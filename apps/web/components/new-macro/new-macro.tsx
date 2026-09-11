@@ -246,7 +246,7 @@ export function NewMacroForm() {
                   {selectedProtocols.map((protocol) => (
                     <div
                       key={protocol.id}
-                      className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
+                      className="border-border flex items-center justify-between rounded-md border px-3 py-2"
                     >
                       <div className="flex min-w-0 items-center gap-2">
                         <span className="truncate text-sm font-medium">{protocol.name}</span>

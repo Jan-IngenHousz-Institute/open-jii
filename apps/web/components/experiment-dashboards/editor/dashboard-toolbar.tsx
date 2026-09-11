@@ -163,7 +163,7 @@ export default function DashboardToolbar({ visible, experimentId }: DashboardToo
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" side="top">
-                <DropdownMenuItem onClick={handleRemove} className="text-destructive">
+                <DropdownMenuItem variant="destructive" onClick={handleRemove}>
                   <Trash2 className="size-4" />
                   {t("editor.inspector.delete")}
                 </DropdownMenuItem>
@@ -246,20 +246,20 @@ function SectionTab({ section, isActive, label, onSelect }: SectionTabProps) {
   const Icon = section.icon;
   const handleClick = () => onSelect(section.key);
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="xs"
       aria-pressed={isActive}
       aria-label={label}
       onClick={handleClick}
       className={cn(
-        "inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors",
-        isActive
-          ? "bg-background text-foreground shadow-xs"
-          : "text-muted-foreground hover:text-foreground",
+        "gap-1.5",
+        isActive ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground",
       )}
     >
       <Icon className="size-3.5" />
       <span className="hidden md:inline">{label}</span>
-    </button>
+    </Button>
   );
 }

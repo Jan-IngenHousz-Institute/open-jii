@@ -60,14 +60,15 @@ export function NewsletterSubscribeForm() {
 
   if (isSuccess) {
     return (
-      <div role="status" aria-live="polite" className="flex items-start gap-2 text-sm text-white">
-        <CheckCircle2
-          className="text-jii-bright-green mt-0.5 h-5 w-5 shrink-0"
-          aria-hidden="true"
-        />
+      <div
+        role="status"
+        aria-live="polite"
+        className="text-brand-chrome-foreground flex items-start gap-2 text-sm"
+      >
+        <CheckCircle2 className="text-brand-accent mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
         <div>
           <p className="font-semibold">{t("footer.successTitle")}</p>
-          <p className="text-white/80">{t("footer.successMessage")}</p>
+          <p className="text-brand-chrome-foreground/80">{t("footer.successMessage")}</p>
         </div>
       </div>
     );
@@ -75,10 +76,12 @@ export function NewsletterSubscribeForm() {
 
   return (
     <div>
-      <h4 className="mb-1 font-extrabold text-white">{t("footer.title")}</h4>
-      <p className="mb-3 text-sm text-white/80">{t("footer.description")}</p>
+      <h4 className="text-brand-chrome-foreground mb-1 font-extrabold">{t("footer.title")}</h4>
+      <p className="text-brand-chrome-foreground/80 mb-3 text-sm">{t("footer.description")}</p>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2" noValidate>
+          {/* Chrome tokens, not card/secondary: the footer does not follow the
+              theme, so a themed control would vanish on it in dark mode. */}
           <div className="flex flex-col gap-2 sm:flex-row">
             <FormField
               control={form.control}
@@ -92,27 +95,26 @@ export function NewsletterSubscribeForm() {
                       type="email"
                       autoComplete="email"
                       placeholder={t("footer.emailPlaceholder")}
-                      className="bg-white text-gray-900 placeholder:text-gray-500"
+                      className="bg-brand-chrome-foreground dark:bg-brand-chrome-foreground text-brand-chrome placeholder:text-brand-chrome/70 border-brand-chrome-border focus-visible:border-brand-accent focus-visible:ring-brand-accent/50"
                       trim
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage role="alert" className="text-jii-bright-green" />
+                  <FormMessage role="alert" className="text-brand-accent" />
                 </FormItem>
               )}
             />
             <Button
               type="submit"
-              variant="secondary"
               disabled={isPending}
-              className="shrink-0 font-semibold"
+              className="bg-brand-accent text-brand-chrome hover:bg-brand-accent/90 focus-visible:border-brand-accent focus-visible:ring-brand-accent/50 shrink-0 font-semibold"
             >
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
               {isPending ? t("footer.submitting") : t("footer.submit")}
             </Button>
           </div>
           {hasError && (
-            <p role="alert" className="text-sm text-red-300">
+            <p role="alert" className="text-brand-accent text-sm">
               {t("footer.errorMessage")}
             </p>
           )}

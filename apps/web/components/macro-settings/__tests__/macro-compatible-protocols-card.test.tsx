@@ -124,10 +124,44 @@ describe("<MacroCompatibleProtocolsCard />", () => {
     const proto1Links = links.filter((l) => l.getAttribute("href")?.includes(PROTO_1_ID));
     expect(proto1Links.length).toBeGreaterThan(0);
     expect(proto1Links[0]).toHaveAttribute("href", `/en-US/platform/protocols/${PROTO_1_ID}`);
+
+    const externalLinks = screen.getAllByRole("link", {
+      name: "macroSettings.openCompatibleProtocol",
+    });
+    expect(externalLinks[0]).toHaveAttribute("target", "_blank");
+    expect(externalLinks[0]).not.toHaveClass("opacity-0");
+
+    externalLinks[0]?.focus();
+    expect(externalLinks[0]).toHaveFocus();
   });
 
-  it("should call remove mutation when X button is clicked", async () => {
+  it("should expose removal on hover, keyboard focus, and coarse pointers", async () => {
+    render(<MacroCompatibleProtocolsCard macroId={MACRO_ID} />);
+
+    await screen.findByText("Temperature Protocol");
+
+    const removeButtons = screen.getAllByRole("button", {
+      name: "macroSettings.removeCompatibleProtocol",
+    });
+    expect(removeButtons).toHaveLength(2);
+
+    for (const button of removeButtons) {
+      expect(button).toHaveClass(
+        "opacity-0",
+        "group-hover:opacity-100",
+        "group-focus-within:opacity-100",
+        "focus-visible:opacity-100",
+        "[@media(pointer:coarse)]:opacity-100",
+      );
+    }
+
+    removeButtons[0]?.focus();
+    expect(removeButtons[0]).toHaveFocus();
+  });
+
+  it("should call remove mutation from the keyboard", async () => {
     const spy = server.mount(contract.macros.removeCompatibleProtocol, {});
+    const user = userEvent.setup();
 
     render(<MacroCompatibleProtocolsCard macroId={MACRO_ID} />);
 
@@ -135,8 +169,11 @@ describe("<MacroCompatibleProtocolsCard />", () => {
       expect(screen.getByText("Temperature Protocol")).toBeInTheDocument();
     });
 
-    const removeButtons = screen.getAllByRole("button");
-    await userEvent.click(removeButtons[0]);
+    const removeButtons = screen.getAllByRole("button", {
+      name: "macroSettings.removeCompatibleProtocol",
+    });
+    removeButtons[0]?.focus();
+    await user.keyboard("{Enter}");
 
     await waitFor(() => {
       expect(spy.callCount).toBe(1);
@@ -153,7 +190,9 @@ describe("<MacroCompatibleProtocolsCard />", () => {
       expect(screen.getByText("Humidity Protocol")).toBeInTheDocument();
     });
 
-    const removeButtons = screen.getAllByRole("button");
+    const removeButtons = screen.getAllByRole("button", {
+      name: "macroSettings.removeCompatibleProtocol",
+    });
     await userEvent.click(removeButtons[1]);
 
     await waitFor(() => {
@@ -222,7 +261,9 @@ describe("<MacroCompatibleProtocolsCard />", () => {
   });
 
   it("should disable remove buttons while removal is pending", async () => {
-    server.mount(contract.macros.removeCompatibleProtocol, { delay: 999_999 });
+    const removeSpy = server.mount(contract.macros.removeCompatibleProtocol, {
+      delay: 999_999,
+    });
 
     render(<MacroCompatibleProtocolsCard macroId={MACRO_ID} />);
 
@@ -230,14 +271,21 @@ describe("<MacroCompatibleProtocolsCard />", () => {
       expect(screen.getByText("Temperature Protocol")).toBeInTheDocument();
     });
 
-    const removeButtons = screen.getAllByRole("button");
+    const removeButtons = screen.getAllByRole("button", {
+      name: "macroSettings.removeCompatibleProtocol",
+    });
     await userEvent.click(removeButtons[0]);
 
     await waitFor(() => {
-      for (const btn of screen.getAllByRole("button")) {
+      for (const btn of screen.getAllByRole("button", {
+        name: "macroSettings.removeCompatibleProtocol",
+      })) {
         expect(btn).toBeDisabled();
       }
     });
+
+    await userEvent.click(removeButtons[0]);
+    expect(removeSpy.callCount).toBe(1);
   });
 
   describe("embedded mode", () => {

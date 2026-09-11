@@ -1,6 +1,6 @@
 "use client";
 
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
@@ -71,7 +71,7 @@ export function QuestionPicker({ existingCells, onSelect, children }: QuestionPi
       <PopoverContent className="w-80 p-3" align="start" side="bottom">
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <HelpCircle className="size-4 text-[#C58AAE]" />
+            <HelpCircle className="text-node-question size-4" />
             <p className="text-sm font-medium">Name your question</p>
           </div>
           <p className="text-muted-foreground text-xs">
@@ -107,6 +107,7 @@ export function QuestionPicker({ existingCells, onSelect, children }: QuestionPi
               Cancel
             </Button>
             <Button size="sm" onClick={handleCreate} disabled={!isValid}>
+              <Plus className="size-4" aria-hidden />
               Create
             </Button>
           </div>

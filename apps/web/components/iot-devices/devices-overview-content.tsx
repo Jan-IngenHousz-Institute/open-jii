@@ -17,7 +17,7 @@ import { IotDevicesTableView } from "./iot-devices-table-view";
  */
 export function DevicesOverviewContent() {
   return (
-    <WorkspaceBand>
+    <WorkspaceBand className="border-t-0">
       <FleetOverviewDashboard>
         <div className="space-y-10">
           <IotDevicesTableView />

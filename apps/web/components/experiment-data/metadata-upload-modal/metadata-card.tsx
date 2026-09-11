@@ -11,6 +11,7 @@ import {
 
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
+import { Card } from "@repo/ui/components/card";
 import { cn } from "@repo/ui/lib/utils";
 
 export type DeleteStatus = "idle" | "deleting" | "deleted";
@@ -45,24 +46,24 @@ export function MetadataCard({
   });
 
   return (
-    <div
+    <Card
       className={cn(
-        "flex items-center gap-3 rounded-lg border border-l-4 border-l-emerald-500 bg-white px-3 py-2.5 transition-all duration-500 dark:border-gray-700 dark:border-l-emerald-500 dark:bg-gray-800",
+        "flex-row items-center gap-3 px-3 py-2.5 transition-all duration-500",
         deleteStatus === "deleted" &&
-          "max-h-0 scale-95 overflow-hidden border-transparent !border-l-transparent py-0 opacity-0",
+          "max-h-0 scale-95 overflow-hidden border-transparent py-0 opacity-0",
       )}
       style={deleteStatus !== "deleted" ? { maxHeight: 200 } : undefined}
     >
-      <div className="shrink-0 rounded-md bg-gray-100 p-1.5 dark:bg-gray-700">
-        <TableProperties className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+      <div className="bg-muted shrink-0 rounded-md p-1.5">
+        <TableProperties className="text-muted-foreground h-4 w-4" />
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+        <p className="text-foreground truncate text-sm font-semibold">
           {name ?? "Untitled metadata"}
         </p>
         {columnNames.length > 0 && (
-          <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-muted-foreground truncate text-xs">
             {columnNames.length <= 5
               ? columnNames.join(", ")
               : t("uploadModal.metadata.columnsTruncated", {
@@ -72,7 +73,7 @@ export function MetadataCard({
           </p>
         )}
 
-        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+        <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-xs">
           <span className="inline-flex items-center gap-1">
             <Rows3 className="h-3 w-3" />
             {rowCount} row{rowCount !== 1 ? "s" : ""}
@@ -98,7 +99,7 @@ export function MetadataCard({
           onClick={onEdit}
           disabled={deleteStatus !== "idle"}
         >
-          <Pencil className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+          <Pencil className="text-muted-foreground h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
@@ -108,14 +109,14 @@ export function MetadataCard({
           disabled={deleteStatus !== "idle"}
         >
           {deleteStatus === "deleted" ? (
-            <Check className="animate-in zoom-in-0 h-4 w-4 text-emerald-500 duration-300" />
+            <Check className="animate-in zoom-in-0 text-status-active-foreground h-4 w-4 duration-300" />
           ) : deleteStatus === "deleting" ? (
-            <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+            <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
           ) : (
             <Trash2 className="text-destructive h-4 w-4" />
           )}
         </Button>
       </div>
-    </div>
+    </Card>
   );
 }

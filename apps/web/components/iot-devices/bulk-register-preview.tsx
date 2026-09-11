@@ -19,10 +19,9 @@ interface BulkRegisterPreviewProps {
 }
 
 const STATUS_CLASS: Record<BulkRowStatus, string> = {
-  ready:
-    "border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-  invalid: "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-  duplicate: "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+  ready: "border-transparent bg-status-active text-status-active-foreground",
+  invalid: "border-transparent bg-status-stale text-status-stale-foreground",
+  duplicate: "border-transparent bg-status-stale text-status-stale-foreground",
   registered: "border-transparent bg-secondary text-secondary-foreground",
 };
 
@@ -54,7 +53,7 @@ export function BulkRegisterPreview({ batch }: BulkRegisterPreviewProps) {
     <div className="border-border max-h-64 overflow-y-auto rounded-lg border">
       <Table>
         <TableHeader>
-          <TableRow className="bg-surface-light border-border hover:bg-transparent">
+          <TableRow className="bg-muted border-border hover:bg-transparent">
             <ColumnHead>{t("iot.devices.bulkDialog.serialColumn")}</ColumnHead>
             <ColumnHead>{t("iot.devices.bulkDialog.nameColumn")}</ColumnHead>
             <ColumnHead>{t("iot.devices.bulkDialog.statusColumn")}</ColumnHead>

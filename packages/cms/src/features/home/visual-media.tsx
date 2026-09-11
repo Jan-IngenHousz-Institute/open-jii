@@ -49,7 +49,7 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
             <button
               aria-label="Previous image"
               onClick={handlePrev}
-              className="shadow-xs absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/80 p-2 hover:bg-white disabled:opacity-50"
+              className="shadow-xs bg-card/80 hover:bg-card absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full p-2 disabled:opacity-50"
               disabled={currentIdx === 0}
               style={{ pointerEvents: currentIdx === 0 ? "none" : undefined }}
             >
@@ -68,7 +68,7 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
             <button
               aria-label="Next image"
               onClick={handleNext}
-              className="shadow-xs absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/80 p-2 hover:bg-white disabled:opacity-50"
+              className="shadow-xs bg-card/80 hover:bg-card absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full p-2 disabled:opacity-50"
               disabled={currentIdx === filteredImages.length - 1}
               style={{
                 pointerEvents: currentIdx === filteredImages.length - 1 ? "none" : undefined,
@@ -107,7 +107,7 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
               <div
                 key={img.sys?.id ?? idx}
                 className={`flex h-60 w-full min-w-[90vw] max-w-full snap-center items-center rounded-2xl md:h-96 md:min-w-[600px] md:max-w-2xl justify-center${
-                  idx === currentIdx ? "ring-jii-dark-green ring-2" : ""
+                  idx === currentIdx ? "ring-primary ring-2" : ""
                 }`}
                 style={{ boxSizing: "border-box" }}
                 data-carousel
@@ -135,7 +135,7 @@ export const VisualMedia: React.FC<VisualMediaProps> = ({ images, inspectorProps
               key={idx}
               aria-label={`Go to image ${idx + 1}`}
               className={`h-2 w-2 rounded-full border-none transition-all ${
-                idx === currentIdx ? "bg-jii-dark-green" : "bg-gray-300"
+                idx === currentIdx ? "bg-primary" : "bg-muted-foreground/40"
               }`}
               onClick={() => scrollToIdx(idx)}
               style={{ outline: "none" }}

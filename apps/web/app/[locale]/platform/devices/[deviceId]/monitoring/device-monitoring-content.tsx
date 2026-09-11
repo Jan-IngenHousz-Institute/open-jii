@@ -71,7 +71,7 @@ export default function DeviceMonitoringPage() {
   // unnamed, since a device publishing to an experiment says nothing about the
   // viewer's access to it.
   const { data: visibleExperiments } = useQuery(
-    orpc.experiments.listExperiments.queryOptions({ input: { filter: "member" } }),
+    orpc.experiments.listExperiments.queryOptions({ input: { scope: "related" } }),
   );
   const { data: visibleProtocols } = useQuery(
     orpc.protocols.listProtocols.queryOptions({ input: {} }),
@@ -93,7 +93,7 @@ export default function DeviceMonitoringPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <div className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -202,7 +202,7 @@ export default function DeviceMonitoringPage() {
               rather than an empty half. */}
           <div
             className={cn(
-              "grid gap-6",
+              "grid min-w-0 gap-6",
               hasBatteryReadings(monitoring) ? "lg:grid-cols-2" : "grid-cols-1",
             )}
           >

@@ -39,7 +39,7 @@ import {
 const AMAZON_CA_DOCS =
   "https://docs.aws.amazon.com/iot/latest/developerguide/server-authentication.html";
 
-const CARD = "divide-y divide-surface rounded-lg border border-border px-3";
+const CARD = "divide-border border-border divide-y rounded-lg border px-3";
 
 interface IotCredentialsDialogProps {
   deviceId: string;

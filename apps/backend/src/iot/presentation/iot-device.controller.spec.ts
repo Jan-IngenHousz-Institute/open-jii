@@ -301,11 +301,32 @@ describe("IotDeviceController", () => {
       expect(second.body.id).toBe(first.body.id);
     });
 
-    it("rejects a non-uuid install id (400)", async () => {
+    // installId is the device's serial, not a minted uuid: a phone reports a
+    // hardware id. It is bounded by length and the AWS IoT thing-attribute
+    // charset, which is what CreateThing would otherwise 500 on.
+    it("accepts a hardware-shaped install id (200)", async () => {
+      const response: SuperTestResponse<IotDevice> = await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send({ installId: "9774d56d682e549c" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body.serialNumber).toBe("9774d56d682e549c");
+    });
+
+    it("rejects an install id outside the thing-attribute charset (400)", async () => {
       await testApp
         .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
         .withAuth(userId)
-        .send({ installId: "not-a-uuid" })
+        .send({ installId: "not a serial!" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("rejects an empty install id (400)", async () => {
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send({ installId: "" })
         .expect(StatusCodes.BAD_REQUEST);
     });
 
@@ -368,7 +389,7 @@ describe("IotDeviceController", () => {
 
       expect(response.body.id).toBe(device.id);
       // The owner of the device's org holds every action through that role, and no
-      // grant of their own — so there is nothing for them to leave. `canTransfer`
+      // grant of their own, so there is nothing for them to leave. `canTransfer`
       // is false even for them: a device's AWS Thing and certificate are
       // provisioned against its organization, so there is no transfer route.
       expect(response.body.capabilities).toEqual({
@@ -831,10 +852,9 @@ describe("IotDeviceController", () => {
 
   describe("authorization", () => {
     // Each guarded route must delegate to AuthorizationService.can() with the
-    // resource/action declared by its @CanAccess decorator (device id in the
-    // `deviceId` param), and turn a denial into a 403. Mocking can() to deny
-    // pins the {resource, action} wiring, so a missing or wrong-action decorator
-    // fails here.
+    // resource/action from its @CanAccess decorator and turn a denial into 403.
+    // Mocking can() to deny pins that wiring, so a missing or wrong-action
+    // decorator fails here.
     it.each([
       {
         name: "get device",

@@ -101,9 +101,9 @@ export function GroupCredentialResults({
     return (
       <li key={row.deviceId} className="flex items-center gap-2 py-1.5 text-sm">
         {row.error === null ? (
-          <Check className="h-4 w-4 shrink-0 text-green-600" aria-hidden />
+          <Check className="text-status-active-foreground h-4 w-4 shrink-0" aria-hidden />
         ) : (
-          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+          <AlertTriangle className="text-status-stale-foreground h-4 w-4 shrink-0" aria-hidden />
         )}
         <span className="min-w-0 flex-1 truncate">{label}</span>
         {row.error !== null && <span className="text-muted-foreground text-xs">{row.error}</span>}
@@ -129,9 +129,9 @@ export function GroupCredentialResults({
     return (
       <li key={row.deviceId} className="flex items-center gap-2 py-1.5 text-sm">
         {row.error === null ? (
-          <Check className="h-4 w-4 shrink-0 text-green-600" aria-hidden />
+          <Check className="text-status-active-foreground h-4 w-4 shrink-0" aria-hidden />
         ) : (
-          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+          <AlertTriangle className="text-status-stale-foreground h-4 w-4 shrink-0" aria-hidden />
         )}
         <span className="min-w-0 flex-1 truncate">{label}</span>
         {row.error !== null && <span className="text-muted-foreground text-xs">{row.error}</span>}

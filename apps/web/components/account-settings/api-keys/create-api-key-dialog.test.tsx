@@ -25,7 +25,9 @@ describe("CreateApiKeyDialog", () => {
   it("requires a name before creating", async () => {
     const user = await openDialog();
 
-    await user.click(screen.getByRole("button", { name: "apiKeys.createConfirm" }));
+    const createButton = screen.getByRole("button", { name: "apiKeys.createConfirm" });
+    expect(createButton.querySelector(".lucide-plus")).toBeInTheDocument();
+    await user.click(createButton);
 
     await waitFor(() => expect(screen.getByText("apiKeys.nameRequired")).toBeInTheDocument());
     expect(authClient.apiKey.create).not.toHaveBeenCalled();

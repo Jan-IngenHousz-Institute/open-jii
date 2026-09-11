@@ -117,16 +117,6 @@ export const mainNavigation = {
         namespace: "navigation",
         url: (locale: string) => `/${locale}/platform/organizations/new`,
       },
-      {
-        titleKey: "sidebar.myOrganizations",
-        namespace: "navigation",
-        url: (locale: string) => `/${locale}/platform/organizations`,
-      },
-      {
-        titleKey: "sidebar.organizationDirectory",
-        namespace: "navigation",
-        url: (locale: string) => `/${locale}/platform/organizations?filter=all`,
-      },
     ] as NavLink[],
   },
   library: {

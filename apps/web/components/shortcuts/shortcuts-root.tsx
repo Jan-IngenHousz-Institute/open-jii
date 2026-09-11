@@ -1,6 +1,6 @@
 "use client";
 
-import { NOTIFICATION_BELL_OPEN_EVENT } from "@/components/navigation/navigation-topbar/activity-popover";
+import { NOTIFICATION_BELL_OPEN_EVENT } from "@/components/activity/activity-popover";
 import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
 import { modifierLabel } from "@/lib/platform";
 import { useHotkey, useHotkeySequence } from "@tanstack/react-hotkeys";
@@ -91,6 +91,7 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
       { key: "W", label: "Workbooks", path: `/${locale}/platform/workbooks` },
       { key: "P", label: "Protocols", path: `/${locale}/platform/protocols` },
       { key: "M", label: "Macros", path: `/${locale}/platform/macros` },
+      { key: "O", label: "Organizations", path: `/${locale}/platform/organizations` },
       { key: "T", label: "Transfer requests", path: `/${locale}/platform/transfer-request` },
       { key: "S", label: "Settings", path: `/${locale}/platform/account` },
       {

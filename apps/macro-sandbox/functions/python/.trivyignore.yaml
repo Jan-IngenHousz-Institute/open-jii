@@ -33,3 +33,8 @@ vulnerabilities:
   - id: CVE-2026-46600
     statement: "dnsmessage parsing DoS. RIE never runs in production."
     expired_at: 2026-11-05
+
+  # openssl-fips-provider-latest / openssl-snapsafe-libs@3.5.7-2.amzn2023.0.1, fixed in .0.2.
+  - id: CVE-2026-14456
+    statement: "QUIC server memory-growth DoS. Sandbox runs no QUIC or TLS server."
+    expired_at: 2026-11-05

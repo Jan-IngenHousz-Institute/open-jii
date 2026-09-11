@@ -162,9 +162,9 @@ export function UploadCreateView({
         multiple
         icon={
           isAmbyte ? (
-            <FolderUp className="h-8 w-8 text-gray-400" />
+            <FolderUp className="text-muted-foreground h-8 w-8" />
           ) : (
-            <FileSpreadsheet className="h-8 w-8 text-gray-400" />
+            <FileSpreadsheet className="text-muted-foreground h-8 w-8" />
           )
         }
         placeholder={

@@ -1,29 +1,32 @@
-import { CACHE_MANAGER } from "@nestjs/cache-manager";
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Logger } from "@nestjs/common";
 import type { Cache } from "cache-manager";
 
-import { CachePort } from "../../../macros/core/ports/cache.port";
+import type { CachePort as MacroCachePort } from "../../../macros/core/ports/cache.port";
+import type { CachePort as MetricsCachePort } from "../../../metrics/core/ports/cache.port";
 
-const PREFIX = "macro:";
-const TTL_MS = 5 * 60 * 1000; // 5 minutes
+export interface CacheNamespace {
+  prefix: string;
+  ttlMs: number;
+}
 
 /**
- * Infrastructure adapter that implements the domain CachePort
- * by delegating to the NestJS cache-manager (in-memory / Redis).
+ * Infrastructure adapter that implements the domain cache ports by delegating
+ * to the NestJS cache-manager (in-memory / Redis).
  *
- * Owns key-prefixing, TTL, and the full read-through pattern
- * so domain code never touches cache primitives directly.
+ * Owns key-prefixing, TTL, and the full read-through pattern so domain code
+ * never touches cache primitives directly. Each domain registers its own
+ * instance with its own key prefix and TTL via a factory provider.
  */
-@Injectable()
-export class CacheAdapter extends CachePort {
+export class CacheAdapter implements MacroCachePort, MetricsCachePort {
   private readonly logger = new Logger(CacheAdapter.name);
 
-  constructor(@Inject(CACHE_MANAGER) private readonly cache: Cache) {
-    super();
-  }
+  constructor(
+    private readonly cache: Cache,
+    private readonly namespace: CacheNamespace,
+  ) {}
 
   async tryCache<T>(key: string, fetchFn: () => Promise<T | null>): Promise<T | null> {
-    const cacheKey = `${PREFIX}${key}`;
+    const cacheKey = `${this.namespace.prefix}${key}`;
 
     try {
       const cached = await this.cache.get<T>(cacheKey);
@@ -38,7 +41,7 @@ export class CacheAdapter extends CachePort {
 
     if (value !== null && value !== undefined) {
       try {
-        await this.cache.set(cacheKey, value, TTL_MS);
+        await this.cache.set(cacheKey, value, this.namespace.ttlMs);
       } catch (error) {
         this.logger.warn({ msg: "Cache write failed", cacheKey, error });
       }
@@ -56,7 +59,7 @@ export class CacheAdapter extends CachePort {
 
     for (const key of keys) {
       try {
-        const cached = await this.cache.get<T>(`${PREFIX}${key}`);
+        const cached = await this.cache.get<T>(`${this.namespace.prefix}${key}`);
         if (cached !== undefined && cached !== null) {
           result.set(key, cached);
           continue;
@@ -73,7 +76,7 @@ export class CacheAdapter extends CachePort {
       for (const [key, value] of fetched) {
         result.set(key, value);
         try {
-          await this.cache.set(`${PREFIX}${key}`, value, TTL_MS);
+          await this.cache.set(`${this.namespace.prefix}${key}`, value, this.namespace.ttlMs);
         } catch (error) {
           this.logger.warn({ msg: "Cache write failed", key, error });
         }
@@ -85,7 +88,7 @@ export class CacheAdapter extends CachePort {
 
   async invalidate(key: string): Promise<void> {
     try {
-      await this.cache.del(`${PREFIX}${key}`);
+      await this.cache.del(`${this.namespace.prefix}${key}`);
     } catch (error) {
       this.logger.warn({ msg: "Cache invalidation failed", key, error });
     }

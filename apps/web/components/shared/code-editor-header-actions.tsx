@@ -22,7 +22,7 @@ export function CodeEditorHeaderActions({ status, onClose }: CodeEditorHeaderAct
     <TooltipProvider delayDuration={200}>
       <div className="flex items-center gap-3">
         <AutosaveIndicator status={status} variant="compact" />
-        <span className="h-4 w-px bg-slate-300" />
+        <span className="bg-border h-4 w-px" />
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0">

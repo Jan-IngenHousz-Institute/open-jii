@@ -1,3 +1,4 @@
+import { listQueryKeys } from "@/hooks/list-query-keys";
 import { getOrpcError, orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -39,7 +40,9 @@ export const useProtocolCreate = (options: UseProtocolCreateOptions = {}) => {
         options.onError?.(...args);
       },
       onSettled: async (...args) => {
-        await queryClient.invalidateQueries({ queryKey: orpc.protocols.listProtocols.key() });
+        for (const queryKey of listQueryKeys.protocols()) {
+          await queryClient.invalidateQueries({ queryKey });
+        }
         options.onSettled?.(...args);
       },
     }),

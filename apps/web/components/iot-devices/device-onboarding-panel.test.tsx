@@ -245,6 +245,18 @@ describe("DeviceOnboardingPanel", () => {
     expect(screen.getByRole("button", { name: "iot.onboarding.retry" })).toBeInTheDocument();
   });
 
+  it("keeps the experiment list loading while related experiments are pending", async () => {
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.experiments.listExperiments, { body: [], delay: "infinite" });
+
+    const { container } = render(<DeviceOnboardingPanel device={device} />);
+
+    await waitFor(() => {
+      expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText("iot.onboarding.noMemberships")).not.toBeInTheDocument();
+  });
+
   it("says so when the viewer belongs to no experiments", async () => {
     server.mount(contract.iot.listDeviceExperiments, { body: [] });
     server.mount(contract.experiments.listExperiments, { body: [] });

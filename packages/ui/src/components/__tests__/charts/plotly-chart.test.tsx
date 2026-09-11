@@ -31,7 +31,10 @@ vi.mock("react", async () => {
 });
 
 // Mock the utils module
-const mockUtils = {
+// `vi.hoisted` because `vi.mock` is hoisted above this declaration. The factory
+// referencing a plain top-level const only threw once the component actually
+// imported this module, which is why it sat latent.
+const mockUtils = vi.hoisted(() => ({
   detectWebGLSupport: vi.fn().mockReturnValue(true),
   getRenderer: vi.fn().mockReturnValue("webgl"),
   validateDimensions: vi.fn().mockReturnValue({ width: 400, height: 300 }),
@@ -39,7 +42,7 @@ const mockUtils = {
   createBaseLayout: vi.fn().mockReturnValue({}),
   create3DLayout: vi.fn().mockReturnValue({}),
   createPlotlyConfig: vi.fn().mockReturnValue({}),
-};
+}));
 
 vi.mock("../../charts/utils", () => mockUtils);
 
@@ -397,7 +400,7 @@ describe("PlotlyChart", () => {
             expect.objectContaining({
               type: "scatter",
               line: expect.objectContaining({
-                color: "#1f77b4", // Default color
+                color: undefined, // Left to the layout colorway
                 width: 2,
                 dash: "solid",
               }),

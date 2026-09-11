@@ -12,11 +12,10 @@ vi.mock("@/components/list-experiments", () => ({
 const defaultProps = { params: Promise.resolve({ locale: "en-US" }) };
 
 describe("ExperimentArchivePage", () => {
-  it("renders title, description, and archived list", async () => {
-    render(await ExperimentArchivePage(defaultProps));
+  it("lets the shell own the title and renders the archived list", () => {
+    render(ExperimentArchivePage(defaultProps));
 
-    expect(screen.getByText("experiments.archiveTitle")).toBeInTheDocument();
-    expect(screen.getByText("experiments.archiveDescription")).toBeInTheDocument();
+    expect(screen.queryByText("experiments.archiveTitle")).not.toBeInTheDocument();
 
     const list = screen.getByTestId("list-experiments");
     expect(list).toHaveAttribute("data-archived", "true");

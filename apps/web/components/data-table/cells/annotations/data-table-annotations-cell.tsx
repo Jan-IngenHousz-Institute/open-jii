@@ -20,14 +20,14 @@ const FLAG_TYPE_COLORS: Record<
   { bg: string; text: string; border: string }
 > = {
   outlier: {
-    bg: "bg-amber-100 dark:bg-amber-950",
-    text: "text-amber-900 dark:text-amber-300",
-    border: "border-amber-300 dark:border-amber-800",
+    bg: "bg-status-stale",
+    text: "text-status-stale-foreground",
+    border: "border-status-stale-foreground/30",
   },
   needs_review: {
-    bg: "bg-blue-100 dark:bg-blue-950",
-    text: "text-blue-900 dark:text-blue-300",
-    border: "border-blue-300 dark:border-blue-800",
+    bg: "bg-status-published",
+    text: "text-status-published-foreground",
+    border: "border-status-published-foreground/30",
   },
 };
 
@@ -70,7 +70,7 @@ function CommentsBadge({ count }: { count: number }) {
 
 function FlagsBadge({ count }: { count: number }) {
   return (
-    <Badge variant="outline" className="bg-highlight-light dark:bg-highlight/30 px-1">
+    <Badge variant="outline" className="bg-accent/70 px-1">
       <Flag size={12} className="mr-2" /> {count}
     </Badge>
   );
@@ -119,7 +119,7 @@ function AnnotationItem({
 
   return (
     <div
-      className={`rounded-lg border p-3 ${isPreview ? "border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/30" : "bg-muted/50"}`}
+      className={`rounded-lg border p-3 ${isPreview ? "border-status-published-foreground/30 bg-status-published/50" : "bg-muted/50"}`}
     >
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -127,7 +127,7 @@ function AnnotationItem({
           {isPreview && (
             <Badge
               variant="outline"
-              className="border-blue-300 bg-blue-100 text-xs text-blue-700 dark:border-blue-700 dark:bg-blue-900 dark:text-blue-300"
+              className="border-status-published-foreground/30 bg-status-published text-status-published-foreground text-xs"
             >
               {t("experimentDataAnnotations.preview")}
             </Badge>
@@ -138,7 +138,7 @@ function AnnotationItem({
       </div>
       <p className="text-foreground text-sm leading-relaxed">{content.text}</p>
       {isPreview && (
-        <div className="mt-2 text-xs italic text-blue-600 dark:text-blue-400">
+        <div className="text-status-published-foreground mt-2 text-xs italic">
           {t("experimentDataAnnotations.previewNote")}
         </div>
       )}
@@ -166,9 +166,9 @@ function CommentsPopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button type="button" className="text-left">
+        <Button type="button" variant="ghost" className="h-auto justify-start p-0">
           <CommentsBadge count={commentCount} />
-        </button>
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-96">
         <div className="flex items-center justify-between border-b pb-3">
@@ -233,9 +233,9 @@ function FlagsPopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button type="button" className="text-left">
+        <Button type="button" variant="ghost" className="h-auto justify-start p-0">
           <FlagsBadge count={flagCount} />
-        </button>
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-96">
         <div className="flex items-center justify-between border-b pb-3">
@@ -294,9 +294,14 @@ function EmptyAnnotationsPopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button type="button" className="text-muted-foreground hover:text-foreground text-sm">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground hover:text-foreground font-normal"
+        >
           {t("common.add")}...
-        </button>
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-96">
         <div className="flex items-center justify-between border-b pb-3">

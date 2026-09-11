@@ -6,12 +6,17 @@ import { auth } from "~/app/actions/auth";
 
 import AppLayout from "./layout";
 
+const { mockSidebarWrapper } = vi.hoisted(() => ({ mockSidebarWrapper: vi.fn() }));
+
 vi.mock("@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper", () => ({
-  NavigationSidebarWrapper: () => <aside aria-label="sidebar">Sidebar</aside>,
+  NavigationSidebarWrapper: (props: unknown) => {
+    mockSidebarWrapper(props);
+    return <aside aria-label="sidebar">Sidebar</aside>;
+  },
 }));
 
-vi.mock("@/components/navigation/navigation-topbar/navigation-topbar", () => ({
-  NavigationTopbar: () => <header aria-label="topbar">Topbar</header>,
+vi.mock("@/components/navigation/site-header/site-header", () => ({
+  SiteHeader: () => <header aria-label="site-header">Site header</header>,
 }));
 
 vi.mock("@/components/whats-new/whats-new-sheet", () => ({
@@ -36,7 +41,17 @@ describe("AppLayout", () => {
 
     expect(screen.getByText("Page content")).toBeInTheDocument();
     expect(screen.getByText("Sidebar")).toBeInTheDocument();
-    expect(screen.getByText("Topbar")).toBeInTheDocument();
+    expect(screen.getByText("Site header")).toBeInTheDocument();
+  });
+
+  it("passes the session user to the sidebar for the footer account menu", async () => {
+    render(await AppLayout(defaultProps));
+
+    expect(mockSidebarWrapper).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user: { id: "user-1", email: "test@example.com" },
+      }),
+    );
   });
 
   it("redirects to login when there is no session", async () => {

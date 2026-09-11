@@ -1,3 +1,4 @@
+import { listQueryKeys } from "@/hooks/list-query-keys";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -18,7 +19,9 @@ export const useProtocolDelete = (protocolId: string, props: ProtocolDeleteProps
     orpc.protocols.deleteProtocol.mutationOptions({
       onSettled: async () => {
         // Refetch the lists after success/error to keep the cache in sync.
-        await queryClient.invalidateQueries({ queryKey: orpc.protocols.listProtocols.key() });
+        for (const queryKey of listQueryKeys.protocols()) {
+          await queryClient.invalidateQueries({ queryKey });
+        }
       },
       onSuccess: () => {
         // Drop the deleted protocol's detail cache.

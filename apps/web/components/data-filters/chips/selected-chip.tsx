@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@repo/ui/components/button";
 
 import { ContributorIdentity } from "../../contributor/contributor-identity";
 
@@ -28,14 +29,16 @@ export function SelectedChip({
       ) : (
         <span className="max-w-[12ch] truncate">{chipKey}</span>
       )}
-      <button
+      <Button
         type="button"
-        className="hover:bg-muted-foreground/20 rounded-sm"
+        variant="ghost"
+        size="icon-xs"
+        className="hover:bg-muted-foreground/20 size-auto"
         onClick={() => onRemove(chipKey)}
         aria-label={t("dataFilters.removeValue", { name: chipKey })}
       >
         <X className="h-3 w-3" />
-      </button>
+      </Button>
     </Badge>
   );
 }

@@ -410,7 +410,7 @@ function buildTrace(series: CartesianSeries, scatterPlotType: string): PlotData 
       type: scatterPlotType,
       mode: series.mode ?? "markers",
       marker: {
-        color: series.marker?.color ?? series.color ?? "#1f77b4",
+        color: series.marker?.color ?? series.color,
         size: series.marker?.size ?? 6,
         symbol: series.marker?.symbol ?? "circle",
         opacity: series.marker?.opacity ?? series.opacity ?? 1,
@@ -445,7 +445,7 @@ function buildTrace(series: CartesianSeries, scatterPlotType: string): PlotData 
     type: scatterPlotType,
     mode: series.mode ?? "lines",
     line: {
-      color: series.line?.color ?? series.color ?? "#1f77b4",
+      color: series.line?.color ?? series.color,
       width: series.line?.width ?? 2,
       dash: series.line?.dash ?? "solid",
       shape: series.line?.shape ?? "linear",

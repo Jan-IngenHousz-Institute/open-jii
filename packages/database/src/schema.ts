@@ -244,6 +244,14 @@ export const organizations = pgTable("organizations", {
   // once somebody deliberately publishes it; personal organizations stay private.
   visibility: visibilityEnum("visibility").default("private").notNull(),
   ...timestamps,
+  // Weighted full-text search vector: name (A) + description (B) + location (C), so "Amsterdam"
+  // finds the organizations based there while still ranking below a name or description hit. The
+  // `type` enum is matched at query time (enum->text casts are not immutable, so they can't live
+  // in a generated column).
+  searchVector: tsvector("search_vector").generatedAlwaysAs(
+    (): SQL =>
+      sql`setweight(to_tsvector('english', coalesce(${organizations.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${organizations.description}, '')), 'B') || setweight(to_tsvector('english', coalesce(${organizations.location}, '')), 'C')`,
+  ),
 });
 
 // Organization Members (Better Auth organization plugin, model "member").

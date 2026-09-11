@@ -93,8 +93,8 @@ describe("ExperimentVisualizationsList", () => {
   it.each([
     // Both line and scatter are in the "basic" family. Color is family-keyed
     // so the list scales to 20+ chart types without per-type bookkeeping.
-    ["line", "workspace.charts.types.line", "bg-badge-published"],
-    ["scatter", "workspace.charts.types.scatter", "bg-badge-published"],
+    ["line", "workspace.charts.types.line", "bg-status-published"],
+    ["scatter", "workspace.charts.types.scatter", "bg-status-published"],
   ] as const)("type pill for %s carries class %s", (chartType, label, className) => {
     render(
       <ExperimentVisualizationsList visualizations={[viz({ chartType })]} experimentId={expId} />,

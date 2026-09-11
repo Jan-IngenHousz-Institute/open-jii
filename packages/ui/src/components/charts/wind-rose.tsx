@@ -7,7 +7,7 @@ import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartSizing } from "./use-is-compact";
-import { createPlotlyConfig, responsiveChrome, tierAxisFontSizes } from "./utils";
+import { createPlotlyConfig, responsiveChrome, tierAxisFontSizes, chartGridColor } from "./utils";
 
 /**
  * Wind-rose series. Each series represents one **value band** (e.g.
@@ -125,7 +125,7 @@ export function WindRose({
         tickangle: 0,
         // Cap ticks so labels don't collide on small charts.
         nticks: 5,
-        gridcolor: "#E6E6E6",
+        gridcolor: chartGridColor(),
         showgrid: config.showGrid !== false,
       },
       angularaxis: {
@@ -138,7 +138,7 @@ export function WindRose({
         tickvals: directionTicks,
         ticktext: tickText,
         tickfont: { size: fontSizes.tick },
-        gridcolor: "#E6E6E6",
+        gridcolor: chartGridColor(),
         showgrid: config.showGrid !== false,
       },
     },

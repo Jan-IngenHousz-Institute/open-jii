@@ -1,5 +1,4 @@
 import type { ChartFormConfig, ChartFormDataConfig } from "../../chart-config";
-import { DEFAULT_PRIMARY_COLOR } from "../../colors/palettes";
 import { makeDataSource } from "../../data/data-sources";
 
 export function boxPlotDefaultConfig(): ChartFormConfig {
@@ -10,7 +9,6 @@ export function boxPlotDefaultConfig(): ChartFormConfig {
     showLegend: true,
     showGrid: true,
     useWebGL: false,
-    color: [DEFAULT_PRIMARY_COLOR],
     boxOrientation: "v",
     // `group` lays sibling series side-by-side at each X category (the
     // canonical "compare distributions across groups" look). `overlay`

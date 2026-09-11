@@ -1,9 +1,11 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
-import { getMacroLanguageBadgeColor, getMacroLanguageLabel } from "@/util/macro-language";
+import { getMacroLanguageBadgeTone, getMacroLanguageLabel } from "@/util/macro-language";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, FileCode2, X } from "lucide-react";
 import Link from "next/link";
@@ -12,15 +14,8 @@ import { useMemo, useState } from "react";
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
 import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@repo/ui/components/card";
+import { Card } from "@repo/ui/components/card";
 
 import { useAddCompatibleMacro } from "../../hooks/protocol/useAddCompatibleMacro/useAddCompatibleMacro";
 import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
@@ -105,10 +100,7 @@ export function ProtocolCompatibleMacrosCard({
       ) : compatibleMacros.length > 0 ? (
         <div className="space-y-3">
           {compatibleMacros.map((entry) => (
-            <div
-              key={entry.macro.id}
-              className="shadow-xs group rounded-lg border border-gray-200 bg-white p-3 transition-shadow hover:shadow-md"
-            >
+            <Card key={entry.macro.id} className="group gap-0 p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="mb-1.5 flex items-center gap-2">
@@ -123,27 +115,36 @@ export function ProtocolCompatibleMacrosCard({
                       href={`/${locale}/platform/macros/${entry.macro.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                      title={t("protocolSettings.openCompatibleMacro", {
+                        name: entry.macro.name,
+                      })}
+                      aria-label={t("protocolSettings.openCompatibleMacro", {
+                        name: entry.macro.name,
+                      })}
+                      className="text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring/50 inline-flex size-8 shrink-0 items-center justify-center rounded-md outline-none transition-[color,box-shadow] focus-visible:ring-[3px]"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <ExternalLink className="text-muted-foreground h-3.5 w-3.5" />
+                      <ExternalLink className="h-4 w-4" />
                     </Link>
                   </div>
-                  <Badge className={getMacroLanguageBadgeColor(entry.macro.language)}>
+                  <StatusBadge tone={getMacroLanguageBadgeTone(entry.macro.language)}>
                     {getMacroLanguageLabel(entry.macro.language)}
-                  </Badge>
+                  </StatusBadge>
                 </div>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                  size="icon-sm"
+                  className="text-muted-foreground hover:text-destructive shrink-0 opacity-0 transition-opacity focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
+                  aria-label={t("protocolSettings.removeCompatibleMacro", {
+                    name: entry.macro.name,
+                  })}
                   onClick={() => handleRemoveMacro(entry.macro.id)}
                   disabled={isRemoving}
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       ) : (
@@ -167,12 +168,12 @@ export function ProtocolCompatibleMacrosCard({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("protocolSettings.compatibleMacros")}</CardTitle>
-        <CardDescription>{t("protocolSettings.compatibleMacrosDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">{content}</CardContent>
-    </Card>
+    <SettingsCard
+      title={t("protocolSettings.compatibleMacros")}
+      description={t("protocolSettings.compatibleMacrosDescription")}
+      contentClassName="space-y-4"
+    >
+      {content}
+    </SettingsCard>
   );
 }

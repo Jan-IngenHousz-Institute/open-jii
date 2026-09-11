@@ -3,6 +3,7 @@
 import type { ChartFormValues } from "@/components/experiment-visualizations/charts/chart-config";
 import { chartFormResolver } from "@/components/experiment-visualizations/charts/chart-config";
 import { getChartTypeDef } from "@/components/experiment-visualizations/charts/chart-registry";
+import { withResolvedColorMode } from "@/components/experiment-visualizations/charts/colors/color-mode";
 import { DataSourcesFieldArrayProvider } from "@/components/experiment-visualizations/workspace/context/data-sources-field-array-context";
 import { useVisualizationAutosave } from "@/components/experiment-visualizations/workspace/hooks/use-visualization-autosave";
 import { VisualizationLayoutContent } from "@/components/experiment-visualizations/workspace/layout/visualization-layout-content";
@@ -61,7 +62,10 @@ function buildDefaults(visualization: ExperimentVisualization): ChartFormValues 
     description: visualization.description ?? "",
     chartFamily: visualization.chartFamily,
     chartType: visualization.chartType,
-    config: { ...def.defaultConfig(), ...(visualization.config ?? {}) },
+    config: withResolvedColorMode(
+      { ...def.defaultConfig(), ...(visualization.config ?? {}) },
+      visualization.dataConfig,
+    ),
     dataConfig: visualization.dataConfig,
   };
 }

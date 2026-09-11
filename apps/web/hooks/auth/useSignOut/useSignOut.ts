@@ -32,6 +32,7 @@ export function useSignOut() {
         orpc.users.listInvitations.key(),
         orpc.experiments.getMyJoinRequest.key(),
         orpc.users.getDeletionBlockers.key(),
+        orpc.search.globalSearch.key(),
         // The signed-out user's own pending invitations name the organizations that
         // asked for them; invalidating the `auth` namespace would leave them readable.
         myOrganizationInvitationsFamily(),

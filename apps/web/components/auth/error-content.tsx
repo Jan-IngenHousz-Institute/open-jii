@@ -16,15 +16,15 @@ export function ErrorContent({ locale, error, errorDescription }: ErrorContentPr
   const { t } = useTranslation();
 
   return (
-    <div className="bg-card text-card-foreground ring-border flex min-h-[600px] w-full flex-col rounded-2xl p-8 shadow-lg ring-1 md:p-14">
+    <div className="bg-card text-card-foreground flex w-full flex-col rounded-2xl p-5 shadow-2xl sm:p-6 md:p-10">
       {/* Spacer to center content vertically */}
       <div className="flex-1" />
 
       <div className="flex flex-col items-center">
         {/* Error Icon */}
         <div className="mb-6 flex items-center justify-center">
-          <div className="rounded-full bg-red-500/10 p-4">
-            <AlertCircle className="h-12 w-12 text-red-500" />
+          <div className="bg-destructive/10 rounded-full p-4">
+            <AlertCircle className="text-destructive h-12 w-12" />
           </div>
         </div>
 
@@ -43,11 +43,11 @@ export function ErrorContent({ locale, error, errorDescription }: ErrorContentPr
 
         {/* Action Buttons */}
         <div className="w-full space-y-3">
-          <Button asChild className="h-12 w-full rounded-full" size="lg">
+          <Button asChild className="w-full" size="lg">
             <Link href={`/${locale}/login`}>{t("auth.errorTryAgain")}</Link>
           </Button>
 
-          <Button asChild variant="outline" className="h-12 w-full rounded-full" size="lg">
+          <Button asChild variant="outline" className="w-full" size="lg">
             <Link href={`/${locale}`}>{t("auth.errorGoHome")}</Link>
           </Button>
         </div>

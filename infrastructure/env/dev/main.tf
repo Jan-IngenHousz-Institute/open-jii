@@ -606,6 +606,27 @@ module "databricks_catalog" {
         "USE_SCHEMA"
       ]
     }
+
+    # Read-only access for the jii-data-platform deploy SP, which runs the
+    # analyst gold pipelines in the sandbox workspace. grebbedijk-ambit-2026-gold
+    # reads centrum.enriched_experiment_raw_data from here cross-catalog.
+    #
+    # These privileges are already live — this block only stops them being
+    # undeclared drift. They were granted by hand and have survived purely
+    # because nothing authoritative covers the catalog securable. The equivalent
+    # prod grant lived at SCHEMA level instead, where the authoritative
+    # `databricks_grants.centrum_schema` reclaimed it on 2026-08-20 and took two
+    # pipelines down for eight days. Same access, different level, opposite
+    # outcome — so it is written down here before someone rediscovers that.
+    data_platform_deploy_sp = {
+      principal = var.data_platform_sp_application_id
+      privileges = [
+        "BROWSE",
+        "SELECT",
+        "USE_CATALOG",
+        "USE_SCHEMA"
+      ]
+    }
   }
 
   providers = {
@@ -763,6 +784,116 @@ module "pipeline_scheduler" {
   }
 
   depends_on = [module.centrum_pipeline]
+}
+
+module "metrics_pipeline" {
+  source = "../../modules/databricks/pipeline"
+
+  name         = "Metrics-DLT-Pipeline-DEV"
+  schema_name  = "metrics"
+  catalog_name = module.databricks_catalog.catalog_name
+
+  notebook_paths = [
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/platform_totals",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/daily_activity",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/family_totals",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/hourly_activity",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/activity_windows",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/parameter_stats",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/pool_facts",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/daily_activity_by_experiment",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/experiment_contributors_window",
+  ]
+
+  environment_dependencies = [
+    "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl",
+  ]
+
+  configuration = {
+    "CATALOG_NAME"        = module.databricks_catalog.catalog_name
+    "CENTRUM_SCHEMA_NAME" = "centrum"
+    "SILVER_TABLE"        = "clean_data"
+  }
+
+  continuous_mode  = false
+  development_mode = true
+  serverless       = true
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_RUN"
+    },
+    {
+      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [databricks_grants.centrum_schema]
+}
+
+module "metrics_pipeline_scheduler" {
+  source = "../../modules/databricks/job"
+
+  name        = "Metrics-Pipeline-Scheduler-DEV"
+  description = "Triggers the public metrics pipeline refresh"
+
+  # Schedule: every 15 minutes
+  # Format: "seconds minutes hours day-of-month month day-of-week"
+  schedule = "0 0/15 * * * ?"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key         = "trigger_metrics_pipeline"
+      task_type   = "pipeline"
+      pipeline_id = module.metrics_pipeline.pipeline_id
+    }
+  ]
+
+  # The metrics pipeline only ever runs through this job, so job-level failure
+  # notifications cover every run; no in-pipeline event hook needed.
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.metrics_pipeline]
 }
 
 module "centrum_backup_job" {
@@ -1938,6 +2069,10 @@ module "backend_ecs" {
     {
       name  = "DATABRICKS_CENTRUM_SCHEMA_NAME"
       value = "centrum"
+    },
+    {
+      name  = "DATABRICKS_METRICS_SCHEMA_NAME"
+      value = "metrics"
     },
     {
       name  = "DATABRICKS_RAW_DATA_TABLE_NAME"

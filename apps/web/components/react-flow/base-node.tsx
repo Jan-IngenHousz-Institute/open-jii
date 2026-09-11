@@ -2,6 +2,8 @@ import type { Node, NodeProps } from "@xyflow/react";
 import { Position } from "@xyflow/react";
 import React from "react";
 
+import { Button } from "@repo/ui/components/button";
+import { Card } from "@repo/ui/components/card";
 import { cn } from "@repo/ui/lib/utils";
 
 import { nodeTypeColorMap } from "./node-config";
@@ -61,37 +63,28 @@ export function BaseNode(props: BaseNodeProps) {
       <div className={cn("group relative inline-block w-[260px] bg-transparent p-0")} tabIndex={0}>
         {/* Delete button - only show if not static */}
         {!isStatic && (
-          <button
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-xs"
             className={cn(
-              "pointer-events-auto absolute -right-2 -top-2 z-20 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-white text-xs opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100",
+              "text-muted-foreground pointer-events-auto absolute -right-2 -top-2 z-20 size-5 rounded-full opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100",
               isActive && "opacity-100",
             )}
-            style={{
-              border: `1px solid #EDF2F6`,
-              color: "#68737B",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-            }}
             title="Delete node"
             onClick={handleDelete}
             aria-label="Delete node"
           >
             <span className="text-[13px] font-medium leading-none">×</span>
-          </button>
+          </Button>
         )}
         <div className="node-hover-area absolute inset-0 z-[9] rounded-[10px]" />
-        <div
+        <Card
           data-testid="node-card"
           className={cn(
-            "relative overflow-hidden rounded-[12px] transition-shadow duration-150 group-hover:shadow-md",
-            isActive && "ring-jii-dark-green ring-2",
+            "relative gap-0 overflow-hidden py-0",
+            isActive && "border-primary ring-primary ring-2",
           )}
-          style={{
-            backgroundColor: "#FFFFFF",
-            border: `1px solid ${isActive ? "#005e5e" : "#E2E8F0"}`,
-            boxShadow: isActive
-              ? "0 8px 20px -6px rgba(0, 94, 94, 0.18), 0 2px 4px rgba(0, 0, 0, 0.04)"
-              : "0 4px 8px -4px rgba(15, 23, 42, 0.10), 0 1px 2px rgba(15, 23, 42, 0.04)",
-          }}
         >
           {/* Left accent bar — matches CellWrapper pattern */}
           <div className="absolute bottom-0 left-0 top-0 w-1" style={{ backgroundColor: accent }} />
@@ -106,7 +99,7 @@ export function BaseNode(props: BaseNodeProps) {
             dragging={nodeProps.dragging}
             isStartNode={isStartNode}
           />
-        </div>
+        </Card>
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import Link from "next/link";
 import type { IotDeviceGroupListItem } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
+import { Card } from "@repo/ui/components/card";
 
 /**
  * One group on the devices overview, in the card idiom the organizations,
@@ -20,13 +21,13 @@ export function GroupOverviewCard({ group }: { group: IotDeviceGroupListItem }) 
 
   return (
     <Link href={`/${locale}/platform/devices/groups/${group.id}`}>
-      <div className="relative flex h-full min-h-32 flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 transition-all hover:scale-[1.02] hover:shadow-lg">
+      <Card interactive className="relative h-full min-h-32 gap-3 p-5">
         <div className="mb-auto">
-          <h3 className="line-clamp-2 break-words text-base font-semibold text-gray-900">
+          <h3 className="text-foreground line-clamp-2 break-words text-base font-semibold">
             {group.name}
           </h3>
           {group.description !== null && (
-            <p className="mt-1 line-clamp-2 text-sm text-gray-500">{group.description}</p>
+            <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">{group.description}</p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-1">
@@ -35,8 +36,8 @@ export function GroupOverviewCard({ group }: { group: IotDeviceGroupListItem }) 
             {t("iot.groups.memberCount", { count: group.memberCount })}
           </Badge>
         </div>
-        <ChevronRight className="absolute bottom-5 right-5 h-6 w-6 text-gray-900 md:hidden" />
-      </div>
+        <ChevronRight className="text-foreground absolute bottom-5 right-5 h-6 w-6 md:hidden" />
+      </Card>
     </Link>
   );
 }

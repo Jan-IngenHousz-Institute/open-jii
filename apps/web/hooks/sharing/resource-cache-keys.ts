@@ -1,3 +1,4 @@
+import { listQueryKeys } from "@/hooks/list-query-keys";
 import { orpc } from "@/lib/orpc";
 import type { QueryKey } from "@tanstack/react-query";
 
@@ -12,11 +13,11 @@ const RESOURCE_CACHE_FAMILIES: Record<SharingResourceType, () => QueryKey[]> = {
   experiment: () => [
     orpc.experiments.getExperiment.key(),
     orpc.experiments.getExperimentAccess.key(),
-    orpc.experiments.listExperiments.key(),
+    ...listQueryKeys.experiments(),
   ],
-  macro: () => [orpc.macros.getMacro.key(), orpc.macros.listMacros.key()],
-  protocol: () => [orpc.protocols.getProtocol.key(), orpc.protocols.listProtocols.key()],
-  workbook: () => [orpc.workbooks.getWorkbook.key(), orpc.workbooks.listWorkbooks.key()],
+  macro: () => [orpc.macros.getMacro.key(), ...listQueryKeys.macros()],
+  protocol: () => [orpc.protocols.getProtocol.key(), ...listQueryKeys.protocols()],
+  workbook: () => [orpc.workbooks.getWorkbook.key(), ...listQueryKeys.workbooks()],
   device: () => [orpc.iot.getIotDevice.key(), orpc.iot.listIotDevices.key()],
   device_group: () => [orpc.iot.getIotDeviceGroup.key(), orpc.iot.listIotDeviceGroups.key()],
 };
@@ -38,22 +39,22 @@ export function resourceCacheKeys(
       return [
         orpc.experiments.getExperiment.queryKey({ input: { id: resourceId } }),
         orpc.experiments.getExperimentAccess.queryKey({ input: { id: resourceId } }),
-        orpc.experiments.listExperiments.key(),
+        ...listQueryKeys.experiments(),
       ];
     case "macro":
       return [
         orpc.macros.getMacro.queryKey({ input: { id: resourceId } }),
-        orpc.macros.listMacros.key(),
+        ...listQueryKeys.macros(),
       ];
     case "protocol":
       return [
         orpc.protocols.getProtocol.queryKey({ input: { id: resourceId } }),
-        orpc.protocols.listProtocols.key(),
+        ...listQueryKeys.protocols(),
       ];
     case "workbook":
       return [
         orpc.workbooks.getWorkbook.queryKey({ input: { id: resourceId } }),
-        orpc.workbooks.listWorkbooks.key(),
+        ...listQueryKeys.workbooks(),
       ];
     case "device":
       return [

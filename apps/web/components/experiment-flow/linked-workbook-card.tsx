@@ -265,14 +265,16 @@ export function LinkedWorkbookCard({
                       <ExternalLink className="ml-1 inline h-3 w-3 align-baseline opacity-50" />
                     </NextLink>
                     {canRename && (
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="icon-xs"
                         onClick={startRename}
                         aria-label={t("flow.renameWorkbook")}
-                        className="text-muted-foreground hover:text-foreground shrink-0 rounded p-0.5 transition-colors"
+                        className="text-muted-foreground hover:text-foreground shrink-0"
                       >
                         <Pencil className="h-3.5 w-3.5" />
-                      </button>
+                      </Button>
                     )}
                   </div>
 
@@ -293,15 +295,17 @@ export function LinkedWorkbookCard({
                       </span>
                     )}
                     {pinnedVersion && (
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="icon-xs"
                         onClick={() => setHistoryOpen(true)}
                         aria-label={t("flow.versionHistory.open")}
                         title={t("flow.versionHistory.open")}
-                        className="text-muted-foreground hover:text-foreground shrink-0 rounded p-0.5 transition-colors"
+                        className="text-muted-foreground hover:text-foreground shrink-0"
                       >
                         <History className="h-3.5 w-3.5" />
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </>
@@ -352,14 +356,14 @@ export function LinkedWorkbookCard({
           className={cn(
             "flex items-center justify-between gap-4 border-t px-4 py-2.5 transition-colors duration-300",
             upgradeState === "upgrading"
-              ? "animate-shimmer bg-linear-to-r bg-size-[200%_100%] from-[#CCFCD8]/20 via-[#CCFCD8]/50 to-[#CCFCD8]/20"
-              : "bg-[#CCFCD8]/30",
+              ? "animate-shimmer bg-linear-to-r bg-size-[200%_100%] from-status-active/20 via-status-active/50 to-status-active/20"
+              : "bg-status-active/30",
           )}
         >
           <div className="flex items-center gap-2">
             <Sparkles
               className={cn(
-                "h-3.5 w-3.5 text-emerald-600 transition-transform duration-300",
+                "text-status-active-foreground h-3.5 w-3.5 transition-transform duration-300",
                 upgradeState === "upgrading" && "animate-spin",
               )}
             />
@@ -384,7 +388,7 @@ export function LinkedWorkbookCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 gap-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
+            className="text-status-active-foreground hover:bg-status-active hover:text-status-active-foreground h-7 gap-1.5 text-xs font-medium"
             disabled={upgradeState === "upgrading"}
             onClick={() => setReviewOpen(true)}
           >
@@ -404,11 +408,11 @@ export function LinkedWorkbookCard({
       )}
 
       {upgradeState === "success" && (
-        <div className="animate-version-pop flex items-center gap-2 border-t bg-[#CCFCD8]/50 px-4 py-2.5">
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
-            <Check className="h-3 w-3 text-white" />
+        <div className="animate-version-pop bg-status-active/50 flex items-center gap-2 border-t px-4 py-2.5">
+          <div className="bg-status-active-foreground flex h-5 w-5 items-center justify-center rounded-full">
+            <Check className="text-status-active h-3 w-3" />
           </div>
-          <p className="text-xs font-medium text-emerald-800">
+          <p className="text-status-active-foreground text-xs font-medium">
             Upgraded to v{latestVersion.version}
           </p>
         </div>

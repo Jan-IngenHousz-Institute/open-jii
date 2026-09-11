@@ -23,9 +23,9 @@ const bannerVariants = cva(
   {
     variants: {
       severity: {
-        info: "bg-quaternary border-b border-primary/5",
-        warning: "bg-highlight-light border-b border-primary/5",
-        critical: "bg-red-50 border-b border-red-900/5",
+        info: "bg-secondary border-b border-primary/5",
+        warning: "bg-accent/70 border-b border-primary/5",
+        critical: "bg-destructive/10 border-b border-destructive/5",
       },
     },
     defaultVariants: { severity: "info" },
@@ -35,9 +35,9 @@ const bannerVariants = cva(
 const blobVariants = cva("h-28 w-56 rounded-full", {
   variants: {
     severity: {
-      info: "from-jii-bright-green/25 to-jii-light-blue/30",
-      warning: "from-highlight/40 to-jii-bright-green/15",
-      critical: "from-red-300/30 to-rose-200/20",
+      info: "from-primary/25 to-accent/30",
+      warning: "from-accent/40 to-primary/15",
+      critical: "from-destructive/30 to-destructive/20",
     },
   },
   defaultVariants: { severity: "info" },
@@ -46,9 +46,9 @@ const blobVariants = cva("h-28 w-56 rounded-full", {
 const badgeVariants = cva("flex h-7 w-7 flex-none items-center justify-center rounded-full", {
   variants: {
     severity: {
-      info: "bg-primary/10 text-gray-700 border border-primary/5",
-      warning: "bg-highlight/80 text-gray-700 border border-primary/5",
-      critical: "bg-red-200 text-gray-700 border border-red-900/5",
+      info: "bg-primary/10 text-foreground border border-primary/5",
+      warning: "bg-accent/80 text-foreground border border-primary/5",
+      critical: "bg-destructive/10 text-foreground border border-destructive/5",
     },
   },
   defaultVariants: { severity: "info" },
@@ -58,8 +58,10 @@ const actionButtonVariants = cva("ml-3 flex-none", {
   variants: {
     severity: {
       info: "",
-      warning: "bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white",
-      critical: "bg-red-700 hover:bg-red-600 active:bg-red-800 text-white",
+      warning:
+        "bg-status-stale-foreground text-status-stale hover:bg-status-stale-foreground/90 active:bg-status-stale-foreground",
+      critical:
+        "bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive",
     },
   },
   defaultVariants: { severity: "info" },
@@ -115,7 +117,7 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({ alert, onDismiss }) =>
             <div className={`${blobVariants({ severity })} bg-gradient-to-l`} />
           </div>
 
-          <div className="flex min-w-0 flex-1 items-center justify-center gap-x-3 text-gray-900">
+          <div className="text-foreground flex min-w-0 flex-1 items-center justify-center gap-x-3">
             {(() => {
               const Icon = typeIcons[alert.type ?? ""];
 
@@ -126,7 +128,7 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({ alert, onDismiss }) =>
               ) : null;
             })()}
 
-            <div className="min-w-0 text-sm/6 text-gray-900">
+            <div className="text-foreground min-w-0 text-sm/6">
               <strong className="font-semibold" {...inspectorProps({ fieldId: "title" })}>
                 {alert.title}
               </strong>
@@ -135,7 +137,7 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({ alert, onDismiss }) =>
                 <svg
                   viewBox="0 0 2 2"
                   aria-hidden="true"
-                  className="mx-1.5 inline size-0.5 fill-current text-gray-700"
+                  className="text-foreground mx-1.5 inline size-0.5 fill-current"
                 >
                   <circle r="1" cx="1" cy="1" />
                 </svg>
@@ -143,7 +145,7 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({ alert, onDismiss }) =>
 
               {alert.body?.json && (
                 <span
-                  className="text-gray-700 [&>*]:inline [&_a]:font-medium [&_a]:underline [&_a]:underline-offset-2 [&_h1]:hidden [&_h2]:hidden [&_h3]:hidden [&_h4]:hidden [&_h5]:hidden [&_h6]:hidden [&_p]:m-0 [&_p]:inline [&_p]:text-sm"
+                  className="text-foreground [&>*]:inline [&_a]:font-medium [&_a]:underline [&_a]:underline-offset-2 [&_h1]:hidden [&_h2]:hidden [&_h3]:hidden [&_h4]:hidden [&_h5]:hidden [&_h6]:hidden [&_p]:m-0 [&_p]:inline [&_p]:text-sm"
                   {...inspectorProps({ fieldId: "body" })}
                 >
                   <CtfRichText json={alert.body.json as Document} />
@@ -170,7 +172,7 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({ alert, onDismiss }) =>
               size="icon"
               onClick={handleDismissClick}
               aria-label="Dismiss alert"
-              className="flex-none text-gray-600 hover:bg-black/10"
+              className="text-muted-foreground hover:bg-foreground/10 flex-none"
             >
               <X className="size-4" />
             </Button>

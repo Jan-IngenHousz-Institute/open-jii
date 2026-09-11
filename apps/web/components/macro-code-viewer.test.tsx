@@ -29,14 +29,9 @@ describe("MacroCodeViewer", () => {
 
     expect(screen.getByTestId("code-editor")).toHaveAttribute("data-language", "javascript");
     expect(screen.getByTestId("code-editor-textarea")).toHaveValue(code);
-    const matches = screen.getAllByText(
-      (_content, el) =>
-        el instanceof HTMLDivElement &&
-        el.classList.contains("text-xs") &&
-        el.textContent.includes("3") === true &&
-        el.textContent.includes("common.lines") === true,
-    );
-    expect(matches.length).toBeGreaterThanOrEqual(1);
+    // The shared frame renders the stats line as one string, so assert it
+    // whole rather than sniffing for an element that happens to contain both.
+    expect(screen.getByText(/^3 common\.lines - \d+ common\.bytes$/)).toBeInTheDocument();
   });
 
   it("copies code to clipboard", async () => {

@@ -302,3 +302,42 @@ describe("AmbitDriver", () => {
     expect(result.error?.message).toBe("Response timeout");
   });
 });
+
+describe("AmbitDriver sensor_id", () => {
+  // The firmware nests its eFuse MAC as sample[].set[].sensor_id and never
+  // emits a top-level device_id, so the platform saw only the transient
+  // USB id until the driver lifted it.
+  const TRACE =
+    '{"device_name":"Ambit","device_firmware":"1.1.4","sample":[{"protocol_id":"NaN","set":[' +
+    '{"par_raw":11.35},{"schema":"ambit.trace/3","sensor_id":"10:91:A8:4F:53:48"}]}]}';
+
+  it("lifts the trace sensor_id into device_id and reports it as the identity", async () => {
+    const protocol = [{ label: "arrun,1,0,2,0,0,9,0,1,0,1" }];
+    const transport = tableTransport({
+      "hello\n": HELLO_REPLY,
+      [`${JSON.stringify(protocol)}\n`]: [TRACE, "7A1E3AA1\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<{ device_id?: string }>(protocol);
+
+    expect(result.success).toBe(true);
+    expect(result.data?.device_id).toBe("10:91:A8:4F:53:48");
+  });
+
+  it("leaves a firmware-supplied device_id alone", async () => {
+    const protocol = [{ label: "arrun,1,0,2,0,0,9,0,1,0,1" }];
+    const withDeviceId = TRACE.replace('"device_name"', '"device_id":"FW-SET","device_name"');
+    const transport = tableTransport({
+      "hello\n": HELLO_REPLY,
+      [`${JSON.stringify(protocol)}\n`]: [withDeviceId, "7A1E3AA1\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<{ device_id?: string }>(protocol);
+
+    expect(result.data?.device_id).toBe("FW-SET");
+  });
+});

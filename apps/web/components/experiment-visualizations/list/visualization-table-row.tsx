@@ -1,5 +1,7 @@
 "use client";
 
+import { StatusBadge } from "@/components/shared/status-badge";
+import type { StatusTone } from "@/components/shared/status-badge";
 import { useExperimentVisualizationDelete } from "@/hooks/experiment/useExperimentVisualizationDelete/useExperimentVisualizationDelete";
 import { formatDate } from "@/util/date";
 import { initialsOf } from "@/util/initials";
@@ -24,6 +26,7 @@ import {
   AlertDialogTitle,
 } from "@repo/ui/components/alert-dialog";
 import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
+import { Button } from "@repo/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,15 +37,20 @@ import { TableCell, TableRow } from "@repo/ui/components/table";
 import { toast } from "@repo/ui/hooks/use-toast";
 import { cn } from "@repo/ui/lib/utils";
 
+import {
+  LIST_TABLE_BORDER,
+  LIST_TEXT_MUTED,
+  LIST_TEXT_STRONG,
+} from "../../experiment-dashboards/list/table/experiment-dashboards-list-tokens";
 import { getChartTypeDef } from "../charts/chart-registry";
 
-// Type-pill background keyed off chart family so the list scales without
-// per-type bookkeeping. Unsupported types fall through to the neutral token.
-const FAMILY_BADGE_CLASS: Record<ExperimentChartFamily, string> = {
-  basic: "bg-badge-published",
-  statistical: "bg-badge-stale",
-  scientific: "bg-badge-archived",
-  "3d": "bg-badge-archived",
+// Type-pill tone keyed off chart family so the list scales without per-type
+// bookkeeping. Unsupported types fall through to the neutral tone.
+const FAMILY_BADGE_TONE: Record<ExperimentChartFamily, StatusTone> = {
+  basic: "published",
+  statistical: "stale",
+  scientific: "archived",
+  "3d": "archived",
 };
 
 export interface VisualizationTableRowProps {
@@ -72,7 +80,7 @@ export function VisualizationTableRow({
   const author = visualization.createdByName ?? `${visualization.createdBy.slice(0, 8)}…`;
   const def = getChartTypeDef(visualization.chartType);
   const typeLabel = t(def.labelKey);
-  const typeBadgeClass = badgeClassFor(visualization.chartType);
+  const typeBadgeTone = badgeToneFor(visualization.chartType);
 
   const handleConfirmDelete = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -89,8 +97,8 @@ export function VisualizationTableRow({
 
   return (
     <>
-      <TableRow className="group border-[#CDD5DB] bg-white hover:bg-[#F6F8FA]">
-        <TableCell className="px-6 py-3 text-[13px] font-semibold text-[#011111]">
+      <TableRow className={cn("bg-card hover:bg-muted group", LIST_TABLE_BORDER)}>
+        <TableCell className={cn("px-6 py-3 text-[13px] font-semibold", LIST_TEXT_STRONG)}>
           <Link
             href={viewHref}
             className="focus-visible:ring-primary/40 focus-visible:outline-hidden hover:underline focus-visible:ring-2"
@@ -99,39 +107,34 @@ export function VisualizationTableRow({
           </Link>
         </TableCell>
         <TableCell className="px-6 py-3">
-          <span
-            className={cn(
-              "text-muted-dark inline-block rounded-full px-2 py-0.5 text-[11px] font-medium",
-              typeBadgeClass,
-            )}
-          >
-            {typeLabel}
-          </span>
+          <StatusBadge tone={typeBadgeTone}>{typeLabel}</StatusBadge>
         </TableCell>
         <TableCell className="px-6 py-3">
           <div className="flex items-center gap-2">
             <Avatar className="size-6">
-              <AvatarFallback className="text-[10px] font-medium text-[#68737B]">
+              <AvatarFallback className={cn("text-[10px] font-medium", LIST_TEXT_MUTED)}>
                 {initialsOf(author)}
               </AvatarFallback>
             </Avatar>
-            <span className="text-[13px] text-[#68737B]">{author}</span>
+            <span className={cn("text-[13px]", LIST_TEXT_MUTED)}>{author}</span>
           </div>
         </TableCell>
-        <TableCell className="px-6 py-3 text-[13px] tabular-nums text-[#68737B]">
+        <TableCell className={cn("px-6 py-3 text-[13px] tabular-nums", LIST_TEXT_MUTED)}>
           {formatDate(visualization.updatedAt)}
         </TableCell>
         <TableCell className="w-12 px-3 py-3 text-right">
           <div className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-sm"
                   aria-label={t("ui.actions.moreActions")}
-                  className="hover:bg-accent data-[state=open]:bg-accent inline-flex size-8 items-center justify-center rounded-md text-[#68737B] hover:text-[#011111] data-[state=open]:text-[#011111]"
+                  className={cn("data-[state=open]:bg-accent size-8", LIST_TEXT_MUTED)}
                 >
                   <MoreHorizontal className="size-4" />
-                </button>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem asChild>
@@ -140,10 +143,7 @@ export function VisualizationTableRow({
                     {t("ui.actions.edit")}
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={handleOpenDeleteDialog}
-                  className="text-destructive focus:text-destructive"
-                >
+                <DropdownMenuItem variant="destructive" onSelect={handleOpenDeleteDialog}>
                   <Trash2 className="mr-2 size-4" />
                   {t("ui.actions.delete")}
                 </DropdownMenuItem>
@@ -177,6 +177,6 @@ export function VisualizationTableRow({
   );
 }
 
-function badgeClassFor(chartType: ExperimentChartType): string {
-  return FAMILY_BADGE_CLASS[getChartTypeDef(chartType).family];
+function badgeToneFor(chartType: ExperimentChartType): StatusTone {
+  return FAMILY_BADGE_TONE[getChartTypeDef(chartType).family];
 }

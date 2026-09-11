@@ -63,7 +63,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
       >
         <Button
           variant="secondary"
-          className="shadow-xs group px-5 py-6 font-semibold transition-all duration-300 ease-out hover:scale-[1.03] hover:bg-white"
+          className="shadow-xs hover:bg-card group px-5 py-6 font-semibold transition-all duration-300 ease-out hover:scale-[1.03]"
           {...buttonInspectorProps({ fieldId: "label" })}
         >
           <div className="flex items-center space-x-2">
@@ -75,8 +75,21 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
     );
   };
 
+  // The scrim darkens the photo identically in both themes, so it and the
+  // foregrounds it pairs with are fixed literals rather than theme tokens.
+  // eslint-disable-next-line no-restricted-syntax -- fixed neutral photo scrim
+  const heroScrim = "bg-gradient-to-b from-black/70 via-black/50 to-transparent";
+  // eslint-disable-next-line no-restricted-syntax -- pairs with heroScrim
+  const heroForeground = "text-white";
+  // eslint-disable-next-line no-restricted-syntax -- pairs with heroScrim
+  const heroSubtitle = "text-white/80";
+  // eslint-disable-next-line no-restricted-syntax -- pairs with heroScrim
+  const heroBadge = "bg-white/10 ring-white/20";
+
   return (
-    <section className="relative isolate -mt-16 min-h-screen w-full overflow-hidden bg-white">
+    <section
+      className={`relative isolate -mt-16 min-h-screen w-full overflow-hidden ${heroForeground}`}
+    >
       {/* Background image block */}
       <div className="absolute inset-0 -z-10" {...inspectorProps({ fieldId: "image" })}>
         {currentHero.image?.url && (
@@ -90,7 +103,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
         )}
 
         {/* Black transparent vertical fade */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-transparent" />
+        <div className={`absolute inset-0 ${heroScrim}`} />
 
         {/* Radial center fade */}
         <div
@@ -109,7 +122,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
           {/* Badge */}
           {currentHero.badge && (
             <div
-              className="backdrop-blur-xs mb-6 inline-flex items-center rounded-full bg-white/10 px-4 py-1.5 text-sm text-white ring-1 ring-white/20"
+              className={`backdrop-blur-xs mb-6 inline-flex items-center rounded-full px-4 py-1.5 text-sm ring-1 ${heroBadge}`}
               {...inspectorProps({ fieldId: "badge" })}
             >
               {currentHero.badge}
@@ -117,14 +130,14 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
           )}
           {/* Title */}
           <h1
-            className="text-5xl font-semibold tracking-tight text-white sm:text-7xl"
+            className="text-5xl font-semibold tracking-tight sm:text-7xl"
             {...inspectorProps({ fieldId: "title" })}
           >
             {currentHero.title}
           </h1>
           {/* Subtitle */}
           <p
-            className="mt-6 text-lg font-medium text-gray-200 sm:text-xl"
+            className={`mt-6 text-lg font-medium sm:text-xl ${heroSubtitle}`}
             {...inspectorProps({ fieldId: "subtitle" })}
           >
             {currentHero.subtitle}
@@ -142,7 +155,7 @@ export const HomeHero: React.FC<HomeHeroProps> = ({ heroData, preview, locale })
 
       {/* Bouncing down arrow */}
       <div className="absolute inset-x-0 bottom-8 flex animate-bounce justify-center">
-        <ChevronDown className="mx-auto h-8 w-8 text-white" />
+        <ChevronDown className="mx-auto h-8 w-8" />
       </div>
     </section>
   );

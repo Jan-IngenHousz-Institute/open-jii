@@ -1,0 +1,391 @@
+{
+  "schemaVersion": 1,
+  "captureContext": {
+    "capturedOn": "2026-08-28",
+    "surface": "apps/web on the local development stack",
+    "environment": "local",
+    "account": "seed@openjii.local (seeded development identity)",
+    "data": "pnpm --filter database db:seed fixtures only",
+    "frame": "1920x1200 desktop, rendered and published 1:1; see media/web/README.md",
+    "captureMethod": "pnpm --filter @repo/e2e capture-docs-media; Playwright at 1920x1200, then ffmpeg metadata strip plus libwebp quality 90 for stills and libvpx-vp9 for recordings",
+    "frames": "apps/e2e/docs-media/frames.ts",
+    "shots": "apps/e2e/docs-media/shots.ts"
+  },
+  "review": {
+    "status": "passed-for-listed-assets",
+    "notes": [
+      "Every frame was reviewed at full size, and both recordings were played end to end, before publishing.",
+      "Only seeded identities and seeded resource names appear; no real user, experiment or organization content is visible.",
+      "No tokens, API keys, session values or precise locations are visible. The API-key capture is guarded by assertNoSecretVisible, which fails the shot rather than screenshot the one-time key dialog; an earlier staged frame that did show it was discarded unpublished.",
+      "The passkey and API-key shots clear existing rows before creating one, so the local seed account is left no more populated than it started: one named passkey and one named API key.",
+      "Next.js and TanStack Query development overlays are suppressed by the capture tool; a production build renders none of them.",
+      "The sign-out toast on the last-used-badge shot is closed through its own control rather than hidden with CSS.",
+      "The dashboard and shell frames include CMS blog cards, one of whose artwork is a screenshot of the pre-refresh dashboard. That is Contentful content and out of scope here."
+    ]
+  },
+  "assets": [
+    {
+      "path": "/img/guide/web/dashboard.webp",
+      "slug": "dashboard",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 170652,
+      "sha256": "4cabaedfeace33ae842e5bc1534ec7a38279d49a22d3b767d6bec585ad40cbf6",
+      "disposition": "published",
+      "scope": "Authenticated dashboard: welcome card, recent experiments, compact contextual header"
+    },
+    {
+      "path": "/img/guide/web/experiments-list.webp",
+      "slug": "experiments-list",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 135970,
+      "sha256": "6f275d76c879e44f848090a76ff2b9f81325e1b68d57008b73025c24c54d4109",
+      "disposition": "published",
+      "scope": "Experiments overview: search, contextual header actions, bordered fixed-layout table"
+    },
+    {
+      "path": "/img/guide/web/create-experiment-entry.webp",
+      "slug": "create-experiment-entry",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 135970,
+      "sha256": "6f275d76c879e44f848090a76ff2b9f81325e1b68d57008b73025c24c54d4109",
+      "disposition": "published",
+      "scope": "Experiments overview with the Create Experiment action in the contextual header"
+    },
+    {
+      "path": "/img/guide/web/create-experiment-details.webp",
+      "slug": "create-experiment-details",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 40152,
+      "sha256": "3e9b52fbc94df1fb6aabfd5f7c311241c9bc07447ffeb3204c347fa75bcea9d7",
+      "disposition": "published",
+      "scope": "Details step of the four-step create-experiment wizard"
+    },
+    {
+      "path": "/img/guide/web/organizations-list.webp",
+      "slug": "organizations-list",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 69790,
+      "sha256": "5e47bc069f7c6d70ef3d3cfa69c7d9db18870e0a2b2b88c8327b2fd57f912ae3",
+      "disposition": "published",
+      "scope": "Ownership-ranked Organizations overview with member and resource counts"
+    },
+    {
+      "path": "/img/guide/web/organization-create-visibility.webp",
+      "slug": "organization-create-visibility",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 41990,
+      "sha256": "27b77f1c59473ec71ee95bf4cc8be5830a0ff7b8969a5d59c02fedc312216efe",
+      "disposition": "published",
+      "scope": "Create-organization wizard, Profile and visibility step, Private selected"
+    },
+    {
+      "path": "/img/guide/web/organization-members.webp",
+      "slug": "organization-members",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 59206,
+      "sha256": "5b47bf478e046fd55238c926f59af1f6e2e9346b4084195b580faa7b82d705c3",
+      "disposition": "published",
+      "scope": "Organization Members screen: Members/Invited/Requests segments and the role roster"
+    },
+    {
+      "path": "/img/guide/web/organization-team.webp",
+      "slug": "organization-team",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 52156,
+      "sha256": "a1e3221520105bc2885c57f6d6fceb463b64f3118be02a02b4aca183ac9a5d46",
+      "disposition": "published",
+      "scope": "A team page with its members above what the team can reach"
+    },
+    {
+      "path": "/img/guide/web/collaborators.webp",
+      "slug": "collaborators",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 61166,
+      "sha256": "247e3b380987dcbf23ef6d7c72eef4d3a24ad1c283ab234f45c2bd8d567c6d36",
+      "disposition": "published",
+      "scope": "Collaborators tab showing every row kind the access model can produce"
+    },
+    {
+      "path": "/img/guide/web/workbook-design.webp",
+      "slug": "workbook-design",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 71088,
+      "sha256": "5e9b662f9abcf5436ead7b0015a24a96e3a3fcf67fed4f3ab26035d340a11072",
+      "disposition": "published",
+      "scope": "Experiment Design tab with its linked workbook and field-flow cells"
+    },
+    {
+      "path": "/img/guide/web/report-issue.webp",
+      "slug": "report-issue",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 170652,
+      "sha256": "4cabaedfeace33ae842e5bc1534ec7a38279d49a22d3b767d6bec585ad40cbf6",
+      "disposition": "published",
+      "scope": "Report bug action in the dashboard welcome card"
+    },
+    {
+      "path": "/img/guide/web/login-signup.webp",
+      "slug": "login-signup",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 127300,
+      "sha256": "f4943e8fadf2580933f2b6340e761de90a0abf38e1b8427cb487ba28f54f751b",
+      "disposition": "published",
+      "scope": "Log in or sign up screen with email, GitHub, ORCID and passkey sign-in"
+    },
+    {
+      "path": "/img/guide/web/visibility-embargo.webp",
+      "slug": "visibility-embargo",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 43394,
+      "sha256": "1acf715261d9bf1e24ed10c89a5a5fef3b6543b83c2b143d4188449dedeac307",
+      "disposition": "published",
+      "scope": "Collaborators and Visibility step, Private selected, embargo end date and calculated public date"
+    },
+    {
+      "path": "/img/guide/web/resource-transfer.webp",
+      "slug": "resource-transfer",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 43810,
+      "sha256": "61427daed1503c7e309a2ec2d0a1b3b8eb1c364f498a09d82df5eb2dd1afebf0",
+      "disposition": "published",
+      "scope": "Transfer dialog with its destination list open, including the grouped Personal workspace option"
+    },
+    {
+      "path": "/img/guide/web/project-transfer.webp",
+      "slug": "project-transfer",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 72320,
+      "sha256": "03bd4e4f4c0361dc8decaf2c7cc0d9da9df14488ab83b2f1670293dff2d1c18c",
+      "disposition": "published",
+      "scope": "The blank Request Project Transfer form"
+    },
+    {
+      "path": "/img/guide/web/project-transfer-history.webp",
+      "slug": "project-transfer-history",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 45510,
+      "sha256": "64a2b7a88dd729cf4afc36b5782486117605e3a08b613545262529d9bc3e467c",
+      "disposition": "published",
+      "scope": "Previous Requests tab before any project transfer has been submitted"
+    },
+    {
+      "path": "/img/guide/web/delete-account-blockers.webp",
+      "slug": "delete-account-blockers",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 84636,
+      "sha256": "ea1d467bde8f27b986fa068ed39b50c9110f6de8d7bf50dfa1ed4dd8d92c65f1",
+      "disposition": "published",
+      "scope": "Delete Account dialog blocked by sole organization ownership and sole answerability for an experiment"
+    },
+    {
+      "path": "/img/guide/web/protocol-picker.webp",
+      "slug": "protocol-picker",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 50628,
+      "sha256": "7ad7cdf75c3d1a9e50edc102857a7b80de5c7f9ed9bf709200c08103a57abdc7",
+      "disposition": "published",
+      "scope": "The searchable protocol picker filtered by name, with creators and sensor-family badges"
+    },
+    {
+      "path": "/img/chrome-refresh/sidebar-peek.webp",
+      "slug": "sidebar-peek",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 161928,
+      "sha256": "678c1ed49d842c0822922f5e7b32c5a4c32b29066f370b0ee944bd27327439e6",
+      "disposition": "published",
+      "scope": "Collapsed sidebar peeking open on hover"
+    },
+    {
+      "path": "/img/chrome-refresh/command-palette.webp",
+      "slug": "command-palette",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 106132,
+      "sha256": "ad3e054648122174ab1a90b809ab38562368ba54906453175746e8a89b32070f",
+      "disposition": "published",
+      "scope": "Command palette open over the dashboard"
+    },
+    {
+      "path": "/img/chrome-refresh/cheatsheet.webp",
+      "slug": "cheatsheet",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 147788,
+      "sha256": "1605a5e827d1d8a79c1acd5070db5c46d2127a6d7bdec099be76a24db95c01ff",
+      "disposition": "published",
+      "scope": "Keyboard shortcut cheatsheet"
+    },
+    {
+      "path": "/img/chrome-refresh/activity-bell.webp",
+      "slug": "activity-bell",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 176466,
+      "sha256": "ef7f60e30fadf631583d921263f8abd9cdc829366085ee9a3a90dc38f409dce5",
+      "disposition": "published",
+      "scope": "Activity feed opened from the sidebar"
+    },
+    {
+      "path": "/img/workbooks/ux-sidebar.webp",
+      "slug": "ux-sidebar",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 62150,
+      "sha256": "faf802ceb653db797aa4c422073232bf81e9d50944bfea67c89369e71d3bd09b",
+      "disposition": "published",
+      "scope": "Workbook editor with the block outline beside the cell list"
+    },
+    {
+      "path": "/img/workbooks/ux-question.webp",
+      "slug": "ux-question",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 48708,
+      "sha256": "6d45006f020a978d346ff5545865b8b2b9d1501b34d4961d237770498bc2236f",
+      "disposition": "published",
+      "scope": "A question cell being authored in the workbook editor"
+    },
+    {
+      "path": "/img/workbooks/ux-rename.webp",
+      "slug": "ux-rename",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 62778,
+      "sha256": "eafe033d03e614e27770147b91c2c25b520147db98772afbdbf6fc113f1e0f51",
+      "disposition": "published",
+      "scope": "Renaming a workbook cell so downstream ctx references stay readable"
+    },
+    {
+      "path": "/img/workbooks/workbook-ux-improvements.webm",
+      "slug": "workbook-ux-improvements",
+      "kind": "recording",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 324536,
+      "sha256": "47b7950127e0531b6571fb824d0bdea2e66ce333f431f8424037a03caced48f1",
+      "disposition": "published",
+      "scope": "Cell rename, adding a question cell, and the block outline tracking both"
+    },
+    {
+      "path": "/img/workbooks/workbook-ux-improvements-poster.webp",
+      "slug": "workbook-ux-improvements-poster",
+      "kind": "poster",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 68798,
+      "sha256": "ec9e276b12e67054812cc386653ddc5e194f664c5a429078f47b19e782c45926",
+      "disposition": "published",
+      "scope": "First frame of workbook-ux-improvements.webm"
+    },
+    {
+      "path": "/img/guide/web/account-security/passkeys-table.webp",
+      "slug": "passkeys-table",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 34566,
+      "sha256": "cc1175c012e7de87d455698e834589358fabcd37bb0a548b8e42d93b21eae8ac",
+      "disposition": "published",
+      "scope": "Security tab listing one registered, named passkey"
+    },
+    {
+      "path": "/img/guide/web/account-security/api-keys-table.webp",
+      "slug": "api-keys-table",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 26532,
+      "sha256": "b2727a7f402b3e948c287cacae946e563dc0d3a425195e89eced1379e5897fa0",
+      "disposition": "published",
+      "scope": "API keys tab listing one active key with its masked prefix; no secret is visible"
+    },
+    {
+      "path": "/img/guide/web/account-security/last-used-badge.webp",
+      "slug": "last-used-badge",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 108796,
+      "sha256": "a2b78603be16133f5e7ed15161e19c6313c0b16624816566537b40bc46886e9b",
+      "disposition": "published",
+      "scope": "Login page with the Last used badge on the previously used sign-in method"
+    },
+    {
+      "path": "/img/guide/web/account-security/passkey-flows.webm",
+      "slug": "passkey-flows",
+      "kind": "recording",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 294109,
+      "sha256": "d2f561f708fa2d6fb669f27af9fcbcdcfd2a9b73d90cfdba03bf6f851387a43d",
+      "disposition": "published",
+      "scope": "Registering a passkey with a platform authenticator, then naming it"
+    },
+    {
+      "path": "/img/guide/web/account-security/passkey-flows-poster.webp",
+      "slug": "passkey-flows-poster",
+      "kind": "poster",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 38956,
+      "sha256": "9467f4ac44bf5c518133e6f720ce222a44a426d590ca8ed523231f7281611591",
+      "disposition": "published",
+      "scope": "First frame of passkey-flows.webm"
+    }
+  ],
+  "unmetCaptures": [
+    "TIER 4 - api-key-create.gif: the flow's whole subject is the one-time dialog that displays the secret. Any faithful recording publishes a working credential, so this is refused on principle rather than blocked by tooling.",
+    "TIER 4 - passkey-prompt.gif: the post-sign-in 'add a passkey' invitation only appears on a real interactive sign-in, which needs the email-OTP round trip inside the recording; not scripted.",
+    "TIER 4 - login-last-used.gif: same OTP round trip. The resulting still (last-used-badge.webp) is published; the motion version is not.",
+    "TIER 2 - protocol-fork.png: 'Fork to edit' only renders on a protocol owned by another user, and every seeded protocol belongs to the seed account.",
+    "TIER 3 - workbook-version-history.png: the seed fixture ships one version per workbook and the seeded workbook exposes no Publish control in its current state, so there is no history to show. Attempted and discarded unpublished.",
+    "TIER 3 - workbook-demo.webm, versioning-demo.webm, multi-device-demo.webm: still pre-refresh, still off-frame (1366x900 and 1600x1000). versioning-demo depends on the version-history blocker above; multi-device-demo needs physical hardware.",
+    "TIER 5 - data-first-measurement.png, charts-filters.png, ambyte-data.png, export-dialog.png, metadata-import.png: every lakehouse-backed surface is deliberately unreachable on the local stack, and the two dialogs open from a populated Data tab.",
+    "TIER 6 - quick-start-web.webm: its middle beat is the populated Data tab, so it inherits the tier 5 blocker.",
+    "TIER 7 - /img/mobile/*: the phone UI is untouched by this redesign and re-recording needs a physical device."
+  ]
+}

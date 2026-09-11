@@ -1,3 +1,4 @@
+import { listQueryKeys } from "@/hooks/list-query-keys";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -11,14 +12,18 @@ export const useMacroDelete = () => {
   return useMutation(
     orpc.macros.deleteMacro.mutationOptions({
       onMutate: async (variables) => {
-        await queryClient.cancelQueries({ queryKey: orpc.macros.listMacros.key() });
+        for (const queryKey of listQueryKeys.macros()) {
+          await queryClient.cancelQueries({ queryKey });
+        }
 
         queryClient.removeQueries({
           queryKey: orpc.macros.getMacro.queryKey({ input: { id: variables.id } }),
         });
       },
       onSettled: async () => {
-        await queryClient.invalidateQueries({ queryKey: orpc.macros.listMacros.key() });
+        for (const queryKey of listQueryKeys.macros()) {
+          await queryClient.invalidateQueries({ queryKey });
+        }
       },
     }),
   );

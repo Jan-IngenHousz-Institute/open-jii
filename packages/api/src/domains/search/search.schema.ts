@@ -4,12 +4,18 @@ import { z } from "zod";
 export const zGlobalSearchQuery = z.object({
   query: z.string().trim().min(1).max(200).describe("Search term"),
   // The backend overfetches `limit` per entity type and merges by score, so this also bounds the
-  // heaviest query the palette can issue (4 types x limit candidate rows).
+  // heaviest query the palette can issue (5 types x limit candidate rows).
   limit: z.coerce.number().int().min(1).max(32).optional().default(20),
 });
 
 /** Entity types surfaced by global search (users are intentionally excluded — no profile page). */
-export const zSearchResultType = z.enum(["experiment", "protocol", "macro", "workbook"]);
+export const zSearchResultType = z.enum([
+  "experiment",
+  "protocol",
+  "macro",
+  "workbook",
+  "organization",
+]);
 
 /** A single normalized, ranked search result. */
 export const zSearchResult = z.object({
@@ -18,8 +24,9 @@ export const zSearchResult = z.object({
   title: z.string(),
   subtitle: z.string().nullable(),
   /**
-   * Short type-specific label shown beside the title (e.g. a macro's language or a protocol's
-   * sensor family). `null` when the type has no such label (experiments).
+   * Short type-specific label shown beside the title (e.g. a macro's language, a protocol's
+   * sensor family or an organization's type). `null` when the type has no such label
+   * (experiments, workbooks) or when the row leaves it unset (organizations).
    */
   meta: z.string().nullable(),
 });

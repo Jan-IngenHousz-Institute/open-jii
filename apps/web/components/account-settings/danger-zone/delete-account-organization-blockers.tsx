@@ -1,5 +1,6 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { Building2, ExternalLink } from "lucide-react";
 
 import type { DeletionBlockerOrganization } from "@repo/api/domains/user/user.schema";
@@ -30,7 +31,7 @@ export function DeleteAccountOrganizationBlockers({
   const { t } = useTranslation("account");
 
   return (
-    <div className="border-destructive/30 bg-muted flex shrink-0 flex-col gap-3 rounded-md border p-3 text-sm shadow-sm">
+    <InsetPanel tone="destructive" className="flex shrink-0 flex-col gap-3 text-sm">
       <div className="flex items-start gap-3">
         <div className="bg-destructive/10 text-destructive flex h-9 w-9 shrink-0 items-center justify-center rounded-md">
           <Building2 className="h-5 w-5" />
@@ -61,7 +62,7 @@ export function DeleteAccountOrganizationBlockers({
               href={`/${locale}/platform/organizations/${organization.id}/members`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex h-7 min-w-0 max-w-[46%] shrink-0 items-center gap-1 rounded-md px-2 text-xs transition-colors sm:max-w-none"
+              className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex h-7 min-w-0 max-w-[46%] shrink-0 items-center gap-1 rounded-md px-2 text-xs transition-colors sm:max-w-none"
             >
               <span className="truncate">
                 {t("dangerZone.delete.organizationBlockers.manageLink")}
@@ -71,6 +72,6 @@ export function DeleteAccountOrganizationBlockers({
           </li>
         ))}
       </ul>
-    </div>
+    </InsetPanel>
   );
 }

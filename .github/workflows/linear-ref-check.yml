@@ -20,35 +20,50 @@ jobs:
           script: |
             const pr = context.payload.pull_request;
             const title = pr.title || "";
-            const branch = pr.head?.ref || "";
             const body = pr.body || "";
             const author = (pr.user?.login || "").toLowerCase();
+            const authorType = (pr.user?.type || "").toLowerCase();
             const labels = (pr.labels || []).map(l => l.name.toLowerCase());
 
-            if (/ojd-\d+/i.test(title) || /ojd-\d+/i.test(branch) || /ojd-\d+/i.test(body)) {
-              core.info("Linear reference found ✓");
+            const approvedBots = new Set(["dependabot[bot]", "renovate[bot]", "github-actions[bot]"]);
+            const isBot = authorType === "bot" || approvedBots.has(author);
+            if (isBot) {
+              core.info("Bot-authored PR; metadata check is exempt.");
               return;
             }
 
-            const isBot = author.endsWith("[bot]")
-              || ["dependabot", "renovate", "github-actions"].some(b => author.includes(b));
+            const conventionalTitle = /^(feat|fix|perf|revert|docs|style|chore|refactor|test|build|ci)(\([^)\r\n]+\))?!?:\s+\S/i;
+            if (!conventionalTitle.test(title)) {
+              core.setFailed([
+                "PR title is not a valid Conventional Commit.",
+                "",
+                "Use: <type>(<optional-scope>): <description>",
+                "Example: feat(web): add filters shelf",
+                "",
+                "Allowed types: feat, fix, perf, revert, docs, style, chore, refactor, test, build, ci.",
+              ].join("\n"));
+              return;
+            }
+
             const optedOut = labels.includes("no-linear") || labels.includes("dependencies");
-            const isDepOrBump = /^(chore|build|fix)\(deps\)/i.test(title) || /\bbump\b/i.test(title);
+            const isDependencyUpdate = /^(chore|build|fix)\(deps\)/i.test(title);
 
-            if (isBot || optedOut || isDepOrBump) {
-              core.info(`No Linear ref, but exempt (bot=${isBot}, label=${optedOut}, depBump=${isDepOrBump}).`);
+            if (optedOut || isDependencyUpdate) {
+              core.info(`Linear metadata is exempt (label=${optedOut}, dependencyUpdate=${isDependencyUpdate}).`);
               return;
             }
 
-            core.setFailed([
-              "No Linear issue reference found in the PR title, branch, or description.",
-              "",
-              "Add an OJD-#### reference anywhere, e.g.:",
-              "  title:       feat(web): add filters shelf (OJD-1541)",
-              "  branch:      ojd-1541-filters-shelf",
-              "  description: Closes OJD-1541",
-              "",
-              "This lets the prod release automation track what ships.",
-              "If this PR intentionally has no ticket (quick fix, security/dep bump, tooling),",
-              "add the `no-linear` label and re-run.",
-            ].join("\n"));
+            const relationPattern = /^\s*(?:[-*]\s*)?(?:close(?:s|d|ing)?|fix(?:es|ed|ing)?|resolve(?:s|d|ing)?|complete(?:s|d|ing)?|implement(?:s|ed|ing)?|ref|references?|part of|related to|contributes? to|towards)\s+(OJD-\d+)\b/gim;
+            const bodyIssues = [...body.matchAll(relationPattern)].map(match => match[1].toUpperCase());
+
+            if (bodyIssues.length === 0) {
+              core.setFailed([
+                "PR metadata is incomplete for Linear release tracking:",
+                "- Add a Linear relation line to the PR body, e.g. `Closes OJD-1541` or `Contributes to OJD-1541`.",
+                "",
+                "If this PR genuinely has no Linear issue, add the `no-linear` label and explain why in Additional Notes.",
+              ].join("\n"));
+              return;
+            }
+
+            core.info(`Release metadata valid: ${[...new Set(bodyIssues)].join(", ")}`);

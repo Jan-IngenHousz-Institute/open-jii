@@ -17,10 +17,10 @@ const MAX_LISTED_OUTAGES = 5;
 // Availability is device state, so it wears the status palette, never the
 // categorical series colors.
 const STATE_COLOR: Record<BucketAvailability, string> = {
-  up: "#10b981",
-  partial: "#f59e0b",
-  down: "#f43f5e",
-  unknown: "#d4d4d8",
+  up: "var(--status-active-foreground)",
+  partial: "var(--status-stale-foreground)",
+  down: "var(--destructive)",
+  unknown: "var(--muted-foreground)",
 };
 
 interface AvailabilityPanelProps {

@@ -60,7 +60,7 @@ export function OAuthLoginForm({
       <Button
         type="submit"
         variant="outline"
-        className="bg-surface text-foreground hover:bg-surface-light active:bg-surface-dark flex h-12 w-full items-center justify-center rounded-full"
+        className="flex w-full items-center justify-center"
         disabled={isPending}
       >
         {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -96,8 +96,8 @@ function ProviderButtonContent({
     return (
       <>
         <ProviderImage id={providerId} />
-        <span className="font-notosans md:hidden">{`${continueWith} ${providerName}`}</span>
-        <span className="font-notosans hidden md:inline">{providerName}</span>
+        <span className="md:hidden">{`${continueWith} ${providerName}`}</span>
+        <span className="hidden md:inline">{providerName}</span>
       </>
     );
   }
@@ -105,7 +105,7 @@ function ProviderButtonContent({
   if (layoutCount === 3) {
     return (
       <>
-        <span className="font-notosans flex items-center md:hidden">
+        <span className="flex items-center md:hidden">
           <span className="mr-2">
             <ProviderImage id={providerId} />
           </span>
@@ -121,7 +121,7 @@ function ProviderButtonContent({
   return (
     <>
       <ProviderImage id={providerId} />
-      <span className="font-notosans">{t(loginWithKey)}</span>
+      <span>{t(loginWithKey)}</span>
     </>
   );
 }

@@ -1,8 +1,10 @@
 "use client";
 
 import { DeviceGroupLayoutContent } from "@/components/iot-devices/groups/device-group-layout-content";
+import { PlatformHeaderDetail } from "@/components/navigation/site-header/platform-header-context";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGroup";
+import { useLocale } from "@/hooks/useLocale";
 import { useParams } from "next/navigation";
 
 import { useTranslation } from "@repo/i18n";
@@ -17,6 +19,7 @@ interface DeviceGroupLayoutProps {
  */
 export default function DeviceGroupLayout({ children }: DeviceGroupLayoutProps) {
   const { groupId } = useParams<{ groupId: string }>();
+  const locale = useLocale();
   const { t } = useTranslation("iot");
   const { data, isLoading, error } = useIotDeviceGroup(groupId);
 
@@ -28,9 +31,15 @@ export default function DeviceGroupLayout({ children }: DeviceGroupLayoutProps) 
       errorDescription={t("iot.groups.loadError")}
     >
       {data && (
-        <DeviceGroupLayoutContent groupId={groupId} group={data}>
-          {children}
-        </DeviceGroupLayoutContent>
+        <>
+          <PlatformHeaderDetail
+            href={`/${locale}/platform/devices/groups/${groupId}`}
+            label={data.name}
+          />
+          <DeviceGroupLayoutContent groupId={groupId} group={data}>
+            {children}
+          </DeviceGroupLayoutContent>
+        </>
       )}
     </EntityLayoutShell>
   );

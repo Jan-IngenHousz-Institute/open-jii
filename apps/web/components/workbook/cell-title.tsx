@@ -94,8 +94,10 @@ export function CellTitle({
   return (
     <span className="group/title inline-flex min-w-0 items-center gap-1">
       <span className="truncate">{name}</span>
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-xs"
         aria-label={labels.rename}
         onClick={(e) => {
           e.stopPropagation();
@@ -105,7 +107,7 @@ export function CellTitle({
         className="shrink-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover/title:opacity-100"
       >
         <Pencil className="h-3 w-3" />
-      </button>
+      </Button>
     </span>
   );
 }

@@ -124,7 +124,7 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
             onEditStart={canUpdate ? () => startEditing(decodeBase64(macro.code)) : undefined}
           />
         ) : (
-          <div className="py-8 text-center text-gray-500">
+          <div className="text-muted-foreground py-8 text-center">
             <CodeIcon className="mx-auto mb-4 h-12 w-12" />
             <p>{t("macros.codeNotAvailable")}</p>
           </div>

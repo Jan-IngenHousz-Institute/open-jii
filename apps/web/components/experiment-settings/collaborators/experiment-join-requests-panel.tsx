@@ -121,7 +121,7 @@ function JoinRequestRow({
           {isMessageOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           {t("experimentSettings.joinRequestMessageLabel")}
         </CollapsibleTrigger>
-        <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden [--radix-accordion-content-height:var(--radix-collapsible-content-height)]">
+        <CollapsibleContent>
           <div className="mt-2 w-full pl-12">
             {request.message ? (
               <p className="text-muted-foreground whitespace-pre-line text-sm">{request.message}</p>

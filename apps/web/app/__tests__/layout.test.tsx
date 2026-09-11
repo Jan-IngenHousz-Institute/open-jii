@@ -3,6 +3,12 @@ import { afterEach, describe, it, expect, vi } from "vitest";
 
 import RootLayout, { metadata } from "../layout";
 
+// next/font/google is compiler-only; it throws when imported outside a build.
+vi.mock("next/font/google", () => ({
+  Inter: () => ({ variable: "--font-inter" }),
+  JetBrains_Mono: () => ({ variable: "--font-jetbrains-mono" }),
+}));
+
 describe("RootLayout", () => {
   afterEach(() => {
     vi.restoreAllMocks();

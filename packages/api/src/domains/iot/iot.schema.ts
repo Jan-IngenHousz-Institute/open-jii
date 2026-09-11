@@ -82,17 +82,24 @@ export const zIotDeviceDetail = zIotDeviceWithConnectivity.extend({
   capabilities: zResourceCapabilities,
 });
 
+/**
+ * A physical device identifier: a MAC, an eFuse id, an Android SSAID. Stored in
+ * a text column, so the only real constraints are length and the AWS IoT
+ * thing-attribute charset. Shared so the mobile and generic register paths
+ * cannot drift apart on what a serial may look like.
+ */
+export const zDeviceSerialNumber = z
+  .string()
+  .min(1)
+  .max(255)
+  // AWS IoT thing-attribute values only allow this charset; anything else
+  // would fail at CreateThing with an opaque 500.
+  .regex(/^[a-zA-Z0-9_.,@/:#=[\]-]+$/, {
+    message: "Only letters, numbers, and _ . , @ / : # = [ ] - are allowed",
+  });
+
 export const zRegisterIotDeviceBody = z.object({
-  serialNumber: z
-    .string()
-    .min(1)
-    .max(255)
-    // AWS IoT thing-attribute values only allow this charset; anything else
-    // would fail at CreateThing with an opaque 500.
-    .regex(/^[a-zA-Z0-9_.,@/:#=[\]-]+$/, {
-      message: "Only letters, numbers, and _ . , @ / : # = [ ] - are allowed",
-    })
-    .describe("Physical device identifier, e.g. MAC address"),
+  serialNumber: zDeviceSerialNumber.describe("Physical device identifier, e.g. MAC address"),
   name: z.string().min(1).max(255).optional(),
   deviceType: zRegisterableDeviceType.describe(
     "IotDevice class, maps to the ingest topic sensorType",
@@ -141,7 +148,12 @@ export const zBulkRegisterIotDevicesResult = z.object({
 // Silent per-phone self-registration: the app calls this on login with its
 // persisted install UUID; the route is an idempotent ensure, not a create.
 export const zEnsureMobileDeviceBody = z.object({
-  installId: z.string().uuid().describe("Persisted per-install identifier; doubles as the serial"),
+  // Not a uuid: this IS the serial, and phones report a hardware id (Android
+  // SSAID) rather than a minted one. The uuid rule was an artefact of the app
+  // generating uuidv4 install ids.
+  installId: zDeviceSerialNumber.describe(
+    "Stable per-device identifier reported by the phone; doubles as the serial",
+  ),
   name: z.string().min(1).max(255).optional().describe("Device model, e.g. iPhone 15"),
 });
 

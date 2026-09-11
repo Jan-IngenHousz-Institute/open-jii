@@ -94,7 +94,7 @@ describe("DeviceLineageContent", () => {
   it("renders the identity chain through to the experiments", async () => {
     mountAll();
 
-    render(<DeviceLineageContent />);
+    const { container } = render(<DeviceLineageContent />);
 
     expect(await screen.findByText("iot.devices.lineage.brokerTitle")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.lineage.warehouseTitle")).toBeInTheDocument();
@@ -102,6 +102,19 @@ describe("DeviceLineageContent", () => {
     expect(screen.getByText("Gateway")).toBeInTheDocument();
     expect(screen.getByText("Soil Health")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.lineage.legend.unbound")).toBeInTheDocument();
+
+    expect(container.firstElementChild).toHaveClass("min-w-0");
+    expect(screen.getByTestId("lineage-flow")).toHaveClass("min-w-0", "overflow-hidden");
+  });
+
+  it("keeps long selected device facts from resizing the graph", async () => {
+    mountAll();
+
+    render(<DeviceLineageContent />);
+    fireEvent.click(await screen.findByText("Gateway"));
+
+    const serial = await screen.findByText("SN-77");
+    expect(serial.closest(".rounded-xl")).toHaveClass("min-w-0");
   });
 
   it("flags an arrival without a binding and keeps its experiment opaque", async () => {

@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
@@ -9,6 +9,7 @@ import {
   SidebarFloatingReopen,
   SidebarProvider,
   SidebarRail,
+  SidebarTrigger,
   useSidebar,
 } from "../sidebar";
 
@@ -92,6 +93,24 @@ beforeEach(() => {
 });
 
 describe("SidebarProvider width + persistence", () => {
+  it("uses an optional app-specific default without changing the shared default", () => {
+    const { unmount } = render(
+      <SidebarProvider defaultWidth={232}>
+        <Consumer />
+      </SidebarProvider>,
+    );
+    expect(widthVal()).toBe(232);
+
+    unmount();
+    window.localStorage.removeItem(STORAGE_KEY);
+    render(
+      <SidebarProvider>
+        <Consumer />
+      </SidebarProvider>,
+    );
+    expect(widthVal()).toBe(268);
+  });
+
   it("hydrates width and collapsed state from localStorage", () => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ width: 320, collapsed: true }));
     render(
@@ -101,6 +120,30 @@ describe("SidebarProvider width + persistence", () => {
     );
     expect(widthVal()).toBe(320);
     expect(screen.getByTestId("state")).toHaveTextContent("collapsed");
+  });
+
+  it("migrates the former shared default to an app-specific default", () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ width: 268 }));
+
+    render(
+      <SidebarProvider defaultWidth={232}>
+        <Consumer />
+      </SidebarProvider>,
+    );
+
+    expect(widthVal()).toBe(232);
+  });
+
+  it("preserves an intentional resize back to the former shared width", () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ width: 268, defaultWidth: 232 }));
+
+    render(
+      <SidebarProvider defaultWidth={232}>
+        <Consumer />
+      </SidebarProvider>,
+    );
+
+    expect(widthVal()).toBe(268);
   });
 
   it("clamps width to the min/max bounds", () => {
@@ -258,6 +301,119 @@ describe("SidebarEdgePeek", () => {
       </SidebarProvider>,
     );
     expect(screen.queryByTestId("edge")).not.toBeInTheDocument();
+  });
+});
+
+describe("Sidebar peek overlay", () => {
+  it("applies the peek overlay when collapsed in offcanvas mode", () => {
+    const { container } = render(
+      <SidebarProvider defaultOpen={false}>
+        <Sidebar collapsible="offcanvas">
+          <div>content</div>
+        </Sidebar>
+        <Consumer />
+      </SidebarProvider>,
+    );
+    fireEvent.click(screen.getByTestId("peek-on"));
+    const sidebar = container.querySelector('[data-peeking="true"]');
+    expect(sidebar).not.toBeNull();
+    expect(sidebar?.querySelector(".fixed")?.className).toContain(
+      "group-data-[collapsible=offcanvas]:z-50",
+    );
+  });
+
+  it("never peeks in icon mode, where the collapsed sidebar stays visible", () => {
+    const { container } = render(
+      <SidebarProvider defaultOpen={false}>
+        <Sidebar collapsible="icon">
+          <div>content</div>
+        </Sidebar>
+        <Consumer />
+      </SidebarProvider>,
+    );
+    fireEvent.click(screen.getByTestId("peek-on"));
+    expect(container.querySelector("[data-peeking]")).toBeNull();
+  });
+
+  it("does not apply the left-edge peek path to a right-side offcanvas sidebar", () => {
+    const { container } = render(
+      <SidebarProvider defaultOpen={false}>
+        <Sidebar side="right" collapsible="offcanvas">
+          <div>content</div>
+        </Sidebar>
+        <Consumer />
+      </SidebarProvider>,
+    );
+
+    fireEvent.click(screen.getByTestId("peek-on"));
+    expect(container.querySelector("[data-peeking]")).toBeNull();
+  });
+});
+
+describe("SidebarTrigger mobile affordance", () => {
+  it("shows open while the mobile drawer is closed and close after it opens", async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = (query: string) =>
+      ({
+        matches: query.includes("max-width"),
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }) as unknown as MediaQueryList;
+
+    try {
+      const { container } = render(
+        <SidebarProvider>
+          <SidebarTrigger />
+        </SidebarProvider>,
+      );
+
+      await waitFor(() =>
+        expect(container.querySelector(".lucide-panel-left-open")).not.toBeNull(),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Toggle Sidebar" }));
+      expect(container.querySelector(".lucide-panel-left-close")).not.toBeNull();
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it("uses the sheet close action instead of a second collapse trigger inside the drawer", async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = (query: string) =>
+      ({
+        matches: query.includes("max-width"),
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }) as unknown as MediaQueryList;
+
+    try {
+      render(
+        <SidebarProvider>
+          <Sidebar>
+            <div>content</div>
+          </Sidebar>
+          <SidebarTrigger />
+        </SidebarProvider>,
+      );
+
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Toggle Sidebar" })).toBeVisible(),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Toggle Sidebar" }));
+      expect(await screen.findByRole("button", { name: "Close" })).toBeVisible();
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
   });
 });
 

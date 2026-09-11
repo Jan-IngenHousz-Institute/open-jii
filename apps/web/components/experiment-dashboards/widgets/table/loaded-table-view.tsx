@@ -1,5 +1,6 @@
 "use client";
 
+import { dataTableFeatures } from "@/components/data-table/data-table-features";
 import {
   DataTableRows,
   DataTableHeader,
@@ -8,13 +9,13 @@ import {
 } from "@/components/data-table/data-table-utils";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentTables } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
-import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { useTable } from "@tanstack/react-table";
 import { AlertCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
-import { TableBody } from "@repo/ui/components/table";
+import { Table, TableBody } from "@repo/ui/components/table";
 
 import { useDashboardFiltersForTable } from "../../dashboard-filters-context";
 import { WidgetEmptyState } from "../shell/widget-empty-state";
@@ -83,12 +84,13 @@ export function LoadedTableView({
     [tableMetadata?.columns, selectedColumns],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features: dataTableFeatures,
     data: rows,
     columns,
-    getCoreRowModel: getCoreRowModel(),
     // Pagination is server-side (`page` state + query), so react-table's
     // page auto-reset is both redundant and the trigger for the loop above.
+    manualPagination: true,
     autoResetPageIndex: false,
   });
 
@@ -109,7 +111,7 @@ export function LoadedTableView({
   return (
     <div className="flex h-full min-h-0 flex-col text-xs">
       <div className="text-muted-foreground min-h-0 flex-1 overflow-auto [&_td]:px-2 [&_td]:py-1 [&_td_*]:!text-xs [&_th]:h-8 [&_th]:px-2">
-        <table className="w-max min-w-full caption-bottom">
+        <Table className="w-max min-w-full text-xs">
           {isInitialHeaderLoad ? (
             <SkeletonTableHeader columnCount={SKELETON_FALLBACK_COLUMN_COUNT} />
           ) : (
@@ -127,7 +129,7 @@ export function LoadedTableView({
               <DataTableRows rows={table.getRowModel().rows} columnCount={columns.length} />
             )}
           </TableBody>
-        </table>
+        </Table>
       </div>
       {showFooter && (
         <TablePaginationFooter

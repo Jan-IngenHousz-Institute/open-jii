@@ -12,6 +12,7 @@ import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader } from "@repo/ui/components/card";
+import { Separator } from "@repo/ui/components/separator";
 import { cn, cva } from "@repo/ui/lib/utils";
 
 import { ExperimentRequestToJoin } from "../../experiment-settings/collaborators/experiment-request-to-join";
@@ -23,22 +24,25 @@ import { ExperimentLocationsSection } from "./experiment-locations-section";
 
 const DETAILS_PANEL_STORAGE_KEY = "experiment_details_panel_collapsed";
 
-const panelWrapperVariants = cva("relative w-full overflow-hidden md:order-2", {
+// The panel is a fixed 24rem. Beside an open sidebar that only leaves a usable
+// column from lg up; at md the row overflowed and `overflow-hidden` clipped the
+// panel's own content instead of scrolling, so it stays stacked until lg.
+const panelWrapperVariants = cva("relative w-full overflow-hidden lg:order-2", {
   variants: {
-    collapsed: { true: "md:w-10", false: "md:w-96" },
+    collapsed: { true: "lg:w-10", false: "lg:w-96" },
     transitionsReady: {
-      true: "md:transition-[width] md:duration-300 md:ease-in-out",
+      true: "lg:transition-[width] lg:duration-300 lg:ease-in-out",
       false: "",
     },
   },
   defaultVariants: { collapsed: false, transitionsReady: false },
 });
 
-const panelContentVariants = cva("w-full md:w-96", {
+const panelContentVariants = cva("w-full lg:w-96", {
   variants: {
-    collapsed: { true: "md:translate-x-full", false: "md:translate-x-0" },
+    collapsed: { true: "lg:translate-x-full", false: "lg:translate-x-0" },
     transitionsReady: {
-      true: "md:transition-transform md:duration-300 md:ease-in-out",
+      true: "lg:transition-transform lg:duration-300 lg:ease-in-out",
       false: "",
     },
   },
@@ -50,20 +54,20 @@ interface ExperimentDetailsCardProps {
   experiment: Experiment;
   locations: ExperimentLocation[];
   contributors: ExperimentContributor[];
-  /** Every collaborator row, not just the creditable faces — see the trail. */
+  /** Every collaborator row, not just the creditable faces: see the trail. */
   collaboratorCount: number;
   /** The contributors read failed; the trail must not claim a zero. */
   isContributorsError?: boolean;
   isContributorsLoading: boolean;
   hasAccess?: boolean;
-  /** `can(manage)` from the experiment-access response — gates the admin-only cards. */
+  /** `can(manage)` from the experiment-access response; gates the admin-only cards. */
   canManage?: boolean;
   /**
-   * `can(transfer)` — narrower than `canManage`: moving the experiment out of its
+   * `can(transfer)` is narrower than `canManage`: moving the experiment out of its
    * organization also takes authority over that organization.
    */
   canTransfer?: boolean;
-  /** `can(contribute)` — whether this person is already a collaborator. */
+  /** `can(contribute)`: whether this person is already a collaborator. */
   canContribute?: boolean;
   isArchived?: boolean;
 }
@@ -112,12 +116,12 @@ export function ExperimentDetailsCard({
 
   return (
     <div className={panelWrapperVariants({ collapsed: isCollapsed, transitionsReady })}>
-      {/* Desktop toggle button — anchored to the right edge, stays put while the panel slides */}
+      {/* Desktop toggle button, anchored to the right edge, stays put while the panel slides */}
       <Button
         onClick={toggleCollapsed}
         variant="ghost"
         size="icon"
-        className="absolute right-2 top-[10px] z-20 hidden h-8 w-8 md:flex"
+        className="absolute right-2 top-[10px] z-20 hidden h-8 w-8 lg:flex"
         aria-label={isCollapsed ? t("openDetailsPanel") : t("closeDetailsPanel")}
       >
         {isCollapsed ? (
@@ -127,7 +131,7 @@ export function ExperimentDetailsCard({
         )}
       </Button>
 
-      {/* Panel content — slides right on desktop collapse */}
+      {/* Panel content slides right on desktop collapse */}
       <div className={panelContentVariants({ collapsed: isCollapsed, transitionsReady })}>
         <Card className="relative shadow-none">
           {/* Mobile toggle button */}
@@ -135,7 +139,7 @@ export function ExperimentDetailsCard({
             onClick={() => setIsMobileCollapsed(!isMobileCollapsed)}
             variant="ghost"
             size="icon"
-            className="absolute right-2 top-[10px] z-20 h-8 w-8 md:hidden"
+            className="absolute right-2 top-[10px] z-20 h-8 w-8 lg:hidden"
             aria-label={isMobileCollapsed ? t("expandDetails") : t("collapseDetails")}
           >
             {isMobileCollapsed ? (
@@ -151,15 +155,15 @@ export function ExperimentDetailsCard({
 
           {/* Mobile collapsed summary */}
           {isMobileCollapsed && (
-            <div className="text-muted-foreground -mt-2 truncate px-6 pb-3 text-sm md:hidden">
+            <div className="text-muted-foreground -mt-2 truncate px-6 pb-3 text-sm lg:hidden">
               {t("updated")} {formatDate(experiment.updatedAt)}, {t("experimentId")} {experiment.id}
             </div>
           )}
 
-          {/* Content — animated height collapse on mobile, always visible on desktop */}
+          {/* Content: animated height collapse on mobile, always visible on desktop */}
           <div
             className={cn(
-              "grid transition-[grid-template-rows] duration-300 ease-in-out md:grid-rows-[1fr]",
+              "grid transition-[grid-template-rows] duration-300 ease-in-out lg:grid-rows-[1fr]",
               isMobileCollapsed ? "grid-rows-[0fr]" : "grid-rows-[1fr]",
             )}
           >
@@ -218,11 +222,7 @@ export function ExperimentDetailsCard({
                 </div>
               </CardContent>
 
-              <div
-                role="separator"
-                aria-orientation="horizontal"
-                className="text-muted-foreground mx-4 border-t"
-              />
+              <Separator decorative={false} className="mx-4 my-4 w-auto" />
 
               {canManage ? (
                 <ExperimentVisibilityCard

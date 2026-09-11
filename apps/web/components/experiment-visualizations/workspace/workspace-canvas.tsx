@@ -1,5 +1,6 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { BarChart3, Loader2 } from "lucide-react";
 import { useMemo } from "react";
 import type { Control } from "react-hook-form";
@@ -7,6 +8,7 @@ import { useWatch } from "react-hook-form";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
+import { Card } from "@repo/ui/components/card";
 
 import { useExperimentVisualizationData } from "../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import "../../../styles/plotly-chart.css";
@@ -125,10 +127,14 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
 
   if (isLoading) {
     return (
-      <div className="bg-muted/20 flex h-[clamp(420px,60vh,640px)] flex-col items-center justify-center gap-3 rounded-lg border border-dashed">
+      <InsetPanel
+        dashed
+        padding="none"
+        className="flex h-[clamp(420px,60vh,640px)] flex-col items-center justify-center gap-3"
+      >
         <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
         <span className="text-muted-foreground text-sm">{t("workspace.canvas.loading")}</span>
-      </div>
+      </InsetPanel>
     );
   }
 
@@ -145,22 +151,26 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
   const Renderer = def.Renderer;
 
   return (
-    <div className="bg-card flex h-[clamp(420px,60vh,640px)] flex-col overflow-hidden rounded-lg border p-4">
+    <Card className="h-[clamp(420px,60vh,640px)] gap-0 overflow-hidden p-4">
       <Renderer
         visualization={previewVisualization}
         experimentId={experimentId}
         data={fetched?.rows}
       />
-    </div>
+    </Card>
   );
 }
 
 function CanvasPlaceholder({ title, body }: { title: string; body: string }) {
   return (
-    <div className="bg-muted/20 flex h-[clamp(420px,60vh,640px)] flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-center">
+    <InsetPanel
+      dashed
+      padding="none"
+      className="flex h-[clamp(420px,60vh,640px)] flex-col items-center justify-center gap-2 text-center"
+    >
       <BarChart3 className="text-muted-foreground/60 h-10 w-10" />
       <div className="text-foreground font-medium">{title}</div>
       <div className="text-muted-foreground text-sm">{body}</div>
-    </div>
+    </InsetPanel>
   );
 }

@@ -94,7 +94,7 @@ describe("NodeHandles", () => {
     );
     const handles = screen.getAllByRole("handle");
     handles.forEach((h) => {
-      expect(h).toHaveStyle({ borderColor: "#005e5e" });
+      expect(h).toHaveStyle({ borderColor: "var(--primary)" });
     });
   });
 
@@ -110,7 +110,7 @@ describe("NodeHandles", () => {
     );
     const handles = screen.getAllByRole("handle");
     handles.forEach((h) => {
-      expect(h).toHaveStyle({ borderColor: "#005e5e" });
+      expect(h).toHaveStyle({ borderColor: "var(--primary)" });
     });
   });
 
@@ -130,7 +130,7 @@ describe("NodeHandles", () => {
     });
   });
 
-  it("falls back to slate when no nodeType", () => {
+  it("falls back to the muted token when no nodeType", () => {
     render(
       <NodeHandles
         hasInput
@@ -141,7 +141,7 @@ describe("NodeHandles", () => {
     );
     const handles = screen.getAllByRole("handle");
     handles.forEach((h) => {
-      expect(h).toHaveStyle({ borderColor: "#94a3b8" });
+      expect(h).toHaveStyle({ borderColor: "var(--muted-foreground)" });
     });
   });
 });

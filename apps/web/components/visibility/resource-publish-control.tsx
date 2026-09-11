@@ -13,6 +13,7 @@ import type {
   Visibility,
 } from "@repo/api/domains/visibility/visibility.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
   Select,
   SelectContent,
@@ -103,9 +104,15 @@ export function ResourcePublishControl({
             <Tooltip>
               <TooltipTrigger asChild>
                 {/* Keep the help copy available without hover. */}
-                <button type="button" className="text-muted-foreground" aria-label={helpText}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="text-muted-foreground"
+                  aria-label={helpText}
+                >
                   <Info className="h-3.5 w-3.5" />
-                </button>
+                </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-xs leading-snug">
                 {helpText}
@@ -133,7 +140,7 @@ export function ResourcePublishControl({
       </Select>
 
       {infoPlacement === "block" && (
-        <div className="bg-surface-light text-muted-foreground mt-2 flex items-center gap-2 rounded-md p-2 text-xs">
+        <div className="bg-muted text-muted-foreground mt-2 flex items-center gap-2 rounded-md p-2 text-xs">
           <Info className="text-primary h-4 w-4 shrink-0" />
           <div className="leading-tight">{helpText}</div>
         </div>

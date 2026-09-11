@@ -1,7 +1,12 @@
+import { InsetPanel } from "@/components/shared/inset-panel";
 import React from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Card, CardContent } from "@repo/ui/components/card";
+import { Input } from "@repo/ui/components/input";
+import { Label } from "@repo/ui/components/label";
+import { RadioGroup, RadioGroupItem } from "@repo/ui/components/radio-group";
+import { Switch } from "@repo/ui/components/switch";
 
 import { BooleanAnswerDisplay } from "./boolean-answer-display/boolean-answer-display";
 import { NumberAnswerDisplay } from "./number-answer-display/number-answer-display";
@@ -45,73 +50,68 @@ export function QuestionCard({
   const { t } = useTranslation(["experiments"]);
 
   return (
-    <Card className="shadow-xs group relative overflow-hidden border border-gray-200 bg-white transition-all hover:border-gray-300 hover:shadow-lg">
+    <Card className="shadow-xs border-border bg-card hover:border-border group relative overflow-hidden border transition-all hover:shadow-lg">
       {/* Subtle accent line */}
-      <div className="from-jii-dark-green to-jii-medium-green absolute left-0 top-0 h-full w-1 bg-gradient-to-b"></div>
+      <div className="from-primary to-primary/70 absolute left-0 top-0 h-full w-1 bg-gradient-to-b"></div>
 
       <CardContent className="p-6 pl-8">
         {/* Question Input */}
         <div className="mb-6">
-          <input
+          <Input
             type="text"
             value={validationMessage ?? ""}
             onChange={(e) => onUpdateText?.(e.target.value)}
             placeholder={t("questionCard.placeholder")}
             disabled={disabled}
-            className="focus:border-jii-dark-green focus:outline-hidden w-full border-0 border-b-2 border-gray-100 bg-transparent px-0 py-3 text-lg font-medium text-gray-900 placeholder-gray-400 focus:ring-0 disabled:cursor-not-allowed disabled:bg-gray-50"
           />
         </div>
 
         {/* Required Toggle */}
         <div className="mb-6">
-          <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <InsetPanel padding="lg" className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-900">{t("questionCard.requiredLabel")}</p>
-              <p className="text-xs text-gray-500">{t("questionCard.requiredDescription")}</p>
+              <p className="text-foreground text-sm font-medium">
+                {t("questionCard.requiredLabel")}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {t("questionCard.requiredDescription")}
+              </p>
             </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                checked={required}
-                onChange={() => onToggleRequired?.()}
-                disabled={disabled}
-                className="peer sr-only"
-              />
-              <div className="peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 peer-focus:outline-hidden peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-4"></div>
-            </label>
-          </div>
+            <Switch
+              aria-label={t("questionCard.requiredLabel")}
+              checked={required}
+              onCheckedChange={() => onToggleRequired?.()}
+              disabled={disabled}
+            />
+          </InsetPanel>
         </div>
 
         {/* Question Type Selection */}
         <div className="mb-6">
           <div className="mb-3 flex items-center gap-2">
-            <div className="h-1 w-1 rounded-full bg-gray-400"></div>
-            <span className="text-sm font-medium text-gray-600">
+            <div className="bg-muted-foreground h-1 w-1 rounded-full"></div>
+            <span className="text-muted-foreground text-sm font-medium">
               {t("questionCard.answerTypeLabel")}
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <RadioGroup
+            className="grid-cols-2 gap-3"
+            value={answerType}
+            onValueChange={(value) => onUpdateAnswerType?.(value as QuestionUI["answerType"])}
+            disabled={disabled}
+          >
             {["TEXT", "SELECT", "NUMBER", "BOOLEAN"].map((type) => (
-              <label key={type} className="flex cursor-pointer items-center gap-3">
-                <input
-                  type="radio"
-                  name="answer-type"
-                  checked={answerType === type}
-                  onChange={() => onUpdateAnswerType?.(type as QuestionUI["answerType"])}
-                  disabled={disabled}
-                  className="peer sr-only"
-                />
-                <div className="peer-checked:border-jii-dark-green peer-checked:bg-jii-dark-green peer-focus:ring-jii-dark-green/20 relative h-4 w-4 shrink-0 rounded-full border-2 border-gray-300 bg-white transition-all peer-focus:ring-2">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="h-1.5 w-1.5 rounded-full bg-white opacity-0 transition-opacity peer-checked:opacity-100"></div>
-                  </div>
-                </div>
-                <span className="text-sm font-medium text-gray-700">
+              <div key={type} className="flex items-center gap-3">
+                <RadioGroupItem value={type} id={`answer-type-${type}`} />
+                <Label
+                  htmlFor={`answer-type-${type}`}
+                  className="text-foreground cursor-pointer text-sm font-medium"
+                >
                   {t(`questionCard.answerTypes.${type}`)}
-                </span>
-              </label>
+                </Label>
+              </div>
             ))}
-          </div>
+          </RadioGroup>
         </div>
 
         {/* Answer Type Specific Content */}

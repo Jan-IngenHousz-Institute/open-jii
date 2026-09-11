@@ -78,7 +78,7 @@ export function DensityPlot2D({
             marker: {
               size: markerSize,
               opacity: markerOpacity,
-              color: markerColor ?? "#1f77b4",
+              color: markerColor,
             },
             // Contour colorbar is the legend; don't list the point cloud.
             showlegend: false,

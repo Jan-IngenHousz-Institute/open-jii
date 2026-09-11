@@ -15,19 +15,9 @@ export async function generateMetadata({ params }: ExperimentPageProps): Promise
   return { title: t("experiments.archiveTitle") };
 }
 
-export default async function ExperimentPage({ params }: ExperimentPageProps) {
-  const { locale } = await params;
-  const { t } = await initTranslations({
-    locale,
-    namespaces: ["common"],
-  });
-
+export default function ExperimentPage(_props: ExperimentPageProps) {
   return (
     <PageContainer width="fluid" className="space-y-6">
-      <div>
-        <h1 className="text-4xl font-bold text-gray-900">{t("experiments.archiveTitle")}</h1>
-        <p>{t("experiments.archiveDescription")}</p>
-      </div>
       <ListExperiments archived={true} />
     </PageContainer>
   );

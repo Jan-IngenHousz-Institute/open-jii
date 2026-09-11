@@ -9,10 +9,10 @@ interface VisualizationMetaFieldProps {
 export function VisualizationMetaField({ label, value, mono }: VisualizationMetaFieldProps) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-sm font-medium leading-[18px] tracking-[0.02em] text-[#011111]">
+      <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
         {label}
       </span>
-      <span className={cn("text-sm leading-[21px] text-[#68737B]", mono && "font-mono")}>
+      <span className={cn("text-muted-foreground text-sm leading-[21px]", mono && "font-mono")}>
         {value}
       </span>
     </div>

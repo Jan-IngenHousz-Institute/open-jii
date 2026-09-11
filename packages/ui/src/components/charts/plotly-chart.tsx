@@ -220,7 +220,7 @@ const validatePlotlyData = (data: Data[] | undefined): PlotData[] => {
         // Always create a line object for scatter plots
         const scatterTrace = safeTrace as any;
         scatterTrace.line = {
-          color: scatterTrace.line?.color || scatterTrace.color || "#1f77b4",
+          color: scatterTrace.line?.color || scatterTrace.color || undefined,
           width: scatterTrace.line?.width || 2,
           dash: scatterTrace.line?.dash || "solid",
           ...scatterTrace.line,
@@ -231,7 +231,7 @@ const validatePlotlyData = (data: Data[] | undefined): PlotData[] => {
       if (safeTrace.marker && typeof safeTrace.marker === "object") {
         const markerTrace = safeTrace as any; // Need any here due to complex Plotly union types
         markerTrace.marker = {
-          color: markerTrace.marker.color || markerTrace.color || "#1f77b4",
+          color: markerTrace.marker.color || markerTrace.color || undefined,
           size: markerTrace.marker.size || 6,
           ...markerTrace.marker,
         };

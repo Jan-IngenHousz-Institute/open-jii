@@ -233,7 +233,7 @@ export const Map = ({
 
   // Create a custom marker icon
   const createCustomMarker = useCallback(
-    (color: string = "#ef4444", isSelected: boolean = false) => {
+    (color: string = "var(--primary)", isSelected: boolean = false) => {
       const svgIcon = `
       <svg width="24" height="24" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="${isSelected ? 3 : 2}" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
         <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
@@ -409,7 +409,7 @@ export const Map = ({
         >
           <div
             className={cn(
-              "flex flex-col rounded-lg border bg-white shadow-lg",
+              "bg-card flex flex-col rounded-lg border shadow-lg",
               isSidebarCollapsed ? "h-auto" : "max-h-96",
             )}
           >
@@ -421,7 +421,7 @@ export const Map = ({
               <button
                 type="button"
                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                className="ml-2 shrink-0 rounded p-1 transition-colors hover:bg-gray-100"
+                className="hover:bg-accent ml-2 shrink-0 rounded p-1 transition-colors"
                 title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {isSidebarCollapsed ? (
@@ -492,7 +492,7 @@ export const Map = ({
               iconCreateFunction={(cluster: any) => {
                 const count = cluster.getChildCount();
                 return L.divIcon({
-                  html: `<div style="background: var(--primary); color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">${count}</div>`,
+                  html: `<div style="background: var(--primary); color: var(--primary-foreground); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">${count}</div>`,
                   className: "custom-cluster-icon",
                   iconSize: [40, 40],
                 });
@@ -505,7 +505,7 @@ export const Map = ({
                     key={location.id || index}
                     position={[location.latitude, location.longitude]}
                     icon={createCustomMarker(
-                      isSelected ? "var(--tertiary)" : "var(--primary)",
+                      isSelected ? "var(--chart-4)" : "var(--primary)",
                       isSelected,
                     )}
                     draggable={selectionMode && !disabled}
@@ -517,14 +517,14 @@ export const Map = ({
                       <div className="min-w-0 space-y-2">
                         <div className="font-semibold">{location.name}</div>
                         {location.address && (
-                          <div className="text-sm text-gray-600">{location.address}</div>
+                          <div className="text-muted-foreground text-sm">{location.address}</div>
                         )}
-                        <div className="text-xs text-gray-500">
+                        <div className="text-muted-foreground text-xs">
                           {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
                         </div>
                         {[location.municipality, location.region, location.country].filter(Boolean)
                           .length > 0 && (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-muted-foreground text-xs">
                             {[location.municipality, location.region, location.country]
                               .filter(Boolean)
                               .join(", ")}
@@ -544,7 +544,7 @@ export const Map = ({
                   key={location.id || index}
                   position={[location.latitude, location.longitude]}
                   icon={createCustomMarker(
-                    isSelected ? "var(--tertiary)" : "var(--primary)",
+                    isSelected ? "var(--chart-4)" : "var(--primary)",
                     isSelected,
                   )}
                   draggable={selectionMode && !disabled}
@@ -556,14 +556,14 @@ export const Map = ({
                     <div className="min-w-0 space-y-2">
                       <div className="font-semibold">{location.name}</div>
                       {location.address && (
-                        <div className="text-sm text-gray-600">{location.address}</div>
+                        <div className="text-muted-foreground text-sm">{location.address}</div>
                       )}
-                      <div className="text-xs text-gray-500">
+                      <div className="text-muted-foreground text-xs">
                         {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
                       </div>
                       {[location.municipality, location.region, location.country].filter(Boolean)
                         .length > 0 && (
-                        <div className="text-xs text-gray-500">
+                        <div className="text-muted-foreground text-xs">
                           {[location.municipality, location.region, location.country]
                             .filter(Boolean)
                             .join(", ")}

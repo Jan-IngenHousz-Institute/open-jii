@@ -67,7 +67,7 @@ export function ProtocolSearchWithDropdown({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className="hover:bg-surface-light w-full justify-between py-6 text-left font-normal"
+          className="hover:bg-muted w-full justify-between py-6 text-left font-normal"
         >
           <div className="min-w-0 flex-1">
             {selectedProtocol ? (

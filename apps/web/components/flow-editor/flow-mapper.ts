@@ -190,7 +190,7 @@ export class FlowMapper {
       sourceHandle: apiEdge.sourceHandle ?? undefined,
       type: "default",
       animated: false,
-      markerEnd: { type: MarkerType.ArrowClosed, color: "#CDD5DB" },
+      markerEnd: { type: MarkerType.ArrowClosed, color: "var(--border)" },
       data: { label: apiEdge.label },
     }));
 

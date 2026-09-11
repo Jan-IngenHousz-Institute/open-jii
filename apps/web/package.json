@@ -49,7 +49,7 @@
     "@repo/ui": "workspace:*",
     "@tanstack/react-hotkeys": "0.10.0",
     "@tanstack/react-query": "catalog:react-query",
-    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-table": "^9.2.3",
     "@uiw/react-codemirror": "^4.25.9",
     "@xyflow/react": "^12.10.2",
     "date-fns": "^4.1.0",

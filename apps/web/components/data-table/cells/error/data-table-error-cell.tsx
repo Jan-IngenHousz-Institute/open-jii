@@ -4,6 +4,7 @@ import { AlertTriangle } from "lucide-react";
 import * as React from "react";
 
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
+import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -26,14 +27,16 @@ export function DataTableErrorCell({ error, className }: ExperimentDataTableErro
     <div className={cn("flex items-center justify-start", className)}>
       <Popover>
         <PopoverTrigger asChild>
-          <button
+          <Button
             type="button"
-            className="text-destructive hover:text-destructive/80 flex items-center gap-1.5 transition-colors"
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive/80 gap-1.5"
             aria-label="View error details"
           >
             <AlertTriangle className="h-4 w-4" />
             <span className="text-xs font-medium">Error</span>
-          </button>
+          </Button>
         </PopoverTrigger>
         <PopoverContent className="w-96" align="start">
           <Alert variant="destructive">

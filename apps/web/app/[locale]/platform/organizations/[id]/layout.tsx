@@ -1,8 +1,10 @@
 "use client";
 
+import { PlatformHeaderDetail } from "@/components/navigation/site-header/platform-header-context";
 import { OrganizationDetailTabs } from "@/components/organizations/organization-detail-tabs";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useOrganization } from "@/hooks/organization/useOrganization/useOrganization";
+import { useLocale } from "@/hooks/useLocale";
 import { useParams } from "next/navigation";
 
 import { useTranslation } from "@repo/i18n";
@@ -17,6 +19,7 @@ import { useTranslation } from "@repo/i18n";
  */
 export default function OrganizationLayout({ children }: { children: React.ReactNode }) {
   const { id } = useParams<{ id: string }>();
+  const locale = useLocale();
   const { t } = useTranslation("common");
   const { data, isPending, error } = useOrganization(id);
 
@@ -27,7 +30,15 @@ export default function OrganizationLayout({ children }: { children: React.React
       hasData={!!data}
       loadingMessage={t("common.loading")}
     >
-      {data && <OrganizationDetailTabs organization={data}>{children}</OrganizationDetailTabs>}
+      {data && (
+        <>
+          <PlatformHeaderDetail
+            href={`/${locale}/platform/organizations/${id}`}
+            label={data.name}
+          />
+          <OrganizationDetailTabs organization={data}>{children}</OrganizationDetailTabs>
+        </>
+      )}
     </EntityLayoutShell>
   );
 }

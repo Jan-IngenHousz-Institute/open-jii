@@ -36,7 +36,7 @@ export function BackEdge({
   const padX = Array.isArray(labelBgPadding) ? labelBgPadding[0] : 8;
   const padY = Array.isArray(labelBgPadding) ? labelBgPadding[1] : 4;
   const stroke = labelBgStyle?.stroke;
-  const fill = labelBgStyle?.fill ?? "#FFFFFF";
+  const fill = labelBgStyle?.fill ?? "var(--card)";
 
   return (
     <>
@@ -53,7 +53,7 @@ export function BackEdge({
               borderRadius: labelBgBorderRadius ?? 6,
               fontSize: 11,
               fontWeight: 500,
-              color: labelStyle?.fill ?? "#475569",
+              color: labelStyle?.fill ?? "var(--foreground)",
               pointerEvents: "all",
               whiteSpace: "nowrap",
             }}

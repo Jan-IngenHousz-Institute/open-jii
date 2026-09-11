@@ -26,6 +26,8 @@ import type {
   WorkbookCell,
 } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
+import { Card } from "@repo/ui/components/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 
 import type { ChartClickHandler } from "./output-cell-charts";
@@ -64,9 +66,21 @@ function getMessageType(message: string): "error" | "warning" | "info" {
 }
 
 const messageStyles = {
-  error: { icon: AlertCircle, color: "#D14343", bg: "rgba(209, 67, 67, 0.06)" },
-  warning: { icon: AlertCircle, color: "#D97706", bg: "rgba(217, 119, 6, 0.06)" },
-  info: { icon: Info, color: "#68737B", bg: "rgba(0, 94, 94, 0.04)" },
+  error: {
+    icon: AlertCircle,
+    color: "var(--destructive)",
+    bg: "color-mix(in srgb, var(--destructive) 8%, transparent)",
+  },
+  warning: {
+    icon: AlertCircle,
+    color: "var(--status-stale-foreground)",
+    bg: "color-mix(in srgb, var(--status-stale-foreground) 8%, transparent)",
+  },
+  info: {
+    icon: Info,
+    color: "var(--muted-foreground)",
+    bg: "color-mix(in srgb, var(--primary) 6%, transparent)",
+  },
 } as const;
 
 function isQuestionAnswer(data: unknown): data is { answer: string } {
@@ -106,24 +120,24 @@ function DataTabs({
   const jsonText = useMemo(() => formatJson(data, { style }), [data, style]);
   return (
     <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-      <TabsList className="h-8 rounded-lg border border-[#EDF2F6] bg-[#F7F8FA] p-0.5">
+      <TabsList className="border-border bg-muted h-8 rounded-lg border p-0.5">
         <TabsTrigger
           value="table"
-          className="data-[state=active]:shadow-xs rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white"
+          className="data-[state=active]:shadow-xs text-muted-foreground data-[state=active]:bg-card rounded-md px-3 py-1 text-xs font-medium"
         >
           {t("output.tabTable")}
         </TabsTrigger>
         {showTimeseries && (
           <TabsTrigger
             value="timeseries"
-            className="data-[state=active]:shadow-xs rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white"
+            className="data-[state=active]:shadow-xs text-muted-foreground data-[state=active]:bg-card rounded-md px-3 py-1 text-xs font-medium"
           >
             {t("output.tabTimeseries")}
           </TabsTrigger>
         )}
         <TabsTrigger
           value="json"
-          className="data-[state=active]:shadow-xs rounded-md px-3 py-1 text-xs font-medium text-[#68737B] data-[state=active]:bg-white"
+          className="data-[state=active]:shadow-xs text-muted-foreground data-[state=active]:bg-card rounded-md px-3 py-1 text-xs font-medium"
         >
           {t("output.tabJson")}
         </TabsTrigger>
@@ -144,23 +158,26 @@ function DataTabs({
       )}
       <TabsContent value="json" className="mt-2">
         <div className="relative">
-          <pre className="max-h-[480px] overflow-auto whitespace-pre-wrap break-words rounded-lg bg-[#F7F8FA] p-3 pr-20 text-xs text-[#011111]">
+          <pre className="bg-muted text-foreground max-h-[480px] overflow-auto whitespace-pre-wrap break-words rounded-lg p-3 pr-20 text-xs">
             {jsonText}
           </pre>
           <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
             <JsonFormatToggle style={style} onToggle={toggleStyle} />
-            <button
-              className="shadow-xs flex size-7 items-center justify-center rounded-md border border-[#EDF2F6] bg-white text-[#68737B] transition-colors hover:bg-[#F7F8FA] hover:text-[#011111]"
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              className="text-muted-foreground hover:text-foreground size-7"
               onClick={() => void copy(jsonText)}
               title={t("output.copyJson")}
               aria-label={t("output.copyJson")}
             >
               {copied ? (
-                <Check className="size-3.5 text-emerald-500" />
+                <Check className="text-status-active-foreground size-3.5" />
               ) : (
                 <Copy className="size-3.5" />
               )}
-            </button>
+            </Button>
           </div>
         </div>
       </TabsContent>
@@ -187,10 +204,10 @@ function DeviceResultIdentity({ result }: { result: OutputDeviceResult }) {
     .join(" · ");
 
   return (
-    <span className="flex min-w-0 flex-col text-[12px] font-semibold text-[#011111]">
+    <span className="text-foreground flex min-w-0 flex-col text-[12px] font-semibold">
       <span className="truncate">{primaryLabel}</span>
       {secondaryLabel.length > 0 && (
-        <span className="truncate font-normal text-[#68737B]">{secondaryLabel}</span>
+        <span className="text-muted-foreground truncate font-normal">{secondaryLabel}</span>
       )}
     </span>
   );
@@ -223,25 +240,25 @@ function DeviceResultBlock({
 
   return (
     <div
-      className="rounded-lg border border-[#EDF2F6] p-3"
+      className="border-border rounded-lg border p-3"
       data-testid="device-result"
       data-device-id={result.deviceId}
       data-status={failed ? "error" : "ok"}
     >
       <div className="mb-2 flex items-center gap-2">
         {failed ? (
-          <AlertCircle className="size-3.5 text-[#D14343]" />
+          <AlertCircle className="text-destructive size-3.5" />
         ) : (
-          <CheckCircle2 className="size-3.5 text-emerald-500" />
+          <CheckCircle2 className="text-status-active-foreground size-3.5" />
         )}
         <DeviceResultIdentity result={result} />
       </div>
       {failed ? (
         <div
           className="flex items-start gap-2 rounded-lg px-3 py-2"
-          style={{ background: "rgba(209, 67, 67, 0.06)" }}
+          style={{ background: "color-mix(in srgb, var(--destructive) 8%, transparent)" }}
         >
-          <span className="text-[13px] leading-[18px]" style={{ color: "#D14343" }}>
+          <span className="text-[13px] leading-[18px]" style={{ color: "var(--destructive)" }}>
             {result.error}
           </span>
         </div>
@@ -323,11 +340,14 @@ export function OutputCellComponent({
   const showTimeseries = protocolFamily === "multispeq" && isMultispeqOutput(cell.data);
 
   return (
-    <div className="group/output relative mt-1 overflow-hidden rounded-[10px] border border-[#EDF2F6] bg-white">
+    <Card className="group/output relative mt-1 gap-0 overflow-hidden py-0">
       <div className={`px-4 ${isCollapsed ? "py-2" : "pb-3 pt-3"}`}>
         <div className={isCollapsed ? "flex items-center gap-2" : "mb-2 flex items-center gap-2"}>
-          <button
-            className="flex size-5 items-center justify-center rounded text-[#68737B] hover:bg-[#EDF2F6]"
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            className="text-muted-foreground hover:bg-muted size-5"
             onClick={toggleCollapsed}
             title={isCollapsed ? t("output.expand") : t("output.collapse")}
             aria-expanded={!isCollapsed}
@@ -337,25 +357,28 @@ export function OutputCellComponent({
             ) : (
               <ChevronDown className="size-3.5" />
             )}
-          </button>
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#68737B]">
+          </Button>
+          <span className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
             {t("output.label")}
           </span>
           {cell.executionTime != null && (
-            <span className="inline-flex items-center gap-1 text-[11px] leading-none text-[#CDD5DB]">
+            <span className="text-muted-foreground/60 inline-flex items-center gap-1 text-[11px] leading-none">
               <Clock className="size-3" />
               <span className="leading-none">{formatExecutionTime(cell.executionTime)}</span>
             </span>
           )}
           <div className="flex-1" />
           {!readOnly && (
-            <button
-              className="flex size-5 items-center justify-center rounded opacity-0 transition-opacity hover:bg-[#EDF2F6] group-hover/output:opacity-100"
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              className="hover:bg-muted size-5 opacity-0 transition-opacity group-hover/output:opacity-100"
               onClick={onDelete}
               title={t("output.clear")}
             >
-              <Trash2 className="size-3 text-[#68737B]" />
-            </button>
+              <Trash2 className="text-muted-foreground size-3" />
+            </Button>
           )}
         </div>
 
@@ -386,9 +409,9 @@ export function OutputCellComponent({
 
             {/* Question answer */}
             {isQuestionAnswer(cell.data) && (
-              <div className="flex items-center gap-2 rounded-lg bg-[#005E5E]/[0.04] px-3 py-2">
-                <CheckCircle2 className="size-3.5 shrink-0 text-[#005E5E]" />
-                <span className="text-[13px] text-[#011111]">{cell.data.answer}</span>
+              <div className="bg-primary/[0.04] flex items-center gap-2 rounded-lg px-3 py-2">
+                <CheckCircle2 className="text-primary size-3.5 shrink-0" />
+                <span className="text-foreground text-[13px]">{cell.data.answer}</span>
               </div>
             )}
 
@@ -446,10 +469,12 @@ export function OutputCellComponent({
                 </>
               )}
 
-            {!hasContent && <p className="py-1 text-xs text-[#CDD5DB]">{t("output.empty")}</p>}
+            {!hasContent && (
+              <p className="text-muted-foreground/60 py-1 text-xs">{t("output.empty")}</p>
+            )}
           </>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

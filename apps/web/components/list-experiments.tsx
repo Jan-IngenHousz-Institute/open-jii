@@ -1,69 +1,80 @@
 "use client";
 
-import { X } from "lucide-react";
-import { ExperimentOverviewCards } from "~/components/experiment-overview-cards";
+import { OverviewToolbar } from "@/components/overview-toolbar";
+import { ListPagination } from "~/components/list-pagination";
+import { getExperimentColumns } from "~/components/overview-table/experiment-columns";
+import { OverviewTable } from "~/components/overview-table/overview-table";
 import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
+import { useLocale } from "~/hooks/useLocale";
 
 import { useTranslation } from "@repo/i18n";
-import { Input } from "@repo/ui/components/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components/select";
+import { SearchInput } from "@repo/ui/components/search-input";
 
 interface ListExperimentsProps {
   archived?: boolean;
 }
 
 export function ListExperiments({ archived = false }: ListExperimentsProps) {
-  const { data, filter, setFilter, search, setSearch } = useExperiments({
-    archived,
-  });
-  const { t } = useTranslation();
+  const {
+    data,
+    isLoading,
+    isPlaceholderData,
+    isSearchPending,
+    error,
+    refetch,
+    search,
+    debouncedSearch,
+    setSearch,
+    page,
+    setPage,
+  } = useExperiments({ archived });
+  const { t } = useTranslation(["experiments", "common"]);
+  const locale = useLocale();
+  const hasSearch = debouncedSearch.trim() !== "";
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:gap-8">
-        <div className="relative w-full md:w-56">
-          <Input
-            type="text"
+      <OverviewToolbar
+        search={
+          <SearchInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={setSearch}
+            isLoading={isSearchPending}
             placeholder={t("experiments.searchExperiments")}
-            className="w-full pr-8"
+            clearLabel={t("experiments.clearSearch")}
+            loadingLabel={t("experiments.loadingExperiments")}
+            className="w-full md:w-56"
           />
-          {search && (
-            <button
-              type="button"
-              aria-label={t("experiments.clearSearch")}
-              onClick={() => setSearch("")}
-              className="absolute right-2 top-1/2 flex -translate-y-1/2 cursor-pointer items-center justify-center border-none bg-transparent p-0 text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-        <div className="flex w-full flex-col gap-4 md:w-auto md:flex-row md:items-center md:gap-8">
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="md:min-w-45 w-full md:w-auto">
-              <SelectValue placeholder="Filter experiments" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="member">{t("experiments.filterMember")}</SelectItem>
-              <SelectItem value="all">{t("experiments.filterAll")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <ExperimentOverviewCards
-        experiments={data}
-        archived={archived}
-        showGetStartedHelp={!archived && !search}
+        }
       />
+
+      <div
+        aria-busy={isPlaceholderData}
+        inert={isPlaceholderData}
+        className={`space-y-4 transition-opacity ${isPlaceholderData ? "pointer-events-none opacity-50" : ""}`}
+      >
+        <OverviewTable
+          columns={getExperimentColumns(t, locale)}
+          items={data?.items}
+          isLoading={isLoading}
+          error={error}
+          onRetry={() => void refetch()}
+          errorMessage={t("experiments.errorLoadingExperiment")}
+          retryLabel={t("common.errors.tryAgain")}
+          getRowKey={(experiment) => experiment.id}
+          getRowHref={(experiment) =>
+            archived
+              ? `/${locale}/platform/experiments-archive/${experiment.id}`
+              : `/${locale}/platform/experiments/${experiment.id}`
+          }
+          emptyMessage={t(hasSearch ? "experiments.noMatches" : "experiments.noExperiments")}
+          emptyHelpPath={!archived && !hasSearch ? "/guide/get-started/quick-start" : undefined}
+        />
+
+        {data && data.items.length > 0 && (
+          <ListPagination page={page} totalPages={data.totalPages} onPageChange={setPage} />
+        )}
+      </div>
     </div>
   );
 }

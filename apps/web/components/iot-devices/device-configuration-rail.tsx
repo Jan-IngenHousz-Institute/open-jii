@@ -72,7 +72,10 @@ export function DeviceConfigurationRail({
     }
     if (state === "stale") {
       return (
-        <Badge variant="outline" className="border-amber-500/50 text-amber-700 dark:text-amber-500">
+        <Badge
+          variant="outline"
+          className="border-status-stale-foreground/50 text-status-stale-foreground"
+        >
           {t("iot.onboarding.rail.stale")}
         </Badge>
       );

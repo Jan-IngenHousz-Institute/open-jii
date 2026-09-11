@@ -65,7 +65,7 @@ describe("VisualizationTableRow", () => {
   it("shows the registered chart type label and family-keyed badge class", () => {
     renderRow({ visualization: viz({ chartType: "line" }) });
     const pill = screen.getByText("workspace.charts.types.line");
-    expect(pill).toHaveClass("bg-badge-published");
+    expect(pill).toHaveClass("bg-status-published");
   });
 
   it.each(["bar", "area", "dot-plot", "lollipop", "bubble", "pie"] as const)(
@@ -74,7 +74,7 @@ describe("VisualizationTableRow", () => {
       renderRow({ visualization: viz({ chartType }) });
       // Labels use camelCased keys for hyphenated types (workspace.charts.types.dot-plot).
       const key = `workspace.charts.types.${chartType}`;
-      expect(screen.getByText(key)).toHaveClass("bg-badge-published");
+      expect(screen.getByText(key)).toHaveClass("bg-status-published");
     },
   );
 
@@ -89,7 +89,7 @@ describe("VisualizationTableRow", () => {
     ["spc-control-chart", "workspace.charts.types.spcControlChart"],
   ] as const)("renders the statistical-family badge for chartType=%s", (chartType, labelKey) => {
     renderRow({ visualization: viz({ chartType }) });
-    expect(screen.getByText(labelKey)).toHaveClass("bg-badge-stale");
+    expect(screen.getByText(labelKey)).toHaveClass("bg-status-stale");
   });
 
   it.each([
@@ -105,7 +105,7 @@ describe("VisualizationTableRow", () => {
     ["carpet", "workspace.charts.types.carpet"],
   ] as const)("renders the scientific-family badge for chartType=%s", (chartType, labelKey) => {
     renderRow({ visualization: viz({ chartType }) });
-    expect(screen.getByText(labelKey)).toHaveClass("bg-badge-archived");
+    expect(screen.getByText(labelKey)).toHaveClass("bg-status-archived");
   });
 
   it("opens the confirm dialog when the delete menu item is selected", async () => {

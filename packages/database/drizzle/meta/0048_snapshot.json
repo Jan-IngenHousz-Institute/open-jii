@@ -1,5 +1,5 @@
 {
-  "id": "529d57ed-851d-47a2-ad04-829b7d955139",
+  "id": "4f32881d-b68f-45b2-bd3c-2052e231c365",
   "prevId": "2b1d754e-fba3-41e7-8ae6-f2aa6ad4c7a0",
   "version": "7",
   "dialect": "postgresql",
@@ -752,13 +752,6 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
-        },
-        "plan_answers": {
-          "name": "plan_answers",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
         },
         "created_at": {
           "name": "created_at",
@@ -2506,6 +2499,16 @@
           "primaryKey": false,
           "notNull": true,
           "default": "(now() AT TIME ZONE 'UTC')"
+        },
+        "search_vector": {
+          "name": "search_vector",
+          "type": "tsvector",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "setweight(to_tsvector('english', coalesce(\"organizations\".\"name\", '')), 'A') || setweight(to_tsvector('english', coalesce(\"organizations\".\"description\", '')), 'B') || setweight(to_tsvector('english', coalesce(\"organizations\".\"location\", '')), 'C')",
+            "type": "stored"
+          }
         }
       },
       "indexes": {},

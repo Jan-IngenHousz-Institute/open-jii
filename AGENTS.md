@@ -91,6 +91,16 @@ blocks destructive git while you are on `main`, and blocks pushing to `main` fro
 on a branch and open a PR. On your own branches nothing is restricted: force-push, reset and clean
 as you like.
 
+## Pull requests feed releases
+
+Before opening or updating a PR, follow
+[Pull request and release metadata](CONTRIBUTING.md#pull-request-and-release-metadata). That section
+is the source of truth for PR titles, Linear issue relations, and exemptions.
+
+A PR is ready for review only when its proposed title and body satisfy that contract and the
+`Linear ref check` can pass. When handing work back without opening the PR, provide the exact title
+and Linear relation lines the author should use.
+
 ## Agent skills
 
 Configuration the vendored `mattpocock/skills` guides read. These files answer "where do issues

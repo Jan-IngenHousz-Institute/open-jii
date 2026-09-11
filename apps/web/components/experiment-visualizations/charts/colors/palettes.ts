@@ -1,12 +1,33 @@
 // Color palettes + lookups for chart series and category encoding.
+import { readThemeColor } from "@repo/ui/components/charts/utils";
 
-export const DEFAULT_PRIMARY_COLOR = "#3b82f6";
+/**
+ * Last-resort swatch for the colour picker when the theme cannot be read.
+ * Only reachable without a computed style (SSR, jsdom); the picker is a
+ * browser-only control, so in practice `--chart-1` always wins.
+ */
+const PICKER_FALLBACK_COLOR = "#3b82f6";
+
+/**
+ * The swatch the colour picker offers before the user pins anything.
+ *
+ * Series colours are *not* seeded into a new chart's config — an unpinned
+ * series takes its colour from Plotly's `colorway`, which `createBaseLayout`
+ * fills from `--chart-1..5`, so it follows a theme swap for the life of the
+ * visualization. This is only the starting point of a deliberate user pick,
+ * which becomes user data and is never migrated afterwards. Resolving it at
+ * pick time is safe precisely because that is a browser interaction: the
+ * determinism that autosave bodies need does not apply.
+ */
+export function getSuggestedSeriesColor(): string {
+  return readThemeColor("--chart-1") ?? PICKER_FALLBACK_COLOR;
+}
 
 // Deterministic palette so adding a series doesn't produce non-reproducible
 // autosave bodies (random hex per render would yield meaningless config diffs
 // and unstable tests). Wraps once exhausted.
 const SERIES_PALETTE = [
-  DEFAULT_PRIMARY_COLOR,
+  PICKER_FALLBACK_COLOR,
   "#ef4444",
   "#10b981",
   "#f59e0b",

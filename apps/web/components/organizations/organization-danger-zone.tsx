@@ -11,6 +11,7 @@ import { authErrorMessage } from "~/hooks/organization/auth-organization-result"
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
+import { Card } from "@repo/ui/components/card";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { OrganizationConfirmDialog } from "./organization-confirm-dialog";
@@ -99,7 +100,7 @@ export function OrganizationDangerZone({
       {/* One chip per type still held, rather than the same list buried in a
           sentence: the remedy is per type, so the list is the instruction. */}
       {isBlocked ? (
-        <div className="bg-card rounded-md border p-3">
+        <Card className="gap-0 p-3">
           <span className="text-muted-foreground mb-2 block text-[11px] font-semibold uppercase tracking-wider">
             {t("organizations.delete.stillOwned")}
           </span>
@@ -110,7 +111,7 @@ export function OrganizationDangerZone({
               </Badge>
             ))}
           </div>
-        </div>
+        </Card>
       ) : null}
 
       <div className="flex flex-col items-start gap-2">

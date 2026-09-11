@@ -13,6 +13,10 @@
     "languageDrawer": "Toggle language drawer",
     "regionalSettings": "Regional Settings",
     "loading": "Loading...",
+    "clear": "Clear",
+    "toggleTheme": "Toggle theme",
+    "switchToLightMode": "Switch to light mode",
+    "switchToDarkMode": "Switch to dark mode",
     "error": "Error",
     "success": "Success",
     "save": "Save",
@@ -82,14 +86,11 @@
     "home": "Home",
     "openJII": "openJII",
     "support": "Support",
+    "documentation": "Documentation",
+    "breadcrumbs": "Breadcrumbs",
     "faq": "FAQ"
   },
   "experiments": {
-    "filterMy": "My Experiments",
-    "filterMember": "Member Experiments",
-    "filterRelated": "All Related Experiments",
-    "filterAll": "All Experiments",
-    "filterStatusAll": "All Statuses",
     "clearSearch": "Clear search",
     "title": "Experiments",
     "archiveTitle": "Experiments Archive",
@@ -105,14 +106,13 @@
     "updatedAt": "Updated At",
     "loadingExperiments": "Loading experiments...",
     "noExperiments": "No experiments yet",
+    "noMatches": "No experiments match your search",
     "noExperimentsDescription": "Get started by creating your first experiment to collect and analyze data.",
     "viewDetails": "View Details",
     "experimentCreated": "Experiment created successfully",
     "experimentUpdated": "Experiment updated successfully",
     "experimentUpdateFailed": "Failed to update experiment",
     "experimentDeleted": "Experiment deleted successfully",
-    "listDescription": "This page will show a list of existing experiments.",
-    "archiveDescription": "This page will show a list of archived experiments.",
     "experiment": "Experiment",
     "settings": "Experiment Settings",
     "settingsDescription": "Manage settings and members for this experiment.",
@@ -457,11 +457,6 @@
     "searchPlaceholder": "Search organizations…",
     "searchLabel": "Search organizations",
     "noMatches": "No organizations match your search",
-    "filter": {
-      "label": "Filter organizations",
-      "my": "My organizations",
-      "all": "All organizations"
-    },
     "tabs": {
       "members": "Members",
       "teams": "Teams",
@@ -548,15 +543,9 @@
         "failed": "The organization was created, but {{names}} could not be invited. Try again from its Members tab."
       }
     },
-    "mine": {
-      "emptyTitle": "You are not in any organization yet",
-      "emptyHint": "Create one to share experiments, protocols, macros and workbooks with a group, or find one in the directory.",
-      "loadFailed": "Could not load your organizations."
-    },
     "directory": {
-      "emptyTitle": "No public organizations yet",
-      "emptyHint": "Only organizations that have made themselves public appear here.",
-      "loadFailed": "Could not load the directory."
+      "emptyTitle": "No organizations yet",
+      "loadFailed": "Could not load organizations."
     },
     "join": {
       "requestAction": "Request to join",
@@ -1178,13 +1167,13 @@
     "updatedAt": "Updated At",
     "loadingProtocols": "Loading protocols...",
     "noProtocols": "No protocols found matching your criteria.",
+    "noMatches": "No protocols match your search",
     "viewDetails": "View Details",
     "protocolCreated": "Protocol created successfully",
     "protocolUpdated": "Protocol updated successfully",
     "protocolDeleted": "Protocol deleted successfully",
     "nameAlreadyExists": "A protocol with this name already exists. Please choose a different name.",
     "createError": "Failed to create protocol. Please try again.",
-    "listDescription": "This page will show a list of existing protocols.",
     "protocol": "Protocol",
     "settings": "Protocol Settings",
     "settingsDescription": "Manage settings for this protocol.",
@@ -1197,15 +1186,17 @@
     "notFoundDescription": "The requested protocol could not be found",
     "family": "Sensor Family",
     "onlyCreatorCanEdit": "Only the protocol creator can access settings",
-    "filterMy": "My Protocols",
-    "filterAll": "All Protocols",
-    "filterProtocols": "Filter protocols",
     "clearSearch": "Clear search",
     "searchProtocols": "Search protocols...",
     "descriptionPlaceholder": "Add a description...",
     "detailsTitle": "Details",
     "codePlaceholder": "Enter protocol code as JSON",
-    "lastUpdate": "Last update"
+    "columns": {
+      "name": "Name",
+      "family": "Family",
+      "macros": "Macros",
+      "updated": "Updated"
+    }
   },
   "newProtocol": {
     "description": "Set up a new protocol.",
@@ -1275,6 +1266,8 @@
     "compatibleMacrosDescription": "Macros that are known to work with this protocol. These will be recommended in the flow builder.",
     "noCompatibleMacros": "No compatible macros linked yet.",
     "addCompatibleMacro": "Search and add a compatible macro...",
+    "openCompatibleMacro": "Open {{name}} in a new tab",
+    "removeCompatibleMacro": "Remove {{name}}",
     "detailsTitle": "Protocol Details",
     "testerTitle": "Connect & Test"
   },
@@ -1401,5 +1394,10 @@
     "pageOf": "of",
     "previous": "Previous",
     "next": "Next"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {{page}} of {{totalPages}}"
   }
 }

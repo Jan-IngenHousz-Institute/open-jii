@@ -1,5 +1,6 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useOrganizationSlugAvailability } from "@/hooks/organization/useOrganizationSlugAvailability/useOrganizationSlugAvailability";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Check, Loader2 } from "lucide-react";
@@ -8,13 +9,6 @@ import type { UseFormReturn } from "react-hook-form";
 import { organizationSlugRejection, suggestOrganizationSlug } from "~/util/organization-slug";
 
 import { useTranslation } from "@repo/i18n";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/components/card";
 import {
   FormControl,
   FormDescription,
@@ -75,105 +69,103 @@ export function NewOrganizationIdentityCard({
   const isSlugSettled = canCheckAvailability && isSlugDebounced && !isCheckingSlug;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("organizations.create.identityTitle")}</CardTitle>
-        <CardDescription>{t("organizations.create.identityDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("organizations.fields.name")}</FormLabel>
+    <SettingsCard
+      title={t("organizations.create.identityTitle")}
+      description={t("organizations.create.identityDescription")}
+      contentClassName="space-y-6"
+    >
+      <FormField
+        control={form.control}
+        name="name"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t("organizations.fields.name")}</FormLabel>
+            <FormControl>
+              <Input
+                {...field}
+                onChange={(event) => {
+                  field.onChange(event);
+                  // The slug follows the name until it is edited by hand, then it is
+                  // the user's. Validated only once the slug has already complained,
+                  // so a name that has not yet reduced to a slug is not scolded for it.
+                  if (!isSlugEdited) {
+                    form.setValue("slug", suggestOrganizationSlug(event.target.value), {
+                      shouldValidate: form.getFieldState("slug", form.formState).invalid,
+                    });
+                  }
+                }}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
+        name="slug"
+        render={({ field, fieldState }) => (
+          <FormItem>
+            <FormLabel>{t("organizations.fields.slug")}</FormLabel>
+            {/* The indicator sits beside the control rather than around it: a wrapper
+                  inside `FormControl` would take the id the label points at. */}
+            <div className="relative">
               <FormControl>
                 <Input
                   {...field}
                   onChange={(event) => {
+                    setIsSlugEdited(true);
                     field.onChange(event);
-                    // The slug follows the name until it is edited by hand, then it is
-                    // the user's. Validated only once the slug has already complained,
-                    // so a name that has not yet reduced to a slug is not scolded for it.
-                    if (!isSlugEdited) {
-                      form.setValue("slug", suggestOrganizationSlug(event.target.value), {
-                        shouldValidate: form.getFieldState("slug", form.formState).invalid,
-                      });
-                    }
                   }}
+                  aria-invalid={fieldState.invalid}
                 />
               </FormControl>
+              {isSlugSettled && isSlugAvailable === true ? (
+                <Check
+                  aria-label={t("organizations.slug.available")}
+                  className="text-primary absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2"
+                />
+              ) : canCheckAvailability && isCheckingSlug ? (
+                <Loader2
+                  aria-label={t("organizations.slug.checking")}
+                  className="text-muted-foreground absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin"
+                />
+              ) : null}
+            </div>
+            {fieldState.error ? (
               <FormMessage />
-            </FormItem>
-          )}
-        />
+            ) : (
+              <FormDescription>{t("organizations.slug.hint")}</FormDescription>
+            )}
+          </FormItem>
+        )}
+      />
 
-        <FormField
-          control={form.control}
-          name="slug"
-          render={({ field, fieldState }) => (
-            <FormItem>
-              <FormLabel>{t("organizations.fields.slug")}</FormLabel>
-              {/* The indicator sits beside the control rather than around it: a wrapper
-                  inside `FormControl` would take the id the label points at. */}
-              <div className="relative">
-                <FormControl>
-                  <Input
-                    {...field}
-                    onChange={(event) => {
-                      setIsSlugEdited(true);
-                      field.onChange(event);
-                    }}
-                    aria-invalid={fieldState.invalid}
-                  />
-                </FormControl>
-                {isSlugSettled && isSlugAvailable === true ? (
-                  <Check
-                    aria-label={t("organizations.slug.available")}
-                    className="text-primary absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2"
-                  />
-                ) : canCheckAvailability && isCheckingSlug ? (
-                  <Loader2
-                    aria-label={t("organizations.slug.checking")}
-                    className="text-muted-foreground absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin"
-                  />
-                ) : null}
-              </div>
-              {fieldState.error ? (
-                <FormMessage />
-              ) : (
-                <FormDescription>{t("organizations.slug.hint")}</FormDescription>
-              )}
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="type"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("organizations.fields.type")}</FormLabel>
-              <Select value={field.value} onValueChange={field.onChange}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value={NO_TYPE}>{t("organizations.types.unspecified")}</SelectItem>
-                  {ORGANIZATION_TYPES.map((organizationType) => (
-                    <SelectItem key={organizationType} value={organizationType}>
-                      {t(organizationTypeLabelKey(organizationType))}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </CardContent>
-    </Card>
+      <FormField
+        control={form.control}
+        name="type"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t("organizations.fields.type")}</FormLabel>
+            <Select value={field.value} onValueChange={field.onChange}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value={NO_TYPE}>{t("organizations.types.unspecified")}</SelectItem>
+                {ORGANIZATION_TYPES.map((organizationType) => (
+                  <SelectItem key={organizationType} value={organizationType}>
+                    {t(organizationTypeLabelKey(organizationType))}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </SettingsCard>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { AlertCircle, Loader2 } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
@@ -161,18 +162,26 @@ function ColumnsState({ hasTable, isLoading, error, hasColumns, children }: Colu
   }
   if (error) {
     return (
-      <div className="text-muted-foreground bg-muted/30 flex items-center gap-2 rounded-md border border-dashed p-4 text-sm">
+      <InsetPanel
+        dashed
+        padding="lg"
+        className="text-muted-foreground flex items-center gap-2 text-sm"
+      >
         <AlertCircle className="h-4 w-4 shrink-0" />
         {t("workspace.inspector.failedToLoadColumns")}
-      </div>
+      </InsetPanel>
     );
   }
   if (!hasColumns) {
     return (
-      <div className="text-muted-foreground bg-muted/30 flex items-center gap-2 rounded-md border border-dashed p-4 text-sm">
+      <InsetPanel
+        dashed
+        padding="lg"
+        className="text-muted-foreground flex items-center gap-2 text-sm"
+      >
         <AlertCircle className="h-4 w-4 shrink-0" />
         {t("workspace.inspector.noValidColumns")}
-      </div>
+      </InsetPanel>
     );
   }
   return <>{children}</>;
