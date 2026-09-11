@@ -36,6 +36,7 @@ describe("ListExperimentDevicesUseCase", () => {
     vi.spyOn(awsAdapter, "searchThingsConnectivity").mockResolvedValue(success(new Map()));
     vi.spyOn(databricksAdapter, "getExperimentPublishers").mockResolvedValue(success([]));
     vi.spyOn(databricksAdapter, "getDevicesLastActivity").mockResolvedValue(success(new Map()));
+    vi.spyOn(databricksAdapter, "getExperimentDeviceStats").mockResolvedValue(success([]));
   });
 
   afterEach(() => {
@@ -172,9 +173,68 @@ describe("ListExperimentDevicesUseCase", () => {
         connectivity: null,
         lastDataAt: null,
         recentData: { measurementCount: 3, lastDataAt: "2026-09-01T00:00:00.000Z" },
+        reported: null,
         canView: false,
       },
     ]);
+  });
+
+  it("folds the gold device rows per client id: newest description wins, measurements sum", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "E", userId });
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
+    await repository.addExperiments(device.id, [experiment.id], userId);
+    // Same device, two firmware generations, as the gold table stores it.
+    vi.spyOn(databricksAdapter, "getExperimentDeviceStats").mockResolvedValue(
+      success([
+        {
+          clientId: device.thingName,
+          deviceName: "old-name",
+          firmware: "ambyte-1",
+          version: "1.0.0",
+          battery: 3.6,
+          totalMeasurements: 40,
+          lastReportedAt: "2026-08-01T00:00:00.000Z",
+        },
+        {
+          clientId: device.thingName,
+          deviceName: "shed-logger",
+          firmware: "ambyte-2",
+          version: "2.4.1",
+          battery: 4.18,
+          totalMeasurements: 2,
+          lastReportedAt: "2026-09-02T00:00:00.000Z",
+        },
+      ]),
+    );
+
+    const result = await useCase.execute(experiment.id, userId, NOW);
+
+    assertSuccess(result);
+    expect(result.value.devices[0].reported).toEqual({
+      deviceName: "shed-logger",
+      firmware: "ambyte-2",
+      version: "2.4.1",
+      battery: 4.18,
+      totalMeasurements: 42,
+      lastReportedAt: "2026-09-02T00:00:00.000Z",
+    });
+  });
+
+  it("flags the pipeline unavailable when only the device stats fail", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "E", userId });
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
+    await repository.addExperiments(device.id, [experiment.id], userId);
+    vi.spyOn(databricksAdapter, "getExperimentDeviceStats").mockResolvedValue(
+      failure(AppError.internal("warehouse down")),
+    );
+
+    const result = await useCase.execute(experiment.id, userId, NOW);
+
+    assertSuccess(result);
+    // The roster still renders; only the reported facts go unknown.
+    expect(result.value.devices).toHaveLength(1);
+    expect(result.value.devices[0].reported).toBeNull();
+    expect(result.value.pipelineUnavailable).toBe(true);
   });
 
   it("flags the pipeline unavailable and keeps the roster when the warehouse fails", async () => {

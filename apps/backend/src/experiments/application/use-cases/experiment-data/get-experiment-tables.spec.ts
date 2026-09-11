@@ -73,7 +73,8 @@ describe("GetExperimentTablesUseCase", () => {
       // Assertions
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toHaveLength(3);
+      // Device metadata is not offered here; it lives on the Devices tab.
+      expect(result.value).toHaveLength(2);
 
       expect(result.value).toEqual([
         {
@@ -82,14 +83,6 @@ describe("GetExperimentTablesUseCase", () => {
           displayName: "Raw Data",
           totalRows: 100,
           defaultSortColumn: "timestamp",
-          errorColumn: undefined,
-        },
-        {
-          identifier: ExperimentTableName.DEVICE,
-          tableType: "static",
-          displayName: "Device Metadata",
-          totalRows: 50,
-          defaultSortColumn: "processed_timestamp",
           errorColumn: undefined,
         },
         {

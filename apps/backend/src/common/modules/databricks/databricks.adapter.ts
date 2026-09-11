@@ -20,6 +20,7 @@ import type {
   DeviceMeasurementRow,
   DevicePayloadBreakdownRow,
   DeviceThroughputRow,
+  ExperimentDeviceStatsRow,
   ExperimentPublisherRow,
   GroupExperimentRow,
   GroupFirmwareRow,
@@ -574,6 +575,50 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         eventType: row[index.event_type] ?? null,
         eventTimestamp: this.toIsoOrNull(row[index.event_timestamp]),
         disconnectReason: row[index.disconnect_reason] ?? null,
+      })),
+    );
+  }
+
+  /**
+   * The gold device table for one experiment: what each device reported about
+   * itself, per firmware version it ran. This is the same source the Devices
+   * tab's metadata came from, so the figures stay identical to what the data
+   * browser showed.
+   */
+  async getExperimentDeviceStats(
+    experimentId: string,
+    limit: number,
+  ): Promise<Result<ExperimentDeviceStatsRow[]>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.experiment_device_data`,
+      columns: [
+        "client_id",
+        "device_name",
+        "device_firmware",
+        "device_version",
+        "device_battery",
+        "total_measurements",
+        "processed_timestamp",
+      ],
+      whereConditions: [["experiment_id", experimentId]],
+      orderBy: "processed_timestamp",
+      orderDirection: "DESC",
+      limit,
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        clientId: row[index.client_id] ?? null,
+        deviceName: row[index.device_name] ?? null,
+        firmware: row[index.device_firmware] ?? null,
+        version: row[index.device_version] ?? null,
+        battery: this.toNumberOrNull(row[index.device_battery]),
+        totalMeasurements: Number(row[index.total_measurements] ?? 0),
+        lastReportedAt: this.toIsoOrNull(row[index.processed_timestamp]),
       })),
     );
   }

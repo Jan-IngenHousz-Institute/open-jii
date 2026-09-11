@@ -24,7 +24,19 @@ export interface ExperimentDeviceEntryDto {
   connectivity: { connected: boolean; lastSeenAt: string | null } | null;
   lastDataAt: string | null;
   recentData: { measurementCount: number; lastDataAt: string | null } | null;
+  reported: ExperimentDeviceReportedDto | null;
   canView: boolean;
+}
+
+// What the device reported about itself while publishing into the experiment,
+// folded across the pipeline's per-firmware rows.
+export interface ExperimentDeviceReportedDto {
+  deviceName: string | null;
+  firmware: string | null;
+  version: string | null;
+  battery: number | null;
+  totalMeasurements: number;
+  lastReportedAt: string | null;
 }
 
 export interface ExperimentDevicesOverviewDto {

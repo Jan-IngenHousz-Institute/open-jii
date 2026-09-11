@@ -569,7 +569,8 @@
         "device": "Apparaat",
         "state": "Status",
         "lastData": "Data in dit experiment",
-        "onboarded": "Gekoppeld"
+        "onboarded": "Gekoppeld",
+        "battery": "Batterij"
       },
       "notOnboarded": "Niet gekoppeld",
       "unregistered": "Niet-geregistreerde zender",
@@ -578,7 +579,11 @@
       "measurements_other": "{{count}} metingen",
       "noRecentData": "Geen data in de afgelopen 30 dagen",
       "lastDataUnavailable": "Niet beschikbaar",
-      "pipelineUnavailable": "Meetdata kon niet worden geladen; apparaten die alleen data stuurden ontbreken mogelijk."
+      "pipelineUnavailable": "Meetdata kon niet worden geladen; apparaten die alleen data stuurden ontbreken mogelijk.",
+      "firmwareVersion": "v{{version}}",
+      "totalMeasurements_one": "{{count}} totaal",
+      "totalMeasurements_other": "{{count}} totaal",
+      "unknownFirmware": "Firmware onbekend"
     },
     "groups": {
       "addDevices": "Apparaten toevoegen",

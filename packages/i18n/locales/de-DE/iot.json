@@ -569,7 +569,8 @@
         "device": "Gerät",
         "state": "Zustand",
         "lastData": "Daten in diesem Experiment",
-        "onboarded": "Zugeordnet"
+        "onboarded": "Zugeordnet",
+        "battery": "Batterie"
       },
       "notOnboarded": "Nicht zugeordnet",
       "unregistered": "Nicht registrierter Sender",
@@ -578,7 +579,11 @@
       "measurements_other": "{{count}} Messungen",
       "noRecentData": "Keine Daten in den letzten 30 Tagen",
       "lastDataUnavailable": "Nicht verfügbar",
-      "pipelineUnavailable": "Messdaten konnten nicht geladen werden; Geräte, die nur Daten gesendet haben, fehlen möglicherweise."
+      "pipelineUnavailable": "Messdaten konnten nicht geladen werden; Geräte, die nur Daten gesendet haben, fehlen möglicherweise.",
+      "firmwareVersion": "v{{version}}",
+      "totalMeasurements_one": "{{count}} insgesamt",
+      "totalMeasurements_other": "{{count}} insgesamt",
+      "unknownFirmware": "Firmware unbekannt"
     },
     "groups": {
       "addDevices": "Geräte hinzufügen",

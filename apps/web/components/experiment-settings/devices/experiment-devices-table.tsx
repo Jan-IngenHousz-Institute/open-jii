@@ -55,16 +55,59 @@ export function ExperimentDevicesTable({ overview, onRequestDetach }: Experiment
             {formatRelativeTime(entry.recentData.lastDataAt, locale)}
           </span>
         )}
+        {renderLifetimeTotal(entry)}
       </div>
     );
   }
 
+  // The window count answers "is it live"; the pipeline's lifetime total
+  // answers "how much has it ever contributed". Only worth a line when it
+  // says something the window count does not.
+  function renderLifetimeTotal(entry: ExperimentDeviceEntry) {
+    const total = entry.reported?.totalMeasurements;
+    if (total === undefined || total === entry.recentData?.measurementCount) {
+      return null;
+    }
+    return (
+      <span className="text-muted-foreground text-[11px]">
+        {t("iot.experimentDevices.totalMeasurements", { count: total })}
+      </span>
+    );
+  }
+
+  function renderType(entry: ExperimentDeviceEntry) {
+    const family = entry.device === null ? null : getSensorFamilyLabel(entry.device.deviceType);
+    const version = entry.reported?.version ?? entry.reported?.firmware ?? null;
+
+    return (
+      <div className="flex flex-col gap-0.5">
+        {family !== null && <span>{family}</span>}
+        {version !== null && (
+          <span className="text-muted-foreground font-mono text-[11px]">
+            {t("iot.experimentDevices.firmwareVersion", { version })}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  function renderBattery(entry: ExperimentDeviceEntry) {
+    const battery = entry.reported?.battery;
+    if (battery === undefined || battery === null) {
+      return null;
+    }
+    // Unit-free on purpose: families report volts or percent and the payload
+    // does not say which.
+    return battery.toLocaleString(locale, { maximumFractionDigits: 2 });
+  }
+
   function renderIdentity(entry: ExperimentDeviceEntry) {
     if (entry.device === null) {
+      const reportedName = entry.reported?.deviceName ?? null;
       return (
         <div className="flex min-w-0 flex-col">
           <span className="truncate text-sm font-medium">
-            {t("iot.experimentDevices.unregistered")}
+            {reportedName ?? t("iot.experimentDevices.unregistered")}
           </span>
           <span className="text-muted-foreground truncate font-mono text-xs">{entry.clientId}</span>
         </div>
@@ -97,13 +140,16 @@ export function ExperimentDevicesTable({ overview, onRequestDetach }: Experiment
       <TableRow key={entry.clientId} className="bg-background hover:bg-muted/50 border-border">
         <TableCell className="min-w-0 px-6 py-3">{renderIdentity(entry)}</TableCell>
         <TableCell className="text-muted-foreground px-6 py-3 text-[13px]">
-          {device === null ? null : getSensorFamilyLabel(device.deviceType)}
+          {renderType(entry)}
         </TableCell>
         <TableCell className="px-6 py-3">
           <div className="flex flex-col gap-1">
             {device !== null && <IotDeviceStatusBadge status={device.status} />}
             {device !== null && <ConnectivityDot connectivity={entry.connectivity} />}
           </div>
+        </TableCell>
+        <TableCell className="text-muted-foreground px-6 py-3 text-[13px] tabular-nums">
+          {renderBattery(entry)}
         </TableCell>
         <TableCell className="text-muted-foreground px-6 py-3 text-[13px]">
           {renderRecentData(entry)}
@@ -141,6 +187,7 @@ export function ExperimentDevicesTable({ overview, onRequestDetach }: Experiment
             <ColumnHead>{t("iot.experimentDevices.columns.device")}</ColumnHead>
             <ColumnHead>{t("iot.devices.columns.type")}</ColumnHead>
             <ColumnHead>{t("iot.experimentDevices.columns.state")}</ColumnHead>
+            <ColumnHead>{t("iot.experimentDevices.columns.battery")}</ColumnHead>
             <ColumnHead>{t("iot.experimentDevices.columns.lastData")}</ColumnHead>
             <ColumnHead>{t("iot.experimentDevices.columns.onboarded")}</ColumnHead>
             <TableHead className="w-12" />

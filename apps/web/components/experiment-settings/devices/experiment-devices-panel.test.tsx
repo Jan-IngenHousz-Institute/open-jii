@@ -39,6 +39,7 @@ const bound: ExperimentDeviceEntry = {
   connectivity: { connected: true, lastSeenAt: null },
   lastDataAt: null,
   recentData: null,
+  reported: null,
   canView: true,
 };
 
@@ -49,6 +50,14 @@ const observedPhone: ExperimentDeviceEntry = {
   connectivity: null,
   lastDataAt: "2026-09-03T10:00:00.000Z",
   recentData: { measurementCount: 7, lastDataAt: "2026-09-03T10:00:00.000Z" },
+  reported: {
+    deviceName: null,
+    firmware: null,
+    version: "2.4.1",
+    battery: 4.18,
+    totalMeasurements: 42,
+    lastReportedAt: "2026-09-03T10:00:00.000Z",
+  },
   canView: false,
 };
 
@@ -59,7 +68,28 @@ const unregistered: ExperimentDeviceEntry = {
   connectivity: null,
   lastDataAt: null,
   recentData: { measurementCount: 3, lastDataAt: "2026-09-01T00:00:00.000Z" },
+  reported: {
+    deviceName: null,
+    firmware: null,
+    version: null,
+    battery: null,
+    totalMeasurements: 3,
+    lastReportedAt: "2026-09-01T00:00:00.000Z",
+  },
   canView: false,
+};
+
+// Same publisher, but this one told the pipeline what it calls itself.
+const unregisteredNamed: ExperimentDeviceEntry = {
+  ...unregistered,
+  reported: {
+    deviceName: "shed-logger",
+    firmware: null,
+    version: null,
+    battery: null,
+    totalMeasurements: 3,
+    lastReportedAt: "2026-09-01T00:00:00.000Z",
+  },
 };
 
 function overview(
@@ -195,5 +225,35 @@ describe("ExperimentDevicesPanel", () => {
     await waitFor(() => {
       expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" }));
     });
+  });
+
+  it("folds the pipeline's reported facts into the row: firmware, battery and lifetime total", async () => {
+    server.mount(contract.experiments.listExperimentDevices, {
+      body: overview([observedPhone]),
+    });
+
+    render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("iot.experimentDevices.firmwareVersion")).toBeInTheDocument();
+    });
+    expect(screen.getByText("4.18")).toBeInTheDocument();
+    // 42 lifetime against 7 in the window, so the total earns its line.
+    expect(screen.getByText("iot.experimentDevices.totalMeasurements")).toBeInTheDocument();
+  });
+
+  it("names an unregistered publisher by what it called itself, keeping its client id", async () => {
+    server.mount(contract.experiments.listExperimentDevices, {
+      body: overview([unregisteredNamed]),
+    });
+
+    render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("shed-logger")).toBeInTheDocument();
+    });
+    expect(screen.getByText("cognito-abc")).toBeInTheDocument();
+    // Its lifetime total equals the window count, so it stays a single line.
+    expect(screen.queryByText("iot.experimentDevices.totalMeasurements")).not.toBeInTheDocument();
   });
 });

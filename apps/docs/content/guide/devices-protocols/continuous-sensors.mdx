@@ -50,9 +50,16 @@ Every experiment has a **Devices** tab. It lists two kinds of device together:
 
 Four tiles summarize the roster: onboarded, sending data, onboarded with no
 recent data, and sending without onboarding. Each row shows the device's status,
-live broker connectivity, how many measurements it sent into this experiment in
-the window and when the last one arrived, and its onboarding date. Onboarded
-devices can be detached from here.
+live broker connectivity, the firmware version and battery level it last
+reported, how many measurements it sent into this experiment in the window and
+when the last one arrived, and its onboarding date. Where a device has sent more
+than the window shows, its total for the experiment appears alongside. Onboarded
+devices can be detached from here. An unregistered publisher is listed by the
+name it reports for itself, falling back to its client id.
+
+This roster replaces the separate device metadata table that used to sit among
+the experiment's data tables: the same reported facts now appear next to each
+device's registry identity and live state.
 
 ![The experiment Devices tab: four summary tiles above a table of onboarded gateways, one gateway sending without onboarding, and an unregistered publisher listed by client id](/img/guide/web/experiment-devices.webp)
 

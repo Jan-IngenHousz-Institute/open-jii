@@ -6,13 +6,18 @@ import { ExperimentRepository } from "../../../../experiments/core/repositories/
 import type {
   ExperimentDeviceDto,
   ExperimentDeviceEntryDto,
+  ExperimentDeviceReportedDto,
   ExperimentDevicesOverviewDto,
 } from "../../../core/models/experiment-device.model";
 import type { IotDeviceDto } from "../../../core/models/iot-device.model";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort, ThingConnectivity } from "../../../core/ports/aws.port";
 import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort, ExperimentPublisherRow } from "../../../core/ports/databricks.port";
+import type {
+  DatabricksPort,
+  ExperimentDeviceStatsRow,
+  ExperimentPublisherRow,
+} from "../../../core/ports/databricks.port";
 import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 
@@ -21,6 +26,9 @@ const OBSERVATION_WINDOW_MS = 30 * 86_400_000;
 
 /** Distinct publishers one experiment plausibly has in a window; a ceiling, not a target. */
 const PUBLISHER_LIMIT = 500;
+
+/** The gold device table holds one row per firmware a device ran, so it needs more headroom. */
+const DEVICE_STATS_LIMIT = 2000;
 
 /**
  * The experiment's Devices tab in one read: the bound roster, every client id
@@ -107,11 +115,13 @@ export class ListExperimentDevicesUseCase {
     const unboundDevices = unboundDevicesResult.value;
 
     const thingNames = [...boundThings, ...unboundDevices.map((device) => device.thingName)];
-    const [connectivity, activity] = await Promise.all([
+    const [connectivity, activity, stats] = await Promise.all([
       this.lookupConnectivity(thingNames),
       this.lookupActivity(thingNames),
+      this.lookupDeviceStats(experimentId),
     ]);
-    const pipelineUnavailable = publishers === null || activity === null;
+    const pipelineUnavailable = publishers === null || activity === null || stats === null;
+    const reportedByClientId = this.foldDeviceStats(stats ?? []);
 
     const entryFor = (
       device: ExperimentDeviceDto["device"],
@@ -129,6 +139,7 @@ export class ListExperimentDevicesUseCase {
         recentData: recent
           ? { measurementCount: recent.count, lastDataAt: recent.lastDataAt }
           : null,
+        reported: reportedByClientId.get(device.thingName) ?? null,
         canView,
       };
     };
@@ -156,6 +167,7 @@ export class ListExperimentDevicesUseCase {
           connectivity: null,
           lastDataAt: null,
           recentData: { measurementCount: row.count, lastDataAt: row.lastDataAt },
+          reported: reportedByClientId.get(clientId) ?? null,
           canView: false,
         });
       }
@@ -177,8 +189,72 @@ export class ListExperimentDevicesUseCase {
     return decision.allow;
   }
 
+  /**
+   * One reported fact set per client id. The gold table carries a row per
+   * firmware the device ran, so measurements sum across them while the
+   * descriptive fields come from the most recently processed row.
+   */
+  private foldDeviceStats(
+    rows: ExperimentDeviceStatsRow[],
+  ): Map<string, ExperimentDeviceReportedDto> {
+    const folded = new Map<string, ExperimentDeviceReportedDto>();
+
+    for (const row of rows) {
+      if (row.clientId === null) {
+        continue;
+      }
+
+      const existing = folded.get(row.clientId);
+      if (!existing) {
+        folded.set(row.clientId, {
+          deviceName: row.deviceName,
+          firmware: row.firmware,
+          version: row.version,
+          battery: row.battery,
+          totalMeasurements: row.totalMeasurements,
+          lastReportedAt: row.lastReportedAt,
+        });
+        continue;
+      }
+
+      const isNewer =
+        row.lastReportedAt !== null &&
+        (existing.lastReportedAt === null || row.lastReportedAt > existing.lastReportedAt);
+
+      folded.set(row.clientId, {
+        deviceName: isNewer ? row.deviceName : existing.deviceName,
+        firmware: isNewer ? row.firmware : existing.firmware,
+        version: isNewer ? row.version : existing.version,
+        battery: isNewer ? row.battery : existing.battery,
+        totalMeasurements: existing.totalMeasurements + row.totalMeasurements,
+        lastReportedAt: isNewer ? row.lastReportedAt : existing.lastReportedAt,
+      });
+    }
+
+    return folded;
+  }
+
   // Every lookup below is an enrichment, never a gate: a failure degrades to
   // null so the roster still renders, with the warehouse ones flagged.
+  private async lookupDeviceStats(
+    experimentId: string,
+  ): Promise<ExperimentDeviceStatsRow[] | null> {
+    const result = await this.databricksPort.getExperimentDeviceStats(
+      experimentId,
+      DEVICE_STATS_LIMIT,
+    );
+    if (result.isFailure()) {
+      this.logger.warn({
+        msg: "Experiment device stats lookup failed; reported facts render as unknown",
+        operation: "listExperimentDevices",
+        experimentId,
+        errorCode: result.error.code,
+      });
+      return null;
+    }
+    return result.value;
+  }
+
   private async lookupPublishers(
     experimentId: string,
     window: { from: string; to: string },

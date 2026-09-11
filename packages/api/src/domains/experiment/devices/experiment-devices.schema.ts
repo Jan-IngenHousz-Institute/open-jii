@@ -26,6 +26,21 @@ export const zExperimentDeviceRecentData = z.object({
 });
 
 /**
+ * What the device said about itself while publishing into this experiment,
+ * folded from the pipeline's per-firmware rows: the newest firmware, version,
+ * battery and self-reported name, plus its total measurements in the
+ * experiment. Null when the pipeline knows nothing about it.
+ */
+export const zExperimentDeviceReported = z.object({
+  deviceName: z.string().nullable(),
+  firmware: z.string().nullable(),
+  version: z.string().nullable(),
+  battery: z.number().nullable(),
+  totalMeasurements: z.number().int().nonnegative(),
+  lastReportedAt: z.string().datetime().nullable(),
+});
+
+/**
  * One device relevant to an experiment: bound to it, observed publishing into
  * it, or both. `device` is null for a publisher whose client id matches no
  * registry row. `lastDataAt` is device-wide; `recentData` is scoped to this
@@ -39,6 +54,7 @@ export const zExperimentDeviceEntry = z.object({
   connectivity: zDeviceConnectivity.nullable(),
   lastDataAt: z.string().datetime().nullable(),
   recentData: zExperimentDeviceRecentData.nullable(),
+  reported: zExperimentDeviceReported.nullable(),
   canView: z.boolean(),
 });
 
@@ -54,6 +70,7 @@ export const zExperimentDevicePathParam = z.object({
 });
 
 export type ExperimentDeviceIdentity = z.infer<typeof zExperimentDeviceIdentity>;
+export type ExperimentDeviceReported = z.infer<typeof zExperimentDeviceReported>;
 export type ExperimentDeviceEntry = z.infer<typeof zExperimentDeviceEntry>;
 export type ExperimentDevicesOverview = z.infer<typeof zExperimentDevicesOverview>;
 export type ExperimentDevicePathParam = z.infer<typeof zExperimentDevicePathParam>;

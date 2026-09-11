@@ -4267,6 +4267,81 @@
                               }
                             ]
                           },
+                          "reported": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "deviceName": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "firmware": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "version": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "battery": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "totalMeasurements": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "lastReportedAt": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "date-time"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "deviceName",
+                                  "firmware",
+                                  "version",
+                                  "battery",
+                                  "totalMeasurements",
+                                  "lastReportedAt"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "canView": {
                             "type": "boolean"
                           }
@@ -4278,6 +4353,7 @@
                           "connectivity",
                           "lastDataAt",
                           "recentData",
+                          "reported",
                           "canView"
                         ]
                       }

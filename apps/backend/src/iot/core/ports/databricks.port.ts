@@ -33,6 +33,21 @@ export interface GroupLifecycleEventRow {
   disconnectReason: string | null;
 }
 
+/**
+ * One (device, firmware) group as the gold device table aggregates it, scoped
+ * to one experiment. A device that reported several firmware versions has one
+ * row each, so callers fold by `clientId`.
+ */
+export interface ExperimentDeviceStatsRow {
+  clientId: string | null;
+  deviceName: string | null;
+  firmware: string | null;
+  version: string | null;
+  battery: number | null;
+  totalMeasurements: number;
+  lastReportedAt: string | null;
+}
+
 /** One publisher's volume and last arrival inside one experiment's data. */
 export interface ExperimentPublisherRow {
   clientId: string | null;
@@ -130,6 +145,10 @@ export interface DatabricksPort {
     to: string,
     limit: number,
   ): Promise<Result<ExperimentPublisherRow[]>>;
+  getExperimentDeviceStats(
+    experimentId: string,
+    limit: number,
+  ): Promise<Result<ExperimentDeviceStatsRow[]>>;
   getDeviceLifecycleEvents(
     thingName: string,
     from: string,
