@@ -339,7 +339,7 @@ class HandlerTest(unittest.TestCase):
         script = 'submit({"par": {"status": "computed", "coefficients": {"spec": "1.0"}}})'
         result = handler(event(script=script), None)
         self.assertEqual(result["status"], "compute_failed")
-        self.assertTrue(any("must be a number" in reason for reason in result["reasons"]))
+        self.assertTrue(any("must be a finite number" in reason for reason in result["reasons"]))
 
     def test_below_minimum_coefficient_fails_validation(self):
         script = 'submit({"par": {"status": "computed", "coefficients": {"spec": 0.001}}})'

@@ -10,8 +10,9 @@ RUN pip install --no-cache-dir \
            /var/lang/lib/python3.12/site-packages/pip \
            /var/lang/lib/python3.12/ensurepip
 
-# qc sits beside the handler so calibration scripts can `import qc`.
+# qc sits beside the runner so calibration scripts can `import qc`.
 COPY functions/python/qc.py ${LAMBDA_TASK_ROOT}/qc.py
+COPY functions/python/runner.py ${LAMBDA_TASK_ROOT}/runner.py
 COPY functions/python/handler.py ${LAMBDA_TASK_ROOT}/handler.py
 
 CMD ["handler.handler"]

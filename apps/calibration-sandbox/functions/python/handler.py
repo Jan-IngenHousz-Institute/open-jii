@@ -1,15 +1,29 @@
-"""Calibration sandbox Lambda: runs one calibration script per invoke against the
-captured series and validates what it submits against the output schema.
+"""Calibration sandbox Lambda: validates a run event, has runner.py execute the
+calibration script in its own process, and checks what it submits against the
+output schema.
+
+The script never runs in this process. A calibration definition is authored by
+any user, so its script gets a fresh interpreter with a stripped environment,
+a wall-clock limit and a capped reply: it cannot read this function's
+credentials, and it cannot leave state behind for the next run in a warm
+container.
 """
 
+import json
 import math
-import traceback
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
 
-import pandas as pd
-
-TRACEBACK_TAIL_LINES = 20
 BLOCK_KEYS = {"status", "coefficients", "fit", "quality", "reason"}
 BLOCK_STATUSES = {"computed", "rejected", "skipped"}
+
+RUNNER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "runner.py")
+SCRIPT_TIMEOUT_SECONDS = 30
+MAX_RUNNER_OUTPUT_BYTES = 10 * 1024 * 1024
+TEMP_PREFIX = "calibration_"
 
 
 def handler(event, context):
@@ -40,41 +54,22 @@ def _execute(event):
     if not isinstance(blocks_spec, dict) or not blocks_spec:
         return _error("'outputSchema.blocks' must be a non-empty object")
 
-    inputs = {}
     for name, rows in series.items():
         if not isinstance(rows, list):
             return _error(f"Series '{name}' must be an array of rows")
-        inputs[name] = pd.DataFrame(rows)
 
-    submissions = []
+    outcome = _run_script_in_subprocess(
+        {"script": script, "series": series, "params": params}
+    )
+    if outcome.get("outcome") != "submitted":
+        return _describe_failed_run(outcome)
 
-    def submit(blocks):
-        submissions.append(blocks)
-
-    scope = {"inputs": inputs, "params": params, "submit": submit}
-    try:
-        exec(compile(script, "<calibration-script>", "exec"), scope)
-    except Exception as exc:
-        return _compute_failed(
-            "".join(traceback.format_exception_only(type(exc), exc)).strip(),
-            trace="".join(traceback.format_exc()).splitlines()[-TRACEBACK_TAIL_LINES:],
-        )
-
-    if len(submissions) == 0:
-        return _compute_failed("Script finished without calling submit()")
-    if len(submissions) > 1:
-        return _compute_failed("submit() must be called exactly once")
-
-    blocks = submissions[0]
-    if not isinstance(blocks, dict):
-        return _compute_failed("submit() takes blocks as a dict keyed by block name")
-
-    blocks = _fill_unattempted(blocks, blocks_spec)
+    blocks = _fill_unattempted(outcome["blocks"], blocks_spec)
     reasons = _validate_blocks(blocks, blocks_spec)
     if reasons:
         return _compute_failed("Submitted blocks failed validation", reasons=reasons)
 
-    return {"status": "computed", "blocks": _jsonable(blocks)}
+    return {"status": "computed", "blocks": blocks}
 
 
 def _fill_unattempted(blocks, spec):
@@ -161,10 +156,10 @@ def _check_number(label, value, spec):
     # numpy integer scalars subclass neither int nor float; unwrap them first.
     if hasattr(value, "item"):
         value = value.item()
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        return [f"Coefficient '{label}' must be a number"]
-    if not math.isfinite(value):
-        return [f"Coefficient '{label}' must be finite"]
+    # A non-finite float cannot cross JSON, so it arrives here as null: both
+    # that and a non-number are the same fault to the person reading the run.
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        return [f"Coefficient '{label}' must be a finite number"]
     reasons = []
     if "min" in spec and value < spec["min"]:
         reasons.append(f"Coefficient '{label}' is below the allowed minimum {spec['min']}")
@@ -199,23 +194,86 @@ def _as_plain_list(value):
     return [entry.item() if hasattr(entry, "item") else entry for entry in value]
 
 
-def _jsonable(value):
-    """Coerce numpy scalars/arrays and non-finite floats into JSON-safe values."""
-    if isinstance(value, bool) or value is None or isinstance(value, str):
-        return value
-    if hasattr(value, "tolist"):
-        value = value.tolist()
-    elif hasattr(value, "item"):
-        value = value.item()
-    if isinstance(value, float) and not math.isfinite(value):
-        return None
-    if isinstance(value, (int, float)):
-        return value
-    if isinstance(value, dict):
-        return {str(key): _jsonable(entry) for key, entry in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_jsonable(entry) for entry in value]
-    return str(value)
+def _run_script_in_subprocess(payload):
+    """Hand the run to runner.py and read back its single JSON line."""
+    _remove_stale_temp_dirs()
+    workdir = tempfile.mkdtemp(prefix=TEMP_PREFIX)
+    try:
+        event_path = os.path.join(workdir, "event.json")
+        with open(
+            event_path, "w", opener=lambda path, flags: os.open(path, flags, 0o600)
+        ) as handle:
+            json.dump(payload, handle)
+
+        try:
+            completed = subprocess.run(
+                # The interpreter that already has numpy, pandas and scipy.
+                [sys.executable, RUNNER_PATH, event_path],
+                capture_output=True,
+                text=True,
+                timeout=SCRIPT_TIMEOUT_SECONDS,
+                # Nothing of this function's environment reaches the script,
+                # least of all its credentials.
+                env={
+                    "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
+                    "HOME": "/tmp",
+                    "PYTHONPATH": os.path.dirname(RUNNER_PATH),
+                    "PYTHONDONTWRITEBYTECODE": "1",
+                },
+            )
+        except subprocess.TimeoutExpired:
+            return {
+                "outcome": "timed_out",
+                "error": f"Script exceeded {SCRIPT_TIMEOUT_SECONDS}s",
+            }
+
+        stdout = completed.stdout.strip()
+        if len(stdout) > MAX_RUNNER_OUTPUT_BYTES:
+            return {"outcome": "too_large"}
+        if not stdout:
+            return {"outcome": "no_output", "error": _tail(completed.stderr)}
+        try:
+            return json.loads(stdout)
+        except json.JSONDecodeError:
+            return {"outcome": "bad_output"}
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
+def _remove_stale_temp_dirs():
+    """A crashed prior invocation can leave a directory behind on a warm container."""
+    root = tempfile.gettempdir()
+    try:
+        names = os.listdir(root)
+    except OSError:
+        return
+    for name in names:
+        if name.startswith(TEMP_PREFIX):
+            shutil.rmtree(os.path.join(root, name), ignore_errors=True)
+
+
+def _tail(text, limit=500):
+    stripped = (text or "").strip()
+    return stripped[-limit:] if stripped else ""
+
+
+def _describe_failed_run(outcome):
+    kind = outcome.get("outcome")
+    if kind == "script_failed":
+        return _compute_failed(outcome.get("error", "Script failed"), trace=outcome.get("trace"))
+    if kind == "no_submit":
+        return _compute_failed("Script finished without calling submit()")
+    if kind == "many_submits":
+        return _compute_failed("submit() must be called exactly once")
+    if kind == "not_a_dict":
+        return _compute_failed("submit() takes blocks as a dict keyed by block name")
+    if kind == "timed_out":
+        return _compute_failed(outcome.get("error", "Script timed out"))
+    if kind == "too_large":
+        return _compute_failed("Script produced more output than the sandbox accepts")
+    # no_output, bad_output and runner_failed are the sandbox's fault, not the
+    # script's, so they surface as infrastructure errors.
+    return _error("The calibration sandbox did not return a usable result")
 
 
 def _error(message):
