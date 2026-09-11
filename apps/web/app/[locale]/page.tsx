@@ -1,13 +1,12 @@
 import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
 import { NewsletterSubscribeForm } from "@/components/newsletter/newsletter-subscribe-form";
-import { PublicMetricsSection } from "@/components/public-metrics/public-metrics-section";
+import { PublicMetricsPanel } from "@/components/public-metrics/public-metrics-panel";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
-import { cache } from "react";
+import { Suspense, cache } from "react";
 import { auth } from "~/app/actions/auth";
 import { getContentfulClients } from "~/lib/contentful";
 import { safeMetadata } from "~/lib/safe-metadata";
-import { createServerOrpcClient } from "~/lib/server-orpc";
 
 import {
   HomeHero as HomeHeroComponent,
@@ -43,17 +42,6 @@ const getHomeData = cache(async (locale: string, preview: boolean) => {
   };
 });
 
-// The landing page must render even when the backend is unreachable, so a
-// failed metrics fetch drops the section instead of erroring the page.
-const getPublicMetrics = cache(async () => {
-  try {
-    const orpc = await createServerOrpcClient();
-    return await orpc.metrics.getPublicMetrics();
-  } catch {
-    return null;
-  }
-});
-
 export function generateMetadata({ params }: HomePageProps): Promise<Metadata> {
   return safeMetadata(async () => {
     const { locale } = await params;
@@ -79,7 +67,6 @@ export default async function Home({ params }: HomePageProps) {
   const session = await auth();
   const { isEnabled: preview } = await draftMode();
   const { hero, mission, features, partners, footer } = await getHomeData(locale, preview);
-  const metrics = await getPublicMetrics();
 
   return (
     <>
@@ -97,8 +84,10 @@ export default async function Home({ params }: HomePageProps) {
         {/* Features Section */}
         <HomeKeyFeatures featuresData={features} preview={preview} locale={locale} />
 
-        {/* Platform Metrics Section */}
-        {metrics ? <PublicMetricsSection metrics={metrics} locale={locale} /> : null}
+        {/* Platform Metrics Section: streamed, so the warehouse never holds up the page. */}
+        <Suspense fallback={null}>
+          <PublicMetricsPanel locale={locale} />
+        </Suspense>
 
         {/* Footer */}
         <HomeFooter

@@ -1,4 +1,4 @@
-import { workbookVersions } from "@repo/database";
+import { eq, experiments, workbookVersions } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -191,6 +191,24 @@ describe("MetricsRepository", () => {
     expect(protocolIds.value).toEqual([visibleProtocol.id]);
     expect(macroIds.value).toEqual([visibleMacro.id]);
     expect(workbookIds.value).toEqual([visibleWorkbook.id]);
+  });
+
+  it("leaves archived experiments out, as the list page does", async () => {
+    const { experiment: archived } = await testApp.createExperiment({
+      name: "Finished experiment",
+      userId,
+      organizationId,
+      visibility: "public",
+    });
+    await testApp.database
+      .update(experiments)
+      .set({ status: "archived" })
+      .where(eq(experiments.id, archived.id));
+
+    const result = await repository.getVisibleExperimentIds(userId);
+
+    assertSuccess(result);
+    expect(result.value).toEqual([orgExperimentId]);
   });
 
   it("lists the experiments a reader may see, and no others", async () => {

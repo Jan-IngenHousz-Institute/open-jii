@@ -72,7 +72,7 @@ export function getProtocolColumns(
       header: t("protocols.columns.activity"),
       className: "w-48",
       cell: (protocol) => (
-        <ResourceMetricsCell activity={protocol.activity ?? null} windowDays={30} />
+        <ResourceMetricsCell activity={protocol.activity ?? null} windowDays={30} kind="protocol" />
       ),
     },
     {

@@ -153,6 +153,9 @@ export class GetScopedMetricsUseCase {
     scopeIds: Set<string>,
     inputs: ScopedInputs,
   ): ScopedMetricsResponse {
+    // Cached rows outlive midnight, so a date is matched against both windows
+    // rather than treated as current by not being previous.
+    const currentDates = new Set(this.windowDates());
     const previousDates = new Set(this.windowDates(1));
 
     const byDate = new Map<string, number>();
@@ -166,6 +169,10 @@ export class GetScopedMetricsUseCase {
 
       if (previousDates.has(row.date)) {
         previousMeasurements += row.measurements;
+        continue;
+      }
+
+      if (!currentDates.has(row.date)) {
         continue;
       }
 

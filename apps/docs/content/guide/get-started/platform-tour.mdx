@@ -50,12 +50,20 @@ while it completes.
 
 ## Platform activity
 
-The dashboard header carries a short row of activity numbers: measurements
-across the platform this month and in the last day, measurements in your own
-experiments, and how many experiments were active in the last 30 days. When the
-community crosses a measurement milestone, a banner above the header marks it
-until you dismiss it. The numbers refresh every few minutes from the platform
-metrics pipeline; when no data is available they simply do not appear.
+Several pages carry a row of activity cards covering the last 30 days. On the
+dashboard they show what your own experiments recorded, how many were active,
+what the community recorded over the same period, and a daily average with the
+days behind it. The experiment, protocol, macro and workbook lists carry the
+same row for that kind, including the busiest one, and each row in the table
+draws its own activity strip. An experiment's overview page has the same row
+under its description.
+
+When the community crosses a measurement milestone, a banner above the
+dashboard marks it until you dismiss it.
+
+The figures come from the platform metrics pipeline, which refreshes every 15
+minutes, and the platform caches them for a further few minutes. Anything with
+nothing to report is left out rather than shown as a zero.
 
 ## Account settings
 

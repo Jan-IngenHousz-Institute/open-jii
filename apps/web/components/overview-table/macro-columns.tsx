@@ -71,7 +71,9 @@ export function getMacroColumns(
     {
       header: t("macros.columns.activity"),
       className: "w-48",
-      cell: (macro) => <ResourceMetricsCell activity={macro.activity ?? null} windowDays={30} />,
+      cell: (macro) => (
+        <ResourceMetricsCell activity={macro.activity ?? null} windowDays={30} kind="macro" />
+      ),
     },
     {
       header: t("macros.columns.updated"),

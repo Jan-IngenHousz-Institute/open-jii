@@ -182,7 +182,7 @@ export function getWorkbookColumns(
       header: t("workbooks.columns.activity"),
       className: "w-48",
       cell: (workbook) => (
-        <ResourceMetricsCell activity={workbook.activity ?? null} windowDays={30} />
+        <ResourceMetricsCell activity={workbook.activity ?? null} windowDays={30} kind="workbook" />
       ),
     },
     {

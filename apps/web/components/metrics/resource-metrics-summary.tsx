@@ -42,6 +42,8 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
   const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
 
   const window = t("window", { days: data.windowDays });
+  // A macro run is an analysis, not a measurement.
+  const unit = t(`resourceMetrics.${kind}.unit`);
   const peak = data.peak;
   const busiest = data.busiest;
 
@@ -55,6 +57,7 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
       note={t("resourceMetrics.busiestNote", {
         value: compact.format(measurements),
         total: compact.format(data.totalMeasurements),
+        unit,
       })}
       context={window}
     />
@@ -93,7 +96,7 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
         label={t("dailyAverage")}
         value={compact.format(Math.round(data.totalMeasurements / data.windowDays))}
         title={number.format(Math.round(data.totalMeasurements / data.windowDays))}
-        seriesName={t("resourceMetrics.series")}
+        seriesName={t("resourceMetrics.series", { unit })}
         days={data.days}
         peakDate={peak?.date ?? null}
         locale={locale}

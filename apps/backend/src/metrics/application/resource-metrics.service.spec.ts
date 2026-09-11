@@ -207,4 +207,46 @@ describe("ResourceMetricsService", () => {
     expect(series.size).toBe(0);
     expect(totals.measurements).toBe(0);
   });
+  it("drops a cached row that has aged out of the window, from every figure", async () => {
+    vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+      success([
+        {
+          date: daysAgo(35),
+          resourceType: "protocol",
+          resourceId: visibleProtocolId,
+          measurements: 99,
+        },
+      ]),
+    );
+    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("protocol"));
+
+    const totals = await service.totalsFor("protocol", [visibleProtocolId]);
+
+    // It belongs to the previous window, so it counts there and nowhere else.
+    expect(totals.previousMeasurements).toBe(99);
+    expect(totals.measurements).toBe(0);
+    expect(totals.activeCount).toBe(0);
+    expect(totals.busiest).toBeNull();
+  });
+
+  it("ignores a row that belongs to neither window", async () => {
+    vi.spyOn(adapter, "getResourceDailyActivity").mockResolvedValue(
+      success([
+        {
+          date: daysAgo(120),
+          resourceType: "protocol",
+          resourceId: visibleProtocolId,
+          measurements: 99,
+        },
+      ]),
+    );
+    await testApp.module.get<CachePort>(CACHE_PORT).invalidate(resourceMetricsCacheKey("protocol"));
+
+    const totals = await service.totalsFor("protocol", [visibleProtocolId]);
+
+    expect(totals.measurements).toBe(0);
+    expect(totals.previousMeasurements).toBe(0);
+    expect(totals.activeCount).toBe(0);
+    expect(totals.busiest).toBeNull();
+  });
 });

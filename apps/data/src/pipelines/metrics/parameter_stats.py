@@ -63,10 +63,9 @@ def parameter_stats():
         .select("sample")
     )
 
-    def stats_frame(name, category, source, value):
+    def stats_frame(name, category, values):
         return (
-            source.select(value.alias("value"))
-            .filter(F.col("value").isNotNull())
+            values.filter(F.col("value").isNotNull())
             .agg(
                 F.count("*").alias("observations"),
                 F.percentile_approx("value", 0.5).alias("median_value"),
@@ -77,23 +76,50 @@ def parameter_stats():
             .select("parameter", "label", "category", "observations", "median_value")
         )
 
+    def sensor_values(name):
+        """Every reading of one parameter in a payload, whatever its shape.
+
+        A payload is an array of samples. Ambit-family samples carry their
+        scalars in a `data` object; MultispeQ, MiniPAR and PhotosynQ samples
+        carry them in a nested `set` array, one entry per reading. Reading only
+        one of those shapes drops the other instrument's readings entirely, and
+        reading only the first entry would sample rather than aggregate.
+        """
+        return payloads.select(
+            F.explode(
+                F.expr(
+                    f"""
+                    filter(
+                      flatten(
+                        transform(
+                          from_json(sample, 'array<string>'),
+                          x -> concat(
+                            array(try_cast(get_json_object(x, '$.data.{name}') as double)),
+                            transform(
+                              from_json(coalesce(get_json_object(x, '$.set'), '[]'), 'array<string>'),
+                              s -> try_cast(get_json_object(s, '$.{name}') as double)
+                            )
+                          )
+                        )
+                      ),
+                      v -> v is not null
+                    )
+                    """
+                )
+            ).alias("value")
+        )
+
     frames = [
         stats_frame(
             name,
             PARAMETER_CATEGORY_DERIVED,
-            macro_outputs,
-            F.expr(f"try_variant_get(macro_output, '$.{name}', 'double')"),
+            macro_outputs.select(
+                F.expr(f"try_variant_get(macro_output, '$.{name}', 'double')").alias("value")
+            ),
         )
         for name in DERIVED_PARAMETER_ALLOWLIST
     ] + [
-        # The payload is a one-element array whose `data` object holds the
-        # device's own scalars, so the reading is two levels down.
-        stats_frame(
-            name,
-            PARAMETER_CATEGORY_SENSOR,
-            payloads,
-            F.get_json_object(F.col("sample"), f"$[0].data.{name}").cast("double"),
-        )
+        stats_frame(name, PARAMETER_CATEGORY_SENSOR, sensor_values(name))
         for name in SENSOR_PARAMETER_ALLOWLIST
     ]
 

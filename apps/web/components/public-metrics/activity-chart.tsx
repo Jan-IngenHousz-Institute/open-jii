@@ -22,14 +22,25 @@ interface ActivityChartProps {
   locale: string;
 }
 
-/** Days within a year of the newest one, dropping clock-skewed outliers. */
+/** Days within a year of today, dropping clock-skewed outliers. */
 function recentYear(data: MetricsActivityDay[]): MetricsActivityDay[] {
-  if (data.length === 0) {
-    return data;
-  }
-
-  const cutoff = Date.parse(data[data.length - 1].date) - CUMULATIVE_DAYS * DAY_MS;
+  const cutoff = Date.now() - CUMULATIVE_DAYS * DAY_MS;
   return data.filter((day) => Date.parse(day.date) >= cutoff);
+}
+
+/**
+ * The last `DAYS_SHOWN` calendar days, silent ones included. The warehouse
+ * only writes days that recorded something, so taking the last N rows would
+ * stretch a sparse series across months and label it a month.
+ */
+function recentDays(data: MetricsActivityDay[]): MetricsActivityDay[] {
+  const byDate = new Map(data.map((day) => [day.date, day]));
+  const today = Date.now();
+
+  return Array.from({ length: DAYS_SHOWN }, (_, index) => {
+    const date = new Date(today - (DAYS_SHOWN - 1 - index) * DAY_MS).toISOString().slice(0, 10);
+    return byDate.get(date) ?? { date, measurements: 0, cumulativeMeasurements: 0, volumeBytes: 0 };
+  });
 }
 
 /** Daily bars or the twelve-month cumulative curve, over the same series. */
@@ -38,7 +49,7 @@ export function ActivityChart({ data, locale }: ActivityChartProps) {
   const [mode, setMode] = useState<ActivityMode>("daily");
 
   const isCumulative = mode === "cumulative";
-  const points = isCumulative ? recentYear(data) : data.slice(-DAYS_SHOWN);
+  const points = isCumulative ? recentYear(data) : recentDays(data);
 
   const x = points.map((day) => day.date);
   const y = points.map((day) => (isCumulative ? day.cumulativeMeasurements : day.measurements));

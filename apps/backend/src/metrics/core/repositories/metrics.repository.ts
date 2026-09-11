@@ -113,7 +113,9 @@ export class MetricsRepository {
       const rows = await this.database
         .select({ id: experiments.id })
         .from(experiments)
-        .where(accessScope);
+        // The list page hides archived experiments by default, so a header
+        // counting them would not describe the rows underneath.
+        .where(and(accessScope, ne(experiments.status, "archived")));
       return rows.map((row) => row.id);
     });
   }

@@ -20,9 +20,14 @@ vi.mock("@repo/ui/components/charts/bar-chart", () => ({
   },
 }));
 
+// The chart states a window of calendar days, so the fixture is anchored to
+// today rather than to dates that would age out of it.
+const dayAt = (offset: number) =>
+  new Date(Date.now() - offset * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
 const data: MetricsActivityDay[] = [
-  { date: "2026-08-27", measurements: 20, cumulativeMeasurements: 980, volumeBytes: 400_000 },
-  { date: "2026-08-28", measurements: 20, cumulativeMeasurements: 1_000, volumeBytes: 400_000 },
+  { date: dayAt(1), measurements: 20, cumulativeMeasurements: 980, volumeBytes: 400_000 },
+  { date: dayAt(0), measurements: 20, cumulativeMeasurements: 1_000, volumeBytes: 400_000 },
 ];
 
 describe("ActivityChart", () => {
@@ -37,8 +42,31 @@ describe("ActivityChart", () => {
     expect(captured.config.backgroundColor).toBe("rgba(0,0,0,0)");
 
     const [series] = captured.data;
-    expect(series.x).toEqual(["2026-08-27", "2026-08-28"]);
-    expect(series.y).toEqual([20, 20]);
+    // Thirty calendar days, not thirty rows: the warehouse writes only the days
+    // that recorded something.
+    expect(series.x).toHaveLength(30);
+    expect(series.x[29]).toBe(dayAt(0));
+    expect(series.x[0]).toBe(dayAt(29));
+    expect(series.y.slice(-2)).toEqual([20, 20]);
+    expect(series.y.slice(0, 28).every((value) => value === 0)).toBe(true);
+  });
+
+  it("leaves out days older than the window it names", () => {
+    barProps.length = 0;
+    render(
+      <ActivityChart
+        data={[
+          { date: dayAt(200), measurements: 999, cumulativeMeasurements: 1, volumeBytes: 1 },
+          ...data,
+        ]}
+        locale="en-US"
+      />,
+    );
+
+    const [captured] = barProps;
+    const [series] = captured.data;
+    expect(series.x).toHaveLength(30);
+    expect(series.y).not.toContain(999);
   });
 
   it("defaults to the daily measure", () => {

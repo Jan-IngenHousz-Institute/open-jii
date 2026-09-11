@@ -147,7 +147,11 @@ export function getExperimentColumns(
       header: t("columns.activity"),
       className: "w-48",
       cell: (experiment) => (
-        <ResourceMetricsCell activity={experiment.activity ?? null} windowDays={30} />
+        <ResourceMetricsCell
+          activity={experiment.activity ?? null}
+          windowDays={30}
+          kind="experiment"
+        />
       ),
     },
     {

@@ -110,6 +110,10 @@ export class ResourceMetricsService {
 
     const attributed = await this.attributeToResources(kind, rows, visibleIds);
     const visible = new Set(visibleIds);
+    // Membership is tested against both windows rather than inferred from one:
+    // cached rows outlive midnight, and a date that has aged out of the current
+    // window would otherwise still count towards its active resources.
+    const currentDates = new Set(this.windowDates());
     const previousDates = new Set(this.windowDates(1));
 
     const byDate = new Map<string, number>();
@@ -123,6 +127,10 @@ export class ResourceMetricsService {
 
       if (previousDates.has(row.date)) {
         previousMeasurements += row.measurements;
+        continue;
+      }
+
+      if (!currentDates.has(row.date)) {
         continue;
       }
 

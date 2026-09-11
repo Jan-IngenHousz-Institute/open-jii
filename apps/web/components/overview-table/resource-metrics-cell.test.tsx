@@ -14,14 +14,18 @@ const activity = {
 
 describe("ResourceMetricsCell", () => {
   it("draws the series its row already carried", () => {
-    const { container } = render(<ResourceMetricsCell activity={activity} windowDays={30} />);
+    const { container } = render(
+      <ResourceMetricsCell activity={activity} windowDays={30} kind="macro" />,
+    );
 
     expect(container.querySelectorAll("path")).toHaveLength(1);
     expect(screen.getByRole("img")).toHaveAccessibleName("resourceMetrics.strip");
   });
 
   it("leaves the cell empty for a row that recorded nothing", () => {
-    const { container } = render(<ResourceMetricsCell activity={null} windowDays={30} />);
+    const { container } = render(
+      <ResourceMetricsCell activity={null} windowDays={30} kind="protocol" />,
+    );
 
     expect(container).toBeEmptyDOMElement();
   });

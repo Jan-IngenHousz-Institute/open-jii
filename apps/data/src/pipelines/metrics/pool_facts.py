@@ -81,7 +81,8 @@ def pool_facts():
                 (
                     F.col("last_arrival").cast("double") - F.col("first_arrival").cast("double")
                 )
-                / F.col("arrivals"),
+                # N arrivals span N-1 gaps.
+                / (F.col("arrivals") - 1),
             ).alias("mean_arrival_gap_seconds")
         )
     )

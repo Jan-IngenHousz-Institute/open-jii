@@ -24,8 +24,8 @@
     "unresolved": "Nog eens {{count}} metingen ({{share}} van alle metingen) komen van publishers die het apparaatregister nog niet kan benoemen."
   },
   "parameter": {
-    "derivedSentence": "Meest berekend deze maand: <em>{{name}}</em>, {{count}} keer, mediaan <em>{{median}}</em>",
-    "sensorSentence": "Meest vastgelegde sensorwaarde: <em>{{name}}</em>, {{count}} keer, mediaan <em>{{median}}</em>"
+    "derivedSentence": "Meest berekend in de afgelopen 90 dagen: <em>{{name}}</em>, {{count}} keer, mediaan <em>{{median}}</em>",
+    "sensorSentence": "Meest vastgelegde sensorwaarde, laatste 90 dagen: <em>{{name}}</em>, {{count}} keer, mediaan <em>{{median}}</em>"
   },
   "captions": {
     "streak": "Data op {{days}} opeenvolgende dagen",
@@ -67,31 +67,35 @@
     "trend": "Dagelijkse metingen"
   },
   "resourceMetrics": {
-    "strip": "Dagelijkse metingen over {{days}} dagen",
-    "series": "Dagelijkse metingen",
+    "strip": "Dagelijkse {{unit}} over {{days}} dagen",
+    "series": "Dagelijkse {{unit}}",
     "ofVisible_one": "van {{count}} die je kunt zien",
     "ofVisible_other": "van {{count}} die je kunt zien",
     "experiment": {
       "measurements": "Metingen",
       "active": "Experimenten met data",
-      "busiest": "Actiefste experiment"
+      "busiest": "Actiefste experiment",
+      "unit": "metingen"
     },
     "protocol": {
       "measurements": "Metingen",
       "active": "Gebruikte protocollen",
-      "busiest": "Meest gebruikte protocol"
+      "busiest": "Meest gebruikte protocol",
+      "unit": "metingen"
     },
     "macro": {
       "measurements": "Analyses",
       "active": "Uitgevoerde macro's",
-      "busiest": "Meest gebruikte macro"
+      "busiest": "Meest gebruikte macro",
+      "unit": "analyses"
     },
     "workbook": {
       "measurements": "Metingen",
       "active": "Verzamelende werkboeken",
-      "busiest": "Actiefste werkboek"
+      "busiest": "Actiefste werkboek",
+      "unit": "metingen"
     },
-    "busiestNote": "{{value}} van {{total}} metingen"
+    "busiestNote": "{{value}} van {{total}} {{unit}}"
   },
   "window": "Laatste {{days}} dagen",
   "peak": "Piek {{value}} op {{date}}",
