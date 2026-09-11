@@ -11,10 +11,16 @@ export const zMetricsLiveness = z.object({
   measurements24h: z.number(),
 });
 
+/**
+ * `contributors30d` counts only the people a measurement names, which is the
+ * app's path; a logger publishes with no contributor at all. `devices30d` is
+ * what the rest of the volume came through, so the two are stated together.
+ */
 export const zMetricsCommunity = z.object({
   measurements30d: z.number(),
   activeExperiments30d: z.number(),
   contributors30d: z.number(),
+  devices30d: z.number(),
   institutions30d: z.number(),
 });
 

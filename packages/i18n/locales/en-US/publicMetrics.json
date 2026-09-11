@@ -8,7 +8,7 @@
     "sentence": "<em>{{measurements}}</em> measurements, <em>{{volume}}</em> of measurement data, recorded across <em>{{timezones}}</em> time zones."
   },
   "community": {
-    "sentence": "This month the community recorded <em>{{measurements}}</em> measurements across <em>{{experiments}}</em> experiments, contributed by <em>{{contributors}}</em> researchers at <em>{{institutions}}</em> institutions."
+    "sentence": "This month the community recorded <em>{{measurements}}</em> measurements across <em>{{experiments}}</em> experiments, from <em>{{contributors}}</em> contributors and <em>{{devices}}</em> devices at <em>{{institutions}}</em> institutions."
   },
   "activityChart": {
     "daily": "Daily",
@@ -21,7 +21,7 @@
   "families": {
     "title": "Measurements by instrument",
     "unattributed": "Unattributed",
-    "unresolved": "A further {{count}} measurements come from publishers the device registry cannot yet name."
+    "unresolved": "A further {{count}} measurements ({{share}} of all of them) come from publishers the device registry cannot yet name."
   },
   "parameter": {
     "derivedSentence": "Most computed this month: <em>{{name}}</em>, {{count}} times, median <em>{{median}}</em>",

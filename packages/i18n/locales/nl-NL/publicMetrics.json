@@ -8,7 +8,7 @@
     "sentence": "<em>{{measurements}}</em> metingen, <em>{{volume}}</em> aan meetdata, vastgelegd in <em>{{timezones}}</em> tijdzones."
   },
   "community": {
-    "sentence": "Deze maand registreerde de community <em>{{measurements}}</em> metingen in <em>{{experiments}}</em> experimenten, bijgedragen door <em>{{contributors}}</em> onderzoekers bij <em>{{institutions}}</em> instellingen."
+    "sentence": "Deze maand registreerde de community <em>{{measurements}}</em> metingen in <em>{{experiments}}</em> experimenten, van <em>{{contributors}}</em> bijdragers en <em>{{devices}}</em> apparaten bij <em>{{institutions}}</em> instellingen."
   },
   "activityChart": {
     "daily": "Dagelijks",
@@ -21,7 +21,7 @@
   "families": {
     "title": "Metingen per instrument",
     "unattributed": "Niet toegewezen",
-    "unresolved": "Nog eens {{count}} metingen komen van publishers die het apparaatregister nog niet kan benoemen."
+    "unresolved": "Nog eens {{count}} metingen ({{share}} van alle metingen) komen van publishers die het apparaatregister nog niet kan benoemen."
   },
   "parameter": {
     "derivedSentence": "Meest berekend deze maand: <em>{{name}}</em>, {{count}} keer, mediaan <em>{{median}}</em>",

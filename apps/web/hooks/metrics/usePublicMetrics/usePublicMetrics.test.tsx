@@ -13,6 +13,7 @@ const snapshot = {
     measurements30d: 18_439_869,
     activeExperiments30d: 11,
     contributors30d: 6,
+    devices30d: 12,
     institutions30d: 5,
   },
   activity: [

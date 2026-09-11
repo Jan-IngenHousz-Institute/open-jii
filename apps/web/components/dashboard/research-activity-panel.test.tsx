@@ -41,6 +41,7 @@ const platform = {
     measurements30d: 18_883_130,
     activeExperiments30d: 11,
     contributors30d: 9,
+    devices30d: 12,
     institutions30d: 4,
   },
   activity: [],

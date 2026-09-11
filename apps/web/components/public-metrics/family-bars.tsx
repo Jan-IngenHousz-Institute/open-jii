@@ -16,6 +16,7 @@ interface FamilyBarsProps {
 export function FamilyBars({ families, unresolved, locale }: FamilyBarsProps) {
   const { t } = useTranslation("publicMetrics");
 
+  const named = families.reduce((sum, family) => sum + family.measurements, 0);
   const max = Math.max(...families.map((family) => family.measurements), 1);
   const formatCount = (value: number) =>
     new Intl.NumberFormat(locale, { notation: "compact" }).format(value);
@@ -46,7 +47,13 @@ export function FamilyBars({ families, unresolved, locale }: FamilyBarsProps) {
       <ul className="flex flex-col gap-2">{families.map(renderRow)}</ul>
       {unresolved > 0 ? (
         <p className="text-muted-foreground text-xs">
-          {t("families.unresolved", { count: formatCount(unresolved) })}
+          {t("families.unresolved", {
+            count: formatCount(unresolved),
+            share: new Intl.NumberFormat(locale, {
+              style: "percent",
+              maximumFractionDigits: 1,
+            }).format(unresolved / (unresolved + named)),
+          })}
         </p>
       ) : null}
     </div>

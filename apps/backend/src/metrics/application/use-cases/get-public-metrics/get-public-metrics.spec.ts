@@ -152,6 +152,9 @@ describe("GetPublicMetricsUseCase", () => {
     });
     expect(result.value.community?.measurements30d).toBe(4_812);
     expect(result.value.community?.institutions30d).toBe(1);
+    // A logger publishes with no contributor, so the devices behind the volume
+    // are stated alongside the people.
+    expect(result.value.community?.devices30d).toBe(12);
     expect(result.value.derivedParameter?.name).toBe("Phi2");
     expect(result.value.sensorParameter?.name).toBe("humidity");
     expect(result.value.families).toHaveLength(1);

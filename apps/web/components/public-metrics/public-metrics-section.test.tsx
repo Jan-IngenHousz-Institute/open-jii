@@ -12,6 +12,7 @@ const metrics: PublicMetricsResponse = {
     measurements30d: 4_812,
     activeExperiments30d: 23,
     contributors30d: 31,
+    devices30d: 12,
     institutions30d: 9,
   },
   activity: [

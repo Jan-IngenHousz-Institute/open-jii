@@ -145,6 +145,7 @@ export class GetPublicMetricsUseCase {
               measurements30d: windowsRow.measurements30d,
               activeExperiments30d: windowsRow.experiments30d,
               contributors30d: windowsRow.contributors30d,
+              devices30d: windowsRow.devices30d,
               institutions30d: institutions,
             }
           : null,

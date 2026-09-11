@@ -53,6 +53,9 @@ export function ActivityChart({ data, locale }: ActivityChartProps) {
     showGrid: true,
     backgroundColor: "rgba(0,0,0,0)",
     xAxisType: detectAxisType(x),
+    // Plotly hangs the year off the first date tick on a second line. The
+    // twelve-month view needs it; a month of days does not.
+    xAxisTickFormat: isCumulative ? undefined : "%b %-d",
     locale,
   };
 

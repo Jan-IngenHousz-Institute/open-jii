@@ -19427,6 +19427,9 @@
                             "contributors30d": {
                               "type": "number"
                             },
+                            "devices30d": {
+                              "type": "number"
+                            },
                             "institutions30d": {
                               "type": "number"
                             }
@@ -19435,6 +19438,7 @@
                             "measurements30d",
                             "activeExperiments30d",
                             "contributors30d",
+                            "devices30d",
                             "institutions30d"
                           ]
                         },
