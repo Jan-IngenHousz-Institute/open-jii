@@ -227,7 +227,7 @@ export function CommandPalette({ locale }: { locale: string }) {
             <CommandGroup heading={t("commandPalette.groups.pages")}>
               {pages.map((entry) => (
                 <CommandItem key={entry.id} value={entry.id} onSelect={() => entry.run()}>
-                  {entry.icon && <entry.icon className="mr-2 h-4 w-4" />}
+                  {entry.icon && <entry.icon className="h-4 w-4" />}
                   {t(entry.labelKey)}
                   {entry.shortcut && (
                     <span className="text-muted-foreground ml-auto text-xs tracking-widest">
@@ -245,7 +245,7 @@ export function CommandPalette({ locale }: { locale: string }) {
               <CommandGroup heading={t("commandPalette.groups.actions")}>
                 {actions.map((entry) => (
                   <CommandItem key={entry.id} value={entry.id} onSelect={() => entry.run()}>
-                    {entry.icon && <entry.icon className="mr-2 h-4 w-4" />}
+                    {entry.icon && <entry.icon className="h-4 w-4" />}
                     {t(entry.labelKey)}
                     {entry.shortcut && (
                       <span className="text-muted-foreground ml-auto text-xs tracking-widest">

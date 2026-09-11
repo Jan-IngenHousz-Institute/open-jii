@@ -128,9 +128,14 @@ export function AppSidebar({
   // primitive's Sheet, so there is no second mobile navigation.
   return (
     <Sidebar variant="inset" collapsible="offcanvas" {...props}>
-      <SidebarHeader className="gap-3 p-4 pb-2">
-        {/* SidebarHeader is a column, so the brand row is laid out here. */}
-        <div className="flex items-center gap-2">
+      <SidebarHeader className="gap-3 px-4 pb-2 pt-0">
+        {/* SidebarHeader is a column, so the brand row is laid out here. Its
+            height matches SiteHeader's h-12 rather than being derived from
+            padding, which is what put the logo 6px below the page title; px-2
+            puts its left edge on the x=32 icon rail every other row sits on.
+            The mobile Sheet reuses this row, so it also lines the logo up with
+            the sheet's close action. */}
+        <div className="flex h-12 items-center gap-2 px-2">
           <Link
             href={`/${locale}/platform`}
             onClick={() => {
@@ -159,11 +164,13 @@ export function AppSidebar({
           type="button"
           variant="ghost"
           onClick={openCommandPalette}
-          aria-label="Open command palette"
+          aria-label={t("commandPalette.open", { ns: "navigation" })}
           className="border-sidebar-border bg-sidebar-accent/60 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring w-full justify-start gap-2 rounded-lg border p-2 text-left font-normal"
         >
           <Search className="size-4 shrink-0" />
-          <span className="flex-1 truncate">Search…</span>
+          <span className="flex-1 truncate">
+            {t("commandPalette.trigger", { ns: "navigation" })}
+          </span>
           <CommandKHint />
         </Button>
       </SidebarHeader>
@@ -196,13 +203,14 @@ export function AppSidebar({
       </SidebarContent>
 
       <SidebarFooter className="border-t p-4 pt-2">
-        {/* Identity gets the row to itself. Sharing it with the utilities left
-            68px for the name and email inside a 216px sidebar, which truncated
-            even a short display name. */}
-        <div className="min-w-0">
-          <NavUser user={user} locale={locale} />
-        </div>
+        {/* One row, identity first: SidebarFooter is a column, so anything given
+            its own child stacks. Identity takes flex-1 rather than the row's
+            leftovers, which is what left it 68px inside a 216px sidebar and
+            truncated even a short display name. */}
         <div className="flex min-w-0 items-center gap-1">
+          <div className="min-w-0 flex-1">
+            <NavUser user={user} locale={locale} />
+          </div>
           <LanguageSwitcher locale={locale} />
           <ThemeToggle
             className="text-sidebar-foreground/70 hover:text-sidebar-foreground shrink-0"
