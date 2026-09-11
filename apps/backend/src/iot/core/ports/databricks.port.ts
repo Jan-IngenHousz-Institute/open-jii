@@ -48,6 +48,12 @@ export interface ExperimentDeviceStatsRow {
   lastReportedAt: string | null;
 }
 
+/** One time bucket of one device's measurement volume inside one experiment. */
+export interface ExperimentDeviceSeriesRow {
+  bucketStart: string | null;
+  count: number;
+}
+
 /** One publisher's volume and last arrival inside one experiment's data. */
 export interface ExperimentPublisherRow {
   clientId: string | null;
@@ -149,6 +155,13 @@ export interface DatabricksPort {
     experimentId: string,
     limit: number,
   ): Promise<Result<ExperimentDeviceStatsRow[]>>;
+  getExperimentDeviceSeries(
+    experimentId: string,
+    clientId: string,
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<ExperimentDeviceSeriesRow[]>>;
   getDeviceLifecycleEvents(
     thingName: string,
     from: string,

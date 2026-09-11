@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   zExperimentDeviceEntry,
+  zExperimentDeviceSeriesQuery,
   zExperimentDevicePathParam,
   zExperimentDevicesOverview,
 } from "./experiment-devices.schema";
@@ -123,5 +124,39 @@ describe("zExperimentDevicePathParam", () => {
     expect(
       zExperimentDevicePathParam.safeParse({ id: "not-a-uuid", deviceId: "also-not" }).success,
     ).toBe(false);
+  });
+});
+
+describe("zExperimentDeviceSeriesQuery", () => {
+  const valid = {
+    id: "11111111-1111-4111-8111-111111111111",
+    clientId: "AMBYTE_28:37:2F:FF:E7:04",
+    from: "2026-08-04T12:00:00.000Z",
+    to: "2026-09-03T12:00:00.000Z",
+    bucket: "day",
+  };
+
+  it("accepts a client id that is not a uuid, since publishers need not be registered", () => {
+    expect(zExperimentDeviceSeriesQuery.safeParse(valid).success).toBe(true);
+    expect(
+      zExperimentDeviceSeriesQuery.safeParse({ ...valid, clientId: "cognito-abc" }).success,
+    ).toBe(true);
+  });
+
+  it("rejects an inverted range and one longer than 31 days", () => {
+    expect(
+      zExperimentDeviceSeriesQuery.safeParse({ ...valid, from: valid.to, to: valid.from }).success,
+    ).toBe(false);
+    expect(
+      zExperimentDeviceSeriesQuery.safeParse({ ...valid, from: "2026-01-01T00:00:00.000Z" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("rejects an empty client id and an unknown bucket", () => {
+    expect(zExperimentDeviceSeriesQuery.safeParse({ ...valid, clientId: "" }).success).toBe(false);
+    expect(zExperimentDeviceSeriesQuery.safeParse({ ...valid, bucket: "week" }).success).toBe(
+      false,
+    );
   });
 });

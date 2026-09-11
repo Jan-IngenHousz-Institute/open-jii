@@ -49,18 +49,23 @@ Every experiment has a **Devices** tab. It lists two kinds of device together:
   listed by its client id as an unregistered publisher.
 
 Four tiles summarize the roster: onboarded, sending data, onboarded with no
-recent data, and sending without onboarding. Each row shows the device's status,
-its live broker connectivity in its own column, the firmware version and battery
-level it last reported, how many measurements it sent into this experiment in the window and
-when the last one arrived, and its onboarding date. Where a device has sent more
-than the window shows, its total for the experiment appears alongside. Onboarded
-devices can be detached from here, and long rosters page 25 at a time. An
-unregistered publisher is listed by the name it reports for itself, falling back
-to its client id.
+recent data, and sending without onboarding.
 
-This roster replaces the separate device metadata table that used to sit among
-the experiment's data tables: the same reported facts now appear next to each
-device's registry identity and live state.
+Below them the devices are listed down the left, searchable and paged 25 at a
+time, with the first one selected. Picking a device fills the rest of the page
+with its detail: status and live broker connectivity, the firmware version and
+battery level it last reported, how much it has sent into this experiment both in
+the window and in total, when data last arrived from it anywhere, and its
+onboarding date. A chart under the facts shows what it sent into this experiment
+day by day. Onboarded devices can be detached from here, and a device you have
+access to links through to its full monitoring.
+
+An unregistered publisher is listed by the name it reports for itself, falling
+back to its client id.
+
+This replaces the separate device metadata table that used to sit among the
+experiment's data tables: the same reported facts now appear beside each device's
+registry identity and live state.
 
 ![The experiment Devices tab: four summary tiles above a table of onboarded gateways, one gateway sending without onboarding, and an unregistered publisher listed by client id](/img/guide/web/experiment-devices.webp)
 

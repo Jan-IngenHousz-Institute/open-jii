@@ -584,7 +584,21 @@
       "firmwareVersion": "v{{version}}",
       "totalMeasurements_one": "{{count}} insgesamt",
       "totalMeasurements_other": "{{count}} insgesamt",
-      "unknownFirmware": "Firmware unbekannt"
+      "unknownFirmware": "Firmware unbekannt",
+      "searchPlaceholder": "Geräte durchsuchen",
+      "searchNoMatches": "Keine Geräte entsprechen der Suche.",
+      "openMonitoring": "Vollständige Überwachung öffnen",
+      "chartTitle": "Messungen in diesem Experiment",
+      "chartDescription": "Was dieses Gerät in den letzten 30 Tagen an dieses Experiment gesendet hat.",
+      "chartEmpty": "Keine Messungen in diesem Zeitraum.",
+      "chartUnavailable": "Messverlauf konnte nicht geladen werden.",
+      "measurementsSeries": "Messungen",
+      "facts": {
+        "firmware": "Firmware",
+        "inWindow": "In diesem Experiment (30 Tage)",
+        "allTime": "In diesem Experiment (gesamt)",
+        "lastDataAnywhere": "Letzte Daten, alle Experimente"
+      }
     },
     "groups": {
       "addDevices": "Geräte hinzufügen",

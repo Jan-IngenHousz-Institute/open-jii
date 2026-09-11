@@ -20,6 +20,7 @@ import type {
   DeviceMeasurementRow,
   DevicePayloadBreakdownRow,
   DeviceThroughputRow,
+  ExperimentDeviceSeriesRow,
   ExperimentDeviceStatsRow,
   ExperimentPublisherRow,
   GroupExperimentRow,
@@ -690,6 +691,46 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         eventTimestamp: this.toIsoOrNull(row[index.event_timestamp]),
         disconnectReason: row[index.disconnect_reason] ?? null,
         sessionIdentifier: row[index.session_identifier] ?? null,
+      })),
+    );
+  }
+
+  /**
+   * One device's measurement counts per time bucket inside one experiment.
+   * Scoped on both keys, so it answers what the experiment tab asks without
+   * returning the device's traffic into experiments the caller cannot see.
+   */
+  async getExperimentDeviceSeries(
+    experimentId: string,
+    clientId: string,
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<ExperimentDeviceSeriesRow[]>> {
+    const bucketAlias = `timestamp_${bucket}`;
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereConditions: [
+        ["experiment_id", experimentId],
+        ["client_id", clientId],
+      ],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      aggregation: {
+        groupBy: [{ column: "timestamp", timeBucket: bucket }],
+        functions: [{ column: "*", function: "count", alias: "measurement_count" }],
+      },
+      orderBy: bucketAlias,
+      orderDirection: "ASC",
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        bucketStart: this.toIsoOrNull(row[index[bucketAlias]]),
+        count: Number(row[index.measurement_count] ?? 0),
       })),
     );
   }

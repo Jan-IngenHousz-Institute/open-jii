@@ -2487,6 +2487,36 @@ describe("DatabricksAdapter", () => {
       expect(captured.statement).toContain("LIMIT 500");
     });
 
+    it("scopes a device series on both the experiment and the client id", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(
+        ["timestamp_day", "measurement_count"],
+        [
+          ["2026-09-01T00:00:00.000Z", "12"],
+          ["2026-09-02T00:00:00.000Z", "4"],
+        ],
+        captured,
+      );
+
+      const result = await databricksAdapter.getExperimentDeviceSeries(
+        "11111111-1111-4111-8111-111111111111",
+        "AMBYTE_A",
+        FROM,
+        TO,
+        "day",
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { bucketStart: "2026-09-01T00:00:00.000Z", count: 12 },
+        { bucketStart: "2026-09-02T00:00:00.000Z", count: 4 },
+      ]);
+      // Both keys, or the chart would show the device's traffic into every experiment.
+      expect(captured.statement).toContain("11111111-1111-4111-8111-111111111111");
+      expect(captured.statement).toContain("AMBYTE_A");
+      expect(captured.statement).toContain("clean_data");
+    });
+
     it("maps the gold device rows for one experiment, newest report first", async () => {
       const captured: CapturedStatement = {};
       mockGroupSql(

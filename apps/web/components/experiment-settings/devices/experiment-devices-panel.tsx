@@ -29,8 +29,9 @@ import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { ExperimentDeviceDetail } from "./experiment-device-detail";
+import { ExperimentDevicesList } from "./experiment-devices-list";
 import { summarizeExperimentDevices } from "./experiment-devices-summary";
-import { ExperimentDevicesTable } from "./experiment-devices-table";
 
 export function ExperimentDevicesPanel({ experimentId }: { experimentId: string }) {
   const { t } = useTranslation("iot");
@@ -40,6 +41,9 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
   const { data, isLoading, isError, refetch } = useExperimentDevices(experimentId);
 
   const [detaching, setDetaching] = useState<ExperimentDeviceIdentity | null>(null);
+  // The client id only, never the entry: a refetch must show the fresh facts,
+  // and a device that leaves the roster deselects itself.
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
   const { mutate: detach, isPending: isDetaching } = useExperimentDeviceRemove({
     onSuccess: () => {
@@ -105,6 +109,11 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
     );
   }
 
+  // Derived, never stored: the fresh entry each render, defaulting to the first
+  // device so the detail area is useful on first paint.
+  const selectedEntry =
+    data.devices.find((entry) => entry.clientId === selectedClientId) ?? data.devices[0];
+
   return (
     <>
       <ExperimentDevicesStats overview={data} />
@@ -116,7 +125,23 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
         </p>
       )}
 
-      <ExperimentDevicesTable overview={data} onRequestDetach={setDetaching} />
+      <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <div className="lg:sticky lg:top-20 lg:self-start">
+          <ExperimentDevicesList
+            devices={data.devices}
+            selectedClientId={selectedEntry.clientId}
+            onSelect={setSelectedClientId}
+          />
+        </div>
+
+        <ExperimentDeviceDetail
+          experimentId={experimentId}
+          entry={selectedEntry}
+          window={data.window}
+          pipelineUnavailable={data.pipelineUnavailable}
+          onRequestDetach={setDetaching}
+        />
+      </div>
 
       <AlertDialog
         open={detaching !== null}

@@ -11,6 +11,7 @@ import { CanAccess } from "../../authorization/can-access.decorator";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { AppError } from "../../common/utils/fp-utils";
 import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { GetExperimentDeviceSeriesUseCase } from "../application/use-cases/get-experiment-device-series/get-experiment-device-series";
 import { ListDeviceExperimentsUseCase } from "../application/use-cases/list-device-experiments/list-device-experiments";
 import { ListExperimentDevicesUseCase } from "../application/use-cases/list-experiment-devices/list-experiment-devices";
 import { OnboardDeviceUseCase } from "../application/use-cases/onboard-device/onboard-device";
@@ -28,6 +29,7 @@ export class ExperimentDeviceController {
     private readonly onboardDeviceUseCase: OnboardDeviceUseCase,
     private readonly listDeviceExperimentsUseCase: ListDeviceExperimentsUseCase,
     private readonly listExperimentDevicesUseCase: ListExperimentDevicesUseCase,
+    private readonly getExperimentDeviceSeriesUseCase: GetExperimentDeviceSeriesUseCase,
     private readonly removeExperimentDeviceUseCase: RemoveExperimentDeviceUseCase,
   ) {}
 
@@ -100,6 +102,31 @@ export class ExperimentDeviceController {
 
       return throwOrpcFailure(result, this.logger, "listExperimentDevices");
     });
+  }
+
+  @CanAccess({ resource: "experiment", action: "read" })
+  @Implement(experimentDevicesContract.getExperimentDeviceSeries)
+  getExperimentDeviceSeries(@Session() session: UserSession) {
+    return implement(experimentDevicesContract.getExperimentDeviceSeries).handler(
+      async ({ input }) => {
+        if (!(await this.devicesEnabled(session))) this.disabled("getExperimentDeviceSeries");
+
+        const result = await this.getExperimentDeviceSeriesUseCase.execute(
+          input.id,
+          input.clientId,
+          input.from,
+          input.to,
+          input.bucket,
+          session.user.id,
+        );
+
+        if (result.isSuccess()) {
+          return result.value;
+        }
+
+        return throwOrpcFailure(result, this.logger, "getExperimentDeviceSeries");
+      },
+    );
   }
 
   @Implement(experimentDevicesContract.removeExperimentDevice)

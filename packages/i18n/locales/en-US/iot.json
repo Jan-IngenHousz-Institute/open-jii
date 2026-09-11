@@ -584,7 +584,21 @@
       "firmwareVersion": "v{{version}}",
       "totalMeasurements_one": "{{count}} total",
       "totalMeasurements_other": "{{count}} total",
-      "unknownFirmware": "Firmware unknown"
+      "unknownFirmware": "Firmware unknown",
+      "searchPlaceholder": "Search devices",
+      "searchNoMatches": "No devices match that search.",
+      "openMonitoring": "Open full monitoring",
+      "chartTitle": "Measurements in this experiment",
+      "chartDescription": "What this device sent into this experiment over the last 30 days.",
+      "chartEmpty": "No measurements in this window.",
+      "chartUnavailable": "Measurement history could not be loaded.",
+      "measurementsSeries": "Measurements",
+      "facts": {
+        "firmware": "Firmware",
+        "inWindow": "In this experiment (30d)",
+        "allTime": "In this experiment (all time)",
+        "lastDataAnywhere": "Last data, any experiment"
+      }
     },
     "groups": {
       "addDevices": "Add devices",

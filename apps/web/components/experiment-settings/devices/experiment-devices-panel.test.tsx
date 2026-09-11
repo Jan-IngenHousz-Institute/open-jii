@@ -2,7 +2,7 @@ import { createIotDevice } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, within } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type {
@@ -100,6 +100,13 @@ function overview(
 }
 
 describe("ExperimentDevicesPanel", () => {
+  beforeEach(() => {
+    // The detail pane fetches a series for whichever device is selected.
+    server.mount(contract.experiments.getExperimentDeviceSeries, {
+      body: { buckets: [], pipelineUnavailable: false },
+    });
+  });
+
   it("lists bound devices, observed devices and unregistered publishers", async () => {
     server.mount(contract.experiments.listExperimentDevices, {
       body: overview([bound, observedPhone, unregistered]),
@@ -108,20 +115,60 @@ describe("ExperimentDevicesPanel", () => {
     render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
 
     await waitFor(() => {
-      expect(screen.getByText("Bench sensor")).toBeInTheDocument();
+      expect(screen.getAllByText("Bench sensor").length).toBeGreaterThan(0);
     });
-    expect(screen.getByText("AA:BB")).toBeInTheDocument();
-    // A bound device the caller may open is a link; the stranger's phone is not.
-    expect(screen.getByRole("link", { name: "Bench sensor" })).toHaveAttribute(
-      "href",
-      expect.stringContaining(`/platform/devices/${device.id}`),
-    );
     expect(screen.getByText("Field phone")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Field phone" })).not.toBeInTheDocument();
     expect(screen.getByText("iot.experimentDevices.unregistered")).toBeInTheDocument();
-    expect(screen.getByText("cognito-abc")).toBeInTheDocument();
-    // Only a bound device can be detached.
+    expect(screen.getAllByText("cognito-abc").length).toBeGreaterThan(0);
+    // The first device is selected on arrival, so the detail area is useful at once.
+    expect(screen.getByText("iot.experimentDevices.openMonitoring")).toBeInTheDocument();
+    // Only a bound device can be detached, and only the selected one shows the action.
     expect(screen.getAllByRole("button", { name: "iot.experimentDevices.detach" })).toHaveLength(1);
+  });
+
+  it("shows the selected device's facts and swaps them when another is picked", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.experiments.listExperimentDevices, {
+      body: overview([bound, observedPhone]),
+    });
+
+    render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
+
+    // Auto-selected: the detail pane heads with the first device.
+    expect(await screen.findByRole("heading", { name: "Bench sensor" })).toBeInTheDocument();
+    expect(screen.getAllByText("AA:BB").length).toBeGreaterThan(0);
+
+    await user.click(screen.getByText("Field phone"));
+
+    expect(await screen.findByRole("heading", { name: "Field phone" })).toBeInTheDocument();
+    expect(screen.getAllByText("PH-1").length).toBeGreaterThan(0);
+    // The phone is not viewable, so it offers no link out.
+    expect(screen.queryByText("iot.experimentDevices.openMonitoring")).not.toBeInTheDocument();
+    expect(screen.getAllByText("iot.experimentDevices.noAccess").length).toBeGreaterThan(0);
+  });
+
+  it("filters the list by search, leaving the detail pane alone", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.experiments.listExperimentDevices, {
+      body: overview([bound, observedPhone]),
+    });
+
+    render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
+
+    await screen.findByText("Field phone");
+    await user.type(
+      screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"),
+      "Field",
+    );
+
+    // Gone from the list, still in the detail pane: filtering does not deselect.
+    expect(within(screen.getByRole("list")).queryByText("Bench sensor")).not.toBeInTheDocument();
+    expect(within(screen.getByRole("list")).getByText("Field phone")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Bench sensor" })).toBeInTheDocument();
+
+    await user.clear(screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"));
+    await user.type(screen.getByPlaceholderText("iot.experimentDevices.searchPlaceholder"), "zzz");
+    expect(screen.getByText("iot.experimentDevices.searchNoMatches")).toBeInTheDocument();
   });
 
   it("counts onboarded, sending, silent and unbound devices in the tiles", async () => {
@@ -177,7 +224,7 @@ describe("ExperimentDevicesPanel", () => {
     server.mount(contract.experiments.listExperimentDevices, { body: overview([bound]) });
     await userEvent.click(screen.getByRole("button", { name: "iot.onboarding.retry" }));
     await waitFor(() => {
-      expect(screen.getByText("Bench sensor")).toBeInTheDocument();
+      expect(screen.getAllByText("Bench sensor").length).toBeGreaterThan(0);
     });
   });
 
@@ -227,7 +274,7 @@ describe("ExperimentDevicesPanel", () => {
     });
   });
 
-  it("folds the pipeline's reported facts into the row: firmware, battery and lifetime total", async () => {
+  it("shows the pipeline's reported facts in the detail pane: firmware, battery and totals", async () => {
     server.mount(contract.experiments.listExperimentDevices, {
       body: overview([observedPhone]),
     });
@@ -235,11 +282,13 @@ describe("ExperimentDevicesPanel", () => {
     render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
 
     await waitFor(() => {
-      expect(screen.getByText("iot.experimentDevices.firmwareVersion")).toBeInTheDocument();
+      expect(screen.getByText("iot.experimentDevices.facts.firmware")).toBeInTheDocument();
     });
+    expect(screen.getByText("2.4.1")).toBeInTheDocument();
     expect(screen.getByText("4.18")).toBeInTheDocument();
-    // 42 lifetime against 7 in the window, so the total earns its line.
-    expect(screen.getByText("iot.experimentDevices.totalMeasurements")).toBeInTheDocument();
+    // The window count and the all-time total are labelled apart, not merged.
+    expect(screen.getByText("iot.experimentDevices.facts.inWindow")).toBeInTheDocument();
+    expect(screen.getByText("iot.experimentDevices.facts.allTime")).toBeInTheDocument();
   });
 
   it("names an unregistered publisher by what it called itself, keeping its client id", async () => {
@@ -250,11 +299,11 @@ describe("ExperimentDevicesPanel", () => {
     render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
 
     await waitFor(() => {
-      expect(screen.getByText("shed-logger")).toBeInTheDocument();
+      expect(screen.getAllByText("shed-logger").length).toBeGreaterThan(0);
     });
-    expect(screen.getByText("cognito-abc")).toBeInTheDocument();
-    // Its lifetime total equals the window count, so it stays a single line.
-    expect(screen.queryByText("iot.experimentDevices.totalMeasurements")).not.toBeInTheDocument();
+    expect(screen.getAllByText("cognito-abc").length).toBeGreaterThan(0);
+    // No registry row, so nothing links out and the lock is stated instead.
+    expect(screen.queryByText("iot.experimentDevices.openMonitoring")).not.toBeInTheDocument();
   });
 
   it("pages a long roster instead of rendering every device at once", async () => {
@@ -267,7 +316,7 @@ describe("ExperimentDevicesPanel", () => {
     render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
 
     await waitFor(() => {
-      expect(screen.getByText("publisher-0")).toBeInTheDocument();
+      expect(screen.getAllByText("publisher-0").length).toBeGreaterThan(0);
     });
     // 25 to a page, matching the device registry.
     expect(screen.queryByText("publisher-25")).not.toBeInTheDocument();
@@ -276,6 +325,7 @@ describe("ExperimentDevicesPanel", () => {
     await userEvent.click(screen.getByLabelText("Go to next page"));
 
     expect(await screen.findByText("publisher-25")).toBeInTheDocument();
-    expect(screen.queryByText("publisher-0")).not.toBeInTheDocument();
+    // publisher-0 stays selected, so it is still named in the detail pane.
+    expect(screen.queryAllByText("publisher-0")).toHaveLength(1);
   });
 });

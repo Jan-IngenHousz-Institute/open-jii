@@ -39,6 +39,12 @@ export interface ExperimentDeviceReportedDto {
   lastReportedAt: string | null;
 }
 
+// One device's bucketed measurement volume inside one experiment.
+export interface ExperimentDeviceSeriesDto {
+  buckets: { bucketStart: string | null; count: number }[];
+  pipelineUnavailable: boolean;
+}
+
 export interface ExperimentDevicesOverviewDto {
   devices: ExperimentDeviceEntryDto[];
   window: { from: string; to: string };

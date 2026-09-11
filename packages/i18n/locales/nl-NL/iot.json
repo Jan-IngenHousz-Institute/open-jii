@@ -584,7 +584,21 @@
       "firmwareVersion": "v{{version}}",
       "totalMeasurements_one": "{{count}} totaal",
       "totalMeasurements_other": "{{count}} totaal",
-      "unknownFirmware": "Firmware onbekend"
+      "unknownFirmware": "Firmware onbekend",
+      "searchPlaceholder": "Apparaten zoeken",
+      "searchNoMatches": "Geen apparaten voldoen aan de zoekopdracht.",
+      "openMonitoring": "Volledige monitoring openen",
+      "chartTitle": "Metingen in dit experiment",
+      "chartDescription": "Wat dit apparaat de afgelopen 30 dagen naar dit experiment heeft gestuurd.",
+      "chartEmpty": "Geen metingen in deze periode.",
+      "chartUnavailable": "Meetgeschiedenis kon niet worden geladen.",
+      "measurementsSeries": "Metingen",
+      "facts": {
+        "firmware": "Firmware",
+        "inWindow": "In dit experiment (30 d)",
+        "allTime": "In dit experiment (totaal)",
+        "lastDataAnywhere": "Laatste data, alle experimenten"
+      }
     },
     "groups": {
       "addDevices": "Apparaten toevoegen",
