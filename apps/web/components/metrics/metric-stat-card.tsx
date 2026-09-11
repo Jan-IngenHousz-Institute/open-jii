@@ -14,8 +14,6 @@ import {
 } from "@repo/ui/components/card";
 import { cn } from "@repo/ui/lib/utils";
 
-import { MarqueeText } from "./marquee-text";
-
 /**
  * Past ten-fold, a percentage stops being a comparison and starts being a
  * headline: "+199,789%" against a base of nine says nothing the two figures
@@ -86,11 +84,9 @@ export function MetricStatCard({
     );
   };
 
-  const renderValue = () => <MarqueeText text={value} />;
-
   const renderLinkedValue = (target: string) => (
     <Link href={target} className="hover:text-primary flex items-center gap-1.5 transition-colors">
-      {renderValue()}
+      <span className="truncate">{value}</span>
       <ArrowUpRight aria-hidden className="size-5 shrink-0 opacity-60" />
     </Link>
   );
@@ -110,8 +106,11 @@ export function MetricStatCard({
     <Card className={cn("@container/card gap-2 py-3", className)}>
       <CardHeader className="gap-1">
         <CardDescription>{label}</CardDescription>
-        <CardTitle title={title} className="min-w-0 text-2xl font-semibold tabular-nums">
-          {href === undefined ? renderValue() : renderLinkedValue(href)}
+        <CardTitle
+          title={title}
+          className="line-clamp-1 min-w-0 text-2xl font-semibold tabular-nums"
+        >
+          {href === undefined ? value : renderLinkedValue(href)}
         </CardTitle>
         {change === null ? null : <CardAction>{renderChange(change)}</CardAction>}
       </CardHeader>
