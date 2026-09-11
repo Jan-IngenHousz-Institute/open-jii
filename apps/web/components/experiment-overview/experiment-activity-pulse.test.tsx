@@ -24,6 +24,7 @@ const response = {
     measurements30d: 1_222,
     activeExperiments30d: 1,
     contributors30d: 2,
+    devices30d: 4,
     activity,
     previousMeasurements: 1_000,
     activeDays: WINDOW_DAYS,
@@ -44,6 +45,20 @@ describe("ExperimentActivityPulse", () => {
     expect(screen.getByText("experiment.measurements")).toBeInTheDocument();
     expect(screen.getByText("+22%")).toBeInTheDocument();
     expect(screen.getByText("peak")).toBeInTheDocument();
+  });
+
+  it("names the devices when no contributor is attributed", async () => {
+    server.mount(contract.metrics.getScopedMetrics, {
+      body: {
+        ...response,
+        scoped: { ...response.scoped, contributors30d: 0, devices30d: 3 },
+      },
+    });
+
+    render(<ExperimentActivityPulse experimentId="e1" />);
+
+    expect(await screen.findByText("experiment.devices")).toBeInTheDocument();
+    expect(screen.queryByText("experiment.contributors")).not.toBeInTheDocument();
   });
 
   it("drops the contributors card rather than crediting nobody", async () => {

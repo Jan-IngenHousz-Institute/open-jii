@@ -54,17 +54,21 @@
       "contributors_other": "{{count}} bijdragers",
       "communityLabel": "Community",
       "trend": "Dagelijkse metingen",
-      "communityNote": "Op het hele platform"
+      "communityNote": "Op het hele platform",
+      "devices_one": "{{count}} apparaat rapporteert",
+      "devices_other": "{{count}} apparaten rapporteren"
     }
   },
   "experiment": {
     "title": "Activiteit",
     "measurements": "Metingen",
     "contributors": "Bijdragers",
-    "contributorsNote_one": "{{count}} persoon legt vast",
-    "contributorsNote_other": "{{count}} personen leggen vast",
     "quiet": "Geen metingen hier in de afgelopen 30 dagen",
-    "trend": "Dagelijkse metingen"
+    "trend": "Dagelijkse metingen",
+    "devices": "Apparaten",
+    "devicesCount_one": "{{count}} apparaat rapporteert",
+    "devicesCount_other": "{{count}} apparaten rapporteren",
+    "devicesNote": "Publiceren zonder benoemde bijdrager"
   },
   "resourceMetrics": {
     "strip": "Dagelijkse {{unit}} over {{days}} dagen",
