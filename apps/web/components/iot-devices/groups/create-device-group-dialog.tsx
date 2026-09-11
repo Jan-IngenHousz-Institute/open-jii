@@ -29,7 +29,13 @@ import {
 import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
 
-const formSchema = zCreateIotDeviceGroupBody.pick({ name: true, description: true });
+import { OrganizationPicker } from "../../organizations/organization-picker";
+
+const formSchema = zCreateIotDeviceGroupBody.pick({
+  name: true,
+  description: true,
+  organizationId: true,
+});
 type FormValues = z.infer<typeof formSchema>;
 
 interface CreateDeviceGroupDialogProps {
@@ -49,7 +55,7 @@ export function CreateDeviceGroupDialog({
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: "", description: "" },
+    defaultValues: { name: "", description: "", organizationId: undefined },
   });
 
   const createGroup = useCreateIotDeviceGroup({
@@ -62,7 +68,11 @@ export function CreateDeviceGroupDialog({
 
   function onSubmit(values: FormValues) {
     const description = values.description === "" ? undefined : values.description;
-    createGroup.mutate({ name: values.name, description });
+    createGroup.mutate({
+      name: values.name,
+      description,
+      organizationId: values.organizationId,
+    });
   }
 
   return (
@@ -100,6 +110,23 @@ export function CreateDeviceGroupDialog({
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="organizationId"
+              disabled={createGroup.isPending}
+              render={({ field }) => (
+                <FormItem>
+                  <OrganizationPicker
+                    id="create-device-group-organization"
+                    value={field.value ?? undefined}
+                    onChange={(organizationId) => field.onChange(organizationId ?? undefined)}
+                    disabled={createGroup.isPending}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <DialogFooter>
               <Button
                 type="button"

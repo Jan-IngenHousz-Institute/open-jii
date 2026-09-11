@@ -1,10 +1,11 @@
-import { createIotDeviceGroup } from "@/test/factories";
+import { createIotDeviceGroup, createMyOrganization } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import { useSession } from "@repo/auth/client";
 
 import { CreateDeviceGroupDialog } from "./create-device-group-dialog";
 
@@ -49,5 +50,43 @@ describe("CreateDeviceGroupDialog", () => {
     // An untouched description stays absent instead of arriving as "".
     expect(create.calls[0].body).toEqual({ name: "Greenhouse A" });
     expect(push).toHaveBeenCalledWith(`/en-US/platform/devices/groups/${group.id}`);
+  });
+
+  it("creates the group into the chosen organization, so its members can see it", async () => {
+    const user = userEvent.setup();
+    // The picker's query is principal-scoped, so it needs a signed-in caller.
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-1" } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
+    const personal = createMyOrganization({
+      id: "11111111-1111-4111-8111-111111111111",
+      isPersonal: true,
+    });
+    const shared = createMyOrganization({
+      id: "22222222-2222-4222-8222-222222222222",
+      name: "Greenhouse Lab",
+    });
+    server.mount(contract.organizations.listMyOrganizations, { body: [personal, shared] });
+    const group = createIotDeviceGroup({ name: "Greenhouse A" });
+    const create = server.mount(contract.iot.createIotDeviceGroup, { body: group });
+    server.mount(contract.iot.listIotDeviceGroups, { body: [group] });
+
+    render(<CreateDeviceGroupDialog open onOpenChange={vi.fn()} locale="en-US" />);
+
+    await user.type(screen.getByLabelText("iot.groups.nameLabel"), "Greenhouse A");
+    await user.click(await screen.findByRole("combobox", { name: "organizations.picker.label" }));
+    await user.click(await screen.findByRole("option", { name: "Greenhouse Lab" }));
+    await user.click(screen.getByText("iot.groups.create"));
+
+    await vi.waitFor(() => {
+      expect(create.calls).toHaveLength(1);
+    });
+    // Without this the group lands in the creator's personal workspace and the
+    // organization's other members never see it.
+    expect(create.calls[0].body).toEqual({
+      name: "Greenhouse A",
+      organizationId: "22222222-2222-4222-8222-222222222222",
+    });
   });
 });
