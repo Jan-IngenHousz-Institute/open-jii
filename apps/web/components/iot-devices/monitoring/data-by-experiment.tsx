@@ -7,10 +7,11 @@ import { AlertTriangle } from "lucide-react";
 import type { DeviceExperiment, DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { HorizontalBarChart } from "@repo/ui/components/charts/bar-chart";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 import { EmptyState } from "@repo/ui/components/empty-state";
 
 import { EntityLink } from "./entity-link";
-import { MONITORING_PRIMARY_COLOR } from "./monitoring-palette";
+import { monitoringPrimaryColor } from "./monitoring-palette";
 import type { EntityAccess, ResolvedEntity } from "./resolve-entity-label";
 import { resolveEntities } from "./resolve-entity-label";
 
@@ -40,6 +41,10 @@ export function DataByExperiment({
   visibleExperiments,
 }: DataByExperimentProps) {
   const { t } = useTranslation("iot");
+  // The colour is resolved here, so this component has to learn about a
+  // theme swap itself; the chart below only re-renders on its own.
+  useChartThemeRefresh();
+  const seriesColor = monitoringPrimaryColor();
   const locale = useLocale();
 
   const rows = buildRows(monitoring, boundExperiments, visibleExperiments, locale, (index) =>
@@ -65,7 +70,7 @@ export function DataByExperiment({
                 name: t("iot.devices.monitoring.measurements"),
                 x: charted.map((row) => row.count),
                 y: charted.map((row) => row.entity.label),
-                color: MONITORING_PRIMARY_COLOR,
+                color: seriesColor,
               },
             ]}
             config={{

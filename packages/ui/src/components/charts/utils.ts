@@ -1,5 +1,6 @@
 import type { Config, Layout, LayoutAxis } from "plotly.js";
 
+import { PLATFORM_SERIES_FALLBACK, PLATFORM_SERIES_TOKENS, PLOTLY_SERIES_TAIL } from "./colorway";
 import type { PlotlyChartConfig, WebGLRenderer } from "./types";
 
 /**
@@ -244,15 +245,22 @@ export function referenceLineColor(): string {
 }
 
 /**
- * The series palette. Charts get their colours from the same `--chart-1..5`
- * block every other surface reads, so swapping the theme re-colours them too.
- * Falls back to Plotly's own palette when the properties are not readable.
+ * The series palette every platform chart cycles through: the theme's own
+ * colours first, then Plotly's for the tail. Lives in `./colorway`; re-exported
+ * here because `layout.colorway` is set in this module and ~20 call sites
+ * already import their colours from it.
  */
-export function resolveChartColorway(): string[] | undefined {
-  const colorway = [1, 2, 3, 4, 5]
-    .map((index) => readThemeColor(`--chart-${index}`))
-    .filter((color): color is string => color !== undefined);
-  return colorway.length === 5 ? colorway : undefined;
+export function resolveChartColorway(): string[] {
+  const head = PLATFORM_SERIES_TOKENS.map(
+    (token, index) => readThemeColor(token) ?? PLATFORM_SERIES_FALLBACK[index] ?? "#005E5E",
+  );
+  return [...head, ...PLOTLY_SERIES_TAIL];
+}
+
+/** The colour a platform chart gives its Nth series. Wraps once exhausted. */
+export function platformChartColor(index: number): string {
+  const colorway = resolveChartColorway();
+  return colorway[Math.abs(Math.trunc(index)) % colorway.length] ?? "#005E5E";
 }
 
 // ISO 8601 (year, year-month, or date with optional time / fractional

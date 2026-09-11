@@ -2,11 +2,12 @@
 
 import type { DevicePayloadStats, WorkbookMixEntry } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Progress } from "@repo/ui/components/progress";
 
 import { EntityLink } from "./entity-link";
-import { MONITORING_SERIES_COLORS } from "./monitoring-palette";
+import { monitoringSeriesColors } from "./monitoring-palette";
 import type { EntityAccess, ResolvedEntity } from "./resolve-entity-label";
 import { resolveEntities } from "./resolve-entity-label";
 
@@ -216,6 +217,9 @@ function Breakdown({
   total: number;
 }) {
   const { t } = useTranslation("iot");
+  // Resolved in JS, so this has to learn about a theme swap itself.
+  useChartThemeRefresh();
+  const seriesColors = monitoringSeriesColors();
 
   return (
     <div className="space-y-3">
@@ -240,8 +244,7 @@ function Breakdown({
                   className="h-full rounded-full"
                   style={{
                     width: `${String((row.count / total) * 100)}%`,
-                    backgroundColor:
-                      MONITORING_SERIES_COLORS[index % MONITORING_SERIES_COLORS.length],
+                    backgroundColor: seriesColors[index % seriesColors.length],
                   }}
                 />
               </div>

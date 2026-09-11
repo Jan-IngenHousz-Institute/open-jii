@@ -5,10 +5,11 @@ import { formatRelativeTime } from "@/util/date";
 import type { IotDeviceGroupExperimentBucket } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { HorizontalBarChart } from "@repo/ui/components/charts/bar-chart";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 import { EmptyState } from "@repo/ui/components/empty-state";
 
 import { EntityLink } from "../monitoring/entity-link";
-import { MONITORING_PRIMARY_COLOR } from "../monitoring/monitoring-palette";
+import { monitoringPrimaryColor } from "../monitoring/monitoring-palette";
 import type { EntityAccess, ResolvedEntity } from "../monitoring/resolve-entity-label";
 import { resolveEntities } from "../monitoring/resolve-entity-label";
 
@@ -38,6 +39,10 @@ export function GroupDataByExperimentPanel({
   locale,
 }: GroupDataByExperimentPanelProps) {
   const { t } = useTranslation("iot");
+  // The colour is resolved here, so this component has to learn about a
+  // theme swap itself; the chart below only re-renders on its own.
+  useChartThemeRefresh();
+  const seriesColor = monitoringPrimaryColor();
 
   const rows = buildRows(
     dataByExperiment,
@@ -60,7 +65,7 @@ export function GroupDataByExperimentPanel({
               name: t("iot.devices.monitoring.measurements"),
               x: rows.map((row) => row.count),
               y: rows.map((row) => row.entity.label),
-              color: MONITORING_PRIMARY_COLOR,
+              color: seriesColor,
             },
           ]}
           config={{

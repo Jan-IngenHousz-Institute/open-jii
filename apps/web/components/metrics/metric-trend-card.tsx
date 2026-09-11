@@ -72,7 +72,7 @@ export function MetricTrendCard({
   // data share one colour. This card is not a chart, so it has to subscribe to
   // the theme itself or the bars keep the outgoing palette after a toggle.
   useChartThemeRefresh();
-  const seriesColor = resolveChartColorway()?.[0];
+  const seriesColor = resolveChartColorway()[0];
 
   return (
     <Card padding="sm" className={cn("@container/card", className)}>

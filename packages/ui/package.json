@@ -14,7 +14,8 @@
     "./hooks/use-in-view": "./src/hooks/use-in-view.ts",
     "./hooks/use-click-outside": "./src/hooks/use-click-outside.ts",
     "./hooks/use-element-size": "./src/hooks/use-element-size.ts",
-    "./lib/utils": "./src/lib/utils.ts"
+    "./lib/utils": "./src/lib/utils.ts",
+    "./components/charts/colorway": "./src/components/charts/colorway.ts"
   },
   "license": "MIT",
   "scripts": {

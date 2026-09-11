@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { invalidateThemeTokenCache } from "@repo/ui/components/charts/utils";
 
 import {
-  CATEGORY_PALETTE,
+  categoryPalette,
   COLOR_MAP_KEY_SEPARATOR,
   composeColorMapKey,
   getCategoryColor,
@@ -51,8 +51,8 @@ describe("getSuggestedSeriesColor", () => {
 
 describe("getCategoryColor", () => {
   it("returns the palette entry at the wrapped index", () => {
-    expect(getCategoryColor(0)).toBe(CATEGORY_PALETTE[0]);
-    expect(getCategoryColor(CATEGORY_PALETTE.length)).toBe(CATEGORY_PALETTE[0]);
+    expect(getCategoryColor(0)).toBe(categoryPalette()[0]);
+    expect(getCategoryColor(categoryPalette().length)).toBe(categoryPalette()[0]);
   });
 
   it("prefers a colorMap match when key is present", () => {
@@ -60,11 +60,11 @@ describe("getCategoryColor", () => {
   });
 
   it("falls back to the palette when key is not in the map", () => {
-    expect(getCategoryColor(2, { A: "#abcdef" }, "B")).toBe(CATEGORY_PALETTE[2]);
+    expect(getCategoryColor(2, { A: "#abcdef" }, "B")).toBe(categoryPalette()[2]);
   });
 
   it("ignores the colorMap when no key is supplied", () => {
-    expect(getCategoryColor(0, { A: "#abcdef" })).toBe(CATEGORY_PALETTE[0]);
+    expect(getCategoryColor(0, { A: "#abcdef" })).toBe(categoryPalette()[0]);
   });
 
   it("prefers a composite series::category override over the plain key", () => {
@@ -79,13 +79,13 @@ describe("getCategoryColor", () => {
   });
 
   it("falls back to the palette when neither composite nor plain hits", () => {
-    expect(getCategoryColor(3, {}, "Hardware", "revenue_eur")).toBe(CATEGORY_PALETTE[3]);
+    expect(getCategoryColor(3, {}, "Hardware", "revenue_eur")).toBe(categoryPalette()[3]);
   });
 
   it("does not probe composite lookup when seriesKey is omitted", () => {
     const composite = composeColorMapKey("revenue_eur", "Hardware");
     const colorMap = { [composite]: "#purple_per_series" };
-    expect(getCategoryColor(0, colorMap, "Hardware")).toBe(CATEGORY_PALETTE[0]);
+    expect(getCategoryColor(0, colorMap, "Hardware")).toBe(categoryPalette()[0]);
   });
 });
 

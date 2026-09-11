@@ -14,18 +14,29 @@ vi.mock("../../charts/plotly-chart", () => ({
   )),
 }));
 
-const LIGHT_COLORWAY = ["#111111", "#222222", "#333333", "#444444", "#555555"];
-const DARK_COLORWAY = ["#aaaaaa", "#bbbbbb", "#cccccc", "#dddddd", "#eeeeee"];
+// The theme-backed head of the colorway, in palette order. Everything past it
+// is Plotly's frozen hex, which cannot move with the theme and is not asserted.
+const HEAD_TOKENS = [
+  "--chart-1",
+  "--chart-4",
+  "--node-question",
+  "--chart-2",
+  "--node-measurement",
+  "--node-branch",
+];
+const LIGHT_COLORWAY = ["#111111", "#222222", "#333333", "#444444", "#555555", "#666666"];
+const DARK_COLORWAY = ["#aaaaaa", "#bbbbbb", "#cccccc", "#dddddd", "#eeeeee", "#ffffff"];
 
 function setChartColors(colors: string[]) {
-  colors.forEach((color, index) => {
-    document.documentElement.style.setProperty(`--chart-${index + 1}`, color);
+  HEAD_TOKENS.forEach((token, index) => {
+    const color = colors[index];
+    if (color !== undefined) document.documentElement.style.setProperty(token, color);
   });
 }
 
 function clearChartColors() {
-  for (let index = 1; index <= 5; index++) {
-    document.documentElement.style.removeProperty(`--chart-${index}`);
+  for (const token of HEAD_TOKENS) {
+    document.documentElement.style.removeProperty(token);
   }
   document.documentElement.classList.remove("dark");
 }
@@ -104,11 +115,11 @@ describe("useChartThemeRefresh", () => {
         />
       </ThemeProvider>,
     );
-    expect(renderedLayout().colorway).toEqual(LIGHT_COLORWAY);
+    expect(renderedLayout().colorway?.slice(0, HEAD_TOKENS.length)).toEqual(LIGHT_COLORWAY);
 
     setChartColors(DARK_COLORWAY);
     await user.click(await screen.findByRole("button", { name: "Switch to dark mode" }));
 
-    expect(renderedLayout().colorway).toEqual(DARK_COLORWAY);
+    expect(renderedLayout().colorway?.slice(0, HEAD_TOKENS.length)).toEqual(DARK_COLORWAY);
   });
 });
