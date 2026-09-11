@@ -1,6 +1,7 @@
 "use client";
 
 import { InlineEditableTitle } from "@/components/shared/inline-editable-title";
+import { workspaceBleed } from "@/components/workspace-band";
 import { formatDate } from "@/util/date";
 import { useFormContext, useWatch } from "react-hook-form";
 
@@ -8,6 +9,7 @@ import type { ExperimentVisualization } from "@repo/api/domains/experiment/visua
 import { useSession } from "@repo/auth/client";
 import { useTranslation } from "@repo/i18n";
 import { Textarea } from "@repo/ui/components/textarea";
+import { cn } from "@repo/ui/lib/utils";
 
 import { AutosaveIndicator } from "../../../shared/autosave/autosave-indicator";
 import type { ChartFormValues } from "../../charts/chart-config";
@@ -100,7 +102,7 @@ export function VisualizationLayoutContent({
         </div>
       </div>
 
-      <div className="border-border bg-canvas -mx-6 -mb-6 flex-1 border-t px-6 pb-6">
+      <div className={cn("border-border bg-canvas relative flex-1 border-t", workspaceBleed)}>
         <div className="w-full pt-6">{children}</div>
       </div>
     </div>
