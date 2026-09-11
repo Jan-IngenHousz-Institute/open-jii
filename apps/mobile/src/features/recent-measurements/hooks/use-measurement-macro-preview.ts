@@ -110,22 +110,22 @@ export function useMeasurementMacroPreview(measurement: StoredMeasurement): Macr
   };
 }
 
-// The version's snapshot holds the code that ran; the macro cell holds the
-// language it was written in. Mirrors hydrateFlowNodes for the live flow.
+// New snapshots pin the code and language that ran; the macro cell supplies
+// language only for versions published before snapshots carried it. Mirrors
+// hydrateFlowNodes for the live flow.
 // publish-version snapshots exactly the macros its cells reference, so a cell
 // is guaranteed whenever a snapshot exists; a missing cell means the version
-// genuinely doesn't carry this macro. Reporting not-found beats guessing a
-// language: applyMacro reads "" as JavaScript, which would silently run a
-// stored Python macro as JS. (Two cells referencing the same macro with
-// different languages would be ambiguous here — the payload records the macro
-// entity id, not the producing cell id, so there is nothing better available.)
+// genuinely doesn't carry this macro. For a legacy snapshot, reporting
+// not-found beats guessing a language. (Two cells referencing the same macro
+// with different languages are ambiguous in those old versions — the payload
+// records the macro entity id, not the producing cell id.)
 function findMacroSnapshot(
   version: WorkbookVersion | undefined,
   macroId: string,
 ): { code: string; language: string } | undefined {
-  const code = version?.entitySnapshots?.macros?.[macroId]?.code;
-  if (!code) return undefined;
+  const snapshot = version?.entitySnapshots?.macros?.[macroId];
+  if (!snapshot?.code) return undefined;
   const cell = version?.cells?.find((c) => c.type === "macro" && c.payload.macroId === macroId);
   if (cell?.type !== "macro") return undefined;
-  return { code, language: cell.payload.language };
+  return { code: snapshot.code, language: snapshot.language ?? cell.payload.language };
 }

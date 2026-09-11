@@ -107,6 +107,7 @@
     "renameSave": "Save name",
     "renameCancel": "Cancel",
     "renameConflict": "That name is already taken",
-    "renameFailed": "Rename failed"
+    "renameFailed": "Rename failed",
+    "languageSaveFailed": "Could not save the macro language"
   }
 }

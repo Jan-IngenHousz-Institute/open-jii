@@ -90,6 +90,33 @@ describe("useMeasurementMacroPreview", () => {
     });
   });
 
+  it("prefers the pinned snapshot language over a stale cell language", () => {
+    results.version = {
+      data: {
+        ...version,
+        cells: [
+          {
+            ...version.cells[0],
+            payload: { ...version.cells[0].payload, language: "javascript" },
+          },
+        ],
+        entitySnapshots: {
+          protocols: {},
+          macros: { "macro-1": { code: "cHJpbnQoMSk=", language: "python" } },
+        },
+      },
+      isLoading: false,
+      error: null,
+    };
+
+    const { result } = renderHook(() => useMeasurementMacroPreview(stored));
+
+    expect(result.current).toMatchObject({
+      status: "ready",
+      preview: { macro: { code: "cHJpbnQoMSk=", language: "python" } },
+    });
+  });
+
   it("is loading while the experiment list or the version read is pending", () => {
     results.list = { data: undefined, isLoading: true };
     const { result, rerender } = renderHook(() => useMeasurementMacroPreview(stored));
