@@ -26,7 +26,7 @@ export function ExperimentDeviceSeriesPanel({
   action,
 }: ExperimentDeviceSeriesPanelProps) {
   const { t } = useTranslation("iot");
-  const { data, isPending } = useExperimentDeviceSeries({
+  const { data, isPending, isError } = useExperimentDeviceSeries({
     experimentId,
     clientId,
     from: window.from,
@@ -42,11 +42,15 @@ export function ExperimentDeviceSeriesPanel({
   const counts = axis.map((bucketStart) => countByBucket.get(bucketStart) ?? 0);
   const total = counts.reduce((sum, count) => sum + count, 0);
 
+  // A failed request knows nothing about this device's volume, so it reads as
+  // unavailable rather than as a silent window.
+  const isSeriesUnavailable = isError || data?.pipelineUnavailable === true;
+
   function renderBody() {
     if (isPending) {
       return <Skeleton className="h-64 w-full" />;
     }
-    if (data?.pipelineUnavailable === true) {
+    if (isSeriesUnavailable) {
       return <EmptyState size="inline" description={t("iot.experimentDevices.chartUnavailable")} />;
     }
     if (total === 0) {

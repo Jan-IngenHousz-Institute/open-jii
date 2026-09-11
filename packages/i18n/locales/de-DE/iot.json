@@ -567,8 +567,8 @@
         "ofTotal_one": "von {{count}} Gerät",
         "ofTotal_other": "von {{count}} Geräten",
         "window": "Letzte 30 Tage",
-        "ofOnboarded": "von {{count}} eingebunden",
-        "ofSending": "von {{count}} sendend"
+        "ofOnboarded": "von {{count}} eingebundenen Geräten",
+        "ofSending": "von {{count}} sendenden Geräten"
       },
       "columns": {
         "onboarded": "Zugeordnet",

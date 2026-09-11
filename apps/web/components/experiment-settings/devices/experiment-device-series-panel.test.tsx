@@ -59,6 +59,15 @@ describe("ExperimentDeviceSeriesPanel", () => {
     expect(screen.queryByTestId("bar-chart")).not.toBeInTheDocument();
   });
 
+  it("says so when the request itself fails, rather than claiming an empty window", async () => {
+    server.mount(contract.experiments.getExperimentDeviceSeries, { status: 500 });
+
+    renderPanel();
+
+    expect(await screen.findByText("iot.experimentDevices.chartUnavailable")).toBeInTheDocument();
+    expect(screen.queryByText("iot.experimentDevices.chartEmpty")).not.toBeInTheDocument();
+  });
+
   it("distinguishes a genuinely empty window from an unavailable one", async () => {
     server.mount(contract.experiments.getExperimentDeviceSeries, {
       body: { buckets: [], pipelineUnavailable: false },
