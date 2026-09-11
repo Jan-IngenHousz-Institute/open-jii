@@ -27,7 +27,10 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
   }
 
   const scoped = mine?.scoped ?? null;
-  if (scoped === null) {
+
+  // A reader with nothing recorded gets no band, rather than a row of zeros:
+  // the same rule the list pages follow.
+  if (scoped === null || scoped.measurements30d === 0) {
     return null;
   }
 

@@ -98,6 +98,19 @@ describe("ResearchActivityPanel", () => {
     expect(screen.queryByText("60.1K")).not.toBeInTheDocument();
   });
 
+  it("renders nothing for a reader who recorded nothing", async () => {
+    server.mount(contract.metrics.getScopedMetrics, {
+      body: { ...mine, scoped: { ...mine.scoped, measurements30d: 0 } },
+    });
+    server.mount(contract.metrics.getPublicMetrics, { body: platform });
+
+    const { container } = render(<ResearchActivityPanel locale="en-US" />);
+
+    await waitFor(() => {
+      expect(container).toBeEmptyDOMElement();
+    });
+  });
+
   it("renders nothing without a scoped snapshot", async () => {
     server.mount(contract.metrics.getScopedMetrics, {
       body: { scope: "mine", scoped: null, baseline: null, computedAt: null },

@@ -63,10 +63,8 @@
     "contributors": "Mitwirkende",
     "contributorsNote_one": "{{count}} Person erfasst Daten",
     "contributorsNote_other": "{{count}} Personen erfassen Daten",
-    "lastRecorded": "Zuletzt erfasst",
     "quiet": "Keine Messungen hier in den letzten 30 Tagen",
-    "trend": "Tägliche Messungen",
-    "lastRecordedNote": "Jüngste Messung"
+    "trend": "Tägliche Messungen"
   },
   "resourceMetrics": {
     "strip": "Tägliche Messungen über {{days}} Tage",

@@ -63,10 +63,8 @@
     "contributors": "Contributors",
     "contributorsNote_one": "{{count}} person recording",
     "contributorsNote_other": "{{count}} people recording",
-    "lastRecorded": "Last recorded",
     "quiet": "No measurements recorded here in the last 30 days",
-    "trend": "Daily measurements",
-    "lastRecordedNote": "Most recent measurement"
+    "trend": "Daily measurements"
   },
   "resourceMetrics": {
     "strip": "Daily measurements over {{days}} days",
