@@ -51,12 +51,17 @@ while it completes.
 ## Platform activity
 
 Several pages carry a row of activity cards covering the last 30 days. On the
-dashboard they show what your own experiments recorded, how many were active,
-what the community recorded over the same period, and a daily average with the
-days behind it. The experiment, protocol, macro and workbook lists carry the
-same row for that kind, including the busiest one, and each row in the table
-draws its own activity strip. An experiment's overview page has the same row
-under its description.
+dashboard they show what your own experiments recorded, how many were active
+and the people and devices behind them, what the community recorded over the
+same period, and a daily average with the days behind it. The experiment,
+protocol, macro and workbook lists carry the same row for that kind, including
+the busiest one, and each row in the table draws its own activity strip. An
+experiment's overview page has the same row under its description.
+
+Contributors and devices are counted separately because measurements arrive by
+two routes: the mobile app records who took a measurement, while a logger
+publishes on its own and names nobody. An experiment fed only by loggers shows
+the devices that reported rather than a contributor count.
 
 When the community crosses a measurement milestone, a banner above the
 dashboard marks it until you dismiss it.

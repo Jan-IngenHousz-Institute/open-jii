@@ -76,6 +76,12 @@ export interface ContributorPairRow {
   userId: string;
 }
 
+/** A publisher that reported for an experiment, registered or not. */
+export interface DevicePairRow {
+  experimentId: string;
+  clientId: string;
+}
+
 /**
  * Injection token for the metrics Databricks port
  */
@@ -97,4 +103,5 @@ export interface DatabricksPort {
   getScopedDailyActivity(days: number): Promise<Result<ScopedDailyRow[]>>;
   getResourceDailyActivity(resourceType: string, days: number): Promise<Result<ResourceDailyRow[]>>;
   getContributorPairs(): Promise<Result<ContributorPairRow[]>>;
+  getDevicePairs(): Promise<Result<DevicePairRow[]>>;
 }

@@ -12,6 +12,7 @@ const scoped = {
     measurements30d: 4_519,
     activeExperiments30d: 1,
     contributors30d: 0,
+    devices30d: 4,
     activity: [{ date: "2026-08-30", measurements: 4_519 }],
     previousMeasurements: 4_100,
     activeDays: 1,
