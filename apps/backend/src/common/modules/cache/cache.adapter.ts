@@ -20,6 +20,9 @@ export interface CacheNamespace {
 export class CacheAdapter implements MacroCachePort, MetricsCachePort {
   private readonly logger = new Logger(CacheAdapter.name);
 
+  /** Loads already running, so a cold key costs one fetch rather than one per caller. */
+  private readonly inFlight = new Map<string, Promise<unknown>>();
+
   constructor(
     private readonly cache: Cache,
     private readonly namespace: CacheNamespace,
@@ -28,15 +31,44 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort {
   async tryCache<T>(key: string, fetchFn: () => Promise<T | null>): Promise<T | null> {
     const cacheKey = `${this.namespace.prefix}${key}`;
 
-    try {
-      const cached = await this.cache.get<T>(cacheKey);
-      if (cached !== undefined && cached !== null) {
-        return cached;
-      }
-    } catch (error) {
-      this.logger.warn({ msg: "Cache read failed, treating as miss", cacheKey, error });
+    const cached = await this.read<T>(cacheKey);
+    if (cached !== null) {
+      return cached;
     }
 
+    // A read behind a short TTL is otherwise repeated by every caller that
+    // arrives while the first one is still running. Waiters take what the
+    // winner stored rather than its return value, which keeps the shared
+    // promise untyped and this method honest about `T`.
+    const running = this.inFlight.get(cacheKey);
+    if (running !== undefined) {
+      await running;
+      return this.read<T>(cacheKey);
+    }
+
+    const load = this.fetchAndStore(cacheKey, fetchFn);
+    this.inFlight.set(cacheKey, load);
+
+    try {
+      return await load;
+    } finally {
+      this.inFlight.delete(cacheKey);
+    }
+  }
+
+  private async read<T>(cacheKey: string): Promise<T | null> {
+    try {
+      return (await this.cache.get<T>(cacheKey)) ?? null;
+    } catch (error) {
+      this.logger.warn({ msg: "Cache read failed, treating as miss", cacheKey, error });
+      return null;
+    }
+  }
+
+  private async fetchAndStore<T>(
+    cacheKey: string,
+    fetchFn: () => Promise<T | null>,
+  ): Promise<T | null> {
     const value = await fetchFn();
 
     if (value !== null && value !== undefined) {
