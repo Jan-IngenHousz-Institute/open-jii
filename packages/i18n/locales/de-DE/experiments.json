@@ -168,7 +168,14 @@
     "readMore": "Mehr erfahren",
     "uploadMetadata": "Metadaten hochladen",
     "editMetadata": "Metadaten bearbeiten",
-    "uploadSensorData": "Sensordaten hochladen"
+    "uploadSensorData": "Sensordaten hochladen",
+    "datasetLabel": "Datensatz",
+    "datasetPlaceholder": "Datensätze suchen...",
+    "datasetEmpty": "Kein passender Datensatz.",
+    "datasetRows": "{{rows}} Zeilen",
+    "datasetGroupStatic": "Quelle",
+    "datasetGroupMacro": "Verarbeitet",
+    "datasetGroupUpload": "Hochgeladen"
   },
   "experiment": "Experiment",
   "experimentId": "Experiment-ID",
