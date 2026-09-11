@@ -31,6 +31,7 @@ import type {
 import type {
   ActivityWindowsRow,
   ContributorPairRow,
+  DevicePairRow,
   DailyActivityRow,
   FamilyTotalsRow,
   HourlyActivityRow,
@@ -1670,6 +1671,24 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       .filter((row): row is ContributorPairRow => row.experimentId !== null && row.userId !== null);
 
     this.warnDroppedMetricsRows("experiment_contributors_window", rows.length - mapped.length);
+    return success(mapped);
+  }
+
+  async getDevicePairs(): Promise<Result<DevicePairRow[]>> {
+    const result = await this.readMetricsTable("experiment_devices_window", {});
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    const mapped = rows
+      .map((row) => ({
+        experimentId: cellString(row[index.experiment_id]),
+        clientId: cellString(row[index.client_id]),
+      }))
+      .filter((row): row is DevicePairRow => row.experimentId !== null && row.clientId !== null);
+
+    this.warnDroppedMetricsRows("experiment_devices_window", rows.length - mapped.length);
     return success(mapped);
   }
 

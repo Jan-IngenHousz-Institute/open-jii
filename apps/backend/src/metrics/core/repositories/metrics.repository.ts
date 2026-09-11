@@ -148,14 +148,31 @@ export class MetricsRepository {
     });
   }
 
-  /** The warehouse knows the busiest resource by id only. */
-  async getResourceName(kind: ResourceKind, id: string): Promise<Result<string | null>> {
+  /**
+   * The warehouse knows the busiest resource by id only. Scoped to what the
+   * caller may read: callers pass ids that already cleared the check, and this
+   * keeps that true of any later one.
+   */
+  async getResourceName(
+    kind: ResourceKind,
+    id: string,
+    userId: string,
+  ): Promise<Result<string | null>> {
     return tryCatch(async () => {
       const table = RESOURCE_TABLES[kind];
+      const accessScope = accessibleResourceCondition({
+        database: this.database,
+        resourceType: kind,
+        resourceIdColumn: table.id,
+        organizationIdColumn: table.organizationId,
+        visibilityColumn: table.visibility,
+        userId,
+      });
+
       const rows = await this.database
         .select({ name: table.name })
         .from(table)
-        .where(eq(table.id, id));
+        .where(and(eq(table.id, id), accessScope));
 
       return rows[0]?.name ?? null;
     });
