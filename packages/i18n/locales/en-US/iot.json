@@ -567,10 +567,11 @@
       },
       "columns": {
         "device": "Device",
-        "state": "State",
         "lastData": "Data in this experiment",
         "onboarded": "Onboarded",
-        "battery": "Battery"
+        "battery": "Battery",
+        "status": "Status",
+        "connectivity": "Connectivity"
       },
       "notOnboarded": "Not onboarded",
       "unregistered": "Unregistered publisher",

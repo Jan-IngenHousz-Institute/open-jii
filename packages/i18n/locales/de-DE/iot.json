@@ -567,10 +567,11 @@
       },
       "columns": {
         "device": "Gerät",
-        "state": "Zustand",
         "lastData": "Daten in diesem Experiment",
         "onboarded": "Zugeordnet",
-        "battery": "Batterie"
+        "battery": "Batterie",
+        "status": "Status",
+        "connectivity": "Verbindung"
       },
       "notOnboarded": "Nicht zugeordnet",
       "unregistered": "Nicht registrierter Sender",

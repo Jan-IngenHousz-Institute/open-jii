@@ -7,6 +7,7 @@ import { useLocale } from "@/hooks/useLocale";
 import { formatDate, formatRelativeTime } from "@/util/date";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { Lock, X } from "lucide-react";
+import { useState } from "react";
 
 import type {
   ExperimentDeviceEntry,
@@ -16,6 +17,13 @@ import type {
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@repo/ui/components/pagination";
+import {
   Table,
   TableBody,
   TableCell,
@@ -23,6 +31,9 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui/components/table";
+
+/** Matches the device registry's page size, so both device tables page alike. */
+const PAGE_SIZE = 25;
 
 interface ExperimentDevicesTableProps {
   overview: ExperimentDevicesOverview;
@@ -37,6 +48,11 @@ interface ExperimentDevicesTableProps {
 export function ExperimentDevicesTable({ overview, onRequestDetach }: ExperimentDevicesTableProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(overview.devices.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = overview.devices.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   function renderRecentData(entry: ExperimentDeviceEntry) {
     if (overview.pipelineUnavailable && entry.recentData === null) {
@@ -143,10 +159,10 @@ export function ExperimentDevicesTable({ overview, onRequestDetach }: Experiment
           {renderType(entry)}
         </TableCell>
         <TableCell className="px-6 py-3">
-          <div className="flex flex-col gap-1">
-            {device !== null && <IotDeviceStatusBadge status={device.status} />}
-            {device !== null && <ConnectivityDot connectivity={entry.connectivity} />}
-          </div>
+          {device !== null && <IotDeviceStatusBadge status={device.status} />}
+        </TableCell>
+        <TableCell className="px-6 py-3">
+          {device !== null && <ConnectivityDot connectivity={entry.connectivity} />}
         </TableCell>
         <TableCell className="text-muted-foreground px-6 py-3 text-[13px] tabular-nums">
           {renderBattery(entry)}
@@ -186,15 +202,47 @@ export function ExperimentDevicesTable({ overview, onRequestDetach }: Experiment
           <TableRow className="bg-muted border-border hover:bg-transparent">
             <ColumnHead>{t("iot.experimentDevices.columns.device")}</ColumnHead>
             <ColumnHead>{t("iot.devices.columns.type")}</ColumnHead>
-            <ColumnHead>{t("iot.experimentDevices.columns.state")}</ColumnHead>
+            <ColumnHead>{t("iot.experimentDevices.columns.status")}</ColumnHead>
+            <ColumnHead>{t("iot.experimentDevices.columns.connectivity")}</ColumnHead>
             <ColumnHead>{t("iot.experimentDevices.columns.battery")}</ColumnHead>
             <ColumnHead>{t("iot.experimentDevices.columns.lastData")}</ColumnHead>
             <ColumnHead>{t("iot.experimentDevices.columns.onboarded")}</ColumnHead>
             <TableHead className="w-12" />
           </TableRow>
         </TableHeader>
-        <TableBody>{overview.devices.map(renderRow)}</TableBody>
+        <TableBody>{pageRows.map(renderRow)}</TableBody>
       </Table>
+      {totalPages > 1 && (
+        <div className="border-border flex items-center justify-between border-t px-6 py-3">
+          <span className="text-muted-foreground text-xs">
+            {t("iot.devices.pageOf", { page: currentPage, total: totalPages })}
+          </span>
+          <Pagination className="m-0 w-auto">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  size="sm"
+                  onClick={() => {
+                    setPage(Math.max(1, currentPage - 1));
+                  }}
+                  aria-disabled={currentPage <= 1}
+                  className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  size="sm"
+                  onClick={() => {
+                    setPage(Math.min(totalPages, currentPage + 1));
+                  }}
+                  aria-disabled={currentPage >= totalPages}
+                  className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </div>
   );
 }

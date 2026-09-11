@@ -567,10 +567,11 @@
       },
       "columns": {
         "device": "Apparaat",
-        "state": "Status",
         "lastData": "Data in dit experiment",
         "onboarded": "Gekoppeld",
-        "battery": "Batterij"
+        "battery": "Batterij",
+        "status": "Status",
+        "connectivity": "Verbinding"
       },
       "notOnboarded": "Niet gekoppeld",
       "unregistered": "Niet-geregistreerde zender",

@@ -256,4 +256,26 @@ describe("ExperimentDevicesPanel", () => {
     // Its lifetime total equals the window count, so it stays a single line.
     expect(screen.queryByText("iot.experimentDevices.totalMeasurements")).not.toBeInTheDocument();
   });
+
+  it("pages a long roster instead of rendering every device at once", async () => {
+    const many = Array.from({ length: 30 }, (_, index) => ({
+      ...unregistered,
+      clientId: `publisher-${String(index)}`,
+    }));
+    server.mount(contract.experiments.listExperimentDevices, { body: overview(many) });
+
+    render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("publisher-0")).toBeInTheDocument();
+    });
+    // 25 to a page, matching the device registry.
+    expect(screen.queryByText("publisher-25")).not.toBeInTheDocument();
+    expect(screen.getByText("iot.devices.pageOf")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByLabelText("Go to next page"));
+
+    expect(await screen.findByText("publisher-25")).toBeInTheDocument();
+    expect(screen.queryByText("publisher-0")).not.toBeInTheDocument();
+  });
 });
