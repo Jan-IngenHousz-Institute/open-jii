@@ -30329,6 +30329,14 @@
                             "properties": {
                               "code": {
                                 "type": "string"
+                              },
+                              "language": {
+                                "enum": [
+                                  "python",
+                                  "r",
+                                  "javascript"
+                                ],
+                                "type": "string"
                               }
                             },
                             "required": [

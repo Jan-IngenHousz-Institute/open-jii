@@ -99,6 +99,7 @@
     "renameSave": "Namen speichern",
     "renameCancel": "Abbrechen",
     "renameConflict": "Dieser Name ist bereits vergeben",
-    "renameFailed": "Umbenennen fehlgeschlagen"
+    "renameFailed": "Umbenennen fehlgeschlagen",
+    "languageSaveFailed": "Die Makrosprache konnte nicht gespeichert werden"
   }
 }

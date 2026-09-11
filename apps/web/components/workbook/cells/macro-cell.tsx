@@ -47,7 +47,7 @@ interface MacroCellProps {
   readOnly?: boolean;
   // Immutable code pinned at publish time. When present the cell renders
   // exclusively from it and never fetches the live macro row.
-  snapshot?: { code: string };
+  snapshot?: { code: string; language?: MacroLanguage };
 }
 
 const languageLabels: Record<MacroLanguage, string> = {
@@ -77,7 +77,10 @@ export function MacroCellComponent({
   const macroName = macroData?.name;
   const rawCode = useSnapshot ? snapshot.code : (macroData?.code ?? null);
   const macroCode = rawCode ? decodeBase64(rawCode) : null;
-  const macroLanguage = macroData?.language;
+  // Live row in edit mode, pinned language in snapshot mode; the cell payload
+  // copy is only a fallback because it can go stale.
+  const macroLanguage = useSnapshot ? snapshot.language : macroData?.language;
+  const displayLanguage = macroLanguage ?? language;
   // Capability, not ownership: the detail payload already carries the
   // caller's `can(update)`, so an `admin`/"Can edit" grantee edits the macro
   // here exactly as they can on its own page.
@@ -89,7 +92,10 @@ export function MacroCellComponent({
   // Lineage: this macro is itself a fork of another one.
   const forkedFrom = useSnapshot ? undefined : macroData?.forkedFrom;
 
+  // Separate mutation state keeps code saves and renames from disabling the
+  // language selector; only its own request should lock it.
   const { mutateAsync: saveMacro } = useMacroUpdate(macroId);
+  const { mutate: saveLanguage, isPending: isSavingLanguage } = useMacroUpdate(macroId);
   const { mutateAsync: forkMacro, isPending: isForking } = useMacroCreate();
   const onEntitySaved = useWorkbookEntitySaved();
 
@@ -158,23 +164,35 @@ export function MacroCellComponent({
 
   const handleLanguageChange = useCallback(
     (lang: MacroLanguage) => {
-      void saveMacro({ id: macroId, language: lang }).catch((err: unknown) => {
-        toast({ description: parseApiError(err)?.message, variant: "destructive" });
-      });
-      onUpdate({ ...cell, payload: { ...cell.payload, language: lang } });
+      saveLanguage(
+        { id: macroId, language: lang },
+        {
+          onSuccess: (saved) => {
+            const { cell: latest, onUpdate: updateLatest } = cellRef.current;
+            if (latest.payload.macroId !== macroId) return;
+            updateLatest({ ...latest, payload: { ...latest.payload, language: saved.language } });
+          },
+          onError: (err) => {
+            toast({
+              description: parseApiError(err)?.message ?? t("cells.languageSaveFailed"),
+              variant: "destructive",
+            });
+          },
+        },
+      );
     },
-    [macroId, saveMacro, cell, onUpdate],
+    [macroId, saveLanguage, t],
   );
 
   const [langSelectOpen, setLangSelectOpen] = useState(false);
 
-  // Track the latest cell so the async rename merges into current state, not a
+  // Track the latest cell so async saves merge into current state, not a
   // stale snapshot from when the save began. Sync in a layout effect (not during
   // render) so a speculative render never leaks into the ref.
-  const cellRef = useRef(cell);
+  const cellRef = useRef({ cell, onUpdate });
   useLayoutEffect(() => {
-    cellRef.current = cell;
-  }, [cell]);
+    cellRef.current = { cell, onUpdate };
+  }, [cell, onUpdate]);
 
   // Rename the shared macro row and repoint the cell label at the new name.
   // Renaming a fork resolves the auto-generated "Copy of ..." name in place.
@@ -184,8 +202,9 @@ export function MacroCellComponent({
       setIsRenaming(true);
       try {
         const res = await saveMacro({ id: macroId, name: next });
-        const latest = cellRef.current;
-        onUpdate({ ...latest, payload: { ...latest.payload, name: res.name } });
+        const { cell: latest, onUpdate: updateLatest } = cellRef.current;
+        if (latest.payload.macroId !== macroId) return;
+        updateLatest({ ...latest, payload: { ...latest.payload, name: res.name } });
       } catch (err) {
         const parsed = parseApiError(err);
         toast({
@@ -200,7 +219,7 @@ export function MacroCellComponent({
         setIsRenaming(false);
       }
     },
-    [macroId, saveMacro, onUpdate, t],
+    [macroId, saveMacro, t],
   );
 
   const displayName = cell.payload.name ?? macroName ?? "Macro";
@@ -299,7 +318,8 @@ export function MacroCellComponent({
           </Button>
           {canUpdateMacro ? (
             <Select
-              value={macroLanguage ?? language}
+              value={displayLanguage}
+              disabled={isSavingLanguage}
               onValueChange={(v) => handleLanguageChange(v as MacroLanguage)}
               open={langSelectOpen}
               onOpenChange={setLangSelectOpen}
@@ -319,7 +339,7 @@ export function MacroCellComponent({
             </Select>
           ) : (
             <span className="text-muted-foreground px-2 text-xs">
-              {languageLabels[macroLanguage ?? language]}
+              {languageLabels[displayLanguage]}
             </span>
           )}
           <Button
@@ -345,7 +365,7 @@ export function MacroCellComponent({
         <WorkbookCodeEditor
           value={localCode ?? macroCode ?? ""}
           onChange={isEditable ? setLocalCode : undefined}
-          language={macroLanguage ?? language}
+          language={displayLanguage}
           minHeight={isEditable ? "120px" : "80px"}
           maxHeight={isEditable ? "500px" : "400px"}
           readOnly={!isEditable}

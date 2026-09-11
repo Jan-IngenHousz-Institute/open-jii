@@ -36,6 +36,22 @@ describe("Workbook Version Schemas", () => {
       expect(zWorkbookVersion.safeParse(withCells).success).toBe(true);
     });
 
+    it("accepts macro snapshots with and without a pinned language", () => {
+      const snapshots = {
+        ...valid,
+        entitySnapshots: {
+          protocols: {},
+          macros: { a: { code: "x" }, b: { code: "y", language: "python" } },
+        },
+      };
+      expect(zWorkbookVersion.safeParse(snapshots).success).toBe(true);
+      const bad = {
+        ...valid,
+        entitySnapshots: { protocols: {}, macros: { a: { code: "x", language: "java" } } },
+      };
+      expect(zWorkbookVersion.safeParse(bad).success).toBe(false);
+    });
+
     it("rejects version <= 0", () => {
       expect(zWorkbookVersion.safeParse({ ...valid, version: 0 }).success).toBe(false);
       expect(zWorkbookVersion.safeParse({ ...valid, version: -1 }).success).toBe(false);
