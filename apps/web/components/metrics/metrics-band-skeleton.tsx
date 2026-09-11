@@ -14,10 +14,7 @@ interface MetricsBandSkeletonProps {
  */
 export function MetricsBandSkeleton({ cards, className }: MetricsBandSkeletonProps) {
   const renderCard = (index: number) => (
-    <Card
-      key={index}
-      className="@container/card from-primary/5 to-card dark:bg-card bg-linear-to-t shadow-xs gap-2 py-3"
-    >
+    <Card key={index} className="@container/card gap-2 py-3">
       <CardHeader className="gap-1">
         <Skeleton className="h-4 w-28" />
         <Skeleton className="h-7 w-24" />

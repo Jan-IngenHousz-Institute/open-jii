@@ -75,12 +75,7 @@ export function MetricTrendCard({
   const seriesColor = resolveChartColorway()?.[0];
 
   return (
-    <Card
-      className={cn(
-        "@container/card from-primary/5 to-card dark:bg-card bg-linear-to-t shadow-xs gap-2 py-3",
-        className,
-      )}
-    >
+    <Card className={cn("@container/card gap-2 py-3", className)}>
       <CardHeader className="gap-1">
         <CardDescription>{label}</CardDescription>
         <CardTitle
