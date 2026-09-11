@@ -63,13 +63,12 @@
     "title": "Activity",
     "measurements": "Measurements",
     "contributors": "Contributors",
-    "contributorsNote_one": "{{count}} person recording",
-    "contributorsNote_other": "{{count}} people recording",
     "quiet": "No measurements recorded here in the last 30 days",
     "trend": "Daily measurements",
     "devices": "Devices",
-    "devicesNote_one": "{{count}} device reporting",
-    "devicesNote_other": "{{count}} devices reporting"
+    "devicesCount_one": "{{count}} device reporting",
+    "devicesCount_other": "{{count}} devices reporting",
+    "devicesNote": "Publishing without a named contributor"
   },
   "resourceMetrics": {
     "strip": "Daily {{unit}} over {{days}} days",

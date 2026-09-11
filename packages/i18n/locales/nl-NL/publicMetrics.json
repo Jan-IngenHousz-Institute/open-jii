@@ -63,13 +63,12 @@
     "title": "Activiteit",
     "measurements": "Metingen",
     "contributors": "Bijdragers",
-    "contributorsNote_one": "{{count}} persoon legt vast",
-    "contributorsNote_other": "{{count}} personen leggen vast",
     "quiet": "Geen metingen hier in de afgelopen 30 dagen",
     "trend": "Dagelijkse metingen",
     "devices": "Apparaten",
-    "devicesNote_one": "{{count}} apparaat rapporteert",
-    "devicesNote_other": "{{count}} apparaten rapporteren"
+    "devicesCount_one": "{{count}} apparaat rapporteert",
+    "devicesCount_other": "{{count}} apparaten rapporteren",
+    "devicesNote": "Publiceren zonder benoemde bijdrager"
   },
   "resourceMetrics": {
     "strip": "Dagelijkse {{unit}} over {{days}} dagen",

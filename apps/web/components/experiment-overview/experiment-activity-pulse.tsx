@@ -53,8 +53,8 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
       locale={locale}
       label={t("experiment.contributors")}
       value={number.format(scoped.contributors30d)}
-      note={t("experiment.contributorsNote", { count: scoped.contributors30d })}
-      context={t("experiment.devicesNote", { count: scoped.devices30d })}
+      note={t("experiment.devicesCount", { count: scoped.devices30d })}
+      context={window}
     />
   );
 
@@ -63,7 +63,7 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
       locale={locale}
       label={t("experiment.devices")}
       value={number.format(scoped.devices30d)}
-      note={t("experiment.devicesNote", { count: scoped.devices30d })}
+      note={t("experiment.devicesNote")}
       context={window}
     />
   );

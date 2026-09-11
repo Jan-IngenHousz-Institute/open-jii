@@ -63,13 +63,12 @@
     "title": "Aktivität",
     "measurements": "Messungen",
     "contributors": "Mitwirkende",
-    "contributorsNote_one": "{{count}} Person erfasst Daten",
-    "contributorsNote_other": "{{count}} Personen erfassen Daten",
     "quiet": "Keine Messungen hier in den letzten 30 Tagen",
     "trend": "Tägliche Messungen",
     "devices": "Geräte",
-    "devicesNote_one": "{{count}} Gerät sendet",
-    "devicesNote_other": "{{count}} Geräte senden"
+    "devicesCount_one": "{{count}} Gerät sendet",
+    "devicesCount_other": "{{count}} Geräte senden",
+    "devicesNote": "Senden ohne benannte Mitwirkende"
   },
   "resourceMetrics": {
     "strip": "Tägliche {{unit}} über {{days}} Tage",
