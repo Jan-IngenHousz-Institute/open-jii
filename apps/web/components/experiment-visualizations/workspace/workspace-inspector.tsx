@@ -35,7 +35,10 @@ interface WorkspaceInspectorProps {
 
 export function WorkspaceInspector(props: WorkspaceInspectorProps) {
   return (
-    <Card className="overflow-hidden shadow-none md:sticky md:top-6 md:flex md:max-h-[calc(100vh-3rem)] md:flex-col">
+    <Card
+      padding="none"
+      className="overflow-hidden shadow-none md:sticky md:top-6 md:flex md:max-h-[calc(100vh-3rem)] md:flex-col"
+    >
       <WorkspaceInspectorBody {...props} bodyClassName="md:flex md:min-h-0 md:flex-1 md:flex-col" />
     </Card>
   );

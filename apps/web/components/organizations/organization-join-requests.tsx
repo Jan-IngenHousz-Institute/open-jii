@@ -61,7 +61,7 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
 
   if (isPending) {
     return (
-      <Card aria-busy="true" className="divide-border divide-y overflow-hidden">
+      <Card padding="none" aria-busy="true" className="divide-border divide-y overflow-hidden">
         {[0, 1].map((row) => (
           <div key={row} className="flex items-center gap-3 px-5 py-3">
             <Skeleton className="h-9 w-9 rounded-full" />
@@ -157,6 +157,7 @@ export function OrganizationJoinRequests({ organizationId }: { organizationId: s
             {t("organizations.requests.historyTitle")}
           </h3>
           <Card
+            padding="none"
             role="list"
             aria-labelledby="organization-request-history-title"
             className="bg-muted/40 divide-border divide-y overflow-hidden shadow-none"

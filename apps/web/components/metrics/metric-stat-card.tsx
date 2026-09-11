@@ -90,7 +90,7 @@ export function MetricStatCard({
   );
 
   return (
-    <Card className={cn("@container/card gap-2 py-3", className)}>
+    <Card padding="sm" className={cn("@container/card", className)}>
       <CardHeader className="gap-1">
         <CardDescription>{label}</CardDescription>
         <CardTitle

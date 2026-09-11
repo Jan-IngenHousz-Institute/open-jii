@@ -54,7 +54,7 @@ export function QuestionCard({
       {/* Subtle accent line */}
       <div className="from-primary to-primary/70 absolute left-0 top-0 h-full w-1 bg-gradient-to-b"></div>
 
-      <CardContent className="p-6 pl-8">
+      <CardContent className="pl-8">
         {/* Question Input */}
         <div className="mb-6">
           <Input

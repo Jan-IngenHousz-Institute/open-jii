@@ -21,7 +21,7 @@ export function FeaturedDashboardCard({ dashboard, href }: FeaturedDashboardCard
   const { t } = useTranslation("experimentDashboards");
   return (
     <Card className="overflow-hidden shadow-none">
-      <CardContent className="space-y-3 pt-6">
+      <CardContent className="space-y-3">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold">
             <Link

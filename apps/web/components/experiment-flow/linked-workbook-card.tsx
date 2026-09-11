@@ -205,8 +205,10 @@ export function LinkedWorkbookCard({
   }, [experimentId, upgradeVersion, t]);
 
   return (
-    <Card className="overflow-hidden shadow-none">
-      <CardContent className="pb-6 pt-6">
+    // The upgrade and success bars below are full-bleed, so the card owns no
+    // vertical padding and the content carries its own.
+    <Card padding="none" className="overflow-hidden shadow-none">
+      <CardContent className="py-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <div className="bg-muted flex h-10 w-10 shrink-0 items-center justify-center rounded-full">

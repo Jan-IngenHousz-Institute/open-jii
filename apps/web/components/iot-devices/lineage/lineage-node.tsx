@@ -171,9 +171,10 @@ export function LineageNode(props: NodeProps) {
 
   return (
     <Card
+      padding="none"
       data-testid="lineage-node"
       className={cn(
-        "relative w-[260px] gap-0 overflow-hidden py-0",
+        "relative w-[260px] overflow-hidden",
         props.selected && "ring-primary border-primary ring-2",
       )}
     >

@@ -10,7 +10,7 @@ interface MetricsBandSkeletonProps {
 /** The band's own geometry while it loads, so nothing reflows when the figures arrive. */
 export function MetricsBandSkeleton({ cards, className }: MetricsBandSkeletonProps) {
   const renderCard = (index: number) => (
-    <Card key={index} className="@container/card gap-2 py-3">
+    <Card key={index} padding="sm" className="@container/card">
       <CardHeader className="gap-1">
         <Skeleton className="h-5 w-28" />
         <Skeleton className="h-8 w-24" />

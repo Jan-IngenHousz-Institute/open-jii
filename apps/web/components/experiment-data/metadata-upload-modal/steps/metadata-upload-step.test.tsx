@@ -2,6 +2,8 @@ import { act, fireEvent, render, screen, waitFor } from "@/test/test-utils";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type * as UiUtils from "@repo/ui/lib/utils";
+
 import { MetadataUploadStep } from "./metadata-upload-step";
 
 const mockParseClipboard = vi.fn();
@@ -149,7 +151,8 @@ vi.mock("@repo/ui/components/scroll-area", () => ({
   ScrollArea: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock("@repo/ui/lib/utils", () => ({
+vi.mock("@repo/ui/lib/utils", async (importOriginal) => ({
+  ...(await importOriginal<typeof UiUtils>()),
   cn: (...args: unknown[]) => args.filter(Boolean).join(" "),
 }));
 

@@ -81,7 +81,7 @@ export function ExpandedChart({
     },
   ];
   return (
-    <Card className="mt-3 gap-0 overflow-hidden py-0">
+    <Card padding="none" className="mt-3 overflow-hidden">
       <div className="border-border bg-muted flex items-center justify-between border-b px-3 py-1.5">
         <span className="text-foreground text-xs font-semibold">{columnName}</span>
         <Button

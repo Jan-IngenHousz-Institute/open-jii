@@ -20,6 +20,12 @@ export function ExperimentOverviewCards({
   const { t } = useTranslation("experiments");
   const locale = useLocale();
 
+  // `ResourceCard` reserves a badge row so titles line up across the grid, and
+  // `VisibilityBadge` renders nothing for a public experiment while still being
+  // a truthy element. Deciding here, where the whole set is known, keeps the
+  // alignment when some are private and drops 34px of dead space when none are.
+  const hasPrivateExperiment = experiments?.some((e) => e.visibility === "private") ?? false;
+
   return (
     <ResourceCardGrid
       isLoading={!experiments}
@@ -39,7 +45,11 @@ export function ExperimentOverviewCards({
           }
           title={experiment.name}
           // Only when private: "public" is the unremarkable default.
-          badges={<VisibilityBadge visibility={experiment.visibility} privateOnly />}
+          badges={
+            hasPrivateExperiment ? (
+              <VisibilityBadge visibility={experiment.visibility} privateOnly />
+            ) : undefined
+          }
           footer={`${t("lastUpdate")}: ${new Date(experiment.updatedAt).toLocaleDateString()}`}
         >
           <RichTextRenderer content={experiment.description ?? " "} truncate maxLines={2} />

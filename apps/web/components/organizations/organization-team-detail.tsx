@@ -276,6 +276,7 @@ export function OrganizationTeamDetail({
         </Card>
       ) : (
         <Card
+          padding="none"
           role="list"
           aria-label={t("organizations.members.title")}
           className="divide-border divide-y overflow-hidden"

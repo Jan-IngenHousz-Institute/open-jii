@@ -398,7 +398,7 @@ export function OutputCellTimeseries({
   };
 
   return (
-    <Card className="h-[820px] w-full gap-0 overflow-hidden py-0">
+    <Card padding="none" className="h-[820px] w-full overflow-hidden">
       <PlotlyChart
         data={traces}
         layout={layout}

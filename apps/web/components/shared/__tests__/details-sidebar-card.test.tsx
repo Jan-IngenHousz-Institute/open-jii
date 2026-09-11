@@ -37,7 +37,7 @@ describe("DetailsSidebarCard", () => {
     renderComponent();
     expect(screen.getByRole("heading", { level: 3 })).toBeInTheDocument();
     expect(screen.getByText("Test children content")).toBeInTheDocument();
-    expect(document.querySelector('[class*="md:block"]')).toBeInTheDocument();
+    expect(document.querySelector('[class*="lg:block"]')).toBeInTheDocument();
   });
 
   it("renders the title inside an h3 element", () => {
@@ -112,7 +112,7 @@ describe("DetailsSidebarCard", () => {
 
   it("applies hidden class to content wrapper when collapsed", () => {
     renderComponent();
-    const contentWrapper = document.querySelector('[class*="md:block"]');
+    const contentWrapper = document.querySelector('[class*="lg:block"]');
     expect(contentWrapper).toHaveClass("hidden");
   });
 
@@ -123,33 +123,37 @@ describe("DetailsSidebarCard", () => {
     const button = screen.getByRole("button");
     await user.click(button);
 
-    const contentWrapper = document.querySelector('[class*="md:block"]');
+    const contentWrapper = document.querySelector('[class*="lg:block"]');
     expect(contentWrapper).toHaveClass("block");
     expect(contentWrapper).not.toHaveClass("hidden");
   });
 
-  it("always includes md:block class on content wrapper", () => {
+  it("always includes lg:block class on content wrapper", () => {
     renderComponent();
-    const contentWrapper = document.querySelector('[class*="md:block"]');
-    expect(contentWrapper).toHaveClass("md:block");
+    const contentWrapper = document.querySelector('[class*="lg:block"]');
+    expect(contentWrapper).toHaveClass("lg:block");
   });
 
-  it("applies correct positioning class to toggle button when collapsed", () => {
-    renderComponent();
-    const button = screen.getByRole("button");
-    expect(button.className).toContain("top-1/2");
-    expect(button.className).toContain("-translate-y-1/2");
+  it("keeps the toggle beside the title in both states", () => {
+    // It used to centre itself on the collapsed card, which put it below a
+    // title row ending 2px earlier. One fixed offset, matching the experiment
+    // details card, so the chevron never gets a row of its own.
+    const { rerender } = renderComponent();
+    const collapsed = screen.getByRole("button").className;
+    expect(collapsed).toContain("top-[10px]");
+    expect(collapsed).not.toContain("top-1/2");
+
+    rerender(
+      <DetailsSidebarCard title="Test Title">
+        <p>Test children content</p>
+      </DetailsSidebarCard>,
+    );
+    expect(screen.getByRole("button").className).toContain("top-[10px]");
   });
 
-  it("applies correct positioning class to toggle button when expanded", async () => {
-    const user = userEvent.setup();
+  it("names the toggle for screen readers", () => {
     renderComponent();
-
-    const button = screen.getByRole("button");
-    await user.click(button);
-
-    expect(button.className).toContain("top-4");
-    expect(button.className).toContain("translate-y-0");
+    expect(screen.getByRole("button", { name: "common.expandDetails" })).toBeInTheDocument();
   });
 
   it("renders complex children", () => {

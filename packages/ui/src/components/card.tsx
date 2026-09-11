@@ -1,22 +1,42 @@
 import * as React from "react";
 
-import { cn } from "../lib/utils";
+import { cn, cva } from "../lib/utils";
+
+/**
+ * `Card` owns the vertical rhythm: `py-6` around the stack and `gap-6` between
+ * its children, with `CardHeader`/`CardContent`/`CardFooter` contributing only
+ * `px-6`. Padding written on a child therefore adds to the parent's rather than
+ * replacing it, which `cn` cannot dedupe across two elements.
+ *
+ * `padding` exists so the two cases that need something else say so by name:
+ * `none` for a card whose children reach the edge (a full-bleed footer bar, a
+ * `divide-y` list, a table, a tab strip) and `sm` for a dense one. Before it,
+ * those were spelled `gap-0 py-0` and `@container/card gap-2 py-3` at thirty-odd
+ * call sites, in six different dialects.
+ */
+const cardVariants = cva("bg-card text-card-foreground flex flex-col rounded-xl border shadow-sm", {
+  variants: {
+    padding: {
+      none: "gap-0 py-0",
+      sm: "gap-2 py-3",
+      md: "gap-6 py-6",
+    },
+    interactive: {
+      true: "transition-all hover:scale-[1.02] hover:shadow-lg",
+      false: "",
+    },
+  },
+  defaultVariants: { padding: "md", interactive: false },
+});
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   interactive?: boolean;
+  padding?: "none" | "sm" | "md";
 }
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, interactive = false, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
-        interactive && "transition-all hover:scale-[1.02] hover:shadow-lg",
-        className,
-      )}
-      {...props}
-    />
+  ({ className, interactive = false, padding = "md", ...props }, ref) => (
+    <div ref={ref} className={cn(cardVariants({ padding, interactive }), className)} {...props} />
   ),
 );
 Card.displayName = "Card";

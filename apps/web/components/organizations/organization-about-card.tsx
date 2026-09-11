@@ -55,7 +55,7 @@ export function OrganizationAboutCard({
   const isMember = organization.role != null;
 
   return (
-    <Card className="p-5">
+    <Card padding="none" className="p-5">
       <h2 className="text-lg font-semibold tracking-tight">{t("organizations.about.title")}</h2>
 
       {/*
