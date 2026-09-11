@@ -19850,7 +19850,14 @@
                               "type": "number"
                             },
                             "devices30d": {
-                              "type": "number"
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "activity": {
                               "type": "array",

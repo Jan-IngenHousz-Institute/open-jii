@@ -31,7 +31,8 @@ export const SCOPED_INPUTS_CACHE_KEY = "scoped-inputs";
 interface ScopedInputs {
   daily: ScopedDailyRow[];
   contributorPairs: ContributorPairRow[];
-  devicePairs: DevicePairRow[];
+  /** Null when the device table cannot be read; every other figure survives it. */
+  devicePairs: DevicePairRow[] | null;
   windows: ActivityWindowsRow;
 }
 
@@ -134,7 +135,6 @@ export class GetScopedMetricsUseCase {
     if (
       scopedDaily.isFailure() ||
       contributorPairs.isFailure() ||
-      devicePairs.isFailure() ||
       windows.isFailure() ||
       windows.value === null
     ) {
@@ -145,10 +145,17 @@ export class GetScopedMetricsUseCase {
       return null;
     }
 
+    if (devicePairs.isFailure()) {
+      this.logger.warn({
+        msg: "Device table unavailable; scoped metrics omit the device count",
+        operation: "loadInputs",
+      });
+    }
+
     return {
       daily: scopedDaily.value,
       contributorPairs: contributorPairs.value,
-      devicePairs: devicePairs.value,
+      devicePairs: devicePairs.isSuccess() ? devicePairs.value : null,
       windows: windows.value,
     };
   }
@@ -205,11 +212,15 @@ export class GetScopedMetricsUseCase {
 
     // A logger names no contributor, so people alone credit none of what it
     // recorded. Distinct publishers, resolvable to a registered device or not.
-    const devices = new Set(
-      inputs.devicePairs
-        .filter((pair) => scopeIds.has(pair.experimentId))
-        .map((pair) => pair.clientId),
-    ).size;
+    const devicePairs = inputs.devicePairs;
+    const devices =
+      devicePairs === null
+        ? null
+        : new Set(
+            devicePairs
+              .filter((pair) => scopeIds.has(pair.experimentId))
+              .map((pair) => pair.clientId),
+          ).size;
 
     return {
       scope,

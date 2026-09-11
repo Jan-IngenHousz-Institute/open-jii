@@ -121,6 +121,20 @@ describe("GetScopedMetricsUseCase", () => {
     ]);
   });
 
+  it("keeps every other figure when only the device table is unavailable", async () => {
+    vi.spyOn(adapter, "getDevicePairs").mockResolvedValue(
+      failure(AppError.internal("table not found")),
+    );
+
+    const result = await useCase.execute("organization", userId, organizationId);
+
+    assertSuccess(result);
+    // Unknown, not none: the band still states what it does know.
+    expect(result.value.scoped?.devices30d).toBeNull();
+    expect(result.value.scoped?.measurements30d).toBe(1_000);
+    expect(result.value.scoped?.contributors30d).toBe(2);
+  });
+
   it("degrades to empty slots, uncached, when a warehouse read fails", async () => {
     const pairsSpy = vi
       .spyOn(adapter, "getContributorPairs")

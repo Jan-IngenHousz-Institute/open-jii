@@ -46,23 +46,28 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
   // Device-published rows carry no contributor, so the slot names the devices
   // that did the recording rather than crediting nobody.
   const hasContributors = scoped.contributors30d > 0;
-  const hasDevices = scoped.devices30d > 0;
+  const devices = scoped.devices30d;
+  const hasDevices = devices !== null && devices > 0;
 
   const renderContributors = () => (
     <MetricStatCard
       locale={locale}
       label={t("experiment.contributors")}
       value={number.format(scoped.contributors30d)}
-      note={t("experiment.devicesCount", { count: scoped.devices30d })}
+      note={
+        devices === null
+          ? t("experiment.window", { days: windowDays })
+          : t("experiment.devicesCount", { count: devices })
+      }
       context={window}
     />
   );
 
-  const renderDevices = () => (
+  const renderDevices = (count: number) => (
     <MetricStatCard
       locale={locale}
       label={t("experiment.devices")}
-      value={number.format(scoped.devices30d)}
+      value={number.format(count)}
       note={t("experiment.devicesNote")}
       context={window}
     />
@@ -104,7 +109,7 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
           }
         />
         {hasContributors ? renderContributors() : null}
-        {!hasContributors && hasDevices ? renderDevices() : null}
+        {!hasContributors && devices !== null && devices > 0 ? renderDevices(devices) : null}
         <MetricTrendCard
           label={t("dailyAverage")}
           value={compact.format(Math.round(scoped.measurements30d / windowDays))}
