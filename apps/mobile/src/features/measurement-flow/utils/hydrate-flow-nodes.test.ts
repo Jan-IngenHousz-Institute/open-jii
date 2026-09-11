@@ -81,6 +81,28 @@ describe("hydrateFlowNodes", () => {
     });
   });
 
+  it("prefers the snapshot language over a stale cell payload language", () => {
+    const staleCells: WorkbookCell[] = [
+      {
+        id: "c2",
+        type: "macro",
+        isCollapsed: false,
+        payload: { macroId: "m1", language: "javascript", name: "My Macro" },
+      },
+    ];
+    const withLanguage: EntitySnapshots = {
+      protocols: {},
+      macros: { m1: { code: "print(1)", language: "python" } },
+    };
+    const macroNode = hydrateFlowNodes([nodes[1]], staleCells, withLanguage)[0];
+    expect(macroNode.content.macro?.language).toBe("python");
+  });
+
+  it("falls back to the cell payload language for versions published without one", () => {
+    const macroNode = hydrateFlowNodes([nodes[1]], cells, snapshots)[0];
+    expect(macroNode.content.macro?.language).toBe("python");
+  });
+
   it("hydrates repeated protocol references from their exact workbook cells", () => {
     const repeatedCells: WorkbookCell[] = [
       {
