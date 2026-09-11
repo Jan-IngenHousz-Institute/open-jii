@@ -240,7 +240,9 @@ describe("VariantExpandedContent", () => {
 
     const copyButton = screen.getByText("common.copy").closest("button");
     expect(copyButton?.className).toContain("absolute");
-    expect(copyButton?.className).toContain("right-6");
+    // Clear of the <pre>'s scrollbar: the p-4 wrapper puts the pre's edge 16px
+    // in and the scrollbar takes the next ~16px, so right-6 sat on top of it.
+    expect(copyButton?.className).toContain("right-10");
     expect(copyButton?.className).toContain("top-6");
     expect(copyButton?.className).toContain("z-1");
   });

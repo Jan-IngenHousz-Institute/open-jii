@@ -76,7 +76,7 @@ export function GroupThroughputPanel({
   );
 
   return (
-    <div className="flex h-full flex-col gap-3">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-muted-foreground text-sm">
           {t("iot.devices.monitoring.throughputTotal", { count: total })}

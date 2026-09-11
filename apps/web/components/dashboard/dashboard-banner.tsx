@@ -30,8 +30,15 @@ export function DashboardBanner({
   //
   // The left rule is teal rather than brand gold: --brand-accent is a chrome
   // colour and reads at 1.1:1 on --card.
+  //
+  // It is an absolutely-positioned bar, not a `border-l-4`: at a rounded corner
+  // the border arc interpolates between the two adjacent widths, so a 4px left
+  // rule sweeps around the radius tapering into the 1px top and bottom
+  // hairlines. Workbook cells (cell-wrapper.tsx) and the question card draw it
+  // this way for the same reason.
   return (
-    <div className="bg-card border-l-primary flex flex-col gap-3 rounded-xl border border-l-4 p-4 shadow-sm lg:flex-row lg:items-start">
+    <div className="bg-card relative flex flex-col gap-3 overflow-hidden rounded-xl border p-4 pl-6 shadow-sm lg:flex-row lg:items-start">
+      <div className="bg-primary absolute left-0 top-0 h-full w-1" aria-hidden />
       <div className="flex flex-1 flex-col gap-1">
         <h2 className="text-foreground text-[0.9125rem] font-semibold leading-[1.3125rem]">
           {title}

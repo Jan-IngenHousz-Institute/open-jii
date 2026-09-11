@@ -89,7 +89,10 @@ export function VariantExpandedContent({ data }: { data: string }) {
       <Button
         variant="ghost"
         size="sm"
-        className="z-1 shadow-xs backdrop-blur-xs bg-card/90 hover:bg-card absolute right-6 top-6 h-7 border px-2"
+        // right-10, not right-6: the wrapper's p-4 puts the <pre>'s edge 16px in
+        // and its scrollbar occupies the next ~16px, so a 24px offset lands on
+        // top of it. The button sits outside the <pre>, so it does not scroll.
+        className="z-1 shadow-xs backdrop-blur-xs bg-card/90 hover:bg-card absolute right-10 top-6 h-7 border px-2"
         onClick={handleCopy}
         title={t("common.copy")}
       >

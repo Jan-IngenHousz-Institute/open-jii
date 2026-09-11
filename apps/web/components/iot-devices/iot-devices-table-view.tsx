@@ -27,7 +27,7 @@ import { useDevicesRegister } from "./devices-register-context";
 import { IotDevicesEmptyState } from "./iot-devices-empty-state";
 import { IotDevicesTable } from "./iot-devices-table";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 20;
 type StatusFilter = "all" | IotDeviceStatus;
 
 // One-of chips in the group monitoring filter's language, not a tab strip:

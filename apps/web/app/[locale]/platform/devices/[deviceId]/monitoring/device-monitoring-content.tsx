@@ -214,6 +214,7 @@ export default function DeviceMonitoringPage() {
 
             <PanelCard title={t("iot.devices.monitoring.eventLogTitle")}>
               <EventLog
+                compact
                 entries={buildDeviceActivity({
                   monitoring,
                   registeredAt: device?.createdAt,

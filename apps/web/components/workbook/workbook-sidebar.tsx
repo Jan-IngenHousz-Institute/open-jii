@@ -154,19 +154,28 @@ function SidebarRow({
       {...(draggable ? attributes : {})}
       {...(draggable ? listeners : {})}
       className={cn(
-        "h-[55px] w-full justify-between rounded-[7px] text-left font-normal",
+        "relative h-[55px] w-full justify-between overflow-hidden rounded-[7px] text-left font-normal",
         isDragging && "opacity-40",
         draggable && "cursor-grab active:cursor-grabbing",
       )}
       style={{
-        padding: "8px 9px 8px 9px",
-        borderLeft: `3px solid ${isActive ? color : "transparent"}`,
+        padding: "8px 9px 8px 12px",
         backgroundColor: isActive ? cellActiveBg[cell.type] : undefined,
         transform: CSS.Transform.toString(transform),
         transition,
       }}
       onClick={onClick}
     >
+      {/* A bar rather than a borderLeft: on a 7px radius the border tapers into
+          the corners, the same reason the cell shell draws its accent this way. */}
+      {isActive && (
+        <span
+          className="absolute left-0 top-0 h-full w-[3px]"
+          style={{ background: color }}
+          aria-hidden
+        />
+      )}
+
       {/* Left: number badge + text */}
       <div className="flex min-w-0 flex-1 items-center gap-2">
         {/* Numbered circle */}

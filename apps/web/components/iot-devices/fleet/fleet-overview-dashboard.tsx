@@ -212,13 +212,12 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
       return <Skeleton className="h-64 w-full rounded-xl" />;
     }
     return (
-      <div className="grid gap-4 lg:grid-cols-3">
+      // items-start: the chart is a fixed height, so stretching this card to the
+      // rail only bought dead box. Matches iot-device-overview and
+      // device-group-content, which lay out the same main+rail shape.
+      <div className="grid items-start gap-4 lg:grid-cols-3">
         <div className="flex min-w-0 lg:col-span-2">
-          <PanelCard
-            title={t("iot.devices.fleet.throughputTitle")}
-            className="flex w-full flex-col"
-            contentClassName="flex flex-1 flex-col"
-          >
+          <PanelCard title={t("iot.devices.fleet.throughputTitle")} className="w-full">
             <GroupThroughputPanel
               throughput={monitoring.throughput}
               labelByDeviceId={labels}
@@ -236,6 +235,7 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
           </PanelCard>
           <PanelCard title={t("iot.devices.fleet.eventsTitle")}>
             <EventLog
+              compact
               entries={buildGroupActivity(
                 monitoring.events,
                 labels,

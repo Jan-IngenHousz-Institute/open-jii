@@ -32,13 +32,15 @@ const KIND_CLASS: Record<ActivityKind, string> = {
 
 interface EventLogProps {
   entries: ActivityEntry[];
+  /** Shorter window where the log shares a row with a chart card it would otherwise stretch. */
+  compact?: boolean;
 }
 
 /**
  * The device's activity record: broker connections, firmware transitions seen
  * in the data, and registration. The evidence behind everything above it.
  */
-export function EventLog({ entries }: EventLogProps) {
+export function EventLog({ entries, compact = false }: EventLogProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
   const [page, setPage] = useState(1);
@@ -54,7 +56,12 @@ export function EventLog({ entries }: EventLogProps) {
 
   return (
     <div className="min-w-0 space-y-3">
-      <div className="max-h-96 max-w-full overflow-auto rounded-lg border">
+      <div
+        className={cn(
+          "max-w-full overflow-auto rounded-lg border",
+          compact ? "max-h-64" : "max-h-96",
+        )}
+      >
         <Table>
           <TableHeader className="bg-background sticky top-0">
             <TableRow>
