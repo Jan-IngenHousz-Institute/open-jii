@@ -28,13 +28,14 @@ The broker authorizes by certificate: a device may only connect as its own thing
 
 ## The configuration file
 
-The Onboarding tab delivers a single JSON file, either downloaded or pushed over a direct serial or Bluetooth connection. It is the device's full desired state: everything it should serve, nothing it should not. Re-issuing (onboarding with no new experiments selected) always returns the complete current state, so applying the newest file is always safe.
+The Onboarding tab delivers a single JSON document: downloaded, pushed over a direct serial or Bluetooth connection, or published to the device's own MQTT topic. It is the device's full desired state: everything it should serve, nothing it should not. Re-issuing (onboarding with no new experiments selected) always returns the complete current state, so applying the newest file is always safe.
 
 ```json
 {
   "thingName": "seed-ambyte-gw-01",
   "deviceType": "ambyte",
   "endpoint": "a2s5...-ats.iot.eu-central-1.amazonaws.com",
+  "issuedAt": "2026-08-28T09:00:00.000Z",
   "docsUrl": "https://docs.openjii.org/developers/device-integration",
   "experiments": [
     {
@@ -72,6 +73,7 @@ Field reference:
 - `thingName`: the MQTT client id. Also echoed as `id` in the push envelope (below).
 - `deviceType`: the device's sensor family; it is the `sensorType` segment already baked into each `topicPrefix`.
 - `endpoint`: the broker host to connect to.
+- `issuedAt`: when the platform issued this state. Echo it when acknowledging a configuration received over MQTT (below).
 - `docsUrl`: this page.
 - `experiments[]`: one entry per experiment the device serves. An experiment the device should stop serving is simply absent from the newest file.
 - `workbookVersion`: provenance of the compiled procedures; `null` when the experiment has no pinned workbook or procedures were excluded at onboarding (the "include workbook procedures" toggle).
@@ -108,6 +110,32 @@ Push-capable families can additionally receive the file over a direct serial or 
 Persist the payload's `config` and treat it as the new full state. A custom build that wants the push must accept this frame; today only generic-family devices do.
 
 The other families are download-only, for two different reasons: MultispeQ, Ambit, and MiniPAR instruments do not store a configuration at all (their procedure travels inline per measurement), while Ambyte edge devices load the file at provisioning time and expose no onboarding commands over a direct connection.
+
+### Over MQTT, without a visit
+
+A connected device does not need its next configuration carried to it by hand. The platform publishes each device's current state to its own topic, retained at QoS 1:
+
+```
+device/config/v1/<thingName>
+```
+
+Subscribe after connecting. Because the message is retained, the broker replays the latest one the moment you subscribe, so a device that was offline when the configuration changed receives it on reconnect instead of missing it. The payload is the same document as the downloaded file, so a device that already reads the file needs no second parser. Treat every message as the full desired state, exactly like a re-issued file.
+
+The platform republishes whenever that state changes: onboarding to a new experiment, re-issuing, or detaching an experiment. Deleting the device clears the topic.
+
+After applying or refusing a configuration, publish one acknowledgement:
+
+```
+device/config/v1/<thingName>/ack
+```
+
+```json
+{ "issuedAt": "2026-08-28T09:00:00.000Z", "status": "applied" }
+```
+
+Echo `issuedAt` from the configuration you acted on and set `status` to `applied` or `rejected`, adding `detail` with a reason when rejecting. This is how the platform learns which configuration each device is actually running; without it, it only knows what it sent.
+
+Both topics are bound to the device's own thing name by its certificate policy, so a device can neither read another device's configuration nor acknowledge on its behalf.
 
 How these capabilities are declared inside the platform, and how to add support for a new device, is covered in [Device support](/developers/extending/device-support).
 
