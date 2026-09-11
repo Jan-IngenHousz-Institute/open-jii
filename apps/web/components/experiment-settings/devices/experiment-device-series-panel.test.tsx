@@ -1,5 +1,6 @@
 import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -15,12 +16,13 @@ vi.mock("@repo/ui/components/charts/bar-chart", () => ({
 const EXPERIMENT_ID = "11111111-1111-4111-8111-111111111111";
 const WINDOW = { from: "2026-09-01T00:00:00.000Z", to: "2026-09-04T00:00:00.000Z" };
 
-function renderPanel() {
+function renderPanel(action?: ReactNode) {
   return render(
     <ExperimentDeviceSeriesPanel
       experimentId={EXPERIMENT_ID}
       clientId="AMBYTE_A"
       window={WINDOW}
+      action={action}
     />,
   );
 }
@@ -81,5 +83,15 @@ describe("ExperimentDeviceSeriesPanel", () => {
       to: WINDOW.to,
       bucket: "day",
     });
+  });
+
+  it("renders a host-supplied header action beside the title", async () => {
+    server.mount(contract.experiments.getExperimentDeviceSeries, {
+      body: { buckets: [], pipelineUnavailable: false },
+    });
+
+    renderPanel(<button type="button">open monitoring</button>);
+
+    expect(await screen.findByRole("button", { name: "open monitoring" })).toBeInTheDocument();
   });
 });

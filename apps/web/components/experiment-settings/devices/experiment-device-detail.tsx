@@ -126,26 +126,26 @@ export function ExperimentDeviceDetail({
         />
       </dl>
 
-      {device !== null &&
-        (entry.canView ? (
-          <Link
-            href={`/${locale}/platform/devices/${device.id}/monitoring`}
-            className="text-primary inline-flex items-center gap-1.5 text-sm hover:underline"
-          >
-            {t("iot.experimentDevices.openMonitoring")}
-            <ExternalLink className="size-3.5" aria-hidden />
-          </Link>
-        ) : (
-          <p className="text-muted-foreground inline-flex items-center gap-1.5 text-sm">
-            <Lock className="size-3.5" aria-hidden />
-            {t("iot.experimentDevices.noAccess")}
-          </p>
-        ))}
-
       <ExperimentDeviceSeriesPanel
         experimentId={experimentId}
         clientId={entry.clientId}
         window={window}
+        action={
+          device === null ? undefined : entry.canView ? (
+            <Link
+              href={`/${locale}/platform/devices/${device.id}/monitoring`}
+              className="text-primary inline-flex items-center gap-1.5 whitespace-nowrap text-sm hover:underline"
+            >
+              {t("iot.experimentDevices.openMonitoring")}
+              <ExternalLink className="size-3.5" aria-hidden />
+            </Link>
+          ) : (
+            <span className="text-muted-foreground inline-flex items-center gap-1.5 whitespace-nowrap text-sm">
+              <Lock className="size-3.5" aria-hidden />
+              {t("iot.experimentDevices.noAccess")}
+            </span>
+          )
+        }
       />
     </div>
   );

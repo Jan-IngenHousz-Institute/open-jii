@@ -4,6 +4,7 @@ import { bucketAxis } from "@/components/iot-devices/monitoring/monitoring-bucke
 import { MONITORING_PRIMARY_COLOR } from "@/components/iot-devices/monitoring/monitoring-palette";
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
 import { useExperimentDeviceSeries } from "@/hooks/experiment/useExperimentDeviceSeries/useExperimentDeviceSeries";
+import type { ReactNode } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { BarChart } from "@repo/ui/components/charts/bar-chart";
@@ -14,6 +15,7 @@ interface ExperimentDeviceSeriesPanelProps {
   experimentId: string;
   clientId: string;
   window: { from: string; to: string };
+  action?: ReactNode;
 }
 
 /** Zero-filled from the axis, so a silent day reads as a gap rather than a missing point. */
@@ -21,6 +23,7 @@ export function ExperimentDeviceSeriesPanel({
   experimentId,
   clientId,
   window,
+  action,
 }: ExperimentDeviceSeriesPanelProps) {
   const { t } = useTranslation("iot");
   const { data, isPending } = useExperimentDeviceSeries({
@@ -80,6 +83,7 @@ export function ExperimentDeviceSeriesPanel({
     <PanelCard
       title={t("iot.experimentDevices.chartTitle")}
       description={t("iot.experimentDevices.chartDescription")}
+      action={action}
     >
       {renderBody()}
     </PanelCard>
