@@ -17,6 +17,15 @@ export interface CacheNamespace {
  * never touches cache primitives directly. Each domain registers its own
  * instance with its own key prefix and TTL via a factory provider.
  */
+/**
+ * One promise per key, so the map cannot carry each key's value type. What it
+ * holds under a key is always that key's load, whose result is `T | null` by
+ * construction in `tryCache`; nothing else writes to it.
+ */
+function sharedLoad<T>(running: Promise<unknown>): Promise<T | null> {
+  return running as Promise<T | null>;
+}
+
 export class CacheAdapter implements MacroCachePort, MetricsCachePort {
   private readonly logger = new Logger(CacheAdapter.name);
 
@@ -37,13 +46,10 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort {
     }
 
     // A read behind a short TTL is otherwise repeated by every caller that
-    // arrives while the first one is still running. Waiters take what the
-    // winner stored rather than its return value, which keeps the shared
-    // promise untyped and this method honest about `T`.
+    // arrives while the first one is still running.
     const running = this.inFlight.get(cacheKey);
     if (running !== undefined) {
-      await running;
-      return this.read<T>(cacheKey);
+      return sharedLoad<T>(running);
     }
 
     const load = this.fetchAndStore(cacheKey, fetchFn);

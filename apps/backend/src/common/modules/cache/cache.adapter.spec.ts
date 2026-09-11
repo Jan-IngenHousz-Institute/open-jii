@@ -97,6 +97,21 @@ describe("CacheAdapter", () => {
       expect(results).toEqual(["warehouse", "warehouse", "warehouse"]);
     });
 
+    it("gives every concurrent caller the value even when the cache write fails", async () => {
+      vi.spyOn(cacheManager, "set").mockRejectedValue(new Error("store down"));
+      const fetchFn = vi.fn().mockResolvedValue("warehouse");
+
+      const results = await Promise.all([
+        cacheAdapter.tryCache("unwritable", fetchFn),
+        cacheAdapter.tryCache("unwritable", fetchFn),
+        cacheAdapter.tryCache("unwritable", fetchFn),
+      ]);
+
+      // Nothing was stored to read back, so waiters take the load's own result.
+      expect(results).toEqual(["warehouse", "warehouse", "warehouse"]);
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+    });
+
     it("lets the next caller load again once the first has finished", async () => {
       const fetchFn = vi.fn().mockResolvedValue("warehouse");
 
