@@ -11,10 +11,12 @@ export const zMetricsLiveness = z.object({
   measurements24h: z.number(),
 });
 
+/** Only the app names a contributor; a logger publishes with none, hence `devices30d`. */
 export const zMetricsCommunity = z.object({
   measurements30d: z.number(),
   activeExperiments30d: z.number(),
   contributors30d: z.number(),
+  devices30d: z.number(),
   institutions30d: z.number(),
 });
 
@@ -36,8 +38,10 @@ export const zMetricsFamily = z.object({
 });
 
 export const zMetricsParameter = z.object({
+  /** Display copy for the parameter; the pipeline ships it ready to render. */
+  label: z.string(),
   name: z.string(),
-  count30d: z.number(),
+  observations: z.number(),
   median: z.number(),
 });
 
@@ -79,18 +83,31 @@ export const zPublicMetricsResponse = z.object({
   computedAt: z.string().nullable(),
 });
 
-export const zMetricsScope = z.enum(["organization", "mine"]);
+/** A single day's total inside an activity window. */
+export const zMetricsWindowDay = z.object({ date: z.string(), measurements: z.number() });
 
+export const zMetricsScope = z.enum(["organization", "mine", "experiment"]);
+
+/**
+ * `organizationId` is required for organization scope and `experimentId` for
+ * experiment scope; both are checked against the caller's access before any
+ * cached figure is served.
+ */
 export const zScopedMetricsQuery = z.object({
   scope: zMetricsScope,
   organizationId: z.string().uuid().optional(),
+  experimentId: z.string().uuid().optional(),
 });
 
+/** `activity` spans the whole window, silent days included; `previousMeasurements` the one before. */
 export const zScopedActivity = z.object({
   measurements30d: z.number(),
   activeExperiments30d: z.number(),
   contributors30d: z.number(),
-  activity: z.array(z.object({ date: z.string(), measurements: z.number() })),
+  activity: z.array(zMetricsWindowDay),
+  previousMeasurements: z.number(),
+  activeDays: z.number(),
+  peak: zMetricsWindowDay.nullable(),
   lastActivityDate: z.string().nullable(),
 });
 
@@ -111,6 +128,44 @@ export const zScopedMetricsResponse = z.object({
   computedAt: z.string().nullable(),
 });
 
+export const zResourceKind = z.enum(["experiment", "protocol", "macro", "workbook"]);
+
+export const zResourceMetricsQuery = z.object({
+  kind: zResourceKind,
+});
+
+/** A resource's daily measurements, carried on the row it belongs to. */
+export const zResourceSeries = z.object({
+  measurements: z.number(),
+  days: z.array(zMetricsWindowDay),
+});
+
+/** The single resource of its kind that recorded the most this window. */
+export const zBusiestResource = z.object({
+  id: z.string(),
+  name: z.string(),
+  measurements: z.number(),
+});
+
+/**
+ * What a list page's header states, across every resource of this kind the
+ * caller may read. `activeCount` recorded something, `visibleCount` may be read
+ * at all; the per-row series ride on the rows themselves.
+ */
+export const zResourceMetricsResponse = z.object({
+  kind: zResourceKind,
+  totalMeasurements: z.number(),
+  previousMeasurements: z.number(),
+  activeCount: z.number(),
+  visibleCount: z.number(),
+  activeDays: z.number(),
+  peak: zMetricsWindowDay.nullable(),
+  lastActivityDate: z.string().nullable(),
+  busiest: zBusiestResource.nullable(),
+  days: z.array(zMetricsWindowDay),
+  windowDays: z.number(),
+});
+
 export type MetricsHero = z.infer<typeof zMetricsHero>;
 export type MetricsLiveness = z.infer<typeof zMetricsLiveness>;
 export type MetricsCommunity = z.infer<typeof zMetricsCommunity>;
@@ -120,6 +175,13 @@ export type MetricsFamily = z.infer<typeof zMetricsFamily>;
 export type MetricsParameter = z.infer<typeof zMetricsParameter>;
 export type MetricsCaption = z.infer<typeof zMetricsCaption>;
 export type PublicMetricsResponse = z.infer<typeof zPublicMetricsResponse>;
+export type MetricsWindowDay = z.infer<typeof zMetricsWindowDay>;
 export type MetricsScope = z.infer<typeof zMetricsScope>;
 export type ScopedMetricsQuery = z.infer<typeof zScopedMetricsQuery>;
+export type ScopedActivity = z.infer<typeof zScopedActivity>;
 export type ScopedMetricsResponse = z.infer<typeof zScopedMetricsResponse>;
+export type ResourceKind = z.infer<typeof zResourceKind>;
+export type ResourceSeries = z.infer<typeof zResourceSeries>;
+export type BusiestResource = z.infer<typeof zBusiestResource>;
+export type ResourceMetricsQuery = z.infer<typeof zResourceMetricsQuery>;
+export type ResourceMetricsResponse = z.infer<typeof zResourceMetricsResponse>;

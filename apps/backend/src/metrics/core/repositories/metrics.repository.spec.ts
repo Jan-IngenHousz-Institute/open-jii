@@ -1,3 +1,5 @@
+import { eq, experiments, workbookVersions } from "@repo/database";
+
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import { MetricsRepository } from "./metrics.repository";
@@ -154,5 +156,114 @@ describe("MetricsRepository", () => {
     assertSuccess(stranger);
     expect(creator.value).toEqual([orgExperimentId]);
     expect(stranger.value).toEqual([]);
+  });
+  it("lists the protocols, macros and workbooks a reader may see", async () => {
+    const outsiderId = await testApp.createTestUser({});
+
+    const visibleProtocol = await testApp.createProtocol({
+      name: "Public protocol",
+      createdBy: outsiderId,
+      visibility: "public",
+    });
+    await testApp.createProtocol({
+      name: "Private protocol",
+      createdBy: outsiderId,
+      visibility: "private",
+    });
+    const visibleMacro = await testApp.createMacro({
+      name: "Public macro",
+      createdBy: outsiderId,
+      visibility: "public",
+    });
+    const visibleWorkbook = await testApp.createWorkbook({
+      name: "Public workbook",
+      createdBy: outsiderId,
+      visibility: "public",
+    });
+
+    const protocolIds = await repository.getVisibleProtocolIds(userId);
+    const macroIds = await repository.getVisibleMacroIds(userId);
+    const workbookIds = await repository.getVisibleWorkbookIds(userId);
+
+    assertSuccess(protocolIds);
+    assertSuccess(macroIds);
+    assertSuccess(workbookIds);
+    expect(protocolIds.value).toEqual([visibleProtocol.id]);
+    expect(macroIds.value).toEqual([visibleMacro.id]);
+    expect(workbookIds.value).toEqual([visibleWorkbook.id]);
+  });
+
+  it("leaves archived experiments out, as the list page does", async () => {
+    const { experiment: archived } = await testApp.createExperiment({
+      name: "Finished experiment",
+      userId,
+      organizationId,
+      visibility: "public",
+    });
+    await testApp.database
+      .update(experiments)
+      .set({ status: "archived" })
+      .where(eq(experiments.id, archived.id));
+
+    const result = await repository.getVisibleExperimentIds(userId);
+
+    assertSuccess(result);
+    expect(result.value).toEqual([orgExperimentId]);
+  });
+
+  it("lists the experiments a reader may see, and no others", async () => {
+    const outsiderId = await testApp.createTestUser({});
+    await testApp.createExperiment({
+      name: "Someone else's private experiment",
+      userId: outsiderId,
+      visibility: "private",
+    });
+
+    const result = await repository.getVisibleExperimentIds(userId);
+
+    assertSuccess(result);
+    expect(result.value).toEqual([orgExperimentId]);
+  });
+
+  it("folds workbook versions back onto the workbooks that own them", async () => {
+    const workbook = await testApp.createWorkbook({ name: "Collecting", createdBy: userId });
+    const [version] = await testApp.database
+      .insert(workbookVersions)
+      .values({
+        workbookId: workbook.id,
+        version: 1,
+        cells: [],
+        metadata: {},
+        entitySnapshots: { protocols: {}, macros: {} },
+        createdBy: userId,
+      })
+      .returning();
+
+    const result = await repository.getWorkbookVersionMap([workbook.id]);
+
+    assertSuccess(result);
+    expect(result.value.get(version.id)).toBe(workbook.id);
+  });
+
+  it("maps no versions for an empty workbook list without querying", async () => {
+    const result = await repository.getWorkbookVersionMap([]);
+
+    assertSuccess(result);
+    expect(result.value.size).toBe(0);
+  });
+  it("names a resource so the busiest one can be stated, and nothing for a stranger", async () => {
+    const protocol = await testApp.createProtocol({
+      name: "Leaf photosynthesis",
+      createdBy: userId,
+      visibility: "public",
+    });
+
+    const found = await repository.getResourceName("protocol", protocol.id);
+    const missing = await repository.getResourceName("macro", protocol.id);
+
+    assertSuccess(found);
+    assertSuccess(missing);
+    expect(found.value).toBe("Leaf photosynthesis");
+    expect(missing.value).toBeNull();
   });
 });

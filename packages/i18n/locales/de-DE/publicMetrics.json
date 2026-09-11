@@ -1,0 +1,105 @@
+{
+  "title": "Die Plattform in Zahlen",
+  "indicator": {
+    "active": "{{count}} Messungen in den letzten 24 Stunden",
+    "quiet": "Ruhig seit {{date}}"
+  },
+  "hero": {
+    "sentence": "<em>{{measurements}}</em> Messungen, <em>{{volume}}</em> Messdaten, erfasst in <em>{{timezones}}</em> Zeitzonen."
+  },
+  "community": {
+    "sentence": "Diesen Monat erfasste die Community <em>{{measurements}}</em> Messungen in <em>{{experiments}}</em> Experimenten, von <em>{{contributors}}</em> Mitwirkenden und <em>{{devices}}</em> Geräten an <em>{{institutions}}</em> Institutionen."
+  },
+  "activityChart": {
+    "daily": "Täglich",
+    "cumulative": "Kumulativ",
+    "title": {
+      "daily": "Messungen pro Tag, letzte 30 Tage",
+      "cumulative": "Erfasste Messungen, letzte 12 Monate"
+    }
+  },
+  "families": {
+    "title": "Messungen nach Instrument",
+    "unattributed": "Nicht zugeordnet",
+    "unresolved": "Weitere {{count}} Messungen ({{share}} aller Messungen) stammen von Publishern, die das Geräteregister noch nicht benennen kann."
+  },
+  "parameter": {
+    "derivedSentence": "Am häufigsten berechnet in den letzten 90 Tagen: <em>{{name}}</em>, {{count}} mal, Median <em>{{median}}</em>",
+    "sensorSentence": "Am häufigsten erfasster Sensorwert, letzte 90 Tage: <em>{{name}}</em>, {{count}} mal, Median <em>{{median}}</em>"
+  },
+  "captions": {
+    "streak": "Daten an {{days}} aufeinanderfolgenden Tagen",
+    "pace_one": "Diesen Monat trifft etwa jede {{count}} Sekunde eine Messung ein",
+    "pace_other": "Diesen Monat trifft etwa alle {{count}} Sekunden eine Messung ein",
+    "sessionSize_one": "Eine typische Feldsitzung erfasst {{count}} Messung",
+    "sessionSize_other": "Eine typische Feldsitzung erfasst {{count}} Messungen",
+    "endurance": "Ein Gerät meldet seit {{days}} Tagen ununterbrochen",
+    "simultaneity": "Zeitgleich haben {{devices}} Geräte gemessen",
+    "zonesPeakDay": "Meiste Zeitzonen an einem Tag: {{zones}}",
+    "analysesRun": "Durchgeführte Analysen: {{count}}",
+    "avgMeasurementSize": "Eine durchschnittliche Messung umfasst {{size}} Rohdaten",
+    "openDatasets": "Offene Datensätze: {{count}}",
+    "sharedExperiments": "Organisationsübergreifend geteilte Experimente: {{count}}",
+    "milestone": "Messung {{ordinal}} erfolgte am {{date}}",
+    "paceFast_one": "Diesen Monat trifft {{count}} Messung pro Sekunde ein",
+    "paceFast_other": "Diesen Monat treffen {{count}} Messungen pro Sekunde ein"
+  },
+  "dashboard": {
+    "milestone": "Die Community erfasste Messung {{ordinal}} am {{date}}.",
+    "dismiss": "Schließen",
+    "activity": {
+      "label": "Deine Messungen",
+      "experimentsLabel": "Aktive Experimente",
+      "contributors_one": "{{count}} Mitwirkender",
+      "contributors_other": "{{count}} Mitwirkende",
+      "communityLabel": "Community",
+      "trend": "Tägliche Messungen",
+      "communityNote": "Auf der gesamten Plattform"
+    }
+  },
+  "experiment": {
+    "title": "Aktivität",
+    "measurements": "Messungen",
+    "contributors": "Mitwirkende",
+    "contributorsNote_one": "{{count}} Person erfasst Daten",
+    "contributorsNote_other": "{{count}} Personen erfassen Daten",
+    "quiet": "Keine Messungen hier in den letzten 30 Tagen",
+    "trend": "Tägliche Messungen"
+  },
+  "resourceMetrics": {
+    "strip": "Tägliche {{unit}} über {{days}} Tage",
+    "series": "Tägliche {{unit}}",
+    "ofVisible_one": "von {{count}} für dich sichtbar",
+    "ofVisible_other": "von {{count}} für dich sichtbar",
+    "experiment": {
+      "measurements": "Messungen",
+      "active": "Experimente mit Daten",
+      "busiest": "Aktivstes Experiment",
+      "unit": "Messungen"
+    },
+    "protocol": {
+      "measurements": "Messungen",
+      "active": "Genutzte Protokolle",
+      "busiest": "Meistgenutztes Protokoll",
+      "unit": "Messungen"
+    },
+    "macro": {
+      "measurements": "Analysen",
+      "active": "Ausgeführte Makros",
+      "busiest": "Meistgenutztes Makro",
+      "unit": "Analysen"
+    },
+    "workbook": {
+      "measurements": "Messungen",
+      "active": "Sammelnde Arbeitsmappen",
+      "busiest": "Aktivste Arbeitsmappe",
+      "unit": "Messungen"
+    },
+    "busiestNote": "{{value}} von {{total}} {{unit}}"
+  },
+  "window": "Letzte {{days}} Tage",
+  "peak": "Spitze {{value}} am {{date}}",
+  "activeDays": "Erfasst an {{active}} von {{total}} Tagen",
+  "previousWindow": "{{value}} in den vorherigen {{days}} Tagen",
+  "dailyAverage": "Tagesdurchschnitt"
+}

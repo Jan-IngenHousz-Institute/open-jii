@@ -3,7 +3,7 @@ title: "A tour of the platform"
 description: "Find your way around the openJII web platform: the sidebar, command palette, keyboard shortcuts, and activity feed."
 ---
 
-{/* verified: code@334d63b10 2026-08-28 */}
+{/* verified: code@87b43c8e4 2026-08-28 */}
 
 Once you are signed in, everything in openJII lives inside one consistent shell.
 This page is a quick visual tour of that shell so you know where to look before
@@ -47,6 +47,23 @@ such as data exports and sensor-data uploads. You can start one and keep working
 while it completes.
 
 ![Activity feed open from the sidebar](/img/chrome-refresh/activity-bell.webp)
+
+## Platform activity
+
+Several pages carry a row of activity cards covering the last 30 days. On the
+dashboard they show what your own experiments recorded, how many were active,
+what the community recorded over the same period, and a daily average with the
+days behind it. The experiment, protocol, macro and workbook lists carry the
+same row for that kind, including the busiest one, and each row in the table
+draws its own activity strip. An experiment's overview page has the same row
+under its description.
+
+When the community crosses a measurement milestone, a banner above the
+dashboard marks it until you dismiss it.
+
+The figures come from the platform metrics pipeline, which refreshes every 15
+minutes, and the platform caches them for a further few minutes. Anything with
+nothing to report is left out rather than shown as a zero.
 
 ## Account settings
 

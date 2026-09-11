@@ -1,0 +1,105 @@
+{
+  "title": "Het platform in cijfers",
+  "indicator": {
+    "active": "{{count}} metingen in de laatste 24 uur",
+    "quiet": "Stil sinds {{date}}"
+  },
+  "hero": {
+    "sentence": "<em>{{measurements}}</em> metingen, <em>{{volume}}</em> aan meetdata, vastgelegd in <em>{{timezones}}</em> tijdzones."
+  },
+  "community": {
+    "sentence": "Deze maand registreerde de community <em>{{measurements}}</em> metingen in <em>{{experiments}}</em> experimenten, van <em>{{contributors}}</em> bijdragers en <em>{{devices}}</em> apparaten bij <em>{{institutions}}</em> instellingen."
+  },
+  "activityChart": {
+    "daily": "Dagelijks",
+    "cumulative": "Cumulatief",
+    "title": {
+      "daily": "Metingen per dag, laatste 30 dagen",
+      "cumulative": "Verzamelde metingen, laatste 12 maanden"
+    }
+  },
+  "families": {
+    "title": "Metingen per instrument",
+    "unattributed": "Niet toegewezen",
+    "unresolved": "Nog eens {{count}} metingen ({{share}} van alle metingen) komen van publishers die het apparaatregister nog niet kan benoemen."
+  },
+  "parameter": {
+    "derivedSentence": "Meest berekend in de afgelopen 90 dagen: <em>{{name}}</em>, {{count}} keer, mediaan <em>{{median}}</em>",
+    "sensorSentence": "Meest vastgelegde sensorwaarde, laatste 90 dagen: <em>{{name}}</em>, {{count}} keer, mediaan <em>{{median}}</em>"
+  },
+  "captions": {
+    "streak": "Data op {{days}} opeenvolgende dagen",
+    "pace_one": "Deze maand komt er ongeveer elke {{count}} seconde een meting binnen",
+    "pace_other": "Deze maand komt er ongeveer elke {{count}} seconden een meting binnen",
+    "sessionSize_one": "Een typische veldsessie legt {{count}} meting vast",
+    "sessionSize_other": "Een typische veldsessie legt {{count}} metingen vast",
+    "endurance": "Eén apparaat rapporteert al {{days}} dagen onafgebroken",
+    "simultaneity": "Op één moment maten {{devices}} apparaten tegelijk",
+    "zonesPeakDay": "Meeste tijdzones op één dag: {{zones}}",
+    "analysesRun": "Uitgevoerde analyses: {{count}}",
+    "avgMeasurementSize": "Een gemiddelde meting bevat {{size}} aan ruwe data",
+    "openDatasets": "Open datasets: {{count}}",
+    "sharedExperiments": "Experimenten gedeeld tussen organisaties: {{count}}",
+    "milestone": "Meting {{ordinal}} kwam binnen op {{date}}",
+    "paceFast_one": "Deze maand komt er {{count}} meting per seconde binnen",
+    "paceFast_other": "Deze maand komen er {{count}} metingen per seconde binnen"
+  },
+  "dashboard": {
+    "milestone": "De community registreerde meting {{ordinal}} op {{date}}.",
+    "dismiss": "Sluiten",
+    "activity": {
+      "label": "Jouw metingen",
+      "experimentsLabel": "Actieve experimenten",
+      "contributors_one": "{{count}} bijdrager",
+      "contributors_other": "{{count}} bijdragers",
+      "communityLabel": "Community",
+      "trend": "Dagelijkse metingen",
+      "communityNote": "Op het hele platform"
+    }
+  },
+  "experiment": {
+    "title": "Activiteit",
+    "measurements": "Metingen",
+    "contributors": "Bijdragers",
+    "contributorsNote_one": "{{count}} persoon legt vast",
+    "contributorsNote_other": "{{count}} personen leggen vast",
+    "quiet": "Geen metingen hier in de afgelopen 30 dagen",
+    "trend": "Dagelijkse metingen"
+  },
+  "resourceMetrics": {
+    "strip": "Dagelijkse {{unit}} over {{days}} dagen",
+    "series": "Dagelijkse {{unit}}",
+    "ofVisible_one": "van {{count}} die je kunt zien",
+    "ofVisible_other": "van {{count}} die je kunt zien",
+    "experiment": {
+      "measurements": "Metingen",
+      "active": "Experimenten met data",
+      "busiest": "Actiefste experiment",
+      "unit": "metingen"
+    },
+    "protocol": {
+      "measurements": "Metingen",
+      "active": "Gebruikte protocollen",
+      "busiest": "Meest gebruikte protocol",
+      "unit": "metingen"
+    },
+    "macro": {
+      "measurements": "Analyses",
+      "active": "Uitgevoerde macro's",
+      "busiest": "Meest gebruikte macro",
+      "unit": "analyses"
+    },
+    "workbook": {
+      "measurements": "Metingen",
+      "active": "Verzamelende werkboeken",
+      "busiest": "Actiefste werkboek",
+      "unit": "metingen"
+    },
+    "busiestNote": "{{value}} van {{total}} {{unit}}"
+  },
+  "window": "Laatste {{days}} dagen",
+  "peak": "Piek {{value}} op {{date}}",
+  "activeDays": "Vastgelegd op {{active}} van {{total}} dagen",
+  "previousWindow": "{{value}} in de vorige {{days}} dagen",
+  "dailyAverage": "Daggemiddelde"
+}

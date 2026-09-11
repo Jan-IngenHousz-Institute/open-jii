@@ -1,5 +1,7 @@
 import { DashboardBanner } from "@/components/dashboard/dashboard-banner";
 import { DashboardSection } from "@/components/dashboard/dashboard-section";
+import { MilestoneBanner } from "@/components/dashboard/milestone-banner";
+import { ResearchActivityPanel } from "@/components/dashboard/research-activity-panel";
 import { UserExperimentsSection } from "@/components/dashboard/user-experiments-section";
 import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
@@ -42,6 +44,12 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
         buttonHref={`/${locale}/platform/transfer-request`}
         locale={locale}
       />
+
+      {/* Milestone Moment */}
+      <MilestoneBanner locale={locale} />
+
+      {/* Platform Pulse */}
+      <ResearchActivityPanel locale={locale} />
 
       {/* First Row - User's Experiments */}
       <DashboardSection

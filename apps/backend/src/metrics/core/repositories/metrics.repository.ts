@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 
+import type { ResourceKind } from "@repo/api/domains/metrics/metrics.schema";
 import {
   and,
   count,
@@ -8,15 +9,27 @@ import {
   experiments,
   inArray,
   isNull,
+  macros,
   ne,
   or,
   organizationMembers,
+  protocols,
   resourceGrants,
+  workbookVersions,
+  workbooks,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { tryCatch } from "../../../common/utils/fp-utils";
 import type { Result } from "../../../common/utils/fp-utils";
+import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+
+const RESOURCE_TABLES = {
+  experiment: experiments,
+  protocol: protocols,
+  macro: macros,
+  workbook: workbooks,
+};
 
 export interface ExperimentOrganizationRow {
   experimentId: string;
@@ -82,6 +95,89 @@ export class MetricsRepository {
       ]);
 
       return Array.from(new Set([...created, ...granted].map((row) => row.id)));
+    });
+  }
+
+  /** Activity is only reported for these, so a caller cannot probe what they cannot see. */
+  async getVisibleExperimentIds(userId: string): Promise<Result<string[]>> {
+    return tryCatch(async () => {
+      const accessScope = accessibleResourceCondition({
+        database: this.database,
+        resourceType: "experiment",
+        resourceIdColumn: experiments.id,
+        organizationIdColumn: experiments.organizationId,
+        visibilityColumn: experiments.visibility,
+        userId,
+      });
+
+      const rows = await this.database
+        .select({ id: experiments.id })
+        .from(experiments)
+        // The list page hides archived experiments by default, so a header
+        // counting them would not describe the rows underneath.
+        .where(and(accessScope, ne(experiments.status, "archived")));
+      return rows.map((row) => row.id);
+    });
+  }
+
+  async getVisibleProtocolIds(userId: string): Promise<Result<string[]>> {
+    return this.visibleIds(userId, "protocol", protocols);
+  }
+
+  async getVisibleMacroIds(userId: string): Promise<Result<string[]>> {
+    return this.visibleIds(userId, "macro", macros);
+  }
+
+  async getVisibleWorkbookIds(userId: string): Promise<Result<string[]>> {
+    return this.visibleIds(userId, "workbook", workbooks);
+  }
+
+  /** The warehouse keys workbook activity by version; only Postgres can fold it back. */
+  async getWorkbookVersionMap(workbookIds: string[]): Promise<Result<Map<string, string>>> {
+    return tryCatch(async () => {
+      if (workbookIds.length === 0) {
+        return new Map<string, string>();
+      }
+
+      const rows = await this.database
+        .select({ versionId: workbookVersions.id, workbookId: workbookVersions.workbookId })
+        .from(workbookVersions)
+        .where(inArray(workbookVersions.workbookId, workbookIds));
+
+      return new Map(rows.map((row) => [row.versionId, row.workbookId]));
+    });
+  }
+
+  /** The warehouse knows the busiest resource by id only. */
+  async getResourceName(kind: ResourceKind, id: string): Promise<Result<string | null>> {
+    return tryCatch(async () => {
+      const table = RESOURCE_TABLES[kind];
+      const rows = await this.database
+        .select({ name: table.name })
+        .from(table)
+        .where(eq(table.id, id));
+
+      return rows[0]?.name ?? null;
+    });
+  }
+
+  private async visibleIds(
+    userId: string,
+    resourceType: "protocol" | "macro" | "workbook",
+    table: typeof protocols | typeof macros | typeof workbooks,
+  ): Promise<Result<string[]>> {
+    return tryCatch(async () => {
+      const accessScope = accessibleResourceCondition({
+        database: this.database,
+        resourceType,
+        resourceIdColumn: table.id,
+        organizationIdColumn: table.organizationId,
+        visibilityColumn: table.visibility,
+        userId,
+      });
+
+      const rows = await this.database.select({ id: table.id }).from(table).where(accessScope);
+      return rows.map((row) => row.id);
     });
   }
 

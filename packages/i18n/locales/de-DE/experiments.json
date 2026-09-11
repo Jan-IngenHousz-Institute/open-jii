@@ -27,7 +27,8 @@
     "status": "Status",
     "owner": "Eigentümer",
     "organization": "Organisation",
-    "members": "Mitglieder"
+    "members": "Mitglieder",
+    "activity": "Aktivität"
   },
   "visibility": {
     "private": "Privat",

@@ -2,6 +2,7 @@ import type { Result } from "../../../common/utils/fp-utils";
 
 export interface PlatformTotalsRow {
   totalMeasurements: number;
+  totalVolumeBytes: number;
   totalUploadedRows: number;
   totalMacroExecutions: number;
   devicesAllTime: number;
@@ -41,17 +42,27 @@ export interface ActivityWindowsRow {
 export type ParameterCategory = "derived" | "sensor";
 
 export interface ParameterStatsRow {
+  label: string;
   name: string;
-  count30d: number;
+  observations: number;
   median: number;
 }
 
 export interface PoolFactsRow {
   sessionMedianMeasurements: number | null;
+  meanArrivalGapSeconds: number | null;
+  currentStreakDays: number | null;
   deviceEnduranceDays: number | null;
   simultaneityPeakDevices: number | null;
   timezonesAllTime: number | null;
   timezonesPeakDay: number | null;
+}
+
+export interface ResourceDailyRow {
+  date: string;
+  resourceType: string;
+  resourceId: string;
+  measurements: number;
 }
 
 export interface ScopedDailyRow {
@@ -77,7 +88,6 @@ export const METRICS_DATABRICKS_PORT = Symbol("METRICS_DATABRICKS_PORT");
  */
 export interface DatabricksPort {
   getPublicPlatformTotals(): Promise<Result<PlatformTotalsRow | null>>;
-  getPublicTotalVolumeBytes(): Promise<Result<number | null>>;
   getPublicDailyActivity(days: number): Promise<Result<DailyActivityRow[]>>;
   getPublicFamilyTotals(): Promise<Result<FamilyTotalsRow[]>>;
   getActivityWindows(): Promise<Result<ActivityWindowsRow | null>>;
@@ -85,5 +95,6 @@ export interface DatabricksPort {
   getTopParameter(category: ParameterCategory): Promise<Result<ParameterStatsRow | null>>;
   getPoolFacts(): Promise<Result<PoolFactsRow | null>>;
   getScopedDailyActivity(days: number): Promise<Result<ScopedDailyRow[]>>;
+  getResourceDailyActivity(resourceType: string, days: number): Promise<Result<ResourceDailyRow[]>>;
   getContributorPairs(): Promise<Result<ContributorPairRow[]>>;
 }

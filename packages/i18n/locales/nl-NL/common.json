@@ -1195,7 +1195,8 @@
       "name": "Naam",
       "family": "Familie",
       "macros": "Macro's",
-      "updated": "Bijgewerkt"
+      "updated": "Bijgewerkt",
+      "activity": "Activiteit"
     }
   },
   "newProtocol": {

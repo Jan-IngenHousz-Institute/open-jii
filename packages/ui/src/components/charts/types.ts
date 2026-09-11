@@ -17,6 +17,12 @@ export interface PlotlyChartConfig extends Partial<Config> {
   theme?: "light" | "dark" | "auto";
   showLegend?: boolean;
   showGrid?: boolean;
+  /**
+   * Strip the chart to its line: no axes, ticks, grid, or margins. For
+   * trend indicators sitting beside text, where the shape is the message
+   * and hover carries the values.
+   */
+  sparkline?: boolean;
   backgroundColor?: string;
   /**
    * Where to anchor the legend.
@@ -45,6 +51,13 @@ export interface PlotlyChartConfig extends Partial<Config> {
   // Mode bar configuration
   showModeBar?: boolean;
   modeBarStyle?: "default" | "minimal" | "transparent";
+
+  /**
+   * d3-time-format string for the x tick labels, e.g. "%b %-d". Plotly's own
+   * date ticks append the year on a second line, which collides with anything
+   * sitting under a short chart.
+   */
+  xAxisTickFormat?: string;
 
   // Axis configuration
   xAxisType?: "linear" | "log" | "date" | "category" | "multicategory";

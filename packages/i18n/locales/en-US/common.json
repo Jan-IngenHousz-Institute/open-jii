@@ -1195,7 +1195,8 @@
       "name": "Name",
       "family": "Family",
       "macros": "Macros",
-      "updated": "Updated"
+      "updated": "Updated",
+      "activity": "Activity"
     }
   },
   "newProtocol": {

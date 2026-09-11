@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import type { MetricsScope, ScopedMetricsResponse } from "@repo/api/domains/metrics/metrics.schema";
 
+import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { AppError, failure, success } from "../../../../common/utils/fp-utils";
 import type { Result } from "../../../../common/utils/fp-utils";
 import { CACHE_PORT, CachePort } from "../../../core/ports/cache.port";
@@ -15,6 +16,9 @@ import type {
 import { MetricsRepository } from "../../../core/repositories/metrics.repository";
 
 const WINDOW_DAYS = 30;
+
+// Two windows in one read: every figure is stated against the previous one.
+const LOADED_DAYS = WINDOW_DAYS * 2;
 
 /**
  * One shared key: the warehouse inputs are scope-independent, so per-caller
@@ -45,13 +49,59 @@ export class GetScopedMetricsUseCase {
     @Inject(CACHE_PORT)
     private readonly cachePort: CachePort,
     private readonly metricsRepository: MetricsRepository,
+    private readonly authz: AuthorizationService,
   ) {}
 
   async execute(
     scope: MetricsScope,
     userId: string,
     organizationId?: string,
+    experimentId?: string,
   ): Promise<Result<ScopedMetricsResponse>> {
+    const scopeIds = await this.resolveScopeIds(scope, userId, organizationId, experimentId);
+    if (scopeIds.isFailure()) {
+      return failure(scopeIds.error);
+    }
+
+    const inputs = await this.cachePort.tryCache(SCOPED_INPUTS_CACHE_KEY, () => this.loadInputs());
+
+    if (inputs === null) {
+      // A lagging or absent warehouse degrades to empty slots. Nothing is
+      // cached, so the next request retries instead of pinning the outage.
+      return success({ scope, scoped: null, baseline: null, computedAt: null });
+    }
+
+    return success(this.aggregate(scope, new Set(scopeIds.value), inputs));
+  }
+
+  /** Refused before any cached figure is touched, so a revoked caller reads nothing. */
+  private async resolveScopeIds(
+    scope: MetricsScope,
+    userId: string,
+    organizationId: string | undefined,
+    experimentId: string | undefined,
+  ): Promise<Result<string[]>> {
+    if (scope === "experiment") {
+      if (experimentId === undefined) {
+        return failure(AppError.badRequest("experimentId is required for experiment scope"));
+      }
+
+      const access = await this.authz.can(userId, {
+        resourceType: "experiment",
+        resourceId: experimentId,
+        action: "read",
+      });
+      if (!access.allow) {
+        return failure(
+          access.reason === "not-found"
+            ? AppError.notFound(`Experiment with ID ${experimentId} not found`)
+            : AppError.forbidden("You do not have access to this experiment"),
+        );
+      }
+
+      return success([experimentId]);
+    }
+
     if (scope === "organization") {
       if (organizationId === undefined) {
         return failure(AppError.badRequest("organizationId is required for organization scope"));
@@ -64,30 +114,16 @@ export class GetScopedMetricsUseCase {
       if (!membership.value) {
         return failure(AppError.forbidden("Not a member of this organization"));
       }
+
+      return this.metricsRepository.getOrganizationExperimentIds(organizationId);
     }
 
-    const experimentIds =
-      scope === "organization" && organizationId !== undefined
-        ? await this.metricsRepository.getOrganizationExperimentIds(organizationId)
-        : await this.metricsRepository.getUserExperimentIds(userId);
-    if (experimentIds.isFailure()) {
-      return failure(experimentIds.error);
-    }
-
-    const inputs = await this.cachePort.tryCache(SCOPED_INPUTS_CACHE_KEY, () => this.loadInputs());
-
-    if (inputs === null) {
-      // A lagging or absent warehouse degrades to empty slots. Nothing is
-      // cached, so the next request retries instead of pinning the outage.
-      return success({ scope, scoped: null, baseline: null, computedAt: null });
-    }
-
-    return success(this.aggregate(scope, new Set(experimentIds.value), inputs));
+    return this.metricsRepository.getUserExperimentIds(userId);
   }
 
   private async loadInputs(): Promise<ScopedInputs | null> {
     const [scopedDaily, contributorPairs, windows] = await Promise.all([
-      this.databricksPort.getScopedDailyActivity(WINDOW_DAYS),
+      this.databricksPort.getScopedDailyActivity(LOADED_DAYS),
       this.databricksPort.getContributorPairs(),
       this.databricksPort.getActivityWindows(),
     ]);
@@ -117,18 +153,44 @@ export class GetScopedMetricsUseCase {
     scopeIds: Set<string>,
     inputs: ScopedInputs,
   ): ScopedMetricsResponse {
-    const rows = inputs.daily.filter((row) => scopeIds.has(row.experimentId));
+    // Cached rows outlive midnight, so a date is matched against both windows
+    // rather than treated as current by not being previous.
+    const currentDates = new Set(this.windowDates());
+    const previousDates = new Set(this.windowDates(1));
 
     const byDate = new Map<string, number>();
-    for (const row of rows) {
+    const activeExperiments = new Set<string>();
+    let previousMeasurements = 0;
+
+    for (const row of inputs.daily) {
+      if (!scopeIds.has(row.experimentId)) {
+        continue;
+      }
+
+      if (previousDates.has(row.date)) {
+        previousMeasurements += row.measurements;
+        continue;
+      }
+
+      if (!currentDates.has(row.date)) {
+        continue;
+      }
+
+      activeExperiments.add(row.experimentId);
       byDate.set(row.date, (byDate.get(row.date) ?? 0) + row.measurements);
     }
-    const activity = Array.from(byDate.entries())
-      .map(([date, measurements]) => ({ date, measurements }))
-      .sort((a, b) => a.date.localeCompare(b.date));
 
-    const measurements30d = rows.reduce((sum, row) => sum + row.measurements, 0);
-    const activeExperiments = new Set(rows.map((row) => row.experimentId));
+    // Silent days keep a zero, so the series is read by its shape.
+    const activity = this.windowDates().map((date) => ({
+      date,
+      measurements: byDate.get(date) ?? 0,
+    }));
+    const activeDays = activity.filter((day) => day.measurements > 0);
+
+    const peak = activeDays.reduce<{ date: string; measurements: number } | null>(
+      (best, day) => (best === null || day.measurements > best.measurements ? day : best),
+      null,
+    );
 
     const contributors = new Set(
       inputs.contributorPairs
@@ -136,16 +198,17 @@ export class GetScopedMetricsUseCase {
         .map((pair) => pair.userId),
     ).size;
 
-    const lastDate = activity.length > 0 ? activity[activity.length - 1].date : null;
-
     return {
       scope,
       scoped: {
-        measurements30d,
+        measurements30d: activity.reduce((sum, day) => sum + day.measurements, 0),
         activeExperiments30d: activeExperiments.size,
         contributors30d: contributors,
         activity,
-        lastActivityDate: lastDate,
+        previousMeasurements,
+        activeDays: activeDays.length,
+        peak,
+        lastActivityDate: activeDays.length > 0 ? activeDays[activeDays.length - 1].date : null,
       },
       baseline: {
         measurements30d: inputs.windows.measurements30d,
@@ -153,5 +216,15 @@ export class GetScopedMetricsUseCase {
       },
       computedAt: inputs.windows.computedAt,
     };
+  }
+
+  /** Day keys oldest first; offset 1 is the window immediately before the current one. */
+  private windowDates(offset = 0): string[] {
+    const dayMs = 24 * 60 * 60 * 1000;
+    const end = Date.now() - offset * WINDOW_DAYS * dayMs;
+
+    return Array.from({ length: WINDOW_DAYS }, (_, index) =>
+      new Date(end - (WINDOW_DAYS - 1 - index) * dayMs).toISOString().slice(0, 10),
+    );
   }
 }
