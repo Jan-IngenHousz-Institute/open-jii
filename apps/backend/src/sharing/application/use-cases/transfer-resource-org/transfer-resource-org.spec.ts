@@ -1,9 +1,19 @@
 import { StatusCodes } from "http-status-codes";
 
-import { and, eq, macros, profiles, resourceGrants, sql } from "@repo/database";
+import {
+  and,
+  deviceGroups,
+  eq,
+  iotDevices,
+  macros,
+  profiles,
+  resourceGrants,
+  sql,
+} from "@repo/database";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { IotDeviceGroupRepository } from "../../../../iot/core/repositories/iot-device-group.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { SharingRepository } from "../../../core/repositories/sharing.repository";
 import { TransferResourceOrgUseCase } from "./transfer-resource-org";
@@ -410,5 +420,73 @@ describe("TransferResourceOrgUseCase", () => {
     // Owners are not collaborators on their own resources — the Owner row on the
     // sharing surface is synthesized from the organization, not from a grant.
     expect(await grantsOn(macro.id, "user")).toEqual([]);
+  });
+
+  describe("device groups", () => {
+    /** An organization plus a device group it owns, with one member device. */
+    async function labWithGroup() {
+      const organizationId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(organizationId, owner, "owner");
+      const groupRepository = testApp.module.get(IotDeviceGroupRepository);
+      const created = await groupRepository.create(
+        { name: "Field fleet", description: null },
+        owner,
+        organizationId,
+      );
+      assertSuccess(created);
+      const device = await testApp.createIotDevice({ createdBy: owner, organizationId });
+      assertSuccess(await groupRepository.addMembers(created.value[0].id, [device.id], owner));
+      return { organizationId, group: created.value[0], device };
+    }
+
+    const owningOrgOfGroup = async (groupId: string) => {
+      const [row] = await testApp.database
+        .select({ organizationId: deviceGroups.organizationId })
+        .from(deviceGroups)
+        .where(eq(deviceGroups.id, groupId));
+      return row.organizationId;
+    };
+
+    it("moves a device group between organizations, keeping its members", async () => {
+      const { organizationId, group, device } = await labWithGroup();
+      const destination = await testApp.createOrganization();
+      await testApp.addOrganizationMember(destination, owner, "member");
+
+      const result = await useCase.execute(owner, "device_group", group.id, destination);
+
+      assertSuccess(result);
+      expect(await owningOrgOfGroup(group.id)).toBe(destination);
+      expect(await owningOrgOfGroup(group.id)).not.toBe(organizationId);
+
+      // The membership rows are untouched: a group is its list, and the list moves with it.
+      const members = await testApp.module.get(IotDeviceGroupRepository).listMembers(group.id);
+      assertSuccess(members);
+      expect(members.value.map((member) => member.deviceId)).toEqual([device.id]);
+    });
+
+    it("leaves the member devices where they are: moving a group never moves hardware", async () => {
+      const { organizationId, group, device } = await labWithGroup();
+      const destination = await testApp.createOrganization();
+      await testApp.addOrganizationMember(destination, owner, "member");
+
+      assertSuccess(await useCase.execute(owner, "device_group", group.id, destination));
+
+      const [row] = await testApp.database
+        .select({ organizationId: iotDevices.organizationId })
+        .from(iotDevices)
+        .where(eq(iotDevices.id, device.id));
+      expect(row.organizationId).toBe(organizationId);
+    });
+
+    it("refuses a member of the owning organization who is not an owner or admin", async () => {
+      const { group } = await labWithGroup();
+      const outsider = await testApp.createTestUser({ name: "Plain member" });
+      const destination = await testApp.createOrganization();
+      await testApp.addOrganizationMember(destination, outsider, "member");
+
+      const result = await useCase.execute(outsider, "device_group", group.id, destination);
+
+      assertFailure(result);
+    });
   });
 });

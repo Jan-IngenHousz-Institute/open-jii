@@ -16340,6 +16340,16 @@
                     "memberCount": {
                       "type": "integer"
                     },
+                    "organizationName": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "capabilities": {
                       "type": "object",
                       "properties": {
@@ -25914,7 +25924,8 @@
                 "experiment",
                 "macro",
                 "protocol",
-                "workbook"
+                "workbook",
+                "device_group"
               ],
               "type": "string"
             }
@@ -25963,7 +25974,8 @@
                         "experiment",
                         "macro",
                         "protocol",
-                        "workbook"
+                        "workbook",
+                        "device_group"
                       ],
                       "type": "string"
                     },

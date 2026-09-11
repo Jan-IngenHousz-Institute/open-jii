@@ -31,6 +31,8 @@ export const zIotDeviceGroupList = z.array(zIotDeviceGroupListItem);
 // Detail carries capabilities like the other resource details: one `can()`
 // resolution per resource, so lists stay plain.
 export const zIotDeviceGroupDetail = zIotDeviceGroupListItem.extend({
+  /** Null for a personal workspace, which is never named as an organization. */
+  organizationName: z.string().nullish(),
   capabilities: zResourceCapabilities,
 });
 

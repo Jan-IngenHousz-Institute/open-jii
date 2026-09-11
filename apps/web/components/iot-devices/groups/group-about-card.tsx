@@ -1,5 +1,6 @@
 "use client";
 
+import { OwningOrganizationField } from "@/components/organizations/owning-organization-field";
 import { CollaboratorsAboutRow } from "@/components/sharing/collaborators-about-row";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
@@ -55,6 +56,14 @@ export function GroupAboutCard({
           )}
         </Row>
         <Row label={t("iot.groups.meta.created")}>{formatDate(group.createdAt)}</Row>
+        <OwningOrganizationField
+          resourceType="device_group"
+          resourceId={group.id}
+          organizationId={group.organizationId}
+          organizationName={group.organizationName}
+          canTransfer={group.capabilities.canTransfer}
+          layout="meta"
+        />
         <CollaboratorsAboutRow
           resourceType="device_group"
           resourceId={group.id}

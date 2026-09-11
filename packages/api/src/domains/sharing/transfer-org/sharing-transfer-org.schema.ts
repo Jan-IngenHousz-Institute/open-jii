@@ -1,11 +1,23 @@
 import { z } from "zod";
 
 /**
- * Devices are absent on purpose: one owns a live AWS IoT Thing and certificate
- * provisioned against its organization, so moving the row would leave the cloud
- * side behind. They are removed and re-created instead.
+ * Devices are absent because a device is the platform's handle on physical
+ * hardware someone registered: its certificate was issued under the owning
+ * organization, and moving the row would hand its credentials and its data to
+ * another organization without the hardware changing hands. They are removed
+ * and re-registered instead.
+ *
+ * Device groups are transferable: a group is platform-native, owns nothing in
+ * AWS, and moving one changes who sees the group, never who controls its
+ * devices. Every operation a group performs re-authorizes per device.
  */
-export const zTransferableResourceType = z.enum(["experiment", "macro", "protocol", "workbook"]);
+export const zTransferableResourceType = z.enum([
+  "experiment",
+  "macro",
+  "protocol",
+  "workbook",
+  "device_group",
+]);
 
 export const zTransferResourcePathParams = z.object({
   resourceType: zTransferableResourceType,

@@ -16,6 +16,7 @@ import {
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import {
@@ -112,6 +113,7 @@ export class IotDeviceGroupRepository {
           name: deviceGroups.name,
           description: deviceGroups.description,
           organizationId: deviceGroups.organizationId,
+          organizationName: owningOrganizationNameSql("device_groups"),
           visibility: deviceGroups.visibility,
           createdBy: deviceGroups.createdBy,
           createdAt: deviceGroups.createdAt,

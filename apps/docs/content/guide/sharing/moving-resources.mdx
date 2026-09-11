@@ -1,6 +1,6 @@
 ---
 title: "Moving a resource to another workspace"
-description: "Transfer an experiment, macro, protocol or workbook between your personal workspace and an organization — and what changes about access when you do."
+description: "Transfer an experiment, macro, protocol, workbook or device group between your personal workspace and an organization, and what changes about access when you do."
 ---
 
 {/* verified: code@2a0698c44 2026-08-17 */}
@@ -40,18 +40,23 @@ Both sides are checked:
   be stranded in an organization nobody can act on.
 </Callout>
 
-## Devices and device groups cannot be moved
+## Devices cannot be moved
 
-Experiments, macros, protocols and workbooks can all be transferred. **Devices cannot** —
-there is no transfer route for them at all. A device stays with the organization that
-registered it until the device is deleted.
+Experiments, macros, protocols, workbooks and device groups can all be transferred.
+**Devices cannot.** A device is the platform's handle on physical hardware: its certificate
+was issued under the organization that registered it, so moving the record alone would hand
+its credentials and its data to another organization while the hardware itself changed
+nothing. A device stays where it was registered until it is deleted and registered again.
 
-**Device groups cannot be moved either**, for the same reason one step removed: a group is
-its list of devices, and those devices are pinned to the organization that registered
-them. A group that moved on its own would arrive without them.
+A **device group** does move. A group owns nothing outside the platform, so transferring one
+changes who can see and manage the group, and nothing else. Its member devices stay in their
+own organizations, and every action the group performs is still authorized against each
+device individually. A group can therefore hold devices the receiving organization cannot
+open, in which case those members show but cannot be acted on.
 
 This matters when you are trying to empty an organization before
-[deleting it](/guide/organizations/deleting).
+[deleting it](/guide/organizations/deleting): its groups can be moved out, its devices
+cannot.
 
 ## What changes, and what doesn't
 
