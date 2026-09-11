@@ -141,7 +141,7 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
                 })}
               </p>
               {summary.silent > 0 && (
-                <p className="flex items-center gap-1 text-xs font-normal text-amber-600 dark:text-amber-500">
+                <p className="text-status-stale-foreground flex items-center gap-1 text-xs font-normal">
                   <AlertTriangle className="h-3 w-3" />
                   {t("iot.groups.monitoring.silentCount", { count: summary.silent })}
                 </p>

@@ -5,6 +5,7 @@ import { FirmwareReleaseList } from "@/components/iot-devices/firmware/firmware-
 import { resolveMonitoringPreset } from "@/components/iot-devices/monitoring/monitoring-range";
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
 import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { useDeviceFirmwareHistory } from "@/hooks/iot/useDeviceFirmwareHistory/useDeviceFirmwareHistory";
 import { useIotDevice } from "@/hooks/iot/useIotDevice/useIotDevice";
 import { useIotFirmwareReleases } from "@/hooks/iot/useIotFirmwareReleases/useIotFirmwareReleases";
@@ -20,7 +21,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -159,17 +159,17 @@ export default function DeviceFirmwarePage() {
             <>
               <ArrowRight className="text-muted-foreground size-4" aria-hidden />
               {renderVersionChip(latest.version)}
-              <Badge className="border-transparent bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+              <StatusBadge tone="stale">
                 <AlertTriangle className="mr-1 size-3" aria-hidden />
                 {t("iot.devices.firmware.updateAvailableShort")}
-              </Badge>
+              </StatusBadge>
             </>
           )}
           {isCurrent && (
-            <Badge className="border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+            <StatusBadge tone="active">
               <CheckCircle2 className="mr-1 size-3" aria-hidden />
               {t("iot.devices.firmware.upToDateShort")}
-            </Badge>
+            </StatusBadge>
           )}
         </div>
         <p className="text-muted-foreground text-xs">{t("iot.devices.firmware.reportedCaption")}</p>

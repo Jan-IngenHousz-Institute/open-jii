@@ -179,22 +179,30 @@ export function QuestionCellComponent({
   return (
     <>
       <Dialog open={isAnswering} onOpenChange={(open) => !open && handleCancelAnswer()}>
-        <DialogContent className="gap-0 overflow-hidden rounded-xl border-[#EDF2F6] p-0 sm:max-w-md">
-          <div className="bg-gradient-to-br from-[#005E5E] to-[#1a7a7a] px-6 py-5">
+        <DialogContent className="border-border gap-0 overflow-hidden rounded-xl p-0 sm:max-w-md">
+          <div className="from-primary to-primary/80 bg-gradient-to-br px-6 py-5">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-white/15">
-                {question.kind === "yes_no" && <CheckCircle2 className="size-4 text-white" />}
-                {question.kind === "open_ended" && <Pencil className="size-4 text-white" />}
-                {question.kind === "multi_choice" && <List className="size-4 text-white" />}
-                {question.kind === "number" && <Hash className="size-4 text-white" />}
+              <div className="bg-primary-foreground/15 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full">
+                {question.kind === "yes_no" && (
+                  <CheckCircle2 className="text-primary-foreground size-4" />
+                )}
+                {question.kind === "open_ended" && (
+                  <Pencil className="text-primary-foreground size-4" />
+                )}
+                {question.kind === "multi_choice" && (
+                  <List className="text-primary-foreground size-4" />
+                )}
+                {question.kind === "number" && <Hash className="text-primary-foreground size-4" />}
               </div>
               <div className="min-w-0 flex-1">
                 <DialogHeader>
-                  <DialogTitle className="text-base font-semibold leading-snug text-white">
+                  <DialogTitle className="text-primary-foreground text-base font-semibold leading-snug">
                     {question.text || "Untitled question"}
                   </DialogTitle>
                 </DialogHeader>
-                {question.required && <p className="mt-1 text-xs text-[#E2FCFC]/70">Required</p>}
+                {question.required && (
+                  <p className="text-primary-foreground/70 mt-1 text-xs">Required</p>
+                )}
               </div>
             </div>
           </div>
@@ -202,32 +210,31 @@ export function QuestionCellComponent({
           <div className="px-6 py-5">
             {question.kind === "yes_no" && (
               <div className="flex gap-3">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-2 rounded-lg border-2 px-4 py-3 text-sm font-medium transition-all",
-                    pendingAnswer === "Yes"
-                      ? "border-[#005E5E] bg-[#E2FCFC] text-[#005E5E]"
-                      : "border-[#EDF2F6] hover:border-[#005E5E]/30 hover:bg-[#E2FCFC]/30",
+                    "h-auto flex-1 py-3",
+                    pendingAnswer === "Yes" && "border-primary bg-accent text-primary",
                   )}
                   onClick={() => setPendingAnswer("Yes")}
                 >
                   <CheckCircle2 className="size-4" />
                   Yes
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="outline"
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-2 rounded-lg border-2 px-4 py-3 text-sm font-medium transition-all",
-                    pendingAnswer === "No"
-                      ? "border-[#C58AAE] bg-[#C58AAE]/10 text-[#C58AAE]"
-                      : "border-[#EDF2F6] hover:border-[#C58AAE]/30 hover:bg-[#C58AAE]/5",
+                    "h-auto flex-1 py-3",
+                    pendingAnswer === "No" &&
+                      "border-node-question bg-node-question/10 text-node-question",
                   )}
                   onClick={() => setPendingAnswer("No")}
                 >
                   <X className="size-4" />
                   No
-                </button>
+                </Button>
               </div>
             )}
 
@@ -261,14 +268,13 @@ export function QuestionCellComponent({
             {question.kind === "multi_choice" && (
               <div className="space-y-2">
                 {question.options.map((option, index) => (
-                  <button
+                  <Button
                     key={index}
                     type="button"
+                    variant="outline"
                     className={cn(
-                      "w-full rounded-lg border-2 p-3 text-left transition-all",
-                      pendingAnswer === option
-                        ? "border-[#005E5E] bg-[#E2FCFC]"
-                        : "border-[#EDF2F6] hover:border-[#005E5E]/30 hover:bg-[#E2FCFC]/30",
+                      "h-auto w-full justify-start p-3 text-left font-normal",
+                      pendingAnswer === option && "border-primary bg-accent",
                     )}
                     onClick={() => setPendingAnswer(option)}
                   >
@@ -276,29 +282,27 @@ export function QuestionCellComponent({
                       <div
                         className={cn(
                           "flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-                          pendingAnswer === option
-                            ? "border-[#005E5E] bg-[#005E5E]"
-                            : "border-[#CDD5DB]",
+                          pendingAnswer === option ? "border-primary bg-primary" : "border-border",
                         )}
                       >
                         {pendingAnswer === option && (
-                          <div className="size-2 rounded-full bg-white" />
+                          <div className="bg-card size-2 rounded-full" />
                         )}
                       </div>
                       <span className="text-foreground text-sm font-medium">{option}</span>
                     </div>
-                  </button>
+                  </Button>
                 ))}
               </div>
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-[#EDF2F6] bg-[#FAFBFC] px-6 py-3">
+          <div className="border-border bg-muted flex items-center justify-end gap-2 border-t px-6 py-3">
             <Button
               variant="ghost"
               size="sm"
               onClick={handleCancelAnswer}
-              className="text-[#011111]/60 hover:text-[#011111]"
+              className="text-foreground/60 hover:text-foreground"
             >
               Cancel
             </Button>
@@ -306,7 +310,6 @@ export function QuestionCellComponent({
               size="sm"
               onClick={handleSubmitAnswer}
               disabled={question.required && !pendingAnswer.trim()}
-              className="bg-[#005E5E] text-white hover:bg-[#004a4a]"
             >
               <Send className="mr-1.5 size-3.5" />
               Submit
@@ -327,19 +330,19 @@ export function QuestionCellComponent({
               existingCells={allCells}
               onRename={handleNameRename}
             >
-              <button
+              <Button
                 type="button"
+                variant="link"
                 aria-label={`Rename question (current: ${cell.name})`}
-                className="focus:outline-hidden cursor-pointer rounded px-0.5 hover:underline focus-visible:underline"
-                style={{ color: "#C58AAE" }}
+                className="text-node-question h-auto px-0.5 py-0"
               >
                 {cell.name}
-              </button>
+              </Button>
             </QuestionNameEditor>
           )
         }
         labelText="Question"
-        accentColor="#C58AAE"
+        accentColor="var(--node-question)"
         isCollapsed={cell.isCollapsed}
         onToggleCollapse={(collapsed) => onUpdate({ ...cell, isCollapsed: collapsed })}
         onDelete={onDelete}
@@ -350,36 +353,33 @@ export function QuestionCellComponent({
         headerBadges={undefined}
       >
         <div className="space-y-3">
-          <div className="flex items-center gap-0.5 rounded-lg border bg-[#EDF2F6] p-0.5">
+          <div className="bg-muted flex items-center gap-0.5 rounded-lg border p-0.5">
             {kindOptions.map(({ kind, label, icon: Icon }) => (
-              <button
+              <Button
                 key={kind}
                 type="button"
+                variant="ghost"
+                size="xs"
                 onClick={() => handleKindChange(kind)}
                 disabled={readOnly}
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-all",
+                  "flex-1 gap-1.5",
                   question.kind === kind
-                    ? "shadow-xs"
+                    ? "border-primary bg-accent text-primary border"
                     : "text-muted-foreground hover:text-foreground",
                   readOnly && "pointer-events-none",
                 )}
-                style={
-                  question.kind === kind
-                    ? { backgroundColor: "#E2FCFC", color: "#005E5E", border: "1px solid #005E5E" }
-                    : undefined
-                }
               >
                 <Icon className="size-3.5" />
                 {label}
-              </button>
+              </Button>
             ))}
           </div>
 
           <div className="space-y-1.5">
-            <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-[#011111]">
+            <span className="text-foreground flex items-center gap-1 text-xs font-semibold uppercase tracking-wide">
               Question text
-              <span className="text-[#C58AAE]" aria-hidden="true">
+              <span className="text-node-question" aria-hidden="true">
                 *
               </span>
             </span>
@@ -387,7 +387,7 @@ export function QuestionCellComponent({
               value={question.text}
               onChange={(e) => handleTextChange(e.target.value)}
               placeholder="Type your question here..."
-              className="border-[#C58AAE]/40 bg-white text-sm placeholder:text-[#CDD5DB] focus-visible:ring-[#C58AAE]/30"
+              className="border-node-question/40 bg-card placeholder:text-muted-foreground/60 focus-visible:ring-node-question/30 text-sm"
               disabled={readOnly}
               aria-label="Question text"
             />

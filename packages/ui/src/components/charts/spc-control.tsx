@@ -7,7 +7,13 @@ import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartSizing } from "./use-is-compact";
-import { createPlotlyConfig, getRenderer, getPlotType, createBaseLayout } from "./utils";
+import {
+  createPlotlyConfig,
+  getRenderer,
+  getPlotType,
+  createBaseLayout,
+  readThemeColor,
+} from "./utils";
 
 export interface SPCSeriesData extends BaseSeries {
   x: any[]; // Mixed types for time series, categories, or numeric data
@@ -51,9 +57,9 @@ export function SPCControlCharts({
   lowerControlLimit,
   upperSpecLimit,
   lowerSpecLimit,
-  controlLimitColor = "#ff6b6b",
-  specLimitColor = "#ffa726",
-  centerLineColor = "#4dabf7",
+  controlLimitColor = readThemeColor("--destructive") ?? "#ff6b6b",
+  specLimitColor = readThemeColor("--chart-4") ?? "#ffa726",
+  centerLineColor = readThemeColor("--chart-1") ?? "#4dabf7",
   showControlLimits = true,
   showSpecLimits = true,
   showCenterLine = true,

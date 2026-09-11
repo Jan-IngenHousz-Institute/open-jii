@@ -4,6 +4,8 @@ import React from "react";
 
 import { DotPlot, type DotSeriesData } from "./dot-plot";
 import type { BaseChartProps } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
+import { readThemeColor } from "./utils";
 
 export interface LollipopChartProps extends BaseChartProps {
   categories: string[];
@@ -27,7 +29,7 @@ export function LollipopChart({
   categories,
   values,
   name,
-  color = "#636EFA",
+  color = readThemeColor("--chart-1") ?? "#636EFA",
   orientation = "v",
   stemWidth = 2,
   dotSize = 12,
@@ -36,6 +38,10 @@ export function LollipopChart({
   errorBarCapWidth = 4,
   ...props
 }: LollipopChartProps) {
+  // The default colour resolves from a CSS variable in this component (not
+  // in DotPlot), so it needs its own theme-flip subscription.
+  useChartThemeRefresh();
+
   const isHorizontal = orientation === "h";
 
   // Always pass categories on `x` and values on `y`; `DotPlot` performs

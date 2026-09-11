@@ -25,6 +25,18 @@ import type {
   GroupLifecycleEventRow,
   GroupThroughputRow,
 } from "../../../iot/core/ports/databricks.port";
+import type {
+  ActivityWindowsRow,
+  ContributorPairRow,
+  DailyActivityRow,
+  FamilyTotalsRow,
+  HourlyActivityRow,
+  ParameterCategory,
+  ParameterStatsRow,
+  PlatformTotalsRow,
+  PoolFactsRow,
+  ScopedDailyRow,
+} from "../../../metrics/core/ports/databricks.port";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
@@ -38,6 +50,7 @@ import type {
   FilterCondition,
   QueryParams,
 } from "./services/query-builder/query-builder.types";
+import { cellNumber, cellString, cellUtcIso } from "./services/sql/cell-values";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData } from "./services/sql/sql.types";
 
@@ -47,6 +60,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
   readonly CATALOG_NAME: string;
   readonly CENTRUM_SCHEMA_NAME: string;
+  readonly METRICS_SCHEMA_NAME: string;
 
   readonly RAW_DATA_TABLE_NAME: string;
   readonly DEVICE_DATA_TABLE_NAME: string;
@@ -62,6 +76,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   ) {
     this.CATALOG_NAME = this.configService.getCatalogName();
     this.CENTRUM_SCHEMA_NAME = this.configService.getCentrumSchemaName();
+    this.METRICS_SCHEMA_NAME = this.configService.getMetricsSchemaName();
     this.RAW_DATA_TABLE_NAME = this.configService.getRawDataTableName();
     this.DEVICE_DATA_TABLE_NAME = this.configService.getDeviceDataTableName();
     this.MACRO_DATA_TABLE_NAME = this.configService.getMacroDataTableName();
@@ -1175,6 +1190,306 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       limit,
       offset,
     });
+  }
+
+  private metricsTable(tableName: string): string {
+    return `${this.CATALOG_NAME}.${this.METRICS_SCHEMA_NAME}.${tableName}`;
+  }
+
+  private async readMetricsTable(
+    tableName: string,
+    options: {
+      orderBy?: string;
+      orderDirection?: "ASC" | "DESC";
+      limit?: number;
+      filters?: FilterCondition[];
+      aggregation?: AggregationSpec;
+    } = {},
+  ): Promise<Result<{ rows: (string | null)[][]; index: Record<string, number> }>> {
+    const queryResult = this.queryBuilder.buildQuery({
+      table: this.metricsTable(tableName),
+      ...options,
+    });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
+
+    const result = await this.executeSqlQuery(this.METRICS_SCHEMA_NAME, queryResult.value);
+    if (result.isFailure()) {
+      return result;
+    }
+
+    // A truncated result would silently under-report aggregates.
+    if (result.value.truncated) {
+      return failure(AppError.internal(`Metrics read of ${tableName} was truncated`));
+    }
+
+    return success({ rows: result.value.rows, index: this.columnIndex(result.value.columns) });
+  }
+
+  async getPublicPlatformTotals(): Promise<Result<PlatformTotalsRow | null>> {
+    const result = await this.readMetricsTable("platform_totals", { limit: 1 });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    if (rows.length === 0) {
+      return success(null);
+    }
+
+    const row = rows[0];
+    const totalMeasurements = cellNumber(row[index.total_measurements]);
+    if (totalMeasurements === null) {
+      return success(null);
+    }
+
+    return success({
+      totalMeasurements,
+      totalUploadedRows: cellNumber(row[index.total_uploaded_rows]) ?? 0,
+      totalMacroExecutions: cellNumber(row[index.total_macro_executions]) ?? 0,
+      devicesAllTime: cellNumber(row[index.devices_all_time]) ?? 0,
+      experimentsWithData: cellNumber(row[index.experiments_with_data]) ?? 0,
+      firstMeasurementAt: cellUtcIso(row[index.first_measurement_at]),
+      lastMeasurementAt: cellUtcIso(row[index.last_measurement_at]),
+      computedAt: cellUtcIso(row[index.computed_at]),
+    });
+  }
+
+  async getPublicTotalVolumeBytes(): Promise<Result<number | null>> {
+    const result = await this.readMetricsTable("daily_activity", {
+      aggregation: {
+        functions: [{ column: "volume_bytes", function: "sum", alias: "total_volume_bytes" }],
+      },
+    });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    if (rows.length === 0) {
+      return success(null);
+    }
+
+    return success(cellNumber(rows[0][index.total_volume_bytes]));
+  }
+
+  async getPublicDailyActivity(days: number): Promise<Result<DailyActivityRow[]>> {
+    const result = await this.readMetricsTable("daily_activity", {
+      orderBy: "date",
+      orderDirection: "DESC",
+      limit: days,
+    });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    const mapped = rows
+      .map((row) => ({
+        date: cellString(row[index.date]),
+        measurements: cellNumber(row[index.measurements]),
+        cumulativeMeasurements: cellNumber(row[index.cumulative_measurements]),
+        volumeBytes: cellNumber(row[index.volume_bytes]),
+      }))
+      .filter(
+        (row): row is DailyActivityRow =>
+          row.date !== null &&
+          row.measurements !== null &&
+          row.cumulativeMeasurements !== null &&
+          row.volumeBytes !== null,
+      );
+
+    this.warnDroppedMetricsRows("daily_activity", rows.length - mapped.length);
+    return success(mapped.reverse());
+  }
+
+  async getPublicFamilyTotals(): Promise<Result<FamilyTotalsRow[]>> {
+    const result = await this.readMetricsTable("family_totals", {
+      orderBy: "total_measurements",
+      orderDirection: "DESC",
+    });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    const mapped = rows
+      .map((row) => ({
+        family: cellString(row[index.family]),
+        measurements: cellNumber(row[index.total_measurements]),
+      }))
+      .filter((row): row is FamilyTotalsRow => row.family !== null && row.measurements !== null);
+
+    this.warnDroppedMetricsRows("family_totals", rows.length - mapped.length);
+    return success(mapped);
+  }
+
+  async getActivityWindows(): Promise<Result<ActivityWindowsRow | null>> {
+    const result = await this.readMetricsTable("activity_windows", { limit: 1 });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    if (rows.length === 0) {
+      return success(null);
+    }
+
+    const row = rows[0];
+    const measurements24h = cellNumber(row[index.measurements_24h]);
+    const measurements30d = cellNumber(row[index.measurements_30d]);
+    const experiments30d = cellNumber(row[index.experiments_30d]);
+    const contributors30d = cellNumber(row[index.contributors_30d]);
+    if (
+      measurements24h === null ||
+      measurements30d === null ||
+      experiments30d === null ||
+      contributors30d === null
+    ) {
+      return success(null);
+    }
+
+    return success({
+      measurements24h,
+      measurements30d,
+      experiments30d,
+      contributors30d,
+      devices30d: cellNumber(row[index.devices_30d]) ?? 0,
+      lastMeasurementAt: cellUtcIso(row[index.last_measurement_at]),
+      computedAt: cellUtcIso(row[index.computed_at]),
+    });
+  }
+
+  async getHourlyActivity(): Promise<Result<HourlyActivityRow[]>> {
+    const result = await this.readMetricsTable("hourly_activity", {
+      orderBy: "hour_local",
+      orderDirection: "ASC",
+    });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    const mapped = rows
+      .map((row) => ({
+        hourLocal: cellNumber(row[index.hour_local]),
+        measurements: cellNumber(row[index.measurements]),
+      }))
+      .filter(
+        (row): row is HourlyActivityRow =>
+          row.hourLocal !== null &&
+          Number.isInteger(row.hourLocal) &&
+          row.hourLocal >= 0 &&
+          row.hourLocal <= 23 &&
+          row.measurements !== null,
+      );
+
+    this.warnDroppedMetricsRows("hourly_activity", rows.length - mapped.length);
+    return success(mapped);
+  }
+
+  async getTopParameter(category: ParameterCategory): Promise<Result<ParameterStatsRow | null>> {
+    const result = await this.readMetricsTable("parameter_stats", {
+      filters: [{ column: "category", operator: "equals", value: category }],
+      orderBy: "count_30d",
+      orderDirection: "DESC",
+      limit: 1,
+    });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    if (rows.length === 0) {
+      return success(null);
+    }
+
+    const row = rows[0];
+    const name = cellString(row[index.parameter]);
+    const count30d = cellNumber(row[index.count_30d]);
+    const median = cellNumber(row[index.median_value]);
+    if (name === null || count30d === null || median === null) {
+      return success(null);
+    }
+
+    return success({ name, count30d, median });
+  }
+
+  async getPoolFacts(): Promise<Result<PoolFactsRow | null>> {
+    const result = await this.readMetricsTable("pool_facts", { limit: 1 });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    if (rows.length === 0) {
+      return success(null);
+    }
+
+    const row = rows[0];
+    return success({
+      sessionMedianMeasurements: cellNumber(row[index.session_median_measurements]),
+      deviceEnduranceDays: cellNumber(row[index.device_endurance_days]),
+      simultaneityPeakDevices: cellNumber(row[index.simultaneity_peak_devices]),
+      timezonesAllTime: cellNumber(row[index.timezones_all_time]),
+      timezonesPeakDay: cellNumber(row[index.timezones_peak_day]),
+    });
+  }
+
+  async getScopedDailyActivity(days: number): Promise<Result<ScopedDailyRow[]>> {
+    // Inclusive BETWEEN: today plus days-1 back covers exactly `days` dates.
+    const to = new Date();
+    const from = new Date(to.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
+    const asDate = (value: Date) => value.toISOString().slice(0, 10);
+
+    const result = await this.readMetricsTable("daily_activity_by_experiment", {
+      filters: [{ column: "date", operator: "between", value: [asDate(from), asDate(to)] }],
+      orderBy: "date",
+      orderDirection: "ASC",
+    });
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    const mapped = rows
+      .map((row) => ({
+        date: cellString(row[index.date]),
+        experimentId: cellString(row[index.experiment_id]),
+        measurements: cellNumber(row[index.measurements]),
+      }))
+      .filter(
+        (row): row is ScopedDailyRow =>
+          row.date !== null && row.experimentId !== null && row.measurements !== null,
+      );
+
+    this.warnDroppedMetricsRows("daily_activity_by_experiment", rows.length - mapped.length);
+    return success(mapped);
+  }
+
+  async getContributorPairs(): Promise<Result<ContributorPairRow[]>> {
+    const result = await this.readMetricsTable("experiment_contributors_window", {});
+    if (result.isFailure()) {
+      return result;
+    }
+
+    const { rows, index } = result.value;
+    const mapped = rows
+      .map((row) => ({
+        experimentId: cellString(row[index.experiment_id]),
+        userId: cellString(row[index.user_id]),
+      }))
+      .filter((row): row is ContributorPairRow => row.experimentId !== null && row.userId !== null);
+
+    this.warnDroppedMetricsRows("experiment_contributors_window", rows.length - mapped.length);
+    return success(mapped);
+  }
+
+  private warnDroppedMetricsRows(tableName: string, dropped: number): void {
+    if (dropped > 0) {
+      this.logger.warn({ msg: "Skipped malformed metrics rows", tableName, dropped });
+    }
   }
 
   async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {

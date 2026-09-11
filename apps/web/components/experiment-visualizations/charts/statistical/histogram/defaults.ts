@@ -1,5 +1,4 @@
 import type { ChartFormConfig, ChartFormDataConfig } from "../../chart-config";
-import { DEFAULT_PRIMARY_COLOR } from "../../colors/palettes";
 import { makeDataSource } from "../../data/data-sources";
 
 export function histogramDefaultConfig(): ChartFormConfig {
@@ -10,7 +9,6 @@ export function histogramDefaultConfig(): ChartFormConfig {
     showLegend: true,
     showGrid: true,
     useWebGL: false,
-    color: [DEFAULT_PRIMARY_COLOR],
     // Plotly auto-picks bin count when `nbinsx` is unset; expose it as
     // a slider but leave undefined to avoid overriding auto-detection.
     histnorm: "",

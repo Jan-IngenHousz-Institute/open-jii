@@ -89,7 +89,7 @@ export function RevokeCollaboratorDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="bg-surface-light text-muted-foreground flex items-start gap-2 rounded-md p-3 text-xs">
+        <div className="bg-muted text-muted-foreground flex items-start gap-2 rounded-md p-3 text-xs">
           <AlertTriangle className="text-primary mt-0.5 h-4 w-4 shrink-0" />
           <p className="leading-snug">
             {retained ??

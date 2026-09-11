@@ -48,6 +48,7 @@ export const envManifest: readonly EnvVar[] = [
   env("DATABRICKS_WAREHOUSE_ID", set, "local-disabled", backend),
   env("DATABRICKS_CATALOG_NAME", set, "local", backend),
   env("DATABRICKS_CENTRUM_SCHEMA_NAME", set, "local", backend),
+  env("DATABRICKS_METRICS_SCHEMA_NAME", set, "metrics", backend),
   env("DATABRICKS_RAW_DATA_TABLE_NAME", set, "raw_data", backend),
   env("DATABRICKS_DEVICE_DATA_TABLE_NAME", set, "device_data", backend),
   env("DATABRICKS_MACRO_DATA_TABLE_NAME", set, "macro_data", backend),

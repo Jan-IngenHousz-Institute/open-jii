@@ -79,7 +79,7 @@ export function GroupDevicesTable({
           <div className="flex flex-col gap-0.5">
             <ConnectivityDot connectivity={member.connectivity} />
             {silent && (
-              <span className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-500">
+              <span className="text-status-stale-foreground flex items-center gap-1 text-[11px]">
                 <AlertTriangle className="h-3 w-3" aria-hidden />
                 {t("iot.devices.monitoring.connectedButSilent")}
               </span>
@@ -109,7 +109,7 @@ export function GroupDevicesTable({
     <div className="border-border overflow-hidden rounded-lg border">
       <Table>
         <TableHeader>
-          <TableRow className="bg-surface-light border-border hover:bg-transparent">
+          <TableRow className="bg-muted border-border hover:bg-transparent">
             <ColumnHead>{t("iot.groups.deviceColumn")}</ColumnHead>
             <ColumnHead>{t("iot.groups.monitoring.stateColumn")}</ColumnHead>
             <ColumnHead>{t("iot.groups.monitoring.lastSeenColumn")}</ColumnHead>

@@ -2578,4 +2578,374 @@ describe("DatabricksAdapter", () => {
       expect(result.isFailure()).toBe(true);
     });
   });
+
+  describe("public metrics", () => {
+    const mockToken = () =>
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+    const mockSqlResponse = (columns: string[], rows: (string | null)[][]) =>
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: columns.length,
+              columns: columns.map((name, position) => ({
+                name,
+                type_name: "STRING",
+                type_text: "STRING",
+                position,
+              })),
+            },
+            total_row_count: rows.length,
+            truncated: false,
+          },
+          result: {
+            data_array: rows,
+            chunk_index: 0,
+            row_count: rows.length,
+            row_offset: 0,
+          },
+        });
+
+    it("maps the platform totals row and returns null when empty", async () => {
+      mockToken();
+      mockSqlResponse(
+        [
+          "total_measurements",
+          "devices_all_time",
+          "experiments_with_data",
+          "first_measurement_at",
+          "last_measurement_at",
+          "total_macro_executions",
+          "total_uploaded_rows",
+          "computed_at",
+        ],
+        [
+          [
+            "1000",
+            "9",
+            "5",
+            "2024-01-01 00:00:00",
+            "2026-08-14 10:00:00",
+            "200",
+            "50",
+            "2026-08-14 10:05:00",
+          ],
+        ],
+      );
+
+      const result = await databricksAdapter.getPublicPlatformTotals();
+
+      assertSuccess(result);
+      expect(result.value).toEqual({
+        totalMeasurements: 1000,
+        devicesAllTime: 9,
+        experimentsWithData: 5,
+        firstMeasurementAt: "2024-01-01T00:00:00.000Z",
+        lastMeasurementAt: "2026-08-14T10:00:00.000Z",
+        totalMacroExecutions: 200,
+        totalUploadedRows: 50,
+        computedAt: "2026-08-14T10:05:00.000Z",
+      });
+
+      mockToken();
+      mockSqlResponse(["total_measurements"], []);
+      const empty = await databricksAdapter.getPublicPlatformTotals();
+      assertSuccess(empty);
+      expect(empty.value).toBeNull();
+    });
+
+    it("sums the all-time volume and reads a blank aggregate as absent", async () => {
+      mockToken();
+      mockSqlResponse(["total_volume_bytes"], [["123456789"]]);
+      const volume = await databricksAdapter.getPublicTotalVolumeBytes();
+      assertSuccess(volume);
+      expect(volume.value).toBe(123456789);
+
+      mockToken();
+      mockSqlResponse(["total_volume_bytes"], [[""]]);
+      const blank = await databricksAdapter.getPublicTotalVolumeBytes();
+      assertSuccess(blank);
+      expect(blank.value).toBeNull();
+    });
+
+    it("reads blank numeric cells as absent, never as zero", async () => {
+      mockToken();
+      mockSqlResponse(["total_measurements", "computed_at"], [["   ", "2026-08-14 10:05:00"]]);
+      const totals = await databricksAdapter.getPublicPlatformTotals();
+      assertSuccess(totals);
+      expect(totals.value).toBeNull();
+    });
+
+    it("passes a warehouse failure through every reader", async () => {
+      const readers = [
+        () => databricksAdapter.getPublicPlatformTotals(),
+        () => databricksAdapter.getPublicTotalVolumeBytes(),
+        () => databricksAdapter.getPublicDailyActivity(30),
+        () => databricksAdapter.getPublicFamilyTotals(),
+        () => databricksAdapter.getActivityWindows(),
+        () => databricksAdapter.getHourlyActivity(),
+        () => databricksAdapter.getTopParameter("derived"),
+        () => databricksAdapter.getPoolFacts(),
+        () => databricksAdapter.getScopedDailyActivity(30),
+        () => databricksAdapter.getContributorPairs(),
+      ];
+
+      for (const read of readers) {
+        mockToken();
+        nock(databricksHost)
+          .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+          .reply(500, { message: "warehouse down" });
+        assertFailure(await read());
+      }
+    });
+
+    it("fails the read when the warehouse truncates the result", async () => {
+      mockToken();
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 2,
+              columns: [
+                { name: "experiment_id", type_name: "STRING", type_text: "STRING", position: 0 },
+                { name: "user_id", type_name: "STRING", type_text: "STRING", position: 1 },
+              ],
+            },
+            total_row_count: 1,
+            truncated: true,
+          },
+          result: { data_array: [["e1", "u1"]], chunk_index: 0, row_count: 1 },
+        });
+
+      assertFailure(await databricksAdapter.getContributorPairs());
+    });
+
+    it("reads empty single-row tables as null", async () => {
+      mockToken();
+      mockSqlResponse(["total_volume_bytes"], []);
+      const volume = await databricksAdapter.getPublicTotalVolumeBytes();
+      assertSuccess(volume);
+      expect(volume.value).toBeNull();
+
+      mockToken();
+      mockSqlResponse(["measurements_24h"], []);
+      const windows = await databricksAdapter.getActivityWindows();
+      assertSuccess(windows);
+      expect(windows.value).toBeNull();
+
+      mockToken();
+      mockSqlResponse(["parameter"], []);
+      const parameter = await databricksAdapter.getTopParameter("derived");
+      assertSuccess(parameter);
+      expect(parameter.value).toBeNull();
+
+      mockToken();
+      mockSqlResponse(["session_median_measurements"], []);
+      const pool = await databricksAdapter.getPoolFacts();
+      assertSuccess(pool);
+      expect(pool.value).toBeNull();
+    });
+
+    it("reads rows with blank essentials as null and absent timestamps as null", async () => {
+      mockToken();
+      mockSqlResponse(
+        [
+          "measurements_24h",
+          "measurements_30d",
+          "experiments_30d",
+          "contributors_30d",
+          "devices_30d",
+          "last_measurement_at",
+          "computed_at",
+        ],
+        [["140", "", "23", "31", "12", "2026-08-28 10:00:00", "2026-08-28 10:05:00"]],
+      );
+      const windows = await databricksAdapter.getActivityWindows();
+      assertSuccess(windows);
+      expect(windows.value).toBeNull();
+
+      mockToken();
+      mockSqlResponse(
+        ["parameter", "category", "count_30d", "median_value"],
+        [["Phi2", "derived", "4214", ""]],
+      );
+      const parameter = await databricksAdapter.getTopParameter("derived");
+      assertSuccess(parameter);
+      expect(parameter.value).toBeNull();
+
+      mockToken();
+      mockSqlResponse(["total_measurements"], [["1000"]]);
+      const totals = await databricksAdapter.getPublicPlatformTotals();
+      assertSuccess(totals);
+      expect(totals.value?.computedAt).toBeNull();
+      expect(totals.value?.lastMeasurementAt).toBeNull();
+    });
+
+    it("drops malformed rows instead of inventing values", async () => {
+      mockToken();
+      mockSqlResponse(
+        ["date", "measurements", "cumulative_measurements", "volume_bytes"],
+        [
+          ["2026-08-14", "10", "1000", "200000"],
+          [null, "10", "1000", "200000"],
+          ["2026-08-15", "not-a-number", "1010", "200000"],
+        ],
+      );
+      const daily = await databricksAdapter.getPublicDailyActivity(30);
+      assertSuccess(daily);
+      expect(daily.value).toEqual([
+        { date: "2026-08-14", measurements: 10, cumulativeMeasurements: 1000, volumeBytes: 200000 },
+      ]);
+
+      // A totals row without its core figure reads as no data, not zero.
+      mockToken();
+      mockSqlResponse(["computed_at"], [["2026-08-14 10:05:00"]]);
+      const totals = await databricksAdapter.getPublicPlatformTotals();
+      assertSuccess(totals);
+      expect(totals.value).toBeNull();
+
+      mockToken();
+      mockSqlResponse(
+        ["hour_local", "measurements"],
+        [
+          ["12", "300"],
+          ["25", "300"],
+          [null, "300"],
+        ],
+      );
+      const hourly = await databricksAdapter.getHourlyActivity();
+      assertSuccess(hourly);
+      expect(hourly.value).toEqual([{ hourLocal: 12, measurements: 300 }]);
+    });
+
+    it("returns daily activity ascending with volume", async () => {
+      mockToken();
+      mockSqlResponse(
+        ["date", "measurements", "cumulative_measurements", "volume_bytes", "computed_at"],
+        [
+          ["2026-08-14", "10", "1000", "200000", "x"],
+          ["2026-08-13", "20", "990", "400000", "x"],
+        ],
+      );
+
+      const result = await databricksAdapter.getPublicDailyActivity(366);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { date: "2026-08-13", measurements: 20, cumulativeMeasurements: 990, volumeBytes: 400000 },
+        { date: "2026-08-14", measurements: 10, cumulativeMeasurements: 1000, volumeBytes: 200000 },
+      ]);
+    });
+
+    it("maps family totals to the public shape", async () => {
+      mockToken();
+      mockSqlResponse(
+        ["family", "total_measurements", "devices_all_time", "computed_at"],
+        [["multispeq", "900", "7", "x"]],
+      );
+
+      const result = await databricksAdapter.getPublicFamilyTotals();
+
+      assertSuccess(result);
+      expect(result.value).toEqual([{ family: "multispeq", measurements: 900 }]);
+    });
+
+    it("maps the activity windows row", async () => {
+      mockToken();
+      mockSqlResponse(
+        [
+          "measurements_24h",
+          "measurements_30d",
+          "experiments_30d",
+          "contributors_30d",
+          "devices_30d",
+          "last_measurement_at",
+          "computed_at",
+        ],
+        [["140", "4812", "23", "31", "12", "2026-08-28 10:00:00", "2026-08-28 10:05:00"]],
+      );
+
+      const result = await databricksAdapter.getActivityWindows();
+
+      assertSuccess(result);
+      expect(result.value).toEqual({
+        measurements24h: 140,
+        measurements30d: 4812,
+        experiments30d: 23,
+        contributors30d: 31,
+        devices30d: 12,
+        lastMeasurementAt: "2026-08-28T10:00:00.000Z",
+        computedAt: "2026-08-28T10:05:00.000Z",
+      });
+    });
+
+    it("maps hourly bins, the top parameter, and pool facts", async () => {
+      mockToken();
+      mockSqlResponse(["hour_local", "measurements", "computed_at"], [["12", "300", "x"]]);
+      const hourly = await databricksAdapter.getHourlyActivity();
+      assertSuccess(hourly);
+      expect(hourly.value).toEqual([{ hourLocal: 12, measurements: 300 }]);
+
+      mockToken();
+      mockSqlResponse(
+        ["parameter", "category", "count_30d", "median_value", "computed_at"],
+        [["Phi2", "derived", "4214", "0.62", "x"]],
+      );
+      const parameter = await databricksAdapter.getTopParameter("derived");
+      assertSuccess(parameter);
+      expect(parameter.value).toEqual({ name: "Phi2", count30d: 4214, median: 0.62 });
+
+      mockToken();
+      mockSqlResponse(
+        [
+          "session_median_measurements",
+          "device_endurance_days",
+          "simultaneity_peak_devices",
+          "timezones_all_time",
+          "timezones_peak_day",
+          "computed_at",
+        ],
+        [["45", null, "14", "14", "9", "x"]],
+      );
+      const pool = await databricksAdapter.getPoolFacts();
+      assertSuccess(pool);
+      expect(pool.value).toEqual({
+        sessionMedianMeasurements: 45,
+        deviceEnduranceDays: null,
+        simultaneityPeakDevices: 14,
+        timezonesAllTime: 14,
+        timezonesPeakDay: 9,
+      });
+    });
+
+    it("maps scoped rows and contributor pairs", async () => {
+      mockToken();
+      mockSqlResponse(
+        ["date", "experiment_id", "measurements", "computed_at"],
+        [["2026-08-28", "exp-1", "300", "x"]],
+      );
+      const scoped = await databricksAdapter.getScopedDailyActivity(30);
+      assertSuccess(scoped);
+      expect(scoped.value).toEqual([
+        { date: "2026-08-28", experimentId: "exp-1", measurements: 300 },
+      ]);
+
+      mockToken();
+      mockSqlResponse(["experiment_id", "user_id", "computed_at"], [["exp-1", "user-1", "x"]]);
+      const pairs = await databricksAdapter.getContributorPairs();
+      assertSuccess(pairs);
+      expect(pairs.value).toEqual([{ experimentId: "exp-1", userId: "user-1" }]);
+    });
+  });
 });

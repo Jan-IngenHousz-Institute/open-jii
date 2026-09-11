@@ -6,10 +6,10 @@ export function BooleanAnswerDisplay() {
   const { t } = useTranslation(["experiments"]);
 
   return (
-    <div className="rounded-lg bg-gradient-to-r from-green-50 to-green-100 p-6 text-center">
-      <div className="shadow-xs mx-auto mb-3 w-fit rounded-full bg-white p-3">
+    <div className="bg-status-active rounded-lg p-6 text-center">
+      <div className="shadow-xs bg-card mx-auto mb-3 w-fit rounded-full p-3">
         <svg
-          className="h-5 w-5 text-green-600"
+          className="text-status-active-foreground h-5 w-5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -22,8 +22,10 @@ export function BooleanAnswerDisplay() {
           />
         </svg>
       </div>
-      <p className="mb-1 font-medium text-gray-900">{t("questionCard.booleanResponseLabel")}</p>
-      <p className="text-sm text-gray-600">{t("questionCard.booleanResponseDescription")}</p>
+      <p className="text-foreground mb-1 font-medium">{t("questionCard.booleanResponseLabel")}</p>
+      <p className="text-muted-foreground text-sm">
+        {t("questionCard.booleanResponseDescription")}
+      </p>
     </div>
   );
 }

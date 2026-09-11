@@ -7,7 +7,7 @@ import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps } from "./types";
 import { useChartSizing } from "./use-is-compact";
-import { createBaseLayout, createPlotlyConfig } from "./utils";
+import { createBaseLayout, createPlotlyConfig, readThemeColor } from "./utils";
 
 export interface SPCChartProps extends BaseChartProps {
   /** Time / index axis values for the main process walk. */
@@ -33,11 +33,6 @@ export interface SPCChartProps extends BaseChartProps {
   seriesColor?: string;
 }
 
-const OUT_OF_CONTROL_COLOR = "#dc2626"; // tailwind red-600
-const CL_COLOR = "#6b7280"; // tailwind gray-500
-const LIMIT_COLOR = OUT_OF_CONTROL_COLOR;
-const WARNING_COLOR = "#f59e0b"; // tailwind amber-500
-
 /**
  * Statistical Process Control (Individuals / X) chart. The caller computes
  * mean, std, limits, and the out-of-control index list; this wrapper just
@@ -62,6 +57,15 @@ export function SPCChart({
   seriesColor,
 }: SPCChartProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+
+  // Resolved per render rather than at module scope: readThemeColor needs the
+  // document, and a constant evaluated at import would also freeze these across
+  // a theme toggle. The centre line stays a neutral — grey is the SPC
+  // convention and it has to read as chrome, not as another plotted series.
+  const OUT_OF_CONTROL_COLOR = readThemeColor("--destructive") ?? "#dc2626";
+  const CL_COLOR = readThemeColor("--muted-foreground") ?? "#6b7280";
+  const LIMIT_COLOR = OUT_OF_CONTROL_COLOR;
+  const WARNING_COLOR = readThemeColor("--chart-4") ?? "#f59e0b";
 
   // Out-of-control overlay: pluck the offending (x, y) by index. Keeping
   // the indices distinct from the main trace lets us draw a *separate*
@@ -103,9 +107,9 @@ export function SPCChart({
       marker: {
         size: markerSize,
         opacity: markerOpacity,
-        color: seriesColor ?? "#1f77b4",
+        color: seriesColor,
       },
-      line: { color: seriesColor ?? "#1f77b4", width: 1.5 },
+      line: { color: seriesColor, width: 1.5 },
       hoverinfo: "x+y",
     } as unknown as PlotData,
     // Centre line is solid grey per SPC convention; dotted would compete

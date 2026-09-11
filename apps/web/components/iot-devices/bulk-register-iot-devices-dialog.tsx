@@ -324,6 +324,9 @@ export function BulkRegisterIotDevicesDialog({
                         <FileUp className="mr-1.5 h-3.5 w-3.5" aria-hidden />
                         {t("iot.devices.bulkDialog.importFile")}
                       </Button>
+                      {/* A hidden file picker driven by the button above, never
+                          rendered visibly — the styled `Input` has nothing to
+                          contribute to an element with `display: none`. */}
                       <input
                         ref={fileInputRef}
                         type="file"

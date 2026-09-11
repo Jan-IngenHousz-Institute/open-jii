@@ -15,12 +15,11 @@ export function WorkspaceBand({ children, className }: WorkspaceBandProps) {
   return (
     <div
       className={cn(
-        "3xl:-mx-10 4xl:-mx-14 3xl:px-10 4xl:px-14 -mx-4 -mb-6 flex flex-1 flex-col border-t border-[#EDF2F6] px-4 pb-6 md:-mx-6 md:px-6",
+        "3xl:-mx-10 4xl:-mx-14 3xl:px-10 4xl:px-14 bg-canvas border-border -mx-4 -mb-6 flex min-w-0 flex-1 flex-col border-t px-4 pb-6 md:-mx-6 md:px-6",
         className,
       )}
-      style={{ background: "linear-gradient(270.03deg, #F5FFF8 0%, #F4F9FF 100%)" }}
     >
-      <div className="flex w-full flex-1 flex-col pt-6">{children}</div>
+      <div className="flex w-full min-w-0 flex-1 flex-col pt-6">{children}</div>
     </div>
   );
 }

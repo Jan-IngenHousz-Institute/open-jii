@@ -4,7 +4,7 @@ import { DataTable } from "@/components/data-table/data-table";
 import type { TableMetadata } from "@/components/data-table/data-table-columns";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { PaginationState } from "@tanstack/react-table";
+import type { PaginationState, RowSelectionState } from "@tanstack/react-table";
 import React, { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
@@ -73,7 +73,7 @@ export function ExperimentDataTable({
   const [deleteAnnotationType, setDeleteAnnotationType] =
     useState<ExperimentAnnotationType>("comment");
 
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const selectionForm = useForm<BulkSelectionFormType>({
     resolver: zodResolver(bulkSelectionFormSchema),

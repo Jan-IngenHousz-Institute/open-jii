@@ -149,7 +149,7 @@ export function InlineEditableDescription({
             </div>
 
             {!isShort && !isExpanded && (
-              <div className="pointer-events-none absolute bottom-0 left-0 right-0 -ml-2 h-16 bg-gradient-to-t from-white to-transparent" />
+              <div className="from-card pointer-events-none absolute bottom-0 left-0 right-0 -ml-2 h-16 bg-gradient-to-t to-transparent" />
             )}
           </div>
 

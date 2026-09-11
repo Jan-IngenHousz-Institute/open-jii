@@ -95,7 +95,7 @@ export const LocationSearch = ({
     <div className={`relative ${className}`}>
       {/* Search Input */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
         <input
           type="text"
           value={query}
@@ -112,20 +112,20 @@ export const LocationSearch = ({
           }}
           placeholder={placeholder}
           disabled={disabled}
-          className="focus:border-jii-dark-green focus:ring-jii-dark-green/20 focus:outline-hidden w-full rounded-lg border border-gray-300 bg-white px-10 py-2 text-sm focus:ring-2 disabled:bg-gray-50 disabled:text-gray-500"
+          className="border-input bg-background focus:border-ring focus:ring-ring/50 focus:outline-hidden disabled:bg-muted disabled:text-muted-foreground w-full rounded-lg border px-10 py-2 text-sm focus:ring-2"
         />
         {isLoading && (
-          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-400" />
+          <Loader2 className="text-muted-foreground absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin" />
         )}
       </div>
 
       {/* Search Results Dropdown */}
       {isOpen && query.length >= 3 && (
-        <div className="absolute top-full z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="bg-popover absolute top-full z-50 mt-1 w-full rounded-lg border shadow-lg">
           {isLoading ? (
             <div className="flex items-center justify-center p-4">
-              <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-              <span className="ml-2 text-sm text-gray-500">Searching...</span>
+              <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+              <span className="text-muted-foreground ml-2 text-sm">Searching...</span>
             </div>
           ) : results.length > 0 ? (
             <div className="max-h-64 overflow-y-auto">
@@ -133,21 +133,21 @@ export const LocationSearch = ({
                 <button
                   key={`${location.latitude}-${location.longitude}-${index}`}
                   onClick={() => handleLocationSelect(location)}
-                  className={`focus:outline-hidden w-full px-4 py-3 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 ${
-                    index === selectedIndex ? "bg-surface" : ""
+                  className={`focus:outline-hidden hover:bg-accent focus:bg-accent w-full px-4 py-3 text-left text-sm ${
+                    index === selectedIndex ? "bg-accent" : ""
                   }`}
                   onMouseEnter={() => setSelectedIndex(index)}
                 >
                   <div className="flex items-start gap-3">
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+                    <MapPin className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium text-gray-900">{location.label}</div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-foreground truncate font-medium">{location.label}</div>
+                      <div className="text-muted-foreground text-xs">
                         {[location.municipality, location.region, location.country]
                           .filter(Boolean)
                           .join(", ")}
                       </div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-muted-foreground text-xs">
                         {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
                       </div>
                     </div>
@@ -156,7 +156,7 @@ export const LocationSearch = ({
               ))}
             </div>
           ) : query.length >= 3 ? (
-            <div className="p-4 text-center text-sm text-gray-500">
+            <div className="text-muted-foreground p-4 text-center text-sm">
               No locations found for "{query}"
             </div>
           ) : null}

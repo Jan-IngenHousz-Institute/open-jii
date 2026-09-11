@@ -42,10 +42,10 @@ describe("QuestionCard", () => {
     expect(props.onUpdateText).toHaveBeenLastCalledWith("a");
   });
 
-  it("toggles required via the checkbox", async () => {
+  it("toggles required via the switch", async () => {
     const user = userEvent.setup();
     const { props } = renderCard();
-    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("switch"));
     expect(props.onToggleRequired).toHaveBeenCalledTimes(1);
   });
 
@@ -104,7 +104,7 @@ describe("QuestionCard", () => {
     expect(screen.getByPlaceholderText("questionCard.placeholder").hasAttribute("disabled")).toBe(
       true,
     );
-    expect(screen.getByRole("checkbox").hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("switch")).toBeDisabled();
     expect(
       screen.getByRole("button", { name: "questionCard.addOption" }).hasAttribute("disabled"),
     ).toBe(true);

@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "@repo/ui/components/card";
 import { ScrollArea } from "@repo/ui/components/scroll-area";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
@@ -17,7 +18,7 @@ export function UploadHistoryLoading() {
 
 function SkeletonRow() {
   return (
-    <div className="flex min-h-[56px] items-center gap-3 rounded-lg border border-l-4 border-l-gray-200 bg-white px-3 py-2.5 dark:border-gray-700 dark:border-l-gray-600 dark:bg-gray-800">
+    <Card className="min-h-[56px] flex-row items-center gap-3 px-3 py-2.5">
       <Skeleton className="h-7 w-7 rounded-md" />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex items-center gap-2">
@@ -30,6 +31,6 @@ function SkeletonRow() {
           <Skeleton className="h-3 w-14 rounded" />
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

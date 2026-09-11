@@ -1,5 +1,6 @@
 import { RegisterIotDeviceDialog } from "@/components/iot-devices/register-iot-device-dialog";
 import { ListWorkbooks } from "@/components/list-workbooks";
+import { OPEN_WORKBOOK_CREATE_EVENT } from "@/components/navigation/site-header/platform-header-events";
 import { NewExperimentForm } from "@/components/new-experiment/new-experiment";
 import { NewMacroForm } from "@/components/new-macro/new-macro";
 import { NewProtocolForm } from "@/components/new-protocol/new-protocol";
@@ -10,7 +11,7 @@ import {
   createWorkbook,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { fireEvent, render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import { act, fireEvent, render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -230,7 +231,9 @@ describe("the owning organization a create form submits", () => {
 
       render(<ListWorkbooks />);
 
-      await user.click(screen.getByRole("button", { name: /workbooks\.create/i }));
+      act(() => {
+        window.dispatchEvent(new Event(OPEN_WORKBOOK_CREATE_EVENT));
+      });
       const dialog = within(await screen.findByRole("dialog"));
       fireEvent.change(dialog.getByPlaceholderText("workbooks.namePlaceholder"), {
         target: { value: "Field notes" },

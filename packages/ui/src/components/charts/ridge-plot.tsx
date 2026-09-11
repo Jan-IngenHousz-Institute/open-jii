@@ -7,7 +7,7 @@ import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps } from "./types";
 import { useChartSizing } from "./use-is-compact";
-import { createBaseLayout, createPlotlyConfig, truncateTickLabel } from "./utils";
+import { createBaseLayout, createPlotlyConfig, readThemeColor, truncateTickLabel } from "./utils";
 
 /**
  * One ridge, pre-computed by the caller. The wrapper just shapes Plotly
@@ -108,7 +108,12 @@ export function RidgePlot({
 /** Local hex-to-rgba helper to keep this wrapper self-contained. */
 function withAlpha(hex: string, alpha: number): string {
   if (!hex.startsWith("#") || (hex.length !== 7 && hex.length !== 4)) {
-    return `rgba(31, 119, 180, ${alpha})`;
+    // Unparseable input: fall back to the theme's first series colour rather
+    // than Plotly's default blue, carrying the requested alpha as a hex byte.
+    const a = Math.round(Math.min(1, Math.max(0, alpha)) * 255)
+      .toString(16)
+      .padStart(2, "0");
+    return `${readThemeColor("--chart-1") ?? "#1f77b4"}${a}`;
   }
   const expanded =
     hex.length === 4 ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}` : hex;

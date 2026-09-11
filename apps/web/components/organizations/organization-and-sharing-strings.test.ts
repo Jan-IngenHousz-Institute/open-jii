@@ -4,6 +4,10 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { zExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
+import {
+  ORGANIZATION_TYPE_SEARCH_ALIASES,
+  zOrganizationType,
+} from "@repo/api/domains/organization/organization.schema";
 import { zSharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import deCommon from "@repo/i18n/locales/de-DE/common.json";
 import deNavigation from "@repo/i18n/locales/de-DE/navigation.json";
@@ -156,14 +160,7 @@ describe("organization and sharing strings", () => {
         `organizations.roles.${role}`,
         `organizations.roleHints.${role}`,
       ]),
-      ...[
-        "unspecified",
-        "research_institute",
-        "non_profit",
-        "private_company",
-        "government_agency",
-        "university",
-      ].map((type) => `organizations.types.${type}`),
+      ...["unspecified", ...zOrganizationType.options].map((type) => `organizations.types.${type}`),
       ...["required", "format", "tooLong", "reserved", "taken"].map(
         (reason) => `organizations.errors.slug.${reason}`,
       ),
@@ -190,6 +187,13 @@ describe("organization and sharing strings", () => {
     expect(missing).toEqual([]);
   });
 
+  it.each(localeNames)("%s keeps visible organization types searchable", (locale) => {
+    for (const type of zOrganizationType.options) {
+      const visibleLabel = LOCALES[locale].common.organizations.types[type].toLowerCase();
+      expect(ORGANIZATION_TYPE_SEARCH_ALIASES[type].toLowerCase(), type).toContain(visibleLabel);
+    }
+  });
+
   // Kept after the scan was widened to `sharing.*`, which now finds these too. Redundant
   // on purpose: if the scan ever stops matching, this is what still fails.
   it.each(localeNames)("%s translates the team grantee strings", (locale) => {
@@ -204,12 +208,9 @@ describe("organization and sharing strings", () => {
   });
 
   it.each(localeNames)("%s translates the organizations navigation entry", (locale) => {
-    const missing = [
-      "sidebar.organizations",
-      "sidebar.newOrganization",
-      "sidebar.myOrganizations",
-      "sidebar.organizationDirectory",
-    ].filter((key) => !bundles[locale].navigation.has(key));
+    const missing = ["sidebar.organizations", "sidebar.newOrganization"].filter(
+      (key) => !bundles[locale].navigation.has(key),
+    );
 
     expect(missing).toEqual([]);
   });

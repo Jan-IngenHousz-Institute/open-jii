@@ -74,7 +74,7 @@ export function IotDeviceDetailTabs({
     : "overview";
 
   return (
-    <NavTabs value={activeTab} className="mt-8 flex w-full flex-1 flex-col">
+    <NavTabs value={activeTab} className="mt-8 flex w-full min-w-0 flex-1 flex-col">
       <NavTabsList>
         {tabs.map((tab) => (
           <NavTabsTrigger key={tab.value} value={tab.value} asChild>

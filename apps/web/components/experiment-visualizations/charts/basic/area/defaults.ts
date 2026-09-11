@@ -1,5 +1,4 @@
 import type { ChartFormConfig, ChartFormDataConfig } from "../../chart-config";
-import { DEFAULT_PRIMARY_COLOR } from "../../colors/palettes";
 import { makeDataSource } from "../../data/data-sources";
 
 export function areaDefaultConfig(): ChartFormConfig {
@@ -12,7 +11,6 @@ export function areaDefaultConfig(): ChartFormConfig {
     showLegend: true,
     showGrid: true,
     useWebGL: false,
-    color: [DEFAULT_PRIMARY_COLOR],
     mode: "lines",
     // Shared AreaChart wrapper defaults `line.width: 0`; in our editor that
     // looks unfinished, so set an explicit width to keep the boundary visible.

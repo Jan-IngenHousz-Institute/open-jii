@@ -1,5 +1,4 @@
 import type { ChartFormConfig, ChartFormDataConfig } from "../../chart-config";
-import { DEFAULT_PRIMARY_COLOR } from "../../colors/palettes";
 import { makeDataSource } from "../../data/data-sources";
 
 export function violinPlotDefaultConfig(): ChartFormConfig {
@@ -10,7 +9,6 @@ export function violinPlotDefaultConfig(): ChartFormConfig {
     showLegend: true,
     showGrid: true,
     useWebGL: false,
-    color: [DEFAULT_PRIMARY_COLOR],
     violinOrientation: "v",
     // `group` lays sibling violins side-by-side at each X category
     // (matches seaborn `violinplot(hue=...)`).

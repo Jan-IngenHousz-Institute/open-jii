@@ -41,7 +41,7 @@ export default async function NotFound() {
   });
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-white to-blue-50 px-4 py-16">
+    <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 py-16">
       <div className="w-full max-w-md text-center">
         {/* Brand Logo/Icon */}
         <div className="mb-8 flex justify-center">
@@ -52,8 +52,8 @@ export default async function NotFound() {
 
         {/* Error Message */}
         <div className="mb-8">
-          <h1 className="mb-4 text-6xl font-bold text-gray-900">{t("errors.notFoundTitle")}</h1>
-          <h2 className="mb-4 text-2xl font-semibold text-gray-800">
+          <h1 className="text-foreground mb-4 text-6xl font-bold">{t("errors.notFoundTitle")}</h1>
+          <h2 className="text-foreground mb-4 text-2xl font-semibold">
             {t("errors.notFoundHeading")}
           </h2>
           <p className="text-muted-foreground text-lg leading-relaxed">
@@ -64,7 +64,7 @@ export default async function NotFound() {
         {/* Navigation Options */}
         <Card className="mb-8">
           <CardContent className="p-6">
-            <h3 className="mb-4 text-lg font-semibold text-gray-800">{t("errors.whereToGo")}</h3>
+            <h3 className="text-foreground mb-4 text-lg font-semibold">{t("errors.whereToGo")}</h3>
             <div className="space-y-3">
               {/* Home Page Link */}
               <Button asChild className="w-full" size="lg">

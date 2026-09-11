@@ -1,4 +1,4 @@
-import { flexRender } from "@tanstack/react-table";
+import { FlexRender } from "@tanstack/react-table";
 import type { Row, HeaderGroup } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import React from "react";
@@ -36,6 +36,7 @@ import { DataTableTextCell } from "./cells/text/data-table-text-cell";
 import { DataTableUserCell } from "./cells/user/data-table-user-cell";
 import { DataTableVariantCell } from "./cells/variant/data-table-variant-cell";
 import { DataTableCellCollapsible } from "./data-table-cell-collapsible";
+import type { DataTableFeatures } from "./data-table-features";
 
 function getTableHeadClassName(isNumericColumn: boolean, isSortable: boolean): string {
   return cn(
@@ -62,9 +63,9 @@ function getSortIcon(
 
   if (isCurrentlySorted) {
     return sortDirection === "ASC" ? (
-      <ArrowUp className="ml-2 inline h-4 w-4 text-green-700 dark:text-green-600" />
+      <ArrowUp className="text-status-active-foreground ml-2 inline h-4 w-4" />
     ) : (
-      <ArrowDown className="ml-2 inline h-4 w-4 text-green-700 dark:text-green-600" />
+      <ArrowDown className="text-status-active-foreground ml-2 inline h-4 w-4" />
     );
   }
 
@@ -196,7 +197,7 @@ export function DataTableHeader({
   sortDirection,
   onSort,
 }: {
-  headerGroups: HeaderGroup<DataRow>[];
+  headerGroups: HeaderGroup<DataTableFeatures, DataRow>[];
   sortColumn?: string;
   sortDirection?: "ASC" | "DESC";
   onSort?: (columnName: string, columnType?: string) => void;
@@ -233,7 +234,9 @@ export function DataTableHeader({
             >
               {header.isPlaceholder ? null : (
                 <div className="flex items-center justify-between">
-                  <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                  <span>
+                    <FlexRender header={header} />
+                  </span>
                   {getSortIcon(isSortable, isCurrentlySorted, sortDirection)}
                 </div>
               )}
@@ -253,7 +256,7 @@ export function DataTableRows({
   columns = [],
   errorColumn,
 }: {
-  rows: Row<DataRow>[];
+  rows: Row<DataTableFeatures, DataRow>[];
   columnCount: number;
   expandedCell?: { rowId: string; columnName: string } | null;
   tableRows?: DataRow[];
@@ -298,7 +301,7 @@ export function DataTableRows({
                 whiteSpace: "nowrap",
               }}
             >
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              <FlexRender cell={cell} />
             </TableCell>
           ))}
         </TableRow>

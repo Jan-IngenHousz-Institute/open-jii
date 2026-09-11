@@ -37,6 +37,22 @@ page before authentication starts.
 - `specs/chrome-refresh.spec.ts` covers the authenticated application shell and experiment chrome.
 - `specs/workbook-search.spec.ts` covers server-side workbook search and attachment.
 - `scripts/record-maintenance.ts` records maintenance-mode screenshots and video but is not a test.
+- `scripts/capture-docs-media.ts` stages documentation screenshots and recordings for `apps/docs`.
+
+## Documentation media
+
+The docs site's web screenshots come from here because this package already owns a browser and a
+seeded session. Shots are declared in `docs-media/shots.ts` and the published frames in
+`docs-media/frames.ts`; both are explained in `apps/docs/media/web/README.md`.
+
+```sh
+pnpm --filter @repo/e2e capture-docs-media --list
+pnpm --filter @repo/e2e capture-docs-media --only dashboard,experiments-list
+pnpm --filter @repo/e2e capture-docs-media --theme dark
+```
+
+Captures are staged in `apps/docs/.capture/web` and are never published automatically. `ffmpeg` is
+required for the scale, metadata strip and encode.
 
 HTML reports are written below `playwright-report`. Failed runs retain screenshots and videos below
 `test-results`, and CI retries capture traces there; both directories are ignored by Git.

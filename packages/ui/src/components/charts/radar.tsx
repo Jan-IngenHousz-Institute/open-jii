@@ -13,6 +13,7 @@ import {
   getPlotType,
   responsiveChrome,
   tierAxisFontSizes,
+  chartGridColor,
 } from "./utils";
 
 export interface RadarSeriesData extends BaseSeries {
@@ -141,8 +142,8 @@ export function RadarPlot({
         range: rangeMode === "tozero" ? [0, undefined] : undefined,
         rangemode: rangeMode,
         tickfont: { size: fontSizes.tick },
-        gridcolor: "#E6E6E6",
-        linecolor: "#444",
+        gridcolor: chartGridColor(),
+        linecolor: chartGridColor(),
         showgrid: config.showGrid !== false,
       },
       angularaxis: {
@@ -159,8 +160,8 @@ export function RadarPlot({
         tickfont: { size: fontSizes.tick },
         direction: "clockwise",
         period: 360,
-        gridcolor: "#E6E6E6",
-        linecolor: "#444",
+        gridcolor: chartGridColor(),
+        linecolor: chartGridColor(),
         showticklabels: showTickLabels,
       },
       gridshape: gridShape,

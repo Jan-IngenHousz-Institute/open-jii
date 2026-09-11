@@ -1,5 +1,6 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { X } from "lucide-react";
 
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -51,7 +52,7 @@ export function FilterRow({
   };
 
   return (
-    <div className="bg-muted/30 space-y-2 rounded-md border p-2.5">
+    <InsetPanel padding="sm" className="space-y-2">
       <div className="flex items-center gap-2">
         <Select value={pickedColumn?.name ?? undefined} onValueChange={handleColumnChange}>
           <SelectTrigger className="h-9 flex-1">
@@ -115,6 +116,6 @@ export function FilterRow({
         experimentId={experimentId}
         tableName={tableName}
       />
-    </div>
+    </InsetPanel>
   );
 }

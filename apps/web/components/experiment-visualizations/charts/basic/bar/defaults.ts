@@ -1,5 +1,4 @@
 import type { ChartFormConfig, ChartFormDataConfig } from "../../chart-config";
-import { DEFAULT_PRIMARY_COLOR } from "../../colors/palettes";
 import { makeDataSource } from "../../data/data-sources";
 
 export function barDefaultConfig(): ChartFormConfig {
@@ -12,7 +11,6 @@ export function barDefaultConfig(): ChartFormConfig {
     showLegend: true,
     showGrid: true,
     useWebGL: false,
-    color: [DEFAULT_PRIMARY_COLOR],
     orientation: "v",
     barmode: "group",
     barnorm: "",

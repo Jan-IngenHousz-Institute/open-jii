@@ -28,9 +28,9 @@ export function BulkRegisterResults({ result }: BulkRegisterResultsProps) {
     return (
       <li key={row.serialNumber} className="flex items-center gap-2 px-3 py-1.5 text-sm">
         {row.error === null ? (
-          <Check className="h-4 w-4 shrink-0 text-green-600" aria-hidden />
+          <Check className="text-status-active-foreground h-4 w-4 shrink-0" aria-hidden />
         ) : (
-          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+          <AlertTriangle className="text-status-stale-foreground h-4 w-4 shrink-0" aria-hidden />
         )}
         {row.device === null ? (
           <span className="font-mono text-xs">{row.serialNumber}</span>
@@ -63,7 +63,7 @@ export function BulkRegisterResults({ result }: BulkRegisterResultsProps) {
       </ul>
 
       {result.groupError !== null && (
-        <p className="flex items-center gap-2 text-sm text-amber-600">
+        <p className="text-status-stale-foreground flex items-center gap-2 text-sm">
           <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
           {t("iot.devices.bulkDialog.groupError", { error: result.groupError })}
         </p>

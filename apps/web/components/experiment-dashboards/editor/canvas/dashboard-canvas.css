@@ -87,7 +87,6 @@
   background: var(--background);
   border: 1.5px solid var(--primary);
   border-radius: 999px;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
   opacity: 0;
   transition:
     opacity 120ms ease,
@@ -150,7 +149,6 @@
   background: var(--background);
   border: 1.5px solid var(--primary);
   border-radius: 2px;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
   opacity: 0;
   transition:
     opacity 120ms ease,

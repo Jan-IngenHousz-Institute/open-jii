@@ -4,17 +4,8 @@
  * slug can be renamed, and a renamed slug would break every link that used it.
  */
 
-/**
- * The organizations listing. The caller's memberships and the public directory
- * are one route filtered by `?filter=all`, the same query the experiments and
- * macros listings use — not two routes with a tab strip over them.
- */
 export function organizationsPath(locale: string): string {
   return `/${locale}/platform/organizations`;
-}
-
-export function newOrganizationPath(locale: string): string {
-  return `/${locale}/platform/organizations/new`;
 }
 
 export function organizationPath(locale: string, organizationId: string): string {

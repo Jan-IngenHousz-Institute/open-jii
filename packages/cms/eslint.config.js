@@ -1,4 +1,5 @@
 import baseConfig from "@repo/eslint-config/base";
+import { themeTokenGuard } from "@repo/eslint-config/theme-tokens";
 
 /** @type {import('typescript-eslint').Config} */
 export default [
@@ -11,4 +12,5 @@ export default [
       "@typescript-eslint/no-unnecessary-condition": "off",
     },
   },
+  ...themeTokenGuard,
 ];

@@ -12,6 +12,8 @@ import {
   createPlotlyConfig,
   getRenderer,
   getPlotType,
+  readThemeColor,
+  chartGridColor,
   tierAxisFontSizes,
 } from "./utils";
 
@@ -140,11 +142,11 @@ export function ParallelCoordinates({
         labelfont: { size: fontSizes.axisTitle },
         rangefont: series.rangefont || {
           size: Math.min(12, fontSizes.tick),
-          color: "#444",
+          color: readThemeColor("--foreground") ?? "#444",
         },
         tickfont: series.tickfont || {
           size: Math.min(10, fontSizes.tick),
-          color: "#444",
+          color: readThemeColor("--foreground") ?? "#444",
         },
 
         visible: series.visible,
@@ -267,11 +269,11 @@ export function ParallelCategories({
         sortpaths: series.sortpaths || "forward",
         labelfont: series.labelfont || {
           size: fontSizes.axisTitle,
-          color: "#444",
+          color: readThemeColor("--foreground") ?? "#444",
         },
         tickfont: series.tickfont || {
           size: fontSizes.tick,
-          color: "#444",
+          color: readThemeColor("--foreground") ?? "#444",
         },
 
         visible: series.visible,
@@ -359,11 +361,11 @@ export function Alluvial({ data, config = {}, className, loading, error }: Alluv
           source: series.links.source,
           target: series.links.target,
           value: series.links.value,
-          color: series.links.color || "rgba(128,128,128,0.2)",
+          color: series.links.color || `${readThemeColor("--muted-foreground") ?? "#808080"}33`,
           label: series.links.label,
           hovertemplate: series.links.hovertemplate,
           line: series.links.line || {
-            color: "rgba(0,0,0,0.2)",
+            color: chartGridColor(),
             width: 0,
           },
         },

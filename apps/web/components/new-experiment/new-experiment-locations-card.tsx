@@ -1,17 +1,11 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useMemo, useState, useCallback, useEffect } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
 import type { CreateExperimentBody } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@repo/ui/components/card";
 import type { LocationPoint } from "@repo/ui/components/map";
 
 import { useLocationGeocode } from "../../hooks/locations/useLocationGeocode";
@@ -116,34 +110,32 @@ export function NewExperimentLocationsCard({ form }: NewExperimentLocationsCardP
   const searchResults = searchData ?? [];
 
   return (
-    <Card className="min-w-0 flex-1">
-      <CardHeader>
-        <CardTitle>{t("newExperiment.addLocationsTitle")}</CardTitle>
-        <CardDescription>{t("newExperiment.addLocationsDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Map
-          locations={locations}
-          onLocationsChange={handleLocationsChange}
-          onLocationAdd={handleLocationAdd}
-          selectionMode={true}
-          onSearch={handleSearch}
-          searchResults={searchResults}
-          searchLoading={searchLoading}
-          center={[52.3676, 4.9041]} // Amsterdam as default center
-          zoom={10}
-          height="400px"
-          showSidebar={true}
-          showLocationSearch={true}
-          showDistances={false}
-          sidebarTitle={t("newExperiment.locationsListTitle")}
-          sidebarCollapsed={false}
-          useClustering={true}
-          showZoomControl={true}
-          showScale={true}
-          className="rounded-lg border"
-        />
-      </CardContent>
-    </Card>
+    <SettingsCard
+      title={t("newExperiment.addLocationsTitle")}
+      description={t("newExperiment.addLocationsDescription")}
+      contentClassName="space-y-4"
+    >
+      <Map
+        locations={locations}
+        onLocationsChange={handleLocationsChange}
+        onLocationAdd={handleLocationAdd}
+        selectionMode={true}
+        onSearch={handleSearch}
+        searchResults={searchResults}
+        searchLoading={searchLoading}
+        center={[52.3676, 4.9041]} // Amsterdam as default center
+        zoom={10}
+        height="400px"
+        showSidebar={true}
+        showLocationSearch={true}
+        showDistances={false}
+        sidebarTitle={t("newExperiment.locationsListTitle")}
+        sidebarCollapsed={false}
+        useClustering={true}
+        showZoomControl={true}
+        showScale={true}
+        className="rounded-lg border"
+      />
+    </SettingsCard>
   );
 }

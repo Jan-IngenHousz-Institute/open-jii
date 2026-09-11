@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
+import { Separator } from "@repo/ui/components/separator";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useProtocolCompatibleMacros } from "../../hooks/protocol/useProtocolCompatibleMacros/useProtocolCompatibleMacros";
@@ -147,7 +148,7 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
           <h4 className="text-sm font-medium">{tCommon("common.forkedFrom")}</h4>
           <Link
             href={`/${locale}/platform/protocols/${protocol.forkedFrom}`}
-            className="text-sm text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
+            className="text-primary hover:text-primary/80 text-sm underline underline-offset-2"
           >
             {tCommon("common.viewOriginal")}
           </Link>
@@ -163,11 +164,7 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
       />
 
       {/* Compatible Macros Section */}
-      <div
-        role="separator"
-        aria-orientation="horizontal"
-        className="text-muted-foreground border-t"
-      />
+      <Separator decorative={false} />
 
       {canUpdate ? (
         <ProtocolCompatibleMacrosCard protocolId={protocolId} embedded />
@@ -185,11 +182,7 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
       {/* Danger Zone */}
       {canManage && isDeletionEnabled && (
         <>
-          <div
-            role="separator"
-            aria-orientation="horizontal"
-            className="text-muted-foreground border-t"
-          />
+          <Separator decorative={false} />
           <div>
             <h5 className="text-destructive mb-2 text-base font-medium">
               {t("protocolSettings.dangerZone")}

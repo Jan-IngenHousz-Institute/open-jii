@@ -1,5 +1,6 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -38,7 +39,11 @@ export function ChartFrame({
 
   if (error) {
     return (
-      <div className="bg-muted/30 text-muted-foreground flex h-full items-center justify-center rounded-lg border border-dashed p-8">
+      <InsetPanel
+        dashed
+        padding="lg"
+        className="text-muted-foreground flex h-full items-center justify-center"
+      >
         <div className="text-center">
           <div className="bg-muted mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
             <AlertCircle className="h-6 w-6" />
@@ -62,18 +67,18 @@ export function ChartFrame({
             />
           </div>
         </div>
-      </div>
+      </InsetPanel>
     );
   }
 
   if (!hasRows) {
     return (
-      <div className="bg-muted/20 flex h-full items-center justify-center rounded-lg border-2 border-dashed">
+      <InsetPanel dashed padding="none" className="flex h-full items-center justify-center">
         <div className="text-center">
           <div className="text-muted-foreground mb-2 font-medium">{t("errors.noData")}</div>
           <div className="text-muted-foreground text-sm">{t("errors.noDataFound")}</div>
         </div>
-      </div>
+      </InsetPanel>
     );
   }
 
@@ -83,11 +88,15 @@ export function ChartFrame({
 export function ChartConfigError({ message }: { message: string }) {
   const { t } = useTranslation("experimentVisualizations");
   return (
-    <div className="bg-muted/30 text-muted-foreground flex h-full items-center justify-center rounded-lg border border-dashed p-8">
+    <InsetPanel
+      dashed
+      padding="lg"
+      className="text-muted-foreground flex h-full items-center justify-center"
+    >
       <div className="max-w-md text-center">
         <div className="mb-2 font-medium">{t("errors.configuration")}</div>
         <div className="text-sm">{message}</div>
       </div>
-    </div>
+    </InsetPanel>
   );
 }

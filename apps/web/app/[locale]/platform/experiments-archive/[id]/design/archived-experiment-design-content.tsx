@@ -57,9 +57,11 @@ export default function ExperimentFlowPage({ params }: ExperimentFlowPageProps) 
           <h2 className="text-2xl font-bold">{t("flow.title")}</h2>
           <p className="text-muted-foreground text-sm">{t("flow.staticDescription")}</p>
         </div>
-        <div className={`flex items-center gap-2 rounded-md bg-blue-50 px-3 py-1.5`}>
-          <div className={`h-2 w-2 rounded-full bg-blue-500`}></div>
-          <span className={`text-sm font-medium text-blue-700`}>{t("previewMode")}</span>
+        <div className={`bg-status-published flex items-center gap-2 rounded-md px-3 py-1.5`}>
+          <div className={`bg-status-published-foreground h-2 w-2 rounded-full`}></div>
+          <span className={`text-status-published-foreground text-sm font-medium`}>
+            {t("previewMode")}
+          </span>
         </div>
       </div>
 

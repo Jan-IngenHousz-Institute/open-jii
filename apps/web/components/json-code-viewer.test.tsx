@@ -102,7 +102,7 @@ describe("JsonCodeViewer", () => {
       const text = element.textContent;
       return (
         typeof element.className === "string" &&
-        element.className.includes("text-xs text-slate-500") &&
+        element.className.includes("text-muted-foreground text-xs") &&
         text.includes(`${lineCount}`) &&
         text.includes("lines")
       );
@@ -198,7 +198,7 @@ describe("JsonCodeViewer", () => {
     render(<JsonCodeViewer {...defaultProps} onEditStart={onEditStart} />);
 
     // Click the outer container
-    const container = screen.getByTestId("json-viewer-wrapper");
+    const container = screen.getByTestId("code-viewer-frame");
     await user.click(container);
 
     expect(onEditStart).toHaveBeenCalled();
@@ -208,14 +208,14 @@ describe("JsonCodeViewer", () => {
     const onEditStart = vi.fn();
     render(<JsonCodeViewer {...defaultProps} onEditStart={onEditStart} />);
 
-    const container = screen.getByTestId("json-viewer-wrapper");
+    const container = screen.getByTestId("code-viewer-frame");
     expect(container.className).toContain("cursor-pointer");
   });
 
   it("should not add cursor-pointer class when onEditStart is not provided", () => {
     render(<JsonCodeViewer {...defaultProps} />);
 
-    const container = screen.getByTestId("json-viewer-wrapper");
+    const container = screen.getByTestId("code-viewer-frame");
     // The outer div should not have cursor-pointer (it may appear in the overlay child,
     // but we check the outer container class string)
     expect(container.className).not.toContain("cursor-pointer");
@@ -224,7 +224,7 @@ describe("JsonCodeViewer", () => {
   it("should apply custom className", () => {
     render(<JsonCodeViewer {...defaultProps} className="my-custom-class" />);
 
-    const container = screen.getByTestId("json-viewer-wrapper");
+    const container = screen.getByTestId("code-viewer-frame");
     expect(container.className).toContain("my-custom-class");
   });
 
@@ -269,7 +269,7 @@ describe("JsonCodeViewer", () => {
       if (!element) return false;
       return (
         typeof element.className === "string" &&
-        element.className.includes("text-xs text-slate-500") &&
+        element.className.includes("text-muted-foreground text-xs") &&
         element.textContent.includes(`${expectedSize} B`)
       );
     });

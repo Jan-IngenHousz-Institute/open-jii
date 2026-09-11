@@ -7,7 +7,14 @@ import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
 import { useChartSizing } from "./use-is-compact";
-import { createPlotlyConfig, getRenderer, responsiveChrome, tierAxisFontSizes } from "./utils";
+import {
+  createPlotlyConfig,
+  getRenderer,
+  responsiveChrome,
+  tierAxisFontSizes,
+  chartGridColor,
+  readThemeColor,
+} from "./utils";
 
 export interface CarpetSeriesData extends BaseSeries {
   a: number[];
@@ -129,16 +136,16 @@ export function CarpetPlot({
                 dtick: series.aaxis.dtick || 1,
                 tickvals: series.aaxis.tickvals,
                 ticktext: series.aaxis.ticktext,
-                gridcolor: series.aaxis.gridcolor || "#E6E6E6",
-                linecolor: series.aaxis.linecolor || "#444",
+                gridcolor: series.aaxis.gridcolor || chartGridColor(),
+                linecolor: series.aaxis.linecolor || chartGridColor(),
                 showgrid: series.aaxis.showgrid !== false,
                 showline: series.aaxis.showline !== false,
               }
             : {
                 title: "A",
                 tickfont: { size: fontSizes.tick },
-                gridcolor: "#E6E6E6",
-                linecolor: "#444",
+                gridcolor: chartGridColor(),
+                linecolor: chartGridColor(),
               },
 
           baxis: series.baxis
@@ -150,16 +157,16 @@ export function CarpetPlot({
                 dtick: series.baxis.dtick || 1,
                 tickvals: series.baxis.tickvals,
                 ticktext: series.baxis.ticktext,
-                gridcolor: series.baxis.gridcolor || "#E6E6E6",
-                linecolor: series.baxis.linecolor || "#444",
+                gridcolor: series.baxis.gridcolor || chartGridColor(),
+                linecolor: series.baxis.linecolor || chartGridColor(),
                 showgrid: series.baxis.showgrid !== false,
                 showline: series.baxis.showline !== false,
               }
             : {
                 title: "B",
                 tickfont: { size: fontSizes.tick },
-                gridcolor: "#E6E6E6",
-                linecolor: "#444",
+                gridcolor: chartGridColor(),
+                linecolor: chartGridColor(),
               },
 
           visible: series.visible,
@@ -189,13 +196,14 @@ export function CarpetPlot({
                 line: series.marker.line
                   ? {
                       width: series.marker.line.width || 1,
-                      color: series.marker.line.color || "#444",
+                      color:
+                        series.marker.line.color ?? readThemeColor("--muted-foreground") ?? "#444",
                     }
                   : undefined,
               }
             : {
                 size: 8,
-                color: "#1f77b4",
+                color: undefined,
               },
 
           line: series.line

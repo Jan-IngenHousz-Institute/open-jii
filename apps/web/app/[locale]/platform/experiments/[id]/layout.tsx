@@ -1,6 +1,7 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { PlatformHeaderDetail } from "@/components/navigation/site-header/platform-header-context";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
@@ -106,6 +107,10 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
     // `page-fluid` marker on the layout so all tabs (overview, data, analysis, flow)
     // render at the same fluid width — switching tabs no longer reflows the page.
     <div className="page-fluid flex flex-1 flex-col gap-6">
+      <PlatformHeaderDetail
+        href={`/${locale}/platform/experiments/${id}`}
+        label={experiment.name}
+      />
       <ExperimentTitle
         experimentId={id}
         name={experiment.name}

@@ -5,6 +5,7 @@ import type { FocusEvent } from "react";
 import { useState } from "react";
 
 import { Button } from "@repo/ui/components/button";
+import { Card } from "@repo/ui/components/card";
 import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
 
@@ -62,10 +63,7 @@ export function InlineEditableProfileField({
     const inputId = `${label.replace(/\W+/g, "-").toLowerCase()}-field`;
 
     return (
-      <div
-        className="border-primary/20 bg-card rounded-md border p-3 shadow-sm"
-        onBlur={handleBlur}
-      >
+      <Card className="gap-0 p-3" onBlur={handleBlur}>
         <label htmlFor={inputId} className="text-muted-foreground text-xs font-medium uppercase">
           {label}
         </label>
@@ -124,7 +122,7 @@ export function InlineEditableProfileField({
             </Button>
           </div>
         </div>
-      </div>
+      </Card>
     );
   }
 

@@ -38,8 +38,8 @@ period rather than a promise of publication at a precise local minute.
 Anyone with **Can edit** can later review visibility in experiment settings.
 Moving from private to public is presented as irreversible.
 
-{/* NEEDS-LIVE-CHECK: create a private dev experiment, verify timezone/date copy, test the settings transition, and observe the scheduled publication behavior in a safe test. */}
-![The Collaborators and Visibility step with Private selected and an unsaved embargo date](/img/guide/web/visibility-embargo.png)
+{/* Verified on the local stack 2026-08-28: choosing Private reveals "Under embargo until" with a date 90 days ahead and the calculated public date. The settings transition and the midnight-UTC job remain unverified here. */}
+![The Collaborators and Visibility step with Private selected, the embargo end date, and the date the experiment becomes public](/img/guide/web/visibility-embargo.webp)
 
 <Callout type="warn">
   Before making data public, check descriptions, metadata, contributor identity, annotations, and

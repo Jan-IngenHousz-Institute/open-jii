@@ -1,7 +1,8 @@
-import { withPrincipal } from "@/hooks/principal-query-key";
+import { ANONYMOUS_PRINCIPAL, withPrincipal } from "@/hooks/principal-query-key";
 import { orpc } from "@/lib/orpc";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
+import type { ResourceScope } from "@repo/api/shared/listing";
 import { useSession } from "@repo/auth/client";
 
 /**
@@ -13,26 +14,35 @@ import { useSession } from "@repo/auth/client";
  * Unpaged: the endpoint returns every match.
  */
 export const useOrganizations = (
-  params: { search?: string } = {},
+  params: { search?: string; scope?: ResourceScope } = {},
   options?: { enabled?: boolean },
 ) => {
   const { data: session, isPending: isSessionPending } = useSession();
   const userId = session?.user.id;
+  const principal = userId ?? ANONYMOUS_PRINCIPAL;
   const search = params.search?.trim();
   const input = {
     // An empty box is "no filter", not a search for the empty string.
     search: search === "" ? undefined : search,
+    scope: params.scope,
   };
 
   return useQuery(
     orpc.organizations.listOrganizations.queryOptions({
       input,
       queryKey: withPrincipal(orpc.organizations.listOrganizations.queryKey({ input }), userId),
+      meta: { scope: input.scope, principal },
       // A new search term is a new cache key, and without this the list would fall
       // back to its pending state — unmounting every row, including a join dialog the
       // reader had open. The rows stay put while the next result set loads; the search
       // input's own spinner is what says it is still moving.
-      placeholderData: keepPreviousData,
+      //
+      // Held only within one scope so callers with a narrower resource listing never
+      // inherit rows from the full directory while their request is in flight.
+      placeholderData: (previous, previousQuery) =>
+        previousQuery?.meta?.scope === input.scope && previousQuery?.meta?.principal === principal
+          ? previous
+          : undefined,
       enabled: (options?.enabled ?? true) && !isSessionPending,
     }),
   );

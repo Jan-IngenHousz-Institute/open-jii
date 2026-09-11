@@ -57,7 +57,7 @@ describe("CellWrapper", () => {
   it("shows completed checkmark when executionStatus is 'completed'", () => {
     renderWrapper({ executionStatus: "completed" });
 
-    const checkIcon = document.querySelector(".text-emerald-500");
+    const checkIcon = document.querySelector(".text-status-active-foreground");
     expect(checkIcon).toBeInTheDocument();
   });
 

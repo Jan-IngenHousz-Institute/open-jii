@@ -136,8 +136,9 @@ function parseJsonHello(text: string): JsonHello | null {
  *    key names the family
  *  - miniPAR line mode: `MiniPAR,1.1,1.04`
  *  - MultispeQ: `MultispeQ Ready`, older firmware `Instrument Ready`
- *  - Ambit: any other `<name> Ready` line (firmware prints a hardcoded
- *    `NEW Name Here Ready`; never trust the name, only the sentinel), skipped
+ *  - Ambit: any other `<name> Ready` line, with or without trailing build text
+ *    (`NEW AmbitV003 Ready FW:1.1.4-3-g2a76435-dirty`); never trust the name,
+ *    only the sentinel, skipped
  *    when a JSON line self-declared an unrecognized device (e.g. CO2Dot):
  *    that must fall through rather than be handed to the AmbitDriver
  */
@@ -175,7 +176,10 @@ function classifyHelloReply(reply: string): DeviceIdentity | null {
   // A self-declared unknown device outranks the weak Ready sentinel.
   if (jsonHello) return null;
 
-  const readyMatch = /^(.*?)\s*\bready\b\s*$/im.exec(text);
+  // Trailing text after the sentinel is allowed: shipping firmware appends its
+  // build to the line (`NEW AmbitV003 Ready FW:1.1.4-3-g2a76435-dirty`), so
+  // anchoring "ready" to end-of-line only ever matched the bare-name form.
+  const readyMatch = /^(.*?)\s*\bready\b(?:\s.*)?$/im.exec(text);
   if (readyMatch) {
     // Ambit firmware currently hardcodes the text before "Ready".  It is a
     // family signature, not a device name, so do not leak the placeholder into

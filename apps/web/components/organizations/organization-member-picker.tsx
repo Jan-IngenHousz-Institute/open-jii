@@ -302,7 +302,7 @@ function PickerResults({
           variant="ghost"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onSelect(result)}
-          className="hover:bg-surface flex h-auto w-full items-center gap-3 px-3 py-2.5 text-left"
+          className="hover:bg-muted flex h-auto w-full items-center gap-3 px-3 py-2.5 text-left"
         >
           <UserAvatar
             avatarUrl={result.avatarUrl}
@@ -334,9 +334,9 @@ function InviteByEmailRow({ email, onClick }: { email: string; onClick: () => vo
       variant="ghost"
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className="hover:bg-surface flex h-auto w-full items-center gap-3 px-3 py-2.5 text-left"
+      className="hover:bg-muted flex h-auto w-full items-center gap-3 px-3 py-2.5 text-left"
     >
-      <div className="bg-surface flex h-9 w-9 shrink-0 items-center justify-center rounded-full border">
+      <div className="bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-full border">
         <Mail className="text-muted-foreground h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">

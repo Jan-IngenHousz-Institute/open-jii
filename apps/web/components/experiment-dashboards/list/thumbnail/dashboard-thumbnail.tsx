@@ -49,7 +49,6 @@ export function DashboardThumbnail({
   const showSkeleton = !mounted || (hasDataWidgets && !everLoaded);
   const canRenderScaled = !isEmpty && isMeasured;
   const showSkeletonOverlay = !isEmpty && (!isMeasured || showSkeleton);
-  const cardHeight = canRenderScaled ? Math.min(innerHeight * scale, maxHeight) : maxHeight;
 
   return (
     <div
@@ -57,7 +56,11 @@ export function DashboardThumbnail({
       role="img"
       aria-label={dashboard.name}
       className="relative w-full overflow-hidden rounded-md"
-      style={{ height: cardHeight }}
+      // Deriving the height from the aspect ratio rather than the measured width
+      // keeps the box right on the first paint. Computing `width * ratio` needs
+      // the measurement, so the frame opened at `maxHeight` and collapsed once it
+      // arrived; the card then needed a min-height to hide the jump.
+      style={{ aspectRatio: `${INNER_WIDTH_PX} / ${innerHeight}`, maxHeight }}
     >
       {isEmpty && <DashboardThumbnailEmpty />}
       {canRenderScaled && (

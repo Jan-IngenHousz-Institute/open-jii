@@ -7,16 +7,24 @@ import { NodeContent } from "../node-content";
 
 vi.mock("../node-config", () => ({
   nodeTypeColorMap: {
-    QUESTION: { border: "border-red-500", bg: "bg-red-50", icon: <span data-testid="icon" /> },
-    INSTRUCTION: { border: "border-blue-500", bg: "bg-blue-50", icon: <span data-testid="icon" /> },
+    QUESTION: {
+      border: "border-destructive",
+      bg: "bg-destructive/10",
+      icon: <span data-testid="icon" />,
+    },
+    INSTRUCTION: {
+      border: "border-status-published-foreground",
+      bg: "bg-status-published",
+      icon: <span data-testid="icon" />,
+    },
     MEASUREMENT: {
-      border: "border-green-500",
-      bg: "bg-green-50",
+      border: "border-status-active-foreground",
+      bg: "bg-status-active",
       icon: <span data-testid="icon" />,
     },
     ANALYSIS: {
-      border: "border-yellow-500",
-      bg: "bg-yellow-50",
+      border: "border-status-stale-foreground",
+      bg: "bg-status-stale",
       icon: <span data-testid="icon" />,
     },
   },

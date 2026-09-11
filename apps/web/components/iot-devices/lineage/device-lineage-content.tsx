@@ -145,7 +145,7 @@ export default function DeviceLineagePage() {
   const selected = model?.nodes.find((node) => node.id === selectedId) ?? null;
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-medium">{t("iot.devices.lineage.title")}</h2>
@@ -173,7 +173,7 @@ export default function DeviceLineagePage() {
           <Skeleton className="h-135 w-full rounded-xl" />
         </div>
       ) : (
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0 space-y-3">
             <DeviceLineageFlow
               model={model}

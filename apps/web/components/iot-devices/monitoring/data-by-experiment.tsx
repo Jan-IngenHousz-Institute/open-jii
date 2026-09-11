@@ -81,11 +81,14 @@ export function DataByExperiment({
 
       <ul className="divide-y rounded-lg border">
         {rows.map((row) => (
-          <li key={row.entity.id} className="flex items-center gap-3 px-3 py-2.5 text-sm">
-            <div className="min-w-0 flex-1">
+          <li
+            key={row.entity.id}
+            className="flex min-w-0 flex-col items-start gap-1.5 px-3 py-2.5 text-sm sm:flex-row sm:items-center sm:gap-3"
+          >
+            <div className="w-full min-w-0 sm:flex-1">
               <EntityLink entity={row.entity} />
               {row.count === 0 && row.bound && (
-                <span className="ml-2 inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
+                <span className="text-status-stale-foreground ml-2 inline-flex items-center gap-1 text-xs">
                   <AlertTriangle className="h-3 w-3" />
                   {t("iot.devices.monitoring.boundButSilent")}
                 </span>
@@ -96,12 +99,17 @@ export function DataByExperiment({
                 </span>
               )}
             </div>
-            <span className="text-muted-foreground text-xs">
-              {row.lastBucketAt === null
-                ? t("iot.devices.monitoring.noData")
-                : formatRelativeTime(row.lastBucketAt, locale)}
-            </span>
-            <span className="w-16 text-right tabular-nums">{row.count}</span>
+            <div
+              data-slot="experiment-row-metadata"
+              className="flex w-full items-center justify-between gap-3 sm:contents"
+            >
+              <span className="text-muted-foreground min-w-0 text-xs">
+                {row.lastBucketAt === null
+                  ? t("iot.devices.monitoring.noData")
+                  : formatRelativeTime(row.lastBucketAt, locale)}
+              </span>
+              <span className="w-16 shrink-0 text-right tabular-nums">{row.count}</span>
+            </div>
           </li>
         ))}
       </ul>

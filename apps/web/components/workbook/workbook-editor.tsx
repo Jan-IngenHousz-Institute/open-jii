@@ -25,6 +25,7 @@ import type { WorkbookConnectionType } from "~/hooks/iot/useIotConnections/useIo
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
+import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
 import { AddCellButton } from "./add-cell-button";
@@ -262,16 +263,18 @@ function SortableCellGroup({
           <div className="w-10 shrink-0">
             <div className="flex flex-col items-center gap-1 pt-2">
               {draggable && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-xs"
                   ref={setActivatorNodeRef}
                   {...attributes}
                   {...listeners}
                   aria-label="Drag to reorder"
                   className="cursor-grab opacity-0 transition-opacity active:cursor-grabbing group-hover/row:opacity-100"
                 >
-                  <GripVertical className="h-4 w-4" style={{ color: "#005E5E" }} />
-                </button>
+                  <GripVertical className="text-primary h-4 w-4" />
+                </Button>
               )}
               {cellNumber !== undefined && (
                 <span className="text-muted-foreground font-mono text-[10px] leading-none">

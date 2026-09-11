@@ -93,9 +93,10 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
 
   const {
     data: experimentsData,
+    isLoading: isLoadingExperiments,
     isError: isExperimentsError,
     refetch: refetchExperiments,
-  } = useQuery(orpc.experiments.listExperiments.queryOptions({ input: { filter: "member" } }));
+  } = useQuery(orpc.experiments.listExperiments.queryOptions({ input: { scope: "related" } }));
   const selectable = useMemo(
     () => listItems(experimentsData).filter((experiment) => !boundIds.has(experiment.id)),
     [experimentsData, boundIds],
@@ -332,7 +333,7 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
   }
 
   function renderExperimentList() {
-    if (isLoadingBound) {
+    if (isLoadingBound || isLoadingExperiments) {
       return (
         <div className="space-y-2 rounded-lg border p-3">
           <Skeleton className="h-5 w-2/3" />

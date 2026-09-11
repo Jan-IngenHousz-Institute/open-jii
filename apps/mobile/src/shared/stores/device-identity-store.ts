@@ -1,5 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { v4 as uuidv4 } from "uuid";
+import * as Application from "expo-application";
+import { Platform } from "react-native";
+import { v4 as uuidv4, v5 as uuidv5 } from "uuid";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { createLogger } from "~/shared/observability/logger";
@@ -8,6 +10,40 @@ import { getEnvName } from "~/shared/stores/environment-store";
 const MOBILE_THING_PREFIX = "mobile_";
 
 const log = createLogger("device-identity-store");
+
+/**
+ * Namespace for deriving the install id. NEVER change this: every Android
+ * phone's identity is a pure function of it, so a new value re-forks the fleet.
+ */
+const INSTALL_ID_NAMESPACE = "f579750d-c294-4302-b2f5-c4e57159ab03";
+
+/**
+ * A hardware-backed install id, so reinstalling the app does not create a new
+ * phone. Android's real serial is unreachable (`Build.getSerial()` has needed
+ * the privileged READ_PRIVILEGED_PHONE_STATE since Android 10), so this derives
+ * from `Settings.Secure.ANDROID_ID`: stable per device and signing key,
+ * survives uninstall, resets only on factory reset.
+ *
+ * Hashed into a deterministic uuidv5 rather than sent raw. The API now accepts
+ * either, but deployed environments predate that, and a uuid keeps this working
+ * against them; the value is still a pure function of the hardware id.
+ *
+ * iOS has no equivalent (`identifierForVendor` resets once every app from the
+ * vendor is removed), so it keeps the random id and stays reinstall-unstable.
+ */
+function hardwareInstallId(): string | undefined {
+  if (Platform.OS !== "android") return undefined;
+  try {
+    const androidId = Application.getAndroidId();
+    if (!androidId || androidId.trim() === "") return undefined;
+    return uuidv5(androidId.trim(), INSTALL_ID_NAMESPACE);
+  } catch (error) {
+    log.warn("ANDROID_ID unavailable; falling back to a random install id", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return undefined;
+  }
+}
 
 /**
  * This phone's device identity against one backend environment. The installId
@@ -44,11 +80,25 @@ export const useDeviceIdentityStore = create<
       isLoaded: false,
       mintInstallId: (envName) => {
         const existing = get().identities[envName];
+        const hardwareId = hardwareInstallId();
+
+        // Adopt the hardware id even over an existing random one, else that
+        // phone keeps forking on reinstall. Registration is dropped with it:
+        // the derived thing name no longer matches what was registered.
+        if (hardwareId && existing?.installId !== hardwareId) {
+          if (existing) {
+            log.info("adopting hardware install id; re-registration required", { envName });
+          }
+          const adopted: DeviceIdentity = { installId: hardwareId };
+          set((state) => ({ identities: { ...state.identities, [envName]: adopted } }));
+          return adopted;
+        }
+
         if (existing) {
           return existing;
         }
 
-        const minted: DeviceIdentity = { installId: uuidv4() };
+        const minted: DeviceIdentity = { installId: hardwareId ?? uuidv4() };
         set((state) => ({ identities: { ...state.identities, [envName]: minted } }));
         return minted;
       },

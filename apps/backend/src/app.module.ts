@@ -25,6 +25,7 @@ import { ExperimentModule } from "./experiments/experiment.module";
 import { HealthModule } from "./health/health.module";
 import { IotModule } from "./iot/iot.module";
 import { MacroModule } from "./macros/macro.module";
+import { MetricsModule } from "./metrics/metrics.module";
 import { NewsletterModule } from "./newsletter/newsletter.module";
 import { OrganizationModule } from "./organizations/organization.module";
 import { ProtocolModule } from "./protocols/protocol.module";
@@ -70,6 +71,7 @@ const orpcLogger = new Logger("ORPC");
     ExperimentModule,
     IotModule,
     MacroModule,
+    MetricsModule,
     NewsletterModule,
     OrganizationModule,
     ProtocolModule,

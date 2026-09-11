@@ -20,9 +20,9 @@ describe("NumberAnswerDisplay", () => {
     expect(svg).toBeInTheDocument();
   });
 
-  it("has blue gradient styling", () => {
+  it("wears the published tone's wash", () => {
     const { container } = render(<NumberAnswerDisplay />);
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper).toHaveClass("from-blue-50", "to-blue-100");
+    expect(wrapper).toHaveClass("bg-status-published");
   });
 });

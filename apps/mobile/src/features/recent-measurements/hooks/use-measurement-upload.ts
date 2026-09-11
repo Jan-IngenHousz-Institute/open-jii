@@ -1,11 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner-native";
+import type { ScanResultEntry } from "~/features/measurement-flow/domain/flow-transitions";
 import { useMeasurements } from "~/features/recent-measurements/hooks/use-measurements";
 import { buildUploadPayload } from "~/features/recent-measurements/services/build-upload-payload";
 import { exportSingleMeasurementToFile } from "~/features/recent-measurements/services/export-measurements";
 import { getOutbox } from "~/shared/composition/upload";
 import { useTranslation } from "~/shared/i18n";
 import { getMeasurementLocation } from "~/shared/location/measurement-location";
+import { getClientMetadata } from "~/shared/measurements/client-metadata";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { getMeasurementMqttTopic } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
@@ -89,7 +91,7 @@ export function useMeasurementUpload() {
     }: SharedUploadArgs & {
       results: {
         rawMeasurement: any;
-        device?: { id: string; name: string };
+        device?: ScanResultEntry["device"];
         // Dispatch rounds: the protocol this device actually ran; overrides
         // the batch-level protocolId/protocolName for this result only.
         protocolId?: string;
@@ -139,7 +141,11 @@ export function useMeasurementUpload() {
           workbookId,
           macroContext,
           fallbackDeviceId: device?.id,
+          fallbackDeviceAddress: device?.address,
+          fallbackDeviceFamily: device?.family,
+          fallbackDeviceFirmware: device?.firmwareVersion,
           location,
+          client: getClientMetadata(),
         });
 
         const measurement = {

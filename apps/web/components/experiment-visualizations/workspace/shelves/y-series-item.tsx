@@ -1,5 +1,6 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 
@@ -25,6 +26,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/too
 import { cn } from "@repo/ui/lib/utils";
 
 import type { ChartFormValues } from "../../charts/chart-config";
+import { getSuggestedSeriesColor } from "../../charts/colors/palettes";
 
 export const AGG_NONE = "__none__";
 export const TRACE_TYPE_DEFAULT = "__default__";
@@ -105,7 +107,7 @@ export function YSeriesItem({
   };
 
   return (
-    <div className="bg-muted/30 space-y-3 rounded-md border p-3">
+    <InsetPanel className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-muted-foreground text-xs font-medium">
           {t("workspace.shelves.series", { index: seriesIndex + 1 })}
@@ -125,7 +127,7 @@ export function YSeriesItem({
       </div>
 
       {willBeSilentlyDropped && (
-        <div className="flex items-start gap-1.5 text-[11px] text-amber-600 dark:text-amber-400">
+        <div className="text-status-stale-foreground flex items-start gap-1.5 text-[11px]">
           <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
           <span>{t("workspace.shelves.seriesSilentlyDropped")}</span>
         </div>
@@ -302,7 +304,7 @@ export function YSeriesItem({
                     <TooltipTrigger asChild>
                       <FormColorInput
                         value={typeof field.value === "string" ? field.value : undefined}
-                        fallback="#3b82f6"
+                        fallback={getSuggestedSeriesColor()}
                         onCommit={field.onChange}
                         disabled={isColorMapped}
                       />
@@ -389,6 +391,6 @@ export function YSeriesItem({
           />
         </div>
       )}
-    </div>
+    </InsetPanel>
   );
 }

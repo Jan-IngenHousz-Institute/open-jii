@@ -132,7 +132,23 @@ describe("ExperimentDataTableChart", () => {
     expect(firstChart.x).toEqual([0, 1, 2, 3, 4]);
     expect(firstChart.y).toEqual(mockData);
     expect(firstChart.mode).toBe("lines");
-    expect(firstChart.line.color).toBe("#0a4d4d");
+  });
+
+  it("takes the series colour from the theme's first chart slot", () => {
+    // Plotly needs a concrete value, so the token is resolved rather than
+    // passed as `var()`; setting it here proves the series tracks the token
+    // instead of a colour baked into the component.
+    const root = document.documentElement;
+    root.style.setProperty("--chart-1", "oklch(0.5551 0.0516 190.6334)");
+    try {
+      render(
+        <ExperimentDataTableChart data={mockData} columnName={mockColumnName} visible={true} />,
+      );
+      const chartData = JSON.parse(screen.getByTestId("line-chart").textContent) as ChartData[];
+      expect(chartData[0]?.line.color).toBe("#4e7d7a");
+    } finally {
+      root.style.removeProperty("--chart-1");
+    }
   });
 
   it("passes correct config to LineChart component", () => {
@@ -177,16 +193,18 @@ describe("ExperimentDataTableChart", () => {
     expect(pinIcon).toBeInTheDocument();
   });
 
-  it("applies correct container styling", () => {
+  it("renders the chart on a card surface", () => {
     render(<ExperimentDataTableChart data={mockData} columnName={mockColumnName} visible={true} />);
 
     const container = screen.getByTestId("line-chart").parentElement?.parentElement;
-    expect(container).toHaveClass("bg-background");
-    expect(container).toHaveClass("w-full");
-    expect(container).toHaveClass("rounded-lg");
+    // The surface is the Card primitive's; width and padding are this
+    // component's own layout.
+    expect(container).toHaveClass("bg-card");
+    expect(container).toHaveClass("rounded-xl");
     expect(container).toHaveClass("border");
+    expect(container).toHaveClass("shadow-sm");
+    expect(container).toHaveClass("w-full");
     expect(container).toHaveClass("p-4");
-    expect(container).toHaveClass("shadow-lg");
   });
 
   it("applies correct chart container height", () => {

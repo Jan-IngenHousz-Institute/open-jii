@@ -8,15 +8,13 @@ vi.mock("@/components/list-protocols", () => ({
 }));
 
 describe("ProtocolPage", () => {
-  it("renders heading, description, and create button", async () => {
-    render(await Page({ params: Promise.resolve({ locale: "en-US" }) }));
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("protocols.title");
-    expect(screen.getByText("protocols.listDescription")).toBeInTheDocument();
-    expect(screen.getByText("protocols.create")).toBeInTheDocument();
+  it("does not repeat the shell heading", () => {
+    render(<Page />);
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
   });
 
-  it("renders the protocol list component", async () => {
-    render(await Page({ params: Promise.resolve({ locale: "en-US" }) }));
+  it("renders the protocol list component", () => {
+    render(<Page />);
     expect(screen.getByTestId("list-protocols")).toBeInTheDocument();
   });
 });

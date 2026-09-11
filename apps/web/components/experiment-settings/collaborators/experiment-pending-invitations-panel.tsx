@@ -1,5 +1,6 @@
 "use client";
 
+import { StatusBadge } from "@/components/shared/status-badge";
 import { Mail, X } from "lucide-react";
 
 import type { Invitation } from "@repo/api/domains/user/user.schema";
@@ -60,16 +61,14 @@ export function ExperimentPendingInvitationsPanel({
     >
       {invitations.map((invitation) => (
         <div key={invitation.id} role="listitem" className="flex items-center gap-3 px-3 py-2.5">
-          <div className="bg-surface flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+          <div className="bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
             <Mail className="text-muted-foreground h-4 w-4" />
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <span className="text-foreground truncate text-sm font-medium" title={invitation.email}>
               {invitation.email}
             </span>
-            <span className="bg-badge-published text-primary inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-medium">
-              {t("experimentSettings.pendingInvite")}
-            </span>
+            <StatusBadge tone="published">{t("experimentSettings.pendingInvite")}</StatusBadge>
           </div>
           <span className="text-muted-foreground shrink-0 text-sm">
             {t(roleLabelKey(invitation.tier))}

@@ -17,14 +17,14 @@ export function CodeDiff({ oldText, newText }: CodeDiffProps) {
   const lines = useMemo(() => lineDiff(oldText, newText), [oldText, newText]);
 
   return (
-    <pre className="max-h-64 overflow-auto rounded-md border bg-[#0B0F14]/[0.02] p-2 text-[11px] leading-relaxed">
+    <pre className="bg-muted max-h-64 overflow-auto rounded-md border p-2 text-[11px] leading-relaxed">
       {lines.map((line, i) => (
         <div
           key={i}
           className={cn(
             "whitespace-pre-wrap break-words px-1",
-            line.type === "add" && "bg-emerald-500/10 text-emerald-800 dark:text-emerald-300",
-            line.type === "del" && "bg-red-500/10 text-red-800 dark:text-red-300",
+            line.type === "add" && "bg-status-active/40 text-status-active-foreground",
+            line.type === "del" && "bg-destructive/10 text-destructive",
             line.type === "same" && "text-muted-foreground",
           )}
         >

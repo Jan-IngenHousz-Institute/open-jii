@@ -47,10 +47,10 @@ export function ConnectionStatusCluster({
         className={cn(
           "size-2 shrink-0",
           isConnected
-            ? "fill-emerald-500 text-emerald-500"
+            ? "fill-status-active-foreground text-status-active-foreground"
             : isConnecting
-              ? "animate-pulse fill-amber-400 text-amber-400"
-              : "fill-gray-300 text-gray-300",
+              ? "fill-status-stale-foreground text-status-stale-foreground animate-pulse"
+              : "fill-border text-border",
         )}
       />
       {isConnected ? (

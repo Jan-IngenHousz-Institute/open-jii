@@ -15,14 +15,13 @@ export interface FeaturedDashboardCardProps {
   href: string;
 }
 
-const CARD_MIN_HEIGHT_PX = 540;
 const THUMBNAIL_MAX_HEIGHT_PX = 460;
 
 export function FeaturedDashboardCard({ dashboard, href }: FeaturedDashboardCardProps) {
   const { t } = useTranslation("experimentDashboards");
   return (
     <Card className="overflow-hidden shadow-none">
-      <CardContent className="space-y-3 pt-6" style={{ minHeight: CARD_MIN_HEIGHT_PX }}>
+      <CardContent className="space-y-3 pt-6">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold">
             <Link

@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, LayoutGrid } from "lucide-react";
+import { BarChart3, LayoutGrid, Plus } from "lucide-react";
 import Link from "next/link";
 
 import { useTranslation } from "@repo/i18n";
@@ -33,7 +33,7 @@ export function ExperimentDashboardsEmptyState({
           {hasAccess && (
             <Button asChild>
               <Link href={dashboardsHref}>
-                <LayoutGrid className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 h-4 w-4" aria-hidden />
                 {t("overview.createDashboard")}
               </Link>
             </Button>

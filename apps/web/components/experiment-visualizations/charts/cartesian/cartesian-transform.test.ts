@@ -304,4 +304,63 @@ describe("transformCartesianData", () => {
     const result = transformCartesianData(rows, sources, baseConfig, baseOptions);
     expect(result.subplots?.cells.every((c) => c.secondaryYaxisId === undefined)).toBe(true);
   });
+
+  // Line, bar, area and dot-plot render their colour shelf `categoricalOnly`,
+  // so they never write `config.colorMode`. The dispatch still sent them to
+  // the categorical builder, but the global category list was gated on
+  // `colorMode === "categorical"` and stayed empty, so every one of them
+  // emitted zero series and drew a blank chart.
+  it("pivots a colour column into categories when colorMode is unset", () => {
+    const rows = [
+      { x: 1, v: 10, dev: "A" },
+      { x: 2, v: 20, dev: "B" },
+      { x: 3, v: 30, dev: "A" },
+    ];
+    const sources = [ds("x", "x"), ds("y", "v"), ds("color", "dev")];
+
+    const result = transformCartesianData(rows, sources, baseConfig, {
+      ...baseOptions,
+      defaultTraceType: "line",
+    });
+
+    expect(result.chartSeries).toHaveLength(2);
+    expect(result.chartSeries.map((s) => s.name)).toEqual(["A", "B"]);
+    expect(result.chartSeries[0].y).toEqual([10, 30]);
+    expect(result.chartSeries[1].y).toEqual([20]);
+  });
+
+  it("still honours an explicit categorical colorMode", () => {
+    const rows = [
+      { x: 1, v: 10, dev: "A" },
+      { x: 2, v: 20, dev: "B" },
+    ];
+    const sources = [ds("x", "x"), ds("y", "v"), ds("color", "dev")];
+
+    const result = transformCartesianData(
+      rows,
+      sources,
+      { ...baseConfig, colorMode: "categorical" },
+      { ...baseOptions, defaultTraceType: "line" },
+    );
+
+    expect(result.chartSeries.map((s) => s.name)).toEqual(["A", "B"]);
+  });
+
+  // Scatter and bubble are the only types that opt into continuous colour, and
+  // an unset colorMode must keep meaning "continuous" for them.
+  it("keeps a single continuous-colour trace when the chart supports it", () => {
+    const rows = [
+      { x: 1, v: 10, temp: 5 },
+      { x: 2, v: 20, temp: 9 },
+    ];
+    const sources = [ds("x", "x"), ds("y", "v"), ds("color", "temp")];
+
+    const result = transformCartesianData(rows, sources, baseConfig, {
+      ...baseOptions,
+      supportsContinuousColor: true,
+    });
+
+    expect(result.chartSeries).toHaveLength(1);
+    expect(result.chartSeries[0].y).toEqual([10, 20]);
+  });
 });

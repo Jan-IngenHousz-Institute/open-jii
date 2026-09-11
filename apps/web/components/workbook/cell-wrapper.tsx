@@ -47,7 +47,10 @@ function RunTimer() {
     return () => clearInterval(id);
   }, []);
   return (
-    <span className="text-[11px] tabular-nums text-blue-500" data-testid="run-timer">
+    <span
+      className="text-status-published-foreground text-[11px] tabular-nums"
+      data-testid="run-timer"
+    >
       {formatElapsed(elapsed)}
     </span>
   );
@@ -113,14 +116,9 @@ export function CellWrapper({
     <Collapsible open={!collapsed} onOpenChange={() => handleToggle()}>
       <div
         className={cn(
-          "text-card-foreground group relative z-10 overflow-hidden rounded-[10px]",
+          "bg-card text-card-foreground group relative z-10 overflow-hidden rounded-[10px]",
           className,
         )}
-        style={{
-          background: "#FFFFFF",
-          boxShadow:
-            "inset 0px 2px 16px rgba(0, 94, 94, 0.08), 0px 4px 8px -2px rgba(0, 0, 0, 0.06)",
-        }}
       >
         <div
           className="absolute left-0 top-0 h-full"
@@ -131,7 +129,7 @@ export function CellWrapper({
           className={`flex items-center gap-2 border-r border-t px-4 py-2 ${collapsed ? "rounded-lg border-b" : "rounded-t-lg"}`}
           style={{
             backgroundColor: `color-mix(in srgb, ${accentColor} 4%, transparent)`,
-            borderColor: "#EDF2F6",
+            borderColor: "var(--border)",
           }}
         >
           {!readOnly && (
@@ -200,13 +198,13 @@ export function CellWrapper({
 
             {executionStatus === "running" && (
               <div className="flex items-center gap-1.5">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
+                <Loader2 className="text-status-published-foreground h-3.5 w-3.5 animate-spin" />
                 <RunTimer />
               </div>
             )}
             {executionStatus === "completed" && (
               <div className="flex w-5 items-center justify-center">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                <CheckCircle2 className="text-status-active-foreground h-3.5 w-3.5" />
               </div>
             )}
             {executionStatus === "error" && (
@@ -241,13 +239,13 @@ export function CellWrapper({
 
         <CollapsibleContent>
           <div className="px-4">
-            <div className="h-px w-full rounded" style={{ backgroundColor: "#EDF2F6" }} />
+            <div className="bg-border h-px w-full rounded" />
           </div>
           <div
             className="rounded-b-lg border-b border-r px-4 py-2"
             style={{
               backgroundColor: `color-mix(in srgb, ${accentColor} 2.5%, transparent)`,
-              borderColor: "#EDF2F6",
+              borderColor: "var(--border)",
             }}
           >
             {children}

@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@repo/ui/components/alert-dialog";
 import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
+import { Button } from "@repo/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,7 +73,7 @@ export function DashboardTableRow({ dashboard, experimentId, basePath }: Dashboa
 
   return (
     <>
-      <TableRow className={cn("group bg-white hover:bg-[#F6F8FA]", LIST_TABLE_BORDER)}>
+      <TableRow className={cn("bg-card hover:bg-muted group", LIST_TABLE_BORDER)}>
         <TableCell className={cn("px-6 py-3 text-[13px] font-semibold", LIST_TEXT_STRONG)}>
           <Link
             href={viewHref}
@@ -101,16 +102,15 @@ export function DashboardTableRow({ dashboard, experimentId, basePath }: Dashboa
           <div className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-sm"
                   aria-label={t("ui.actions.edit")}
-                  className={cn(
-                    "hover:bg-accent data-[state=open]:bg-accent inline-flex size-8 items-center justify-center rounded-md hover:text-[#011111] data-[state=open]:text-[#011111]",
-                    LIST_TEXT_MUTED,
-                  )}
+                  className={cn("data-[state=open]:bg-accent size-8", LIST_TEXT_MUTED)}
                 >
                   <MoreHorizontal className="size-4" />
-                </button>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem asChild>
@@ -119,10 +119,7 @@ export function DashboardTableRow({ dashboard, experimentId, basePath }: Dashboa
                     {t("ui.actions.edit")}
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={handleDeleteSelect}
-                  className="text-destructive focus:text-destructive"
-                >
+                <DropdownMenuItem variant="destructive" onSelect={handleDeleteSelect}>
                   <Trash2 className="mr-2 size-4" />
                   {t("ui.actions.delete")}
                 </DropdownMenuItem>

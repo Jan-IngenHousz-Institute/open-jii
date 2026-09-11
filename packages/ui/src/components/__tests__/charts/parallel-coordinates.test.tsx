@@ -12,6 +12,8 @@ import type {
   ParallelCategoriesSeriesData,
   AlluvialSeriesData,
 } from "../../charts/parallel-coordinates";
+// Mocked above; asserting against it keeps the expectation and the mock in step.
+import { chartGridColor } from "../../charts/utils";
 
 // Mock common utilities
 vi.mock("../../charts/plotly-chart", () => ({
@@ -27,6 +29,8 @@ vi.mock("../../charts/plotly-chart", () => ({
 }));
 
 vi.mock("../../charts/utils", () => ({
+  chartGridColor: vi.fn(() => "#E6E6E6"),
+  readThemeColor: vi.fn(() => undefined),
   createBaseLayout: vi.fn((config: any) => ({
     title: config.title || "Chart",
     xaxis: { title: config.xLabel || "X Axis" },
@@ -635,9 +639,11 @@ describe("Alluvial", () => {
         source: [0, 1, 0, 1],
         target: [2, 2, 3, 3],
         value: [10, 20, 5, 15],
-        color: "rgba(128,128,128,0.2)",
+        // A neutral default carrying 0.2 alpha as an 8-digit hex, which is what
+        // Plotly can parse; the base comes from the theme when one resolves.
+        color: expect.stringMatching(/^#[0-9a-f]{6}33$/i),
         line: {
-          color: "rgba(0,0,0,0.2)",
+          color: chartGridColor(),
           width: 0,
         },
       },

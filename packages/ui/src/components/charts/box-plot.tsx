@@ -15,6 +15,7 @@ import {
   extendLayoutForFacets,
   getRenderer,
   getPlotType,
+  readThemeColor,
   truncateCategoryTicks,
 } from "./utils";
 
@@ -113,7 +114,7 @@ export function BoxPlot({
         // stay visible against the trace-color fill.
         fillcolor: series.fillcolor || series.color,
         line: {
-          color: series.line?.color || "#444",
+          color: series.line?.color || readThemeColor("--foreground") || "#444",
           width: series.line?.width || 1.5,
         },
         marker: {

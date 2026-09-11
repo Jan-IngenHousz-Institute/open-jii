@@ -1,6 +1,7 @@
 "use client";
 
 import { resolveMonitoringPreset } from "@/components/iot-devices/monitoring/monitoring-range";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
 import { useDeviceFirmwareHistory } from "@/hooks/iot/useDeviceFirmwareHistory/useDeviceFirmwareHistory";
 import { useDeviceObservedExperiments } from "@/hooks/iot/useDeviceObservedExperiments/useDeviceObservedExperiments";
@@ -22,7 +23,6 @@ import { useMemo } from "react";
 import type { IotDeviceDetail, ObservedExperiment } from "@repo/api/domains/iot/iot.schema";
 import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { CardDescription } from "@repo/ui/components/card";
 import { EmptyState } from "@repo/ui/components/empty-state";
@@ -291,13 +291,9 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
         <span className="font-mono">{reported}</span>
         {latest !== null &&
           (isCurrent ? (
-            <Badge className="border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-              {t("iot.devices.firmware.upToDateShort")}
-            </Badge>
+            <StatusBadge tone="active">{t("iot.devices.firmware.upToDateShort")}</StatusBadge>
           ) : (
-            <Badge className="border-transparent bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-              {t("iot.devices.firmware.updateAvailableShort")}
-            </Badge>
+            <StatusBadge tone="stale">{t("iot.devices.firmware.updateAvailableShort")}</StatusBadge>
           ))}
       </span>,
       t("iot.devices.detail.cards.firmwareReportedCaption"),
@@ -309,7 +305,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
       {!isMobileFamily && (
         <OverviewCard
           icon={<FlaskConical aria-hidden />}
-          wellClassName="bg-quaternary text-primary"
+          wellClassName="bg-primary/10 text-primary"
           title={t("iot.devices.detail.cards.experimentsTitle")}
           link={{
             href: `${basePath}/onboarding`,
@@ -323,7 +319,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
       {isMobileFamily && (
         <OverviewCard
           icon={<FlaskConical aria-hidden />}
-          wellClassName="bg-quaternary text-primary"
+          wellClassName="bg-primary/10 text-primary"
           title={t("iot.devices.detail.cards.experimentsTitle")}
           link={{
             href: `${basePath}/monitoring`,

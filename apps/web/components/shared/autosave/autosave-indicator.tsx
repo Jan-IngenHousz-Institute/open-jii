@@ -44,15 +44,15 @@ export function AutosaveIndicator({
     }
     if (status === "dirty" || status === "saving") {
       return {
-        icon: <Loader2 className="size-4 animate-spin text-[#68737B]" />,
+        icon: <Loader2 className="text-muted-foreground size-4 animate-spin" />,
         label: t("autosave.saving", "Saving…"),
-        labelClassName: "text-[#011111]",
+        labelClassName: "text-foreground",
       };
     }
     return {
-      icon: <CheckCircle2 className="size-4 text-[#09B732]" />,
+      icon: <CheckCircle2 className="text-status-active-foreground size-4" />,
       label: t("autosave.saved", "All changes saved"),
-      labelClassName: "text-[#68737B]",
+      labelClassName: "text-muted-foreground",
     };
   })();
 
