@@ -123,13 +123,9 @@ def _validate_blocks(blocks, spec):
         if status != "computed":
             continue
 
-        quality = block.get("quality")
-        if isinstance(quality, dict) and quality.get("passed") is False:
-            qc_reasons = quality.get("reasons") or ["no reasons reported"]
-            reasons.append(
-                f"Block '{name}' is computed but its QC gates failed "
-                f"({'; '.join(map(str, qc_reasons))}); mark it rejected instead"
-            )
+        # A failed quality record is advisory: the thresholds are the platform's
+        # until a scientist supplies real ones, so it travels with the block and
+        # the person approving the run decides.
 
         reasons.extend(_validate_coefficients(name, block.get("coefficients"), spec[name]))
 

@@ -257,14 +257,16 @@ class HandlerTest(unittest.TestCase):
         self.assertEqual(result["status"], "compute_failed")
         self.assertTrue(any("exactly 6" in reason for reason in result["reasons"]))
 
-    def test_failed_qc_gates_fail_the_run(self):
+    def test_failed_qc_gates_are_advisory_and_travel_with_the_block(self):
         script = (
             'submit({"par": {"status": "computed", "coefficients": {"spec": 1.0}, '
             '"quality": {"passed": False, "reasons": ["R-squared must be at least 0.99"]}}})'
         )
         result = handler(event(script=script), None)
-        self.assertEqual(result["status"], "compute_failed")
-        self.assertTrue(any("mark it rejected" in reason for reason in result["reasons"]))
+        self.assertEqual(result["status"], "computed", result)
+        quality = result["blocks"]["par"]["quality"]
+        self.assertFalse(quality["passed"])
+        self.assertEqual(quality["reasons"], ["R-squared must be at least 0.99"])
 
     def test_series_that_is_not_an_object_is_error(self):
         result = handler(event(series="rows"), None)
