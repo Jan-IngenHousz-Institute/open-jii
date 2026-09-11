@@ -296,8 +296,10 @@ export class ListExperimentDevicesUseCase {
   private async lookupConnectivity(
     thingNames: string[],
   ): Promise<Map<string, ThingConnectivity> | null> {
+    // Nothing to ask is an empty answer, not a failure: null is reserved for a
+    // lookup that broke, as it is for the warehouse reads above.
     if (thingNames.length === 0) {
-      return null;
+      return new Map();
     }
     const result = await this.awsPort.searchThingsConnectivity(thingNames);
     if (result.isFailure()) {

@@ -566,12 +566,8 @@
         "unbound": "Sendet ohne Zuordnung"
       },
       "columns": {
-        "device": "Gerät",
-        "lastData": "Daten in diesem Experiment",
         "onboarded": "Zugeordnet",
-        "battery": "Batterie",
-        "status": "Status",
-        "connectivity": "Verbindung"
+        "battery": "Batterie"
       },
       "notOnboarded": "Nicht zugeordnet",
       "unregistered": "Nicht registrierter Sender",
@@ -581,9 +577,6 @@
       "noRecentData": "Keine Daten in den letzten 30 Tagen",
       "lastDataUnavailable": "Nicht verfügbar",
       "pipelineUnavailable": "Messdaten konnten nicht geladen werden; Geräte, die nur Daten gesendet haben, fehlen möglicherweise.",
-      "firmwareVersion": "v{{version}}",
-      "totalMeasurements_one": "{{count}} insgesamt",
-      "totalMeasurements_other": "{{count}} insgesamt",
       "unknownFirmware": "Firmware unbekannt",
       "searchPlaceholder": "Geräte durchsuchen",
       "searchNoMatches": "Keine Geräte entsprechen der Suche.",

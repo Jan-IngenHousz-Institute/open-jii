@@ -566,12 +566,8 @@
         "unbound": "Stuurt data zonder koppeling"
       },
       "columns": {
-        "device": "Apparaat",
-        "lastData": "Data in dit experiment",
         "onboarded": "Gekoppeld",
-        "battery": "Batterij",
-        "status": "Status",
-        "connectivity": "Verbinding"
+        "battery": "Batterij"
       },
       "notOnboarded": "Niet gekoppeld",
       "unregistered": "Niet-geregistreerde zender",
@@ -581,9 +577,6 @@
       "noRecentData": "Geen data in de afgelopen 30 dagen",
       "lastDataUnavailable": "Niet beschikbaar",
       "pipelineUnavailable": "Meetdata kon niet worden geladen; apparaten die alleen data stuurden ontbreken mogelijk.",
-      "firmwareVersion": "v{{version}}",
-      "totalMeasurements_one": "{{count}} totaal",
-      "totalMeasurements_other": "{{count}} totaal",
       "unknownFirmware": "Firmware onbekend",
       "searchPlaceholder": "Apparaten zoeken",
       "searchNoMatches": "Geen apparaten voldoen aan de zoekopdracht.",

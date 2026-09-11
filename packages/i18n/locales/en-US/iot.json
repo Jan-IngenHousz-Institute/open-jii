@@ -566,12 +566,8 @@
         "unbound": "Sending without onboarding"
       },
       "columns": {
-        "device": "Device",
-        "lastData": "Data in this experiment",
         "onboarded": "Onboarded",
-        "battery": "Battery",
-        "status": "Status",
-        "connectivity": "Connectivity"
+        "battery": "Battery"
       },
       "notOnboarded": "Not onboarded",
       "unregistered": "Unregistered publisher",
@@ -581,9 +577,6 @@
       "noRecentData": "No data in the last 30 days",
       "lastDataUnavailable": "Unavailable",
       "pipelineUnavailable": "Measurement data could not be loaded, so devices that only sent data may be missing.",
-      "firmwareVersion": "v{{version}}",
-      "totalMeasurements_one": "{{count}} total",
-      "totalMeasurements_other": "{{count}} total",
       "unknownFirmware": "Firmware unknown",
       "searchPlaceholder": "Search devices",
       "searchNoMatches": "No devices match that search.",
