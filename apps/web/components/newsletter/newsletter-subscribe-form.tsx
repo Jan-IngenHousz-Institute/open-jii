@@ -95,7 +95,9 @@ export function NewsletterSubscribeForm() {
                       type="email"
                       autoComplete="email"
                       placeholder={t("footer.emailPlaceholder")}
-                      className="bg-brand-chrome-foreground dark:bg-brand-chrome-foreground text-brand-chrome placeholder:text-brand-chrome/70 border-brand-chrome-border focus-visible:border-brand-accent focus-visible:ring-brand-accent/50"
+                      // Teal edge, gold ring: the field is filled near-white, where
+                      // gold sits at 1.1:1, but the ring spills onto the dark footer.
+                      className="bg-brand-chrome-foreground dark:bg-brand-chrome-foreground text-brand-chrome placeholder:text-brand-chrome/70 border-brand-chrome-border focus-visible:border-brand-chrome focus-visible:ring-brand-accent/50"
                       trim
                       {...field}
                     />

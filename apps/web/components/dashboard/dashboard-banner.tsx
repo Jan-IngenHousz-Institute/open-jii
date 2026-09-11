@@ -27,8 +27,11 @@ export function DashboardBanner({
 }: DashboardBannerProps) {
   // Both buttons are nowrap and need ~20rem together. Beside an open sidebar
   // that only fits from lg up; at sm the copy was crushed to a few words per line.
+  //
+  // The left rule is teal rather than brand gold: --brand-accent is a chrome
+  // colour and reads at 1.1:1 on --card.
   return (
-    <div className="bg-card border-l-brand-accent flex flex-col gap-3 rounded-xl border border-l-4 p-4 shadow-sm lg:flex-row lg:items-start">
+    <div className="bg-card border-l-primary flex flex-col gap-3 rounded-xl border border-l-4 p-4 shadow-sm lg:flex-row lg:items-start">
       <div className="flex flex-1 flex-col gap-1">
         <h2 className="text-foreground text-[0.9125rem] font-semibold leading-[1.3125rem]">
           {title}

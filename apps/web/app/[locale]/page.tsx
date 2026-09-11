@@ -71,7 +71,7 @@ export default async function Home({ params }: HomePageProps) {
   return (
     <>
       <UnifiedNavbar locale={locale} session={session} isHomePage={true} />
-      <main className="flex min-h-screen flex-col items-center bg-gradient-to-br">
+      <main className="flex min-h-screen flex-col items-center">
         {/* Hero Section */}
         <HomeHeroComponent heroData={hero} preview={preview} locale={locale} />
 

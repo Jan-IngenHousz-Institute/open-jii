@@ -64,13 +64,17 @@
 
   /* The public navbar and footer are a deep-teal brand surface in both modes by
      decision. Declared identically in `:root` and `.dark` so a theme toggle does
-     not move them. #002828 chrome, #FAF8F3 foreground, #FFD32E logo gold,
+     not move them. #002828 chrome, #FAF8F3 foreground, #FFF381 logo gold,
      #1C4B4B raised surface and edge. Gold is an accent: interaction colour,
      active state and focus ring on the chrome, never a large fill or body text.
-     Mirrored verbatim into apps/docs/app/global.css. */
+     The gold is sampled from the logo artwork, not picked: every asset in
+     apps/web/public is #FFF381 on #005E5E. Chroma stops at 0.136, not the
+     0.1361 that converts exactly, because 0.1361 puts linear red at 1.0001 and
+     the browser gamut-maps a value the stylesheet then no longer pins. On
+     --card this gold is 1.1:1, so it stays on the chrome. */
   --brand-chrome: oklch(0.2507 0.0428 194.77);
   --brand-chrome-foreground: oklch(0.9793 0.007 88.64);
-  --brand-accent: oklch(0.88 0.1701 92.44);
+  --brand-accent: oklch(0.9508 0.136 103.26);
   --brand-chrome-accent: oklch(0.3809 0.0506 195.24);
   --brand-chrome-border: oklch(0.3809 0.0506 195.24);
 
@@ -172,7 +176,7 @@
   /* Identical to light on purpose; see the note there. */
   --brand-chrome: oklch(0.2507 0.0428 194.77);
   --brand-chrome-foreground: oklch(0.9793 0.007 88.64);
-  --brand-accent: oklch(0.88 0.1701 92.44);
+  --brand-accent: oklch(0.9508 0.136 103.26);
   --brand-chrome-accent: oklch(0.3809 0.0506 195.24);
   --brand-chrome-border: oklch(0.3809 0.0506 195.24);
 
