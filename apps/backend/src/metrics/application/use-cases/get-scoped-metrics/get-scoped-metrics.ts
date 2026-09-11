@@ -11,6 +11,7 @@ import type {
   ActivityWindowsRow,
   ContributorPairRow,
   DatabricksPort,
+  DevicePairRow,
   ScopedDailyRow,
 } from "../../../core/ports/databricks.port";
 import { MetricsRepository } from "../../../core/repositories/metrics.repository";
@@ -30,6 +31,7 @@ export const SCOPED_INPUTS_CACHE_KEY = "scoped-inputs";
 interface ScopedInputs {
   daily: ScopedDailyRow[];
   contributorPairs: ContributorPairRow[];
+  devicePairs: DevicePairRow[];
   windows: ActivityWindowsRow;
 }
 
@@ -122,15 +124,17 @@ export class GetScopedMetricsUseCase {
   }
 
   private async loadInputs(): Promise<ScopedInputs | null> {
-    const [scopedDaily, contributorPairs, windows] = await Promise.all([
+    const [scopedDaily, contributorPairs, devicePairs, windows] = await Promise.all([
       this.databricksPort.getScopedDailyActivity(LOADED_DAYS),
       this.databricksPort.getContributorPairs(),
+      this.databricksPort.getDevicePairs(),
       this.databricksPort.getActivityWindows(),
     ]);
 
     if (
       scopedDaily.isFailure() ||
       contributorPairs.isFailure() ||
+      devicePairs.isFailure() ||
       windows.isFailure() ||
       windows.value === null
     ) {
@@ -144,6 +148,7 @@ export class GetScopedMetricsUseCase {
     return {
       daily: scopedDaily.value,
       contributorPairs: contributorPairs.value,
+      devicePairs: devicePairs.value,
       windows: windows.value,
     };
   }
@@ -198,12 +203,21 @@ export class GetScopedMetricsUseCase {
         .map((pair) => pair.userId),
     ).size;
 
+    // A logger names no contributor, so people alone credit none of what it
+    // recorded. Distinct publishers, resolvable to a registered device or not.
+    const devices = new Set(
+      inputs.devicePairs
+        .filter((pair) => scopeIds.has(pair.experimentId))
+        .map((pair) => pair.clientId),
+    ).size;
+
     return {
       scope,
       scoped: {
         measurements30d: activity.reduce((sum, day) => sum + day.measurements, 0),
         activeExperiments30d: activeExperiments.size,
         contributors30d: contributors,
+        devices30d: devices,
         activity,
         previousMeasurements,
         activeDays: activeDays.length,

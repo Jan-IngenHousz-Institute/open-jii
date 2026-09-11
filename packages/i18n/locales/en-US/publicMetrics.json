@@ -54,7 +54,9 @@
       "contributors_other": "{{count}} contributors",
       "communityLabel": "Community",
       "trend": "Daily measurements",
-      "communityNote": "Across the whole platform"
+      "communityNote": "Across the whole platform",
+      "devices_one": "{{count}} device reporting",
+      "devices_other": "{{count}} devices reporting"
     }
   },
   "experiment": {
@@ -64,7 +66,10 @@
     "contributorsNote_one": "{{count}} person recording",
     "contributorsNote_other": "{{count}} people recording",
     "quiet": "No measurements recorded here in the last 30 days",
-    "trend": "Daily measurements"
+    "trend": "Daily measurements",
+    "devices": "Devices",
+    "devicesNote_one": "{{count}} device reporting",
+    "devicesNote_other": "{{count}} devices reporting"
   },
   "resourceMetrics": {
     "strip": "Daily {{unit}} over {{days}} days",

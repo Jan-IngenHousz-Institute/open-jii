@@ -43,9 +43,10 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
 
   const peak = scoped.peak;
 
-  // Device-published rows carry no contributor, and a recency claim in its place
-  // would lag the pipeline by up to a refresh.
+  // Device-published rows carry no contributor, so the slot names the devices
+  // that did the recording rather than crediting nobody.
   const hasContributors = scoped.contributors30d > 0;
+  const hasDevices = scoped.devices30d > 0;
 
   const renderContributors = () => (
     <MetricStatCard
@@ -53,6 +54,16 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
       label={t("experiment.contributors")}
       value={number.format(scoped.contributors30d)}
       note={t("experiment.contributorsNote", { count: scoped.contributors30d })}
+      context={t("experiment.devicesNote", { count: scoped.devices30d })}
+    />
+  );
+
+  const renderDevices = () => (
+    <MetricStatCard
+      locale={locale}
+      label={t("experiment.devices")}
+      value={number.format(scoped.devices30d)}
+      note={t("experiment.devicesNote", { count: scoped.devices30d })}
       context={window}
     />
   );
@@ -93,6 +104,7 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
           }
         />
         {hasContributors ? renderContributors() : null}
+        {!hasContributors && hasDevices ? renderDevices() : null}
         <MetricTrendCard
           label={t("dailyAverage")}
           value={compact.format(Math.round(scoped.measurements30d / windowDays))}
@@ -102,7 +114,9 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
           peakDate={peak?.date ?? null}
           locale={locale}
           footer={t("activeDays", { active: scoped.activeDays, total: windowDays })}
-          className={hasContributors ? "sm:col-span-2 lg:col-span-1" : "sm:col-span-2"}
+          className={
+            hasContributors || hasDevices ? "sm:col-span-2 lg:col-span-1" : "sm:col-span-2"
+          }
         />
       </div>
     </section>

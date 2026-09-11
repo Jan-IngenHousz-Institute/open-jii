@@ -77,6 +77,13 @@ describe("GetScopedMetricsUseCase", () => {
         { experimentId: "someone-elses-experiment", userId: "contributor-3" },
       ]),
     );
+    vi.spyOn(adapter, "getDevicePairs").mockResolvedValue(
+      success([
+        { experimentId: orgExperimentId, clientId: "logger-1" },
+        { experimentId: orgExperimentId, clientId: "logger-2" },
+        { experimentId: "someone-elses-experiment", clientId: "logger-3" },
+      ]),
+    );
   });
 
   afterEach(() => {
@@ -94,6 +101,8 @@ describe("GetScopedMetricsUseCase", () => {
     expect(result.value.scoped?.measurements30d).toBe(1_000);
     expect(result.value.scoped?.activeExperiments30d).toBe(1);
     expect(result.value.scoped?.contributors30d).toBe(2);
+    // Two loggers reported here; the third belongs to an experiment out of scope.
+    expect(result.value.scoped?.devices30d).toBe(2);
     expect(result.value.scoped?.previousMeasurements).toBe(250);
     expect(result.value.scoped?.activeDays).toBe(2);
     expect(result.value.scoped?.peak).toEqual({ date: dayAt(2), measurements: 700 });

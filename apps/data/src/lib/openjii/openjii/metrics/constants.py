@@ -17,6 +17,7 @@ POOL_FACTS_TABLE = "pool_facts"
 # the backend unaggregated; the public endpoint must not expose them.
 DAILY_ACTIVITY_BY_EXPERIMENT_TABLE = "daily_activity_by_experiment"
 EXPERIMENT_CONTRIBUTORS_WINDOW_TABLE = "experiment_contributors_window"
+EXPERIMENT_DEVICES_WINDOW_TABLE = "experiment_devices_window"
 DAILY_ACTIVITY_BY_RESOURCE_TABLE = "daily_activity_by_resource"
 
 # Resource kinds the list-page activity strips cover. Workbooks are keyed by

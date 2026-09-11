@@ -54,7 +54,9 @@
       "contributors_other": "{{count}} Mitwirkende",
       "communityLabel": "Community",
       "trend": "Tägliche Messungen",
-      "communityNote": "Auf der gesamten Plattform"
+      "communityNote": "Auf der gesamten Plattform",
+      "devices_one": "{{count}} Gerät sendet",
+      "devices_other": "{{count}} Geräte senden"
     }
   },
   "experiment": {
@@ -64,7 +66,10 @@
     "contributorsNote_one": "{{count}} Person erfasst Daten",
     "contributorsNote_other": "{{count}} Personen erfassen Daten",
     "quiet": "Keine Messungen hier in den letzten 30 Tagen",
-    "trend": "Tägliche Messungen"
+    "trend": "Tägliche Messungen",
+    "devices": "Geräte",
+    "devicesNote_one": "{{count}} Gerät sendet",
+    "devicesNote_other": "{{count}} Geräte senden"
   },
   "resourceMetrics": {
     "strip": "Tägliche {{unit}} über {{days}} Tage",

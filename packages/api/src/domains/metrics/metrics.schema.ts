@@ -104,6 +104,7 @@ export const zScopedActivity = z.object({
   measurements30d: z.number(),
   activeExperiments30d: z.number(),
   contributors30d: z.number(),
+  devices30d: z.number(),
   activity: z.array(zMetricsWindowDay),
   previousMeasurements: z.number(),
   activeDays: z.number(),
