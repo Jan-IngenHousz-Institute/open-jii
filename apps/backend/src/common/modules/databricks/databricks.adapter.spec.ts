@@ -2801,6 +2801,7 @@ describe("DatabricksAdapter", () => {
         () => databricksAdapter.getPoolFacts(),
         () => databricksAdapter.getScopedDailyActivity(30),
         () => databricksAdapter.getContributorPairs(),
+        () => databricksAdapter.getDevicePairs(),
       ];
 
       for (const read of readers) {
@@ -3075,6 +3076,19 @@ describe("DatabricksAdapter", () => {
       const pairs = await databricksAdapter.getContributorPairs();
       assertSuccess(pairs);
       expect(pairs.value).toEqual([{ experimentId: "exp-1", userId: "user-1" }]);
+
+      mockToken();
+      mockSqlResponse(
+        ["experiment_id", "client_id", "computed_at"],
+        [
+          ["exp-1", "logger-1", "x"],
+          ["exp-1", null, "x"],
+        ],
+      );
+      const devices = await databricksAdapter.getDevicePairs();
+      assertSuccess(devices);
+      // A row without a publisher names no device, so it is dropped.
+      expect(devices.value).toEqual([{ experimentId: "exp-1", clientId: "logger-1" }]);
     });
   });
 });

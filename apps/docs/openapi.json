@@ -20173,6 +20173,16 @@
                             "contributors30d": {
                               "type": "number"
                             },
+                            "devices30d": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
                             "activity": {
                               "type": "array",
                               "items": {
@@ -20234,6 +20244,7 @@
                             "measurements30d",
                             "activeExperiments30d",
                             "contributors30d",
+                            "devices30d",
                             "activity",
                             "previousMeasurements",
                             "activeDays",

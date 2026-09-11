@@ -77,7 +77,11 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
         label={t("dashboard.activity.experimentsLabel")}
         value={number.format(scoped.activeExperiments30d)}
         note={t("dashboard.activity.contributors", { count: scoped.contributors30d })}
-        context={window}
+        context={
+          scoped.devices30d === null
+            ? window
+            : t("dashboard.activity.devices", { count: scoped.devices30d })
+        }
       />
       {community === null ? null : renderCommunity(community.measurements30d)}
       <MetricTrendCard
