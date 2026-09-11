@@ -73,33 +73,42 @@ export function ExperimentDevicesList({
             onSelect(entry.clientId);
           }}
           className={cn(
-            "hover:bg-muted/50 flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors",
-            isSelected && "bg-muted",
+            "hover:bg-muted/50 relative flex w-full min-w-0 flex-col gap-1.5 px-3 py-2.5 text-left transition-colors",
+            // Marked on the edge, not by a wash alone, so the choice stays
+            // legible while scanning a long list.
+            isSelected &&
+              "bg-muted before:bg-primary before:absolute before:inset-y-0 before:left-0 before:w-0.5",
           )}
         >
-          <span className="min-w-0 flex-1">
-            {entry.device === null ? (
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate text-sm font-medium">
-                  {entry.reported?.deviceName ?? t("iot.experimentDevices.unregistered")}
-                </span>
-                <span className="text-muted-foreground truncate font-mono text-xs">
-                  {entry.clientId}
-                </span>
+          {/* Identity and state stack rather than compete: a 320px column cannot
+              carry a name, a serial, a badge and a connectivity label on one
+              line without something pushing the row wider than the panel. */}
+          {entry.device === null ? (
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate text-sm font-medium">
+                {entry.reported?.deviceName ?? t("iot.experimentDevices.unregistered")}
               </span>
-            ) : (
-              <DeviceIdentity device={entry.device} showSerial />
+              <span className="text-muted-foreground truncate font-mono text-xs">
+                {entry.clientId}
+              </span>
+            </span>
+          ) : (
+            <DeviceIdentity device={entry.device} showSerial />
+          )}
+
+          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            {entry.device !== null && <IotDeviceStatusBadge status={entry.device.status} />}
+            {entry.device !== null && <ConnectivityDot connectivity={entry.connectivity} />}
+            {!entry.canView && (
+              <span
+                className="text-muted-foreground inline-flex items-center gap-1 text-xs"
+                title={t("iot.experimentDevices.noAccess")}
+              >
+                <Lock className="size-3" aria-hidden />
+                {t("iot.experimentDevices.noAccessShort")}
+              </span>
             )}
           </span>
-
-          {entry.device !== null && <IotDeviceStatusBadge status={entry.device.status} />}
-          {entry.device !== null && <ConnectivityDot connectivity={entry.connectivity} />}
-          {!entry.canView && (
-            <Lock
-              className="text-muted-foreground size-3.5 shrink-0"
-              aria-label={t("iot.experimentDevices.noAccess")}
-            />
-          )}
         </button>
       </li>
     );
@@ -120,7 +129,7 @@ export function ExperimentDevicesList({
         </p>
       ) : (
         <ScrollArea className="-mx-3 max-h-[32rem] overflow-y-auto">
-          <ul className="divide-border divide-y">{pageRows.map(renderRow)}</ul>
+          <ul className="divide-border min-w-0 divide-y">{pageRows.map(renderRow)}</ul>
         </ScrollArea>
       )}
 

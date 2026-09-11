@@ -187,32 +187,30 @@ describe("ExperimentDevicesPanel", () => {
     expect(await tileValue("iot.experimentDevices.stats.unbound")).toBe("2");
   });
 
-  it("flags the two anomaly tiles only when there is an anomaly to act on", async () => {
+  it("gives every tile a denominator, so a figure is never bare", async () => {
     server.mount(contract.experiments.listExperimentDevices, {
       body: overview([bound, observedPhone, unregistered]),
     });
 
     render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
 
-    // One onboarded device with no recent data, and two sending without a binding.
-    expect(await screen.findByText("iot.experimentDevices.stats.silentHint")).toBeInTheDocument();
-    expect(screen.getByText("iot.experimentDevices.stats.unboundHint")).toBeInTheDocument();
-    // The plain tiles stay plain: a count with its context, no warning tone.
-    expect(screen.getByText("iot.experimentDevices.stats.ofTotal")).toBeInTheDocument();
+    expect(await screen.findByText("iot.experimentDevices.stats.ofTotal")).toBeInTheDocument();
     expect(screen.getByText("iot.experimentDevices.stats.window")).toBeInTheDocument();
+    expect(screen.getByText("iot.experimentDevices.stats.ofOnboarded")).toBeInTheDocument();
+    expect(screen.getByText("iot.experimentDevices.stats.ofSending")).toBeInTheDocument();
   });
 
-  it("withholds the anomaly hints when the warehouse could not be reached", async () => {
+  it("drops the warehouse-derived denominators when the pipeline is unreachable", async () => {
     server.mount(contract.experiments.listExperimentDevices, {
       body: overview([bound, observedPhone, unregistered], true),
     });
 
     render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
 
-    await screen.findByText("iot.experimentDevices.stats.ofTotal");
-    // Counts are unknown, so nothing is called out as needing attention.
-    expect(screen.queryByText("iot.experimentDevices.stats.silentHint")).not.toBeInTheDocument();
-    expect(screen.queryByText("iot.experimentDevices.stats.unboundHint")).not.toBeInTheDocument();
+    // The roster size is still known, the counts it would divide are not.
+    expect(await screen.findByText("iot.experimentDevices.stats.ofTotal")).toBeInTheDocument();
+    expect(screen.queryByText("iot.experimentDevices.stats.ofOnboarded")).not.toBeInTheDocument();
+    expect(screen.queryByText("iot.experimentDevices.stats.ofSending")).not.toBeInTheDocument();
   });
 
   it("does not claim silence when the warehouse was unavailable", async () => {

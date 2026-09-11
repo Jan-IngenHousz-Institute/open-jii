@@ -69,7 +69,7 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
   };
 
   if (isLoading) {
-    return <Skeleton className="h-16 w-full rounded-lg" />;
+    return <ExperimentDevicesSkeleton />;
   }
 
   if (isError || data === undefined) {
@@ -185,6 +185,54 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
   );
 }
 
+function ExperimentDevicesSkeleton() {
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {Array.from({ length: 4 }, (_, index) => (
+          <div key={index} className="bg-card space-y-2 rounded-lg border p-3">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-5 w-10" />
+          </div>
+        ))}
+      </div>
+
+      <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <div className="border-border flex flex-col gap-3 rounded-lg border p-3">
+          <Skeleton className="h-9 w-full" />
+          <div className="-mx-3 divide-y">
+            {Array.from({ length: 5 }, (_, index) => (
+              <div key={index} className="flex items-center gap-2 px-3 py-2.5">
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-28" />
+                </div>
+                <Skeleton className="size-2 shrink-0 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="min-w-0 space-y-6">
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-64" />
+            <Skeleton className="h-3 w-44" />
+          </div>
+          <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            {Array.from({ length: 8 }, (_, index) => (
+              <div key={index} className="space-y-1">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            ))}
+          </div>
+          <Skeleton className="h-72 w-full rounded-xl" />
+        </div>
+      </div>
+    </>
+  );
+}
+
 function ExperimentDevicesStats({ overview }: { overview: ExperimentDevicesOverview }) {
   const { t } = useTranslation("iot");
   const summary = summarizeExperimentDevices(overview);
@@ -212,24 +260,22 @@ function ExperimentDevicesStats({ overview }: { overview: ExperimentDevicesOverv
         </p>
       </Tile>
 
-      {/* The two anomalies carry a warning tone only when there is one, matching
-          the fleet dashboard's silent-count line. */}
+      {/* Every tile reads the same way: the figure, then what it is a share of.
+          No advice, and no alarm on a number that is often perfectly normal. */}
       <Tile label={t("iot.experimentDevices.stats.silent")} className="bg-card">
         <p className="text-lg font-semibold">{dataValue(summary.onboardedSilent)}</p>
-        {summary.onboardedSilent > 0 && !overview.pipelineUnavailable && (
-          <p className="text-status-stale-foreground flex items-center gap-1 text-xs font-normal">
-            <AlertTriangle className="h-3 w-3" aria-hidden />
-            {t("iot.experimentDevices.stats.silentHint")}
+        {!overview.pipelineUnavailable && (
+          <p className="text-muted-foreground text-xs font-normal">
+            {t("iot.experimentDevices.stats.ofOnboarded", { count: summary.onboarded })}
           </p>
         )}
       </Tile>
 
       <Tile label={t("iot.experimentDevices.stats.unbound")} className="bg-card">
         <p className="text-lg font-semibold">{dataValue(summary.sendingUnbound)}</p>
-        {summary.sendingUnbound > 0 && !overview.pipelineUnavailable && (
-          <p className="text-status-stale-foreground flex items-center gap-1 text-xs font-normal">
-            <AlertTriangle className="h-3 w-3" aria-hidden />
-            {t("iot.experimentDevices.stats.unboundHint")}
+        {!overview.pipelineUnavailable && (
+          <p className="text-muted-foreground text-xs font-normal">
+            {t("iot.experimentDevices.stats.ofSending", { count: summary.sending })}
           </p>
         )}
       </Tile>

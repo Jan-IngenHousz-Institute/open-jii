@@ -567,8 +567,8 @@
         "ofTotal_one": "van {{count}} apparaat",
         "ofTotal_other": "van {{count}} apparaten",
         "window": "Laatste 30 dagen",
-        "silentHint": "Controleer deze apparaten",
-        "unboundHint": "Onboarden of onderzoeken"
+        "ofOnboarded": "van {{count}} onboarded",
+        "ofSending": "van {{count}} verzendend"
       },
       "columns": {
         "onboarded": "Gekoppeld",
@@ -596,7 +596,8 @@
         "inWindow": "In dit experiment (30 d)",
         "allTime": "In dit experiment (totaal)",
         "lastDataAnywhere": "Laatste data, alle experimenten"
-      }
+      },
+      "noAccessShort": "Geen toegang"
     },
     "groups": {
       "addDevices": "Apparaten toevoegen",

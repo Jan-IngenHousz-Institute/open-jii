@@ -567,8 +567,8 @@
         "ofTotal_one": "of {{count}} device",
         "ofTotal_other": "of {{count}} devices",
         "window": "Last 30 days",
-        "silentHint": "Check these devices",
-        "unboundHint": "Onboard or investigate"
+        "ofOnboarded": "of {{count}} onboarded",
+        "ofSending": "of {{count}} sending"
       },
       "columns": {
         "onboarded": "Onboarded",
@@ -596,7 +596,8 @@
         "inWindow": "In this experiment (30d)",
         "allTime": "In this experiment (all time)",
         "lastDataAnywhere": "Last data, any experiment"
-      }
+      },
+      "noAccessShort": "No access"
     },
     "groups": {
       "addDevices": "Add devices",
