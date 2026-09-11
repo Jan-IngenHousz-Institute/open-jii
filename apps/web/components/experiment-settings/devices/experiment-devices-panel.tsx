@@ -41,8 +41,6 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
   const { data, isLoading, isError, refetch } = useExperimentDevices(experimentId);
 
   const [detaching, setDetaching] = useState<ExperimentDeviceIdentity | null>(null);
-  // The client id only, never the entry: a refetch must show the fresh facts,
-  // and a device that leaves the roster deselects itself.
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
   const { mutate: detach, isPending: isDetaching } = useExperimentDeviceRemove({
@@ -109,8 +107,7 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
     );
   }
 
-  // Derived, never stored: the fresh entry each render, defaulting to the first
-  // device so the detail area is useful on first paint.
+  // Derived each render so a refetch cannot leave the pane on a stale entry.
   const selectedEntry =
     data.devices.find((entry) => entry.clientId === selectedClientId) ?? data.devices[0];
 
@@ -198,9 +195,11 @@ function ExperimentDevicesSkeleton() {
       </div>
 
       <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <div className="border-border flex flex-col gap-3 rounded-lg border p-3">
-          <Skeleton className="h-9 w-full" />
-          <div className="-mx-3 divide-y">
+        <div className="border-border overflow-hidden rounded-lg border">
+          <div className="p-3">
+            <Skeleton className="h-9 w-full" />
+          </div>
+          <div className="border-border divide-y border-t">
             {Array.from({ length: 5 }, (_, index) => (
               <div key={index} className="flex items-center gap-2 px-3 py-2.5">
                 <div className="min-w-0 flex-1 space-y-1.5">
@@ -260,8 +259,6 @@ function ExperimentDevicesStats({ overview }: { overview: ExperimentDevicesOverv
         </p>
       </Tile>
 
-      {/* Every tile reads the same way: the figure, then what it is a share of.
-          No advice, and no alarm on a number that is often perfectly normal. */}
       <Tile label={t("iot.experimentDevices.stats.silent")} className="bg-card">
         <p className="text-lg font-semibold">{dataValue(summary.onboardedSilent)}</p>
         {!overview.pipelineUnavailable && (

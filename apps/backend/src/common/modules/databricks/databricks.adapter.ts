@@ -696,11 +696,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     );
   }
 
-  /**
-   * One device's measurement counts per time bucket inside one experiment.
-   * Scoped on both keys, so it answers what the experiment tab asks without
-   * returning the device's traffic into experiments the caller cannot see.
-   */
+  /** Scoped on both keys, so it never returns traffic into other experiments. */
   async getExperimentDeviceSeries(
     experimentId: string,
     clientId: string,

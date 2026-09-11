@@ -28,12 +28,7 @@ interface ExperimentDevicesListProps {
   onSelect: (clientId: string) => void;
 }
 
-/**
- * The experiment's devices as a selectable list. Rows compose `DeviceIdentity`
- * rather than using `DeviceRow`: that component's `selection` prop is
- * multi-select grammar (a checkbox in a label), and this list drives a detail
- * pane instead.
- */
+/** Rows compose `DeviceIdentity`: `DeviceRow`'s `selection` prop is multi-select grammar. */
 export function ExperimentDevicesList({
   devices,
   selectedClientId,
@@ -74,15 +69,10 @@ export function ExperimentDevicesList({
           }}
           className={cn(
             "hover:bg-muted/50 relative flex w-full min-w-0 flex-col gap-1.5 px-3 py-2.5 text-left transition-colors",
-            // Marked on the edge, not by a wash alone, so the choice stays
-            // legible while scanning a long list.
             isSelected &&
               "bg-muted before:bg-primary before:absolute before:inset-y-0 before:left-0 before:w-0.5",
           )}
         >
-          {/* Identity and state stack rather than compete: a 320px column cannot
-              carry a name, a serial, a badge and a connectivity label on one
-              line without something pushing the row wider than the panel. */}
           {entry.device === null ? (
             <span className="flex min-w-0 flex-col">
               <span className="truncate text-sm font-medium">
@@ -115,26 +105,28 @@ export function ExperimentDevicesList({
   }
 
   return (
-    <div className="border-border flex flex-col gap-3 rounded-lg border p-3">
-      <SearchInput
-        value={search}
-        onChange={changeSearch}
-        placeholder={t("iot.experimentDevices.searchPlaceholder")}
-        className="w-full"
-      />
+    <div className="border-border overflow-hidden rounded-lg border">
+      <div className="p-3">
+        <SearchInput
+          value={search}
+          onChange={changeSearch}
+          placeholder={t("iot.experimentDevices.searchPlaceholder")}
+          className="w-full"
+        />
+      </div>
 
       {matching.length === 0 ? (
-        <p className="text-muted-foreground px-1 py-6 text-center text-sm">
+        <p className="text-muted-foreground border-border border-t px-3 py-6 text-center text-sm">
           {t("iot.experimentDevices.searchNoMatches")}
         </p>
       ) : (
-        <ScrollArea className="-mx-3 max-h-[32rem] overflow-y-auto">
+        <ScrollArea className="border-border max-h-128 overflow-y-auto border-t">
           <ul className="divide-border min-w-0 divide-y">{pageRows.map(renderRow)}</ul>
         </ScrollArea>
       )}
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="border-border flex items-center justify-between border-t px-3 py-2">
           <span className="text-muted-foreground text-xs">
             {t("iot.devices.pageOf", { page: currentPage, total: totalPages })}
           </span>

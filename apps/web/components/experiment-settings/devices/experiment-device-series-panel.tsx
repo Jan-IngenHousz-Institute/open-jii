@@ -16,11 +16,7 @@ interface ExperimentDeviceSeriesPanelProps {
   window: { from: string; to: string };
 }
 
-/**
- * What this one device sent into this experiment, per day across the tab's
- * window. Zero-filled from the axis so silent days read as gaps rather than a
- * compressed line.
- */
+/** Zero-filled from the axis, so a silent day reads as a gap rather than a missing point. */
 export function ExperimentDeviceSeriesPanel({
   experimentId,
   clientId,

@@ -19,7 +19,6 @@ import { ExperimentDeviceSeriesPanel } from "./experiment-device-series-panel";
 
 interface ExperimentDeviceDetailProps {
   experimentId: string;
-  /** Never null: the panel guards the empty roster and auto-selects the first row. */
   entry: ExperimentDeviceEntry;
   window: { from: string; to: string };
   pipelineUnavailable: boolean;

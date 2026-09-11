@@ -8,16 +8,9 @@ import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
 import type { DatabricksPort } from "../../../core/ports/databricks.port";
 
 /**
- * One device's measurement volume inside one experiment, bucketed for the tab's
- * detail pane.
- *
- * Authorized on the experiment, never on the device: the tab lists publishers
- * the caller cannot open, and gating this on `device:read` would refuse a chart
- * for exactly those rows. The caller already sees the roster and its counts, so
- * the shape of that same volume over time discloses nothing further.
- *
- * Keyed by client id rather than device id, because an unregistered publisher
- * has no registry row to address.
+ * Authorized on the experiment, never the device: the tab lists publishers the
+ * caller cannot open, and `device:read` would refuse a chart for exactly those
+ * rows. Keyed by client id, because an unregistered publisher has no registry row.
  */
 @Injectable()
 export class GetExperimentDeviceSeriesUseCase {
@@ -53,8 +46,6 @@ export class GetExperimentDeviceSeriesUseCase {
       return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
     }
 
-    // The same tier the roster demands: org-role and grant readers, never the
-    // public-read tier.
     const decision = await this.authorizationService.can(userId, {
       resourceType: "experiment",
       resourceId: experimentId,
@@ -74,8 +65,6 @@ export class GetExperimentDeviceSeriesUseCase {
       bucket,
     );
     if (result.isFailure()) {
-      // The pane keeps its facts and says the chart is unavailable, rather than
-      // the whole request failing over a warehouse outage.
       this.logger.warn({
         msg: "Experiment device series lookup failed; the chart renders as unavailable",
         operation: "getExperimentDeviceSeries",
