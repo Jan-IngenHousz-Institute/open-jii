@@ -17,8 +17,7 @@ import { MetricsRepository } from "../../../core/repositories/metrics.repository
 
 const WINDOW_DAYS = 30;
 
-// Two windows in one read: every scoped figure is stated against the window
-// before it, and the inputs are shared across all scopes anyway.
+// Two windows in one read: every figure is stated against the previous one.
 const LOADED_DAYS = WINDOW_DAYS * 2;
 
 /**
@@ -75,10 +74,7 @@ export class GetScopedMetricsUseCase {
     return success(this.aggregate(scope, new Set(scopeIds.value), inputs));
   }
 
-  /**
-   * The experiments a scope covers, refused before any cached figure is
-   * touched so a revoked caller cannot read a warm snapshot.
-   */
+  /** Refused before any cached figure is touched, so a revoked caller reads nothing. */
   private async resolveScopeIds(
     scope: MetricsScope,
     userId: string,
@@ -177,8 +173,7 @@ export class GetScopedMetricsUseCase {
       byDate.set(row.date, (byDate.get(row.date) ?? 0) + row.measurements);
     }
 
-    // The window is drawn dense: a sparkline is read by its shape, and a series
-    // that skipped silent days would draw a different length.
+    // Silent days keep a zero, so the series is read by its shape.
     const activity = this.windowDates().map((date) => ({
       date,
       measurements: byDate.get(date) ?? 0,

@@ -12,11 +12,7 @@ interface ResearchActivityPanelProps {
   locale: string;
 }
 
-/**
- * The reader's own 30 days, with the community beside it as context rather
- * than as the headline. A trend beats a counter: the shape is what says
- * whether the work is moving.
- */
+/** The reader's own 30 days, with the community beside it rather than as the headline. */
 export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
   const { t } = useTranslation("publicMetrics");
   const { data: mine, isPending } = useMyScopedMetrics();
@@ -28,15 +24,14 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
 
   const scoped = mine?.scoped ?? null;
 
-  // A reader with nothing recorded gets no band, rather than a row of zeros:
-  // the same rule the list pages follow.
+  // No band rather than a row of zeros, as on the list pages.
   if (scoped === null || scoped.measurements30d === 0) {
     return null;
   }
 
   const number = new Intl.NumberFormat(locale);
   const compact = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 });
-  // The warehouse groups by UTC day, so the label has to read it back as one.
+  // Warehouse days are UTC.
   const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
 
   const windowDays = scoped.activity.length;

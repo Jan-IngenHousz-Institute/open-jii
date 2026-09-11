@@ -19,11 +19,7 @@ export function parseWarehouseTimestamp(value: string): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-/**
- * Liveness as a number that moves: the rolling 24h count. The recency claim
- * only appears when there is silence to report; a permanently-true "active
- * recently" badge carries no information.
- */
+/** The rolling 24h count. The recency line appears only when there is silence to report. */
 export function ActivityIndicator({
   measurements24h,
   lastMeasurementAt,

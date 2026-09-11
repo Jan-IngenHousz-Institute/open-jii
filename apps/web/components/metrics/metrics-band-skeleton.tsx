@@ -3,15 +3,11 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 import { cn } from "@repo/ui/lib/utils";
 
 interface MetricsBandSkeletonProps {
-  /** How many cards the band will hold once it loads. */
   cards: number;
   className?: string;
 }
 
-/**
- * The band's own shape while it loads, so the page does not reflow when the
- * figures arrive. Same card geometry as the real thing.
- */
+/** The band's own geometry while it loads, so nothing reflows when the figures arrive. */
 export function MetricsBandSkeleton({ cards, className }: MetricsBandSkeletonProps) {
   const renderCard = (index: number) => (
     <Card key={index} className="@container/card gap-2 py-3">

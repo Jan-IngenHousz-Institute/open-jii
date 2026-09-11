@@ -14,7 +14,7 @@ interface MilestoneBannerProps {
   locale: string;
 }
 
-/** An announcement moment, not a widget: shown only while a milestone stands. */
+/** Shown only while a milestone stands. */
 export function MilestoneBanner({ locale }: MilestoneBannerProps) {
   const { t } = useTranslation("publicMetrics");
   const { data } = usePublicMetrics();

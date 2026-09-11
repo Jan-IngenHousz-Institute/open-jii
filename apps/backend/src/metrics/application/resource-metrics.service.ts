@@ -9,8 +9,7 @@ import { MetricsRepository } from "../core/repositories/metrics.repository";
 
 export const RESOURCE_METRICS_WINDOW_DAYS = 30;
 
-// Two windows in one read: the header states the current one against the one
-// before it, and both consumers share the cached rows.
+// Two windows in one read: the header compares against the previous one.
 const LOADED_DAYS = RESOURCE_METRICS_WINDOW_DAYS * 2;
 
 /** The warehouse keys workbook activity by the version that produced it. */
@@ -42,12 +41,8 @@ export interface ResourceTotals {
 }
 
 /**
- * Daily measurement series per resource, for the list pages.
- *
- * Callers pass the ids of the rows they are already returning, so the work is
- * proportional to a page rather than to the workspace. Those ids have passed
- * the caller's own access check by the time they arrive here, which is why this
- * service does not repeat it.
+ * Daily measurement series per resource. Callers pass ids that already passed
+ * their own access check, so this service does not repeat it.
  */
 @Injectable()
 export class ResourceMetricsService {
@@ -87,8 +82,6 @@ export class ResourceMetricsService {
       byResource.set(row.resourceId, days);
     }
 
-    // Every resource spans the same window: a sparkline is read by its shape,
-    // and a series that skipped silent days would draw a different length.
     const series = new Map<string, ResourceSeries>();
 
     for (const [id, days] of byResource) {
@@ -144,7 +137,6 @@ export class ResourceMetricsService {
     return this.totals(this.densify(new Map()), 0, new Map());
   }
 
-  /** What the series says beyond its total: how often, how high, how recently. */
   private totals(
     days: MetricsWindowDay[],
     previousMeasurements: number,
@@ -213,7 +205,7 @@ export class ResourceMetricsService {
     );
   }
 
-  /** A silent day carries a zero rather than being absent from the series. */
+  /** Silent days keep a zero, so every series over the window is the same length. */
   private densify(totals: Map<string, number>): MetricsWindowDay[] {
     return this.windowDates().map((date) => ({
       date,

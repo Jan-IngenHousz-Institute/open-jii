@@ -7,7 +7,6 @@ import { ResourceMetricsService } from "../../../../metrics/application/resource
 import { WorkbookListItemDto } from "../../../core/models/workbook.model";
 import { WorkbookRepository, WorkbookFilter } from "../../../core/repositories/workbook.repository";
 
-/** A listed resource plus the measurement series its row draws. */
 type WorkbookWithActivity = WorkbookListItemDto & { activity: ResourceSeries | null };
 
 @Injectable()
@@ -45,8 +44,7 @@ export class ListWorkbooksUseCase {
       return paged;
     }
 
-    // The page has already passed the access check, so the series are read
-    // for exactly these rows rather than for the whole workspace.
+    // These ids already passed the access check.
     const series = await this.resourceMetrics.seriesFor(
       "workbook",
       paged.value.items.map((item) => item.id),

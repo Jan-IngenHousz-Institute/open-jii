@@ -10,7 +10,6 @@ import { MetricStatCard } from "./metric-stat-card";
 import { MetricTrendCard } from "./metric-trend-card";
 import { MetricsBandSkeleton } from "./metrics-band-skeleton";
 
-/** Where a kind's detail pages live, for the busiest card's link. */
 const RESOURCE_SECTIONS: Record<ResourceKind, string> = {
   experiment: "experiments",
   protocol: "protocols",
@@ -22,10 +21,7 @@ interface ResourceMetricsSummaryProps {
   kind: ResourceKind;
 }
 
-/**
- * The activity behind a list page, above its table. Counts only what the
- * reader may see, so the figures agree with the rows underneath.
- */
+/** The activity behind a list page. Counts only what the reader may see. */
 export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
   const { t } = useTranslation("publicMetrics");
   const locale = useLocale();
@@ -42,7 +38,7 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
 
   const number = new Intl.NumberFormat(locale);
   const compact = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 });
-  // The warehouse groups by UTC day, so the label has to read it back as one.
+  // Warehouse days are UTC.
   const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
 
   const window = t("window", { days: data.windowDays });

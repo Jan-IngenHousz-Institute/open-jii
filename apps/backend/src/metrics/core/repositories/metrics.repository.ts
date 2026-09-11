@@ -24,7 +24,6 @@ import { tryCatch } from "../../../common/utils/fp-utils";
 import type { Result } from "../../../common/utils/fp-utils";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 
-/** Every listed kind names itself the same way: an id and a name column. */
 const RESOURCE_TABLES = {
   experiment: experiments,
   protocol: protocols,
@@ -99,11 +98,7 @@ export class MetricsRepository {
     });
   }
 
-  /**
-   * Resources of one kind the caller may read, by the same predicate the list
-   * pages filter with. Activity is only ever reported for these, so a caller
-   * cannot learn how busy a resource they cannot see is.
-   */
+  /** Activity is only reported for these, so a caller cannot probe what they cannot see. */
   async getVisibleExperimentIds(userId: string): Promise<Result<string[]>> {
     return tryCatch(async () => {
       const accessScope = accessibleResourceCondition({
@@ -135,11 +130,7 @@ export class MetricsRepository {
     return this.visibleIds(userId, "workbook", workbooks);
   }
 
-  /**
-   * Workbook versions belonging to the given workbooks. A measurement records
-   * the version that produced it, so the warehouse keys activity by version and
-   * only Postgres can fold those back into a workbook.
-   */
+  /** The warehouse keys workbook activity by version; only Postgres can fold it back. */
   async getWorkbookVersionMap(workbookIds: string[]): Promise<Result<Map<string, string>>> {
     return tryCatch(async () => {
       if (workbookIds.length === 0) {
@@ -155,10 +146,7 @@ export class MetricsRepository {
     });
   }
 
-  /**
-   * The display name of one resource. The warehouse keys activity by id, so
-   * only Postgres can say what the busiest one is called.
-   */
+  /** The warehouse knows the busiest resource by id only. */
   async getResourceName(kind: ResourceKind, id: string): Promise<Result<string | null>> {
     return tryCatch(async () => {
       const table = RESOURCE_TABLES[kind];

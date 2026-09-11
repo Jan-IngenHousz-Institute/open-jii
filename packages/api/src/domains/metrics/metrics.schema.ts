@@ -11,11 +11,7 @@ export const zMetricsLiveness = z.object({
   measurements24h: z.number(),
 });
 
-/**
- * `contributors30d` counts only the people a measurement names, which is the
- * app's path; a logger publishes with no contributor at all. `devices30d` is
- * what the rest of the volume came through, so the two are stated together.
- */
+/** Only the app names a contributor; a logger publishes with none, hence `devices30d`. */
 export const zMetricsCommunity = z.object({
   measurements30d: z.number(),
   activeExperiments30d: z.number(),
@@ -103,11 +99,7 @@ export const zScopedMetricsQuery = z.object({
   experimentId: z.string().uuid().optional(),
 });
 
-/**
- * `activity` spans the whole window, silent days included, so a series is read
- * by its shape. `previousMeasurements` covers the window immediately before it,
- * which is what makes the headline figure mean something.
- */
+/** `activity` spans the whole window, silent days included; `previousMeasurements` the one before. */
 export const zScopedActivity = z.object({
   measurements30d: z.number(),
   activeExperiments30d: z.number(),
@@ -156,12 +148,9 @@ export const zBusiestResource = z.object({
 });
 
 /**
- * What a list page's header states: the window's totals and shape across every
- * resource of this kind the caller may read. The per-row series ride on the
- * rows themselves, so this response stays the same size whatever the workspace
- * holds. `activeCount` counts the resources that recorded something and
- * `visibleCount` those the caller may read at all, which is the comparison the
- * header makes.
+ * What a list page's header states, across every resource of this kind the
+ * caller may read. `activeCount` recorded something, `visibleCount` may be read
+ * at all; the per-row series ride on the rows themselves.
  */
 export const zResourceMetricsResponse = z.object({
   kind: zResourceKind,

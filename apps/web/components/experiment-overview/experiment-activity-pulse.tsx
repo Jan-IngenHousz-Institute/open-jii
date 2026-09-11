@@ -12,11 +12,7 @@ interface ExperimentActivityPulseProps {
   experimentId: string;
 }
 
-/**
- * Whether this experiment is still collecting, answered where the question is
- * asked. A silent experiment says so rather than disappearing: on this page the
- * absence of a reading is itself the answer.
- */
+/** Whether this experiment is still collecting. A silent one says so rather than vanishing. */
 export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPulseProps) {
   const { t } = useTranslation("publicMetrics");
   const locale = useLocale();
@@ -38,7 +34,7 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
 
   const number = new Intl.NumberFormat(locale);
   const compact = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 });
-  // The warehouse groups by UTC day, so the label has to read it back as one.
+  // Warehouse days are UTC.
   const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
 
   const windowDays = scoped.activity.length;
@@ -47,9 +43,8 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
 
   const peak = scoped.peak;
 
-  // Device-published rows carry no contributor. The slot is dropped rather
-  // than filled with a recency claim: the figures lag the pipeline by up to a
-  // refresh, which a reader who just took a measurement would catch.
+  // Device-published rows carry no contributor, and a recency claim in its place
+  // would lag the pipeline by up to a refresh.
   const hasContributors = scoped.contributors30d > 0;
 
   const renderContributors = () => (

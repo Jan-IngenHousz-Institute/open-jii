@@ -7,7 +7,6 @@ import { ResourceMetricsService } from "../../../../metrics/application/resource
 import { MacroDto } from "../../../core/models/macro.model";
 import { MacroRepository, MacroFilter } from "../../../core/repositories/macro.repository";
 
-/** A listed resource plus the measurement series its row draws. */
 type MacroWithActivity = MacroDto & { activity: ResourceSeries | null };
 
 @Injectable()
@@ -47,8 +46,7 @@ export class ListMacrosUseCase {
       return paged;
     }
 
-    // The page has already passed the access check, so the series are read
-    // for exactly these rows rather than for the whole workspace.
+    // These ids already passed the access check.
     const series = await this.resourceMetrics.seriesFor(
       "macro",
       paged.value.items.map((item) => item.id),

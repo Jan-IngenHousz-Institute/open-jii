@@ -9,7 +9,6 @@ import { ResourceMetricsService } from "../../../../metrics/application/resource
 import { ProtocolDto } from "../../../core/models/protocol.model";
 import { ProtocolRepository } from "../../../core/repositories/protocol.repository";
 
-/** A listed protocol plus the measurement series its row draws. */
 type ProtocolWithActivity = ProtocolDto & { activity: ResourceSeries | null };
 
 @Injectable()
@@ -39,8 +38,7 @@ export class ListProtocolsUseCase {
       return paged;
     }
 
-    // The page has already passed the access check, so the series are read
-    // for exactly these rows rather than for the whole workspace.
+    // These ids already passed the access check.
     const series = await this.resourceMetrics.seriesFor(
       "protocol",
       paged.value.items.map((item) => item.id),

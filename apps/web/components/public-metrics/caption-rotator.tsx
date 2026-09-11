@@ -23,11 +23,7 @@ function formatBytes(bytes: number, locale: string): string {
   return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value)} ${units[unit]}`;
 }
 
-/**
- * One rotating almanac line drawing from the caption pool. Values are typed
- * facts; each kind has its own i18n template, so unknown kinds coming from a
- * newer backend are simply skipped.
- */
+/** One rotating line from the caption pool. Each kind has its own i18n template. */
 export function CaptionRotator({ captions, locale }: CaptionRotatorProps) {
   const { t } = useTranslation("publicMetrics");
   const [index, setIndex] = useState(0);

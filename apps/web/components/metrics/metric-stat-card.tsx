@@ -14,14 +14,10 @@ import {
 } from "@repo/ui/components/card";
 import { cn } from "@repo/ui/lib/utils";
 
-/**
- * Past ten-fold, a percentage stops being a comparison and starts being a
- * headline: "+199,789%" against a base of nine says nothing the two figures
- * do not say better. The footer states both, so the badge simply drops.
- */
+// Past ten-fold a percentage says less than the two figures, which the footer
+// carries anyway.
 const MAX_DISPLAYED_CHANGE = 10;
 
-/** The share of change, or null when it would not be worth reading. */
 function displayableChange(comparison?: { current: number; previous: number }): number | null {
   if (comparison === undefined || comparison.previous <= 0) {
     return null;
@@ -37,23 +33,14 @@ interface MetricStatCardProps {
   locale: string;
   /** The full figure behind an abbreviated `value`, shown on hover. */
   title?: string;
-  /** This window against the one before it. The badge is dropped when a
-   * percentage would say less than the two figures themselves. */
   comparison?: { current: number; previous: number };
-  /** Where the figure names a resource the reader can open. */
   href?: string;
-  /** Leading footer line: what the figure says. */
   note?: string;
-  /** Trailing footer line: what it is measured over. */
   context?: string;
   className?: string;
 }
 
-/**
- * One figure of a metrics band. A period-over-period badge sits with the
- * number and the qualifiers sit under it, so the card reads top to bottom
- * without the reader hunting for what the figure is measured against.
- */
+/** One figure of a metrics band: the number, its change, and what it is measured over. */
 export function MetricStatCard({
   label,
   value,

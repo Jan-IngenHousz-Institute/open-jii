@@ -17,11 +17,7 @@ interface PublicMetricsSectionProps {
   locale: string;
 }
 
-/**
- * The landing-page composition; visual treatment iterates on this skeleton.
- * Every block is individually conditional so the section degrades instead of
- * rendering zeros before the pipeline's first refresh.
- */
+/** Every block is conditional, so the section degrades rather than rendering zeros. */
 export function PublicMetricsSection({ metrics, locale }: PublicMetricsSectionProps) {
   const { t } = useTranslation("publicMetrics");
   const {

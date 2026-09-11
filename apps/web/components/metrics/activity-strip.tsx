@@ -20,11 +20,7 @@ interface ActivityStripProps {
   className?: string;
 }
 
-/**
- * A measurement sparkline, the shape a repository timeline uses: the trend is
- * the message and the values live in the row beside it. Plain SVG, because a
- * plot library at row height renders axes nobody can read.
- */
+/** A measurement sparkline. Plain SVG: a plot library at row height draws axes nobody reads. */
 export function ActivityStrip({ days, label, className }: ActivityStripProps) {
   const path = useMemo(() => {
     if (days.length < 2) {

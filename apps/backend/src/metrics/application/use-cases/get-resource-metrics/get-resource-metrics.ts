@@ -14,11 +14,7 @@ import {
   ResourceMetricsService,
 } from "../../resource-metrics.service";
 
-/**
- * What a list page's header states: how much of this kind is collecting, how
- * much it recorded, and how that compares with the window before. The per-row
- * series ride on the rows themselves.
- */
+/** What a list page's header states. The per-row series ride on the rows themselves. */
 @Injectable()
 export class GetResourceMetricsUseCase {
   constructor(
@@ -50,10 +46,7 @@ export class GetResourceMetricsUseCase {
     });
   }
 
-  /**
-   * The busiest resource is only worth stating if it can be named: a row whose
-   * resource has since been deleted would otherwise surface as a bare id.
-   */
+  /** A resource deleted since the pipeline ran would surface as a bare id. */
   private async nameBusiest(
     kind: ResourceKind,
     busiest: { id: string; measurements: number } | null,
@@ -70,7 +63,7 @@ export class GetResourceMetricsUseCase {
     return { id: busiest.id, name: name.value, measurements: busiest.measurements };
   }
 
-  /** The same predicate each list page filters with, so the header agrees with the rows. */
+  /** The same predicate the list pages filter with, so header and rows agree. */
   private async visibleIds(kind: ResourceKind, userId: string): Promise<Result<string[]>> {
     switch (kind) {
       case "protocol":

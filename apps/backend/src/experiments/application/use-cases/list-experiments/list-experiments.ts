@@ -9,7 +9,6 @@ import { ResourceMetricsService } from "../../../../metrics/application/resource
 import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
-/** A listed resource plus the measurement series its row draws. */
 type ExperimentWithActivity = ExperimentDto & { activity: ResourceSeries | null };
 
 @Injectable()
@@ -92,8 +91,7 @@ export class ListExperimentsUseCase {
       return paged;
     }
 
-    // The page has already passed the access check, so the series are read
-    // for exactly these rows rather than for the whole workspace.
+    // These ids already passed the access check.
     const series = await this.resourceMetrics.seriesFor(
       "experiment",
       paged.value.items.map((item) => item.id),
