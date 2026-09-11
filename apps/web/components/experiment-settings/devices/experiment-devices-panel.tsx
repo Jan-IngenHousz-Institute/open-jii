@@ -194,19 +194,44 @@ function ExperimentDevicesStats({ overview }: { overview: ExperimentDevicesOverv
   const dataValue = (value: number) =>
     overview.pipelineUnavailable ? t("iot.experimentDevices.lastDataUnavailable") : value;
 
+  const total = overview.devices.length;
+
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <Tile label={t("iot.experimentDevices.stats.onboarded")} className="bg-card">
         <p className="text-lg font-semibold">{summary.onboarded}</p>
+        <p className="text-muted-foreground text-xs font-normal">
+          {t("iot.experimentDevices.stats.ofTotal", { count: total })}
+        </p>
       </Tile>
+
       <Tile label={t("iot.experimentDevices.stats.sending")} className="bg-card">
         <p className="text-lg font-semibold">{dataValue(summary.sending)}</p>
+        <p className="text-muted-foreground text-xs font-normal">
+          {t("iot.experimentDevices.stats.window")}
+        </p>
       </Tile>
+
+      {/* The two anomalies carry a warning tone only when there is one, matching
+          the fleet dashboard's silent-count line. */}
       <Tile label={t("iot.experimentDevices.stats.silent")} className="bg-card">
         <p className="text-lg font-semibold">{dataValue(summary.onboardedSilent)}</p>
+        {summary.onboardedSilent > 0 && !overview.pipelineUnavailable && (
+          <p className="text-status-stale-foreground flex items-center gap-1 text-xs font-normal">
+            <AlertTriangle className="h-3 w-3" aria-hidden />
+            {t("iot.experimentDevices.stats.silentHint")}
+          </p>
+        )}
       </Tile>
+
       <Tile label={t("iot.experimentDevices.stats.unbound")} className="bg-card">
         <p className="text-lg font-semibold">{dataValue(summary.sendingUnbound)}</p>
+        {summary.sendingUnbound > 0 && !overview.pipelineUnavailable && (
+          <p className="text-status-stale-foreground flex items-center gap-1 text-xs font-normal">
+            <AlertTriangle className="h-3 w-3" aria-hidden />
+            {t("iot.experimentDevices.stats.unboundHint")}
+          </p>
+        )}
       </Tile>
     </div>
   );

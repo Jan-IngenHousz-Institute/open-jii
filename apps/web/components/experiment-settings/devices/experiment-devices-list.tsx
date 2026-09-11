@@ -15,6 +15,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@repo/ui/components/pagination";
+import { ScrollArea } from "@repo/ui/components/scroll-area";
 import { SearchInput } from "@repo/ui/components/search-input";
 import { cn } from "@repo/ui/lib/utils";
 
@@ -118,7 +119,9 @@ export function ExperimentDevicesList({
           {t("iot.experimentDevices.searchNoMatches")}
         </p>
       ) : (
-        <ul className="divide-border -mx-3 divide-y">{pageRows.map(renderRow)}</ul>
+        <ScrollArea className="-mx-3 max-h-[32rem] overflow-y-auto">
+          <ul className="divide-border divide-y">{pageRows.map(renderRow)}</ul>
+        </ScrollArea>
       )}
 
       {totalPages > 1 && (

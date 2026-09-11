@@ -5,7 +5,7 @@ import { IotDeviceStatusBadge } from "@/components/iot-devices/iot-device-status
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate, formatRelativeTime } from "@/util/date";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
-import { ExternalLink, Lock, X } from "lucide-react";
+import { ExternalLink, Lock, Unlink } from "lucide-react";
 import Link from "next/link";
 
 import type {
@@ -66,16 +66,14 @@ export function ExperimentDeviceDetail({
           {device !== null && <ConnectivityDot connectivity={entry.connectivity} />}
           {entry.binding !== null && device !== null && (
             <Button
-              variant="ghost"
-              size="icon"
-              className="size-8"
-              aria-label={t("iot.experimentDevices.detach")}
-              title={t("iot.experimentDevices.detach")}
+              variant="outline"
+              size="sm"
               onClick={() => {
                 onRequestDetach(device);
               }}
             >
-              <X className="size-4" />
+              <Unlink className="mr-1.5 size-4" aria-hidden />
+              {t("iot.experimentDevices.detach")}
             </Button>
           )}
         </div>
@@ -154,13 +152,11 @@ export function ExperimentDeviceDetail({
   );
 }
 
-function Fact({ label, value, mono }: { label: string; value: string | null; mono?: boolean }) {
+function Fact({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="min-w-0 space-y-0.5">
       <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className={mono === true ? "truncate font-mono text-sm" : "truncate text-sm"}>
-        {value ?? "—"}
-      </dd>
+      <dd className={mono === true ? "truncate font-mono text-sm" : "truncate text-sm"}>{value}</dd>
     </div>
   );
 }

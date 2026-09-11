@@ -563,7 +563,12 @@
         "onboarded": "Gekoppeld",
         "sending": "Stuurt data (30 d)",
         "silent": "Gekoppeld, geen recente data",
-        "unbound": "Stuurt data zonder koppeling"
+        "unbound": "Stuurt data zonder koppeling",
+        "ofTotal_one": "van {{count}} apparaat",
+        "ofTotal_other": "van {{count}} apparaten",
+        "window": "Laatste 30 dagen",
+        "silentHint": "Controleer deze apparaten",
+        "unboundHint": "Onboarden of onderzoeken"
       },
       "columns": {
         "onboarded": "Gekoppeld",

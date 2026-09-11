@@ -563,7 +563,12 @@
         "onboarded": "Onboarded",
         "sending": "Sending data (30d)",
         "silent": "Onboarded, no recent data",
-        "unbound": "Sending without onboarding"
+        "unbound": "Sending without onboarding",
+        "ofTotal_one": "of {{count}} device",
+        "ofTotal_other": "of {{count}} devices",
+        "window": "Last 30 days",
+        "silentHint": "Check these devices",
+        "unboundHint": "Onboard or investigate"
       },
       "columns": {
         "onboarded": "Onboarded",

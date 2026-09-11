@@ -187,6 +187,34 @@ describe("ExperimentDevicesPanel", () => {
     expect(await tileValue("iot.experimentDevices.stats.unbound")).toBe("2");
   });
 
+  it("flags the two anomaly tiles only when there is an anomaly to act on", async () => {
+    server.mount(contract.experiments.listExperimentDevices, {
+      body: overview([bound, observedPhone, unregistered]),
+    });
+
+    render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
+
+    // One onboarded device with no recent data, and two sending without a binding.
+    expect(await screen.findByText("iot.experimentDevices.stats.silentHint")).toBeInTheDocument();
+    expect(screen.getByText("iot.experimentDevices.stats.unboundHint")).toBeInTheDocument();
+    // The plain tiles stay plain: a count with its context, no warning tone.
+    expect(screen.getByText("iot.experimentDevices.stats.ofTotal")).toBeInTheDocument();
+    expect(screen.getByText("iot.experimentDevices.stats.window")).toBeInTheDocument();
+  });
+
+  it("withholds the anomaly hints when the warehouse could not be reached", async () => {
+    server.mount(contract.experiments.listExperimentDevices, {
+      body: overview([bound, observedPhone, unregistered], true),
+    });
+
+    render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
+
+    await screen.findByText("iot.experimentDevices.stats.ofTotal");
+    // Counts are unknown, so nothing is called out as needing attention.
+    expect(screen.queryByText("iot.experimentDevices.stats.silentHint")).not.toBeInTheDocument();
+    expect(screen.queryByText("iot.experimentDevices.stats.unboundHint")).not.toBeInTheDocument();
+  });
+
   it("does not claim silence when the warehouse was unavailable", async () => {
     server.mount(contract.experiments.listExperimentDevices, {
       body: overview([bound], true),
@@ -327,5 +355,10 @@ describe("ExperimentDevicesPanel", () => {
     expect(await screen.findByText("publisher-25")).toBeInTheDocument();
     // publisher-0 stays selected, so it is still named in the detail pane.
     expect(screen.queryAllByText("publisher-0")).toHaveLength(1);
+
+    await userEvent.click(screen.getByLabelText("Go to previous page"));
+
+    expect(await screen.findByText("publisher-1")).toBeInTheDocument();
+    expect(screen.queryByText("publisher-25")).not.toBeInTheDocument();
   });
 });

@@ -32,6 +32,8 @@ describe("ExperimentDeviceSeriesPanel", () => {
         buckets: [
           { bucketStart: "2026-09-01T00:00:00.000Z", count: 12 },
           { bucketStart: "2026-09-03T00:00:00.000Z", count: 4 },
+          // A bucket the warehouse could not stamp belongs nowhere on the axis.
+          { bucketStart: null, count: 99 },
         ],
         pipelineUnavailable: false,
       },

@@ -563,7 +563,12 @@
         "onboarded": "Zugeordnet",
         "sending": "Sendet Daten (30 T.)",
         "silent": "Zugeordnet, keine aktuellen Daten",
-        "unbound": "Sendet ohne Zuordnung"
+        "unbound": "Sendet ohne Zuordnung",
+        "ofTotal_one": "von {{count}} Gerät",
+        "ofTotal_other": "von {{count}} Geräten",
+        "window": "Letzte 30 Tage",
+        "silentHint": "Diese Geräte prüfen",
+        "unboundHint": "Einbinden oder prüfen"
       },
       "columns": {
         "onboarded": "Zugeordnet",
