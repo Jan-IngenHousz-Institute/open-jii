@@ -8,7 +8,6 @@ import type {
 import { resolveMonitoringPreset } from "@/components/iot-devices/monitoring/monitoring-range";
 import { MonitoringRangeControl } from "@/components/iot-devices/monitoring/monitoring-range-control";
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
-import { Tile } from "@/components/iot-devices/monitoring/tile";
 import { useIotDevices } from "@/hooks/iot/useIotDevices/useIotDevices";
 import { useIotFleetMonitoring } from "@/hooks/iot/useIotFleetMonitoring/useIotFleetMonitoring";
 import { useLocale } from "@/hooks/useLocale";
@@ -22,6 +21,8 @@ import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
+import { MetricStatCard } from "../../metrics/metric-stat-card";
+import { metricsBandGrid } from "../../metrics/metrics-band-grid";
 import { buildGroupActivity } from "../groups/group-activity";
 import { summarizeGroupHealth } from "../groups/group-health";
 import { GroupThroughputPanel } from "../groups/group-throughput-panel";
@@ -128,62 +129,77 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
 
   function renderTiles() {
     return (
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tile label={t("iot.devices.fleet.onlineLabel")} className="bg-card">
-          {summary === undefined ? (
-            <Skeleton className="h-4 w-24" />
-          ) : (
-            <div className="space-y-1">
-              <p className="text-lg font-semibold">
-                {t("iot.groups.monitoring.onlineValue", {
-                  online: summary.online,
-                  total: summary.total,
-                })}
-              </p>
-              {summary.silent > 0 && (
-                <p className="text-status-stale-foreground flex items-center gap-1 text-xs font-normal">
-                  <AlertTriangle className="h-3 w-3" />
-                  {t("iot.groups.monitoring.silentCount", { count: summary.silent })}
-                </p>
-              )}
-            </div>
-          )}
-        </Tile>
+      <div className={metricsBandGrid}>
+        <MetricStatCard
+          locale={locale}
+          label={t("iot.devices.fleet.onlineLabel")}
+          value={
+            summary === undefined ? (
+              <Skeleton className="h-7 w-24" />
+            ) : (
+              t("iot.groups.monitoring.onlineValue", {
+                online: summary.online,
+                total: summary.total,
+              })
+            )
+          }
+          alert={
+            summary !== undefined && summary.silent > 0 ? (
+              <>
+                <AlertTriangle className="h-3 w-3" />
+                {t("iot.groups.monitoring.silentCount", { count: summary.silent })}
+              </>
+            ) : undefined
+          }
+          className="bg-card"
+        />
 
-        <Tile label={t("iot.devices.monitoring.lastData")} className="bg-card">
-          {monitoring === undefined ? (
-            <Skeleton className="h-4 w-24" />
-          ) : (
-            <p className="text-lg font-semibold">{lastDataLine(monitoring.pipelineUnavailable)}</p>
-          )}
-        </Tile>
+        <MetricStatCard
+          locale={locale}
+          label={t("iot.devices.monitoring.lastData")}
+          value={
+            monitoring === undefined ? (
+              <Skeleton className="h-7 w-24" />
+            ) : (
+              lastDataLine(monitoring.pipelineUnavailable)
+            )
+          }
+          className="bg-card"
+        />
 
-        <Tile label={t("iot.devices.monitoring.measurements")} className="bg-card">
-          {total === undefined || perHour === undefined ? (
-            <Skeleton className="h-4 w-16" />
-          ) : (
-            <div className="space-y-1">
-              <p className="text-lg font-semibold tabular-nums">{total.toLocaleString(locale)}</p>
-              <p className="text-muted-foreground text-xs font-normal tabular-nums">
-                {t("iot.devices.monitoring.perHour", {
+        <MetricStatCard
+          locale={locale}
+          label={t("iot.devices.monitoring.measurements")}
+          value={
+            total === undefined ? <Skeleton className="h-7 w-16" /> : total.toLocaleString(locale)
+          }
+          title={total === undefined ? undefined : total.toLocaleString(locale)}
+          note={
+            perHour === undefined
+              ? undefined
+              : t("iot.devices.monitoring.perHour", {
                   rate: perHour.toLocaleString(locale, {
                     minimumFractionDigits: 1,
                     maximumFractionDigits: 1,
                   }),
-                })}
-              </p>
-              <FleetSparkline values={sparkValues} />
-            </div>
-          )}
-        </Tile>
+                })
+          }
+          chart={total === undefined ? undefined : <FleetSparkline values={sparkValues} />}
+          className="bg-card"
+        />
 
-        <Tile label={t("iot.devices.fleet.attentionLabel")} className="bg-card">
-          {attention === undefined ? (
-            <Skeleton className="h-4 w-16" />
-          ) : (
-            <p className="text-lg font-semibold tabular-nums">{attention.length}</p>
-          )}
-        </Tile>
+        <MetricStatCard
+          locale={locale}
+          label={t("iot.devices.fleet.attentionLabel")}
+          value={
+            attention === undefined ? (
+              <Skeleton className="h-7 w-16" />
+            ) : (
+              attention.length.toLocaleString(locale)
+            )
+          }
+          className="bg-card"
+        />
       </div>
     );
   }

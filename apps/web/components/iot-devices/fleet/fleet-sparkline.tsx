@@ -42,15 +42,15 @@ export function FleetSparkline({ values }: FleetSparklineProps) {
       className="h-7 w-full"
       aria-hidden
     >
-      <path d={area.join(" ")} fill="var(--primary)" opacity={0.12} />
+      <path d={area.join(" ")} className="fill-primary" opacity={0.12} />
       <path
         d={line.join(" ")}
         fill="none"
-        stroke="var(--primary)"
+        className="stroke-primary"
         strokeWidth={1.5}
         vectorEffect="non-scaling-stroke"
       />
-      <circle cx={last.x} cy={last.y} r={2} fill="var(--primary)" />
+      <circle cx={last.x} cy={last.y} r={2} className="fill-primary" />
     </svg>
   );
 }

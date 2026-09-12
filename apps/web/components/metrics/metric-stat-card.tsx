@@ -2,11 +2,13 @@
 
 import { ArrowUpRight, TrendingDown, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { Badge } from "@repo/ui/components/badge";
 import {
   Card,
   CardAction,
+  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -29,7 +31,12 @@ function displayableChange(comparison?: { current: number; previous: number }): 
 
 interface MetricStatCardProps {
   label: string;
-  value: string;
+  /**
+   * ReactNode, not string, so a device tile can put a status indicator or a
+   * loading skeleton where the figure goes. Still typography-owned: the slot
+   * styles it as the figure whatever is passed.
+   */
+  value: ReactNode;
   locale: string;
   /** The full figure behind an abbreviated `value`, shown on hover. */
   title?: string;
@@ -37,6 +44,10 @@ interface MetricStatCardProps {
   href?: string;
   note?: string;
   context?: string;
+  /** A warning under the footer, e.g. connected but not sending. */
+  alert?: ReactNode;
+  /** A sparkline between the figure and the footer. */
+  chart?: ReactNode;
   className?: string;
 }
 
@@ -50,9 +61,11 @@ export function MetricStatCard({
   href,
   note,
   context,
+  alert,
+  chart,
   className,
 }: MetricStatCardProps) {
-  const hasFooter = note !== undefined || context !== undefined;
+  const hasFooter = note !== undefined || context !== undefined || alert !== undefined;
   const change = displayableChange(comparison);
 
   const renderChange = (fraction: number) => {
@@ -107,11 +120,15 @@ export function MetricStatCard({
           <CardAction className="@[10rem]/card:block hidden">{renderChange(change)}</CardAction>
         )}
       </CardHeader>
+      {chart === undefined ? null : <CardContent>{chart}</CardContent>}
       {hasFooter ? (
         <CardFooter className="mt-auto flex-col items-start gap-0.5 text-xs">
           {note === undefined ? null : renderNote(note)}
           {context === undefined ? null : (
             <div className="text-muted-foreground @[10rem]/card:block hidden">{context}</div>
+          )}
+          {alert === undefined ? null : (
+            <div className="text-status-stale-foreground flex items-center gap-1">{alert}</div>
           )}
         </CardFooter>
       ) : null}
