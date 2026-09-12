@@ -49,7 +49,7 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
     }
 
     if (errorStatus === 403) {
-      return <ResourceAccessDenied resource="experiment" />;
+      return <ResourceAccessDenied resource="archivedExperiment" />;
     }
 
     // Show generic error for other types (5xx, etc.)

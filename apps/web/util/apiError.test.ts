@@ -1,7 +1,27 @@
 import { ORPCError } from "@orpc/client";
 import { describe, it, expect } from "vitest";
 
-import { parseApiError } from "./apiError";
+import { httpStatusOf, parseApiError } from "./apiError";
+
+describe("httpStatusOf", () => {
+  it("reads the status an API error carries", () => {
+    expect(httpStatusOf({ status: 403 })).toBe(403);
+  });
+
+  it("returns undefined for an error carrying no status", () => {
+    expect(httpStatusOf(new Error("boom"))).toBeUndefined();
+  });
+
+  it("ignores a status that is not a number, so a string never compares equal", () => {
+    expect(httpStatusOf({ status: "403" })).toBeUndefined();
+  });
+
+  it("survives null and non-object input", () => {
+    expect(httpStatusOf(null)).toBeUndefined();
+    expect(httpStatusOf(undefined)).toBeUndefined();
+    expect(httpStatusOf("403")).toBeUndefined();
+  });
+});
 
 describe("parseApiError", () => {
   it("reads message from .message and app code from .data.code on an ORPCError", () => {

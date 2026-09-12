@@ -19,8 +19,7 @@ export const zResourceCapabilities = z.object({
   /**
    * May move the resource to another organization: `can(manage)` plus authority
    * over the owning one — being its owner/admin, or holding a grant on a resource
-   * whose organization has no living owner left. Always false for a device, which
-   * has no transfer route.
+   * whose organization has no living owner left.
    */
   canTransfer: z.boolean(),
 });

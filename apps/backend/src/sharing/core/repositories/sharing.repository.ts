@@ -120,9 +120,9 @@ function toOrganizationMemberRole(stored: string | null): OrganizationMemberRole
 }
 
 /**
- * The tables a resource can be moved between organizations in. Devices are absent
- * because they have no transfer route — their cloud identity is provisioned per
- * organization — and the contract's type keeps this map honest.
+ * The table each transferable type lives in. Kept separate from the staffing map
+ * so transferability can narrow without narrowing what is shareable; the
+ * `satisfies` below is what forces this map to track the contract's enum.
  */
 const TRANSFERABLE_RESOURCE_TABLES = {
   experiment: experiments,

@@ -48,7 +48,7 @@ const SORT_OPTIONS: readonly { value: ResourceSort; labelKey: string }[] = [
   { value: "type", labelKey: "organizations.resources.sortType" },
 ];
 
-/** Read off the schema rather than excluding `device` by hand, so a sixth type stays honest. */
+/** Read off the schema rather than listing types by hand, so a new type stays honest. */
 function transferableType(type: OrganizationResource["type"]): TransferableResourceType | null {
   const parsed = zTransferableResourceType.safeParse(type);
   return parsed.success ? parsed.data : null;
@@ -234,8 +234,6 @@ function ResourceRow({
   const locale = useLocale();
 
   const meta = metaBadge(resource, t);
-  // Neither a device nor a device group has a transfer route, so they get no control
-  // rather than one that refuses.
   const transferableAs = onTransfer ? transferableType(resource.type) : null;
 
   return (

@@ -12,6 +12,7 @@ import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
 
 const UNSHAREABLE_LIST_SEGMENTS = {
+  archivedExperiment: "experiments-archive",
   dashboard: "experiments",
   visualization: "experiments",
   organization: "organizations",
@@ -19,7 +20,7 @@ const UNSHAREABLE_LIST_SEGMENTS = {
 
 export type AccessDeniedResource = SharingResourceType | keyof typeof UNSHAREABLE_LIST_SEGMENTS;
 
-const LIST_SEGMENTS: Record<AccessDeniedResource, string> = {
+export const LIST_SEGMENTS: Record<AccessDeniedResource, string> = {
   ...RESOURCE_ROUTE_SEGMENTS,
   ...UNSHAREABLE_LIST_SEGMENTS,
 };

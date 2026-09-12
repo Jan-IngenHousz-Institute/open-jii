@@ -140,7 +140,6 @@
     "seeProtocolDetails": "See protocol details",
     "family": "Family:",
     "createdBy": "Created by:",
-    "noPermissionToAccess": "You do not have permission to access this experiment.",
     "errorLoadingExperiment": "There was an error loading the experiment.",
     "experimentNotFound": "The experiment you are looking for could not be found.",
     "needMemberAccess": "You need to be a member to access experiment settings",
@@ -986,8 +985,6 @@
     "serverError": "Server error occurred",
     "validationError": "Validation error",
     "unauthorized": "Unauthorized access",
-    "forbidden": "Access forbidden",
-    "accessDenied": "Access Denied",
     "notFound": "Not Found",
     "failedToLoadProtocol": "Failed to load protocol",
     "loginRequired": "Please log in to access this page",
@@ -1019,7 +1016,8 @@
         "workbook": "You do not have access to this workbook",
         "protocol": "You do not have access to this protocol",
         "macro": "You do not have access to this macro",
-        "organization": "You do not have access to this organization"
+        "organization": "You do not have access to this organization",
+        "archivedExperiment": "You do not have access to this archived experiment"
       },
       "back": {
         "experiment": "Back to experiments",
@@ -1030,7 +1028,8 @@
         "workbook": "Back to workbooks",
         "protocol": "Back to protocols",
         "macro": "Back to macros",
-        "organization": "Back to organizations"
+        "organization": "Back to organizations",
+        "archivedExperiment": "Back to archived experiments"
       }
     }
   },

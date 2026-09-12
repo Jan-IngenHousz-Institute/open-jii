@@ -140,7 +140,6 @@
     "seeProtocolDetails": "Protokolldetails anzeigen",
     "family": "Familie:",
     "createdBy": "Erstellt von:",
-    "noPermissionToAccess": null,
     "errorLoadingExperiment": null,
     "experimentNotFound": null,
     "needMemberAccess": "Sie müssen Mitglied sein, um auf die Experiment-Einstellungen zuzugreifen",
@@ -986,8 +985,6 @@
     "serverError": "Serverfehler aufgetreten",
     "validationError": "Validierungsfehler",
     "unauthorized": "Unbefugter Zugriff",
-    "forbidden": "Zugriff verboten",
-    "accessDenied": null,
     "notFound": null,
     "failedToLoadProtocol": "Protokoll konnte nicht geladen werden",
     "loginRequired": "Bitte melden Sie sich an, um auf diese Seite zuzugreifen",
@@ -1019,7 +1016,8 @@
         "workbook": "Sie haben keinen Zugriff auf dieses Arbeitsbuch",
         "protocol": "Sie haben keinen Zugriff auf dieses Protokoll",
         "macro": "Sie haben keinen Zugriff auf dieses Makro",
-        "organization": "Sie haben keinen Zugriff auf diese Organisation"
+        "organization": "Sie haben keinen Zugriff auf diese Organisation",
+        "archivedExperiment": "Sie haben keinen Zugriff auf dieses archivierte Experiment"
       },
       "back": {
         "experiment": "Zurück zu den Experimenten",
@@ -1030,7 +1028,8 @@
         "workbook": "Zurück zu den Arbeitsbüchern",
         "protocol": "Zurück zu den Protokollen",
         "macro": "Zurück zu den Makros",
-        "organization": "Zurück zu den Organisationen"
+        "organization": "Zurück zu den Organisationen",
+        "archivedExperiment": "Zurück zu den archivierten Experimenten"
       }
     }
   },

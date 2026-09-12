@@ -140,7 +140,6 @@
     "seeProtocolDetails": null,
     "family": null,
     "createdBy": null,
-    "noPermissionToAccess": null,
     "errorLoadingExperiment": null,
     "experimentNotFound": null,
     "needMemberAccess": null,
@@ -986,8 +985,6 @@
     "serverError": "Serverfout opgetreden",
     "validationError": "Validatiefout",
     "unauthorized": "Ongeautoriseerde toegang",
-    "forbidden": "Toegang verboden",
-    "accessDenied": "Toegang geweigerd",
     "notFound": "Niet gevonden",
     "failedToLoadProtocol": "Protocol kon niet worden geladen",
     "loginRequired": "Log in om toegang te krijgen tot deze pagina",
@@ -1019,7 +1016,8 @@
         "workbook": "U hebt geen toegang tot dit werkboek",
         "protocol": "U hebt geen toegang tot dit protocol",
         "macro": "U hebt geen toegang tot deze macro",
-        "organization": "U hebt geen toegang tot deze organisatie"
+        "organization": "U hebt geen toegang tot deze organisatie",
+        "archivedExperiment": "U hebt geen toegang tot dit gearchiveerde experiment"
       },
       "back": {
         "experiment": "Terug naar experimenten",
@@ -1030,7 +1028,8 @@
         "workbook": "Terug naar werkboeken",
         "protocol": "Terug naar protocollen",
         "macro": "Terug naar macro's",
-        "organization": "Terug naar organisaties"
+        "organization": "Terug naar organisaties",
+        "archivedExperiment": "Terug naar gearchiveerde experimenten"
       }
     }
   },
