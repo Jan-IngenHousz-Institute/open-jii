@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import type { MetricsWindowDay } from "@repo/api/domains/metrics/metrics.schema";
 import {
   Card,
@@ -20,7 +22,8 @@ const TRACK_OPACITY = 0.08;
 
 interface MetricTrendCardProps {
   label: string;
-  value: string;
+  /** ReactNode so a tile can put a skeleton where the figure goes. */
+  value: ReactNode;
   title?: string;
   seriesName: string;
   days: MetricsWindowDay[];

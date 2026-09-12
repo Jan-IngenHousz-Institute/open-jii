@@ -22,14 +22,14 @@ import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { MetricStatCard } from "../../metrics/metric-stat-card";
+import { MetricTrendCard } from "../../metrics/metric-trend-card";
 import { metricsBandGrid } from "../../metrics/metrics-band-grid";
 import { buildGroupActivity } from "../groups/group-activity";
 import { summarizeGroupHealth } from "../groups/group-health";
 import { GroupThroughputPanel } from "../groups/group-throughput-panel";
-import { bucketAxis } from "../monitoring/monitoring-buckets";
+import { bucketAxis, foldBucketSeries, peakBucketDate } from "../monitoring/monitoring-buckets";
 import { FleetAttentionList } from "./fleet-attention-list";
-import { fleetAttention, foldSparkValues, toFleetHealth } from "./fleet-health";
-import { FleetSparkline } from "./fleet-sparkline";
+import { fleetAttention, toFleetHealth } from "./fleet-health";
 
 const DEFAULT_PRESET: MonitoringPresetId = "last24h";
 
@@ -103,13 +103,15 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
   const windowHours = Math.max(1, windowMs / 3_600_000);
   const perHour = total === undefined ? undefined : total / windowHours;
 
-  const sparkValues =
+  const sparkSeries =
     monitoring === undefined
       ? []
-      : foldSparkValues(
+      : foldBucketSeries(
           monitoring.throughput,
           bucketAxis(selection.range.from, selection.range.to, selection.range.bucket),
         );
+
+  const peakBucket = peakBucketDate(sparkSeries);
 
   const labels = new Map(devices.map((device) => [device.id, resolveDeviceLabel(device, t)]));
 
@@ -167,14 +169,17 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
           className="bg-card"
         />
 
-        <MetricStatCard
+        <MetricTrendCard
           locale={locale}
           label={t("iot.devices.monitoring.measurements")}
           value={
             total === undefined ? <Skeleton className="h-7 w-16" /> : total.toLocaleString(locale)
           }
           title={total === undefined ? undefined : total.toLocaleString(locale)}
-          note={
+          seriesName={t("iot.devices.monitoring.measurements")}
+          days={sparkSeries}
+          peakDate={peakBucket}
+          footer={
             perHour === undefined
               ? undefined
               : t("iot.devices.monitoring.perHour", {
@@ -184,7 +189,6 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
                   }),
                 })
           }
-          chart={total === undefined ? undefined : <FleetSparkline values={sparkValues} />}
           className="bg-card"
         />
 

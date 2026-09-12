@@ -12,7 +12,9 @@ import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { MetricStatCard } from "../../metrics/metric-stat-card";
+import { MetricTrendCard } from "../../metrics/metric-trend-card";
 import { metricsBandGrid } from "../../metrics/metrics-band-grid";
+import { bucketAxis, foldBucketSeries, peakBucketDate } from "../monitoring/monitoring-buckets";
 import type { MonitoringRange } from "../monitoring/monitoring-range";
 import { summarizeGroupHealth } from "./group-health";
 
@@ -57,6 +59,7 @@ export function GroupMonitoringTiles({
     monitoring === undefined
       ? undefined
       : throughput.reduce((sum, bucket) => sum + bucket.count, 0);
+  const series = foldBucketSeries(throughput, bucketAxis(range.from, range.to, range.bucket));
   // Fractional hours: truncating would misstate the rate on sub-day windows.
   const windowMs = new Date(range.to).getTime() - new Date(range.from).getTime();
   const windowHours = Math.max(1, windowMs / 3_600_000);
@@ -105,14 +108,17 @@ export function GroupMonitoringTiles({
         className={tileClassName}
       />
 
-      <MetricStatCard
+      <MetricTrendCard
         locale={locale}
         label={t("iot.devices.monitoring.measurements")}
         value={
           total === undefined ? <Skeleton className="h-7 w-16" /> : total.toLocaleString(locale)
         }
         title={total === undefined ? undefined : total.toLocaleString(locale)}
-        note={
+        seriesName={t("iot.devices.monitoring.measurements")}
+        days={series}
+        peakDate={peakBucketDate(series)}
+        footer={
           perHour === undefined
             ? undefined
             : t("iot.devices.monitoring.perHour", {
