@@ -1,13 +1,14 @@
 "use client";
 
 import { bucketAxis } from "@/components/iot-devices/monitoring/monitoring-buckets";
-import { MONITORING_PRIMARY_COLOR } from "@/components/iot-devices/monitoring/monitoring-palette";
+import { monitoringPrimaryColor } from "@/components/iot-devices/monitoring/monitoring-palette";
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
 import { useExperimentDeviceSeries } from "@/hooks/experiment/useExperimentDeviceSeries/useExperimentDeviceSeries";
 import type { ReactNode } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { BarChart } from "@repo/ui/components/charts/bar-chart";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
@@ -26,6 +27,10 @@ export function ExperimentDeviceSeriesPanel({
   action,
 }: ExperimentDeviceSeriesPanelProps) {
   const { t } = useTranslation("iot");
+  // The colour is resolved here, so this component has to learn about a
+  // theme swap itself; the chart below only re-renders on its own.
+  useChartThemeRefresh();
+  const seriesColor = monitoringPrimaryColor();
   const { data, isPending, isError } = useExperimentDeviceSeries({
     experimentId,
     clientId,
@@ -68,7 +73,7 @@ export function ExperimentDeviceSeriesPanel({
               // `xaxis.type` to linear, which cannot place label strings.
               x: axis,
               y: counts,
-              color: MONITORING_PRIMARY_COLOR,
+              color: seriesColor,
             },
           ]}
           config={{
