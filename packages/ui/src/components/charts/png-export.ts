@@ -1,3 +1,4 @@
+/// <reference path="./plotly-dist.d.ts" />
 import type { Config, ModeBarButton, ModeBarButtonAny, PlotlyHTMLElement } from "plotly.js";
 
 import { toast } from "../../hooks/use-toast";
