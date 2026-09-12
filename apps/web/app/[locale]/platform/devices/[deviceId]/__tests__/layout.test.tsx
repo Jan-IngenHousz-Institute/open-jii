@@ -76,8 +76,6 @@ describe("<DeviceLayout />", () => {
     renderLayout();
 
     await waitFor(() => expect(screen.getByText("Child Content")).toBeInTheDocument());
-    // Shown, not hidden: the device reads the same to everyone, and a closed tab
-    // looks like missing permission rather than a missing feature.
     const tab = screen.getByRole("tab", { name: "iot.devices.detailTabs.collaborators" });
     expect(tab).toBeDisabled();
     expect(tab).not.toHaveAttribute("href");
@@ -158,8 +156,6 @@ describe("<DeviceLayout />", () => {
   });
 
   it("keeps the disabled tab the URL names selected, rather than jumping to Overview", async () => {
-    // Demoted while sitting on /credentials: the tab stays, disabled, and the strip
-    // must not claim Overview is the current page while the URL says /credentials.
     vi.mocked(usePathname).mockReturnValue(`/en-US/platform/devices/${DEVICE_ID}/credentials`);
     server.mount(contract.iot.getIotDevice, {
       body: createIotDeviceDetail({
@@ -176,8 +172,6 @@ describe("<DeviceLayout />", () => {
   });
 
   it("highlights no tab when the device has no such surface at all", async () => {
-    // A phone has no certificate lifecycle, so Credentials is absent rather than
-    // disabled, and nothing in the strip may claim to be the current page.
     vi.mocked(usePathname).mockReturnValue(`/en-US/platform/devices/${DEVICE_ID}/credentials`);
     server.mount(contract.iot.getIotDevice, {
       body: createIotDeviceDetail({ id: DEVICE_ID, deviceType: "mobile", status: "active" }),

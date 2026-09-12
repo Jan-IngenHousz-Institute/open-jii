@@ -17,11 +17,6 @@ interface ResourceCollaboratorsRouteProps {
   capabilities?: { canShare: boolean; canLeave: boolean };
 }
 
-/**
- * The tab is disabled for a user with neither capability, so reaching this route
- * means a typed or shared URL: say the surface is closed rather than bouncing
- * them somewhere they did not ask to go.
- */
 export function ResourceCollaboratorsRoute({
   resourceType,
   resourceId,

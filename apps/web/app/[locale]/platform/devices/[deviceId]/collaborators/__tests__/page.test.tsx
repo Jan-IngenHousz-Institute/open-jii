@@ -92,7 +92,6 @@ describe("DeviceCollaboratorsPage", () => {
     renderPage();
 
     expect(await screen.findByText("errors.noAccess.title.device")).toBeInTheDocument();
-    // Still no sharing surface behind the explanation.
     expect(screen.queryByRole("button", { name: "sharing.shareResource" })).not.toBeInTheDocument();
   });
 });

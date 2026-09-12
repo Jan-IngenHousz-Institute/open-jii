@@ -22,8 +22,7 @@ export default function ExperimentDevicesContent({ params }: ExperimentDevicesCo
   const devicesEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.IOT_DEVICES);
   const { data: accessData, isLoading, error } = useExperimentAccess(id);
 
-  // Only public experiments accept join requests, and a refused devices read on
-  // one means the viewer holds nothing but that public tier.
+  // Only public experiments accept join requests.
   const isPubliclyReadable = accessData?.experiment.visibility === "public";
 
   if (devicesEnabled === false) {

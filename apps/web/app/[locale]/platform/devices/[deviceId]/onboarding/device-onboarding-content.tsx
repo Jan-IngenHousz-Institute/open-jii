@@ -11,11 +11,7 @@ interface DeviceOnboardingPageProps {
   params: Promise<{ deviceId: string }>;
 }
 
-/**
- * Manage-gated onboarding: binding and config issuance require device manage. A
- * phone has no config to deliver, so that visit redirects; a viewer who lacks
- * `manage` is told so instead of being bounced.
- */
+/** Manage-gated onboarding; a phone has no config to deliver. */
 export default function DeviceOnboardingPage({ params }: DeviceOnboardingPageProps) {
   const { deviceId } = use(params);
   const { data } = useIotDevice(deviceId);
@@ -23,8 +19,6 @@ export default function DeviceOnboardingPage({ params }: DeviceOnboardingPagePro
   const locale = useLocale();
 
   const detailPath = `/${locale}/platform/devices/${deviceId}`;
-  // Only once the device is actually in hand: "not yet known" must not read as
-  // "nothing to show here".
   const hasNoConfigToDeliver = !!data && data.deviceType === "mobile";
 
   useEffect(() => {

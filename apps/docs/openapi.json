@@ -25925,7 +25925,8 @@
                 "macro",
                 "protocol",
                 "workbook",
-                "device_group"
+                "device_group",
+                "device"
               ],
               "type": "string"
             }
@@ -25975,7 +25976,8 @@
                         "macro",
                         "protocol",
                         "workbook",
-                        "device_group"
+                        "device_group",
+                        "device"
                       ],
                       "type": "string"
                     },

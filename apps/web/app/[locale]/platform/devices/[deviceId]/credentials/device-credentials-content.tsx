@@ -15,10 +15,7 @@ interface DeviceCredentialsPageProps {
   params: Promise<{ deviceId: string }>;
 }
 
-/**
- * Manage-gated device certificate controls. A phone has no certificate lifecycle
- * at all, so that visit redirects; a viewer who simply lacks `manage` is told so.
- */
+/** Manage-gated device certificate controls; a phone has no certificate lifecycle. */
 export default function DeviceCredentialsPage({ params }: DeviceCredentialsPageProps) {
   const { deviceId } = use(params);
   const { t } = useTranslation("iot");
@@ -27,8 +24,6 @@ export default function DeviceCredentialsPage({ params }: DeviceCredentialsPageP
   const locale = useLocale();
 
   const detailPath = `/${locale}/platform/devices/${deviceId}`;
-  // Only once the device is actually in hand: "not yet known" must not read as
-  // "nothing to show here".
   const hasNoCertificateLifecycle = !!data && data.deviceType === "mobile";
 
   useEffect(() => {

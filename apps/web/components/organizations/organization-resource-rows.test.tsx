@@ -391,17 +391,15 @@ describe("<OrganizationResourceRows />", () => {
       );
     }
 
-    /**
-     * Pinned on the enum, not the render: a device is the one resource whose org is
-     * also its certificate's, so widening this must be a deliberate edit.
-     */
-    it("keeps devices, and only devices, out of the transferable set", () => {
+    /** Pinned on the enum, not the render, so narrowing the set is a deliberate edit. */
+    it("covers every resource type a workspace can own", () => {
       expect(zTransferableResourceType.options).toEqual([
         "experiment",
         "macro",
         "protocol",
         "workbook",
         "device_group",
+        "device",
       ]);
     });
 
@@ -412,22 +410,18 @@ describe("<OrganizationResourceRows />", () => {
       expect(transferButtons(container)).toHaveLength(0);
     });
 
-    it("offers it on every transferable type and not on a device", () => {
+    it("offers it on every row, devices included", () => {
       const { container } = renderTransferable();
 
-      // Six rows, five controls: only a device has no transfer route, so only it
-      // goes without a control that would otherwise just refuse.
       expect(rowsIn(container)).toHaveLength(6);
-      expect(transferButtons(container)).toHaveLength(5);
-      expect(
-        within(rowFor(container, "Ambyte 04")).queryByRole("button", { name: TRANSFER }),
-      ).toBeNull();
+      expect(transferButtons(container)).toHaveLength(6);
       for (const name of [
         "Drought stress",
         "Dark adaptation",
         "Batch fit",
         "Canopy synthesis",
         "Rooftop array",
+        "Ambyte 04",
       ]) {
         expect(
           within(rowFor(container, name)).getByRole("button", { name: TRANSFER }),

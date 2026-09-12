@@ -389,16 +389,14 @@ describe("IotDeviceController", () => {
 
       expect(response.body.id).toBe(device.id);
       // The owner of the device's org holds every action through that role, and no
-      // grant of their own, so there is nothing for them to leave. `canTransfer`
-      // is false even for them: a device's AWS Thing and certificate are
-      // provisioned against its organization, so there is no transfer route.
+      // grant of their own, so there is nothing for them to leave.
       expect(response.body.capabilities).toEqual({
         canContribute: true,
         canUpdate: true,
         canManage: true,
         canShare: true,
         canLeave: false,
-        canTransfer: false,
+        canTransfer: true,
       });
     });
 

@@ -13,11 +13,9 @@ interface EntityLayoutShellProps {
   isLoading: boolean;
   error: unknown;
   hasData: boolean;
-  /** Names the resource in the denied page, and where that page sends the viewer back to. */
   resource: AccessDeniedResource;
   loadingMessage?: string;
   errorDescription?: string;
-  /** Passed through to the denied page for resources that accept access requests. */
   requestAccess?: ReactNode;
   children: ReactNode;
 }

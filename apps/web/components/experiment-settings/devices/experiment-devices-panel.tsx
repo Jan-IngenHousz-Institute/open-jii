@@ -32,11 +32,6 @@ import { ExperimentDeviceRow } from "./experiment-device-row";
 
 interface ExperimentDevicesPanelProps {
   experimentId: string;
-  /**
-   * Offered when the tab is closed to the viewer. Devices are withheld from the
-   * public-read tier, so a refused read here means the viewer reads the
-   * experiment publicly and joining is the way in.
-   */
   requestAccess?: ReactNode;
 }
 

@@ -59,11 +59,8 @@ describe("DeviceCredentialsPage", () => {
 
     renderPage();
 
-    // The tab is disabled for them, so reaching this route means a typed or
-    // shared URL. Say why it is closed instead of silently moving them.
     expect(await screen.findByText("errors.noAccess.title.device")).toBeInTheDocument();
-    // And no control renders: issuing, rotating and revoking all reach real AWS
-    // IoT and are refused server-side, so there must be no button to press.
+    // Every control here reaches real AWS IoT, so none may render.
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 

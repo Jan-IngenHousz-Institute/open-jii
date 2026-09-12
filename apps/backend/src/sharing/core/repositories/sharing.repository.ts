@@ -23,6 +23,7 @@ import {
   experiments,
   ilike,
   inArray,
+  iotDevices,
   isNotPersonalOrgSql,
   isNull,
   listResourceGrants,
@@ -129,6 +130,7 @@ const TRANSFERABLE_RESOURCE_TABLES = {
   protocol: protocols,
   workbook: workbooks,
   device_group: deviceGroups,
+  device: iotDevices,
 } as const satisfies Record<TransferableResourceType, unknown>;
 
 /** Refusals shared by the pre-flight transfer gate and its re-checks under lock. */

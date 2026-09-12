@@ -38,11 +38,7 @@ export async function resolveResourceCapabilities(
     // exists to give up. See the schema for the exact semantics.
     canLeave: hasOwnGrant,
     // `manage` plus authority over the owning organization, mirroring the server
-    // gate. Asked only when it can be true, since it costs another two queries —
-    // and devices have no transfer route to enable.
-    canTransfer:
-      resourceType !== "device" &&
-      manage.allow &&
-      (await authz.canTransferOut(userId, manage.organizationId)),
+    // gate.
+    canTransfer: manage.allow && (await authz.canTransferOut(userId, manage.organizationId)),
   };
 }

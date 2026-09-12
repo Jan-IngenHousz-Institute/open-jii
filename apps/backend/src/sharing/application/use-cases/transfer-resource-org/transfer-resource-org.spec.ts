@@ -489,4 +489,62 @@ describe("TransferResourceOrgUseCase", () => {
       assertFailure(result);
     });
   });
+
+  describe("devices", () => {
+    const owningOrgOfDevice = async (deviceId: string) => {
+      const [row] = await testApp.database
+        .select({ organizationId: iotDevices.organizationId })
+        .from(iotDevices)
+        .where(eq(iotDevices.id, deviceId));
+      return row.organizationId;
+    };
+
+    it("moves a device between organizations", async () => {
+      const organizationId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(organizationId, owner, "owner");
+      const device = await testApp.createIotDevice({ createdBy: owner, organizationId });
+      const destination = await testApp.createOrganization();
+      await testApp.addOrganizationMember(destination, owner, "member");
+
+      assertSuccess(await useCase.execute(owner, "device", device.id, destination));
+
+      expect(await owningOrgOfDevice(device.id)).toBe(destination);
+    });
+
+    it("leaves a group holding the device behind in its own organization", async () => {
+      const organizationId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(organizationId, owner, "owner");
+      const groupRepository = testApp.module.get(IotDeviceGroupRepository);
+      const created = await groupRepository.create(
+        { name: "Provisioning batch", description: null },
+        owner,
+        organizationId,
+      );
+      assertSuccess(created);
+      const device = await testApp.createIotDevice({ createdBy: owner, organizationId });
+      assertSuccess(await groupRepository.addMembers(created.value[0].id, [device.id], owner));
+      const destination = await testApp.createOrganization();
+      await testApp.addOrganizationMember(destination, owner, "member");
+
+      assertSuccess(await useCase.execute(owner, "device", device.id, destination));
+
+      const [row] = await testApp.database
+        .select({ organizationId: deviceGroups.organizationId })
+        .from(deviceGroups)
+        .where(eq(deviceGroups.id, created.value[0].id));
+      expect(row.organizationId).toBe(organizationId);
+      expect(await owningOrgOfDevice(device.id)).toBe(destination);
+    });
+
+    it("refuses a member of the owning organization who is not an owner or admin", async () => {
+      const organizationId = await testApp.createOrganization();
+      const outsider = await testApp.createTestUser({ name: "Plain member" });
+      await testApp.addOrganizationMember(organizationId, outsider, "member");
+      const device = await testApp.createIotDevice({ createdBy: owner, organizationId });
+      const destination = await testApp.createOrganization();
+      await testApp.addOrganizationMember(destination, outsider, "member");
+
+      assertFailure(await useCase.execute(outsider, "device", device.id, destination));
+    });
+  });
 });

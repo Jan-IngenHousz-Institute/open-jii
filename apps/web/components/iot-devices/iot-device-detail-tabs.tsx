@@ -30,7 +30,6 @@ interface IotDeviceDetailTabsProps {
   isMobileFamily: boolean;
   /** Only families whose firmware JII builds have a release line to show. */
   hasManagedFirmware: boolean;
-  /** `capabilities.canShare`: the caller may grant others access. */
   canShare: boolean;
   /** `capabilities.canLeave`: the caller holds a direct grant they could give up. */
   canLeave: boolean;
@@ -43,9 +42,8 @@ interface IotDeviceDetailTabsProps {
  * Routes let each tab own its entire surface, so credentials and danger-zone
  * controls are absent—not merely hidden—elsewhere, while links/back still work.
  *
- * A tab the device has no use for is dropped; a tab the viewer simply may not
- * open stays visible and disabled, so the device reads the same to everyone and
- * missing permission looks like missing permission rather than a missing feature.
+ * A tab the device has no use for is dropped; one the viewer may not open is
+ * disabled rather than hidden.
  */
 export function IotDeviceDetailTabs({
   deviceId,
