@@ -8,6 +8,18 @@ description: "Create and download a processed experiment-table export."
 Web exports are created per experiment **dataset**, not as one automatic archive
 of every table. Choose the table that contains the measurements you need.
 
+## Download a chart image
+
+On a chart with PNG export enabled, use the toolbar's **Download plot as a PNG**
+button. The downloaded image includes the openJII logo at the bottom right in a
+white footer below the chart. The footer adds height to the image so it does not
+cover data, labels, or legends. The chart itself keeps its configured export
+resolution and colors.
+
+This saves an image of the chart. To work with the underlying measurements in
+R or Python, create a dataset export as described below. SVG, JPEG, and WebP
+exports keep their existing behavior.
+
 ## Create an export
 
 1. Open the experiment's **Data** tab and select a dataset.

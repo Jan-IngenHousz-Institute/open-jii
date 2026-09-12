@@ -705,7 +705,7 @@ describe("utils", () => {
 
       expect(config.displayModeBar).toBe(true);
       expect(config.displaylogo).toBe(false);
-      expect(config.modeBarButtonsToRemove).toEqual(["lasso2d", "select2d"]);
+      expect(config.modeBarButtonsToRemove).toEqual(["lasso2d", "select2d", "toImage"]);
     });
 
     it("configures image export options", () => {

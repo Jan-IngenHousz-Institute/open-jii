@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState, Suspense, lazy } from "react";
 import type { PlotParams } from "react-plotly.js";
 
 import { cn } from "../../lib/utils";
+import { withBrandedPngExport } from "./png-export";
 
 // Type definitions for better type safety
 interface SafeDimensions {
@@ -354,7 +355,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
 
     // Prepare safe config
     const safeConfig = React.useMemo(() => {
-      return createSafeConfig(config, isWebGLEnabled && isContextAvailable);
+      return withBrandedPngExport(createSafeConfig(config, isWebGLEnabled && isContextAvailable));
     }, [config, isWebGLEnabled, isContextAvailable]);
 
     // Handle errors

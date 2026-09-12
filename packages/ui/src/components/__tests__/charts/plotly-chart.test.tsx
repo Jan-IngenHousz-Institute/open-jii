@@ -515,6 +515,10 @@ describe("PlotlyChart", () => {
               height: 800, // Minimum enforced
               format: "png",
             }),
+            modeBarButtonsToRemove: expect.arrayContaining(["toImage"]),
+            modeBarButtonsToAdd: expect.arrayContaining([
+              expect.objectContaining({ name: "downloadBrandedPng" }),
+            ]),
           }),
         }),
       );
