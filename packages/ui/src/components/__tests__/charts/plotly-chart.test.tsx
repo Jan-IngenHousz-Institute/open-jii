@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import type { Data, Layout } from "plotly.js";
+import type { Config, Data, Layout } from "plotly.js";
 import * as React from "react";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
@@ -495,6 +495,46 @@ describe("PlotlyChart", () => {
   });
 
   describe("Config Handling", () => {
+    it.each(["png", "svg", "jpeg", "webp"] as const)(
+      "preserves %s export settings on initial render and after WebGL fallback",
+      (format) => {
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        const options = { format, width: 1800, height: 1000, scale: 3, filename: "field-trial" };
+        render(
+          <PlotlyChart
+            data={[{ type: "scatter", x: [1, 2], y: [2, 3] }]}
+            layout={{}}
+            config={{ toImageButtonOptions: options }}
+          />,
+        );
+
+        const expectExportConfig = (config: Partial<Config>) => {
+          expect(config.toImageButtonOptions).toEqual(options);
+          if (format === "png") {
+            expect(config.modeBarButtonsToRemove).toContain("toImage");
+            expect(config.modeBarButtonsToAdd).toEqual(
+              expect.arrayContaining([expect.objectContaining({ name: "downloadBrandedPng" })]),
+            );
+          } else {
+            expect(config.modeBarButtonsToRemove ?? []).not.toContain("toImage");
+            expect(config.modeBarButtonsToAdd ?? []).not.toEqual(
+              expect.arrayContaining([expect.objectContaining({ name: "downloadBrandedPng" })]),
+            );
+          }
+        };
+
+        for (const [props] of mockPlotComponent.mock.calls) expectExportConfig(props.config);
+
+        fireEvent(window, new Event("webglcontextlost"));
+        expect(screen.getByText("Chart Error")).toBeInTheDocument();
+        mockPlotComponent.mockClear();
+        fireEvent.click(screen.getByText("Retry with fallback rendering"));
+
+        expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
+        expectExportConfig(mockPlotComponent.mock.lastCall[0].config);
+      },
+    );
+
     it("handles custom toImageButtonOptions with minimum dimensions", () => {
       const testData: Data[] = [{ type: "scatter", x: [1, 2], y: [1, 2] }];
       const customConfig = {
