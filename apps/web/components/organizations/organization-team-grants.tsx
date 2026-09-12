@@ -2,7 +2,15 @@
 
 import { useLocale } from "@/hooks/useLocale";
 import type { LucideIcon } from "lucide-react";
-import { BookOpen, Boxes, Code, FileSliders, Leaf, RadioReceiver } from "lucide-react";
+import {
+  BookOpen,
+  Boxes,
+  Code,
+  FileSliders,
+  Leaf,
+  RadioReceiver,
+  SlidersHorizontal,
+} from "lucide-react";
 import Link from "next/link";
 
 import type { OrganizationTeamGrant } from "@repo/api/domains/organization/organization.schema";
@@ -26,6 +34,7 @@ const RESOURCE_ICON: Record<SharingResourceType, LucideIcon> = {
   workbook: BookOpen,
   device: RadioReceiver,
   device_group: Boxes,
+  calibration_definition: SlidersHorizontal,
 };
 
 /**

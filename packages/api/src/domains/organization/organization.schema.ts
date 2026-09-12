@@ -206,6 +206,10 @@ export const zOrganizationResource = z.discriminatedUnion("type", [
     /** How many devices the group holds; stated in the footer, not as a badge. */
     memberCount: z.number().int(),
   }),
+  zOrganizationResourceBase.extend({
+    type: z.literal("calibration_definition"),
+    family: zSensorFamily,
+  }),
 ]);
 
 /**
@@ -231,6 +235,7 @@ export const zOrganizationResourceTotals = z.object({
   workbook: z.number().int(),
   device: z.number().int(),
   device_group: z.number().int(),
+  calibration_definition: z.number().int(),
 }) satisfies z.ZodType<Record<z.infer<typeof zSharingResourceType>, number>>;
 
 export const zOrganizationResources = z.object({

@@ -579,7 +579,9 @@
         "device_one": "Gerät",
         "device_other": "Geräte",
         "device_group_one": "Gerätegruppe",
-        "device_group_other": "Gerätegruppen"
+        "device_group_other": "Gerätegruppen",
+        "calibration_definition_one": "Kalibrierungsdefinition",
+        "calibration_definition_other": "Kalibrierungsdefinitionen"
       },
       "groupMemberCount_one": "{{count}} Gerät",
       "groupMemberCount_other": "{{count}} Geräte",
@@ -765,7 +767,9 @@
         "device_one": "Gerät",
         "device_other": "Geräte",
         "device_group_one": "Gerätegruppe",
-        "device_group_other": "Gerätegruppen"
+        "device_group_other": "Gerätegruppen",
+        "calibration_definition_one": "Kalibrierungsdefinition",
+        "calibration_definition_other": "Kalibrierungsdefinitionen"
       },
       "confirmTitle": "Organisation löschen?",
       "confirmDescription": "{{name}} wird mit allen Mitgliedern, Einladungen und Teams gelöscht.",

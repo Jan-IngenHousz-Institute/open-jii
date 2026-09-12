@@ -24968,6 +24968,66 @@
                               "type",
                               "memberCount"
                             ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "collaboratorCount": {
+                                "type": "integer"
+                              },
+                              "type": {
+                                "const": "calibration_definition"
+                              },
+                              "family": {
+                                "enum": [
+                                  "multispeq",
+                                  "ambyte",
+                                  "minipar",
+                                  "generic",
+                                  "ambit",
+                                  "mobile"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description",
+                              "visibility",
+                              "updatedAt",
+                              "collaboratorCount",
+                              "type",
+                              "family"
+                            ]
                           }
                         ]
                       }
@@ -24992,6 +25052,9 @@
                         },
                         "device_group": {
                           "type": "integer"
+                        },
+                        "calibration_definition": {
+                          "type": "integer"
                         }
                       },
                       "required": [
@@ -25000,7 +25063,8 @@
                         "macro",
                         "workbook",
                         "device",
-                        "device_group"
+                        "device_group",
+                        "calibration_definition"
                       ]
                     }
                   },
@@ -25138,7 +25202,8 @@
                               "protocol",
                               "workbook",
                               "device",
-                              "device_group"
+                              "device_group",
+                              "calibration_definition"
                             ],
                             "type": "string"
                           },
@@ -25310,7 +25375,8 @@
                           "protocol",
                           "workbook",
                           "device",
-                          "device_group"
+                          "device_group",
+                          "calibration_definition"
                         ],
                         "type": "string"
                       },
@@ -25361,7 +25427,8 @@
                 "protocol",
                 "workbook",
                 "device",
-                "device_group"
+                "device_group",
+                "calibration_definition"
               ],
               "type": "string"
             }
@@ -28218,7 +28285,8 @@
                 "protocol",
                 "workbook",
                 "device",
-                "device_group"
+                "device_group",
+                "calibration_definition"
               ],
               "type": "string"
             }
@@ -28419,7 +28487,8 @@
                               "protocol",
                               "workbook",
                               "device",
-                              "device_group"
+                              "device_group",
+                              "calibration_definition"
                             ],
                             "type": "string"
                           },
@@ -28596,7 +28665,8 @@
                 "protocol",
                 "workbook",
                 "device",
-                "device_group"
+                "device_group",
+                "calibration_definition"
               ],
               "type": "string"
             }
@@ -28833,7 +28903,8 @@
                               "protocol",
                               "workbook",
                               "device",
-                              "device_group"
+                              "device_group",
+                              "calibration_definition"
                             ],
                             "type": "string"
                           },
@@ -29012,7 +29083,8 @@
                 "protocol",
                 "workbook",
                 "device",
-                "device_group"
+                "device_group",
+                "calibration_definition"
               ],
               "type": "string"
             }
@@ -29245,7 +29317,8 @@
                               "protocol",
                               "workbook",
                               "device",
-                              "device_group"
+                              "device_group",
+                              "calibration_definition"
                             ],
                             "type": "string"
                           },
@@ -29422,7 +29495,8 @@
                 "protocol",
                 "workbook",
                 "device",
-                "device_group"
+                "device_group",
+                "calibration_definition"
               ],
               "type": "string"
             }
@@ -29484,7 +29558,8 @@
                 "protocol",
                 "workbook",
                 "device",
-                "device_group"
+                "device_group",
+                "calibration_definition"
               ],
               "type": "string"
             }
@@ -29605,7 +29680,8 @@
                 "protocol",
                 "workbook",
                 "device",
-                "device_group"
+                "device_group",
+                "calibration_definition"
               ],
               "type": "string"
             }
@@ -29754,7 +29830,8 @@
                             "protocol",
                             "workbook",
                             "device",
-                            "device_group"
+                            "device_group",
+                            "calibration_definition"
                           ],
                           "type": "string",
                           "description": "Type of resource to transfer admin on"
@@ -29807,7 +29884,8 @@
                               "protocol",
                               "workbook",
                               "device",
-                              "device_group"
+                              "device_group",
+                              "calibration_definition"
                             ],
                             "type": "string"
                           },
@@ -30332,7 +30410,8 @@
                               "protocol",
                               "workbook",
                               "device",
-                              "device_group"
+                              "device_group",
+                              "calibration_definition"
                             ],
                             "type": "string"
                           },

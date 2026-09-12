@@ -579,7 +579,9 @@
         "device_one": "Device",
         "device_other": "Devices",
         "device_group_one": "Device group",
-        "device_group_other": "Device groups"
+        "device_group_other": "Device groups",
+        "calibration_definition_one": "Calibration definition",
+        "calibration_definition_other": "Calibration definitions"
       },
       "groupMemberCount_one": "{{count}} device",
       "groupMemberCount_other": "{{count}} devices",
@@ -765,7 +767,9 @@
         "device_one": "device",
         "device_other": "devices",
         "device_group_one": "device group",
-        "device_group_other": "device groups"
+        "device_group_other": "device groups",
+        "calibration_definition_one": "calibration definition",
+        "calibration_definition_other": "calibration definitions"
       },
       "confirmTitle": "Delete organization?",
       "confirmDescription": "{{name}} will be deleted, along with its members, invitations and teams.",

@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { AppError, Result, failure, isFailure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
+import { IotCalibrationDefinitionRepository } from "../../../../iot/core/repositories/iot-calibration-definition.repository";
 import { IotDeviceGroupRepository } from "../../../../iot/core/repositories/iot-device-group.repository";
 import { IotDeviceRepository } from "../../../../iot/core/repositories/iot-device.repository";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
@@ -59,6 +60,7 @@ export class ListOrganizationResourcesUseCase {
     private readonly workbookRepository: WorkbookRepository,
     private readonly iotDeviceRepository: IotDeviceRepository,
     private readonly iotDeviceGroupRepository: IotDeviceGroupRepository,
+    private readonly calibrationDefinitionRepository: IotCalibrationDefinitionRepository,
     private readonly sharingRepository: SharingRepository,
   ) {}
 
@@ -84,21 +86,29 @@ export class ListOrganizationResourcesUseCase {
       return failure(AppError.notFound(`Organization with ID ${organizationId} not found`));
     }
 
-    const [experiments, protocols, macros, workbooks, devices, deviceGroups, totals] =
-      await Promise.all([
-        // Archived stay in: every other count of what an organization owns includes them,
-        // so dropping them here would let a group header promise a row the list cannot show.
-        this.experimentRepository.findAll(userId, undefined, undefined, undefined, undefined, {
-          organizationId,
-          includeArchived: true,
-        }),
-        this.protocolRepository.findAll(undefined, undefined, userId, undefined, organizationId),
-        this.macroRepository.findAll({ userId, organizationId }),
-        this.workbookRepository.findAll({ userId, organizationId }),
-        this.iotDeviceRepository.listAccessible(userId, { organizationId }),
-        this.iotDeviceGroupRepository.listAccessible(userId, { organizationId }),
-        this.organizationRepository.countAccessibleResources(organizationId, userId),
-      ]);
+    const [
+      experiments,
+      protocols,
+      macros,
+      workbooks,
+      devices,
+      deviceGroups,
+      calibrationDefinitions,
+      totals,
+    ] = await Promise.all([
+      // Archived stay in: every other ownership count includes them, so a group header cannot promise a row the list lacks.
+      this.experimentRepository.findAll(userId, undefined, undefined, undefined, undefined, {
+        organizationId,
+        includeArchived: true,
+      }),
+      this.protocolRepository.findAll(undefined, undefined, userId, undefined, organizationId),
+      this.macroRepository.findAll({ userId, organizationId }),
+      this.workbookRepository.findAll({ userId, organizationId }),
+      this.iotDeviceRepository.listAccessible(userId, { organizationId }),
+      this.iotDeviceGroupRepository.listAccessible(userId, { organizationId }),
+      this.calibrationDefinitionRepository.listAccessible(userId, { organizationId }),
+      this.organizationRepository.countAccessibleResources(organizationId, userId),
+    ]);
 
     if (isFailure(experiments)) return failure(experiments.error);
     if (isFailure(protocols)) return failure(protocols.error);
@@ -106,6 +116,7 @@ export class ListOrganizationResourcesUseCase {
     if (isFailure(workbooks)) return failure(workbooks.error);
     if (isFailure(devices)) return failure(devices.error);
     if (isFailure(deviceGroups)) return failure(deviceGroups.error);
+    if (isFailure(calibrationDefinitions)) return failure(calibrationDefinitions.error);
     if (totals.isFailure()) {
       return failure(AppError.internal("Failed to count an organization's resources"));
     }
@@ -121,6 +132,10 @@ export class ListOrganizationResourcesUseCase {
       ...devices.value.map((row) => ({ resourceType: "device" as const, resourceId: row.id })),
       ...deviceGroups.value.map((row) => ({
         resourceType: "device_group" as const,
+        resourceId: row.id,
+      })),
+      ...calibrationDefinitions.value.map((row) => ({
+        resourceType: "calibration_definition" as const,
         resourceId: row.id,
       })),
     ]);
@@ -164,6 +179,11 @@ export class ListOrganizationResourcesUseCase {
         // Already on the row the list read: the group projection carries its roster
         // size, so showing it costs no second query.
         memberCount: row.memberCount,
+      })),
+      ...calibrationDefinitions.value.map((row) => ({
+        ...base(row, countFor("calibration_definition", row.id)),
+        type: "calibration_definition" as const,
+        family: row.family,
       })),
     ].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 
