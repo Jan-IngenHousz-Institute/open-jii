@@ -38,6 +38,11 @@ flowchart LR
 - **Public visibility.** If the resource is public, anyone can read it — including
   people with no account relationship to you at all. Reading only, never contributing.
 
+Devices have one extra, read-only route: a device onboarded to an experiment can be
+viewed by anyone who reaches that experiment through their organization role or a
+share. Public visibility on the experiment does not carry over, and the route never
+grants editing or credential access on the device.
+
 <Callout type="info">
   Where more than one applies, **the strongest one wins**. A route never caps another: giving
   someone a Can view share cannot reduce the Can edit they already have as an Admin of the lab, and

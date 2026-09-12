@@ -25,6 +25,7 @@ import { GetDevicePayloadStatsUseCase } from "./application/use-cases/get-device
 import { GetDeviceRegistryUseCase } from "./application/use-cases/get-device-registry/get-device-registry";
 import { GetDeviceSessionsUseCase } from "./application/use-cases/get-device-sessions/get-device-sessions";
 import { GetDeviceThroughputUseCase } from "./application/use-cases/get-device-throughput/get-device-throughput";
+import { GetExperimentDeviceSeriesUseCase } from "./application/use-cases/get-experiment-device-series/get-experiment-device-series";
 import { GetIotCredentialsUseCase } from "./application/use-cases/get-iot-credentials/get-iot-credentials";
 import { GetIotDeviceActivityUseCase } from "./application/use-cases/get-iot-device-activity/get-iot-device-activity";
 import { GetIotDeviceFirmwareHistoryUseCase } from "./application/use-cases/get-iot-device-firmware-history/get-iot-device-firmware-history";
@@ -114,6 +115,7 @@ import { IotController } from "./presentation/iot.controller";
     RevokeIotDeviceGroupCredentialsUseCase,
     ListDeviceExperimentsUseCase,
     ListExperimentDevicesUseCase,
+    GetExperimentDeviceSeriesUseCase,
     RemoveExperimentDeviceUseCase,
     CreateIotDeviceGroupUseCase,
     ListIotDeviceGroupsUseCase,

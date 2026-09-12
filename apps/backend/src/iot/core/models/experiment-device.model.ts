@@ -15,6 +15,42 @@ export interface ExperimentDeviceDto {
   addedAt: Date;
 }
 
+// One device on the experiment's Devices tab: bound, observed publishing into
+// the experiment, or both. `device` is null for a publisher with no registry row.
+export interface ExperimentDeviceEntryDto {
+  device: ExperimentDeviceDto["device"] | null;
+  clientId: string;
+  binding: { addedBy: string; addedAt: Date } | null;
+  connectivity: { connected: boolean; lastSeenAt: string | null } | null;
+  lastDataAt: string | null;
+  recentData: { measurementCount: number; lastDataAt: string | null } | null;
+  reported: ExperimentDeviceReportedDto | null;
+  canView: boolean;
+}
+
+// What the device reported about itself while publishing into the experiment,
+// folded across the pipeline's per-firmware rows.
+export interface ExperimentDeviceReportedDto {
+  deviceName: string | null;
+  firmware: string | null;
+  version: string | null;
+  battery: number | null;
+  totalMeasurements: number;
+  lastReportedAt: string | null;
+}
+
+// One device's bucketed measurement volume inside one experiment.
+export interface ExperimentDeviceSeriesDto {
+  buckets: { bucketStart: string | null; count: number }[];
+  pipelineUnavailable: boolean;
+}
+
+export interface ExperimentDevicesOverviewDto {
+  devices: ExperimentDeviceEntryDto[];
+  window: { from: string; to: string };
+  pipelineUnavailable: boolean;
+}
+
 // An experiment a device serves, for the device-detail view.
 export type DeviceExperimentDto = Pick<ExperimentDto, "id" | "name" | "status"> & {
   addedAt: Date;

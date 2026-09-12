@@ -548,7 +548,7 @@
     "experimentDevices": {
       "tabLabel": "Geräte",
       "title": "Geräte",
-      "description": "Geräte, die diesem Experiment zugeordnet sind. Ein zugeordnetes Gerät kann seine Messungen dorthin senden.",
+      "description": "Geräte, die diesem Experiment zugeordnet sind, und Geräte, die in den letzten 30 Tagen Daten hierher gesendet haben.",
       "loading": "Geräte werden geladen...",
       "empty": "Geräte werden über ihren eigenen Einrichtungs-Tab eingerichtet, wo Zertifikate und Konfiguration liegen.",
       "detach": "Entfernen",
@@ -558,7 +558,46 @@
       "emptyTitle": "Noch keine Geräte senden in dieses Experiment",
       "openRegistry": "Geräteregister öffnen",
       "detachTitle": "{{name}} entfernen?",
-      "detachConfirmBody": "Es sendet nicht mehr in dieses Experiment, und seine Prozeduren fehlen in der nächsten ausgegebenen Konfiguration."
+      "detachConfirmBody": "Es sendet nicht mehr in dieses Experiment, und seine Prozeduren fehlen in der nächsten ausgegebenen Konfiguration.",
+      "stats": {
+        "onboarded": "Zugeordnet",
+        "sending": "Sendet Daten (30 T.)",
+        "silent": "Zugeordnet, keine aktuellen Daten",
+        "unbound": "Sendet ohne Zuordnung",
+        "ofTotal_one": "von {{count}} Gerät",
+        "ofTotal_other": "von {{count}} Geräten",
+        "window": "Letzte 30 Tage",
+        "ofOnboarded": "von {{count}} eingebundenen Geräten",
+        "ofSending": "von {{count}} sendenden Geräten"
+      },
+      "columns": {
+        "onboarded": "Zugeordnet",
+        "battery": "Batterie"
+      },
+      "notOnboarded": "Nicht zugeordnet",
+      "unregistered": "Nicht registrierter Sender",
+      "noAccess": "Kein Zugriff auf dieses Gerät",
+      "measurements_one": "{{count}} Messung",
+      "measurements_other": "{{count}} Messungen",
+      "noRecentData": "Keine Daten in den letzten 30 Tagen",
+      "lastDataUnavailable": "Nicht verfügbar",
+      "pipelineUnavailable": "Messdaten konnten nicht geladen werden; Geräte, die nur Daten gesendet haben, fehlen möglicherweise.",
+      "unknownFirmware": "Firmware unbekannt",
+      "searchPlaceholder": "Geräte durchsuchen",
+      "searchNoMatches": "Keine Geräte entsprechen der Suche.",
+      "openMonitoring": "Vollständige Überwachung öffnen",
+      "chartTitle": "Messungen in diesem Experiment",
+      "chartDescription": "Was dieses Gerät in den letzten 30 Tagen an dieses Experiment gesendet hat.",
+      "chartEmpty": "Keine Messungen in diesem Zeitraum.",
+      "chartUnavailable": "Messverlauf konnte nicht geladen werden.",
+      "measurementsSeries": "Messungen",
+      "facts": {
+        "firmware": "Firmware",
+        "inWindow": "In diesem Experiment (30 Tage)",
+        "allTime": "In diesem Experiment (gesamt)",
+        "lastDataAnywhere": "Letzte Daten, alle Experimente"
+      },
+      "noAccessShort": "Kein Zugriff"
     },
     "groups": {
       "addDevices": "Geräte hinzufügen",

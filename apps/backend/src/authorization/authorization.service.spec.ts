@@ -1,6 +1,7 @@
 import type { ResourceAction } from "@repo/auth/access";
 import {
   ensurePersonalOrganization,
+  experimentDevices,
   experiments,
   grantResource,
   macros,
@@ -255,6 +256,89 @@ describe("AuthorizationService.can", () => {
       action: "update",
     });
     expect(update.allow).toBe(false);
+  });
+
+  describe("device read through an experiment binding", () => {
+    async function bindDeviceToExperiment(
+      deviceOwnerId: string,
+      experimentOwnerId: string,
+      visibility: "private" | "public" = "private",
+    ) {
+      const device = await testApp.createIotDevice({ createdBy: deviceOwnerId });
+      const { experiment } = await testApp.createExperiment({
+        name: "Bound",
+        userId: experimentOwnerId,
+        visibility,
+      });
+      await testApp.database
+        .insert(experimentDevices)
+        .values({ experimentId: experiment.id, deviceId: device.id, addedBy: deviceOwnerId });
+      return { device, experiment };
+    }
+
+    it("lets an experiment collaborator read a device bound to it, and only read", async () => {
+      const collaboratorId = await testApp.createTestUser({});
+      const { device, experiment } = await bindDeviceToExperiment(ownerId, ownerId);
+      await grantResource(testApp.database, {
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId: collaboratorId,
+        role: "viewer",
+        createdBy: ownerId,
+      });
+
+      const read = await authz.can(collaboratorId, {
+        resourceType: "device",
+        resourceId: device.id,
+        action: "read",
+      });
+      expect(read).toMatchObject({ allow: true, reason: "experiment-binding" });
+
+      for (const action of ["update", "manage", "share", "contribute"] as const) {
+        const denied = await authz.can(collaboratorId, {
+          resourceType: "device",
+          resourceId: device.id,
+          action,
+        });
+        expect(denied.allow).toBe(false);
+      }
+    });
+
+    it("does not open a device through the public tier of a public experiment", async () => {
+      const strangerId = await testApp.createTestUser({});
+      const { device } = await bindDeviceToExperiment(ownerId, ownerId, "public");
+
+      const read = await authz.can(strangerId, {
+        resourceType: "device",
+        resourceId: device.id,
+        action: "read",
+      });
+      expect(read).toMatchObject({ allow: false, reason: "forbidden" });
+    });
+
+    it("does not derive access from a binding the caller cannot read", async () => {
+      const strangerId = await testApp.createTestUser({});
+      const { device } = await bindDeviceToExperiment(ownerId, ownerId);
+
+      const read = await authz.can(strangerId, {
+        resourceType: "device",
+        resourceId: device.id,
+        action: "read",
+      });
+      expect(read).toMatchObject({ allow: false, reason: "forbidden" });
+    });
+
+    it("credits an org role or grant on the device itself before the binding", async () => {
+      const { device } = await bindDeviceToExperiment(ownerId, ownerId);
+
+      const read = await authz.can(ownerId, {
+        resourceType: "device",
+        resourceId: device.id,
+        action: "read",
+      });
+      expect(read.reason).toBe("org-role");
+    });
   });
 
   describe("isOrgMember", () => {

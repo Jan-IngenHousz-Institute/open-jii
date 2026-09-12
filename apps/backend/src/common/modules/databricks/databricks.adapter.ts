@@ -20,6 +20,9 @@ import type {
   DeviceMeasurementRow,
   DevicePayloadBreakdownRow,
   DeviceThroughputRow,
+  ExperimentDeviceSeriesRow,
+  ExperimentDeviceStatsRow,
+  ExperimentPublisherRow,
   GroupExperimentRow,
   GroupFirmwareRow,
   GroupLifecycleEventRow,
@@ -578,6 +581,90 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     );
   }
 
+  /**
+   * The gold device table for one experiment: what each device reported about
+   * itself, per firmware version it ran. This is the same source the Devices
+   * tab's metadata came from, so the figures stay identical to what the data
+   * browser showed.
+   */
+  async getExperimentDeviceStats(
+    experimentId: string,
+    limit: number,
+  ): Promise<Result<ExperimentDeviceStatsRow[]>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.experiment_device_data`,
+      columns: [
+        "client_id",
+        "device_name",
+        "device_firmware",
+        "device_version",
+        "device_battery",
+        "total_measurements",
+        "processed_timestamp",
+      ],
+      whereConditions: [["experiment_id", experimentId]],
+      orderBy: "processed_timestamp",
+      orderDirection: "DESC",
+      limit,
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        clientId: row[index.client_id] ?? null,
+        deviceName: row[index.device_name] ?? null,
+        firmware: row[index.device_firmware] ?? null,
+        version: row[index.device_version] ?? null,
+        battery: this.toNumberOrNull(row[index.device_battery]),
+        totalMeasurements: Number(row[index.total_measurements] ?? 0),
+        lastReportedAt: this.toIsoOrNull(row[index.processed_timestamp]),
+      })),
+    );
+  }
+
+  /**
+   * Every client id that published into one experiment in the window, with
+   * volume and last arrival. Newest publishers first, so a hit ceiling can
+   * only shed the ones that went quiet earliest.
+   */
+  async getExperimentPublishers(
+    experimentId: string,
+    from: string,
+    to: string,
+    limit: number,
+  ): Promise<Result<ExperimentPublisherRow[]>> {
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereConditions: [["experiment_id", experimentId]],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      aggregation: {
+        groupBy: [{ column: "client_id" }],
+        functions: [
+          { column: "*", function: "count", alias: "measurement_count" },
+          { column: "timestamp", function: "max", alias: "last_data_at" },
+        ],
+      },
+      orderBy: "last_data_at",
+      orderDirection: "DESC",
+      limit,
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        clientId: row[index.client_id] ?? null,
+        count: Number(row[index.measurement_count] ?? 0),
+        lastDataAt: this.toIsoOrNull(row[index.last_data_at]),
+      })),
+    );
+  }
+
   /** Lifecycle events in a range, ascending, capped at `limit`. */
   async getDeviceLifecycleEvents(
     thingName: string,
@@ -605,6 +692,42 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         eventTimestamp: this.toIsoOrNull(row[index.event_timestamp]),
         disconnectReason: row[index.disconnect_reason] ?? null,
         sessionIdentifier: row[index.session_identifier] ?? null,
+      })),
+    );
+  }
+
+  /** Scoped on both keys, so it never returns traffic into other experiments. */
+  async getExperimentDeviceSeries(
+    experimentId: string,
+    clientId: string,
+    from: string,
+    to: string,
+    bucket: "hour" | "day",
+  ): Promise<Result<ExperimentDeviceSeriesRow[]>> {
+    const bucketAlias = `timestamp_${bucket}`;
+    const result = await this.runMonitoringQuery({
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.clean_data`,
+      whereConditions: [
+        ["experiment_id", experimentId],
+        ["client_id", clientId],
+      ],
+      filters: [{ column: "timestamp", operator: "between", value: [from, to] }],
+      aggregation: {
+        groupBy: [{ column: "timestamp", timeBucket: bucket }],
+        functions: [{ column: "*", function: "count", alias: "measurement_count" }],
+      },
+      orderBy: bucketAlias,
+      orderDirection: "ASC",
+    });
+    if (result.isFailure()) {
+      return failure(result.error);
+    }
+
+    const { rows, index } = result.value;
+    return success(
+      rows.map((row) => ({
+        bucketStart: this.toIsoOrNull(row[index[bucketAlias]]),
+        count: Number(row[index.measurement_count] ?? 0),
       })),
     );
   }

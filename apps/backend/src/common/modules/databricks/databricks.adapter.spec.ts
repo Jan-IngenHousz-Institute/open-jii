@@ -2458,6 +2458,123 @@ describe("DatabricksAdapter", () => {
       expect(captured.statement).toContain("LIMIT 50");
     });
 
+    it("maps one experiment's publishers, newest arrival first", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(
+        ["client_id", "measurement_count", "last_data_at"],
+        [
+          ["AMBYTE_A", "12", "2026-08-17T11:00:00.000Z"],
+          [null, "3", "2026-08-17T09:00:00.000Z"],
+        ],
+        captured,
+      );
+
+      const result = await databricksAdapter.getExperimentPublishers(
+        "11111111-1111-4111-8111-111111111111",
+        FROM,
+        TO,
+        500,
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { clientId: "AMBYTE_A", count: 12, lastDataAt: "2026-08-17T11:00:00.000Z" },
+        { clientId: null, count: 3, lastDataAt: "2026-08-17T09:00:00.000Z" },
+      ]);
+      expect(captured.statement).toContain("11111111-1111-4111-8111-111111111111");
+      expect(captured.statement).toContain("GROUP BY `client_id`");
+      expect(captured.statement).toContain("ORDER BY `last_data_at` DESC");
+      expect(captured.statement).toContain("LIMIT 500");
+    });
+
+    it("scopes a device series on both the experiment and the client id", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(
+        ["timestamp_day", "measurement_count"],
+        [
+          ["2026-09-01T00:00:00.000Z", "12"],
+          ["2026-09-02T00:00:00.000Z", "4"],
+        ],
+        captured,
+      );
+
+      const result = await databricksAdapter.getExperimentDeviceSeries(
+        "11111111-1111-4111-8111-111111111111",
+        "AMBYTE_A",
+        FROM,
+        TO,
+        "day",
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { bucketStart: "2026-09-01T00:00:00.000Z", count: 12 },
+        { bucketStart: "2026-09-02T00:00:00.000Z", count: 4 },
+      ]);
+      // Both keys, or the chart would show the device's traffic into every experiment.
+      expect(captured.statement).toContain("11111111-1111-4111-8111-111111111111");
+      expect(captured.statement).toContain("AMBYTE_A");
+      expect(captured.statement).toContain("clean_data");
+    });
+
+    it("maps the gold device rows for one experiment, newest report first", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(
+        [
+          "client_id",
+          "device_name",
+          "device_firmware",
+          "device_version",
+          "device_battery",
+          "total_measurements",
+          "processed_timestamp",
+        ],
+        [
+          [
+            "AMBYTE_A",
+            "shed-logger",
+            "ambyte-2",
+            "2.4.1",
+            "4.18",
+            "42",
+            "2026-08-17T11:00:00.000Z",
+          ],
+          [null, null, null, null, null, "3", "2026-08-17T09:00:00.000Z"],
+        ],
+        captured,
+      );
+
+      const result = await databricksAdapter.getExperimentDeviceStats(
+        "11111111-1111-4111-8111-111111111111",
+        2000,
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        {
+          clientId: "AMBYTE_A",
+          deviceName: "shed-logger",
+          firmware: "ambyte-2",
+          version: "2.4.1",
+          battery: 4.18,
+          totalMeasurements: 42,
+          lastReportedAt: "2026-08-17T11:00:00.000Z",
+        },
+        {
+          clientId: null,
+          deviceName: null,
+          firmware: null,
+          version: null,
+          battery: null,
+          totalMeasurements: 3,
+          lastReportedAt: "2026-08-17T09:00:00.000Z",
+        },
+      ]);
+      expect(captured.statement).toContain("experiment_device_data");
+      expect(captured.statement).toContain("ORDER BY `processed_timestamp` DESC");
+      expect(captured.statement).toContain("LIMIT 2000");
+    });
+
     it("maps grouped experiment attribution rows", async () => {
       const captured: CapturedStatement = {};
       mockGroupSql(
