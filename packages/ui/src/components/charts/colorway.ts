@@ -1,17 +1,13 @@
 /**
- * The series palette for platform-defined charts, as data. Resolution lives in
- * `./utils` beside `readThemeColor`; this file stays import-free to avoid a cycle.
- *
- * Not for user-picked series colours, which are stored as user data.
+ * The series palette for platform-defined charts, as data. Import-free to avoid
+ * a cycle with `./utils`, which resolves it. Not for user-picked colours.
  */
 
 /**
- * The platform half, ordered so the earliest slots are the furthest apart: most
- * charts carry two or three series.
- *
+ * Ordered widest-separation-first, since most charts carry two or three series.
  * Six, because separation holds above ΔE 10 through slot 6 and falls to 9.8 at
- * slot 7. `--destructive` and `--muted-foreground` are deliberately absent:
- * red means error and grey means muted everywhere else.
+ * slot 7. `--destructive` and `--muted-foreground` are out: red means error and
+ * grey means muted everywhere else.
  */
 export const PLATFORM_SERIES_TOKENS = [
   "--chart-1",
@@ -33,9 +29,8 @@ export const PLATFORM_SERIES_FALLBACK = [
 ] as const;
 
 /**
- * Plotly's own categorical palette, unchanged, for everything past the six.
- * Frozen hex, so these do not follow a theme swap: a chart only reaches them
- * with seven or more series, and is directly labelled at that point.
+ * Plotly's own palette for everything past the six. Frozen hex, so it does not
+ * follow a theme swap: a chart reaching here has seven series and its own legend.
  */
 export const PLOTLY_SERIES_TAIL = [
   "#1f77b4",

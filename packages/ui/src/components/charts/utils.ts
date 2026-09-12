@@ -186,10 +186,8 @@ const PLOTLY_PARSEABLE = /^(#|rgba?\(|hsla?\(|[a-z]+$)/i;
 const themeTokenCache = new Map<string, string | undefined>();
 
 /**
- * The root state the cached entries were resolved under. The observer in
- * `use-chart-theme-refresh` only runs while a chart is mounted, so a theme
- * toggle made on a chart-free page is never seen; keying the cache on the root
- * lets the next read notice by itself rather than serving the outgoing palette.
+ * The root state the entries were resolved under. The theme observer only runs
+ * while a chart is mounted, so a toggle on a chart-free page is never seen.
  */
 let cacheSignature: string | undefined;
 
@@ -198,7 +196,6 @@ function rootSignature(): string {
   return `${root.className}|${root.getAttribute("style") ?? ""}`;
 }
 
-/** Called by the theme observer before it notifies, so the re-render reads the new theme. */
 export function invalidateThemeTokenCache(): void {
   themeTokenCache.clear();
   cacheSignature = undefined;
@@ -213,11 +210,9 @@ export function invalidateThemeTokenCache(): void {
  * bypasses every caller's `?? "#fallback"` and fails invisibly. A token
  * registered by Tailwind computes to `lab()`, which Plotly cannot parse at all.
  *
- * Cached because it is a forced style read, and on a theme toggle every chart
- * makes it at the same moment, interleaved with Plotly's own DOM writes. The
- * oklch/lab conversion is pure, so it is cached too. Entries are dropped as
- * soon as the root's class or inline style differs from the one they were
- * resolved under, so an unobserved toggle cannot be served from the cache.
+ * Cached because it is a forced style read that every chart makes at the same
+ * moment on a theme toggle. Entries drop as soon as the root differs from the
+ * state they were resolved under.
  */
 export function readThemeColor(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
@@ -259,8 +254,7 @@ export function referenceLineColor(): string {
 
 /**
  * The series palette every platform chart cycles through: the theme's own
- * colours first, then Plotly's for the tail. Defined in `./colorway`, resolved
- * here because `layout.colorway` is set in this module.
+ * colours first, then Plotly's for the tail. Defined in `./colorway`.
  */
 export function resolveChartColorway(): string[] {
   const head = PLATFORM_SERIES_TOKENS.map(

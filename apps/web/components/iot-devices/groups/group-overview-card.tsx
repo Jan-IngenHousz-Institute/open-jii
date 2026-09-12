@@ -9,9 +9,8 @@ import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 
 /**
- * One group on the devices overview, on the shared resource tile. A group
- * carries less than the other resources, so it takes a shorter floor than the
- * tile's default 180px.
+ * One group on the shared resource tile, on a shorter floor than its 180px
+ * default: a group carries less than the other resources.
  */
 export function GroupOverviewCard({ group }: { group: IotDeviceGroupListItem }) {
   const { t } = useTranslation("iot");

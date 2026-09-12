@@ -15,12 +15,10 @@ import type { ChartFormValues } from "../charts/chart-config";
 import { DataTabContent } from "./tabs/data-tab-content";
 import { StyleTabContent } from "./tabs/style-tab-content";
 
-// An underline tab, not a pill. TabsTrigger's base carries `border
-// border-transparent` and a later `border-b-2` does not remove it, so
-// `border-primary` coloured all four edges; `border-x-0 border-t-0` is what
-// leaves only the underline, and `flex-none` undoes the base's `flex-1`. The
-// `dark:` overrides need restating for the same reason: an unmodified class
-// never displaces a modified one.
+// An underline tab, not a pill. `border-b-2` does not remove TabsTrigger's
+// base `border`, so `border-primary` painted all four edges; `border-x-0
+// border-t-0` leaves the underline. The `dark:` overrides need restating
+// because an unmodified class never displaces a modified one.
 const tabTriggerClass = cn(
   "text-muted-foreground hover:text-foreground -mb-px flex-none gap-1.5 rounded-none border-x-0 border-b-2 border-t-0 border-transparent bg-transparent px-3 py-2.5 text-sm font-medium shadow-none",
   "data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:border-primary data-[state=active]:shadow-none",
@@ -44,9 +42,8 @@ export function WorkspaceInspector(props: WorkspaceInspectorProps) {
   return (
     <Card
       padding="none"
-      // lg, not md: the inspector only becomes a column beside the chart at lg
-      // (visualization-workspace.tsx). At md it was a full-width block that was
-      // also sticky and internally scrolling, which is a nested-scroll trap.
+      // lg, not md: below lg the inspector is a full-width block, and sticky
+      // plus internal scrolling there is a nested-scroll trap.
       className="overflow-hidden shadow-none lg:sticky lg:top-6 lg:flex lg:max-h-[calc(100vh-3rem)] lg:flex-col"
     >
       <WorkspaceInspectorBody {...props} bodyClassName="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col" />

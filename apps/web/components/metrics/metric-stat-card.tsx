@@ -108,9 +108,8 @@ export function MetricStatCard({
         >
           {href === undefined ? value : renderLinkedValue(href)}
         </CardTitle>
-        {/* The note below already prints a trend arrow, so in a half-width card
-            the badge repeats it in the space the figure needs. A container
-            query, because what matters is this card's width, not the window's. */}
+        {/* The note already prints a trend arrow; at half width the badge just
+            repeats it. Container query: this card's width, not the window's. */}
         {change === null ? null : (
           <CardAction className="@[10rem]/card:block hidden">{renderChange(change)}</CardAction>
         )}

@@ -24,8 +24,7 @@ export function DensityPlotRenderer({
   const chartConfig = narrowChartConfig(visualization);
   const dataSources = visualization.dataConfig.dataSources;
 
-  // The transform below resolves category colours, so this has to re-run on a
-  // theme swap or the traces keep the outgoing palette.
+  // Cache key for the memo below, which resolves category colours.
   const themeVersion = useChartThemeRefresh();
 
   // KEEP IN SYNC with the field reads in `transformDensityPlotData`.

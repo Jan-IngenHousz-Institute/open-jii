@@ -3,12 +3,9 @@ import * as React from "react";
 import { cn, cva } from "../lib/utils";
 
 /**
- * `Card` owns the vertical rhythm: `py-6` around the stack and `gap-6` between
- * its children, with `CardHeader`/`CardContent`/`CardFooter` contributing only
- * `px-6`. Padding written on a child therefore adds to the parent's rather than
- * replacing it, which `cn` cannot dedupe across two elements, so the cases that
- * need something else say so by name: `none` for a card whose children reach
- * the edge (a `divide-y` list, a table, a tab strip) and `sm` for a dense one.
+ * `Card` owns the vertical rhythm; the slots contribute only `px-6`. Padding on
+ * a child adds to the parent's rather than replacing it, which `cn` cannot
+ * dedupe across two elements, so density is a named step instead.
  */
 const cardVariants = cva("bg-card text-card-foreground flex flex-col rounded-xl border shadow-sm", {
   variants: {

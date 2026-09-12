@@ -34,8 +34,7 @@ describe("Card", () => {
   });
 
   it("keeps the horizontal inset on the children, not the card", () => {
-    // Vertical rhythm belongs to Card, horizontal to the slots. A slot that
-    // also sets py-* adds to the card's, which tailwind-merge cannot see.
+    // Vertical rhythm is Card's; a slot's py-* adds to it, invisibly to twMerge.
     const { container } = render(
       <Card>
         <CardHeader>Head</CardHeader>

@@ -3,11 +3,8 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 
 interface MetricsBandSkeletonProps {
   cards: number;
-  /**
-   * The band's grid. Required rather than defaulted: a default of the
-   * four-column band survives twMerge against a three-column caller, because
-   * the tiers carry different modifiers, and the page reflows on load.
-   */
+  /** Required, not defaulted: a four-column default survives twMerge against a
+   * three-column caller and the page reflows on load. */
   grid: string;
 }
 

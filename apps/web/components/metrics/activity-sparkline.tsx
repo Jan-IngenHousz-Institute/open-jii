@@ -17,11 +17,7 @@ interface ActivitySparklineProps {
   className?: string;
 }
 
-/**
- * The hover-readable counterpart to `ActivityStrip`: the same series, at card
- * rather than table-row height, where a tooltip is worth a plot library.
- * Carries the metric tiles' config so it comes out as a strip, not a chart.
- */
+/** `ActivityStrip` with hover: worth a plot library at card height, not at row height. */
 export function ActivitySparkline({
   days,
   seriesName,
@@ -29,8 +25,7 @@ export function ActivitySparkline({
   locale,
   className,
 }: ActivitySparklineProps) {
-  // Not a chart component, so it subscribes itself or keeps the outgoing
-  // palette after a theme toggle.
+  // Resolved in JS, so this has to learn about a theme swap itself.
   useChartThemeRefresh();
 
   const config: PlotlyChartConfig = {
@@ -46,8 +41,6 @@ export function ActivitySparkline({
   };
 
   return (
-    // Plotly's plot is a div of shapes, so the tree gets the description and
-    // not the subtree. Hover carries the values for everyone else.
     <div role="img" aria-label={label} className={cn("h-10 w-full", className)}>
       <LineChart
         data={[

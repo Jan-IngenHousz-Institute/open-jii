@@ -20,7 +20,6 @@ interface ExperimentOverviewCardProps {
   locale: string;
 }
 
-/** One tile of an experiment listing: what it is, how it is doing, when it last moved. */
 export function ExperimentOverviewCard({ experiment, href, locale }: ExperimentOverviewCardProps) {
   const { t } = useTranslation("experiments");
   const { t: tMetrics } = useTranslation("publicMetrics");
@@ -52,18 +51,15 @@ export function ExperimentOverviewCard({ experiment, href, locale }: ExperimentO
     </div>
   );
 
-  // A line rather than nothing for a window that really was empty: the block is
-  // the bottom of every tile in the grid, and dropping it on the quiet ones
-  // makes those cards read as broken.
+  // A line rather than nothing, so a quiet card does not read as broken.
   const renderQuiet = () => (
     <p className="text-muted-foreground border-t pt-3 text-xs">
       {tMetrics("resourceMetrics.quiet", { unit, days: WINDOW_DAYS })}
     </p>
   );
 
-  // A null series is "none came back", which is also what a failed warehouse
-  // read looks like, so it cannot be reported as a zero. The table's activity
-  // column renders nothing for it too.
+  // A null series is "none came back", which is also a failed warehouse read,
+  // so it cannot be reported as a zero.
   const renderActivity = () => {
     if (activity === null) {
       return null;

@@ -28,11 +28,9 @@ export function DashboardBanner({
   // Both buttons are nowrap and need ~20rem together. Beside an open sidebar
   // that only fits from lg up; at sm the copy was crushed to a few words per line.
   //
-  // The left rule is teal rather than brand gold: --brand-accent is a chrome
-  // colour and reads at 1.1:1 on --card. It is an absolute bar rather than a
-  // `border-l-4` because a border arc interpolates between the two adjacent
-  // widths, tapering a 4px rule around the radius into the 1px hairlines.
-  // Workbook cells draw it the same way.
+  // Teal, not brand gold, which reads 1.1:1 on --card. An absolute bar rather
+  // than `border-l-4`, because a border arc tapers a 4px rule around the radius
+  // into the 1px hairlines. Workbook cells draw it the same way.
   return (
     <div className="bg-card relative flex flex-col gap-3 overflow-hidden rounded-xl border p-4 pl-6 shadow-sm lg:flex-row lg:items-start">
       <div className="bg-primary absolute left-0 top-0 h-full w-1" aria-hidden />

@@ -46,9 +46,8 @@ export function formatBucketLabel(
 }
 
 /**
- * Throughput rows folded onto a bucket axis, zero-filling the gaps, in the
- * shape the metric trend card plots. Rows the warehouse could not bucket carry
- * a null `bucketStart` and are dropped rather than counted at an arbitrary one.
+ * Throughput folded onto a bucket axis, zero-filling gaps, in the shape the
+ * trend card plots. A null `bucketStart` is dropped, not counted somewhere.
  */
 export function foldBucketSeries(
   buckets: { bucketStart: string | null; count: number }[],
@@ -67,7 +66,6 @@ export function foldBucketSeries(
   }));
 }
 
-/** The busiest bucket, which the trend card emphasises. */
 export function peakBucketDate(series: MetricsWindowDay[]): string | null {
   if (series.length === 0) {
     return null;

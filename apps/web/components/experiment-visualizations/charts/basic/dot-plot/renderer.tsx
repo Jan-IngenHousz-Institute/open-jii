@@ -66,8 +66,7 @@ export function DotPlotRenderer({
   const chartConfig = narrowChartConfig(visualization);
   const orientation = chartConfig.orientation === "h" ? "h" : "v";
 
-  // The series below resolve category colours, so this has to re-run on a
-  // theme swap or the traces keep the outgoing palette.
+  // Cache key for the memo below, which resolves category colours.
   const themeVersion = useChartThemeRefresh();
 
   const chartSeries = useMemo<DotSeriesData[]>(() => {
@@ -163,9 +162,7 @@ export function DotPlotRenderer({
         };
       });
     });
-    // themeVersion is a cache key, not a value: getCategoryColor resolves theme
-    // tokens, so without it the traces keep the outgoing palette.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
   }, [
     rows,
     xColumn,

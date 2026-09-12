@@ -143,9 +143,8 @@ describe("AppSidebar", () => {
     expect(themeToggle).toHaveClass("shrink-0");
     expect(themeToggle).not.toHaveTextContent("common.toggleTheme");
 
-    // The theme action sits beside the bottom-pinned identity, not under it:
-    // SidebarFooter is a column, so a second child stacks. flex-1 gives the
-    // identity the width, which a 216px sidebar otherwise truncates.
+    // Beside the identity, not under it: SidebarFooter is a column, so a second
+    // child stacks. flex-1 gives the identity the width.
     const footer = container.querySelector('[data-sidebar="footer"]');
     expect(footer?.children).toHaveLength(1);
     const [identityRow] = [...(footer?.children ?? [])];

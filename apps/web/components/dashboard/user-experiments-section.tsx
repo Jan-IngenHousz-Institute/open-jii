@@ -8,9 +8,7 @@ import { listItems } from "@repo/api/shared/listing";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 export function UserExperimentsSection() {
-  // Paginated, not the bare list: `activity` is only attached on the paginated
-  // branch, and the default ordering means page 1 of 3 is the same three rows
-  // the old client-side slice produced.
+  // Paginated, not the bare list: only that branch attaches `activity`.
   const { data } = useQuery(
     orpc.experiments.listExperiments.queryOptions({
       input: { scope: "related", page: 1, pageSize: 3 },

@@ -130,9 +130,8 @@ export function InlineEditableProfileField({
     <Button
       type="button"
       variant="ghost"
-      // whitespace-normal: this is a field row rather than a control, and
-      // buttonVariants' base whitespace-nowrap left the break-words below
-      // unable to act, so a long image URL ran past the card edge.
+      // whitespace-normal: buttonVariants' base whitespace-nowrap left the
+      // break-words below unable to act, so a long URL ran past the card edge.
       className="hover:border-primary/10 hover:bg-muted group flex h-auto w-full items-start justify-between gap-4 whitespace-normal rounded-md border border-transparent px-3 py-3 text-left font-normal"
       onClick={startEditing}
     >

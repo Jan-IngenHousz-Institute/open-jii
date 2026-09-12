@@ -47,11 +47,7 @@ export function getDefaultSeriesColor(seriesIndex: number): string {
   return SERIES_PALETTE[seriesIndex % SERIES_PALETTE.length];
 }
 
-/**
- * The palette an unpinned category falls back to: the platform's own six first,
- * then Plotly's. Resolved per call because the first six are theme tokens and
- * move with a light/dark swap.
- */
+/** Unpinned categories: the platform's six, then Plotly's. Resolved per call, as the head is themed. */
 export function categoryPalette(): string[] {
   return resolveChartColorway();
 }

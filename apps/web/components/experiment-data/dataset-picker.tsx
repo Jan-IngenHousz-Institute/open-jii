@@ -36,10 +36,8 @@ interface DatasetPickerProps {
 }
 
 /**
- * The experiment's datasets are unbounded: two fixed tables plus one per macro
- * that produced output and one per upload. As a tab strip they wrapped to three
- * rows and kept growing, so this is a combobox grouped by where each dataset
- * came from.
+ * A combobox, not a tab strip: datasets are unbounded (one per macro, one per
+ * upload) and the strip wrapped to three rows.
  */
 export function DatasetPicker({ tables, value, onChange }: DatasetPickerProps) {
   const { t } = useTranslation("experiments");

@@ -71,8 +71,7 @@ export function MetricTrendCard({
   // A zero day draws no bar, so every day gets a faint slot behind the data and
   // a sparse window reads as quiet rather than as empty.
   const trackHeight = Math.max(...measurements, 0) || 1;
-  // Resolved here rather than left to `layout.colorway`, so the track and the
-  // data share one colour, which means subscribing to the theme here too.
+  // Resolved here, not left to `layout.colorway`, so track and data share one colour.
   useChartThemeRefresh();
   const seriesColor = platformChartColor(0);
 

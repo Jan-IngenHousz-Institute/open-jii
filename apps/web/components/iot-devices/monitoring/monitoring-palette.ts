@@ -1,10 +1,6 @@
 import { resolveChartColorway } from "@repo/ui/components/charts/utils";
 
-/**
- * The first four platform series colours. The shared colorway is already
- * ordered widest-separation-first, and series past four fold into "Other"
- * rather than cycling.
- */
+/** The colorway's first four, already widest-separation-first. Past four folds into "Other". */
 export const MONITORING_MAX_SERIES = 4;
 
 export function monitoringSeriesColors(): string[] {

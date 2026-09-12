@@ -47,8 +47,7 @@ describe("ExperimentOverviewCards", () => {
     render(<ExperimentOverviewCards experiments={[exp]} />);
     expect(screen.getByText("Photosynthesis Study")).toBeInTheDocument();
     expect(screen.getByText("Measuring chlorophyll")).toBeInTheDocument();
-    // The status shares the badge row the visibility badge reserves anyway, so
-    // it costs no height and the row is no longer blank on a public experiment.
+    // Shares the row the visibility badge reserves anyway, so it costs no height.
     expect(screen.getByText("status.active")).toBeInTheDocument();
   });
 

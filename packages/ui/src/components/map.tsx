@@ -227,11 +227,9 @@ export const Map = ({
 }: MapProps) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(sidebarCollapsed);
   const hasChosenSidebarState = useRef(false);
-  // A caller deriving this from the viewport has nothing to seed with, because
-  // useIsMobile is false on the first render and flips in an effect. Follow the
-  // prop until the reader states a preference, then leave it alone: it also
-  // changes on every resize across the breakpoint, which would otherwise undo
-  // their choice.
+  // useIsMobile is false on the first render, so a viewport-derived prop has
+  // nothing to seed with. Follow it until the reader states a preference, then
+  // stop: it also flips on every resize across the breakpoint.
   useEffect(() => {
     if (hasChosenSidebarState.current) {
       return;

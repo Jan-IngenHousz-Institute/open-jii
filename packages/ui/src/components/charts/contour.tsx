@@ -160,10 +160,7 @@ export function ContourPlot({
 
   const layout = useMemo(
     () => createBaseLayout(config, sizing),
-    // themeVersion is a cache key, not a value: createBaseLayout resolves
-    // tokens internally, so without it this memo outlives a theme toggle and
-    // the contour keeps the old palette.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
     [config, sizing, themeVersion],
   );
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
@@ -252,10 +249,7 @@ export function OverlayContour({
 
   const layout = useMemo(
     () => createBaseLayout(config, sizing),
-    // themeVersion is a cache key, not a value: createBaseLayout resolves
-    // tokens internally, so without it this memo outlives a theme toggle and
-    // the contour keeps the old palette.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
     [config, sizing, themeVersion],
   );
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);

@@ -331,9 +331,8 @@ function SortableCellGroup({
 }
 
 /**
- * A custom property in px, resolved against `el` rather than the root.
- * `--sidebar-inset-offset` is declared on `SidebarInset` and reaches the header
- * by inheritance, so the root never carries it. It is authored in rem.
+ * Resolved against `el`, not the root: `--sidebar-inset-offset` is declared on
+ * `SidebarInset` and only inherits down. Authored in rem.
  */
 function readPixels(el: Element, name: string): number {
   const raw = getComputedStyle(el).getPropertyValue(name).trim();

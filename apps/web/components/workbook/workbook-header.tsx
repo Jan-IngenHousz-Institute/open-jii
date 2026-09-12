@@ -263,11 +263,9 @@ export function WorkbookHeader({
   const hasOutputs = cells.some((c) => c.type === "output");
 
   return (
-    // The offset is expressed the way SiteHeader expresses its own top, plus
-    // its h-12, so the two cannot drift apart again. The row scrolls itself
-    // rather than spilling, and the overflow has to stay here: nothing between
-    // this and <html> has one, so adding one above would become the scrolling
-    // ancestor and unstick the header.
+    // Expressed the way SiteHeader expresses its own top, so the two cannot
+    // drift. The overflow has to stay on this row: nothing between it and
+    // <html> has one, so an ancestor scroller would unstick the header.
     <div
       className="bg-card border-border sticky z-30 flex items-center gap-2 overflow-x-auto border-b px-4 py-2 xl:gap-3 xl:overflow-x-visible xl:py-3"
       style={{

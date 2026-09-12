@@ -47,9 +47,7 @@ describe("DatasetPicker", () => {
 
     await user.click(screen.getByRole("combobox"));
 
-    // Source before processed before uploaded, so the raw tables lead. Asserted
-    // as document order, since presence alone cannot tell the grouping apart
-    // from a flat list that happens to contain the headings.
+    // Document order: presence alone cannot tell grouping from a flat list.
     const order = [
       "experimentData.datasetGroupStatic",
       "experimentData.datasetGroupMacro",
@@ -71,8 +69,7 @@ describe("DatasetPicker", () => {
 
     await user.click(screen.getByRole("combobox"));
 
-    // en-US in tests, so the group separator is a comma; the point is that a
-    // separator is applied at all, which is what `122840` was missing.
+    // en-US here, so a comma; the point is that a separator is applied at all.
     expect(await screen.findByRole("option", { name: /Raw Data/ })).toHaveTextContent("122,840");
   });
 
