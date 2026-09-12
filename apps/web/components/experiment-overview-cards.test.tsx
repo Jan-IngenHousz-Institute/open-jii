@@ -1,8 +1,22 @@
 import { createExperiment } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import { ExperimentOverviewCards } from "./experiment-overview-cards";
+
+vi.mock("@repo/ui/components/charts/line-chart", () => ({
+  LineChart: ({ data }: { data: { y: number[] }[] }) => (
+    <div data-testid="sparkline">{JSON.stringify(data[0]?.y ?? [])}</div>
+  ),
+}));
+
+const series = (counts: number[]) => ({
+  measurements: counts.reduce((sum, count) => sum + count, 0),
+  days: counts.map((measurements, index) => ({
+    date: `2026-06-${String(index + 1).padStart(2, "0")}`,
+    measurements,
+  })),
+});
 
 describe("ExperimentOverviewCards", () => {
   it("shows skeleton loaders while loading", () => {
@@ -24,7 +38,7 @@ describe("ExperimentOverviewCards", () => {
     );
   });
 
-  it("renders experiment cards with name and description (no status pill)", () => {
+  it("renders experiment cards with name, description and status", () => {
     const exp = createExperiment({
       name: "Photosynthesis Study",
       description: "Measuring chlorophyll",
@@ -33,8 +47,9 @@ describe("ExperimentOverviewCards", () => {
     render(<ExperimentOverviewCards experiments={[exp]} />);
     expect(screen.getByText("Photosynthesis Study")).toBeInTheDocument();
     expect(screen.getByText("Measuring chlorophyll")).toBeInTheDocument();
-    // Status pill/label was removed from the overview cards (name/description/last-updated only).
-    expect(screen.queryByText("status.active")).not.toBeInTheDocument();
+    // The status shares the badge row the visibility badge reserves anyway, so
+    // it costs no height and the row is no longer blank on a public experiment.
+    expect(screen.getByText("status.active")).toBeInTheDocument();
   });
 
   it("badges a private experiment, the way the other resource lists do", () => {
@@ -81,6 +96,27 @@ describe("ExperimentOverviewCards", () => {
       />,
     );
     expect(screen.getByText(/lastUpdate/)).toBeInTheDocument();
+  });
+
+  it("plots the measurement window when the row carries one", () => {
+    render(
+      <ExperimentOverviewCards experiments={[createExperiment({ activity: series([1, 4, 2]) })]} />,
+    );
+    expect(screen.getByText("resourceMetrics.experiment.measurements")).toBeInTheDocument();
+    expect(screen.getByTestId("sparkline")).toHaveTextContent("[1,4,2]");
+  });
+
+  it("says the window was quiet rather than dropping the block", () => {
+    render(<ExperimentOverviewCards experiments={[createExperiment({ activity: null })]} />);
+    expect(screen.getByText("resourceMetrics.quiet")).toBeInTheDocument();
+    expect(screen.queryByTestId("sparkline")).not.toBeInTheDocument();
+  });
+
+  it("treats an all-zero window as quiet", () => {
+    render(
+      <ExperimentOverviewCards experiments={[createExperiment({ activity: series([0, 0]) })]} />,
+    );
+    expect(screen.getByText("resourceMetrics.quiet")).toBeInTheDocument();
   });
 
   it("handles null description gracefully", () => {

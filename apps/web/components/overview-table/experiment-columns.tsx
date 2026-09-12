@@ -1,3 +1,4 @@
+import { ExperimentStatusIndicator } from "@/components/experiment/experiment-status-indicator";
 import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { formatShortDate } from "@/util/date";
@@ -5,20 +6,13 @@ import { Users } from "lucide-react";
 import Link from "next/link";
 
 import type { ExperimentListItem } from "@repo/api/domains/experiment/experiment.schema";
-import type { Experiment, ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
+import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
 import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { cn } from "@repo/ui/lib/utils";
 
 import type { OverviewTableColumn } from "./overview-table";
 import { overviewTableText } from "./overview-table";
-
-const STATUS_DOT: Record<ExperimentStatus, string> = {
-  active: "bg-status-active-foreground",
-  published: "bg-status-published-foreground",
-  stale: "bg-status-stale-foreground",
-  archived: "bg-status-archived-foreground",
-};
 
 function ownerName(experiment: Experiment): string | null {
   const name = [experiment.ownerFirstName, experiment.ownerLastName].filter(Boolean).join(" ");
@@ -70,24 +64,12 @@ export function getExperimentColumns(
     {
       header: t("columns.status"),
       className: "hidden w-28 sm:table-cell",
-      cell: (experiment) => {
-        const label = t(`status.${experiment.status}`);
-        return (
-          <span
-            title={label}
-            className={cn(
-              "inline-flex min-w-0 items-center gap-1.5 text-[13px]",
-              overviewTableText.muted,
-            )}
-          >
-            <span
-              className={cn("size-1.5 shrink-0 rounded-full", STATUS_DOT[experiment.status])}
-              aria-hidden
-            />
-            <span className="truncate">{label}</span>
-          </span>
-        );
-      },
+      cell: (experiment) => (
+        <ExperimentStatusIndicator
+          status={experiment.status}
+          className={cn("text-[13px]", overviewTableText.muted)}
+        />
+      ),
     },
     {
       header: t("columns.owner"),

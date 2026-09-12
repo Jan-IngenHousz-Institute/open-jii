@@ -13,23 +13,30 @@ vi.mock("~/components/experiment-overview-cards", () => ({
   ),
 }));
 
+const envelope = (items: unknown[]) => ({
+  items,
+  page: 1,
+  pageSize: 3,
+  totalPages: 1,
+  totalCount: items.length,
+});
+
 describe("UserExperimentsSection", () => {
   it("shows skeletons while loading then resolves", () => {
-    server.mount(contract.experiments.listExperiments, { body: [], delay: 100 });
+    server.mount(contract.experiments.listExperiments, { body: envelope([]), delay: 100 });
     render(<UserExperimentsSection />);
 
     // Initially shows skeletons (no experiment-cards yet)
     expect(screen.queryByTestId("experiment-cards")).not.toBeInTheDocument();
   });
 
-  it("shows first 3 experiments", async () => {
+  it("renders the page the server returned, without slicing it again", async () => {
     server.mount(contract.experiments.listExperiments, {
-      body: [
+      body: envelope([
         createExperiment({ id: "1" }),
         createExperiment({ id: "2" }),
         createExperiment({ id: "3" }),
-        createExperiment({ id: "4" }),
-      ],
+      ]),
     });
 
     render(<UserExperimentsSection />);

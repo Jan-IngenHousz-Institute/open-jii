@@ -8,12 +8,16 @@ import { listItems } from "@repo/api/shared/listing";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 export function UserExperimentsSection() {
+  // Paginated, not the bare list: `activity` is only attached on the paginated
+  // branch, and the default ordering means page 1 of 3 is the same three rows
+  // the old client-side slice produced.
   const { data } = useQuery(
-    orpc.experiments.listExperiments.queryOptions({ input: { scope: "related" } }),
+    orpc.experiments.listExperiments.queryOptions({
+      input: { scope: "related", page: 1, pageSize: 3 },
+    }),
   );
 
-  // Show only first 3 experiments for dashboard
-  const limitedExperiments = data ? listItems(data).slice(0, 3) : undefined;
+  const limitedExperiments = data ? listItems(data) : undefined;
 
   return (
     <div className="space-y-4">

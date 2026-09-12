@@ -51,9 +51,12 @@ type PlotlyTraceType = WebGLTraceType | StandardTraceType | string;
 // Lazy load Plotly to avoid SSR issues
 const Plot = lazy(() => import("react-plotly.js"));
 
-// Loading component for the lazy-loaded Plot
+// h-full, not h-96: Plotly is lazy-loaded, and a fixed 384px fallback inside a
+// 40px sparkline slot shoves the layout on first paint.
 const PlotLoadingComponent = () => (
-  <div className="flex h-96 items-center justify-center">Loading chart...</div>
+  <div className="text-muted-foreground flex h-full min-h-0 items-center justify-center text-sm">
+    Loading chart...
+  </div>
 );
 
 // Hook to detect if we're on the client side
