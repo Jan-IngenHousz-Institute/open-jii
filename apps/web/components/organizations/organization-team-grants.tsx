@@ -76,6 +76,7 @@ export function OrganizationTeamGrants({
         </Card>
       ) : (
         <Card
+          padding="none"
           role="list"
           aria-labelledby="organization-team-grants-title"
           className="bg-muted/40 divide-border divide-y overflow-hidden shadow-none"

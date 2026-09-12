@@ -73,6 +73,7 @@
   "resourceMetrics": {
     "strip": "Daily {{unit}} over {{days}} days",
     "series": "Daily {{unit}}",
+    "quiet": "No {{unit}} in the last {{days}} days",
     "ofVisible_one": "of {{count}} you can access",
     "ofVisible_other": "of {{count}} you can access",
     "experiment": {

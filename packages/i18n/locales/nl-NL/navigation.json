@@ -49,6 +49,8 @@
   },
   "commandPalette": {
     "title": "Commandopalet",
+    "trigger": "Zoeken…",
+    "open": "Commandopalet openen",
     "placeholder": "Pagina's, acties en bronnen zoeken...",
     "groups": {
       "pages": "Pagina's",

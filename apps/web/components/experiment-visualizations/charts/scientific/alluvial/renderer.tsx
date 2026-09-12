@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Alluvial } from "@repo/ui/components/charts/parallel-coordinates";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";
@@ -28,6 +29,9 @@ export function AlluvialRenderer({
     enabled: stageCount >= 2,
   });
 
+  // Cache key for the memo below, which resolves category colours.
+  const themeVersion = useChartThemeRefresh();
+
   // KEEP IN SYNC with the field reads in `transformAlluvialData`.
   const series = useMemo(() => {
     if (visualization.chartType !== "alluvial") {
@@ -45,6 +49,7 @@ export function AlluvialRenderer({
     chartConfig.alluvialColorMode,
     chartConfig.alluvialHideLabels,
     chartConfig.colorMap,
+    themeVersion,
   ]);
 
   if (visualization.chartType !== "alluvial") {

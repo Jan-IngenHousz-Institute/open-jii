@@ -79,8 +79,10 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({
     <footer className="bg-brand-chrome text-brand-chrome-foreground w-full py-12">
       <div className="mx-auto w-full max-w-7xl px-4">
         <div className="mb-8 flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
-          {/* openJII Brand/Description aligned left */}
-          <div className="flex flex-col items-start">
+          {/* Centred on a phone, left-aligned once the columns sit side by side:
+              the link columns already did this and the brand block did not, so
+              nothing in the footer shared an edge. */}
+          <div className="flex flex-col items-center text-center md:items-start md:text-left">
             <Image
               src="/openJII_logo_RGB_horizontal_yellow_transparentBG.png"
               alt="openJII Logo"
@@ -97,7 +99,9 @@ export const HomeFooter: React.FC<HomeFooterProps> = ({
                 {currentFooter.badge}
               </span>
             </div>
-            {newsletterSlot && <div className="mt-6 w-full max-w-sm">{newsletterSlot}</div>}
+            {newsletterSlot && (
+              <div className="mt-6 w-full max-w-sm text-left">{newsletterSlot}</div>
+            )}
           </div>
 
           {/* Centered Menu and Support aligned right */}

@@ -6,6 +6,7 @@ import { useState } from "react";
 import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { LineChart } from "@repo/ui/components/charts/line-chart";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 import {
   Table,
   TableBody,
@@ -18,7 +19,7 @@ import {
 import { ChartTableToggle } from "./chart-table-toggle";
 import type { PanelView } from "./chart-table-toggle";
 import { formatBucketLabel } from "./monitoring-buckets";
-import { MONITORING_PRIMARY_COLOR } from "./monitoring-palette";
+import { monitoringPrimaryColor } from "./monitoring-palette";
 
 interface BatteryPanelProps {
   monitoring: DeviceMonitoring;
@@ -31,6 +32,9 @@ interface BatteryPanelProps {
  */
 export function BatteryPanel({ monitoring }: BatteryPanelProps) {
   const { t } = useTranslation("iot");
+  // Resolved in JS, so this has to learn about a theme swap itself.
+  useChartThemeRefresh();
+  const seriesColor = monitoringPrimaryColor();
   const locale = useLocale();
   const [view, setView] = useState<PanelView>("chart");
 
@@ -72,7 +76,7 @@ export function BatteryPanel({ monitoring }: BatteryPanelProps) {
                 x: points.map((point) => point.bucketStart),
                 y: values,
                 mode: "lines+markers",
-                color: MONITORING_PRIMARY_COLOR,
+                color: seriesColor,
                 connectgaps: false,
               },
             ]}

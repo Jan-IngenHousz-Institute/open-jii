@@ -6,6 +6,7 @@ import { useTranslation } from "@repo/i18n";
 import type { DotSeriesData } from "@repo/ui/components/charts/dot-plot";
 import { DotPlot } from "@repo/ui/components/charts/dot-plot";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 
 import { narrowChartConfig } from "../../chart-config";
 import type { ChartFormConfig } from "../../chart-config";
@@ -64,6 +65,9 @@ export function DotPlotRenderer({
 
   const chartConfig = narrowChartConfig(visualization);
   const orientation = chartConfig.orientation === "h" ? "h" : "v";
+
+  // Cache key for the memo below, which resolves category colours.
+  const themeVersion = useChartThemeRefresh();
 
   const chartSeries = useMemo<DotSeriesData[]>(() => {
     if (visualization.chartType !== "dot-plot") {
@@ -158,7 +162,17 @@ export function DotPlotRenderer({
         };
       });
     });
-  }, [rows, xColumn, yEntries, colorColumn, orientation, chartConfig, visualization.chartType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+  }, [
+    rows,
+    xColumn,
+    yEntries,
+    colorColumn,
+    orientation,
+    chartConfig,
+    visualization.chartType,
+    themeVersion,
+  ]);
 
   if (visualization.chartType !== "dot-plot") {
     return <ChartConfigError message={t("errors.invalidConfiguration")} />;

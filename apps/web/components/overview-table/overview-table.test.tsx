@@ -184,6 +184,7 @@ describe("experiment overview columns", () => {
     renderExperiments([createExperiment({ id: "e-1", name: "Photosynthesis" })]);
 
     expectColumnHiddenBelowItsBreakpoint("columns.updated");
+    expectColumnHiddenBelowItsBreakpoint("columns.activity");
     expect(screen.getByRole("columnheader", { name: "columns.updated" })).toHaveClass(
       "lg:table-cell",
     );
@@ -271,6 +272,7 @@ describe("protocol overview columns", () => {
     expectColumnHiddenBelowItsBreakpoint("protocols.columns.family");
     expectColumnHiddenBelowItsBreakpoint("protocols.columns.macros");
     expectColumnHiddenBelowItsBreakpoint("protocols.columns.updated");
+    expectColumnHiddenBelowItsBreakpoint("protocols.columns.activity");
     expect(screen.getByRole("columnheader", { name: "protocols.columns.updated" })).toHaveClass(
       "lg:table-cell",
     );
@@ -328,6 +330,7 @@ describe("macro overview columns", () => {
     expectColumnHiddenBelowItsBreakpoint("macros.columns.language");
     expectColumnHiddenBelowItsBreakpoint("macros.columns.protocols");
     expectColumnHiddenBelowItsBreakpoint("macros.columns.updated");
+    expectColumnHiddenBelowItsBreakpoint("macros.columns.activity");
     expect(screen.getByRole("columnheader", { name: "macros.columns.updated" })).toHaveClass(
       "lg:table-cell",
     );
@@ -406,6 +409,7 @@ describe("workbook overview columns", () => {
     expectColumnHiddenBelowItsBreakpoint("workbooks.columns.usedBy");
     expectColumnHiddenBelowItsBreakpoint("workbooks.columns.user");
     expectColumnHiddenBelowItsBreakpoint("workbooks.columns.updated");
+    expectColumnHiddenBelowItsBreakpoint("workbooks.columns.activity");
     expect(screen.getByRole("columnheader", { name: "workbooks.columns.updated" })).toHaveClass(
       "lg:table-cell",
     );

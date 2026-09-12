@@ -2,11 +2,13 @@
 
 import { ArrowUpRight, TrendingDown, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { Badge } from "@repo/ui/components/badge";
 import {
   Card,
   CardAction,
+  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -29,7 +31,8 @@ function displayableChange(comparison?: { current: number; previous: number }): 
 
 interface MetricStatCardProps {
   label: string;
-  value: string;
+  /** ReactNode so a tile can put a status dot or a skeleton where the figure goes. */
+  value: ReactNode;
   locale: string;
   /** The full figure behind an abbreviated `value`, shown on hover. */
   title?: string;
@@ -37,6 +40,8 @@ interface MetricStatCardProps {
   href?: string;
   note?: string;
   context?: string;
+  alert?: ReactNode;
+  chart?: ReactNode;
   className?: string;
 }
 
@@ -50,9 +55,11 @@ export function MetricStatCard({
   href,
   note,
   context,
+  alert,
+  chart,
   className,
 }: MetricStatCardProps) {
-  const hasFooter = note !== undefined || context !== undefined;
+  const hasFooter = note !== undefined || context !== undefined || alert !== undefined;
   const change = displayableChange(comparison);
 
   const renderChange = (fraction: number) => {
@@ -90,7 +97,7 @@ export function MetricStatCard({
   );
 
   return (
-    <Card className={cn("@container/card gap-2 py-3", className)}>
+    <Card padding="sm" className={cn("@container/card", className)}>
       <CardHeader className="gap-1">
         <CardDescription>{label}</CardDescription>
         <CardTitle
@@ -99,12 +106,22 @@ export function MetricStatCard({
         >
           {href === undefined ? value : renderLinkedValue(href)}
         </CardTitle>
-        {change === null ? null : <CardAction>{renderChange(change)}</CardAction>}
+        {/* The note already prints a trend arrow; at half width the badge just
+            repeats it. Container query: this card's width, not the window's. */}
+        {change === null ? null : (
+          <CardAction className="@[10rem]/card:block hidden">{renderChange(change)}</CardAction>
+        )}
       </CardHeader>
+      {chart === undefined ? null : <CardContent>{chart}</CardContent>}
       {hasFooter ? (
         <CardFooter className="mt-auto flex-col items-start gap-0.5 text-xs">
           {note === undefined ? null : renderNote(note)}
-          {context === undefined ? null : <div className="text-muted-foreground">{context}</div>}
+          {context === undefined ? null : (
+            <div className="text-muted-foreground @[10rem]/card:block hidden">{context}</div>
+          )}
+          {alert === undefined ? null : (
+            <div className="text-status-stale-foreground flex items-center gap-1">{alert}</div>
+          )}
         </CardFooter>
       ) : null}
     </Card>

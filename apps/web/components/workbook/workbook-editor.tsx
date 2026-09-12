@@ -330,6 +330,20 @@ function SortableCellGroup({
   );
 }
 
+/**
+ * Resolved against `el`, not the root: `--sidebar-inset-offset` is declared on
+ * `SidebarInset` and only inherits down. Authored in rem.
+ */
+function readPixels(el: Element, name: string): number {
+  const raw = getComputedStyle(el).getPropertyValue(name).trim();
+  const parsed = Number.parseFloat(raw);
+  if (!Number.isFinite(parsed)) return 0;
+  if (!raw.endsWith("rem")) return parsed;
+
+  const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+  return parsed * (Number.isFinite(rootFontSize) ? rootFontSize : 16);
+}
+
 export function WorkbookEditor({
   cells,
   onCellsChange,
@@ -500,9 +514,11 @@ export function WorkbookEditor({
     const handleScroll = () => {
       const el = headerRef.current;
       if (!el) return;
-      // 64px matches top-16 on the sticky header.
+      // Matches the sticky offset in workbook-header.tsx.
       const rect = el.getBoundingClientRect();
-      setIsSticky(rect.top <= 64);
+      const stickyTop =
+        48 + readPixels(el, "--banner-offset") + readPixels(el, "--sidebar-inset-offset");
+      setIsSticky(rect.top <= stickyTop);
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();

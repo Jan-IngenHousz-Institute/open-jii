@@ -70,7 +70,7 @@ export function OrganizationInvitations({ organizationId }: { organizationId: st
 
   if (isPending) {
     return (
-      <Card aria-busy="true" className="divide-border divide-y overflow-hidden">
+      <Card padding="none" aria-busy="true" className="divide-border divide-y overflow-hidden">
         {[0, 1].map((row) => (
           <div key={row} className="flex items-center gap-3 px-5 py-3">
             <Skeleton className="h-9 w-9 rounded-full" />
@@ -105,7 +105,7 @@ export function OrganizationInvitations({ organizationId }: { organizationId: st
   }
 
   return (
-    <Card role="list" className="divide-border divide-y overflow-hidden">
+    <Card padding="none" role="list" className="divide-border divide-y overflow-hidden">
       {invitations.map((invitation) => {
         const inviter = inviterNames.get(invitation.inviterId);
         const expiry = t("organizations.invite.expiresOn", {

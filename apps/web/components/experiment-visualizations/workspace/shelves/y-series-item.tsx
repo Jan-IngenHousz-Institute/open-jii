@@ -133,7 +133,9 @@ export function YSeriesItem({
         </div>
       )}
 
-      <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+      {/* One column on a phone: against a fixed 140px aggregate the column
+          select was left ~136px, which is less than a name plus its type badge. */}
+      <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto]">
         <FormField
           control={form.control}
           name={`dataConfig.dataSources.${dsIndex}.columnName` as const}
@@ -155,8 +157,8 @@ export function YSeriesItem({
                 <SelectContent>
                   {columns.map((column) => (
                     <SelectItem key={column.name} value={column.name}>
-                      <div className="flex items-center gap-2">
-                        <span>{column.name}</span>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="truncate">{column.name}</span>
                         <Badge
                           variant="outline"
                           className="text-muted-foreground h-4 px-1.5 py-0 font-mono text-[10px] font-normal leading-none"
@@ -174,7 +176,7 @@ export function YSeriesItem({
         />
 
         {!hideAggregate && (
-          <FormItem className="w-[140px]">
+          <FormItem className="w-full sm:w-[140px]">
             <FormLabel className="text-xs font-medium">
               {t("workspace.shelves.aggregate")}
             </FormLabel>
@@ -246,8 +248,8 @@ export function YSeriesItem({
                     </SelectItem>
                     {effectiveErrorColumns.map((column) => (
                       <SelectItem key={column.name} value={column.name}>
-                        <div className="flex items-center gap-2">
-                          <span>{column.name}</span>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="truncate">{column.name}</span>
                           <Badge
                             variant="outline"
                             className="text-muted-foreground h-4 px-1.5 py-0 font-mono text-[10px] font-normal leading-none"

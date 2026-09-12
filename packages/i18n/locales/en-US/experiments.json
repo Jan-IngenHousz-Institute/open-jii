@@ -196,7 +196,15 @@
     "readMore": "Read more",
     "uploadMetadata": "Upload Metadata",
     "editMetadata": "Edit Metadata",
-    "uploadSensorData": "Upload Sensor Data"
+    "uploadSensorData": "Upload Sensor Data",
+    "datasetLabel": "Dataset",
+    "datasetPlaceholder": "Search datasets...",
+    "datasetEmpty": "No dataset matches that.",
+    "datasetRows_one": "{{rows}} row",
+    "datasetRows_other": "{{rows}} rows",
+    "datasetGroupStatic": "Source",
+    "datasetGroupMacro": "Processed",
+    "datasetGroupUpload": "Uploaded"
   },
   "experiment": "Experiment",
   "detailsTitle": "Details",

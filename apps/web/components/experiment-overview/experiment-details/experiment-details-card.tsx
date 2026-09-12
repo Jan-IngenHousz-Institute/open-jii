@@ -133,7 +133,13 @@ export function ExperimentDetailsCard({
 
       {/* Panel content slides right on desktop collapse */}
       <div className={panelContentVariants({ collapsed: isCollapsed, transitionsReady })}>
-        <Card className="relative shadow-none">
+        {/* The collapsed body is a zero-height grid rather than `hidden`, so it
+            keeps its animation but is still a flex item: the card's own bottom
+            padding would sit under nothing. */}
+        <Card
+          padding="sm"
+          className={cn("relative shadow-none", isMobileCollapsed && "pb-0 lg:pb-3")}
+        >
           {/* Mobile toggle button */}
           <Button
             onClick={() => setIsMobileCollapsed(!isMobileCollapsed)}
@@ -149,7 +155,7 @@ export function ExperimentDetailsCard({
             )}
           </Button>
 
-          <CardHeader className="py-3 pr-10">
+          <CardHeader className="pr-10">
             <h3 className="text-lg font-semibold">{t("detailsTitle")}</h3>
           </CardHeader>
 

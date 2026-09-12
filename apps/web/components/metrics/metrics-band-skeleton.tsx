@@ -1,16 +1,17 @@
 import { Card, CardFooter, CardHeader } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import { cn } from "@repo/ui/lib/utils";
 
 interface MetricsBandSkeletonProps {
   cards: number;
-  className?: string;
+  /** Required, not defaulted: a four-column default survives twMerge against a
+   * three-column caller and the page reflows on load. */
+  grid: string;
 }
 
 /** The band's own geometry while it loads, so nothing reflows when the figures arrive. */
-export function MetricsBandSkeleton({ cards, className }: MetricsBandSkeletonProps) {
+export function MetricsBandSkeleton({ cards, grid }: MetricsBandSkeletonProps) {
   const renderCard = (index: number) => (
-    <Card key={index} className="@container/card gap-2 py-3">
+    <Card key={index} padding="sm" className="@container/card">
       <CardHeader className="gap-1">
         <Skeleton className="h-5 w-28" />
         <Skeleton className="h-8 w-24" />
@@ -23,7 +24,7 @@ export function MetricsBandSkeleton({ cards, className }: MetricsBandSkeletonPro
   );
 
   return (
-    <section aria-hidden className={cn("grid gap-4", className)}>
+    <section aria-hidden className={grid}>
       {Array.from({ length: cards }, (_, index) => renderCard(index))}
     </section>
   );

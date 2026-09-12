@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { bucketAxis, formatBucketLabel } from "./monitoring-buckets";
+import { bucketAxis, formatBucketLabel, foldBucketSeries } from "./monitoring-buckets";
 
 describe("bucketAxis", () => {
   it("zero-fills every hour bucket across the range, boundaries included", () => {
@@ -44,5 +44,27 @@ describe("formatBucketLabel", () => {
 
   it("labels an hour bucket as an instant carrying a time of day", () => {
     expect(formatBucketLabel("2026-08-13T14:00:00.000Z", "hour", "en-US")).toMatch(/\d{2}:\d{2}/);
+  });
+});
+
+describe("foldBucketSeries", () => {
+  it("zero-fills the axis and drops rows the warehouse could not bucket", () => {
+    const axis = ["t1", "t2", "t3"];
+
+    const series = foldBucketSeries(
+      [
+        { bucketStart: "t1", count: 3 },
+        { bucketStart: "t1", count: 2 },
+        { bucketStart: "t3", count: 7 },
+        { bucketStart: null, count: 99 },
+      ],
+      axis,
+    );
+
+    expect(series).toEqual([
+      { date: "t1", measurements: 5 },
+      { date: "t2", measurements: 0 },
+      { date: "t3", measurements: 7 },
+    ]);
   });
 });

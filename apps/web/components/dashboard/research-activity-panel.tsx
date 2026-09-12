@@ -2,6 +2,7 @@
 
 import { MetricStatCard } from "@/components/metrics/metric-stat-card";
 import { MetricTrendCard } from "@/components/metrics/metric-trend-card";
+import { metricsBandGrid, metricsBandTrendSpan } from "@/components/metrics/metrics-band-grid";
 import { MetricsBandSkeleton } from "@/components/metrics/metrics-band-skeleton";
 import { useMyScopedMetrics } from "@/hooks/metrics/useMyScopedMetrics/useMyScopedMetrics";
 import { usePublicMetrics } from "@/hooks/metrics/usePublicMetrics/usePublicMetrics";
@@ -19,7 +20,7 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
   const { data: platform } = usePublicMetrics();
 
   if (isPending) {
-    return <MetricsBandSkeleton cards={4} className="sm:grid-cols-2 xl:grid-cols-4" />;
+    return <MetricsBandSkeleton cards={4} grid={metricsBandGrid} />;
   }
 
   const scoped = mine?.scoped ?? null;
@@ -52,7 +53,7 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
   );
 
   return (
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section className={metricsBandGrid}>
       <MetricStatCard
         locale={locale}
         label={t("dashboard.activity.label")}
@@ -93,7 +94,7 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
         peakDate={peak?.date ?? null}
         locale={locale}
         footer={t("activeDays", { active: scoped.activeDays, total: windowDays })}
-        className="sm:col-span-2 xl:col-span-1"
+        className={metricsBandTrendSpan}
       />
     </section>
   );

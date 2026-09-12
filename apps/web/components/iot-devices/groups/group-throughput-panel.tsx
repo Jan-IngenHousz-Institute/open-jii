@@ -6,11 +6,12 @@ import { useState } from "react";
 import type { IotDeviceGroupThroughputBucket } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
 import { BarChart } from "@repo/ui/components/charts/bar-chart";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 
 import { ChartTableToggle } from "../monitoring/chart-table-toggle";
 import type { PanelView } from "../monitoring/chart-table-toggle";
 import { bucketAxis } from "../monitoring/monitoring-buckets";
-import { MONITORING_SERIES_COLORS } from "../monitoring/monitoring-palette";
+import { monitoringSeriesColors } from "../monitoring/monitoring-palette";
 import type { MonitoringRange } from "../monitoring/monitoring-range";
 import { foldThroughputSeries } from "../monitoring/throughput-series";
 import { GroupThroughputTable } from "./group-throughput-table";
@@ -59,6 +60,9 @@ export function GroupThroughputPanel({
   locale,
 }: GroupThroughputPanelProps) {
   const { t } = useTranslation("iot");
+  // Resolved in JS, so this has to learn about a theme swap itself.
+  useChartThemeRefresh();
+  const seriesColors = monitoringSeriesColors();
   const [view, setView] = useState<PanelView>("chart");
 
   const axis = bucketAxis(range.from, range.to, range.bucket);
@@ -76,7 +80,7 @@ export function GroupThroughputPanel({
   );
 
   return (
-    <div className="flex h-full flex-col gap-3">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-muted-foreground text-sm">
           {t("iot.devices.monitoring.throughputTotal", { count: total })}
@@ -104,7 +108,7 @@ export function GroupThroughputPanel({
               // `xaxis.type` to linear, which cannot place label strings.
               x: axis,
               y: entry.counts,
-              color: MONITORING_SERIES_COLORS[index % MONITORING_SERIES_COLORS.length],
+              color: seriesColors[index % seriesColors.length],
             }))}
             config={{
               showLegend: series.length > 1,

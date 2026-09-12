@@ -76,8 +76,10 @@ describe("DashboardBanner", () => {
     expect(banner).toHaveClass("flex-col", "lg:flex-row");
     expect(banner?.className).not.toMatch(/\bsm:flex-row\b/);
 
+    // The tier itself, not "contains no sm:", which another spelling slips past.
     const actions = screen.getByRole("link", { name: "Docs" }).parentElement;
-    expect(actions).toHaveClass("lg:flex-row");
+    expect(actions).toHaveClass("flex-col", "min-[26rem]:flex-row", "lg:flex-row");
     expect(actions?.className).not.toMatch(/\bsm:/);
+    expect(actions?.className).not.toMatch(/\bmd:/);
   });
 });

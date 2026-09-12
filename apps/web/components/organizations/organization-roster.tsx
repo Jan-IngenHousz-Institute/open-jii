@@ -153,7 +153,7 @@ export function OrganizationRoster({
 
   if (isPending) {
     return (
-      <Card aria-busy="true" className="divide-border divide-y overflow-hidden">
+      <Card padding="none" aria-busy="true" className="divide-border divide-y overflow-hidden">
         {[0, 1, 2].map((row) => (
           <div key={row} className="flex items-center gap-3 px-5 py-3">
             <Skeleton className="h-9 w-9 rounded-full" />
@@ -170,7 +170,7 @@ export function OrganizationRoster({
 
   return (
     <>
-      <Card role="list" className="divide-border divide-y overflow-hidden">
+      <Card padding="none" role="list" className="divide-border divide-y overflow-hidden">
         {normalized.map((member) => {
           const target = { userId: member.userId, role: member.orgRole };
           const isSelf = member.userId === currentUserId;

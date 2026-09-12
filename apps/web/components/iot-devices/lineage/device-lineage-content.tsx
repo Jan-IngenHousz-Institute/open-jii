@@ -160,7 +160,7 @@ export default function DeviceLineagePage() {
       </div>
 
       {hasError ? (
-        <Card className="shadow-none">
+        <Card padding="none" className="shadow-none">
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <p className="text-muted-foreground text-sm">{t("iot.devices.monitoring.loadError")}</p>
             <Button variant="outline" size="sm" onClick={handleRetry}>

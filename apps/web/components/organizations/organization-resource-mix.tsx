@@ -34,7 +34,7 @@ export function OrganizationResourceMix({
   if (total === 0) return null;
 
   return (
-    <Card className="p-5">
+    <Card padding="none" className="p-5">
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 id="organization-mix-title" className="text-lg font-semibold tracking-tight">
           {t("organizations.mix.title")}

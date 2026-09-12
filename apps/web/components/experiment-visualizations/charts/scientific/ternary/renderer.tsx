@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { TernaryPlot } from "@repo/ui/components/charts/ternary";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";
@@ -30,6 +31,9 @@ export function TernaryRenderer({
 
   const sum = chartConfig.ternarySum ?? 100;
 
+  // Cache key for the memo below, which resolves category colours.
+  const themeVersion = useChartThemeRefresh();
+
   // KEEP IN SYNC with the field reads in `transformTernaryData`.
   const { series } = useMemo(() => {
     if (visualization.chartType !== "ternary") {
@@ -47,6 +51,7 @@ export function TernaryRenderer({
     chartConfig.ternaryMarkerSize,
     chartConfig.ternaryLineWidth,
     chartConfig.ternarySum,
+    themeVersion,
   ]);
 
   if (visualization.chartType !== "ternary") {

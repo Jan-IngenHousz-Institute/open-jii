@@ -59,7 +59,7 @@ export function ExperimentMeasurements({
     return (
       <div className="space-y-4">
         <CardTitle>{t("measurements.latestMeasurements")}</CardTitle>
-        <Card className="shadow-none">
+        <Card padding="none" className="shadow-none">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="bg-muted mb-4 flex h-24 w-24 items-center justify-center rounded-full">
               <svg
@@ -99,7 +99,7 @@ export function ExperimentMeasurements({
           </Button>
         </Link>
       </div>
-      <Card className="overflow-hidden shadow-none">
+      <Card padding="none" className="overflow-hidden shadow-none">
         <CardContent className="p-0">
           <Table>
             <TableHeader className="bg-muted">

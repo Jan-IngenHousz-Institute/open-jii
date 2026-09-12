@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { PieChart } from "@repo/ui/components/charts/pie-chart";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";
@@ -26,6 +27,9 @@ export function PieRenderer({
   const dataSources = visualization.dataConfig.dataSources;
   const aggregation = visualization.dataConfig.aggregation;
 
+  // Cache key for the memo below, which resolves category colours.
+  const themeVersion = useChartThemeRefresh();
+
   // KEEP IN SYNC with the field reads in `transformPieData`.
   const slices = useMemo(() => {
     if (visualization.chartType !== "pie") {
@@ -43,6 +47,7 @@ export function PieRenderer({
     chartConfig.textinfo,
     chartConfig.pieTextPosition,
     chartConfig.sortSlices,
+    themeVersion,
   ]);
 
   if (visualization.chartType !== "pie") {

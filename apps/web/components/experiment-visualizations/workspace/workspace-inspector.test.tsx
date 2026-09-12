@@ -166,4 +166,17 @@ describe("WorkspaceInspector", () => {
     // Line's style panel includes the line-style fields heading.
     expect(screen.getByText("workspace.style.display")).toBeInTheDocument();
   });
+  it("draws the active tab as an underline, not a box", () => {
+    // TabsTrigger's base carries `border border-transparent`, which a later
+    // `border-b-2` does not drop, so without border-x-0/border-t-0 the
+    // side-agnostic `data-[state=active]:border-primary` paints a rectangle.
+    renderInspector({ selectedTableName: "readings" });
+
+    const active = screen.getByRole("tab", { name: /workspace\.inspector\.tabs\.data/ });
+    expect(active).toHaveClass("border-b-2", "border-x-0", "border-t-0");
+    expect(active).toHaveClass("data-[state=active]:border-primary");
+    // flex-1 on the base silently defeats the list's justify-start.
+    expect(active).toHaveClass("flex-none");
+    expect(active).not.toHaveClass("rounded-md");
+  });
 });

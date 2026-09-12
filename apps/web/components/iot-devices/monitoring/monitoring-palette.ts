@@ -1,13 +1,12 @@
-import { CATEGORY_PALETTE } from "@/components/experiment-visualizations/charts/colors/palettes";
+import { resolveChartColorway } from "@repo/ui/components/charts/utils";
 
-// The house categorical palette, reordered for this dashboard: its first four
-// entries put #ff7f0e next to #2ca02c, a pair that collapses under protanopia
-// (ΔE well under the readable floor). These four indices keep the same hues but
-// stay separable, and series past them fold into "Other" rather than cycling.
-const CVD_SAFE_ORDER = [0, 1, 4, 9] as const;
+/** The colorway's first four, already widest-separation-first. Past four folds into "Other". */
+export const MONITORING_MAX_SERIES = 4;
 
-export const MONITORING_SERIES_COLORS = CVD_SAFE_ORDER.map((index) => CATEGORY_PALETTE[index]);
+export function monitoringSeriesColors(): string[] {
+  return resolveChartColorway().slice(0, MONITORING_MAX_SERIES);
+}
 
-export const MONITORING_MAX_SERIES = MONITORING_SERIES_COLORS.length;
-
-export const MONITORING_PRIMARY_COLOR = MONITORING_SERIES_COLORS[0];
+export function monitoringPrimaryColor(): string {
+  return monitoringSeriesColors()[0] ?? "#005E5E";
+}

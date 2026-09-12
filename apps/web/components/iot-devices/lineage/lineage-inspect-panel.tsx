@@ -41,7 +41,7 @@ export function LineageInspectPanel({ selected, device, monitoring }: LineageIns
 
   if (selected === null) {
     return (
-      <Card className="min-w-0">
+      <Card padding="none" className="min-w-0">
         <CardContent className="text-muted-foreground py-8 text-center text-sm">
           {t("iot.devices.lineage.inspectHint")}
         </CardContent>

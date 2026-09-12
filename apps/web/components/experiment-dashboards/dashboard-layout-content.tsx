@@ -71,7 +71,9 @@ export function DashboardLayoutContent({
         </Link>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-4">
+          {/* Stacked below sm: the autosave line plus the menu take ~200px of a
+          328px box, which wrapped the title to three lines. */}
+          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div className="min-w-0 flex-1">
               <InlineEditableTitle
                 name={name || t("form.namePlaceholder")}
@@ -79,7 +81,7 @@ export function DashboardLayoutContent({
                 onSave={handleTitleSave}
               />
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-3">
               {isEditing && <AutosaveIndicator />}
               {canEdit && (
                 <Button variant="outline" size="sm" onClick={toggleMode}>
@@ -96,7 +98,9 @@ export function DashboardLayoutContent({
               onChange={handleDescriptionChange}
               placeholder={t("form.descriptionPlaceholder")}
               rows={1}
-              className="text-muted-foreground min-h-0 resize-none border-0 bg-transparent p-0 text-base shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              // dark:bg-transparent as well as bg-transparent: Textarea's base carries
+              // dark:bg-input/30, which an unmodified utility never strips.
+              className="text-muted-foreground min-h-0 resize-none border-0 bg-transparent p-0 text-base shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-transparent"
             />
           )}
           {showStaticDescription && (
@@ -104,7 +108,10 @@ export function DashboardLayoutContent({
           )}
         </div>
 
-        <div className="border-border flex items-start gap-10 border-b pb-8">
+        {/* No border: the canvas band below draws the full-bleed rule, and the
+            two stacked into one thick line. Two columns on a phone so a long
+            identifier cannot set the row's min-content width. */}
+        <div className="grid grid-cols-2 gap-x-10 gap-y-4 pb-8 md:flex md:items-start">
           <MetaField label={tCommon("common.created")} value={formatDate(dashboard.createdAt)} />
           <MetaField label={tCommon("common.updated")} value={formatDate(dashboard.updatedAt)} />
           <MetaField label={tCommon("common.createdBy")} value={createdByDisplay} />

@@ -59,7 +59,7 @@ export function OrganizationOverview({ organizationId }: { organizationId: strin
 
         <OrganizationFeaturedResources resources={resources} />
 
-        <Card className="p-5">
+        <Card padding="none" className="p-5">
           <div className="mb-4 space-y-1">
             <h2 className="text-lg font-semibold tracking-tight">
               {t("organizations.resources.title")}

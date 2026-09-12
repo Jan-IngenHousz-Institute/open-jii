@@ -2,6 +2,11 @@
 
 import { MetricStatCard } from "~/components/metrics/metric-stat-card";
 import { MetricTrendCard } from "~/components/metrics/metric-trend-card";
+import {
+  metricsBandGridOfThree,
+  metricsBandTrendSpanOfThree,
+  metricsBandTrendSpanWide,
+} from "~/components/metrics/metrics-band-grid";
 import { MetricsBandSkeleton } from "~/components/metrics/metrics-band-skeleton";
 import { useExperimentMetrics } from "~/hooks/metrics/useExperimentMetrics/useExperimentMetrics";
 import { useLocale } from "~/hooks/useLocale";
@@ -22,7 +27,7 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
     return (
       <section className="space-y-3">
         <h2 className="font-bold">{t("experiment.title")}</h2>
-        <MetricsBandSkeleton cards={3} className="sm:grid-cols-2 lg:grid-cols-3" />
+        <MetricsBandSkeleton cards={3} grid={metricsBandGridOfThree} />
       </section>
     );
   }
@@ -85,7 +90,7 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
   return (
     <section className="space-y-3">
       <h2 className="font-bold">{t("experiment.title")}</h2>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className={metricsBandGridOfThree}>
         <MetricStatCard
           locale={locale}
           label={t("experiment.measurements")}
@@ -120,7 +125,7 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
           locale={locale}
           footer={t("activeDays", { active: scoped.activeDays, total: windowDays })}
           className={
-            hasContributors || hasDevices ? "sm:col-span-2 lg:col-span-1" : "sm:col-span-2"
+            hasContributors || hasDevices ? metricsBandTrendSpanOfThree : metricsBandTrendSpanWide
           }
         />
       </div>

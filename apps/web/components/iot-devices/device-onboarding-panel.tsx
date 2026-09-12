@@ -300,7 +300,7 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
           <button
             type="button"
             aria-label={t("iot.onboarding.boundRowActions")}
-            className="text-muted-foreground hover:bg-muted hover:text-foreground data-[state=open]:bg-muted inline-flex size-8 items-center justify-center rounded-md"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground data-[state=open]:bg-muted inline-flex size-8 shrink-0 items-center justify-center rounded-md"
           >
             <MoreHorizontal className="size-4" />
           </button>
@@ -389,18 +389,22 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
         title={t("iot.onboarding.title")}
         description={t("iot.onboarding.description")}
       />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
+      {/* An explicit track at the base tier too: with only the implicit `auto`
+          track the items keep `min-width: auto`, so one wide child widens the
+          whole page and the rail, the switch row and the button all read as
+          shifted. */}
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="space-y-6">
           <Card className="shadow-none">
             <CardHeader>
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <CardTitle className="text-base">{t("iot.onboarding.experimentsTitle")}</CardTitle>
                 {isLongList && (
                   <SearchInput
                     value={experimentFilter}
                     onChange={setExperimentFilter}
                     placeholder={t("iot.onboarding.filterExperiments")}
-                    className="h-8 w-56"
+                    className="h-8 w-full md:w-56"
                   />
                 )}
               </div>
@@ -420,7 +424,7 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
                     {t("iot.onboarding.includeWorkbook")}
                   </Label>
                 </div>
-                <div className="text-right">
+                <div className="w-full text-right sm:w-auto">
                   <Button
                     onClick={() => {
                       issue(selectedIds);

@@ -104,7 +104,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
 
   function renderFigure(value: React.ReactNode, caption: string) {
     return (
-      <div className="mb-3">
+      <div>
         <p className="text-2xl font-semibold tabular-nums">{value}</p>
         <p className="text-muted-foreground text-xs">{caption}</p>
       </div>
@@ -301,7 +301,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
   }
 
   return (
-    <div className={cn("grid gap-4", !isMobileFamily && "xl:grid-cols-2")}>
+    <div className={cn("grid items-start gap-4", !isMobileFamily && "xl:grid-cols-2")}>
       {!isMobileFamily && (
         <OverviewCard
           icon={<FlaskConical aria-hidden />}

@@ -59,7 +59,7 @@ export function SearchResultItem({
       value={`${result.type}:${result.id}`}
       onSelect={() => onSelect(result)}
     >
-      <Icon className="mr-2 h-4 w-4 shrink-0" />
+      <Icon className="h-4 w-4 shrink-0" />
       <div className="flex min-w-0 flex-col">
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate text-sm">{result.title}</span>

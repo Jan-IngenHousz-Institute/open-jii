@@ -80,9 +80,10 @@ export function BaseNode(props: BaseNodeProps) {
         )}
         <div className="node-hover-area absolute inset-0 z-[9] rounded-[10px]" />
         <Card
+          padding="none"
           data-testid="node-card"
           className={cn(
-            "relative gap-0 overflow-hidden py-0",
+            "relative overflow-hidden",
             isActive && "border-primary ring-primary ring-2",
           )}
         >

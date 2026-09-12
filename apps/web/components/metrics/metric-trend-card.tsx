@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import type { MetricsWindowDay } from "@repo/api/domains/metrics/metrics.schema";
 import {
   Card,
@@ -11,7 +13,8 @@ import {
 } from "@repo/ui/components/card";
 import { BarChart } from "@repo/ui/components/charts/bar-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
-import { detectAxisType, resolveChartColorway } from "@repo/ui/components/charts/utils";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
+import { detectAxisType, platformChartColor } from "@repo/ui/components/charts/utils";
 import { cn } from "@repo/ui/lib/utils";
 
 const QUIET_BAR_OPACITY = 0.45;
@@ -19,7 +22,7 @@ const TRACK_OPACITY = 0.08;
 
 interface MetricTrendCardProps {
   label: string;
-  value: string;
+  value: ReactNode;
   title?: string;
   seriesName: string;
   days: MetricsWindowDay[];
@@ -67,10 +70,12 @@ export function MetricTrendCard({
   // A zero day draws no bar, so every day gets a faint slot behind the data and
   // a sparse window reads as quiet rather than as empty.
   const trackHeight = Math.max(...measurements, 0) || 1;
-  const seriesColor = resolveChartColorway()?.[0];
+  // Resolved here, not left to `layout.colorway`, so track and data share one colour.
+  useChartThemeRefresh();
+  const seriesColor = platformChartColor(0);
 
   return (
-    <Card className={cn("@container/card gap-2 py-3", className)}>
+    <Card padding="sm" className={cn("@container/card", className)}>
       <CardHeader className="gap-1">
         <CardDescription>{label}</CardDescription>
         <CardTitle

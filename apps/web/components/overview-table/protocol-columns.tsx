@@ -70,7 +70,8 @@ export function getProtocolColumns(
     },
     {
       header: t("protocols.columns.activity"),
-      className: "w-48",
+      // Gated like the other secondary columns: ungated, it left the name ~90px.
+      className: "hidden w-48 lg:table-cell",
       cell: (protocol) => (
         <ResourceMetricsCell activity={protocol.activity ?? null} windowDays={30} kind="protocol" />
       ),

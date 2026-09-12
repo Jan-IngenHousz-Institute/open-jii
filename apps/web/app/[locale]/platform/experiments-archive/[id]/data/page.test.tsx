@@ -160,7 +160,7 @@ describe("<ExperimentDataPage />", () => {
     });
   });
 
-  it("renders data page with upload button and tabs when experiment is archived", async () => {
+  it("renders data page with a disabled upload button when experiment is archived", async () => {
     mountDefaults();
 
     render(<ExperimentDataPage params={PARAMS} />);
@@ -174,44 +174,31 @@ describe("<ExperimentDataPage />", () => {
     const uploadButton = screen.getByRole("button", { name: /experimentData.uploadData/i });
     expect(uploadButton).toBeInTheDocument();
     expect(uploadButton).toBeDisabled();
-
-    expect(screen.getByTestId("nav-tabs")).toBeInTheDocument();
-    expect(screen.getByTestId("nav-tabs-list")).toBeInTheDocument();
   });
 
-  it("renders tab triggers with table names and row counts", async () => {
+  it("picks the dataset from a combobox rather than a tab strip", async () => {
     mountDefaults();
 
     render(<ExperimentDataPage params={PARAMS} />);
 
+    // The archived page is the live page's twin: an experiment can hold a
+    // dataset per macro and per upload, which wrapped the strip to three rows.
     await waitFor(() => {
-      expect(screen.getByTestId("nav-tab-trigger-measurements")).toBeInTheDocument();
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
     });
-
-    expect(screen.getByText("Measurements (100)")).toBeInTheDocument();
-    expect(screen.getByTestId("nav-tab-trigger-device")).toBeInTheDocument();
-    expect(screen.getByText("Device (1)")).toBeInTheDocument();
+    expect(screen.queryByTestId("nav-tabs")).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toHaveTextContent("Measurements");
   });
 
-  it("renders tab content with ExperimentDataTable for each table", async () => {
+  it("renders the selected dataset's table", async () => {
     mountDefaults();
 
     render(<ExperimentDataPage params={PARAMS} />);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("nav-tab-content-measurements")).toBeInTheDocument();
-    });
-
-    const tabContent1 = screen.getByTestId("nav-tab-content-measurements");
-    const dataTable1 = tabContent1.querySelector('[data-testid="experiment-data-table"]');
-    expect(dataTable1).toHaveAttribute("data-experiment-id", EXP_ID);
-    expect(dataTable1).toHaveAttribute("data-table-name", "measurements");
-    expect(dataTable1).toHaveAttribute("data-default-sort-column", "timestamp");
-
-    const tabContent2 = screen.getByTestId("nav-tab-content-device");
-    const dataTable2 = tabContent2.querySelector('[data-testid="experiment-data-table"]');
-    expect(dataTable2).toHaveAttribute("data-experiment-id", EXP_ID);
-    expect(dataTable2).toHaveAttribute("data-table-name", ExperimentTableName.DEVICE);
+    const dataTable = await screen.findByTestId("experiment-data-table");
+    expect(dataTable).toHaveAttribute("data-experiment-id", EXP_ID);
+    expect(dataTable).toHaveAttribute("data-table-name", "measurements");
+    expect(dataTable).toHaveAttribute("data-default-sort-column", "timestamp");
   });
 
   it("shows no data message when tables array is empty", async () => {

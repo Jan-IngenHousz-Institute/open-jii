@@ -59,7 +59,7 @@ export default function ExperimentVisualizationsDisplay({
           <CardTitle>{t("ui.title")}</CardTitle>
           <CardDescription>{t("selector.noVisualizations")}</CardDescription>
         </div>
-        <Card className="shadow-none">
+        <Card padding="none" className="shadow-none">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="bg-muted mb-4 flex h-24 w-24 items-center justify-center rounded-full">
               <svg
@@ -105,7 +105,7 @@ export default function ExperimentVisualizationsDisplay({
         <CardTitle>{t("ui.title")}</CardTitle>
       </div>
       <Card className="shadow-none">
-        <CardContent className="space-y-6 pt-6">
+        <CardContent className="space-y-6">
           <div>
             <Select value={selectedVisualizationId} onValueChange={setSelectedVisualizationId}>
               <SelectTrigger className="h-auto w-fit border-none p-0 text-base font-semibold shadow-none hover:bg-transparent focus:ring-0">

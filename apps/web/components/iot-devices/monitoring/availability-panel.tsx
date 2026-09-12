@@ -6,6 +6,8 @@ import { formatDateTime, formatRelativeTime } from "@/util/date";
 import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { BarChart } from "@repo/ui/components/charts/bar-chart";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
+import { readThemeColor } from "@repo/ui/components/charts/utils";
 
 import type { BucketAvailability } from "./availability-strip";
 import { buildAvailabilitySlices, deriveOutages } from "./availability-strip";
@@ -16,12 +18,31 @@ const MAX_LISTED_OUTAGES = 5;
 
 // Availability is device state, so it wears the status palette, never the
 // categorical series colors.
-const STATE_COLOR: Record<BucketAvailability, string> = {
-  up: "var(--status-active-foreground)",
-  partial: "var(--status-stale-foreground)",
-  down: "var(--destructive)",
-  unknown: "var(--muted-foreground)",
+//
+// Hex, not `var(--token)`: the same map feeds the legend (a React `style`, which
+// CSS resolves) and Plotly, which parses colour in JS and paints it black.
+const STATE_TOKEN: Record<BucketAvailability, string> = {
+  up: "--status-active-foreground",
+  partial: "--status-stale-foreground",
+  down: "--destructive",
+  unknown: "--muted-foreground",
 };
+
+const STATE_FALLBACK: Record<BucketAvailability, string> = {
+  up: "#10b981",
+  partial: "#f59e0b",
+  down: "#f43f5e",
+  unknown: "#d4d4d8",
+};
+
+function stateColors(): Record<BucketAvailability, string> {
+  return {
+    up: readThemeColor(STATE_TOKEN.up) ?? STATE_FALLBACK.up,
+    partial: readThemeColor(STATE_TOKEN.partial) ?? STATE_FALLBACK.partial,
+    down: readThemeColor(STATE_TOKEN.down) ?? STATE_FALLBACK.down,
+    unknown: readThemeColor(STATE_TOKEN.unknown) ?? STATE_FALLBACK.unknown,
+  };
+}
 
 interface AvailabilityPanelProps {
   monitoring: DeviceMonitoring;
@@ -41,6 +62,9 @@ interface AvailabilityPanelProps {
 export function AvailabilityPanel({ monitoring, from, to, showVerdict }: AvailabilityPanelProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
+  // Re-resolve the palette when the theme flips; the panel paints from JS.
+  useChartThemeRefresh();
+  const stateColor = stateColors();
 
   const axis = bucketAxis(from, to, monitoring.bucket);
   const slices = buildAvailabilitySlices(monitoring, axis, to);
@@ -83,7 +107,7 @@ export function AvailabilityPanel({ monitoring, from, to, showVerdict }: Availab
               x: slices.map((slice) => slice.start),
               // Bar height is the share of the bucket spent online.
               y: slices.map((slice) => Math.round(slice.onlineRatio * 100)),
-              marker: { color: slices.map((slice) => STATE_COLOR[slice.state]) },
+              marker: { color: slices.map((slice) => stateColor[slice.state]) },
               text: slices.map((slice) =>
                 t(`iot.devices.monitoring.legend${stateSuffix(slice.state)}`),
               ),
@@ -106,7 +130,7 @@ export function AvailabilityPanel({ monitoring, from, to, showVerdict }: Availab
           <span key={state} className="flex items-center gap-1.5">
             <span
               className="h-2 w-2 rounded-sm"
-              style={{ backgroundColor: STATE_COLOR[state] }}
+              style={{ backgroundColor: stateColor[state] }}
               aria-hidden
             />
             {t(`iot.devices.monitoring.legend${stateSuffix(state)}`)}

@@ -180,7 +180,8 @@ export function getWorkbookColumns(
     },
     {
       header: t("workbooks.columns.activity"),
-      className: "w-48",
+      // Gated like the other secondary columns: ungated, it left the name ~90px.
+      className: "hidden w-48 lg:table-cell",
       cell: (workbook) => (
         <ResourceMetricsCell activity={workbook.activity ?? null} windowDays={30} kind="workbook" />
       ),

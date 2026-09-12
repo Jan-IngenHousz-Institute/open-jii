@@ -165,7 +165,15 @@
     "readMore": "Lees meer",
     "uploadMetadata": "Metadata uploaden",
     "editMetadata": "Metadata bewerken",
-    "uploadSensorData": "Sensorgegevens uploaden"
+    "uploadSensorData": "Sensorgegevens uploaden",
+    "datasetLabel": "Dataset",
+    "datasetPlaceholder": "Datasets zoeken...",
+    "datasetEmpty": "Geen overeenkomende dataset.",
+    "datasetRows_one": "{{rows}} rij",
+    "datasetRows_other": "{{rows}} rijen",
+    "datasetGroupStatic": "Bron",
+    "datasetGroupMacro": "Verwerkt",
+    "datasetGroupUpload": "Geüpload"
   },
   "experiment": "Experiment",
   "experimentId": "Experiment-ID",

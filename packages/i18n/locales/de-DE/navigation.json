@@ -53,6 +53,8 @@
   },
   "commandPalette": {
     "title": "Befehlspalette",
+    "trigger": "Suchen…",
+    "open": "Befehlspalette öffnen",
     "placeholder": "Seiten, Aktionen und Ressourcen suchen...",
     "groups": {
       "pages": "Seiten",

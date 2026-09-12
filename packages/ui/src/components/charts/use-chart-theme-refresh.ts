@@ -2,13 +2,32 @@
 
 import { useSyncExternalStore } from "react";
 
+import { invalidateThemeTokenCache, readThemeColor } from "./utils";
+
 type Subscriber = () => void;
 
 const subscribers = new Set<Subscriber>();
 let rootObserver: MutationObserver | undefined;
 
-function themeClassSnapshot(): string {
-  return typeof document === "undefined" ? "" : document.documentElement.className;
+const PROBE_TOKENS = ["--foreground", "--card", "--chart-1"] as const;
+
+let lastProbe: string | undefined;
+
+/**
+ * Class and tokens together: the class alone misses an inline override, the
+ * tokens alone resolve empty without a stylesheet. Comparing it stops unrelated
+ * root writes counting as a theme change.
+ */
+function themeProbe(): string {
+  const tokens = PROBE_TOKENS.map((token) => readThemeColor(token) ?? "");
+  return [document.documentElement.className, ...tokens].join("|");
+}
+
+/** A number, not the class string: charts use it as a memo dependency. */
+let themeVersion = 0;
+
+function themeVersionSnapshot(): number {
+  return themeVersion;
 }
 
 function subscribeToThemeClass(subscriber: Subscriber): () => void {
@@ -16,12 +35,22 @@ function subscribeToThemeClass(subscriber: Subscriber): () => void {
 
   if (rootObserver === undefined) {
     rootObserver = new MutationObserver(() => {
+      // Before probing: the probe reads through this cache.
+      invalidateThemeTokenCache();
+
+      const probe = themeProbe();
+      if (probe === lastProbe) return;
+
+      lastProbe = probe;
+      themeVersion += 1;
       subscribers.forEach((notify) => notify());
     });
     rootObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["class"],
+      // `style` too: a token can be overridden inline on the root.
+      attributeFilter: ["class", "style"],
     });
+    lastProbe = themeProbe();
   }
 
   return () => {
@@ -34,19 +63,11 @@ function subscribeToThemeClass(subscriber: Subscriber): () => void {
 }
 
 /**
- * Subscribe the calling chart to the class that supplies its CSS palette.
- *
- * Chart palettes are resolved from CSS custom properties (`--chart-1..5`,
- * `--foreground`, `--border`, ...) at render time because Plotly cannot
- * read a CSS variable. `next-themes` changes the root class in an effect after
- * its context consumers render, so its context alone is too early. This shared
- * external store notifies all charts after the class is actually applied while
- * allocating only one observer, regardless of chart count.
- *
- * Called inside `useChartSizing`, which every chart component already uses;
- * components that resolve theme colours without sizing (LollipopChart) call
- * it directly.
+ * A token that changes when the CSS palette does. `next-themes` swaps the root
+ * class in an effect after its context consumers render, so its context alone
+ * fires too early. Anything memoising a resolved colour must put the returned
+ * version in its dependency list.
  */
-export function useChartThemeRefresh(): void {
-  useSyncExternalStore(subscribeToThemeClass, themeClassSnapshot, () => "");
+export function useChartThemeRefresh(): number {
+  return useSyncExternalStore(subscribeToThemeClass, themeVersionSnapshot, () => 0);
 }

@@ -13,9 +13,12 @@ import type {
 import { useTranslation } from "@repo/i18n";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
+import { MetricStatCard } from "../../metrics/metric-stat-card";
+import { MetricTrendCard } from "../../metrics/metric-trend-card";
+import { metricsBandGrid } from "../../metrics/metrics-band-grid";
+import { bucketAxis, foldBucketSeries, peakBucketDate } from "./monitoring-buckets";
 import type { MonitoringRange } from "./monitoring-range";
 import { SILENT_THRESHOLD_MS } from "./silent-threshold";
-import { Tile } from "./tile";
 
 interface MonitoringTilesProps {
   /** Extra classes per tile, e.g. a translucent ground on the wash hero. */
@@ -55,96 +58,112 @@ export function MonitoringTiles({
     (lastDataAt === null || Date.now() - new Date(lastDataAt).getTime() > SILENT_THRESHOLD_MS);
 
   const total = monitoring?.throughput.reduce((sum, bucket) => sum + bucket.count, 0);
+  const series =
+    monitoring === undefined
+      ? []
+      : foldBucketSeries(monitoring.throughput, bucketAxis(range.from, range.to, range.bucket));
   // Fractional hours: truncating would misstate the rate on sub-day windows.
   const windowMs = new Date(range.to).getTime() - new Date(range.from).getTime();
   const windowHours = Math.max(1, windowMs / 3_600_000);
   const perHour = total === undefined ? undefined : total / windowHours;
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <Tile className={tileClassName} label={t("iot.devices.monitoring.state")}>
-        {device === undefined ? (
-          <Skeleton className="h-4 w-24" />
-        ) : (
-          <div className="space-y-1">
-            <ConnectivityDot connectivity={device.connectivity} className="text-lg font-semibold" />
-            <p className="text-muted-foreground text-xs font-normal">
-              {formatLastSeen(device.connectivity)}
-            </p>
-            {connectedButSilent && (
-              <p className="text-status-stale-foreground flex items-center gap-1 text-xs font-normal">
-                <AlertTriangle className="h-3 w-3" />
-                {t("iot.devices.monitoring.connectedButSilent")}
-              </p>
-            )}
-          </div>
-        )}
-      </Tile>
+    <div className={metricsBandGrid}>
+      <MetricStatCard
+        locale={locale}
+        label={t("iot.devices.monitoring.state")}
+        value={
+          device === undefined ? (
+            <Skeleton className="h-7 w-24" />
+          ) : (
+            // ConnectivityDot carries its own text-xs, which beats the
+            // CardTitle's text-2xl from the child element.
+            <ConnectivityDot
+              connectivity={device.connectivity}
+              className="text-2xl font-semibold"
+            />
+          )
+        }
+        note={device === undefined ? undefined : formatLastSeen(device.connectivity)}
+        alert={
+          connectedButSilent ? (
+            <>
+              <AlertTriangle className="h-3 w-3" />
+              {t("iot.devices.monitoring.connectedButSilent")}
+            </>
+          ) : undefined
+        }
+        className={tileClassName}
+      />
 
-      <Tile className={tileClassName} label={t("iot.devices.monitoring.lastData")}>
-        {activity === undefined ? (
-          <Skeleton className="h-4 w-24" />
-        ) : (
-          <div className="space-y-1">
-            <p className="text-lg font-semibold">
-              {activity.pipelineUnavailable
-                ? t("iot.devices.monitoring.lastDataUnavailable")
-                : activity.lastDataAt === null
-                  ? t("iot.devices.monitoring.noData")
-                  : formatRelativeTime(activity.lastDataAt, locale)}
-            </p>
-            <p className="text-muted-foreground text-xs font-normal">
-              {t("iot.devices.monitoring.pipelineNote")}
-            </p>
-          </div>
-        )}
-      </Tile>
+      <MetricStatCard
+        locale={locale}
+        label={t("iot.devices.monitoring.lastData")}
+        value={
+          activity === undefined ? (
+            <Skeleton className="h-7 w-24" />
+          ) : activity.pipelineUnavailable ? (
+            t("iot.devices.monitoring.lastDataUnavailable")
+          ) : activity.lastDataAt === null ? (
+            t("iot.devices.monitoring.noData")
+          ) : (
+            formatRelativeTime(activity.lastDataAt, locale)
+          )
+        }
+        context={activity === undefined ? undefined : t("iot.devices.monitoring.pipelineNote")}
+        className={tileClassName}
+      />
 
-      <Tile className={tileClassName} label={t("iot.devices.monitoring.measurements")}>
-        {total === undefined || perHour === undefined ? (
-          <Skeleton className="h-4 w-16" />
-        ) : (
-          <div className="space-y-1">
-            <p className="text-lg font-semibold tabular-nums">{total.toLocaleString(locale)}</p>
-            <p className="text-muted-foreground text-xs font-normal tabular-nums">
-              {t("iot.devices.monitoring.perHour", {
+      <MetricTrendCard
+        locale={locale}
+        label={t("iot.devices.monitoring.measurements")}
+        value={
+          total === undefined ? <Skeleton className="h-7 w-16" /> : total.toLocaleString(locale)
+        }
+        title={total === undefined ? undefined : total.toLocaleString(locale)}
+        seriesName={t("iot.devices.monitoring.measurements")}
+        days={series}
+        peakDate={peakBucketDate(series)}
+        footer={
+          perHour === undefined
+            ? undefined
+            : t("iot.devices.monitoring.perHour", {
                 rate: perHour.toLocaleString(locale, {
                   minimumFractionDigits: 1,
                   maximumFractionDigits: 1,
                 }),
-              })}
-            </p>
-          </div>
-        )}
-      </Tile>
-
-      <Tile
+              })
+        }
         className={tileClassName}
+      />
+
+      <MetricStatCard
+        locale={locale}
         label={
           isMobileFamily
             ? t("iot.devices.monitoring.sessionsLabel")
             : t("iot.devices.monitoring.uptimeLabel")
         }
-      >
-        {monitoring === undefined ? (
-          <Skeleton className="h-4 w-16" />
-        ) : (
-          <div className="space-y-1">
-            <p className="text-lg font-semibold tabular-nums">
-              {isMobileFamily
-                ? monitoring.sessions.length
-                : monitoring.uptimePercent === null
-                  ? t("iot.devices.monitoring.uptimeUnknown")
-                  : `${monitoring.uptimePercent.toFixed(1)}%`}
-            </p>
-            <p className="text-muted-foreground text-xs font-normal">
-              {isMobileFamily
-                ? t("iot.devices.monitoring.mobileSessionsNote")
-                : t("iot.devices.monitoring.sessionCount", { count: monitoring.sessions.length })}
-            </p>
-          </div>
-        )}
-      </Tile>
+        value={
+          monitoring === undefined ? (
+            <Skeleton className="h-7 w-16" />
+          ) : isMobileFamily ? (
+            monitoring.sessions.length.toLocaleString(locale)
+          ) : monitoring.uptimePercent === null ? (
+            t("iot.devices.monitoring.uptimeUnknown")
+          ) : (
+            `${monitoring.uptimePercent.toFixed(1)}%`
+          )
+        }
+        note={
+          monitoring === undefined
+            ? undefined
+            : isMobileFamily
+              ? t("iot.devices.monitoring.mobileSessionsNote")
+              : t("iot.devices.monitoring.sessionCount", { count: monitoring.sessions.length })
+        }
+        className={tileClassName}
+      />
     </div>
   );
 }

@@ -8,7 +8,6 @@ import type {
 import { resolveMonitoringPreset } from "@/components/iot-devices/monitoring/monitoring-range";
 import { MonitoringRangeControl } from "@/components/iot-devices/monitoring/monitoring-range-control";
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
-import { Tile } from "@/components/iot-devices/monitoring/tile";
 import { useIotDevices } from "@/hooks/iot/useIotDevices/useIotDevices";
 import { useIotFleetMonitoring } from "@/hooks/iot/useIotFleetMonitoring/useIotFleetMonitoring";
 import { useLocale } from "@/hooks/useLocale";
@@ -22,13 +21,15 @@ import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
+import { MetricStatCard } from "../../metrics/metric-stat-card";
+import { MetricTrendCard } from "../../metrics/metric-trend-card";
+import { metricsBandGrid } from "../../metrics/metrics-band-grid";
 import { buildGroupActivity } from "../groups/group-activity";
 import { summarizeGroupHealth } from "../groups/group-health";
 import { GroupThroughputPanel } from "../groups/group-throughput-panel";
-import { bucketAxis } from "../monitoring/monitoring-buckets";
+import { bucketAxis, foldBucketSeries, peakBucketDate } from "../monitoring/monitoring-buckets";
 import { FleetAttentionList } from "./fleet-attention-list";
-import { fleetAttention, foldSparkValues, toFleetHealth } from "./fleet-health";
-import { FleetSparkline } from "./fleet-sparkline";
+import { fleetAttention, toFleetHealth } from "./fleet-health";
 
 const DEFAULT_PRESET: MonitoringPresetId = "last24h";
 
@@ -102,13 +103,15 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
   const windowHours = Math.max(1, windowMs / 3_600_000);
   const perHour = total === undefined ? undefined : total / windowHours;
 
-  const sparkValues =
+  const sparkSeries =
     monitoring === undefined
       ? []
-      : foldSparkValues(
+      : foldBucketSeries(
           monitoring.throughput,
           bucketAxis(selection.range.from, selection.range.to, selection.range.bucket),
         );
+
+  const peakBucket = peakBucketDate(sparkSeries);
 
   const labels = new Map(devices.map((device) => [device.id, resolveDeviceLabel(device, t)]));
 
@@ -128,62 +131,79 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
 
   function renderTiles() {
     return (
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tile label={t("iot.devices.fleet.onlineLabel")} className="bg-card">
-          {summary === undefined ? (
-            <Skeleton className="h-4 w-24" />
-          ) : (
-            <div className="space-y-1">
-              <p className="text-lg font-semibold">
-                {t("iot.groups.monitoring.onlineValue", {
-                  online: summary.online,
-                  total: summary.total,
-                })}
-              </p>
-              {summary.silent > 0 && (
-                <p className="text-status-stale-foreground flex items-center gap-1 text-xs font-normal">
-                  <AlertTriangle className="h-3 w-3" />
-                  {t("iot.groups.monitoring.silentCount", { count: summary.silent })}
-                </p>
-              )}
-            </div>
-          )}
-        </Tile>
+      <div className={metricsBandGrid}>
+        <MetricStatCard
+          locale={locale}
+          label={t("iot.devices.fleet.onlineLabel")}
+          value={
+            summary === undefined ? (
+              <Skeleton className="h-7 w-24" />
+            ) : (
+              t("iot.groups.monitoring.onlineValue", {
+                online: summary.online,
+                total: summary.total,
+              })
+            )
+          }
+          alert={
+            summary !== undefined && summary.silent > 0 ? (
+              <>
+                <AlertTriangle className="h-3 w-3" />
+                {t("iot.groups.monitoring.silentCount", { count: summary.silent })}
+              </>
+            ) : undefined
+          }
+          className="bg-card"
+        />
 
-        <Tile label={t("iot.devices.monitoring.lastData")} className="bg-card">
-          {monitoring === undefined ? (
-            <Skeleton className="h-4 w-24" />
-          ) : (
-            <p className="text-lg font-semibold">{lastDataLine(monitoring.pipelineUnavailable)}</p>
-          )}
-        </Tile>
+        <MetricStatCard
+          locale={locale}
+          label={t("iot.devices.monitoring.lastData")}
+          value={
+            monitoring === undefined ? (
+              <Skeleton className="h-7 w-24" />
+            ) : (
+              lastDataLine(monitoring.pipelineUnavailable)
+            )
+          }
+          className="bg-card"
+        />
 
-        <Tile label={t("iot.devices.monitoring.measurements")} className="bg-card">
-          {total === undefined || perHour === undefined ? (
-            <Skeleton className="h-4 w-16" />
-          ) : (
-            <div className="space-y-1">
-              <p className="text-lg font-semibold tabular-nums">{total.toLocaleString(locale)}</p>
-              <p className="text-muted-foreground text-xs font-normal tabular-nums">
-                {t("iot.devices.monitoring.perHour", {
+        <MetricTrendCard
+          locale={locale}
+          label={t("iot.devices.monitoring.measurements")}
+          value={
+            total === undefined ? <Skeleton className="h-7 w-16" /> : total.toLocaleString(locale)
+          }
+          title={total === undefined ? undefined : total.toLocaleString(locale)}
+          seriesName={t("iot.devices.monitoring.measurements")}
+          days={sparkSeries}
+          peakDate={peakBucket}
+          footer={
+            perHour === undefined
+              ? undefined
+              : t("iot.devices.monitoring.perHour", {
                   rate: perHour.toLocaleString(locale, {
                     minimumFractionDigits: 1,
                     maximumFractionDigits: 1,
                   }),
-                })}
-              </p>
-              <FleetSparkline values={sparkValues} />
-            </div>
-          )}
-        </Tile>
+                })
+          }
+          className="bg-card"
+        />
 
-        <Tile label={t("iot.devices.fleet.attentionLabel")} className="bg-card">
-          {attention === undefined ? (
-            <Skeleton className="h-4 w-16" />
-          ) : (
-            <p className="text-lg font-semibold tabular-nums">{attention.length}</p>
-          )}
-        </Tile>
+        <MetricStatCard
+          locale={locale}
+          label={t("iot.devices.fleet.attentionLabel")}
+          value={
+            attention === undefined ? (
+              <Skeleton className="h-7 w-16" />
+            ) : (
+              attention.length.toLocaleString(locale)
+            )
+          }
+          className="bg-card"
+        />
       </div>
     );
   }
@@ -212,13 +232,11 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
       return <Skeleton className="h-64 w-full rounded-xl" />;
     }
     return (
-      <div className="grid gap-4 lg:grid-cols-3">
+      // items-start: the chart is a fixed height, so stretching this card to
+      // the rail only buys dead box.
+      <div className="grid items-start gap-4 lg:grid-cols-3">
         <div className="flex min-w-0 lg:col-span-2">
-          <PanelCard
-            title={t("iot.devices.fleet.throughputTitle")}
-            className="flex w-full flex-col"
-            contentClassName="flex flex-1 flex-col"
-          >
+          <PanelCard title={t("iot.devices.fleet.throughputTitle")} className="w-full">
             <GroupThroughputPanel
               throughput={monitoring.throughput}
               labelByDeviceId={labels}
@@ -236,6 +254,7 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
           </PanelCard>
           <PanelCard title={t("iot.devices.fleet.eventsTitle")}>
             <EventLog
+              compact
               entries={buildGroupActivity(
                 monitoring.events,
                 labels,
