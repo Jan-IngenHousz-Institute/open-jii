@@ -1,6 +1,7 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { ResourceCardGrid } from "@/components/shared/resource-card";
 import { useIotDeviceGroups } from "@/hooks/iot/useIotDeviceGroups/useIotDeviceGroups";
 import { useLocale } from "@/hooks/useLocale";
 import { ChevronDown, ChevronUp, Plus, Search } from "lucide-react";
@@ -81,11 +82,11 @@ export function DeviceGroupsBlock() {
 
     return (
       <div className="space-y-3">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <ResourceCardGrid>
           {visibleGroups.map((group) => (
             <GroupOverviewCard key={group.id} group={group} />
           ))}
-        </div>
+        </ResourceCardGrid>
         {isSearching && matching.length === 0 && (
           <p className="text-muted-foreground text-sm">{t("iot.groups.searchNoMatches")}</p>
         )}

@@ -20,6 +20,7 @@ import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -338,12 +339,14 @@ export function GroupCredentialsContent() {
 
         <div className="lg:sticky lg:top-20 lg:self-start">
           <Card className="shadow-none">
-            <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardHeader>
               <CardTitle className="text-base">
                 {t("iot.groups.credentials.resultsTitle")}
               </CardTitle>
               {batch === null && (
-                <Badge variant="outline">{t("iot.onboarding.rail.preview")}</Badge>
+                <CardAction>
+                  <Badge variant="outline">{t("iot.onboarding.rail.preview")}</Badge>
+                </CardAction>
               )}
             </CardHeader>
             <CardContent className="space-y-3">

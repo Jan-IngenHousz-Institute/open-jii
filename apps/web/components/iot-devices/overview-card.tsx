@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { cn } from "@repo/ui/lib/utils";
 
 interface OverviewCardProps {
@@ -34,24 +34,32 @@ export function OverviewCard({
 }: OverviewCardProps) {
   return (
     <Card className="shadow-xs flex min-w-0 flex-col rounded-xl transition-shadow hover:shadow-sm">
-      <CardHeader className="min-w-0 flex-row items-center gap-3 space-y-0">
-        <div
-          className={cn(
-            "bg-secondary text-primary flex size-9 shrink-0 items-center justify-center rounded-lg [&_svg]:size-4",
-            wellClassName,
-          )}
-        >
-          {icon}
-        </div>
-        <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
-        {titleExtra}
-        {link !== undefined && (
-          <Link
-            href={link.href}
-            className="text-primary ml-auto shrink-0 text-sm font-medium hover:underline"
+      {/* CardHeader is a grid, so the well, title and link have to share one
+          cell to sit on a line; `flex-row` on the header itself is inert and
+          used to drop each of them onto its own row. The link belongs in
+          CardAction, which is the column the grid grows for it. */}
+      <CardHeader>
+        <CardTitle className="flex min-w-0 items-center gap-3 text-base font-semibold tracking-tight">
+          <span
+            className={cn(
+              "bg-secondary text-primary flex size-9 shrink-0 items-center justify-center rounded-lg [&_svg]:size-4",
+              wellClassName,
+            )}
           >
-            {link.label}
-          </Link>
+            {icon}
+          </span>
+          <span className="min-w-0 truncate">{title}</span>
+          {titleExtra}
+        </CardTitle>
+        {link !== undefined && (
+          <CardAction>
+            <Link
+              href={link.href}
+              className="text-primary shrink-0 text-sm font-medium hover:underline"
+            >
+              {link.label}
+            </Link>
+          </CardAction>
         )}
       </CardHeader>
       <CardContent className="min-w-0 flex-1">{children}</CardContent>
