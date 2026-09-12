@@ -1,5 +1,6 @@
 import type { Config, Layout, LayoutAxis } from "plotly.js";
 
+import { withBrandedPngExport } from "./png-export";
 import type { PlotlyChartConfig, WebGLRenderer } from "./types";
 
 /**
@@ -918,7 +919,7 @@ export function createPlotlyConfig(
     }
   };
 
-  return {
+  return withBrandedPngExport({
     ...getModeBarConfig(),
     responsive,
     // Enhanced error handling for WebGL
@@ -936,7 +937,7 @@ export function createPlotlyConfig(
     doubleClick: "reset",
     showTips: false,
     ...config, // Allow override of any config option
-  };
+  });
 }
 
 /**

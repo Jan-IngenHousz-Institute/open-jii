@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState, Suspense, lazy } from "react";
 import type { PlotParams } from "react-plotly.js";
 
 import { cn } from "../../lib/utils";
+import { withBrandedPngExport } from "./png-export";
 
 // Type definitions for better type safety
 interface SafeDimensions {
@@ -148,7 +149,7 @@ const validateDimensions = (layout: Partial<Layout>): SafeDimensions => {
 };
 
 // Enhanced safe config generation
-const createSafeConfig = (config: Partial<Config> = {}, useWebGL: boolean): SafeConfig => {
+const createSafeConfig = (config: Partial<Config> = {}): SafeConfig => {
   const baseConfig: SafeConfig = {
     displayModeBar: true, // Enable toolbar for export
     responsive: true,
@@ -170,20 +171,6 @@ const createSafeConfig = (config: Partial<Config> = {}, useWebGL: boolean): Safe
       // Always ensure minimum quality export dimensions
       width: Math.max(config.toImageButtonOptions.width || 1200, 1200),
       height: Math.max(config.toImageButtonOptions.height || 800, 800),
-    };
-  }
-
-  // Force SVG rendering if WebGL is problematic
-  if (!useWebGL) {
-    return {
-      ...baseConfig,
-      toImageButtonOptions: {
-        ...baseConfig.toImageButtonOptions,
-        format: "svg",
-        width: 1200, // Increased from 800
-        height: 800, // Increased from 600
-        scale: 2,
-      },
     };
   }
 
@@ -354,8 +341,8 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
 
     // Prepare safe config
     const safeConfig = React.useMemo(() => {
-      return createSafeConfig(config, isWebGLEnabled && isContextAvailable);
-    }, [config, isWebGLEnabled, isContextAvailable]);
+      return withBrandedPngExport(createSafeConfig(config));
+    }, [config]);
 
     // Handle errors
     const displayError = error || localError;
