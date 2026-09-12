@@ -1,7 +1,4 @@
-/**
- * The series palette for platform-defined charts, as data. Import-free to avoid
- * a cycle with `./utils`, which resolves it. Not for user-picked colours.
- */
+/** Platform chart series colours, as data. Import-free to avoid a cycle with `./utils`. */
 
 /**
  * Ordered widest-separation-first, since most charts carry two or three series.
@@ -28,10 +25,7 @@ export const PLATFORM_SERIES_FALLBACK = [
   "#A9733A",
 ] as const;
 
-/**
- * Plotly's own palette for everything past the six. Frozen hex, so it does not
- * follow a theme swap: a chart reaching here has seven series and its own legend.
- */
+/** Plotly's own, past the six. Frozen hex, so it does not follow a theme swap. */
 export const PLOTLY_SERIES_TAIL = [
   "#1f77b4",
   "#ff7f0e",

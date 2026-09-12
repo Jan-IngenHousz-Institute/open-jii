@@ -11,7 +11,7 @@ import type { ResourceSeries } from "@repo/api/domains/metrics/metrics.schema";
 import { useTranslation } from "@repo/i18n";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 
-/** The window the list response fills, as the table's activity column also assumes. */
+/** The window the list response fills, as the table's activity column assumes. */
 const WINDOW_DAYS = 30;
 
 interface ExperimentOverviewCardProps {

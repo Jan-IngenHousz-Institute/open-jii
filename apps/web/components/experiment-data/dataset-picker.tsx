@@ -35,10 +35,7 @@ interface DatasetPickerProps {
   onChange: (identifier: string) => void;
 }
 
-/**
- * A combobox, not a tab strip: datasets are unbounded (one per macro, one per
- * upload) and the strip wrapped to three rows.
- */
+/** A combobox, not a tab strip: datasets are unbounded and the strip wrapped. */
 export function DatasetPicker({ tables, value, onChange }: DatasetPickerProps) {
   const { t } = useTranslation("experiments");
   const locale = useLocale();

@@ -71,9 +71,8 @@ export function DashboardLayoutContent({
         </Link>
 
         <div className="space-y-2">
-          {/* Stacked below sm: "All changes saved" plus the menu take ~200px of a
-              328px content box, which left a text-2xl title wrapping to three
-              lines beside them. */}
+          {/* Stacked below sm: the autosave line plus the menu take ~200px of a
+          328px box, which wrapped the title to three lines. */}
           <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div className="min-w-0 flex-1">
               <InlineEditableTitle
@@ -109,9 +108,8 @@ export function DashboardLayoutContent({
           )}
         </div>
 
-        {/* No border: the canvas band below draws the full-bleed rule, and the two
-            sat flush against each other as one thick inset line over a thin
-            full-width one. Two columns on a phone so a long data-source
+        {/* No border: the canvas band below draws the full-bleed rule, and the
+            two stacked into one thick line. Two columns on a phone so a long
             identifier cannot set the row's min-content width. */}
         <div className="grid grid-cols-2 gap-x-10 gap-y-4 pb-8 md:flex md:items-start">
           <MetaField label={tCommon("common.created")} value={formatDate(dashboard.createdAt)} />

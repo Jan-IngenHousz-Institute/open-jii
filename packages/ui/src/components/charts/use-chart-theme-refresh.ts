@@ -15,9 +15,8 @@ let lastProbe: string | undefined;
 
 /**
  * Class and tokens together: the class alone misses an inline override, the
- * tokens alone resolve empty without a stylesheet. Comparing this is what stops
- * unrelated root writes (`--banner-offset`, `overflow`) counting as a theme
- * change and remounting every contour plot.
+ * tokens alone resolve empty without a stylesheet. Comparing it stops unrelated
+ * root writes counting as a theme change.
  */
 function themeProbe(): string {
   const tokens = PROBE_TOKENS.map((token) => readThemeColor(token) ?? "");
@@ -64,13 +63,10 @@ function subscribeToThemeClass(subscriber: Subscriber): () => void {
 }
 
 /**
- * A token that changes when the CSS palette does. Plotly cannot read a CSS
- * variable, so charts resolve tokens at render time, and `next-themes` swaps
- * the root class in an effect after its context consumers render: its context
- * alone fires too early.
- *
- * Anything memoising a resolved colour must put the returned version in its
- * dependency list, or it keeps the outgoing theme's palette.
+ * A token that changes when the CSS palette does. `next-themes` swaps the root
+ * class in an effect after its context consumers render, so its context alone
+ * fires too early. Anything memoising a resolved colour must put the returned
+ * version in its dependency list.
  */
 export function useChartThemeRefresh(): number {
   return useSyncExternalStore(subscribeToThemeClass, themeVersionSnapshot, () => 0);

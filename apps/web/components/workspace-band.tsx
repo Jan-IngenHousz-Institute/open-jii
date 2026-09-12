@@ -1,9 +1,8 @@
 import { cn } from "@repo/ui/lib/utils";
 
 /**
- * Cancels the platform shell's padding and puts it back inside. Mirrors
- * `app/[locale]/platform/layout.tsx` by hand and must stay in step: pull too
- * far and the band overflows, too little and a gutter shows beside it.
+ * Cancels the shell's padding and puts it back inside. Mirrors
+ * `app/[locale]/platform/layout.tsx` by hand and must stay in step with it.
  */
 export const workspaceBleed =
   "3xl:-mx-10 3xl:px-10 4xl:-mx-14 4xl:px-14 -mx-4 -mb-4 px-4 pb-4 md:-mx-6 md:-mb-6 md:px-6 md:pb-6";

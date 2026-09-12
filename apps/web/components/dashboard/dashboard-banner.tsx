@@ -52,10 +52,8 @@ export function DashboardBanner({
           )}
         </p>
       </div>
-      {/* Side by side from 26rem, stacked below it. The two labels are nowrap
-          and need ~20rem together, which is the width the banner's own box has
-          left at that viewport. The banner itself stays stacked until lg,
-          where the copy column and the actions finally both fit. */}
+      {/* Side by side from 26rem: the two nowrap labels need ~20rem, which is
+          what the banner has left there. The banner itself stacks until lg. */}
       <div className="min-[26rem]:flex-row min-[26rem]:gap-3 flex w-full flex-col gap-2 lg:w-auto lg:flex-row lg:gap-4">
         {secondaryButtonLabel && secondaryButtonHref && (
           <Link

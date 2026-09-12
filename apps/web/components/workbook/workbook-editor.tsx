@@ -514,8 +514,7 @@ export function WorkbookEditor({
     const handleScroll = () => {
       const el = headerRef.current;
       if (!el) return;
-      // Matches the sticky offset in workbook-header.tsx: the shell header is
-      // h-12, plus whatever banner/inset offset is in play.
+      // Matches the sticky offset in workbook-header.tsx.
       const rect = el.getBoundingClientRect();
       const stickyTop =
         48 + readPixels(el, "--banner-offset") + readPixels(el, "--sidebar-inset-offset");

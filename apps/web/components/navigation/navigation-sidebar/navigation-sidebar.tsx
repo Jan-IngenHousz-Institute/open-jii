@@ -129,12 +129,9 @@ export function AppSidebar({
   return (
     <Sidebar variant="inset" collapsible="offcanvas" {...props}>
       <SidebarHeader className="gap-3 px-4 pb-2 pt-0">
-        {/* SidebarHeader is a column, so the brand row is laid out here. Its
-            height matches SiteHeader's h-12 rather than being derived from
-            padding, which is what put the logo 6px below the page title; px-2
-            puts its left edge on the x=32 icon rail every other row sits on.
-            The mobile Sheet reuses this row, so it also lines the logo up with
-            the sheet's close action. */}
+        {/* SidebarHeader is a column, so the brand row is laid out here. h-12
+            matches SiteHeader and px-2 puts the logo on the x=32 icon rail
+            every other row sits on. The mobile Sheet reuses this row. */}
         <div className="flex h-12 items-center gap-2 px-2">
           <Link
             href={`/${locale}/platform`}
@@ -203,10 +200,9 @@ export function AppSidebar({
       </SidebarContent>
 
       <SidebarFooter className="border-t p-4 pt-2">
-        {/* One row, identity first: SidebarFooter is a column, so anything given
-            its own child stacks. Identity takes flex-1 rather than the row's
-            leftovers, which is what left it 68px inside a 216px sidebar and
-            truncated even a short display name. */}
+        {/* One row, identity first: SidebarFooter is a column, so a separate child
+            stacks. flex-1 rather than the row's leftovers, which left the name
+            68px inside a 216px sidebar. */}
         <div className="flex min-w-0 items-center gap-1">
           <div className="min-w-0 flex-1">
             <NavUser user={user} locale={locale} />

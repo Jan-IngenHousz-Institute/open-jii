@@ -32,17 +32,13 @@ const CommandDialog = ({
 }) => {
   return (
     <Dialog {...props}>
-      {/* A palette closes on Esc and on the overlay. DialogContent's close is
-          positioned against its default p-6, which this sets to p-0, so it
-          would land mid-search-row and sit over the typed text. */}
+      {/* DialogContent's close is positioned against its default p-6, which this
+          sets to p-0, so it would land mid-search-row over the typed text. */}
       <DialogContent showCloseButton={false} className="overflow-hidden p-0">
-        {/* One inset for the whole dialog: px-4 on the search row puts the
-            magnifier on the same rail as the item icons below it. Icon sizes
-            come from the components' own size-4; overriding them here made the
-            magnifier 20px against 16px list icons, a visible step down the edge.
-            cmdk puts a plain-block [cmdk-list-sizer] between the list and its
-            children, so a status message's flex-1 is inert against the list's
-            own min-height. Making both a flex column lets it fill the space. */}
+        {/* One inset for the whole dialog, so the magnifier sits on the item-icon
+            rail; icon sizes come from the components' own size-4. cmdk puts a
+            plain-block [cmdk-list-sizer] between the list and its children, so a
+            status message needs both to be flex columns to fill the space. */}
         <Command
           className="[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]]:h-12 [&_[cmdk-input-wrapper]]:px-4 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-2 [&_[cmdk-list-sizer]]:flex [&_[cmdk-list-sizer]]:flex-1 [&_[cmdk-list-sizer]]:flex-col [&_[cmdk-list]]:flex [&_[cmdk-list]]:flex-col"
           {...commandProps}
@@ -60,9 +56,8 @@ const CommandInput = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div className="flex h-9 items-center gap-2 border-b px-3" cmdk-input-wrapper="">
     <MagnifyingGlassIcon className="size-4 shrink-0 opacity-50" />
-    {/* The field takes its height from the wrapper rather than carrying its own.
-        An h-10 input in an h-9 row overflowed the border it is supposed to sit
-        above, and consumers that wanted a taller row had to raise both. */}
+    {/* Height from the wrapper: an h-10 input in an h-9 row overflowed the
+        border it sits above. */}
     <CommandPrimitive.Input
       ref={ref}
       className={cn(

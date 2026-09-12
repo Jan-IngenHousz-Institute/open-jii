@@ -25,9 +25,8 @@ export function DetailsSidebarCard({ title, collapsedSummary, children }: Detail
   return (
     <div className="w-full lg:order-2 lg:w-96">
       <Card padding="sm" className={cn("relative shadow-none", isCollapsed && "pb-0 lg:pb-3")}>
-        {/* Beside the title rather than centred on the card: a ghost Button with
-            no size inherits h-9 px-4, and centring it on a collapsed card put it
-            below a title row that ends 2px earlier. */}
+        {/* Beside the title, not centred: a ghost Button with no size inherits
+            h-9 px-4, which on a collapsed card lands below the title row. */}
         <Button
           onClick={() => setIsCollapsed(!isCollapsed)}
           variant="ghost"
