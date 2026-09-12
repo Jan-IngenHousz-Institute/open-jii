@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { RidgePlot } from "@repo/ui/components/charts/ridge-plot";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";
@@ -29,6 +30,10 @@ export function RidgePlotRenderer({
   const fillOpacity =
     typeof chartConfig.marker?.opacity === "number" ? chartConfig.marker.opacity : 0.7;
 
+  // The transform below resolves category colours, so this has to re-run on a
+  // theme swap or the traces keep the outgoing palette.
+  const themeVersion = useChartThemeRefresh();
+
   // KEEP IN SYNC with the field reads in `transformRidgePlotData`.
   const ridges = useMemo(() => {
     if (visualization.chartType !== "ridge-plot") {
@@ -43,6 +48,7 @@ export function RidgePlotRenderer({
     chartConfig.ridgeOverlap,
     chartConfig.ridgeSortOrder,
     chartConfig.colorMap,
+    themeVersion,
   ]);
 
   if (visualization.chartType !== "ridge-plot") {

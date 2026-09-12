@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   chartGridColor,
   invalidateThemeTokenCache,
   labToHex,
   oklchToHex,
+  readThemeColor,
 } from "../../charts/utils";
 
 /**
@@ -99,13 +100,35 @@ describe("chartGridColor", () => {
 
   it("serves a repeated read from cache rather than re-reading the document", () => {
     // The point of the cache: on a theme toggle every chart re-renders at once.
+    // Asserted by counting the forced style reads, not by mutating the root,
+    // which is now itself a reason to re-resolve.
     const root = document.documentElement;
     root.style.setProperty("--border", BORDER_TOKEN);
-    expect(chartGridColor()).toBe(BORDER_HEX);
-    root.style.removeProperty("--border");
+    const computed = vi.spyOn(window, "getComputedStyle");
 
     expect(chartGridColor()).toBe(BORDER_HEX);
+    expect(chartGridColor()).toBe(BORDER_HEX);
+    expect(computed).toHaveBeenCalledTimes(1);
+
+    computed.mockRestore();
+    root.style.removeProperty("--border");
+  });
+});
+
+describe("readThemeColor cache validity", () => {
+  it("re-resolves when the root class moved with no observer attached", () => {
     invalidateThemeTokenCache();
-    expect(chartGridColor()).toBe("#E6E6E6");
+    document.documentElement.style.setProperty("--probe-token", "oklch(0.5 0.1 200)");
+    expect(readThemeColor("--probe-token")).toBe("#00747a");
+
+    // The observer in use-chart-theme-refresh only runs while a chart is
+    // mounted, so this stands in for a toggle made on a chart-free page.
+    document.documentElement.classList.add("dark");
+    document.documentElement.style.setProperty("--probe-token", "oklch(0.8 0.1 200)");
+
+    expect(readThemeColor("--probe-token")).toBe("#64d1d7");
+
+    document.documentElement.classList.remove("dark");
+    document.documentElement.style.removeProperty("--probe-token");
   });
 });

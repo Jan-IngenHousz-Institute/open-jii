@@ -2,12 +2,32 @@
 
 import { useSyncExternalStore } from "react";
 
-import { invalidateThemeTokenCache } from "./utils";
+import { invalidateThemeTokenCache, readThemeColor } from "./utils";
 
 type Subscriber = () => void;
 
 const subscribers = new Set<Subscriber>();
 let rootObserver: MutationObserver | undefined;
+
+/** Read alongside the root class, to catch a token overridden inline. */
+const PROBE_TOKENS = ["--foreground", "--card", "--chart-1"] as const;
+
+let lastProbe: string | undefined;
+
+/**
+ * What a theme change actually moves: the root class, plus a few tokens in case
+ * one was overridden inline. The class alone is not enough, and the tokens
+ * alone are not either, since they resolve empty without a stylesheet.
+ *
+ * The point is to ignore every other write to those attributes. The alert
+ * banner's ResizeObserver sets `--banner-offset` on the root and the flow
+ * editor sets `overflow` there, and notifying on those would remount a contour
+ * plot, which keys on the version, every time the banner reflowed.
+ */
+function themeProbe(): string {
+  const tokens = PROBE_TOKENS.map((token) => readThemeColor(token) ?? "");
+  return [document.documentElement.className, ...tokens].join("|");
+}
 
 /**
  * Bumped once per theme change. A number rather than the class string, because
@@ -24,18 +44,25 @@ function subscribeToThemeClass(subscriber: Subscriber): () => void {
 
   if (rootObserver === undefined) {
     rootObserver = new MutationObserver(() => {
-      // Before notifying, not after: the re-render this triggers reads tokens
-      // synchronously, and a stale cache would hand it the outgoing palette.
+      // Before probing, not after: the probe reads through the same cache, and
+      // a stale entry would report the outgoing palette as unchanged.
       invalidateThemeTokenCache();
+
+      const probe = themeProbe();
+      if (probe === lastProbe) return;
+
+      lastProbe = probe;
       themeVersion += 1;
       subscribers.forEach((notify) => notify());
     });
     rootObserver.observe(document.documentElement, {
       attributes: true,
       // `style` as well as `class`: a token can also move by being set inline
-      // on the root, and the resolved palette is cached.
+      // on the root. The probe above is what keeps the unrelated writes to that
+      // attribute from counting as a theme change.
       attributeFilter: ["class", "style"],
     });
+    lastProbe = themeProbe();
   }
 
   return () => {

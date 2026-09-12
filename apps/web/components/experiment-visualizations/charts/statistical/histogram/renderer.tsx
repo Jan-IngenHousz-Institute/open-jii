@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Histogram } from "@repo/ui/components/charts/histogram";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";
@@ -23,6 +24,10 @@ export function HistogramRenderer({
   const chartConfig = narrowChartConfig(visualization);
   const dataSources = visualization.dataConfig.dataSources;
   const orientation = chartConfig.histogramOrientation === "h" ? "h" : "v";
+
+  // The transform below resolves category colours, so this has to re-run on a
+  // theme swap or the traces keep the outgoing palette.
+  const themeVersion = useChartThemeRefresh();
 
   // KEEP IN SYNC with the field reads in `transformHistogramData`.
   const { chartSeries, subplots } = useMemo(() => {
@@ -49,6 +54,7 @@ export function HistogramRenderer({
     chartConfig.facetSharedXTitle,
     chartConfig.facetSharedYTitle,
     chartConfig.facetRowOrder,
+    themeVersion,
   ]);
 
   if (visualization.chartType !== "histogram") {

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { RadarPlot } from "@repo/ui/components/charts/radar";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";
@@ -28,6 +29,10 @@ export function RadarRenderer({
     enabled: yColumnsCount >= 3,
   });
 
+  // The transform below resolves category colours, so this has to re-run on a
+  // theme swap or the traces keep the outgoing palette.
+  const themeVersion = useChartThemeRefresh();
+
   // KEEP IN SYNC with the field reads in `transformRadarData`.
   const { series, categories } = useMemo(() => {
     if (visualization.chartType !== "radar") {
@@ -44,6 +49,7 @@ export function RadarRenderer({
     chartConfig.radarLineWidth,
     chartConfig.radarShowMarkers,
     chartConfig.colorMap,
+    themeVersion,
   ]);
 
   if (visualization.chartType !== "radar") {

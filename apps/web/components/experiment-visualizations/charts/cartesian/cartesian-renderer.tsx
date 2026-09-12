@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import type { ExperimentSeriesTraceType } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { CartesianChart } from "@repo/ui/components/charts/cartesian-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 
 import { narrowChartConfig } from "../chart-config";
 import { ChartFrame } from "../chart-frame";
@@ -37,6 +38,10 @@ export function CartesianRenderer({
   });
 
   const chartConfig = narrowChartConfig(visualization);
+
+  // The transform below resolves category colours, so this has to re-run on a
+  // theme swap or the traces keep the outgoing palette.
+  const themeVersion = useChartThemeRefresh();
 
   // KEEP IN SYNC with field reads in `transformCartesianData` and its helpers.
   // Re-derive: `grep -oE 'chartConfig\\.[a-zA-Z_]+' cartesian-transform.ts | sort -u`.
@@ -81,6 +86,7 @@ export function CartesianRenderer({
     chartConfig.text,
     chartConfig.textfont,
     chartConfig.textposition,
+    themeVersion,
   ]);
 
   // WebGL avoids SVG jank on large datasets, but each gl trace holds a scarce

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { LineChart } from "@repo/ui/components/charts/line-chart";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";
@@ -22,6 +23,10 @@ export function DensityPlotRenderer({
   const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData);
   const chartConfig = narrowChartConfig(visualization);
   const dataSources = visualization.dataConfig.dataSources;
+
+  // The transform below resolves category colours, so this has to re-run on a
+  // theme swap or the traces keep the outgoing palette.
+  const themeVersion = useChartThemeRefresh();
 
   // KEEP IN SYNC with the field reads in `transformDensityPlotData`.
   const { chartSeries, subplots } = useMemo(() => {
@@ -47,6 +52,7 @@ export function DensityPlotRenderer({
     chartConfig.facetSharedXTitle,
     chartConfig.facetSharedYTitle,
     chartConfig.facetRowOrder,
+    themeVersion,
   ]);
 
   if (visualization.chartType !== "density-plot") {

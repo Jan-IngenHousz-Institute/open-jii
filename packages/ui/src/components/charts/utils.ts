@@ -183,15 +183,25 @@ export function labToHex(value: string): string | undefined {
 /** Colour forms Plotly's own parser understands. */
 const PLOTLY_PARSEABLE = /^(#|rgba?\(|hsla?\(|[a-z]+$)/i;
 
-/**
- * Resolved tokens for the current theme. Emptied by `invalidateThemeTokenCache`
- * when the root class changes, which is the only thing that can move them.
- */
 const themeTokenCache = new Map<string, string | undefined>();
+
+/**
+ * The root state the cached entries were resolved under. The observer in
+ * `use-chart-theme-refresh` only runs while a chart is mounted, so a theme
+ * toggle made on a chart-free page is never seen; keying the cache on the root
+ * lets the next read notice by itself rather than serving the outgoing palette.
+ */
+let cacheSignature: string | undefined;
+
+function rootSignature(): string {
+  const root = document.documentElement;
+  return `${root.className}|${root.getAttribute("style") ?? ""}`;
+}
 
 /** Called by the theme observer before it notifies, so the re-render reads the new theme. */
 export function invalidateThemeTokenCache(): void {
   themeTokenCache.clear();
+  cacheSignature = undefined;
 }
 
 /**
@@ -205,10 +215,19 @@ export function invalidateThemeTokenCache(): void {
  *
  * Cached because it is a forced style read, and on a theme toggle every chart
  * makes it at the same moment, interleaved with Plotly's own DOM writes. The
- * oklch/lab conversion is pure, so it is cached too.
+ * oklch/lab conversion is pure, so it is cached too. Entries are dropped as
+ * soon as the root's class or inline style differs from the one they were
+ * resolved under, so an unobserved toggle cannot be served from the cache.
  */
 export function readThemeColor(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
+
+  const signature = rootSignature();
+  if (signature !== cacheSignature) {
+    themeTokenCache.clear();
+    cacheSignature = signature;
+  }
+
   const cached = themeTokenCache.get(name);
   if (cached !== undefined || themeTokenCache.has(name)) return cached;
 
