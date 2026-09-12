@@ -130,7 +130,8 @@ vi.mock("@/components/macro-code-editor", () => ({
   ),
 }));
 
-vi.mock("~/util/apiError", () => ({
+vi.mock("~/util/apiError", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/util/apiError")>()),
   parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
 

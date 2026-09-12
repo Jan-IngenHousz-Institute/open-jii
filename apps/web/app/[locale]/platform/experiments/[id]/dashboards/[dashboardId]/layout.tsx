@@ -25,6 +25,7 @@ export default function DashboardLayout({ children }: LayoutProps) {
         isLoading={isLoading}
         error={error}
         hasData={Boolean(data)}
+        resource="dashboard"
         loadingMessage={t("common.loading")}
       >
         {data && (

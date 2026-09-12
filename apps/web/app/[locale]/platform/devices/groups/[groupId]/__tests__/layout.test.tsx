@@ -49,8 +49,16 @@ describe("<DeviceGroupLayout />", () => {
     expect(screen.getByText("Child Content")).toBeInTheDocument();
   });
 
-  it("shows the load error when the group is inaccessible", async () => {
+  it("says the group is closed to the viewer when the read is refused", async () => {
     server.mount(contract.iot.getIotDeviceGroup, { status: 403 });
+
+    renderLayout();
+
+    expect(await screen.findByText("errors.noAccess.title.device_group")).toBeInTheDocument();
+  });
+
+  it("still shows the load error when the read fails for another reason", async () => {
+    server.mount(contract.iot.getIotDeviceGroup, { status: 500 });
 
     renderLayout();
 

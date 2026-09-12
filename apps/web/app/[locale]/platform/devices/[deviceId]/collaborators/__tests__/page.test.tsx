@@ -84,17 +84,15 @@ describe("DeviceCollaboratorsPage", () => {
     expect(listSpy.called).toBe(false);
   });
 
-  it("sends a viewer with no sharing surface back to the device", async () => {
+  it("tells a viewer with no sharing surface that the tab is closed to them", async () => {
     server.mount(contract.iot.getIotDevice, {
       body: createIotDeviceDetail({ id: DEVICE_ID, capabilities: readOnlyCapabilities }),
     });
 
-    const { container, router } = renderPage();
+    renderPage();
 
-    await waitFor(() =>
-      expect(router.replace).toHaveBeenCalledWith(`/en-US/platform/devices/${DEVICE_ID}`),
-    );
-    // Nothing is rendered on the way out — no empty surface, no lone heading.
-    expect(container).toBeEmptyDOMElement();
+    expect(await screen.findByText("errors.noAccess.title.device")).toBeInTheDocument();
+    // Still no sharing surface behind the explanation.
+    expect(screen.queryByRole("button", { name: "sharing.shareResource" })).not.toBeInTheDocument();
   });
 });

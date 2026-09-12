@@ -2,8 +2,10 @@
 
 import { ErrorDisplay } from "@/components/error-display";
 import { PlatformHeaderDetail } from "@/components/navigation/site-header/platform-header-context";
+import { ResourceAccessDenied } from "@/components/shared/resource-access-denied";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useLocale } from "@/hooks/useLocale";
+import { httpStatusOf } from "@/util/apiError";
 import Link from "next/link";
 import { notFound, usePathname, useParams } from "next/navigation";
 import { useFeatureFlagEnabled } from "posthog-js/react";
@@ -44,26 +46,15 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
 
   // Show error if access is denied or other error
   if (error) {
-    // Extract status from API error response
-    const errorObj = error as { status?: number };
-    const errorStatus = errorObj.status;
+    const errorStatus = httpStatusOf(error);
 
     // Handle 404 Not Found or 400 Bad Request (e.g., invalid UUID) - show not found page
     if (errorStatus === 404 || errorStatus === 400) {
       notFound();
     }
 
-    // Handle 403 Forbidden
     if (errorStatus === 403) {
-      return (
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-lg font-medium">{tCommon("errors.accessDenied")}</h3>
-            <p className="text-muted-foreground text-sm">{t("noPermissionToAccess")}</p>
-          </div>
-          <ErrorDisplay error={error} title={tCommon("errors.forbidden")} />
-        </div>
-      );
+      return <ResourceAccessDenied resource="experiment" />;
     }
 
     // Show generic error for other types (5xx, etc.)

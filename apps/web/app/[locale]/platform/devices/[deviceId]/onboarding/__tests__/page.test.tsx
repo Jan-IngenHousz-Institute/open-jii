@@ -63,7 +63,7 @@ describe("DeviceOnboardingPage", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("sends someone below manage back to the device instead of a blank route", async () => {
+  it("tells someone below manage the surface is closed, rather than bouncing them", async () => {
     server.mount(contract.iot.getIotDevice, {
       body: createIotDeviceDetail({
         id: DEVICE_ID,
@@ -72,11 +72,13 @@ describe("DeviceOnboardingPage", () => {
       }),
     });
 
-    const { container, router } = renderPage();
+    renderPage();
 
-    await waitFor(() => {
-      expect(router.replace).toHaveBeenCalledWith(`/en-US/platform/devices/${DEVICE_ID}`);
-    });
-    expect(container).toBeEmptyDOMElement();
+    // The tab is disabled for them, so reaching this route means a typed or
+    // shared URL. Say why it is closed instead of silently moving them.
+    expect(await screen.findByText("errors.noAccess.title.device")).toBeInTheDocument();
+    // And no control renders: issuing, rotating and revoking all reach real AWS
+    // IoT and are refused server-side, so there must be no button to press.
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

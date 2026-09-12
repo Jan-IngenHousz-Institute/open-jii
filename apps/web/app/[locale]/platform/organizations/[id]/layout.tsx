@@ -28,6 +28,7 @@ export default function OrganizationLayout({ children }: { children: React.React
       isLoading={isPending}
       error={error}
       hasData={!!data}
+      resource="organization"
       loadingMessage={t("common.loading")}
     >
       {data && (

@@ -28,6 +28,7 @@ export default function DeviceGroupLayout({ children }: DeviceGroupLayoutProps) 
       isLoading={isLoading}
       error={error}
       hasData={!!data}
+      resource="device_group"
       errorDescription={t("iot.groups.loadError")}
     >
       {data && (

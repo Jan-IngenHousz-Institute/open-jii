@@ -38,6 +38,7 @@ function renderComponent(options: RenderOptions = {}) {
       isLoading={isLoading}
       error={error}
       hasData={hasData}
+      resource="experiment"
       loadingMessage={loadingMessage}
       errorDescription={errorDescription}
     >
@@ -71,6 +72,13 @@ describe("EntityLayoutShell", () => {
   it("calls notFound for 400 error", () => {
     renderComponent({ error: { status: 400 } });
     expect(mockNotFound).toHaveBeenCalled();
+  });
+
+  it("shows the access-denied page for a 403, not a raw error alert", () => {
+    renderComponent({ error: { status: 403 } });
+
+    expect(screen.getByText("errors.noAccess.title.experiment")).toBeInTheDocument();
+    expect(screen.queryByText("errors.error")).not.toBeInTheDocument();
   });
 
   it("shows ErrorDisplay for 500 error", () => {

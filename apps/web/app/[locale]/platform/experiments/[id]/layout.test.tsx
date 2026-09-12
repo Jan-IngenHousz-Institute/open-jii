@@ -44,7 +44,7 @@ describe("ExperimentLayout", () => {
     server.mount(contract.experiments.getExperimentAccess, { status: 403 });
     renderLayout();
     await waitFor(() => {
-      expect(screen.getByText("errors.accessDenied")).toBeInTheDocument();
+      expect(screen.getByText("errors.noAccess.title.experiment")).toBeInTheDocument();
     });
   });
 

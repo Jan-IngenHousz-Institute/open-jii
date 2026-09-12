@@ -55,9 +55,9 @@ describe("<ExperimentLayout />", () => {
       renderLayout();
 
       await waitFor(() => {
-        expect(screen.getByText("errors.accessDenied")).toBeInTheDocument();
+        expect(screen.getByText("errors.noAccess.title.experiment")).toBeInTheDocument();
       });
-      expect(screen.getByText("noPermissionToAccess")).toBeInTheDocument();
+      expect(screen.getByText("errors.noAccess.description")).toBeInTheDocument();
       expect(screen.queryByText("Child Content")).not.toBeInTheDocument();
     });
 

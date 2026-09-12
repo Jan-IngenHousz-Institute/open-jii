@@ -22,13 +22,15 @@ const DEVICE_TABS = [
   { value: "monitoring", segment: "monitoring" },
 ] as const;
 
+type DeviceTabValue = (typeof DEVICE_TABS)[number]["value"];
+
 interface IotDeviceDetailTabsProps {
   deviceId: string;
   /** Phones have no certificate lifecycle and no config to deliver. */
   isMobileFamily: boolean;
   /** Only families whose firmware JII builds have a release line to show. */
   hasManagedFirmware: boolean;
-  /** Hides a Collaborators route that would immediately redirect without share/leave access. */
+  /** `capabilities.canShare`: the caller may grant others access. */
   canShare: boolean;
   /** `capabilities.canLeave`: the caller holds a direct grant they could give up. */
   canLeave: boolean;
@@ -40,6 +42,10 @@ interface IotDeviceDetailTabsProps {
 /**
  * Routes let each tab own its entire surface, so credentials and danger-zone
  * controls are absent—not merely hidden—elsewhere, while links/back still work.
+ *
+ * A tab the device has no use for is dropped; a tab the viewer simply may not
+ * open stays visible and disabled, so the device reads the same to everyone and
+ * missing permission looks like missing permission rather than a missing feature.
  */
 export function IotDeviceDetailTabs({
   deviceId,
@@ -55,15 +61,28 @@ export function IotDeviceDetailTabs({
   const locale = useLocale();
 
   const basePath = `/${locale}/platform/devices/${deviceId}`;
-  const tabs = DEVICE_TABS.filter((tab) => {
-    if (tab.value === "collaborators") return canShare || canLeave;
-    if (tab.value === "credentials") return canManage && !isMobileFamily;
-    // Hidden, not shown-then-redirected: gating parity with Credentials.
-    if (tab.value === "onboarding") return canManage && !isMobileFamily;
-    if (tab.value === "firmware") return hasManagedFirmware;
+
+  function isSupported(value: DeviceTabValue): boolean {
+    if (value === "credentials" || value === "onboarding") {
+      return !isMobileFamily;
+    }
+    if (value === "firmware") {
+      return hasManagedFirmware;
+    }
     return true;
-  });
-  // Match all routes first so a filtered-out tab does not highlight Overview.
+  }
+
+  function isPermitted(value: DeviceTabValue): boolean {
+    if (value === "collaborators") {
+      return canShare || canLeave;
+    }
+    if (value === "credentials" || value === "onboarding") {
+      return canManage;
+    }
+    return true;
+  }
+
+  const tabs = DEVICE_TABS.filter((tab) => isSupported(tab.value));
   const urlTab = DEVICE_TABS.find(
     (tab) => tab.segment !== "" && pathname.endsWith(`/${tab.segment}`),
   );
@@ -73,17 +92,27 @@ export function IotDeviceDetailTabs({
       : ""
     : "overview";
 
+  function renderTab(tab: (typeof DEVICE_TABS)[number]) {
+    const label = t(`iot.devices.detailTabs.${tab.value}`);
+
+    if (!isPermitted(tab.value)) {
+      return (
+        <NavTabsTrigger key={tab.value} value={tab.value} disabled>
+          {label}
+        </NavTabsTrigger>
+      );
+    }
+
+    return (
+      <NavTabsTrigger key={tab.value} value={tab.value} asChild>
+        <Link href={tab.segment ? `${basePath}/${tab.segment}` : basePath}>{label}</Link>
+      </NavTabsTrigger>
+    );
+  }
+
   return (
     <NavTabs value={activeTab} className="mt-8 flex w-full min-w-0 flex-1 flex-col">
-      <NavTabsList>
-        {tabs.map((tab) => (
-          <NavTabsTrigger key={tab.value} value={tab.value} asChild>
-            <Link href={tab.segment ? `${basePath}/${tab.segment}` : basePath}>
-              {t(`iot.devices.detailTabs.${tab.value}`)}
-            </Link>
-          </NavTabsTrigger>
-        ))}
-      </NavTabsList>
+      <NavTabsList>{tabs.map(renderTab)}</NavTabsList>
 
       <WorkspaceBand className="mt-6">{children}</WorkspaceBand>
     </NavTabs>

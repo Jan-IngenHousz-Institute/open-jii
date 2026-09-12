@@ -27,6 +27,7 @@ export default function WorkbookLayout({ children }: WorkbookLayoutProps) {
         isLoading={isLoading}
         error={error}
         hasData={!!data}
+        resource="workbook"
         loadingMessage={t("common.loading")}
       >
         {data && (

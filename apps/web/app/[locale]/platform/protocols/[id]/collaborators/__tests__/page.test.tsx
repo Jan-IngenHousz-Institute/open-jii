@@ -79,16 +79,13 @@ describe("ProtocolCollaboratorsPage", () => {
     expect(screen.queryByRole("button", { name: /sharing.invite/ })).not.toBeInTheDocument();
   });
 
-  it("sends a viewer with no sharing surface back to the protocol", async () => {
+  it("tells a viewer with no sharing surface that the tab is closed to them", async () => {
     server.mount(contract.protocols.getProtocol, {
       body: createProtocolDetail({ id: "proto-1", capabilities: readOnlyCapabilities }),
     });
 
-    const { container, router } = renderPage();
+    renderPage();
 
-    await waitFor(() =>
-      expect(router.replace).toHaveBeenCalledWith("/en-US/platform/protocols/proto-1"),
-    );
-    expect(container).toBeEmptyDOMElement();
+    expect(await screen.findByText("errors.noAccess.title.protocol")).toBeInTheDocument();
   });
 });

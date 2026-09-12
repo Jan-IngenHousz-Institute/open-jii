@@ -1,11 +1,14 @@
 "use client";
 
+import { ResourceAccessDenied } from "@/components/shared/resource-access-denied";
 import { useExperimentDeviceRemove } from "@/hooks/experiment/useExperimentDeviceRemove/useExperimentDeviceRemove";
 import { useExperimentDevices } from "@/hooks/experiment/useExperimentDevices/useExperimentDevices";
 import { useLocale } from "@/hooks/useLocale";
+import { httpStatusOf } from "@/util/apiError";
 import { resolveDeviceLabel } from "@/util/device-presentation";
 import { Cpu, Loader2 } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
 import type { ExperimentDevice } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
@@ -27,12 +30,25 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { ExperimentDeviceRow } from "./experiment-device-row";
 
-export function ExperimentDevicesPanel({ experimentId }: { experimentId: string }) {
+interface ExperimentDevicesPanelProps {
+  experimentId: string;
+  /**
+   * Offered when the tab is closed to the viewer. Devices are withheld from the
+   * public-read tier, so a refused read here means the viewer reads the
+   * experiment publicly and joining is the way in.
+   */
+  requestAccess?: ReactNode;
+}
+
+export function ExperimentDevicesPanel({
+  experimentId,
+  requestAccess,
+}: ExperimentDevicesPanelProps) {
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
 
-  const { data, isLoading, isError, refetch } = useExperimentDevices(experimentId);
+  const { data, isLoading, isError, error, refetch } = useExperimentDevices(experimentId);
   const bindings = useMemo(() => data ?? [], [data]);
 
   const [detaching, setDetaching] = useState<ExperimentDevice["device"] | null>(null);
@@ -69,6 +85,10 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
   }
 
   if (isError) {
+    if (httpStatusOf(error) === 403) {
+      return <ResourceAccessDenied resource="experiment" requestAccess={requestAccess} />;
+    }
+
     return (
       <EmptyState
         variant="error"

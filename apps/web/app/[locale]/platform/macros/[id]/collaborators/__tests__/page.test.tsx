@@ -80,17 +80,13 @@ describe("MacroCollaboratorsPage", () => {
     expect(listSpy.called).toBe(false);
   });
 
-  it("sends a viewer with no sharing surface back to the macro", async () => {
+  it("tells a viewer with no sharing surface that the tab is closed to them", async () => {
     server.mount(contract.macros.getMacro, {
       body: createMacroDetail({ id: "macro-1", capabilities: readOnlyCapabilities }),
     });
 
-    const { container, router } = renderPage();
+    renderPage();
 
-    await waitFor(() =>
-      expect(router.replace).toHaveBeenCalledWith("/en-US/platform/macros/macro-1"),
-    );
-    // Nothing is rendered on the way out — no empty surface, no lone heading.
-    expect(container).toBeEmptyDOMElement();
+    expect(await screen.findByText("errors.noAccess.title.macro")).toBeInTheDocument();
   });
 });

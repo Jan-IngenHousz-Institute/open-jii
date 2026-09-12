@@ -1007,7 +1007,32 @@
     "resourceNotFoundMessage": "The resource you're looking for could not be found.",
     "backToDashboard": "Back to Dashboard",
     "viewExperiments": "View Experiments",
-    "viewWorkbook": "View Workbook"
+    "viewWorkbook": "View Workbook",
+    "noAccess": {
+      "description": "Access is granted by whoever manages it. Ask them to share it with you.",
+      "title": {
+        "experiment": "You do not have access to this experiment",
+        "dashboard": "You do not have access to this dashboard",
+        "visualization": "You do not have access to this visualization",
+        "device": "You do not have access to this device",
+        "device_group": "You do not have access to this device group",
+        "workbook": "You do not have access to this workbook",
+        "protocol": "You do not have access to this protocol",
+        "macro": "You do not have access to this macro",
+        "organization": "You do not have access to this organization"
+      },
+      "back": {
+        "experiment": "Back to experiments",
+        "dashboard": "Back to experiments",
+        "visualization": "Back to experiments",
+        "device": "Back to devices",
+        "device_group": "Back to device groups",
+        "workbook": "Back to workbooks",
+        "protocol": "Back to protocols",
+        "macro": "Back to macros",
+        "organization": "Back to organizations"
+      }
+    }
   },
   "footer": {
     "aboutUs": "About Us",

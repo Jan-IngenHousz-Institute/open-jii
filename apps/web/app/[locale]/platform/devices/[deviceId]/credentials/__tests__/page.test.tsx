@@ -48,7 +48,7 @@ describe("DeviceCredentialsPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("sends someone below manage back to the device instead of a blank route", async () => {
+  it("tells someone below manage the surface is closed, rather than bouncing them", async () => {
     server.mount(contract.iot.getIotDevice, {
       body: createIotDeviceDetail({
         id: DEVICE_ID,
@@ -57,21 +57,14 @@ describe("DeviceCredentialsPage", () => {
       }),
     });
 
-    const { container, router } = renderPage();
+    renderPage();
 
-    // The tab is hidden for them, but they can be sitting on the URL when their
-    // access is reduced. Leaving them on an empty page with the strip above it and
-    // no explanation is the thing to avoid.
-    await waitFor(() =>
-      expect(router.replace).toHaveBeenCalledWith(`/en-US/platform/devices/${DEVICE_ID}`),
-    );
-    // And nothing renders on the way out: issuing, rotating and revoking all reach
-    // real AWS IoT and are refused server-side, so there must be no button to press
-    // even for the frame the redirect takes.
-    expect(container).toBeEmptyDOMElement();
-    expect(
-      screen.queryByRole("button", { name: "iot.devices.credentials.issue" }),
-    ).not.toBeInTheDocument();
+    // The tab is disabled for them, so reaching this route means a typed or
+    // shared URL. Say why it is closed instead of silently moving them.
+    expect(await screen.findByText("errors.noAccess.title.device")).toBeInTheDocument();
+    // And no control renders: issuing, rotating and revoking all reach real AWS
+    // IoT and are refused server-side, so there must be no button to press.
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("sends a mobile device back to the overview even for a manager, there is no cert lifecycle", async () => {

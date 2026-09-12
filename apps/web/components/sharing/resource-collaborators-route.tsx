@@ -1,14 +1,11 @@
 "use client";
 
-import { useLocale } from "@/hooks/useLocale";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { ResourceAccessDenied } from "@/components/shared/resource-access-denied";
 
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 
 import { LeaveResourceCard } from "./leave-resource-card";
 import { ResourceCollaborators } from "./resource-collaborators";
-import { resourceDetailPath } from "./resource-routes";
 
 interface ResourceCollaboratorsRouteProps {
   resourceType: SharingResourceType;
@@ -21,27 +18,22 @@ interface ResourceCollaboratorsRouteProps {
 }
 
 /**
- * A user with neither capability never saw this tab but may visit its URL, so
- * redirect them to the detail route instead of leaving a blank page behind.
+ * The tab is disabled for a user with neither capability, so reaching this route
+ * means a typed or shared URL: say the surface is closed rather than bouncing
+ * them somewhere they did not ask to go.
  */
 export function ResourceCollaboratorsRoute({
   resourceType,
   resourceId,
   capabilities,
 }: ResourceCollaboratorsRouteProps) {
-  const router = useRouter();
-  const locale = useLocale();
-
-  const detailPath = resourceDetailPath(locale, resourceType, resourceId);
   // Wait for capabilities before deciding that no surface exists.
-  const hasNoSurface = !!capabilities && !capabilities.canShare && !capabilities.canLeave;
-
-  useEffect(() => {
-    if (hasNoSurface) router.replace(detailPath);
-  }, [hasNoSurface, detailPath, router]);
-
-  if (!capabilities || hasNoSurface) {
+  if (!capabilities) {
     return null;
+  }
+
+  if (!capabilities.canShare && !capabilities.canLeave) {
+    return <ResourceAccessDenied resource={resourceType} />;
   }
 
   return (

@@ -81,16 +81,13 @@ describe("WorkbookCollaboratorsPage", () => {
     expect(screen.queryByRole("button", { name: /sharing.invite/ })).not.toBeInTheDocument();
   });
 
-  it("sends a viewer with no sharing surface back to the workbook", async () => {
+  it("tells a viewer with no sharing surface that the tab is closed to them", async () => {
     server.mount(contract.workbooks.getWorkbook, {
       body: createWorkbookDetail({ id: "wb-1", capabilities: readOnlyCapabilities }),
     });
 
-    const { container, router } = renderPage();
+    renderPage();
 
-    await waitFor(() =>
-      expect(router.replace).toHaveBeenCalledWith("/en-US/platform/workbooks/wb-1"),
-    );
-    expect(container).toBeEmptyDOMElement();
+    expect(await screen.findByText("errors.noAccess.title.workbook")).toBeInTheDocument();
   });
 });

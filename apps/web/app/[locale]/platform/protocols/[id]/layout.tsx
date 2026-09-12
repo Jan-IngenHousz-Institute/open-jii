@@ -67,6 +67,7 @@ export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
       isLoading={isLoading}
       error={error}
       hasData={!!data}
+      resource="protocol"
       loadingMessage={t("protocols.loadingProtocols")}
       errorDescription={t("protocols.notFoundDescription")}
     >

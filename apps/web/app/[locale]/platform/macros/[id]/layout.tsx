@@ -24,6 +24,7 @@ export default function MacroLayout({ children }: MacroLayoutProps) {
       isLoading={isLoading}
       error={error}
       hasData={!!data}
+      resource="macro"
       loadingMessage={t("common.loading")}
     >
       {data && (

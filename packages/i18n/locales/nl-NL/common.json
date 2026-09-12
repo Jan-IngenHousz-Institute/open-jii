@@ -1007,7 +1007,32 @@
     "resourceNotFoundMessage": "De bron die je zoekt kon niet worden gevonden.",
     "backToDashboard": "Terug naar Dashboard",
     "viewExperiments": "Experimenten bekijken",
-    "viewWorkbook": "Werkboek bekijken"
+    "viewWorkbook": "Werkboek bekijken",
+    "noAccess": {
+      "description": "Toegang wordt verleend door wie deze bron beheert. Vraag diegene om hem met u te delen.",
+      "title": {
+        "experiment": "U hebt geen toegang tot dit experiment",
+        "dashboard": "U hebt geen toegang tot dit dashboard",
+        "visualization": "U hebt geen toegang tot deze visualisatie",
+        "device": "U hebt geen toegang tot dit apparaat",
+        "device_group": "U hebt geen toegang tot deze apparaatgroep",
+        "workbook": "U hebt geen toegang tot dit werkboek",
+        "protocol": "U hebt geen toegang tot dit protocol",
+        "macro": "U hebt geen toegang tot deze macro",
+        "organization": "U hebt geen toegang tot deze organisatie"
+      },
+      "back": {
+        "experiment": "Terug naar experimenten",
+        "dashboard": "Terug naar experimenten",
+        "visualization": "Terug naar experimenten",
+        "device": "Terug naar apparaten",
+        "device_group": "Terug naar apparaatgroepen",
+        "workbook": "Terug naar werkboeken",
+        "protocol": "Terug naar protocollen",
+        "macro": "Terug naar macro's",
+        "organization": "Terug naar organisaties"
+      }
+    }
   },
   "footer": {
     "aboutUs": "Over ons",

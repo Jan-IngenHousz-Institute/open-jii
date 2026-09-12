@@ -17,7 +17,8 @@ vi.mock("@/components/error-display", () => ({
   ),
 }));
 
-vi.mock("~/util/apiError", () => ({
+vi.mock("~/util/apiError", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/util/apiError")>()),
   parseApiError: (err: unknown) => ({ message: String(err) }),
 }));
 

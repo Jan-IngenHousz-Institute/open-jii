@@ -68,7 +68,7 @@ describe("<DeviceLayout />", () => {
     expect(await screen.findByRole("heading", { name: "SN-77" })).toBeInTheDocument();
   });
 
-  it("hides the Collaborators tab from a reader who can neither share nor leave", async () => {
+  it("disables the Collaborators tab for a reader who can neither share nor leave", async () => {
     server.mount(contract.iot.getIotDevice, {
       body: createIotDeviceDetail({ id: DEVICE_ID, capabilities: readOnlyCapabilities }),
     });
@@ -76,9 +76,11 @@ describe("<DeviceLayout />", () => {
     renderLayout();
 
     await waitFor(() => expect(screen.getByText("Child Content")).toBeInTheDocument());
-    expect(
-      screen.queryByRole("tab", { name: "iot.devices.detailTabs.collaborators" }),
-    ).not.toBeInTheDocument();
+    // Shown, not hidden: the device reads the same to everyone, and a closed tab
+    // looks like missing permission rather than a missing feature.
+    const tab = screen.getByRole("tab", { name: "iot.devices.detailTabs.collaborators" });
+    expect(tab).toBeDisabled();
+    expect(tab).not.toHaveAttribute("href");
   });
 
   it("keeps the Collaborators tab for a grantee who can only leave", async () => {
@@ -96,7 +98,7 @@ describe("<DeviceLayout />", () => {
     ).toBeInTheDocument();
   });
 
-  it("hides the Credentials tab below manage — every action on it reaches AWS", async () => {
+  it("disables the Credentials tab below manage — every action on it reaches AWS", async () => {
     server.mount(contract.iot.getIotDevice, {
       body: createIotDeviceDetail({
         id: DEVICE_ID,
@@ -107,9 +109,7 @@ describe("<DeviceLayout />", () => {
     renderLayout();
 
     await waitFor(() => expect(screen.getByText("Child Content")).toBeInTheDocument());
-    expect(
-      screen.queryByRole("tab", { name: "iot.devices.detailTabs.credentials" }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "iot.devices.detailTabs.credentials" })).toBeDisabled();
   });
 
   it("hides Credentials and Onboarding for a mobile device, phones carry neither", async () => {
@@ -157,15 +157,30 @@ describe("<DeviceLayout />", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("highlights no tab when the route the caller is on has been filtered out", async () => {
-    // Demoted while sitting on /credentials: the tab is gone, and the strip must not
-    // claim Overview is the current page while the URL still says /credentials.
+  it("keeps the disabled tab the URL names selected, rather than jumping to Overview", async () => {
+    // Demoted while sitting on /credentials: the tab stays, disabled, and the strip
+    // must not claim Overview is the current page while the URL says /credentials.
     vi.mocked(usePathname).mockReturnValue(`/en-US/platform/devices/${DEVICE_ID}/credentials`);
     server.mount(contract.iot.getIotDevice, {
       body: createIotDeviceDetail({
         id: DEVICE_ID,
         capabilities: { ...readOnlyCapabilities, canLeave: true },
       }),
+    });
+
+    renderLayout();
+
+    const overview = await screen.findByRole("tab", { name: "iot.devices.detailTabs.overview" });
+    expect(overview).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByRole("tab", { name: "iot.devices.detailTabs.credentials" })).toBeDisabled();
+  });
+
+  it("highlights no tab when the device has no such surface at all", async () => {
+    // A phone has no certificate lifecycle, so Credentials is absent rather than
+    // disabled, and nothing in the strip may claim to be the current page.
+    vi.mocked(usePathname).mockReturnValue(`/en-US/platform/devices/${DEVICE_ID}/credentials`);
+    server.mount(contract.iot.getIotDevice, {
+      body: createIotDeviceDetail({ id: DEVICE_ID, deviceType: "mobile", status: "active" }),
     });
 
     renderLayout();

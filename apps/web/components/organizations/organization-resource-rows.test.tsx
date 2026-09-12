@@ -392,15 +392,16 @@ describe("<OrganizationResourceRows />", () => {
     }
 
     /**
-     * Pinned on the enum, not the render: transferring a group would strand its devices
-     * or force re-provisioning each one, so widening it must be a deliberate edit.
+     * Pinned on the enum, not the render: a device is the one resource whose org is
+     * also its certificate's, so widening this must be a deliberate edit.
      */
-    it("keeps devices and device groups out of the transferable set", () => {
+    it("keeps devices, and only devices, out of the transferable set", () => {
       expect(zTransferableResourceType.options).toEqual([
         "experiment",
         "macro",
         "protocol",
         "workbook",
+        "device_group",
       ]);
     });
 
@@ -411,19 +412,23 @@ describe("<OrganizationResourceRows />", () => {
       expect(transferButtons(container)).toHaveLength(0);
     });
 
-    it("offers it on the four transferable types and not on a device or a group", () => {
+    it("offers it on every transferable type and not on a device", () => {
       const { container } = renderTransferable();
 
-      // Six rows, four controls: neither a device nor a device group has a transfer
-      // route, so neither gets a control that would only refuse.
+      // Six rows, five controls: only a device has no transfer route, so only it
+      // goes without a control that would otherwise just refuse.
       expect(rowsIn(container)).toHaveLength(6);
-      expect(transferButtons(container)).toHaveLength(4);
-      for (const name of ["Ambyte 04", "Rooftop array"]) {
-        expect(
-          within(rowFor(container, name)).queryByRole("button", { name: TRANSFER }),
-        ).toBeNull();
-      }
-      for (const name of ["Drought stress", "Dark adaptation", "Batch fit", "Canopy synthesis"]) {
+      expect(transferButtons(container)).toHaveLength(5);
+      expect(
+        within(rowFor(container, "Ambyte 04")).queryByRole("button", { name: TRANSFER }),
+      ).toBeNull();
+      for (const name of [
+        "Drought stress",
+        "Dark adaptation",
+        "Batch fit",
+        "Canopy synthesis",
+        "Rooftop array",
+      ]) {
         expect(
           within(rowFor(container, name)).getByRole("button", { name: TRANSFER }),
         ).toBeVisible();

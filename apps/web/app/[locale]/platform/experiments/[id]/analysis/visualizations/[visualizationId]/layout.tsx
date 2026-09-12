@@ -43,6 +43,7 @@ export default function VisualizationLayout({ children }: LayoutProps) {
         isLoading={isLoading}
         error={error}
         hasData={Boolean(data)}
+        resource="visualization"
         loadingMessage={t("common.loading")}
       >
         {data && (

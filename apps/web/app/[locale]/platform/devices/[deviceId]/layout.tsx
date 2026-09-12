@@ -29,6 +29,7 @@ export default function DeviceLayout({ children }: DeviceLayoutProps) {
       isLoading={isLoading}
       error={error}
       hasData={!!data}
+      resource="device"
       errorDescription={t("iot.devices.loadError")}
     >
       {data && (

@@ -14,6 +14,16 @@ function hasBody(value: unknown): value is { body: unknown } {
   return typeof value === "object" && value !== null && "body" in value;
 }
 
+/** The HTTP status a thrown API error carries, or undefined when it carries none. */
+export function httpStatusOf(error: unknown): number | undefined {
+  if (typeof error === "object" && error !== null && "status" in error) {
+    const { status } = error;
+    return typeof status === "number" ? status : undefined;
+  }
+
+  return undefined;
+}
+
 /**
  * Normalizes a thrown API error into `{ message, code? }`.
  *

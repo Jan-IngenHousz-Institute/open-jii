@@ -1,5 +1,6 @@
 "use client";
 
+import { ExperimentRequestToJoin } from "@/components/experiment-settings/collaborators/experiment-request-to-join";
 import { ExperimentDevicesPanel } from "@/components/experiment-settings/devices/experiment-devices-panel";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
@@ -21,6 +22,10 @@ export default function ExperimentDevicesContent({ params }: ExperimentDevicesCo
   const devicesEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.IOT_DEVICES);
   const { data: accessData, isLoading, error } = useExperimentAccess(id);
 
+  // Only public experiments accept join requests, and a refused devices read on
+  // one means the viewer holds nothing but that public tier.
+  const isPubliclyReadable = accessData?.experiment.visibility === "public";
+
   if (devicesEnabled === false) {
     notFound();
   }
@@ -33,6 +38,7 @@ export default function ExperimentDevicesContent({ params }: ExperimentDevicesCo
       isLoading={isLoading}
       error={error}
       hasData={Boolean(accessData?.experiment)}
+      resource="experiment"
       loadingMessage={t("iot.experimentDevices.loading")}
     >
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
@@ -41,7 +47,10 @@ export default function ExperimentDevicesContent({ params }: ExperimentDevicesCo
           <p className="text-muted-foreground text-sm">{t("iot.experimentDevices.description")}</p>
         </div>
 
-        <ExperimentDevicesPanel experimentId={id} />
+        <ExperimentDevicesPanel
+          experimentId={id}
+          requestAccess={isPubliclyReadable ? <ExperimentRequestToJoin experimentId={id} /> : null}
+        />
       </div>
     </EntityLayoutShell>
   );

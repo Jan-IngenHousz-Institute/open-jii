@@ -50,8 +50,30 @@ describe("ExperimentDevicesPanel", () => {
     });
   });
 
-  it("shows an error state when the list cannot load", async () => {
+  it("says the tab is closed rather than offering a retry that cannot succeed", async () => {
     server.mount(contract.experiments.listExperimentDevices, { status: 403 });
+
+    render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
+
+    expect(await screen.findByText("errors.noAccess.title.experiment")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "iot.onboarding.retry" })).not.toBeInTheDocument();
+  });
+
+  it("offers the way in when the experiment accepts join requests", async () => {
+    server.mount(contract.experiments.listExperimentDevices, { status: 403 });
+
+    render(
+      <ExperimentDevicesPanel
+        experimentId={EXPERIMENT_ID}
+        requestAccess={<button type="button">request to join</button>}
+      />,
+    );
+
+    expect(await screen.findByRole("button", { name: "request to join" })).toBeInTheDocument();
+  });
+
+  it("shows an error state when the list cannot load", async () => {
+    server.mount(contract.experiments.listExperimentDevices, { status: 500 });
 
     render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
 

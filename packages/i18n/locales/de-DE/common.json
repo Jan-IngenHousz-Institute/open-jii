@@ -1007,7 +1007,32 @@
     "resourceNotFoundMessage": "Die gesuchte Ressource konnte nicht gefunden werden.",
     "backToDashboard": "Zurück zum Dashboard",
     "viewExperiments": "Experimente anzeigen",
-    "viewWorkbook": "Arbeitsbuch anzeigen"
+    "viewWorkbook": "Arbeitsbuch anzeigen",
+    "noAccess": {
+      "description": "Zugriff vergibt, wer diese Ressource verwaltet. Bitten Sie diese Person, sie mit Ihnen zu teilen.",
+      "title": {
+        "experiment": "Sie haben keinen Zugriff auf dieses Experiment",
+        "dashboard": "Sie haben keinen Zugriff auf dieses Dashboard",
+        "visualization": "Sie haben keinen Zugriff auf diese Visualisierung",
+        "device": "Sie haben keinen Zugriff auf dieses Gerät",
+        "device_group": "Sie haben keinen Zugriff auf diese Gerätegruppe",
+        "workbook": "Sie haben keinen Zugriff auf dieses Arbeitsbuch",
+        "protocol": "Sie haben keinen Zugriff auf dieses Protokoll",
+        "macro": "Sie haben keinen Zugriff auf dieses Makro",
+        "organization": "Sie haben keinen Zugriff auf diese Organisation"
+      },
+      "back": {
+        "experiment": "Zurück zu den Experimenten",
+        "dashboard": "Zurück zu den Experimenten",
+        "visualization": "Zurück zu den Experimenten",
+        "device": "Zurück zu den Geräten",
+        "device_group": "Zurück zu den Gerätegruppen",
+        "workbook": "Zurück zu den Arbeitsbüchern",
+        "protocol": "Zurück zu den Protokollen",
+        "macro": "Zurück zu den Makros",
+        "organization": "Zurück zu den Organisationen"
+      }
+    }
   },
   "footer": {
     "aboutUs": "Über uns",
