@@ -161,11 +161,9 @@ function PersonRow({
   const isTeam = collaborator.granteeType === "team";
 
   return (
-    // Stacked below sm. The avatar plus a 130px role select plus an icon button
-    // are ~174px of shrink-0, which left the name column ~100px on a phone: the
-    // name truncated to nothing and an "Outside Collaborator" badge painted over
-    // the select. `sm:contents` returns the identity block to the row above sm
-    // without a second wrapper, the shape monitoring/data-by-experiment uses.
+    // Stacked below sm: the avatar, the 130px role select and the icon button
+    // are ~174px of shrink-0, leaving the name column ~100px on a phone.
+    // `sm:contents` returns the identity block to the row above sm.
     <div
       role="listitem"
       className="flex min-w-0 flex-col items-start gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3"

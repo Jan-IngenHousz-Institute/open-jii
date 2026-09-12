@@ -226,10 +226,8 @@ export const Map = ({
   fitBoundsOnMapLoad = true,
 }: MapProps) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(sidebarCollapsed);
-  // The prop seeds the state once, and a caller that derives it from the
-  // viewport has nothing to seed with: useIsMobile is false on the first render
-  // and flips in an effect. Without this, "start collapsed on a phone" cannot
-  // be expressed at all.
+  // The prop seeds the state once, and a caller deriving it from the viewport
+  // has nothing to seed with: useIsMobile is false on the first render.
   useEffect(() => {
     setIsSidebarCollapsed(sidebarCollapsed);
   }, [sidebarCollapsed]);

@@ -76,9 +76,8 @@ describe("oklchToHex", () => {
  * nothing else exercises the real chain.
  */
 describe("chartGridColor", () => {
-  // Resolved tokens are cached until the root's class or style changes, and the
-  // observer that clears the cache only runs while a chart is mounted. These
-  // tests move the document directly, so they stand in for it.
+  // These tests set theme tokens on the root directly, and the observer that
+  // clears the resolved-token cache only runs while a chart is mounted.
   beforeEach(() => {
     invalidateThemeTokenCache();
   });
@@ -99,8 +98,7 @@ describe("chartGridColor", () => {
   });
 
   it("serves a repeated read from cache rather than re-reading the document", () => {
-    // The point of the cache: on a theme toggle every chart re-renders at once,
-    // and this was nine forced style reads per chart.
+    // The point of the cache: on a theme toggle every chart re-renders at once.
     const root = document.documentElement;
     root.style.setProperty("--border", BORDER_TOKEN);
     expect(chartGridColor()).toBe(BORDER_HEX);

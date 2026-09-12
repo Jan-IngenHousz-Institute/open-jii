@@ -6,13 +6,9 @@ import { cn, cva } from "../lib/utils";
  * `Card` owns the vertical rhythm: `py-6` around the stack and `gap-6` between
  * its children, with `CardHeader`/`CardContent`/`CardFooter` contributing only
  * `px-6`. Padding written on a child therefore adds to the parent's rather than
- * replacing it, which `cn` cannot dedupe across two elements.
- *
- * `padding` exists so the two cases that need something else say so by name:
- * `none` for a card whose children reach the edge (a full-bleed footer bar, a
- * `divide-y` list, a table, a tab strip) and `sm` for a dense one. Before it,
- * those were spelled `gap-0 py-0` and `@container/card gap-2 py-3` at thirty-odd
- * call sites, in six different dialects.
+ * replacing it, which `cn` cannot dedupe across two elements, so the cases that
+ * need something else say so by name: `none` for a card whose children reach
+ * the edge (a `divide-y` list, a table, a tab strip) and `sm` for a dense one.
  */
 const cardVariants = cva("bg-card text-card-foreground flex flex-col rounded-xl border shadow-sm", {
   variants: {

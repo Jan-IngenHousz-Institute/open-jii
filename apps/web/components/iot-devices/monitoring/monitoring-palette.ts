@@ -2,9 +2,8 @@ import { resolveChartColorway } from "@repo/ui/components/charts/utils";
 
 /**
  * The first four platform series colours. The shared colorway is already
- * ordered widest-separation-first, so the top of it is what this dashboard
- * used to hand-pick indices for; series past four fold into "Other" rather
- * than cycling.
+ * ordered widest-separation-first, and series past four fold into "Other"
+ * rather than cycling.
  */
 export const MONITORING_MAX_SERIES = 4;
 

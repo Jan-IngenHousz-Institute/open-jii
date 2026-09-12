@@ -93,10 +93,9 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
   const { canManage, canTransfer } = workbook.capabilities;
 
   return (
-    // A grid, not flex-wrap: seven unlike fields packed by whatever fit, so the
-    // dates landed ragged and org/version/visibility spilled into an uneven
-    // second row. Fixed columns give it a shape at every width, and the desktop
-    // row returns at xl.
+    // A grid, not flex-wrap: seven unlike fields packed by whatever fit landed
+    // ragged. Fixed columns give it a shape at every width, and the desktop row
+    // returns at xl.
     <div className="border-border flex flex-col gap-6 border-b pb-8">
       <div className="grid grid-cols-2 items-start gap-x-6 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:flex xl:flex-wrap xl:gap-x-10">
         <div className="flex flex-col gap-1">

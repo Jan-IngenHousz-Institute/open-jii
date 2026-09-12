@@ -50,9 +50,8 @@ Object.defineProperty(document, "createElement", {
 describe("utils", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // These tests set theme tokens on the root directly. The cache that serves
-    // them is cleared by the observer in use-chart-theme-refresh, which only
-    // runs while a chart is mounted, so clear it here instead.
+    // These tests set theme tokens on the root directly, and the observer that
+    // clears the resolved-token cache only runs while a chart is mounted.
     invalidateThemeTokenCache();
   });
 

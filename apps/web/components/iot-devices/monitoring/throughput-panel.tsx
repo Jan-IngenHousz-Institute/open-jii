@@ -66,8 +66,7 @@ export function ThroughputPanel({
   to,
 }: ThroughputPanelProps) {
   const { t } = useTranslation("iot");
-  // The colour is resolved here, so this component has to learn about a
-  // theme swap itself; the chart below only re-renders on its own.
+  // Resolved in JS, so this has to learn about a theme swap itself.
   useChartThemeRefresh();
   const seriesColors = monitoringSeriesColors();
   const [view, setView] = useState<PanelView>("chart");

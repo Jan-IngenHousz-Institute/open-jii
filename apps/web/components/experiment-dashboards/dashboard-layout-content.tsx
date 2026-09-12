@@ -100,8 +100,7 @@ export function DashboardLayoutContent({
               placeholder={t("form.descriptionPlaceholder")}
               rows={1}
               // dark:bg-transparent as well as bg-transparent: Textarea's base carries
-              // dark:bg-input/30, and an unmodified utility never strips a dark:
-              // one. It painted a lighter band the width of the content column.
+              // dark:bg-input/30, which an unmodified utility never strips.
               className="text-muted-foreground min-h-0 resize-none border-0 bg-transparent p-0 text-base shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-transparent"
             />
           )}

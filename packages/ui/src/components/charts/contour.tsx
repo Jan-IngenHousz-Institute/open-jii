@@ -161,9 +161,8 @@ export function ContourPlot({
   const layout = useMemo(
     () => createBaseLayout(config, sizing),
     // themeVersion is a cache key, not a value: createBaseLayout resolves
-    // --border, --foreground, --card and --popover internally, so without it
-    // this memo outlives a theme toggle and the contour keeps the old palette.
-    // The remount below does not cover it; this memo lives in the parent.
+    // tokens internally, so without it this memo outlives a theme toggle and
+    // the contour keeps the old palette.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [config, sizing, themeVersion],
   );
@@ -254,9 +253,8 @@ export function OverlayContour({
   const layout = useMemo(
     () => createBaseLayout(config, sizing),
     // themeVersion is a cache key, not a value: createBaseLayout resolves
-    // --border, --foreground, --card and --popover internally, so without it
-    // this memo outlives a theme toggle and the contour keeps the old palette.
-    // The remount below does not cover it; this memo lives in the parent.
+    // tokens internally, so without it this memo outlives a theme toggle and
+    // the contour keeps the old palette.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [config, sizing, themeVersion],
   );

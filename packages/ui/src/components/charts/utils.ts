@@ -189,11 +189,7 @@ const PLOTLY_PARSEABLE = /^(#|rgba?\(|hsla?\(|[a-z]+$)/i;
  */
 const themeTokenCache = new Map<string, string | undefined>();
 
-/**
- * Drop the resolved palette. Called by the observer in
- * `use-chart-theme-refresh` before it notifies, so the re-render that follows
- * reads the new theme rather than the cached one.
- */
+/** Called by the theme observer before it notifies, so the re-render reads the new theme. */
 export function invalidateThemeTokenCache(): void {
   themeTokenCache.clear();
 }
@@ -207,11 +203,9 @@ export function invalidateThemeTokenCache(): void {
  * bypasses every caller's `?? "#fallback"` and fails invisibly. A token
  * registered by Tailwind computes to `lab()`, which Plotly cannot parse at all.
  *
- * Cached because this is a forced style read, and it used to happen nine times
- * per chart per render (four here plus the five-entry colorway). On a theme
- * toggle every chart re-renders at the same moment, interleaving those reads
- * with Plotly's own DOM writes; on a dashboard of a dozen widgets that is the
- * bulk of the stall. The oklch/lab conversion is pure, so it is cached too.
+ * Cached because it is a forced style read, and on a theme toggle every chart
+ * makes it at the same moment, interleaved with Plotly's own DOM writes. The
+ * oklch/lab conversion is pure, so it is cached too.
  */
 export function readThemeColor(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
@@ -246,9 +240,8 @@ export function referenceLineColor(): string {
 
 /**
  * The series palette every platform chart cycles through: the theme's own
- * colours first, then Plotly's for the tail. Lives in `./colorway`; re-exported
- * here because `layout.colorway` is set in this module and ~20 call sites
- * already import their colours from it.
+ * colours first, then Plotly's for the tail. Defined in `./colorway`, resolved
+ * here because `layout.colorway` is set in this module.
  */
 export function resolveChartColorway(): string[] {
   const head = PLATFORM_SERIES_TOKENS.map(

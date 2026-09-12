@@ -87,9 +87,7 @@ describe("AppSidebar", () => {
     const { container } = renderSidebar();
 
     // h-12 matches SiteHeader, so the logo and the page title share a centre;
-    // px-2 puts its left edge on the x=32 rail the search, nav and user rows sit
-    // on. Deriving the row from SidebarHeader's padding instead dropped the logo
-    // 6px and hung it 8px to the left of everything below it.
+    // px-2 puts its left edge on the x=32 rail every row below it sits on.
     const header = container.querySelector('[data-sidebar="header"]');
     expect(header).toHaveClass("pt-0");
     const brandRow = screen.getAllByAltText("openJII Logo")[0]?.closest("div");
@@ -146,9 +144,8 @@ describe("AppSidebar", () => {
     expect(themeToggle).not.toHaveTextContent("common.toggleTheme");
 
     // The theme action sits beside the bottom-pinned identity, not under it:
-    // SidebarFooter is a column, so a second child stacks. Identity keeps the
-    // width via flex-1 rather than taking the row's leftovers, which is what
-    // truncated even a short display name in a 216px sidebar.
+    // SidebarFooter is a column, so a second child stacks. flex-1 gives the
+    // identity the width, which a 216px sidebar otherwise truncates.
     const footer = container.querySelector('[data-sidebar="footer"]');
     expect(footer?.children).toHaveLength(1);
     const [identityRow] = [...(footer?.children ?? [])];

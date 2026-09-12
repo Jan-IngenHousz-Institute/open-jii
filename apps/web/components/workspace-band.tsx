@@ -2,25 +2,18 @@ import { cn } from "@repo/ui/lib/utils";
 
 /**
  * The negative margins that cancel the platform shell's padding, plus the
- * padding put back on the inside so content keeps its gutter.
+ * padding put back inside so content keeps its gutter.
  *
- * This mirrors `app/[locale]/platform/layout.tsx`'s `px-4 py-4 md:px-6 md:py-6
- * 3xl:px-10 4xl:px-14` by hand, and has to stay in step with it: a band that
- * pulls further than the shell pads overflows the viewport, and one that pulls
- * less leaves a gutter of page showing beside a surface meant to be full-bleed.
- * Exported because three pages draw this band and each had re-derived the
- * string, two of them with a flat `-mx-6`/`-mb-6` that over-pulls by 8px below
- * `md`.
+ * Mirrors `app/[locale]/platform/layout.tsx` by hand and has to stay in step
+ * with it: pull further than the shell pads and the band overflows the
+ * viewport, pull less and a gutter of page shows beside a full-bleed surface.
  */
 export const workspaceBleed =
   "3xl:-mx-10 3xl:px-10 4xl:-mx-14 4xl:px-14 -mx-4 -mb-4 px-4 pb-4 md:-mx-6 md:-mb-6 md:px-6 md:pb-6";
 
 interface WorkspaceBandProps {
   children: React.ReactNode;
-  /**
-   * Pull the band up under the shell header. Only for a page where the band is
-   * the first thing on it; anywhere else this eats the content above.
-   */
+  /** Pulls the band up under the shell header. Only for a band that is first on its page. */
   flush?: boolean;
   className?: string;
 }

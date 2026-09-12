@@ -19,10 +19,9 @@ const MAX_LISTED_OUTAGES = 5;
 // Availability is device state, so it wears the status palette, never the
 // categorical series colors.
 //
-// Resolved to hex rather than left as `var(--token)`: the legend below is a
-// React `style`, where CSS resolves it, but the same map goes to Plotly, which
-// parses colour in JS and silently paints anything it cannot read as black.
-// That is why the legend was right while every bar was black.
+// Resolved to hex rather than left as `var(--token)`: the legend is a React
+// `style`, where CSS resolves it, but the same map goes to Plotly, which parses
+// colour in JS and paints anything it cannot read as black.
 const STATE_TOKEN: Record<BucketAvailability, string> = {
   up: "--status-active-foreground",
   partial: "--status-stale-foreground",

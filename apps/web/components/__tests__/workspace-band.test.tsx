@@ -5,10 +5,8 @@ import { WorkspaceBand, workspaceBleed } from "../workspace-band";
 
 describe("workspaceBleed", () => {
   it("cancels the platform shell's padding at every breakpoint it sets", () => {
-    // app/[locale]/platform/layout.tsx pads `px-4 py-4 md:px-6 md:py-6
-    // 3xl:px-10 4xl:px-14`. A pull that does not match it leaves a gutter beside
-    // a full-bleed surface, or overflows the viewport: a flat `-mx-6` against
-    // the shell's `px-4` overhung by 8px per side below md.
+    // Matches app/[locale]/platform/layout.tsx's padding at every tier: a pull
+    // that does not leaves a gutter beside a full-bleed surface, or overflows.
     for (const cls of [
       "-mx-4",
       "-mb-4",
@@ -38,9 +36,8 @@ describe("WorkspaceBand", () => {
   });
 
   it("starts below the shell's top padding by default", () => {
-    // Every band that has page content above it depends on this: a negative top
-    // margin in the base string would pull those pages up under their own
-    // headings.
+    // A negative top margin in the base string would pull every band that has
+    // page content above it up under its own heading.
     const { container } = render(<WorkspaceBand>Body</WorkspaceBand>);
 
     expect(container.firstElementChild).not.toHaveClass("-mt-4");

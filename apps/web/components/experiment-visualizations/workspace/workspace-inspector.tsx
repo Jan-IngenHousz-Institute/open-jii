@@ -16,13 +16,11 @@ import { DataTabContent } from "./tabs/data-tab-content";
 import { StyleTabContent } from "./tabs/style-tab-content";
 
 // An underline tab, not a pill. TabsTrigger's base carries `border
-// border-transparent`, and a later `border-b-2` does not remove it: the
-// border-width conflict table is one-directional, so `border-primary` (which is
-// side-agnostic) coloured all four edges into a rectangle. `border-x-0
-// border-t-0` is what actually leaves only the underline. `flex-none` undoes
-// the base's `flex-1`, which silently defeated the list's `justify-start`.
-// The dark overrides are the same story: they carry a `dark:` modifier, so the
-// unmodified ones here never displaced them and they won on specificity too.
+// border-transparent` and a later `border-b-2` does not remove it, so
+// `border-primary` coloured all four edges; `border-x-0 border-t-0` is what
+// leaves only the underline, and `flex-none` undoes the base's `flex-1`. The
+// `dark:` overrides need restating for the same reason: an unmodified class
+// never displaces a modified one.
 const tabTriggerClass = cn(
   "text-muted-foreground hover:text-foreground -mb-px flex-none gap-1.5 rounded-none border-x-0 border-b-2 border-t-0 border-transparent bg-transparent px-3 py-2.5 text-sm font-medium shadow-none",
   "data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:border-primary data-[state=active]:shadow-none",

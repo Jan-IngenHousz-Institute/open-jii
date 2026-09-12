@@ -69,8 +69,7 @@ export function MetricTrendCard({
   // a sparse window reads as quiet rather than as empty.
   const trackHeight = Math.max(...measurements, 0) || 1;
   // Resolved here rather than left to `layout.colorway`, so the track and the
-  // data share one colour. This card is not a chart, so it has to subscribe to
-  // the theme itself or the bars keep the outgoing palette after a toggle.
+  // data share one colour, which means subscribing to the theme here too.
   useChartThemeRefresh();
   const seriesColor = resolveChartColorway()[0];
 

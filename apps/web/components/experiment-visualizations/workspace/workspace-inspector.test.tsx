@@ -167,10 +167,9 @@ describe("WorkspaceInspector", () => {
     expect(screen.getByText("workspace.style.display")).toBeInTheDocument();
   });
   it("draws the active tab as an underline, not a box", () => {
-    // TabsTrigger's base carries `border border-transparent`, and tailwind-merge
-    // does not drop it for a later `border-b-2`: the border-width conflict table
-    // is one-directional. Without border-x-0/border-t-0 the side-agnostic
-    // `data-[state=active]:border-primary` paints a rectangle.
+    // TabsTrigger's base carries `border border-transparent`, which a later
+    // `border-b-2` does not drop, so without border-x-0/border-t-0 the
+    // side-agnostic `data-[state=active]:border-primary` paints a rectangle.
     renderInspector({ selectedTableName: "readings" });
 
     const active = screen.getByRole("tab", { name: /workspace\.inspector\.tabs\.data/ });

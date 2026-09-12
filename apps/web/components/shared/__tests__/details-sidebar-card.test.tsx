@@ -135,9 +135,8 @@ describe("DetailsSidebarCard", () => {
   });
 
   it("keeps the toggle beside the title in both states", () => {
-    // It used to centre itself on the collapsed card, which put it below a
-    // title row ending 2px earlier. One fixed offset, matching the experiment
-    // details card, so the chevron never gets a row of its own.
+    // One fixed offset, matching the experiment details card: centring on the
+    // collapsed card put the chevron below the title row, on a row of its own.
     const { rerender } = renderComponent();
     const collapsed = screen.getByRole("button").className;
     expect(collapsed).toContain("top-[10px]");

@@ -48,8 +48,8 @@ describe("resolveChartColorway", () => {
 
   it("falls back to light-mode literals when no theme is readable", () => {
     invalidateThemeTokenCache();
-    // jsdom applies no stylesheet, so nothing resolves and every slot falls
-    // through — the SSR path, which must still hand Plotly a parseable colour.
+    // jsdom applies no stylesheet, so every slot falls through to the SSR path,
+    // which must still hand Plotly a parseable colour.
     for (const color of resolveChartColorway()) {
       expect(color).toMatch(/^#[0-9a-f]{3,8}$/i);
     }

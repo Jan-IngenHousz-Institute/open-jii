@@ -276,13 +276,10 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     }, [data]);
 
     // `Plotly.react` runs in "immutable" mode whenever `layout.datarevision` is
-    // undefined, and there it treats a new-but-identical `x`/`y` array as
-    // changed data: `flags.calc` is set and the whole chart is recalculated and
-    // replotted. Every caller rebuilds its trace array each render, so that was
-    // the path for a resize, a keystroke or any parent re-render. Counting the
-    // data's identity instead means a rebuild that produced the same arrays no
-    // longer forces the recalc, and one that produced different arrays still
-    // does.
+    // undefined, and there a new-but-identical `x`/`y` array sets `flags.calc`
+    // and replots the whole chart. Every caller rebuilds its trace array each
+    // render, so counting the data's identity is what keeps a resize or a
+    // keystroke from forcing the recalc.
     const dataRevision = React.useMemo(() => (data ? nextDataRevision() : 0), [data]);
 
     // Stable boolean drives the context-management effect. Memoizing a

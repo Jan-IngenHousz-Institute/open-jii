@@ -10,9 +10,8 @@ const subscribers = new Set<Subscriber>();
 let rootObserver: MutationObserver | undefined;
 
 /**
- * Bumped once per theme change. A number rather than the class string because
- * charts use it as a memo dependency: the string is stable across a swap only
- * by accident, and it is the invalidation that matters, not its content.
+ * Bumped once per theme change. A number rather than the class string, because
+ * charts use it as a memo dependency and it is the invalidation that matters.
  */
 let themeVersion = 0;
 
@@ -33,9 +32,8 @@ function subscribeToThemeClass(subscriber: Subscriber): () => void {
     });
     rootObserver.observe(document.documentElement, {
       attributes: true,
-      // `style` as well as `class`: a token can also move by being set inline on
-      // the root, and the resolved palette is cached, so missing that would
-      // leave every chart on the outgoing colours.
+      // `style` as well as `class`: a token can also move by being set inline
+      // on the root, and the resolved palette is cached.
       attributeFilter: ["class", "style"],
     });
   }
@@ -60,10 +58,8 @@ function subscribeToThemeClass(subscriber: Subscriber): () => void {
  * external store notifies all charts after the class is actually applied while
  * allocating only one observer, regardless of chart count.
  *
- * Called inside `useChartSizing`, which every chart component already uses;
- * components that resolve theme colours without sizing (LollipopChart) call
- * it directly. Anything that memoises a resolved colour must put the returned
- * version in its dependency list, or it keeps the outgoing theme's palette.
+ * Anything that memoises a resolved colour has to put the returned version in
+ * its dependency list, or it keeps the outgoing theme's palette.
  */
 export function useChartThemeRefresh(): number {
   return useSyncExternalStore(subscribeToThemeClass, themeVersionSnapshot, () => 0);

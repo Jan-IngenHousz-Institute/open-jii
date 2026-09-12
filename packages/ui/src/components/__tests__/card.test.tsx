@@ -25,9 +25,8 @@ describe("Card", () => {
   });
 
   it("lets a full-bleed child reach the card edge", () => {
-    // `padding="none"` is what a divide-y list, a table or a footer bar needs:
-    // the card's own py-6 is what left a 24px band of card background under
-    // them, and gap-6 is what floated their divider away from the content.
+    // What a divide-y list, a table or a footer bar needs: the card's own py-6
+    // leaves a 24px band under them, and gap-6 floats their divider away.
     const { container } = render(<Card padding="none">Body</Card>);
 
     expect(container.firstElementChild).not.toHaveClass("py-6");
@@ -36,8 +35,7 @@ describe("Card", () => {
 
   it("keeps the horizontal inset on the children, not the card", () => {
     // Vertical rhythm belongs to Card, horizontal to the slots. A slot that
-    // also sets py-* adds to the card's rather than replacing it, which is
-    // invisible to tailwind-merge because they are different elements.
+    // also sets py-* adds to the card's, which tailwind-merge cannot see.
     const { container } = render(
       <Card>
         <CardHeader>Head</CardHeader>

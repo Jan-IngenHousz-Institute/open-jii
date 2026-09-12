@@ -32,8 +32,7 @@ interface BatteryPanelProps {
  */
 export function BatteryPanel({ monitoring }: BatteryPanelProps) {
   const { t } = useTranslation("iot");
-  // The colour is resolved here, so this component has to learn about a
-  // theme swap itself; the chart below only re-renders on its own.
+  // Resolved in JS, so this has to learn about a theme swap itself.
   useChartThemeRefresh();
   const seriesColor = monitoringPrimaryColor();
   const locale = useLocale();

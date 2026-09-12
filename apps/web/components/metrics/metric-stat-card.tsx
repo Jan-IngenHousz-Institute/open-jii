@@ -31,11 +31,7 @@ function displayableChange(comparison?: { current: number; previous: number }): 
 
 interface MetricStatCardProps {
   label: string;
-  /**
-   * ReactNode, not string, so a device tile can put a status indicator or a
-   * loading skeleton where the figure goes. Still typography-owned: the slot
-   * styles it as the figure whatever is passed.
-   */
+  /** ReactNode so a tile can put a status dot or a skeleton where the figure goes. */
   value: ReactNode;
   locale: string;
   /** The full figure behind an abbreviated `value`, shown on hover. */
@@ -113,9 +109,8 @@ export function MetricStatCard({
           {href === undefined ? value : renderLinkedValue(href)}
         </CardTitle>
         {/* The note below already prints a trend arrow, so in a half-width card
-            the badge is a second reading of the same thing in the space the
-            figure needs. Container query, not a breakpoint: what matters is how
-            wide this card ended up, not how wide the window is. */}
+            the badge repeats it in the space the figure needs. A container
+            query, because what matters is this card's width, not the window's. */}
         {change === null ? null : (
           <CardAction className="@[10rem]/card:block hidden">{renderChange(change)}</CardAction>
         )}

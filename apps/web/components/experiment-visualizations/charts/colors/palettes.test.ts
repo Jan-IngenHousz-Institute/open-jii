@@ -27,9 +27,8 @@ describe("getDefaultSeriesColor", () => {
 });
 
 describe("getSuggestedSeriesColor", () => {
-  // Resolved tokens are cached until the root's class or style changes, and the
-  // observer that clears the cache only runs while a chart is mounted. These
-  // tests move the document directly, so they stand in for it.
+  // These tests set theme tokens on the root directly, and the observer that
+  // clears the resolved-token cache only runs while a chart is mounted.
   beforeEach(() => {
     invalidateThemeTokenCache();
   });
