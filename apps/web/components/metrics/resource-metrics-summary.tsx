@@ -33,7 +33,7 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
   const { data, isPending } = useResourceMetrics(kind);
 
   if (isPending) {
-    return <MetricsBandSkeleton cards={4} className={metricsBandGrid} />;
+    return <MetricsBandSkeleton cards={4} grid={metricsBandGrid} />;
   }
 
   // A workspace with nothing recorded states nothing, rather than a row of zeros.

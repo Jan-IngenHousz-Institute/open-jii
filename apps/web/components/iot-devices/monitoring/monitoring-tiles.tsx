@@ -70,7 +70,12 @@ export function MonitoringTiles({
           device === undefined ? (
             <Skeleton className="h-7 w-24" />
           ) : (
-            <ConnectivityDot connectivity={device.connectivity} />
+            // ConnectivityDot carries its own text-xs, which beats the
+            // CardTitle's text-2xl from the child element.
+            <ConnectivityDot
+              connectivity={device.connectivity}
+              className="text-2xl font-semibold"
+            />
           )
         }
         note={device === undefined ? undefined : formatLastSeen(device.connectivity)}

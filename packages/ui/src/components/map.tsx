@@ -226,9 +226,16 @@ export const Map = ({
   fitBoundsOnMapLoad = true,
 }: MapProps) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(sidebarCollapsed);
-  // The prop seeds the state once, and a caller deriving it from the viewport
-  // has nothing to seed with: useIsMobile is false on the first render.
+  const hasChosenSidebarState = useRef(false);
+  // A caller deriving this from the viewport has nothing to seed with, because
+  // useIsMobile is false on the first render and flips in an effect. Follow the
+  // prop until the reader states a preference, then leave it alone: it also
+  // changes on every resize across the breakpoint, which would otherwise undo
+  // their choice.
   useEffect(() => {
+    if (hasChosenSidebarState.current) {
+      return;
+    }
     setIsSidebarCollapsed(sidebarCollapsed);
   }, [sidebarCollapsed]);
   const [selectedLocation, setSelectedLocation] = useState<LocationPoint | undefined>();
@@ -429,7 +436,10 @@ export const Map = ({
               </h3>
               <button
                 type="button"
-                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                onClick={() => {
+                  hasChosenSidebarState.current = true;
+                  setIsSidebarCollapsed(!isSidebarCollapsed);
+                }}
                 className="hover:bg-accent ml-2 shrink-0 rounded p-1 transition-colors"
                 title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >

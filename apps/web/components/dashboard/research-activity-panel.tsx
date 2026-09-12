@@ -20,7 +20,7 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
   const { data: platform } = usePublicMetrics();
 
   if (isPending) {
-    return <MetricsBandSkeleton cards={4} className={metricsBandGrid} />;
+    return <MetricsBandSkeleton cards={4} grid={metricsBandGrid} />;
   }
 
   const scoped = mine?.scoped ?? null;

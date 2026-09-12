@@ -8,6 +8,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
+import { DatasetPicker } from "~/components/experiment-data/dataset-picker";
 import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
 import { UploadDataModal } from "~/components/experiment-data/upload-data-modal/upload-data-modal";
 import { env } from "~/env";
@@ -16,7 +17,6 @@ import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useE
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
-import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 interface ExperimentDataPageProps {
@@ -29,6 +29,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
   const { tables, isLoading: isLoadingTables, error: tablesError } = useExperimentTables(id);
   const { t } = useTranslation("experiments");
   const [uploadModalOpen, setUploadModalOpen] = React.useState(false);
+  const [activeIdentifier, setActiveIdentifier] = React.useState<string | undefined>(undefined);
 
   if (isLoading || isLoadingTables) {
     return (
@@ -116,6 +117,8 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
     );
   }
 
+  const activeTable = tables.find((table) => table.identifier === activeIdentifier) ?? tables[0];
+
   return (
     <PageContainer width="fluid" className="space-y-8">
       <div className="flex items-start justify-between">
@@ -129,28 +132,21 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         </Button>
       </div>
 
-      <NavTabs defaultValue={tables[0].identifier} className="w-full">
-        <NavTabsList>
-          {tables.map((table) => (
-            <NavTabsTrigger key={table.identifier} value={table.identifier}>
-              <span className="truncate">
-                {table.displayName} ({table.totalRows})
-              </span>
-            </NavTabsTrigger>
-          ))}
-        </NavTabsList>
-        {tables.map((table) => (
-          <NavTabsContent key={table.identifier} value={table.identifier} className="mt-6">
-            <ExperimentDataTable
-              experimentId={id}
-              tableName={table.identifier}
-              displayName={table.displayName}
-              pageSize={10}
-              defaultSortColumn={table.defaultSortColumn}
-            />
-          </NavTabsContent>
-        ))}
-      </NavTabs>
+      <div className="space-y-6">
+        <DatasetPicker
+          tables={tables}
+          value={activeTable.identifier}
+          onChange={setActiveIdentifier}
+        />
+        <ExperimentDataTable
+          key={activeTable.identifier}
+          experimentId={id}
+          tableName={activeTable.identifier}
+          displayName={activeTable.displayName}
+          pageSize={10}
+          defaultSortColumn={activeTable.defaultSortColumn}
+        />
+      </div>
 
       <UploadDataModal
         experimentId={id}

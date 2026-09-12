@@ -330,12 +330,19 @@ function SortableCellGroup({
   );
 }
 
-/** A root custom property in px, or 0 when it is unset. */
-function readPixels(name: string): number {
-  if (typeof document === "undefined") return 0;
-  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+/**
+ * A custom property in px, resolved against `el` rather than the root.
+ * `--sidebar-inset-offset` is declared on `SidebarInset` and reaches the header
+ * by inheritance, so the root never carries it. It is authored in rem.
+ */
+function readPixels(el: Element, name: string): number {
+  const raw = getComputedStyle(el).getPropertyValue(name).trim();
   const parsed = Number.parseFloat(raw);
-  return Number.isFinite(parsed) ? parsed : 0;
+  if (!Number.isFinite(parsed)) return 0;
+  if (!raw.endsWith("rem")) return parsed;
+
+  const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+  return parsed * (Number.isFinite(rootFontSize) ? rootFontSize : 16);
 }
 
 export function WorkbookEditor({
@@ -511,7 +518,8 @@ export function WorkbookEditor({
       // Matches the sticky offset in workbook-header.tsx: the shell header is
       // h-12, plus whatever banner/inset offset is in play.
       const rect = el.getBoundingClientRect();
-      const stickyTop = 48 + readPixels("--banner-offset") + readPixels("--sidebar-inset-offset");
+      const stickyTop =
+        48 + readPixels(el, "--banner-offset") + readPixels(el, "--sidebar-inset-offset");
       setIsSticky(rect.top <= stickyTop);
     };
     window.addEventListener("scroll", handleScroll, { passive: true });

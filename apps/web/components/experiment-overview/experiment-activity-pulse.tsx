@@ -27,7 +27,7 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
     return (
       <section className="space-y-3">
         <h2 className="font-bold">{t("experiment.title")}</h2>
-        <MetricsBandSkeleton cards={3} className={metricsBandGridOfThree} />
+        <MetricsBandSkeleton cards={3} grid={metricsBandGridOfThree} />
       </section>
     );
   }
