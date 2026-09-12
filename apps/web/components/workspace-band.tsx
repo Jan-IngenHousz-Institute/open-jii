@@ -9,7 +9,7 @@ export const workspaceBleed =
 
 interface WorkspaceBandProps {
   children: React.ReactNode;
-  /** Pulls the band up under the shell header. Only for a band that is first on its page. */
+  /** Only for a band that is the first thing on its page. */
   flush?: boolean;
   className?: string;
 }

@@ -77,8 +77,7 @@ describe("oklchToHex", () => {
  * nothing else exercises the real chain.
  */
 describe("chartGridColor", () => {
-  // These tests set theme tokens on the root directly, and the observer that
-  // clears the resolved-token cache only runs while a chart is mounted.
+  // These set theme tokens on the root; nothing observes that without a chart.
   beforeEach(() => {
     invalidateThemeTokenCache();
   });

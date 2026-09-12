@@ -40,9 +40,7 @@ interface MetricStatCardProps {
   href?: string;
   note?: string;
   context?: string;
-  /** A warning under the footer, e.g. connected but not sending. */
   alert?: ReactNode;
-  /** A sparkline between the figure and the footer. */
   chart?: ReactNode;
   className?: string;
 }

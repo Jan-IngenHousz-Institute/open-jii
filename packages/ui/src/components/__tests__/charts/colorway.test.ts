@@ -38,7 +38,6 @@ describe("resolveChartColorway", () => {
     for (const color of head) {
       expect(color).toMatch(/^#[0-9a-f]{6}$/i);
     }
-    // Six different hues in, six different colours out.
     expect(new Set(head).size).toBe(PLATFORM_SERIES_TOKENS.length);
   });
 

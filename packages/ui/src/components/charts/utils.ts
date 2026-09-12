@@ -263,7 +263,6 @@ export function resolveChartColorway(): string[] {
   return [...head, ...PLOTLY_SERIES_TAIL];
 }
 
-/** The colour a platform chart gives its Nth series. Wraps once exhausted. */
 export function platformChartColor(index: number): string {
   const colorway = resolveChartColorway();
   return colorway[Math.abs(Math.trunc(index)) % colorway.length] ?? "#005E5E";

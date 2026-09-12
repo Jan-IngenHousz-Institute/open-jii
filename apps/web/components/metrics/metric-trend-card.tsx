@@ -22,7 +22,6 @@ const TRACK_OPACITY = 0.08;
 
 interface MetricTrendCardProps {
   label: string;
-  /** ReactNode so a tile can put a skeleton where the figure goes. */
   value: ReactNode;
   title?: string;
   seriesName: string;
