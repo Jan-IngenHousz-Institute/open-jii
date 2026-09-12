@@ -59,5 +59,3 @@ export const PLOTLY_SERIES_TAIL = [
   "#dbdb8d",
   "#9edae5",
 ] as const;
-
-export const PLATFORM_SERIES_COUNT = PLATFORM_SERIES_TOKENS.length;

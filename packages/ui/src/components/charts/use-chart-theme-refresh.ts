@@ -78,7 +78,7 @@ function subscribeToThemeClass(subscriber: Subscriber): () => void {
  * Subscribe the calling chart to the class that supplies its CSS palette, and
  * return a token that changes when that palette does.
  *
- * Chart palettes are resolved from CSS custom properties (`--chart-1..5`,
+ * Chart palettes are resolved from CSS custom properties (`PLATFORM_SERIES_TOKENS`,
  * `--foreground`, `--border`, ...) at render time because Plotly cannot
  * read a CSS variable. `next-themes` changes the root class in an effect after
  * its context consumers render, so its context alone is too early. This shared

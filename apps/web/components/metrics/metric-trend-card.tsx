@@ -12,7 +12,7 @@ import {
 import { BarChart } from "@repo/ui/components/charts/bar-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
-import { detectAxisType, resolveChartColorway } from "@repo/ui/components/charts/utils";
+import { detectAxisType, platformChartColor } from "@repo/ui/components/charts/utils";
 import { cn } from "@repo/ui/lib/utils";
 
 const QUIET_BAR_OPACITY = 0.45;
@@ -71,7 +71,7 @@ export function MetricTrendCard({
   // Resolved here rather than left to `layout.colorway`, so the track and the
   // data share one colour, which means subscribing to the theme here too.
   useChartThemeRefresh();
-  const seriesColor = resolveChartColorway()[0];
+  const seriesColor = platformChartColor(0);
 
   return (
     <Card padding="sm" className={cn("@container/card", className)}>

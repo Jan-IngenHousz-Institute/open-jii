@@ -172,7 +172,8 @@
     "datasetLabel": "Datensatz",
     "datasetPlaceholder": "Datensätze suchen...",
     "datasetEmpty": "Kein passender Datensatz.",
-    "datasetRows": "{{rows}} Zeilen",
+    "datasetRows_one": "{{rows}} Zeile",
+    "datasetRows_other": "{{rows}} Zeilen",
     "datasetGroupStatic": "Quelle",
     "datasetGroupMacro": "Verarbeitet",
     "datasetGroupUpload": "Hochgeladen"

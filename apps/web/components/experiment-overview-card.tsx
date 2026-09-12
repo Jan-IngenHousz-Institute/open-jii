@@ -30,9 +30,8 @@ export function ExperimentOverviewCard({ experiment, href, locale }: ExperimentO
 
   const unit = tMetrics("resourceMetrics.experiment.unit");
   const activity = experiment.activity ?? null;
-  const hasActivity = activity !== null && activity.measurements > 0;
 
-  const renderActivity = (series: ResourceSeries) => (
+  const renderSeries = (series: ResourceSeries) => (
     <div className="space-y-1 border-t pt-3">
       <div className="text-muted-foreground flex items-baseline justify-between gap-2 text-xs">
         <span>{tMetrics("resourceMetrics.experiment.measurements")}</span>
@@ -47,18 +46,30 @@ export function ExperimentOverviewCard({ experiment, href, locale }: ExperimentO
       <ActivitySparkline
         days={series.days}
         seriesName={tMetrics("resourceMetrics.series", { unit })}
+        label={tMetrics("resourceMetrics.strip", { days: WINDOW_DAYS, unit })}
         locale={locale}
       />
     </div>
   );
 
-  // A line rather than nothing: the block is the bottom of every tile in the
-  // grid, and dropping it on the quiet ones makes those cards read as broken.
+  // A line rather than nothing for a window that really was empty: the block is
+  // the bottom of every tile in the grid, and dropping it on the quiet ones
+  // makes those cards read as broken.
   const renderQuiet = () => (
     <p className="text-muted-foreground border-t pt-3 text-xs">
       {tMetrics("resourceMetrics.quiet", { unit, days: WINDOW_DAYS })}
     </p>
   );
+
+  // A null series is "none came back", which is also what a failed warehouse
+  // read looks like, so it cannot be reported as a zero. The table's activity
+  // column renders nothing for it too.
+  const renderActivity = () => {
+    if (activity === null) {
+      return null;
+    }
+    return activity.measurements === 0 ? renderQuiet() : renderSeries(activity);
+  };
 
   return (
     <ResourceCard
@@ -74,7 +85,7 @@ export function ExperimentOverviewCard({ experiment, href, locale }: ExperimentO
           <VisibilityBadge visibility={experiment.visibility} privateOnly />
         </>
       }
-      extra={hasActivity ? renderActivity(activity) : renderQuiet()}
+      extra={renderActivity()}
       footer={`${t("lastUpdate")}: ${formatShortDate(experiment.updatedAt, locale)}`}
     >
       <RichTextRenderer content={experiment.description ?? " "} truncate maxLines={2} />

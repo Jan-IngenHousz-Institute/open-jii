@@ -200,7 +200,8 @@
     "datasetLabel": "Dataset",
     "datasetPlaceholder": "Search datasets...",
     "datasetEmpty": "No dataset matches that.",
-    "datasetRows": "{{rows}} rows",
+    "datasetRows_one": "{{rows}} row",
+    "datasetRows_other": "{{rows}} rows",
     "datasetGroupStatic": "Source",
     "datasetGroupMacro": "Processed",
     "datasetGroupUpload": "Uploaded"

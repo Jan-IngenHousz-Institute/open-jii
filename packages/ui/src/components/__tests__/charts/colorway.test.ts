@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  PLATFORM_SERIES_COUNT,
-  PLATFORM_SERIES_TOKENS,
-  PLOTLY_SERIES_TAIL,
-} from "../../charts/colorway";
+import { PLATFORM_SERIES_TOKENS, PLOTLY_SERIES_TAIL } from "../../charts/colorway";
 import {
   invalidateThemeTokenCache,
   platformChartColor,
@@ -27,8 +23,8 @@ describe("resolveChartColorway", () => {
     invalidateThemeTokenCache();
     const colorway = resolveChartColorway();
 
-    expect(colorway).toHaveLength(PLATFORM_SERIES_COUNT + PLOTLY_SERIES_TAIL.length);
-    expect(colorway.slice(PLATFORM_SERIES_COUNT)).toEqual([...PLOTLY_SERIES_TAIL]);
+    expect(colorway).toHaveLength(PLATFORM_SERIES_TOKENS.length + PLOTLY_SERIES_TAIL.length);
+    expect(colorway.slice(PLATFORM_SERIES_TOKENS.length)).toEqual([...PLOTLY_SERIES_TAIL]);
   });
 
   it("resolves the head from the theme, so it follows a light/dark swap", () => {
@@ -38,12 +34,12 @@ describe("resolveChartColorway", () => {
     });
     invalidateThemeTokenCache();
 
-    const head = resolveChartColorway().slice(0, PLATFORM_SERIES_COUNT);
+    const head = resolveChartColorway().slice(0, PLATFORM_SERIES_TOKENS.length);
     for (const color of head) {
       expect(color).toMatch(/^#[0-9a-f]{6}$/i);
     }
     // Six different hues in, six different colours out.
-    expect(new Set(head).size).toBe(PLATFORM_SERIES_COUNT);
+    expect(new Set(head).size).toBe(PLATFORM_SERIES_TOKENS.length);
   });
 
   it("falls back to light-mode literals when no theme is readable", () => {

@@ -30,7 +30,14 @@ const days = [
 ];
 
 function renderSparkline() {
-  render(<ActivitySparkline days={days} seriesName="Daily measurements" locale="en-US" />);
+  render(
+    <ActivitySparkline
+      days={days}
+      seriesName="Daily measurements"
+      label="Daily measurements over 30 days"
+      locale="en-US"
+    />,
+  );
   return screen.getByTestId("line-chart");
 }
 
@@ -52,7 +59,17 @@ describe("ActivitySparkline", () => {
     expect(chart).toHaveAttribute("data-grid", "false");
     // Transparent, because it sits on a card rather than on its own surface.
     expect(chart).toHaveAttribute("data-background", "rgba(0,0,0,0)");
-    expect(chart).toHaveAttribute("data-classname", "h-10 w-full");
+    // The 40px slot is on the labelled wrapper; the plot fills it.
+    expect(screen.getByRole("img")).toHaveClass("h-10", "w-full");
+    expect(chart).toHaveAttribute("data-classname", "h-full w-full");
+  });
+
+  it("describes itself for readers who cannot see it", () => {
+    renderSparkline();
+
+    expect(
+      screen.getByRole("img", { name: "Daily measurements over 30 days" }),
+    ).toBeInTheDocument();
   });
 
   it("takes its colour from the platform colorway rather than a literal", () => {

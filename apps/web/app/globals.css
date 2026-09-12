@@ -67,8 +67,8 @@
      not move them. #002828 chrome, #FAF8F3 foreground, #FFF381 logo gold,
      #1C4B4B raised surface and edge. Gold is an accent: interaction colour,
      active state and focus ring on the chrome, never a large fill or body text.
-     The gold is sampled from the logo artwork, not picked: every asset in
-     apps/web/public is #FFF381 on #005E5E. Chroma stops at 0.136, not the
+     The gold is sampled from the logo artwork, not picked: it is the yellow
+     the logo variants in apps/web/public paint on #005E5E. Chroma stops at 0.136, not the
      0.1361 that converts exactly, because 0.1361 puts linear red at 1.0001 and
      the browser gamut-maps a value the stylesheet then no longer pins. On
      --card this gold is 1.1:1, so it stays on the chrome. */

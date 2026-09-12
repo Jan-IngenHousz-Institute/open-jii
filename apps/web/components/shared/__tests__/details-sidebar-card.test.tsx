@@ -134,20 +134,20 @@ describe("DetailsSidebarCard", () => {
     expect(contentWrapper).toHaveClass("lg:block");
   });
 
-  it("keeps the toggle beside the title in both states", () => {
+  it("keeps the toggle beside the title in both states", async () => {
     // One fixed offset, matching the experiment details card: centring on the
     // collapsed card put the chevron below the title row, on a row of its own.
-    const { rerender } = renderComponent();
-    const collapsed = screen.getByRole("button").className;
-    expect(collapsed).toContain("top-[10px]");
-    expect(collapsed).not.toContain("top-1/2");
+    const user = userEvent.setup();
+    renderComponent({ collapsedSummary: "Summary" });
 
-    rerender(
-      <DetailsSidebarCard title="Test Title">
-        <p>Test children content</p>
-      </DetailsSidebarCard>,
-    );
+    const toggle = screen.getByRole("button");
+    expect(toggle.className).toContain("top-[10px]");
+    expect(toggle.className).not.toContain("top-1/2");
+
+    await user.click(toggle);
+
     expect(screen.getByRole("button").className).toContain("top-[10px]");
+    expect(screen.getByRole("button").className).not.toContain("top-1/2");
   });
 
   it("names the toggle for screen readers", () => {

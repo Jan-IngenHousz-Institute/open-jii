@@ -94,7 +94,10 @@ export function DatasetPicker({ tables, value, onChange }: DatasetPickerProps) {
           <span className="flex shrink-0 items-center gap-2">
             {selected !== undefined && (
               <span className="text-muted-foreground text-xs tabular-nums">
-                {t("experimentData.datasetRows", { rows: number.format(selected.totalRows) })}
+                {t("experimentData.datasetRows", {
+                  count: selected.totalRows,
+                  rows: number.format(selected.totalRows),
+                })}
               </span>
             )}
             <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />

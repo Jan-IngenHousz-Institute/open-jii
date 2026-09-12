@@ -47,13 +47,21 @@ describe("DatasetPicker", () => {
 
     await user.click(screen.getByRole("combobox"));
 
-    // Source before processed before uploaded, so the raw tables lead.
-    for (const heading of [
+    // Source before processed before uploaded, so the raw tables lead. Asserted
+    // as document order, since presence alone cannot tell the grouping apart
+    // from a flat list that happens to contain the headings.
+    const order = [
       "experimentData.datasetGroupStatic",
       "experimentData.datasetGroupMacro",
       "experimentData.datasetGroupUpload",
-    ]) {
-      expect(await screen.findByText(heading)).toBeInTheDocument();
+    ];
+    await screen.findByText(order[0]);
+
+    const rendered = order.map((heading) => screen.getByText(heading));
+    for (let i = 1; i < rendered.length; i += 1) {
+      expect(
+        rendered[i - 1].compareDocumentPosition(rendered[i]) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     }
   });
 

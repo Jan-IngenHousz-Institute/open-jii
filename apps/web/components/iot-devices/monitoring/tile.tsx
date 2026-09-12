@@ -2,7 +2,7 @@
 
 import { cn } from "@repo/ui/lib/utils";
 
-/** One triage-row cell, shared by the device, group and fleet dashboards. */
+/** One triage-row cell. The metrics bands use `MetricStatCard`; this is the denser row. */
 export function Tile({
   label,
   className,

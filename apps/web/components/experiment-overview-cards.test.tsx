@@ -107,16 +107,19 @@ describe("ExperimentOverviewCards", () => {
   });
 
   it("says the window was quiet rather than dropping the block", () => {
-    render(<ExperimentOverviewCards experiments={[createExperiment({ activity: null })]} />);
-    expect(screen.getByText("resourceMetrics.quiet")).toBeInTheDocument();
-    expect(screen.queryByTestId("sparkline")).not.toBeInTheDocument();
-  });
-
-  it("treats an all-zero window as quiet", () => {
     render(
       <ExperimentOverviewCards experiments={[createExperiment({ activity: series([0, 0]) })]} />,
     );
     expect(screen.getByText("resourceMetrics.quiet")).toBeInTheDocument();
+    expect(screen.queryByTestId("sparkline")).not.toBeInTheDocument();
+  });
+
+  it("claims nothing when no series came back at all", () => {
+    // `null` is also what a failed warehouse read looks like, so it cannot be
+    // reported as a zero the way a real empty window is.
+    render(<ExperimentOverviewCards experiments={[createExperiment({ activity: null })]} />);
+    expect(screen.queryByText("resourceMetrics.quiet")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("sparkline")).not.toBeInTheDocument();
   });
 
   it("handles null description gracefully", () => {

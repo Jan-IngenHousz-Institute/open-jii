@@ -76,8 +76,12 @@ describe("DashboardBanner", () => {
     expect(banner).toHaveClass("flex-col", "lg:flex-row");
     expect(banner?.className).not.toMatch(/\bsm:flex-row\b/);
 
+    // The actions row turns horizontal at its own tier, not at `sm`. Asserted
+    // as the tier rather than as "contains no sm:", which any other spelling
+    // of an early breakpoint would slip past.
     const actions = screen.getByRole("link", { name: "Docs" }).parentElement;
-    expect(actions).toHaveClass("lg:flex-row");
+    expect(actions).toHaveClass("flex-col", "min-[26rem]:flex-row", "lg:flex-row");
     expect(actions?.className).not.toMatch(/\bsm:/);
+    expect(actions?.className).not.toMatch(/\bmd:/);
   });
 });
