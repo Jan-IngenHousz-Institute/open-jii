@@ -4,7 +4,6 @@ import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { PolarPlot } from "@repo/ui/components/charts/polar";
-import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";
@@ -28,9 +27,6 @@ export function PolarRenderer({
     enabled: Boolean(xColumn) && hasYPicks,
   });
 
-  // Cache key for the memo below, which resolves category colours.
-  const themeVersion = useChartThemeRefresh();
-
   // KEEP IN SYNC with the field reads in `transformPolarData`.
   const series = useMemo(() => {
     if (visualization.chartType !== "polar") {
@@ -48,7 +44,6 @@ export function PolarRenderer({
     chartConfig.polarLineWidth,
     chartConfig.polarMarkerSize,
     chartConfig.polarFill,
-    themeVersion,
   ]);
 
   if (visualization.chartType !== "polar") {

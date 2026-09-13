@@ -1,9 +1,5 @@
 // Color palettes + lookups for chart series and category encoding.
-import {
-  platformChartColor,
-  readThemeColor,
-  resolveChartColorway,
-} from "@repo/ui/components/charts/utils";
+import { readThemeColor } from "@repo/ui/components/charts/utils";
 
 /**
  * Last-resort swatch for the colour picker when the theme cannot be read.
@@ -47,9 +43,37 @@ export function getDefaultSeriesColor(seriesIndex: number): string {
   return SERIES_PALETTE[seriesIndex % SERIES_PALETTE.length];
 }
 
-/** Unpinned categories: the platform's six, then Plotly's. Resolved per call, as the head is themed. */
-export function categoryPalette(): string[] {
-  return resolveChartColorway();
+/**
+ * Unpinned categories on a user-built visualization. Frozen, not themed: a
+ * chart someone composed should not change colour when they flip the theme,
+ * and baking a themed hex into the traces forces every chart on a dashboard to
+ * rebuild on a toggle. The platform's own charts are the themed ones.
+ */
+export const CATEGORY_PALETTE = [
+  "#1f77b4",
+  "#ff7f0e",
+  "#2ca02c",
+  "#d62728",
+  "#9467bd",
+  "#8c564b",
+  "#e377c2",
+  "#7f7f7f",
+  "#bcbd22",
+  "#17becf",
+  "#aec7e8",
+  "#ffbb78",
+  "#98df8a",
+  "#ff9896",
+  "#c5b0d5",
+  "#c49c94",
+  "#f7b6d2",
+  "#c7c7c7",
+  "#dbdb8d",
+  "#9edae5",
+] as const;
+
+export function categoryPalette(): readonly string[] {
+  return CATEGORY_PALETTE;
 }
 
 export const COLOR_MAP_KEY_SEPARATOR = "::";
@@ -74,7 +98,7 @@ export function getCategoryColor(
     const flat = colorMap[key];
     if (flat) return flat;
   }
-  return platformChartColor(index);
+  return CATEGORY_PALETTE[Math.abs(Math.trunc(index)) % CATEGORY_PALETTE.length];
 }
 
 /**

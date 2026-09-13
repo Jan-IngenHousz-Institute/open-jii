@@ -604,7 +604,7 @@ export function createBaseLayout(
   // 8-digit hex: Plotly parses that, and silently substitutes its own default
   // for a color-mix() it cannot read. isDark still supplies the SSR fallback.
   const plateBgColor = `${readThemeColor("--popover") ?? (isDark ? "#000000" : "#ffffff")}cc`;
-  const colorway = resolveChartColorway();
+  const colorway = config.colorway === undefined ? resolveChartColorway() : [...config.colorway];
 
   // Tier-aware typography. Axis chrome (tick fonts, axis title font,
   // tick density) keys off cell tiers so per-cell ticks shrink in faceted

@@ -23,6 +23,12 @@ export interface PlotlyChartConfig extends Partial<Config> {
    * and hover carries the values.
    */
   sparkline?: boolean;
+  /**
+   * Overrides the themed series palette. User-built charts pin a frozen one:
+   * `colorway` is editType 'calc', so letting it follow the theme makes every
+   * chart on a dashboard recalculate on a light/dark toggle.
+   */
+  colorway?: readonly string[];
   backgroundColor?: string;
   /**
    * Where to anchor the legend.

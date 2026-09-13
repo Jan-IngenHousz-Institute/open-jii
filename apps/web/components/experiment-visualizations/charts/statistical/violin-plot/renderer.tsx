@@ -4,7 +4,6 @@ import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { ViolinPlot } from "@repo/ui/components/charts/box-plot";
-import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";
@@ -23,9 +22,6 @@ export function ViolinPlotRenderer({
   const chartConfig = narrowChartConfig(visualization);
   const dataSources = visualization.dataConfig.dataSources;
   const orientation = chartConfig.violinOrientation === "h" ? "h" : "v";
-
-  // Cache key for the memo below, which resolves category colours.
-  const themeVersion = useChartThemeRefresh();
 
   // KEEP IN SYNC with the field reads in `transformViolinPlotData`.
   const { chartSeries, subplots } = useMemo(() => {
@@ -55,7 +51,6 @@ export function ViolinPlotRenderer({
     chartConfig.facetSharedXTitle,
     chartConfig.facetSharedYTitle,
     chartConfig.facetRowOrder,
-    themeVersion,
   ]);
 
   if (visualization.chartType !== "violin-plot") {

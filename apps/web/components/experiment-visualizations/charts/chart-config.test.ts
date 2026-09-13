@@ -1,20 +1,34 @@
 import { describe, expect, it } from "vitest";
 
 import { defaultAxisTypeFor, narrowChartConfig } from "./chart-config";
+import { CATEGORY_PALETTE } from "./colors/palettes";
 
 describe("narrowChartConfig", () => {
   it("returns the visualization's config when present", () => {
     const config = { colorMode: "categorical", barmode: "stack" };
-    expect(narrowChartConfig({ config })).toEqual(config);
+    expect(narrowChartConfig({ config })).toMatchObject(config);
   });
 
   it("returns an empty config when missing", () => {
-    expect(narrowChartConfig({})).toEqual({});
+    expect(narrowChartConfig({})).toMatchObject({});
   });
 
-  it("preserves the same object reference (no defensive copy)", () => {
+  it("keeps the same object across calls, since the result is a prop", () => {
+    // react-plotly compares config by reference, so a fresh object per render
+    // would call Plotly.react on every render.
     const config = { colorMode: "continuous" as const };
-    expect(narrowChartConfig({ config })).toBe(config);
+    expect(narrowChartConfig({ config })).toBe(narrowChartConfig({ config }));
+    expect(narrowChartConfig({})).toBe(narrowChartConfig({}));
+  });
+
+  it("pins the frozen palette, so a user's chart does not recolour on a theme toggle", () => {
+    expect(narrowChartConfig({}).colorway).toBe(CATEGORY_PALETTE);
+    expect(narrowChartConfig({ config: { barmode: "stack" } }).colorway).toBe(CATEGORY_PALETTE);
+  });
+
+  it("lets a stored config keep its own palette", () => {
+    const config = { colorway: ["#111111"] };
+    expect(narrowChartConfig({ config }).colorway).toEqual(["#111111"]);
   });
 });
 

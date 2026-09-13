@@ -4,7 +4,6 @@ import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { ParallelCoordinates } from "@repo/ui/components/charts/parallel-coordinates";
-import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";
@@ -31,9 +30,6 @@ export function ParallelCoordinatesRenderer({
     enabled: distinctYCount >= 2,
   });
 
-  // Cache key for the memo below, which resolves category colours.
-  const themeVersion = useChartThemeRefresh();
-
   // KEEP IN SYNC with the field reads in `transformParallelCoordinatesData`.
   const { series, axes } = useMemo(() => {
     if (visualization.chartType !== "parallel-coordinates") {
@@ -54,7 +50,6 @@ export function ParallelCoordinatesRenderer({
     chartConfig.marker?.colorbar?.title?.side,
     chartConfig.parcoordsLineWidth,
     chartConfig.parcoordsLineOpacity,
-    themeVersion,
   ]);
 
   if (visualization.chartType !== "parallel-coordinates") {
