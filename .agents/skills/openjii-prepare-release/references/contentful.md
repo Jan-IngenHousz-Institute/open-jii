@@ -63,9 +63,10 @@ pnpm --filter @repo/devkit release:cms draft --file /absolute/path/to/note.json 
 pnpm --filter @repo/devkit release:cms draft --file /absolute/path/to/note.json
 ```
 
-Dry run is offline: no credentials, live schema checks, reads or writes. It previews the localized
-input, not the full merged entry. A live draft reads schema/locales, finds the slug, rejects duplicate
-slugs, and creates an unpublished entry with a stable ID. It never publishes. Identical reruns are
+Dry run is offline: no credentials, live schema checks, reads or writes. It previews the unlocalized
+input and checks locale syntax, not the environment's supported locales or the full merged entry. A live draft reads schema/locales, finds the slug, rejects duplicate
+slugs, and creates an unpublished entry with a stable ID. It resolves the entry by ID after the slug search, including the stable ID when search indexing lags.
+It never publishes. Identical reruns are
 no-ops. To change an existing entry, inspect it, review its current contents, then supply its version:
 
 ```sh
@@ -124,7 +125,7 @@ resurrect an older gate. Prepare one intended entry and keep its identity throug
 1. Read CMA `content_types/pageForceUpdate`, `locales` and all
    `entries?content_type=pageForceUpdate` pages. Record IDs, fields, `sys.version` and publication
    state. CMA fields may contain edits that are not live: inspect the delivery response or the last
-   published snapshot for the actual live configuration. Resolve the app's newest published gate.
+   published snapshot for the actual live configuration. Resolve the app's newest published gate by `sys.publishedAt`, never `sys.updatedAt`.
 2. If multiple published gates exist, or the live gate differs from the intended entry, show the
    conflict and require a choice before preparing changes to it. Preserve the existing live state.
    A new gate may be drafted when none exists. A successor to an existing gate requires an explicit
@@ -138,7 +139,7 @@ resurrect an older gate. Prepare one intended entry and keep its identity throug
    copy and `updateCta` link. Preserve every other field, locale and metadata. Verify the linked
    `componentButton` is published and its URL leads to the available Android store build.
 5. A selected live draft uses `PUT entries/<id>` with `X-Contentful-Content-Type: pageForceUpdate`
-   and `X-Contentful-Version: <reviewed-version>`; a new stable entry uses version `0`. Read it back.
+   and `X-Contentful-Version: <reviewed-version>`; omit the version header for a new stable entry. Read it back.
    This changes a working draft, not the published gate. A mock only writes the payload locally.
 6. Prepare the activation handoff: re-read and compare version and current published gate, review
    the entire entry because publish includes every pending edit, then

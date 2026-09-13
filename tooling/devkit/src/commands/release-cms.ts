@@ -1,14 +1,18 @@
-import { parse } from "dotenv";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { isDeepStrictEqual, parseArgs } from "node:util";
 
-import { repositoryRoot } from "../lib/config.js";
+import { readEnvFile, repositoryRoot } from "../lib/config.js";
 
 type Fields = Partial<Record<string, Record<string, unknown>>>;
 interface Entry {
-  sys: { id: string; version: number; contentType: { sys: { id: string } } };
+  sys: {
+    id: string;
+    version: number;
+    publishedVersion?: number;
+    contentType: { sys: { id: string } };
+  };
   fields: Fields;
   metadata?: unknown;
 }
@@ -31,6 +35,15 @@ interface Config {
 const contentType = "componentReleaseNote";
 const validId = /^[a-zA-Z0-9_.-]{1,64}$/;
 
+class ContentfulError extends Error {
+  constructor(
+    readonly status: number,
+    method: string,
+  ) {
+    super(`Contentful ${method} returned ${status}; no automatic retry`);
+  }
+}
+
 function validateNote(value: unknown): asserts value is Note {
   if (
     !value ||
@@ -49,6 +62,11 @@ function validateNote(value: unknown): asserts value is Note {
   ) {
     throw new Error("A note requires a fields object");
   }
+  try {
+    Intl.getCanonicalLocales(value.locale);
+  } catch {
+    throw new Error("Invalid locale syntax; use a locale such as en-US");
+  }
   const fields = value.fields as Record<string, unknown>;
   if (typeof fields.slug !== "string" || !fields.slug.trim())
     throw new Error("A note requires a nonempty slug");
@@ -61,12 +79,7 @@ function validateNote(value: unknown): asserts value is Note {
 }
 
 async function loadConfig(root: string, env: NodeJS.ProcessEnv): Promise<Config> {
-  let file: Record<string, string> = {};
-  try {
-    file = parse(await readFile(`${root}/.env`));
-  } catch (error) {
-    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
-  }
+  const file = await readEnvFile(`${root}/.env`);
   const values = { ...file, ...env };
   return {
     space: values.CONTENTFUL_SPACE_ID?.trim() ?? "",
@@ -106,14 +119,9 @@ export async function releaseCms(
       target: { space: config.space || "missing", environment: config.environment || "missing" },
       entryId: options.entryId,
       expectedVersion: options.version,
-      payload: note
-        ? {
-            fields: Object.fromEntries(
-              Object.entries(note.fields).map(([key, value]) => [key, { [note.locale]: value }]),
-            ),
-          }
-        : undefined,
-      validation: "Offline only; live schema, existing entry, and permissions are unchecked",
+      input: note,
+      validation:
+        "Unlocalized input only; environment locale support, live schema, existing entry, and permissions are unchecked",
     };
   }
   const missing = [
@@ -149,7 +157,7 @@ export async function releaseCms(
       throw new Error(`Contentful ${method} failed; inspect the entry before retrying`);
     }
     if (!response.ok) {
-      throw new Error(`Contentful ${method} returned ${response.status}; no automatic retry`);
+      throw new ContentfulError(response.status, method);
     }
     return (await response.json()) as T;
   }
@@ -169,7 +177,11 @@ export async function releaseCms(
     await api<Entry>(`${path}/published`, "PUT", undefined, {
       "X-Contentful-Version": String(options.version),
     });
-    return api<Entry>(path);
+    const saved = await api<Entry>(path);
+    if (saved.sys.publishedVersion !== options.version) {
+      throw new Error("Published version differs; inspect the entry before continuing");
+    }
+    return saved;
   }
   const schema = await api<{ fields: { id: string; localized: boolean }[] }>(
     `content_types/${contentType}`,
@@ -196,7 +208,15 @@ export async function releaseCms(
   if (matches.total > 1)
     throw new Error("Multiple notes have this slug; resolve the duplicate first");
   const match = matches.items.at(0);
-  const current = options.entryId ? await api<Entry>(`entries/${options.entryId}`) : match;
+  const derivedId = `release-${createHash("sha256").update(String(note.fields.slug)).digest("hex").slice(0, 32)}`;
+  let current: Entry | undefined;
+  try {
+    current = await api<Entry>(`entries/${options.entryId ?? match?.sys.id ?? derivedId}`);
+  } catch (error) {
+    if (!(error instanceof ContentfulError && error.status === 404 && !options.entryId && !match)) {
+      throw error;
+    }
+  }
   if (current) checkEntry(current);
   if (current && match && current.sys.id !== match.sys.id) {
     throw new Error("Slug belongs to another entry");
@@ -207,9 +227,7 @@ export async function releaseCms(
   ) {
     throw new Error("Existing slug differs; use the original release identity");
   }
-  const id =
-    current?.sys.id ??
-    `release-${createHash("sha256").update(String(note.fields.slug)).digest("hex").slice(0, 32)}`;
+  const id = current?.sys.id ?? derivedId;
   const fields: Fields = structuredClone(current?.fields ?? {});
   for (const [key, value] of Object.entries(note.fields)) {
     const locale = schema.fields.find((field) => field.id === key)?.localized
@@ -236,7 +254,7 @@ export async function releaseCms(
     },
     {
       "X-Contentful-Content-Type": contentType,
-      "X-Contentful-Version": String(current?.sys.version ?? 0),
+      ...(current ? { "X-Contentful-Version": String(current.sys.version) } : {}),
     },
   );
   const saved = await api<Entry>(`entries/${result.sys.id}`);

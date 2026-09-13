@@ -40,12 +40,15 @@ function urlString(url: Parameters<typeof fetch>[0]): string {
 function response(body: unknown): Response {
   return Response.json(body);
 }
-function discovery(total = 0, items: unknown[] = []) {
+function discovery(total = 0, items: unknown[] = [], directEntry: unknown = items.at(0)) {
   return vi
     .fn<typeof fetch>()
     .mockResolvedValueOnce(response(schema))
     .mockResolvedValueOnce(response(locales))
-    .mockResolvedValueOnce(response({ total, items }));
+    .mockResolvedValueOnce(response({ total, items }))
+    .mockResolvedValueOnce(
+      directEntry ? response(directEntry) : new Response(null, { status: 404 }),
+    );
 }
 
 describe("release CMS", () => {
@@ -94,7 +97,7 @@ describe("release CMS", () => {
         .mockImplementationOnce((url, init) => {
           ids.push(urlString(url));
           expect(init?.method).toBe("PUT");
-          expect(init?.headers).toMatchObject({ "X-Contentful-Version": "0" });
+          expect(init?.headers).not.toHaveProperty("X-Contentful-Version");
           expect(bodyJson(init?.body)).toEqual({ fields });
           return Promise.resolve(response({ ...existing, fields }));
         })
@@ -143,7 +146,7 @@ describe("release CMS", () => {
       config,
       request,
     );
-    expect(bodyJson(request.mock.calls[3]?.[1]?.body)).toMatchObject({ fields });
+    expect(bodyJson(request.mock.calls[4]?.[1]?.body)).toMatchObject({ fields });
   });
 
   it("treats an identical rerun as a read-only no-op", async () => {
@@ -158,7 +161,7 @@ describe("release CMS", () => {
         request,
       ),
     ).resolves.toMatchObject({ unchanged: true });
-    expect(request).toHaveBeenCalledTimes(3);
+    expect(request).toHaveBeenCalledTimes(4);
   });
 
   it("refuses duplicates and edits without the reviewed version", async () => {
@@ -170,7 +173,7 @@ describe("release CMS", () => {
     await expect(releaseCms({ action: "draft", note, version: 3 }, config, stale)).rejects.toThrow(
       "reviewed --version 4",
     );
-    expect(stale).toHaveBeenCalledTimes(3);
+    expect(stale).toHaveBeenCalledTimes(4);
   });
 
   it("does not retry a conflict or reveal its response body", async () => {
@@ -180,7 +183,7 @@ describe("release CMS", () => {
     await expect(
       releaseCms({ action: "draft", note, version: 4 }, config, request),
     ).rejects.toThrow("409; no automatic retry");
-    expect(request).toHaveBeenCalledTimes(4);
+    expect(request).toHaveBeenCalledTimes(5);
   });
 
   it("rejects an unknown field or a list of surfaces before writing", async () => {
@@ -208,10 +211,13 @@ describe("release CMS", () => {
     expect(untouched).not.toHaveBeenCalled();
   });
 
-  it("publishes only the reviewed release-note version and reads it back", async () => {
+  it("publishes only the reviewed release-note version and verifies the published version", async () => {
+    const published = { ...existing, sys: { ...existing.sys, version: 5, publishedVersion: 4 } };
     const request = vi
       .fn<typeof fetch>()
-      .mockImplementation(() => Promise.resolve(response(existing)));
+      .mockResolvedValueOnce(response(existing))
+      .mockResolvedValueOnce(response(published))
+      .mockResolvedValueOnce(response(published));
     await releaseCms({ action: "publish", entryId: "note-1", version: 4 }, config, request);
     expect(request.mock.calls[1]?.[0]).toBe(
       "https://api.contentful.com/spaces/space/environments/staging/entries/note-1/published",
@@ -221,6 +227,53 @@ describe("release CMS", () => {
       headers: { "X-Contentful-Version": "4" },
     });
     expect(request).toHaveBeenCalledTimes(3);
+  });
+
+  it("fails verification if the reviewed version was not published", async () => {
+    const request = vi
+      .fn<typeof fetch>()
+      .mockImplementation(() => Promise.resolve(response(existing)));
+    await expect(
+      releaseCms({ action: "publish", entryId: "note-1", version: 4 }, config, request),
+    ).rejects.toThrow("Published version differs");
+  });
+
+  it("recovers a just-created note by stable ID when slug indexing lags", async () => {
+    const request = discovery(0, [], existing);
+    await expect(
+      releaseCms(
+        {
+          action: "draft",
+          note: { locale: "en-US", fields: { slug: "september", title: "Old title" } },
+        },
+        config,
+        request,
+      ),
+    ).resolves.toMatchObject({ unchanged: true });
+    expect(request).toHaveBeenCalledTimes(4);
+    expect(request.mock.calls[3]?.[0]).toMatch(/entries\/release-[a-f0-9]{32}$/);
+    expect(request.mock.calls.every(([, init]) => init?.method === "GET")).toBe(true);
+  });
+
+  it("does not recreate a stable ID after its slug was edited", async () => {
+    const request = discovery(0, [], {
+      ...existing,
+      fields: { ...existing.fields, slug: { "en-US": "renamed" } },
+    });
+    await expect(releaseCms({ action: "draft", note }, config, request)).rejects.toThrow(
+      "Existing slug differs",
+    );
+    expect(request).toHaveBeenCalledTimes(4);
+  });
+
+  it("shows unlocalized dry-run input instead of inventing the default locale", async () => {
+    const translated = { ...note, locale: "nl-NL" };
+    await expect(
+      releaseCms({ action: "draft", dryRun: true, note: translated }, config),
+    ).resolves.toMatchObject({ input: translated, networkRequests: 0 });
+    await expect(
+      releaseCms({ action: "draft", dryRun: true, note: { ...note, locale: "en_US" } }, config),
+    ).rejects.toThrow("Invalid locale syntax");
   });
 
   it("refuses a changed publish version and never publishes a force-update gate", async () => {

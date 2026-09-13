@@ -24,10 +24,12 @@ Also establish the candidate ref or PRs and whether this is preparation or a moc
 uses live read-only discovery when available but creates only local files: no branches, pushes, CMS
 writes, Linear posts, flag changes, workflow dispatches, or phone interactions that change app data.
 If the user asks to exercise every path in a mock, simulate all choices and label them simulated.
+Local seeded-database changes are excluded too. A mock may capture read-only screens, but it only
+lists fixture-mutating capture shots unless the user separately authorizes those local changes.
 
 Create `.release-prep/<release-id>/packet.md`. Record choices, evidence, drafts, pending actions, and
-returned IDs there. Keep secrets in the ignored root `.env`; use [`.env.example`](.env.example) as a
-key list, adding only missing keys to an existing file. Do not overwrite the user's `.env`.
+returned IDs there. Report missing credential names using [`.env.example`](.env.example) as the key
+list. The user can supply them through the shell or ignored root `.env`; leave existing secrets intact.
 
 ## Establish what is being released
 
