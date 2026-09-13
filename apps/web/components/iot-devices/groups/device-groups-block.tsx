@@ -14,7 +14,7 @@ import { Input } from "@repo/ui/components/input";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { CreateDeviceGroupDialog } from "./create-device-group-dialog";
-import { GroupOverviewCard } from "./group-overview-card";
+import { GroupOverviewCard, hasGroupBadges } from "./group-overview-card";
 
 /**
  * Groups on the devices overview. Creation follows the platform's one
@@ -84,7 +84,11 @@ export function DeviceGroupsBlock() {
       <div className="space-y-3">
         <ResourceCardGrid>
           {visibleGroups.map((group) => (
-            <GroupOverviewCard key={group.id} group={group} />
+            <GroupOverviewCard
+              key={group.id}
+              group={group}
+              reserveBadgeRow={visibleGroups.some(hasGroupBadges)}
+            />
           ))}
         </ResourceCardGrid>
         {isSearching && matching.length === 0 && (

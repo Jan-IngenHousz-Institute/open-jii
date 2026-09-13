@@ -164,7 +164,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
     return (
       <>
         {renderFigure(bound.length, t("iot.devices.detail.cards.onboarded"))}
-        <ul className="-mx-6 -mb-3 divide-y">{bound.map(renderBoundExperiment)}</ul>
+        <ul className="-mx-6 -mb-3 divide-y border-t">{bound.map(renderBoundExperiment)}</ul>
       </>
     );
   }
@@ -300,8 +300,38 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
     );
   }
 
+  const rail = [
+    !isMobileFamily && (
+      <OverviewCard
+        key="activity"
+        icon={<Activity aria-hidden />}
+        wellClassName="bg-chart-2/10 text-chart-2"
+        title={t("iot.devices.detail.cards.activityTitle")}
+        link={{
+          href: `${basePath}/monitoring`,
+          label: t("iot.devices.detail.cards.monitoringLink"),
+        }}
+      >
+        {renderActivityBody()}
+      </OverviewCard>
+    ),
+    isManagedFirmware && (
+      <OverviewCard
+        key="firmware"
+        icon={<Cpu aria-hidden />}
+        wellClassName="bg-muted text-foreground"
+        title={t("iot.devices.detail.cards.firmwareTitle")}
+        link={{ href: `${basePath}/firmware`, label: t("iot.devices.detail.cards.firmwareLink") }}
+      >
+        {renderFirmwareBody()}
+      </OverviewCard>
+    ),
+  ].filter(Boolean);
+
+  // Main and rail: the experiments card carries a list, the others a figure, so
+  // a plain two-column grid left the short ones stranded beside half a row.
   return (
-    <div className={cn("grid items-start gap-4", !isMobileFamily && "xl:grid-cols-2")}>
+    <div className={cn("grid items-start gap-4", rail.length > 0 && "xl:grid-cols-2")}>
       {!isMobileFamily && (
         <OverviewCard
           icon={<FlaskConical aria-hidden />}
@@ -330,30 +360,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
         </OverviewCard>
       )}
 
-      {!isMobileFamily && (
-        <OverviewCard
-          icon={<Activity aria-hidden />}
-          wellClassName="bg-primary/10 text-primary"
-          title={t("iot.devices.detail.cards.activityTitle")}
-          link={{
-            href: `${basePath}/monitoring`,
-            label: t("iot.devices.detail.cards.monitoringLink"),
-          }}
-        >
-          {renderActivityBody()}
-        </OverviewCard>
-      )}
-
-      {isManagedFirmware && (
-        <OverviewCard
-          icon={<Cpu aria-hidden />}
-          wellClassName="bg-muted text-foreground"
-          title={t("iot.devices.detail.cards.firmwareTitle")}
-          link={{ href: `${basePath}/firmware`, label: t("iot.devices.detail.cards.firmwareLink") }}
-        >
-          {renderFirmwareBody()}
-        </OverviewCard>
-      )}
+      {rail.length > 0 && <div className="grid gap-4">{rail}</div>}
     </div>
   );
 }
