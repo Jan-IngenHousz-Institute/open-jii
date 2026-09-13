@@ -2,7 +2,7 @@
 
 import { MetricStatCard } from "@/components/metrics/metric-stat-card";
 import { MetricTrendCard } from "@/components/metrics/metric-trend-card";
-import { metricsBandGrid, metricsBandTrendSpan } from "@/components/metrics/metrics-band-grid";
+import { metricsBandGrid } from "@/components/metrics/metrics-band-grid";
 import { MetricsBandSkeleton } from "@/components/metrics/metrics-band-skeleton";
 import { useMyScopedMetrics } from "@/hooks/metrics/useMyScopedMetrics/useMyScopedMetrics";
 import { usePublicMetrics } from "@/hooks/metrics/usePublicMetrics/usePublicMetrics";
@@ -94,7 +94,6 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
         peakDate={peak?.date ?? null}
         locale={locale}
         footer={t("activeDays", { active: scoped.activeDays, total: windowDays })}
-        className={metricsBandTrendSpan}
       />
     </section>
   );

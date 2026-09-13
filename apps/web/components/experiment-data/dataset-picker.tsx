@@ -29,6 +29,19 @@ const GROUP_LABEL_KEY: Record<TableType, string> = {
   upload: "experimentData.datasetGroupUpload",
 };
 
+/**
+ * The group heading already says where a dataset came from, so the backend's
+ * `"Processed Data (chlorophyll)"` is redundant down to its parenthesised name.
+ * Only macro tables carry that wrapper; uploads and the fixed tables are named.
+ */
+function datasetLabel(table: ExperimentTableMetadata): string {
+  if (table.tableType !== "macro") {
+    return table.displayName;
+  }
+  const inner = /\(([^()]*)\)\s*$/.exec(table.displayName)?.[1]?.trim();
+  return inner === undefined || inner === "" ? table.displayName : inner;
+}
+
 interface DatasetPickerProps {
   tables: ExperimentTableMetadata[];
   value: string;
@@ -47,7 +60,7 @@ export function DatasetPicker({ tables, value, onChange }: DatasetPickerProps) {
   const renderRow = (table: ExperimentTableMetadata) => (
     <CommandItem
       key={table.identifier}
-      value={table.displayName}
+      value={datasetLabel(table)}
       onSelect={() => {
         onChange(table.identifier);
         setOpen(false);
@@ -56,7 +69,7 @@ export function DatasetPicker({ tables, value, onChange }: DatasetPickerProps) {
       <Check
         className={cn("h-4 w-4 shrink-0", table.identifier === value ? "opacity-100" : "opacity-0")}
       />
-      <span className="min-w-0 flex-1 truncate">{table.displayName}</span>
+      <span className="min-w-0 flex-1 truncate">{datasetLabel(table)}</span>
       <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
         {number.format(table.totalRows)}
       </span>
@@ -85,7 +98,7 @@ export function DatasetPicker({ tables, value, onChange }: DatasetPickerProps) {
           aria-label={t("experimentData.datasetLabel")}
           className="w-full justify-between font-normal sm:w-96"
         >
-          <span className="min-w-0 truncate">{selected?.displayName}</span>
+          <span className="min-w-0 truncate">{selected ? datasetLabel(selected) : null}</span>
           <span className="flex shrink-0 items-center gap-2">
             {selected !== undefined && (
               <span className="text-muted-foreground text-xs tabular-nums">

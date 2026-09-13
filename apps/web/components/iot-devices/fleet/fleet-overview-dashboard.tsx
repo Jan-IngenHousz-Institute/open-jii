@@ -179,6 +179,7 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
           seriesName={t("iot.devices.monitoring.measurements")}
           days={sparkSeries}
           peakDate={peakBucket}
+          mark="line"
           footer={
             perHour === undefined
               ? undefined

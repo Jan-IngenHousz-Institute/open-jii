@@ -79,8 +79,8 @@ export function MetricStatCard({
   };
 
   const renderLinkedValue = (target: string) => (
-    <Link href={target} className="hover:text-primary flex items-center gap-1.5 transition-colors">
-      <span className="truncate">{value}</span>
+    <Link href={target} className="hover:text-primary flex items-start gap-1.5 transition-colors">
+      <span className="min-w-0 break-words">{value}</span>
       <ArrowUpRight aria-hidden className="size-5 shrink-0 opacity-60" />
     </Link>
   );
@@ -102,14 +102,14 @@ export function MetricStatCard({
         <CardDescription>{label}</CardDescription>
         <CardTitle
           title={title}
-          className="line-clamp-1 min-w-0 text-2xl font-semibold tabular-nums"
+          className="@[13rem]/card:text-2xl line-clamp-2 min-w-0 break-words text-xl font-semibold tabular-nums"
         >
           {href === undefined ? value : renderLinkedValue(href)}
         </CardTitle>
         {/* The note already prints a trend arrow; at half width the badge just
             repeats it. Container query: this card's width, not the window's. */}
         {change === null ? null : (
-          <CardAction className="@[10rem]/card:block hidden">{renderChange(change)}</CardAction>
+          <CardAction className="@[13rem]/card:block hidden">{renderChange(change)}</CardAction>
         )}
       </CardHeader>
       {chart === undefined ? null : <CardContent>{chart}</CardContent>}

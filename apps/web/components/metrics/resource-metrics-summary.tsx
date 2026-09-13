@@ -8,11 +8,7 @@ import { useTranslation } from "@repo/i18n";
 
 import { MetricStatCard } from "./metric-stat-card";
 import { MetricTrendCard } from "./metric-trend-card";
-import {
-  metricsBandGrid,
-  metricsBandTrendSpan,
-  metricsBandTrendSpanWide,
-} from "./metrics-band-grid";
+import { metricsBandGrid, metricsBandTrendSpanWide } from "./metrics-band-grid";
 import { MetricsBandSkeleton } from "./metrics-band-skeleton";
 
 const RESOURCE_SECTIONS: Record<ResourceKind, string> = {
@@ -106,7 +102,7 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
         peakDate={peak?.date ?? null}
         locale={locale}
         footer={t("activeDays", { active: data.activeDays, total: data.windowDays })}
-        className={busiest === null ? metricsBandTrendSpanWide : metricsBandTrendSpan}
+        className={busiest === null ? metricsBandTrendSpanWide : undefined}
       />
     </section>
   );

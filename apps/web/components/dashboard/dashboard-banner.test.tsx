@@ -76,10 +76,12 @@ describe("DashboardBanner", () => {
     expect(banner).toHaveClass("flex-col", "lg:flex-row");
     expect(banner?.className).not.toMatch(/\bsm:flex-row\b/);
 
-    // The tier itself, not "contains no sm:", which another spelling slips past.
+    // The actions pair up by wrapping, so there is no sub-lg tier to pin: the
+    // guard is that no breakpoint decides it.
     const actions = screen.getByRole("link", { name: "Docs" }).parentElement;
-    expect(actions).toHaveClass("flex-col", "min-[26rem]:flex-row", "lg:flex-row");
+    expect(actions).toHaveClass("flex-wrap", "lg:flex-nowrap");
     expect(actions?.className).not.toMatch(/\bsm:/);
     expect(actions?.className).not.toMatch(/\bmd:/);
+    expect(actions?.className).not.toMatch(/\bmin-\[/);
   });
 });

@@ -63,6 +63,17 @@ describe("DatasetPicker", () => {
     }
   });
 
+  it("drops the group prefix a macro dataset's name repeats", async () => {
+    const user = userEvent.setup();
+    render(<DatasetPicker tables={TABLES} value="raw_data" onChange={vi.fn()} />);
+
+    await user.click(screen.getByRole("combobox"));
+
+    // The "Processed" heading above it already says what the prefix would.
+    expect(await screen.findByText("ambyte-trace")).toBeInTheDocument();
+    expect(screen.queryByText(/Processed Data \(/)).not.toBeInTheDocument();
+  });
+
   it("formats row counts for the locale rather than printing the raw integer", async () => {
     const user = userEvent.setup();
     render(<DatasetPicker tables={TABLES} value="raw_data" onChange={vi.fn()} />);

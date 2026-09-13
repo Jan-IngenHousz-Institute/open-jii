@@ -52,15 +52,15 @@ export function DashboardBanner({
           )}
         </p>
       </div>
-      {/* Side by side from 26rem: the two nowrap labels need ~20rem, which is
-          what the banner has left there. The banner itself stacks until lg. */}
-      <div className="min-[26rem]:flex-row min-[26rem]:gap-3 flex w-full flex-col gap-2 lg:w-auto lg:flex-row lg:gap-4">
+      {/* Wrapping, not a breakpoint: the labels are nowrap and translated, so
+          what fits is a property of the text, not of the viewport. */}
+      <div className="flex w-full flex-row flex-wrap gap-2 lg:w-auto lg:flex-nowrap lg:gap-4">
         {secondaryButtonLabel && secondaryButtonHref && (
           <Link
             href={secondaryButtonHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="min-[26rem]:flex-1 w-full lg:w-auto lg:flex-none"
+            className="min-w-[9rem] flex-1 lg:w-auto lg:flex-none"
           >
             <Button
               variant="secondary"
@@ -74,7 +74,7 @@ export function DashboardBanner({
           <Link
             href={buttonHref}
             locale={locale}
-            className="min-[26rem]:flex-1 w-full lg:w-auto lg:flex-none"
+            className="min-w-[9rem] flex-1 lg:w-auto lg:flex-none"
           >
             <Button className="h-10 w-full whitespace-nowrap rounded-lg px-4 text-[0.9375rem] font-semibold leading-[1.25rem] shadow-none lg:h-11 lg:w-auto">
               {buttonLabel}

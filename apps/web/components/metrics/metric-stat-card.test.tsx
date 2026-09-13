@@ -65,3 +65,24 @@ describe("MetricStatCard", () => {
     expect(screen.getByText("of 27 you can access")).toBeInTheDocument();
   });
 });
+
+describe("MetricStatCard on a narrow card", () => {
+  it("holds the delta badge and the full-size figure back until the card has room", () => {
+    render(
+      <MetricStatCard
+        locale="en-US"
+        label="Measurements"
+        value="8M"
+        comparison={{ current: 100, previous: 300 }}
+      />,
+    );
+
+    // Both are container queries, not breakpoints: what matters is the width
+    // this card ended up with in the band, not the viewport's.
+    expect(screen.getByText("-67%").closest("[data-slot=card-action]")).toHaveClass(
+      "hidden",
+      "@[13rem]/card:block",
+    );
+    expect(screen.getByText("8M")).toHaveClass("text-xl", "@[13rem]/card:text-2xl");
+  });
+});

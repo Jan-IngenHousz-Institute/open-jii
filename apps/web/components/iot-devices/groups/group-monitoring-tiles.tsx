@@ -118,6 +118,7 @@ export function GroupMonitoringTiles({
         seriesName={t("iot.devices.monitoring.measurements")}
         days={series}
         peakDate={peakBucketDate(series)}
+        mark="line"
         footer={
           perHour === undefined
             ? undefined
