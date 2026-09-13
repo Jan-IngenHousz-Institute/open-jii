@@ -114,9 +114,9 @@ describe("branded PNG export", () => {
     expect(downloaded?.name).toBe("plot.png");
   });
 
-  it("wires the shared chart config once and preserves other modebar controls", () => {
+  it("preserves other modebar controls when branding is applied again", () => {
     const custom: ModeBarButton = { name: "custom", title: "Custom", icon: "", click: vi.fn() };
-    const config = createPlotlyConfig({ downloadFilename: "measurements" });
+    const config = withBrandedPngExport(createPlotlyConfig({ downloadFilename: "measurements" }));
     const twice = withBrandedPngExport({
       ...config,
       modeBarButtonsToAdd: [...config.modeBarButtonsToAdd!, custom],
@@ -141,7 +141,7 @@ describe("branded PNG export", () => {
     const svg = { toImageButtonOptions: { format: "svg" as const } };
     expect(withBrandedPngExport(svg)).toBe(svg);
     const config = withBrandedPngExport({ ...createPlotlyConfig({}), ...svg });
-    expect(config.modeBarButtonsToAdd).toEqual([]);
+    expect(config.modeBarButtonsToAdd ?? []).toEqual([]);
     expect(config.modeBarButtonsToRemove).not.toContain("toImage");
   });
 });

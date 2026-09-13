@@ -495,6 +495,29 @@ describe("PlotlyChart", () => {
   });
 
   describe("Config Handling", () => {
+    it("adds the branded download only in the wrapper and keeps it stable across rerenders", async () => {
+      const { createPlotlyConfig } =
+        await vi.importActual<typeof import("../../charts/utils")>("../../charts/utils");
+      const config = createPlotlyConfig({ downloadFilename: "field-trial" });
+      expect(config.modeBarButtonsToAdd ?? []).toEqual([]);
+      expect(config.modeBarButtonsToRemove).not.toContain("toImage");
+      const data: Data[] = [{ type: "scatter", x: [1, 2], y: [2, 3] }];
+      const { rerender } = render(<PlotlyChart data={data} layout={{}} config={config} />);
+      const exportedConfig = mockPlotComponent.mock.lastCall[0].config;
+      expect(exportedConfig.modeBarButtonsToAdd).toEqual([
+        expect.objectContaining({ name: "downloadBrandedPng", click: expect.any(Function) }),
+      ]);
+      expect(
+        exportedConfig.modeBarButtonsToRemove.filter((name: string) => name === "toImage"),
+      ).toHaveLength(1);
+      expect(exportedConfig.toImageButtonOptions.filename).toBe("field-trial");
+
+      rerender(<PlotlyChart data={data} layout={{ title: { text: "Updated" } }} config={config} />);
+      expect(mockPlotComponent.mock.lastCall[0].config.modeBarButtonsToAdd[0]).toBe(
+        exportedConfig.modeBarButtonsToAdd[0],
+      );
+    });
+
     it.each(["png", "svg", "jpeg", "webp"] as const)(
       "preserves %s export settings on initial render and after WebGL fallback",
       (format) => {
