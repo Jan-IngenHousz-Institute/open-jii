@@ -232,7 +232,7 @@ function PersonRow({
         </div>
       </div>
 
-      <div className="flex w-full shrink-0 items-center justify-end gap-1 sm:w-auto">
+      <div className="flex w-full flex-wrap items-center gap-1 sm:w-auto sm:shrink-0 sm:flex-nowrap sm:justify-end">
         {collaborator.kind === "owner" ? (
           <OwnerControls
             row={collaborator}
@@ -342,6 +342,7 @@ function GrantControls({
           onChange={onRoleChange}
           disabled={disabled}
           ariaLabel={t("sharing.roleForLabel", { name: displayName })}
+          className="min-w-[8rem] flex-1 sm:w-[130px] sm:flex-none"
         />
       ) : (
         <Badge variant="secondary" className="shrink-0 text-xs font-normal">
