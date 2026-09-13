@@ -1,5 +1,5 @@
 import { DocsHelpLink } from "@/components/docs-help-link";
-import { ExperimentOverviewCard } from "@/components/experiment-overview-card";
+import { ExperimentOverviewCard, hasBadges } from "@/components/experiment-overview-card";
 import { ResourceCardGrid } from "@/components/shared/resource-card";
 import { useLocale } from "@/hooks/useLocale";
 import React from "react";
@@ -20,6 +20,7 @@ export function ExperimentOverviewCards({
   const locale = useLocale();
 
   const segment = archived ? "experiments-archive" : "experiments";
+  const reserveBadgeRow = experiments?.some(hasBadges) ?? false;
 
   return (
     <ResourceCardGrid
@@ -36,6 +37,7 @@ export function ExperimentOverviewCards({
           experiment={experiment}
           href={`/${locale}/platform/${segment}/${experiment.id}`}
           locale={locale}
+          reserveBadgeRow={reserveBadgeRow}
         />
       ))}
     </ResourceCardGrid>
