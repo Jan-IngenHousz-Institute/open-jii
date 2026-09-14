@@ -47,8 +47,7 @@
     "title": "Metingen",
     "addMeasurement": "Meting toevoegen",
     "viewResults": "Resultaten bekijken",
-    "downloadData": "Gegevens downloaden",
-    "noMeasurements": "Nog geen metingen geregistreerd"
+    "downloadData": "Gegevens downloaden"
   },
   "dashboards": {
     "tabLabel": "Dashboards"
@@ -290,5 +289,19 @@
       "note": "Opmerking:",
       "warningMessage": "De volgende bestand(en) worden automatisch uitgesloten van de upload:"
     }
+  },
+  "dataInventory": {
+    "title": "Gegevens",
+    "seeAll": "Alles bekijken",
+    "emptyTitle": "Nog geen gegevens",
+    "empty": "Tabellen verschijnen hier zodra een apparaat naar dit experiment verzendt, een macro draait of u een bestand uploadt.",
+    "loadError": "De gegevens van dit experiment konden niet worden geladen.",
+    "type": {
+      "static": "Ruw",
+      "macro": "Verwerkt",
+      "upload": "Geüpload"
+    },
+    "rowUnit_one": "rij",
+    "rowUnit_other": "rijen"
   }
 }

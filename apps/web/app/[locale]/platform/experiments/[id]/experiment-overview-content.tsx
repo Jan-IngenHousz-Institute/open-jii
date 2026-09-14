@@ -7,10 +7,10 @@ import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocation
 import { notFound } from "next/navigation";
 import { use, useRef } from "react";
 import { ExperimentActivityPulse } from "~/components/experiment-overview/experiment-activity-pulse";
+import { ExperimentDataInventory } from "~/components/experiment-overview/experiment-data-inventory";
 import { ExperimentDescription } from "~/components/experiment-overview/experiment-description";
 import { ExperimentDetailsCard } from "~/components/experiment-overview/experiment-details/experiment-details-card";
 import { ExperimentLinkedWorkbook } from "~/components/experiment-overview/experiment-linked-workbook";
-import { ExperimentMeasurements } from "~/components/experiment-overview/experiment-measurements";
 
 import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
@@ -99,7 +99,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           workbookId={experiment.workbookId}
           workbookVersionId={experiment.workbookVersionId}
         />
-        <ExperimentMeasurements experimentId={id} />
+        <ExperimentDataInventory experimentId={id} />
 
         <ExperimentDashboardsDisplay experimentId={id} hasAccess={hasAccess} />
       </div>
