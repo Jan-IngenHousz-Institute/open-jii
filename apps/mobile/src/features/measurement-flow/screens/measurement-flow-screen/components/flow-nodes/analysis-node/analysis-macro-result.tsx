@@ -34,13 +34,15 @@ export function AnalysisMacroResult({
 }: AnalysisMacroResultProps) {
   const { classes } = useTheme();
   const { t } = useTranslation("measurementFlow");
+  // code is undefined only while the resume gate is still re-hydrating.
+  const runnableMacro = macro?.code !== undefined ? { ...macro, code: macro.code } : undefined;
   const {
     outputs,
     isLoading: isRunning,
     error,
   } = useMacroOutputs({
     rawMeasurement: scanResult,
-    macro,
+    macro: runnableMacro,
     ctx,
     inputError,
     onProcessed,
