@@ -110,6 +110,7 @@ pnpm dev          # Run all development servers
 pnpm db:setup     # First-time setup: start Postgres and reset + migrate the DB (wipes existing local data)
 pnpm db:migrate   # Apply pending migrations (non-destructive)
 pnpm db:studio    # Browse the database with Drizzle Studio
+pnpm --filter database db:seed   # Seed the local DB with development data (needed to see data in the platform)
 
 pnpm lint         # Check code style
 pnpm typecheck    # Type-check all packages
