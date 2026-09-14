@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { v4 as uuidv4 } from "uuid";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { stripSnapshotCode } from "~/features/measurement-flow/domain/flow-snapshots";
 import type {
   DevicePlanEntry,
   FlowState,
@@ -39,6 +40,9 @@ interface MeasurementFlowStore extends FlowState {
   reset: () => void;
 
   setFlowNodes: (nodes: FlowNode[]) => void;
+  // Resume-only: replaces flowNodes without resetting progress, unlike
+  // setFlowNodes/setFlowGraph.
+  rehydrateFlowNodes: (nodes: FlowNode[]) => void;
   setFlowGraph: (
     nodes: FlowNode[],
     edges: FlowEdge[],
@@ -118,6 +122,8 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           branchReturnStack: [],
         }),
 
+      rehydrateFlowNodes: (nodes) => set({ flowNodes: nodes }),
+
       setFlowGraph: (nodes, edges, cells, workbookVersionId, workbookId) =>
         set({
           flowNodes: nodes,
@@ -188,6 +194,10 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       // protocolId was dropped from the persisted slice; uploads resolve it
       // from the exact producer measurement node. Legacy payloads carrying it
       // merge in as an ignored extra key.
+      //
+      // flowNodes are persisted without protocol/macro snapshot code; it lives
+      // in the persisted workbook-version query and useResumeSnapshotHydration
+      // re-attaches it on resume. Stripped here so in-memory state is unaffected.
       partialize: (state) => ({
         experimentId: state.experimentId,
         experimentLabel: state.experimentLabel,
@@ -195,7 +205,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         workbookId: state.workbookId,
         workbookRunId: state.workbookRunId,
         currentStep: state.currentStep,
-        flowNodes: state.flowNodes,
+        flowNodes: stripSnapshotCode(state.flowNodes),
         currentFlowStep: state.currentFlowStep,
         iterationCount: state.iterationCount,
         isFlowFinished: state.isFlowFinished,

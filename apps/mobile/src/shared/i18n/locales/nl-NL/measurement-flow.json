@@ -251,7 +251,15 @@
     },
     "empty": "Geen stappen beschikbaar.",
     "error": "Kon experiment niet laden. Probeer het opnieuw.",
-    "loading": "Experiment laden..."
+    "loading": "Experiment laden...",
+    "resumeUnavailable": {
+      "titleOffline": "Offline hervatten lukt niet",
+      "bodyOffline": "De protocollen en macro's van deze meting staan niet op het toestel. Maak opnieuw verbinding om verder te gaan waar je gebleven was, of sluit de meting af.",
+      "titleUnavailable": "Deze meting kan niet worden hervat",
+      "bodyVersionMissing": "De workbookversie van deze meting bestaat niet meer, dus de protocollen en macro's kunnen niet worden geladen. Sluit de meting af en start een nieuwe.",
+      "bodyError": "De protocollen en macro's van deze meting konden niet worden geladen. Controleer je verbinding en wacht even, of sluit de meting af.",
+      "exit": "Meting afsluiten"
+    }
   },
   "result": {
     "comment": "Opmerking",

@@ -251,7 +251,15 @@
     },
     "empty": "No steps available.",
     "error": "Failed to load experiment. Please try again.",
-    "loading": "Loading experiment..."
+    "loading": "Loading experiment...",
+    "resumeUnavailable": {
+      "titleOffline": "Can't resume offline",
+      "bodyOffline": "This flow's protocols and macros aren't stored on the device. Reconnect to continue where you left off, or exit the flow.",
+      "titleUnavailable": "Can't resume this flow",
+      "bodyVersionMissing": "This flow's workbook version is no longer available, so its protocols and macros can't be loaded. Exit the flow and start a new one.",
+      "bodyError": "This flow's protocols and macros couldn't be loaded. Check your connection and wait a moment, or exit the flow.",
+      "exit": "Exit flow"
+    }
   },
   "result": {
     "comment": "Comment",

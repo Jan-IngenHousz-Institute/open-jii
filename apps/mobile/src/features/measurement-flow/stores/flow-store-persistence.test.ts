@@ -1,5 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { hasUnresolvedSnapshotCode } from "~/features/measurement-flow/domain/flow-snapshots";
+import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import { useFlowAnswersStore } from "./use-flow-answers-store";
 import { useMeasurementFlowStore } from "./use-measurement-flow-store";
@@ -177,6 +179,96 @@ describe("measurement-flow-storage v2 wire format", () => {
       "workbookRunId",
       "workbookVersionId",
     ]);
+  });
+});
+
+// Only the nested content of flowNodes changes, so the wire version stays at 2.
+describe("measurement-flow-storage strips snapshot code from flowNodes", () => {
+  const HYDRATED_NODES = [
+    {
+      id: "node-m1",
+      name: "spad_reading",
+      type: "measurement",
+      content: {
+        params: { averages: 3 },
+        protocolId: "proto-7",
+        protocol: { code: [{ pulses: [1, 2] }], name: "SPAD", family: "multispeq" },
+      },
+      isStart: false,
+    },
+    {
+      id: "node-a1",
+      name: "spad_macro",
+      type: "analysis",
+      content: {
+        params: { threshold: 40 },
+        macroId: "macro-9",
+        macro: {
+          id: "macro-9",
+          name: "SPAD macro",
+          filename: "macro-9.py",
+          language: "python",
+          code: "print(1)",
+        },
+      },
+      isStart: false,
+    },
+  ] as unknown as FlowNode[];
+
+  async function persistedFlowNodes(): Promise<Record<string, any>[]> {
+    await AsyncStorage.removeItem(MEASUREMENT_KEY);
+    useMeasurementFlowStore.setState({}); // identity write still runs partialize + setItem
+    const envelope = await readEnvelope(MEASUREMENT_KEY);
+    return (envelope.state as { flowNodes: Record<string, any>[] }).flowNodes;
+  }
+
+  it("writes protocol/macro without a code key", async () => {
+    useMeasurementFlowStore.setState({ flowNodes: HYDRATED_NODES });
+
+    const [measurement, analysis] = await persistedFlowNodes();
+
+    expect(measurement.content.protocol).toStrictEqual({ name: "SPAD", family: "multispeq" });
+    expect(analysis.content.macro).toStrictEqual({
+      id: "macro-9",
+      name: "SPAD macro",
+      filename: "macro-9.py",
+      language: "python",
+    });
+    // Absent, not null: null would round-trip as "resolved, empty".
+    expect("code" in measurement.content.protocol).toBe(false);
+    expect("code" in analysis.content.macro).toBe(false);
+    expect(measurement.content).toMatchObject({
+      params: { averages: 3 },
+      protocolId: "proto-7",
+    });
+    expect(analysis.content).toMatchObject({ params: { threshold: 40 }, macroId: "macro-9" });
+  });
+
+  it("keeps the code in memory after setFlowGraph; only the storage copy is stripped", async () => {
+    useMeasurementFlowStore
+      .getState()
+      .setFlowGraph(HYDRATED_NODES, [], [], "version-17", "workbook-17");
+
+    const inMemory = useMeasurementFlowStore.getState().flowNodes;
+    expect(inMemory[0].content.protocol.code).toEqual([{ pulses: [1, 2] }]);
+    expect(inMemory[1].content.macro.code).toBe("print(1)");
+
+    const [measurement] = await persistedFlowNodes();
+    expect(measurement.content.protocol.code).toBeUndefined();
+  });
+
+  it("rehydrates a legacy v2 payload that still carries code, with nothing to resolve", async () => {
+    const legacy = JSON.stringify({
+      state: { ...MEASUREMENT_STATE, flowNodes: HYDRATED_NODES },
+      version: 2,
+    });
+    await AsyncStorage.setItem(MEASUREMENT_KEY, legacy);
+    await useMeasurementFlowStore.persist.rehydrate();
+
+    const { flowNodes } = useMeasurementFlowStore.getState();
+    expect(flowNodes[0].content.protocol.code).toEqual([{ pulses: [1, 2] }]);
+    expect(flowNodes[1].content.macro.code).toBe("print(1)");
+    expect(hasUnresolvedSnapshotCode(flowNodes)).toBe(false);
   });
 });
 
