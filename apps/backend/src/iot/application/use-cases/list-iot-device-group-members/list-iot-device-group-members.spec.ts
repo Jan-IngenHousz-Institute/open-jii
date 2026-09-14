@@ -1,7 +1,8 @@
 import { and, deviceGroupMembers, eq } from "@repo/database";
 
-import { assertSuccess } from "../../../../common/utils/fp-utils";
+import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
 import { IotDeviceGroupRepository } from "../../../core/repositories/iot-device-group.repository";
 import { CreateIotDeviceGroupUseCase } from "../create-iot-device-group/create-iot-device-group";
 import { ListIotDeviceGroupMembersUseCase } from "./list-iot-device-group-members";
@@ -65,5 +66,16 @@ describe("ListIotDeviceGroupMembersUseCase", () => {
 
     assertSuccess(result);
     expect(result.value).toEqual([]);
+  });
+
+  it("fails when the binding count cannot be read, rather than listing every member as provisioned", async () => {
+    const member = await testApp.createIotDevice({ createdBy: userId, name: "Counted" });
+    await groupRepository.addMembers(groupId, [member.id], userId);
+    vi.spyOn(
+      testApp.module.get(ExperimentDeviceRepository),
+      "countByDevices",
+    ).mockResolvedValueOnce(failure(AppError.internal("db down")));
+
+    assertFailure(await useCase.execute(groupId));
   });
 });

@@ -240,4 +240,10 @@ describe("IssueIotCredentialsUseCase", () => {
     assertFailure(result);
     expect(result.error.message).toBe("policy failed");
   });
+
+  it("refuses a retired device until it is reinstated", async () => {
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "retired" });
+
+    assertFailure(await useCase.execute(device.id, userId));
+  });
 });

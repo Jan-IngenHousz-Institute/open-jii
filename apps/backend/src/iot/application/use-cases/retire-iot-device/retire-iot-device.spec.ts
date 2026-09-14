@@ -122,4 +122,41 @@ describe("RetireIotDeviceUseCase", () => {
     expect(stored.value?.status).toBe("active");
     expect(stored.value?.certificateId).toBe("cert-2");
   });
+
+  it("reports a device that does not exist", async () => {
+    assertFailure(await useCase.execute("11111111-1111-4111-8111-111111111111", userId));
+  });
+
+  it("stops before persisting when the principals cannot be listed", async () => {
+    vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(
+      failure(AppError.internal("aws down")),
+    );
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
+
+    assertFailure(await useCase.execute(device.id, userId));
+    const stored = await repo.findById(device.id);
+    assertSuccess(stored);
+    expect(stored.value?.status).toBe("registered");
+  });
+
+  it("stops before persisting when a principal cannot be detached", async () => {
+    vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(success(["principal-1"]));
+    vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(
+      failure(AppError.internal("aws down")),
+    );
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
+
+    assertFailure(await useCase.execute(device.id, userId));
+    const stored = await repo.findById(device.id);
+    assertSuccess(stored);
+    expect(stored.value?.status).toBe("registered");
+  });
+
+  it("reports a row that vanished between the read and the write", async () => {
+    vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(success([]));
+    vi.spyOn(repo, "update").mockResolvedValue(success(null));
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
+
+    assertFailure(await useCase.execute(device.id, userId));
+  });
 });

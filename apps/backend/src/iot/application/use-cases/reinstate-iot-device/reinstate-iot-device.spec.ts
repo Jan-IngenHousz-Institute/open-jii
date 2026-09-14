@@ -1,5 +1,6 @@
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { ReinstateIotDeviceUseCase } from "./reinstate-iot-device";
 
 describe("ReinstateIotDeviceUseCase", () => {
@@ -49,6 +50,18 @@ describe("ReinstateIotDeviceUseCase", () => {
 
   it("refuses a device that is not retired", async () => {
     const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
+
+    assertFailure(await useCase.execute(device.id, userId));
+  });
+
+  it("reports a device that does not exist", async () => {
+    assertFailure(await useCase.execute("11111111-1111-4111-8111-111111111111", userId));
+  });
+
+  it("reports a row that vanished between the read and the write", async () => {
+    const repo = testApp.module.get(IotDeviceRepository);
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "retired" });
+    vi.spyOn(repo, "update").mockResolvedValue(success(null));
 
     assertFailure(await useCase.execute(device.id, userId));
   });

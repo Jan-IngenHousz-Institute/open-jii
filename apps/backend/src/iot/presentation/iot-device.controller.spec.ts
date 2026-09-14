@@ -815,6 +815,20 @@ describe("IotDeviceController", () => {
       expect(response.body.status).toBe("registered");
     });
 
+    it("maps a refused retire and a refused reinstate through the error contract (400)", async () => {
+      const retired = await testApp.createIotDevice({ createdBy: userId, status: "retired" });
+      const active = await testApp.createIotDevice({ createdBy: userId, status: "active" });
+
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.retireIotDevice, { deviceId: retired.id }))
+        .withAuth(userId)
+        .expect(StatusCodes.BAD_REQUEST);
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.reinstateIotDevice, { deviceId: active.id }))
+        .withAuth(userId)
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
     it("refuses to retire or reinstate below manage (403)", async () => {
       const device = await testApp.createIotDevice({ createdBy: userId });
       const stranger = await testApp.createTestUser({ name: "Stranger" });
