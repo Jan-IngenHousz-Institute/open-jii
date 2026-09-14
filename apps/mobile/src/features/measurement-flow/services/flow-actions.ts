@@ -4,6 +4,7 @@ import {
   seedNextIterationAnswer,
 } from "~/features/measurement-flow/domain/iteration";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
+import { useFlowSnapshotsStore } from "~/features/measurement-flow/stores/use-flow-snapshots-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import type { FlowNode } from "~/shared/measurements/flow-node";
 
@@ -43,12 +44,13 @@ export function advanceWithAnswer(node: FlowNode, answerValue: string): void {
 }
 
 /**
- * Tear down the whole flow session: active flow, answer history, and the
- * experiment selection. The single home for the reset pairing previously
- * duplicated across exit-flow-sheet and use-finish-flow.
+ * Tear down the whole flow session: active flow, its persisted snapshots,
+ * answer history, and the experiment selection. The single home for the reset
+ * pairing previously duplicated across exit-flow-sheet and use-finish-flow.
  */
 export function teardownFlow(): void {
   useMeasurementFlowStore.getState().resetFlow();
+  useFlowSnapshotsStore.getState().clear();
   useFlowAnswersStore.getState().clearHistory();
   useExperimentSelectionStore.getState().setSelectedExperimentId(undefined);
 }

@@ -107,6 +107,43 @@ describe("useMeasurementFlowStore", () => {
       expect(state.scanResult).toEqual({ from: "a" });
     });
 
+    it("rehydrateFlowNodes replaces flowNodes and touches nothing else", () => {
+      const scanResults = [{ result: { spad: 41 } }];
+      const stripped = [makeMeasurement("m1"), makeAnalysis("a1")];
+      useMeasurementFlowStore.setState({
+        flowNodes: stripped,
+        currentFlowStep: 1,
+        iterationCount: 4,
+        scanResults,
+        scanResult: { spad: 41 },
+        producerCellId: "m1",
+        cellOutputs: { a1: { spad_avg: 40.5 } },
+        branchReturnStack: [{ landing: 3, step: 1 }],
+        branchVisitCounts: { b1: 2 },
+        lastMatchedPath: { label: "High N", color: "#22c55e" },
+        workbookRunId: "run-17",
+      });
+
+      const hydrated = [
+        { ...stripped[0], content: { protocolId: "p1", protocol: { code: [{ x: 1 }] } } },
+        { ...stripped[1], content: { macroId: "mac1", macro: { code: "print(1)" } } },
+      ] as FlowNode[];
+      useMeasurementFlowStore.getState().rehydrateFlowNodes(hydrated);
+
+      const state = useMeasurementFlowStore.getState();
+      expect(state.flowNodes).toBe(hydrated);
+      expect(state.currentFlowStep).toBe(1);
+      expect(state.iterationCount).toBe(4);
+      expect(state.scanResults).toBe(scanResults);
+      expect(state.scanResult).toEqual({ spad: 41 });
+      expect(state.producerCellId).toBe("m1");
+      expect(state.cellOutputs).toEqual({ a1: { spad_avg: 40.5 } });
+      expect(state.branchReturnStack).toEqual([{ landing: 3, step: 1 }]);
+      expect(state.branchVisitCounts).toEqual({ b1: 2 });
+      expect(state.lastMatchedPath).toEqual({ label: "High N", color: "#22c55e" });
+      expect(state.workbookRunId).toBe("run-17");
+    });
+
     it("setFlowNodes resets currentFlowStep to 0", () => {
       const nodes = [makeQuestion("q1"), makeQuestion("q2")];
       useMeasurementFlowStore.setState({ currentFlowStep: 5 });
