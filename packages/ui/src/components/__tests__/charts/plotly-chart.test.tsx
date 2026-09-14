@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import type { Data, Layout } from "plotly.js";
+import type { Config, Data, Layout } from "plotly.js";
 import * as React from "react";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
@@ -495,6 +495,69 @@ describe("PlotlyChart", () => {
   });
 
   describe("Config Handling", () => {
+    it("adds the branded download only in the wrapper and keeps it stable across rerenders", async () => {
+      const { createPlotlyConfig } =
+        await vi.importActual<typeof import("../../charts/utils")>("../../charts/utils");
+      const config = createPlotlyConfig({ downloadFilename: "field-trial" });
+      expect(config.modeBarButtonsToAdd ?? []).toEqual([]);
+      expect(config.modeBarButtonsToRemove).not.toContain("toImage");
+      const data: Data[] = [{ type: "scatter", x: [1, 2], y: [2, 3] }];
+      const { rerender } = render(<PlotlyChart data={data} layout={{}} config={config} />);
+      const exportedConfig = mockPlotComponent.mock.lastCall[0].config;
+      expect(exportedConfig.modeBarButtonsToAdd).toEqual([
+        expect.objectContaining({ name: "downloadBrandedPng", click: expect.any(Function) }),
+      ]);
+      expect(
+        exportedConfig.modeBarButtonsToRemove.filter((name: string) => name === "toImage"),
+      ).toHaveLength(1);
+      expect(exportedConfig.toImageButtonOptions.filename).toBe("field-trial");
+
+      rerender(<PlotlyChart data={data} layout={{ title: { text: "Updated" } }} config={config} />);
+      expect(mockPlotComponent.mock.lastCall[0].config.modeBarButtonsToAdd[0]).toBe(
+        exportedConfig.modeBarButtonsToAdd[0],
+      );
+    });
+
+    it.each(["png", "svg", "jpeg", "webp"] as const)(
+      "preserves %s export settings on initial render and after WebGL fallback",
+      (format) => {
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        const options = { format, width: 1800, height: 1000, scale: 3, filename: "field-trial" };
+        render(
+          <PlotlyChart
+            data={[{ type: "scatter", x: [1, 2], y: [2, 3] }]}
+            layout={{}}
+            config={{ toImageButtonOptions: options }}
+          />,
+        );
+
+        const expectExportConfig = (config: Partial<Config>) => {
+          expect(config.toImageButtonOptions).toEqual(options);
+          if (format === "png") {
+            expect(config.modeBarButtonsToRemove).toContain("toImage");
+            expect(config.modeBarButtonsToAdd).toEqual(
+              expect.arrayContaining([expect.objectContaining({ name: "downloadBrandedPng" })]),
+            );
+          } else {
+            expect(config.modeBarButtonsToRemove ?? []).not.toContain("toImage");
+            expect(config.modeBarButtonsToAdd ?? []).not.toEqual(
+              expect.arrayContaining([expect.objectContaining({ name: "downloadBrandedPng" })]),
+            );
+          }
+        };
+
+        for (const [props] of mockPlotComponent.mock.calls) expectExportConfig(props.config);
+
+        fireEvent(window, new Event("webglcontextlost"));
+        expect(screen.getByText("Chart Error")).toBeInTheDocument();
+        mockPlotComponent.mockClear();
+        fireEvent.click(screen.getByText("Retry with fallback rendering"));
+
+        expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
+        expectExportConfig(mockPlotComponent.mock.lastCall[0].config);
+      },
+    );
+
     it("handles custom toImageButtonOptions with minimum dimensions", () => {
       const testData: Data[] = [{ type: "scatter", x: [1, 2], y: [1, 2] }];
       const customConfig = {
@@ -515,6 +578,10 @@ describe("PlotlyChart", () => {
               height: 800, // Minimum enforced
               format: "png",
             }),
+            modeBarButtonsToRemove: expect.arrayContaining(["toImage"]),
+            modeBarButtonsToAdd: expect.arrayContaining([
+              expect.objectContaining({ name: "downloadBrandedPng" }),
+            ]),
           }),
         }),
       );
