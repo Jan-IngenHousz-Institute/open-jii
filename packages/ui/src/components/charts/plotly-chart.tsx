@@ -48,6 +48,15 @@ type PlotlyTraceType = WebGLTraceType | StandardTraceType | string;
 const loadRuntime = () => import("./plotly-runtime");
 const Plot = lazy(() => loadRuntime().then((runtime) => ({ default: runtime.Plot })));
 
+/**
+ * Starts the Plotly download before any chart has data to draw, so it overlaps
+ * the data wait instead of following it. The import is cached, so this only
+ * moves the download forward.
+ */
+export function preloadPlotly(): void {
+  void loadRuntime();
+}
+
 // h-full, not h-96: Plotly is lazy-loaded, and a fixed 384px fallback inside a
 // 40px sparkline slot shoves the layout on first paint.
 const PlotLoadingComponent = () => (

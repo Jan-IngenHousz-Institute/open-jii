@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
+
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import { preloadPlotly } from "@repo/ui/components/charts/plotly-chart";
 
 import "../../styles/plotly-chart.css";
 import { getChartTypeDef } from "./charts/chart-registry";
@@ -21,6 +24,12 @@ export default function ExperimentVisualizationRenderer({
   showDescription = true,
 }: ExperimentVisualizationRendererProps) {
   const def = getChartTypeDef(visualization.chartType);
+
+  // The chart wrapper, and with it Plotly's lazy import, only mounts once the
+  // data is in; fetching Plotly now lets the two downloads overlap.
+  useEffect(() => {
+    preloadPlotly();
+  }, []);
 
   return (
     <div className="flex h-full w-full flex-col">
