@@ -36,7 +36,7 @@ interface ReadTrace {
   countMs?: number;
 }
 
-export const tableMetadataCacheKey = (experimentId: string, tableName: string) =>
+const tableMetadataCacheKey = (experimentId: string, tableName: string) =>
   `table-metadata:${experimentId}:${tableName}`;
 
 @Injectable()

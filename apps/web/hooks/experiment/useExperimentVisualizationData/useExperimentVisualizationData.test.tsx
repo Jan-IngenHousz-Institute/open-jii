@@ -344,8 +344,10 @@ describe("useExperimentVisualizationData", () => {
     expect(spy.called).toBe(false);
   });
 
-  it("hands back a fresh row set on refetch instead of deep-comparing the response", async () => {
-    server.mount(contract.experiments.getExperimentData, {
+  // The chart wrappers skip a Plotly redraw only while the rows keep their
+  // reference; a refetch that changes nothing must not break that.
+  it("keeps the same row set when a refetch returns identical data", async () => {
+    const spy = server.mount(contract.experiments.getExperimentData, {
       body: [
         createExperimentDataTable({
           name: "measurements",
@@ -375,8 +377,8 @@ describe("useExperimentVisualizationData", () => {
 
     await act(() => queryClient.refetchQueries());
 
-    await waitFor(() => expect(result.current.data).not.toBe(before));
-    expect(result.current.data).toEqual(before);
+    expect(spy.callCount).toBe(2);
+    expect(result.current.data).toBe(before);
   });
 
   it("remaps groupBy aliases and flattens display structs in the same pass", async () => {

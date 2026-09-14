@@ -51,7 +51,7 @@ export interface PolarSeriesData extends BaseSeries {
     size?: number;
     color?: string;
   };
-  type?: "scatterpolar" | "scatterpolargl" | "barpolar";
+  type?: "scatterpolar" | "barpolar";
 }
 
 export interface PolarPlotProps extends BaseChartProps {

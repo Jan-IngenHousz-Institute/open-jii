@@ -193,10 +193,6 @@ export const useExperimentVisualizationData = (
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       retry: shouldRetryQuery,
-      // A chart response can run to 100k rows. The default deep compare walks
-      // every one of them on each refetch to hand back an old reference that
-      // no consumer relies on.
-      structuralSharing: false,
     }),
   );
 

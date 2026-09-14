@@ -4,12 +4,12 @@ import compression from "compression";
 import type { NextFunction, Request, Response } from "express";
 
 /**
- * Chart responses run to megabytes of repetitive JSON, and the edge cannot
- * compress them for us: oRPC ends a JSON response without a Content-Length,
- * so CloudFront sees a chunked body and passes it through as is. An event
- * stream stays uncompressed, since the encoder would hold events back until
- * its buffer filled. NDJSON is text the default filter's media type table
- * does not know, so it is allowed by name.
+ * Chart responses run to megabytes of repetitive JSON. The API distribution
+ * does not compress, and could not for these responses anyway: oRPC ends a
+ * JSON response without a Content-Length, and CloudFront only compresses a
+ * body whose length it knows. An event stream stays uncompressed, since the
+ * encoder would hold events back until its buffer filled. NDJSON is text the
+ * default filter's media type table does not know, so it is allowed by name.
  */
 @Injectable()
 export class CompressionMiddleware implements NestMiddleware {

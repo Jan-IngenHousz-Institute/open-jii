@@ -3,9 +3,10 @@ import { coerceCell } from "./cell-coercion";
 type SortKey = string | number | null;
 
 /**
- * Rows ordered by one column the way the warehouse orders them: nulls first,
- * then numbers, then strings by code unit. Numeric strings count as numbers,
- * matching the axes the renderers build from the same coercion. Returns a new
+ * Rows ordered by one column. Nulls come first, as the warehouse's ASC order
+ * puts them; numeric strings count as numbers, matching the axes the renderers
+ * build from the same coercion; strings compare by code unit. Numbers before
+ * strings is this sort's own rule for a column with mixed cells. Returns a new
  * array; the rows themselves are shared and never moved.
  */
 export function sortRowsByColumn(

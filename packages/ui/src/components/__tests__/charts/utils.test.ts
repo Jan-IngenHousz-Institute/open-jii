@@ -187,10 +187,10 @@ describe("utils", () => {
       expect(getPlotType("heatmap", "webgl")).toBe("heatmap");
     });
 
-    it("preserves 3D plot types", () => {
-      expect(getPlotType("scatter3d", "webgl")).toBe("scatter3d");
-      expect(getPlotType("surface", "webgl")).toBe("surface");
-      expect(getPlotType("mesh3d", "webgl")).toBe("mesh3d");
+    it("passes types without a WebGL twin in the bundle through unchanged", () => {
+      expect(getPlotType("scatterpolar", "webgl")).toBe("scatterpolar");
+      expect(getPlotType("box", "webgl")).toBe("box");
+      expect(getPlotType("pie", "webgl")).toBe("pie");
     });
 
     it("returns original type for unknown types", () => {
