@@ -85,3 +85,21 @@ describe("MetricStatCard on a phone", () => {
     expect(screen.getByText("-67%")).toBeInTheDocument();
   });
 });
+
+describe("MetricStatCard with a linked value", () => {
+  it("clamps a long name on the text, not on the card title", () => {
+    render(
+      <MetricStatCard
+        locale="en-US"
+        label="Busiest protocol"
+        value="Ambit orientation ground-truth snapshot (4 averages)"
+        href="/en-US/platform/protocols/abc"
+      />,
+    );
+
+    // line-clamp on the CardTitle counts the link as a single box, so a long
+    // name ran to full length and stretched the whole band.
+    const name = screen.getByText("Ambit orientation ground-truth snapshot (4 averages)");
+    expect(name).toHaveClass("line-clamp-2");
+  });
+});

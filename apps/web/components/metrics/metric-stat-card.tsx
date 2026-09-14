@@ -80,7 +80,9 @@ export function MetricStatCard({
 
   const renderLinkedValue = (target: string) => (
     <Link href={target} className="hover:text-primary flex items-start gap-1.5 transition-colors">
-      <span className="min-w-0 break-words">{value}</span>
+      {/* The clamp has to sit on the text: `line-clamp` on the CardTitle counts
+          this link as one box and never reaches the lines inside it. */}
+      <span className="line-clamp-2 min-w-0 break-words">{value}</span>
       <ArrowUpRight aria-hidden className="size-5 shrink-0 opacity-60" />
     </Link>
   );
