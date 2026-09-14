@@ -67,7 +67,7 @@ describe("MetricStatCard", () => {
 });
 
 describe("MetricStatCard on a phone", () => {
-  it("lays the label and the figure on one row, so a full-width card stays short", () => {
+  it("keeps one anatomy at every width, since the band scrolls rather than stacks", () => {
     render(
       <MetricStatCard
         locale="en-US"
@@ -77,10 +77,10 @@ describe("MetricStatCard on a phone", () => {
       />,
     );
 
-    // One column below sm, so the card has the width to show the figure at full
-    // size and the delta beside it rather than shrinking or hiding either.
+    // The label-left/figure-right row stranded a lone number across a
+    // full-width card. The rail gives every tile its card width back.
     const header = screen.getByText("Measurements").parentElement;
-    expect(header).toHaveClass("max-sm:flex-row", "max-sm:justify-between");
+    expect(header?.className).not.toMatch(/max-sm:/);
     expect(screen.getByText("8M")).toHaveClass("text-2xl");
     expect(screen.getByText("-67%")).toBeInTheDocument();
   });
