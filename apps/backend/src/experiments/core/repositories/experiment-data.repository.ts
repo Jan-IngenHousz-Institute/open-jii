@@ -20,6 +20,8 @@ import type {
   TableDataDto,
 } from "../models/experiment-data.model";
 import { ExperimentDto } from "../models/experiment.model";
+import { CACHE_PORT } from "../ports/cache.port";
+import type { CachePort } from "../ports/cache.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 
@@ -34,12 +36,16 @@ interface ReadTrace {
   countMs?: number;
 }
 
+export const tableMetadataCacheKey = (experimentId: string, tableName: string) =>
+  `table-metadata:${experimentId}:${tableName}`;
+
 @Injectable()
 export class ExperimentDataRepository {
   private readonly logger = new Logger(ExperimentDataRepository.name);
 
   constructor(
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+    @Inject(CACHE_PORT) private readonly cachePort: CachePort,
     private readonly contributorAnonymizer: ContributorAnonymizerService,
   ) {}
 
@@ -89,10 +95,7 @@ export class ExperimentDataRepository {
     };
 
     const [metadataResult, metadataMs] = await this.measure(() =>
-      this.databricksPort.getExperimentTableMetadata(experimentId, {
-        identifier: tableName,
-        includeSchemas: true,
-      }),
+      this.tableMetadata(experimentId, tableName),
     );
     read.metadataMs = metadataMs;
 
@@ -229,11 +232,7 @@ export class ExperimentDataRepository {
   }): Promise<Result<{ values: (string | number)[]; truncated: boolean }>> {
     const { experimentId, experiment, tableName, column, limit } = params;
 
-    // Need schemas so buildQuery can extract columns living inside a VARIANT.
-    const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
-      identifier: tableName,
-      includeSchemas: true,
-    });
+    const metadataResult = await this.tableMetadata(experimentId, tableName);
     if (metadataResult.isFailure()) {
       return metadataResult;
     }
@@ -290,6 +289,39 @@ export class ExperimentDataRepository {
     );
 
     return success({ values, truncated });
+  }
+
+  /**
+   * Schemas and row count for one table, held for a minute: every read needs
+   * them to build its SQL, and they only move when the pipeline runs. A failed
+   * lookup is thrown through the cache so it is never stored, and callers
+   * sharing the in-flight load all see the failure.
+   */
+  private async tableMetadata(
+    experimentId: string,
+    tableName: string,
+  ): Promise<Result<ExperimentTableMetadata[]>> {
+    try {
+      const rows = await this.cachePort.tryCache(
+        tableMetadataCacheKey(experimentId, tableName),
+        async () => {
+          const result = await this.databricksPort.getExperimentTableMetadata(experimentId, {
+            identifier: tableName,
+            includeSchemas: true,
+          });
+          if (result.isFailure()) {
+            throw result.error;
+          }
+          return result.value;
+        },
+      );
+      return success(rows ?? []);
+    } catch (error) {
+      if (error instanceof AppError) {
+        return failure(error);
+      }
+      throw error;
+    }
   }
 
   /**
