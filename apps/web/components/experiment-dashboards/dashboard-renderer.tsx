@@ -6,6 +6,7 @@ import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboard
 import { useTranslation } from "@repo/i18n";
 
 import { DashboardFiltersProvider } from "./dashboard-filters-context";
+import { LazyWidget } from "./widgets/shell/lazy-widget";
 import { WidgetCard } from "./widgets/shell/widget-card";
 import { WidgetRenderer } from "./widgets/widget-renderer";
 
@@ -48,7 +49,9 @@ export function DashboardRenderer({ dashboard, experimentId, scale = 1 }: Dashbo
             }}
           >
             <WidgetCard>
-              <WidgetRenderer widget={widget} experimentId={experimentId} />
+              <LazyWidget>
+                <WidgetRenderer widget={widget} experimentId={experimentId} />
+              </LazyWidget>
             </WidgetCard>
           </div>
         ))}
