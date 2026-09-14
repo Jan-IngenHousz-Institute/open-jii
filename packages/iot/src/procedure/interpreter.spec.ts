@@ -511,6 +511,30 @@ describe("runCaptureProcedure", () => {
       expect(result.payload.spectral[0].reading).toBe(JSON.stringify(structured));
     });
 
+    // A console prints its readings as text; the payload and the fit want numbers.
+    it("stores a reply that is a number in text as a number, and other text as text", async () => {
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }],
+        steps: [
+          {
+            kind: "read",
+            series: "identity",
+            read: [
+              { instrument: "dut", command: "par_raw", as: "par_raw" },
+              { instrument: "dut", command: "get_name", as: "name" },
+            ],
+          },
+        ],
+      };
+
+      const result = await runCaptureProcedure(
+        procedure,
+        context({ rig: { dut: reader({ par_raw: "396.96", get_name: "miniPAR" }) } }),
+      );
+
+      expect(result.payload.identity[0]).toEqual({ par_raw: 396.96, name: "miniPAR" });
+    });
+
     // A payload cell can hold a numeric series but not a series of anything
     // else, so a repeated text or structured read is kept whole as text.
     it("keeps a repeated non-numeric read whole as text", async () => {

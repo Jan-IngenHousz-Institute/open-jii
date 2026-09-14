@@ -287,8 +287,14 @@ function interpolate(prompt: string, value: SetpointValue): string {
   });
 }
 
+const NUMERIC_TEXT = /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i;
+
 /** Narrow a driver reply to something a payload cell can hold. */
 function toCell(data: unknown): SeriesCell {
+  // A console prints readings as text; a reading is a number to the script and the fit.
+  if (typeof data === "string" && NUMERIC_TEXT.test(data.trim())) {
+    return Number(data.trim());
+  }
   if (typeof data === "number" || typeof data === "string" || typeof data === "boolean") {
     return data;
   }

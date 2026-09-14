@@ -112,7 +112,9 @@ describe("validateCalibrationBlocks", () => {
     ]);
   });
 
-  it("flags a failed QC record with its reasons", () => {
+  // The thresholds behind a quality record are the platform's, not the scientist's,
+  // so a failed record travels with the block and the reviewer decides.
+  it("treats a failed QC record as advisory, not a violation", () => {
     const reasons = validateCalibrationBlocks(
       {
         par: {
@@ -124,18 +126,7 @@ describe("validateCalibrationBlocks", () => {
       },
       AMBIT_SCHEMA,
     );
-    expect(reasons.some((r) => r.includes("QC gates failed: R-squared"))).toBe(true);
-  });
-
-  it("flags a failed QC record that reported no reasons", () => {
-    const reasons = validateCalibrationBlocks(
-      {
-        par: { status: "computed", coefficients: { spec: 1.19 }, quality: { passed: false } },
-        baseline: { status: "computed", coefficients: { channels: [1, 2, 3, 4, 5, 6] } },
-      },
-      AMBIT_SCHEMA,
-    );
-    expect(reasons).toEqual(["Block 'par' computed but its QC gates failed: no reasons reported"]);
+    expect(reasons).toEqual([]);
   });
 
   // The bench session the all-or-nothing model rejected outright: one gain

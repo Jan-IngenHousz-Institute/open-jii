@@ -52,14 +52,8 @@ export function validateCalibrationBlocks(
       }
       reasons.push(...checkCoefficient(`${blockName}.${name}`, value, coefficientSpec));
     }
-
-    const quality = block.quality;
-    if (quality?.passed === false) {
-      const qcReasons = Array.isArray(quality.reasons) ? quality.reasons : ["no reasons reported"];
-      reasons.push(
-        `Block '${blockName}' computed but its QC gates failed: ${qcReasons.join("; ")}`,
-      );
-    }
+    // A failed quality record is advisory: the thresholds are the platform's until a
+    // scientist supplies real ones, so it travels with the block and the reviewer decides.
   }
 
   return reasons;
