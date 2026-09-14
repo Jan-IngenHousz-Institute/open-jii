@@ -57,6 +57,7 @@ describe("DownloadExportUseCase", () => {
         stream,
         filePath,
         tableName: "raw_data",
+        format: "csv",
         completedAt: "2026-01-02T03:04:05Z",
       }),
     );
@@ -67,6 +68,7 @@ describe("DownloadExportUseCase", () => {
     assertSuccess(result);
     expect(result.value.stream).toBe(stream);
     expect(result.value.filename).toBe("leaf-photosynthesis-2026_raw-data_20260102_030405.csv");
+    expect(result.value.format).toBe("csv");
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(exportsRepository.downloadExport).toHaveBeenCalledWith({
@@ -87,6 +89,7 @@ describe("DownloadExportUseCase", () => {
         stream: mockStream(),
         filePath: `/volumes/exports/${exportId}/clean_data.xlsx`,
         tableName: "clean_data",
+        format: "xlsx",
         completedAt: "2026-01-02 03:04:05",
       }),
     );
@@ -109,6 +112,7 @@ describe("DownloadExportUseCase", () => {
         stream: mockStream(),
         filePath: "",
         tableName: "",
+        format: "csv",
         completedAt: null,
       }),
     );

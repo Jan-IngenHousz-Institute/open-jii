@@ -8,7 +8,8 @@ import type { NextFunction, Request, Response } from "express";
  * compress them for us: oRPC ends a JSON response without a Content-Length,
  * so CloudFront sees a chunked body and passes it through as is. An event
  * stream stays uncompressed, since the encoder would hold events back until
- * its buffer filled.
+ * its buffer filled. NDJSON is text the default filter's media type table
+ * does not know, so it is allowed by name.
  */
 @Injectable()
 export class CompressionMiddleware implements NestMiddleware {
@@ -20,8 +21,13 @@ export class CompressionMiddleware implements NestMiddleware {
 
   private static isCompressible(this: void, request: Request, response: Response): boolean {
     const contentType = response.getHeader("content-type");
-    if (typeof contentType === "string" && contentType.startsWith("text/event-stream")) {
+    const mediaType = typeof contentType === "string" ? contentType : "";
+
+    if (mediaType.startsWith("text/event-stream")) {
       return false;
+    }
+    if (mediaType.startsWith("application/x-ndjson")) {
+      return true;
     }
     return compression.filter(request, response);
   }

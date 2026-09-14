@@ -4,6 +4,7 @@ import { Readable } from "stream";
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { zExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
 
+import { isExportFormat } from "../../../experiments/core/models/experiment-data-exports.model";
 import type {
   ExportFormat,
   ExportMetadata,
@@ -160,7 +161,13 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     exportId: string,
     experimentId: string,
   ): Promise<
-    Result<{ stream: Readable; filePath: string; tableName: string; completedAt: string | null }>
+    Result<{
+      stream: Readable;
+      filePath: string;
+      tableName: string;
+      format: ExportFormat;
+      completedAt: string | null;
+    }>
   > {
     this.logger.log({
       msg: "Streaming export by ID",
@@ -200,9 +207,11 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
     const filePathIndex = schemaData.columns.findIndex((col) => col.name === "file_path");
     const tableNameIndex = schemaData.columns.findIndex((col) => col.name === "table_name");
+    const formatIndex = schemaData.columns.findIndex((col) => col.name === "format");
     const completedAtIndex = schemaData.columns.findIndex((col) => col.name === "completed_at");
     const filePath = schemaData.rows[0][filePathIndex];
     const tableName = schemaData.rows[0][tableNameIndex];
+    const format = schemaData.rows[0][formatIndex];
     const completedAt = completedAtIndex >= 0 ? schemaData.rows[0][completedAtIndex] : null;
 
     if (!filePath) {
@@ -223,6 +232,16 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       return failure(AppError.internal("Export table name is missing"));
     }
 
+    if (format === null || !isExportFormat(format)) {
+      this.logger.error({
+        msg: "Export has an unknown format",
+        operation: "streamExport",
+        exportId,
+        format,
+      });
+      return failure(AppError.internal("Export format is unknown"));
+    }
+
     const downloadResult = await this.filesService.download(filePath);
 
     if (downloadResult.isFailure()) {
@@ -233,6 +252,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       stream: downloadResult.value,
       filePath,
       tableName,
+      format,
       completedAt: completedAt ?? null,
     });
   }
