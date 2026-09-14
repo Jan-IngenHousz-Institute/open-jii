@@ -27,7 +27,9 @@
         "type": "Type",
         "user": "Gebruiker",
         "updated": "Bijgewerkt"
-      }
+      },
+      "viewAll": "Alles bekijken",
+      "updatedAgo": "Bijgewerkt {{date}}"
     }
   },
   "form": {
