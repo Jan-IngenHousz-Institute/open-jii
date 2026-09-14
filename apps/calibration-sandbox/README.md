@@ -38,6 +38,11 @@ pnpm --filter calibration-sandbox dev     # run it locally on :9004
 pnpm --filter calibration-sandbox invoke  # send test/event.json to it
 ```
 
+`test/event.json` runs the automated MiniPAR fit over synthetic readings placed
+on the line the manual bench really fitted, so a healthy container answers a
+slope of 0.96 and an intercept of -1.08. No recording of a real sweep exists;
+the notebooks the procedures come from saved only their results.
+
 Author a script against an exported bench payload without any of the above:
 
 ```bash

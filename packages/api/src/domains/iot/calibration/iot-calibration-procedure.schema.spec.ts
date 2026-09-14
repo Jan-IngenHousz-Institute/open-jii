@@ -53,8 +53,9 @@ const ambitFactoryProcedure = {
   ],
 };
 
-// The manual MiniPAR bench: no DC source, the operator sets the lamp by hand
-// and types the reference reading from a handheld meter.
+// The manual MiniPAR bench: no supply and no reference instrument. The operator
+// sets up two light levels and darkness by hand and types the reading from a
+// reference PAR sensor at each.
 const manualMiniparProcedure = {
   instruments: [{ role: "dut" }],
   steps: [
@@ -62,19 +63,24 @@ const manualMiniparProcedure = {
       kind: "sweep",
       series: "par_sweep",
       stimulus: {
-        operator: "Set the lamp to {value} and wait for it to stabilise",
-        values: [100, 300, 600, 1000, 1500, 0],
+        operator: "Set up {value}, then wait for both readings to settle before continuing.",
+        values: ["a first light level", "a second light level", "darkness"],
       },
+      settleMs: 1000,
       read: [
         { instrument: "dut", command: "par_raw", as: "par_raw" },
-        { operator: "Enter the handheld meter reading", as: "par_ref", type: "number" },
+        {
+          operator: "Enter the PAR value shown by the reference sensor",
+          as: "par_ref",
+          type: "number",
+        },
       ],
     },
   ],
 };
 
-// The same MiniPAR procedure automated: a supply drives the lamp and a
-// MicroPython photodiode replaces the operator's handheld reading.
+// The same MiniPAR bench automated: a DC supply steps the lamp through the six
+// currents the bench uses, and a MicroPython photodiode replaces the operator's reading.
 const automatedMiniparProcedure = {
   instruments: [
     { role: "dut" },
@@ -85,7 +91,7 @@ const automatedMiniparProcedure = {
     {
       kind: "sweep",
       series: "par_sweep",
-      stimulus: { instrument: "lamp", set: "current_a", values: [0.5, 1.5, 3.0, 0.0] },
+      stimulus: { instrument: "lamp", set: "current_a", values: [0.2, 0.4, 0.8, 1.0, 1.6, 0] },
       settleMs: 1000,
       read: [
         { instrument: "dut", command: "par_raw", as: "par_raw" },

@@ -50,12 +50,17 @@ const MANUAL_MINIPAR: CaptureProcedure = {
       kind: "sweep",
       series: "par_sweep",
       stimulus: {
-        operator: "Set the lamp to {value} and wait for it to stabilise",
-        values: [100, 300, 600, 1000, 1500, 0],
+        operator: "Set up {value}, then wait for both readings to settle before continuing.",
+        values: ["a first light level", "a second light level", "darkness"],
       },
+      settleMs: 1000,
       read: [
         { instrument: "dut", command: "par_raw", as: "par_raw" },
-        { operator: "Enter the handheld meter reading", as: "par_ref", type: "number" },
+        {
+          operator: "Enter the PAR value shown by the reference sensor",
+          as: "par_ref",
+          type: "number",
+        },
       ],
     },
   ],
@@ -72,7 +77,7 @@ const AUTOMATED_MINIPAR: CaptureProcedure = {
     {
       kind: "sweep",
       series: "par_sweep",
-      stimulus: { instrument: "lamp", set: "current_a", values: [0.5, 1.5, 3.0, 0.0] },
+      stimulus: { instrument: "lamp", set: "current_a", values: [0.2, 0.4, 0.8, 1.0, 1.6, 0] },
       settleMs: 1000,
       read: [
         { instrument: "dut", command: "par_raw", as: "par_raw" },
