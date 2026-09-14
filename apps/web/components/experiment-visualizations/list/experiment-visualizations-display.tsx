@@ -1,23 +1,17 @@
 "use client";
 
-import { useLocale } from "@/hooks/useLocale";
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardDescription, CardTitle } from "@repo/ui/components/card";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@repo/ui/components/carousel";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@repo/ui/components/select";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
-import { FeaturedVisualizationCard } from "./highlights/featured-visualization-card";
+import ExperimentVisualizationRenderer from "../experiment-visualization-renderer";
 
 interface ExperimentVisualizationsDisplayProps {
   experimentId: string;
@@ -35,10 +29,16 @@ export default function ExperimentVisualizationsDisplay({
   hasAccess = false,
 }: ExperimentVisualizationsDisplayProps) {
   const { t } = useTranslation("experimentVisualizations");
-  const locale = useLocale();
+  const [selectedVisualizationId, setSelectedVisualizationId] = useState<string>("");
 
-  const basePath = isArchived ? "experiments-archive" : "experiments";
-  const visualizationsHref = `/${locale}/platform/${basePath}/${experimentId}/analysis/visualizations`;
+  // Auto-select the first visualization when visualizations are loaded
+  useEffect(() => {
+    if (visualizations.length > 0 && !selectedVisualizationId) {
+      setSelectedVisualizationId(visualizations[0].id);
+    }
+  }, [visualizations, selectedVisualizationId]);
+
+  const selectedVisualization = visualizations.find((viz) => viz.id === selectedVisualizationId);
 
   if (isLoading) {
     return (
@@ -101,54 +101,56 @@ export default function ExperimentVisualizationsDisplay({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="p-0">
         <CardTitle>{t("ui.title")}</CardTitle>
-        <Link href={visualizationsHref} className="shrink-0">
-          <Button variant="link" className="h-auto p-0">
-            {t("ui.labels.viewAll")}
-          </Button>
-        </Link>
       </div>
+      <Card className="shadow-none">
+        <CardContent className="space-y-6">
+          <div>
+            <Select value={selectedVisualizationId} onValueChange={setSelectedVisualizationId}>
+              <SelectTrigger className="h-auto w-fit border-none p-0 text-base font-semibold shadow-none hover:bg-transparent focus:ring-0">
+                {selectedVisualization ? (
+                  <span className="text-base font-semibold">{selectedVisualization.name}</span>
+                ) : (
+                  <span className="text-muted-foreground text-base font-semibold">
+                    {t("selector.selectVisualization")}
+                  </span>
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                {visualizations.map((visualization) => (
+                  <SelectItem key={visualization.id} value={visualization.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{visualization.name}</span>
+                      {visualization.description && (
+                        <span className="text-muted-foreground text-xs">
+                          {visualization.description.length > 60
+                            ? `${visualization.description.substring(0, 60)}...`
+                            : visualization.description}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground text-xs capitalize">
+                        {t(`charts.types.${visualization.chartType}`, visualization.chartType)}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      <VisualizationCarousel
-        visualizations={visualizations}
-        experimentId={experimentId}
-        visualizationsHref={visualizationsHref}
-      />
+          {selectedVisualization && (
+            <div className="mt-6 flex flex-col">
+              <ExperimentVisualizationRenderer
+                visualization={selectedVisualization}
+                experimentId={experimentId}
+                showTitle={false}
+                showDescription={false}
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
-  );
-}
-
-function VisualizationCarousel({
-  visualizations,
-  experimentId,
-  visualizationsHref,
-}: {
-  visualizations: ExperimentVisualization[];
-  experimentId: string;
-  visualizationsHref: string;
-}) {
-  const showNavArrows = visualizations.length > 1;
-
-  return (
-    <Carousel opts={{ align: "start" }} className="relative">
-      <CarouselContent>
-        {visualizations.map((visualization) => (
-          <CarouselItem key={visualization.id} className="min-w-0">
-            <FeaturedVisualizationCard
-              visualization={visualization}
-              experimentId={experimentId}
-              href={`${visualizationsHref}/${visualization.id}`}
-            />
-          </CarouselItem>
-        ))}
-      </CarouselContent>
-      {showNavArrows && (
-        <>
-          <CarouselPrevious className="left-2" />
-          <CarouselNext className="right-2" />
-        </>
-      )}
-    </Carousel>
   );
 }

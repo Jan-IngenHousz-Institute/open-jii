@@ -1,36 +1,11 @@
 import { createExperimentDataTable, createVisualization } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen } from "@/test/test-utils";
-import { beforeAll, beforeEach, describe, it, expect } from "vitest";
+import { render, screen, userEvent } from "@/test/test-utils";
+import { beforeEach, describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
 import ExperimentVisualizationsDisplay from "./experiment-visualizations-display";
-
-// Embla carousel uses IntersectionObserver; jsdom doesn't ship one.
-beforeAll(() => {
-  if (typeof globalThis.IntersectionObserver === "undefined") {
-    class IO {
-      observe() {
-        /* noop */
-      }
-      unobserve() {
-        /* noop */
-      }
-      disconnect() {
-        /* noop */
-      }
-      takeRecords() {
-        return [];
-      }
-      root = null;
-      rootMargin = "";
-      thresholds: number[] = [];
-    }
-    Object.defineProperty(globalThis, "IntersectionObserver", { value: IO, writable: true });
-    Object.defineProperty(window, "IntersectionObserver", { value: IO, writable: true });
-  }
-});
 
 describe("ExperimentVisualizationsDisplay", () => {
   beforeEach(() => {
@@ -68,7 +43,7 @@ describe("ExperimentVisualizationsDisplay", () => {
     ).toBeInTheDocument();
   });
 
-  it("lists every visualization as its own preview card, like the dashboards tab", () => {
+  it("auto-selects the first visualization so its name appears in the selector trigger", () => {
     const viz1 = createVisualization({ name: "Line Chart" });
     const viz2 = createVisualization({ name: "Scatter Plot", chartType: "scatter" });
 
@@ -80,49 +55,25 @@ describe("ExperimentVisualizationsDisplay", () => {
       />,
     );
 
-    // Previously one at a time behind a dropdown; now each is a card, so a
-    // reader sees what is there without opening a selector.
-    expect(screen.getByRole("link", { name: /Line Chart/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Scatter Plot/ })).toBeInTheDocument();
-    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.getByRole("combobox")).toHaveTextContent("Line Chart");
   });
 
-  it("links each card at the visualization and offers a way to all of them", () => {
-    const viz = createVisualization({ name: "Line Chart", id: "viz-1" });
+  it("swaps the selected visualization when the user picks a different option", async () => {
+    const user = userEvent.setup();
+    const viz1 = createVisualization({ name: "Line Chart" });
+    const viz2 = createVisualization({ name: "Scatter Plot", chartType: "scatter" });
 
     render(
       <ExperimentVisualizationsDisplay
         experimentId="exp-1"
-        visualizations={[viz]}
+        visualizations={[viz1, viz2]}
         isLoading={false}
       />,
     );
 
-    expect(screen.getByRole("link", { name: /Line Chart/ })).toHaveAttribute(
-      "href",
-      "/en-US/platform/experiments/exp-1/analysis/visualizations/viz-1",
-    );
-    expect(screen.getByRole("link", { name: "ui.labels.viewAll" })).toHaveAttribute(
-      "href",
-      "/en-US/platform/experiments/exp-1/analysis/visualizations",
-    );
-  });
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: /Scatter Plot/ }));
 
-  it("points an archived experiment at its archive route", () => {
-    const viz = createVisualization({ name: "Line Chart", id: "viz-1" });
-
-    render(
-      <ExperimentVisualizationsDisplay
-        experimentId="exp-1"
-        visualizations={[viz]}
-        isLoading={false}
-        isArchived
-      />,
-    );
-
-    expect(screen.getByRole("link", { name: /Line Chart/ })).toHaveAttribute(
-      "href",
-      "/en-US/platform/experiments-archive/exp-1/analysis/visualizations/viz-1",
-    );
+    expect(screen.getByRole("combobox")).toHaveTextContent("Scatter Plot");
   });
 });

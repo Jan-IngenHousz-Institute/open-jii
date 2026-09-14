@@ -28,7 +28,6 @@
         "user": "Benutzer",
         "updated": "Aktualisiert"
       },
-      "viewAll": "Alle anzeigen",
       "updatedAgo": "Aktualisiert {{date}}"
     }
   },

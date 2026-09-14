@@ -31,7 +31,6 @@
         "user": "User",
         "updated": "Updated"
       },
-      "viewAll": "View all",
       "updatedAgo": "Updated {{date}}"
     }
   },

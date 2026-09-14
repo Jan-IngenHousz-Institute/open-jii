@@ -28,7 +28,6 @@
         "user": "Gebruiker",
         "updated": "Bijgewerkt"
       },
-      "viewAll": "Alles bekijken",
       "updatedAgo": "Bijgewerkt {{date}}"
     }
   },
