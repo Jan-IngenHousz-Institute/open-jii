@@ -154,6 +154,14 @@ export type {
   SeriesCell,
   SetpointValue,
 } from "./procedure/types";
+
+export {
+  parseAmbitBootDump,
+  applyAmbitBootLine,
+  ambitStoredCoefficients,
+  AMBIT_BOOT_DUMP_MAX_LINES,
+} from "./driver/ambit/device-info";
+export type { AmbitDeviceInfo, AmbitMetadata } from "./driver/ambit/device-info";
 export type {
   AmbitParReading,
   AmbitTempReading,

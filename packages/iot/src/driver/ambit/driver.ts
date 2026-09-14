@@ -32,6 +32,8 @@ import {
 } from "./commands";
 import { AMBIT_FRAMING } from "./config";
 import type { AmbitDriverConfig } from "./config";
+import { parseAmbitBootDump } from "./device-info";
+import type { AmbitDeviceInfo } from "./device-info";
 import type { AmbitStreamEvents } from "./interface";
 import { AMBIT_REPLY_PARSERS } from "./response-parsers";
 
@@ -294,6 +296,36 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
       family: this.family,
       ...(this.sensorId ? { deviceId: this.sensorId } : {}),
       raw: { helloReply: text, ...(this.sensorId ? { sensor_id: this.sensorId } : {}) },
+    };
+  }
+
+  /**
+   * Reboot the device and parse its configuration dump; the MAC, build and stored
+   * coefficients are reported nowhere else.
+   */
+  async readDeviceInfo(): Promise<AmbitDeviceInfo> {
+    const result = await this.execute<unknown>(AMBIT_COMMANDS.REBOOT);
+    // A failed command and a truncated dump need different handling at the bench, so the transport failure is thrown.
+    if (!result.success) {
+      throw result.error ?? new Error("Ambit did not answer the reboot");
+    }
+    const dump = typeof result.data === "string" ? result.data : "";
+    return parseAmbitBootDump(dump);
+  }
+
+  /**
+   * Identity with the MAC, which `getDeviceIdentity()` only has after a measurement.
+   * Reboots the device, so this is the bench path rather than the connect path.
+   */
+  async getDeviceIdentityFromBootDump(): Promise<DeviceIdentity> {
+    const info = await this.readDeviceInfo();
+    if (info.mac) {
+      this.sensorId = info.mac;
+    }
+    return {
+      family: this.family,
+      ...(info.mac ? { deviceId: info.mac } : {}),
+      raw: { ...info },
     };
   }
 
