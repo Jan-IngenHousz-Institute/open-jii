@@ -206,6 +206,66 @@ describe("ExperimentDataRepository", () => {
       logSpy.mockRestore();
     });
 
+    it("issues the filtered COUNT and the page as concurrent statements", async () => {
+      const mockMetadata: ExperimentTableMetadata[] = [
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          displayName: null,
+          rowCount: 100,
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+        },
+      ];
+      const countData = {
+        columns: [{ name: "total", type_name: "long", type_text: "BIGINT", position: 0 }],
+        rows: [["12"]],
+        totalRows: 1,
+        truncated: false,
+      };
+      const pageData = {
+        columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
+        rows: [["1"], ["2"], ["3"]],
+        totalRows: 3,
+        truncated: false,
+      };
+      const settle: (() => void)[] = [];
+
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(mockMetadata),
+      );
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(
+        success("SELECT id FROM raw_data"),
+      );
+      const executeSpy = vi.spyOn(databricksPort, "executeSqlQuery").mockImplementation(
+        (_schema, sql) =>
+          new Promise((resolve) => {
+            settle.push(() =>
+              resolve(success(sql.startsWith("SELECT COUNT") ? countData : pageData)),
+            );
+          }),
+      );
+      executeSpy.mockClear();
+
+      const pending = repository.getTableData({
+        ...baseParams,
+        columns: ["id"],
+        filters: [{ column: "id", operator: "equals", value: "1" }],
+        page: 3,
+        pageSize: 3,
+      });
+
+      // Both statements are in flight before either one has answered.
+      await vi.waitFor(() => expect(executeSpy).toHaveBeenCalledTimes(2));
+      settle.forEach((resolve) => resolve());
+
+      const result = await pending;
+      assertSuccess(result);
+      expect(result.value[0]).toMatchObject({ page: 3, pageSize: 3, totalRows: 12, totalPages: 4 });
+      expect(result.value[0].data?.rows).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
+    });
+
     it("serves the table metadata from the cache on the next read", async () => {
       const mockMetadata: ExperimentTableMetadata[] = [
         {

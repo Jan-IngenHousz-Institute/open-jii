@@ -149,12 +149,6 @@ export class ExperimentDataRepository {
           return countSubqueryResult;
         }
         const countSql = `SELECT COUNT(*) AS total FROM (${countSubqueryResult.value}) AS sub`;
-        const [countResult, countMs] = await this.measure(() => this.executeQuery(countSql));
-        read.countMs = countMs;
-        if (countResult.isFailure()) {
-          return countResult;
-        }
-        const totalRows = Number(countResult.value.rows[0]?.[0] ?? 0);
 
         const dataQueryResult = this.buildQuery(experimentId, metadata, {
           columns,
@@ -168,15 +162,33 @@ export class ExperimentDataRepository {
           return dataQueryResult;
         }
 
-        return this.getTableDataPage({
-          tableName,
-          experiment,
-          page,
-          pageSize,
-          rowCount: totalRows,
-          query: dataQueryResult.value,
-          read,
-        });
+        // The count and the page are independent statements; the warehouse
+        // runs them side by side, so a filtered page waits for the slower one
+        // rather than the sum.
+        const [[countResult, countMs], [dataResult, dataMs]] = await Promise.all([
+          this.measure(() => this.executeQuery(countSql)),
+          this.measure(() => this.executeQuery(dataQueryResult.value)),
+        ]);
+        read.countMs = countMs;
+        if (countResult.isFailure()) {
+          return countResult;
+        }
+        if (dataResult.isFailure()) {
+          return dataResult;
+        }
+        this.logRead(read, dataMs, dataResult.value);
+
+        const totalRows = Number(countResult.value.rows[0]?.[0] ?? 0);
+        return success([
+          this.tablePage({
+            tableName,
+            experiment,
+            page,
+            pageSize,
+            rowCount: totalRows,
+            data: dataResult.value,
+          }),
+        ]);
       }
 
       // Chart-style: all matching rows in one page, capped by `limit`.
@@ -500,8 +512,6 @@ export class ExperimentDataRepository {
   }): Promise<Result<TableDataDto[]>> {
     const { tableName, experiment, page, pageSize, rowCount, query, read } = params;
 
-    const totalPages = Math.ceil(rowCount / pageSize);
-
     const [dataResult, dataMs] = await this.measure(() => this.executeQuery(query));
     if (dataResult.isFailure()) {
       return dataResult;
@@ -509,17 +519,29 @@ export class ExperimentDataRepository {
     this.logRead(read, dataMs, dataResult.value);
 
     return success([
-      {
-        name: tableName,
-        catalog_name: experiment.name,
-        schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
-        data: this.transformSchemaData(dataResult.value, experiment),
-        page,
-        pageSize,
-        totalRows: rowCount,
-        totalPages,
-      },
+      this.tablePage({ tableName, experiment, page, pageSize, rowCount, data: dataResult.value }),
     ]);
+  }
+
+  private tablePage(params: {
+    tableName: string;
+    experiment: ExperimentDto;
+    page: number;
+    pageSize: number;
+    rowCount: number;
+    data: SchemaData;
+  }): TableDataDto {
+    const { tableName, experiment, page, pageSize, rowCount, data } = params;
+    return {
+      name: tableName,
+      catalog_name: experiment.name,
+      schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
+      data: this.transformSchemaData(data, experiment),
+      page,
+      pageSize,
+      totalRows: rowCount,
+      totalPages: Math.ceil(rowCount / pageSize),
+    };
   }
 
   private async measure<T>(run: () => Promise<T>): Promise<[T, number]> {
