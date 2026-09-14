@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { act, render, screen, waitFor, fireEvent } from "@testing-library/react";
 import type { Config, Data, Layout } from "plotly.js";
 import * as React from "react";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -1204,6 +1204,38 @@ describe("WebGLContextManager", () => {
 });
 
 describe("PlotlyChart container resizing", () => {
+  it("relayouts the graph in place when its container resizes", async () => {
+    let notify: (() => void) | undefined;
+    class StubResizeObserver implements ResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        notify = () => callback([], this);
+      }
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+    }
+    const original = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = StubResizeObserver;
+    const frame = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      callback(0);
+      return 1;
+    });
+
+    render(<PlotlyChart data={[]} layout={{}} />);
+    const graphDiv = document.createElement("div");
+    const plotProps = mockPlotComponent.mock.calls.at(-1)?.[0];
+    act(() => {
+      plotProps.onInitialized({ data: [], layout: {}, frames: null }, graphDiv);
+    });
+
+    notify?.();
+    const { Plotly } = await import("../../charts/plotly-runtime");
+    await waitFor(() => expect(Plotly.Plots.resize).toHaveBeenCalledWith(graphDiv));
+
+    frame.mockRestore();
+    globalThis.ResizeObserver = original;
+  });
+
   it("observes its own container, not just the window", () => {
     // react-plotly's useResizeHandler binds to `window` resize, so collapsing
     // the sidebar left every chart at its previous pixel width.

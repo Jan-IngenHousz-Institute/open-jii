@@ -45,7 +45,8 @@ type PlotlyTraceType = WebGLTraceType | StandardTraceType | string;
 
 // Plotly touches `window` on import, so it only loads on the client, and only
 // once a chart is actually rendered.
-const Plot = lazy(() => import("./plotly-runtime").then((runtime) => ({ default: runtime.Plot })));
+const loadRuntime = () => import("./plotly-runtime");
+const Plot = lazy(() => loadRuntime().then((runtime) => ({ default: runtime.Plot })));
 
 // h-full, not h-96: Plotly is lazy-loaded, and a fixed 384px fallback inside a
 // 40px sparkline slot shoves the layout on first paint.
@@ -250,10 +251,10 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     // react-plotly's own resize handler listens to `window` only, so a
     // container that changes width without the window changing (collapsing the
     // sidebar, dragging a panel) never reaches Plotly and the plot keeps its
-    // old pixel width. Bumping `revision` re-runs `Plotly.react`, which
-    // re-measures the container because the layout is autosized.
+    // old pixel width. `Plots.resize` re-measures the container and relayouts
+    // in place; a full `Plotly.react` is only for a changed figure.
     const containerRef = useRef<HTMLDivElement | null>(null);
-    const [resizeRevision, setResizeRevision] = useState(0);
+    const graphDivRef = useRef<HTMLElement | null>(null);
 
     const setContainer = React.useCallback(
       (node: HTMLDivElement | null) => {
@@ -273,11 +274,12 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
 
       let frame = 0;
       const observer = new ResizeObserver(() => {
-        // Coalesced: a drag emits an entry per frame, and each one would
-        // otherwise be a separate Plotly.react.
+        // Coalesced: a drag emits an entry per frame.
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(() => {
-          setResizeRevision((previous) => previous + 1);
+          const graphDiv = graphDivRef.current;
+          if (!graphDiv) return;
+          void loadRuntime().then(({ Plotly }) => Plotly.Plots.resize(graphDiv));
         });
       });
       observer.observe(el);
@@ -287,6 +289,22 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
         observer.disconnect();
       };
     }, []);
+
+    const { onInitialized, onPurge } = plotProps;
+    const handleInitialized = React.useCallback<NonNullable<PlotParams["onInitialized"]>>(
+      (figure, graphDiv) => {
+        graphDivRef.current = graphDiv;
+        onInitialized?.(figure, graphDiv);
+      },
+      [onInitialized],
+    );
+    const handlePurge = React.useCallback<NonNullable<PlotParams["onPurge"]>>(
+      (figure, graphDiv) => {
+        graphDivRef.current = null;
+        onPurge?.(figure, graphDiv);
+      },
+      [onPurge],
+    );
 
     // Validate and sanitize data
     const safeData = React.useMemo(() => {
@@ -479,8 +497,8 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
                 setIsWebGLEnabled(false);
               }
             }}
-            useResizeHandler={true}
-            revision={resizeRevision}
+            onInitialized={handleInitialized}
+            onPurge={handlePurge}
           />
         </Suspense>
       </div>

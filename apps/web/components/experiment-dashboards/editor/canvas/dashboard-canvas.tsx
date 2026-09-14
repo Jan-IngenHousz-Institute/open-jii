@@ -13,7 +13,6 @@ import { DashboardFiltersProvider } from "../../dashboard-filters-context";
 import type { DashboardFormValues } from "../../dashboard-form-shell";
 import { useDashboardEditor } from "../context/dashboard-editor-context";
 import { useDeselectOnOutsideClick } from "../hooks/use-deselect-on-outside-click";
-import { usePlotlyResizeOnLayout } from "../hooks/use-plotly-resize-on-layout";
 import { useWidgetPlacement } from "../hooks/use-widget-placement";
 import { DashboardCanvasEmptyState, PlacementGhost } from "./dashboard-canvas-overlays";
 import "./dashboard-canvas.css";
@@ -99,8 +98,6 @@ export function DashboardCanvas({ experimentId }: DashboardCanvasProps) {
     );
   }, [baseLayout, layout.columns, tool, snapTarget]);
 
-  usePlotlyResizeOnLayout(width);
-
   // DOM order = visual reading order so Tab walks the grid naturally.
   const renderOrder = useMemo(
     () =>
@@ -159,16 +156,11 @@ export function DashboardCanvas({ experimentId }: DashboardCanvasProps) {
 
   const placementActive = tool !== "cursor";
 
-  const handleDragStop = useCallback(
+  // Charts watch their own container, so a moved or resized widget relayouts
+  // without any synthetic window event.
+  const handleLayoutStop = useCallback(
     (next: Layout) => {
       persistLayout(next);
-    },
-    [persistLayout],
-  );
-  const handleResizeStop = useCallback(
-    (next: Layout) => {
-      persistLayout(next);
-      requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
     },
     [persistLayout],
   );
@@ -193,8 +185,8 @@ export function DashboardCanvas({ experimentId }: DashboardCanvasProps) {
             gridConfig={gridConfig}
             dragConfig={dragConfig}
             resizeConfig={resizeConfig}
-            onDragStop={handleDragStop}
-            onResizeStop={handleResizeStop}
+            onDragStop={handleLayoutStop}
+            onResizeStop={handleLayoutStop}
           >
             {renderOrder.map(({ widget, index }) => (
               <div key={widget.id} data-dashboard-widget-id={widget.id}>
