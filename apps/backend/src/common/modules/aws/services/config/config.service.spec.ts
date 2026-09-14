@@ -1,6 +1,8 @@
 import { ConfigService } from "@nestjs/config";
+import type { ConfigType } from "@nestjs/config";
 
 import { TestHarness } from "../../../../../test/test-harness";
+import type awsConfig from "../../../../config/aws.config";
 import { AwsConfigService } from "./config.service";
 
 describe("AwsConfigService", () => {
@@ -73,20 +75,17 @@ describe("AwsConfigService", () => {
 
   describe("config validation", () => {
     it("rejects a calibration sandbox endpoint that is not a URL", () => {
-      const configService = testApp.module.get(ConfigService);
-      const realGet = configService.get.bind(configService);
-      const getSpy = vi.spyOn(configService, "get").mockImplementation((key: string) => {
-        if (key === "aws.lambda.calibrationSandboxEndpoint") {
-          return "not-a-url";
-        }
-        return realGet(key);
+      const aws = testApp.module.get(ConfigService).get<ConfigType<typeof awsConfig>>("aws");
+      if (!aws) {
+        throw new Error("The aws configuration namespace is not loaded");
+      }
+      const withBadEndpoint = new ConfigService({
+        aws: { ...aws, lambda: { ...aws.lambda, calibrationSandboxEndpoint: "not-a-url" } },
       });
 
-      expect(() => new AwsConfigService(configService)).toThrow(
+      expect(() => new AwsConfigService(withBadEndpoint)).toThrow(
         "AWS configuration validation failed",
       );
-
-      getSpy.mockRestore();
     });
 
     it("should throw error for invalid config during construction", () => {
