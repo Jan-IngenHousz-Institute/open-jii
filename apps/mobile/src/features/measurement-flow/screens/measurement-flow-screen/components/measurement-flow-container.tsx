@@ -36,12 +36,12 @@ export function MeasurementFlowContainer() {
     return <LoadingState />;
   }
 
-  if (hydration.status === "loading") {
+  if (hydration === "loading") {
     return <LoadingState />;
   }
 
-  if (hydration.status === "unavailable") {
-    return <ResumeUnavailableState reason={hydration.reason} />;
+  if (hydration === "unavailable") {
+    return <ResumeUnavailableState />;
   }
 
   // Active flow states sit under the FlowHero with a rounded "card" lip.

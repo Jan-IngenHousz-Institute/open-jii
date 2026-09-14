@@ -4,10 +4,11 @@ import { hasUnresolvedSnapshotCode } from "~/features/measurement-flow/domain/fl
 import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import { useFlowAnswersStore } from "./use-flow-answers-store";
+import { useFlowSnapshotsStore } from "./use-flow-snapshots-store";
 import { useMeasurementFlowStore } from "./use-measurement-flow-store";
 
-// Characterization of the AsyncStorage wire format of both persisted flow
-// stores (measurement flow v2, answers v1). A silent shape change wipes a field
+// Characterization of the AsyncStorage wire format of the persisted flow
+// stores (measurement flow v2, answers v1, snapshots v1). A silent shape change wipes a field
 // researcher's paused flow on rehydrate. Measurement v2 deliberately discards
 // older flows that cannot be correlated safely; update fixtures only deliberately.
 
@@ -324,6 +325,60 @@ describe("flow-answers-storage v1 wire format", () => {
       "autoincrementSettings",
       "rememberAnswerSettings",
     ]);
+  });
+});
+
+// The flow's protocol/macro code, written once per flow so resume never needs
+// the workbook-version query cache. A shape change here silently breaks
+// offline resume for a paused flow.
+describe("measurement-flow-snapshots-storage v1 wire format", () => {
+  const SNAPSHOTS_KEY = "measurement-flow-snapshots-storage";
+  const SNAPSHOTS_FIXTURE = `{
+    "state": {
+      "workbookVersionId": "version-17",
+      "entitySnapshots": {
+        "protocols": { "proto-7": { "code": [{ "pulses": [1, 2] }], "family": "multispeq" } },
+        "macros": { "macro-9": { "code": "print(1)", "language": "python" } }
+      }
+    },
+    "version": 1
+  }`;
+  const SNAPSHOTS_STATE = (JSON.parse(SNAPSHOTS_FIXTURE) as { state: Record<string, unknown> })
+    .state;
+
+  beforeAll(async () => {
+    await AsyncStorage.setItem(SNAPSHOTS_KEY, SNAPSHOTS_FIXTURE);
+    await useFlowSnapshotsStore.persist.rehydrate();
+  });
+
+  it.each(Object.keys(SNAPSHOTS_STATE))("rehydrates persisted field %s", (key) => {
+    const state = useFlowSnapshotsStore.getState() as unknown as Record<string, unknown>;
+    expect(state[key]).toEqual(SNAPSHOTS_STATE[key]);
+  });
+
+  it("round-trips the envelope unchanged through partialize", async () => {
+    await AsyncStorage.removeItem(SNAPSHOTS_KEY);
+    useFlowSnapshotsStore.setState({}); // identity write still runs partialize + setItem
+    const envelope = await readEnvelope(SNAPSHOTS_KEY);
+    expect(Object.keys(envelope).sort()).toEqual(["state", "version"]);
+    expect(envelope.version).toBe(1);
+    expect(envelope.state).toEqual(SNAPSHOTS_STATE);
+  });
+
+  it("persists exactly the known field set", () => {
+    const { partialize } = useFlowSnapshotsStore.persist.getOptions();
+    if (!partialize) throw new Error("store no longer configures partialize");
+    const persisted = partialize(useFlowSnapshotsStore.getState()) as Record<string, unknown>;
+    expect(Object.keys(persisted).sort()).toEqual(["entitySnapshots", "workbookVersionId"]);
+  });
+
+  it("clear() empties both fields", async () => {
+    useFlowSnapshotsStore.getState().clear();
+    const state = useFlowSnapshotsStore.getState();
+    expect(state.workbookVersionId).toBeUndefined();
+    expect(state.entitySnapshots).toBeUndefined();
+    const envelope = await readEnvelope(SNAPSHOTS_KEY);
+    expect(envelope.state).toEqual({});
   });
 });
 

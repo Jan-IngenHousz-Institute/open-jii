@@ -6,23 +6,26 @@ import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.sch
 
 import { useResumeSnapshotHydration } from "../use-resume-snapshot-hydration";
 
-const { useWorkbookVersionQueryMock, rehydrateFlowNodes, setFlowNodes, setFlowGraph } = vi.hoisted(
-  () => ({
-    useWorkbookVersionQueryMock: vi.fn(),
-    rehydrateFlowNodes: vi.fn(),
-    setFlowNodes: vi.fn(),
-    setFlowGraph: vi.fn(),
-  }),
-);
-
-vi.mock("~/features/experiments/hooks/use-experiment-flow-query", () => ({
-  useWorkbookVersionQuery: (...args: unknown[]) => useWorkbookVersionQueryMock(...args),
+const { rehydrateFlowNodes, setFlowNodes, setFlowGraph, snapshotsPersist } = vi.hoisted(() => ({
+  rehydrateFlowNodes: vi.fn(),
+  setFlowNodes: vi.fn(),
+  setFlowGraph: vi.fn(),
+  snapshotsPersist: {
+    hasHydrated: vi.fn(() => true),
+    onFinishHydration: vi.fn(() => () => undefined),
+  },
 }));
 
 vi.mock("~/features/measurement-flow/stores/use-measurement-flow-store", () => ({
   useMeasurementFlowStore: (selector: (s: unknown) => unknown) =>
     selector({ ...storeState, rehydrateFlowNodes, setFlowNodes, setFlowGraph }),
 }));
+
+vi.mock("~/features/measurement-flow/stores/use-flow-snapshots-store", () => {
+  const store = (selector: (s: unknown) => unknown) => selector(snapshotsState);
+  store.persist = snapshotsPersist;
+  return { useFlowSnapshotsStore: store };
+});
 
 const cells: WorkbookCell[] = [
   {
@@ -40,7 +43,7 @@ const cells: WorkbookCell[] = [
 ];
 
 const entitySnapshots = {
-  protocols: { "proto-7": { code: [{ pulses: [1, 2] }], family: "multispeq" } },
+  protocols: { "proto-7": { code: [{ pulses: [1, 2] }], family: "multispeq" as const } },
   macros: { "macro-9": { code: "print(1)" } },
 };
 
@@ -84,39 +87,29 @@ const hydratedNodes: FlowNode[] = [
 
 let storeState: {
   flowNodes: FlowNode[];
-  workbookId?: string;
+  cells: WorkbookCell[];
   workbookVersionId?: string;
 };
 
-function mockQuery(result: Record<string, unknown>) {
-  useWorkbookVersionQueryMock.mockReturnValue({
-    data: undefined,
-    error: null,
-    isPaused: false,
-    ...result,
-  });
-}
+let snapshotsState: {
+  workbookVersionId?: string;
+  entitySnapshots?: typeof entitySnapshots;
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
-  storeState = {
-    flowNodes: strippedNodes,
-    workbookId: "workbook-17",
-    workbookVersionId: "version-17",
-  };
-  mockQuery({});
+  snapshotsPersist.hasHydrated.mockReturnValue(true);
+  storeState = { flowNodes: strippedNodes, cells, workbookVersionId: "version-17" };
+  snapshotsState = { workbookVersionId: "version-17", entitySnapshots };
 });
 
 describe("useResumeSnapshotHydration", () => {
-  it("is ready and leaves the version query disabled when nothing is unresolved", () => {
+  it("is ready when nothing is unresolved", () => {
     storeState.flowNodes = hydratedNodes;
 
     const { result } = renderHook(() => useResumeSnapshotHydration());
 
-    expect(result.current).toEqual({ status: "ready" });
-    expect(useWorkbookVersionQueryMock).toHaveBeenCalledWith(undefined, undefined, {
-      suppressToast: true,
-    });
+    expect(result.current).toBe("ready");
     expect(rehydrateFlowNodes).not.toHaveBeenCalled();
   });
 
@@ -137,18 +130,13 @@ describe("useResumeSnapshotHydration", () => {
 
     const { result } = renderHook(() => useResumeSnapshotHydration());
 
-    expect(result.current).toEqual({ status: "ready" });
+    expect(result.current).toBe("ready");
     expect(rehydrateFlowNodes).not.toHaveBeenCalled();
   });
 
-  it("re-attaches the code from the version's entitySnapshots, once", async () => {
-    mockQuery({ data: { cells, entitySnapshots } });
-
+  it("re-attaches the code from the stored snapshots, once, without resetting progress", async () => {
     const { result } = renderHook(() => useResumeSnapshotHydration());
 
-    expect(useWorkbookVersionQueryMock).toHaveBeenCalledWith("workbook-17", "version-17", {
-      suppressToast: true,
-    });
     await waitFor(() => expect(rehydrateFlowNodes).toHaveBeenCalledTimes(1));
 
     const [nodes] = rehydrateFlowNodes.mock.calls[0] as [FlowNode[]];
@@ -159,47 +147,42 @@ describe("useResumeSnapshotHydration", () => {
     expect(setFlowNodes).not.toHaveBeenCalled();
     expect(setFlowGraph).not.toHaveBeenCalled();
     // Still loading on this render; the store write clears the gate.
-    expect(result.current).toEqual({ status: "loading" });
+    expect(result.current).toBe("loading");
   });
 
-  it("reports loading while the version query is pending", () => {
+  it("waits for the snapshots store to hydrate before deciding anything", () => {
+    snapshotsPersist.hasHydrated.mockReturnValue(false);
+
     const { result } = renderHook(() => useResumeSnapshotHydration());
 
-    expect(result.current).toEqual({ status: "loading" });
+    expect(result.current).toBe("loading");
     expect(rehydrateFlowNodes).not.toHaveBeenCalled();
   });
 
-  it("reports offline when the query is paused with nothing cached", () => {
-    mockQuery({ isPaused: true });
+  it("is unavailable when the stored snapshots belong to another version", () => {
+    snapshotsState.workbookVersionId = "version-16";
 
     const { result } = renderHook(() => useResumeSnapshotHydration());
 
-    expect(result.current).toEqual({ status: "unavailable", reason: "offline" });
+    expect(result.current).toBe("unavailable");
+    expect(rehydrateFlowNodes).not.toHaveBeenCalled();
   });
 
-  it("reports version-missing on a 404", () => {
-    mockQuery({ error: Object.assign(new Error("Not found"), { status: 404 }) });
+  it("is unavailable when no snapshots were stored", () => {
+    snapshotsState = { workbookVersionId: undefined, entitySnapshots: undefined };
 
     const { result } = renderHook(() => useResumeSnapshotHydration());
 
-    expect(result.current).toEqual({ status: "unavailable", reason: "version-missing" });
+    expect(result.current).toBe("unavailable");
+    expect(rehydrateFlowNodes).not.toHaveBeenCalled();
   });
 
-  it("reports error for any other query failure", () => {
-    mockQuery({ error: Object.assign(new Error("Boom"), { status: 500 }) });
-
-    const { result } = renderHook(() => useResumeSnapshotHydration());
-
-    expect(result.current).toEqual({ status: "unavailable", reason: "error" });
-  });
-
-  it("reports version-missing instead of hanging when the ids are gone", () => {
-    storeState.workbookId = undefined;
+  it("is unavailable when the flow has no version id to match against", () => {
     storeState.workbookVersionId = undefined;
 
     const { result } = renderHook(() => useResumeSnapshotHydration());
 
-    expect(result.current).toEqual({ status: "unavailable", reason: "version-missing" });
+    expect(result.current).toBe("unavailable");
     expect(rehydrateFlowNodes).not.toHaveBeenCalled();
   });
 });

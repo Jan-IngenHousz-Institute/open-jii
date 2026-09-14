@@ -126,7 +126,7 @@ Pure rules live in `features/<f>/domain/` as per-transition functions returning 
 
 ### Flow session persistence
 
-The two flow stores are persisted at `measurement-flow-storage` (persist `version: 2`) and `flow-answers-storage` (`version: 1`); their `partialize` output is the wire format, locked by `flow-store-persistence.test.ts`. Renaming/removing a persisted field without a version bump + real `migrate` silently wipes a paused field flow. Persisted `flowNodes` omit protocol/macro snapshot code (it lives in the cached workbook-version query); `useResumeSnapshotHydration` re-attaches it on cold-start resume before the flow is interactive. Cross-store consistency after hydration is enforced by `stores/flow-rehydration-guard.ts`, mounted at boot.
+The two flow stores are persisted at `measurement-flow-storage` (persist `version: 2`) and `flow-answers-storage` (`version: 1`); their `partialize` output is the wire format, locked by `flow-store-persistence.test.ts`. Renaming/removing a persisted field without a version bump + real `migrate` silently wipes a paused field flow. Persisted `flowNodes` omit protocol/macro snapshot code; it is written once per flow to `measurement-flow-snapshots-storage` (`version: 1`), and `useResumeSnapshotHydration` re-attaches it on cold-start resume before the flow is interactive. Cross-store consistency after hydration is enforced by `stores/flow-rehydration-guard.ts`, mounted at boot.
 
 ### Device ops
 
