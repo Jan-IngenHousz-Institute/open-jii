@@ -10,7 +10,12 @@ function useSnapshotsStoreHydrated(): boolean {
   const [hydrated, setHydrated] = useState(() => useFlowSnapshotsStore.persist.hasHydrated());
   useEffect(() => {
     if (hydrated) return;
-    return useFlowSnapshotsStore.persist.onFinishHydration(() => setHydrated(true));
+    // Subscribe before re-checking: onFinishHydration does not replay for late
+    // subscribers, so hydration finishing between render and this effect would
+    // otherwise leave the hook on "loading" for good.
+    const unsubscribe = useFlowSnapshotsStore.persist.onFinishHydration(() => setHydrated(true));
+    if (useFlowSnapshotsStore.persist.hasHydrated()) setHydrated(true);
+    return unsubscribe;
   }, [hydrated]);
   return hydrated;
 }

@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FlowNode } from "~/shared/measurements/flow-node";
 
@@ -12,7 +12,7 @@ const { rehydrateFlowNodes, setFlowNodes, setFlowGraph, snapshotsPersist } = vi.
   setFlowGraph: vi.fn(),
   snapshotsPersist: {
     hasHydrated: vi.fn(() => true),
-    onFinishHydration: vi.fn(() => () => undefined),
+    onFinishHydration: vi.fn((_cb: () => void) => () => undefined),
   },
 }));
 
@@ -157,6 +157,33 @@ describe("useResumeSnapshotHydration", () => {
 
     expect(result.current).toBe("loading");
     expect(rehydrateFlowNodes).not.toHaveBeenCalled();
+  });
+
+  it("does not miss a hydration that completes between render and the effect", async () => {
+    // First call (during render) says not hydrated; by the time the effect
+    // re-checks, hydration has finished and the listener will never fire.
+    snapshotsPersist.hasHydrated.mockReturnValueOnce(false).mockReturnValue(true);
+
+    renderHook(() => useResumeSnapshotHydration());
+
+    await waitFor(() => expect(rehydrateFlowNodes).toHaveBeenCalledTimes(1));
+  });
+
+  it("proceeds when hydration finishes after the effect subscribed", async () => {
+    snapshotsPersist.hasHydrated.mockReturnValue(false);
+    let finish: (() => void) | undefined;
+    snapshotsPersist.onFinishHydration.mockImplementation((cb: () => void) => {
+      finish = cb;
+      return () => undefined;
+    });
+
+    const { result } = renderHook(() => useResumeSnapshotHydration());
+    expect(result.current).toBe("loading");
+
+    snapshotsPersist.hasHydrated.mockReturnValue(true);
+    act(() => finish?.());
+
+    await waitFor(() => expect(rehydrateFlowNodes).toHaveBeenCalledTimes(1));
   });
 
   it("is unavailable when the stored snapshots belong to another version", () => {
