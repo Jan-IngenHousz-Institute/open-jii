@@ -62,7 +62,6 @@ export default async function AppLayout({
       <ActivityProvider>
         <NavigationSidebarWrapper
           locale={locale}
-          distinctId={session.user.email || session.user.id}
           releaseNotes={releaseNotes}
           user={{ id: session.user.id, email: session.user.email }}
         />
