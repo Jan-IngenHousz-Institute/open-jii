@@ -1,6 +1,7 @@
 "use client";
 
-import { Tile } from "@/components/iot-devices/monitoring/tile";
+import { MetricStatCard } from "@/components/metrics/metric-stat-card";
+import { metricsBandGrid } from "@/components/metrics/metrics-band-grid";
 import { useExperimentDeviceRemove } from "@/hooks/experiment/useExperimentDeviceRemove/useExperimentDeviceRemove";
 import { useExperimentDevices } from "@/hooks/experiment/useExperimentDevices/useExperimentDevices";
 import { useLocale } from "@/hooks/useLocale";
@@ -233,6 +234,7 @@ function ExperimentDevicesSkeleton() {
 }
 
 function ExperimentDevicesStats({ overview }: { overview: ExperimentDevicesOverview }) {
+  const locale = useLocale();
   const { t } = useTranslation("iot");
   const summary = summarizeExperimentDevices(overview);
 
@@ -244,38 +246,46 @@ function ExperimentDevicesStats({ overview }: { overview: ExperimentDevicesOverv
   const total = overview.devices.length;
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <Tile label={t("iot.experimentDevices.stats.onboarded")} className="bg-card">
-        <p className="text-lg font-semibold">{summary.onboarded}</p>
-        <p className="text-muted-foreground text-xs font-normal">
-          {t("iot.experimentDevices.stats.ofTotal", { count: total })}
-        </p>
-      </Tile>
+    <div className={metricsBandGrid}>
+      <MetricStatCard
+        locale={locale}
+        label={t("iot.experimentDevices.stats.onboarded")}
+        value={summary.onboarded}
+        note={t("iot.experimentDevices.stats.ofTotal", { count: total })}
+        className="bg-card"
+      />
 
-      <Tile label={t("iot.experimentDevices.stats.sending")} className="bg-card">
-        <p className="text-lg font-semibold">{dataValue(summary.sending)}</p>
-        <p className="text-muted-foreground text-xs font-normal">
-          {t("iot.experimentDevices.stats.window")}
-        </p>
-      </Tile>
+      <MetricStatCard
+        locale={locale}
+        label={t("iot.experimentDevices.stats.sending")}
+        value={dataValue(summary.sending)}
+        note={t("iot.experimentDevices.stats.window")}
+        className="bg-card"
+      />
 
-      <Tile label={t("iot.experimentDevices.stats.silent")} className="bg-card">
-        <p className="text-lg font-semibold">{dataValue(summary.onboardedSilent)}</p>
-        {!overview.pipelineUnavailable && (
-          <p className="text-muted-foreground text-xs font-normal">
-            {t("iot.experimentDevices.stats.ofOnboarded", { count: summary.onboarded })}
-          </p>
-        )}
-      </Tile>
+      <MetricStatCard
+        locale={locale}
+        label={t("iot.experimentDevices.stats.silent")}
+        value={dataValue(summary.onboardedSilent)}
+        note={
+          overview.pipelineUnavailable
+            ? undefined
+            : t("iot.experimentDevices.stats.ofOnboarded", { count: summary.onboarded })
+        }
+        className="bg-card"
+      />
 
-      <Tile label={t("iot.experimentDevices.stats.unbound")} className="bg-card">
-        <p className="text-lg font-semibold">{dataValue(summary.sendingUnbound)}</p>
-        {!overview.pipelineUnavailable && (
-          <p className="text-muted-foreground text-xs font-normal">
-            {t("iot.experimentDevices.stats.ofSending", { count: summary.sending })}
-          </p>
-        )}
-      </Tile>
+      <MetricStatCard
+        locale={locale}
+        label={t("iot.experimentDevices.stats.unbound")}
+        value={dataValue(summary.sendingUnbound)}
+        note={
+          overview.pipelineUnavailable
+            ? undefined
+            : t("iot.experimentDevices.stats.ofSending", { count: summary.sending })
+        }
+        className="bg-card"
+      />
     </div>
   );
 }

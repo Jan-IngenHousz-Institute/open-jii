@@ -2,17 +2,18 @@
 
 import { ArrowUpRight, TrendingDown, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { Badge } from "@repo/ui/components/badge";
 import {
   Card,
   CardAction,
+  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { cn } from "@repo/ui/lib/utils";
 
 // Past ten-fold a percentage says less than the two figures, which the footer
 // carries anyway.
@@ -29,7 +30,8 @@ function displayableChange(comparison?: { current: number; previous: number }): 
 
 interface MetricStatCardProps {
   label: string;
-  value: string;
+  /** ReactNode so a tile can put a status dot or a skeleton where the figure goes. */
+  value: ReactNode;
   locale: string;
   /** The full figure behind an abbreviated `value`, shown on hover. */
   title?: string;
@@ -37,6 +39,8 @@ interface MetricStatCardProps {
   href?: string;
   note?: string;
   context?: string;
+  alert?: ReactNode;
+  chart?: ReactNode;
   className?: string;
 }
 
@@ -50,9 +54,11 @@ export function MetricStatCard({
   href,
   note,
   context,
+  alert,
+  chart,
   className,
 }: MetricStatCardProps) {
-  const hasFooter = note !== undefined || context !== undefined;
+  const hasFooter = note !== undefined || context !== undefined || alert !== undefined;
   const change = displayableChange(comparison);
 
   const renderChange = (fraction: number) => {
@@ -72,8 +78,10 @@ export function MetricStatCard({
   };
 
   const renderLinkedValue = (target: string) => (
-    <Link href={target} className="hover:text-primary flex items-center gap-1.5 transition-colors">
-      <span className="truncate">{value}</span>
+    <Link href={target} className="hover:text-primary flex items-start gap-1.5 transition-colors">
+      {/* The clamp has to sit on the text: `line-clamp` on the CardTitle counts
+          this link as one box and never reaches the lines inside it. */}
+      <span className="line-clamp-2 min-w-0 break-words">{value}</span>
       <ArrowUpRight aria-hidden className="size-5 shrink-0 opacity-60" />
     </Link>
   );
@@ -90,21 +98,25 @@ export function MetricStatCard({
   );
 
   return (
-    <Card className={cn("@container/card gap-2 py-3", className)}>
+    <Card padding="sm" className={className}>
       <CardHeader className="gap-1">
         <CardDescription>{label}</CardDescription>
         <CardTitle
           title={title}
-          className="line-clamp-1 min-w-0 text-2xl font-semibold tabular-nums"
+          className="line-clamp-2 min-w-0 break-words text-2xl font-semibold tabular-nums"
         >
           {href === undefined ? value : renderLinkedValue(href)}
         </CardTitle>
         {change === null ? null : <CardAction>{renderChange(change)}</CardAction>}
       </CardHeader>
+      {chart === undefined ? null : <CardContent>{chart}</CardContent>}
       {hasFooter ? (
         <CardFooter className="mt-auto flex-col items-start gap-0.5 text-xs">
           {note === undefined ? null : renderNote(note)}
           {context === undefined ? null : <div className="text-muted-foreground">{context}</div>}
+          {alert === undefined ? null : (
+            <div className="text-status-stale-foreground flex items-center gap-1">{alert}</div>
+          )}
         </CardFooter>
       ) : null}
     </Card>

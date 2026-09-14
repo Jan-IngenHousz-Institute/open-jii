@@ -69,9 +69,10 @@ export function BranchNode(props: BranchNodeProps) {
         )}
 
         <Card
+          padding="none"
           data-testid="node-card"
           className={cn(
-            "relative gap-0 overflow-hidden py-0",
+            "relative overflow-hidden",
             isActive && "border-primary ring-primary ring-2",
           )}
         >

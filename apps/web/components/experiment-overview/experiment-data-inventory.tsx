@@ -78,7 +78,7 @@ export function ExperimentDataInventory({
         </Button>
       </div>
 
-      <Card className="overflow-hidden shadow-none">
+      <Card padding="none" className="overflow-hidden shadow-none">
         <CardContent className="p-0">
           <ul>
             {tables.map((table) => (

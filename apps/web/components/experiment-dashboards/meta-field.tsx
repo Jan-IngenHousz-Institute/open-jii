@@ -5,7 +5,7 @@ interface MetaFieldProps {
 
 export function MetaField({ label, value }: MetaFieldProps) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
         {label}
       </span>

@@ -263,7 +263,15 @@ export function WorkbookHeader({
   const hasOutputs = cells.some((c) => c.type === "output");
 
   return (
-    <div className="bg-card border-border sticky top-16 z-30 flex items-center gap-2 border-b px-4 py-2 xl:gap-3 xl:py-3">
+    // Expressed the way SiteHeader expresses its own top, so the two cannot
+    // drift. The overflow has to stay on this row: nothing between it and
+    // <html> has one, so an ancestor scroller would unstick the header.
+    <div
+      className="bg-card border-border sticky z-30 flex items-center gap-2 overflow-x-auto border-b px-4 py-2 xl:gap-3 xl:overflow-x-visible xl:py-3"
+      style={{
+        top: "calc(var(--banner-offset, 0px) + var(--sidebar-inset-offset, 0px) + 3rem)",
+      }}
+    >
       <div className="flex items-center gap-1.5 xl:gap-2.5">
         {onSensorFamilyChange && (
           <Select
@@ -277,7 +285,7 @@ export function WorkbookHeader({
             }}
             disabled={isConnected || isConnecting}
           >
-            <SelectTrigger className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]">
+            <SelectTrigger className="h-[34px] w-auto min-w-0 max-w-[7.5rem] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:max-w-none xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -296,7 +304,7 @@ export function WorkbookHeader({
             onValueChange={(v) => onConnectionTypeChange(v as WorkbookConnectionType)}
             disabled={isConnecting}
           >
-            <SelectTrigger className="h-[34px] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]">
+            <SelectTrigger className="h-[34px] w-auto min-w-0 max-w-[7.5rem] gap-1 border px-2.5 text-[12px] font-normal leading-[18px] xl:h-[38px] xl:max-w-none xl:gap-2 xl:px-4 xl:text-[13px] xl:leading-[21px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

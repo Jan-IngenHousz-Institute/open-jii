@@ -52,9 +52,12 @@ type PlotlyTraceType = WebGLTraceType | StandardTraceType | string;
 // Lazy load Plotly to avoid SSR issues
 const Plot = lazy(() => import("react-plotly.js"));
 
-// Loading component for the lazy-loaded Plot
+// h-full, not h-96: Plotly is lazy-loaded, and a fixed 384px fallback inside a
+// 40px sparkline slot shoves the layout on first paint.
 const PlotLoadingComponent = () => (
-  <div className="flex h-96 items-center justify-center">Loading chart...</div>
+  <div className="text-muted-foreground flex h-full min-h-0 items-center justify-center text-sm">
+    Loading chart...
+  </div>
 );
 
 // Hook to detect if we're on the client side
@@ -249,6 +252,47 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     const chartIdRef = useRef<string>(`chart-${Math.random().toString(36).slice(2, 11)}`);
     const contextManager = WebGLContextManager.getInstance();
 
+    // react-plotly's own resize handler listens to `window` only, so a
+    // container that changes width without the window changing (collapsing the
+    // sidebar, dragging a panel) never reaches Plotly and the plot keeps its
+    // old pixel width. Bumping `revision` re-runs `Plotly.react`, which
+    // re-measures the container because the layout is autosized.
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const [resizeRevision, setResizeRevision] = useState(0);
+
+    const setContainer = React.useCallback(
+      (node: HTMLDivElement | null) => {
+        containerRef.current = node;
+        if (typeof ref === "function") {
+          ref(node);
+        } else if (ref) {
+          ref.current = node;
+        }
+      },
+      [ref],
+    );
+
+    useEffect(() => {
+      const el = containerRef.current;
+      if (!el) return;
+
+      let frame = 0;
+      const observer = new ResizeObserver(() => {
+        // Coalesced: a drag emits an entry per frame, and each one would
+        // otherwise be a separate Plotly.react.
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => {
+          setResizeRevision((previous) => previous + 1);
+        });
+      });
+      observer.observe(el);
+
+      return () => {
+        cancelAnimationFrame(frame);
+        observer.disconnect();
+      };
+    }, []);
+
     // Validate and sanitize data
     const safeData = React.useMemo(() => {
       if (!data) return [];
@@ -349,7 +393,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     if (displayError) {
       return (
         <div
-          ref={ref}
+          ref={setContainer}
           className={cn(
             "border-destructive/50 bg-destructive/10 text-destructive flex h-full items-center justify-center rounded-lg border",
             className,
@@ -377,7 +421,10 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     // Handle loading states
     if (loading) {
       return (
-        <div ref={ref} className={cn("flex h-full items-center justify-center", className)}>
+        <div
+          ref={setContainer}
+          className={cn("flex h-full items-center justify-center", className)}
+        >
           <div className="text-muted-foreground animate-pulse">Loading chart...</div>
         </div>
       );
@@ -386,7 +433,10 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     // Show loading for SSR (prevents hydration mismatch)
     if (!isClient) {
       return (
-        <div ref={ref} className={cn("flex h-full items-center justify-center", className)}>
+        <div
+          ref={setContainer}
+          className={cn("flex h-full items-center justify-center", className)}
+        >
           <div className="text-muted-foreground animate-pulse">Loading chart...</div>
         </div>
       );
@@ -395,7 +445,10 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     // Show waiting state for WebGL charts when context not available
     if (needsWebGL && !isContextAvailable) {
       return (
-        <div ref={ref} className={cn("flex h-full items-center justify-center", className)}>
+        <div
+          ref={setContainer}
+          className={cn("flex h-full items-center justify-center", className)}
+        >
           <div className="text-center">
             <div className="text-muted-foreground animate-pulse">Waiting for GPU resources...</div>
             <div className="text-muted-foreground/60 mt-1 text-xs">
@@ -408,7 +461,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
 
     return (
       <div
-        ref={ref}
+        ref={setContainer}
         className={cn("plotly-container relative h-full min-h-0 w-full flex-1", className)}
       >
         <Suspense fallback={<PlotLoadingComponent />}>
@@ -432,6 +485,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
               }
             }}
             useResizeHandler={true}
+            revision={resizeRevision}
           />
         </Suspense>
       </div>

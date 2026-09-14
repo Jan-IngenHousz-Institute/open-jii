@@ -7,7 +7,7 @@ export function pieDefaultConfig(): ChartFormConfig {
     showLegend: true,
     showGrid: false,
     useWebGL: false,
-    // Each slice gets its own colour from CATEGORY_PALETTE at render time;
+    // Each slice gets its own colour from getCategoryColor at render time;
     // `colorMap` is exposed so future per-category overrides slot in the
     // same way scatter's categorical colouring does.
     colorMap: {},

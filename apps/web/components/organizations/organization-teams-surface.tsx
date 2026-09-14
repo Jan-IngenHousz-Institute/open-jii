@@ -128,7 +128,10 @@ export function OrganizationTeamsSurface({ organizationId }: { organizationId: s
           {/* The new team takes a slot in the grid rather than a form above it, so the
               card being filled in sits where the card will be. */}
           {canManage && isCreateOpen && (
-            <Card className="border-primary bg-primary/5 border-dashed p-5 shadow-none">
+            <Card
+              padding="none"
+              className="border-primary bg-primary/5 border-dashed p-5 shadow-none"
+            >
               <form
                 onSubmit={(e) => {
                   e.preventDefault();

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
+import { DatasetPicker } from "~/components/experiment-data/dataset-picker";
 import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
 import { MetadataUploadModal } from "~/components/experiment-data/metadata-upload-modal/metadata-upload-modal";
 import { UploadDataModal } from "~/components/experiment-data/upload-data-modal/upload-data-modal";
@@ -18,7 +19,6 @@ import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useE
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
-import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 interface ExperimentDataPageProps {
@@ -32,6 +32,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
   const { t } = useTranslation("experiments");
   const [uploadDataOpen, setUploadDataOpen] = React.useState(false);
   const [metadataModalOpen, setMetadataModalOpen] = React.useState(false);
+  const [activeIdentifier, setActiveIdentifier] = React.useState<string | undefined>(undefined);
 
   // Check if metadata already exists for this experiment
   const { data: metadataResponse } = useExperimentMetadata(id);
@@ -149,6 +150,10 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
     );
   }
 
+  // Falls back to the first table rather than seeding state from it: `tables`
+  // arrives after the first render, and a dataset can disappear between loads.
+  const activeTable = tables.find((table) => table.identifier === activeIdentifier) ?? tables[0];
+
   return (
     <PageContainer width="fluid" className="space-y-8">
       <div className="flex items-center justify-between gap-6">
@@ -176,30 +181,23 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         </div>
       </div>
 
-      <NavTabs defaultValue={tables[0].identifier} className="max-w-full">
-        <NavTabsList>
-          {tables.map((table) => (
-            <NavTabsTrigger key={table.identifier} value={table.identifier}>
-              <span className="truncate">
-                {table.displayName} ({table.totalRows})
-              </span>
-            </NavTabsTrigger>
-          ))}
-        </NavTabsList>
-        {tables.map((table) => (
-          <NavTabsContent key={table.identifier} value={table.identifier} className="mt-6">
-            <ExperimentDataTable
-              experimentId={id}
-              tableName={table.identifier}
-              displayName={table.displayName}
-              defaultSortColumn={table.defaultSortColumn}
-              errorColumn={table.errorColumn}
-              pageSize={10}
-              canContribute={canContribute}
-            />
-          </NavTabsContent>
-        ))}
-      </NavTabs>
+      <div className="space-y-6">
+        <DatasetPicker
+          tables={tables}
+          value={activeTable.identifier}
+          onChange={setActiveIdentifier}
+        />
+        <ExperimentDataTable
+          key={activeTable.identifier}
+          experimentId={id}
+          tableName={activeTable.identifier}
+          displayName={activeTable.displayName}
+          defaultSortColumn={activeTable.defaultSortColumn}
+          errorColumn={activeTable.errorColumn}
+          pageSize={10}
+          canContribute={canContribute}
+        />
+      </div>
 
       <UploadDataModal
         experimentId={id}

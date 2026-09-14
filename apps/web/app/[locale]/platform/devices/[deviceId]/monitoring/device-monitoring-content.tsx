@@ -120,7 +120,7 @@ export default function DeviceMonitoringPage() {
       </div>
 
       {isError ? (
-        <Card className="shadow-none">
+        <Card padding="none" className="shadow-none">
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <p className="text-muted-foreground text-sm">{t("iot.devices.monitoring.loadError")}</p>
             <Button
@@ -214,6 +214,7 @@ export default function DeviceMonitoringPage() {
 
             <PanelCard title={t("iot.devices.monitoring.eventLogTitle")}>
               <EventLog
+                compact
                 entries={buildDeviceActivity({
                   monitoring,
                   registeredAt: device?.createdAt,

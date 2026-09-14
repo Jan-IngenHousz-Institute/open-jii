@@ -8,7 +8,7 @@ import { env } from "~/env";
 import type { DeviceOnboardingConfig, IotDevice } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import {
   Collapsible,
   CollapsibleContent,
@@ -179,9 +179,9 @@ export function DeviceConfigurationRail({
 
   return (
     <Card className={cn("shadow-none", state === "updating" && "opacity-70")}>
-      <CardHeader className="flex-row items-center justify-between space-y-0">
+      <CardHeader>
         <CardTitle className="text-base">{t("iot.onboarding.rail.title")}</CardTitle>
-        {renderStateChip()}
+        <CardAction>{renderStateChip()}</CardAction>
       </CardHeader>
 
       <CardContent className="space-y-4">

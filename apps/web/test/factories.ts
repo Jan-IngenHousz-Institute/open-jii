@@ -28,6 +28,7 @@ import type {
   ExperimentAccess,
   ExperimentExportRecord,
   ExperimentFlowGraph,
+  ExperimentListItem,
   ExperimentUploadMetadata,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
@@ -79,7 +80,7 @@ import type { Session } from "@repo/auth/types";
 
 let experimentSeq = 0;
 
-export function createExperiment(overrides: Partial<Experiment> = {}): Experiment {
+export function createExperiment(overrides: Partial<ExperimentListItem> = {}): ExperimentListItem {
   experimentSeq++;
   return {
     id: `exp-${experimentSeq}-${crypto.randomUUID().slice(0, 8)}`,

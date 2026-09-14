@@ -9,12 +9,13 @@ import type {
 } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { BarChart } from "@repo/ui/components/charts/bar-chart";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 import { EmptyState } from "@repo/ui/components/empty-state";
 
 import { ChartTableToggle } from "./chart-table-toggle";
 import type { PanelView } from "./chart-table-toggle";
 import { bucketAxis } from "./monitoring-buckets";
-import { MONITORING_SERIES_COLORS } from "./monitoring-palette";
+import { monitoringSeriesColors } from "./monitoring-palette";
 import { RecentMeasurements } from "./recent-measurements";
 import type { EntityAccess } from "./resolve-entity-label";
 import { foldThroughputSeries } from "./throughput-series";
@@ -65,6 +66,9 @@ export function ThroughputPanel({
   to,
 }: ThroughputPanelProps) {
   const { t } = useTranslation("iot");
+  // Resolved in JS, so this has to learn about a theme swap itself.
+  useChartThemeRefresh();
+  const seriesColors = monitoringSeriesColors();
   const [view, setView] = useState<PanelView>("chart");
 
   const axis = bucketAxis(from, to, monitoring.bucket);
@@ -99,7 +103,7 @@ export function ThroughputPanel({
               // `xaxis.type` to linear, which cannot place label strings.
               x: axis,
               y: entry.counts,
-              color: MONITORING_SERIES_COLORS[index % MONITORING_SERIES_COLORS.length],
+              color: seriesColors[index % seriesColors.length],
             }))}
             config={{
               showLegend: series.length > 1,

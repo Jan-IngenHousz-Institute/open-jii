@@ -266,7 +266,7 @@ function OwnerSettingsForm({ organization }: { organization: OrganizationProfile
         </form>
       </Card>
 
-      <Card className="p-5">
+      <Card padding="none" className="p-5">
         <div className="space-y-0.5">
           <h3 className="text-sm font-semibold">{t("organizations.visibility.title")}</h3>
           <p className="text-muted-foreground text-xs leading-relaxed">

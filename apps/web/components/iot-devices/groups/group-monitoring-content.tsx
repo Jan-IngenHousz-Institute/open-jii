@@ -163,7 +163,7 @@ export function GroupMonitoringContent() {
       </div>
 
       {isError ? (
-        <Card className="shadow-none">
+        <Card padding="none" className="shadow-none">
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <p className="text-muted-foreground text-sm">{t("iot.devices.monitoring.loadError")}</p>
             <Button
@@ -184,7 +184,7 @@ export function GroupMonitoringContent() {
           <Skeleton className="h-48 w-full rounded-xl" />
         </div>
       ) : monitoring.members.length === 0 ? (
-        <Card className="shadow-none">
+        <Card padding="none" className="shadow-none">
           <CardContent className="text-muted-foreground py-10 text-center text-sm">
             {t("iot.groups.noMembers")}
           </CardContent>
