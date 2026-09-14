@@ -245,6 +245,20 @@ describe("MetricsRepository", () => {
     expect(result.value.get(version.id)).toBe(workbook.id);
   });
 
+  it("names nothing for a resource the caller cannot read", async () => {
+    const outsiderId = await testApp.createTestUser({});
+    const hidden = await testApp.createProtocol({
+      name: "Private protocol",
+      createdBy: outsiderId,
+      visibility: "private",
+    });
+
+    const result = await repository.getResourceName("protocol", hidden.id, userId);
+
+    assertSuccess(result);
+    expect(result.value).toBeNull();
+  });
+
   it("maps no versions for an empty workbook list without querying", async () => {
     const result = await repository.getWorkbookVersionMap([]);
 
@@ -258,8 +272,8 @@ describe("MetricsRepository", () => {
       visibility: "public",
     });
 
-    const found = await repository.getResourceName("protocol", protocol.id);
-    const missing = await repository.getResourceName("macro", protocol.id);
+    const found = await repository.getResourceName("protocol", protocol.id, userId);
+    const missing = await repository.getResourceName("macro", protocol.id, userId);
 
     assertSuccess(found);
     assertSuccess(missing);

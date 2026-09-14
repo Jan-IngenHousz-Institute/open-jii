@@ -104,6 +104,8 @@ export const zScopedActivity = z.object({
   measurements30d: z.number(),
   activeExperiments30d: z.number(),
   contributors30d: z.number(),
+  /** Null while the device table is unavailable: unknown, not none. */
+  devices30d: z.number().nullable(),
   activity: z.array(zMetricsWindowDay),
   previousMeasurements: z.number(),
   activeDays: z.number(),

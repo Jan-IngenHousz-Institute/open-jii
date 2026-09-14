@@ -29,7 +29,7 @@ export class GetResourceMetricsUseCase {
     }
 
     const totals = await this.resourceMetrics.totalsFor(kind, visible.value);
-    const busiest = await this.nameBusiest(kind, totals.busiest);
+    const busiest = await this.nameBusiest(kind, totals.busiest, userId);
 
     return success({
       kind,
@@ -50,12 +50,13 @@ export class GetResourceMetricsUseCase {
   private async nameBusiest(
     kind: ResourceKind,
     busiest: { id: string; measurements: number } | null,
+    userId: string,
   ): Promise<BusiestResource | null> {
     if (busiest === null) {
       return null;
     }
 
-    const name = await this.metricsRepository.getResourceName(kind, busiest.id);
+    const name = await this.metricsRepository.getResourceName(kind, busiest.id, userId);
     if (name.isFailure() || name.value === null) {
       return null;
     }
