@@ -52,6 +52,7 @@ export function MetricTrendCard({
   const config: PlotlyChartConfig = {
     showLegend: false,
     showModeBar: false,
+    showHoverName: false,
     dragMode: false,
     scrollZoom: false,
     showGrid: false,

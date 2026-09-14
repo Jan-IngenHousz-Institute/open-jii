@@ -541,6 +541,7 @@ export function createBaseLayout(
     yAxisType = "linear",
     showLegend = true,
     showGrid = true,
+    showHoverName = true,
     sparkline = false,
     backgroundColor,
     annotations = [],
@@ -697,6 +698,10 @@ export function createBaseLayout(
     hoverlabel: {
       bgcolor: readThemeColor("--popover") ?? (isDark ? "#000000" : "#ffffff"),
       bordercolor: gridColor,
+      // The trace-name chip is the one part Plotly styles from the series
+      // colour rather than from here, so a single-series chart drops it
+      // instead of carrying one unthemed surface.
+      ...(showHoverName ? {} : { namelength: 0 }),
       font: {
         size: veryCompact ? 10 : compact ? 11 : 12,
         family: "var(--font-sans)",

@@ -507,6 +507,15 @@ describe("utils", () => {
       expect(layout.hoverlabel?.font?.size).toBe(10);
     });
 
+    it("keeps Plotly's trace-name chip by default and drops it on request", () => {
+      expect(createBaseLayout(baseConfig).hoverlabel?.namelength).toBeUndefined();
+      // 0 empties the name, and Plotly removes the chip rather than drawing an
+      // empty one. It is the only hover surface `hoverlabel` cannot colour.
+      expect(createBaseLayout({ ...baseConfig, showHoverName: false }).hoverlabel?.namelength).toBe(
+        0,
+      );
+    });
+
     it("shrinks cell-axis fonts and adds nticks cap under cellCompact", () => {
       const layout = createBaseLayout(baseConfig, { cellCompact: true });
       expect(layout.xaxis?.tickfont?.size).toBe(10);
