@@ -42,8 +42,8 @@ vi.mock("~/components/experiment-overview/experiment-description", () => ({
 vi.mock("~/components/experiment-overview/experiment-details/experiment-details-card", () => ({
   ExperimentDetailsCard: () => <section aria-label="details" />,
 }));
-vi.mock("~/components/experiment-overview/experiment-measurements", () => ({
-  ExperimentMeasurements: () => <section aria-label="measurements" />,
+vi.mock("~/components/experiment-overview/experiment-data-inventory", () => ({
+  ExperimentDataInventory: () => <section aria-label="data-inventory" />,
 }));
 vi.mock("~/components/experiment-overview/experiment-linked-workbook", () => ({
   ExperimentLinkedWorkbook: () => <section aria-label="workbook" />,
@@ -98,7 +98,7 @@ describe("ExperimentOverviewPage", () => {
     });
     expect(screen.getByRole("region", { name: /description/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /workbook/i })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: /measurements/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /data-inventory/i })).toBeInTheDocument();
   });
 
   // A flex row reports the sum of its items' min-content as its own, and each
