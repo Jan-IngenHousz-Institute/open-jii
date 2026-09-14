@@ -18,7 +18,6 @@ assignees: ""
 <!--
 Guidance:
 - Ensure your story aligns with the INVEST criteria: Independent, Negotiable, Valuable, Estimable, Small, Testable
-- Refer to [INVEST framework](https://github.com/Jan-IngenHousz-Institute/open-jii/wiki/Definition-of-Ready-%E2%80%90-DoR#invest-criteria)
 -->
 
 ## Acceptance Criteria
@@ -27,16 +26,12 @@ Guidance:
 - [Include primary user flow and relevant alternative flows]
 - [Explicitly state critical test cases and business logic rules, if applicable]
 
-<!-- For detailed guidance, see [Acceptance Criteria Guidelines](https://github.com/Jan-IngenHousz-Institute/open-jii/wiki/Definition-of-Ready-%E2%80%90-DoR#acceptance-criteria) -->
-
 <!--
 ## Definition of Ready (DoR)
 - Clearly defined, independent, and estimable scope
-- Sized to fit within a sprint
+- Sized to fit within a single change cycle
 - Testable acceptance criteria
 - Dependencies and necessary designs/mockups identified
-
-For more details, see [Definition of Ready (DoR)](https://github.com/Jan-IngenHousz-Institute/open-jii/wiki/Definition-of-Ready-%E2%80%90-DoR)
 
 ## Definition of Done (DoD)
 - Implementation meets team standards
@@ -44,8 +39,6 @@ For more details, see [Definition of Ready (DoR)](https://github.com/Jan-IngenHo
 - Peer-reviewed
 - Functional and UX/UI validations successful
 - Deployed and monitored in production
-
-For complete details, see [Definition of Done (DoD)](https://github.com/Jan-IngenHousz-Institute/open-jii/wiki/Definition-of-Done-%E2%80%90-DoD)
 -->
 
 ## Dependencies & Risks

@@ -4,12 +4,14 @@ How the engineering skills should consume this repo's domain documentation when 
 codebase.
 
 This repo has one shared context at the root, with `apps/mobile/CONTEXT.md` as a scoped exception
-for mobile-only vocabulary. System-wide ADRs live in `docs/adr/`.
+for mobile-only vocabulary. System-wide ADRs live in
+`apps/docs/content/developers/design-decisions/`, on the public docs site.
 
 ## Before exploring, read these
 
 - **`CONTEXT.md`** at the repo root.
-- **`docs/adr/`**: read the ADRs that touch the area you are about to work in.
+- **`apps/docs/content/developers/design-decisions/`**: read the ADRs that touch the area you are
+  about to work in.
 - **`apps/mobile/CONTEXT.md`**: a pre-existing domain glossary for the mobile app, written before
   this scheme and kept because the mobile vocabulary is genuinely its own. Read it for mobile work.
   The root `CONTEXT.md` is still the entry point, and it is where a term shared across apps belongs.
@@ -23,15 +25,13 @@ suggest creating them upfront. The `/domain-modeling` skill, reached through `/g
 ```text
 /
 ├── AGENTS.md                  ← the router; read it first
-├── CONTEXT.md                 ← the glossary
+├── CONTEXT.md                 ← points at the public glossary
 ├── docs/
-│   ├── adr/
-│   │   ├── 0001-....md
-│   │   └── 0002-....md
 │   └── agents/                ← this directory: skill configuration, not domain docs
 ├── apps/
 │   ├── web/
 │   ├── backend/
+│   ├── docs/content/developers/design-decisions/   ← the ADRs, on the public site
 │   └── mobile/
 │       └── CONTEXT.md         ← app-local glossary, predates this scheme
 └── packages/

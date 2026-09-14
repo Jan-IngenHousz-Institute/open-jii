@@ -32,7 +32,9 @@
     "typecheck": "turbo run typecheck",
     "ui-add": "turbo run ui-add",
     "dev:fb": "turbo run dev --filter=backend --filter=web",
-    "local:login": "pnpm --filter @repo/devkit login --"
+    "local:login": "pnpm --filter @repo/devkit login --",
+    "linear:apply": "pnpm --filter @repo/devkit linear:apply --",
+    "linear:taxonomy": "pnpm --filter @repo/devkit linear:taxonomy --"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",

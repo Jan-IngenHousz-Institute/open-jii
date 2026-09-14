@@ -21,7 +21,14 @@ Edit the right-hand column to match whatever vocabulary you actually use.
 Apply them as **Linear** labels on team `OJD`, since Linear is the source of truth. See
 `issue-tracker.md`.
 
-Of the five, only `wontfix` already exists on the GitHub mirror, and the mirror's own label set
-(`Bug`, `Web`, `Mobile`, `Epic`, the `releaseProd-*` series, the `WBSO*` series) covers a different
-axis: area, type and release, not triage state. So these five are additions rather than renames, and
-they do not collide with anything in use.
+> **None of these five exist in Linear yet.** An audit of the `OJD` label set found all five
+> missing, so a skill that applies one today will fail. They are listed as pending creations in
+> `linear-taxonomy.md`, under a `triage` label group. Create them before relying on this file.
+
+Once created they sit in an exclusive `triage` group, so an issue carries at most one. Grouping does
+not change the strings: a label under a `triage` group is still named `needs-triage`, not
+`triage/needs-triage`, so anything matching these names keeps working.
+
+They do not collide with anything in use. The existing `OJD` labels cover area, type, release and
+the WBSO reporting series, none of which express triage state. On the GitHub mirror only `wontfix`
+exists, and the mirror is fed from Linear, so Linear is where they need creating.
