@@ -300,8 +300,6 @@ export class IotDeviceController {
   @Implement(iotContract.retireIotDevice)
   retireIotDevice(@Session() session: UserSession) {
     return implement(iotContract.retireIotDevice).handler(async ({ input }) => {
-      if (!(await this.devicesEnabled(session))) this.disabled("retireIotDevice");
-
       const result = await this.retireIotDeviceUseCase.execute(input.deviceId, session.user.id);
 
       if (result.isSuccess()) {
@@ -316,8 +314,6 @@ export class IotDeviceController {
   @Implement(iotContract.reinstateIotDevice)
   reinstateIotDevice(@Session() session: UserSession) {
     return implement(iotContract.reinstateIotDevice).handler(async ({ input }) => {
-      if (!(await this.devicesEnabled(session))) this.disabled("reinstateIotDevice");
-
       const result = await this.reinstateIotDeviceUseCase.execute(input.deviceId, session.user.id);
 
       if (result.isSuccess()) {
