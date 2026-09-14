@@ -178,13 +178,13 @@ describe("utils", () => {
     it("converts to WebGL types when using webgl renderer", () => {
       expect(getPlotType("scatter", "webgl")).toBe("scattergl");
       expect(getPlotType("line", "webgl")).toBe("scattergl");
-      expect(getPlotType("heatmap", "webgl")).toBe("heatmapgl");
     });
 
     it("keeps non-WebGL types unchanged even with webgl renderer", () => {
       expect(getPlotType("bar", "webgl")).toBe("bar");
       expect(getPlotType("histogram", "webgl")).toBe("histogram");
       expect(getPlotType("contour", "webgl")).toBe("contour");
+      expect(getPlotType("heatmap", "webgl")).toBe("heatmap");
     });
 
     it("preserves 3D plot types", () => {

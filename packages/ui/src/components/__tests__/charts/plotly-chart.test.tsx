@@ -6,12 +6,12 @@ import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import { PlotlyChart, WebGLContextManager } from "../../charts/plotly-chart";
 
-// Mock react-plotly.js with configurable behavior
+// Mock the Plotly runtime with configurable behavior
 let mockPlotComponent: any;
 
-vi.mock("react-plotly.js", () => ({
-  __esModule: true,
-  default: (props: any) => mockPlotComponent(props),
+vi.mock("../../charts/plotly-runtime", () => ({
+  Plot: (props: any) => mockPlotComponent(props),
+  Plotly: { Plots: { resize: vi.fn() } },
 }));
 
 // Mock React.lazy to return our mock component directly
@@ -694,23 +694,6 @@ describe("PlotlyChart", () => {
   });
 
   describe("WebGL Context Management", () => {
-    it("detects WebGL requirement for scatter3d charts", () => {
-      mockUtils.getPlotType.mockReturnValue("scatter3d");
-
-      const testData: Data[] = [
-        {
-          type: "scatter3d",
-          x: [1, 2, 3],
-          y: [1, 2, 3],
-          z: [1, 2, 3],
-        },
-      ];
-
-      render(<PlotlyChart data={testData} layout={{}} />);
-
-      expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
-    });
-
     it("detects WebGL requirement for scattergl charts", () => {
       mockUtils.getPlotType.mockReturnValue("scattergl");
 
@@ -727,53 +710,8 @@ describe("PlotlyChart", () => {
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
     });
 
-    it("detects WebGL requirement for surface charts", () => {
-      const testData: Data[] = [
-        {
-          type: "surface",
-          z: [
-            [1, 2],
-            [3, 4],
-          ],
-        },
-      ];
-
-      render(<PlotlyChart data={testData} layout={{}} />);
-
-      expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
-    });
-
-    it("detects WebGL requirement for mesh3d charts", () => {
-      const testData: Data[] = [
-        {
-          type: "mesh3d",
-          x: [1, 2, 3],
-          y: [1, 2, 3],
-          z: [1, 2, 3],
-        },
-      ];
-
-      render(<PlotlyChart data={testData} layout={{}} />);
-
-      expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
-    });
-
-    it("detects WebGL requirement for scattermapbox charts", () => {
-      const testData: Data[] = [
-        {
-          type: "scattermapbox",
-          lat: [45.5, 43.4],
-          lon: [-73.5, -79.4],
-        },
-      ];
-
-      render(<PlotlyChart data={testData} layout={{}} />);
-
-      expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
-    });
-
     it("handles WebGL context lost events", () => {
-      const testData: Data[] = [{ type: "scatter3d", x: [1, 2], y: [1, 2], z: [1, 2] }];
+      const testData: Data[] = [{ type: "scattergl", x: [1, 2], y: [1, 2] }];
       const consoleSpy = vi.spyOn(console, "warn");
 
       render(<PlotlyChart data={testData} layout={{}} />);
@@ -1021,7 +959,7 @@ describe("PlotlyChart", () => {
     });
 
     it("shows WebGL waiting state when context is not available", () => {
-      const testData: Data[] = [{ type: "scatter3d", x: [1, 2], y: [1, 2], z: [1, 2] }];
+      const testData: Data[] = [{ type: "scattergl", x: [1, 2], y: [1, 2] }];
 
       // Mock WebGLContextManager to simulate no available contexts
       const originalManager = WebGLContextManager.getInstance();

@@ -33,24 +33,19 @@ interface SafeConfig extends Partial<Config> {
   toImageButtonOptions?: ToImageButtonOptions;
 }
 
-// WebGL trace types that require special handling
-type WebGLTraceType = "scatter3d" | "surface" | "mesh3d" | "scattergl" | "scattermapbox";
+// The only WebGL trace the bundle registers; see `plotly-runtime`.
+type WebGLTraceType = "scattergl";
 
-const WEBGL_TRACE_TYPES: readonly WebGLTraceType[] = [
-  "scatter3d",
-  "surface",
-  "mesh3d",
-  "scattergl",
-  "scattermapbox",
-];
+const WEBGL_TRACE_TYPES: readonly WebGLTraceType[] = ["scattergl"];
 
 // Regular trace types
 type StandardTraceType = "scatter" | "bar" | "line" | "area" | "pie" | "box" | "violin";
 
 type PlotlyTraceType = WebGLTraceType | StandardTraceType | string;
 
-// Lazy load Plotly to avoid SSR issues
-const Plot = lazy(() => import("react-plotly.js"));
+// Plotly touches `window` on import, so it only loads on the client, and only
+// once a chart is actually rendered.
+const Plot = lazy(() => import("./plotly-runtime").then((runtime) => ({ default: runtime.Plot })));
 
 // h-full, not h-96: Plotly is lazy-loaded, and a fixed 384px fallback inside a
 // 40px sparkline slot shoves the layout on first paint.

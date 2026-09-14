@@ -53,17 +53,11 @@ export function validateDimensions(
 export function getPlotType(baseType: string, renderer: WebGLRenderer): string {
   if (renderer === "svg") return baseType;
 
-  // WebGL type mappings
+  // Scatter is the only family with a WebGL twin in the bundle; everything
+  // else keeps its SVG type. (`heatmapgl` was removed in Plotly 3.)
   const webglTypes: Record<string, string> = {
     scatter: "scattergl",
     line: "scattergl",
-    bar: "bar", // Bar charts don't have WebGL equivalent
-    histogram: "histogram", // Histogram doesn't have WebGL equivalent
-    heatmap: "heatmapgl",
-    contour: "contour", // Contour doesn't have WebGL equivalent
-    scatter3d: "scatter3d", // 3D plots are already optimized
-    surface: "surface",
-    mesh3d: "mesh3d",
   };
 
   return webglTypes[baseType] || baseType;
