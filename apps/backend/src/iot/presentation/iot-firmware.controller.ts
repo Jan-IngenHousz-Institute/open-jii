@@ -6,8 +6,7 @@ import { iotFirmwareContract } from "@repo/api/domains/iot/firmware/iot-firmware
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { ListIotFirmwareReleasesUseCase } from "../application/use-cases/list-iot-firmware-releases/list-iot-firmware-releases";
 
-// Firmware releases are public artifacts, so this reads without a resource
-// guard; it still rides the device-registry flag like every other IoT surface.
+// Firmware releases are public artifacts, so this reads without a resource guard.
 @Controller()
 export class IotFirmwareController {
   private readonly logger = new Logger(IotFirmwareController.name);
