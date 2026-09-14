@@ -120,16 +120,21 @@ export interface TernaryPlotProps extends BaseChartProps {
   bgcolor?: string;
 }
 
+// Default parameter values are re-created on every render, which would defeat
+// the memos below. Shared frozen empties keep the identity stable.
+const NO_BOUNDARIES: TernaryBoundary[] = [];
+const NO_AXIS: NonNullable<TernaryPlotProps["aaxis"]> = {};
+
 export function TernaryPlot({
   data,
   config = {},
   className,
   loading,
   error,
-  boundaries = [],
-  aaxis = {},
-  baxis = {},
-  caxis = {},
+  boundaries = NO_BOUNDARIES,
+  aaxis = NO_AXIS,
+  baxis = NO_AXIS,
+  caxis = NO_AXIS,
   sum = 1,
   bgcolor = "white",
 }: TernaryPlotProps) {
@@ -198,28 +203,33 @@ export function TernaryPlot({
   );
 
   // Add boundary lines as additional traces
-  const boundaryTraces: PlotData[] = boundaries.map(
-    (boundary) =>
-      ({
-        a: boundary.a,
-        b: boundary.b,
-        c: boundary.c,
-        name: boundary.name,
-        type: plotType,
-        mode: "lines",
-        line: {
-          color: boundary.line?.color || chartGridColor(),
-          width: boundary.line?.width || 2,
-          dash: boundary.line?.dash || "solid",
-        },
-        fill: "toself", // Fill the polygon to itself
-        fillcolor: boundary.fillcolor,
-        opacity: boundary.opacity || 1,
-        showlegend: true, // Show region names in legend
-        legendgroup: "regions", // Group regions together
-        hoverinfo: "name", // Show region name on hover
-        sum: sum,
-      }) as any as PlotData,
+  const boundaryTraces: PlotData[] = useMemo(
+    () =>
+      boundaries.map(
+        (boundary) =>
+          ({
+            a: boundary.a,
+            b: boundary.b,
+            c: boundary.c,
+            name: boundary.name,
+            type: plotType,
+            mode: "lines",
+            line: {
+              color: boundary.line?.color || chartGridColor(),
+              width: boundary.line?.width || 2,
+              dash: boundary.line?.dash || "solid",
+            },
+            fill: "toself", // Fill the polygon to itself
+            fillcolor: boundary.fillcolor,
+            opacity: boundary.opacity || 1,
+            showlegend: true, // Show region names in legend
+            legendgroup: "regions", // Group regions together
+            hoverinfo: "name", // Show region name on hover
+            sum: sum,
+          }) as any as PlotData,
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+    [boundaries, plotType, sum, themeVersion],
   );
 
   // Combine all traces - boundaries first (background), then scatter points (foreground) for proper layering
@@ -374,9 +384,9 @@ export function TernaryContour({
   className,
   loading,
   error,
-  aaxis = {},
-  baxis = {},
-  caxis = {},
+  aaxis = NO_AXIS,
+  baxis = NO_AXIS,
+  caxis = NO_AXIS,
   sum = 1,
 }: TernaryContourProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();

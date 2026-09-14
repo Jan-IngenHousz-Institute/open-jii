@@ -69,14 +69,14 @@ export function SPCChart({
   const LIMIT_COLOR = OUT_OF_CONTROL_COLOR;
   const WARNING_COLOR = readThemeColor("--chart-4") ?? "#f59e0b";
 
-  // Out-of-control overlay: pluck the offending (x, y) by index. Keeping
-  // the indices distinct from the main trace lets us draw a *separate*
-  // marker layer with its own size/colour without clobbering the main
-  // series's marker styling.
-  const outOfControlX = outOfControlIndices.map((i) => x[i]);
-  const outOfControlY = outOfControlIndices.map((i) => y[i]);
-
   const plotData: PlotData[] = useMemo(() => {
+    // Out-of-control overlay: pluck the offending (x, y) by index. Keeping
+    // the indices distinct from the main trace lets us draw a *separate*
+    // marker layer with its own size/colour without clobbering the main
+    // series's marker styling.
+    const outOfControlX = outOfControlIndices.map((i) => x[i]);
+    const outOfControlY = outOfControlIndices.map((i) => y[i]);
+
     // Reference lines are scatter traces (not `layout.shapes`) so they
     // show up in the legend.
     const xStart = x[0];
@@ -160,8 +160,7 @@ export function SPCChart({
     markerOpacity,
     markerSize,
     mode,
-    outOfControlX,
-    outOfControlY,
+    outOfControlIndices,
     seriesColor,
     ucl,
     warningLower,

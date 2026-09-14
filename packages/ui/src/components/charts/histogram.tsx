@@ -200,106 +200,106 @@ export function Histogram({
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("histogram", renderer);
 
-  const plotData: PlotData[] = useMemo(
-    () =>
-      data.map(
-        (series) =>
-          ({
-            // Transform sets x or y per orientation; don't swap.
-            x: series.x,
-            y: series.y,
-            // Per-trace subplot routing for facets. Plotly reads `xaxis` /
-            // `yaxis` strings (`"x"`, `"x2"`, ...) at the trace level and
-            // matches them to the numbered axis configs in `layout`.
-            xaxis: series.xaxisId,
-            yaxis: series.yaxisId,
-            name: series.name,
-            type: plotType,
+  const plotData: PlotData[] = useMemo(() => {
+    const traces: PlotData[] = data.map(
+      (series) =>
+        ({
+          // Transform sets x or y per orientation; don't swap.
+          x: series.x,
+          y: series.y,
+          // Per-trace subplot routing for facets. Plotly reads `xaxis` /
+          // `yaxis` strings (`"x"`, `"x2"`, ...) at the trace level and
+          // matches them to the numbered axis configs in `layout`.
+          xaxis: series.xaxisId,
+          yaxis: series.yaxisId,
+          name: series.name,
+          type: plotType,
 
-            // Binning
-            nbinsx: series.nbinsx,
-            nbinsy: series.nbinsy,
-            xbins: series.xbins,
-            ybins: series.ybins,
-            autobinx: series.autobinx !== false,
-            autobiny: series.autobiny !== false,
-            bingroup: series.bingroup,
+          // Binning
+          nbinsx: series.nbinsx,
+          nbinsy: series.nbinsy,
+          xbins: series.xbins,
+          ybins: series.ybins,
+          autobinx: series.autobinx !== false,
+          autobiny: series.autobiny !== false,
+          bingroup: series.bingroup,
 
-            // Histogram function and normalization
-            histfunc: series.histfunc || "count",
-            histnorm: series.histnorm || "",
+          // Histogram function and normalization
+          histfunc: series.histfunc || "count",
+          histnorm: series.histnorm || "",
 
-            // Cumulative
-            cumulative: series.cumulative
+          // Cumulative
+          cumulative: series.cumulative
+            ? {
+                enabled: series.cumulative.enabled || false,
+                direction: series.cumulative.direction || "increasing",
+                currentbin: series.cumulative.currentbin || "include",
+              }
+            : { enabled: false },
+
+          // Styling
+          marker: {
+            color: series.marker?.color || series.color,
+            opacity: series.marker?.opacity || series.opacity || 0.7,
+            line: series.marker?.line
               ? {
-                  enabled: series.cumulative.enabled || false,
-                  direction: series.cumulative.direction || "increasing",
-                  currentbin: series.cumulative.currentbin || "include",
+                  color: series.marker.line.color,
+                  width: series.marker.line.width || 0.5,
                 }
-              : { enabled: false },
+              : undefined,
+          },
 
-            // Styling
-            marker: {
-              color: series.marker?.color || series.color,
-              opacity: series.marker?.opacity || series.opacity || 0.7,
-              line: series.marker?.line
-                ? {
-                    color: series.marker.line.color,
-                    width: series.marker.line.width || 0.5,
-                  }
-                : undefined,
-            },
+          text: series.text,
+          textposition: series.textposition,
+          textfont: series.textfont,
 
-            text: series.text,
-            textposition: series.textposition,
-            textfont: series.textfont,
+          orientation: (series.orientation || orientation) === "h" ? "h" : "v",
 
-            orientation: (series.orientation || orientation) === "h" ? "h" : "v",
+          visible: series.visible,
+          showlegend: series.showlegend,
+          legendgroup: series.legendgroup,
+          hovertemplate: series.hovertemplate,
+          hoverinfo: series.hoverinfo,
+          customdata: series.customdata,
+        }) as any as PlotData,
+    );
 
-            visible: series.visible,
-            showlegend: series.showlegend,
-            legendgroup: series.legendgroup,
-            hovertemplate: series.hovertemplate,
-            hoverinfo: series.hoverinfo,
-            customdata: series.customdata,
-          }) as any as PlotData,
-      ),
-    [data, orientation, plotType],
-  );
-
-  if (fitOverlay === "normal") {
-    for (let i = 0; i < data.length; i++) {
-      const series = data[i];
-      if (!series) continue;
-      const seriesOrientation = series.orientation || orientation;
-      const valuesForFit = seriesOrientation === "v" ? series.x : series.y;
-      if (!valuesForFit || valuesForFit.length === 0) continue;
-      const seriesNbins = seriesOrientation === "v" ? series.nbinsx : series.nbinsy;
-      const fit = buildNormalFit(
-        valuesForFit,
-        Boolean(series.cumulative?.enabled),
-        series.histnorm,
-        seriesNbins,
-      );
-      if (!fit) continue;
-      const lineColor = series.marker?.color || series.color;
-      const fitTrace = {
-        x: seriesOrientation === "v" ? fit.xs : fit.ys,
-        y: seriesOrientation === "v" ? fit.ys : fit.xs,
-        xaxis: series.xaxisId,
-        yaxis: series.yaxisId,
-        name: `${series.name ?? `series ${i + 1}`} (normal fit)`,
-        type: "scatter",
-        mode: "lines",
-        line: { color: lineColor, width: 2 },
-        // Share legendgroup so the parent's toggle hides the fit too.
-        legendgroup: series.legendgroup ?? series.name,
-        showlegend: series.showlegend !== false,
-        hovertemplate: `μ=${fit.mean.toFixed(3)}<br>σ=${fit.std.toFixed(3)}<extra></extra>`,
-      } as unknown as PlotData;
-      plotData.push(fitTrace);
+    if (fitOverlay === "normal") {
+      for (let i = 0; i < data.length; i++) {
+        const series = data[i];
+        if (!series) continue;
+        const seriesOrientation = series.orientation || orientation;
+        const valuesForFit = seriesOrientation === "v" ? series.x : series.y;
+        if (!valuesForFit || valuesForFit.length === 0) continue;
+        const seriesNbins = seriesOrientation === "v" ? series.nbinsx : series.nbinsy;
+        const fit = buildNormalFit(
+          valuesForFit,
+          Boolean(series.cumulative?.enabled),
+          series.histnorm,
+          seriesNbins,
+        );
+        if (!fit) continue;
+        const lineColor = series.marker?.color || series.color;
+        const fitTrace = {
+          x: seriesOrientation === "v" ? fit.xs : fit.ys,
+          y: seriesOrientation === "v" ? fit.ys : fit.xs,
+          xaxis: series.xaxisId,
+          yaxis: series.yaxisId,
+          name: `${series.name ?? `series ${i + 1}`} (normal fit)`,
+          type: "scatter",
+          mode: "lines",
+          line: { color: lineColor, width: 2 },
+          // Share legendgroup so the parent's toggle hides the fit too.
+          legendgroup: series.legendgroup ?? series.name,
+          showlegend: series.showlegend !== false,
+          hovertemplate: `μ=${fit.mean.toFixed(3)}<br>σ=${fit.std.toFixed(3)}<extra></extra>`,
+        } as unknown as PlotData;
+        traces.push(fitTrace);
+      }
     }
-  }
+
+    return traces;
+  }, [data, orientation, plotType, fitOverlay]);
 
   const layout = useMemo(() => {
     const next = createBaseLayout(config, sizing);
