@@ -1,5 +1,7 @@
 import { and, eq, inArray, like } from "drizzle-orm";
 
+import { zCreateCalibrationDefinitionBody } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
+
 import { db } from "../src/database";
 import { ensurePersonalOrganization, personalOrgSlug } from "../src/organizations";
 import { upsertGrant } from "../src/resource-grants";
@@ -13,6 +15,9 @@ import {
   experimentMembers,
   experimentDevices,
   flows,
+  calibrationDefinitions,
+  calibrationRuns,
+  deviceCalibrations,
   deviceGroupMembers,
   deviceGroups,
   iotDevices,
@@ -99,6 +104,22 @@ async function clearSeedData() {
       );
     // Experiments cascade-delete: flows, experimentDevices
     await db.delete(experiments).where(inArray(experiments.id, seedExpIds));
+  }
+
+  // Calibration runs RESTRICT their definition, so runs go first; a run's
+  // device_calibrations rows cascade with it.
+  const seedDefinitions = await db
+    .select({ id: calibrationDefinitions.id })
+    .from(calibrationDefinitions)
+    .where(like(calibrationDefinitions.name, SEED_PREFIX));
+  const seedDefinitionIds = seedDefinitions.map((definition) => definition.id);
+  if (seedDefinitionIds.length > 0) {
+    await db
+      .delete(calibrationRuns)
+      .where(inArray(calibrationRuns.definitionId, seedDefinitionIds));
+    await db
+      .delete(calibrationDefinitions)
+      .where(inArray(calibrationDefinitions.id, seedDefinitionIds));
   }
 
   // Groups cascade-delete their memberships.
@@ -893,6 +914,170 @@ async function main() {
     })),
   );
   console.log(`  Created ${createdGroups.length} device groups (3 members in the first)`);
+
+  // 11. Calibration: the two MiniPAR bench procedures as definitions, plus the
+  // result the manual one produced on a real sensor, approved and written, so
+  // the run history, the active calibration and the write report each have a
+  // real row behind them before any device is plugged in.
+  const miniparParFitScript = (orderedByStimulus: boolean) => `import math
+
+from qc import assess_linear_fit
+
+# Map the sensor's uncalibrated PAR onto the reference, y = slope * x + intercept,
+# the straight line the bench procedure fits with numpy.polyfit(x, y, 1).
+points = inputs["par_sweep"]
+fit = assess_linear_fit(
+    points["par_raw"],
+    points["par_ref"],
+${orderedByStimulus ? '    points["stimulus"],\n' : ""}    slope_min=0.1,
+    slope_max=10.0,
+    intercept_min=-100.0,
+    intercept_max=100.0,
+)
+
+# The thresholds are the platform's until the scientist supplies real ones: a
+# failed gate travels with the block as advice and the reviewer decides.
+fitted = math.isfinite(fit["slope"]) and math.isfinite(fit["intercept"])
+if fitted:
+    block = {
+        "status": "computed",
+        "coefficients": {"slope": fit["slope"], "intercept": fit["intercept"]},
+        "quality": fit,
+    }
+else:
+    block = {"status": "rejected", "reason": "; ".join(fit["reasons"]), "quality": fit}
+submit({"par": block})
+`;
+
+  const miniparOutputSchema = {
+    blocks: { par: { slope: { type: "number" }, intercept: { type: "number" } } },
+  };
+
+  const calibrationDefinitionSeeds = [
+    {
+      family: "minipar",
+      name: "[Seed] MiniPAR PAR calibration, manual bench",
+      description:
+        "Three points against a reference PAR sensor: two light levels and darkness. The operator sets the light and types the reference reading; the fit maps uncalibrated PAR onto the reference.",
+      captureProcedure: {
+        instruments: [{ role: "dut" }],
+        steps: [
+          {
+            kind: "operator",
+            prompt:
+              "Place the MiniPAR next to the reference PAR sensor so both see the same light.",
+          },
+          {
+            kind: "sweep",
+            series: "par_sweep",
+            stimulus: {
+              operator: "Set up {value}, then wait for both readings to settle before continuing.",
+              values: ["a first light level", "a second light level", "darkness"],
+            },
+            settleMs: 1000,
+            read: [
+              { instrument: "dut", command: "par_raw", as: "par_raw" },
+              {
+                operator: "Enter the PAR value shown by the reference sensor",
+                as: "par_ref",
+                type: "number",
+              },
+            ],
+          },
+        ],
+      },
+      script: miniparParFitScript(false),
+      outputSchema: miniparOutputSchema,
+    },
+    {
+      family: "minipar",
+      name: "[Seed] MiniPAR PAR calibration, automated bench",
+      description:
+        "A DC supply steps the lamp through six currents while a MicroPython photodiode supplies the reference. The same fit as the manual bench, with the sweep ordered by lamp current.",
+      captureProcedure: {
+        instruments: [
+          { role: "dut" },
+          { role: "lamp", handshake: "KIPRIM" },
+          { role: "par_ref", handshake: "raw REPL" },
+        ],
+        steps: [
+          {
+            kind: "operator",
+            prompt:
+              "Aim the lamp at the MiniPAR and the reference photodiode, and check the supply's current limit.",
+          },
+          {
+            kind: "sweep",
+            series: "lamp_setup",
+            stimulus: { instrument: "lamp", set: "voltage_v", values: [25] },
+            settleMs: 1000,
+            read: [{ instrument: "dut", command: "par_raw", as: "par_raw" }],
+          },
+          {
+            kind: "sweep",
+            series: "par_sweep",
+            stimulus: {
+              instrument: "lamp",
+              set: "current_a",
+              values: [0.2, 0.4, 0.8, 1.0, 1.6, 0],
+            },
+            settleMs: 1000,
+            read: [
+              { instrument: "dut", command: "par_raw", as: "par_raw" },
+              { instrument: "par_ref", command: "par", as: "par_ref" },
+            ],
+          },
+        ],
+      },
+      script: miniparParFitScript(true),
+      outputSchema: miniparOutputSchema,
+    },
+  ];
+
+  // Parsed through the contract so a seeded definition is exactly what the API would accept.
+  const createdDefinitions = await db
+    .insert(calibrationDefinitions)
+    .values(
+      calibrationDefinitionSeeds.map((seed) => ({
+        ...zCreateCalibrationDefinitionBody.parse(seed),
+        organizationId: personalOrganizationId,
+        createdBy: user.id,
+      })),
+    )
+    .returning();
+  console.log(`  Created ${createdDefinitions.length} calibration definitions`);
+
+  // The manual bench's real outcome on a MiniPAR: firmware 1.03 answered
+  // "MiniPAR,1.1,1.03", the fit came out at slope 0.96 and intercept -1.08,
+  // and the device echoed both values back when they were written.
+  const benchCoefficients = { slope: 0.96, intercept: -1.08 };
+  const benchTime = new Date();
+  const [benchRun] = await db
+    .insert(calibrationRuns)
+    .values({
+      definitionId: createdDefinitions[0].id,
+      deviceId: d[4].id,
+      requestedBy: user.id,
+      inputSource: "external_bench",
+      status: "approved",
+      blocks: { par: { status: "computed", coefficients: benchCoefficients } },
+      preInfo: { helloReply: "MiniPAR,1.1,1.03", deviceName: "miniPAR" },
+      firmwareVersion: "1.03",
+      reviewedBy: user.id,
+      reviewedAt: benchTime,
+      finishedAt: benchTime,
+    })
+    .returning();
+
+  await db.insert(deviceCalibrations).values({
+    deviceId: d[4].id,
+    runId: benchRun.id,
+    blocks: { par: { coefficients: benchCoefficients } },
+    approvedBy: user.id,
+    writtenToDeviceAt: benchTime,
+    writeResults: { par: { verified: true } },
+  });
+  console.log("  Created 1 approved calibration run and the MiniPAR's active calibration");
 
   console.log("Seed complete!");
 }
