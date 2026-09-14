@@ -142,4 +142,28 @@ describe("ExperimentDeviceRepository", () => {
     const poisonedRow = onboarding.value.find((row) => row.experimentId === poisoned.id);
     expect(poisonedRow?.workbook).toBeNull();
   });
+
+  it("counts bindings per device in one query, leaving unbound devices out of the map", async () => {
+    const bound = await testApp.createIotDevice({ createdBy: userId });
+    const twice = await testApp.createIotDevice({ createdBy: userId });
+    const unbound = await testApp.createIotDevice({ createdBy: userId });
+    const { experiment: alpha } = await testApp.createExperiment({ name: "Alpha", userId });
+    const { experiment: beta } = await testApp.createExperiment({ name: "Beta", userId });
+    assertSuccess(await repository.addExperiments(bound.id, [alpha.id], userId));
+    assertSuccess(await repository.addExperiments(twice.id, [alpha.id, beta.id], userId));
+
+    const counts = await repository.countByDevices([bound.id, twice.id, unbound.id]);
+
+    assertSuccess(counts);
+    expect(counts.value.get(bound.id)).toBe(1);
+    expect(counts.value.get(twice.id)).toBe(2);
+    expect(counts.value.has(unbound.id)).toBe(false);
+  });
+
+  it("answers an empty selection with an empty map, without a round-trip", async () => {
+    const counts = await repository.countByDevices([]);
+
+    assertSuccess(counts);
+    expect(counts.value.size).toBe(0);
+  });
 });

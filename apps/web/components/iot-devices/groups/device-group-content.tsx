@@ -123,6 +123,7 @@ export function DeviceGroupContent() {
                       <TableCell>
                         <IotDeviceStatusBadge
                           status={member.status}
+                          deviceType={member.deviceType}
                           boundExperimentCount={member.boundExperimentCount}
                         />
                       </TableCell>

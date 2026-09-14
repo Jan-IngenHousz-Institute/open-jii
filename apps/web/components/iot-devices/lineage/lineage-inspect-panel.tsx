@@ -67,6 +67,7 @@ export function LineageInspectPanel({ selected, device, monitoring }: LineageIns
             value={
               <IotDeviceStatusBadge
                 status={selected.status}
+                deviceType={selected.family}
                 boundExperimentCount={selected.boundExperimentCount}
               />
             }

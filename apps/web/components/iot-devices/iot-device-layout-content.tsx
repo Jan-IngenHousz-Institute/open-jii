@@ -57,6 +57,7 @@ export function IotDeviceLayoutContent({
             >
               <IotDeviceStatusBadge
                 status={device.status}
+                deviceType={device.deviceType}
                 boundExperimentCount={device.boundExperimentCount}
               />
               <ConnectivityDot connectivity={device.connectivity} deviceType={device.deviceType} />

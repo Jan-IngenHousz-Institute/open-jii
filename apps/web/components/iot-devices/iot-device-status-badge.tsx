@@ -4,8 +4,10 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import type { StatusTone } from "@/components/shared/status-badge";
 import { Archive, CheckCircle2, Clock, KeyRound, XCircle } from "lucide-react";
 
-import type { IotDeviceRung, IotDeviceStatus } from "@repo/api/domains/iot/iot.schema";
+import type { IotDevice, IotDeviceRung } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
+
+import { deviceRung } from "./device-rung";
 
 const RUNG_CONFIG: Record<IotDeviceRung, { icon: typeof Clock; tone: StatusTone }> = {
   registered: { icon: Clock, tone: "stale" },
@@ -15,21 +17,27 @@ const RUNG_CONFIG: Record<IotDeviceRung, { icon: typeof Clock; tone: StatusTone 
   retired: { icon: Archive, tone: "stale" },
 };
 
-/** The stored status resolved against the binding count: "active" reads as Provisioned or Onboarded. */
-export function deviceRung(status: IotDeviceStatus, boundExperimentCount: number): IotDeviceRung {
-  if (status === "active") {
-    return boundExperimentCount > 0 ? "onboarded" : "provisioned";
-  }
-  return status;
-}
-
 interface IotDeviceStatusBadgeProps {
-  status: IotDeviceStatus;
+  status: IotDevice["status"];
+  deviceType: IotDevice["deviceType"];
   boundExperimentCount: number;
 }
 
-export function IotDeviceStatusBadge({ status, boundExperimentCount }: IotDeviceStatusBadgeProps) {
+/**
+ * A phone has no certificate and picks its experiment in the app, so it has no
+ * ladder to climb: it shows nothing here unless it was retired.
+ */
+export function IotDeviceStatusBadge({
+  status,
+  deviceType,
+  boundExperimentCount,
+}: IotDeviceStatusBadgeProps) {
   const { t } = useTranslation("iot");
+
+  if (deviceType === "mobile" && status !== "retired") {
+    return null;
+  }
+
   const rung = deviceRung(status, boundExperimentCount);
   const config = RUNG_CONFIG[rung];
   const Icon = config.icon;

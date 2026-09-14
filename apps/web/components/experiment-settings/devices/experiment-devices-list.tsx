@@ -90,6 +90,7 @@ export function ExperimentDevicesList({
             {entry.device !== null && (
               <IotDeviceStatusBadge
                 status={entry.device.status}
+                deviceType={entry.device.deviceType}
                 boundExperimentCount={entry.device.boundExperimentCount}
               />
             )}

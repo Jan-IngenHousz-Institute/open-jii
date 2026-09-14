@@ -6,8 +6,10 @@ import { IotDeviceDto } from "../../../core/models/iot-device.model";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 
 /**
- * Returns a retired device to the registry. Retiring revoked its certificate,
- * so it comes back as registered and needs a new one before it can connect.
+ * Returns a retired device to the registry. Retiring cut its broker access, so
+ * an instrument comes back as registered and needs a new certificate; a phone,
+ * which never held one, is active again and re-binds its identity on its next
+ * app open.
  */
 @Injectable()
 export class ReinstateIotDeviceUseCase {

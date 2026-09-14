@@ -47,6 +47,17 @@ describe("fleetAttention", () => {
     expect(entries[0].device.id).toBe(pending.id);
   });
 
+  it("leaves a retired device out of the attention list, whatever it lacks", () => {
+    // Retired means taken out of service on purpose: no certificate and no
+    // broker sighting are the expected state, not something to fix.
+    const shelved = device({
+      status: "retired",
+      connectivity: { connected: false, lastSeenAt: null },
+    });
+
+    expect(fleetAttention([shelved], [], false, NOW)).toEqual([]);
+  });
+
   it("flags a credentialed device the broker has never seen", () => {
     const neverSeen = device({ connectivity: { connected: false, lastSeenAt: null } });
 

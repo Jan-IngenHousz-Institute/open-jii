@@ -115,6 +115,7 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
       >
         <IotDeviceStatusBadge
           status={device.status}
+          deviceType={device.deviceType}
           boundExperimentCount={device.boundExperimentCount}
         />
       </TableCell>

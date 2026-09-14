@@ -10,6 +10,7 @@ import { OverviewToolbar } from "@/components/overview-toolbar";
 import { useIotDevices } from "@/hooks/iot/useIotDevices/useIotDevices";
 import { useEffect, useMemo, useState } from "react";
 
+import { zIotDeviceRung } from "@repo/api/domains/iot/iot.schema";
 import type { IotDeviceRung, IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -23,8 +24,8 @@ import {
 } from "@repo/ui/components/pagination";
 import { SearchInput } from "@repo/ui/components/search-input";
 
+import { deviceRung } from "./device-rung";
 import { useDevicesRegister } from "./devices-register-context";
-import { deviceRung } from "./iot-device-status-badge";
 import { IotDevicesEmptyState } from "./iot-devices-empty-state";
 import { IotDevicesTable } from "./iot-devices-table";
 
@@ -34,14 +35,7 @@ type StatusFilter = "all" | IotDeviceRung;
 // One-of chips in the group monitoring filter's language, not a tab strip:
 // a filter narrows the same list, it does not navigate. They filter on the
 // rung the badge shows, which is what a person narrowing the list means.
-const CHIP_STATUSES = [
-  "all",
-  "registered",
-  "provisioned",
-  "onboarded",
-  "revoked",
-  "retired",
-] as const;
+const CHIP_STATUSES = ["all", ...zIotDeviceRung.options] as const;
 type ChipStatus = (typeof CHIP_STATUSES)[number];
 
 export function IotDevicesTableView() {

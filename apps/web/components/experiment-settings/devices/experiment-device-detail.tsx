@@ -64,6 +64,7 @@ export function ExperimentDeviceDetail({
           {device !== null && (
             <IotDeviceStatusBadge
               status={device.status}
+              deviceType={device.deviceType}
               boundExperimentCount={device.boundExperimentCount}
             />
           )}

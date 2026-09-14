@@ -235,6 +235,22 @@ describe("DeviceOnboardingPanel", () => {
     expect(screen.getByRole("button", { name: /iot.onboarding.onboard/ })).toBeDisabled();
   });
 
+  it("tells a retired device it cannot be onboarded, with no certificate to go and fix", async () => {
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.experiments.listExperiments, { body: [fresh] });
+
+    render(<DeviceOnboardingPanel device={createIotDevice({ status: "retired" })} />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("iot.onboarding.retiredDevice").length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText("iot.onboarding.inactiveDevice")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "iot.onboarding.inactiveDeviceAction" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /iot.onboarding.onboard/ })).toBeDisabled();
+  });
+
   it("surfaces a failed experiment list with a retry rather than an empty one", async () => {
     server.mount(contract.iot.listDeviceExperiments, { status: 500 });
     server.mount(contract.experiments.listExperiments, { body: [] });

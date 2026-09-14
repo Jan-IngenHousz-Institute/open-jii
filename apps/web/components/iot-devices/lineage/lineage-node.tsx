@@ -84,6 +84,7 @@ export function LineageNode(props: NodeProps) {
             <span className="text-muted-foreground font-mono text-[11px]">{model.family}</span>
             <IotDeviceStatusBadge
               status={model.status}
+              deviceType={model.family}
               boundExperimentCount={model.boundExperimentCount}
             />
           </div>

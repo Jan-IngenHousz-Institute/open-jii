@@ -8,9 +8,9 @@ import type { AwsPort } from "../../../core/ports/aws.port";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 
 /**
- * Takes a device out of service without deleting it: the certificate is
- * revoked so it can no longer connect, and the row keeps its bindings and
- * history so lineage and monitoring still explain what it did.
+ * Takes a device out of service without deleting it: its broker access is cut
+ * (certificate revoked, every principal detached) and the row keeps its
+ * bindings and history so lineage and monitoring still explain what it did.
  */
 @Injectable()
 export class RetireIotDeviceUseCase {
@@ -52,14 +52,18 @@ export class RetireIotDeviceUseCase {
       if (revoke.isFailure()) {
         return failure(revoke.error);
       }
-      if (device.certificateArn) {
-        const detach = await this.awsPort.detachThingPrincipal(
-          device.thingName,
-          device.certificateArn,
-        );
-        if (detach.isFailure()) {
-          this.logger.warn({ msg: "Cleanup failed: detach principal after retire", deviceId });
-        }
+    }
+
+    // Every principal, not only the certificate: a phone authenticates through
+    // its Cognito identity, and retiring has to cut that off just the same.
+    const principalsResult = await this.awsPort.listThingPrincipals(device.thingName);
+    if (principalsResult.isFailure()) {
+      return failure(principalsResult.error);
+    }
+    for (const principal of principalsResult.value) {
+      const detach = await this.awsPort.detachThingPrincipal(device.thingName, principal);
+      if (detach.isFailure()) {
+        return failure(detach.error);
       }
     }
 
