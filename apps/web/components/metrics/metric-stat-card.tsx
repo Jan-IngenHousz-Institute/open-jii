@@ -14,7 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { cn } from "@repo/ui/lib/utils";
 
 // Past ten-fold a percentage says less than the two figures, which the footer
 // carries anyway.
@@ -99,7 +98,7 @@ export function MetricStatCard({
   );
 
   return (
-    <Card padding="sm" className={cn("@container/card", className)}>
+    <Card padding="sm" className={className}>
       <CardHeader className="gap-1">
         <CardDescription>{label}</CardDescription>
         <CardTitle

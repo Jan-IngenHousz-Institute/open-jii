@@ -16,7 +16,6 @@ import { LineChart } from "@repo/ui/components/charts/line-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 import { detectAxisType, platformChartColor } from "@repo/ui/components/charts/utils";
-import { cn } from "@repo/ui/lib/utils";
 
 const QUIET_BAR_OPACITY = 0.45;
 const TRACK_OPACITY = 0.08;
@@ -123,7 +122,7 @@ export function MetricTrendCard({
   );
 
   return (
-    <Card padding="sm" className={cn("@container/card", className)}>
+    <Card padding="sm" className={className}>
       <CardHeader className="gap-1">
         <CardDescription>{label}</CardDescription>
         <CardTitle
