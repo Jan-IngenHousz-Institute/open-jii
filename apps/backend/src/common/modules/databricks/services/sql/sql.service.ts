@@ -4,10 +4,22 @@ import { AxiosResponse } from "axios";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
 import { ErrorCodes } from "../../../../utils/error-codes";
-import { Result, AppError, tryCatch, failure, apiErrorMapper } from "../../../../utils/fp-utils";
+import {
+  Result,
+  AppError,
+  tryCatch,
+  failure,
+  success,
+  apiErrorMapper,
+} from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
 import { ExecuteStatementRequest, SchemaData, StatementResponse } from "./sql.types";
+
+interface PolledStatement {
+  response: StatementResponse;
+  attempts: number;
+}
 
 @Injectable()
 export class DatabricksSqlService {
@@ -60,6 +72,7 @@ export class DatabricksSqlService {
           disposition: "INLINE",
           format: "JSON_ARRAY",
         };
+        const startedAt = performance.now();
 
         try {
           const response: AxiosResponse<StatementResponse> = await this.httpService.axiosRef.post(
@@ -78,7 +91,7 @@ export class DatabricksSqlService {
 
           // Check if the statement is in a terminal state
           if (statementResponse.status.state === "SUCCEEDED") {
-            return this.formatExperimentDataResponse(statementResponse);
+            return this.completeStatement(statementResponse, startedAt, 0);
           } else if (["FAILED", "CANCELED", "CLOSED"].includes(statementResponse.status.state)) {
             if (statementResponse.status.error) {
               throw DatabricksSqlService.mapSqlStatementError(statementResponse.status.error);
@@ -98,7 +111,11 @@ export class DatabricksSqlService {
             throw pollResult.error;
           }
 
-          return this.formatExperimentDataResponse(pollResult.value);
+          return this.completeStatement(
+            pollResult.value.response,
+            startedAt,
+            pollResult.value.attempts,
+          );
         } catch (error) {
           throw error instanceof AppError
             ? error
@@ -126,7 +143,7 @@ export class DatabricksSqlService {
   private async pollStatementExecution(
     token: string,
     statementId: string,
-  ): Promise<Result<StatementResponse>> {
+  ): Promise<Result<PolledStatement>> {
     const maxAttempts = 30; // Maximum polling attempts
     const pollingIntervalMs = 1000; // 1 second between polls
     const host = this.configService.getHost();
@@ -150,10 +167,7 @@ export class DatabricksSqlService {
 
         // Check if the statement finished
         if (statementResponse.status.state === "SUCCEEDED") {
-          return tryCatch(
-            () => statementResponse,
-            (error) => AppError.internal(`Failed to process SQL response: ${String(error)}`),
-          );
+          return success({ response: statementResponse, attempts: attempt + 1 });
         } else if (["FAILED", "CANCELED", "CLOSED"].includes(statementResponse.status.state)) {
           if (statementResponse.status.error) {
             return failure(
@@ -186,6 +200,29 @@ export class DatabricksSqlService {
     return failure(
       AppError.internal("SQL statement execution timed out after multiple polling attempts"),
     );
+  }
+
+  /** Shape the terminal response and record how the statement ran. */
+  private completeStatement(
+    response: StatementResponse,
+    startedAt: number,
+    pollAttempts: number,
+  ): SchemaData {
+    const data = this.formatExperimentDataResponse(response);
+
+    this.logger.log({
+      msg: "Warehouse statement completed",
+      operation: "executeSqlQuery",
+      statementId: response.statement_id,
+      durationMs: Math.round(performance.now() - startedAt),
+      pollAttempts,
+      rowCount: data.totalRows,
+      byteCount: response.manifest?.total_byte_count,
+      chunkCount: response.manifest?.total_chunk_count,
+      truncated: data.truncated,
+    });
+
+    return data;
   }
 
   private formatExperimentDataResponse(response: StatementResponse): SchemaData {

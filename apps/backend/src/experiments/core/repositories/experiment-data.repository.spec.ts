@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { Logger } from "@nestjs/common";
 import { expect } from "vitest";
 
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -135,6 +136,69 @@ describe("ExperimentDataRepository", () => {
         limit: 5,
         offset: 0,
       });
+    });
+
+    it("logs one read summary with the warehouse phases split out", async () => {
+      const mockMetadata: ExperimentTableMetadata[] = [
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          rowCount: 100,
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+        },
+      ];
+      const countData = {
+        columns: [{ name: "total", type_name: "long", type_text: "BIGINT", position: 0 }],
+        rows: [["7"]],
+        totalRows: 1,
+        truncated: false,
+      };
+      const pageData = {
+        columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
+        rows: [["1"], ["2"]],
+        totalRows: 2,
+        truncated: false,
+      };
+
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(mockMetadata),
+      );
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(
+        success("SELECT id FROM raw_data"),
+      );
+      vi.spyOn(databricksPort, "executeSqlQuery").mockImplementation((_schema, sql) =>
+        Promise.resolve(success(sql.startsWith("SELECT COUNT") ? countData : pageData)),
+      );
+      const logSpy = vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
+
+      const result = await repository.getTableData({
+        ...baseParams,
+        columns: ["id"],
+        filters: [{ column: "id", operator: "equals", value: "1" }],
+        page: 2,
+        pageSize: 2,
+      });
+
+      assertSuccess(result);
+      expect(result.value[0]).toMatchObject({ page: 2, pageSize: 2, totalRows: 7, totalPages: 4 });
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: "Experiment data read",
+          experimentId,
+          tableName: "raw_data",
+          mode: "filtered-page",
+          metadataMs: expect.any(Number) as number,
+          countMs: expect.any(Number) as number,
+          dataMs: expect.any(Number) as number,
+          totalMs: expect.any(Number) as number,
+          rows: 2,
+          totalRows: 2,
+          truncated: false,
+        }),
+      );
+      logSpy.mockRestore();
     });
 
     it("tags contributor id filters with the pseudonym salt when anonymizing", async () => {
