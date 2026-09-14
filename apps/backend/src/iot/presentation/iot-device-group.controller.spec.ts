@@ -1,7 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
-import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
 import type {
   IotDeviceGroup,
@@ -10,11 +9,9 @@ import type {
   IotDeviceGroupMember,
 } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 
-import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
-import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { GetIotDeviceGroupMonitoringUseCase } from "../application/use-cases/get-iot-device-group-monitoring/get-iot-device-group-monitoring";
@@ -32,7 +29,6 @@ const MONITORING_RANGE = {
 describe("IotDeviceGroupController", () => {
   const testApp = TestHarness.App;
   let userId: string;
-  let analyticsAdapter: MockAnalyticsAdapter;
 
   beforeAll(async () => {
     await testApp.setup({ mock: { AnalyticsAdapter: true } });
@@ -41,8 +37,6 @@ describe("IotDeviceGroupController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     userId = await testApp.createTestUser({ name: "Owner" });
-    analyticsAdapter = testApp.module.get(AnalyticsAdapter);
-    analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, true);
   });
 
   afterEach(() => {
@@ -62,89 +56,6 @@ describe("IotDeviceGroupController", () => {
       .expect(StatusCodes.CREATED);
     return response.body;
   }
-
-  describe("iot-devices feature flag", () => {
-    it("returns 403 on every group endpoint when the flag is disabled", async () => {
-      const group = await createGroup();
-      analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, false);
-
-      await testApp
-        .get(testApp.resolveOrpcPath(contract.iot.listIotDeviceGroups))
-        .withAuth(userId)
-        .expect(StatusCodes.FORBIDDEN);
-      await testApp
-        .post(testApp.resolveOrpcPath(contract.iot.createIotDeviceGroup))
-        .withAuth(userId)
-        .send({ name: "x" })
-        .expect(StatusCodes.FORBIDDEN);
-
-      const groupPath = testApp.resolveOrpcPath(contract.iot.getIotDeviceGroup, {
-        groupId: group.id,
-      });
-      await testApp.get(groupPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
-      await testApp
-        .patch(groupPath)
-        .withAuth(userId)
-        .send({ name: "y" })
-        .expect(StatusCodes.FORBIDDEN);
-      await testApp.delete(groupPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
-
-      const membersPath = testApp.resolveOrpcPath(contract.iot.listIotDeviceGroupMembers, {
-        groupId: group.id,
-      });
-      await testApp.get(membersPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
-      await testApp
-        .post(
-          testApp.resolveOrpcPath(contract.iot.onboardIotDeviceGroup, {
-            groupId: group.id,
-          }),
-        )
-        .withAuth(userId)
-        .send({ experimentIds: [] })
-        .expect(StatusCodes.FORBIDDEN);
-      await testApp
-        .get(
-          testApp.resolveOrpcPath(contract.iot.getIotDeviceGroupMonitoring, {
-            groupId: group.id,
-          }),
-        )
-        .withAuth(userId)
-        .query(MONITORING_RANGE)
-        .expect(StatusCodes.FORBIDDEN);
-      await testApp
-        .post(
-          testApp.resolveOrpcPath(contract.iot.issueIotDeviceGroupCredentials, {
-            groupId: group.id,
-          }),
-        )
-        .withAuth(userId)
-        .send({})
-        .expect(StatusCodes.FORBIDDEN);
-      await testApp
-        .post(
-          testApp.resolveOrpcPath(contract.iot.rotateIotDeviceGroupCredentials, {
-            groupId: group.id,
-          }),
-        )
-        .withAuth(userId)
-        .send({})
-        .expect(StatusCodes.FORBIDDEN);
-      await testApp
-        .post(
-          testApp.resolveOrpcPath(contract.iot.revokeIotDeviceGroupCredentials, {
-            groupId: group.id,
-          }),
-        )
-        .withAuth(userId)
-        .send({})
-        .expect(StatusCodes.FORBIDDEN);
-      await testApp
-        .post(membersPath)
-        .withAuth(userId)
-        .send({ deviceIds: ["11111111-1111-4111-8111-111111111111"] })
-        .expect(StatusCodes.FORBIDDEN);
-    });
-  });
 
   describe("createIotDeviceGroup", () => {
     it("creates a private group owned by the caller (201)", async () => {

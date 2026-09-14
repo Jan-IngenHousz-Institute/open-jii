@@ -3,17 +3,9 @@
 import { DevicesRegisterProvider } from "@/components/iot-devices/devices-register-context";
 import { PageContainer } from "@/components/page-container";
 import { useLocale } from "@/hooks/useLocale";
-import { notFound, usePathname } from "next/navigation";
-import { useFeatureFlagEnabled } from "posthog-js/react";
-
-import { FEATURE_FLAGS } from "@repo/analytics";
+import { usePathname } from "next/navigation";
 
 export default function DevicesLayout({ children }: { children: React.ReactNode }) {
-  // undefined while flags load; render nothing to avoid flashing a gated page
-  const devicesEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.IOT_DEVICES);
-  if (devicesEnabled === false) notFound();
-  if (!devicesEnabled) return null;
-
   return (
     <DevicesRegisterProvider>
       <DevicesLayoutInner>{children}</DevicesLayoutInner>
