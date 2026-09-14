@@ -302,6 +302,43 @@ describe("AwsAdapter", () => {
     });
   });
 
+  describe("invokeCalibrationSandbox", () => {
+    it("invokes the configured calibration sandbox function with the run event", async () => {
+      vi.spyOn(awsConfigService, "lambdaConfig", "get").mockReturnValue({
+        ...awsConfigService.lambdaConfig,
+        calibrationSandboxFunctionName: "calibration-sandbox",
+      });
+      vi.spyOn(awsLambdaService, "invoke").mockResolvedValue(
+        success({ statusCode: 200, payload: { status: "computed", blocks: {} } }),
+      );
+
+      const result = await awsAdapter.invokeCalibrationSandbox({ script: "submit({})" });
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(awsLambdaService.invoke).toHaveBeenCalledWith({
+        functionName: "calibration-sandbox",
+        payload: { script: "submit({})" },
+      });
+      expect(result.isSuccess()).toBe(true);
+    });
+
+    // A deployment without the function must fail the run visibly rather than
+    // invoke a Lambda named "".
+    it("fails without invoking when no function is configured", async () => {
+      vi.spyOn(awsConfigService, "lambdaConfig", "get").mockReturnValue({
+        ...awsConfigService.lambdaConfig,
+        calibrationSandboxFunctionName: "",
+      });
+      const invoke = vi.spyOn(awsLambdaService, "invoke");
+
+      const result = await awsAdapter.invokeCalibrationSandbox({});
+
+      assertFailure(result);
+      expect(result.error.message).toContain("not configured");
+      expect(invoke).not.toHaveBeenCalled();
+    });
+  });
+
   describe("getIotUploadUrl", () => {
     it("delegates to AwsS3Service and returns the upload URL on success", async () => {
       const mockUploadUrl: IotUploadUrl = {

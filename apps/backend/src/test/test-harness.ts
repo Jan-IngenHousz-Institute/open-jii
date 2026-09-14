@@ -15,6 +15,8 @@ import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.sche
 import { auth } from "@repo/auth/server";
 import type { DatabaseInstance } from "@repo/database";
 import {
+  calibrationDefinitions,
+  calibrationRuns,
   experimentMembers,
   experimentLocations,
   experiments,
@@ -219,7 +221,10 @@ export class TestHarness {
     await this.database.delete(profiles).execute();
     // Every org-owned resource reaches organizations through a RESTRICT FK — nothing an
     // organization owns is destroyed with it — so all of them go first. Workbooks and
-    // experiments are already gone above; devices and device groups are not.
+    // experiments are already gone above; devices, device groups, and calibration
+    // definitions are not. Runs RESTRICT on definitions, applied rows cascade off runs.
+    await this.database.delete(calibrationRuns).execute();
+    await this.database.delete(calibrationDefinitions).execute();
     await this.database.delete(iotDevices).execute();
     await this.database.delete(deviceGroups).execute();
     await this.database.delete(organizations).execute();

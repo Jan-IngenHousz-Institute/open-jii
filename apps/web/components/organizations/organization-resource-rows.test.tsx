@@ -222,7 +222,7 @@ describe("<OrganizationResourceRows />", () => {
         }),
       );
 
-      // Six types and no seventh, in GROUP_ORDER — a hand-written list could drift.
+      // Seven types and no eighth, in GROUP_ORDER; a hand-written list could drift.
       expect((await screen.findAllByRole("option")).map((o) => o.textContent)).toEqual([
         "organizations.resources.allTypes",
         "organizations.resources.types.experiment",
@@ -231,6 +231,7 @@ describe("<OrganizationResourceRows />", () => {
         "organizations.resources.types.workbook",
         "organizations.resources.types.device",
         "organizations.resources.types.device_group",
+        "organizations.resources.types.calibration_definition",
       ]);
     });
   });

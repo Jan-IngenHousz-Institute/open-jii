@@ -12,6 +12,7 @@ const NO_TOTALS: OrganizationResourceTotals = {
   workbook: 0,
   device: 0,
   device_group: 0,
+  calibration_definition: 0,
 };
 
 /**
@@ -73,7 +74,15 @@ describe("<OrganizationResourceMix />", () => {
   it("reads every type in the resources card's order, hardware last", () => {
     const { container } = render(
       <OrganizationResourceMix
-        totals={{ experiment: 1, protocol: 1, macro: 1, workbook: 1, device: 1, device_group: 1 }}
+        totals={{
+          experiment: 1,
+          protocol: 1,
+          macro: 1,
+          workbook: 1,
+          device: 1,
+          device_group: 1,
+          calibration_definition: 1,
+        }}
         isMember
       />,
     );
@@ -92,6 +101,7 @@ describe("<OrganizationResourceMix />", () => {
       "organizations.resources.types.workbook1",
       "organizations.resources.types.device1",
       "organizations.resources.types.device_group1",
+      "organizations.resources.types.calibration_definition1",
     ]);
   });
 
