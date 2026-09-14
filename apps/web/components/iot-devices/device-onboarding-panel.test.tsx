@@ -223,7 +223,7 @@ describe("DeviceOnboardingPanel", () => {
     server.mount(contract.iot.listDeviceExperiments, { body: [] });
     server.mount(contract.experiments.listExperiments, { body: [fresh] });
 
-    render(<DeviceOnboardingPanel device={createIotDevice({ status: "pending" })} />);
+    render(<DeviceOnboardingPanel device={createIotDevice({ status: "registered" })} />);
 
     await waitFor(() => {
       expect(screen.getAllByText("iot.onboarding.inactiveDevice").length).toBeGreaterThan(0);

@@ -113,7 +113,10 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
       <TableCell
         className={`${IOT_DEVICE_TABLE_COLUMN_CLASS.status} min-w-0 overflow-hidden px-6 py-3`}
       >
-        <IotDeviceStatusBadge status={device.status} />
+        <IotDeviceStatusBadge
+          status={device.status}
+          boundExperimentCount={device.boundExperimentCount}
+        />
       </TableCell>
       <TableCell
         className={`${IOT_DEVICE_TABLE_COLUMN_CLASS.type} text-muted-foreground min-w-0 truncate px-6 py-3 text-[13px]`}

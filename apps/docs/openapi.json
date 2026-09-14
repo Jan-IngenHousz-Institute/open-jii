@@ -4146,12 +4146,16 @@
                                   },
                                   "status": {
                                     "enum": [
-                                      "pending",
+                                      "registered",
                                       "active",
-                                      "rotating",
-                                      "revoked"
+                                      "revoked",
+                                      "retired"
                                     ],
                                     "type": "string"
+                                  },
+                                  "boundExperimentCount": {
+                                    "type": "integer",
+                                    "minimum": 0
                                   }
                                 },
                                 "required": [
@@ -4160,7 +4164,8 @@
                                   "serialNumber",
                                   "name",
                                   "deviceType",
-                                  "status"
+                                  "status",
+                                  "boundExperimentCount"
                                 ]
                               },
                               {
@@ -13852,10 +13857,10 @@
                           },
                           "status": {
                             "enum": [
-                              "pending",
+                              "registered",
                               "active",
-                              "rotating",
-                              "revoked"
+                              "revoked",
+                              "retired"
                             ],
                             "type": "string"
                           },
@@ -13964,10 +13969,10 @@
                     },
                     "status": {
                       "enum": [
-                        "pending",
+                        "registered",
                         "active",
-                        "rotating",
-                        "revoked"
+                        "revoked",
+                        "retired"
                       ],
                       "type": "string"
                     },
@@ -14094,10 +14099,10 @@
                       },
                       "status": {
                         "enum": [
-                          "pending",
+                          "registered",
                           "active",
-                          "rotating",
-                          "revoked"
+                          "revoked",
+                          "retired"
                         ],
                         "type": "string"
                       },
@@ -14180,6 +14185,10 @@
                             "type": "null"
                           }
                         ]
+                      },
+                      "boundExperimentCount": {
+                        "type": "integer",
+                        "minimum": 0
                       }
                     },
                     "required": [
@@ -14197,7 +14206,8 @@
                       "visibility",
                       "createdAt",
                       "updatedAt",
-                      "connectivity"
+                      "connectivity",
+                      "boundExperimentCount"
                     ]
                   }
                 }
@@ -14295,10 +14305,10 @@
                     },
                     "status": {
                       "enum": [
-                        "pending",
+                        "registered",
                         "active",
-                        "rotating",
-                        "revoked"
+                        "revoked",
+                        "retired"
                       ],
                       "type": "string"
                     },
@@ -14707,10 +14717,10 @@
                                   },
                                   "status": {
                                     "enum": [
-                                      "pending",
+                                      "registered",
                                       "active",
-                                      "rotating",
-                                      "revoked"
+                                      "revoked",
+                                      "retired"
                                     ],
                                     "type": "string"
                                   },
@@ -14898,10 +14908,10 @@
                     },
                     "status": {
                       "enum": [
-                        "pending",
+                        "registered",
                         "active",
-                        "rotating",
-                        "revoked"
+                        "revoked",
+                        "retired"
                       ],
                       "type": "string"
                     },
@@ -14985,6 +14995,10 @@
                         }
                       ]
                     },
+                    "boundExperimentCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
                     "capabilities": {
                       "type": "object",
                       "properties": {
@@ -15033,6 +15047,7 @@
                     "createdAt",
                     "updatedAt",
                     "connectivity",
+                    "boundExperimentCount",
                     "capabilities"
                   ]
                 }
@@ -15872,10 +15887,10 @@
                     },
                     "status": {
                       "enum": [
-                        "pending",
+                        "registered",
                         "active",
-                        "rotating",
-                        "revoked"
+                        "revoked",
+                        "retired"
                       ],
                       "type": "string"
                     },
@@ -15998,6 +16013,286 @@
                     "certificatePem",
                     "publicKey",
                     "privateKey"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{deviceId}/retire": {
+      "post": {
+        "operationId": "iot.retireIotDevice",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the device"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "thingName": {
+                      "type": "string"
+                    },
+                    "thingArn": {
+                      "type": "string"
+                    },
+                    "serialNumber": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "deviceType": {
+                      "enum": [
+                        "multispeq",
+                        "ambyte",
+                        "minipar",
+                        "generic",
+                        "ambit",
+                        "mobile"
+                      ],
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "registered",
+                        "active",
+                        "revoked",
+                        "retired"
+                      ],
+                      "type": "string"
+                    },
+                    "certificateId": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "certificateArn": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "thingName",
+                    "thingArn",
+                    "serialNumber",
+                    "name",
+                    "deviceType",
+                    "status",
+                    "certificateId",
+                    "certificateArn",
+                    "createdBy",
+                    "organizationId",
+                    "visibility",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/devices/{deviceId}/reinstate": {
+      "post": {
+        "operationId": "iot.reinstateIotDevice",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the device"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "thingName": {
+                      "type": "string"
+                    },
+                    "thingArn": {
+                      "type": "string"
+                    },
+                    "serialNumber": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "deviceType": {
+                      "enum": [
+                        "multispeq",
+                        "ambyte",
+                        "minipar",
+                        "generic",
+                        "ambit",
+                        "mobile"
+                      ],
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "registered",
+                        "active",
+                        "revoked",
+                        "retired"
+                      ],
+                      "type": "string"
+                    },
+                    "certificateId": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "certificateArn": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "organizationId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "thingName",
+                    "thingArn",
+                    "serialNumber",
+                    "name",
+                    "deviceType",
+                    "status",
+                    "certificateId",
+                    "certificateArn",
+                    "createdBy",
+                    "organizationId",
+                    "visibility",
+                    "createdAt",
+                    "updatedAt"
                   ]
                 }
               }
@@ -17891,12 +18186,16 @@
                       },
                       "status": {
                         "enum": [
-                          "pending",
+                          "registered",
                           "active",
-                          "rotating",
-                          "revoked"
+                          "revoked",
+                          "retired"
                         ],
                         "type": "string"
+                      },
+                      "boundExperimentCount": {
+                        "type": "integer",
+                        "minimum": 0
                       },
                       "connected": {
                         "anyOf": [
@@ -17919,6 +18218,7 @@
                       "serialNumber",
                       "deviceType",
                       "status",
+                      "boundExperimentCount",
                       "connected",
                       "addedAt"
                     ]
@@ -18006,12 +18306,16 @@
                       },
                       "status": {
                         "enum": [
-                          "pending",
+                          "registered",
                           "active",
-                          "rotating",
-                          "revoked"
+                          "revoked",
+                          "retired"
                         ],
                         "type": "string"
+                      },
+                      "boundExperimentCount": {
+                        "type": "integer",
+                        "minimum": 0
                       },
                       "connected": {
                         "anyOf": [
@@ -18034,6 +18338,7 @@
                       "serialNumber",
                       "deviceType",
                       "status",
+                      "boundExperimentCount",
                       "connected",
                       "addedAt"
                     ]

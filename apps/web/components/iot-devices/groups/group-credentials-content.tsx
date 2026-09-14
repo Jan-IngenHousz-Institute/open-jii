@@ -41,9 +41,9 @@ type CredentialAction = "issue" | "rotate" | "revoke";
 const MAX_BATCH = 100;
 
 const ELIGIBLE_STATUSES: Record<CredentialAction, readonly IotDeviceGroupMember["status"][]> = {
-  issue: ["pending", "revoked"],
+  issue: ["registered", "revoked"],
   rotate: ["active"],
-  revoke: ["active", "rotating"],
+  revoke: ["active"],
 };
 
 /** Phones authenticate through the user's session; certificates never apply. */
@@ -193,11 +193,11 @@ export function GroupCredentialsContent() {
     if (member.deviceType === "mobile") {
       return t("iot.groups.credentials.mobileIneligible");
     }
+    if (member.status === "retired") {
+      return t("iot.groups.credentials.retiredIneligible");
+    }
     if (action === "issue") {
       return t("iot.groups.credentials.hasCredentialsIneligible");
-    }
-    if (member.status === "rotating") {
-      return t("iot.groups.credentials.rotatingIneligible");
     }
     return t("iot.groups.credentials.noCertificateIneligible");
   }
@@ -219,6 +219,7 @@ export function GroupCredentialsContent() {
           status={
             eligibleMember ? (
               <ConnectivityDot
+                deviceType={member.deviceType}
                 connectivity={
                   member.connected === null
                     ? null

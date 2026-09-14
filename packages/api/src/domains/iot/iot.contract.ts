@@ -124,6 +124,19 @@ export const iotContract = {
     .input(zIotDevicePathParam)
     .output(zIotDevice),
 
+  // Retiring keeps the record and its history but takes the device out of
+  // service: the certificate is revoked and the device leaves every attention
+  // list and picker. Reinstating returns it as registered, since the
+  // certificate is gone.
+  retireIotDevice: oc
+    .route({ method: "POST", path: "/api/v1/devices/{deviceId}/retire", successStatus: 200 })
+    .input(zIotDevicePathParam)
+    .output(zIotDevice),
+  reinstateIotDevice: oc
+    .route({ method: "POST", path: "/api/v1/devices/{deviceId}/reinstate", successStatus: 200 })
+    .input(zIotDevicePathParam)
+    .output(zIotDevice),
+
   // Onboarding: bind the device to experiments and return the config to hand
   // to the hardware. An empty body re-issues the config without new bindings.
   onboardDevice: oc

@@ -23,6 +23,8 @@ import { GetIotFleetMonitoringUseCase } from "../application/use-cases/get-iot-f
 import { IssueIotCredentialsUseCase } from "../application/use-cases/issue-iot-credentials/issue-iot-credentials";
 import { ListIotDevicesUseCase } from "../application/use-cases/list-iot-devices/list-iot-devices";
 import { RegisterIotDeviceUseCase } from "../application/use-cases/register-iot-device/register-iot-device";
+import { ReinstateIotDeviceUseCase } from "../application/use-cases/reinstate-iot-device/reinstate-iot-device";
+import { RetireIotDeviceUseCase } from "../application/use-cases/retire-iot-device/retire-iot-device";
 import { RevokeIotCredentialsUseCase } from "../application/use-cases/revoke-iot-credentials/revoke-iot-credentials";
 import { RotateIotCredentialsUseCase } from "../application/use-cases/rotate-iot-credentials/rotate-iot-credentials";
 
@@ -45,6 +47,8 @@ export class IotDeviceController {
     private readonly issueIotCredentialsUseCase: IssueIotCredentialsUseCase,
     private readonly revokeIotCredentialsUseCase: RevokeIotCredentialsUseCase,
     private readonly rotateIotCredentialsUseCase: RotateIotCredentialsUseCase,
+    private readonly retireIotDeviceUseCase: RetireIotDeviceUseCase,
+    private readonly reinstateIotDeviceUseCase: ReinstateIotDeviceUseCase,
     private readonly authz: AuthorizationService,
   ) {}
 
@@ -289,6 +293,38 @@ export class IotDeviceController {
       }
 
       return throwOrpcFailure(result, this.logger, "revokeIotCredentials");
+    });
+  }
+
+  @CanAccess({ resource: "device", action: "manage", param: "deviceId" })
+  @Implement(iotContract.retireIotDevice)
+  retireIotDevice(@Session() session: UserSession) {
+    return implement(iotContract.retireIotDevice).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("retireIotDevice");
+
+      const result = await this.retireIotDeviceUseCase.execute(input.deviceId, session.user.id);
+
+      if (result.isSuccess()) {
+        return formatDates(result.value);
+      }
+
+      return throwOrpcFailure(result, this.logger, "retireIotDevice");
+    });
+  }
+
+  @CanAccess({ resource: "device", action: "manage", param: "deviceId" })
+  @Implement(iotContract.reinstateIotDevice)
+  reinstateIotDevice(@Session() session: UserSession) {
+    return implement(iotContract.reinstateIotDevice).handler(async ({ input }) => {
+      if (!(await this.devicesEnabled(session))) this.disabled("reinstateIotDevice");
+
+      const result = await this.reinstateIotDeviceUseCase.execute(input.deviceId, session.user.id);
+
+      if (result.isSuccess()) {
+        return formatDates(result.value);
+      }
+
+      return throwOrpcFailure(result, this.logger, "reinstateIotDevice");
     });
   }
 }

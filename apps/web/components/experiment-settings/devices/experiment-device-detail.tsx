@@ -61,8 +61,15 @@ export function ExperimentDeviceDetail({
         </div>
 
         <div className="flex items-center gap-2">
-          {device !== null && <IotDeviceStatusBadge status={device.status} />}
-          {device !== null && <ConnectivityDot connectivity={entry.connectivity} />}
+          {device !== null && (
+            <IotDeviceStatusBadge
+              status={device.status}
+              boundExperimentCount={device.boundExperimentCount}
+            />
+          )}
+          {device !== null && (
+            <ConnectivityDot connectivity={entry.connectivity} deviceType={device.deviceType} />
+          )}
           {entry.binding !== null && device !== null && (
             <Button
               variant="outline"

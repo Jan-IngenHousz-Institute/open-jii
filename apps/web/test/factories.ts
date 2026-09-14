@@ -1063,7 +1063,7 @@ export function createIotDevice(
     serialNumber: `SN-${iotDeviceSeq}`,
     name: `Device ${iotDeviceSeq}`,
     deviceType: "ambyte",
-    status: "pending",
+    status: "registered",
     certificateId: null,
     certificateArn: null,
     createdBy: crypto.randomUUID(),
@@ -1073,6 +1073,7 @@ export function createIotDevice(
     updatedAt: "2025-01-10T00:00:00.000Z",
     // Unknown by default: the fleet index is an enrichment, not a given.
     connectivity: null,
+    boundExperimentCount: 0,
     ...overrides,
   };
 }
@@ -1171,6 +1172,7 @@ export function createDeviceGroupMember(
     serialNumber: "AA:BB:CC:DD",
     deviceType: "ambyte",
     status: "active",
+    boundExperimentCount: 0,
     connected: null,
     addedAt: new Date().toISOString(),
     ...overrides,

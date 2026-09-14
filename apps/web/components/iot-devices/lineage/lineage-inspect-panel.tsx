@@ -64,7 +64,12 @@ export function LineageInspectPanel({ selected, device, monitoring }: LineageIns
           <FactRow label={t("iot.devices.lineage.familyLabel")} value={selected.family} />
           <FactRow
             label={t("iot.devices.lineage.statusLabel")}
-            value={<IotDeviceStatusBadge status={selected.status} />}
+            value={
+              <IotDeviceStatusBadge
+                status={selected.status}
+                boundExperimentCount={selected.boundExperimentCount}
+              />
+            }
           />
           {device.certificateId !== null && (
             <FactRow

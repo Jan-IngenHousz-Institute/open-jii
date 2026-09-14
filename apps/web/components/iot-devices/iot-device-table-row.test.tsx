@@ -23,7 +23,7 @@ describe("IotDeviceTableRow", () => {
     renderRow(createIotDevice({ name: "Greenhouse 1", status: "active" }));
 
     expect(screen.getByRole("link", { name: "Greenhouse 1" })).toBeInTheDocument();
-    expect(screen.getByText("iot.devices.status.active")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.status.provisioned")).toBeInTheDocument();
   });
 
   it("shows since-when in the last-seen cell for an online device", () => {
@@ -111,9 +111,9 @@ describe("IotDeviceTableRow", () => {
     expect(router.push).not.toHaveBeenCalled();
   });
 
-  it("leads the menu with issue-certificate for a pending device", async () => {
+  it("leads the menu with issue-certificate for a registered device", async () => {
     const user = userEvent.setup();
-    renderRow(createIotDevice({ status: "pending" }));
+    renderRow(createIotDevice({ status: "registered" }));
 
     await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
 

@@ -10,7 +10,7 @@ import { OverviewToolbar } from "@/components/overview-toolbar";
 import { useIotDevices } from "@/hooks/iot/useIotDevices/useIotDevices";
 import { useEffect, useMemo, useState } from "react";
 
-import type { IotDeviceStatus, IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
+import type { IotDeviceRung, IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
@@ -24,16 +24,24 @@ import {
 import { SearchInput } from "@repo/ui/components/search-input";
 
 import { useDevicesRegister } from "./devices-register-context";
+import { deviceRung } from "./iot-device-status-badge";
 import { IotDevicesEmptyState } from "./iot-devices-empty-state";
 import { IotDevicesTable } from "./iot-devices-table";
 
 const PAGE_SIZE = 20;
-type StatusFilter = "all" | IotDeviceStatus;
+type StatusFilter = "all" | IotDeviceRung;
 
 // One-of chips in the group monitoring filter's language, not a tab strip:
-// a filter narrows the same list, it does not navigate. Rotating and its kin
-// are transient states, not filter axes, so the chips stay at these four.
-const CHIP_STATUSES = ["all", "active", "pending", "revoked"] as const;
+// a filter narrows the same list, it does not navigate. They filter on the
+// rung the badge shows, which is what a person narrowing the list means.
+const CHIP_STATUSES = [
+  "all",
+  "registered",
+  "provisioned",
+  "onboarded",
+  "revoked",
+  "retired",
+] as const;
 type ChipStatus = (typeof CHIP_STATUSES)[number];
 
 export function IotDevicesTableView() {
@@ -57,20 +65,25 @@ export function IotDevicesTableView() {
     };
   }, [openRegister]);
 
-  const counts = useMemo(
-    () => ({
+  const counts = useMemo(() => {
+    const byRung: Record<StatusFilter, number> = {
       all: devices.length,
-      active: devices.filter((d) => d.status === "active").length,
-      pending: devices.filter((d) => d.status === "pending").length,
-      revoked: devices.filter((d) => d.status === "revoked").length,
-    }),
-    [devices],
-  );
+      registered: 0,
+      provisioned: 0,
+      onboarded: 0,
+      revoked: 0,
+      retired: 0,
+    };
+    for (const device of devices) {
+      byRung[deviceRung(device.status, device.boundExperimentCount)] += 1;
+    }
+    return byRung;
+  }, [devices]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return [...devices]
-      .filter((d) => status === "all" || d.status === status)
+      .filter((d) => status === "all" || deviceRung(d.status, d.boundExperimentCount) === status)
       .filter(
         (d) =>
           q === "" ||

@@ -50,11 +50,8 @@ export class RotateIotCredentialsUseCase {
     const oldCertificateId = device.certificateId;
     const oldCertificateArn = device.certificateArn;
 
-    await this.deviceRepository.update(deviceId, { status: "rotating" });
-
     const certResult = await this.awsPort.createDeviceCertificate();
     if (certResult.isFailure()) {
-      await this.revertToActive(deviceId);
       return failure(certResult.error);
     }
     const cert = certResult.value;
@@ -65,14 +62,12 @@ export class RotateIotCredentialsUseCase {
     );
     if (attachResult.isFailure()) {
       await this.revokeCertificate(cert.certificateId);
-      await this.revertToActive(deviceId);
       return failure(attachResult.error);
     }
 
     const policyResult = await this.awsPort.attachDevicePolicies(cert.certificateArn);
     if (policyResult.isFailure()) {
       await this.detachAndRevoke(device.thingName, cert);
-      await this.revertToActive(deviceId);
       return failure(policyResult.error);
     }
 
@@ -97,13 +92,6 @@ export class RotateIotCredentialsUseCase {
     }
 
     return success(cert);
-  }
-
-  private async revertToActive(deviceId: string): Promise<void> {
-    const revert = await this.deviceRepository.update(deviceId, { status: "active" });
-    if (revert.isFailure()) {
-      this.logger.warn({ msg: "Cleanup failed: revert status to active", deviceId });
-    }
   }
 
   // Retire a superseded certificate: revoke it and detach its principal.

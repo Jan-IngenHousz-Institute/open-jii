@@ -1,9 +1,11 @@
 "use client";
 
 import { useDeleteIotDevice } from "@/hooks/iot/useDeleteIotDevice/useDeleteIotDevice";
+import { useReinstateIotDevice } from "@/hooks/iot/useReinstateIotDevice/useReinstateIotDevice";
+import { useRetireIotDevice } from "@/hooks/iot/useRetireIotDevice/useRetireIotDevice";
 import { useLocale } from "@/hooks/useLocale";
 import { resolveDeviceLabel } from "@/util/device-presentation";
-import { Loader2, ChevronDown, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Loader2, ChevronDown, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -39,7 +41,7 @@ export function DeviceHeaderActions({ device }: { device: IotDeviceDetail }) {
   const { t: tCommon } = useTranslation("common");
   const locale = useLocale();
   const router = useRouter();
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [confirming, setConfirming] = useState<"delete" | "retire" | "reinstate" | null>(null);
 
   const { mutate: deleteDevice, isPending: isDeleting } = useDeleteIotDevice({
     onSuccess: () => {
@@ -47,10 +49,97 @@ export function DeviceHeaderActions({ device }: { device: IotDeviceDetail }) {
       router.push(`/${locale}/platform/devices`);
     },
   });
+  const { mutate: retireDevice, isPending: isRetiring } = useRetireIotDevice({
+    onSuccess: () => {
+      toast({ title: t("iot.devices.retire.success") });
+      setConfirming(null);
+    },
+  });
+  const { mutate: reinstateDevice, isPending: isReinstating } = useReinstateIotDevice({
+    onSuccess: () => {
+      toast({ title: t("iot.devices.reinstate.success") });
+      setConfirming(null);
+    },
+  });
 
   if (!device.capabilities.canManage) {
     return null;
   }
+
+  const isRetired = device.status === "retired";
+  const isBusy = isDeleting || isRetiring || isReinstating;
+  const deviceName = resolveDeviceLabel(device, t);
+
+  function confirmSelected() {
+    if (confirming === "delete") {
+      deleteDevice({ deviceId: device.id });
+    } else if (confirming === "retire") {
+      retireDevice(
+        { deviceId: device.id },
+        {
+          onError: () => {
+            toast({ title: t("iot.devices.retire.error"), variant: "destructive" });
+          },
+        },
+      );
+    } else if (confirming === "reinstate") {
+      reinstateDevice(
+        { deviceId: device.id },
+        {
+          onError: () => {
+            toast({ title: t("iot.devices.reinstate.error"), variant: "destructive" });
+          },
+        },
+      );
+    }
+  }
+
+  function renderLifecycleItem() {
+    if (isRetired) {
+      return (
+        <DropdownMenuItem
+          onSelect={() => {
+            setConfirming("reinstate");
+          }}
+        >
+          <ArchiveRestore className="text-muted-foreground mr-2 size-4" />
+          {t("iot.devices.actions.reinstate")}
+        </DropdownMenuItem>
+      );
+    }
+    return (
+      <DropdownMenuItem
+        onSelect={() => {
+          setConfirming("retire");
+        }}
+      >
+        <Archive className="text-muted-foreground mr-2 size-4" />
+        {t("iot.devices.actions.retire")}
+      </DropdownMenuItem>
+    );
+  }
+
+  const confirmCopy = {
+    delete: {
+      title: t("iot.devices.remove.title"),
+      body: t("iot.devices.remove.confirm", { name: deviceName }),
+      action: t("iot.devices.actions.delete"),
+      destructive: true,
+    },
+    retire: {
+      title: t("iot.devices.retire.title"),
+      body: t("iot.devices.retire.confirm", { name: deviceName }),
+      action: t("iot.devices.actions.retire"),
+      destructive: true,
+    },
+    reinstate: {
+      title: t("iot.devices.reinstate.title"),
+      body: t("iot.devices.reinstate.confirm", { name: deviceName }),
+      action: t("iot.devices.actions.reinstate"),
+      destructive: false,
+    },
+  } as const;
+  const copy = confirming === null ? null : confirmCopy[confirming];
 
   return (
     <>
@@ -62,9 +151,10 @@ export function DeviceHeaderActions({ device }: { device: IotDeviceDetail }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {renderLifecycleItem()}
           <DropdownMenuItem
             onSelect={() => {
-              setConfirmingDelete(true);
+              setConfirming("delete");
             }}
             className="focus:text-destructive focus:bg-destructive/10 group"
           >
@@ -74,29 +164,34 @@ export function DeviceHeaderActions({ device }: { device: IotDeviceDetail }) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
+      <AlertDialog
+        open={copy !== null}
+        onOpenChange={(open) => {
+          if (!open && !isBusy) {
+            setConfirming(null);
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("iot.devices.remove.title")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("iot.devices.remove.confirm", { name: resolveDeviceLabel(device, t) })}
-            </AlertDialogDescription>
+            <AlertDialogTitle>{copy?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{copy?.body}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>{tCommon("common.cancel")}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isBusy}>{tCommon("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
-              disabled={isDeleting}
+              disabled={isBusy}
               onClick={(e) => {
                 e.preventDefault();
-                deleteDevice({ deviceId: device.id });
+                confirmSelected();
               }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className={
+                copy?.destructive
+                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  : undefined
+              }
             >
-              {isDeleting ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                t("iot.devices.actions.delete")
-              )}
+              {isBusy ? <Loader2 className="size-4 animate-spin" /> : copy?.action}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

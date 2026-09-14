@@ -45,6 +45,7 @@ export const zIotDeviceGroupMember = z.object({
   serialNumber: z.string(),
   deviceType: zDeviceType,
   status: zIotDeviceStatus,
+  boundExperimentCount: z.number().int().nonnegative(),
   // Fleet-index connectivity; null when the index is unavailable, never a guess.
   connected: z.boolean().nullable(),
   addedAt: z.string().datetime(),

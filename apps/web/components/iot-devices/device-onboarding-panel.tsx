@@ -277,6 +277,14 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
     if (isDeviceActive) {
       return null;
     }
+    if (device.status === "retired") {
+      return (
+        <Alert>
+          <AlertTriangle className="size-4" aria-hidden />
+          <AlertDescription>{t("iot.onboarding.retiredDevice")}</AlertDescription>
+        </Alert>
+      );
+    }
     return (
       <Alert>
         <AlertTriangle className="size-4" aria-hidden />

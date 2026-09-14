@@ -87,8 +87,18 @@ export function ExperimentDevicesList({
           )}
 
           <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            {entry.device !== null && <IotDeviceStatusBadge status={entry.device.status} />}
-            {entry.device !== null && <ConnectivityDot connectivity={entry.connectivity} />}
+            {entry.device !== null && (
+              <IotDeviceStatusBadge
+                status={entry.device.status}
+                boundExperimentCount={entry.device.boundExperimentCount}
+              />
+            )}
+            {entry.device !== null && (
+              <ConnectivityDot
+                connectivity={entry.connectivity}
+                deviceType={entry.device.deviceType}
+              />
+            )}
             {!entry.canView && (
               <span
                 className="text-muted-foreground inline-flex items-center gap-1 text-xs"

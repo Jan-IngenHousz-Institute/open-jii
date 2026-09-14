@@ -69,6 +69,7 @@ describe("LineageInspectPanel", () => {
       label: "Gateway",
       family: "ambyte",
       status: "active",
+      boundExperimentCount: 1,
       firmwareVersion: "1.2.0",
     });
 

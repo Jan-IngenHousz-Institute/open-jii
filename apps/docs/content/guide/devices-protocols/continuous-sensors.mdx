@@ -26,6 +26,17 @@ Registration and credentials are the same for any continuous sensor:
 3. Install the credentials on the device or its gateway so it can authenticate
    against the platform's MQTT endpoint.
 
+The device's status follows these steps. A device is **Registered** once it is in
+the registry, **Provisioned** once it holds a certificate, and **Onboarded** once
+it is bound to at least one experiment. **Revoked** means its certificate was
+withdrawn and a new one restores it. **Retired** takes a device out of service on
+purpose: its certificate is revoked, it drops out of attention lists and pickers,
+and its record and history stay until you reinstate or delete it. Whether the
+device is currently on the broker is a separate live indicator beside the status:
+Online, Offline, Never connected, or Unknown when the fleet index is unavailable.
+A phone has no certificate and picks its experiment in the app, so it shows the
+connectivity indicator only, reading Idle when the app is closed.
+
 <Callout type="warn">
   Device credentials include private key material that is shown once. Store it securely and never
   paste it into an issue, screenshot, or shared document.

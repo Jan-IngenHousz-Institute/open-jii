@@ -287,7 +287,7 @@ describe("IotDeviceGroupController", () => {
 
     it("issues per-device credentials for the selection (200)", async () => {
       const group = await createGroup();
-      const device = await testApp.createIotDevice({ createdBy: userId, status: "pending" });
+      const device = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
       await addMember(group.id, device.id);
       const awsAdapter = testApp.module.get(AwsAdapter);
       vi.spyOn(awsAdapter, "createDeviceCertificate").mockResolvedValue(success(CERT));

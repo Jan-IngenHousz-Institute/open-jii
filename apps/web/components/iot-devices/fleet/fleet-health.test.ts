@@ -33,7 +33,7 @@ describe("toFleetHealth", () => {
 
 describe("fleetAttention", () => {
   it("ranks a missing certificate above everything else", () => {
-    const pending = device({ status: "pending", connectivity: null });
+    const pending = device({ status: "registered", connectivity: null });
     const silent = device({ connectivity: { connected: true, lastSeenAt: FRESH } });
 
     const entries = fleetAttention(
@@ -70,7 +70,7 @@ describe("fleetAttention", () => {
   it("leaves phones alone: they set themselves up and connect on their own schedule", () => {
     const phone = device({
       deviceType: "mobile",
-      status: "pending",
+      status: "registered",
       connectivity: { connected: false, lastSeenAt: null },
     });
 

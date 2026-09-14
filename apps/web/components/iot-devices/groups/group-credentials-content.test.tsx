@@ -42,11 +42,11 @@ describe("GroupCredentialsContent", () => {
   });
 
   it("preselects only devices the current action applies to", async () => {
-    const waiting = createDeviceGroupMember({ name: "Waiting", status: "pending" });
+    const waiting = createDeviceGroupMember({ name: "Waiting", status: "registered" });
     mountGroup([
       waiting,
       createDeviceGroupMember({ name: "Gateway", status: "active" }),
-      createDeviceGroupMember({ name: "Mid-swap", status: "rotating" }),
+      createDeviceGroupMember({ name: "Shelved", status: "retired" }),
       createDeviceGroupMember({ name: "Phone", deviceType: "mobile" }),
     ]);
     const issue = server.mount(contract.iot.issueIotDeviceGroupCredentials, {
@@ -55,9 +55,11 @@ describe("GroupCredentialsContent", () => {
 
     render(<GroupCredentialsContent />);
 
-    // Issue is the default: live certificates and phones sit out with a reason.
+    // Issue is the default: a live certificate, a retired device and a phone
+    // each sit out with their own reason.
     expect(await screen.findByText("Waiting")).toBeInTheDocument();
-    expect(screen.getAllByText("iot.groups.credentials.hasCredentialsIneligible")).toHaveLength(2);
+    expect(screen.getAllByText("iot.groups.credentials.hasCredentialsIneligible")).toHaveLength(1);
+    expect(screen.getByText("iot.groups.credentials.retiredIneligible")).toBeInTheDocument();
     expect(screen.getByText("iot.groups.credentials.mobileIneligible")).toBeInTheDocument();
 
     await userEvent.setup().click(screen.getByRole("button", { name: /submitIssue/ }));
@@ -73,8 +75,8 @@ describe("GroupCredentialsContent", () => {
     const gateway = createDeviceGroupMember({ name: "Gateway", status: "active" });
     mountGroup([
       gateway,
-      createDeviceGroupMember({ name: "Waiting", status: "pending" }),
-      createDeviceGroupMember({ name: "Mid-swap", status: "rotating" }),
+      createDeviceGroupMember({ name: "Waiting", status: "registered" }),
+      createDeviceGroupMember({ name: "Shelved", status: "retired" }),
     ]);
     const rotate = server.mount(contract.iot.rotateIotDeviceGroupCredentials, {
       body: { devices: [] },
@@ -87,7 +89,7 @@ describe("GroupCredentialsContent", () => {
 
     // Only the active device rotates; the others explain themselves.
     expect(screen.getByText("iot.groups.credentials.noCertificateIneligible")).toBeInTheDocument();
-    expect(screen.getByText("iot.groups.credentials.rotatingIneligible")).toBeInTheDocument();
+    expect(screen.getByText("iot.groups.credentials.retiredIneligible")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /submitRotate/ }));
     await user.click(screen.getByRole("button", { name: "iot.groups.credentials.actionRotate" }));
@@ -118,7 +120,7 @@ describe("GroupCredentialsContent", () => {
 
   it("issues directly and delivers the one-time bundles", async () => {
     const user = userEvent.setup();
-    const waiting = createDeviceGroupMember({ name: "Waiting", status: "pending" });
+    const waiting = createDeviceGroupMember({ name: "Waiting", status: "registered" });
     const broken = createDeviceGroupMember({ name: "Broken", status: "revoked" });
     mountGroup([waiting, broken]);
     server.mount(contract.iot.issueIotDeviceGroupCredentials, {
@@ -174,7 +176,7 @@ describe("GroupCredentialsContent", () => {
   it("disables the submit and explains when the selection exceeds the batch cap", async () => {
     mountGroup(
       Array.from({ length: 101 }, (_, index) =>
-        createDeviceGroupMember({ name: `Node ${String(index)}`, status: "pending" }),
+        createDeviceGroupMember({ name: `Node ${String(index)}`, status: "registered" }),
       ),
     );
 
@@ -187,7 +189,7 @@ describe("GroupCredentialsContent", () => {
 
   it("reports a destructive outcome when every row fails", async () => {
     const user = userEvent.setup();
-    const waiting = createDeviceGroupMember({ name: "Waiting", status: "pending" });
+    const waiting = createDeviceGroupMember({ name: "Waiting", status: "registered" });
     mountGroup([waiting]);
     server.mount(contract.iot.issueIotDeviceGroupCredentials, {
       body: {

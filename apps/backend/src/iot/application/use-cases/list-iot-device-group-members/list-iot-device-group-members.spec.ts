@@ -57,7 +57,7 @@ describe("ListIotDeviceGroupMembersUseCase", () => {
     expect(result.value.map((member) => member.deviceId)).toEqual([second.id, first.id]);
     expect(result.value[0].name).toBe("Second");
     expect(result.value[0].serialNumber).toBe(second.serialNumber);
-    expect(result.value[0].status).toBe("pending");
+    expect(result.value[0].status).toBe("registered");
   });
 
   it("returns an empty array for a memberless group", async () => {

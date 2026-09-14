@@ -4,8 +4,6 @@ import { SettingsCard } from "@/components/shared/settings-card";
 import { useIssueIotCredentials } from "@/hooks/iot/useIssueIotCredentials/useIssueIotCredentials";
 import { useRevokeIotCredentials } from "@/hooks/iot/useRevokeIotCredentials/useRevokeIotCredentials";
 import { useRotateIotCredentials } from "@/hooks/iot/useRotateIotCredentials/useRotateIotCredentials";
-import { orpc } from "@/lib/orpc";
-import { useQueryClient } from "@tanstack/react-query";
 import { KeyRound, Loader2, RefreshCw, ShieldOff } from "lucide-react";
 import { useState } from "react";
 
@@ -23,7 +21,6 @@ import { IotCredentialsDialog } from "./iot-credentials-dialog";
 
 export function IotDeviceCredentialsCard({ device }: { device: IotDeviceWithConnectivity }) {
   const { t } = useTranslation("iot");
-  const queryClient = useQueryClient();
   const [issued, setIssued] = useState<IssueIotCredentialsResponse | null>(null);
   const [confirmingRotate, setConfirmingRotate] = useState(false);
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
@@ -64,7 +61,13 @@ export function IotDeviceCredentialsCard({ device }: { device: IotDeviceWithConn
 
   return (
     <SettingsCard title={t("iot.devices.detail.credentials.title")} contentClassName="space-y-4">
-      {(device.status === "pending" || device.status === "revoked") && (
+      {device.status === "retired" && (
+        <p className="text-muted-foreground text-sm">
+          {t("iot.devices.credentials.retiredDescription")}
+        </p>
+      )}
+
+      {(device.status === "registered" || device.status === "revoked") && (
         <div className="flex flex-col gap-3">
           <p className="text-muted-foreground text-sm">
             {device.status === "revoked"
@@ -129,28 +132,6 @@ export function IotDeviceCredentialsCard({ device }: { device: IotDeviceWithConn
               {t("iot.devices.credentials.revoke")}
             </Button>
           </div>
-        </div>
-      )}
-
-      {device.status === "rotating" && (
-        <div className="flex flex-col gap-3">
-          <p className="text-muted-foreground text-sm">
-            {t("iot.devices.credentials.rotatingDescription")}
-          </p>
-          <Button
-            variant="outline"
-            className="w-fit"
-            onClick={() => {
-              void queryClient.invalidateQueries({
-                queryKey: orpc.iot.getIotDevice.queryOptions({
-                  input: { deviceId: device.id },
-                }).queryKey,
-              });
-            }}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            {t("iot.devices.credentials.refreshStatus")}
-          </Button>
         </div>
       )}
 

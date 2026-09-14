@@ -166,7 +166,7 @@ describe("OnboardDeviceUseCase", () => {
   });
 
   it("rejects a device without active credentials", async () => {
-    const pending = await testApp.createIotDevice({ createdBy: userId, status: "pending" });
+    const pending = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
     const revoked = await testApp.createIotDevice({ createdBy: userId, status: "revoked" });
     const { experiment } = await testApp.createExperiment({ name: "E", userId });
 

@@ -21,7 +21,7 @@ const devices = [
   createIotDevice({
     id: PENDING_ID,
     name: "Bench unit",
-    status: "pending",
+    status: "registered",
     connectivity: { connected: false, lastSeenAt: null },
   }),
 ];
@@ -62,7 +62,7 @@ describe("FleetOverviewDashboard", () => {
     expect(await screen.findByText("iot.groups.monitoring.onlineValue")).toBeInTheDocument();
     // 12 + 30 measurements in range.
     expect(await screen.findByText("42")).toBeInTheDocument();
-    // The pending device is the one attention entry. The reason appears twice:
+    // The registered device is the one attention entry. The reason appears twice:
     // once in the tile footer, so it is answerable without scrolling, and once
     // against the device in the panel below.
     expect(await screen.findAllByText("iot.devices.fleet.reasonCredentials")).toHaveLength(2);

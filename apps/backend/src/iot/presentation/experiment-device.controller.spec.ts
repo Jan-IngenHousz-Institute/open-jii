@@ -166,7 +166,7 @@ describe("ExperimentDeviceController", () => {
   });
 
   it("returns 400 when onboarding a device without active credentials", async () => {
-    const device = await testApp.createIotDevice({ createdBy: userId, status: "pending" });
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
     const { experiment } = await testApp.createExperiment({ name: "E", userId });
 
     await testApp

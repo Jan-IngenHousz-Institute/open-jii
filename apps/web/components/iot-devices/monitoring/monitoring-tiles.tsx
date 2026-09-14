@@ -80,6 +80,7 @@ export function MonitoringTiles({
             // CardTitle's text-2xl from the child element.
             <ConnectivityDot
               connectivity={device.connectivity}
+              deviceType={device.deviceType}
               className="text-2xl font-semibold"
             />
           )

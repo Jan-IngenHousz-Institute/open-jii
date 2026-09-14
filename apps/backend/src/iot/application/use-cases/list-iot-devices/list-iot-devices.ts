@@ -1,13 +1,15 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
-import { Result, success } from "../../../../common/utils/fp-utils";
+import { Result, failure, success } from "../../../../common/utils/fp-utils";
 import { IotDeviceDto } from "../../../core/models/iot-device.model";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort, ThingConnectivity } from "../../../core/ports/aws.port";
+import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 
 export type IotDeviceWithConnectivityDto = IotDeviceDto & {
   connectivity: { connected: boolean; lastSeenAt: string | null } | null;
+  boundExperimentCount: number;
 };
 
 @Injectable()
@@ -18,6 +20,7 @@ export class ListIotDevicesUseCase {
     @Inject(AWS_PORT)
     private readonly awsPort: AwsPort,
     private readonly deviceRepository: IotDeviceRepository,
+    private readonly experimentDeviceRepository: ExperimentDeviceRepository,
   ) {}
 
   async execute(userId: string): Promise<Result<IotDeviceWithConnectivityDto[]>> {
@@ -33,6 +36,13 @@ export class ListIotDevicesUseCase {
     }
 
     const devices = devicesResult.value;
+    const bindingsResult = await this.experimentDeviceRepository.countByDevices(
+      devices.map((device) => device.id),
+    );
+    if (bindingsResult.isFailure()) {
+      return failure(bindingsResult.error);
+    }
+    const bindings = bindingsResult.value;
     const connectivity = await this.lookupConnectivity(devices.map((device) => device.thingName));
 
     return success(
@@ -41,6 +51,7 @@ export class ListIotDevicesUseCase {
         return {
           ...device,
           connectivity: thing ? { connected: thing.connected, lastSeenAt: thing.lastSeenAt } : null,
+          boundExperimentCount: bindings.get(device.id) ?? 0,
         };
       }),
     );

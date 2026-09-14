@@ -69,6 +69,7 @@ describe("zIotDeviceGroupMember", () => {
         serialNumber: "E8:F6:0A",
         deviceType: "ambyte",
         status: "active",
+        boundExperimentCount: 0,
         connected: null,
         addedAt: new Date().toISOString(),
       }).success,

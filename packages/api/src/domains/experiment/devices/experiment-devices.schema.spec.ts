@@ -15,6 +15,7 @@ const validEntry = {
     name: "Bench sensor",
     deviceType: "ambyte",
     status: "active",
+    boundExperimentCount: 1,
   },
   clientId: "ambyte_AA11",
   binding: {
