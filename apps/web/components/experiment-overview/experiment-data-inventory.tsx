@@ -7,11 +7,12 @@ import { useLocale } from "~/hooks/useLocale";
 
 import type { ExperimentTableMetadata } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
-import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
+
+import { ExperimentDataInventoryRow } from "./experiment-data-inventory-row";
 
 interface ExperimentDataInventoryProps {
   experimentId: string;
@@ -32,62 +33,7 @@ export function ExperimentDataInventory({
   const { tables, isLoading, error } = useExperimentTables(experimentId);
 
   const dataHref = `/${locale}/platform/${isArchived ? "experiments-archive" : "experiments"}/${experimentId}/data`;
-  const number = new Intl.NumberFormat(locale);
   const hasTables = tables !== undefined && tables.length > 0;
-
-  function renderRow(table: ExperimentTableMetadata) {
-    return (
-      <li
-        key={table.identifier}
-        className="flex items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0"
-      >
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="truncate font-medium">{table.displayName}</span>
-          <Badge variant="secondary" className="shrink-0 font-normal">
-            {t(`dataInventory.type.${table.tableType}`)}
-          </Badge>
-        </span>
-        <span className="text-muted-foreground shrink-0 text-sm">
-          <span className="tabular-nums">{number.format(table.totalRows)}</span>{" "}
-          {t("dataInventory.rowUnit", { count: table.totalRows })}
-        </span>
-      </li>
-    );
-  }
-
-  function renderBody() {
-    if (isLoading) {
-      return <Skeleton className="h-[172px]" />;
-    }
-
-    if (error) {
-      return (
-        <EmptyState
-          variant="error"
-          description={t("dataInventory.loadError")}
-          icon={<Database aria-hidden />}
-        />
-      );
-    }
-
-    if (!hasTables) {
-      return (
-        <EmptyState
-          icon={<Database aria-hidden />}
-          title={t("dataInventory.emptyTitle")}
-          description={t("dataInventory.empty")}
-        />
-      );
-    }
-
-    return (
-      <Card className="overflow-hidden shadow-none">
-        <CardContent className="p-0">
-          <ul>{tables.map(renderRow)}</ul>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <section className="space-y-3">
@@ -99,7 +45,54 @@ export function ExperimentDataInventory({
           </Button>
         )}
       </div>
-      {renderBody()}
+
+      <DataInventoryBody isLoading={isLoading} hasError={!!error} tables={tables ?? []} />
     </section>
+  );
+}
+
+interface DataInventoryBodyProps {
+  isLoading: boolean;
+  hasError: boolean;
+  tables: ExperimentTableMetadata[];
+}
+
+function DataInventoryBody({ isLoading, hasError, tables }: DataInventoryBodyProps) {
+  const { t } = useTranslation("experiments");
+
+  if (isLoading) {
+    return <Skeleton className="h-[172px]" />;
+  }
+
+  if (hasError) {
+    return (
+      <EmptyState
+        variant="error"
+        icon={<Database aria-hidden />}
+        description={t("dataInventory.loadError")}
+      />
+    );
+  }
+
+  if (tables.length === 0) {
+    return (
+      <EmptyState
+        icon={<Database aria-hidden />}
+        title={t("dataInventory.emptyTitle")}
+        description={t("dataInventory.empty")}
+      />
+    );
+  }
+
+  return (
+    <Card className="overflow-hidden shadow-none">
+      <CardContent className="p-0">
+        <ul>
+          {tables.map((table) => (
+            <ExperimentDataInventoryRow key={table.identifier} table={table} />
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
