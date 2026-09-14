@@ -109,6 +109,19 @@ describe("NavigationSidebarWrapper", () => {
     });
   });
 
+  it("always offers the devices navigation", async () => {
+    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
+    render(Component);
+
+    const navigationDataElement = screen.getByTestId("sidebar-navigationData");
+    const navigationData = JSON.parse(navigationDataElement.textContent) as {
+      navDevices: { url: string }[];
+    };
+
+    expect(navigationData.navDevices).toHaveLength(1);
+    expect(navigationData.navDevices[0].url).toBe("/en/platform/devices");
+  });
+
   it("prepares library navigation with protocols child", async () => {
     const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
     render(Component);

@@ -15,6 +15,7 @@ import { DatabricksAdapter } from "../../common/modules/databricks/databricks.ad
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
+import { GetDeviceObservedExperimentsUseCase } from "../application/use-cases/get-device-observed-experiments/get-device-observed-experiments";
 import { GetIotDeviceFirmwareHistoryUseCase } from "../application/use-cases/get-iot-device-firmware-history/get-iot-device-firmware-history";
 import { ListIotDevicesUseCase } from "../application/use-cases/list-iot-devices/list-iot-devices";
 
@@ -470,6 +471,54 @@ describe("IotDeviceController", () => {
       });
 
       await testApp.get(path).withAuth(userId).expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
+  describe("listDeviceObservedExperiments", () => {
+    const RANGE = { from: "2026-07-15T00:00:00.000Z", to: "2026-08-14T00:00:00.000Z" };
+
+    it("returns the experiments the warehouse saw the device feed (200)", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const useCase = testApp.module.get(GetDeviceObservedExperimentsUseCase);
+      vi.spyOn(useCase, "execute").mockResolvedValue(
+        success([
+          {
+            experimentId: "11111111-1111-4111-8111-111111111111",
+            count: 12,
+            lastAt: "2026-08-14T00:00:00.000Z",
+          },
+        ]),
+      );
+
+      const response: SuperTestResponse<{ experiments: { experimentId: string | null }[] }> =
+        await testApp
+          .get(
+            testApp.resolveOrpcPath(contract.iot.listDeviceObservedExperiments, {
+              deviceId: device.id,
+            }),
+          )
+          .withAuth(userId)
+          .query(RANGE)
+          .expect(StatusCodes.OK);
+
+      expect(response.body.experiments[0].experimentId).toBe(
+        "11111111-1111-4111-8111-111111111111",
+      );
+    });
+
+    it("returns 403 for a viewer without device access", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const stranger = await testApp.createTestUser({ name: "Stranger" });
+
+      await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.iot.listDeviceObservedExperiments, {
+            deviceId: device.id,
+          }),
+        )
+        .withAuth(stranger)
+        .query(RANGE)
+        .expect(StatusCodes.FORBIDDEN);
     });
   });
 
