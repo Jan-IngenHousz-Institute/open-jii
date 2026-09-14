@@ -62,9 +62,33 @@ describe("AwsConfigService", () => {
     it("should return the correct deviceThingGroupName", () => {
       expect(service.deviceThingGroupName).toBe(process.env.AWS_IOT_DEVICE_THING_GROUP_NAME);
     });
+
+    it("reads the calibration sandbox function name and leaves the endpoint empty when unset", () => {
+      expect(service.lambdaConfig.calibrationSandboxFunctionName).toBe(
+        process.env.AWS_LAMBDA_CALIBRATION_SANDBOX_FUNCTION_NAME,
+      );
+      expect(service.lambdaConfig.calibrationSandboxEndpoint).toBe("");
+    });
   });
 
   describe("config validation", () => {
+    it("rejects a calibration sandbox endpoint that is not a URL", () => {
+      const configService = testApp.module.get(ConfigService);
+      const realGet = configService.get.bind(configService);
+      const getSpy = vi.spyOn(configService, "get").mockImplementation((key: string) => {
+        if (key === "aws.lambda.calibrationSandboxEndpoint") {
+          return "not-a-url";
+        }
+        return realGet(key);
+      });
+
+      expect(() => new AwsConfigService(configService)).toThrow(
+        "AWS configuration validation failed",
+      );
+
+      getSpy.mockRestore();
+    });
+
     it("should throw error for invalid config during construction", () => {
       // Create a mock ConfigService that returns invalid data
       const configService = testApp.module.get(ConfigService);
