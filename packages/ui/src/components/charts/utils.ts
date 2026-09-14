@@ -690,12 +690,17 @@ export function createBaseLayout(
       },
     },
 
-    // Match hover-label font to the rest of the compact typography so
-    // tooltips don't suddenly look oversized inside a tight widget.
+    // Pinned to the popover surface, like every other floating surface on the
+    // platform. Left unset, Plotly takes the background from the series colour
+    // and picks the text colour itself, which on a light series reads as pale
+    // text on a pale plate.
     hoverlabel: {
+      bgcolor: readThemeColor("--popover") ?? (isDark ? "#000000" : "#ffffff"),
+      bordercolor: gridColor,
       font: {
         size: veryCompact ? 10 : compact ? 11 : 12,
         family: "var(--font-sans)",
+        color: readThemeColor("--popover-foreground") ?? textColor,
       },
     },
 

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   chartGridColor,
+  createBaseLayout,
   invalidateThemeTokenCache,
   labToHex,
   oklchToHex,
@@ -127,5 +128,24 @@ describe("readThemeColor cache validity", () => {
 
     document.documentElement.classList.remove("dark");
     document.documentElement.style.removeProperty("--probe-token");
+  });
+});
+
+describe("hover label contrast", () => {
+  it("pins the tooltip to the popover pairing rather than the series colour", () => {
+    invalidateThemeTokenCache();
+    const root = document.documentElement;
+    root.style.setProperty("--popover", "oklch(0.2 0.03 195)");
+    root.style.setProperty("--popover-foreground", "oklch(0.95 0.006 195)");
+
+    const layout = createBaseLayout({});
+
+    // Left to Plotly these come from the trace colour, which on a pale series
+    // produces pale text on a pale plate.
+    expect(layout.hoverlabel?.bgcolor).toBe(readThemeColor("--popover"));
+    expect(layout.hoverlabel?.font?.color).toBe(readThemeColor("--popover-foreground"));
+
+    root.style.removeProperty("--popover");
+    root.style.removeProperty("--popover-foreground");
   });
 });
