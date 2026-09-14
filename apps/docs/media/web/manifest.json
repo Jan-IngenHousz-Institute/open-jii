@@ -20,7 +20,8 @@
       "The passkey and API-key shots clear existing rows before creating one, so the local seed account is left no more populated than it started: one named passkey and one named API key.",
       "Next.js and TanStack Query development overlays are suppressed by the capture tool; a production build renders none of them.",
       "The sign-out toast on the last-used-badge shot is closed through its own control rather than hidden with CSS.",
-      "The dashboard and shell frames include CMS blog cards, one of whose artwork is a screenshot of the pre-refresh dashboard. That is Contentful content and out of scope here."
+      "The dashboard and shell frames include CMS blog cards, one of whose artwork is a screenshot of the pre-refresh dashboard. That is Contentful content and out of scope here.",
+      "experiment-devices (captured 2026-09-03): the roster comes from a local experiment whose id mirrors a dev-lakehouse experiment with published Ambyte data, so the measurement counts are real dev data; device names are local labels and the client ids are dev gateway MAC addresses, not personal data. The iot-devices flag is pinned in the browser by the capture tool (see featureFlags in shots.ts); the backend evaluated the real flag."
     ]
   },
   "assets": [
@@ -375,6 +376,17 @@
       "sha256": "9467f4ac44bf5c518133e6f720ce222a44a426d590ca8ed523231f7281611591",
       "disposition": "published",
       "scope": "First frame of passkey-flows.webm"
+    },
+    {
+      "path": "/img/guide/web/experiment-devices.webp",
+      "slug": "experiment-devices",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 60424,
+      "sha256": "20ab60d5d7bcb2c03e82fb5d15069c99154e8edc34af396729b4fbb427a79287",
+      "disposition": "published",
+      "scope": "Experiment Devices tab with onboarded, observed and unregistered devices and its tiles"
     }
   ],
   "unmetCaptures": [

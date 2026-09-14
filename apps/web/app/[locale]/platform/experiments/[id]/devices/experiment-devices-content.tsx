@@ -2,6 +2,7 @@
 
 import { ExperimentRequestToJoin } from "@/components/experiment-settings/collaborators/experiment-request-to-join";
 import { ExperimentDevicesPanel } from "@/components/experiment-settings/devices/experiment-devices-panel";
+import { PageContainer } from "@/components/page-container";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { notFound } from "next/navigation";
@@ -40,7 +41,7 @@ export default function ExperimentDevicesContent({ params }: ExperimentDevicesCo
       resource="experiment"
       loadingMessage={t("iot.experimentDevices.loading")}
     >
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+      <PageContainer width="fluid" className="gap-6">
         <div className="space-y-1">
           <h2 className="text-2xl font-semibold">{t("iot.experimentDevices.title")}</h2>
           <p className="text-muted-foreground text-sm">{t("iot.experimentDevices.description")}</p>
@@ -50,7 +51,7 @@ export default function ExperimentDevicesContent({ params }: ExperimentDevicesCo
           experimentId={id}
           requestAccess={isPubliclyReadable ? <ExperimentRequestToJoin experimentId={id} /> : null}
         />
-      </div>
+      </PageContainer>
     </EntityLayoutShell>
   );
 }

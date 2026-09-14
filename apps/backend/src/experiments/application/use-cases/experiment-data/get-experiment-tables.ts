@@ -1,6 +1,8 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 import { z } from "zod";
 
+import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
+
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
@@ -79,7 +81,12 @@ export class GetExperimentTablesUseCase {
       return failure(AppError.internal("Failed to retrieve table metadata"));
     }
 
-    const staticMetadata = metadataResult.value.filter((m) => m.tableType === "static");
+    // Device metadata is no longer browsable here: the experiment's Devices tab
+    // shows it per device, alongside registry identity and live connectivity.
+    // The table itself stays queryable, it is just not offered as a data tab.
+    const staticMetadata = metadataResult.value.filter(
+      (m) => m.tableType === "static" && m.identifier !== ExperimentTableName.DEVICE,
+    );
     const macroMetadata = metadataResult.value.filter((m) => m.tableType === "macro");
     const uploadMetadata = metadataResult.value.filter((m) => m.tableType === "upload");
 
