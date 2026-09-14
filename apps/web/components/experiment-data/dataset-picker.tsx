@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocale } from "@/hooks/useLocale";
+import { datasetLabel } from "@/util/dataset-label";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
 
@@ -28,19 +29,6 @@ const GROUP_LABEL_KEY: Record<TableType, string> = {
   macro: "experimentData.datasetGroupMacro",
   upload: "experimentData.datasetGroupUpload",
 };
-
-/**
- * The group heading already says where a dataset came from, so the backend's
- * `"Processed Data (chlorophyll)"` is redundant down to its parenthesised name.
- * Only macro tables carry that wrapper; uploads and the fixed tables are named.
- */
-function datasetLabel(table: ExperimentTableMetadata): string {
-  if (table.tableType !== "macro") {
-    return table.displayName;
-  }
-  const inner = /\(([^()]*)\)\s*$/.exec(table.displayName)?.[1]?.trim();
-  return inner === undefined || inner === "" ? table.displayName : inner;
-}
 
 interface DatasetPickerProps {
   tables: ExperimentTableMetadata[];

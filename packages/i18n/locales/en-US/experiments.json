@@ -448,11 +448,6 @@
     "emptyTitle": "No data yet",
     "empty": "Tables appear here once a device publishes into this experiment, a macro runs, or you upload a file.",
     "loadError": "This experiment's data could not be loaded.",
-    "type": {
-      "static": "Raw",
-      "macro": "Processed",
-      "upload": "Uploaded"
-    },
     "rowUnit_one": "row",
     "rowUnit_other": "rows"
   }
