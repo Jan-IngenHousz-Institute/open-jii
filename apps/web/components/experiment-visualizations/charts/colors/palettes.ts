@@ -13,7 +13,7 @@ const PICKER_FALLBACK_COLOR = "#3b82f6";
  *
  * Series colours are *not* seeded into a new chart's config — an unpinned
  * series takes its colour from Plotly's `colorway`, which `createBaseLayout`
- * fills from `--chart-1..5`, so it follows a theme swap for the life of the
+ * fills from `PLATFORM_SERIES_TOKENS`, so it follows a theme swap for the life of the
  * visualization. This is only the starting point of a deliberate user pick,
  * which becomes user data and is never migrated afterwards. Resolving it at
  * pick time is safe precisely because that is a browser interaction: the
@@ -43,7 +43,12 @@ export function getDefaultSeriesColor(seriesIndex: number): string {
   return SERIES_PALETTE[seriesIndex % SERIES_PALETTE.length];
 }
 
-/** Categorical color palette (D3 schemeCategory10 + 10 lighter alternates). Wraps past 20. */
+/**
+ * Unpinned categories on a user-built visualization. Frozen, not themed: a
+ * chart someone composed should not change colour when they flip the theme,
+ * and baking a themed hex into the traces forces every chart on a dashboard to
+ * rebuild on a toggle. The platform's own charts are the themed ones.
+ */
 export const CATEGORY_PALETTE = [
   "#1f77b4",
   "#ff7f0e",
@@ -67,6 +72,10 @@ export const CATEGORY_PALETTE = [
   "#9edae5",
 ] as const;
 
+export function categoryPalette(): readonly string[] {
+  return CATEGORY_PALETTE;
+}
+
 export const COLOR_MAP_KEY_SEPARATOR = "::";
 
 export function composeColorMapKey(seriesKey: string, categoryKey: string): string {
@@ -89,7 +98,7 @@ export function getCategoryColor(
     const flat = colorMap[key];
     if (flat) return flat;
   }
-  return CATEGORY_PALETTE[index % CATEGORY_PALETTE.length];
+  return CATEGORY_PALETTE[Math.abs(Math.trunc(index)) % CATEGORY_PALETTE.length];
 }
 
 /**

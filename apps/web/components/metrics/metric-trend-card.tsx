@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import type { MetricsWindowDay } from "@repo/api/domains/metrics/metrics.schema";
 import {
   Card,
@@ -10,30 +12,31 @@ import {
   CardTitle,
 } from "@repo/ui/components/card";
 import { BarChart } from "@repo/ui/components/charts/bar-chart";
+import { LineChart } from "@repo/ui/components/charts/line-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
-import { detectAxisType, resolveChartColorway } from "@repo/ui/components/charts/utils";
-import { cn } from "@repo/ui/lib/utils";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
+import { detectAxisType, platformChartColor } from "@repo/ui/components/charts/utils";
 
 const QUIET_BAR_OPACITY = 0.45;
 const TRACK_OPACITY = 0.08;
+/** Two hex digits, so the area under the line stays a wash. */
+const AREA_ALPHA = "1f";
 
 interface MetricTrendCardProps {
   label: string;
-  value: string;
+  value: ReactNode;
   title?: string;
   seriesName: string;
   days: MetricsWindowDay[];
   peakDate?: string | null;
+  /** Bars read better on a sparse window, a line on a continuous one. */
+  mark?: "bars" | "line";
   locale: string;
   footer?: string;
   className?: string;
 }
 
-/**
- * A figure of the window with the days behind it. Bars, because a filled area
- * over a steady series draws a solid block; no axes, because hover carries the
- * values and a tick label is unreadable at this height.
- */
+/** A figure of the window with the window behind it. No axes: hover carries the values. */
 export function MetricTrendCard({
   label,
   value,
@@ -41,6 +44,7 @@ export function MetricTrendCard({
   seriesName,
   days,
   peakDate = null,
+  mark = "bars",
   locale,
   footer,
   className,
@@ -48,6 +52,7 @@ export function MetricTrendCard({
   const config: PlotlyChartConfig = {
     showLegend: false,
     showModeBar: false,
+    showHoverName: false,
     dragMode: false,
     scrollZoom: false,
     showGrid: false,
@@ -67,10 +72,58 @@ export function MetricTrendCard({
   // A zero day draws no bar, so every day gets a faint slot behind the data and
   // a sparse window reads as quiet rather than as empty.
   const trackHeight = Math.max(...measurements, 0) || 1;
-  const seriesColor = resolveChartColorway()?.[0];
+  // Resolved here, not left to `layout.colorway`, so track and data share one colour.
+  useChartThemeRefresh();
+  const seriesColor = platformChartColor(0);
+
+  const areaColor = /^#[0-9a-f]{6}$/i.test(seriesColor) ? `${seriesColor}${AREA_ALPHA}` : undefined;
+
+  const renderBars = () => (
+    <BarChart
+      barmode="overlay"
+      data={[
+        {
+          x: dates,
+          y: dates.map(() => trackHeight),
+          name: seriesName,
+          color: seriesColor,
+          marker: { opacity: TRACK_OPACITY },
+          hoverinfo: "skip",
+          showlegend: false,
+        },
+        {
+          x: dates,
+          y: measurements,
+          name: seriesName,
+          color: seriesColor,
+          marker: { opacity },
+        },
+      ]}
+      config={config}
+      className="h-10 w-full"
+    />
+  );
+
+  const renderLine = () => (
+    <LineChart
+      data={[
+        {
+          x: dates,
+          y: measurements,
+          name: seriesName,
+          color: seriesColor,
+          line: { width: 1.5 },
+          fill: "tozeroy",
+          fillcolor: areaColor,
+        },
+      ]}
+      config={config}
+      className="h-10 w-full"
+    />
+  );
 
   return (
-    <Card className={cn("@container/card gap-2 py-3", className)}>
+    <Card padding="sm" className={className}>
       <CardHeader className="gap-1">
         <CardDescription>{label}</CardDescription>
         <CardTitle
@@ -80,31 +133,7 @@ export function MetricTrendCard({
           {value}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <BarChart
-          barmode="overlay"
-          data={[
-            {
-              x: dates,
-              y: dates.map(() => trackHeight),
-              name: seriesName,
-              color: seriesColor,
-              marker: { opacity: TRACK_OPACITY },
-              hoverinfo: "skip",
-              showlegend: false,
-            },
-            {
-              x: dates,
-              y: measurements,
-              name: seriesName,
-              color: seriesColor,
-              marker: { opacity },
-            },
-          ]}
-          config={config}
-          className="h-10 w-full"
-        />
-      </CardContent>
+      <CardContent>{mark === "line" ? renderLine() : renderBars()}</CardContent>
       {footer === undefined ? null : (
         <CardFooter className="text-muted-foreground mt-auto text-xs">{footer}</CardFooter>
       )}

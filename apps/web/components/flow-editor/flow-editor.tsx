@@ -357,7 +357,10 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
               }
             >
               {/* ExperimentFlow Area */}
-              <Card className={isFullscreen ? "flex h-full min-h-0 flex-1 flex-col" : "flex-1"}>
+              <Card
+                padding="none"
+                className={isFullscreen ? "flex h-full min-h-0 flex-1 flex-col" : "flex-1"}
+              >
                 <CardContent className={isFullscreen ? "min-h-0 flex-1 p-0" : "p-0"}>
                   <div
                     ref={flowAreaRef}

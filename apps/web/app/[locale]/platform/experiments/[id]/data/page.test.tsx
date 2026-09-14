@@ -1,6 +1,6 @@
 import { createExperimentAccess, createExperimentTable } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -121,7 +121,7 @@ describe("ExperimentDataPage", () => {
     server.mount(contract.experiments.listExperimentMetadata, { body: [] });
   });
 
-  it("renders the experiment data page with tabs when loaded", async () => {
+  it("renders the experiment data page with a dataset picker when loaded", async () => {
     mountDefaults();
     render(<ExperimentDataPage params={defaultProps.params} />);
 
@@ -129,7 +129,9 @@ describe("ExperimentDataPage", () => {
       expect(screen.getByText("experimentData.title")).toBeInTheDocument();
     });
     expect(screen.getByText("experimentData.description")).toBeInTheDocument();
-    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "experimentData.datasetLabel" }),
+    ).toBeInTheDocument();
   });
 
   it("displays loading state when experiment is loading", () => {
@@ -180,33 +182,35 @@ describe("ExperimentDataPage", () => {
     });
   });
 
-  it("renders tab triggers for each table with row counts, including device table", async () => {
-    mountDefaults();
-    render(<ExperimentDataPage params={defaultProps.params} />);
-
-    await waitFor(() => {
-      expect(screen.getByRole("tab", { name: /Measurements \(100\)/ })).toBeInTheDocument();
-      expect(screen.getByRole("tab", { name: /Device Metadata \(50\)/ })).toBeInTheDocument();
-    });
-  });
-
-  it("renders table content for each tab, including device table", async () => {
+  it("lists every dataset with its row count, including the device table", async () => {
     const user = userEvent.setup();
     mountDefaults();
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      expect(screen.getByRole("tabpanel")).toBeInTheDocument();
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
     });
-    expect(
-      within(screen.getByRole("tabpanel")).getByTestId("experiment-data-table"),
-    ).toBeInTheDocument();
+    await user.click(screen.getByRole("combobox"));
 
-    await user.click(screen.getByRole("tab", { name: /Device Metadata/ }));
+    const measurements = await screen.findByRole("option", { name: /Measurements/ });
+    expect(measurements).toHaveTextContent("100");
+    expect(screen.getByRole("option", { name: /Device Metadata/ })).toHaveTextContent("50");
+  });
+
+  it("swaps the rendered table when another dataset is picked", async () => {
+    const user = userEvent.setup();
+    mountDefaults();
+    render(<ExperimentDataPage params={defaultProps.params} />);
+
     await waitFor(() => {
-      expect(
-        within(screen.getByRole("tabpanel")).getByText("Table: Device Metadata"),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("experiment-data-table")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: /Device Metadata/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Table: Device Metadata")).toBeInTheDocument();
     });
   });
 
@@ -236,7 +240,7 @@ describe("ExperimentDataPage", () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      expect(screen.getByRole("tab", { name: /Device Metadata \(50\)/ })).toBeInTheDocument();
+      expect(screen.getByRole("combobox")).toHaveTextContent("Device Metadata");
     });
   });
 
@@ -268,17 +272,16 @@ describe("ExperimentDataPage", () => {
     });
   });
 
-  it("renders NavTabs with the first table tab active by default", async () => {
+  it("selects the first dataset by default", async () => {
     mountDefaults();
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      const measurementsTab = screen.getByRole("tab", { name: /Measurements/ });
-      expect(measurementsTab).toHaveAttribute("data-state", "active");
+      expect(screen.getByRole("combobox")).toHaveTextContent("Measurements");
     });
   });
 
-  it("truncates long table names in tabs", async () => {
+  it("truncates a long dataset name on the picker", async () => {
     const longTableName = "very_long_table_name_that_should_be_truncated";
     server.mount(contract.experiments.getExperimentAccess, { body: accessPayload });
     server.mount(contract.experiments.getExperimentTables, {
@@ -294,8 +297,8 @@ describe("ExperimentDataPage", () => {
     render(<ExperimentDataPage params={defaultProps.params} />);
 
     await waitFor(() => {
-      const trigger = screen.getByRole("tab", { name: /Very Long Table Name/ });
-      expect(trigger).toBeInTheDocument();
+      const trigger = screen.getByRole("combobox");
+      expect(trigger).toHaveTextContent("Very Long Table Name");
       expect(trigger.querySelector(".truncate")).toBeInTheDocument();
     });
   });

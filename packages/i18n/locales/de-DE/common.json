@@ -33,6 +33,8 @@
     "confirm": "Bestätigen",
     "confirmDelete": null,
     "close": "Schließen",
+    "expandDetails": "Details einblenden",
+    "collapseDetails": "Details ausblenden",
     "copy": "Kopieren",
     "copied": "Kopiert",
     "yes": "Ja",

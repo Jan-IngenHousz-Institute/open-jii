@@ -18,9 +18,11 @@ export function DeviceCredentialsGuide() {
 
   return (
     <Card className="shadow-none">
-      <CardHeader className="flex-row items-center gap-2 space-y-0">
-        <KeyRound className="text-muted-foreground size-4" aria-hidden />
-        <CardTitle className="text-base">{t("iot.devices.credentials.guide.title")}</CardTitle>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <KeyRound className="text-muted-foreground size-4" aria-hidden />
+          {t("iot.devices.credentials.guide.title")}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <ol className="text-muted-foreground list-decimal space-y-2 pl-4 text-sm">

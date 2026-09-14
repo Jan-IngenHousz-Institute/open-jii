@@ -83,6 +83,17 @@ describe("AppSidebar", () => {
     expect(screen.getAllByAltText("openJII Logo").length).toBeGreaterThan(0);
   });
 
+  it("gives the brand row the topbar's height and the sidebar's icon rail", () => {
+    const { container } = renderSidebar();
+
+    // h-12 matches SiteHeader, so the logo and the page title share a centre;
+    // px-2 puts its left edge on the x=32 rail every row below it sits on.
+    const header = container.querySelector('[data-sidebar="header"]');
+    expect(header).toHaveClass("pt-0");
+    const brandRow = screen.getAllByAltText("openJII Logo")[0]?.closest("div");
+    expect(brandRow).toHaveClass("h-12", "items-center", "px-2");
+  });
+
   it("renders all navigation sections", () => {
     renderSidebar();
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
@@ -97,7 +108,7 @@ describe("AppSidebar", () => {
     const handler = vi.fn();
     window.addEventListener(COMMAND_PALETTE_OPEN_EVENT, handler);
     renderSidebar();
-    fireEvent.click(screen.getByLabelText("Open command palette"));
+    fireEvent.click(screen.getByLabelText("commandPalette.open"));
     expect(handler).toHaveBeenCalledTimes(1);
     window.removeEventListener(COMMAND_PALETTE_OPEN_EVENT, handler);
   });
@@ -132,14 +143,14 @@ describe("AppSidebar", () => {
     expect(themeToggle).toHaveClass("shrink-0");
     expect(themeToggle).not.toHaveTextContent("common.toggleTheme");
 
-    // Identity takes the first row on its own, utilities the second. Sharing one
-    // row left 68px for the name and email in a 216px sidebar, which truncated
-    // even a short display name.
+    // Beside the identity, not under it: SidebarFooter is a column, so a second
+    // child stacks. flex-1 gives the identity the width.
     const footer = container.querySelector('[data-sidebar="footer"]');
-    const [identityRow, utilitiesRow] = [...(footer?.children ?? [])];
+    expect(footer?.children).toHaveLength(1);
+    const [identityRow] = [...(footer?.children ?? [])];
     expect(identityRow).toContainElement(screen.getByText("test@example.com"));
-    expect(identityRow).not.toContainElement(themeToggle);
-    expect(utilitiesRow).toContainElement(themeToggle);
+    expect(identityRow).toContainElement(themeToggle);
+    expect(screen.getByText("test@example.com").closest("div.min-w-0.flex-1")).toBeInTheDocument();
   });
 
   it("removes the redundant in-sidebar collapse control", () => {

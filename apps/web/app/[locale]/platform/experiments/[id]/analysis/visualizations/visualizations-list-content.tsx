@@ -8,6 +8,7 @@ import { useLocale } from "@/hooks/useLocale";
 import { Loader2, Plus } from "lucide-react";
 import { notFound, useParams, useRouter } from "next/navigation";
 import ExperimentVisualizationsList from "~/components/experiment-visualizations/list/experiment-visualizations-list";
+import ExperimentVisualizationsHighlights from "~/components/experiment-visualizations/list/highlights/experiment-visualizations-highlights";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -71,6 +72,12 @@ export default function ExperimentVisualizationsPage() {
           {t("ui.actions.create")}
         </Button>
       </div>
+
+      <ExperimentVisualizationsHighlights
+        visualizations={visualizationsData ?? []}
+        experimentId={experimentId}
+        isLoading={isLoading}
+      />
 
       <ExperimentVisualizationsList
         visualizations={visualizationsData ?? []}

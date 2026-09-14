@@ -30,7 +30,7 @@ const tables = [
 ];
 
 describe("ExperimentDataInventory", () => {
-  it("lists every table the experiment holds, with its type and size", async () => {
+  it("lists every table the experiment holds, by name and size", async () => {
     server.mount(contract.experiments.getExperimentTables, { body: tables });
 
     render(<ExperimentDataInventory experimentId={EXPERIMENT_ID} />);
@@ -38,9 +38,17 @@ describe("ExperimentDataInventory", () => {
     const rows = await screen.findAllByRole("listitem");
     expect(rows).toHaveLength(3);
     expect(within(rows[0]).getByText("Raw Data")).toBeInTheDocument();
-    expect(within(rows[0]).getByText("dataInventory.type.static")).toBeInTheDocument();
-    expect(within(rows[1]).getByText("dataInventory.type.macro")).toBeInTheDocument();
-    expect(within(rows[2]).getByText("dataInventory.type.upload")).toBeInTheDocument();
+    expect(within(rows[2]).getByText("field-notes-sept")).toBeInTheDocument();
+  });
+
+  it("drops the backend's wrapper around a macro table's name", async () => {
+    server.mount(contract.experiments.getExperimentTables, { body: tables });
+
+    render(<ExperimentDataInventory experimentId={EXPERIMENT_ID} />);
+
+    const rows = await screen.findAllByRole("listitem");
+    expect(within(rows[1]).getByText("Chlorophyll fit")).toBeInTheDocument();
+    expect(within(rows[1]).queryByText(/Processed Data/)).not.toBeInTheDocument();
   });
 
   it("groups the row count for readability rather than printing a bare integer", async () => {

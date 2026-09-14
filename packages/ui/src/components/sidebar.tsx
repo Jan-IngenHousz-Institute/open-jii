@@ -295,7 +295,10 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="bg-sidebar text-sidebar-foreground w-(--sidebar-width) [&>button]:text-sidebar-foreground/70 [&>button]:hover:bg-sidebar-accent [&>button]:hover:text-sidebar-foreground p-0"
+            // Sheet's close is a bare 16px icon, so its hover wash was a 16px
+            // square. size-8 with top-2/right-2 grows the target and keeps the
+            // glyph on the brand row's centre.
+            className="bg-sidebar text-sidebar-foreground w-(--sidebar-width) [&>button]:text-sidebar-foreground/70 [&>button]:hover:bg-sidebar-accent [&>button]:hover:text-sidebar-foreground p-0 [&>button]:right-2 [&>button]:top-2 [&>button]:inline-flex [&>button]:size-8 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-md"
             style={
               {
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,

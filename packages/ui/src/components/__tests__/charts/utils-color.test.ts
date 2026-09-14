@@ -1,6 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { chartGridColor, labToHex, oklchToHex } from "../../charts/utils";
+import {
+  chartGridColor,
+  createBaseLayout,
+  invalidateThemeTokenCache,
+  labToHex,
+  oklchToHex,
+  readThemeColor,
+} from "../../charts/utils";
 
 /**
  * jsdom applies no stylesheet, so `readThemeColor` finds nothing and every call
@@ -71,6 +78,11 @@ describe("oklchToHex", () => {
  * nothing else exercises the real chain.
  */
 describe("chartGridColor", () => {
+  // These set theme tokens on the root; nothing observes that without a chart.
+  beforeEach(() => {
+    invalidateThemeTokenCache();
+  });
+
   it("resolves --border when the document carries a theme", () => {
     const root = document.documentElement;
     root.style.setProperty("--border", BORDER_TOKEN);
@@ -84,5 +96,56 @@ describe("chartGridColor", () => {
   it("falls back to a literal when no theme is readable", () => {
     // The server-render and jsdom path: getComputedStyle finds nothing.
     expect(chartGridColor()).toBe("#E6E6E6");
+  });
+
+  it("serves a repeated read from cache rather than re-reading the document", () => {
+    // The point of the cache: on a theme toggle every chart re-renders at once.
+    // Counted as forced style reads: mutating the root now re-resolves by design.
+    const root = document.documentElement;
+    root.style.setProperty("--border", BORDER_TOKEN);
+    const computed = vi.spyOn(window, "getComputedStyle");
+
+    expect(chartGridColor()).toBe(BORDER_HEX);
+    expect(chartGridColor()).toBe(BORDER_HEX);
+    expect(computed).toHaveBeenCalledTimes(1);
+
+    computed.mockRestore();
+    root.style.removeProperty("--border");
+  });
+});
+
+describe("readThemeColor cache validity", () => {
+  it("re-resolves when the root class moved with no observer attached", () => {
+    invalidateThemeTokenCache();
+    document.documentElement.style.setProperty("--probe-token", "oklch(0.5 0.1 200)");
+    expect(readThemeColor("--probe-token")).toBe("#00747a");
+
+    // Stands in for a toggle made on a chart-free page, which nothing observes.
+    document.documentElement.classList.add("dark");
+    document.documentElement.style.setProperty("--probe-token", "oklch(0.8 0.1 200)");
+
+    expect(readThemeColor("--probe-token")).toBe("#64d1d7");
+
+    document.documentElement.classList.remove("dark");
+    document.documentElement.style.removeProperty("--probe-token");
+  });
+});
+
+describe("hover label contrast", () => {
+  it("pins the tooltip to the popover pairing rather than the series colour", () => {
+    invalidateThemeTokenCache();
+    const root = document.documentElement;
+    root.style.setProperty("--popover", "oklch(0.2 0.03 195)");
+    root.style.setProperty("--popover-foreground", "oklch(0.95 0.006 195)");
+
+    const layout = createBaseLayout({});
+
+    // Left to Plotly these come from the trace colour, which on a pale series
+    // produces pale text on a pale plate.
+    expect(layout.hoverlabel?.bgcolor).toBe(readThemeColor("--popover"));
+    expect(layout.hoverlabel?.font?.color).toBe(readThemeColor("--popover-foreground"));
+
+    root.style.removeProperty("--popover");
+    root.style.removeProperty("--popover-foreground");
   });
 });

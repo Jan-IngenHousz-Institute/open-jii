@@ -191,7 +191,15 @@
     "readMore": "Read more",
     "uploadMetadata": "Upload Metadata",
     "editMetadata": "Edit Metadata",
-    "uploadSensorData": "Upload Sensor Data"
+    "uploadSensorData": "Upload Sensor Data",
+    "datasetLabel": "Dataset",
+    "datasetPlaceholder": "Search datasets...",
+    "datasetEmpty": "No dataset matches that.",
+    "datasetRows_one": "{{rows}} row",
+    "datasetRows_other": "{{rows}} rows",
+    "datasetGroupStatic": "Source",
+    "datasetGroupMacro": "Processed",
+    "datasetGroupUpload": "Uploaded"
   },
   "experiment": "Experiment",
   "detailsTitle": "Details",
@@ -440,11 +448,6 @@
     "emptyTitle": "No data yet",
     "empty": "Tables appear here once a device publishes into this experiment, a macro runs, or you upload a file.",
     "loadError": "This experiment's data could not be loaded.",
-    "type": {
-      "static": "Raw",
-      "macro": "Processed",
-      "upload": "Uploaded"
-    },
     "rowUnit_one": "row",
     "rowUnit_other": "rows"
   }
