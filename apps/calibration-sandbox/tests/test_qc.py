@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "functions" / "python"))
 
-from qc import assess_linear_fit, assess_origin_fit
+from qc import assess_linear_fit, assess_multilinear_fit, assess_origin_fit
 
 # A clean bench sweep: y = 1.19 * x with negligible noise.
 CLEAN_X = [1.1, 148.2, 431.7, 540.1, 715.3, 1182.4]
@@ -131,6 +131,83 @@ class AssessLinearFitTest(unittest.TestCase):
     def test_mismatched_lengths_raise(self):
         with self.assertRaises(ValueError):
             assess_linear_fit([1.0, 2.0, 3.0], [1.0, 2.0], **LINEAR_BOUNDS)
+
+
+# A spectral bench: three channel counts per point, the reference PAR a known
+# combination of them, so the fit has coefficients to recover.
+SPECTRAL_COEFFICIENTS = [0.00786, 0.00344, 0.00285]
+SPECTRAL_INTERCEPT = -0.34
+SPECTRAL_ROWS = [
+    [19.0, 53.0, 79.0],
+    [11.0, 30.0, 40.0],
+    [14.0, 41.0, 60.0],
+    [25.0, 70.0, 96.0],
+    [8.0, 22.0, 31.0],
+    [30.0, 88.0, 120.0],
+    [5.0, 15.0, 20.0],
+]
+SPECTRAL_Y = [
+    sum(coefficient * value for coefficient, value in zip(SPECTRAL_COEFFICIENTS, row))
+    + SPECTRAL_INTERCEPT
+    for row in SPECTRAL_ROWS
+]
+
+
+class AssessMultilinearFitTest(unittest.TestCase):
+    def test_channel_coefficients_are_recovered(self):
+        record = assess_multilinear_fit(SPECTRAL_ROWS, SPECTRAL_Y)
+        self.assertTrue(record["passed"], record["reasons"])
+        self.assertEqual(record["fit"], "multilinear")
+        for fitted, expected in zip(record["coefficients"], SPECTRAL_COEFFICIENTS):
+            self.assertAlmostEqual(fitted, expected, places=6)
+        self.assertAlmostEqual(record["intercept"], SPECTRAL_INTERCEPT, places=6)
+        self.assertEqual(record["channels"], 3)
+        self.assertEqual(record["points"], 7)
+        self.assertEqual(record["rank"], 4)
+
+    def test_exact_fit_is_refused(self):
+        # Four points fit three channels plus an intercept exactly, so R-squared proves nothing.
+        record = assess_multilinear_fit(SPECTRAL_ROWS[:4], SPECTRAL_Y[:4])
+        self.assertFalse(record["passed"])
+        self.assertIn("at least 5 calibration points are required for 3 channels", record["reasons"])
+
+    def test_collinear_channels_fail(self):
+        rows = [[row[0], row[1], 2.0 * row[0]] for row in SPECTRAL_ROWS]
+        record = assess_multilinear_fit(rows, SPECTRAL_Y)
+        self.assertFalse(record["passed"])
+        self.assertTrue(any("collinear" in reason for reason in record["reasons"]))
+
+    def test_coefficient_bounds_gate(self):
+        record = assess_multilinear_fit(
+            SPECTRAL_ROWS, SPECTRAL_Y, coefficient_min=0.005, coefficient_max=1.0
+        )
+        self.assertFalse(record["passed"])
+        self.assertTrue(any("channel coefficient" in reason for reason in record["reasons"]))
+
+    def test_intercept_bounds_gate(self):
+        record = assess_multilinear_fit(SPECTRAL_ROWS, SPECTRAL_Y, intercept_min=0.0)
+        self.assertFalse(record["passed"])
+        self.assertTrue(any("intercept must be" in reason for reason in record["reasons"]))
+
+    def test_noisy_points_fail_r2(self):
+        scrambled = [SPECTRAL_Y[index] for index in (3, 0, 5, 1, 6, 2, 4)]
+        record = assess_multilinear_fit(SPECTRAL_ROWS, scrambled)
+        self.assertFalse(record["passed"])
+        self.assertTrue(any("R-squared" in reason for reason in record["reasons"]))
+
+    def test_non_finite_input_fails_closed(self):
+        rows = [[float("nan"), *SPECTRAL_ROWS[0][1:]], *SPECTRAL_ROWS[1:]]
+        record = assess_multilinear_fit(rows, SPECTRAL_Y)
+        self.assertFalse(record["passed"])
+        self.assertIn("all calibration values must be finite", record["reasons"])
+
+    def test_ragged_rows_raise(self):
+        with self.assertRaises(ValueError):
+            assess_multilinear_fit([[1.0, 2.0], [1.0]], [1.0, 2.0])
+
+    def test_mismatched_lengths_raise(self):
+        with self.assertRaises(ValueError):
+            assess_multilinear_fit(SPECTRAL_ROWS, SPECTRAL_Y[:-1])
 
 
 if __name__ == "__main__":

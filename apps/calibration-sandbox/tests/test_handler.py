@@ -68,6 +68,72 @@ submit({"par": block})
 """
 
 
+# The spectral bench: the console prints the raw spectrum as "<model>,ch0,...", the
+# reference PAR is typed in, and the channel coefficients go to the device while
+# the intercept stays on the run.
+SPECTRAL_COEFFICIENTS = [0.00786, 0.00344, 0.00285]
+SPECTRAL_INTERCEPT = -0.34
+SPECTRAL_COUNTS = [
+    ("no filter", [19, 53, 79]),
+    ("filter e002", [11, 30, 40]),
+    ("filter e003", [14, 41, 60]),
+    ("filter e004", [25, 70, 96]),
+    ("filter e007", [8, 22, 31]),
+    ("filter e008", [30, 88, 120]),
+    ("the dark cap", [5, 15, 20]),
+]
+SPECTRAL_POINTS = [
+    {
+        "stimulus": label,
+        "spec_raw": "AS7341," + ",".join(str(count) for count in counts),
+        "par_ref": sum(c * v for c, v in zip(SPECTRAL_COEFFICIENTS, counts)) + SPECTRAL_INTERCEPT,
+    }
+    for label, counts in SPECTRAL_COUNTS
+]
+
+SPECTRAL_SCHEMA = {
+    "blocks": {"spec": {"channel_coefficients": {"type": "number_array", "length": 3}}}
+}
+
+SPECTRAL_SCRIPT = """
+import math
+
+from qc import assess_multilinear_fit
+
+CHANNELS = 10
+
+
+def channel_counts(line):
+    parts = [part.strip() for part in str(line).split(",") if part.strip()]
+    if parts and not parts[0][0].isdigit():
+        parts = parts[1:]
+    return [float(part) for part in parts[:CHANNELS]]
+
+
+points = inputs["spec_sweep"]
+fit = assess_multilinear_fit(
+    [channel_counts(line) for line in points["spec_raw"]],
+    points["par_ref"],
+    intercept_min=-100.0,
+    intercept_max=100.0,
+)
+
+fitted = all(math.isfinite(value) for value in fit["coefficients"]) and math.isfinite(
+    fit["intercept"]
+)
+if fitted:
+    block = {
+        "status": "computed",
+        "coefficients": {"channel_coefficients": fit["coefficients"]},
+        "fit": {"intercept": fit["intercept"]},
+        "quality": fit,
+    }
+else:
+    block = {"status": "rejected", "reason": "; ".join(fit["reasons"]), "quality": fit}
+submit({"spec": block})
+"""
+
+
 def minipar_event(points=MINIPAR_POINTS):
     return {
         "script": MINIPAR_SCRIPT,
@@ -104,6 +170,20 @@ class HandlerTest(unittest.TestCase):
         self.assertEqual(block["status"], "rejected")
         self.assertNotIn("coefficients", block)
         self.assertIn("at least three calibration points", block["reason"])
+
+    def test_spectral_fit_writes_channel_coefficients_and_keeps_the_intercept(self):
+        result = handler(
+            event(script=SPECTRAL_SCRIPT, series={"spec_sweep": SPECTRAL_POINTS}, schema=SPECTRAL_SCHEMA),
+            None,
+        )
+        self.assertEqual(result["status"], "computed", result)
+        block = result["blocks"]["spec"]
+        coefficients = block["coefficients"]["channel_coefficients"]
+        self.assertEqual(len(coefficients), 3)
+        for fitted, expected in zip(coefficients, SPECTRAL_COEFFICIENTS):
+            self.assertAlmostEqual(fitted, expected, places=6)
+        self.assertAlmostEqual(block["fit"]["intercept"], SPECTRAL_INTERCEPT, places=6)
+        self.assertTrue(block["quality"]["passed"], block["quality"]["reasons"])
 
     def test_ambit_par_fit_computes(self):
         result = handler(event(), None)

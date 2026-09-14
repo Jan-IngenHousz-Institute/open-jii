@@ -960,6 +960,53 @@ submit({"par": block})
     blocks: { par: { slope: { type: "number" }, intercept: { type: "number" } } },
   };
 
+  const miniparSpectralFitScript = `import math
+
+from qc import assess_multilinear_fit
+
+# The console prints the raw spectrum as "<model>,ch0,...,chN". The first ten channels
+# feed a least-squares fit, y = sum(coefficient[i] * channel[i]) + intercept, which is
+# what the bench procedure does before uploading the channel coefficients.
+CHANNELS = 10
+
+
+def channel_counts(line):
+    parts = [part.strip() for part in str(line).split(",") if part.strip()]
+    if parts and not parts[0][0].isdigit():
+        parts = parts[1:]
+    return [float(part) for part in parts[:CHANNELS]]
+
+
+points = inputs["spec_sweep"]
+fit = assess_multilinear_fit(
+    [channel_counts(line) for line in points["spec_raw"]],
+    points["par_ref"],
+    intercept_min=-100.0,
+    intercept_max=100.0,
+)
+
+# The thresholds are the platform's until the scientist supplies real ones: a
+# failed gate travels with the block as advice and the reviewer decides.
+fitted = all(math.isfinite(value) for value in fit["coefficients"]) and math.isfinite(
+    fit["intercept"]
+)
+if fitted:
+    block = {
+        "status": "computed",
+        # The device applies the channel coefficients; the intercept stays on the run.
+        "coefficients": {"channel_coefficients": fit["coefficients"]},
+        "fit": {"intercept": fit["intercept"]},
+        "quality": fit,
+    }
+else:
+    block = {"status": "rejected", "reason": "; ".join(fit["reasons"]), "quality": fit}
+submit({"spec": block})
+`;
+
+  const miniparSpectralOutputSchema = {
+    blocks: { spec: { channel_coefficients: { type: "number_array", length: 10 } } },
+  };
+
   const calibrationDefinitionSeeds = [
     {
       family: "minipar",
@@ -1032,6 +1079,55 @@ submit({"par": block})
       },
       script: miniparParFitScript(true),
       outputSchema: miniparOutputSchema,
+    },
+    {
+      family: "minipar",
+      name: "[Seed] MiniPAR spectral PAR calibration, manual bench",
+      description:
+        "Optical filters change the spectrum in front of the MiniPAR and a reference PAR sensor. A least-squares fit maps the ten raw spectral channels onto the reference; the ten channel coefficients are written to the device and the fitted intercept is kept on the run.",
+      captureProcedure: {
+        instruments: [{ role: "dut" }],
+        steps: [
+          {
+            kind: "operator",
+            prompt:
+              "Place the MiniPAR next to the reference PAR sensor so both see the same light through the same filter.",
+          },
+          {
+            kind: "sweep",
+            series: "spec_sweep",
+            stimulus: {
+              operator:
+                "Cover both sensors with {value}, then wait for the readings to settle before continuing.",
+              values: [
+                "no filter",
+                "filter e002",
+                "filter e003",
+                "filter e004",
+                "filter e007",
+                "filter e008",
+                "filter e009",
+                "filter e010",
+                "filter e013",
+                "filter e015",
+                "filter e017",
+                "the dark cap",
+              ],
+            },
+            settleMs: 1000,
+            read: [
+              { instrument: "dut", command: "spec_raw", as: "spec_raw" },
+              {
+                operator: "Enter the PAR value shown by the reference sensor",
+                as: "par_ref",
+                type: "number",
+              },
+            ],
+          },
+        ],
+      },
+      script: miniparSpectralFitScript,
+      outputSchema: miniparSpectralOutputSchema,
     },
   ];
 

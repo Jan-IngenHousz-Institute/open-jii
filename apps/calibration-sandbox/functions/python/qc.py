@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
+
 MIN_R2 = 0.99
 MAX_NRMSE = 0.05
 MAX_FULL_SCALE_RESIDUAL = 0.10
@@ -217,6 +219,121 @@ def assess_linear_fit(
             "max_full_scale_residual": MAX_FULL_SCALE_RESIDUAL,
             "slope_min": slope_min,
             "slope_max": slope_max,
+            "intercept_min": intercept_min,
+            "intercept_max": intercept_max,
+        },
+    }
+
+
+def assess_multilinear_fit(
+    rows,
+    y_values,
+    *,
+    coefficient_min=-math.inf,
+    coefficient_max=math.inf,
+    intercept_min=-math.inf,
+    intercept_max=math.inf,
+):
+    """Fit ``y = sum(coefficient[i] * x[i]) + intercept`` over channel vectors and
+    return a fail-closed QC record.
+
+    One row per calibration point, every row the same channel vector length.
+    """
+    x = [[float(value) for value in row] for row in rows]
+    y = [float(value) for value in y_values]
+    reasons = []
+
+    if len(x) != len(y):
+        raise ValueError("calibration rows and reference values must be equal length")
+    channels = len(x[0]) if x else 0
+    if channels == 0 or any(len(row) != channels for row in x):
+        raise ValueError("every calibration row must hold the same non-zero number of channels")
+
+    parameters = channels + 1
+    # With no degrees of freedom the fit is exact by construction and R-squared proves nothing.
+    if len(x) <= parameters:
+        reasons.append(
+            f"at least {parameters + 1} calibration points are required for {channels} channels"
+        )
+
+    finite = all(math.isfinite(value) for row in x for value in row) and all(
+        math.isfinite(value) for value in y
+    )
+    if not finite:
+        reasons.append("all calibration values must be finite")
+
+    y_span = max(y) - min(y) if finite and y else 0.0
+    if y_span <= 0:
+        reasons.append("reference values must span a non-zero range")
+
+    if finite:
+        design = np.hstack([np.array(x), np.ones((len(x), 1))])
+        solution, _, rank, singular = np.linalg.lstsq(design, np.array(y), rcond=None)
+        coefficients = [float(value) for value in solution[:-1]]
+        intercept = float(solution[-1])
+        rank = int(rank)
+        condition_number = (
+            float(singular[0] / singular[-1]) if singular.size and singular[-1] > 0 else math.inf
+        )
+        residual = [float(value) for value in np.array(y) - design @ solution]
+    else:
+        coefficients = [math.nan] * channels
+        intercept = math.nan
+        rank = 0
+        condition_number = math.inf
+        residual = []
+
+    if rank < parameters:
+        reasons.append("channel readings are collinear, so the coefficients are not unique")
+
+    ss_res = sum(value * value for value in residual) if residual else math.inf
+    y_mean = sum(y) / len(y) if y else 0.0
+    ss_tot = sum((value - y_mean) ** 2 for value in y) if finite else 0.0
+    r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 and math.isfinite(ss_res) else math.nan
+    rmse = math.sqrt(ss_res / len(y)) if y and math.isfinite(ss_res) else math.inf
+    nrmse = rmse / y_span if y_span > 0 and math.isfinite(rmse) else math.inf
+    max_residual_fraction = (
+        max(abs(value) for value in residual) / y_span if residual and y_span > 0 else math.inf
+    )
+
+    within_bounds = all(
+        math.isfinite(value) and coefficient_min <= value <= coefficient_max
+        for value in coefficients
+    )
+    if not within_bounds:
+        reasons.append(
+            "every channel coefficient must be finite and within "
+            f"[{coefficient_min}, {coefficient_max}]"
+        )
+    if not math.isfinite(intercept) or not intercept_min <= intercept <= intercept_max:
+        reasons.append(f"intercept must be finite and within [{intercept_min}, {intercept_max}]")
+    if not math.isfinite(r2) or r2 < MIN_R2:
+        reasons.append(f"R-squared must be at least {MIN_R2}")
+    if not math.isfinite(nrmse) or nrmse > MAX_NRMSE:
+        reasons.append(f"normalized RMSE must be at most {MAX_NRMSE}")
+    if not math.isfinite(max_residual_fraction) or max_residual_fraction > MAX_FULL_SCALE_RESIDUAL:
+        reasons.append(f"maximum residual must be at most {MAX_FULL_SCALE_RESIDUAL} of full scale")
+
+    return {
+        "passed": not reasons,
+        "reasons": reasons,
+        "fit": "multilinear",
+        "coefficients": coefficients,
+        "intercept": intercept,
+        "r2": r2,
+        "rmse": rmse,
+        "nrmse": nrmse,
+        "max_residual_fraction": max_residual_fraction,
+        "condition_number": condition_number,
+        "rank": rank,
+        "points": len(x),
+        "channels": channels,
+        "thresholds": {
+            "min_r2": MIN_R2,
+            "max_nrmse": MAX_NRMSE,
+            "max_full_scale_residual": MAX_FULL_SCALE_RESIDUAL,
+            "coefficient_min": coefficient_min,
+            "coefficient_max": coefficient_max,
             "intercept_min": intercept_min,
             "intercept_max": intercept_max,
         },
