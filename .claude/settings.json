@@ -1,4 +1,46 @@
 {
+  "permissions": {
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.local)",
+      "Read(**/.env.*.local)",
+      "Read(**/.env.production)",
+      "Read(.auth/**)",
+      "Read(**/*.pem)",
+      "Read(**/*.p12)",
+      "Read(**/*.pfx)",
+      "Read(.claude/session.header)",
+      "Read(~/.expo/state.json)",
+      "Read(~/.aws/**)",
+      "Read(~/.databrickscfg)",
+      "Read(~/.docker/config.json)",
+      "Read(~/.npmrc)",
+      "Read(~/.claude/.credentials.json)",
+      "Read(~/.claude/projects/**/*.jsonl)"
+    ],
+    "disableBypassPermissionsMode": "disable"
+  },
+  "sandbox": {
+    "credentials": {
+      "files": [
+        { "path": "~/.expo/state.json", "mode": "deny" },
+        { "path": "~/.aws/credentials", "mode": "deny" },
+        { "path": "~/.aws/config", "mode": "deny" },
+        { "path": "~/.databrickscfg", "mode": "deny" },
+        { "path": "~/.docker/config.json", "mode": "deny" },
+        { "path": "~/.npmrc", "mode": "deny" }
+      ],
+      "envVars": [
+        { "name": "EXPO_TOKEN", "mode": "deny" },
+        { "name": "AWS_ACCESS_KEY_ID", "mode": "deny" },
+        { "name": "AWS_SECRET_ACCESS_KEY", "mode": "deny" },
+        { "name": "AWS_SESSION_TOKEN", "mode": "deny" },
+        { "name": "DATABRICKS_TOKEN", "mode": "deny" },
+        { "name": "GH_TOKEN", "mode": "deny" },
+        { "name": "GITHUB_TOKEN", "mode": "deny" }
+      ]
+    }
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -7,6 +49,15 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-main.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-secrets.sh"
           }
         ]
       }

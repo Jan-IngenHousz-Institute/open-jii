@@ -6,18 +6,16 @@ side is close-only. Status, labels and relations belong in Linear.
 
 ## Access
 
-One route: a personal API key, scoped, in `.claude/.env`. There is no MCP server in this repo. The
-key works in subagents, background commands and CI, which interactive OAuth does not, and it gives
-everyone the same recipe. Setup is in the `openjii-linear` skill.
+One route: a personal API key, scoped to Read plus Write on team `OJD`, held by the OS keychain and
+used only inside `@repo/devkit`. There is no MCP server in this repo. Setup is
+`pbpaste | pnpm linear:auth`, or `--file` for the owner-only `.claude/.env` fallback; the
+`openjii-linear` skill has the details.
 
-Call the GraphQL API at `https://api.linear.app/graphql` with `LINEAR_API_KEY`. Do not fan out
-subagents for bulk work; one process with `issueBatchUpdate` is faster and keeps one record.
-
-Mint the key at <https://linear.app/settings/account/security>, scoped to Read plus Write and
-restricted to team `OJD`. Personal keys support permission and team scoping, so do not issue a
-full-access one. Keep it in `.claude/.env`, which `.gitignore` excludes twice, and source it only for
-the commands that need it. The header is `Authorization: <key>` with no `Bearer` prefix; adding one
-gives a silent 401. `LINEAR_API_KEY` is not set in every checkout, so ask rather than inventing one.
+Agents call Linear through `pnpm linear:query` and the other `linear:*` commands, never with the key
+in a shell. The devkit refuses `*Delete` and `*Archive` mutations unless told otherwise and logs
+every mutation to `.claude/linear-writes.log`. Do not fan out subagents for bulk work; one process
+with `issueBatchUpdate` is faster and keeps one record. If no key is found, ask rather than
+inventing one.
 
 ## Projects, tickets, and what they contain
 

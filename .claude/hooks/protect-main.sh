@@ -4,13 +4,31 @@
 # Adapted from mattpocock/skills git-guardrails-claude-code (MIT).
 set -uo pipefail
 
-if ! command -v jq >/dev/null 2>&1; then
-  echo "WARNING: protect-main hook skipped because jq is not installed." >&2
-  exit 0
-fi
+# Node is required by this repo; jq is the fallback. Without either, the hook cannot see the
+# command and steps aside with a warning, as it always has.
+read_command() {
+  if command -v node >/dev/null 2>&1; then
+    node -e '
+      let data = "";
+      process.stdin.on("data", (chunk) => { data += chunk; });
+      process.stdin.on("end", () => {
+        const input = JSON.parse(data);
+        const command = input.tool_input && input.tool_input.command;
+        process.stdout.write(String(command ?? "").replace(/[\r\n]+/g, " "));
+      });
+    '
+  elif command -v jq >/dev/null 2>&1; then
+    jq -r '(.tool_input.command // "") | gsub("[\r\n]+"; " ")'
+  else
+    return 1
+  fi
+}
 
 INPUT=$(cat)
-COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
+if ! COMMAND=$(printf '%s' "$INPUT" | read_command); then
+  echo "WARNING: protect-main hook skipped because neither node nor jq is available." >&2
+  exit 0
+fi
 [ -z "$COMMAND" ] && exit 0
 
 block() {

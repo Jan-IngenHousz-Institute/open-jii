@@ -14,6 +14,8 @@
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "env:generate": "tsx src/generate-env.ts",
     "linear:apply": "tsx src/commands/linear-apply.ts",
+    "linear:auth": "tsx src/commands/linear-auth.ts",
+    "linear:query": "tsx src/commands/linear-query.ts",
     "linear:taxonomy": "tsx src/commands/linear-taxonomy.ts",
     "lint": "eslint",
     "login": "tsx src/commands/login.ts",

@@ -27,10 +27,7 @@ One paginated query gets the open backlog. Exclude `duplicate` as well as `compl
 `canceled`; it is its own state type and it inflates every count if left in.
 
 ```bash
-set -a; . .claude/.env; set +a
-curl -s https://api.linear.app/graphql \
-  -H "Authorization: $LINEAR_API_KEY" -H 'Content-Type: application/json' \
-  -d '{"query":"query($after:String){ issues(first:250, after:$after, filter:{ team:{key:{eq:\"OJD\"}}, state:{type:{nin:[\"completed\",\"canceled\",\"duplicate\"]}} }){ nodes{ id identifier title description state{name} project{name} labels{nodes{name}} } pageInfo{ hasNextPage endCursor } } }","variables":{"after":null}}'
+pnpm linear:query --query 'query($after:String){ issues(first:250, after:$after, filter:{ team:{key:{eq:"OJD"}}, state:{type:{nin:["completed","canceled","duplicate"]}} }){ nodes{ id identifier title description state{name} project{name} labels{nodes{name}} } pageInfo{ hasNextPage endCursor } } }' --variables '{"after":null}'
 ```
 
 Write the result to the scratchpad and analyse it there rather than re-querying.
@@ -105,7 +102,7 @@ and `removedLabelIds`, which are additive; `labelIds` replaces the whole set and
 you meant to keep.
 
 ```bash
--d '{"query":"mutation($ids:[UUID!]!, $in:IssueUpdateInput!){ issueBatchUpdate(ids:$ids, input:$in){ success } }","variables":{"ids":["<uuid>","<uuid>"],"in":{"addedLabelIds":["<id>"]}}}'
+pnpm linear:query --query 'mutation($ids:[UUID!]!, $in:IssueUpdateInput!){ issueBatchUpdate(ids:$ids, input:$in){ success } }' --variables '{"ids":["<uuid>","<uuid>"],"in":{"addedLabelIds":["<id>"]}}'
 ```
 
 Chunk large groups and check `success` on every response.

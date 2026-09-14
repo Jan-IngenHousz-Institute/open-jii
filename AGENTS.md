@@ -35,10 +35,14 @@ The platform UI is auth-gated, so a real check needs Postgres and the backend, n
 - After the user authorizes resetting local data, run `pnpm db:setup` to start Postgres,
   **reset** the local database, and apply migrations.
 - `pnpm --filter database db:seed` — seeds the local user and development data.
-- `pnpm local:login` — a session cookie with no browser and no email; reads the OTP from Postgres.
+- `pnpm local:login` — signs in the seed user with no browser and no email (it reads the OTP from
+  Postgres) and writes the session to `.claude/session.header` for
+  `curl -H @.claude/session.header`; the cookie never prints unless you pass `--print`.
 - `pnpm dev:fb` — runs backend and web together.
 - `pnpm e2e` — the browser end-to-end suite, against an already-running stack.
 - `pnpm lint`, `pnpm test`, `pnpm format:check` — validation.
+- `pnpm linear:auth` stores your Linear key in the OS keychain; `pnpm linear:query` and the other
+  `linear:*` commands use it, so the key never enters a shell.
 
 Copy `apps/backend/.env.example` to `apps/backend/.env` before first boot. It is generated and
 boot-tested, and its comments mark the variables where a plausible dummy value is **worse** than
@@ -88,6 +92,23 @@ screenshot showing the affected screen is re-captured rather than reused. The
 A `Stop` hook in `.claude/settings.json` gives Claude Code one reminder per session when `apps/web`
 or `apps/mobile` change without `apps/docs/content`. It is a nudge, not a gate, and it only reaches
 Claude Code. Per-machine overrides belong in `.claude/settings.local.json`, which stays untracked.
+
+## Secrets stay out of the context window
+
+Local env files (`.env`, `.env.local` and the other gitignored variants), Playwright's
+`apps/e2e/.auth/` state, device certificates (`.pem`, `.p12`, `.pfx`) and `.claude/session.header`
+hold secrets and are never read, printed, copied or sourced by an agent. The tool that needs a
+secret reads it itself: each app loads its own `.env`, the devkit resolves the Linear key from the
+OS keychain, and `curl -H @.claude/session.header` reads the local session. Copying an env file into
+another checkout's env file is fine; copying it anywhere else is not. `.claude/settings.json` denies
+the file tools those paths outright; a second `PreToolUse` hook, `.claude/hooks/protect-secrets.sh`,
+catches what deny rules cannot see (`grep -r`, `python open()`, `cp`, `source`) and blocks
+publishing commands (`eas update`, `eas submit`). Releases and
+infrastructure are run by people, never by an agent. The Bash sandbox is opt-in through
+`/sandbox`; once it is on, the tracked `sandbox.credentials` entries keep the developer's CLI logins
+out of sandboxed commands. Never pass a secret as a command-line argument or write one into a
+ticket, PR, canvas or log. `.env.example`, `.env.default` and `.env.test` hold no secrets and are
+fine to read.
 
 ## main is protected
 

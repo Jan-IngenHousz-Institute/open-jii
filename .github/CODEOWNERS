@@ -1,0 +1,9 @@
+# Files that program every developer's agent, and the tooling that holds credentials.
+# Takes effect once "Require review from Code Owners" is on in branch protection.
+/.claude/          @petar-INFO
+/.agents/          @petar-INFO
+/AGENTS.md         @petar-INFO
+/CLAUDE.md         @petar-INFO
+/docs/agents/      @petar-INFO
+/tooling/devkit/   @petar-INFO
+/.github/          @petar-INFO

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import { repositoryRoot, resolveLinearApiKey } from "../lib/config.js";
-import { createLinearClient } from "../lib/linear.js";
+import { createFileAudit, createLinearClient } from "../lib/linear.js";
 import type { LinearClient } from "../lib/linear.js";
 
 export interface IssueUpdate {
@@ -180,10 +180,12 @@ async function run(args: string[]): Promise<number> {
   const write = (text: string): void => {
     process.stdout.write(text);
   };
-  const apiKey = await resolveLinearApiKey(repositoryRoot(), process.env);
-  if (!apiKey) throw new Error("LINEAR_API_KEY is missing; put it in .claude/.env");
+  const root = repositoryRoot();
+  const apiKey = await resolveLinearApiKey(root, process.env);
+  if (!apiKey) throw new Error("No Linear key found; run pnpm linear:auth first");
 
-  await applyChanges(rows, apply, { client: createLinearClient({ apiKey }), write, batchSize });
+  const client = createLinearClient({ apiKey, audit: createFileAudit(root) });
+  await applyChanges(rows, apply, { client, write, batchSize });
   return 0;
 }
 

@@ -1,11 +1,29 @@
+import { appendFile, mkdir } from "node:fs/promises";
+import { dirname } from "node:path";
+
 export interface LinearClient {
   query<T>(document: string, variables?: Record<string, unknown>): Promise<T>;
+}
+
+export interface AuditEntry {
+  at: string;
+  ok: boolean;
+  fields: string[];
+  variables: string;
 }
 
 export interface LinearClientOptions {
   apiKey: string;
   request?: typeof fetch;
   endpoint?: string;
+  // Mutations named *Delete or *Archive are refused unless this is set.
+  allowDestructive?: boolean;
+  audit?: (entry: AuditEntry) => void | Promise<void>;
+}
+
+export interface OperationSummary {
+  kind: "query" | "mutation";
+  fields: string[];
 }
 
 interface GraphqlError {
@@ -18,40 +36,125 @@ interface GraphqlResponse<T> {
 }
 
 const defaultEndpoint = "https://api.linear.app/graphql";
+const identifier = /[A-Za-z_][A-Za-z0-9_]*/y;
 
 function isGraphqlResponse<T>(value: unknown): value is GraphqlResponse<T> {
   return typeof value === "object" && value !== null;
 }
 
+export function isDestructive(field: string): boolean {
+  return /(Delete|Archive)$/.test(field);
+}
+
+// Names the top-level selections. A guard for the policy, not a GraphQL parser.
+export function describeOperation(document: string): OperationSummary {
+  const kind: OperationSummary["kind"] = /^\s*mutation\b/.test(document) ? "mutation" : "query";
+  const fields: string[] = [];
+  let parens = 0;
+  let braces = 0;
+  let index = 0;
+
+  while (index < document.length) {
+    const char = document.charAt(index);
+    if (char === "(") {
+      parens += 1;
+    } else if (char === ")") {
+      parens -= 1;
+    } else if (char === "{") {
+      braces += 1;
+    } else if (char === "}") {
+      braces -= 1;
+    } else if (braces === 1 && parens === 0 && /[A-Za-z_]/.test(char)) {
+      identifier.lastIndex = index;
+      const match = identifier.exec(document);
+      const name = match ? match[0] : char;
+      const after = index + name.length;
+      const isAlias = /^\s*:/.test(document.slice(after));
+      const isSpread = document.slice(Math.max(0, index - 3), index) === "...";
+      if (!isAlias && !isSpread) fields.push(name);
+      index = after;
+      continue;
+    }
+    index += 1;
+  }
+
+  return { kind, fields };
+}
+
 // Personal API keys go in the Authorization header bare; a Bearer prefix is a silent 401.
+async function send<T>(
+  request: typeof fetch,
+  endpoint: string,
+  apiKey: string,
+  document: string,
+  variables: Record<string, unknown>,
+): Promise<T> {
+  const response = await request(endpoint, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: apiKey },
+    body: JSON.stringify({ query: document, variables }),
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`Linear returned ${response.status}: ${text}`);
+  }
+
+  const parsed: unknown = JSON.parse(text);
+  if (!isGraphqlResponse<T>(parsed)) {
+    throw new Error(`Linear returned a non-object body: ${text}`);
+  }
+  if (parsed.errors !== undefined && parsed.errors.length > 0) {
+    const messages = parsed.errors.map((error) => error.message).join("; ");
+    throw new Error(`Linear query failed: ${messages}`);
+  }
+  if (parsed.data === undefined) {
+    throw new Error(`Linear returned no data: ${text}`);
+  }
+  return parsed.data;
+}
+
 export function createLinearClient(options: LinearClientOptions): LinearClient {
   const request = options.request ?? fetch;
   const endpoint = options.endpoint ?? defaultEndpoint;
+  const allowDestructive = options.allowDestructive ?? false;
 
   return {
     async query<T>(document: string, variables: Record<string, unknown> = {}): Promise<T> {
-      const response = await request(endpoint, {
-        method: "POST",
-        headers: { "content-type": "application/json", authorization: options.apiKey },
-        body: JSON.stringify({ query: document, variables }),
-      });
-      const text = await response.text();
-      if (!response.ok) {
-        throw new Error(`Linear returned ${response.status}: ${text}`);
+      const operation = describeOperation(document);
+      if (operation.kind === "mutation" && !allowDestructive) {
+        const destructive = operation.fields.filter(isDestructive);
+        if (destructive.length > 0) {
+          throw new Error(
+            `Refusing destructive mutation ${destructive.join(", ")}; pass --allow-destructive only if you mean it`,
+          );
+        }
       }
 
-      const parsed: unknown = JSON.parse(text);
-      if (!isGraphqlResponse<T>(parsed)) {
-        throw new Error(`Linear returned a non-object body: ${text}`);
+      let ok = false;
+      try {
+        const data = await send<T>(request, endpoint, options.apiKey, document, variables);
+        ok = true;
+        return data;
+      } finally {
+        if (operation.kind === "mutation" && options.audit) {
+          await options.audit({
+            at: new Date().toISOString(),
+            ok,
+            fields: operation.fields,
+            variables: JSON.stringify(variables).slice(0, 500),
+          });
+        }
       }
-      if (parsed.errors !== undefined && parsed.errors.length > 0) {
-        const messages = parsed.errors.map((error) => error.message).join("; ");
-        throw new Error(`Linear query failed: ${messages}`);
-      }
-      if (parsed.data === undefined) {
-        throw new Error(`Linear returned no data: ${text}`);
-      }
-      return parsed.data;
     },
+  };
+}
+
+// Every mutation lands in .claude/linear-writes.log, which .gitignore already excludes.
+export function createFileAudit(root: string): (entry: AuditEntry) => Promise<void> {
+  const path = `${root}/.claude/linear-writes.log`;
+  return async (entry) => {
+    await mkdir(dirname(path), { recursive: true });
+    const outcome = entry.ok ? "ok" : "failed";
+    await appendFile(path, `${entry.at} ${outcome} ${entry.fields.join(",")} ${entry.variables}\n`);
   };
 }

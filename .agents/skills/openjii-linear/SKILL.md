@@ -18,29 +18,35 @@ you did not create, and never write to more than one issue without saying what t
 
 ## Access
 
-One route: a personal API key, scoped, in `.claude/.env`. There is no MCP server in this repo. The
-key works in subagents, background commands and CI, which interactive OAuth does not, and it gives
-everyone the same recipe.
+One route: a personal API key, scoped, held by the OS keychain and used only inside `@repo/devkit`.
+There is no MCP server in this repo. The key works in subagents, background commands and CI, which
+interactive OAuth does not, and it never enters a shell, a history file or this context.
 
 Mint a key at [Security and access](https://linear.app/settings/account/security), scoped to Read
 plus Write and restricted to team `OJD`. Personal keys can be permission-scoped and team-scoped, so
-do not issue a full-access one. Store it in `.claude/.env`, which `.gitignore` excludes twice:
-
-```
-LINEAR_API_KEY=lin_api_xxxxx
-```
-
-Load it only for the commands that need it, so it is not ambient in every shell:
+do not issue a full-access one. Then store it without pasting it anywhere visible:
 
 ```bash
-set -a; . .claude/.env; set +a
+pbpaste | pnpm linear:auth          # macOS keychain; secret-tool on Linux
+pbpaste | pnpm linear:auth --file   # fallback: .claude/.env, owner-only, gitignored twice
 ```
 
-The header is `Authorization: $LINEAR_API_KEY` with **no** `Bearer` prefix. Adding one gives a
-silent 401. `@repo/devkit` commands read the same file.
+`linear:auth` verifies the key against Linear before storing it and prints who it belongs to. To
+rotate, regenerate the key in Linear and run it again.
 
-The key is not set in every checkout. If it is missing, say so and ask rather than inventing one or
-guessing at ticket contents.
+Every call goes through the devkit. It resolves the key in-process (shell env, then keychain, then
+the env file), sends it bare in the `Authorization` header (a `Bearer` prefix is a silent 401),
+refuses any `*Delete` or `*Archive` mutation unless `--allow-destructive` is passed, and appends
+every mutation to `.claude/linear-writes.log`:
+
+```bash
+pnpm linear:query --query '{ viewer { name } }'
+pnpm linear:query --file query.graphql --variables '{"id":"OJD-1755"}'
+```
+
+Never read `.claude/.env` or any other env file into the context. A hook blocks the obvious ways;
+the rule covers the rest. If no key is found, say so and ask; do not invent one or guess at ticket
+contents.
 
 ## Conventions
 
@@ -81,28 +87,26 @@ section is empty**; point at `openjii-testing-criteria`.
 One ticket, with everything a decision needs:
 
 ```bash
-curl -s https://api.linear.app/graphql \
-  -H "Authorization: $LINEAR_API_KEY" -H 'Content-Type: application/json' \
-  -d '{"query":"query($id:String!){ issue(id:$id){ id identifier title description priorityLabel state{name} project{name} labels{nodes{name}} assignee{name} relations{nodes{type relatedIssue{identifier title state{name}}}} comments{nodes{body user{name}}} } }","variables":{"id":"OJD-1755"}}'
+pnpm linear:query --query 'query($id:String!){ issue(id:$id){ id identifier title description priorityLabel state{name} project{name} labels{nodes{name}} assignee{name} relations{nodes{type relatedIssue{identifier title state{name}}}} comments{nodes{body user{name}}} } }' --variables '{"id":"OJD-1755"}'
 ```
 
 Search when you have words, not an id. A `searchableContent` filter matches poorly:
 
 ```bash
--d '{"query":"query($t:String!){ searchIssues(term:$t, first:10){ nodes{ identifier title state{name} project{name} } } }","variables":{"t":"device transfer organization"}}'
+pnpm linear:query --query 'query($t:String!){ searchIssues(term:$t, first:10){ nodes{ identifier title state{name} project{name} } } }' --variables '{"t":"device transfer organization"}'
 ```
 
 Projects. Keep nested `first` small; Linear caps query complexity at 10,000 and default page sizes
 on every connection exceed it:
 
 ```bash
--d '{"query":"{ projects(first:50){ nodes{ id name state lead{name} targetDate description content projectMilestones(first:10){ nodes{ name } } } } }"}'
+pnpm linear:query --query '{ projects(first:50){ nodes{ id name state lead{name} targetDate description content projectMilestones(first:10){ nodes{ name } } } } }'
 ```
 
 The private process documents, when a judgement call needs them:
 
 ```bash
--d '{"query":"{ documents(first:50){ nodes{ title url content } } }"}'
+pnpm linear:query --query '{ documents(first:50){ nodes{ title url content } } }'
 ```
 
 "Team Process" holds the Definition of Ready and Done and how the team works; "Critical Flows" holds
@@ -111,7 +115,7 @@ the smoke tests and tiers.
 Create an issue. Resolve `teamId` and `projectId` once; a ticket without a project fails the gate:
 
 ```bash
--d '{"query":"mutation($in:IssueCreateInput!){ issueCreate(input:$in){ success issue{ identifier url } } }","variables":{"in":{"teamId":"<id>","projectId":"<id>","title":"...","description":"...","labelIds":["<type>","<area>"]}}}'
+pnpm linear:query --query 'mutation($in:IssueCreateInput!){ issueCreate(input:$in){ success issue{ identifier url } } }' --variables '{"in":{"teamId":"<id>","projectId":"<id>","title":"...","description":"...","labelIds":["<type>","<area>"]}}'
 ```
 
 Move state, assign, or relabel with `issueUpdate($id:String!, $input:IssueUpdateInput!)`. Use

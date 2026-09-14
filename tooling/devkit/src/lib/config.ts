@@ -2,6 +2,8 @@ import { parse } from "dotenv";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
+import { linearKeychainService, readKeychainSecret } from "./keychain.js";
+
 type EnvRecord = Partial<Record<string, string>>;
 
 export function repositoryRoot(): string {
@@ -26,11 +28,15 @@ export async function resolveDatabaseUrl(
   return (await readEnvFile(`${root}/apps/backend/.env`)).DATABASE_URL ?? null;
 }
 
+// Shell first for one-off overrides, then the keychain, then the owner-only env file as the fallback.
 export async function resolveLinearApiKey(
   root: string,
   shellEnv: NodeJS.ProcessEnv,
+  lookupKeychain: () => Promise<string | null> = () => readKeychainSecret(linearKeychainService),
 ): Promise<string | null> {
   const shellValue = shellEnv.LINEAR_API_KEY?.trim();
   if (shellValue) return shellValue;
+  const keychainValue = await lookupKeychain();
+  if (keychainValue) return keychainValue;
   return (await readEnvFile(`${root}/.claude/.env`)).LINEAR_API_KEY ?? null;
 }
