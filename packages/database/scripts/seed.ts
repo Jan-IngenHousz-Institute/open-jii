@@ -89,11 +89,38 @@ const CONTRIBUTOR_SEEDS = [
 ] as const;
 
 async function clearSeedData() {
+  // User + profile (seed user)
+  const seedUsers = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, SEED_EMAIL));
+
+  // Contributor users keyed by fixed UUIDs. We can't filter by email
+  // pattern since the silver pipeline picks the contributor UUIDs, not us.
+  const contributorIds = CONTRIBUTOR_SEEDS.map((c) => c.id);
+
+  // Personal organizations provisioned for those seed users (Phase 1 org
+  // provisioning). Everything created inside one goes with it, whatever it was named.
+  const seedUserIds = [...seedUsers.map((u) => u.id), ...contributorIds];
+  const seedOrganizations = await db
+    .select({ id: organizations.id })
+    .from(organizations)
+    .where(inArray(organizations.slug, seedUserIds.map(personalOrgSlug)));
+  const seedOrganizationIds = seedOrganizations.map((organization) => organization.id);
+
   // Find seed experiment IDs for join table cleanup
   const seedExperiments = await db
     .select({ id: experiments.id })
     .from(experiments)
-    .where(or(like(experiments.name, SEED_PREFIX), inArray(experiments.id, SEED_EXPERIMENT_IDS)));
+    .where(
+      or(
+        like(experiments.name, SEED_PREFIX),
+        inArray(experiments.id, SEED_EXPERIMENT_IDS),
+        ...(seedOrganizationIds.length > 0
+          ? [inArray(experiments.organizationId, seedOrganizationIds)]
+          : []),
+      ),
+    );
   const seedExpIds = seedExperiments.map((e) => e.id);
 
   if (seedExpIds.length > 0) {
@@ -144,23 +171,9 @@ async function clearSeedData() {
   await db.delete(protocols).where(like(protocols.name, SEED_PREFIX));
   await db.delete(macros).where(like(macros.name, SEED_PREFIX));
 
-  // User + profile (seed user)
-  const seedUsers = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.email, SEED_EMAIL));
-
-  // Contributor users keyed by fixed UUIDs. We can't filter by email
-  // pattern since the silver pipeline picks the contributor UUIDs, not us.
-  const contributorIds = CONTRIBUTOR_SEEDS.map((c) => c.id);
-
-  // Personal organizations provisioned for those seed users (Phase 1 org
-  // provisioning). Deleting the org cascade-removes its organization_members.
-  const seedUserIds = [...seedUsers.map((u) => u.id), ...contributorIds];
-  if (seedUserIds.length > 0) {
-    await db
-      .delete(organizations)
-      .where(inArray(organizations.slug, seedUserIds.map(personalOrgSlug)));
+  // Deleting an organization cascade-removes its organization_members.
+  if (seedOrganizationIds.length > 0) {
+    await db.delete(organizations).where(inArray(organizations.id, seedOrganizationIds));
   }
 
   if (seedUsers.length > 0) {
@@ -1039,6 +1052,22 @@ submit({"spec": block})
             ],
           },
         ],
+        // The bench procedure re-reads calibrated PAR beside the reference once the write is in.
+        verify: [
+          {
+            kind: "read",
+            series: "par_check",
+            prompt: "Keep both sensors in the same light for the check reading.",
+            read: [
+              { instrument: "dut", command: "par", as: "par" },
+              {
+                operator: "Enter the PAR value shown by the reference sensor",
+                as: "par_ref",
+                type: "number",
+              },
+            ],
+          },
+        ],
       },
       script: miniparParFitScript(false),
       outputSchema: miniparOutputSchema,
@@ -1075,6 +1104,20 @@ submit({"spec": block})
               { instrument: "par_ref", command: "par", as: "par_ref" },
             ],
           },
+        ],
+        // The bench procedure checks one lamp current after the write, then rests the lamp.
+        verify: [
+          { kind: "set", instrument: "lamp", set: "current_a", value: 0.8 },
+          { kind: "settle", ms: 1000 },
+          {
+            kind: "read",
+            series: "par_check",
+            read: [
+              { instrument: "dut", command: "par", as: "par" },
+              { instrument: "par_ref", command: "par", as: "par_ref" },
+            ],
+          },
+          { kind: "set", instrument: "lamp", set: "current_a", value: 0 },
         ],
       },
       script: miniparParFitScript(true),
@@ -1117,6 +1160,27 @@ submit({"spec": block})
             settleMs: 1000,
             read: [
               { instrument: "dut", command: "spec_raw", as: "spec_raw" },
+              {
+                operator: "Enter the PAR value shown by the reference sensor",
+                as: "par_ref",
+                type: "number",
+              },
+            ],
+          },
+        ],
+        // Three of the filters again, reading the spectral PAR the device now computes.
+        verify: [
+          {
+            kind: "sweep",
+            series: "spec_check",
+            stimulus: {
+              operator:
+                "Cover both sensors with {value}, then wait for the readings to settle before continuing.",
+              values: ["no filter", "filter e004", "the dark cap"],
+            },
+            settleMs: 1000,
+            read: [
+              { instrument: "dut", command: "spec", as: "spec" },
               {
                 operator: "Enter the PAR value shown by the reference sensor",
                 as: "par_ref",

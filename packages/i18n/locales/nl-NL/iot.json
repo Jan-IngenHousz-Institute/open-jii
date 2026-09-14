@@ -849,7 +849,10 @@
         "partial": "Een niet bevestigd blok kan het apparaat gedeeltelijk hebben bereikt. Voer deze kalibratie opnieuw uit voordat u op het apparaat vertrouwt.",
         "unsupported": "Het platform kan voor deze apparaatfamilie nog geen coëfficiënten schrijven. De kalibratie is alleen in het record goedgekeurd.",
         "skip": "Afronden zonder te schrijven",
-        "reportFailed": "Het apparaat is beschreven, maar het resultaat kon niet worden vastgelegd."
+        "reportFailed": "Het apparaat is beschreven, maar het resultaat kon niet worden vastgelegd.",
+        "verifyHeading": "Controle met de nieuwe coëfficiënten",
+        "verifying": "Het apparaat wordt uitgelezen met de nieuwe coëfficiënten…",
+        "verificationStopped": "De controle is voortijdig gestopt: {{reason}}. De hierboven geschreven coëfficiënten blijven staan."
       },
       "done": {
         "close": "Sluiten",

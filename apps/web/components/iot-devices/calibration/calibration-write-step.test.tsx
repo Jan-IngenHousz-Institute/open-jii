@@ -12,6 +12,10 @@ function renderStep(overrides: Partial<Parameters<typeof CalibrationWriteStep>[0
     results: null,
     isWriting: false,
     error: null,
+    verifyEvents: [],
+    isVerifying: false,
+    verification: null,
+    verificationError: null,
     onWrite: vi.fn(),
     onFinish: vi.fn(),
     ...overrides,
@@ -85,6 +89,50 @@ describe("CalibrationWriteStep", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "iot.calibration.write.skip" }));
     expect(props.onFinish).toHaveBeenCalledTimes(1);
+  });
+
+  // The procedure's check after the write is the operator's evidence the new
+  // coefficients behave; it is shown beside the write results as it comes in.
+  describe("the check after the write", () => {
+    it("says nothing about a check when the procedure has none", () => {
+      renderStep({ results: { par: { verified: true } } });
+
+      expect(screen.queryByText("iot.calibration.write.verifyHeading")).toBeNull();
+    });
+
+    it("shows the check running and keeps the close button back until it is done", () => {
+      renderStep({
+        results: { par: { verified: true } },
+        isWriting: true,
+        isVerifying: true,
+        verifyEvents: [{ kind: "step", index: 0, total: 1, description: "Read par_check" }],
+      });
+
+      expect(screen.getByText("iot.calibration.write.verifying")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "iot.calibration.done.close" })).toBeDisabled();
+    });
+
+    it("tables what the device and the reference read afterwards", () => {
+      renderStep({
+        results: { par: { verified: true } },
+        verification: { par_check: [{ par: 398.1, par_ref: 398.5 }] },
+      });
+
+      expect(screen.getByText("iot.calibration.write.verifyHeading")).toBeInTheDocument();
+      expect(screen.getByText("par_check")).toBeInTheDocument();
+      expect(screen.getByText("398.1")).toBeInTheDocument();
+      expect(screen.getByText("398.5")).toBeInTheDocument();
+    });
+
+    it("says why a check stopped early without retracting the write", () => {
+      renderStep({
+        results: { par: { verified: true } },
+        verificationError: "Operator declined: Keep both sensors in the same light",
+      });
+
+      expect(screen.getByText("iot.calibration.write.verificationStopped")).toBeInTheDocument();
+      expect(screen.getByText("iot.calibration.write.verified")).toBeInTheDocument();
+    });
   });
 
   it("surfaces a reporting failure without losing the write results", () => {

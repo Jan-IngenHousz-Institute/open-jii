@@ -14,6 +14,7 @@ import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type {
+  CalibrationDefinition,
   CalibrationFamily,
   CalibrationRun,
   CalibrationRunPayload,
@@ -25,9 +26,11 @@ import type { IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import type { CapturePayload, IDeviceDriver, ProcedureProgress } from "@repo/iot";
 import {
+  ProcedureAborted,
   canWriteCalibration,
   isSensorFamily,
   runCaptureProcedure,
+  runVerificationProcedure,
   writeCalibrationBlocks,
 } from "@repo/iot";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
@@ -97,6 +100,10 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
   const [writeResults, setWriteResults] = useState<CalibrationWriteResults | null>(null);
   const [writeError, setWriteError] = useState<string | null>(null);
   const [isWriting, setIsWriting] = useState(false);
+  const [verifyEvents, setVerifyEvents] = useState<ProcedureProgress[]>([]);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verification, setVerification] = useState<CalibrationRunPayload | null>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
 
   const definitions = useCalibrationDefinitions(family);
   const definition = useCalibrationDefinition(definitionId);
@@ -188,7 +195,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
   }
 
   async function write() {
-    if (!applied || !connection || writableFamily === null) return;
+    if (!applied || !connection || writableFamily === null || !definition.data) return;
     setIsWriting(true);
     setWriteError(null);
     try {
@@ -198,14 +205,52 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
         applied.blocks,
       );
       setWriteResults(results);
+      const checked = await verifyOnDevice(definition.data.captureProcedure, connection, results);
       const postInfo = await readPostWriteInfo(connection.driver);
-      await reportWrite.mutateAsync({ calibrationId: applied.id, writeResults: results, postInfo });
+      await reportWrite.mutateAsync({
+        calibrationId: applied.id,
+        writeResults: results,
+        postInfo,
+        verification: checked,
+      });
     } catch (error) {
       setWriteError(
         error instanceof Error ? error.message : t("iot.calibration.write.reportFailed"),
       );
     } finally {
       setIsWriting(false);
+    }
+  }
+
+  /** The procedure's check once something reached the device; a stop keeps what it read, and the write stands. */
+  async function verifyOnDevice(
+    procedure: CalibrationDefinition["captureProcedure"],
+    rigConnection: NonNullable<typeof connection>,
+    results: CalibrationWriteResults,
+  ): Promise<CalibrationRunPayload | undefined> {
+    const hasCheck = (procedure.verify?.length ?? 0) > 0;
+    const wroteSomething = Object.values(results).some((result) => result.verified);
+    if (!hasCheck || !wroteSomething) return undefined;
+
+    setIsVerifying(true);
+    setVerifyEvents([]);
+    setVerificationError(null);
+    try {
+      const result = await runVerificationProcedure(procedure, {
+        rig: { dut: { read: rigConnection.driver } },
+        operator: operator.port,
+        onProgress: (event) => setVerifyEvents((previous) => [...previous, event]),
+      });
+      const readings = toRunPayload(result.payload);
+      setVerification(readings);
+      return readings;
+    } catch (error) {
+      const partial = error instanceof ProcedureAborted ? toRunPayload(error.partial.payload) : {};
+      setVerificationError(error instanceof Error ? error.message : String(error));
+      setVerification(partial);
+      return Object.keys(partial).length > 0 ? partial : undefined;
+    } finally {
+      setIsVerifying(false);
     }
   }
 
@@ -326,15 +371,22 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
   function renderWrite() {
     if (!applied) return null;
     return (
-      <CalibrationWriteStep
-        applied={applied}
-        canWrite={writableFamily !== null && canWriteCalibration(writableFamily, applied.blocks)}
-        results={writeResults}
-        isWriting={isWriting}
-        error={writeError}
-        onWrite={() => void write()}
-        onFinish={() => setStep("done")}
-      />
+      <div className="space-y-4">
+        {operator.pending !== null && <CalibrationOperatorPrompt request={operator.pending} />}
+        <CalibrationWriteStep
+          applied={applied}
+          canWrite={writableFamily !== null && canWriteCalibration(writableFamily, applied.blocks)}
+          results={writeResults}
+          isWriting={isWriting}
+          error={writeError}
+          verifyEvents={verifyEvents}
+          isVerifying={isVerifying}
+          verification={verification}
+          verificationError={verificationError}
+          onWrite={() => void write()}
+          onFinish={() => setStep("done")}
+        />
+      </div>
     );
   }
 

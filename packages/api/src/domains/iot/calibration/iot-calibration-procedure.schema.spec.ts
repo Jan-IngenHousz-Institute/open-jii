@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   procedureSeriesNames,
   requiredProcedureSeriesNames,
+  verificationSeriesNames,
   zCaptureProcedure,
 } from "./iot-calibration-procedure.schema";
 
@@ -100,6 +101,20 @@ const automatedMiniparProcedure = {
         { instrument: "par_ref", command: "par", as: "par_ref" },
       ],
     },
+  ],
+  // One lamp current after the write, calibrated PAR beside the reference, then rest.
+  verify: [
+    { kind: "set", instrument: "lamp", set: "current_a", value: 0.8 },
+    { kind: "settle", ms: 1000 },
+    {
+      kind: "read",
+      series: "par_check",
+      read: [
+        { instrument: "dut", command: "par", as: "par" },
+        { instrument: "par_ref", command: "par", as: "par_ref" },
+      ],
+    },
+    { kind: "set", instrument: "lamp", set: "current_a", value: 0 },
   ],
 };
 
@@ -236,6 +251,14 @@ describe("zCaptureProcedure", () => {
       expect(requiredProcedureSeriesNames(parsed)).toEqual(["par_sweep"]);
     });
 
+    // The verify phase runs after the write, so its series never reach the script.
+    it("keeps the verify phase's series apart from the capture series", () => {
+      const parsed = zCaptureProcedure.parse(automatedMiniparProcedure);
+      expect(verificationSeriesNames(parsed)).toEqual(["par_check"]);
+      expect(procedureSeriesNames(parsed)).toEqual(["par_sweep"]);
+      expect(verificationSeriesNames(zCaptureProcedure.parse(manualMiniparProcedure))).toEqual([]);
+    });
+
     // A bench without the Emit_LED MiniPAR and without the dark fixture still
     // produces a useful PAR calibration, so only its series is required.
     it("excludes optional steps from the required series", () => {
@@ -278,6 +301,32 @@ describe("zCaptureProcedure", () => {
         0,
         "instrument",
       ]);
+    });
+
+    it("rejects a verify step reading an undeclared instrument", () => {
+      const result = zCaptureProcedure.safeParse({
+        ...manualMiniparProcedure,
+        verify: [
+          {
+            kind: "read",
+            series: "par_check",
+            read: [{ instrument: "meter", command: "par", as: "par_ref" }],
+          },
+        ],
+      });
+      expect(result.success).toBe(false);
+      expect(result.success ? [] : result.error.issues.map((issue) => issue.path)).toContainEqual([
+        "verify",
+        0,
+        "read",
+        0,
+        "instrument",
+      ]);
+    });
+
+    it("rejects an empty verify phase", () => {
+      const result = zCaptureProcedure.safeParse({ ...manualMiniparProcedure, verify: [] });
+      expect(result.success).toBe(false);
     });
 
     it("rejects a set step without a numeric value", () => {

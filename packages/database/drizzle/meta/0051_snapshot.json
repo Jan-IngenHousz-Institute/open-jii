@@ -1,6 +1,6 @@
 {
-  "id": "8b2b4482-dc18-40b3-aab7-2950336b972e",
-  "prevId": "8c77f954-247c-4764-b2b4-848d3460de69",
+  "id": "2fd68d9f-e589-4ef3-beac-7d860453ac48",
+  "prevId": "8b2b4482-dc18-40b3-aab7-2950336b972e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -619,15 +619,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "params": {
-          "name": "params",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
         "payload_s3_key": {
           "name": "payload_s3_key",
           "type": "varchar(512)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "params": {
+          "name": "params",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -857,6 +857,12 @@
         },
         "write_results": {
           "name": "write_results",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "verification": {
+          "name": "verification",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false

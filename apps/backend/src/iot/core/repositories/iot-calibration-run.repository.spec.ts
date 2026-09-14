@@ -186,10 +186,12 @@ describe("IotCalibrationRunRepository", () => {
       approved.value.id,
       { par: { verified: true } },
       { helloReply: "cal_par_slope=1.19" },
+      { par_check: [{ par: 402.9, par_ref: 402.2 }] },
     );
     assertSuccess(written);
     expect(written.value.writtenToDeviceAt).not.toBeNull();
     expect(written.value.writeResults).toEqual({ par: { verified: true } });
+    expect(written.value.verification).toEqual({ par_check: [{ par: 402.9, par_ref: 402.2 }] });
 
     const stored = await repository.findById(run.id);
     assertSuccess(stored);

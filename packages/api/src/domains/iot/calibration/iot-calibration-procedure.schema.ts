@@ -164,6 +164,8 @@ export const zCaptureProcedure = z
       })
       .optional(),
     steps: z.array(zProcedureStep).min(1).max(64),
+    // Runs after the approved coefficients are written; what it reads is kept with the calibration.
+    verify: z.array(zProcedureStep).min(1).max(16).optional(),
   })
   .strict()
   .superRefine((procedure, ctx) => {
@@ -205,83 +207,89 @@ export const zCaptureProcedure = z
       }
     };
 
-    const seriesNames = new Set<string>();
-    procedure.steps.forEach((step, stepIndex) => {
-      if (step.kind === "set") {
-        requireDeclaredRole(step.instrument, ["steps", stepIndex, "instrument"]);
-        return;
-      }
-      if (step.kind !== "read" && step.kind !== "sweep") {
-        return;
-      }
+    // Each phase names its own series; the capture feeds the script, the verify phase the calibration record.
+    const checkSteps = (steps: ProcedureStep[], phase: "steps" | "verify") => {
+      const seriesNames = new Set<string>();
+      steps.forEach((step, stepIndex) => {
+        if (step.kind === "set") {
+          requireDeclaredRole(step.instrument, [phase, stepIndex, "instrument"]);
+          return;
+        }
+        if (step.kind !== "read" && step.kind !== "sweep") {
+          return;
+        }
 
-      if (seriesNames.has(step.series)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Series "${step.series}" is produced by more than one step`,
-          path: ["steps", stepIndex, "series"],
-        });
-      }
-      seriesNames.add(step.series);
-
-      const columns = new Set<string>();
-      step.read.forEach((read, readIndex) => {
-        if (columns.has(read.as)) {
+        if (seriesNames.has(step.series)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `Column "${read.as}" is read more than once in this step`,
-            path: ["steps", stepIndex, "read", readIndex, "as"],
+            message: `Series "${step.series}" is produced by more than one step`,
+            path: [phase, stepIndex, "series"],
           });
         }
-        columns.add(read.as);
+        seriesNames.add(step.series);
 
-        if (isInstrumentRead(read)) {
-          requireDeclaredRole(read.instrument, [
-            "steps",
-            stepIndex,
-            "read",
-            readIndex,
-            "instrument",
-          ]);
-
-          if (read.protocol !== undefined && !protocols.has(read.protocol)) {
+        const columns = new Set<string>();
+        step.read.forEach((read, readIndex) => {
+          if (columns.has(read.as)) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `Protocol "${read.protocol}" is not declared in the procedure`,
-              path: ["steps", stepIndex, "read", readIndex, "protocol"],
+              message: `Column "${read.as}" is read more than once in this step`,
+              path: [phase, stepIndex, "read", readIndex, "as"],
             });
           }
+          columns.add(read.as);
 
-          // Bench instruments answer named readings, not protocols. Refused
-          // here so a definition cannot publish a step the bench would abort on.
-          if (read.protocol !== undefined && read.instrument !== DUT_ROLE) {
+          if (isInstrumentRead(read)) {
+            requireDeclaredRole(read.instrument, [
+              phase,
+              stepIndex,
+              "read",
+              readIndex,
+              "instrument",
+            ]);
+
+            if (read.protocol !== undefined && !protocols.has(read.protocol)) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `Protocol "${read.protocol}" is not declared in the procedure`,
+                path: [phase, stepIndex, "read", readIndex, "protocol"],
+              });
+            }
+
+            // Bench instruments answer named readings, not protocols. Refused
+            // here so a definition cannot publish a step the bench would abort on.
+            if (read.protocol !== undefined && read.instrument !== DUT_ROLE) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `Only the "${DUT_ROLE}" instrument can run a measurement protocol`,
+                path: [phase, stepIndex, "read", readIndex, "protocol"],
+              });
+            }
+          }
+        });
+
+        if (step.kind === "sweep") {
+          if (columns.has(SWEEP_STIMULUS_COLUMN)) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `Only the "${DUT_ROLE}" instrument can run a measurement protocol`,
-              path: ["steps", stepIndex, "read", readIndex, "protocol"],
+              message: `"${SWEEP_STIMULUS_COLUMN}" is a reserved sweep column`,
+              path: [phase, stepIndex, "read"],
             });
+          }
+          if (isInstrumentStimulus(step.stimulus)) {
+            requireDeclaredRole(step.stimulus.instrument, [
+              phase,
+              stepIndex,
+              "stimulus",
+              "instrument",
+            ]);
           }
         }
       });
+    };
 
-      if (step.kind === "sweep") {
-        if (columns.has(SWEEP_STIMULUS_COLUMN)) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: `"${SWEEP_STIMULUS_COLUMN}" is a reserved sweep column`,
-            path: ["steps", stepIndex, "read"],
-          });
-        }
-        if (isInstrumentStimulus(step.stimulus)) {
-          requireDeclaredRole(step.stimulus.instrument, [
-            "steps",
-            stepIndex,
-            "stimulus",
-            "instrument",
-          ]);
-        }
-      }
-    });
+    checkSteps(procedure.steps, "steps");
+    checkSteps(procedure.verify ?? [], "verify");
   });
 
 /** Every series a procedure can produce; the run payload may carry no others. */
@@ -303,6 +311,17 @@ export function requiredProcedureSeriesNames(procedure: CaptureProcedure): strin
   const names: string[] = [];
   for (const step of procedure.steps) {
     if ((step.kind === "read" || step.kind === "sweep") && !step.optional) {
+      names.push(step.series);
+    }
+  }
+  return names;
+}
+
+/** Series the verify phase produces; a stored verification may carry no others. */
+export function verificationSeriesNames(procedure: CaptureProcedure): string[] {
+  const names: string[] = [];
+  for (const step of procedure.verify ?? []) {
+    if (step.kind === "read" || step.kind === "sweep") {
       names.push(step.series);
     }
   }

@@ -1202,6 +1202,7 @@ export function createDeviceCalibration(
     supersededAt: null,
     writtenToDeviceAt: null,
     writeResults: null,
+    verification: null,
     createdAt: "2026-09-01T10:05:00.000Z",
     updatedAt: "2026-09-01T10:05:00.000Z",
     ...overrides,

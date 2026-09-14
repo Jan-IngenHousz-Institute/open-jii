@@ -16,6 +16,13 @@ const PROCEDURE: CaptureProcedure = {
       read: [{ instrument: "dut", command: "get_par", as: "par_raw" }],
     },
   ],
+  verify: [
+    {
+      kind: "read",
+      series: "par_check",
+      read: [{ instrument: "dut", command: "par", as: "par" }],
+    },
+  ],
 };
 
 describe("ReportDeviceCalibrationWriteUseCase", () => {
@@ -121,6 +128,46 @@ describe("ReportDeviceCalibrationWriteUseCase", () => {
     const run = await testApp.module.get(IotCalibrationRunRepository).findById(result.value.runId);
     assertSuccess(run);
     expect(run.value?.postInfo).toEqual({ helloReply: "MiniPAR 1.03 cal_par_slope=1.19" });
+  });
+
+  // The check the procedure runs after the write is the evidence the new
+  // coefficients behave; it belongs on the applied row they describe.
+  it("stores the verify phase's readings on the applied row", async () => {
+    const result = await useCase.execute(
+      {
+        calibrationId,
+        writeResults: { par: { verified: true } },
+        verification: { par_check: [{ par: 402.9, par_ref: 402.2 }] },
+      },
+      userId,
+    );
+
+    assertSuccess(result);
+    expect(result.value.verification).toEqual({ par_check: [{ par: 402.9, par_ref: 402.2 }] });
+  });
+
+  it("leaves the verification null when the report carries none", async () => {
+    const result = await useCase.execute(
+      { calibrationId, writeResults: { par: { verified: true } } },
+      userId,
+    );
+
+    assertSuccess(result);
+    expect(result.value.verification).toBeNull();
+  });
+
+  it("refuses a verification naming a series the verify phase does not produce", async () => {
+    const result = await useCase.execute(
+      {
+        calibrationId,
+        writeResults: { par: { verified: true } },
+        verification: { par_sweep: [{ par_raw: 1 }] },
+      },
+      userId,
+    );
+
+    assertFailure(result);
+    expect(result.error.message).toContain("par_sweep");
   });
 
   it("refuses results naming a block this calibration did not apply", async () => {

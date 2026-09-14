@@ -3,12 +3,17 @@
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 
 import type {
+  CalibrationRunPayload,
   CalibrationWriteResults,
   DeviceCalibration,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
+import type { ProcedureProgress } from "@repo/iot";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
 import { Button } from "@repo/ui/components/button";
+
+import { CalibrationCaptureProgress } from "./calibration-capture-progress";
+import { CalibrationVerificationReadings } from "./calibration-verification-readings";
 
 interface CalibrationWriteStepProps {
   applied: DeviceCalibration;
@@ -16,6 +21,10 @@ interface CalibrationWriteStepProps {
   results: CalibrationWriteResults | null;
   isWriting: boolean;
   error: string | null;
+  verifyEvents: ProcedureProgress[];
+  isVerifying: boolean;
+  verification: CalibrationRunPayload | null;
+  verificationError: string | null;
   onWrite: () => void;
   onFinish: () => void;
 }
@@ -27,6 +36,10 @@ export function CalibrationWriteStep({
   results,
   isWriting,
   error,
+  verifyEvents,
+  isVerifying,
+  verification,
+  verificationError,
   onWrite,
   onFinish,
 }: CalibrationWriteStepProps) {
@@ -37,6 +50,9 @@ export function CalibrationWriteStep({
   // Nothing is rolled back, so an unconfirmed block can have reached the device
   // in part. The operator has to know before the unit goes back into service.
   const hasUnconfirmedBlock = Object.values(results ?? {}).some((result) => !result.verified);
+  const hasVerification = verification !== null && Object.keys(verification).length > 0;
+  const showsCheck =
+    isVerifying || verifyEvents.length > 0 || hasVerification || verificationError !== null;
 
   function renderResult(block: string) {
     const result = results?.[block];
@@ -58,6 +74,27 @@ export function CalibrationWriteStep({
           )}
         </span>
       </li>
+    );
+  }
+
+  function renderCheck() {
+    if (!showsCheck) return null;
+    return (
+      <div className="space-y-3 rounded-md border p-4">
+        <p className="text-sm font-medium">{t("iot.calibration.write.verifyHeading")}</p>
+        {isVerifying && (
+          <p className="text-muted-foreground text-sm">{t("iot.calibration.write.verifying")}</p>
+        )}
+        <CalibrationCaptureProgress events={verifyEvents} isRunning={isVerifying} />
+        {verificationError !== null && (
+          <Alert variant="destructive">
+            <AlertDescription>
+              {t("iot.calibration.write.verificationStopped", { reason: verificationError })}
+            </AlertDescription>
+          </Alert>
+        )}
+        {hasVerification && <CalibrationVerificationReadings verification={verification} />}
+      </div>
     );
   }
 
@@ -88,6 +125,7 @@ export function CalibrationWriteStep({
           <AlertDescription>{t("iot.calibration.write.partial")}</AlertDescription>
         </Alert>
       )}
+      {renderCheck()}
       <div className="flex gap-2">
         {!isWritten && (
           <Button type="button" onClick={onWrite} disabled={isWriting}>
@@ -96,7 +134,7 @@ export function CalibrationWriteStep({
           </Button>
         )}
         {isWritten && (
-          <Button type="button" onClick={onFinish}>
+          <Button type="button" onClick={onFinish} disabled={isWriting}>
             {t("iot.calibration.done.close")}
           </Button>
         )}

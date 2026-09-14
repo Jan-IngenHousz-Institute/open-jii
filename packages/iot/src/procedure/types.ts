@@ -97,6 +97,8 @@ export interface CaptureProcedure {
   /** Declared once by name; an instrument read refers to one by that name. */
   protocols?: Partial<Record<string, MeasurementProtocol>>;
   steps: ProcedureStep[];
+  /** Runs after the approved coefficients are written; what it reads is kept with the calibration. */
+  verify?: ProcedureStep[];
 }
 
 /** One captured value. Matches the contract's series cell union. */

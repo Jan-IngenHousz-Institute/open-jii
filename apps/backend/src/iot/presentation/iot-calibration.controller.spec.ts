@@ -24,6 +24,13 @@ const PROCEDURE: CaptureProcedure = {
       read: [{ instrument: "dut", command: "par_raw", as: "par_raw" }],
     },
   ],
+  verify: [
+    {
+      kind: "read",
+      series: "par_check",
+      read: [{ instrument: "dut", command: "par", as: "par" }],
+    },
+  ],
 };
 
 const DEFINITION_BODY = {
@@ -379,17 +386,37 @@ describe("IotCalibrationController", () => {
         .send({
           writeResults: { par: { verified: true } },
           postInfo: { helloReply: "MiniPAR 1.03 cal_par_slope=1.19" },
+          verification: { par_check: [{ par: 402.9 }] },
         })
         .expect(StatusCodes.OK);
 
       expect(response.body.writtenToDeviceAt).not.toBeNull();
       expect(response.body.writeResults).toEqual({ par: { verified: true } });
+      expect(response.body.verification).toEqual({ par_check: [{ par: 402.9 }] });
 
       const stored: SuperTestResponse<CalibrationRun> = await testApp
         .get(testApp.resolveOrpcPath(contract.iot.getCalibrationRun, { runId: run.body.id }))
         .withAuth(userId)
         .expect(StatusCodes.OK);
       expect(stored.body.postInfo).toEqual({ helloReply: "MiniPAR 1.03 cal_par_slope=1.19" });
+    });
+
+    it("returns 400 for a verification naming a series the verify phase does not produce", async () => {
+      const run = await createRun(definitionId);
+      const applied = await approveRun(run.body.id);
+
+      await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.iot.reportDeviceCalibrationWrite, {
+            calibrationId: applied.body.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({
+          writeResults: { par: { verified: true } },
+          verification: { par_sweep: [{ par_raw: 1 }] },
+        })
+        .expect(StatusCodes.BAD_REQUEST);
     });
 
     it("returns 400 for a write naming a block the calibration did not apply", async () => {

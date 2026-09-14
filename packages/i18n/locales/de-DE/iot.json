@@ -849,7 +849,10 @@
         "partial": "Ein nicht bestätigter Block kann das Gerät teilweise erreicht haben. Führen Sie diese Kalibrierung erneut aus, bevor Sie dem Gerät vertrauen.",
         "unsupported": "Die Plattform kann für diese Gerätefamilie noch keine Koeffizienten schreiben. Die Kalibrierung ist nur im Datensatz freigegeben.",
         "skip": "Ohne Schreiben abschließen",
-        "reportFailed": "Das Gerät wurde beschrieben, das Ergebnis konnte aber nicht gespeichert werden."
+        "reportFailed": "Das Gerät wurde beschrieben, das Ergebnis konnte aber nicht gespeichert werden.",
+        "verifyHeading": "Prüfung mit den neuen Koeffizienten",
+        "verifying": "Das Gerät wird mit den neuen Koeffizienten ausgelesen…",
+        "verificationStopped": "Die Prüfung wurde vorzeitig beendet: {{reason}}. Die oben geschriebenen Koeffizienten bleiben bestehen."
       },
       "done": {
         "close": "Schließen",

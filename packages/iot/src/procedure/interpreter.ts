@@ -57,7 +57,16 @@ export async function runCaptureProcedure(
   procedure: CaptureProcedure,
   context: ProcedureContext,
 ): Promise<CaptureResult> {
-  const runner = new ProcedureRunner(procedure, context);
+  const runner = new ProcedureRunner(procedure, procedure.steps, context);
+  return runner.run();
+}
+
+/** The steps declared to run once the coefficients are on the device; none declared captures nothing. */
+export async function runVerificationProcedure(
+  procedure: CaptureProcedure,
+  context: ProcedureContext,
+): Promise<CaptureResult> {
+  const runner = new ProcedureRunner(procedure, procedure.verify ?? [], context);
   return runner.run();
 }
 
@@ -69,6 +78,7 @@ class ProcedureRunner {
 
   constructor(
     private readonly procedure: CaptureProcedure,
+    private readonly steps: ProcedureStep[],
     private readonly context: ProcedureContext,
   ) {
     this.log = context.logger ?? defaultLogger;
@@ -78,7 +88,7 @@ class ProcedureRunner {
   async run(): Promise<CaptureResult> {
     this.assertRigDeclaresDut();
 
-    const steps = this.procedure.steps;
+    const steps = this.steps;
     for (const [index, step] of steps.entries()) {
       this.report({
         kind: "step",

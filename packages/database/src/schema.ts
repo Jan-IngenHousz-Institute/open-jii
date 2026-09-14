@@ -1027,6 +1027,8 @@ export const deviceCalibrations = pgTable(
     // One verdict per block: a session can confirm one gain and fail another,
     // and a block that failed part way through stays partly written.
     writeResults: jsonb("write_results"),
+    // What the procedure's verify phase read after the write, in the run payload's shape.
+    verification: jsonb("verification"),
     ...timestamps,
   },
   (t) => [

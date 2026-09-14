@@ -12,6 +12,7 @@ import type {
   AppliedCalibrationBlocks,
   CalibrationBlocks,
   CalibrationRunParams,
+  CalibrationRunPayload,
   CalibrationWriteResults,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import {
@@ -182,12 +183,17 @@ export class IotCalibrationRunRepository {
     calibrationId: string,
     writeResults: CalibrationWriteResults,
     postInfo?: Record<string, unknown>,
+    verification?: CalibrationRunPayload,
   ): Promise<Result<DeviceCalibrationDto>> {
     return tryCatch(async () => {
       return this.database.transaction(async (tx) => {
         const rows = await tx
           .update(deviceCalibrations)
-          .set({ writtenToDeviceAt: new Date(), writeResults })
+          .set({
+            writtenToDeviceAt: new Date(),
+            writeResults,
+            ...(verification ? { verification } : {}),
+          })
           .where(eq(deviceCalibrations.id, calibrationId))
           .returning();
         const applied = this.parseCalibration(rows[0]);
@@ -243,6 +249,8 @@ export class IotCalibrationRunRepository {
       blocks: zAppliedCalibrationBlocks.parse(row.blocks),
       writeResults:
         row.writeResults == null ? null : zCalibrationWriteResults.parse(row.writeResults),
+      verification:
+        row.verification == null ? null : zCalibrationRunPayload.parse(row.verification),
     };
   }
 

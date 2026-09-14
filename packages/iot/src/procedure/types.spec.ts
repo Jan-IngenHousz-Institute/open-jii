@@ -87,6 +87,19 @@ const AUTOMATED_MINIPAR: CaptureProcedure = {
       ],
     },
   ],
+  verify: [
+    { kind: "set", instrument: "lamp", set: "current_a", value: 0.8 },
+    { kind: "settle", ms: 1000 },
+    {
+      kind: "read",
+      series: "par_check",
+      read: [
+        { instrument: "dut", command: "par", as: "par" },
+        { instrument: "par_ref", command: "par", as: "par_ref" },
+      ],
+    },
+    { kind: "set", instrument: "lamp", set: "current_a", value: 0 },
+  ],
 };
 
 const MULTISPEQ_COLORCAL: CaptureProcedure = {
@@ -189,6 +202,11 @@ describe("procedure types", () => {
     // and one output schema serve both.
     it("demands the same series from the manual and automated MiniPAR rigs", () => {
       expect(requiredSeriesNames(AUTOMATED_MINIPAR)).toEqual(requiredSeriesNames(MANUAL_MINIPAR));
+    });
+
+    // The verify phase runs after the write; its series are never part of the run payload.
+    it("leaves the verify phase out of the required series", () => {
+      expect(requiredSeriesNames(AUTOMATED_MINIPAR)).not.toContain("par_check");
     });
   });
 });

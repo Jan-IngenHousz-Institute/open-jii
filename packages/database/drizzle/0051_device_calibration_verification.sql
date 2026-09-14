@@ -1,0 +1,1 @@
+ALTER TABLE "device_calibrations" ADD COLUMN "verification" jsonb;

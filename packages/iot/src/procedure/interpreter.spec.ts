@@ -5,7 +5,12 @@ import { createMockTransport } from "../driver/testing/mock-transport";
 import { KIPRIM_COMMANDS } from "../instrument/kiprim/commands";
 import { KiprimDcSource } from "../instrument/kiprim/instrument";
 import { MicroPythonParReference } from "../instrument/micropython-par/instrument";
-import { bindBenchInstrument, runCaptureProcedure, shutdownRig } from "./interpreter";
+import {
+  bindBenchInstrument,
+  runCaptureProcedure,
+  runVerificationProcedure,
+  shutdownRig,
+} from "./interpreter";
 import type { ProcedureContext, RigBinding } from "./interpreter";
 import { ProcedureAborted, ProcedureDeclined, ProcedureRigError } from "./operator";
 import type { OperatorPort, ProcedureProgress } from "./operator";
@@ -766,6 +771,18 @@ describe("runCaptureProcedure", () => {
           ],
         },
       ],
+      verify: [
+        { kind: "set", instrument: "lamp", set: "current_a", value: 0.8 },
+        {
+          kind: "read",
+          series: "par_check",
+          read: [
+            { instrument: "dut", command: "par", as: "par" },
+            { instrument: "par_ref", command: "par", as: "par_ref" },
+          ],
+        },
+        { kind: "set", instrument: "lamp", set: "current_a", value: 0 },
+      ],
     };
 
     function supplyTransport(): MockTransport {
@@ -814,6 +831,41 @@ describe("runCaptureProcedure", () => {
         "current 1.500\r\n",
         "current 0.000\r\n",
       ]);
+    });
+
+    // After the write the same rig checks one current: calibrated PAR beside the reference.
+    it("runs the verify phase through the same bindings after the write", async () => {
+      const lampTransport = supplyTransport();
+      const lamp = new KiprimDcSource();
+      await lamp.initialize(lampTransport);
+      const reference = new MicroPythonParReference({ readTimeoutMs: 200 });
+      await reference.initialize(referenceTransport(["402.2"]));
+
+      const result = await runVerificationProcedure(
+        AUTOMATED_MINIPAR,
+        context({
+          rig: {
+            dut: reader({ par_raw: 150.0, par: 402.9 }),
+            lamp: bindBenchInstrument(lamp),
+            par_ref: bindBenchInstrument(reference),
+          },
+        }),
+      );
+
+      expect(result.payload).toEqual({ par_check: [{ par: 402.9, par_ref: 402.2 }] });
+      expect(vi.mocked(lampTransport.send).mock.calls.map(([payload]) => payload)).toEqual([
+        "current 0.800\r\n",
+        "current 0.000\r\n",
+      ]);
+    });
+
+    it("captures nothing when the procedure declares no verify phase", async () => {
+      const result = await runVerificationProcedure(
+        { ...AUTOMATED_MINIPAR, verify: undefined },
+        context({ rig: { dut: reader({ par: 402.9 }) } }),
+      );
+
+      expect(result).toEqual({ payload: {}, skipped: [] });
     });
 
     it("binds a reference as read-only and a supply as setpoint-only", () => {

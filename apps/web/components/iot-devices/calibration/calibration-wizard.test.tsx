@@ -32,31 +32,47 @@ const DEFINITION_ID = "22222222-2222-4222-8222-222222222222";
 
 /**
  * A MiniPAR console: `par_raw` answers a reading, calibration writers echo
- * the value. Every line the wizard sends is kept so the test can assert the
- * exact console traffic a bench session produces.
+ * the value and the readback reports what they stored. Every line the wizard
+ * sends is kept so the test can assert the exact console traffic a bench
+ * session produces.
  */
-function miniparConsole(readings: number[]) {
+function miniparConsole(readings: number[], calibratedPar = 398.1) {
   const sent: string[] = [];
   const queue = [...readings];
+  const stored = { slope: 1, intercept: 0 };
   let deliver: ((data: string) => void) | undefined;
+
+  function reply(line: string): string {
+    const [command, value] = line.split(",");
+    switch (command) {
+      case "par_raw":
+        return `\n${(queue.shift() ?? 0).toFixed(2)}\n`;
+      case "par":
+        return `\n${calibratedPar.toFixed(2)}\n`;
+      case "cal_par_slope":
+        stored.slope = Number(value);
+        return `\n${value}\n`;
+      case "cal_par_intercept":
+        stored.intercept = Number(value);
+        return `\n${value}\n`;
+      case "get_cal_par":
+        return `\nslope=${stored.slope.toFixed(6)},intercept=${stored.intercept.toFixed(6)}\n`;
+      case "hello":
+        return "\nMiniPAR,1.03\n";
+      case "get_name":
+        return "\nBench-7\n";
+      default:
+        return "error:unknown_command\n";
+    }
+  }
 
   const transport: ITransportAdapter = {
     isConnected: () => true,
     send: (payload) => {
       const line = payload.trim();
       sent.push(line);
-      const [command, value] = line.split(",");
-      const reply =
-        command === "par_raw"
-          ? `\n${(queue.shift() ?? 0).toFixed(2)}\n`
-          : command.startsWith("cal_par_")
-            ? `\n${value}\n`
-            : command === "hello"
-              ? "\nMiniPAR,1.03\n"
-              : command === "get_name"
-                ? "\nBench-7\n"
-                : "\n";
-      setTimeout(() => deliver?.(reply), 0);
+      const answer = reply(line);
+      setTimeout(() => deliver?.(answer), 0);
       return Promise.resolve();
     },
     onDataReceived: (callback) => {
@@ -70,6 +86,26 @@ function miniparConsole(readings: number[]) {
 }
 
 const DEFINITION = createCalibrationDefinition({ id: DEFINITION_ID, family: "minipar" });
+
+/** The same bench, checked once after the write: calibrated PAR beside the reference. */
+const DEFINITION_WITH_CHECK = createCalibrationDefinition({
+  id: DEFINITION_ID,
+  family: "minipar",
+  captureProcedure: {
+    ...DEFINITION.captureProcedure,
+    verify: [
+      {
+        kind: "read",
+        series: "par_check",
+        prompt: "Keep both sensors in the same light for the check reading.",
+        read: [
+          { instrument: "dut", command: "par", as: "par" },
+          { operator: "Enter the reference meter reading", as: "par_ref", type: "number" },
+        ],
+      },
+    ],
+  },
+});
 
 type Connections = ReturnType<typeof useIotConnections>;
 
@@ -141,7 +177,8 @@ describe("CalibrationWizard", () => {
     server.mount(contract.iot.getActiveDeviceCalibration, { body: null });
   });
 
-  it("runs the manual MiniPAR procedure from choosing it to a confirmed write", async () => {
+  it("runs the manual MiniPAR procedure from choosing it to a confirmed, checked write", async () => {
+    server.mount(contract.iot.getCalibrationDefinition, { body: DEFINITION_WITH_CHECK });
     const console = miniparConsole([420, 150, 8.33]);
     const driver = new MiniParDriver({ timeoutMs: 500, protocolTimeoutMs: 500 });
     driver.initialize(console.transport);
@@ -210,6 +247,18 @@ describe("CalibrationWizard", () => {
       await screen.findByRole("button", { name: "iot.calibration.write.action" }),
     );
     expect(await screen.findByText("iot.calibration.write.verified")).toBeInTheDocument();
+
+    // The procedure's check: acknowledge the instruction, read the device, type the reference.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.prompt.continue" }),
+    );
+    await userEvent.type(await screen.findByRole("textbox"), "398.5");
+    await userEvent.click(screen.getByRole("button", { name: "iot.calibration.prompt.submit" }));
+    expect(await screen.findByText("398.5")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "iot.calibration.done.close" })).toBeEnabled();
+    });
     await userEvent.click(screen.getByRole("button", { name: "iot.calibration.done.close" }));
 
     await waitFor(() => {
@@ -220,20 +269,24 @@ describe("CalibrationWizard", () => {
 
     // The submission carried the three captured rows and the device's version.
     expect(createSpy.params.deviceId).toBe(DEVICE_ID);
-    // The write report carries what the device said about itself afterwards.
+    // The write report carries the check's readings and what the device said about itself afterwards.
     expect(reportSpy.body).toMatchObject({
       writeResults: { par: { verified: true } },
+      verification: { par_check: [{ par: 398.1, par_ref: 398.5 }] },
       postInfo: { helloReply: "MiniPAR,1.03", deviceName: "Bench-7" },
     });
 
-    // The console saw three raw reads, both coefficient writers, then the
-    // identity read for the record, in order.
+    // The console saw three raw reads, both coefficient writers and their
+    // readback, the check's calibrated read, then the identity read for the
+    // record, in order.
     expect(console.sent).toEqual([
       "par_raw",
       "par_raw",
       "par_raw",
       "cal_par_slope,0.96",
       "cal_par_intercept,-1.08",
+      "get_cal_par",
+      "par",
       "hello",
       "get_name",
     ]);
@@ -407,6 +460,44 @@ describe("CalibrationWizard", () => {
 
     expect(await screen.findByText("iot.calibration.write.verified")).toBeInTheDocument();
     expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+
+  // The coefficients are already on the device when the operator walks away
+  // from the check; the write is recorded as it stands, without a verification.
+  it("records the write without a check when the operator declines it", async () => {
+    server.mount(contract.iot.getCalibrationDefinition, { body: DEFINITION_WITH_CHECK });
+    const console = attachMiniPar([420, 150, 8.33]);
+    server.mount(contract.iot.createCalibrationRun, {
+      status: 201,
+      body: createCalibrationRun({ deviceId: DEVICE_ID, definitionId: DEFINITION_ID }),
+    });
+    const applied = createDeviceCalibration({ deviceId: DEVICE_ID });
+    server.mount(contract.iot.approveCalibrationRun, { status: 201, body: applied });
+    const reportSpy = server.mount(contract.iot.reportDeviceCalibrationWrite, {
+      body: { ...applied, writtenToDeviceAt: "2026-09-01T10:06:00.000Z" },
+    });
+    renderWizard();
+
+    await captureThreePoints();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.review.approve" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.write.action" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.prompt.decline" }),
+    );
+
+    expect(
+      await screen.findByText("iot.calibration.write.verificationStopped"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("iot.calibration.write.verified")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(reportSpy.called).toBe(true);
+    });
+    expect(reportSpy.body).not.toHaveProperty("verification");
+    expect(console.sent).not.toContain("par");
   });
 
   it("shows a load failure instead of an empty list of procedures", async () => {

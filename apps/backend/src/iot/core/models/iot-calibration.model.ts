@@ -46,6 +46,7 @@ export const selectCalibrationRunSchema = createSelectSchema(calibrationRuns).ex
 export const selectDeviceCalibrationSchema = createSelectSchema(deviceCalibrations).extend({
   blocks: zAppliedCalibrationBlocks,
   writeResults: zCalibrationWriteResults.nullable(),
+  verification: zCalibrationRunPayload.nullable(),
 });
 
 export type CreateCalibrationDefinitionDto = z.infer<typeof createCalibrationDefinitionSchema>;

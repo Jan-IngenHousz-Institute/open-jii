@@ -138,7 +138,12 @@ export type {
 } from "./calibration/write-back";
 
 // Capture procedures: the declared steps a calibration runs at a bench.
-export { runCaptureProcedure, bindBenchInstrument, shutdownRig } from "./procedure/interpreter";
+export {
+  runCaptureProcedure,
+  runVerificationProcedure,
+  bindBenchInstrument,
+  shutdownRig,
+} from "./procedure/interpreter";
 export type {
   ProcedureContext,
   RigBinding,

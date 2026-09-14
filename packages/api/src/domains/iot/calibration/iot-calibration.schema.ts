@@ -261,6 +261,8 @@ export const zDeviceCalibration = z.object({
   supersededAt: z.string().datetime().nullable(),
   writtenToDeviceAt: z.string().datetime().nullable(),
   writeResults: zCalibrationWriteResults.nullable(),
+  // What the procedure's verify phase read after the write, in the run payload's shape.
+  verification: zCalibrationRunPayload.nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -277,6 +279,7 @@ export const zReportDeviceCalibrationWriteBody = zDeviceCalibrationPathParam.ext
   writeResults: zCalibrationWriteResults,
   // Device state after the write; the counterpart of preInfo.
   postInfo: zInfoRecord.optional(),
+  verification: zCalibrationRunPayload.optional(),
 });
 
 export type CalibrationFamily = z.infer<typeof zCalibrationFamily>;
