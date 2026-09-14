@@ -63,7 +63,7 @@ export default async function NotFound() {
 
         {/* Navigation Options */}
         <Card className="mb-8">
-          <CardContent className="p-6">
+          <CardContent>
             <h3 className="text-foreground mb-4 text-lg font-semibold">{t("errors.whereToGo")}</h3>
             <div className="space-y-3">
               {/* Home Page Link */}

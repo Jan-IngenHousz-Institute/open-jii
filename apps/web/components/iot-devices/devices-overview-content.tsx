@@ -17,7 +17,9 @@ import { IotDevicesTableView } from "./iot-devices-table-view";
  */
 export function DevicesOverviewContent() {
   return (
-    <WorkspaceBand className="border-t-0">
+    // The band is the whole page here, so it starts at the header's border
+    // rather than below the shell's top padding, and draws no edge of its own.
+    <WorkspaceBand flush className="border-t-0">
       <FleetOverviewDashboard>
         <div className="space-y-10">
           <IotDevicesTableView />

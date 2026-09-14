@@ -8,10 +8,10 @@ import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocation
 import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
 import { notFound } from "next/navigation";
 import { use, useRef } from "react";
+import { ExperimentDataInventory } from "~/components/experiment-overview/experiment-data-inventory";
 import { ExperimentDescription } from "~/components/experiment-overview/experiment-description";
 import { ExperimentDetailsCard } from "~/components/experiment-overview/experiment-details/experiment-details-card";
 import { ExperimentLinkedWorkbook } from "~/components/experiment-overview/experiment-linked-workbook";
-import { ExperimentMeasurements } from "~/components/experiment-overview/experiment-measurements";
 
 import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
@@ -93,7 +93,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
           workbookVersionId={experiment.workbookVersionId}
         />
 
-        <ExperimentMeasurements experimentId={id} isArchived />
+        <ExperimentDataInventory experimentId={id} isArchived />
 
         <ExperimentVisualizationsDisplay
           experimentId={id}

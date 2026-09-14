@@ -92,7 +92,15 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html suppressHydrationWarning className={cn(inter.variable, jetbrainsMono.variable)}>
       <body className="h-full">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        {/* The swap is instant rather than a cross-fade. `transition-colors` is
+            on most primitives, so without this the class change animates the
+            whole tree at the moment every chart is re-resolving its palette. */}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
           <PostHogProvider>
             {children}
             <CookieBanner />

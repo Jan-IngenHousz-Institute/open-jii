@@ -47,8 +47,7 @@
     "title": "Metingen",
     "addMeasurement": "Meting toevoegen",
     "viewResults": "Resultaten bekijken",
-    "downloadData": "Gegevens downloaden",
-    "noMeasurements": "Nog geen metingen geregistreerd"
+    "downloadData": "Gegevens downloaden"
   },
   "dashboards": {
     "tabLabel": "Dashboards"
@@ -165,7 +164,15 @@
     "readMore": "Lees meer",
     "uploadMetadata": "Metadata uploaden",
     "editMetadata": "Metadata bewerken",
-    "uploadSensorData": "Sensorgegevens uploaden"
+    "uploadSensorData": "Sensorgegevens uploaden",
+    "datasetLabel": "Dataset",
+    "datasetPlaceholder": "Datasets zoeken...",
+    "datasetEmpty": "Geen overeenkomende dataset.",
+    "datasetRows_one": "{{rows}} rij",
+    "datasetRows_other": "{{rows}} rijen",
+    "datasetGroupStatic": "Bron",
+    "datasetGroupMacro": "Verwerkt",
+    "datasetGroupUpload": "Geüpload"
   },
   "experiment": "Experiment",
   "experimentId": "Experiment-ID",
@@ -282,5 +289,14 @@
       "note": "Opmerking:",
       "warningMessage": "De volgende bestand(en) worden automatisch uitgesloten van de upload:"
     }
+  },
+  "dataInventory": {
+    "title": "Gegevens",
+    "seeAll": "Alles bekijken",
+    "emptyTitle": "Nog geen gegevens",
+    "empty": "Tabellen verschijnen hier zodra een apparaat naar dit experiment verzendt, een macro draait of u een bestand uploadt.",
+    "loadError": "De gegevens van dit experiment konden niet worden geladen.",
+    "rowUnit_one": "rij",
+    "rowUnit_other": "rijen"
   }
 }

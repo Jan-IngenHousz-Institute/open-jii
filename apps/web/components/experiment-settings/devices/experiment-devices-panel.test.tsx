@@ -178,8 +178,10 @@ describe("ExperimentDevicesPanel", () => {
 
     render(<ExperimentDevicesPanel experimentId={EXPERIMENT_ID} />);
 
+    // The shared metric card puts the figure in the element right after its
+    // label, so the tiles read the same way here as every other metrics band.
     const tileValue = async (label: string) =>
-      (await screen.findByText(label)).parentElement?.querySelector("p.text-lg")?.textContent;
+      (await screen.findByText(label)).nextElementSibling?.textContent;
 
     expect(await tileValue("iot.experimentDevices.stats.onboarded")).toBe("1");
     expect(await tileValue("iot.experimentDevices.stats.sending")).toBe("2");

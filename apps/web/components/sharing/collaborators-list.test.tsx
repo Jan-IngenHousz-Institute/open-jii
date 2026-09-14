@@ -608,3 +608,17 @@ describe("<CollaboratorsList />", () => {
     });
   });
 });
+
+describe("collaborator row on a phone", () => {
+  it("gives every row the same full-width control bar", async () => {
+    renderList([grantFor("Mira Member")]);
+
+    // The controls shared the identity's left edge rather than right-aligning
+    // per row, which made each row ragged in a different way.
+    const select = await screen.findByRole("combobox");
+    const bar = select.closest("div.flex.w-full");
+    expect(bar).toHaveClass("w-full", "flex-wrap");
+    expect(bar).toHaveClass("sm:w-auto", "sm:justify-end");
+    expect(select).toHaveClass("flex-1", "sm:flex-none");
+  });
+});

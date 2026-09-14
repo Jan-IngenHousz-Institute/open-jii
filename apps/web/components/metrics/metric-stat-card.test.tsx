@@ -65,3 +65,41 @@ describe("MetricStatCard", () => {
     expect(screen.getByText("of 27 you can access")).toBeInTheDocument();
   });
 });
+
+describe("MetricStatCard on a phone", () => {
+  it("keeps one anatomy at every width, since the band scrolls rather than stacks", () => {
+    render(
+      <MetricStatCard
+        locale="en-US"
+        label="Measurements"
+        value="8M"
+        comparison={{ current: 100, previous: 300 }}
+      />,
+    );
+
+    // The label-left/figure-right row stranded a lone number across a
+    // full-width card. The rail gives every tile its card width back.
+    const header = screen.getByText("Measurements").parentElement;
+    expect(header?.className).not.toMatch(/max-sm:/);
+    expect(screen.getByText("8M")).toHaveClass("text-2xl");
+    expect(screen.getByText("-67%")).toBeInTheDocument();
+  });
+});
+
+describe("MetricStatCard with a linked value", () => {
+  it("clamps a long name on the text, not on the card title", () => {
+    render(
+      <MetricStatCard
+        locale="en-US"
+        label="Busiest protocol"
+        value="Ambit orientation ground-truth snapshot (4 averages)"
+        href="/en-US/platform/protocols/abc"
+      />,
+    );
+
+    // line-clamp on the CardTitle counts the link as a single box, so a long
+    // name ran to full length and stretched the whole band.
+    const name = screen.getByText("Ambit orientation ground-truth snapshot (4 averages)");
+    expect(name).toHaveClass("line-clamp-2");
+  });
+});

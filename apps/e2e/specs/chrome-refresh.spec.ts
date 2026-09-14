@@ -60,8 +60,11 @@ test("platform footer stays compact and organizations use the shared table", asy
   const account = footer.getByRole("button", { name: /SE|JII/ });
   await expect(theme).toBeVisible();
   await expect(account).toBeVisible();
+  // One row, identity first so the avatar keeps the icon rail every other
+  // sidebar row sits on and the theme action trails it.
+  await expect(footer.locator("> *")).toHaveCount(1);
   await expect(
-    theme.locator("xpath=following-sibling::*[1]").getByRole("button", { name: /SE|JII/ }),
+    theme.locator("xpath=preceding-sibling::*[1]").getByRole("button", { name: /SE|JII/ }),
   ).toBeVisible();
 
   await page.goto(`/${locale}/platform/organizations`, { waitUntil: "networkidle" });

@@ -226,6 +226,16 @@ export const Map = ({
   fitBoundsOnMapLoad = true,
 }: MapProps) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(sidebarCollapsed);
+  const hasChosenSidebarState = useRef(false);
+  // useIsMobile is false on the first render, so a viewport-derived prop has
+  // nothing to seed with. Follow it until the reader states a preference, then
+  // stop: it also flips on every resize across the breakpoint.
+  useEffect(() => {
+    if (hasChosenSidebarState.current) {
+      return;
+    }
+    setIsSidebarCollapsed(sidebarCollapsed);
+  }, [sidebarCollapsed]);
   const [selectedLocation, setSelectedLocation] = useState<LocationPoint | undefined>();
   const [mapCenter, setMapCenter] = useState<[number, number]>(center);
   const [mapZoom, setMapZoom] = useState(zoom);
@@ -404,7 +414,11 @@ export const Map = ({
         <div
           className={cn(
             "absolute bottom-2 left-2 z-[900] flex flex-col transition-all duration-300 ease-in-out",
-            isSidebarCollapsed ? "w-auto min-w-32" : "max-h-96 w-80",
+            // Expanded, the 320x384 panel is wider than the 310px map it floats
+            // over on a phone and covers almost all of its height.
+            isSidebarCollapsed
+              ? "w-auto min-w-32"
+              : "max-h-48 w-[calc(100%-1rem)] sm:max-h-96 sm:w-80",
           )}
         >
           <div
@@ -420,7 +434,10 @@ export const Map = ({
               </h3>
               <button
                 type="button"
-                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                onClick={() => {
+                  hasChosenSidebarState.current = true;
+                  setIsSidebarCollapsed(!isSidebarCollapsed);
+                }}
                 className="hover:bg-accent ml-2 shrink-0 rounded p-1 transition-colors"
                 title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >

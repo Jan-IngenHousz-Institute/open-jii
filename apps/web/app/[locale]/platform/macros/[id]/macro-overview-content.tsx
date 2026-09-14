@@ -89,10 +89,10 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
   };
 
   return (
-    <div className="flex flex-col gap-6 md:flex-row">
+    <div className="flex flex-col gap-6 lg:flex-row">
       <MacroDetailsSidebar macroId={id} macro={macro} />
 
-      <div className="min-w-0 flex-1 space-y-10 md:order-1">
+      <div className="min-w-0 flex-1 space-y-10 lg:order-1">
         <InlineEditableDescription
           description={macro.description ?? ""}
           hasAccess={canUpdate}

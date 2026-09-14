@@ -4,21 +4,10 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
+import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader } from "@repo/ui/components/card";
-import { cva } from "@repo/ui/lib/utils";
-
-const toggleButtonVariants = cva(
-  "absolute right-4 z-20 flex items-center justify-center md:hidden",
-  {
-    variants: {
-      collapsed: {
-        true: "top-1/2 -translate-y-1/2",
-        false: "top-4 translate-y-0",
-      },
-    },
-  },
-);
+import { cn } from "@repo/ui/lib/utils";
 
 interface DetailsSidebarCardProps {
   title: string;
@@ -27,34 +16,43 @@ interface DetailsSidebarCardProps {
 }
 
 export function DetailsSidebarCard({ title, collapsedSummary, children }: DetailsSidebarCardProps) {
+  const { t } = useTranslation("common");
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const showsSummary = isCollapsed && collapsedSummary !== undefined;
 
+  // Side-by-side waits for lg, not md: an open 232px sidebar leaves ~544px at
+  // 768px, which is not two columns.
   return (
-    <div className="w-full md:order-2 md:w-96">
-      <Card className="relative shadow-none">
+    <div className="w-full lg:order-2 lg:w-96">
+      <Card padding="sm" className={cn("relative shadow-none", isCollapsed && "pb-0 lg:pb-3")}>
+        {/* Beside the title, not centred: a ghost Button with no size inherits
+            h-9 px-4, which on a collapsed card lands below the title row. */}
         <Button
           onClick={() => setIsCollapsed(!isCollapsed)}
           variant="ghost"
-          className={toggleButtonVariants({ collapsed: isCollapsed })}
+          size="icon"
+          className="absolute right-2 top-[10px] z-20 h-8 w-8 lg:hidden"
+          aria-label={isCollapsed ? t("common.expandDetails") : t("common.collapseDetails")}
         >
           {isCollapsed ? (
-            <ChevronDown className="!h-6 !w-6" />
+            <ChevronDown className="!h-5 !w-5" />
           ) : (
-            <ChevronUp className="!h-6 !w-6" />
+            <ChevronUp className="!h-5 !w-5" />
           )}
         </Button>
 
-        <CardHeader>
+        <CardHeader className="pr-10">
           <h3 className="text-lg font-semibold">{title}</h3>
         </CardHeader>
 
-        {isCollapsed && collapsedSummary && (
-          <div className="text-muted-foreground -mt-6 truncate px-6 pb-3 text-sm md:hidden">
+        {showsSummary && (
+          // -mt-2 cancels the card's gap-2 so the line sits under the title.
+          <div className="text-muted-foreground -mt-2 truncate px-6 pb-3 text-sm lg:hidden">
             {collapsedSummary}
           </div>
         )}
 
-        <div className={`md:block ${isCollapsed ? "hidden" : "block"}`}>
+        <div className={cn("lg:block", isCollapsed ? "hidden" : "block")}>
           <CardContent className="space-y-4">{children}</CardContent>
         </div>
       </Card>
