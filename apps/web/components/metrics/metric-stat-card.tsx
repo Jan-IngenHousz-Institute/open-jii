@@ -98,27 +98,21 @@ export function MetricStatCard({
 
   return (
     <Card padding="sm" className={cn("@container/card", className)}>
-      <CardHeader className="gap-1">
-        <CardDescription>{label}</CardDescription>
+      <CardHeader className="gap-1 max-sm:flex max-sm:flex-row max-sm:items-center max-sm:justify-between">
+        <CardDescription className="min-w-0">{label}</CardDescription>
         <CardTitle
           title={title}
-          className="@[13rem]/card:text-2xl line-clamp-2 min-w-0 break-words text-xl font-semibold tabular-nums"
+          className="line-clamp-2 min-w-0 break-words text-2xl font-semibold tabular-nums"
         >
           {href === undefined ? value : renderLinkedValue(href)}
         </CardTitle>
-        {/* The note already prints a trend arrow; at half width the badge just
-            repeats it. Container query: this card's width, not the window's. */}
-        {change === null ? null : (
-          <CardAction className="@[13rem]/card:block hidden">{renderChange(change)}</CardAction>
-        )}
+        {change === null ? null : <CardAction>{renderChange(change)}</CardAction>}
       </CardHeader>
       {chart === undefined ? null : <CardContent>{chart}</CardContent>}
       {hasFooter ? (
         <CardFooter className="mt-auto flex-col items-start gap-0.5 text-xs">
           {note === undefined ? null : renderNote(note)}
-          {context === undefined ? null : (
-            <div className="text-muted-foreground @[10rem]/card:block hidden">{context}</div>
-          )}
+          {context === undefined ? null : <div className="text-muted-foreground">{context}</div>}
           {alert === undefined ? null : (
             <div className="text-status-stale-foreground flex items-center gap-1">{alert}</div>
           )}

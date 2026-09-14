@@ -1,12 +1,14 @@
 /**
- * Two columns from the smallest width, not one: four stacked cards run ~500px,
- * which puts a list page's search field and table below the fold.
+ * One column on a phone. Two columns leave ~125px of content inside the card,
+ * which shatters a long value one syllable per line; the cards earn the width
+ * back by laying out as a row at that size rather than as a stack.
  */
-export const metricsBandGrid = "grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4";
+export const metricsBandGrid = "grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4";
 
-export const metricsBandGridOfThree = "grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3";
+export const metricsBandGridOfThree =
+  "grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3";
 
-export const metricsBandTrendSpanOfThree = "col-span-2 lg:col-span-1";
+export const metricsBandTrendSpanOfThree = "sm:col-span-2 lg:col-span-1";
 
 /** A three-card band: the trend takes the second row on its own. */
-export const metricsBandTrendSpanWide = "col-span-2";
+export const metricsBandTrendSpanWide = "sm:col-span-2";

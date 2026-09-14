@@ -66,8 +66,8 @@ describe("MetricStatCard", () => {
   });
 });
 
-describe("MetricStatCard on a narrow card", () => {
-  it("holds the delta badge and the full-size figure back until the card has room", () => {
+describe("MetricStatCard on a phone", () => {
+  it("lays the label and the figure on one row, so a full-width card stays short", () => {
     render(
       <MetricStatCard
         locale="en-US"
@@ -77,12 +77,11 @@ describe("MetricStatCard on a narrow card", () => {
       />,
     );
 
-    // Both are container queries, not breakpoints: what matters is the width
-    // this card ended up with in the band, not the viewport's.
-    expect(screen.getByText("-67%").closest("[data-slot=card-action]")).toHaveClass(
-      "hidden",
-      "@[13rem]/card:block",
-    );
-    expect(screen.getByText("8M")).toHaveClass("text-xl", "@[13rem]/card:text-2xl");
+    // One column below sm, so the card has the width to show the figure at full
+    // size and the delta beside it rather than shrinking or hiding either.
+    const header = screen.getByText("Measurements").parentElement;
+    expect(header).toHaveClass("max-sm:flex-row", "max-sm:justify-between");
+    expect(screen.getByText("8M")).toHaveClass("text-2xl");
+    expect(screen.getByText("-67%")).toBeInTheDocument();
   });
 });

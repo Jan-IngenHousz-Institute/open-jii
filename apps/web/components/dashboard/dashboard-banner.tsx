@@ -60,7 +60,7 @@ export function DashboardBanner({
             href={secondaryButtonHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="min-w-[9rem] flex-1 lg:w-auto lg:flex-none"
+            className="min-w-[9rem] flex-1 lg:w-auto lg:min-w-0 lg:flex-none"
           >
             <Button
               variant="secondary"
@@ -74,7 +74,7 @@ export function DashboardBanner({
           <Link
             href={buttonHref}
             locale={locale}
-            className="min-w-[9rem] flex-1 lg:w-auto lg:flex-none"
+            className="min-w-[9rem] flex-1 lg:w-auto lg:min-w-0 lg:flex-none"
           >
             <Button className="h-10 w-full whitespace-nowrap rounded-lg px-4 text-[0.9375rem] font-semibold leading-[1.25rem] shadow-none lg:h-11 lg:w-auto">
               {buttonLabel}
