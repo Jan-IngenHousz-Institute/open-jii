@@ -1,11 +1,12 @@
 "use client";
 
 import type { PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, LineConfig, MarkerConfig, ErrorBarConfig } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
 import {
   createBaseLayout,
@@ -61,104 +62,112 @@ export interface ScatterChartProps extends BaseChartProps {
 
 export function ScatterChart({ data, config = {}, className, loading, error }: ScatterChartProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatter", renderer);
 
-  // Shrink the colorbar across responsive tiers; title font, tick font,
-  // thickness and length all sit alongside the plot area and steal
-  // horizontal room from a small chart.
-  const adaptColorbar = (cb: NonNullable<ScatterSeriesData["marker"]>["colorbar"]) => {
-    if (!cb) return undefined;
-    if (!sizing.snug) return cb;
-    const tickFontSize = sizing.veryCompact ? 8 : sizing.compact ? 9 : 11;
-    const titleFontSize = sizing.veryCompact ? 8 : sizing.compact ? 9 : 11;
-    const thickness = sizing.veryCompact ? 6 : sizing.compact ? 8 : 12;
-    const len = sizing.veryCompact ? 0.5 : sizing.compact ? 0.6 : 0.8;
-    return {
-      ...cb,
-      thickness,
-      len,
-      tickfont: { ...(cb as { tickfont?: { size?: number } }).tickfont, size: tickFontSize },
-      title: cb.title
-        ? {
-            ...cb.title,
-            font: { ...cb.title.font, size: titleFontSize },
-          }
-        : undefined,
+  const plotData: PlotData[] = useMemo(() => {
+    // Shrink the colorbar across responsive tiers; title font, tick font,
+    // thickness and length all sit alongside the plot area and steal
+    // horizontal room from a small chart.
+    const adaptColorbar = (cb: NonNullable<ScatterSeriesData["marker"]>["colorbar"]) => {
+      if (!cb) return undefined;
+      if (!sizing.snug) return cb;
+      const tickFontSize = sizing.veryCompact ? 8 : sizing.compact ? 9 : 11;
+      const titleFontSize = sizing.veryCompact ? 8 : sizing.compact ? 9 : 11;
+      const thickness = sizing.veryCompact ? 6 : sizing.compact ? 8 : 12;
+      const len = sizing.veryCompact ? 0.5 : sizing.compact ? 0.6 : 0.8;
+      return {
+        ...cb,
+        thickness,
+        len,
+        tickfont: { ...(cb as { tickfont?: { size?: number } }).tickfont, size: tickFontSize },
+        title: cb.title
+          ? {
+              ...cb.title,
+              font: { ...cb.title.font, size: titleFontSize },
+            }
+          : undefined,
+      };
     };
-  };
 
-  const plotData: PlotData[] = data.map(
-    (series) =>
-      ({
-        x: series.x,
-        y: series.y,
-        name: series.name,
-        type: plotType,
-        mode: series.mode || "markers",
+    return data.map(
+      (series) =>
+        ({
+          x: series.x,
+          y: series.y,
+          name: series.name,
+          type: plotType,
+          mode: series.mode || "markers",
 
-        marker: {
-          color: series.marker?.color || series.color,
-          size: series.size || series.marker?.size || 8,
-          symbol: series.marker?.symbol || "circle",
-          opacity: series.marker?.opacity || series.opacity || 0.8,
-          colorscale: series.marker?.colorscale,
-          showscale: series.marker?.showscale || false,
-          colorbar: adaptColorbar(series.marker?.colorbar),
-          line: series.marker?.line,
-          sizemode: series.sizemode,
-          sizeref: series.sizeref,
-          sizemin: series.sizemin,
-        },
+          marker: {
+            color: series.marker?.color || series.color,
+            size: series.size || series.marker?.size || 8,
+            symbol: series.marker?.symbol || "circle",
+            opacity: series.marker?.opacity || series.opacity || 0.8,
+            colorscale: series.marker?.colorscale,
+            showscale: series.marker?.showscale || false,
+            colorbar: adaptColorbar(series.marker?.colorbar),
+            line: series.marker?.line,
+            sizemode: series.sizemode,
+            sizeref: series.sizeref,
+            sizemin: series.sizemin,
+          },
 
-        line:
-          series.line && series.mode?.includes("lines")
-            ? {
-                color: series.line.color || series.color,
-                width: series.line.width || 2,
-                dash: series.line.dash || "solid",
-                shape: series.line.shape || "linear",
-                smoothing: series.line.smoothing,
-              }
-            : undefined,
+          line:
+            series.line && series.mode?.includes("lines")
+              ? {
+                  color: series.line.color || series.color,
+                  width: series.line.width || 2,
+                  dash: series.line.dash || "solid",
+                  shape: series.line.shape || "linear",
+                  smoothing: series.line.smoothing,
+                }
+              : undefined,
 
-        fill: series.fill || "none",
-        fillcolor: series.fillcolor,
+          fill: series.fill || "none",
+          fillcolor: series.fillcolor,
 
-        text: series.text,
-        textposition: series.textposition,
-        textfont: series.textfont,
+          text: series.text,
+          textposition: series.textposition,
+          textfont: series.textfont,
 
-        error_x: series.error_x,
-        error_y: series.error_y,
+          error_x: series.error_x,
+          error_y: series.error_y,
 
-        opacity: series.opacity || 1,
-        visible: series.visible,
-        showlegend: series.showlegend,
-        legendgroup: series.legendgroup,
-        hovertemplate: series.hovertemplate,
-        hoverinfo: series.hoverinfo,
-        customdata: series.customdata,
-      }) as PlotData,
-  );
+          opacity: series.opacity || 1,
+          visible: series.visible,
+          showlegend: series.showlegend,
+          legendgroup: series.legendgroup,
+          hovertemplate: series.hovertemplate,
+          hoverinfo: series.hoverinfo,
+          customdata: series.customdata,
+        }) as PlotData,
+    );
+  }, [data, plotType, sizing]);
 
   // Detect any continuous-color trace; its colorbar lives in the right
   // gutter, same column the default right-anchored legend wants. The
   // base layout uses this to either nudge the legend further right (full
   // size) or anchor it at the bottom (compact tiers).
   const hasColorbar = data.some((s) => s.marker?.showscale);
-  const layout = createBaseLayout(config, { ...sizing, hasColorbar });
-  const plotConfig = createPlotlyConfig(config, sizing);
+  const layout = useMemo(() => {
+    const next = createBaseLayout(config, { ...sizing, hasColorbar });
 
-  layout.xaxis = refineAxisType(
-    layout.xaxis,
-    data.flatMap((s) => s.x ?? []),
-  );
-  layout.yaxis = refineAxisType(
-    layout.yaxis,
-    data.flatMap((s) => s.y ?? []),
-  );
+    next.xaxis = refineAxisType(
+      next.xaxis,
+      data.flatMap((s) => s.x ?? []),
+    );
+    next.yaxis = refineAxisType(
+      next.yaxis,
+      data.flatMap((s) => s.y ?? []),
+    );
 
+    return next;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+  }, [config, sizing, hasColorbar, data, themeVersion]);
+
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart

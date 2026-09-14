@@ -89,11 +89,14 @@ export function CartesianRenderer({
   // large charts so small (grouped) ones stay on SVG and cost no context.
   const totalPoints = chartSeries.reduce((sum, s) => sum + s.y.length, 0);
 
-  const effectiveConfig: PlotlyChartConfig = {
-    ...chartConfig,
-    xAxisType: useIndexForX ? "linear" : chartConfig.xAxisType,
-    useWebGL: chartConfig.useWebGL ?? totalPoints > WEBGL_POINT_THRESHOLD,
-  };
+  const effectiveConfig: PlotlyChartConfig = useMemo(
+    () => ({
+      ...chartConfig,
+      xAxisType: useIndexForX ? "linear" : chartConfig.xAxisType,
+      useWebGL: chartConfig.useWebGL ?? totalPoints > WEBGL_POINT_THRESHOLD,
+    }),
+    [chartConfig, useIndexForX, totalPoints],
+  );
 
   return (
     <ChartFrame
