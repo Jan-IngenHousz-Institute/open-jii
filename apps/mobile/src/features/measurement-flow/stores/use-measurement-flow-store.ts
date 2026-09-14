@@ -196,8 +196,9 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
       // merge in as an ignored extra key.
       //
       // flowNodes are persisted without protocol/macro snapshot code; it lives
-      // in the persisted workbook-version query and useResumeSnapshotHydration
-      // re-attaches it on resume. Stripped here so in-memory state is unaffected.
+      // in useFlowSnapshotsStore (written once per flow) and
+      // useResumeSnapshotHydration re-attaches it on resume. Stripped here so
+      // in-memory state is unaffected.
       partialize: (state) => ({
         experimentId: state.experimentId,
         experimentLabel: state.experimentLabel,
