@@ -86,9 +86,15 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                   {displayName ? displayName.substring(0, 2).toUpperCase() : "JII"}
                 </AvatarFallback>
               </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{displayName}</span>
-                <span className="truncate text-xs">{user.email}</span>
+              <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium" title={displayName}>
+                  {displayName}
+                </span>
+                {/* A long address still cannot fit the sidebar; the title makes
+                    the truncated part reachable without opening the menu. */}
+                <span className="truncate text-xs" title={user.email}>
+                  {user.email}
+                </span>
               </div>
             </div>
           </DropdownMenuLabel>
@@ -166,9 +172,15 @@ export function NavUser({ user, locale, compact = false }: NavUserProps) {
                 <AvatarImage src={userProfileBody?.avatarUrl ?? ""} alt={displayName} />
                 <AvatarFallback className="rounded-lg">JII</AvatarFallback>
               </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{displayName}</span>
-                <span className="truncate text-xs">{user.email}</span>
+              <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium" title={displayName}>
+                  {displayName}
+                </span>
+                {/* A long address still cannot fit the sidebar; the title makes
+                    the truncated part reachable without opening the menu. */}
+                <span className="truncate text-xs" title={user.email}>
+                  {user.email}
+                </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>

@@ -6,7 +6,7 @@ import { Card } from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { cn, cva } from "@repo/ui/lib/utils";
 
-// Layout and the featured tint only — the chrome (background, border, radius,
+// Layout and the featured tint only. The chrome (background, border, radius,
 // shadow) comes from `Card`, and so does the hover lift, via `interactive`.
 const resourceCardVariants = cva("relative h-full min-h-[180px] gap-3 p-5", {
   variants: {
@@ -23,7 +23,7 @@ export interface ResourceCardProps {
   title: ReactNode;
   /** Badges shown above the title. */
   badges?: ReactNode;
-  /** The description body — usually a `RichTextRenderer`. */
+  /** The description body, usually a `RichTextRenderer`. */
   children?: ReactNode;
   /** Content between the description and the footer, e.g. a compatibility list. */
   extra?: ReactNode;
@@ -37,7 +37,7 @@ export interface ResourceCardProps {
 }
 
 /**
- * One tile in a resource listing — experiment, protocol, macro, organization.
+ * One tile in a resource listing: experiment, protocol, macro, organization.
  * The whole tile is the link; the chevron is a mobile-only affordance because
  * hover cannot say "tappable" on a touch screen.
  */
@@ -56,7 +56,13 @@ export function ResourceCard({
   return (
     <Link href={href} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       <Card interactive className={cn(resourceCardVariants({ featured }), className)}>
-        {badges ? <div className="inline-flex flex-wrap gap-1">{badges}</div> : null}
+        {/* `badges` is a JSX element even when it renders nothing, so a card
+            whose resource is public got an empty row and sat its title 22px
+            higher than its neighbours. Reserving one badge's height keeps the
+            titles on a line across the grid. */}
+        {badges ? (
+          <div className="inline-flex min-h-[1.375rem] flex-wrap items-center gap-1">{badges}</div>
+        ) : null}
         <div className="mb-auto">
           <h3 className="text-foreground mb-2 line-clamp-2 break-words text-base font-semibold md:text-lg">
             {title}
@@ -89,7 +95,7 @@ export interface ResourceCardGridProps {
 
 /**
  * The three-across grid every resource listing uses, together with its loading
- * and empty states — the three were duplicated per entity, and drifted.
+ * and empty states. The three were duplicated per entity, and drifted.
  */
 export function ResourceCardGrid({
   isLoading = false,

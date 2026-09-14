@@ -1,12 +1,42 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
-import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
-import type { ExperimentDto } from "../../../../experiments/core/models/experiment.model";
+import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
-import type { ExperimentDeviceDto } from "../../../core/models/experiment-device.model";
+import type {
+  ExperimentDeviceDto,
+  ExperimentDeviceEntryDto,
+  ExperimentDeviceReportedDto,
+  ExperimentDevicesOverviewDto,
+} from "../../../core/models/experiment-device.model";
+import type { IotDeviceDto } from "../../../core/models/iot-device.model";
+import { AWS_PORT } from "../../../core/ports/aws.port";
+import type { AwsPort, ThingConnectivity } from "../../../core/ports/aws.port";
+import { IOT_DATABRICKS_PORT } from "../../../core/ports/databricks.port";
+import type {
+  DatabricksPort,
+  ExperimentDeviceStatsRow,
+  ExperimentPublisherRow,
+} from "../../../core/ports/databricks.port";
 import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
+import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 
+/** "Currently sending" means inside this window. */
+const OBSERVATION_WINDOW_MS = 30 * 86_400_000;
+
+/** Distinct publishers one experiment plausibly has in a window; a ceiling, not a target. */
+const PUBLISHER_LIMIT = 500;
+
+/** The gold device table holds one row per firmware a device ran, so it needs more headroom. */
+const DEVICE_STATS_LIMIT = 2000;
+
+/**
+ * The experiment's Devices tab in one read: the bound roster, every client id
+ * observed publishing into the experiment in the window, live connectivity from
+ * the fleet index and last-data from the warehouse. Warehouse facts share one
+ * health flag: a failure sets `pipelineUnavailable` and empties them, never
+ * the roster.
+ */
 @Injectable()
 export class ListExperimentDevicesUseCase {
   private readonly logger = new Logger(ListExperimentDevicesUseCase.name);
@@ -14,10 +44,19 @@ export class ListExperimentDevicesUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly experimentDeviceRepository: ExperimentDeviceRepository,
+    private readonly deviceRepository: IotDeviceRepository,
     private readonly authorizationService: AuthorizationService,
+    @Inject(AWS_PORT)
+    private readonly awsPort: AwsPort,
+    @Inject(IOT_DATABRICKS_PORT)
+    private readonly databricksPort: DatabricksPort,
   ) {}
 
-  async execute(experimentId: string, userId: string): Promise<Result<ExperimentDeviceDto[]>> {
+  async execute(
+    experimentId: string,
+    userId: string,
+    now: Date = new Date(),
+  ): Promise<Result<ExperimentDevicesOverviewDto>> {
     this.logger.log({
       msg: "Listing experiment devices",
       operation: "listExperimentDevices",
@@ -26,27 +65,269 @@ export class ListExperimentDevicesUseCase {
     });
 
     const accessResult = await this.experimentRepository.checkAccess(experimentId, userId);
+    if (accessResult.isFailure()) {
+      return failure(accessResult.error);
+    }
+    if (!accessResult.value.experiment) {
+      return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+    }
 
-    return accessResult.chain(async ({ experiment }: { experiment: ExperimentDto | null }) => {
-      if (!experiment) {
-        return failure(AppError.notFound(`Experiment with ID ${experimentId} not found`));
+    // Devices are operational infrastructure, not published results:
+    // org-role and grant readers see them, the public-read tier (anyone,
+    // on a public experiment) does not.
+    const decision = await this.authorizationService.can(userId, {
+      resourceType: "experiment",
+      resourceId: experimentId,
+      action: "read",
+    });
+    if (!decision.allow || decision.reason === "public") {
+      return failure(
+        AppError.forbidden("Only experiment collaborators or managers can view its devices"),
+      );
+    }
+
+    const window = {
+      from: new Date(now.getTime() - OBSERVATION_WINDOW_MS).toISOString(),
+      to: now.toISOString(),
+    };
+
+    const bindingsResult = await this.experimentDeviceRepository.listByExperiment(experimentId);
+    if (bindingsResult.isFailure()) {
+      return failure(bindingsResult.error);
+    }
+    const bindings = bindingsResult.value;
+
+    const publishers = await this.lookupPublishers(experimentId, window);
+    const observed = new Map<string, ExperimentPublisherRow>();
+    for (const row of publishers ?? []) {
+      if (row.clientId !== null) {
+        observed.set(row.clientId, row);
       }
+    }
 
-      // Devices are operational infrastructure, not published results:
-      // org-role and grant readers see them, the public-read tier (anyone,
-      // on a public experiment) does not.
-      const decision = await this.authorizationService.can(userId, {
-        resourceType: "experiment",
-        resourceId: experimentId,
-        action: "read",
-      });
-      if (!decision.allow || decision.reason === "public") {
-        return failure(
-          AppError.forbidden("Only experiment collaborators or managers can view its devices"),
-        );
+    // Publishers with no binding still need a registry identity to render.
+    const boundThings = new Set(bindings.map((binding) => binding.device.thingName));
+    const unboundClientIds = [...observed.keys()].filter((clientId) => !boundThings.has(clientId));
+    const unboundDevicesResult = await this.deviceRepository.findByThingNames(unboundClientIds);
+    if (unboundDevicesResult.isFailure()) {
+      return failure(unboundDevicesResult.error);
+    }
+    const unboundDevices = unboundDevicesResult.value;
+
+    const thingNames = [...boundThings, ...unboundDevices.map((device) => device.thingName)];
+    const [connectivity, activity, stats] = await Promise.all([
+      this.lookupConnectivity(thingNames),
+      this.lookupActivity(thingNames),
+      this.lookupDeviceStats(experimentId),
+    ]);
+    const pipelineUnavailable = publishers === null || activity === null || stats === null;
+    const reportedByClientId = this.foldDeviceStats(stats ?? []);
+
+    const entryFor = (
+      device: ExperimentDeviceDto["device"],
+      binding: ExperimentDeviceEntryDto["binding"],
+      canView: boolean,
+    ): ExperimentDeviceEntryDto => {
+      const thing = connectivity?.get(device.thingName);
+      const recent = observed.get(device.thingName);
+      return {
+        device,
+        clientId: device.thingName,
+        binding,
+        connectivity: thing ? { connected: thing.connected, lastSeenAt: thing.lastSeenAt } : null,
+        lastDataAt: activity?.get(device.thingName) ?? null,
+        recentData: recent
+          ? { measurementCount: recent.count, lastDataAt: recent.lastDataAt }
+          : null,
+        reported: reportedByClientId.get(device.thingName) ?? null,
+        canView,
+      };
+    };
+
+    // A binding to an experiment the caller reads (non-publicly, checked above)
+    // is itself a read path onto the device, so bound rows never need a walk.
+    const bound = bindings.map((binding) =>
+      entryFor(binding.device, { addedBy: binding.addedBy, addedAt: binding.addedAt }, true),
+    );
+
+    const unbound = await Promise.all(
+      unboundDevices.map(async (device) =>
+        entryFor(toIdentity(device), null, await this.canViewDevice(userId, device.id)),
+      ),
+    );
+
+    const registered = new Set(thingNames);
+    const unregistered: ExperimentDeviceEntryDto[] = [];
+    for (const [clientId, row] of observed) {
+      if (!registered.has(clientId)) {
+        unregistered.push({
+          device: null,
+          clientId,
+          binding: null,
+          connectivity: null,
+          lastDataAt: null,
+          recentData: { measurementCount: row.count, lastDataAt: row.lastDataAt },
+          reported: reportedByClientId.get(clientId) ?? null,
+          canView: false,
+        });
       }
+    }
 
-      return this.experimentDeviceRepository.listByExperiment(experimentId);
+    return success({
+      devices: [...bound, ...byFreshest(unbound), ...byFreshest(unregistered)],
+      window,
+      pipelineUnavailable,
     });
   }
+
+  private async canViewDevice(userId: string, deviceId: string): Promise<boolean> {
+    const decision = await this.authorizationService.can(userId, {
+      resourceType: "device",
+      resourceId: deviceId,
+      action: "read",
+    });
+    return decision.allow;
+  }
+
+  /**
+   * One reported fact set per client id. The gold table carries a row per
+   * firmware the device ran, so measurements sum across them while the
+   * descriptive fields come from the most recently processed row.
+   */
+  private foldDeviceStats(
+    rows: ExperimentDeviceStatsRow[],
+  ): Map<string, ExperimentDeviceReportedDto> {
+    const folded = new Map<string, ExperimentDeviceReportedDto>();
+
+    for (const row of rows) {
+      if (row.clientId === null) {
+        continue;
+      }
+
+      const existing = folded.get(row.clientId);
+      if (!existing) {
+        folded.set(row.clientId, {
+          deviceName: row.deviceName,
+          firmware: row.firmware,
+          version: row.version,
+          battery: row.battery,
+          totalMeasurements: row.totalMeasurements,
+          lastReportedAt: row.lastReportedAt,
+        });
+        continue;
+      }
+
+      const isNewer =
+        row.lastReportedAt !== null &&
+        (existing.lastReportedAt === null || row.lastReportedAt > existing.lastReportedAt);
+
+      folded.set(row.clientId, {
+        deviceName: isNewer ? row.deviceName : existing.deviceName,
+        firmware: isNewer ? row.firmware : existing.firmware,
+        version: isNewer ? row.version : existing.version,
+        battery: isNewer ? row.battery : existing.battery,
+        totalMeasurements: existing.totalMeasurements + row.totalMeasurements,
+        lastReportedAt: isNewer ? row.lastReportedAt : existing.lastReportedAt,
+      });
+    }
+
+    return folded;
+  }
+
+  // Every lookup below is an enrichment, never a gate: a failure degrades to
+  // null so the roster still renders, with the warehouse ones flagged.
+  private async lookupDeviceStats(
+    experimentId: string,
+  ): Promise<ExperimentDeviceStatsRow[] | null> {
+    const result = await this.databricksPort.getExperimentDeviceStats(
+      experimentId,
+      DEVICE_STATS_LIMIT,
+    );
+    if (result.isFailure()) {
+      this.logger.warn({
+        msg: "Experiment device stats lookup failed; reported facts render as unknown",
+        operation: "listExperimentDevices",
+        experimentId,
+        errorCode: result.error.code,
+      });
+      return null;
+    }
+    return result.value;
+  }
+
+  private async lookupPublishers(
+    experimentId: string,
+    window: { from: string; to: string },
+  ): Promise<ExperimentPublisherRow[] | null> {
+    const result = await this.databricksPort.getExperimentPublishers(
+      experimentId,
+      window.from,
+      window.to,
+      PUBLISHER_LIMIT,
+    );
+    if (result.isFailure()) {
+      this.logger.warn({
+        msg: "Experiment publisher lookup failed; observed devices render as unknown",
+        operation: "listExperimentDevices",
+        experimentId,
+        errorCode: result.error.code,
+      });
+      return null;
+    }
+    return result.value;
+  }
+
+  private async lookupActivity(thingNames: string[]): Promise<Map<string, string | null> | null> {
+    if (thingNames.length === 0) {
+      return new Map();
+    }
+    const result = await this.databricksPort.getDevicesLastActivity(thingNames);
+    if (result.isFailure()) {
+      this.logger.warn({
+        msg: "Last-activity lookup failed; devices render as unknown",
+        operation: "listExperimentDevices",
+        errorCode: result.error.code,
+      });
+      return null;
+    }
+    return result.value;
+  }
+
+  private async lookupConnectivity(
+    thingNames: string[],
+  ): Promise<Map<string, ThingConnectivity> | null> {
+    // Nothing to ask is an empty answer, not a failure: null is reserved for a
+    // lookup that broke, as it is for the warehouse reads above.
+    if (thingNames.length === 0) {
+      return new Map();
+    }
+    const result = await this.awsPort.searchThingsConnectivity(thingNames);
+    if (result.isFailure()) {
+      this.logger.warn({
+        msg: "Fleet-index connectivity lookup failed; devices render as unknown",
+        operation: "listExperimentDevices",
+        errorCode: result.error.code,
+      });
+      return null;
+    }
+    return result.value;
+  }
+}
+
+function toIdentity(device: IotDeviceDto): ExperimentDeviceDto["device"] {
+  return {
+    id: device.id,
+    thingName: device.thingName,
+    serialNumber: device.serialNumber,
+    name: device.name,
+    deviceType: device.deviceType,
+    status: device.status,
+  };
+}
+
+/** Most recent arrival in this experiment first; never-seen rows last. */
+function byFreshest(entries: ExperimentDeviceEntryDto[]): ExperimentDeviceEntryDto[] {
+  return [...entries].sort((a, b) =>
+    (b.recentData?.lastDataAt ?? "").localeCompare(a.recentData?.lastDataAt ?? ""),
+  );
 }

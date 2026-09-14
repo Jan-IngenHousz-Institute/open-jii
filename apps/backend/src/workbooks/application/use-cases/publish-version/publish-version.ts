@@ -118,7 +118,7 @@ export class PublishVersionUseCase {
       entitySnapshots.protocols[id] = { code: p.code, family: p.family };
     }
     for (const [id, m] of macrosResult.value) {
-      entitySnapshots.macros[id] = { code: m.code };
+      entitySnapshots.macros[id] = { code: m.code, language: m.language };
     }
 
     this.logger.log({

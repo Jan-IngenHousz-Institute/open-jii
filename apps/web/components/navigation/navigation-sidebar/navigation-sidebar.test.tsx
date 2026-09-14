@@ -132,11 +132,14 @@ describe("AppSidebar", () => {
     expect(themeToggle).toHaveClass("shrink-0");
     expect(themeToggle).not.toHaveTextContent("common.toggleTheme");
 
+    // Identity takes the first row on its own, utilities the second. Sharing one
+    // row left 68px for the name and email in a 216px sidebar, which truncated
+    // even a short display name.
     const footer = container.querySelector('[data-sidebar="footer"]');
-    const footerRow = footer?.firstElementChild;
-    expect(footerRow).toContainElement(themeToggle);
-    expect(footerRow).toContainElement(screen.getByText("test@example.com"));
-    expect(themeToggle.nextElementSibling).toContainElement(screen.getByText("test@example.com"));
+    const [identityRow, utilitiesRow] = [...(footer?.children ?? [])];
+    expect(identityRow).toContainElement(screen.getByText("test@example.com"));
+    expect(identityRow).not.toContainElement(themeToggle);
+    expect(utilitiesRow).toContainElement(themeToggle);
   });
 
   it("removes the redundant in-sidebar collapse control", () => {

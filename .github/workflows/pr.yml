@@ -159,8 +159,35 @@ jobs:
             echo "No API/spec changes detected"
           fi
 
+      # asyncapi.yaml is hand-written, so the MQTT contract needs its own
+      # trigger: a pipeline-only PR that adds an ingest field must still be
+      # held to documenting it.
+      - name: Detect MQTT ingest contract changes
+        id: contract
+        shell: bash
+        run: |
+          BASE_SHA=${{ github.event.pull_request.base.sha || github.event.before || 'HEAD~1' }}
+          # Fail closed: an unresolvable base would otherwise land in the "no
+          # changes" branch and silently skip the gate below.
+          if ! CONTRACT_CHANGES=$(git diff --name-only "$BASE_SHA" HEAD -- \
+              asyncapi.yaml \
+              apps/data/src/lib/openjii/openjii/centrum/schemas.py \
+              apps/data/src/pipelines/centrum/bronze/raw_data.py \
+              apps/docs/package.json \
+              apps/docs/scripts/check-mqtt-contract.mjs); then
+            echo "::error::Could not diff against base $BASE_SHA; refusing to skip the MQTT ingest contract check."
+            exit 1
+          fi
+          if [ -n "$CONTRACT_CHANGES" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "✅ MQTT ingest contract changes detected"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No MQTT ingest contract changes detected"
+          fi
+
       - name: Setup Node.js and pnpm
-        if: steps.changed.outputs.changed == 'true'
+        if: steps.changed.outputs.changed == 'true' || steps.contract.outputs.changed == 'true'
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
           node-version: "24"
@@ -176,6 +203,15 @@ jobs:
             exit 1
           fi
           echo "ok — API spec copies are up to date"
+
+      - name: Check MQTT ingest contract
+        if: steps.contract.outputs.changed == 'true'
+        shell: bash
+        run: |
+          if ! pnpm --filter docs check-mqtt-contract; then
+            echo "::error::asyncapi.yaml is out of sync with the centrum ingest schemas. See the assertion above for the fields to add or remove."
+            exit 1
+          fi
 
   build_lint_test:
     name: Build, Lint, & Test

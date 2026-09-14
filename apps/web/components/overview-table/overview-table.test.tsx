@@ -9,6 +9,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 
 import { getExperimentColumns } from "./experiment-columns";
 import { getMacroColumns } from "./macro-columns";
+import { getOrganizationColumns } from "./organization-columns";
 import { OverviewTable } from "./overview-table";
 import type { OverviewTableColumn } from "./overview-table";
 import { getProtocolColumns } from "./protocol-columns";
@@ -49,6 +50,20 @@ function renderStubTable(
       emptyHelpPath="/guide/stubs"
     />,
   );
+}
+
+function expectColumnHiddenBelowItsBreakpoint(headerName: string) {
+  const header = screen.getByRole("columnheader", { name: headerName });
+  const headerRow = header.parentElement;
+  const columnIndex = headerRow ? Array.from(headerRow.children).indexOf(header) : -1;
+
+  expect(columnIndex).toBeGreaterThanOrEqual(0);
+  expect(header).toHaveClass("hidden");
+
+  const table = header.closest("table");
+  for (const row of table?.querySelectorAll("tbody tr") ?? []) {
+    expect(row.children.item(columnIndex)).toHaveClass("hidden");
+  }
 }
 
 describe("OverviewTable", () => {
@@ -164,6 +179,45 @@ describe("experiment overview columns", () => {
     expect(label).toHaveClass("truncate");
     expect(label.parentElement).toHaveAttribute("title", "status.archived");
   });
+
+  it("does not sacrifice the name column to the updated date on phones", () => {
+    renderExperiments([createExperiment({ id: "e-1", name: "Photosynthesis" })]);
+
+    expectColumnHiddenBelowItsBreakpoint("columns.updated");
+    expect(screen.getByRole("columnheader", { name: "columns.updated" })).toHaveClass(
+      "lg:table-cell",
+    );
+  });
+});
+
+describe("organization overview columns", () => {
+  it("keeps the organization name as the primary phone column", () => {
+    render(
+      <OverviewTable
+        columns={getOrganizationColumns(t)}
+        items={[
+          {
+            id: "org-1",
+            name: "JII",
+            description: null,
+            memberCount: 4,
+            resourceCount: 7,
+            visibility: "public",
+            isMember: true,
+          },
+        ]}
+        getRowKey={(organization) => organization.id}
+        getRowHref={(organization) => `/platform/organizations/${organization.id}`}
+        emptyMessage="organizations.empty"
+      />,
+    );
+
+    expectColumnHiddenBelowItsBreakpoint("organizations.tabs.members");
+    expectColumnHiddenBelowItsBreakpoint("organizations.resources.title");
+    expect(screen.getByRole("columnheader", { name: "organizations.resources.title" })).toHaveClass(
+      "lg:table-cell",
+    );
+  });
 });
 
 describe("protocol overview columns", () => {
@@ -204,7 +258,21 @@ describe("protocol overview columns", () => {
 
     expect(screen.getByRole("columnheader", { name: "protocols.columns.macros" })).toHaveClass(
       "w-56",
-      "md:table-cell",
+      "xl:table-cell",
+    );
+  });
+
+  it("keeps the name readable on phones by hiding secondary columns below their breakpoint", () => {
+    renderProtocols([createProtocol({ id: "p-1", name: "Protocol" })]);
+
+    expect(screen.getByRole("columnheader", { name: "protocols.columns.name" })).not.toHaveClass(
+      "hidden",
+    );
+    expectColumnHiddenBelowItsBreakpoint("protocols.columns.family");
+    expectColumnHiddenBelowItsBreakpoint("protocols.columns.macros");
+    expectColumnHiddenBelowItsBreakpoint("protocols.columns.updated");
+    expect(screen.getByRole("columnheader", { name: "protocols.columns.updated" })).toHaveClass(
+      "lg:table-cell",
     );
   });
 });
@@ -239,7 +307,29 @@ describe("macro overview columns", () => {
 
     expect(screen.getByRole("columnheader", { name: "macros.columns.protocols" })).toHaveClass(
       "w-56",
-      "md:table-cell",
+      "xl:table-cell",
+    );
+  });
+
+  it("keeps the name readable on phones by hiding secondary columns below their breakpoint", () => {
+    render(
+      <OverviewTable
+        columns={getMacroColumns(t, "en-US")}
+        items={[createMacro({ id: "m-1", name: "A_single_unbroken_macro_name" })]}
+        getRowKey={(macro) => macro.id}
+        getRowHref={(macro) => `/platform/macros/${macro.id}`}
+        emptyMessage="macros.noMacros"
+      />,
+    );
+
+    expect(screen.getByRole("columnheader", { name: "macros.columns.name" })).not.toHaveClass(
+      "hidden",
+    );
+    expectColumnHiddenBelowItsBreakpoint("macros.columns.language");
+    expectColumnHiddenBelowItsBreakpoint("macros.columns.protocols");
+    expectColumnHiddenBelowItsBreakpoint("macros.columns.updated");
+    expect(screen.getByRole("columnheader", { name: "macros.columns.updated" })).toHaveClass(
+      "lg:table-cell",
     );
   });
 });
@@ -305,6 +395,20 @@ describe("workbook overview columns", () => {
 
     const actionButton = screen.getByLabelText("workbooks.actions.more");
     expect(actionButton.closest("td")).toHaveClass("w-14", "px-3");
+  });
+
+  it("keeps the workbook name as the primary phone column", () => {
+    renderWorkbooks([unused]);
+
+    expect(screen.getByRole("columnheader", { name: "workbooks.columns.name" })).not.toHaveClass(
+      "hidden",
+    );
+    expectColumnHiddenBelowItsBreakpoint("workbooks.columns.usedBy");
+    expectColumnHiddenBelowItsBreakpoint("workbooks.columns.user");
+    expectColumnHiddenBelowItsBreakpoint("workbooks.columns.updated");
+    expect(screen.getByRole("columnheader", { name: "workbooks.columns.updated" })).toHaveClass(
+      "lg:table-cell",
+    );
   });
 
   it("duplicates a workbook from the row menu", async () => {

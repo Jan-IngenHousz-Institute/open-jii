@@ -27,6 +27,7 @@ import { TableCell, TableRow } from "@repo/ui/components/table";
 import { useFormatLastSeen } from "./device-connectivity";
 import { deviceNeedsCredentials } from "./device-next-action";
 import { IotDeviceStatusBadge } from "./iot-device-status-badge";
+import { IOT_DEVICE_TABLE_COLUMN_CLASS } from "./iot-device-table-columns";
 
 export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivity }) {
   const { t } = useTranslation("iot");
@@ -83,7 +84,9 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
       className="bg-background hover:bg-muted/50 has-data-[state=open]:bg-muted/50 group cursor-pointer"
       onClick={() => router.push(viewHref)}
     >
-      <TableCell className="min-w-0 overflow-hidden px-6 py-3">
+      <TableCell
+        className={`${IOT_DEVICE_TABLE_COLUMN_CLASS.name} min-w-0 overflow-hidden px-6 py-3`}
+      >
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2">
             <Link
@@ -107,25 +110,36 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
           )}
         </div>
       </TableCell>
-      <TableCell className="min-w-0 overflow-hidden px-6 py-3">
+      <TableCell
+        className={`${IOT_DEVICE_TABLE_COLUMN_CLASS.status} min-w-0 overflow-hidden px-6 py-3`}
+      >
         <IotDeviceStatusBadge status={device.status} />
       </TableCell>
-      <TableCell className="text-muted-foreground min-w-0 truncate px-6 py-3 text-[13px]">
+      <TableCell
+        className={`${IOT_DEVICE_TABLE_COLUMN_CLASS.type} text-muted-foreground min-w-0 truncate px-6 py-3 text-[13px]`}
+      >
         {getSensorFamilyLabel(device.deviceType)}
       </TableCell>
       <TableCell
         title={device.serialNumber}
-        className="text-muted-foreground min-w-0 truncate px-6 py-3 font-mono text-xs"
+        className={`${IOT_DEVICE_TABLE_COLUMN_CLASS.serial} text-muted-foreground min-w-0 truncate px-6 py-3 font-mono text-xs`}
       >
         {device.serialNumber}
       </TableCell>
-      <TableCell className="text-muted-foreground min-w-0 truncate px-6 py-3 text-[13px]">
+      <TableCell
+        className={`${IOT_DEVICE_TABLE_COLUMN_CLASS.lastSeen} text-muted-foreground min-w-0 truncate px-6 py-3 text-[13px]`}
+      >
         {formatLastSeen(device.connectivity)}
       </TableCell>
-      <TableCell className="text-muted-foreground min-w-0 truncate px-6 py-3 text-[13px] tabular-nums">
+      <TableCell
+        className={`${IOT_DEVICE_TABLE_COLUMN_CLASS.created} text-muted-foreground min-w-0 truncate px-6 py-3 text-[13px] tabular-nums`}
+      >
         {formatDate(device.createdAt)}
       </TableCell>
-      <TableCell className="w-12 px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+      <TableCell
+        className={`${IOT_DEVICE_TABLE_COLUMN_CLASS.actions} px-3 py-3 text-right`}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Persistently visible: no hover-only affordances anywhere in the domain. */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

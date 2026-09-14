@@ -41,6 +41,7 @@ describe("ScopedMetricsController", () => {
     vi.spyOn(adapter, "getActivityWindows").mockResolvedValue(success(windows));
     vi.spyOn(adapter, "getScopedDailyActivity").mockResolvedValue(success([]));
     vi.spyOn(adapter, "getContributorPairs").mockResolvedValue(success([]));
+    vi.spyOn(adapter, "getDevicePairs").mockResolvedValue(success([]));
   });
 
   afterEach(() => {

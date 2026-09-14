@@ -38,7 +38,8 @@
       "name": "Naam",
       "usedBy": "Gebruikt door",
       "user": "Gebruiker",
-      "updated": "Bijgewerkt"
+      "updated": "Bijgewerkt",
+      "activity": "Activiteit"
     },
     "actions": {
       "open": "Openen",
@@ -99,6 +100,7 @@
     "renameSave": "Naam opslaan",
     "renameCancel": "Annuleren",
     "renameConflict": "Die naam is al in gebruik",
-    "renameFailed": "Naam wijzigen mislukt"
+    "renameFailed": "Naam wijzigen mislukt",
+    "languageSaveFailed": "Kan de macrotaal niet opslaan"
   }
 }

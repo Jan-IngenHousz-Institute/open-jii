@@ -231,6 +231,26 @@ describe("utils", () => {
       expect(layout.yaxis?.gridcolor).toBe("rgba(255,255,255,0.1)");
     });
 
+    it("hides both axes and drops the margins for a sparkline", () => {
+      const layout = createBaseLayout({ ...baseConfig, sparkline: true });
+
+      expect(layout.xaxis?.visible).toBe(false);
+      expect(layout.yaxis?.visible).toBe(false);
+      expect(layout.margin).toMatchObject({ l: 0, r: 0, t: 2, b: 2 });
+    });
+
+    it("takes an explicit x tick format so date ticks cannot wrap onto a second line", () => {
+      const layout = createBaseLayout({ ...baseConfig, xAxisTickFormat: "%b %-d" });
+
+      expect(layout.xaxis?.tickformat).toBe("%b %-d");
+    });
+
+    it("leaves the tick format to plotly when none is given", () => {
+      const layout = createBaseLayout(baseConfig);
+
+      expect(layout.xaxis?.tickformat).toBeUndefined();
+    });
+
     it("sets title when provided", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,

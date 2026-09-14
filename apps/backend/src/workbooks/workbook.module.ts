@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { MacroModule } from "../macros/macro.module";
+import { MetricsModule } from "../metrics/metrics.module";
 import { ProtocolRepository } from "../protocols/core/repositories/protocol.repository";
 import { CreateWorkbookUseCase } from "./application/use-cases/create-workbook/create-workbook";
 import { DeleteWorkbookUseCase } from "./application/use-cases/delete-workbook/delete-workbook";
@@ -16,7 +17,7 @@ import { WorkbookRepository } from "./core/repositories/workbook.repository";
 import { WorkbookController } from "./presentation/workbook.controller";
 
 @Module({
-  imports: [MacroModule],
+  imports: [MetricsModule, MacroModule],
   controllers: [WorkbookController],
   providers: [
     WorkbookRepository,

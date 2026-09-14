@@ -187,4 +187,12 @@ describe("<ListOrganizations />", () => {
     expect(screen.getByRole("button", { name: "pagination.previous" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "pagination.next" })).toBeDisabled();
   });
+
+  // jsdom cannot measure text, so the width itself was set from a browser
+  // measurement: the placeholder needs 151px and w-56 left only 146px.
+  it("gives the search box room for its own placeholder", () => {
+    render(<ListOrganizations />);
+    const form = screen.getByPlaceholderText("organizations.searchPlaceholder").closest("form");
+    expect(form).toHaveClass("md:w-64");
+  });
 });

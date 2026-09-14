@@ -2458,6 +2458,123 @@ describe("DatabricksAdapter", () => {
       expect(captured.statement).toContain("LIMIT 50");
     });
 
+    it("maps one experiment's publishers, newest arrival first", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(
+        ["client_id", "measurement_count", "last_data_at"],
+        [
+          ["AMBYTE_A", "12", "2026-08-17T11:00:00.000Z"],
+          [null, "3", "2026-08-17T09:00:00.000Z"],
+        ],
+        captured,
+      );
+
+      const result = await databricksAdapter.getExperimentPublishers(
+        "11111111-1111-4111-8111-111111111111",
+        FROM,
+        TO,
+        500,
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { clientId: "AMBYTE_A", count: 12, lastDataAt: "2026-08-17T11:00:00.000Z" },
+        { clientId: null, count: 3, lastDataAt: "2026-08-17T09:00:00.000Z" },
+      ]);
+      expect(captured.statement).toContain("11111111-1111-4111-8111-111111111111");
+      expect(captured.statement).toContain("GROUP BY `client_id`");
+      expect(captured.statement).toContain("ORDER BY `last_data_at` DESC");
+      expect(captured.statement).toContain("LIMIT 500");
+    });
+
+    it("scopes a device series on both the experiment and the client id", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(
+        ["timestamp_day", "measurement_count"],
+        [
+          ["2026-09-01T00:00:00.000Z", "12"],
+          ["2026-09-02T00:00:00.000Z", "4"],
+        ],
+        captured,
+      );
+
+      const result = await databricksAdapter.getExperimentDeviceSeries(
+        "11111111-1111-4111-8111-111111111111",
+        "AMBYTE_A",
+        FROM,
+        TO,
+        "day",
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { bucketStart: "2026-09-01T00:00:00.000Z", count: 12 },
+        { bucketStart: "2026-09-02T00:00:00.000Z", count: 4 },
+      ]);
+      // Both keys, or the chart would show the device's traffic into every experiment.
+      expect(captured.statement).toContain("11111111-1111-4111-8111-111111111111");
+      expect(captured.statement).toContain("AMBYTE_A");
+      expect(captured.statement).toContain("clean_data");
+    });
+
+    it("maps the gold device rows for one experiment, newest report first", async () => {
+      const captured: CapturedStatement = {};
+      mockGroupSql(
+        [
+          "client_id",
+          "device_name",
+          "device_firmware",
+          "device_version",
+          "device_battery",
+          "total_measurements",
+          "processed_timestamp",
+        ],
+        [
+          [
+            "AMBYTE_A",
+            "shed-logger",
+            "ambyte-2",
+            "2.4.1",
+            "4.18",
+            "42",
+            "2026-08-17T11:00:00.000Z",
+          ],
+          [null, null, null, null, null, "3", "2026-08-17T09:00:00.000Z"],
+        ],
+        captured,
+      );
+
+      const result = await databricksAdapter.getExperimentDeviceStats(
+        "11111111-1111-4111-8111-111111111111",
+        2000,
+      );
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        {
+          clientId: "AMBYTE_A",
+          deviceName: "shed-logger",
+          firmware: "ambyte-2",
+          version: "2.4.1",
+          battery: 4.18,
+          totalMeasurements: 42,
+          lastReportedAt: "2026-08-17T11:00:00.000Z",
+        },
+        {
+          clientId: null,
+          deviceName: null,
+          firmware: null,
+          version: null,
+          battery: null,
+          totalMeasurements: 3,
+          lastReportedAt: "2026-08-17T09:00:00.000Z",
+        },
+      ]);
+      expect(captured.statement).toContain("experiment_device_data");
+      expect(captured.statement).toContain("ORDER BY `processed_timestamp` DESC");
+      expect(captured.statement).toContain("LIMIT 2000");
+    });
+
     it("maps grouped experiment attribution rows", async () => {
       const captured: CapturedStatement = {};
       mockGroupSql(
@@ -2619,6 +2736,7 @@ describe("DatabricksAdapter", () => {
       mockSqlResponse(
         [
           "total_measurements",
+          "total_volume_bytes",
           "devices_all_time",
           "experiments_with_data",
           "first_measurement_at",
@@ -2630,6 +2748,7 @@ describe("DatabricksAdapter", () => {
         [
           [
             "1000",
+            "949000",
             "9",
             "5",
             "2024-01-01 00:00:00",
@@ -2646,6 +2765,7 @@ describe("DatabricksAdapter", () => {
       assertSuccess(result);
       expect(result.value).toEqual({
         totalMeasurements: 1000,
+        totalVolumeBytes: 949000,
         devicesAllTime: 9,
         experimentsWithData: 5,
         firstMeasurementAt: "2024-01-01T00:00:00.000Z",
@@ -2662,20 +2782,6 @@ describe("DatabricksAdapter", () => {
       expect(empty.value).toBeNull();
     });
 
-    it("sums the all-time volume and reads a blank aggregate as absent", async () => {
-      mockToken();
-      mockSqlResponse(["total_volume_bytes"], [["123456789"]]);
-      const volume = await databricksAdapter.getPublicTotalVolumeBytes();
-      assertSuccess(volume);
-      expect(volume.value).toBe(123456789);
-
-      mockToken();
-      mockSqlResponse(["total_volume_bytes"], [[""]]);
-      const blank = await databricksAdapter.getPublicTotalVolumeBytes();
-      assertSuccess(blank);
-      expect(blank.value).toBeNull();
-    });
-
     it("reads blank numeric cells as absent, never as zero", async () => {
       mockToken();
       mockSqlResponse(["total_measurements", "computed_at"], [["   ", "2026-08-14 10:05:00"]]);
@@ -2687,7 +2793,6 @@ describe("DatabricksAdapter", () => {
     it("passes a warehouse failure through every reader", async () => {
       const readers = [
         () => databricksAdapter.getPublicPlatformTotals(),
-        () => databricksAdapter.getPublicTotalVolumeBytes(),
         () => databricksAdapter.getPublicDailyActivity(30),
         () => databricksAdapter.getPublicFamilyTotals(),
         () => databricksAdapter.getActivityWindows(),
@@ -2696,6 +2801,7 @@ describe("DatabricksAdapter", () => {
         () => databricksAdapter.getPoolFacts(),
         () => databricksAdapter.getScopedDailyActivity(30),
         () => databricksAdapter.getContributorPairs(),
+        () => databricksAdapter.getDevicePairs(),
       ];
 
       for (const read of readers) {
@@ -2732,12 +2838,6 @@ describe("DatabricksAdapter", () => {
     });
 
     it("reads empty single-row tables as null", async () => {
-      mockToken();
-      mockSqlResponse(["total_volume_bytes"], []);
-      const volume = await databricksAdapter.getPublicTotalVolumeBytes();
-      assertSuccess(volume);
-      expect(volume.value).toBeNull();
-
       mockToken();
       mockSqlResponse(["measurements_24h"], []);
       const windows = await databricksAdapter.getActivityWindows();
@@ -2777,7 +2877,7 @@ describe("DatabricksAdapter", () => {
 
       mockToken();
       mockSqlResponse(
-        ["parameter", "category", "count_30d", "median_value"],
+        ["parameter", "category", "observations", "median_value"],
         [["Phi2", "derived", "4214", ""]],
       );
       const parameter = await databricksAdapter.getTopParameter("derived");
@@ -2827,6 +2927,27 @@ describe("DatabricksAdapter", () => {
       const hourly = await databricksAdapter.getHourlyActivity();
       assertSuccess(hourly);
       expect(hourly.value).toEqual([{ hourLocal: 12, measurements: 300 }]);
+    });
+
+    it("returns per-resource daily activity and drops rows missing an essential", async () => {
+      mockToken();
+      mockSqlResponse(
+        ["date", "resource_type", "resource_id", "measurements"],
+        [
+          ["2026-08-14", "protocol", "p1", "10"],
+          ["2026-08-15", "protocol", "p1", "12"],
+          ["2026-08-15", "protocol", null, "12"],
+          ["2026-08-15", "protocol", "p2", "not-a-number"],
+        ],
+      );
+
+      const result = await databricksAdapter.getResourceDailyActivity("protocol", 30);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { date: "2026-08-14", resourceType: "protocol", resourceId: "p1", measurements: 10 },
+        { date: "2026-08-15", resourceType: "protocol", resourceId: "p1", measurements: 12 },
+      ]);
     });
 
     it("returns daily activity ascending with volume", async () => {
@@ -2899,12 +3020,17 @@ describe("DatabricksAdapter", () => {
 
       mockToken();
       mockSqlResponse(
-        ["parameter", "category", "count_30d", "median_value", "computed_at"],
-        [["Phi2", "derived", "4214", "0.62", "x"]],
+        ["parameter", "label", "category", "observations", "median_value", "computed_at"],
+        [["Phi2", "Photosystem II efficiency", "derived", "4214", "0.62", "x"]],
       );
       const parameter = await databricksAdapter.getTopParameter("derived");
       assertSuccess(parameter);
-      expect(parameter.value).toEqual({ name: "Phi2", count30d: 4214, median: 0.62 });
+      expect(parameter.value).toEqual({
+        label: "Photosystem II efficiency",
+        name: "Phi2",
+        observations: 4214,
+        median: 0.62,
+      });
 
       mockToken();
       mockSqlResponse(
@@ -2914,14 +3040,18 @@ describe("DatabricksAdapter", () => {
           "simultaneity_peak_devices",
           "timezones_all_time",
           "timezones_peak_day",
+          "mean_arrival_gap_seconds",
+          "current_streak_days",
           "computed_at",
         ],
-        [["45", null, "14", "14", "9", "x"]],
+        [["45", null, "14", "14", "9", "0.25", "12", "x"]],
       );
       const pool = await databricksAdapter.getPoolFacts();
       assertSuccess(pool);
       expect(pool.value).toEqual({
         sessionMedianMeasurements: 45,
+        meanArrivalGapSeconds: 0.25,
+        currentStreakDays: 12,
         deviceEnduranceDays: null,
         simultaneityPeakDevices: 14,
         timezonesAllTime: 14,
@@ -2946,6 +3076,19 @@ describe("DatabricksAdapter", () => {
       const pairs = await databricksAdapter.getContributorPairs();
       assertSuccess(pairs);
       expect(pairs.value).toEqual([{ experimentId: "exp-1", userId: "user-1" }]);
+
+      mockToken();
+      mockSqlResponse(
+        ["experiment_id", "client_id", "computed_at"],
+        [
+          ["exp-1", "logger-1", "x"],
+          ["exp-1", null, "x"],
+        ],
+      );
+      const devices = await databricksAdapter.getDevicePairs();
+      assertSuccess(devices);
+      // A row without a publisher names no device, so it is dropped.
+      expect(devices.value).toEqual([{ experimentId: "exp-1", clientId: "logger-1" }]);
     });
   });
 });

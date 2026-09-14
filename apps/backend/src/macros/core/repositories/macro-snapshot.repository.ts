@@ -75,10 +75,12 @@ export class MacroSnapshotRepository {
       const macroId = cell.payload.macroId;
       const snapshot = snapshots.macros?.[macroId];
       if (!snapshot?.code) continue;
+      // Snapshot language wins: the cell payload copy goes stale when the macro
+      // row's language is changed outside this workbook.
       bundle[macroId] = {
         id: macroId,
         name: cell.payload.name ?? macroId,
-        language: cell.payload.language,
+        language: snapshot.language ?? cell.payload.language,
         code: snapshot.code,
       };
     }

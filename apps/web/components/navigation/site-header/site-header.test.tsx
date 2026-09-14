@@ -83,6 +83,21 @@ describe("SiteHeader", () => {
     expect(transfer.querySelector("svg")).toBeInTheDocument();
   });
 
+  // Three actions beside an open sidebar left the section label ~30px at md,
+  // rendering it as "E..", so both text labels wait for lg.
+  it("holds the experiments action labels back until lg", () => {
+    renderHeader("/en/platform/experiments");
+
+    const archive = screen.getByRole("link", { name: "experiments.viewArchived" });
+    const transfer = screen.getByRole("link", { name: "transferRequest.title" });
+
+    for (const action of [archive, transfer]) {
+      const label = action.querySelector("span");
+      expect(label).toHaveClass("hidden", "lg:inline");
+      expect(label?.className).not.toMatch(/\bmd:inline\b/);
+    }
+  });
+
   it("uses plus icons for both device registration actions", () => {
     renderHeader("/en/platform/devices");
 

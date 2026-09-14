@@ -699,7 +699,10 @@ describe("ExperimentCollaboratorsPage", () => {
         expect(screen.getByText("experimentSettings.collaborators")).toBeInTheDocument(),
       );
       await user.click(screen.getByRole("button", { name: /experimentSettings.invite/ }));
-      await user.type(screen.getByLabelText("sharing.granteeSearchLabel"), "pending@uni.edu");
+      // Pasted rather than typed: 15 keystrokes restart the 300ms debounce 15
+      // times and re-render the modal for each one, for no extra coverage.
+      await user.click(screen.getByLabelText("sharing.granteeSearchLabel"));
+      await user.paste("pending@uni.edu");
 
       await waitFor(() =>
         expect(screen.getByText("sharing.emailAlreadyInvited")).toBeInTheDocument(),

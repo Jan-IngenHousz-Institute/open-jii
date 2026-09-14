@@ -13,6 +13,7 @@ import {
 } from "@repo/ui/components/table";
 import { cn } from "@repo/ui/lib/utils";
 
+import { IOT_DEVICE_TABLE_COLUMN_CLASS } from "./iot-device-table-columns";
 import { IotDeviceTableRow } from "./iot-device-table-row";
 
 interface IotDevicesTableProps {
@@ -28,13 +29,25 @@ export function IotDevicesTable({ devices, isLoading }: IotDevicesTableProps) {
       <Table className="table-fixed">
         <TableHeader>
           <TableRow className="bg-muted/50 border-border hover:bg-transparent">
-            <ColumnHead className="w-[30%]">{t("iot.devices.columns.name")}</ColumnHead>
-            <ColumnHead className="w-28">{t("iot.devices.columns.status")}</ColumnHead>
-            <ColumnHead className="w-28">{t("iot.devices.columns.type")}</ColumnHead>
-            <ColumnHead className="w-36">{t("iot.devices.columns.serial")}</ColumnHead>
-            <ColumnHead className="w-32">{t("iot.devices.columns.lastSeen")}</ColumnHead>
-            <ColumnHead className="w-32">{t("iot.devices.columns.created")}</ColumnHead>
-            <TableHead aria-hidden className="w-12" />
+            <ColumnHead className={IOT_DEVICE_TABLE_COLUMN_CLASS.name}>
+              {t("iot.devices.columns.name")}
+            </ColumnHead>
+            <ColumnHead className={IOT_DEVICE_TABLE_COLUMN_CLASS.status}>
+              {t("iot.devices.columns.status")}
+            </ColumnHead>
+            <ColumnHead className={IOT_DEVICE_TABLE_COLUMN_CLASS.type}>
+              {t("iot.devices.columns.type")}
+            </ColumnHead>
+            <ColumnHead className={IOT_DEVICE_TABLE_COLUMN_CLASS.serial}>
+              {t("iot.devices.columns.serial")}
+            </ColumnHead>
+            <ColumnHead className={IOT_DEVICE_TABLE_COLUMN_CLASS.lastSeen}>
+              {t("iot.devices.columns.lastSeen")}
+            </ColumnHead>
+            <ColumnHead className={IOT_DEVICE_TABLE_COLUMN_CLASS.created}>
+              {t("iot.devices.columns.created")}
+            </ColumnHead>
+            <TableHead aria-hidden className={IOT_DEVICE_TABLE_COLUMN_CLASS.actions} />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -63,25 +76,27 @@ function ColumnHead({ children, className }: { children: React.ReactNode; classN
 function SkeletonRow() {
   return (
     <TableRow className="border-border hover:bg-transparent">
-      <TableCell className="min-w-0 overflow-hidden px-6 py-3">
+      <TableCell
+        className={cn("min-w-0 overflow-hidden px-6 py-3", IOT_DEVICE_TABLE_COLUMN_CLASS.name)}
+      >
         <Skeleton className="h-4 w-40" />
       </TableCell>
-      <TableCell className="px-6 py-3">
+      <TableCell className={cn("px-6 py-3", IOT_DEVICE_TABLE_COLUMN_CLASS.status)}>
         <Skeleton className="h-5 w-20 rounded-full" />
       </TableCell>
-      <TableCell className="px-6 py-3">
+      <TableCell className={cn("px-6 py-3", IOT_DEVICE_TABLE_COLUMN_CLASS.type)}>
         <Skeleton className="h-4 w-16" />
       </TableCell>
-      <TableCell className="px-6 py-3">
+      <TableCell className={cn("px-6 py-3", IOT_DEVICE_TABLE_COLUMN_CLASS.serial)}>
         <Skeleton className="h-4 w-28" />
       </TableCell>
-      <TableCell className="px-6 py-3">
+      <TableCell className={cn("px-6 py-3", IOT_DEVICE_TABLE_COLUMN_CLASS.lastSeen)}>
         <Skeleton className="h-4 w-20" />
       </TableCell>
-      <TableCell className="px-6 py-3">
+      <TableCell className={cn("px-6 py-3", IOT_DEVICE_TABLE_COLUMN_CLASS.created)}>
         <Skeleton className="h-4 w-24" />
       </TableCell>
-      <TableCell className="w-12 px-6 py-3" />
+      <TableCell className={cn("px-6 py-3", IOT_DEVICE_TABLE_COLUMN_CLASS.actions)} />
     </TableRow>
   );
 }

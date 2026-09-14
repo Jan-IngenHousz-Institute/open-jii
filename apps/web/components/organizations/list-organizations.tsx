@@ -48,7 +48,8 @@ export function ListOrganizations() {
             aria-label={t("organizations.searchLabel")}
             clearLabel={t("common.clear")}
             loadingLabel={t("common.loading")}
-            className="w-full md:w-56"
+            // 224px left 146px for a 151px placeholder, clipping the ellipsis.
+            className="w-full md:w-64"
           />
         }
       />

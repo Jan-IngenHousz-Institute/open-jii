@@ -21,6 +21,7 @@ export class ScopedMetricsController {
         input.scope,
         session.user.id,
         input.organizationId,
+        input.experimentId,
       );
 
       if (result.isFailure()) {

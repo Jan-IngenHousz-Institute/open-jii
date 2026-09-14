@@ -57,6 +57,13 @@ export interface MacroInput {
   language?: string;
 }
 
+export class UnsupportedMacroLanguageError extends Error {
+  constructor(public readonly language: string) {
+    super(`Macro language "${language}" cannot run on this device (supported: javascript, python)`);
+    this.name = "UnsupportedMacroLanguageError";
+  }
+}
+
 export class MacroInputNormalizationError extends Error {
   constructor(
     public readonly code: "empty-envelope",
@@ -94,12 +101,18 @@ export async function applyMacro(
   const macroInput: MacroInput =
     typeof macro === "string" ? { code: macro, language: "javascript" } : macro;
   const code = atob(macroInput.code);
-  // `||`, not `??`: resolvers hand over "" when the language is unknown, and ""
-  // must fall back to javascript rather than execute as-is.
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
-  const language = (macroInput.language || "javascript").toLowerCase();
+  // Bare code strings are the legacy JavaScript API above. Structured inputs
+  // must identify their runtime; an empty value must not guess JavaScript.
+  const language = macroInput.language?.toLowerCase() ?? "";
 
   log.debug("apply", { language, source: normalized.source, code_bytes: code.length });
+
+  // Never fall through to the JS engine for a language it cannot run: Python
+  // or R source parsed as JS fails on the first `#` with a cryptic Hermes error.
+  if (language !== "javascript" && language !== "python") {
+    log.error("unsupported macro language", { language });
+    throw new UnsupportedMacroLanguageError(language);
+  }
 
   if (language === "python") {
     const runPython = getPythonMacroRunner();

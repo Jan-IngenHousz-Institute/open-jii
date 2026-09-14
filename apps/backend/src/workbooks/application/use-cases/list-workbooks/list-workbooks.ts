@@ -1,14 +1,22 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { Result } from "../../../../common/utils/fp-utils";
+import type { ResourceSeries } from "@repo/api/domains/metrics/metrics.schema";
+
+import { Result, success } from "../../../../common/utils/fp-utils";
+import { ResourceMetricsService } from "../../../../metrics/application/resource-metrics.service";
 import { WorkbookListItemDto } from "../../../core/models/workbook.model";
 import { WorkbookRepository, WorkbookFilter } from "../../../core/repositories/workbook.repository";
+
+type WorkbookWithActivity = WorkbookListItemDto & { activity: ResourceSeries | null };
 
 @Injectable()
 export class ListWorkbooksUseCase {
   private readonly logger = new Logger(ListWorkbooksUseCase.name);
 
-  constructor(private readonly workbookRepository: WorkbookRepository) {}
+  constructor(
+    private readonly workbookRepository: WorkbookRepository,
+    private readonly resourceMetrics: ResourceMetricsService,
+  ) {}
 
   async execute(filter?: WorkbookFilter): Promise<Result<WorkbookListItemDto[]>> {
     this.logger.log({
@@ -23,7 +31,7 @@ export class ListWorkbooksUseCase {
     page: number,
     pageSize: number,
     filter?: WorkbookFilter,
-  ): Promise<Result<{ items: WorkbookListItemDto[]; totalCount: number }>> {
+  ): Promise<Result<{ items: WorkbookWithActivity[]; totalCount: number }>> {
     this.logger.log({
       msg: "Listing workbooks",
       operation: "listWorkbooksPaginated",
@@ -31,6 +39,23 @@ export class ListWorkbooksUseCase {
       pageSize,
       hasSearch: !!filter?.search,
     });
-    return await this.workbookRepository.findPage(page, pageSize, filter);
+    const paged = await this.workbookRepository.findPage(page, pageSize, filter);
+    if (paged.isFailure()) {
+      return paged;
+    }
+
+    // These ids already passed the access check.
+    const series = await this.resourceMetrics.seriesFor(
+      "workbook",
+      paged.value.items.map((item) => item.id),
+    );
+
+    return success({
+      items: paged.value.items.map((item) => ({
+        ...item,
+        activity: series.get(item.id) ?? null,
+      })),
+      totalCount: paged.value.totalCount,
+    });
   }
 }

@@ -40,6 +40,7 @@ export function hydrateFlowNodes(
     if (node.type === "analysis" && node.content?.macroId) {
       const id = node.content.macroId as string;
       const cell = cells.find((c): c is MacroCell => c.type === "macro" && c.id === node.id);
+      const snapshot = snapshots?.macros[id];
       return {
         ...node,
         content: {
@@ -48,8 +49,10 @@ export function hydrateFlowNodes(
             id,
             name: cell?.payload.name ?? deriveMacroFilename(id),
             filename: deriveMacroFilename(id),
-            language: cell?.payload.language ?? "",
-            code: snapshots?.macros[id]?.code ?? "",
+            // Snapshot language wins over the cell payload copy, which goes
+            // stale when the macro row's language is changed elsewhere.
+            language: snapshot?.language ?? cell?.payload.language ?? "",
+            code: snapshot?.code ?? "",
           },
         },
       };

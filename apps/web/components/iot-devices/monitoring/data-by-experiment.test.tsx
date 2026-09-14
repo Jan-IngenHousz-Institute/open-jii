@@ -111,4 +111,21 @@ describe("DataByExperiment", () => {
 
     expect(screen.getByText("iot.devices.monitoring.noExperiments")).toBeInTheDocument();
   });
+
+  it("stacks row metadata below the experiment name on phones", () => {
+    const { container } = render(
+      <DataByExperiment
+        monitoring={monitoringWith([])}
+        boundExperiments={BOUND}
+        visibleExperiments={[]}
+        locale="en-US"
+      />,
+    );
+
+    expect(container.querySelector("li")).toHaveClass("flex-col", "sm:flex-row");
+    expect(container.querySelector('[data-slot="experiment-row-metadata"]')).toHaveClass(
+      "w-full",
+      "sm:contents",
+    );
+  });
 });

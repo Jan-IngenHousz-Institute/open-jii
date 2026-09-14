@@ -69,6 +69,60 @@ describe("CacheAdapter", () => {
       expect(cached).toBeUndefined();
     });
 
+    it("loads once for every caller that arrives while the load is running", async () => {
+      let started = 0;
+      let release: (() => void) | undefined;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+
+      const fetchFn = vi.fn(async () => {
+        started += 1;
+        await held;
+        return "warehouse";
+      });
+
+      const callers = [
+        cacheAdapter.tryCache("cold", fetchFn),
+        cacheAdapter.tryCache("cold", fetchFn),
+        cacheAdapter.tryCache("cold", fetchFn),
+      ];
+
+      release?.();
+      const results = await Promise.all(callers);
+
+      // One warehouse read, three satisfied callers.
+      expect(started).toBe(1);
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+      expect(results).toEqual(["warehouse", "warehouse", "warehouse"]);
+    });
+
+    it("gives every concurrent caller the value even when the cache write fails", async () => {
+      vi.spyOn(cacheManager, "set").mockRejectedValue(new Error("store down"));
+      const fetchFn = vi.fn().mockResolvedValue("warehouse");
+
+      const results = await Promise.all([
+        cacheAdapter.tryCache("unwritable", fetchFn),
+        cacheAdapter.tryCache("unwritable", fetchFn),
+        cacheAdapter.tryCache("unwritable", fetchFn),
+      ]);
+
+      // Nothing was stored to read back, so waiters take the load's own result.
+      expect(results).toEqual(["warehouse", "warehouse", "warehouse"]);
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+    });
+
+    it("lets the next caller load again once the first has finished", async () => {
+      const fetchFn = vi.fn().mockResolvedValue("warehouse");
+
+      await cacheAdapter.tryCache("sequential", fetchFn);
+      await cacheManager.del("macro:sequential");
+      await cacheAdapter.tryCache("sequential", fetchFn);
+
+      // Deduplication lasts for the load, not beyond it.
+      expect(fetchFn).toHaveBeenCalledTimes(2);
+    });
+
     it("should use the 'macro:' prefix for cache keys", async () => {
       const getSpy = vi.spyOn(cacheManager, "get");
       const setSpy = vi.spyOn(cacheManager, "set");

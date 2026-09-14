@@ -21,6 +21,13 @@ export interface Shot {
   readonly webauthn?: boolean;
   /** Capture without a session. Default is the seeded development session. */
   readonly anonymous?: boolean;
+  /**
+   * PostHog flags pinned on in the browser for this shot. The client SDK runs
+   * cookieless until consent settles and reports no flags in that state, so a
+   * flag-gated surface would otherwise never render; the backend still evaluates
+   * the real flag for the seeded identity.
+   */
+  readonly featureFlags?: readonly string[];
   /** Why this asset exists, carried into apps/docs/media/web/manifest.json. */
   readonly scope: string;
 }
@@ -171,6 +178,20 @@ export const SHOTS: readonly Shot[] = [
     route: async () =>
       `/platform/experiments/${await experimentId("Access Showcase Experiment")}/collaborators`,
     scope: "Collaborators tab showing every row kind the access model can produce",
+  },
+  {
+    slug: "experiment-devices",
+    publish: "img/guide/web/experiment-devices.webp",
+    frame: "desktop",
+    // Needs a local experiment whose id matches one that has published data in
+    // the dev lakehouse; the seed alone yields an empty roster.
+    route: async () => `/platform/experiments/${await experimentId("Ambyte Field Trial")}/devices`,
+    featureFlags: ["iot-devices"],
+    async prepare(page) {
+      await page.getByRole("table").waitFor({ timeout: 60_000 });
+      await settle(page, 1500);
+    },
+    scope: "Experiment Devices tab with onboarded, observed and unregistered devices and its tiles",
   },
   {
     slug: "workbook-design",

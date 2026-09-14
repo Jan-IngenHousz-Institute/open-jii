@@ -129,6 +129,34 @@ describe("PublishVersionUseCase", () => {
     expect(result.error.statusCode).toBe(403);
   });
 
+  it("pins the macro language from the live row, not the cell payload", async () => {
+    const macro = await testApp.createMacro({
+      name: "Python macro",
+      language: "python",
+      code: btoa("# python"),
+      createdBy: userId,
+    });
+    const workbook = await testApp.createWorkbook({
+      name: "WBLang",
+      cells: [
+        {
+          id: "m1",
+          type: "macro",
+          isCollapsed: false,
+          payload: { macroId: macro.id, language: "javascript" },
+        },
+      ],
+      createdBy: userId,
+    });
+
+    const result = await useCase.execute(workbook.id, userId);
+    assertSuccess(result);
+    expect(result.value.entitySnapshots.macros[macro.id]).toEqual({
+      code: btoa("# python"),
+      language: "python",
+    });
+  });
+
   it("snapshots the current cells of the workbook", async () => {
     const cells = [
       {

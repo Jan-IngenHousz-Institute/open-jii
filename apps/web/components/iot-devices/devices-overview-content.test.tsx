@@ -18,4 +18,14 @@ describe("DevicesOverviewContent", () => {
     expect(screen.queryByRole("tab", { name: "iot.devices.sections.onboarding" })).toBeNull();
     expect(screen.queryByRole("tab", { name: "iot.devices.sections.monitoring" })).toBeNull();
   });
+
+  it("does not add a second divider directly below the platform header", async () => {
+    server.mount(contract.iot.listIotDevices, { body: [] });
+    server.mount(contract.iot.listIotDeviceGroups, { body: [] });
+
+    const { container } = render(<DevicesOverviewContent />);
+
+    await screen.findByText("iot.devices.sections.groups");
+    expect(container.firstElementChild).not.toHaveClass("border-t");
+  });
 });
