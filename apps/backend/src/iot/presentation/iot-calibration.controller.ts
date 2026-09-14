@@ -1,16 +1,14 @@
-import { Controller, Inject, Logger } from "@nestjs/common";
+import { Controller, Logger } from "@nestjs/common";
 import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 
-import { FEATURE_FLAGS } from "@repo/analytics";
 import { iotCalibrationContract } from "@repo/api/domains/iot/calibration/iot-calibration.contract";
 
 import { CanAccess } from "../../authorization/can-access.decorator";
 import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
-import { AppError } from "../../common/utils/fp-utils";
-import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { ApproveCalibrationRunUseCase } from "../application/use-cases/approve-calibration-run/approve-calibration-run";
 import { CreateCalibrationDefinitionUseCase } from "../application/use-cases/create-calibration-definition/create-calibration-definition";
 import { CreateCalibrationRunUseCase } from "../application/use-cases/create-calibration-run/create-calibration-run";
@@ -24,17 +22,12 @@ import { ListDeviceCalibrationRunsUseCase } from "../application/use-cases/list-
 import { ListDeviceCalibrationsUseCase } from "../application/use-cases/list-device-calibrations/list-device-calibrations";
 import { RejectCalibrationRunUseCase } from "../application/use-cases/reject-calibration-run/reject-calibration-run";
 import { ReportDeviceCalibrationWriteUseCase } from "../application/use-cases/report-device-calibration-write/report-device-calibration-write";
-import { ANALYTICS_PORT } from "../core/ports/analytics.port";
-import type { AnalyticsPort } from "../core/ports/analytics.port";
 
-// Calibrations ride the same feature flag as the device registry they serve.
 @Controller()
 export class IotCalibrationController {
   private readonly logger = new Logger(IotCalibrationController.name);
 
   constructor(
-    @Inject(ANALYTICS_PORT)
-    private readonly analyticsPort: AnalyticsPort,
     private readonly createCalibrationDefinitionUseCase: CreateCalibrationDefinitionUseCase,
     private readonly listCalibrationDefinitionsUseCase: ListCalibrationDefinitionsUseCase,
     private readonly getCalibrationDefinitionUseCase: GetCalibrationDefinitionUseCase,
@@ -50,27 +43,10 @@ export class IotCalibrationController {
     private readonly reportDeviceCalibrationWriteUseCase: ReportDeviceCalibrationWriteUseCase,
   ) {}
 
-  private devicesEnabled(session: UserSession): Promise<boolean> {
-    return this.analyticsPort.isFeatureFlagEnabled(
-      FEATURE_FLAGS.IOT_DEVICES,
-      session.user.email || session.user.id,
-    );
-  }
-
-  private disabled(operation: string): never {
-    return throwOrpcError(
-      AppError.forbidden("The device registry is currently disabled"),
-      this.logger,
-      operation,
-    );
-  }
-
   @Implement(iotCalibrationContract.listCalibrationDefinitions)
   listCalibrationDefinitions(@Session() session: UserSession) {
     return implement(iotCalibrationContract.listCalibrationDefinitions).handler(
       async ({ input }) => {
-        if (!(await this.devicesEnabled(session))) this.disabled("listCalibrationDefinitions");
-
         const result = await this.listCalibrationDefinitionsUseCase.execute(
           session.user.id,
           input.family,
@@ -97,10 +73,8 @@ export class IotCalibrationController {
 
   @CanAccess({ resource: "calibration_definition", action: "read", param: "definitionId" })
   @Implement(iotCalibrationContract.getCalibrationDefinition)
-  getCalibrationDefinition(@Session() session: UserSession) {
+  getCalibrationDefinition() {
     return implement(iotCalibrationContract.getCalibrationDefinition).handler(async ({ input }) => {
-      if (!(await this.devicesEnabled(session))) this.disabled("getCalibrationDefinition");
-
       const result = await this.getCalibrationDefinitionUseCase.execute(input.definitionId);
 
       if (result.isSuccess()) {
@@ -116,8 +90,6 @@ export class IotCalibrationController {
   createCalibrationDefinition(@Session() session: UserSession) {
     return implement(iotCalibrationContract.createCalibrationDefinition).handler(
       async ({ input }) => {
-        if (!(await this.devicesEnabled(session))) this.disabled("createCalibrationDefinition");
-
         const result = await this.createCalibrationDefinitionUseCase.execute(
           input,
           session.user.id,
@@ -137,8 +109,6 @@ export class IotCalibrationController {
   deleteCalibrationDefinition(@Session() session: UserSession) {
     return implement(iotCalibrationContract.deleteCalibrationDefinition).handler(
       async ({ input }) => {
-        if (!(await this.devicesEnabled(session))) this.disabled("deleteCalibrationDefinition");
-
         const result = await this.deleteCalibrationDefinitionUseCase.execute(
           input.definitionId,
           session.user.id,
@@ -158,8 +128,6 @@ export class IotCalibrationController {
   @Implement(iotCalibrationContract.createCalibrationRun)
   createCalibrationRun(@Session() session: UserSession) {
     return implement(iotCalibrationContract.createCalibrationRun).handler(async ({ input }) => {
-      if (!(await this.devicesEnabled(session))) this.disabled("createCalibrationRun");
-
       const result = await this.createCalibrationRunUseCase.execute(input, session.user.id);
 
       if (result.isSuccess()) {
@@ -175,8 +143,6 @@ export class IotCalibrationController {
   createExternalCalibrationRun(@Session() session: UserSession) {
     return implement(iotCalibrationContract.createExternalCalibrationRun).handler(
       async ({ input }) => {
-        if (!(await this.devicesEnabled(session))) this.disabled("createExternalCalibrationRun");
-
         const result = await this.createExternalCalibrationRunUseCase.execute(
           input,
           session.user.id,
@@ -193,11 +159,9 @@ export class IotCalibrationController {
 
   @CanAccess({ resource: "device", action: "read", param: "deviceId" })
   @Implement(iotCalibrationContract.listDeviceCalibrationRuns)
-  listDeviceCalibrationRuns(@Session() session: UserSession) {
+  listDeviceCalibrationRuns() {
     return implement(iotCalibrationContract.listDeviceCalibrationRuns).handler(
       async ({ input }) => {
-        if (!(await this.devicesEnabled(session))) this.disabled("listDeviceCalibrationRuns");
-
         const result = await this.listDeviceCalibrationRunsUseCase.execute(input.deviceId);
 
         if (result.isSuccess()) {
@@ -212,8 +176,6 @@ export class IotCalibrationController {
   @Implement(iotCalibrationContract.getCalibrationRun)
   getCalibrationRun(@Session() session: UserSession) {
     return implement(iotCalibrationContract.getCalibrationRun).handler(async ({ input }) => {
-      if (!(await this.devicesEnabled(session))) this.disabled("getCalibrationRun");
-
       const result = await this.getCalibrationRunUseCase.execute(input.runId, session.user.id);
 
       if (result.isSuccess()) {
@@ -227,8 +189,6 @@ export class IotCalibrationController {
   @Implement(iotCalibrationContract.approveCalibrationRun)
   approveCalibrationRun(@Session() session: UserSession) {
     return implement(iotCalibrationContract.approveCalibrationRun).handler(async ({ input }) => {
-      if (!(await this.devicesEnabled(session))) this.disabled("approveCalibrationRun");
-
       const result = await this.approveCalibrationRunUseCase.execute(input.runId, session.user.id);
 
       if (result.isSuccess()) {
@@ -242,8 +202,6 @@ export class IotCalibrationController {
   @Implement(iotCalibrationContract.rejectCalibrationRun)
   rejectCalibrationRun(@Session() session: UserSession) {
     return implement(iotCalibrationContract.rejectCalibrationRun).handler(async ({ input }) => {
-      if (!(await this.devicesEnabled(session))) this.disabled("rejectCalibrationRun");
-
       const result = await this.rejectCalibrationRunUseCase.execute(input.runId, session.user.id);
 
       if (result.isSuccess()) {
@@ -256,11 +214,9 @@ export class IotCalibrationController {
 
   @CanAccess({ resource: "device", action: "read", param: "deviceId" })
   @Implement(iotCalibrationContract.getActiveDeviceCalibration)
-  getActiveDeviceCalibration(@Session() session: UserSession) {
+  getActiveDeviceCalibration() {
     return implement(iotCalibrationContract.getActiveDeviceCalibration).handler(
       async ({ input }) => {
-        if (!(await this.devicesEnabled(session))) this.disabled("getActiveDeviceCalibration");
-
         const result = await this.getActiveDeviceCalibrationUseCase.execute(input.deviceId);
 
         if (result.isSuccess()) {
@@ -274,10 +230,8 @@ export class IotCalibrationController {
 
   @CanAccess({ resource: "device", action: "read", param: "deviceId" })
   @Implement(iotCalibrationContract.listDeviceCalibrations)
-  listDeviceCalibrations(@Session() session: UserSession) {
+  listDeviceCalibrations() {
     return implement(iotCalibrationContract.listDeviceCalibrations).handler(async ({ input }) => {
-      if (!(await this.devicesEnabled(session))) this.disabled("listDeviceCalibrations");
-
       const result = await this.listDeviceCalibrationsUseCase.execute(input.deviceId);
 
       if (result.isSuccess()) {
@@ -292,8 +246,6 @@ export class IotCalibrationController {
   reportDeviceCalibrationWrite(@Session() session: UserSession) {
     return implement(iotCalibrationContract.reportDeviceCalibrationWrite).handler(
       async ({ input }) => {
-        if (!(await this.devicesEnabled(session))) this.disabled("reportDeviceCalibrationWrite");
-
         const result = await this.reportDeviceCalibrationWriteUseCase.execute(
           input,
           session.user.id,
