@@ -1,4 +1,4 @@
-import { and, eq, inArray, like } from "drizzle-orm";
+import { and, eq, inArray, like, or } from "drizzle-orm";
 
 import { zCreateCalibrationDefinitionBody } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 
@@ -39,6 +39,13 @@ const EXPERIMENT_ID_WINTER_WHEAT = "3e5309b8-d5f2-4f7a-b20a-8b5e1e73a9f1";
 // Has a real QUESTIONS-typed column in the silver layer, useful for
 // demoing per-answer grouping on the bar chart.
 const EXPERIMENT_ID_CORN_QUESTIONS = "e917055f-b786-4d7b-a9da-acad73c4dab4";
+// The seed owns these rows whatever they were renamed to; a rename must not
+// leave a row behind that the next seed collides with.
+const SEED_EXPERIMENT_IDS = [
+  EXPERIMENT_ID_SOIL_HEALTH,
+  EXPERIMENT_ID_WINTER_WHEAT,
+  EXPERIMENT_ID_CORN_QUESTIONS,
+];
 
 // Contributor UUIDs that appear inside the contributor STRUCT on those
 // Databricks rows. Local user rows aren't strictly required for chart
@@ -86,7 +93,7 @@ async function clearSeedData() {
   const seedExperiments = await db
     .select({ id: experiments.id })
     .from(experiments)
-    .where(like(experiments.name, SEED_PREFIX));
+    .where(or(like(experiments.name, SEED_PREFIX), inArray(experiments.id, SEED_EXPERIMENT_IDS)));
   const seedExpIds = seedExperiments.map((e) => e.id);
 
   if (seedExpIds.length > 0) {
