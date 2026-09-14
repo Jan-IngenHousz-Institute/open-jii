@@ -30,7 +30,9 @@ describe("WorkspaceBand", () => {
     const { container } = render(<WorkspaceBand>Body</WorkspaceBand>);
 
     expect(screen.getByText("Body")).toBeInTheDocument();
-    expect(container.firstElementChild).toHaveClass("bg-canvas", "border-t");
+    // Untinted: the device pages carry no canvas gradient.
+    expect(container.firstElementChild).toHaveClass("border-t");
+    expect(container.firstElementChild).not.toHaveClass("bg-canvas");
     expect(container.firstElementChild).toHaveClass("-mx-4", "md:-mx-6");
   });
 

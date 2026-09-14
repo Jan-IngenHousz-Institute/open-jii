@@ -15,15 +15,15 @@ interface WorkspaceBandProps {
 }
 
 /**
- * The platform's workspace surface, as the analysis pages define it: a
- * full-bleed tinted band that owns the rest of the viewport, with the page's
- * working content floating on it as cards.
+ * The platform's workspace surface: a full-bleed band that owns the rest of the
+ * viewport, with the page's working content floating on it as cards. Untinted;
+ * the analysis pages that want the canvas gradient set `bg-canvas` themselves.
  */
 export function WorkspaceBand({ children, flush = false, className }: WorkspaceBandProps) {
   return (
     <div
       className={cn(
-        "bg-canvas border-border flex min-w-0 flex-1 flex-col border-t",
+        "border-border flex min-w-0 flex-1 flex-col border-t",
         workspaceBleed,
         flush && "-mt-4 md:-mt-6",
         className,
