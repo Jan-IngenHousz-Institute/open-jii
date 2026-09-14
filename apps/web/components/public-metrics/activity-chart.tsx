@@ -58,6 +58,7 @@ export function ActivityChart({ data, locale }: ActivityChartProps) {
   const config: PlotlyChartConfig = {
     showLegend: false,
     showModeBar: false,
+    showHoverName: false,
     // A display chart: hover reads values, drag would zoom or select.
     dragMode: false,
     scrollZoom: false,

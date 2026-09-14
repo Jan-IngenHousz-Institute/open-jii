@@ -18,11 +18,24 @@ export interface PlotlyChartConfig extends Partial<Config> {
   showLegend?: boolean;
   showGrid?: boolean;
   /**
+   * The trace-name chip beside the hover label. Plotly paints it from the
+   * series colour over the paper background and ignores `hoverlabel`, so on a
+   * transparent paper it flattens to white and stays white in dark mode. Turn
+   * it off on single-series charts, where the name repeats the heading.
+   */
+  showHoverName?: boolean;
+  /**
    * Strip the chart to its line: no axes, ticks, grid, or margins. For
    * trend indicators sitting beside text, where the shape is the message
    * and hover carries the values.
    */
   sparkline?: boolean;
+  /**
+   * Overrides the themed series palette. User-built charts pin a frozen one:
+   * `colorway` is editType 'calc', so letting it follow the theme makes every
+   * chart on a dashboard recalculate on a light/dark toggle.
+   */
+  colorway?: readonly string[];
   backgroundColor?: string;
   /**
    * Where to anchor the legend.

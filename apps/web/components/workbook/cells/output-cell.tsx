@@ -340,7 +340,7 @@ export function OutputCellComponent({
   const showTimeseries = protocolFamily === "multispeq" && isMultispeqOutput(cell.data);
 
   return (
-    <Card className="group/output relative mt-1 gap-0 overflow-hidden py-0">
+    <Card padding="none" className="group/output relative mt-1 overflow-hidden">
       <div className={`px-4 ${isCollapsed ? "py-2" : "pb-3 pt-3"}`}>
         <div className={isCollapsed ? "flex items-center gap-2" : "mb-2 flex items-center gap-2"}>
           <Button

@@ -33,6 +33,8 @@
     "confirm": "Bevestigen",
     "confirmDelete": null,
     "close": "Sluiten",
+    "expandDetails": "Details uitklappen",
+    "collapseDetails": "Details inklappen",
     "copy": "Kopiëren",
     "copied": "Gekopieerd",
     "yes": "Ja",

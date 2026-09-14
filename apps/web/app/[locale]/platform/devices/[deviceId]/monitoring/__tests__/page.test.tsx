@@ -107,7 +107,9 @@ describe("DeviceMonitoringPage", () => {
 
     expect(await screen.findByText("iot.devices.monitoring.availabilityTitle")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.monitoring.throughputTitle")).toBeInTheDocument();
-    expect(screen.getByText("Soil Health")).toBeInTheDocument();
+    // By role: the name also appears as a Plotly axis label once the
+    // lazy chart paints, so a bare text match is a race.
+    expect(screen.getByRole("link", { name: /Soil Health/ })).toBeInTheDocument();
     expect(screen.getByText("iot.devices.monitoring.payloadTitle")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.monitoring.batteryTitle")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.monitoring.eventLogTitle")).toBeInTheDocument();

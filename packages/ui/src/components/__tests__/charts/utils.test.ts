@@ -3,19 +3,20 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 
 import type { PlotlyChartConfig } from "../../charts/types";
 import {
-  detectWebGLSupport,
-  getRenderer,
-  validateDimensions,
-  getPlotType,
-  createBaseLayout,
-  createSubplotLayout,
-  create3DLayout,
-  createPlotlyConfig,
-  detectAxisType,
-  refineAxisType,
-  extendLayoutForFacets,
-  defaultFacetColumns,
   applyReferenceLines,
+  create3DLayout,
+  createBaseLayout,
+  createPlotlyConfig,
+  createSubplotLayout,
+  defaultFacetColumns,
+  detectAxisType,
+  detectWebGLSupport,
+  extendLayoutForFacets,
+  getPlotType,
+  getRenderer,
+  invalidateThemeTokenCache,
+  refineAxisType,
+  validateDimensions,
 } from "../../charts/utils";
 import type { ReferenceLineSpec } from "../../charts/utils";
 
@@ -49,6 +50,8 @@ Object.defineProperty(document, "createElement", {
 describe("utils", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // These set theme tokens on the root; nothing observes that without a chart.
+    invalidateThemeTokenCache();
   });
 
   afterEach(() => {
@@ -502,6 +505,15 @@ describe("utils", () => {
       expect((layout.title as { font: { size: number } }).font.size).toBe(11);
       expect(layout.legend?.font?.size).toBe(9);
       expect(layout.hoverlabel?.font?.size).toBe(10);
+    });
+
+    it("keeps Plotly's trace-name chip by default and drops it on request", () => {
+      expect(createBaseLayout(baseConfig).hoverlabel?.namelength).toBeUndefined();
+      // 0 empties the name, and Plotly removes the chip rather than drawing an
+      // empty one. It is the only hover surface `hoverlabel` cannot colour.
+      expect(createBaseLayout({ ...baseConfig, showHoverName: false }).hoverlabel?.namelength).toBe(
+        0,
+      );
     });
 
     it("shrinks cell-axis fonts and adds nticks cap under cellCompact", () => {

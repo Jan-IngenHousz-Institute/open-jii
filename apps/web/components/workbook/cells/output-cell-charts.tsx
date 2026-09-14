@@ -7,6 +7,8 @@ import { Button } from "@repo/ui/components/button";
 import { Card } from "@repo/ui/components/card";
 import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
 import { LineChart } from "@repo/ui/components/charts/line-chart";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
+import { readThemeColor } from "@repo/ui/components/charts/utils";
 
 export type ChartClickHandler = (data: number[], columnName: string) => void;
 
@@ -49,7 +51,7 @@ export function Sparkline({
         <path
           d={path}
           fill="none"
-          stroke="var(--primary)"
+          className="stroke-primary"
           strokeWidth="1"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -70,18 +72,21 @@ export function ExpandedChart({
   onClose: () => void;
 }) {
   const { t } = useTranslation("workbook");
+  // Plotly parses colour itself and cannot read a CSS variable.
+  useChartThemeRefresh();
+  const lineColor = readThemeColor("--primary") ?? "#0f766e";
   const plotData: LineSeriesData[] = [
     {
       name: columnName,
       x: data.map((_, idx) => idx),
       y: data,
       mode: "lines",
-      line: { color: "var(--primary)", width: 2 },
+      line: { color: lineColor, width: 2 },
       showlegend: false,
     },
   ];
   return (
-    <Card className="mt-3 gap-0 overflow-hidden py-0">
+    <Card padding="none" className="mt-3 overflow-hidden">
       <div className="border-border bg-muted flex items-center justify-between border-b px-3 py-1.5">
         <span className="text-foreground text-xs font-semibold">{columnName}</span>
         <Button

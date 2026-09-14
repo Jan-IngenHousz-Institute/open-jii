@@ -27,7 +27,8 @@
         "type": "Typ",
         "user": "Benutzer",
         "updated": "Aktualisiert"
-      }
+      },
+      "updatedAgo": "Aktualisiert {{date}}"
     }
   },
   "form": {

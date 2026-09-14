@@ -5,12 +5,15 @@ description: "Inspect, filter, annotate, and visualize an experiment's processed
 
 {/* verified: code@efd66bdd4 2026-08-04 */}
 
-Open an experiment and select **Data**. Each processed dataset appears as a tab
-with its display name and row count.
+Open an experiment and select **Data**. The dataset picker above the table names
+the dataset you are looking at and its row count. Opening it lists every dataset
+in the experiment, grouped by where it came from: the source tables, anything a
+macro produced, and anything uploaded.
 
 ## Inspect a table
 
-- Select a dataset tab to change tables.
+- Open the dataset picker to change tables. Type to filter it when an
+  experiment holds many datasets.
 - Select a column heading to sort ascending or descending.
 - Use filter chips to narrow rows by one or more columns.
 - Change the rows per page or move through pages.
@@ -21,6 +24,7 @@ Numeric columns can open a quick table chart. This is useful for checking a
 distribution while cleaning data; it is not a saved analysis.
 
 {/* NEEDS-LIVE-CHECK: confirm representative MultispeQ and Ambyte tables, filter operators, raw-trace visibility, and the processing delay from mobile sync to visible row. */}
+{/* NEEDS-RECAPTURE: this frame predates the dataset picker and still shows the tab strip it replaced. */}
 ![A populated Data tab with dataset tabs, filtering controls, and sortable columns](/img/guide/web/data-first-measurement.png)
 
 ![A saved line visualization built from an experiment dataset](/img/guide/web/charts-filters.png)

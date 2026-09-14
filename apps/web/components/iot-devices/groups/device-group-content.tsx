@@ -91,7 +91,7 @@ export function DeviceGroupContent() {
           )}
 
           {(members ?? []).length === 0 ? (
-            <Card className="shadow-none">
+            <Card padding="none" className="shadow-none">
               <CardContent className="text-muted-foreground py-10 text-center text-sm">
                 {t("iot.groups.noMembers")}
               </CardContent>

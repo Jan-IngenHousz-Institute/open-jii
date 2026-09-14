@@ -167,7 +167,15 @@
     "readMore": "Mehr erfahren",
     "uploadMetadata": "Metadaten hochladen",
     "editMetadata": "Metadaten bearbeiten",
-    "uploadSensorData": "Sensordaten hochladen"
+    "uploadSensorData": "Sensordaten hochladen",
+    "datasetLabel": "Datensatz",
+    "datasetPlaceholder": "Datensätze suchen...",
+    "datasetEmpty": "Kein passender Datensatz.",
+    "datasetRows_one": "{{rows}} Zeile",
+    "datasetRows_other": "{{rows}} Zeilen",
+    "datasetGroupStatic": "Quelle",
+    "datasetGroupMacro": "Verarbeitet",
+    "datasetGroupUpload": "Hochgeladen"
   },
   "experiment": "Experiment",
   "experimentId": "Experiment-ID",
@@ -369,11 +377,6 @@
     "emptyTitle": "Noch keine Daten",
     "empty": "Tabellen erscheinen hier, sobald ein Gerät in dieses Experiment sendet, ein Makro läuft oder Sie eine Datei hochladen.",
     "loadError": "Die Daten dieses Experiments konnten nicht geladen werden.",
-    "type": {
-      "static": "Roh",
-      "macro": "Verarbeitet",
-      "upload": "Hochgeladen"
-    },
     "rowUnit_one": "Zeile",
     "rowUnit_other": "Zeilen"
   }
