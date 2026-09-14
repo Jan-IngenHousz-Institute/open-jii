@@ -29,6 +29,9 @@ export function parseArgs(args: string[]): QueryArgs {
   if ((document === null) === (file === null)) {
     throw new Error("Pass exactly one of --query <document> or --file <path>");
   }
+  if (file !== null && !/\.(graphql|gql)$/.test(file)) {
+    throw new Error("--file must point at a .graphql or .gql document");
+  }
 
   const rawVariables = optionAfter(args, "--variables");
   let variables: Record<string, unknown> = {};

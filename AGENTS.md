@@ -102,9 +102,10 @@ secret reads it itself: each app loads its own `.env`, the devkit resolves the L
 OS keychain, and `curl -H @.claude/session.header` reads the local session. Copying an env file into
 another checkout's env file is fine; copying it anywhere else is not. `.claude/settings.json` denies
 the file tools those paths outright; a second `PreToolUse` hook, `.claude/hooks/protect-secrets.sh`,
-catches what deny rules cannot see (`grep -r`, `python open()`, `cp`, `source`) and blocks
-publishing commands (`eas update`, `eas submit`). Releases and
-infrastructure are run by people, never by an agent. The Bash sandbox is opt-in through
+catches what deny rules cannot see (`grep -r`, `python open()`, `cp`, `source`), keeps the keychain,
+the clipboard and the environment closed (no `security find-generic-password`, no bare `pbpaste`,
+no `env`, no `$SOME_TOKEN` on a command line) and blocks publishing commands (`eas update`,
+`eas submit`). Releases and infrastructure are run by people, never by an agent. The Bash sandbox is opt-in through
 `/sandbox`; once it is on, the tracked `sandbox.credentials` entries keep the developer's CLI logins
 out of sandboxed commands. Never pass a secret as a command-line argument or write one into a
 ticket, PR, canvas or log. `.env.example`, `.env.default` and `.env.test` hold no secrets and are

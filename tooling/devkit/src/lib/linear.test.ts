@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createLinearClient, describeOperation, isDestructive } from "./linear.js";
+import { createLinearClient, describeOperation, isDestructive, selectsSecret } from "./linear.js";
 import type { AuditEntry } from "./linear.js";
 
 function okResponse(data: unknown): Response {
@@ -38,7 +38,30 @@ describe("isDestructive", () => {
   });
 });
 
+describe("selectsSecret", () => {
+  it("catches the secret fields wherever they sit in the selection", () => {
+    expect(selectsSecret("{ webhooks { nodes { id secret } } }")).toBe(true);
+    expect(selectsSecret("{ webhooks { nodes { id\nsecret\n} } }")).toBe(true);
+    expect(selectsSecret("{ oauth { clientSecret } }")).toBe(true);
+  });
+
+  it("ignores the word inside string arguments and longer names", () => {
+    expect(selectsSecret('{ issueSearch(query: "secret rotation") { nodes { id } } }')).toBe(false);
+    expect(selectsSecret("{ webhooks { nodes { id secretless } } }")).toBe(false);
+  });
+});
+
 describe("createLinearClient", () => {
+  it("refuses to select a secret before any request is made", async () => {
+    const request = vi.fn<typeof fetch>();
+    const client = createLinearClient({ apiKey: "k", request, allowDestructive: true });
+
+    await expect(client.query("{ webhooks { nodes { secret } } }")).rejects.toThrow(
+      "Refusing to select secret",
+    );
+    expect(request).not.toHaveBeenCalled();
+  });
+
   it("sends the key bare in the Authorization header", async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(okResponse({ viewer: { name: "P" } }));
     const client = createLinearClient({ apiKey: "lin_api_test", request });

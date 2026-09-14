@@ -46,6 +46,12 @@ export function isDestructive(field: string): boolean {
   return /(Delete|Archive)$/.test(field);
 }
 
+// A webhook's signing secret is the one thing a personal key can read that must never be printed.
+export function selectsSecret(document: string): boolean {
+  const withoutStrings = document.replace(/"(?:[^"\\]|\\.)*"/g, '""');
+  return /(^|[^A-Za-z0-9_])(secret|clientSecret)([^A-Za-z0-9_]|$)/.test(withoutStrings);
+}
+
 // Names the top-level selections. A guard for the policy, not a GraphQL parser.
 export function describeOperation(document: string): OperationSummary {
   const kind: OperationSummary["kind"] = /^\s*mutation\b/.test(document) ? "mutation" : "query";
@@ -120,6 +126,12 @@ export function createLinearClient(options: LinearClientOptions): LinearClient {
 
   return {
     async query<T>(document: string, variables: Record<string, unknown> = {}): Promise<T> {
+      if (selectsSecret(document)) {
+        throw new Error(
+          "Refusing to select secret or clientSecret; signing secrets stay in Linear",
+        );
+      }
+
       const operation = describeOperation(document);
       if (operation.kind === "mutation" && !allowDestructive) {
         const destructive = operation.fields.filter(isDestructive);

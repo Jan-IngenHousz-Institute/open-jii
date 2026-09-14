@@ -82,6 +82,49 @@ for pattern in \
   fi
 done
 
+# The keychain, the clipboard and the environment are the other places a credential sits. The
+# devkit reads the keychain in-process; the one clipboard use is piping a pasted key into
+# pnpm linear:auth; the session cookie only ever travels as a file, to the local backend.
+KEYCHAIN='(^|[[:space:]|;&(])(security[[:space:]]+(find-generic-password|find-internet-password|add-generic-password|add-internet-password|dump-keychain|export)|secret-tool[[:space:]]+(lookup|search|store))([[:space:]]|$)'
+CLIPBOARD='(^|[[:space:]|;&(])(pbpaste|wl-paste|xclip|xsel)([[:space:]]|$)'
+CLIPBOARD_TO_AUTH='^[[:space:]]*(pbpaste|wl-paste|xclip[^|]*|xsel[^|]*)[[:space:]]*\|[[:space:]]*pnpm[[:space:]]+linear:auth([[:space:]]+--file)?[[:space:]]*$'
+ENV_DUMP='(^|[[:space:]|;&(])(env|printenv|set|(export|declare|typeset)([[:space:]]+-[px])?)[[:space:]]*($|[|;&>)])'
+SECRET_VAR='[A-Z0-9_]*(API_KEY|ACCESS_KEY|SECRET|TOKEN|PASSWORD|PRIVATE_KEY|CREDENTIALS)[A-Z0-9_]*'
+SECRET_VAR_USE='(\$\{?'"${SECRET_VAR}"'|printenv[[:space:]]+'"${SECRET_VAR}"'|(^|[[:space:]|;&(])(export[[:space:]]+)?'"${SECRET_VAR}"'=[^[:space:]])'
+# Inline scripts get the same treatment; a code search for process.env is not an interpreter call.
+INTERPRETER='(^|[[:space:]|;&(])(node|tsx|bun|deno|python3?|ruby|perl|php)[[:space:]]'
+INLINE_ENV_DUMP='(process\.env|os\.environ)([^A-Za-z0-9_.[]|$)'
+INLINE_SECRET_READ='(process\.env(\.|\[[^A-Za-z0-9_]{0,3})|os\.environ(\[|\.get\()[^A-Za-z0-9_]{0,3}|getenv\([^A-Za-z0-9_]{0,3})'"${SECRET_VAR}"
+
+if mentions "$KEYCHAIN"; then
+  block "this reads or writes the OS keychain; pnpm linear:auth and pnpm linear:query do that in-process."
+fi
+if mentions "$CLIPBOARD" && ! mentions "$CLIPBOARD_TO_AUTH"; then
+  block "this reads the clipboard; the one allowed form is: pbpaste | pnpm linear:auth"
+fi
+if mentions "$ENV_DUMP"; then
+  block "this dumps the environment."
+fi
+if mentions "$SECRET_VAR_USE"; then
+  block "this prints a credential variable or puts one on the command line."
+fi
+if mentions "$INTERPRETER" && { mentions "$INLINE_ENV_DUMP" || mentions "$INLINE_SECRET_READ"; }; then
+  block "this reads the environment from an inline script."
+fi
+if mentions '(local:login|commands/login\.ts)[^|;&]*[[:space:]]--print([[:space:]]|$)'; then
+  block "this prints the session cookie; pnpm local:login writes .claude/session.header instead."
+fi
+if mentions "(^|[[:space:]|;&(])curl[[:space:]]" && mentions "$SESSION_HEADER"; then
+  HOSTS=$(printf '%s' "$COMMAND" | grep -oE "https?://[^/[:space:]'\"?#]+" | sed -E 's#^https?://##; s#:[0-9]+$##')
+  [ -n "$HOSTS" ] || block "this uses the local session without a literal 127.0.0.1 URL."
+  for host in $HOSTS; do
+    case "$host" in
+      localhost | 127.0.0.1 | '[::1]') ;;
+      *) block "this sends the local session to $host; it is only for the local backend." ;;
+    esac
+  done
+fi
+
 mentions "${ANY_SECRET}${TERMINATOR}" || exit 0
 
 # The command names a secret file. Reading, sourcing, uploading or copying it elsewhere is what gets

@@ -35,6 +35,12 @@ describe("parseArgs", () => {
     expect(() => parseArgs(["--query", "{ a }", "--variables", "[1]"])).toThrow("JSON object");
     expect(() => parseArgs(["--query"])).toThrow("--query requires a value");
   });
+
+  it("reads only GraphQL documents from disk, never an env or auth file", () => {
+    expect(() => parseArgs(["--file", ".claude/.env"])).toThrow(".graphql or .gql");
+    expect(() => parseArgs(["--file", "apps/e2e/.auth/user.json"])).toThrow(".graphql or .gql");
+    expect(parseArgs(["--file", "queries/open.gql"]).file).toBe("queries/open.gql");
+  });
 });
 
 describe("runQuery", () => {
