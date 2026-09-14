@@ -18,6 +18,7 @@ import type {
   ReadStep,
   SeriesCell,
   SeriesRow,
+  SetStep,
   SetpointValue,
   SweepStep,
 } from "./types";
@@ -114,6 +115,9 @@ class ProcedureRunner {
       case "settle":
         await this.sleep(step.ms);
         return;
+      case "set":
+        await this.runSetStep(step);
+        return;
       case "read":
         await this.runReadStep(step);
         return;
@@ -121,6 +125,15 @@ class ProcedureRunner {
         await this.runSweepStep(step);
         return;
     }
+  }
+
+  /** A set step produces no series, so an absent instrument always aborts. */
+  private async runSetStep(step: SetStep): Promise<void> {
+    const unavailable = this.missingSetpointRole(step.instrument);
+    if (unavailable) {
+      throw new ProcedureRigError(`Cannot set ${step.instrument} ${step.set}: ${unavailable}`);
+    }
+    await this.applySetpoint(step.instrument, step.set, step.value);
   }
 
   private async runReadStep(step: ReadStep): Promise<void> {
@@ -176,14 +189,20 @@ class ProcedureRunner {
       return this.context.operator.acknowledge(interpolate(step.stimulus.operator, value));
     }
 
-    const target = this.context.rig[step.stimulus.instrument]?.setpoint;
-    if (!target) {
-      throw new ProcedureRigError(
-        `Instrument "${step.stimulus.instrument}" cannot apply setpoints`,
-      );
-    }
-    await target.applySetpoint(step.stimulus.set, step.stimulus.values[index]);
+    await this.applySetpoint(
+      step.stimulus.instrument,
+      step.stimulus.set,
+      step.stimulus.values[index],
+    );
     return true;
+  }
+
+  private async applySetpoint(role: string, name: string, value: number): Promise<void> {
+    const target = this.context.rig[role]?.setpoint;
+    if (!target) {
+      throw new ProcedureRigError(`Instrument "${role}" cannot apply setpoints`);
+    }
+    await target.applySetpoint(name, value);
   }
 
   private async takeReads(reads: ProcedureRead[]): Promise<SeriesRow> {
@@ -311,6 +330,8 @@ function describeStep(step: ProcedureStep): string {
       return step.prompt;
     case "settle":
       return `Settle ${step.ms} ms`;
+    case "set":
+      return `Set ${step.instrument} ${step.set} to ${step.value}`;
     case "read":
       return `Read ${step.series}`;
     case "sweep":

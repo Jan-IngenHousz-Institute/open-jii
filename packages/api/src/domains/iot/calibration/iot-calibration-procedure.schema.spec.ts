@@ -88,6 +88,8 @@ const automatedMiniparProcedure = {
     { role: "par_ref", handshake: "raw REPL" },
   ],
   steps: [
+    { kind: "set", instrument: "lamp", set: "current_a", value: 0 },
+    { kind: "set", instrument: "lamp", set: "voltage_v", value: 25 },
     {
       kind: "sweep",
       series: "par_sweep",
@@ -227,6 +229,13 @@ describe("zCaptureProcedure", () => {
       expect(procedureSeriesNames(parsed)).toEqual(["par_sweep", "led_sweep", "adpd_baseline"]);
     });
 
+    // The supply is set up before the sweep; those steps read nothing.
+    it("produces no series from set steps", () => {
+      const parsed = zCaptureProcedure.parse(automatedMiniparProcedure);
+      expect(procedureSeriesNames(parsed)).toEqual(["par_sweep"]);
+      expect(requiredProcedureSeriesNames(parsed)).toEqual(["par_sweep"]);
+    });
+
     // A bench without the Emit_LED MiniPAR and without the dark fixture still
     // produces a useful PAR calibration, so only its series is required.
     it("excludes optional steps from the required series", () => {
@@ -251,6 +260,30 @@ describe("zCaptureProcedure", () => {
       const result = zCaptureProcedure.safeParse({
         ...ambitFactoryProcedure,
         instruments: ambitFactoryProcedure.instruments.filter((i) => i.role !== "lamp"),
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects a set step aimed at an undeclared instrument", () => {
+      const result = zCaptureProcedure.safeParse({
+        ...automatedMiniparProcedure,
+        steps: [
+          { kind: "set", instrument: "supply", set: "voltage_v", value: 25 },
+          ...automatedMiniparProcedure.steps,
+        ],
+      });
+      expect(result.success).toBe(false);
+      expect(result.success ? [] : result.error.issues.map((issue) => issue.path)).toContainEqual([
+        "steps",
+        0,
+        "instrument",
+      ]);
+    });
+
+    it("rejects a set step without a numeric value", () => {
+      const result = zCaptureProcedure.safeParse({
+        ...automatedMiniparProcedure,
+        steps: [{ kind: "set", instrument: "lamp", set: "voltage_v", value: "25" }],
       });
       expect(result.success).toBe(false);
     });

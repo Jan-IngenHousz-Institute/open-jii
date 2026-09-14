@@ -1010,9 +1010,10 @@ submit({"par": block})
         steps: [
           {
             kind: "operator",
-            prompt:
-              "Aim the lamp at the MiniPAR and the reference photodiode. Set the supply's voltage limit to 25 V and check its current limit.",
+            prompt: "Aim the lamp at the MiniPAR and the reference photodiode.",
           },
+          { kind: "set", instrument: "lamp", set: "current_a", value: 0 },
+          { kind: "set", instrument: "lamp", set: "voltage_v", value: 25 },
           {
             kind: "sweep",
             series: "par_sweep",

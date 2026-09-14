@@ -18448,6 +18448,32 @@
                               "type": "object",
                               "properties": {
                                 "kind": {
+                                  "const": "set"
+                                },
+                                "instrument": {
+                                  "type": "string",
+                                  "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                },
+                                "set": {
+                                  "type": "string",
+                                  "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                },
+                                "value": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "instrument",
+                                "set",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
                                   "const": "read"
                                 },
                                 "series": {
@@ -18966,6 +18992,32 @@
                                 "required": [
                                   "kind",
                                   "ms"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "const": "set"
+                                  },
+                                  "instrument": {
+                                    "type": "string",
+                                    "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                  },
+                                  "set": {
+                                    "type": "string",
+                                    "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                  },
+                                  "value": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "instrument",
+                                  "set",
+                                  "value"
                                 ],
                                 "additionalProperties": false
                               },
@@ -19548,6 +19600,32 @@
                                 "required": [
                                   "kind",
                                   "ms"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "const": "set"
+                                  },
+                                  "instrument": {
+                                    "type": "string",
+                                    "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                  },
+                                  "set": {
+                                    "type": "string",
+                                    "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                  },
+                                  "value": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "instrument",
+                                  "set",
+                                  "value"
                                 ],
                                 "additionalProperties": false
                               },

@@ -657,6 +657,60 @@ describe("runCaptureProcedure", () => {
     });
   });
 
+  describe("set steps", () => {
+    const WITH_SUPPLY_SETUP: CaptureProcedure = {
+      instruments: [{ role: "dut" }, { role: "lamp", handshake: "KIPRIM" }],
+      steps: [
+        { kind: "set", instrument: "lamp", set: "current_a", value: 0 },
+        { kind: "set", instrument: "lamp", set: "voltage_v", value: 25 },
+        {
+          kind: "read",
+          series: "par_sweep",
+          read: [{ instrument: "dut", command: "par_raw", as: "par_raw" }],
+        },
+      ],
+    };
+
+    it("applies each setpoint on its own and reports it", async () => {
+      const lamp = setpointTarget();
+      const events: ProcedureProgress[] = [];
+
+      const result = await runCaptureProcedure(
+        WITH_SUPPLY_SETUP,
+        context({
+          rig: { dut: reader({ par_raw: 1 }), lamp },
+          onProgress: (event) => events.push(event),
+        }),
+      );
+
+      expect(lamp.applied).toEqual([
+        ["current_a", 0],
+        ["voltage_v", 25],
+      ]);
+      expect(events).toContainEqual({
+        kind: "step",
+        index: 1,
+        total: 3,
+        description: "Set lamp voltage_v to 25",
+      });
+      expect(Object.keys(result.payload)).toEqual(["par_sweep"]);
+    });
+
+    // A set step feeds no series, so nothing can mark it optional: the
+    // instrument it names has to be on the bench.
+    it("aborts when the instrument is absent", async () => {
+      const run = runCaptureProcedure(
+        WITH_SUPPLY_SETUP,
+        context({ rig: { dut: reader({ par_raw: 1 }) } }),
+      );
+
+      await expect(run).rejects.toBeInstanceOf(ProcedureAborted);
+      await expect(run).rejects.toThrow(
+        'Procedure aborted: Cannot set lamp current_a: instrument "lamp" is not connected',
+      );
+    });
+  });
+
   describe("shutdownRig", () => {
     // Leaving a lamp driven because a sibling instrument's port died is the
     // one outcome a bench must never see.
@@ -700,6 +754,8 @@ describe("runCaptureProcedure", () => {
         { role: "par_ref", handshake: "raw REPL" },
       ],
       steps: [
+        { kind: "set", instrument: "lamp", set: "current_a", value: 0 },
+        { kind: "set", instrument: "lamp", set: "voltage_v", value: 25 },
         {
           kind: "sweep",
           series: "par_sweep",
@@ -750,7 +806,10 @@ describe("runCaptureProcedure", () => {
       );
 
       expect(result.payload.par_sweep.map((row) => row.par_ref)).toEqual([143.1, 402.2, 0.7]);
+      // The supply is brought to rest and given its voltage limit before the sweep drives it.
       expect(vi.mocked(lampTransport.send).mock.calls.map(([payload]) => payload)).toEqual([
+        "current 0.000\r\n",
+        "voltage 25.000\r\n",
         "current 0.500\r\n",
         "current 1.500\r\n",
         "current 0.000\r\n",

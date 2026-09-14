@@ -74,6 +74,8 @@ const AUTOMATED_MINIPAR: CaptureProcedure = {
     { role: "par_ref", handshake: "raw REPL" },
   ],
   steps: [
+    { kind: "set", instrument: "lamp", set: "current_a", value: 0 },
+    { kind: "set", instrument: "lamp", set: "voltage_v", value: 25 },
     {
       kind: "sweep",
       series: "par_sweep",
@@ -178,8 +180,9 @@ describe("procedure types", () => {
       expect(requiredSeriesNames(partial)).toEqual(["par_sweep", "adpd_baseline"]);
     });
 
-    it("ignores operator and settle steps, which produce nothing", () => {
+    it("ignores operator, settle and set steps, which produce nothing", () => {
       expect(requiredSeriesNames(MANUAL_MINIPAR)).toEqual(["par_sweep"]);
+      expect(requiredSeriesNames(AUTOMATED_MINIPAR)).toEqual(["par_sweep"]);
     });
 
     // Manual and automated MiniPAR produce the same payload, so one script

@@ -63,6 +63,14 @@ export interface SettleStep {
   ms: number;
 }
 
+/** One setpoint applied on its own, with nothing read. */
+export interface SetStep {
+  kind: "set";
+  instrument: string;
+  set: string;
+  value: number;
+}
+
 export interface ReadStep {
   kind: "read";
   series: string;
@@ -80,7 +88,7 @@ export interface SweepStep {
   optional?: boolean;
 }
 
-export type ProcedureStep = OperatorStep | SettleStep | ReadStep | SweepStep;
+export type ProcedureStep = OperatorStep | SettleStep | SetStep | ReadStep | SweepStep;
 
 export type MeasurementProtocol = Record<string, unknown>;
 

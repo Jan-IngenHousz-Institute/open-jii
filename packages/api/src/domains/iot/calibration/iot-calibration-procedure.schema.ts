@@ -102,6 +102,16 @@ const zSettleStep = z
   })
   .strict();
 
+// Apply one instrument setpoint and move on; nothing is read.
+const zSetStep = z
+  .object({
+    kind: z.literal("set"),
+    instrument: zIdentifier,
+    set: zIdentifier,
+    value: z.number().finite(),
+  })
+  .strict();
+
 const zReadStep = z
   .object({
     kind: z.literal("read"),
@@ -128,6 +138,7 @@ const zSweepStep = z
 export const zProcedureStep = z.discriminatedUnion("kind", [
   zOperatorStep,
   zSettleStep,
+  zSetStep,
   zReadStep,
   zSweepStep,
 ]);
@@ -196,6 +207,10 @@ export const zCaptureProcedure = z
 
     const seriesNames = new Set<string>();
     procedure.steps.forEach((step, stepIndex) => {
+      if (step.kind === "set") {
+        requireDeclaredRole(step.instrument, ["steps", stepIndex, "instrument"]);
+        return;
+      }
       if (step.kind !== "read" && step.kind !== "sweep") {
         return;
       }
