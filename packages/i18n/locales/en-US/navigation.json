@@ -53,6 +53,8 @@
   },
   "commandPalette": {
     "title": "Command palette",
+    "trigger": "Search…",
+    "open": "Open command palette",
     "placeholder": "Search pages, actions, and resources...",
     "groups": {
       "pages": "Pages",

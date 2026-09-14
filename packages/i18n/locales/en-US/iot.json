@@ -471,7 +471,10 @@
         "loadError": "Fleet activity could not be loaded.",
         "reasonCredentials": "Needs a certificate",
         "reasonNeverConnected": "Never connected",
-        "reasonSilent": "Connected, no data"
+        "reasonSilent": "Connected, no data",
+        "fromDevice": "Most recent from {{device}}",
+        "offlineCount_one": "{{count}} offline",
+        "offlineCount_other": "{{count}} offline"
       }
     },
     "onboarding": {

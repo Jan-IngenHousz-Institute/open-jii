@@ -48,8 +48,7 @@
     "title": "Messungen",
     "addMeasurement": "Messung hinzufügen",
     "viewResults": "Ergebnisse anzeigen",
-    "downloadData": "Daten herunterladen",
-    "noMeasurements": "Noch keine Messungen aufgezeichnet"
+    "downloadData": "Daten herunterladen"
   },
   "dashboards": {
     "tabLabel": "Dashboards"
@@ -168,7 +167,15 @@
     "readMore": "Mehr erfahren",
     "uploadMetadata": "Metadaten hochladen",
     "editMetadata": "Metadaten bearbeiten",
-    "uploadSensorData": "Sensordaten hochladen"
+    "uploadSensorData": "Sensordaten hochladen",
+    "datasetLabel": "Datensatz",
+    "datasetPlaceholder": "Datensätze suchen...",
+    "datasetEmpty": "Kein passender Datensatz.",
+    "datasetRows_one": "{{rows}} Zeile",
+    "datasetRows_other": "{{rows}} Zeilen",
+    "datasetGroupStatic": "Quelle",
+    "datasetGroupMacro": "Verarbeitet",
+    "datasetGroupUpload": "Hochgeladen"
   },
   "experiment": "Experiment",
   "experimentId": "Experiment-ID",
@@ -363,5 +370,14 @@
       "note": "Hinweis:",
       "warningMessage": "Die folgende(n) Datei(en) werden automatisch vom Upload ausgeschlossen:"
     }
+  },
+  "dataInventory": {
+    "title": "Daten",
+    "seeAll": "Alle anzeigen",
+    "emptyTitle": "Noch keine Daten",
+    "empty": "Tabellen erscheinen hier, sobald ein Gerät in dieses Experiment sendet, ein Makro läuft oder Sie eine Datei hochladen.",
+    "loadError": "Die Daten dieses Experiments konnten nicht geladen werden.",
+    "rowUnit_one": "Zeile",
+    "rowUnit_other": "Zeilen"
   }
 }

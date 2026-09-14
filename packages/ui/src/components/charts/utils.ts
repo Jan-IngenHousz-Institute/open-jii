@@ -1,5 +1,6 @@
 import type { Config, Layout, LayoutAxis } from "plotly.js";
 
+import { PLATFORM_SERIES_FALLBACK, PLATFORM_SERIES_TOKENS, PLOTLY_SERIES_TAIL } from "./colorway";
 import type { PlotlyChartConfig, WebGLRenderer } from "./types";
 
 /**
@@ -182,6 +183,24 @@ export function labToHex(value: string): string | undefined {
 /** Colour forms Plotly's own parser understands. */
 const PLOTLY_PARSEABLE = /^(#|rgba?\(|hsla?\(|[a-z]+$)/i;
 
+const themeTokenCache = new Map<string, string | undefined>();
+
+/**
+ * The root state the entries were resolved under. The theme observer only runs
+ * while a chart is mounted, so a toggle on a chart-free page is never seen.
+ */
+let cacheSignature: string | undefined;
+
+function rootSignature(): string {
+  const root = document.documentElement;
+  return `${root.className}|${root.getAttribute("style") ?? ""}`;
+}
+
+export function invalidateThemeTokenCache(): void {
+  themeTokenCache.clear();
+  cacheSignature = undefined;
+}
+
 /**
  * Reads a theme custom property off the document root and returns it as
  * something Plotly can parse, or `undefined`.
@@ -190,10 +209,30 @@ const PLOTLY_PARSEABLE = /^(#|rgba?\(|hsla?\(|[a-z]+$)/i;
  * for a colour string it cannot read, so forwarding an unrecognised value
  * bypasses every caller's `?? "#fallback"` and fails invisibly. A token
  * registered by Tailwind computes to `lab()`, which Plotly cannot parse at all.
+ *
+ * Cached because it is a forced style read that every chart makes at the same
+ * moment on a theme toggle. Entries drop as soon as the root differs from the
+ * state they were resolved under.
  */
 export function readThemeColor(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
+
+  const signature = rootSignature();
+  if (signature !== cacheSignature) {
+    themeTokenCache.clear();
+    cacheSignature = signature;
+  }
+
+  const cached = themeTokenCache.get(name);
+  if (cached !== undefined || themeTokenCache.has(name)) return cached;
+
   const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const resolved = resolveThemeColor(raw);
+  themeTokenCache.set(name, resolved);
+  return resolved;
+}
+
+function resolveThemeColor(raw: string): string | undefined {
   if (!raw) return undefined;
   const converted = oklchToHex(raw) ?? labToHex(raw);
   if (converted) return converted;
@@ -214,15 +253,19 @@ export function referenceLineColor(): string {
 }
 
 /**
- * The series palette. Charts get their colours from the same `--chart-1..5`
- * block every other surface reads, so swapping the theme re-colours them too.
- * Falls back to Plotly's own palette when the properties are not readable.
+ * The series palette every platform chart cycles through: the theme's own
+ * colours first, then Plotly's for the tail. Defined in `./colorway`.
  */
-export function resolveChartColorway(): string[] | undefined {
-  const colorway = [1, 2, 3, 4, 5]
-    .map((index) => readThemeColor(`--chart-${index}`))
-    .filter((color): color is string => color !== undefined);
-  return colorway.length === 5 ? colorway : undefined;
+export function resolveChartColorway(): string[] {
+  const head = PLATFORM_SERIES_TOKENS.map(
+    (token, index) => readThemeColor(token) ?? PLATFORM_SERIES_FALLBACK[index] ?? "#005E5E",
+  );
+  return [...head, ...PLOTLY_SERIES_TAIL];
+}
+
+export function platformChartColor(index: number): string {
+  const colorway = resolveChartColorway();
+  return colorway[Math.abs(Math.trunc(index)) % colorway.length] ?? "#005E5E";
 }
 
 // ISO 8601 (year, year-month, or date with optional time / fractional
@@ -498,6 +541,7 @@ export function createBaseLayout(
     yAxisType = "linear",
     showLegend = true,
     showGrid = true,
+    showHoverName = true,
     sparkline = false,
     backgroundColor,
     annotations = [],
@@ -561,7 +605,7 @@ export function createBaseLayout(
   // 8-digit hex: Plotly parses that, and silently substitutes its own default
   // for a color-mix() it cannot read. isDark still supplies the SSR fallback.
   const plateBgColor = `${readThemeColor("--popover") ?? (isDark ? "#000000" : "#ffffff")}cc`;
-  const colorway = resolveChartColorway();
+  const colorway = config.colorway === undefined ? resolveChartColorway() : [...config.colorway];
 
   // Tier-aware typography. Axis chrome (tick fonts, axis title font,
   // tick density) keys off cell tiers so per-cell ticks shrink in faceted
@@ -647,12 +691,21 @@ export function createBaseLayout(
       },
     },
 
-    // Match hover-label font to the rest of the compact typography so
-    // tooltips don't suddenly look oversized inside a tight widget.
+    // Pinned to the popover surface, like every other floating surface on the
+    // platform. Left unset, Plotly takes the background from the series colour
+    // and picks the text colour itself, which on a light series reads as pale
+    // text on a pale plate.
     hoverlabel: {
+      bgcolor: readThemeColor("--popover") ?? (isDark ? "#000000" : "#ffffff"),
+      bordercolor: gridColor,
+      // The trace-name chip is the one part Plotly styles from the series
+      // colour rather than from here, so a single-series chart drops it
+      // instead of carrying one unthemed surface.
+      ...(showHoverName ? {} : { namelength: 0 }),
       font: {
         size: veryCompact ? 10 : compact ? 11 : 12,
         family: "var(--font-sans)",
+        color: readThemeColor("--popover-foreground") ?? textColor,
       },
     },
 

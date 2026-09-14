@@ -97,7 +97,7 @@ export function InlineEditableTitle({
                   handleCancel();
                 }
               }}
-              className="min-w-[300px] flex-1 text-2xl font-semibold"
+              className="min-w-0 flex-1 text-2xl font-semibold sm:min-w-[300px]"
               disabled={isPending}
               autoFocus
               onBlur={handleBlur}

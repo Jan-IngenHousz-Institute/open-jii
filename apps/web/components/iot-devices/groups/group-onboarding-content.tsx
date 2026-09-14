@@ -28,6 +28,7 @@ import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -232,7 +233,11 @@ export function GroupOnboardingContent() {
         description={t("iot.groups.onboarding.description")}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
+      {/* An explicit track at the base tier too: with only the implicit `auto`
+          track the items keep `min-width: auto`, so one wide child widens the
+          whole page and the rail, the switch row and the button all read as
+          shifted. */}
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="space-y-6">
           <Card className="shadow-none">
             <CardHeader>
@@ -324,17 +329,19 @@ export function GroupOnboardingContent() {
 
         <div className="lg:sticky lg:top-20 lg:self-start">
           <Card className="shadow-none">
-            <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardHeader>
               <CardTitle className="text-base">{t("iot.onboarding.rail.title")}</CardTitle>
-              {rows === null ? (
-                <Badge variant="outline">{t("iot.onboarding.rail.preview")}</Badge>
-              ) : (
-                issuedAt !== null && (
-                  <Badge variant="secondary">
-                    {t("iot.onboarding.rail.issuedAt", { time: formatHm(issuedAt) })}
-                  </Badge>
-                )
-              )}
+              <CardAction>
+                {rows === null ? (
+                  <Badge variant="outline">{t("iot.onboarding.rail.preview")}</Badge>
+                ) : (
+                  issuedAt !== null && (
+                    <Badge variant="secondary">
+                      {t("iot.onboarding.rail.issuedAt", { time: formatHm(issuedAt) })}
+                    </Badge>
+                  )
+                )}
+              </CardAction>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* One configuration per device, all cut from the same selection;

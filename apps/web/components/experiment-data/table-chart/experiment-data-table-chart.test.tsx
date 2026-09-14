@@ -2,6 +2,8 @@ import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
+import { invalidateThemeTokenCache } from "@repo/ui/components/charts/utils";
+
 import { ExperimentDataTableChart } from "./experiment-data-table-chart";
 
 // Mock the LineChart component from @repo/ui/components
@@ -139,6 +141,9 @@ describe("ExperimentDataTableChart", () => {
     // passed as `var()`; setting it here proves the series tracks the token
     // instead of a colour baked into the component.
     const root = document.documentElement;
+    // The resolved palette is cached until the theme observer clears it, and
+    // that only runs with a chart mounted; this test moves the document itself.
+    invalidateThemeTokenCache();
     root.style.setProperty("--chart-1", "oklch(0.5551 0.0516 190.6334)");
     try {
       render(

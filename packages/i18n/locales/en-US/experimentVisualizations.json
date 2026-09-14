@@ -30,7 +30,8 @@
         "type": "Type",
         "user": "User",
         "updated": "Updated"
-      }
+      },
+      "updatedAgo": "Updated {{date}}"
     }
   },
   "form": {

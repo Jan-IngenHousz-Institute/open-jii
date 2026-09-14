@@ -1264,3 +1264,29 @@ describe("WebGLContextManager", () => {
     });
   });
 });
+
+describe("PlotlyChart container resizing", () => {
+  it("observes its own container, not just the window", () => {
+    // react-plotly's useResizeHandler binds to `window` resize, so collapsing
+    // the sidebar left every chart at its previous pixel width.
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+
+    class StubResizeObserver implements ResizeObserver {
+      observe = observe;
+      unobserve = vi.fn();
+      disconnect = disconnect;
+    }
+
+    const original = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = StubResizeObserver;
+
+    const { unmount } = render(<PlotlyChart data={[]} layout={{}} />);
+    expect(observe).toHaveBeenCalled();
+
+    unmount();
+    expect(disconnect).toHaveBeenCalled();
+
+    globalThis.ResizeObserver = original;
+  });
+});
