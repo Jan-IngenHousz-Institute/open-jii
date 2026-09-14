@@ -6,6 +6,7 @@ import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboard
 import { useTranslation } from "@repo/i18n";
 
 import { DashboardFiltersProvider } from "./dashboard-filters-context";
+import { DashboardSharedReadsProvider } from "./dashboard-shared-reads-context";
 import { LazyWidget } from "./widgets/shell/lazy-widget";
 import { WidgetCard } from "./widgets/shell/widget-card";
 import { WidgetRenderer } from "./widgets/widget-renderer";
@@ -31,31 +32,33 @@ export function DashboardRenderer({ dashboard, experimentId, scale = 1 }: Dashbo
 
   return (
     <DashboardFiltersProvider widgets={dashboard.widgets}>
-      <div
-        className="w-full"
-        style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-          gridAutoRows: `${rowHeight * scale}px`,
-          gap: `${gap * scale}px`,
-        }}
-      >
-        {dashboard.widgets.map((widget) => (
-          <div
-            key={widget.id}
-            style={{
-              gridColumn: `${widget.layout.col + 1} / span ${widget.layout.colSpan}`,
-              gridRow: `${widget.layout.row + 1} / span ${widget.layout.rowSpan}`,
-            }}
-          >
-            <WidgetCard>
-              <LazyWidget>
-                <WidgetRenderer widget={widget} experimentId={experimentId} />
-              </LazyWidget>
-            </WidgetCard>
-          </div>
-        ))}
-      </div>
+      <DashboardSharedReadsProvider experimentId={experimentId} widgets={dashboard.widgets}>
+        <div
+          className="w-full"
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+            gridAutoRows: `${rowHeight * scale}px`,
+            gap: `${gap * scale}px`,
+          }}
+        >
+          {dashboard.widgets.map((widget) => (
+            <div
+              key={widget.id}
+              style={{
+                gridColumn: `${widget.layout.col + 1} / span ${widget.layout.colSpan}`,
+                gridRow: `${widget.layout.row + 1} / span ${widget.layout.rowSpan}`,
+              }}
+            >
+              <WidgetCard>
+                <LazyWidget>
+                  <WidgetRenderer widget={widget} experimentId={experimentId} />
+                </LazyWidget>
+              </WidgetCard>
+            </div>
+          ))}
+        </div>
+      </DashboardSharedReadsProvider>
     </DashboardFiltersProvider>
   );
 }

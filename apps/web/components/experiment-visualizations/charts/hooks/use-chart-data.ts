@@ -1,16 +1,25 @@
 "use client";
 
+import { useMemo } from "react";
+
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 import { useExperimentVisualizationData } from "../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
+import type { VisualizationDataConfig } from "../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { useDashboardFiltersForTable } from "../../../experiment-dashboards/dashboard-filters-context";
-import { dataSourcesByRole } from "../data/data-sources";
+import { useDashboardSharedRead } from "../../../experiment-dashboards/dashboard-shared-reads-context";
+import type { OwnRead } from "../../../experiment-dashboards/dashboard-shared-reads-context";
+import { dataSourcesByRole, readColumnsOf } from "../data/data-sources";
+import { sortRowsByColumn } from "../data/row-order";
 
 export interface UseChartDataResult {
   rows: Record<string, unknown>[];
   isLoading: boolean;
   error: unknown;
 }
+
+// The data hook disables itself on an empty table name.
+const NO_READ: VisualizationDataConfig = { tableName: "", columns: [] };
 
 // Pass through providedData when available, otherwise fetch (TanStack dedupes).
 export function useChartData(
@@ -20,14 +29,7 @@ export function useChartData(
   options: { orderBy?: string; enabled?: boolean } = {},
 ): UseChartDataResult {
   const dataConfig = visualization.dataConfig;
-  // Project primary + errorColumn dedup'd.
-  const columns = Array.from(
-    new Set(
-      dataConfig.dataSources
-        .flatMap((ds) => [ds.columnName, ds.errorColumn])
-        .filter((name): name is string => typeof name === "string" && name.length > 0),
-    ),
-  );
+  const columns = readColumnsOf(dataConfig.dataSources);
 
   // Keep color/facet columns through aggregation so the renderer can pivot.
   const colorColumn = dataSourcesByRole(dataConfig.dataSources, "color")[0]?.source.columnName;
@@ -46,12 +48,37 @@ export function useChartData(
 
   // Pre-flight check so an orphan cumsum config renders inline, not a global toast.
   const aggregationError = validateAggregation(dataConfig.aggregation, options.orderBy);
+  const canFetch =
+    providedData === undefined && aggregationError === undefined && options.enabled !== false;
 
-  const {
-    data: fetched,
-    isLoading,
-    error,
-  } = useExperimentVisualizationData(
+  // On a dashboard, charts on the same table with the same filters read once
+  // through a shared plan; the plan's input becomes the query key they share.
+  const own: OwnRead = {
+    tableName: dataConfig.tableName,
+    columns,
+    filters: mergedFilters,
+    aggregation: dataConfig.aggregation,
+  };
+  const shared = useDashboardSharedRead(visualization.id, own);
+  const sharedRead = useExperimentVisualizationData(
+    experimentId,
+    shared
+      ? {
+          tableName: shared.tableName,
+          columns: shared.columns,
+          filters: shared.filters,
+          orderBy: shared.orderBy,
+          orderDirection: shared.orderBy ? "ASC" : undefined,
+        }
+      : NO_READ,
+    canFetch && shared !== undefined,
+  );
+  // One stale column in any member fails the whole group; that chart then
+  // reads alone, which is what every chart did before.
+  const sharedFailed = shared !== undefined && Boolean(sharedRead.error);
+  const isSharing = shared !== undefined && !sharedFailed;
+
+  const ownRead = useExperimentVisualizationData(
     experimentId,
     {
       tableName: dataConfig.tableName,
@@ -62,8 +89,18 @@ export function useChartData(
       orderBy: options.orderBy,
       orderDirection: options.orderBy ? "ASC" : undefined,
     },
-    providedData === undefined && aggregationError === undefined && options.enabled !== false,
+    canFetch && !isSharing,
   );
+
+  const active = isSharing ? sharedRead : ownRead;
+  // The group is ordered by one x; a member with another x sorts its own copy.
+  const needsOwnOrder =
+    isSharing && options.orderBy !== undefined && options.orderBy !== shared.orderBy;
+  const orderBy = options.orderBy;
+  const rows = useMemo(() => {
+    const fetched = active.data?.rows ?? [];
+    return needsOwnOrder && orderBy !== undefined ? sortRowsByColumn(fetched, orderBy) : fetched;
+  }, [active.data, needsOwnOrder, orderBy]);
 
   if (providedData) {
     return { rows: providedData, isLoading: false, error: undefined };
@@ -71,7 +108,7 @@ export function useChartData(
   if (aggregationError) {
     return { rows: [], isLoading: false, error: aggregationError };
   }
-  return { rows: fetched?.rows ?? [], isLoading, error };
+  return { rows, isLoading: active.isLoading, error: active.error };
 }
 
 // Diagnostic code surfaced when cumsum is configured without a groupBy or

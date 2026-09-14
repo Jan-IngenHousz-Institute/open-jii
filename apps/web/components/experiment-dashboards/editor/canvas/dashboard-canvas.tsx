@@ -11,6 +11,7 @@ import { cn } from "@repo/ui/lib/utils";
 
 import { DashboardFiltersProvider } from "../../dashboard-filters-context";
 import type { DashboardFormValues } from "../../dashboard-form-shell";
+import { DashboardSharedReadsProvider } from "../../dashboard-shared-reads-context";
 import { useDashboardEditor } from "../context/dashboard-editor-context";
 import { useDeselectOnOutsideClick } from "../hooks/use-deselect-on-outside-click";
 import { useWidgetPlacement } from "../hooks/use-widget-placement";
@@ -167,46 +168,48 @@ export function DashboardCanvas({ experimentId }: DashboardCanvasProps) {
 
   return (
     <DashboardFiltersProvider widgets={widgets}>
-      {/* Keep containerRef mounted so RGL's ResizeObserver attaches on first paint. */}
-      <div
-        ref={containerRef}
-        className={cn(
-          "dashboard-canvas-root relative w-full",
-          placementActive && "cursor-crosshair",
-          // Stretch past last widget in placement mode so empty space is clickable.
-          placementActive && "min-h-[60vh]",
-        )}
-      >
-        {widgets.length === 0 && !placementActive && <DashboardCanvasEmptyState />}
-        {mounted && (
-          <GridLayout
-            width={width}
-            layout={rglLayout}
-            gridConfig={gridConfig}
-            dragConfig={dragConfig}
-            resizeConfig={resizeConfig}
-            onDragStop={handleLayoutStop}
-            onResizeStop={handleLayoutStop}
-          >
-            {renderOrder.map(({ widget, index }) => (
-              <div key={widget.id} data-dashboard-widget-id={widget.id}>
-                <WidgetSlot
-                  widgetId={widget.id}
-                  widgetIndex={index}
-                  experimentId={experimentId}
-                  isSelected={selectedWidgetId === widget.id}
-                  onSelect={selectWidget}
-                />
-              </div>
-            ))}
-            {placementActive && snapTarget && (
-              <div key={PLACEMENT_GHOST_ID} data-placement-ghost="">
-                <PlacementGhost />
-              </div>
-            )}
-          </GridLayout>
-        )}
-      </div>
+      <DashboardSharedReadsProvider experimentId={experimentId} widgets={widgets}>
+        {/* Keep containerRef mounted so RGL's ResizeObserver attaches on first paint. */}
+        <div
+          ref={containerRef}
+          className={cn(
+            "dashboard-canvas-root relative w-full",
+            placementActive && "cursor-crosshair",
+            // Stretch past last widget in placement mode so empty space is clickable.
+            placementActive && "min-h-[60vh]",
+          )}
+        >
+          {widgets.length === 0 && !placementActive && <DashboardCanvasEmptyState />}
+          {mounted && (
+            <GridLayout
+              width={width}
+              layout={rglLayout}
+              gridConfig={gridConfig}
+              dragConfig={dragConfig}
+              resizeConfig={resizeConfig}
+              onDragStop={handleLayoutStop}
+              onResizeStop={handleLayoutStop}
+            >
+              {renderOrder.map(({ widget, index }) => (
+                <div key={widget.id} data-dashboard-widget-id={widget.id}>
+                  <WidgetSlot
+                    widgetId={widget.id}
+                    widgetIndex={index}
+                    experimentId={experimentId}
+                    isSelected={selectedWidgetId === widget.id}
+                    onSelect={selectWidget}
+                  />
+                </div>
+              ))}
+              {placementActive && snapTarget && (
+                <div key={PLACEMENT_GHOST_ID} data-placement-ghost="">
+                  <PlacementGhost />
+                </div>
+              )}
+            </GridLayout>
+          )}
+        </div>
+      </DashboardSharedReadsProvider>
     </DashboardFiltersProvider>
   );
 }
