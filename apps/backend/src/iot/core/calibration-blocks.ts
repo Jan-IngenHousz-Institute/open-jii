@@ -98,16 +98,19 @@ function checkCoefficient(
     return reasons;
   }
 
+  const isIntegerArray = spec.type === "integer_array";
   if (!Array.isArray(value)) {
-    return [`Coefficient '${label}' must be an integer array`];
+    return [`Coefficient '${label}' must be ${isIntegerArray ? "an integer" : "a number"} array`];
   }
   if (value.length !== spec.length) {
     return [`Coefficient '${label}' must have exactly ${spec.length} entries`];
   }
   const reasons: string[] = [];
   value.forEach((entry, index) => {
-    if (!Number.isInteger(entry)) {
+    if (isIntegerArray && !Number.isInteger(entry)) {
       reasons.push(`Coefficient '${label}[${index}]' must be an integer`);
+    } else if (!Number.isFinite(entry)) {
+      reasons.push(`Coefficient '${label}[${index}]' must be a finite number`);
     } else if (spec.min !== undefined && entry < spec.min) {
       reasons.push(`Coefficient '${label}[${index}]' is below the allowed minimum`);
     } else if (spec.max !== undefined && entry > spec.max) {

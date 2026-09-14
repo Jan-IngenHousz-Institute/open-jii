@@ -145,7 +145,9 @@ def _validate_coefficients(block_name, coefficients, coefficient_specs):
         if spec.get("type") == "number":
             reasons.extend(_check_number(label, value, spec))
         elif spec.get("type") == "integer_array":
-            reasons.extend(_check_integer_array(label, value, spec))
+            reasons.extend(_check_array(label, value, spec, integers=True))
+        elif spec.get("type") == "number_array":
+            reasons.extend(_check_array(label, value, spec, integers=False))
         else:
             reasons.append(f"Coefficient '{label}' has an unknown spec type")
 
@@ -168,16 +170,18 @@ def _check_number(label, value, spec):
     return reasons
 
 
-def _check_integer_array(label, value, spec):
+def _check_array(label, value, spec, integers):
     values = _as_plain_list(value)
     if values is None:
-        return [f"Coefficient '{label}' must be an integer array"]
+        return [f"Coefficient '{label}' must be {'an integer' if integers else 'a number'} array"]
     if len(values) != spec["length"]:
         return [f"Coefficient '{label}' must have exactly {spec['length']} entries"]
     reasons = []
     for index, entry in enumerate(values):
-        if isinstance(entry, bool) or not isinstance(entry, int):
+        if integers and (isinstance(entry, bool) or not isinstance(entry, int)):
             reasons.append(f"Coefficient '{label}[{index}]' must be an integer")
+        elif _is_not_finite_number(entry):
+            reasons.append(f"Coefficient '{label}[{index}]' must be a finite number")
         elif "min" in spec and entry < spec["min"]:
             reasons.append(f"Coefficient '{label}[{index}]' is below the allowed minimum")
         elif "max" in spec and entry > spec["max"]:
@@ -185,8 +189,13 @@ def _check_integer_array(label, value, spec):
     return reasons
 
 
+def _is_not_finite_number(entry):
+    # A non-finite float arrives as None once it has crossed the runner's JSON line.
+    return isinstance(entry, bool) or not isinstance(entry, (int, float)) or not math.isfinite(entry)
+
+
 def _as_plain_list(value):
-    """A list, or a numpy array of integers, as a plain int list; else None."""
+    """A list, or a numpy array, as a plain list of Python scalars; else None."""
     if hasattr(value, "tolist"):
         value = value.tolist()
     if not isinstance(value, list):

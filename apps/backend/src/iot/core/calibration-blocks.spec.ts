@@ -112,6 +112,61 @@ describe("validateCalibrationBlocks", () => {
     ]);
   });
 
+  // A spectral block holds one fractional coefficient per channel.
+  describe("number arrays", () => {
+    const SPECTRAL_SCHEMA: CalibrationOutputSchema = {
+      blocks: {
+        spec: { channel_coefficients: { type: "number_array", length: 3, min: -1, max: 1 } },
+      },
+    };
+
+    it("accepts fractional and signed entries within bounds", () => {
+      const reasons = validateCalibrationBlocks(
+        {
+          spec: {
+            status: "computed",
+            coefficients: { channel_coefficients: [0.00785574, -0.000739113, 0] },
+          },
+        },
+        SPECTRAL_SCHEMA,
+      );
+      expect(reasons).toEqual([]);
+    });
+
+    it("flags a number array given as a scalar", () => {
+      const reasons = validateCalibrationBlocks(
+        { spec: { status: "computed", coefficients: { channel_coefficients: 0.5 } } },
+        SPECTRAL_SCHEMA,
+      );
+      expect(reasons).toEqual(["Coefficient 'spec.channel_coefficients' must be a number array"]);
+    });
+
+    it("flags a wrong length and each entry out of bounds or not finite", () => {
+      expect(
+        validateCalibrationBlocks(
+          { spec: { status: "computed", coefficients: { channel_coefficients: [0.1, 0.2] } } },
+          SPECTRAL_SCHEMA,
+        ),
+      ).toEqual(["Coefficient 'spec.channel_coefficients' must have exactly 3 entries"]);
+
+      expect(
+        validateCalibrationBlocks(
+          {
+            spec: {
+              status: "computed",
+              coefficients: { channel_coefficients: [Number.NaN, -2, 1.5] },
+            },
+          },
+          SPECTRAL_SCHEMA,
+        ),
+      ).toEqual([
+        "Coefficient 'spec.channel_coefficients[0]' must be a finite number",
+        "Coefficient 'spec.channel_coefficients[1]' is below the allowed minimum",
+        "Coefficient 'spec.channel_coefficients[2]' is above the allowed maximum",
+      ]);
+    });
+  });
+
   // The thresholds behind a quality record are the platform's, not the scientist's,
   // so a failed record travels with the block and the reviewer decides.
   it("treats a failed QC record as advisory, not a violation", () => {

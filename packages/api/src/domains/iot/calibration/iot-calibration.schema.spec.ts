@@ -60,6 +60,23 @@ describe("zCalibrationOutputSchema", () => {
   it("rejects an empty blocks object", () => {
     expect(zCalibrationOutputSchema.safeParse({ blocks: {} }).success).toBe(false);
   });
+
+  // A spectral sensor holds one coefficient per channel, fractional and signed.
+  it("accepts a number array coefficient with per-entry bounds", () => {
+    const result = zCalibrationOutputSchema.safeParse({
+      blocks: {
+        spec: { channel_coefficients: { type: "number_array", length: 10, min: -1, max: 1 } },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a number array without a length", () => {
+    const result = zCalibrationOutputSchema.safeParse({
+      blocks: { spec: { channel_coefficients: { type: "number_array" } } },
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("zCalibrationBlocks", () => {
@@ -83,6 +100,24 @@ describe("zCalibrationBlocks", () => {
       },
     });
     expect(result.success).toBe(true);
+  });
+
+  it("accepts a block whose coefficient is an array of fractional numbers", () => {
+    const result = zCalibrationBlocks.safeParse({
+      spec: {
+        status: "computed",
+        coefficients: { channel_coefficients: [0.00785574, 0.00343847, -0.000739113] },
+      },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  // NaN and infinity cannot cross JSON; a block carrying one is a script fault, not data.
+  it("rejects a non-finite coefficient", () => {
+    const result = zCalibrationBlocks.safeParse({
+      par: { status: "computed", coefficients: { spec: Number.POSITIVE_INFINITY } },
+    });
+    expect(result.success).toBe(false);
   });
 
   // The bench session the all-or-nothing model could not express: one gain

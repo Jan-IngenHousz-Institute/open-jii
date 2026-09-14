@@ -372,6 +372,47 @@ class HandlerTest(unittest.TestCase):
         self.assertTrue(any("[1]' is below" in reason for reason in result["reasons"]))
         self.assertTrue(any("[2]' is above" in reason for reason in result["reasons"]))
 
+    def test_number_array_accepts_fractional_signed_entries(self):
+        script = (
+            "import numpy as np\n"
+            'submit({"spec": {"status": "computed", '
+            '"coefficients": {"channel_coefficients": np.array([0.00785574, -0.000739113, 0.0])}}})'
+        )
+        schema = {
+            "blocks": {
+                "spec": {"channel_coefficients": {"type": "number_array", "length": 3, "min": -1, "max": 1}}
+            }
+        }
+        result = handler(event(script=script, schema=schema, series={}), None)
+        self.assertEqual(result["status"], "computed", result)
+        self.assertEqual(
+            result["blocks"]["spec"]["coefficients"]["channel_coefficients"],
+            [0.00785574, -0.000739113, 0.0],
+        )
+
+    def test_number_array_given_a_scalar_fails_validation(self):
+        script = 'submit({"spec": {"status": "computed", "coefficients": {"channel_coefficients": 0.5}}})'
+        schema = {"blocks": {"spec": {"channel_coefficients": {"type": "number_array", "length": 3}}}}
+        result = handler(event(script=script, schema=schema, series={}), None)
+        self.assertEqual(result["status"], "compute_failed")
+        self.assertTrue(any("must be a number array" in reason for reason in result["reasons"]))
+
+    def test_each_number_array_entry_is_checked(self):
+        script = (
+            'submit({"spec": {"status": "computed", '
+            '"coefficients": {"channel_coefficients": [float("nan"), -2.0, 1.5]}}})'
+        )
+        schema = {
+            "blocks": {
+                "spec": {"channel_coefficients": {"type": "number_array", "length": 3, "min": -1, "max": 1}}
+            }
+        }
+        result = handler(event(script=script, schema=schema, series={}), None)
+        self.assertEqual(result["status"], "compute_failed")
+        self.assertTrue(any("[0]' must be a finite number" in reason for reason in result["reasons"]))
+        self.assertTrue(any("[1]' is below" in reason for reason in result["reasons"]))
+        self.assertTrue(any("[2]' is above" in reason for reason in result["reasons"]))
+
     # A script's fit record naturally holds numpy arrays and scalars; the record
     # a reader gets back is plain JSON regardless.
     def test_numpy_values_in_the_fit_record_serialize_as_plain_json(self):

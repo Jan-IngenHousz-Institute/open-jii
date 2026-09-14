@@ -18826,6 +18826,30 @@
                                   "length"
                                 ],
                                 "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "const": "number_array"
+                                  },
+                                  "length": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 64
+                                  },
+                                  "min": {
+                                    "type": "number"
+                                  },
+                                  "max": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "length"
+                                ],
+                                "additionalProperties": false
                               }
                             ]
                           }
@@ -19368,6 +19392,30 @@
                                     },
                                     "max": {
                                       "type": "integer"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "length"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "const": "number_array"
+                                    },
+                                    "length": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 64
+                                    },
+                                    "min": {
+                                      "type": "number"
+                                    },
+                                    "max": {
+                                      "type": "number"
                                     }
                                   },
                                   "required": [
@@ -19983,6 +20031,30 @@
                                     "length"
                                   ],
                                   "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "const": "number_array"
+                                    },
+                                    "length": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 64
+                                    },
+                                    "min": {
+                                      "type": "number"
+                                    },
+                                    "max": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "length"
+                                  ],
+                                  "additionalProperties": false
                                 }
                               ]
                             }
@@ -20283,7 +20355,7 @@
                                     {
                                       "type": "array",
                                       "items": {
-                                        "type": "integer"
+                                        "type": "number"
                                       }
                                     }
                                   ]
@@ -20516,7 +20588,7 @@
                                       {
                                         "type": "array",
                                         "items": {
-                                          "type": "integer"
+                                          "type": "number"
                                         }
                                       }
                                     ]
@@ -20713,7 +20785,7 @@
                               {
                                 "type": "array",
                                 "items": {
-                                  "type": "integer"
+                                  "type": "number"
                                 }
                               }
                             ]
@@ -20906,7 +20978,7 @@
                                     {
                                       "type": "array",
                                       "items": {
-                                        "type": "integer"
+                                        "type": "number"
                                       }
                                     }
                                   ]
@@ -21138,7 +21210,7 @@
                                     {
                                       "type": "array",
                                       "items": {
-                                        "type": "integer"
+                                        "type": "number"
                                       }
                                     }
                                   ]
@@ -21334,7 +21406,7 @@
                                 {
                                   "type": "array",
                                   "items": {
-                                    "type": "integer"
+                                    "type": "number"
                                   }
                                 }
                               ]
@@ -21535,7 +21607,7 @@
                                     {
                                       "type": "array",
                                       "items": {
-                                        "type": "integer"
+                                        "type": "number"
                                       }
                                     }
                                   ]
@@ -21734,7 +21806,7 @@
                                     {
                                       "type": "array",
                                       "items": {
-                                        "type": "integer"
+                                        "type": "number"
                                       }
                                     }
                                   ]
@@ -21907,7 +21979,7 @@
                                   {
                                     "type": "array",
                                     "items": {
-                                      "type": "integer"
+                                      "type": "number"
                                     }
                                   }
                                 ]
@@ -22114,7 +22186,7 @@
                                 {
                                   "type": "array",
                                   "items": {
-                                    "type": "integer"
+                                    "type": "number"
                                   }
                                 }
                               ]

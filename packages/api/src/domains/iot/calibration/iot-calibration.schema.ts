@@ -28,9 +28,20 @@ const zIntegerArrayCoefficientSpec = z
   })
   .strict();
 
+// One coefficient per channel of a multi-channel sensor, written one entry at a time.
+const zNumberArrayCoefficientSpec = z
+  .object({
+    type: z.literal("number_array"),
+    length: z.number().int().min(1).max(64),
+    min: z.number().finite().optional(),
+    max: z.number().finite().optional(),
+  })
+  .strict();
+
 export const zCoefficientSpec = z.discriminatedUnion("type", [
   zNumberCoefficientSpec,
   zIntegerArrayCoefficientSpec,
+  zNumberArrayCoefficientSpec,
 ]);
 
 export const zCalibrationOutputSchema = z
@@ -46,7 +57,8 @@ export const zCalibrationOutputSchema = z
 /** Families disagree on shape: Ambit "1.1.3", MiniPAR "1.03"; a missing patch compares as zero. */
 export const zFirmwareVersion = z.string().regex(/^\d+(\.\d+){1,2}$/);
 
-export const zCoefficientValue = z.union([z.number(), z.array(z.number().int())]);
+// Whether an array holds integers is the output schema's call, checked against its spec.
+export const zCoefficientValue = z.union([z.number().finite(), z.array(z.number().finite())]);
 
 /**
  * A bench run is routinely partial; each block records its own outcome so one
