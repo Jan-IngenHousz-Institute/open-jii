@@ -1,4 +1,3 @@
-import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -38,8 +37,7 @@ export interface ResourceCardProps {
 
 /**
  * One tile in a resource listing: experiment, protocol, macro, organization.
- * The whole tile is the link; the chevron is a mobile-only affordance because
- * hover cannot say "tappable" on a touch screen.
+ * The whole tile is the link.
  */
 export function ResourceCard({
   href,
@@ -77,10 +75,6 @@ export function ResourceCard({
         {footer ? (
           <p className="text-muted-foreground border-border/60 border-t pt-3 text-xs">{footer}</p>
         ) : null}
-        <ChevronRight
-          className="text-foreground absolute bottom-5 right-5 size-6 md:hidden"
-          aria-hidden
-        />
       </Card>
     </Link>
   );
