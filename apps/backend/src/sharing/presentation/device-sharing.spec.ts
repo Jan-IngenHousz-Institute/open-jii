@@ -1,15 +1,12 @@
 import { StatusCodes } from "http-status-codes";
 
-import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
 import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
 import type { ResourceCollaboratorDto } from "@repo/api/domains/sharing/sharing.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
-import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { assertSuccess } from "../../common/utils/fp-utils";
 import { ListIotDevicesUseCase } from "../../iot/application/use-cases/list-iot-devices/list-iot-devices";
-import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 
 /**
@@ -29,7 +26,6 @@ describe("device sharing", () => {
   const testApp = TestHarness.App;
   let authz: AuthorizationService;
   let listDevices: ListIotDevicesUseCase;
-  let analyticsAdapter: MockAnalyticsAdapter;
   let owner: string;
   let grantee: string;
 
@@ -44,8 +40,6 @@ describe("device sharing", () => {
     // The device routes are behind the registry feature flag, which refuses with a
     // 403 of its own. Turning it on is what makes an assertion of 403 below mean
     // "the authorization guard refused", not "the feature is off".
-    analyticsAdapter = testApp.module.get(AnalyticsAdapter);
-    analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, true);
     owner = await testApp.createTestUser({ name: "Device Owner" });
     grantee = await testApp.createTestUser({ name: "Device Grantee" });
   });

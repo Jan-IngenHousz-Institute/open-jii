@@ -1,7 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
-import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
 import type {
   BulkRegisterIotDevicesResult,
@@ -11,11 +10,9 @@ import type {
 } from "@repo/api/domains/iot/iot.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
-import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
-import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { GetIotDeviceFirmwareHistoryUseCase } from "../application/use-cases/get-iot-device-firmware-history/get-iot-device-firmware-history";
@@ -31,7 +28,6 @@ describe("IotDeviceController", () => {
   let userId: string;
   let awsAdapter: AwsAdapter;
   let databricksAdapter: DatabricksAdapter;
-  let analyticsAdapter: MockAnalyticsAdapter;
 
   const registerBody = { serialNumber: "AA:BB:CC:DD:EE:FF", name: "Sensor", deviceType: "ambyte" };
 
@@ -44,8 +40,6 @@ describe("IotDeviceController", () => {
     userId = await testApp.createTestUser({ name: "Owner" });
     awsAdapter = testApp.module.get(AwsAdapter);
     databricksAdapter = testApp.module.get(DatabricksAdapter);
-    analyticsAdapter = testApp.module.get(AnalyticsAdapter);
-    analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, true);
     vi.spyOn(awsAdapter, "createThing").mockResolvedValue(success(RETURNED_THING));
     vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
     vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(success([]));
@@ -63,50 +57,6 @@ describe("IotDeviceController", () => {
 
   afterAll(async () => {
     await testApp.teardown();
-  });
-
-  describe("iot-devices feature flag", () => {
-    it("returns 403 on every device endpoint when the flag is disabled", async () => {
-      const device = await testApp.createIotDevice({ createdBy: userId });
-      analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, false);
-
-      await testApp
-        .get(testApp.resolveOrpcPath(contract.iot.listIotDevices))
-        .withAuth(userId)
-        .expect(StatusCodes.FORBIDDEN);
-      await testApp
-        .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
-        .withAuth(userId)
-        .send(registerBody)
-        .expect(StatusCodes.FORBIDDEN);
-      await testApp
-        .post(testApp.resolveOrpcPath(contract.iot.bulkRegisterIotDevices))
-        .withAuth(userId)
-        .send({ devices: [{ serialNumber: "S-1" }], deviceType: "ambyte" })
-        .expect(StatusCodes.FORBIDDEN);
-      await testApp
-        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
-        .withAuth(userId)
-        .send({ installId: "9f2c1a2e-1111-4111-8111-111111111111" })
-        .expect(StatusCodes.FORBIDDEN);
-
-      const getPath = testApp.resolveOrpcPath(contract.iot.getIotDevice, {
-        deviceId: device.id,
-      });
-      await testApp.get(getPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
-      await testApp.delete(getPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
-
-      const credentialsPath = testApp.resolveOrpcPath(contract.iot.issueIotCredentials, {
-        deviceId: device.id,
-      });
-      await testApp.post(credentialsPath).withAuth(userId).send({}).expect(StatusCodes.FORBIDDEN);
-      await testApp.delete(credentialsPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
-
-      const rotatePath = testApp.resolveOrpcPath(contract.iot.rotateIotCredentials, {
-        deviceId: device.id,
-      });
-      await testApp.post(rotatePath).withAuth(userId).send({}).expect(StatusCodes.FORBIDDEN);
-    });
   });
 
   describe("registerIotDevice", () => {
