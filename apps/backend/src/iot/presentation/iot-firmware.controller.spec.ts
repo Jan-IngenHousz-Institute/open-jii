@@ -1,12 +1,9 @@
 import { StatusCodes } from "http-status-codes";
 
-import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
 import type { FirmwareReleaseList } from "@repo/api/domains/iot/firmware/iot-firmware.schema";
 
-import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
-import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { ListIotFirmwareReleasesUseCase } from "../application/use-cases/list-iot-firmware-releases/list-iot-firmware-releases";
@@ -31,7 +28,6 @@ const RELEASE = {
 describe("IotFirmwareController", () => {
   const testApp = TestHarness.App;
   let userId: string;
-  let analyticsAdapter: MockAnalyticsAdapter;
 
   beforeAll(async () => {
     await testApp.setup({ mock: { AnalyticsAdapter: true } });
@@ -40,8 +36,6 @@ describe("IotFirmwareController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     userId = await testApp.createTestUser({ name: "Owner" });
-    analyticsAdapter = testApp.module.get(AnalyticsAdapter);
-    analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, true);
   });
 
   afterEach(() => {
@@ -66,12 +60,6 @@ describe("IotFirmwareController", () => {
       .expect(StatusCodes.OK);
 
     expect(response.body.releases).toEqual([RELEASE]);
-  });
-
-  it("returns 403 when the device registry is disabled", async () => {
-    analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, false);
-
-    await testApp.get(path("ambyte")).withAuth(userId).expect(StatusCodes.FORBIDDEN);
   });
 
   it("returns 401 when unauthenticated", async () => {
