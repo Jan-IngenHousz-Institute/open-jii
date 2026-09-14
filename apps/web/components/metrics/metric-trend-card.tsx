@@ -124,8 +124,8 @@ export function MetricTrendCard({
 
   return (
     <Card padding="sm" className={cn("@container/card", className)}>
-      <CardHeader className="gap-1">
-        <CardDescription>{label}</CardDescription>
+      <CardHeader className="gap-1 max-sm:flex max-sm:flex-row max-sm:items-center max-sm:justify-between">
+        <CardDescription className="min-w-0">{label}</CardDescription>
         <CardTitle
           title={title}
           className="line-clamp-1 min-w-0 text-2xl font-semibold tabular-nums"

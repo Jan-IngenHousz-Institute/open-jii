@@ -115,6 +115,22 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
 
   const labels = new Map(devices.map((device) => [device.id, resolveDeviceLabel(device, t)]));
 
+  const freshestDevice =
+    freshest === null
+      ? null
+      : (labels.get(health.find((member) => member.lastDataAt === freshest)?.deviceId ?? "") ??
+        null);
+
+  // Most actionable reason first, matching the order the attention list uses.
+  const REASON_LABEL = {
+    credentials: "iot.devices.fleet.reasonCredentials",
+    neverConnected: "iot.devices.fleet.reasonNeverConnected",
+    silent: "iot.devices.fleet.reasonSilent",
+  } as const;
+
+  const topAttentionReason =
+    attention === undefined || attention.length === 0 ? null : attention[0].reason;
+
   const handleRangeChange = (range: MonitoringRange, preset: MonitoringPresetId | null) => {
     setSelection({ range, preset });
   };
@@ -145,6 +161,11 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
               })
             )
           }
+          note={
+            summary === undefined
+              ? undefined
+              : t("iot.devices.fleet.offlineCount", { count: summary.total - summary.online })
+          }
           alert={
             summary !== undefined && summary.silent > 0 ? (
               <>
@@ -165,6 +186,11 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
             ) : (
               lastDataLine(monitoring.pipelineUnavailable)
             )
+          }
+          note={
+            freshestDevice === null
+              ? undefined
+              : t("iot.devices.fleet.fromDevice", { device: freshestDevice })
           }
           className="bg-card"
         />
@@ -202,6 +228,13 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
             ) : (
               attention.length.toLocaleString(locale)
             )
+          }
+          note={
+            attention === undefined
+              ? undefined
+              : topAttentionReason === null
+                ? t("iot.devices.fleet.attentionEmpty")
+                : t(REASON_LABEL[topAttentionReason])
           }
           className="bg-card"
         />

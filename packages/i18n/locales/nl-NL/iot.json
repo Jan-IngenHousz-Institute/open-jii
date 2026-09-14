@@ -471,7 +471,10 @@
         "loadError": "De vlootactiviteit kon niet worden geladen.",
         "reasonCredentials": "Certificaat nodig",
         "reasonNeverConnected": "Nooit verbonden",
-        "reasonSilent": "Verbonden, geen data"
+        "reasonSilent": "Verbonden, geen data",
+        "fromDevice": "Meest recent van {{device}}",
+        "offlineCount_one": "{{count}} offline",
+        "offlineCount_other": "{{count}} offline"
       }
     },
     "onboarding": {

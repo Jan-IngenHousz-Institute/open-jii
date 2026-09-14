@@ -104,7 +104,7 @@ export function MetricStatCard({
         <CardDescription className="min-w-0">{label}</CardDescription>
         <CardTitle
           title={title}
-          className="line-clamp-2 min-w-0 break-words text-2xl font-semibold tabular-nums"
+          className="line-clamp-2 min-w-0 break-words text-2xl font-semibold tabular-nums max-sm:ml-auto"
         >
           {href === undefined ? value : renderLinkedValue(href)}
         </CardTitle>
