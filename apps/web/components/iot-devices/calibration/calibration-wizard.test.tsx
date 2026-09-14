@@ -269,7 +269,14 @@ describe("CalibrationWizard", () => {
 
     // The submission carried the three captured rows and the device's version.
     expect(createSpy.params.deviceId).toBe(DEVICE_ID);
-    // The write report carries the check's readings and what the device said about itself afterwards.
+    // The write goes on record before the check, with what the device said about
+    // itself afterwards; the check's readings follow in a second report.
+    expect(reportSpy.callCount).toBe(2);
+    expect(reportSpy.calls[0].body).toMatchObject({
+      writeResults: { par: { verified: true } },
+      postInfo: { helloReply: "MiniPAR,1.03", deviceName: "Bench-7" },
+    });
+    expect(reportSpy.calls[0].body).not.toHaveProperty("verification");
     expect(reportSpy.body).toMatchObject({
       writeResults: { par: { verified: true } },
       verification: { par_check: [{ par: 398.1, par_ref: 398.5 }] },
@@ -277,8 +284,8 @@ describe("CalibrationWizard", () => {
     });
 
     // The console saw three raw reads, both coefficient writers and their
-    // readback, the check's calibrated read, then the identity read for the
-    // record, in order.
+    // readback, the identity read for the record, then the check's calibrated
+    // read, in order.
     expect(console.sent).toEqual([
       "par_raw",
       "par_raw",
@@ -286,9 +293,9 @@ describe("CalibrationWizard", () => {
       "cal_par_slope,0.96",
       "cal_par_intercept,-1.08",
       "get_cal_par",
-      "par",
       "hello",
       "get_name",
+      "par",
     ]);
   });
 
@@ -496,6 +503,7 @@ describe("CalibrationWizard", () => {
     await waitFor(() => {
       expect(reportSpy.called).toBe(true);
     });
+    expect(reportSpy.callCount).toBe(1);
     expect(reportSpy.body).not.toHaveProperty("verification");
     expect(console.sent).not.toContain("par");
   });

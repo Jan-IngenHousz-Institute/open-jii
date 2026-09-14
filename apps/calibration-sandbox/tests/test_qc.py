@@ -171,6 +171,12 @@ class AssessMultilinearFitTest(unittest.TestCase):
         self.assertFalse(record["passed"])
         self.assertIn("at least 5 calibration points are required for 3 channels", record["reasons"])
 
+    def test_underdetermined_fit_is_refused_without_calling_the_channels_collinear(self):
+        record = assess_multilinear_fit(SPECTRAL_ROWS[:3], SPECTRAL_Y[:3])
+        self.assertFalse(record["passed"])
+        self.assertIn("at least 5 calibration points are required for 3 channels", record["reasons"])
+        self.assertFalse(any("collinear" in reason for reason in record["reasons"]))
+
     def test_collinear_channels_fail(self):
         rows = [[row[0], row[1], 2.0 * row[0]] for row in SPECTRAL_ROWS]
         record = assess_multilinear_fit(rows, SPECTRAL_Y)
@@ -200,6 +206,7 @@ class AssessMultilinearFitTest(unittest.TestCase):
         record = assess_multilinear_fit(rows, SPECTRAL_Y)
         self.assertFalse(record["passed"])
         self.assertIn("all calibration values must be finite", record["reasons"])
+        self.assertFalse(any("collinear" in reason for reason in record["reasons"]))
 
     def test_ragged_rows_raise(self):
         with self.assertRaises(ValueError):

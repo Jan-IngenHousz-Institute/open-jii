@@ -193,6 +193,13 @@ describe("IotCalibrationRunRepository", () => {
     expect(written.value.writeResults).toEqual({ par: { verified: true } });
     expect(written.value.verification).toEqual({ par_check: [{ par: 402.9, par_ref: 402.2 }] });
 
+    // The wizard reports the write before the check and again after it; the first
+    // report keeps the time the coefficients reached the device.
+    const reported = await repository.markWritten(approved.value.id, { par: { verified: true } });
+    assertSuccess(reported);
+    expect(reported.value.writtenToDeviceAt).toEqual(written.value.writtenToDeviceAt);
+    expect(reported.value.verification).toBeNull();
+
     const stored = await repository.findById(run.id);
     assertSuccess(stored);
     expect(stored.value?.postInfo).toEqual({ helloReply: "cal_par_slope=1.19" });

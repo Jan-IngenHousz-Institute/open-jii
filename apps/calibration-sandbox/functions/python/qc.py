@@ -283,7 +283,8 @@ def assess_multilinear_fit(
         condition_number = math.inf
         residual = []
 
-    if rank < parameters:
+    # Rank only says something once the points could have determined every parameter.
+    if finite and len(x) > parameters and rank < parameters:
         reasons.append("channel readings are collinear, so the coefficients are not unique")
 
     ss_res = sum(value * value for value in residual) if residual else math.inf

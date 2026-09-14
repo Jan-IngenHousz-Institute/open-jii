@@ -205,14 +205,14 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
         applied.blocks,
       );
       setWriteResults(results);
-      const checked = await verifyOnDevice(definition.data.captureProcedure, connection, results);
+      // On record before the check starts: a check is operator-paced and the tab may not outlive it.
       const postInfo = await readPostWriteInfo(connection.driver);
-      await reportWrite.mutateAsync({
-        calibrationId: applied.id,
-        writeResults: results,
-        postInfo,
-        verification: checked,
-      });
+      const report = { calibrationId: applied.id, writeResults: results, postInfo };
+      await reportWrite.mutateAsync(report);
+      const checked = await verifyOnDevice(definition.data.captureProcedure, connection, results);
+      if (checked) {
+        await reportWrite.mutateAsync({ ...report, verification: checked });
+      }
     } catch (error) {
       setWriteError(
         error instanceof Error ? error.message : t("iot.calibration.write.reportFailed"),

@@ -47,7 +47,7 @@ export interface BlockWriters {
 }
 
 export interface FamilyCalibrationWriters {
-  /** Consecutive console writes need this gap on the bench, or the second one is lost. */
+  /** The gap the bench procedure leaves between consecutive console writes. */
   pauseBetweenWritesMs: number;
   blocks: Partial<Record<string, BlockWriters>>;
 }
@@ -135,7 +135,7 @@ function scalarWriter(command: string): CoefficientWriter {
 /** A family absent here cannot receive coefficients yet; Ambit joins once its readback loop exists. */
 export const CALIBRATION_WRITERS: Partial<Record<SensorFamily, FamilyCalibrationWriters>> = {
   minipar: {
-    // The bench procedure waits 300 ms between the two PAR writes; back to back, the second is lost.
+    // The bench procedure waits 300 ms between the two PAR writes so the console keeps up.
     pauseBetweenWritesMs: 300,
     blocks: {
       par: {

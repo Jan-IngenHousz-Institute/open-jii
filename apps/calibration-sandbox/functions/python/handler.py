@@ -180,7 +180,7 @@ def _check_array(label, value, spec, integers):
     for index, entry in enumerate(values):
         if integers and (isinstance(entry, bool) or not isinstance(entry, int)):
             reasons.append(f"Coefficient '{label}[{index}]' must be an integer")
-        elif _is_not_finite_number(entry):
+        elif not _is_finite_number(entry):
             reasons.append(f"Coefficient '{label}[{index}]' must be a finite number")
         elif "min" in spec and entry < spec["min"]:
             reasons.append(f"Coefficient '{label}[{index}]' is below the allowed minimum")
@@ -189,9 +189,9 @@ def _check_array(label, value, spec, integers):
     return reasons
 
 
-def _is_not_finite_number(entry):
+def _is_finite_number(entry):
     # A non-finite float arrives as None once it has crossed the runner's JSON line.
-    return isinstance(entry, bool) or not isinstance(entry, (int, float)) or not math.isfinite(entry)
+    return not isinstance(entry, bool) and isinstance(entry, (int, float)) and math.isfinite(entry)
 
 
 def _as_plain_list(value):

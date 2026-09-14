@@ -121,7 +121,7 @@ describe("writeCalibrationBlocks", () => {
     ]);
   });
 
-  // The bench procedure sleeps 300 ms between the two writes; back to back, the second is lost.
+  // The bench procedure sleeps 300 ms between the two writes so the console keeps up.
   it("pauses between consecutive console writes by the family's gap", async () => {
     const transport = miniparConsole();
     driver.initialize(transport);

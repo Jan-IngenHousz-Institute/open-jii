@@ -187,12 +187,14 @@ export class IotCalibrationRunRepository {
   ): Promise<Result<DeviceCalibrationDto>> {
     return tryCatch(async () => {
       return this.database.transaction(async (tx) => {
+        // The first report fixes when the coefficients reached the device; a later
+        // report refreshes everything else, including whether a check is on record.
         const rows = await tx
           .update(deviceCalibrations)
           .set({
-            writtenToDeviceAt: new Date(),
+            writtenToDeviceAt: sql`coalesce(${deviceCalibrations.writtenToDeviceAt}, (now() AT TIME ZONE 'UTC'))`,
             writeResults,
-            ...(verification ? { verification } : {}),
+            verification: verification ?? null,
           })
           .where(eq(deviceCalibrations.id, calibrationId))
           .returning();

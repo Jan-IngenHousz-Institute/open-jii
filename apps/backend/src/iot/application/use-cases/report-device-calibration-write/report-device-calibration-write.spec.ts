@@ -156,6 +156,29 @@ describe("ReportDeviceCalibrationWriteUseCase", () => {
     expect(result.value.verification).toBeNull();
   });
 
+  // The write is reported as soon as it lands and again once the check is done, so
+  // the latest report decides what is on record while the write time stays put.
+  it("lets a later report replace the check without moving the write time", async () => {
+    const first = await useCase.execute(
+      { calibrationId, writeResults: { par: { verified: true } } },
+      userId,
+    );
+    assertSuccess(first);
+
+    const checked = await useCase.execute(
+      {
+        calibrationId,
+        writeResults: { par: { verified: true } },
+        verification: { par_check: [{ par: 402.9 }] },
+      },
+      userId,
+    );
+    assertSuccess(checked);
+
+    expect(checked.value.verification).toEqual({ par_check: [{ par: 402.9 }] });
+    expect(checked.value.writtenToDeviceAt).toEqual(first.value.writtenToDeviceAt);
+  });
+
   it("refuses a verification naming a series the verify phase does not produce", async () => {
     const result = await useCase.execute(
       {
