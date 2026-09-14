@@ -127,10 +127,14 @@ export {
 } from "./calibration/write-back";
 export type {
   AppliedCalibrationBlocks,
+  BlockReadback,
+  BlockWriters,
   CalibrationWriteResults,
+  CoefficientValue,
   CoefficientWriteResult,
   CoefficientWriter,
   FamilyCalibrationWriters,
+  WriteCalibrationOptions,
 } from "./calibration/write-back";
 
 // Capture procedures: the declared steps a calibration runs at a bench.
