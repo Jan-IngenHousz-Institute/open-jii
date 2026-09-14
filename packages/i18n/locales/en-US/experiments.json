@@ -50,12 +50,7 @@
     "title": "Measurements",
     "addMeasurement": "Add Measurement",
     "viewResults": "View Results",
-    "downloadData": "Download Data",
-    "noMeasurements": "No measurements recorded yet",
-    "latestMeasurements": "Latest Measurements",
-    "deviceId": "Device ID",
-    "lastProcessed": "Last Processed",
-    "seeAll": "See all"
+    "downloadData": "Download Data"
   },
   "dashboards": {
     "tabLabel": "Dashboards"
@@ -438,5 +433,19 @@
       "note": "Note:",
       "warningMessage": "The following file(s) will be automatically excluded from the upload:"
     }
+  },
+  "dataInventory": {
+    "title": "Data",
+    "seeAll": "See all",
+    "emptyTitle": "No data yet",
+    "empty": "Tables appear here once a device publishes into this experiment, a macro runs, or you upload a file.",
+    "loadError": "This experiment's data could not be loaded.",
+    "type": {
+      "static": "Raw",
+      "macro": "Processed",
+      "upload": "Uploaded"
+    },
+    "rowUnit_one": "row",
+    "rowUnit_other": "rows"
   }
 }
