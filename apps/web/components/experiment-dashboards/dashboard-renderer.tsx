@@ -51,7 +51,11 @@ export function DashboardRenderer({ dashboard, experimentId, scale = 1 }: Dashbo
               }}
             >
               <WidgetCard>
-                <LazyWidget>
+                <LazyWidget
+                  intrinsicHeight={
+                    (rowHeight * widget.layout.rowSpan + gap * (widget.layout.rowSpan - 1)) * scale
+                  }
+                >
                   <WidgetRenderer widget={widget} experimentId={experimentId} />
                 </LazyWidget>
               </WidgetCard>
