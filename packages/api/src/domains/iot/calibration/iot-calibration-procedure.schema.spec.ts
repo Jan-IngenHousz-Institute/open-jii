@@ -505,6 +505,128 @@ describe("zCaptureProcedure", () => {
       expect(result.success).toBe(false);
     });
 
+    // A bench is often told the level and asked for the trace in one command,
+    // so a sweep's reads carry the setpoint the same way a prompt does.
+    it("accepts a setpoint placeholder in a sweep read's command", () => {
+      const result = zCaptureProcedure.safeParse({
+        instruments: [{ role: "dut" }, { role: "lamp", handshake: "KIPRIM" }],
+        steps: [
+          {
+            kind: "sweep",
+            series: "par_sweep",
+            stimulus: { instrument: "lamp", set: "current_a", values: [0.8, 2.4] },
+            read: [{ instrument: "dut", command: "arrun2,{value},1", as: "par_raw" }],
+          },
+        ],
+      });
+      expect(result.success, result.success ? "" : JSON.stringify(result.error.issues)).toBe(true);
+    });
+
+    // A step prompt is read by the operator, so an unresolved placeholder is
+    // nonsense on a screen rather than on a wire, and is refused the same way.
+    it.each([
+      ["an operator step's instruction", { kind: "operator", prompt: "Set the lamp to {value}" }],
+      [
+        "a read step's instruction",
+        {
+          kind: "read",
+          series: "par_check",
+          prompt: "Hold the sensor at {value}",
+          read: [{ instrument: "dut", command: "par", as: "par" }],
+        },
+      ],
+    ])("rejects a setpoint placeholder in %s", (_name, step) => {
+      const result = zCaptureProcedure.safeParse({ instruments: [{ role: "dut" }], steps: [step] });
+
+      expect(result.success).toBe(false);
+      expect(result.success ? [] : result.error.issues.map((issue) => issue.path)).toContainEqual([
+        "steps",
+        0,
+        "prompt",
+      ]);
+    });
+
+    // Outside a sweep there is no setpoint, so the device would be sent the braces themselves.
+    it("rejects a setpoint placeholder in a read step's command", () => {
+      const result = zCaptureProcedure.safeParse({
+        instruments: [{ role: "dut" }],
+        steps: [
+          {
+            kind: "read",
+            series: "par_check",
+            read: [{ instrument: "dut", command: "arrun2,{value},1", as: "par_raw" }],
+          },
+        ],
+      });
+      expect(result.success).toBe(false);
+      expect(result.success ? [] : result.error.issues.map((issue) => issue.path)).toContainEqual([
+        "steps",
+        0,
+        "read",
+        0,
+        "command",
+      ]);
+    });
+
+    it("rejects a read step naming a protocol that interpolates, while a sweep may name it", () => {
+      const procedure = {
+        instruments: [{ role: "dut" }],
+        protocols: { detector_scan: { pulses: ["{value}"], detectors: [[1, 2]] } },
+        steps: [
+          {
+            kind: "sweep",
+            series: "colorcal",
+            stimulus: { operator: "Clamp onto reference card {value}", values: ["white_a"] },
+            read: [{ instrument: "dut", protocol: "detector_scan", as: "channels" }],
+          },
+        ],
+      };
+      const asReadStep = {
+        ...procedure,
+        steps: [
+          {
+            kind: "read",
+            series: "colorcal",
+            read: [{ instrument: "dut", protocol: "detector_scan", as: "channels" }],
+          },
+        ],
+      };
+
+      expect(zCaptureProcedure.safeParse(procedure).success).toBe(true);
+      const result = zCaptureProcedure.safeParse(asReadStep);
+      expect(result.success).toBe(false);
+      expect(result.success ? [] : result.error.issues.map((issue) => issue.path)).toContainEqual([
+        "steps",
+        0,
+        "read",
+        0,
+        "protocol",
+      ]);
+    });
+
+    // An instrument steps through plain numbers, so a key has nothing to pick out.
+    it("rejects a keyed placeholder in a sweep driven by an instrument", () => {
+      const result = zCaptureProcedure.safeParse({
+        instruments: [{ role: "dut" }, { role: "lamp", handshake: "KIPRIM" }],
+        steps: [
+          {
+            kind: "sweep",
+            series: "par_sweep",
+            stimulus: { instrument: "lamp", set: "current_a", values: [0.8, 2.4] },
+            read: [{ instrument: "dut", command: "arrun2,{value.level},1", as: "par_raw" }],
+          },
+        ],
+      });
+      expect(result.success).toBe(false);
+      expect(result.success ? [] : result.error.issues.map((issue) => issue.path)).toContainEqual([
+        "steps",
+        0,
+        "read",
+        0,
+        "command",
+      ]);
+    });
+
     it("rejects an empty sweep", () => {
       const result = zCaptureProcedure.safeParse({
         ...manualMiniparProcedure,

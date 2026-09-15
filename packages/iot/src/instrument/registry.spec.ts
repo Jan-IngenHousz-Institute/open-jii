@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { MockTransport } from "../driver/testing/mock-transport";
 import { createMockTransport } from "../driver/testing/mock-transport";
+import { KIPRIM_COMMANDS } from "./kiprim/commands";
 import { benchInstrumentForHandshake, identifyBenchInstrument } from "./registry";
 
 function respondingWith(reply: string): MockTransport {
@@ -17,9 +18,9 @@ describe("bench instrument registry", () => {
   it("identifies a supply from whatever it answers on the port", async () => {
     const transport = respondingWith("KIPRIM,DC310S,25011669,FV:V5.2.0\n");
 
-    const instrument = await identifyBenchInstrument(transport);
+    const identification = await identifyBenchInstrument(transport);
 
-    expect(instrument?.model).toBe("kiprim-dc");
+    expect(identification?.instrument.model).toBe("kiprim-dc");
   });
 
   // Discovery is by identity reply, not by port order or configuration, so a
@@ -27,9 +28,9 @@ describe("bench instrument registry", () => {
   it("matches the token inside a longer vendor string, case-insensitively", async () => {
     const transport = respondingWith("  kiprim technologies,dc source,0001,v2\r\n");
 
-    const instrument = await identifyBenchInstrument(transport);
+    const identification = await identifyBenchInstrument(transport);
 
-    expect(instrument?.model).toBe("kiprim-dc");
+    expect(identification?.instrument.model).toBe("kiprim-dc");
   });
 
   // The reference answers Ctrl-A, not *IDN?, so the probe order has to reach it.
@@ -42,9 +43,28 @@ describe("bench instrument registry", () => {
       return Promise.resolve();
     });
 
-    const instrument = await identifyBenchInstrument(transport);
+    const identification = await identifyBenchInstrument(transport);
 
-    expect(instrument?.model).toBe("micropython-par-reference");
+    expect(identification?.instrument.model).toBe("micropython-par-reference");
+  });
+
+  // Two roles can be served by one instrument class and told apart only by the name
+  // the unit reports, so the class alone does not answer "is this the declared role".
+  it("surfaces the identity reply beside the instrument, so a caller can match a declared role", async () => {
+    const transport = respondingWith("KIPRIM,DC310S,25011669,FV:V5.2.0\n");
+
+    const identification = await identifyBenchInstrument(transport);
+
+    expect(identification?.reply).toBe("KIPRIM,DC310S,25011669,FV:V5.2.0");
+  });
+
+  it("does not drive a port whose instrument it did not recognise", async () => {
+    const transport = respondingWith("raw REPL; CTRL-B to exit\r\n>");
+
+    const identification = await identifyBenchInstrument(transport);
+
+    expect(identification?.instrument.model).toBe("micropython-par-reference");
+    expect(transport.send).not.toHaveBeenCalledWith(KIPRIM_COMMANDS.setCurrent(0));
   });
 
   it("returns null for an instrument nothing recognises", async () => {

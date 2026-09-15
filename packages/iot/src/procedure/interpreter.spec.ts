@@ -663,6 +663,161 @@ describe("runCaptureProcedure", () => {
         runCaptureProcedure(procedure, context({ rig: { dut: failing } })),
       ).rejects.toThrow(/device stopped answering/);
     });
+
+    // A bench that is told the level and asked for the trace in one command
+    // carries the setpoint in the command text.
+    it("interpolates the sweep's setpoint into a read command, once per setpoint", async () => {
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }, { role: "lamp", handshake: "KIPRIM" }],
+        steps: [
+          {
+            kind: "sweep",
+            series: "par_sweep",
+            stimulus: { instrument: "lamp", set: "current_a", values: [0.8, 2.4] },
+            read: [{ instrument: "dut", command: "arrun2,{value},1", as: "par_raw" }],
+          },
+        ],
+      };
+      const dut = reader({ "arrun2,0.8,1": 148.2, "arrun2,2.4,1": 402.2 });
+
+      const result = await runCaptureProcedure(
+        procedure,
+        context({ rig: { dut, lamp: setpointTarget() } }),
+      );
+
+      expect(result.payload.par_sweep.map((row) => row.par_raw)).toEqual([148.2, 402.2]);
+    });
+
+    it("interpolates a compound setpoint's key into a read command", async () => {
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }],
+        steps: [
+          {
+            kind: "sweep",
+            series: "vwc_curve",
+            stimulus: {
+              operator: "Insert the probe: {value.medium}",
+              values: [{ medium: "sand", condition: "air_dry" }],
+            },
+            read: [{ instrument: "dut", command: "read_vwc,{value.medium}", as: "vwc_raw" }],
+          },
+        ],
+      };
+
+      const result = await runCaptureProcedure(
+        procedure,
+        context({ rig: { dut: reader({ "read_vwc,sand": 0.03 }) } }),
+      );
+
+      expect(result.payload.vwc_curve[0].vwc_raw).toBe(0.03);
+    });
+
+    it("interpolates the setpoint into an operator read's prompt inside a sweep", async () => {
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }, { role: "lamp", handshake: "KIPRIM" }],
+        steps: [
+          {
+            kind: "sweep",
+            series: "par_sweep",
+            stimulus: { instrument: "lamp", set: "current_a", values: [0.8] },
+            read: [
+              { operator: "Enter the meter reading at {value} A", as: "par_ref", type: "number" },
+            ],
+          },
+        ],
+      };
+      const port = operator({ readValue: vi.fn(() => Promise.resolve(176.4)) });
+
+      await runCaptureProcedure(
+        procedure,
+        context({ rig: { dut: reader({}), lamp: setpointTarget() }, operator: port }),
+      );
+
+      expect(port.readValue).toHaveBeenCalledWith("Enter the meter reading at 0.8 A", "number");
+    });
+
+    it("sends a resolved clone of a protocol that interpolates, leaving the declaration alone", async () => {
+      const scan = {
+        pulses: ["{value}"],
+        label: "step {value}",
+        detectors: [[1, 2]],
+        autogain: { start_value: "{value}" },
+      };
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }],
+        protocols: { detector_scan: scan },
+        steps: [
+          {
+            kind: "sweep",
+            series: "colorcal",
+            stimulus: { operator: "Set the lamp to {value}", values: [20, 40] },
+            read: [{ instrument: "dut", protocol: "detector_scan", as: "channels" }],
+          },
+        ],
+      };
+      const execute = vi.fn((_command: string | object) =>
+        Promise.resolve({ success: true, data: { channels: [415] } }),
+      );
+
+      await runCaptureProcedure(procedure, context({ rig: { dut: { read: { execute } } } }));
+
+      // A lone placeholder carries the setpoint's own type; text around one keeps it a string.
+      expect(execute.mock.calls.map(([command]) => command)).toEqual([
+        { pulses: [20], label: "step 20", detectors: [[1, 2]], autogain: { start_value: 20 } },
+        { pulses: [40], label: "step 40", detectors: [[1, 2]], autogain: { start_value: 40 } },
+      ]);
+      expect(execute.mock.calls[0][0]).not.toBe(scan);
+      expect(execute.mock.calls[0][0]).not.toBe(execute.mock.calls[1][0]);
+      expect(scan).toEqual({
+        pulses: ["{value}"],
+        label: "step {value}",
+        detectors: [[1, 2]],
+        autogain: { start_value: "{value}" },
+      });
+    });
+
+    it("sends the declared protocol object itself when a sweep has nothing to interpolate", async () => {
+      const scan = { pulses: [20], detectors: [[1, 2]] };
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }],
+        protocols: { detector_scan: scan },
+        steps: [
+          {
+            kind: "sweep",
+            series: "colorcal",
+            stimulus: { operator: "Clamp onto reference card {value}", values: ["white_a"] },
+            read: [{ instrument: "dut", protocol: "detector_scan", as: "channels" }],
+          },
+        ],
+      };
+      const execute = vi.fn((_command: string | object) =>
+        Promise.resolve({ success: true, data: { channels: [415] } }),
+      );
+
+      await runCaptureProcedure(procedure, context({ rig: { dut: { read: { execute } } } }));
+
+      expect(execute.mock.calls[0][0]).toBe(scan);
+    });
+
+    it("leaves a read step's command as declared, having no setpoint to resolve", async () => {
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }],
+        steps: [
+          {
+            kind: "read",
+            series: "par_sweep",
+            read: [{ instrument: "dut", command: "par,{value}", as: "par_raw" }],
+          },
+        ],
+      };
+
+      const result = await runCaptureProcedure(
+        procedure,
+        context({ rig: { dut: reader({ "par,{value}": 12 }) } }),
+      );
+
+      expect(result.payload.par_sweep[0].par_raw).toBe(12);
+    });
   });
 
   describe("settle steps", () => {

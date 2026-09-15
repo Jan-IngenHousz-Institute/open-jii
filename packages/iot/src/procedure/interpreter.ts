@@ -184,7 +184,7 @@ class ProcedureRunner {
 
       if (step.settleMs) await this.sleep(step.settleMs);
 
-      const row = await this.takeReads(step.read);
+      const row = await this.takeReads(step.read, value);
       row[SWEEP_STIMULUS_COLUMN] = value;
       rows.push(row);
     }
@@ -215,17 +215,21 @@ class ProcedureRunner {
     await target.applySetpoint(name, value);
   }
 
-  private async takeReads(reads: ProcedureRead[]): Promise<SeriesRow> {
+  /** `value` is the sweep setpoint the reads are taken at; a read step has none. */
+  private async takeReads(reads: ProcedureRead[], value?: SetpointValue): Promise<SeriesRow> {
     const row: SeriesRow = {};
     for (const read of reads) {
-      row[read.as] = await this.takeOneRead(read);
+      row[read.as] = await this.takeOneRead(read, value);
     }
     return row;
   }
 
-  private async takeOneRead(read: ProcedureRead): Promise<SeriesCell | null> {
+  private async takeOneRead(
+    read: ProcedureRead,
+    value?: SetpointValue,
+  ): Promise<SeriesCell | null> {
     if (!isInstrumentRead(read)) {
-      return this.context.operator.readValue(read.operator, read.type);
+      return this.context.operator.readValue(interpolate(read.operator, value), read.type);
     }
 
     const target = this.context.rig[read.instrument]?.read;
@@ -237,7 +241,7 @@ class ProcedureRunner {
     const repeat = read.repeat ?? 1;
     for (let index = 0; index < repeat; index++) {
       if (index > 0 && read.intervalMs) await this.sleep(read.intervalMs);
-      samples.push(await this.readOnce(target, read));
+      samples.push(await this.readOnce(target, read, value));
     }
 
     // One sample stays scalar; a repeat yields the series. A cell holds a numeric
@@ -248,8 +252,15 @@ class ProcedureRunner {
       : JSON.stringify(samples);
   }
 
-  private async readOnce(target: ReadTarget, read: InstrumentRead): Promise<SeriesCell> {
-    const command = read.command ?? this.resolveProtocol(read);
+  private async readOnce(
+    target: ReadTarget,
+    read: InstrumentRead,
+    value?: SetpointValue,
+  ): Promise<SeriesCell> {
+    const command =
+      read.command === undefined
+        ? this.resolveProtocol(read, value)
+        : interpolate(read.command, value);
 
     const result = await target.execute(command, { timeoutMs: read.timeoutMs });
     if (!result.success) {
@@ -258,8 +269,8 @@ class ProcedureRunner {
     return toCell(result.data);
   }
 
-  /** A read names a protocol; the device gets the declared object, whole. */
-  private resolveProtocol(read: InstrumentRead): MeasurementProtocol {
+  /** A read names a protocol; the device gets the declared object, whole, or a clone per setpoint. */
+  private resolveProtocol(read: InstrumentRead, value?: SetpointValue): MeasurementProtocol {
     if (read.protocol === undefined) {
       throw new ProcedureRigError(`Read "${read.as}" names neither a command nor a protocol`);
     }
@@ -269,7 +280,12 @@ class ProcedureRunner {
         `Read "${read.as}" names protocol "${read.protocol}", which the procedure does not declare`,
       );
     }
-    return protocol;
+
+    if (value === undefined || !holdsPlaceholder(JSON.stringify(protocol))) {
+      return protocol;
+    }
+
+    return interpolateProtocol(protocol, value);
   }
 
   private missingRole(reads: ProcedureRead[]): string | undefined {
@@ -306,14 +322,69 @@ class ProcedureRunner {
   }
 }
 
-/** `{value}` and `{value.key}` in an operator prompt. */
-function interpolate(prompt: string, value: SetpointValue): string {
-  return prompt.replace(/\{value(?:\.([a-zA-Z0-9_]+))?\}/g, (_match, key: string | undefined) => {
+/** The sweep setpoint, as it may be written into a prompt, a read command, or a protocol's strings. */
+const SETPOINT_PLACEHOLDER = /\{value(?:\.([a-zA-Z0-9_]+))?\}/g;
+const LONE_SETPOINT_PLACEHOLDER = new RegExp(`^${SETPOINT_PLACEHOLDER.source}$`);
+
+/** Outside a sweep there is no setpoint, and the declared text stands as written. */
+function interpolate(text: string, value: SetpointValue | undefined): string {
+  if (value === undefined) {
+    return text;
+  }
+
+  return text.replace(SETPOINT_PLACEHOLDER, (_match, key: string | undefined) => {
     if (key === undefined) {
       return typeof value === "object" ? JSON.stringify(value) : String(value);
     }
     return typeof value === "object" ? String(value[key] ?? "") : String(value);
   });
+}
+
+// search, not test: the shared pattern is global, and test would leave its lastIndex behind.
+function holdsPlaceholder(text: string): boolean {
+  return text.search(SETPOINT_PLACEHOLDER) !== -1;
+}
+
+/** Resolved into a clone per setpoint: the declared protocols are the definition and are never written to. */
+function interpolateProtocol(
+  protocol: MeasurementProtocol,
+  value: SetpointValue,
+): MeasurementProtocol {
+  const resolved: MeasurementProtocol = {};
+
+  for (const [key, node] of Object.entries(protocol)) {
+    resolved[key] = interpolateNode(node, value);
+  }
+
+  return resolved;
+}
+
+function interpolateNode(node: unknown, value: SetpointValue): unknown {
+  if (typeof node === "string") {
+    const text = interpolate(node, value);
+    // A leaf that is nothing but the placeholder takes the setpoint's own type, so a
+    // device gets `"pulses": [20]` rather than `["20"]`.
+    const isLoneNumber = LONE_SETPOINT_PLACEHOLDER.test(node) && NUMERIC_TEXT.test(text);
+    return isLoneNumber ? Number(text) : text;
+  }
+
+  if (isProtocolArray(node)) {
+    return node.map((entry) => interpolateNode(entry, value));
+  }
+
+  if (isProtocolObject(node)) {
+    return interpolateProtocol(node, value);
+  }
+
+  return node;
+}
+
+function isProtocolArray(node: unknown): node is unknown[] {
+  return Array.isArray(node);
+}
+
+function isProtocolObject(node: unknown): node is MeasurementProtocol {
+  return typeof node === "object" && node !== null && !Array.isArray(node);
 }
 
 const NUMERIC_TEXT = /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i;

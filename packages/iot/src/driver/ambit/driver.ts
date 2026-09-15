@@ -4,8 +4,8 @@
  * Text console (string commands): the firmware has NO reply framing
  * (free-text lines, silent writers, no terminator), so replies are collected
  * until an RX quiet window elapses. The device light-sleeps after console
- * idle and prints a wake byte >127; `initialize()`/`ensureAwake()` run the
- * Calibratron-style hello poll until the `NEW ... Ready` sentinel answers.
+ * idle and prints a wake byte >127; `initialize()`/`ensureAwake()` poll hello
+ * until the `NEW ... Ready` sentinel answers, as the factory bench does.
  *
  * JSON envelope (object/array commands): the firmware's openJII protocol
  * module runs measurements (`arrun`) sent as protocol JSON and replies one
@@ -133,7 +133,7 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
     return reply;
   }
 
-  /** Poll hello until the ready sentinel answers (Calibratron's wake loop). */
+  /** Poll hello until the ready sentinel answers, the factory bench's wake loop. */
   private async wake(): Promise<void> {
     for (let attempt = 0; attempt < AMBIT_FRAMING.WAKE_RETRIES; attempt++) {
       try {

@@ -17,23 +17,30 @@ export const BENCH_INSTRUMENTS: readonly BenchInstrumentFactory[] = [
   (logger) => new MicroPythonParReference(undefined, logger),
 ];
 
+export interface BenchIdentification {
+  instrument: BenchInstrument;
+
+  /** What the port answered, so a caller can match a declared role's handshake against it. */
+  reply: string;
+}
+
 /** Ask each known instrument in turn; null means nothing recognised the reply. */
 export async function identifyBenchInstrument(
   transport: ITransportAdapter,
   logger?: Logger,
-): Promise<BenchInstrument | null> {
+): Promise<BenchIdentification | null> {
   for (const create of BENCH_INSTRUMENTS) {
     const instrument = create(logger);
     try {
       await instrument.initialize(transport);
       const reply = await instrument.identify();
       if (identityMatches(instrument, reply)) {
-        return instrument;
+        return { instrument, reply };
       }
     } catch {
       // A silent or malformed answer just means "not this one".
     }
-    await instrument.destroy().catch(() => undefined);
+    // Dropped, not destroyed: destroy() writes to the port, which no mismatched candidate may.
   }
   return null;
 }

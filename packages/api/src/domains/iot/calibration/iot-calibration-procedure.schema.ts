@@ -30,6 +30,11 @@ const zAuxiliaryInstrument = z
 export const zRigInstrument = z.union([zDutInstrument, zAuxiliaryInstrument]);
 
 // An operator prompt may interpolate the setpoint with {value} or {value.key}.
+// A sweep's reads carry the same grammar; the copy that executes it is the
+// interpreter in packages/iot/src/procedure/interpreter.ts.
+const SETPOINT_PLACEHOLDER = /\{value(?:\.[a-zA-Z0-9_]+)?\}/;
+const KEYED_SETPOINT_PLACEHOLDER = /\{value\.[a-zA-Z0-9_]+\}/;
+
 const zSetpointValue = z.union([
   z.number().finite(),
   z.string().min(1).max(64),
@@ -207,6 +212,18 @@ export const zCaptureProcedure = z
       }
     };
 
+    // A placeholder resolves against the setpoint a sweep is at; published
+    // anywhere else it reaches the bench as literal text.
+    const refusePlaceholder = (text: string | undefined, path: (string | number)[]) => {
+      if (text !== undefined && SETPOINT_PLACEHOLDER.test(text)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "A setpoint placeholder resolves only inside a sweep step",
+          path,
+        });
+      }
+    };
+
     // Each phase names its own series; the capture feeds the script, the verify phase the calibration record.
     const checkSteps = (steps: ProcedureStep[], phase: "steps" | "verify") => {
       const seriesNames = new Set<string>();
@@ -215,8 +232,15 @@ export const zCaptureProcedure = z
           requireDeclaredRole(step.instrument, [phase, stepIndex, "instrument"]);
           return;
         }
+        if (step.kind === "operator") {
+          refusePlaceholder(step.prompt, [phase, stepIndex, "prompt"]);
+          return;
+        }
         if (step.kind !== "read" && step.kind !== "sweep") {
           return;
+        }
+        if (step.kind === "read") {
+          refusePlaceholder(step.prompt, [phase, stepIndex, "prompt"]);
         }
 
         if (seriesNames.has(step.series)) {
@@ -227,6 +251,28 @@ export const zCaptureProcedure = z
           });
         }
         seriesNames.add(step.series);
+
+        const isSweep = step.kind === "sweep";
+        const hasNumericSetpoints = step.kind === "sweep" && isInstrumentStimulus(step.stimulus);
+
+        const checkPlaceholders = (text: string | undefined, path: (string | number)[]) => {
+          if (text === undefined) {
+            return;
+          }
+
+          if (!isSweep) {
+            refusePlaceholder(text, path);
+          }
+
+          if (hasNumericSetpoints && KEYED_SETPOINT_PLACEHOLDER.test(text)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message:
+                "A keyed setpoint placeholder needs a compound setpoint; this sweep steps an instrument through plain numbers",
+              path,
+            });
+          }
+        };
 
         const columns = new Set<string>();
         step.read.forEach((read, readIndex) => {
@@ -265,6 +311,15 @@ export const zCaptureProcedure = z
                 path: [phase, stepIndex, "read", readIndex, "protocol"],
               });
             }
+
+            const declared =
+              read.protocol === undefined ? undefined : procedure.protocols?.[read.protocol];
+            const declaredJson = declared === undefined ? undefined : JSON.stringify(declared);
+
+            checkPlaceholders(read.command, [phase, stepIndex, "read", readIndex, "command"]);
+            checkPlaceholders(declaredJson, [phase, stepIndex, "read", readIndex, "protocol"]);
+          } else {
+            checkPlaceholders(read.operator, [phase, stepIndex, "read", readIndex, "operator"]);
           }
         });
 

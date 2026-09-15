@@ -135,3 +135,31 @@ export function requiredSeriesNames(procedure: CaptureProcedure): string[] {
     )
     .map((step) => step.series);
 }
+
+/** Roles a run cannot proceed without, in declaration order; an optional step's role is not one. */
+export function requiredRoles(procedure: CaptureProcedure): string[] {
+  const roles: string[] = [];
+
+  for (const step of [...procedure.steps, ...(procedure.verify ?? [])]) {
+    if (step.kind === "set") {
+      roles.push(step.instrument);
+      continue;
+    }
+
+    if (step.kind !== "read" && step.kind !== "sweep") {
+      continue;
+    }
+
+    if (step.optional) {
+      continue;
+    }
+
+    if (step.kind === "sweep" && isInstrumentStimulus(step.stimulus)) {
+      roles.push(step.stimulus.instrument);
+    }
+
+    roles.push(...step.read.filter(isInstrumentRead).map((read) => read.instrument));
+  }
+
+  return [...new Set(roles)];
+}

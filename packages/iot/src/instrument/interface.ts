@@ -45,8 +45,13 @@ export interface BenchInstrument {
   destroy(): Promise<void>;
 }
 
+/** A declared handshake matches an identity reply when it appears in it, ignoring case. */
+export function handshakeMatches(reply: string, handshake: string): boolean {
+  return reply.trim().toUpperCase().includes(handshake.trim().toUpperCase());
+}
+
 export function identityMatches(instrument: BenchInstrument, reply: string): boolean {
-  return reply.toUpperCase().includes(instrument.identityToken.toUpperCase());
+  return handshakeMatches(reply, instrument.identityToken);
 }
 
 export function findSetpoint(

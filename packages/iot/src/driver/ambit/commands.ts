@@ -1,6 +1,6 @@
 /**
  * Ambit console commands, sourced from the firmware's `do_command.h`
- * (Jan-IngenHousz-Institute/ambit-iot) and the ambit-Calibratron bench tool.
+ * (Jan-IngenHousz-Institute/ambit-iot) and the factory bench that calibrates it.
  * The text console is the only host-facing contract; the binary UART protocol
  * (cmd 33 GET_INFO, arrun traces) is Ambyte-gateway-facing and out of scope.
  */
@@ -17,6 +17,7 @@ export const AMBIT_COMMANDS = {
   GET_PAR:   "get_par",   // raw PAR float, then 10 CSV spectral channels
   PAR:       "PAR",       // calibrated PAR (raw x spec coeff), then channels
   TEMP:      "temp",      // "obj\tamb\tobj_r" (MLX90632, 3 floats)
+  ARRUN1:    "arrun1",    // arrun1,1,1,2,0,0,1,0,1,<level>,1,\n, two lines, latches the actinic LED
 
   // Calibration writers (persist to NVS; the firmware replies NOTHING)
   SET_SPEC:  "set_spec",  // set_spec,<float>  PAR gain

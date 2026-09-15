@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { requiredSeriesNames } from "./types";
+import { requiredRoles, requiredSeriesNames } from "./types";
 import type { CaptureProcedure } from "./types";
 
 /**
@@ -207,6 +207,48 @@ describe("procedure types", () => {
     // The verify phase runs after the write; its series are never part of the run payload.
     it("leaves the verify phase out of the required series", () => {
       expect(requiredSeriesNames(AUTOMATED_MINIPAR)).not.toContain("par_check");
+    });
+  });
+
+  // The wizard connects one port per role, so it has to know which ones a run cannot start without.
+  describe("requiredRoles", () => {
+    it("lists every role a run needs, deduplicated, in the order the steps name them", () => {
+      expect(requiredRoles(AMBIT_FACTORY)).toEqual(["lamp", "dut", "par_ref", "emit_ref"]);
+      expect(requiredRoles(AUTOMATED_MINIPAR)).toEqual(["lamp", "dut", "par_ref"]);
+    });
+
+    it("needs only the device under test when the operator is the rest of the rig", () => {
+      expect(requiredRoles(MANUAL_MINIPAR)).toEqual(["dut"]);
+      expect(requiredRoles(MULTISPEQ_COLORCAL)).toEqual(["dut"]);
+      expect(requiredRoles(SOIL_MOISTURE)).toEqual(["dut"]);
+    });
+
+    // A bench without the Emit_LED reference skips that sweep and still runs.
+    it("leaves out a role that only an optional step reads", () => {
+      const partial: CaptureProcedure = {
+        ...AMBIT_FACTORY,
+        steps: AMBIT_FACTORY.steps.map((step) =>
+          step.kind === "sweep" && step.series === "led_sweep" ? { ...step, optional: true } : step,
+        ),
+      };
+
+      expect(requiredRoles(partial)).toEqual(["lamp", "dut", "par_ref"]);
+    });
+
+    // The verify phase runs on the same rig, after the write: its instruments must be there too.
+    it("includes the roles only the verify phase names", () => {
+      const dutOnlyCapture: CaptureProcedure = {
+        ...AUTOMATED_MINIPAR,
+        steps: [
+          {
+            kind: "read",
+            series: "par_sweep",
+            read: [{ instrument: "dut", command: "par_raw", as: "par_raw" }],
+          },
+        ],
+      };
+
+      expect(requiredRoles(dutOnlyCapture)).toEqual(["dut", "lamp", "par_ref"]);
     });
   });
 });

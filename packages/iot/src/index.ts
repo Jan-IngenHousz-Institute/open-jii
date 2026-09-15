@@ -104,7 +104,12 @@ export type {
   InstrumentReading,
   InstrumentSetpoint,
 } from "./instrument/interface";
-export { identityMatches, findSetpoint, findReading } from "./instrument/interface";
+export {
+  identityMatches,
+  handshakeMatches,
+  findSetpoint,
+  findReading,
+} from "./instrument/interface";
 export { KiprimDcSource } from "./instrument/kiprim/instrument";
 export { MicroPythonParReference } from "./instrument/micropython-par/instrument";
 export type { MicroPythonParConfig } from "./instrument/micropython-par/instrument";
@@ -116,7 +121,7 @@ export {
   identifyBenchInstrument,
   benchInstrumentForHandshake,
 } from "./instrument/registry";
-export type { BenchInstrumentFactory } from "./instrument/registry";
+export type { BenchInstrumentFactory, BenchIdentification } from "./instrument/registry";
 
 // Calibration write-back: approved coefficients become family console commands.
 export {
@@ -152,7 +157,16 @@ export type {
 } from "./procedure/interpreter";
 export { ProcedureAborted, ProcedureDeclined, ProcedureRigError } from "./procedure/operator";
 export type { OperatorPort, ProcedureProgress } from "./procedure/operator";
-export { requiredSeriesNames, DUT_ROLE, SWEEP_STIMULUS_COLUMN } from "./procedure/types";
+export {
+  requiredSeriesNames,
+  requiredRoles,
+  DUT_ROLE,
+  SWEEP_STIMULUS_COLUMN,
+} from "./procedure/types";
+
+// Setpoints the device under test applies itself, the sibling of a bench instrument's.
+export { DEVICE_SETPOINTS, bindDeviceSetpoints } from "./procedure/device-setpoints";
+export type { DeviceSetpoint } from "./procedure/device-setpoints";
 export type {
   CaptureProcedure,
   CaptureResult,
