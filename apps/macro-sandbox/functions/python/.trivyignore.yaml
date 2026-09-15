@@ -3,38 +3,66 @@
 # no outbound HTTP, no IAM creds, restricted builtins.
 # Verify with the ghcr trivy DB (mirror.gcr.io lags): --db-repository ghcr.io/aquasecurity/trivy-db:2
 
+# openssl-fips-provider-latest / openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2.
+# AWS names 3.5.8-1.amzn2023.0.1 as the fix but has not published it to the
+# AL2023 repos, so upgrading in the Dockerfile is a no-op ("Nothing to do").
+# Every id is a server-side TLS/DTLS/QUIC/CMP or CMS path: the sandbox runs no
+# such server, and macro code cannot reach OpenSSL because the builtins
+# allowlist has no __import__.
+# purls pin each suppression to the detected copy, so the 3.5.8 base re-fails
+# the scan instead of inheriting these.
 vulnerabilities:
-  # gawk@5.1.0-3.amzn2023.0.3, fixed in .0.4.
-  - id: CVE-2026-40467
-    statement: "gawk use-after-free. No awk invoked at runtime."
+  - id: CVE-2026-14457
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "RPK server signature selection derefs a missing certificate. No TLS server."
     expired_at: 2026-11-05
-  - id: CVE-2026-40468
-    statement: "gawk integer overflow. No awk invoked at runtime."
+  - id: CVE-2026-18798
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "QUIC INITIAL packet double free. No QUIC server."
     expired_at: 2026-11-05
-  - id: CVE-2026-40553
-    statement: "gawk ftype() overflow. No awk invoked at runtime."
+  - id: CVE-2026-54874
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "DTLS future-epoch record buffering memory use. No DTLS."
     expired_at: 2026-11-05
-
-  # glib2@2.82.2-770, fixed in -771. Ships unused; nothing requires it.
-  - id: CVE-2026-16118
-    statement: "xdgmime heap overflow. No MIME sniffing."
+  - id: CVE-2026-63072
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "CMS key unwrapping heap overflow. No CMS decryption."
     expired_at: 2026-11-05
-
-  # rpm/rpm-libs@4.16.1.3-29.amzn2023.0.6, fixed in .0.7.
-  - id: CVE-2026-44605
-    statement: "rpm NDB heap overflow. No rpm operations at runtime."
+  - id: CVE-2026-63073
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "CMP sender DN format string. No CMP client or server."
     expired_at: 2026-11-05
-
-  # aws-lambda-rie, Go stdlib 1.26.5, fixed in 1.26.6. Local emulation binary;
-  # on Lambda the entrypoint skips RIE because AWS_LAMBDA_RUNTIME_API is set.
-  - id: CVE-2026-39821
-    statement: "net/http punycode privilege escalation. RIE never runs in production."
+  - id: CVE-2026-63074
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "CMP ExtraCerts cache growth. No CMP client or server."
     expired_at: 2026-11-05
-  - id: CVE-2026-46600
-    statement: "dnsmessage parsing DoS. RIE never runs in production."
+  - id: CVE-2026-63075
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "QUIC ACK-only packet retention memory exhaustion. No QUIC server."
     expired_at: 2026-11-05
-
-  # openssl-fips-provider-latest / openssl-snapsafe-libs@3.5.7-2.amzn2023.0.1, fixed in .0.2.
-  - id: CVE-2026-14456
-    statement: "QUIC server memory-growth DoS. Sandbox runs no QUIC or TLS server."
+  - id: CVE-2026-63076
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "CMP server protectionAlg invalid pointer deref. No CMP server."
+    expired_at: 2026-11-05
+  - id: CVE-2026-75803
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "ChaCha20-Poly1305 and AES-OCB empty-AAD decryption. No AEAD decryption."
     expired_at: 2026-11-05

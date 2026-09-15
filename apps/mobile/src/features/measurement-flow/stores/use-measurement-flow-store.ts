@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { v4 as uuidv4 } from "uuid";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { stripSnapshotCode } from "~/features/measurement-flow/domain/flow-snapshots";
 import type {
   DevicePlanEntry,
   FlowState,
@@ -39,6 +40,9 @@ interface MeasurementFlowStore extends FlowState {
   reset: () => void;
 
   setFlowNodes: (nodes: FlowNode[]) => void;
+  // Resume-only: replaces flowNodes without resetting progress, unlike
+  // setFlowNodes/setFlowGraph.
+  rehydrateFlowNodes: (nodes: FlowNode[]) => void;
   setFlowGraph: (
     nodes: FlowNode[],
     edges: FlowEdge[],
@@ -118,6 +122,8 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
           branchReturnStack: [],
         }),
 
+      rehydrateFlowNodes: (nodes) => set({ flowNodes: nodes }),
+
       setFlowGraph: (nodes, edges, cells, workbookVersionId, workbookId) =>
         set({
           flowNodes: nodes,
@@ -179,15 +185,22 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
     {
       name: "measurement-flow-storage",
       storage: createJSONStorage(() => AsyncStorage),
-      // v2 wire format, pinned by flow-store-persistence.test.ts. Flows from
-      // earlier app versions have no trustworthy workbookRunId, so the upgrade
-      // deliberately drops them and returns the user to experiment selection.
-      version: 2,
+      // v3 wire format, pinned by flow-store-persistence.test.ts. Older flows are
+      // dropped on upgrade and the user returns to experiment selection: v1 had
+      // no trustworthy workbookRunId, and v2 kept protocol/macro code inside
+      // flowNodes with no snapshots store to back it, so its first write on
+      // this build would strip the code with nothing to re-hydrate from.
+      version: 3,
       migrate: (persisted, version) =>
-        (version < 2 ? initialFlowState : persisted) as MeasurementFlowStore,
+        (version < 3 ? initialFlowState : persisted) as MeasurementFlowStore,
       // protocolId was dropped from the persisted slice; uploads resolve it
       // from the exact producer measurement node. Legacy payloads carrying it
       // merge in as an ignored extra key.
+      //
+      // flowNodes are persisted without protocol/macro snapshot code; it lives
+      // in useFlowSnapshotsStore (written once per flow) and
+      // useResumeSnapshotHydration re-attaches it on resume. Stripped here so
+      // in-memory state is unaffected.
       partialize: (state) => ({
         experimentId: state.experimentId,
         experimentLabel: state.experimentLabel,
@@ -195,7 +208,7 @@ export const useMeasurementFlowStore = create<MeasurementFlowStore>()(
         workbookId: state.workbookId,
         workbookRunId: state.workbookRunId,
         currentStep: state.currentStep,
-        flowNodes: state.flowNodes,
+        flowNodes: stripSnapshotCode(state.flowNodes),
         currentFlowStep: state.currentFlowStep,
         iterationCount: state.iterationCount,
         isFlowFinished: state.isFlowFinished,

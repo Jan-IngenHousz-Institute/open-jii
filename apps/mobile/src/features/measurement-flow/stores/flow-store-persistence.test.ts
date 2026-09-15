@@ -1,13 +1,20 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  hasUnresolvedSnapshotCode,
+  stripSnapshotCode,
+} from "~/features/measurement-flow/domain/flow-snapshots";
+import type { FlowNode } from "~/shared/measurements/flow-node";
 
 import { useFlowAnswersStore } from "./use-flow-answers-store";
+import { useFlowSnapshotsStore } from "./use-flow-snapshots-store";
 import { useMeasurementFlowStore } from "./use-measurement-flow-store";
 
-// Characterization of the AsyncStorage wire format of both persisted flow
-// stores (measurement flow v2, answers v1). A silent shape change wipes a field
-// researcher's paused flow on rehydrate. Measurement v2 deliberately discards
-// older flows that cannot be correlated safely; update fixtures only deliberately.
+// Characterization of the AsyncStorage wire format of the persisted flow
+// stores (measurement flow v3, answers v1, snapshots v1). A silent shape change
+// wipes a field researcher's paused flow on rehydrate. Measurement v3
+// deliberately discards older flows (v1: no workbookRunId; v2: code inside
+// flowNodes, no snapshots store); update fixtures only deliberately.
 
 const MEASUREMENT_KEY = "measurement-flow-storage";
 const ANSWERS_KEY = "flow-answers-storage";
@@ -16,7 +23,7 @@ const ANSWERS_KEY = "flow-answers-storage";
 const MEASUREMENT_V0 = `{ "state": { "experimentId": "old-exp", "iterationCount": 5 }, "version": 0 }`;
 const ANSWERS_V0 = `{ "state": { "answersHistory": [{ "plot": "old" }], "autoincrementSettings": { "plot": true }, "rememberAnswerSettings": {} }, "version": 0 }`;
 
-// Current v2 envelope for a paused mid-flow session, parked on the measurement node.
+// Current v3 envelope for a paused mid-flow session, parked on the measurement node.
 // Every value differs from the store default so a key dropped from partialize
 // fails its per-field assert instead of silently matching the default.
 const MEASUREMENT_FIXTURE = `{
@@ -82,7 +89,7 @@ const MEASUREMENT_FIXTURE = `{
     "branchVisitCounts": { "node-b1": 2 },
     "branchReturnStack": [{ "landing": 3, "step": 1 }]
   },
-  "version": 2
+  "version": 3
 }`;
 
 // v0 envelope after two completed answer iterations with per-question
@@ -122,7 +129,7 @@ async function readEnvelope(key: string): Promise<Record<string, unknown>> {
   return JSON.parse(raw) as Record<string, unknown>;
 }
 
-describe("measurement-flow-storage v2 wire format", () => {
+describe("measurement-flow-storage v3 wire format", () => {
   beforeAll(async () => {
     await AsyncStorage.setItem(MEASUREMENT_KEY, MEASUREMENT_FIXTURE);
     await useMeasurementFlowStore.persist.rehydrate();
@@ -145,7 +152,7 @@ describe("measurement-flow-storage v2 wire format", () => {
     useMeasurementFlowStore.setState({}); // identity write still runs partialize + setItem
     const envelope = await readEnvelope(MEASUREMENT_KEY);
     expect(Object.keys(envelope).sort()).toEqual(["state", "version"]);
-    expect(envelope.version).toBe(2);
+    expect(envelope.version).toBe(3);
     expect(envelope.state).toEqual(EXPECTED_WRITTEN_STATE);
   });
 
@@ -180,7 +187,98 @@ describe("measurement-flow-storage v2 wire format", () => {
   });
 });
 
-describe("measurement-flow-storage v1 to v2 migration", () => {
+// Nodes as hydrateFlowNodes leaves them in memory (code attached) and as
+// partialize writes them to disk (code stripped).
+const HYDRATED_NODES = [
+  {
+    id: "node-m1",
+    name: "spad_reading",
+    type: "measurement",
+    content: {
+      params: { averages: 3 },
+      protocolId: "proto-7",
+      protocol: { code: [{ pulses: [1, 2] }], name: "SPAD", family: "multispeq" },
+    },
+    isStart: false,
+  },
+  {
+    id: "node-a1",
+    name: "spad_macro",
+    type: "analysis",
+    content: {
+      params: { threshold: 40 },
+      macroId: "macro-9",
+      macro: {
+        id: "macro-9",
+        name: "SPAD macro",
+        filename: "macro-9.py",
+        language: "python",
+        code: "print(1)",
+      },
+    },
+    isStart: false,
+  },
+] as unknown as FlowNode[];
+const STRIPPED_NODES = stripSnapshotCode(HYDRATED_NODES);
+
+describe("measurement-flow-storage strips snapshot code from flowNodes", () => {
+  async function persistedFlowNodes(): Promise<Record<string, any>[]> {
+    await AsyncStorage.removeItem(MEASUREMENT_KEY);
+    useMeasurementFlowStore.setState({}); // identity write still runs partialize + setItem
+    const envelope = await readEnvelope(MEASUREMENT_KEY);
+    return (envelope.state as { flowNodes: Record<string, any>[] }).flowNodes;
+  }
+
+  it("writes protocol/macro without a code key", async () => {
+    useMeasurementFlowStore.setState({ flowNodes: HYDRATED_NODES });
+
+    const [measurement, analysis] = await persistedFlowNodes();
+
+    expect(measurement.content.protocol).toStrictEqual({ name: "SPAD", family: "multispeq" });
+    expect(analysis.content.macro).toStrictEqual({
+      id: "macro-9",
+      name: "SPAD macro",
+      filename: "macro-9.py",
+      language: "python",
+    });
+    // Absent, not null: null would round-trip as "resolved, empty".
+    expect("code" in measurement.content.protocol).toBe(false);
+    expect("code" in analysis.content.macro).toBe(false);
+    expect(measurement.content).toMatchObject({
+      params: { averages: 3 },
+      protocolId: "proto-7",
+    });
+    expect(analysis.content).toMatchObject({ params: { threshold: 40 }, macroId: "macro-9" });
+  });
+
+  it("keeps the code in memory after setFlowGraph; only the storage copy is stripped", async () => {
+    useMeasurementFlowStore
+      .getState()
+      .setFlowGraph(HYDRATED_NODES, [], [], "version-17", "workbook-17");
+
+    const inMemory = useMeasurementFlowStore.getState().flowNodes;
+    expect(inMemory[0].content.protocol.code).toEqual([{ pulses: [1, 2] }]);
+    expect(inMemory[1].content.macro.code).toBe("print(1)");
+
+    const [measurement] = await persistedFlowNodes();
+    expect(measurement.content.protocol.code).toBeUndefined();
+  });
+
+  it("rehydrates a v3 payload with stripped nodes as unresolved, ready for the snapshots store", async () => {
+    const stripped = JSON.stringify({
+      state: { ...MEASUREMENT_STATE, flowNodes: STRIPPED_NODES },
+      version: 3,
+    });
+    await AsyncStorage.setItem(MEASUREMENT_KEY, stripped);
+    await useMeasurementFlowStore.persist.rehydrate();
+
+    const { flowNodes } = useMeasurementFlowStore.getState();
+    expect(flowNodes[0].content.protocol.code).toBeUndefined();
+    expect(hasUnresolvedSnapshotCode(flowNodes)).toBe(true);
+  });
+});
+
+describe("measurement-flow-storage migration to v3", () => {
   it("drops an active v1 flow and returns to experiment selection", async () => {
     await AsyncStorage.setItem(MEASUREMENT_KEY, MEASUREMENT_V1_WITHOUT_RUN);
     await useMeasurementFlowStore.persist.rehydrate();
@@ -193,12 +291,33 @@ describe("measurement-flow-storage v1 to v2 migration", () => {
     expect(state.flowNodes).toEqual([]);
 
     const envelope = await readEnvelope(MEASUREMENT_KEY);
-    expect(envelope.version).toBe(2);
+    expect(envelope.version).toBe(3);
     expect(envelope.state).toMatchObject({
       currentFlowStep: 0,
       flowNodes: [],
       iterationCount: 0,
     });
+  });
+
+  // A v2 flow kept its code inside flowNodes and has no snapshots store entry.
+  // Its first write on this build would strip that code with nothing to
+  // re-hydrate from, so the upgrade drops it rather than stranding the user at
+  // "Can't resume this flow" after their next step.
+  it("drops an active v2 flow that still carries code inside flowNodes", async () => {
+    const v2WithCode = JSON.stringify({
+      state: { ...MEASUREMENT_STATE, flowNodes: HYDRATED_NODES },
+      version: 2,
+    });
+    await AsyncStorage.setItem(MEASUREMENT_KEY, v2WithCode);
+    await useMeasurementFlowStore.persist.rehydrate();
+
+    const state = useMeasurementFlowStore.getState();
+    expect(state.experimentId).toBeUndefined();
+    expect(state.flowNodes).toEqual([]);
+
+    const envelope = await readEnvelope(MEASUREMENT_KEY);
+    expect(envelope.version).toBe(3);
+    expect(envelope.state).toMatchObject({ currentFlowStep: 0, flowNodes: [] });
   });
 });
 
@@ -232,6 +351,60 @@ describe("flow-answers-storage v1 wire format", () => {
       "autoincrementSettings",
       "rememberAnswerSettings",
     ]);
+  });
+});
+
+// The flow's protocol/macro code, written once per flow so resume never needs
+// the workbook-version query cache. A shape change here silently breaks
+// offline resume for a paused flow.
+describe("measurement-flow-snapshots-storage v1 wire format", () => {
+  const SNAPSHOTS_KEY = "measurement-flow-snapshots-storage";
+  const SNAPSHOTS_FIXTURE = `{
+    "state": {
+      "workbookVersionId": "version-17",
+      "entitySnapshots": {
+        "protocols": { "proto-7": { "code": [{ "pulses": [1, 2] }], "family": "multispeq" } },
+        "macros": { "macro-9": { "code": "print(1)", "language": "python" } }
+      }
+    },
+    "version": 1
+  }`;
+  const SNAPSHOTS_STATE = (JSON.parse(SNAPSHOTS_FIXTURE) as { state: Record<string, unknown> })
+    .state;
+
+  beforeAll(async () => {
+    await AsyncStorage.setItem(SNAPSHOTS_KEY, SNAPSHOTS_FIXTURE);
+    await useFlowSnapshotsStore.persist.rehydrate();
+  });
+
+  it.each(Object.keys(SNAPSHOTS_STATE))("rehydrates persisted field %s", (key) => {
+    const state = useFlowSnapshotsStore.getState() as unknown as Record<string, unknown>;
+    expect(state[key]).toEqual(SNAPSHOTS_STATE[key]);
+  });
+
+  it("round-trips the envelope unchanged through partialize", async () => {
+    await AsyncStorage.removeItem(SNAPSHOTS_KEY);
+    useFlowSnapshotsStore.setState({}); // identity write still runs partialize + setItem
+    const envelope = await readEnvelope(SNAPSHOTS_KEY);
+    expect(Object.keys(envelope).sort()).toEqual(["state", "version"]);
+    expect(envelope.version).toBe(1);
+    expect(envelope.state).toEqual(SNAPSHOTS_STATE);
+  });
+
+  it("persists exactly the known field set", () => {
+    const { partialize } = useFlowSnapshotsStore.persist.getOptions();
+    if (!partialize) throw new Error("store no longer configures partialize");
+    const persisted = partialize(useFlowSnapshotsStore.getState()) as Record<string, unknown>;
+    expect(Object.keys(persisted).sort()).toEqual(["entitySnapshots", "workbookVersionId"]);
+  });
+
+  it("clear() empties both fields", async () => {
+    useFlowSnapshotsStore.getState().clear();
+    const state = useFlowSnapshotsStore.getState();
+    expect(state.workbookVersionId).toBeUndefined();
+    expect(state.entitySnapshots).toBeUndefined();
+    const envelope = await readEnvelope(SNAPSHOTS_KEY);
+    expect(envelope.state).toEqual({});
   });
 });
 

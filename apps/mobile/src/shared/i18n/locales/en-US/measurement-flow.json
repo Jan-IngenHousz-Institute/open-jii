@@ -251,7 +251,12 @@
     },
     "empty": "No steps available.",
     "error": "Failed to load experiment. Please try again.",
-    "loading": "Loading experiment..."
+    "loading": "Loading experiment...",
+    "resumeUnavailable": {
+      "title": "Can't resume this flow",
+      "body": "This flow's protocols and macros are no longer stored on the device. Exit the flow and start a new one.",
+      "exit": "Exit flow"
+    }
   },
   "result": {
     "comment": "Comment",
