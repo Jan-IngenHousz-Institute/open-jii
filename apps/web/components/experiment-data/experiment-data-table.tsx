@@ -3,7 +3,6 @@
 import { DataTable } from "@/components/data-table/data-table";
 import type {
   OnAnnotationHandler,
-  OnChartClickHandler,
   TableMetadata,
 } from "@/components/data-table/data-table-columns";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
@@ -15,6 +14,7 @@ import z from "zod";
 import { AddAnnotationDialog } from "~/components/experiment-data/annotations/add-annotation-dialog";
 import { BulkActionsBar } from "~/components/experiment-data/annotations/bulk-actions-bar";
 import { DeleteAnnotationsDialog } from "~/components/experiment-data/annotations/delete-annotations-dialog";
+import { useChartDisplay } from "~/hooks/useChartDisplay";
 import { useUrlDataFilters } from "~/hooks/useUrlDataFilters";
 
 import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
@@ -24,8 +24,6 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { FilterChipBar } from "../data-filters/filter-chip-bar";
 import { DataExportModal } from "./data-export-modal/data-export-modal";
-import { toggleChartDisplay } from "./table-chart/chart-display";
-import type { ChartDisplayState } from "./table-chart/chart-display";
 import { ExperimentDataTableChart } from "./table-chart/experiment-data-table-chart";
 
 function getSortColumnName(columnName: string, columnType?: string): string {
@@ -86,17 +84,9 @@ export function ExperimentDataTable({
     defaultValues: { selectedRowIds: [] },
   });
 
-  const [chartDisplay, setChartDisplay] = useState<ChartDisplayState | null>(null);
+  const { chartDisplay, toggleChartPin, closePinnedChart } = useChartDisplay();
 
   const { t } = useTranslation();
-
-  const toggleChartPin = useCallback<OnChartClickHandler>((data, columnName, rowId) => {
-    setChartDisplay((prev) => toggleChartDisplay(prev, data, columnName, rowId));
-  }, []);
-
-  const closePinnedChart = useCallback(() => {
-    setChartDisplay(null);
-  }, []);
 
   const openAddAnnotationDialog = useCallback<OnAnnotationHandler>((rowIds, type = "comment") => {
     setAddAnnotationRowIds(rowIds);

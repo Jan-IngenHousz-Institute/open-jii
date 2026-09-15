@@ -1,3 +1,6 @@
+import { useCallback, useState } from "react";
+import type { OnChartClickHandler } from "~/components/data-table/data-table-columns";
+
 export interface ChartDisplayState {
   data: number[];
   columnName: string;
@@ -20,4 +23,18 @@ export function toggleChartDisplay(
     return null;
   }
   return { data, columnName, rowId, isPinned: true };
+}
+
+export function useChartDisplay() {
+  const [chartDisplay, setChartDisplay] = useState<ChartDisplayState | null>(null);
+
+  const toggleChartPin = useCallback<OnChartClickHandler>((data, columnName, rowId) => {
+    setChartDisplay((prev) => toggleChartDisplay(prev, data, columnName, rowId));
+  }, []);
+
+  const closePinnedChart = useCallback(() => {
+    setChartDisplay(null);
+  }, []);
+
+  return { chartDisplay, toggleChartPin, closePinnedChart };
 }
