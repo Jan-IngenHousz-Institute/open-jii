@@ -1,0 +1,16 @@
+{
+  "name": "calibration-sandbox",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "docker build -f functions/python/Dockerfile -t calibration-sandbox .",
+    "dev": "docker run --rm -p 9011:8080 calibration-sandbox",
+    "invoke": "curl -sS -XPOST http://localhost:9011/2015-03-31/functions/function/invocations -d @test/event.json | jq .",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "test": "uv run python -m unittest discover -s tests -v",
+    "clean": "git clean -xdf .cache .turbo .venv dist node_modules"
+  },
+  "devDependencies": {
+    "prettier": "catalog:"
+  }
+}
