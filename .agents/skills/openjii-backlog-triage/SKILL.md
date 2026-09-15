@@ -39,7 +39,7 @@ Report, in this order:
 | No project                                                                         | Invisible to every project view. Solution-shaped tickets in the maintenance bucket count |
 | No `type` label, no `area` label                                                   | The ticket gate cannot pass; nothing can be counted or routed                            |
 | In `Ready` but fails the ticket gate                                               | The state is lying, which is worse than `Backlog`                                        |
-| In `In Testing` without `## Testing criteria`                                      | QA has nothing to run                                                                    |
+| A work item or bug in `In Testing` without `## Testing criteria`                   | QA has nothing to run                                                                    |
 | Project in `Planned` or later missing a template section, a lead, or a target date | The project gate is lying                                                                |
 | Open, untouched for six months                                                     | Probably dead; ask before touching                                                       |
 

@@ -8,10 +8,13 @@ description: Write the two developer sections a ticket needs before review - How
 Read `AGENTS.md` first. The testing gate and the shape of the two sections are in
 `docs/agents/ticket-standard.md`. Access and query recipes are in `openjii-linear`.
 
-A ticket may enter `In Testing` only with a non-empty `## How it was built` and
+A work item or bug may enter `In Testing` only with a non-empty `## How it was built` and
 `## Testing criteria`. Those sections are what the requester, the TPM or the intern execute on dev.
 This skill writes them from evidence, gets the developer to confirm them, and only then lets the
 ticket move on.
+
+A spike has neither section and skips `In Testing`, so this skill does not apply to one. Adding the
+sections to a spike breaks its shape; say so rather than writing them.
 
 ## Inputs
 
@@ -66,8 +69,8 @@ acceptance criteria disagree, stop and say so; that is a finding, not something 
 4. Paste the same testing criteria into the PR's "Testing Instructions" section so the two never
    diverge. The ticket is canonical.
 5. Only then does the ticket move on: to `In Review` when the PR is marked ready (PR automation, or
-   by hand), and to `In Testing` on merge. Refuse to move a ticket to `In Testing` yourself while
-   either section is empty.
+   by hand), and to `In Testing` on merge. Refuse to move a work item or bug to `In Testing`
+   yourself while either section is empty.
 
 If the ticket is already in `In Testing` without these sections, write them with the developer who
 built it and do not move the ticket back.

@@ -62,9 +62,10 @@ candidate siblings at once. Not for one file, and not for anything needing judge
 
 Two tracks. Most user-facing work needs both.
 
-**Interface.** Use the `design` skill to build a design canvas: artboards on one pan-and-zoom
-surface, published as an Artifact, so the whole flow is visible and the user can move things
-instead of describing changes in prose. Cover the states that get forgotten: empty, loading, error,
+**Interface.** Build a design canvas: artboards on one pan-and-zoom surface, published as an
+Artifact, so the whole flow is visible and the user can move things instead of describing changes
+in prose. A canvas or design skill does that for you where one is available; this repo ships none,
+so do not wait for it. Cover the states that get forgotten: empty, loading, error,
 permission denied, narrow viewport. Keep the URL; it goes under the project's `## Design` and into
 every ticket that touches a screen.
 

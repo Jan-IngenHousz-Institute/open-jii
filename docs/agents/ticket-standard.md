@@ -178,11 +178,15 @@ someone could say whether that is true. A ticket that fails either is split, not
 
 ## Testing gate
 
-A ticket may enter `In Testing` only with a non-empty `## How it was built` and
+A work item or bug may enter `In Testing` only with a non-empty `## How it was built` and
 `## Testing criteria`. The developer writes both before marking the PR ready for review, through
 the `openjii-testing-criteria` skill; the PR checklist makes the reviewer confirm they exist; the
 triage sweep lists any `In Testing` ticket that slipped through. `openjii-linear` refuses a manual
 move without them.
+
+A spike carries neither section, since its shape has neither, and it skips `In Testing`. It is
+accepted when the artefact named in its `## Done when` exists, which is the one case where `Done`
+means accepted rather than deployed.
 
 Testing criteria are written for someone who did not build the change (the requester, the TPM, or
 the intern) and read like the smoke tests in the Critical Flows document:

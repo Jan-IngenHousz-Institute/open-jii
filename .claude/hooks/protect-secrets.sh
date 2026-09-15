@@ -88,6 +88,8 @@ if [ "$TOOL" = "Read" ]; then
 fi
 
 # The Grep tool searches file contents; pointed at a secrets file it prints the matching line.
+# Whether Grep is a valid PreToolUse matcher is undocumented, so treat this as a second layer:
+# the Read deny rules are what actually has to hold.
 if [ "$TOOL" = "Grep" ]; then
   if is_secret_path "$SEARCH_PATH"; then
     block "this searches inside a secrets file."

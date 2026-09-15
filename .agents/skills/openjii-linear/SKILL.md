@@ -83,8 +83,9 @@ Project statuses: `Backlog` (template started), `Planned` (passes the project ga
 
 PR automation, once configured on the team, moves tickets to `In Progress`, `In Review` and
 `In Testing` as the PR opens, is marked ready and merges. The production release workflow moves
-shipped tickets to `Done`. **Refuse to move a ticket to `In Testing` yourself while either dev
-section is empty**; point at `openjii-testing-criteria`.
+shipped tickets to `Done`. **Refuse to move a work item or bug to `In Testing` yourself while
+either dev section is empty**; point at `openjii-testing-criteria`. A spike has neither section and
+skips `In Testing` altogether.
 
 ## Query recipes
 

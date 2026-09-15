@@ -76,6 +76,9 @@ workspace-scoped ones are in the merge table below.
 | `Blocked - External` | `blocked-external`   | `process` |      5 |
 | `help wanted`        | `help-wanted`        | `process` |      3 |
 
+`design` is listed because it belongs in the target structure, but it already sits where it should,
+so the tool skips it and the plan shows eleven renames rather than twelve.
+
 ### Create
 
 | Label             | Group    | Why                                                 |

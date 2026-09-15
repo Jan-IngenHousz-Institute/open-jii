@@ -66,6 +66,23 @@ export async function readKeychainSecret(
   }
 }
 
+const fileHint = "store the key in a file instead: pnpm linear:auth --file";
+
+async function store(
+  deps: KeychainDependencies,
+  command: string,
+  args: string[],
+  input?: string,
+): Promise<void> {
+  let result: ProcessResult;
+  try {
+    result = await deps.run(command, args, input);
+  } catch (error) {
+    throw new Error(`${command} is not available on this machine; ${fileHint}`, { cause: error });
+  }
+  if (result.code !== 0) throw new Error(`${command} did not store the key; ${fileHint}`);
+}
+
 export async function writeKeychainSecret(
   service: string,
   value: string,
@@ -74,15 +91,11 @@ export async function writeKeychainSecret(
   const deps = withDefaults(overrides);
   if (deps.platform === "darwin") {
     const args = ["add-generic-password", "-a", deps.account, "-s", service, "-w", value, "-U"];
-    const result = await deps.run("security", args);
-    if (result.code !== 0) throw new Error("security add-generic-password did not succeed");
-    return;
+    return store(deps, "security", args);
   }
   if (deps.platform === "linux") {
     const args = ["store", "--label=openJII Linear", "service", service];
-    const result = await deps.run("secret-tool", args, value);
-    if (result.code !== 0) throw new Error("secret-tool store did not succeed");
-    return;
+    return store(deps, "secret-tool", args, value);
   }
-  throw new Error(`No keychain support on ${deps.platform}; use pnpm linear:auth --file`);
+  throw new Error(`No keychain support on ${deps.platform}; ${fileHint}`);
 }
