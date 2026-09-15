@@ -11,6 +11,7 @@ import type {
 
 import { failure, AppError } from "../../common/utils/fp-utils";
 import { stableStringify } from "../../common/utils/stable-json";
+import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { GetUsersMetadataUseCase } from "../application/use-cases/get-users-metadata/get-users-metadata";
 import { UserRepository } from "../core/repositories/user.repository";
@@ -80,17 +81,20 @@ describe("UserWebhookController", () => {
       const signature = crypto.createHmac("sha256", webhookSecret).update(payload).digest("hex");
 
       // Make the API request with the required headers
-      const response = await testApp
+      const response: SuperTestResponse<UserMetadataWebhookResponse> = await testApp
         .post(testApp.resolveOrpcPath(contract.users.getUserMetadata))
         .set("x-api-key-id", apiKeyId)
         .set("x-databricks-signature", signature)
         .set("x-databricks-timestamp", timestamp)
         .send(webhookPayload);
 
-      // Verify response
+      // Verify response. The lookup carries no ORDER BY, so the two rows can arrive
+      // either way round; assert the set, not the sequence.
       expect(response.status).toBe(StatusCodes.OK);
-      expect(response.body).toEqual({
-        users: [
+      expect(response.body.success).toBe(true);
+      expect(response.body.users).toHaveLength(2);
+      expect(response.body.users).toEqual(
+        expect.arrayContaining([
           {
             userId: testUser1Id,
             firstName: "John",
@@ -103,9 +107,8 @@ describe("UserWebhookController", () => {
             lastName: "Smith",
             avatarUrl: null,
           },
-        ],
-        success: true,
-      });
+        ]),
+      );
     });
 
     it("should return empty users array for empty user IDs array", async () => {
