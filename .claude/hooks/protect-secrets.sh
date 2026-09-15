@@ -7,6 +7,11 @@
 # they cannot see: reads that do not name the file (recursive grep, find -exec, inline scripts),
 # python open(), cp, mv, tar, git, source, uploads, the keychain, the clipboard, the environment,
 # and publishing. It matches command text, so it raises the bar; it is not a sandbox.
+#
+# Editing this file: run `bash -n` on it first. Bash exits 2 on a syntax error, and 2 is the code
+# that blocks a tool call, so a typo here refuses every Bash and Read call for everyone who pulls
+# it. A deleted or non-executable hook does the opposite and lets everything through silently.
+# tooling/devkit/src/hooks.test.ts runs the case table against this script in CI.
 set -uo pipefail
 
 # Fields arrive one per line. A multi-line command is flattened to one line, which is all the
@@ -112,7 +117,10 @@ done
 KEYCHAIN="${SEP}(security[[:space:]]+(find-generic-password|find-internet-password|add-generic-password|add-internet-password|dump-keychain|export)|secret-tool[[:space:]]+(lookup|search|store))([[:space:]]|\$)"
 CLIPBOARD="${SEP}(pbpaste|wl-paste|xclip|xsel)([[:space:]]|\$)"
 CLIPBOARD_TO_AUTH='^[[:space:]]*(pbpaste|wl-paste|xclip[^|]*|xsel[^|]*)[[:space:]]*\|[[:space:]]*pnpm[[:space:]]+linear:auth([[:space:]]+--file)?[[:space:]]*$'
-ENV_DUMP="${SEP}(env|printenv|set|(export|declare|typeset)([[:space:]]+-[px])?)[[:space:]]*(\$|[|;&>)'\"])"
+# A dump is the whole command, so these verbs only count where a command starts and where nothing
+# follows them. "pnpm export" and an echoed "(not set)" are ordinary text, not a dump.
+SEGMENT="(^|[|;&('\"\`])[[:space:]]*"
+ENV_DUMP="(${SEGMENT}(env|printenv|set|export|declare|typeset)[[:space:]]*(\$|[|;&>'\"\`])|${SEP}(export|declare|typeset)[[:space:]]+-[px]([[:space:]]|\$))"
 SECRET_VAR='([A-Z0-9_]*(API_KEY|ACCESS_KEY|SECRET|TOKEN|PASSWORD|PASSWD|PRIVATE_KEY|CREDENTIALS|DSN)[A-Z0-9_]*|DATABASE_URL|DB_URL|REDIS_URL)'
 SECRET_VAR_USE='(\$\{?'"${SECRET_VAR}"'|printenv[[:space:]]+'"${SECRET_VAR}"'|'"${SEP}"'(export[[:space:]]+)?'"${SECRET_VAR}"'=[^[:space:]])'
 # Inline scripts get the same treatment; a code search for process.env is not an interpreter call.
