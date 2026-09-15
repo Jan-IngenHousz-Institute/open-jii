@@ -10,6 +10,7 @@ import experimentsEn from "./locales/en-US/experiments.json";
 import forceUpdateEn from "./locales/en-US/force-update.json";
 import homeEn from "./locales/en-US/home.json";
 import measurementFlowEn from "./locales/en-US/measurement-flow.json";
+import organizationsEn from "./locales/en-US/organizations.json";
 import profileEn from "./locales/en-US/profile.json";
 import recentMeasurementsEn from "./locales/en-US/recent-measurements.json";
 import whatsNewEn from "./locales/en-US/whats-new.json";
@@ -20,6 +21,7 @@ import experimentsNl from "./locales/nl-NL/experiments.json";
 import forceUpdateNl from "./locales/nl-NL/force-update.json";
 import homeNl from "./locales/nl-NL/home.json";
 import measurementFlowNl from "./locales/nl-NL/measurement-flow.json";
+import organizationsNl from "./locales/nl-NL/organizations.json";
 import profileNl from "./locales/nl-NL/profile.json";
 import recentMeasurementsNl from "./locales/nl-NL/recent-measurements.json";
 import whatsNewNl from "./locales/nl-NL/whats-new.json";
@@ -42,6 +44,7 @@ const bundledResources = {
     home: homeEn,
     forceUpdate: forceUpdateEn,
     whatsNew: whatsNewEn,
+    organizations: organizationsEn,
   },
   "nl-NL": {
     common: commonNl,
@@ -54,6 +57,7 @@ const bundledResources = {
     home: homeNl,
     forceUpdate: forceUpdateNl,
     whatsNew: whatsNewNl,
+    organizations: organizationsNl,
   },
 } as const;
 
@@ -94,6 +98,7 @@ export function initI18n(): Promise<typeof i18next> {
         "home",
         "forceUpdate",
         "whatsNew",
+        "organizations",
       ],
       defaultNS: "common",
       resources: bundledResources,
