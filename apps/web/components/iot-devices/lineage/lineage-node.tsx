@@ -82,7 +82,11 @@ export function LineageNode(props: NodeProps) {
         <>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground font-mono text-[11px]">{model.family}</span>
-            <IotDeviceStatusBadge status={model.status} />
+            <IotDeviceStatusBadge
+              status={model.status}
+              deviceType={model.family}
+              boundExperimentCount={model.boundExperimentCount}
+            />
           </div>
           {model.firmwareVersion !== null && (
             <p className="text-muted-foreground text-xs">

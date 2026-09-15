@@ -29,6 +29,7 @@ function identity(source: typeof device) {
     name: source.name,
     deviceType: source.deviceType,
     status: source.status,
+    boundExperimentCount: source.boundExperimentCount,
   };
 }
 

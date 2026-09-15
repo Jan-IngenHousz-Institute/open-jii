@@ -39,8 +39,8 @@ export interface FleetAttentionEntry {
  * actionable first. A missing certificate outranks everything because nothing
  * else about the device can move until it exists; "never connected" is a
  * credentialed device the broker has still not seen; "silent" reuses the
- * shared connected-but-not-delivering policy. Phones are exempt throughout,
- * and an unknown fleet index claims nothing.
+ * shared connected-but-not-delivering policy. Phones and retired devices are
+ * exempt throughout, and an unknown fleet index claims nothing.
  */
 export function fleetAttention(
   devices: IotDeviceWithConnectivity[],
@@ -53,7 +53,7 @@ export function fleetAttention(
 
   const entries: FleetAttentionEntry[] = [];
   for (const device of devices) {
-    if (device.deviceType === "mobile") {
+    if (device.deviceType === "mobile" || device.status === "retired") {
       continue;
     }
     if (deviceNeedsCredentials(device)) {

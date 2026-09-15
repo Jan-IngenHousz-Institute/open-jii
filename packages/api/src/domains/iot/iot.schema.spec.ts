@@ -186,7 +186,7 @@ describe("Iot Schema", () => {
       serialNumber: "SN-1",
       name: "Device 1",
       deviceType: "ambyte",
-      status: "pending",
+      status: "registered",
       certificateId: null,
       certificateArn: null,
       createdBy: "22222222-2222-4222-8222-222222222222",
@@ -214,8 +214,12 @@ describe("Iot Schema", () => {
       expect(zIotDevice.safeParse(active).success).toBe(true);
     });
 
-    it("accepts the rotating status", () => {
-      expect(zIotDevice.safeParse({ ...validDevice, status: "rotating" }).success).toBe(true);
+    it("accepts the retired status", () => {
+      expect(zIotDevice.safeParse({ ...validDevice, status: "retired" }).success).toBe(true);
+    });
+
+    it("rejects the retired transient of the old vocabulary", () => {
+      expect(zIotDevice.safeParse({ ...validDevice, status: "rotating" }).success).toBe(false);
     });
 
     it("rejects an unknown status", () => {
@@ -235,7 +239,8 @@ describe("Iot Schema", () => {
       serialNumber: "SN-1",
       name: "Device 1",
       deviceType: "ambyte" as const,
-      status: "pending" as const,
+      status: "registered" as const,
+      boundExperimentCount: 0,
       certificateId: null,
       certificateArn: null,
       createdBy: "22222222-2222-4222-8222-222222222222",

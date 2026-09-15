@@ -3,18 +3,20 @@
 import { useLocale } from "@/hooks/useLocale";
 import { formatDateTime, formatRelativeTime } from "@/util/date";
 
-import type { DeviceConnectivity } from "@repo/api/domains/iot/iot.schema";
+import type { DeviceConnectivity, IotDevice } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
 interface ConnectivityDotProps {
   connectivity: DeviceConnectivity | null;
+  /** A phone connects only while the app is open, so its offline reads as idle, not down. */
+  deviceType?: IotDevice["deviceType"];
   /** Lets a caller scale the label, e.g. the monitoring metric tiles. */
   className?: string;
 }
 
-/** Broker connectivity: green = connected, gray = offline, muted ring = unknown. */
-export function ConnectivityDot({ connectivity, className }: ConnectivityDotProps) {
+/** Broker connectivity: green = online, gray = offline or idle, muted ring = unknown. */
+export function ConnectivityDot({ connectivity, deviceType, className }: ConnectivityDotProps) {
   const { t } = useTranslation("iot");
 
   if (connectivity === null) {
@@ -48,9 +50,23 @@ export function ConnectivityDot({ connectivity, className }: ConnectivityDotProp
       className={cn("text-muted-foreground inline-flex items-center gap-1.5 text-xs", className)}
     >
       <span className="bg-border h-2 w-2 shrink-0 rounded-full" />
-      {t("iot.devices.connectivity.disconnected")}
+      {offlineLabel(connectivity, deviceType, t)}
     </span>
   );
+}
+
+function offlineLabel(
+  connectivity: DeviceConnectivity,
+  deviceType: IotDevice["deviceType"] | undefined,
+  t: (key: string) => string,
+): string {
+  if (deviceType === "mobile") {
+    return t("iot.devices.connectivity.idle");
+  }
+  if (connectivity.lastSeenAt === null) {
+    return t("iot.devices.connectivity.never");
+  }
+  return t("iot.devices.connectivity.disconnected");
 }
 
 /** Last-seen line: relative time of the last state change, with fallbacks. */

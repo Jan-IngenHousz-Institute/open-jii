@@ -6,6 +6,7 @@ import { ExperimentRepository } from "../../../../experiments/core/repositories/
 import type {
   ExperimentDeviceDto,
   ExperimentDeviceEntryDto,
+  ExperimentDeviceIdentityDto,
   ExperimentDeviceReportedDto,
   ExperimentDevicesOverviewDto,
 } from "../../../core/models/experiment-device.model";
@@ -115,6 +116,16 @@ export class ListExperimentDevicesUseCase {
     const unboundDevices = unboundDevicesResult.value;
 
     const thingNames = [...boundThings, ...unboundDevices.map((device) => device.thingName)];
+    const deviceIds = [
+      ...bindings.map((binding) => binding.device.id),
+      ...unboundDevices.map((device) => device.id),
+    ];
+
+    const bindingCountsResult = await this.experimentDeviceRepository.countByDevices(deviceIds);
+    if (bindingCountsResult.isFailure()) {
+      return failure(bindingCountsResult.error);
+    }
+    const bindingCounts = bindingCountsResult.value;
     const [connectivity, activity, stats] = await Promise.all([
       this.lookupConnectivity(thingNames),
       this.lookupActivity(thingNames),
@@ -130,8 +141,12 @@ export class ListExperimentDevicesUseCase {
     ): ExperimentDeviceEntryDto => {
       const thing = connectivity?.get(device.thingName);
       const recent = observed.get(device.thingName);
+      const identity: ExperimentDeviceIdentityDto = {
+        ...device,
+        boundExperimentCount: bindingCounts.get(device.id) ?? 0,
+      };
       return {
-        device,
+        device: identity,
         clientId: device.thingName,
         binding,
         connectivity: thing ? { connected: thing.connected, lastSeenAt: thing.lastSeenAt } : null,

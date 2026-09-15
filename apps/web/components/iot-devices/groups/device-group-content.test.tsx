@@ -45,7 +45,7 @@ describe("DeviceGroupContent", () => {
     // its own second line, so the value legitimately appears twice.
     expect((await screen.findAllByText(/E8:F6:0A/)).length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: /E8:F6:0A/ })).toBeInTheDocument();
-    expect(screen.getByText("iot.devices.status.active")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.status.provisioned")).toBeInTheDocument();
   });
 
   it("offers add and remove to contributors", async () => {

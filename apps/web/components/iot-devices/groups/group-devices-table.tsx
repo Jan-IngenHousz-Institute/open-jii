@@ -77,7 +77,7 @@ export function GroupDevicesTable({
         </TableCell>
         <TableCell className="px-6 py-3">
           <div className="flex flex-col gap-0.5">
-            <ConnectivityDot connectivity={member.connectivity} />
+            <ConnectivityDot connectivity={member.connectivity} deviceType={member.deviceType} />
             {silent && (
               <span className="text-status-stale-foreground flex items-center gap-1 text-[11px]">
                 <AlertTriangle className="h-3 w-3" aria-hidden />

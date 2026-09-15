@@ -55,8 +55,12 @@ export function IotDeviceLayoutContent({
               data-slot="device-status-summary"
               className="flex w-full shrink-0 flex-wrap items-center gap-3 xl:w-auto"
             >
-              <IotDeviceStatusBadge status={device.status} />
-              <ConnectivityDot connectivity={device.connectivity} />
+              <IotDeviceStatusBadge
+                status={device.status}
+                deviceType={device.deviceType}
+                boundExperimentCount={device.boundExperimentCount}
+              />
+              <ConnectivityDot connectivity={device.connectivity} deviceType={device.deviceType} />
             </div>
           </div>
           <div className="ml-auto shrink-0">

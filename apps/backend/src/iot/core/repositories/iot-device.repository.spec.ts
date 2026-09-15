@@ -50,7 +50,7 @@ describe("IotDeviceRepository", () => {
     assertSuccess(result);
     const device = result.value[0];
     expect(device.serialNumber).toBe(dto.serialNumber);
-    expect(device.status).toBe("pending");
+    expect(device.status).toBe("registered");
 
     const rows = await testApp.database
       .select()

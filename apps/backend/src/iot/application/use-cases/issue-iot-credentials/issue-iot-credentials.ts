@@ -40,7 +40,16 @@ export class IssueIotCredentialsUseCase {
 
     // Allowed from pending (never provisioned) or revoked (re-provision the same
     // device). Blocked while a live certificate exists: rotate or revoke first.
-    if (device.status === "active" || device.status === "rotating") {
+    if (device.status === "retired") {
+      return failure(
+        AppError.badRequest(
+          "A retired device cannot be issued a certificate. Reinstate it first.",
+          ErrorCodes.IOT_CREDENTIALS_INVALID_STATE,
+        ),
+      );
+    }
+
+    if (device.status === "active") {
       return failure(
         AppError.badRequest(
           `Device already has a certificate (status: ${device.status}). Rotate or revoke it first.`,

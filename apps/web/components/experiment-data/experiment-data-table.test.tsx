@@ -11,13 +11,45 @@ vi.mock("@/hooks/experiment/useExperimentData/useExperimentData", () => ({
 }));
 
 vi.mock("~/components/experiment-data/annotations/bulk-actions-bar", () => ({
-  BulkActionsBar: () => <div>BulkActionsBar</div>,
+  BulkActionsBar: ({
+    onAddAnnotation,
+    onDeleteAnnotations,
+  }: {
+    onAddAnnotation: (rowIds: string[], type?: string) => void;
+    onDeleteAnnotations: (rowIds: string[], type?: string) => void;
+  }) => (
+    <div>
+      BulkActionsBar
+      <button type="button" onClick={() => onAddAnnotation(["1"])}>
+        Add Annotation
+      </button>
+      <button type="button" onClick={() => onDeleteAnnotations(["1"], "flag")}>
+        Delete Annotation
+      </button>
+    </div>
+  ),
 }));
 vi.mock("~/components/experiment-data/annotations/add-annotation-dialog", () => ({
-  AddAnnotationDialog: () => null,
+  AddAnnotationDialog: ({
+    open,
+    rowIds,
+    type,
+  }: {
+    open: boolean;
+    rowIds: string[];
+    type: string;
+  }) => (open ? <div>{`AddAnnotationDialog for ${rowIds.join(",")} (${type})`}</div> : null),
 }));
 vi.mock("~/components/experiment-data/annotations/delete-annotations-dialog", () => ({
-  DeleteAnnotationsDialog: () => null,
+  DeleteAnnotationsDialog: ({
+    open,
+    rowIds,
+    type,
+  }: {
+    open: boolean;
+    rowIds: string[];
+    type: string;
+  }) => (open ? <div>{`DeleteAnnotationsDialog for ${rowIds.join(",")} (${type})`}</div> : null),
 }));
 vi.mock("./data-export-modal/data-export-modal", () => ({
   DataExportModal: () => null,
@@ -173,5 +205,25 @@ describe("ExperimentDataTable", () => {
     setupHook();
     render(<ExperimentDataTable {...defaultProps} />);
     expect(screen.getByText(/dataTable.page.*1.*dataTable.pageOf.*5/)).toBeInTheDocument();
+  });
+
+  it("opens the add-annotation dialog with the clicked rows and default type", async () => {
+    setupHook();
+    render(<ExperimentDataTable {...defaultProps} canContribute />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText("Add Annotation"));
+
+    expect(screen.getByText("AddAnnotationDialog for 1 (comment)")).toBeInTheDocument();
+  });
+
+  it("opens the delete-annotations dialog with the clicked rows and type", async () => {
+    setupHook();
+    render(<ExperimentDataTable {...defaultProps} canContribute />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText("Delete Annotation"));
+
+    expect(screen.getByText("DeleteAnnotationsDialog for 1 (flag)")).toBeInTheDocument();
   });
 });
