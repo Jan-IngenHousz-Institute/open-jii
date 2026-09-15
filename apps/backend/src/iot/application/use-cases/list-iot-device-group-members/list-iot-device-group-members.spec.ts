@@ -1,7 +1,15 @@
 import { and, deviceGroupMembers, eq } from "@repo/database";
 
-import { assertSuccess } from "../../../../common/utils/fp-utils";
+import { AwsAdapter } from "../../../../common/modules/aws/aws.adapter";
+import {
+  AppError,
+  assertFailure,
+  assertSuccess,
+  failure,
+  success,
+} from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
 import { IotDeviceGroupRepository } from "../../../core/repositories/iot-device-group.repository";
 import { CreateIotDeviceGroupUseCase } from "../create-iot-device-group/create-iot-device-group";
 import { ListIotDeviceGroupMembersUseCase } from "./list-iot-device-group-members";
@@ -11,6 +19,7 @@ describe("ListIotDeviceGroupMembersUseCase", () => {
   let useCase: ListIotDeviceGroupMembersUseCase;
   let createGroup: CreateIotDeviceGroupUseCase;
   let groupRepository: IotDeviceGroupRepository;
+  let awsAdapter: AwsAdapter;
   let userId: string;
   let groupId: string;
 
@@ -24,6 +33,7 @@ describe("ListIotDeviceGroupMembersUseCase", () => {
     useCase = testApp.module.get(ListIotDeviceGroupMembersUseCase);
     createGroup = testApp.module.get(CreateIotDeviceGroupUseCase);
     groupRepository = testApp.module.get(IotDeviceGroupRepository);
+    awsAdapter = testApp.module.get(AwsAdapter);
 
     const created = await createGroup.execute({ name: "Roster" }, userId);
     assertSuccess(created);
@@ -57,7 +67,32 @@ describe("ListIotDeviceGroupMembersUseCase", () => {
     expect(result.value.map((member) => member.deviceId)).toEqual([second.id, first.id]);
     expect(result.value[0].name).toBe("Second");
     expect(result.value[0].serialNumber).toBe(second.serialNumber);
-    expect(result.value[0].status).toBe("pending");
+    expect(result.value[0].status).toBe("registered");
+  });
+
+  it("carries the last-seen through, so an offline member is not read as never connected", async () => {
+    const member = await testApp.createIotDevice({ createdBy: userId, name: "Seen" });
+    await groupRepository.addMembers(groupId, [member.id], userId);
+    vi.spyOn(awsAdapter, "searchThingsConnectivity").mockResolvedValue(
+      success(
+        new Map([
+          [
+            member.thingName,
+            {
+              thingName: member.thingName,
+              connected: false,
+              lastSeenAt: "2026-09-01T10:00:00.000Z",
+            },
+          ],
+        ]),
+      ),
+    );
+
+    const result = await useCase.execute(groupId);
+
+    assertSuccess(result);
+    expect(result.value[0].connected).toBe(false);
+    expect(result.value[0].lastSeenAt).toBe("2026-09-01T10:00:00.000Z");
   });
 
   it("returns an empty array for a memberless group", async () => {
@@ -65,5 +100,16 @@ describe("ListIotDeviceGroupMembersUseCase", () => {
 
     assertSuccess(result);
     expect(result.value).toEqual([]);
+  });
+
+  it("fails when the binding count cannot be read, rather than listing every member as provisioned", async () => {
+    const member = await testApp.createIotDevice({ createdBy: userId, name: "Counted" });
+    await groupRepository.addMembers(groupId, [member.id], userId);
+    vi.spyOn(
+      testApp.module.get(ExperimentDeviceRepository),
+      "countByDevices",
+    ).mockResolvedValueOnce(failure(AppError.internal("db down")));
+
+    assertFailure(await useCase.execute(groupId));
   });
 });

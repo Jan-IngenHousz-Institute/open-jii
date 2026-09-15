@@ -42,7 +42,7 @@ describe("RotateIotCredentialsUseCase", () => {
     await testApp.teardown();
   });
 
-  const createDevice = async (status: "pending" | "active") => {
+  const createDevice = async (status: "registered" | "active") => {
     seq++;
     const created = await repo.create(
       {
@@ -89,7 +89,7 @@ describe("RotateIotCredentialsUseCase", () => {
   });
 
   it("rejects rotating a device that is not active", async () => {
-    const device = await createDevice("pending");
+    const device = await createDevice("registered");
 
     const result = await useCase.execute(device.id, userId);
 

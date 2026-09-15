@@ -109,7 +109,11 @@ export class EnsureMobileDeviceUseCase {
       );
     }
 
-    await this.attachIdentity(device.thingName, userId);
+    // Retiring detached the phone's identity on purpose; healing it back on
+    // the next app open would undo the operator's decision.
+    if (device.status !== "retired") {
+      await this.attachIdentity(device.thingName, userId);
+    }
 
     // Fill a missing name only, atomically: the conditional update loses to a
     // concurrent rename, and then the fresher row is returned instead.

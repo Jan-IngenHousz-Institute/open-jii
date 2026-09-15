@@ -62,7 +62,7 @@ describe("IssueIotDeviceGroupCredentialsUseCase", () => {
     vi.spyOn(awsAdapter, "createDeviceCertificate").mockResolvedValue(success(CERT));
     vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
     vi.spyOn(awsAdapter, "attachDevicePolicies").mockResolvedValue(success(undefined));
-    const pending = await testApp.createIotDevice({ createdBy: userId, status: "pending" });
+    const pending = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
     const active = await testApp.createIotDevice({ createdBy: userId, status: "active" });
     const groupId = await seedGroup([pending.id, active.id]);
 
@@ -85,7 +85,7 @@ describe("IssueIotDeviceGroupCredentialsUseCase", () => {
     vi.spyOn(awsAdapter, "createDeviceCertificate").mockResolvedValue(success(CERT));
     vi.spyOn(awsAdapter, "attachThingPrincipal").mockResolvedValue(success(undefined));
     vi.spyOn(awsAdapter, "attachDevicePolicies").mockResolvedValue(success(undefined));
-    const pending = await testApp.createIotDevice({ createdBy: userId, status: "pending" });
+    const pending = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
     const groupId = await seedGroup([pending.id]);
 
     const result = await useCase.execute(groupId, [pending.id, pending.id], userId);
@@ -96,7 +96,7 @@ describe("IssueIotDeviceGroupCredentialsUseCase", () => {
   });
 
   it("reports a non-member selection as a row error", async () => {
-    const device = await testApp.createIotDevice({ createdBy: userId, status: "pending" });
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
     const groupId = await seedGroup([device.id]);
     const strangerDeviceId = faker.string.uuid();
 
@@ -115,7 +115,7 @@ describe("IssueIotDeviceGroupCredentialsUseCase", () => {
 
   it("reports an unmanageable member as a row error", async () => {
     const stranger = await testApp.createTestUser({ name: "Stranger" });
-    const foreign = await testApp.createIotDevice({ createdBy: stranger, status: "pending" });
+    const foreign = await testApp.createIotDevice({ createdBy: stranger, status: "registered" });
     const groupId = await seedGroup([foreign.id]);
 
     const result = await useCase.execute(groupId, undefined, userId);
@@ -126,7 +126,7 @@ describe("IssueIotDeviceGroupCredentialsUseCase", () => {
   });
 
   it("rejects a default-everyone batch beyond the selection cap", async () => {
-    const device = await testApp.createIotDevice({ createdBy: userId, status: "pending" });
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
     const groupId = await seedGroup([device.id]);
     vi.spyOn(groupRepository, "listMembers").mockResolvedValue(
       success(
@@ -135,7 +135,7 @@ describe("IssueIotDeviceGroupCredentialsUseCase", () => {
           name: null,
           serialNumber: `S-${String(index)}`,
           deviceType: "ambyte" as const,
-          status: "pending" as const,
+          status: "registered" as const,
           thingName: `ambyte_${String(index)}`,
           addedAt: new Date(),
         })),

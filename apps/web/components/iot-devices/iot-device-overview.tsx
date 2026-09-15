@@ -1,7 +1,6 @@
 "use client";
 
 import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
-import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
 
 import type { IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
@@ -17,8 +16,7 @@ import { DeviceOverviewCards } from "./device-overview-cards";
 export function IotDeviceOverview({ device }: { device: IotDeviceDetail }) {
   const { t } = useTranslation("iot");
 
-  const { data: boundExperiments } = useDeviceExperiments(device.id);
-  const nextAction = deviceNextAction(device, boundExperiments?.length ?? null);
+  const nextAction = deviceNextAction(device, device.boundExperimentCount);
 
   return (
     <div className="space-y-8">

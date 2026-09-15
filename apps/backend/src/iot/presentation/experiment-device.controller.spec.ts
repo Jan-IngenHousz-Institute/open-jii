@@ -130,6 +130,8 @@ describe("ExperimentDeviceController", () => {
       .expect(StatusCodes.OK);
     expect(listed.body.devices).toHaveLength(1);
     expect(listed.body.devices[0].device?.id).toBe(device.id);
+    // A bound row is onboarded by definition, so the count the badge reads is at least one.
+    expect(listed.body.devices[0].device?.boundExperimentCount).toBeGreaterThanOrEqual(1);
 
     const removePath = testApp.resolveOrpcPath(contract.experiments.removeExperimentDevice, {
       id: experiment.id,
@@ -166,7 +168,7 @@ describe("ExperimentDeviceController", () => {
   });
 
   it("returns 400 when onboarding a device without active credentials", async () => {
-    const device = await testApp.createIotDevice({ createdBy: userId, status: "pending" });
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
     const { experiment } = await testApp.createExperiment({ name: "E", userId });
 
     await testApp

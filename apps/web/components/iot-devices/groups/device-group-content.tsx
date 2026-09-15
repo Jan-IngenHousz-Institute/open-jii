@@ -121,7 +121,11 @@ export function DeviceGroupContent() {
                         {getSensorFamilyLabel(member.deviceType)}
                       </TableCell>
                       <TableCell>
-                        <IotDeviceStatusBadge status={member.status} />
+                        <IotDeviceStatusBadge
+                          status={member.status}
+                          deviceType={member.deviceType}
+                          boundExperimentCount={member.boundExperimentCount}
+                        />
                       </TableCell>
                       {canContribute && (
                         <TableCell>

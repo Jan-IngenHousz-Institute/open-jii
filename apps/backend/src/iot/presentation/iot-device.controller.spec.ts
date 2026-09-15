@@ -69,7 +69,7 @@ describe("IotDeviceController", () => {
         .expect(StatusCodes.CREATED);
 
       expect(response.body.thingName).toBe(RETURNED_THING.thingName);
-      expect(response.body.status).toBe("pending");
+      expect(response.body.status).toBe("registered");
     });
 
     it("returns 401 when unauthenticated", async () => {
@@ -779,6 +779,73 @@ describe("IotDeviceController", () => {
         .expect(StatusCodes.OK);
 
       expect(response.body.status).toBe("revoked");
+    });
+
+    it("retires an active device, revoking and detaching its certificate on the way (200)", async () => {
+      const certificateArn = "arn:aws:iot:eu-central-1:000000000000:cert/cert-retire";
+      vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
+      vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(success([certificateArn]));
+      const detachThingPrincipal = vi
+        .spyOn(awsAdapter, "detachThingPrincipal")
+        .mockResolvedValue(success(undefined));
+      const device = await testApp.createIotDevice({
+        createdBy: userId,
+        status: "active",
+        certificateId: "cert-retire",
+        certificateArn,
+      });
+      const path = testApp.resolveOrpcPath(contract.iot.retireIotDevice, { deviceId: device.id });
+
+      const response: SuperTestResponse<IotDevice> = await testApp
+        .post(path)
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.status).toBe("retired");
+      expect(response.body.certificateId).toBeNull();
+      expect(detachThingPrincipal).toHaveBeenCalledWith(device.thingName, certificateArn);
+    });
+
+    it("reinstates a retired device as registered (200)", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId, status: "retired" });
+      const path = testApp.resolveOrpcPath(contract.iot.reinstateIotDevice, {
+        deviceId: device.id,
+      });
+
+      const response: SuperTestResponse<IotDevice> = await testApp
+        .post(path)
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.status).toBe("registered");
+    });
+
+    it("maps a refused retire and a refused reinstate through the error contract (400)", async () => {
+      const retired = await testApp.createIotDevice({ createdBy: userId, status: "retired" });
+      const active = await testApp.createIotDevice({ createdBy: userId, status: "active" });
+
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.retireIotDevice, { deviceId: retired.id }))
+        .withAuth(userId)
+        .expect(StatusCodes.BAD_REQUEST);
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.reinstateIotDevice, { deviceId: active.id }))
+        .withAuth(userId)
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("refuses to retire or reinstate below manage (403)", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const stranger = await testApp.createTestUser({ name: "Stranger" });
+
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.retireIotDevice, { deviceId: device.id }))
+        .withAuth(stranger)
+        .expect(StatusCodes.FORBIDDEN);
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.reinstateIotDevice, { deviceId: device.id }))
+        .withAuth(stranger)
+        .expect(StatusCodes.FORBIDDEN);
     });
 
     it("returns 401 when unauthenticated", async () => {

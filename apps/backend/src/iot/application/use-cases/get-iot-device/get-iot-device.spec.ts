@@ -9,6 +9,7 @@ import {
   success,
 } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
 import { GetIotDeviceUseCase } from "./get-iot-device";
 
 describe("GetIotDeviceUseCase", () => {
@@ -86,4 +87,14 @@ describe("GetIotDeviceUseCase", () => {
 
   // Non-owner access is denied by the @CanAccess guard (device/read), covered in
   // authorization.service.spec + the controller spec — not by the use-case.
+
+  it("fails when the binding count cannot be read, rather than guessing zero", async () => {
+    const device = await testApp.createIotDevice({ createdBy: userId });
+    vi.spyOn(
+      testApp.module.get(ExperimentDeviceRepository),
+      "countByDevices",
+    ).mockResolvedValueOnce(failure(AppError.internal("db down")));
+
+    assertFailure(await useCase.execute(device.id, userId));
+  });
 });

@@ -23,7 +23,20 @@ export const zIotUploadUrl = z.object({
 });
 
 // --- IoT IotDevices ---
-export const zIotDeviceStatus = z.enum(["pending", "active", "rotating", "revoked"]);
+/**
+ * Stored setup state. "active" is never rendered as a word: with a binding count
+ * it reads as Provisioned or Onboarded, which is what `zIotDeviceRung` names.
+ */
+export const zIotDeviceStatus = z.enum(["registered", "active", "revoked", "retired"]);
+
+/** What the status badge shows: the stored status resolved against the binding count. */
+export const zIotDeviceRung = z.enum([
+  "registered",
+  "provisioned",
+  "onboarded",
+  "revoked",
+  "retired",
+]);
 
 // A device's class shares the canonical sensor-family taxonomy and maps to the ingest topic sensorType.
 export const zDeviceType = zSensorFamily;
@@ -65,6 +78,8 @@ export const zDeviceConnectivity = z.object({
 // plain shape so their handlers never depend on the fleet index.
 export const zIotDeviceWithConnectivity = zIotDevice.extend({
   connectivity: zDeviceConnectivity.nullable(),
+  /** Experiments the device is bound to; with `status` it decides Provisioned versus Onboarded. */
+  boundExperimentCount: z.number().int().nonnegative(),
 });
 
 export const zIotDeviceList = z.array(zIotDeviceWithConnectivity);
@@ -503,6 +518,7 @@ export type IotCredentials = z.infer<typeof zIotCredentials>;
 export type IotUploadUrlRequest = z.infer<typeof zIotUploadUrlRequest>;
 export type IotUploadUrl = z.infer<typeof zIotUploadUrl>;
 export type IotDeviceStatus = z.infer<typeof zIotDeviceStatus>;
+export type IotDeviceRung = z.infer<typeof zIotDeviceRung>;
 export type IotDevice = z.infer<typeof zIotDevice>;
 export type DeviceConnectivity = z.infer<typeof zDeviceConnectivity>;
 export type MonitoringBucket = z.infer<typeof zMonitoringBucket>;

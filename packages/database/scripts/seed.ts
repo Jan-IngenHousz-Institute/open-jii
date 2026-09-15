@@ -798,7 +798,7 @@ async function main() {
     slug: string;
     name: string;
     deviceType: "multispeq" | "ambyte" | "ambit" | "minipar" | "mobile";
-    status: "pending" | "active" | "revoked";
+    status: "registered" | "active" | "revoked" | "retired";
   }[] = [
     {
       slug: "ambyte-gw-01",
@@ -810,7 +810,7 @@ async function main() {
       slug: "ambyte-gw-02",
       name: "[Seed] Ambyte Field Gateway 02",
       deviceType: "ambyte",
-      status: "pending",
+      status: "registered",
     },
     {
       slug: "multispeq-01",
@@ -825,7 +825,7 @@ async function main() {
       deviceType: "minipar",
       status: "active",
     },
-    { slug: "retired-gw", name: "[Seed] Retired Gateway", deviceType: "ambyte", status: "revoked" },
+    { slug: "retired-gw", name: "[Seed] Retired Gateway", deviceType: "ambyte", status: "retired" },
   ];
 
   const createdDevices = await db
@@ -838,7 +838,7 @@ async function main() {
         name: d.name,
         deviceType: d.deviceType,
         status: d.status,
-        ...(d.status === "pending" ? {} : certFor(d.slug)),
+        ...(d.status === "active" ? certFor(d.slug) : {}),
         organizationId: personalOrganizationId,
         createdBy: user.id,
       })),

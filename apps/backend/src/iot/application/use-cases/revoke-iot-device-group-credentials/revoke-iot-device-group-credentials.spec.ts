@@ -62,7 +62,7 @@ describe("RevokeIotDeviceGroupCredentialsUseCase", () => {
       certificateId: "cert-old",
       certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-old",
     });
-    const pending = await testApp.createIotDevice({ createdBy: userId, status: "pending" });
+    const pending = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
     const groupId = await seedGroup([active.id, pending.id]);
 
     const result = await useCase.execute(groupId, undefined, userId);

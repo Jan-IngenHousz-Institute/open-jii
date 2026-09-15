@@ -33,7 +33,7 @@ describe("toFleetHealth", () => {
 
 describe("fleetAttention", () => {
   it("ranks a missing certificate above everything else", () => {
-    const pending = device({ status: "pending", connectivity: null });
+    const pending = device({ status: "registered", connectivity: null });
     const silent = device({ connectivity: { connected: true, lastSeenAt: FRESH } });
 
     const entries = fleetAttention(
@@ -45,6 +45,17 @@ describe("fleetAttention", () => {
 
     expect(entries.map((entry) => entry.reason)).toEqual(["credentials", "silent"]);
     expect(entries[0].device.id).toBe(pending.id);
+  });
+
+  it("leaves a retired device out of the attention list, whatever it lacks", () => {
+    // Retired means taken out of service on purpose: no certificate and no
+    // broker sighting are the expected state, not something to fix.
+    const shelved = device({
+      status: "retired",
+      connectivity: { connected: false, lastSeenAt: null },
+    });
+
+    expect(fleetAttention([shelved], [], false, NOW)).toEqual([]);
   });
 
   it("flags a credentialed device the broker has never seen", () => {
@@ -70,7 +81,7 @@ describe("fleetAttention", () => {
   it("leaves phones alone: they set themselves up and connect on their own schedule", () => {
     const phone = device({
       deviceType: "mobile",
-      status: "pending",
+      status: "registered",
       connectivity: { connected: false, lastSeenAt: null },
     });
 
