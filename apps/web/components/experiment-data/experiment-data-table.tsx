@@ -24,6 +24,8 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { FilterChipBar } from "../data-filters/filter-chip-bar";
 import { DataExportModal } from "./data-export-modal/data-export-modal";
+import { toggleChartDisplay } from "./table-chart/chart-display";
+import type { ChartDisplayState } from "./table-chart/chart-display";
 import { ExperimentDataTableChart } from "./table-chart/experiment-data-table-chart";
 
 function getSortColumnName(columnName: string, columnType?: string): string {
@@ -84,22 +86,12 @@ export function ExperimentDataTable({
     defaultValues: { selectedRowIds: [] },
   });
 
-  const [chartDisplay, setChartDisplay] = useState<{
-    data: number[];
-    columnName: string;
-    rowId: string;
-    isPinned: boolean;
-  } | null>(null);
+  const [chartDisplay, setChartDisplay] = useState<ChartDisplayState | null>(null);
 
   const { t } = useTranslation();
 
   const toggleChartPin = useCallback<OnChartClickHandler>((data, columnName, rowId) => {
-    setChartDisplay((prev) => {
-      if (prev?.isPinned && prev.columnName === columnName && prev.rowId === rowId) {
-        return null;
-      }
-      return { data, columnName, rowId, isPinned: true };
-    });
+    setChartDisplay((prev) => toggleChartDisplay(prev, data, columnName, rowId));
   }, []);
 
   const closePinnedChart = useCallback(() => {
