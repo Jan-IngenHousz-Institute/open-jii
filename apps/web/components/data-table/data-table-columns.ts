@@ -20,12 +20,13 @@ import {
 import type { DataTableFeatures } from "./data-table-features";
 
 export type DataRow = Record<string, unknown>;
+export type OnChartClickHandler = (data: number[], columnName: string, rowId: string) => void;
 export type DataRenderFunction = (
   value: unknown,
   type: string,
   rowId: string,
   columnName?: string,
-  onChartClick?: (data: number[], columnName: string) => void,
+  onChartClick?: OnChartClickHandler,
   onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void,
   onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void,
   onToggleCellExpansion?: (rowId: string, columnName: string) => void,
@@ -123,7 +124,7 @@ export function getColumnWidth(typeText: string, columnName?: string): number | 
 interface CreateTableColumnsParams {
   columns: ExperimentDataColumn[] | undefined;
   formatFunction?: DataRenderFunction;
-  onChartClick?: (data: number[], columnName: string) => void;
+  onChartClick?: OnChartClickHandler;
   onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
   onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
   onToggleCellExpansion?: (rowId: string, columnName: string) => void;

@@ -83,17 +83,18 @@ export function ExperimentDataTable({
   const [chartDisplay, setChartDisplay] = useState<{
     data: number[];
     columnName: string;
+    rowId: string;
     isPinned: boolean;
   } | null>(null);
 
   const { t } = useTranslation();
 
-  const toggleChartPin = useCallback((data: number[], columnName: string) => {
+  const toggleChartPin = useCallback((data: number[], columnName: string, rowId: string) => {
     setChartDisplay((prev) => {
-      if (prev?.isPinned && prev.columnName === columnName) {
+      if (prev?.isPinned && prev.columnName === columnName && prev.rowId === rowId) {
         return null;
       }
-      return { data, columnName, isPinned: true };
+      return { data, columnName, rowId, isPinned: true };
     });
   }, []);
 

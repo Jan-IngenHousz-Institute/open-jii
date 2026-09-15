@@ -30,7 +30,7 @@ import { Table, TableBody } from "@repo/ui/components/table";
 import { cn } from "@repo/ui/lib/utils";
 
 import { createTableColumns, sortColumnsForDisplay } from "./data-table-columns";
-import type { DataRow } from "./data-table-columns";
+import type { DataRow, OnChartClickHandler } from "./data-table-columns";
 import { dataTableFeatures } from "./data-table-features";
 import { DataTableHeader, DataTableRows, formatValue, LoadingRows } from "./data-table-utils";
 
@@ -70,7 +70,7 @@ interface SelectionConfig {
 }
 
 interface CellHandlers {
-  onChartClick?: (data: number[], columnName: string) => void;
+  onChartClick?: OnChartClickHandler;
   onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
   onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
 }
