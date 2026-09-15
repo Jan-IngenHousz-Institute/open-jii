@@ -42,7 +42,8 @@ The platform UI is auth-gated, so a real check needs Postgres and the backend, n
 - `pnpm e2e` — the browser end-to-end suite, against an already-running stack.
 - `pnpm lint`, `pnpm test`, `pnpm format:check` — validation.
 - `pnpm linear:auth` stores your Linear key in the OS keychain; `pnpm linear:query` and the other
-  `linear:*` commands use it, so the key never enters a shell.
+  `linear:*` commands use it, so the key never enters a shell. The one-time setup a person follows
+  is [Linear access for your coding agent](CONTRIBUTING.md#linear-access-for-your-coding-agent).
 
 Copy `apps/backend/.env.example` to `apps/backend/.env` before first boot. It is generated and
 boot-tested, and its comments mark the variables where a plausible dummy value is **worse** than
