@@ -244,6 +244,12 @@ class HandlerTest(unittest.TestCase):
         self.assertIn("bench went dark", result["error"])
         self.assertTrue(any("bench went dark" in line for line in result["traceback"]))
 
+    # A notebook habit: ending a script with exit() must read as the script's doing.
+    def test_script_that_exits_is_compute_failed(self):
+        result = handler(event(script="raise SystemExit(0)"), None)
+        self.assertEqual(result["status"], "compute_failed")
+        self.assertIn("SystemExit", result["error"])
+
     def test_missing_submit_is_compute_failed(self):
         result = handler(event(script="x = 1"), None)
         self.assertEqual(result["status"], "compute_failed")

@@ -115,6 +115,18 @@ function context(overrides: Partial<ProcedureContext> = {}): ProcedureContext {
   };
 }
 
+/** The abort a run ends in, typed without a cast so its reason and partial payload can be inspected. */
+async function abortOf(run: Promise<unknown>): Promise<ProcedureAborted> {
+  const outcome: unknown = await run.then(
+    () => undefined,
+    (error: unknown) => error,
+  );
+  if (!(outcome instanceof ProcedureAborted)) {
+    throw new Error(`Expected the run to abort, got ${String(outcome)}`);
+  }
+  return outcome;
+}
+
 describe("runCaptureProcedure", () => {
   it("captures every series a full rig can produce", async () => {
     const { rig, lamp } = fullRig();
@@ -214,13 +226,11 @@ describe("runCaptureProcedure", () => {
       const { rig } = fullRig();
       const withoutReference = { dut: rig.dut, lamp: rig.lamp };
 
-      const aborted = await runCaptureProcedure(
-        AMBIT_PROCEDURE,
-        context({ rig: withoutReference }),
-      ).catch((error: unknown) => error);
+      const aborted = await abortOf(
+        runCaptureProcedure(AMBIT_PROCEDURE, context({ rig: withoutReference })),
+      );
 
-      expect(aborted).toBeInstanceOf(ProcedureAborted);
-      expect((aborted as ProcedureAborted).reason).toBeInstanceOf(ProcedureRigError);
+      expect(aborted.reason).toBeInstanceOf(ProcedureRigError);
     });
 
     // A bench session is long and its series are independent: a fault during
@@ -235,12 +245,13 @@ describe("runCaptureProcedure", () => {
         },
       };
 
-      const aborted = (await runCaptureProcedure(
-        AMBIT_PROCEDURE,
-        context({ rig: { ...rig, emit_ref: dyingReference } }),
-      ).catch((error: unknown) => error)) as ProcedureAborted;
+      const aborted = await abortOf(
+        runCaptureProcedure(
+          AMBIT_PROCEDURE,
+          context({ rig: { ...rig, emit_ref: dyingReference } }),
+        ),
+      );
 
-      expect(aborted).toBeInstanceOf(ProcedureAborted);
       expect(aborted.reason.message).toMatch(/reference unplugged/);
       // The completed sweep survives, so the operator can still submit it.
       expect(aborted.partial.payload.par_sweep).toHaveLength(3);
@@ -272,12 +283,11 @@ describe("runCaptureProcedure", () => {
       const { rig } = fullRig();
       const declining = operator({ acknowledge: vi.fn(() => Promise.resolve(false)) });
 
-      const aborted = await runCaptureProcedure(
-        AMBIT_PROCEDURE,
-        context({ rig, operator: declining }),
-      ).catch((error: unknown) => error);
+      const aborted = await abortOf(
+        runCaptureProcedure(AMBIT_PROCEDURE, context({ rig, operator: declining })),
+      );
 
-      expect((aborted as ProcedureAborted).reason).toBeInstanceOf(ProcedureDeclined);
+      expect(aborted.reason).toBeInstanceOf(ProcedureDeclined);
     });
 
     it("passes the confirmation token through so the port can require it", async () => {
@@ -450,6 +460,30 @@ describe("runCaptureProcedure", () => {
   });
 
   describe("reads", () => {
+    // A port that can no longer reach the operator fails the read; nothing is recorded in its place.
+    it("aborts when the operator port fails a value request", async () => {
+      const gone = operator({
+        readValue: vi.fn(() => Promise.reject(new Error("operator left the bench"))),
+      });
+      const procedure: CaptureProcedure = {
+        instruments: [{ role: "dut" }],
+        steps: [
+          {
+            kind: "read",
+            series: "par_sweep",
+            read: [{ operator: "Enter the reference reading", as: "par_ref", type: "number" }],
+          },
+        ],
+      };
+
+      const aborted = await abortOf(
+        runCaptureProcedure(procedure, context({ rig: { dut: reader({}) }, operator: gone })),
+      );
+
+      expect(aborted.reason.message).toMatch(/left the bench/);
+      expect(aborted.partial.payload).toEqual({});
+    });
+
     it("returns a scalar for a single sample and an array for a repeat", async () => {
       const procedure: CaptureProcedure = {
         instruments: [{ role: "dut" }],

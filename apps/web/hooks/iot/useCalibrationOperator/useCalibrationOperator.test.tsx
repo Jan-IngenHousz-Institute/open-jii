@@ -62,7 +62,8 @@ describe("useCalibrationOperator", () => {
     expect(result.current.pending).toBeNull();
   });
 
-  it("answers an open value request with nothing useful when cancelled", async () => {
+  // A value the operator never typed must not be recorded; the failed read aborts the run.
+  it("fails an open value request when cancelled", async () => {
     const { result } = renderHook(() => useCalibrationOperator());
 
     let answer: Promise<number | string> | undefined;
@@ -74,7 +75,7 @@ describe("useCalibrationOperator", () => {
       result.current.cancel();
     });
 
-    await expect(answer).resolves.toBeNaN();
+    await expect(answer).rejects.toThrow("left the bench");
     expect(result.current.pending).toBeNull();
   });
 });

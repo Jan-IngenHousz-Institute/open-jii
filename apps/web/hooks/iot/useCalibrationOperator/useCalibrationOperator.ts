@@ -16,6 +16,7 @@ export type OperatorRequest =
       prompt: string;
       type: "number" | "text";
       resolve: (value: number | string) => void;
+      reject: (reason: Error) => void;
     };
 
 /** Bridges the interpreter's operator port to React state; only one request is ever open. */
@@ -45,7 +46,7 @@ export function useCalibrationOperator() {
           setPending(request);
         }),
       readValue: (prompt, type) =>
-        new Promise<number | string>((resolve) => {
+        new Promise<number | string>((resolve, reject) => {
           const request: OperatorRequest = {
             kind: "readValue",
             prompt,
@@ -53,6 +54,10 @@ export function useCalibrationOperator() {
             resolve: (value) => {
               settle();
               resolve(value);
+            },
+            reject: (reason) => {
+              settle();
+              reject(reason);
             },
           };
           pendingRef.current = request;
@@ -62,14 +67,14 @@ export function useCalibrationOperator() {
     [settle],
   );
 
-  // Leaving mid-prompt: an open acknowledge is declined, an open read answers NaN, and the run aborts normally.
+  // Leaving mid-prompt: an open acknowledge is declined and an open read fails, so the run aborts either way.
   const cancel = useCallback(() => {
     const request = pendingRef.current;
     if (!request) return;
     if (request.kind === "acknowledge") {
       request.resolve(false);
     } else {
-      request.resolve(Number.NaN);
+      request.reject(new Error("The operator left the bench before answering"));
     }
   }, []);
 

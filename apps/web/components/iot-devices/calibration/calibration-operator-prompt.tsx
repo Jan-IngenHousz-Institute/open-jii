@@ -44,7 +44,9 @@ export function CalibrationOperatorPrompt({ request }: { request: OperatorReques
       request.resolve(values.answer);
       return;
     }
-    const parsed = Number.parseFloat(values.answer);
+    // Whole-string parse: "142,92" must be refused, not recorded as 142.
+    const text = values.answer.trim();
+    const parsed = text === "" ? Number.NaN : Number(text);
     if (!Number.isFinite(parsed)) {
       form.setError("answer", { message: t("iot.calibration.prompt.invalidNumber") });
       return;

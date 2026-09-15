@@ -69,6 +69,7 @@ describe("CalibrationOperatorPrompt", () => {
           prompt: "Enter the reference meter reading",
           type: "number",
           resolve,
+          reject: vi.fn(),
         }}
       />,
     );
@@ -83,7 +84,13 @@ describe("CalibrationOperatorPrompt", () => {
     const resolve = vi.fn();
     render(
       <CalibrationOperatorPrompt
-        request={{ kind: "readValue", prompt: "Enter the reading", type: "number", resolve }}
+        request={{
+          kind: "readValue",
+          prompt: "Enter the reading",
+          type: "number",
+          resolve,
+          reject: vi.fn(),
+        }}
       />,
     );
 
@@ -94,11 +101,42 @@ describe("CalibrationOperatorPrompt", () => {
     expect(resolve).not.toHaveBeenCalled();
   });
 
+  // A decimal comma or a trailing unit must not be silently cut down to the leading digits.
+  it.each(["142,92", "176.4 umol", ""])(
+    "refuses %j rather than recording part of it",
+    async (typed) => {
+      const resolve = vi.fn();
+      render(
+        <CalibrationOperatorPrompt
+          request={{
+            kind: "readValue",
+            prompt: "Enter the reading",
+            type: "number",
+            resolve,
+            reject: vi.fn(),
+          }}
+        />,
+      );
+
+      if (typed !== "") await userEvent.type(screen.getByRole("textbox"), typed);
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.prompt.submit" }));
+
+      expect(await screen.findByText("iot.calibration.prompt.invalidNumber")).toBeInTheDocument();
+      expect(resolve).not.toHaveBeenCalled();
+    },
+  );
+
   it("records a text answer as typed", async () => {
     const resolve = vi.fn();
     render(
       <CalibrationOperatorPrompt
-        request={{ kind: "readValue", prompt: "Enter the card lot", type: "text", resolve }}
+        request={{
+          kind: "readValue",
+          prompt: "Enter the card lot",
+          type: "text",
+          resolve,
+          reject: vi.fn(),
+        }}
       />,
     );
 

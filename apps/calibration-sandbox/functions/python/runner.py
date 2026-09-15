@@ -56,7 +56,8 @@ def _run(event):
     scope = {"inputs": inputs, "params": params, "submit": submit}
     try:
         exec(compile(event["script"], "<calibration-script>", "exec"), scope)
-    except Exception as exc:
+    # BaseException: a script that calls exit() is a script fault, not a sandbox failure.
+    except BaseException as exc:
         return {
             "outcome": "script_failed",
             "error": "".join(traceback.format_exception_only(type(exc), exc)).strip(),
