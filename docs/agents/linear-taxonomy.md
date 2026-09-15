@@ -105,7 +105,9 @@ that history is a compliance record.
 
 Reassign the issues to the target label first, then archive the source. Each of these is either a
 genuine duplicate on an axis that should carry one value, or a workspace-scoped label that cannot be
-moved into a team group.
+moved into a team group. An issue that already carries another label from the target's group (a
+`Bug` that is also `enhancement`, say) is skipped and listed rather than having one label silently
+replaced; the source stays until a person settles those, then the phase is rerun.
 
 | Source           | Issues | Target                                 |
 | ---------------- | -----: | -------------------------------------- |

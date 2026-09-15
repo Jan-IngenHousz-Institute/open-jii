@@ -37,10 +37,18 @@ block() {
   exit 2
 }
 
-# Pushing to main from any branch, including short and fully qualified refspecs.
+# Pushing to main from any branch: short, quoted, forced (+main) and fully qualified refspecs.
 if printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+push' &&
-  printf '%s' "$COMMAND" | grep -qE '(^|[[:space:]:])(refs/heads/)?main([[:space:]]|$)'; then
+  printf '%s' "$COMMAND" | grep -qE "(^|[[:space:]:+'\"])(refs/heads/)?main(['\"[:space:]]|\$)"; then
   block "this pushes to main."
+fi
+
+# A bare git push goes wherever the branch tracks, and a branch cut from origin/main tracks main.
+if printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+push([[:space:]]+-[^[:space:]]+)*[[:space:]]*($|[|;&])'; then
+  UPSTREAM=$(git rev-parse --abbrev-ref '@{upstream}' 2>/dev/null || echo "")
+  case "$UPSTREAM" in
+    */main) block "this branch tracks $UPSTREAM, so a bare git push lands on main; push an explicit branch instead, e.g. git push -u origin HEAD." ;;
+  esac
 fi
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")

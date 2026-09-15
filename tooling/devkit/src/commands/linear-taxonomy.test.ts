@@ -217,6 +217,7 @@ function fakeLinear(initialLabels: LiveLabel[], issues: FakeIssue[]) {
       return { teams: { nodes: [{ id: "team-1" }] } };
     }
     if (document.includes("issues(")) {
+      if (variables.teamKey !== team) throw new Error("issues query without the team filter");
       const name = variables.name;
       const nodes = issues
         .filter((issue) => typeof name === "string" && issue.labels.has(name))
@@ -336,6 +337,61 @@ describe("applyTaxonomy", () => {
       .filter((entry) => entry.retired)
       .map((entry) => entry.name);
     expect(retired).toEqual(["Bug", "Fullstack", "Migrated"]);
+  });
+
+  it("skips issues that already carry another label from the target's group and keeps the source", async () => {
+    const live = [
+      label("type", team, true),
+      under("type", "feature"),
+      under("type", "bug"),
+      label("Bug", null),
+    ];
+    const issues: FakeIssue[] = [
+      { id: "i-1", labels: new Set(["Bug"]) },
+      { id: "i-2", labels: new Set(["Bug", "feature"]) },
+    ];
+    const spec: TaxonomySpec = {
+      ...taxonomy,
+      renames: [{ from: "Bug", to: "bug", facet: "type" }],
+      creates: [],
+      merges: [],
+      retires: [],
+    };
+    const fake = fakeLinear(live, issues);
+    const lines: string[] = [];
+
+    await applyTaxonomy(["merges"], {
+      client: fake.client,
+      spec,
+      write: (text) => lines.push(text),
+      batchSize: 50,
+    });
+
+    expect(issues[0].labels).toEqual(new Set(["Bug", "bug"]));
+    expect(issues[1].labels).toEqual(new Set(["Bug", "feature"]));
+    expect(fake.mutations).toEqual(["issueBatchUpdate"]);
+    expect(lines.join("")).toContain("1 issue(s) skipped");
+  });
+
+  it("ignores labels that belong to another team", async () => {
+    const fake = fakeLinear([label("type", team, true), label("bug", "XYZ")], []);
+    const spec: TaxonomySpec = {
+      ...taxonomy,
+      facets: [{ name: "type", grouped: true }],
+      renames: [],
+      creates: [{ name: "bug", facet: "type" }],
+      merges: [],
+      retires: [],
+    };
+
+    await applyTaxonomy(["creates"], {
+      client: fake.client,
+      spec,
+      write: () => undefined,
+      batchSize: 50,
+    });
+
+    expect(fake.mutations).toEqual(["issueLabelCreate"]);
   });
 
   it("only runs the phases it is given", async () => {

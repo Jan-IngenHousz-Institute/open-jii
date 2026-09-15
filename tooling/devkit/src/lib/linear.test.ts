@@ -27,14 +27,30 @@ describe("describeOperation", () => {
 
     expect(summary).toEqual({ kind: "mutation", fields: ["issueUpdate", "issueDelete"] });
   });
+
+  it("is not fooled by a leading comment or braces inside a string", () => {
+    expect(
+      describeOperation('# housekeeping\nmutation { issueDelete(id: "1") { success } }'),
+    ).toEqual({
+      kind: "mutation",
+      fields: ["issueDelete"],
+    });
+    expect(
+      describeOperation(
+        'mutation { issueUpdate(id: "1", input: { title: "}" }) { success } issueDelete(id: "1") { success } }',
+      ).fields,
+    ).toEqual(["issueUpdate", "issueDelete"]);
+  });
 });
 
 describe("isDestructive", () => {
-  it("flags deletes and archives, not retires or updates", () => {
+  it("flags deletes and archives, not retires, updates or unarchives", () => {
     expect(isDestructive("issueDelete")).toBe(true);
     expect(isDestructive("issueArchive")).toBe(true);
+    expect(isDestructive("projectArchive")).toBe(true);
     expect(isDestructive("issueLabelRetire")).toBe(false);
     expect(isDestructive("issueUpdate")).toBe(false);
+    expect(isDestructive("issueUnarchive")).toBe(false);
   });
 });
 
@@ -45,8 +61,12 @@ describe("selectsSecret", () => {
     expect(selectsSecret("{ oauth { clientSecret } }")).toBe(true);
   });
 
-  it("ignores the word inside string arguments and longer names", () => {
+  it("ignores the word inside string arguments, block strings, comments and longer names", () => {
     expect(selectsSecret('{ issueSearch(query: "secret rotation") { nodes { id } } }')).toBe(false);
+    expect(
+      selectsSecret('mutation { issueCreate(input: { description: """a secret""" }) { success } }'),
+    ).toBe(false);
+    expect(selectsSecret("# secret\n{ viewer { id } }")).toBe(false);
     expect(selectsSecret("{ webhooks { nodes { id secretless } } }")).toBe(false);
   });
 });
@@ -82,6 +102,9 @@ describe("createLinearClient", () => {
     await expect(
       client.query("mutation($id: String!) { issueDelete(id: $id) { success } }", { id: "1" }),
     ).rejects.toThrow("Refusing destructive mutation issueDelete");
+    await expect(
+      client.query('# tidy\nmutation { issueArchive(id: "1") { success } }'),
+    ).rejects.toThrow("Refusing destructive mutation issueArchive");
     expect(request).not.toHaveBeenCalled();
   });
 

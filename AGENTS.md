@@ -58,7 +58,8 @@ Task guides live in `.agents/skills/<name>/SKILL.md`. They are plain markdown an
 read the file when the situation matches. `.claude/skills/` holds symlinks to the same files so
 Claude Code auto-discovers them, but the files under `.agents/` are the source. The symlink layer
 assumes the team's supported macOS/Linux development environments. The shared hooks require Bash,
-Git, and `jq`; a missing `jq` prints a warning and skips the hook.
+Git and Node, with `jq` as the fallback parser. Without either parser the main-branch guard and the
+docs reminder print a warning and step aside; the secrets guard blocks instead.
 
 | Skill                      | Read it when                                                               |
 | -------------------------- | -------------------------------------------------------------------------- |
@@ -101,15 +102,18 @@ hold secrets and are never read, printed, copied or sourced by an agent. The too
 secret reads it itself: each app loads its own `.env`, the devkit resolves the Linear key from the
 OS keychain, and `curl -H @.claude/session.header` reads the local session. Copying an env file into
 another checkout's env file is fine; copying it anywhere else is not. `.claude/settings.json` denies
-the file tools those paths outright; a second `PreToolUse` hook, `.claude/hooks/protect-secrets.sh`,
-catches what deny rules cannot see (`grep -r`, `python open()`, `cp`, `source`), keeps the keychain,
-the clipboard and the environment closed (no `security find-generic-password`, no bare `pbpaste`,
-no `env`, no `$SOME_TOKEN` on a command line) and blocks publishing commands (`eas update`,
-`eas submit`). Releases and infrastructure are run by people, never by an agent. The Bash sandbox is opt-in through
-`/sandbox`; once it is on, the tracked `sandbox.credentials` entries keep the developer's CLI logins
-out of sandboxed commands. Never pass a secret as a command-line argument or write one into a
-ticket, PR, canvas or log. `.env.example`, `.env.default` and `.env.test` hold no secrets and are
-fine to read.
+the file tools those paths outright, along with the developer's own credential files (`~/.ssh`,
+`~/.aws`, the `gh` and Expo logins); a second `PreToolUse` hook, `.claude/hooks/protect-secrets.sh`,
+catches what deny rules cannot see: recursive `grep` and `find -exec` (use `rg`, `git grep` or the
+Grep tool, which skip gitignored files), `python open()`, `cp`, `mv`, `tar`, `git add`, `source`
+and uploads. It keeps the keychain, the clipboard and the environment closed (no
+`security find-generic-password`, no bare `pbpaste`, no `env`, no `$SOME_TOKEN` on a command line)
+and blocks publishing commands (`eas update`, `eas submit`). It matches command text, so it raises
+the bar rather than closing every path. Releases and infrastructure are run by people, never by an
+agent. The Bash sandbox is opt-in through `/sandbox`; once it is on, the tracked
+`sandbox.credentials` entries keep the developer's CLI logins out of sandboxed commands. Never pass
+a secret as a command-line argument or write one into a ticket, PR, canvas or log. `.env.example`,
+`.env.default` and `.env.test` hold no secrets and are fine to read.
 
 ## main is protected
 

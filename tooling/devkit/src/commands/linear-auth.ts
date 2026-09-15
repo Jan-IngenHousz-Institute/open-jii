@@ -72,6 +72,11 @@ export async function authenticate(useFile: boolean, deps: AuthDependencies): Pr
 }
 
 async function run(args: string[]): Promise<number> {
+  if (process.stdin.isTTY) {
+    throw new Error(
+      "The key is read from stdin so it never lands on a command line: pbpaste | pnpm linear:auth",
+    );
+  }
   const root = repositoryRoot();
   await authenticate(args.includes("--file"), {
     readInput: () => readFileSync(0, "utf8"),

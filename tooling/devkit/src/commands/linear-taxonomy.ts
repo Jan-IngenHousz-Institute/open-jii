@@ -76,8 +76,12 @@ const teamQuery = `query($key: String!) {
   teams(filter: { key: { eq: $key } }) { nodes { id } }
 }`;
 
-const issuesByLabelQuery = `query($name: String!, $after: String) {
-  issues(first: 100, after: $after, filter: { labels: { name: { eq: $name } } }) {
+const issuesByLabelQuery = `query($name: String!, $teamKey: String!, $after: String) {
+  issues(
+    first: 100
+    after: $after
+    filter: { team: { key: { eq: $teamKey } }, labels: { name: { eq: $name } } }
+  ) {
     nodes { id labels(first: 25) { nodes { name } } }
     pageInfo { hasNextPage endCursor }
   }
@@ -239,13 +243,15 @@ export function printPlan(
   write(`untouchable prefixes: ${spec.untouchablePrefixes.join(", ")}\n`);
 }
 
-export async function fetchLabels(client: LinearClient): Promise<LiveLabel[]> {
+export async function fetchLabels(client: LinearClient, teamKey: string): Promise<LiveLabel[]> {
   const labels: LiveLabel[] = [];
   let after: string | null = null;
   for (;;) {
     const page: LabelsPage = await client.query<LabelsPage>(labelsQuery, { after });
     for (const node of page.issueLabels.nodes) {
       if (node.retiredAt !== null) continue;
+      // Another team's labels share the query but are not ours to plan against.
+      if (node.team !== null && node.team.key !== teamKey) continue;
       labels.push({
         id: node.id,
         name: node.name,
@@ -266,14 +272,24 @@ async function fetchTeamId(client: LinearClient, key: string): Promise<string> {
   return team.id;
 }
 
+interface LabelledIssue {
+  id: string;
+  labelNames: string[];
+}
+
 async function fetchIssuesWithLabel(
   client: LinearClient,
   name: string,
-): Promise<{ id: string; labelNames: string[] }[]> {
-  const issues: { id: string; labelNames: string[] }[] = [];
+  teamKey: string,
+): Promise<LabelledIssue[]> {
+  const issues: LabelledIssue[] = [];
   let after: string | null = null;
   for (;;) {
-    const page: IssuesPage = await client.query<IssuesPage>(issuesByLabelQuery, { name, after });
+    const page: IssuesPage = await client.query<IssuesPage>(issuesByLabelQuery, {
+      name,
+      teamKey,
+      after,
+    });
     for (const node of page.issues.nodes) {
       issues.push({ id: node.id, labelNames: node.labels.nodes.map((label) => label.name) });
     }
@@ -305,10 +321,26 @@ async function expectSuccess(
   if (!outcome?.success) throw new Error(`${what} did not succeed`);
 }
 
-function labelIdOrThrow(labels: ReadonlyMap<string, LiveLabel>, name: string): string {
+function labelOrThrow(labels: ReadonlyMap<string, LiveLabel>, name: string): LiveLabel {
   const label = labels.get(name);
   if (!label) throw new Error(`Label "${name}" is missing; run the earlier phases first`);
-  return label.id;
+  return label;
+}
+
+function labelIdOrThrow(labels: ReadonlyMap<string, LiveLabel>, name: string): string {
+  return labelOrThrow(labels, name).id;
+}
+
+// An issue carries one label per group, so adding a second one would replace or fail; skip it.
+function conflictsWithGroup(
+  issueLabels: readonly string[],
+  target: LiveLabel,
+  labels: ReadonlyMap<string, LiveLabel>,
+): boolean {
+  if (target.parentName === null) return false;
+  return issueLabels.some(
+    (name) => name !== target.name && labels.get(name)?.parentName === target.parentName,
+  );
 }
 
 async function applyMerge(
@@ -316,13 +348,24 @@ async function applyMerge(
   labels: ReadonlyMap<string, LiveLabel>,
   deps: TaxonomyDependencies,
 ): Promise<void> {
-  const sourceId = labelIdOrThrow(labels, operation.from);
-  const targetIds = operation.into.map((name) => labelIdOrThrow(labels, name));
-  const issues = await fetchIssuesWithLabel(deps.client, operation.from);
-  deps.write(`  ${operation.from}: ${issues.length} issue(s) get ${operation.into.join(", ")}\n`);
+  const source = labelOrThrow(labels, operation.from);
+  const targets = operation.into.map((name) => labelOrThrow(labels, name));
+  const issues = await fetchIssuesWithLabel(deps.client, operation.from, deps.spec.teamKey);
+  const conflicting = issues.filter((issue) =>
+    targets.some((target) => conflictsWithGroup(issue.labelNames, target, labels)),
+  );
+  const ready = issues.filter((issue) => !conflicting.includes(issue));
+  deps.write(`  ${operation.from}: ${ready.length} issue(s) get ${operation.into.join(", ")}\n`);
+  if (conflicting.length > 0) {
+    const ids = conflicting.map((issue) => issue.id).join(" ");
+    deps.write(
+      `  ${operation.from}: ${conflicting.length} issue(s) skipped, another label from the same group is set: ${ids}\n`,
+    );
+  }
 
-  for (let start = 0; start < issues.length; start += deps.batchSize) {
-    const ids = issues.slice(start, start + deps.batchSize).map((issue) => issue.id);
+  const targetIds = targets.map((target) => target.id);
+  for (let start = 0; start < ready.length; start += deps.batchSize) {
+    const ids = ready.slice(start, start + deps.batchSize).map((issue) => issue.id);
     await expectSuccess(
       deps.client,
       addLabelsMutation,
@@ -331,18 +374,27 @@ async function applyMerge(
     );
   }
 
-  const stillMissing = (await fetchIssuesWithLabel(deps.client, operation.from)).filter((issue) =>
-    operation.into.some((name) => !issue.labelNames.includes(name)),
+  const skippedIds = new Set(conflicting.map((issue) => issue.id));
+  const after = await fetchIssuesWithLabel(deps.client, operation.from, deps.spec.teamKey);
+  const stillMissing = after.filter(
+    (issue) =>
+      !skippedIds.has(issue.id) && operation.into.some((name) => !issue.labelNames.includes(name)),
   );
   if (stillMissing.length > 0) {
     throw new Error(
       `${stillMissing.length} issue(s) still lack a target after merging ${operation.from}; not retiring it`,
     );
   }
+  if (conflicting.length > 0) {
+    deps.write(
+      `  ${operation.from} stays until those issues are settled by hand; rerun merges then\n`,
+    );
+    return;
+  }
   await expectSuccess(
     deps.client,
     retireLabelMutation,
-    { id: sourceId },
+    { id: source.id },
     `Retiring ${operation.from}`,
   );
 }
@@ -391,7 +443,7 @@ export async function applyTaxonomy(
   for (const phase of labelPhases) {
     if (!phases.includes(phase)) continue;
     // Labels are re-read per phase because earlier phases create the ids later ones need.
-    const live = await fetchLabels(deps.client);
+    const live = await fetchLabels(deps.client, deps.spec.teamKey);
     const labels = new Map(live.map((label) => [label.name, label]));
     const todo = planTaxonomy(deps.spec, live).filter(
       (operation) => operation.phase === phase && operation.kind !== "skip",
@@ -432,7 +484,7 @@ async function run(args: string[]): Promise<number> {
   if (!apiKey) throw new Error("No Linear key found; run pnpm linear:auth first");
 
   const client = createLinearClient({ apiKey, audit: createFileAudit(root) });
-  printPlan(taxonomy, planTaxonomy(taxonomy, await fetchLabels(client)), write);
+  printPlan(taxonomy, planTaxonomy(taxonomy, await fetchLabels(client, taxonomy.teamKey)), write);
   if (!apply) {
     write("dry run; pass --apply --step <phase[,phase]> to write\n");
     return 0;

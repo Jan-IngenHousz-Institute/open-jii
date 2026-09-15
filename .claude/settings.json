@@ -5,13 +5,18 @@
       "Read(**/.env.local)",
       "Read(**/.env.*.local)",
       "Read(**/.env.production)",
-      "Read(.auth/**)",
+      "Read(**/.auth/**)",
       "Read(**/*.pem)",
       "Read(**/*.p12)",
       "Read(**/*.pfx)",
       "Read(.claude/session.header)",
       "Read(~/.expo/state.json)",
       "Read(~/.aws/**)",
+      "Read(~/.ssh/**)",
+      "Read(~/.gnupg/**)",
+      "Read(~/.netrc)",
+      "Read(~/.config/gh/hosts.yml)",
+      "Read(~/.kube/config)",
       "Read(~/.databrickscfg)",
       "Read(~/.docker/config.json)",
       "Read(~/.npmrc)",
@@ -53,7 +58,7 @@
         ]
       },
       {
-        "matcher": "Bash|Read",
+        "matcher": "Bash|Read|Grep",
         "hooks": [
           {
             "type": "command",

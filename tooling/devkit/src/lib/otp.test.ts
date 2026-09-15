@@ -17,6 +17,16 @@ describe("assertLocalDatabase", () => {
     );
   });
 
+  it("counts a host smuggled in through the query string", () => {
+    expect(() =>
+      assertLocalDatabase("postgresql://u:p@127.0.0.1:5432/app?host=db.example.internal", {}),
+    ).toThrow("db.example.internal");
+    expect(() =>
+      assertLocalDatabase("postgresql://u:p@localhost/app?hostaddr=10.0.0.5", {}),
+    ).toThrow("10.0.0.5");
+    expect(() => assertLocalDatabase("postgresql:///app?host=/var/run/postgresql", {})).toThrow();
+  });
+
   it("honours the same override the e2e fixtures use", () => {
     expect(() =>
       assertLocalDatabase("postgresql://u:p@db.example.internal/app", {

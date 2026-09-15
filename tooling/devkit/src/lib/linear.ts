@@ -43,25 +43,31 @@ function isGraphqlResponse<T>(value: unknown): value is GraphqlResponse<T> {
 }
 
 export function isDestructive(field: string): boolean {
-  return /(Delete|Archive)$/.test(field);
+  return /Delete|(?<!Un)Archive/.test(field);
+}
+
+// Comments and string literals carry no structure and may hold braces or field names.
+function stripLiterals(document: string): string {
+  return document.replace(/"""[\s\S]*?"""|"(?:[^"\\\n]|\\.)*"|#[^\n]*/g, " ");
 }
 
 // A webhook's signing secret is the one thing a personal key can read that must never be printed.
 export function selectsSecret(document: string): boolean {
-  const withoutStrings = document.replace(/"(?:[^"\\]|\\.)*"/g, '""');
-  return /(^|[^A-Za-z0-9_])(secret|clientSecret)([^A-Za-z0-9_]|$)/.test(withoutStrings);
+  return /(^|[^A-Za-z0-9_])(secret|clientSecret)([^A-Za-z0-9_]|$)/.test(stripLiterals(document));
 }
 
 // Names the top-level selections. A guard for the policy, not a GraphQL parser.
 export function describeOperation(document: string): OperationSummary {
-  const kind: OperationSummary["kind"] = /^\s*mutation\b/.test(document) ? "mutation" : "query";
+  const source = stripLiterals(document);
+  const isMutation = /(^|[^A-Za-z0-9_])mutation([^A-Za-z0-9_]|$)/.test(source);
+  const kind: OperationSummary["kind"] = isMutation ? "mutation" : "query";
   const fields: string[] = [];
   let parens = 0;
   let braces = 0;
   let index = 0;
 
-  while (index < document.length) {
-    const char = document.charAt(index);
+  while (index < source.length) {
+    const char = source.charAt(index);
     if (char === "(") {
       parens += 1;
     } else if (char === ")") {
@@ -72,11 +78,11 @@ export function describeOperation(document: string): OperationSummary {
       braces -= 1;
     } else if (braces === 1 && parens === 0 && /[A-Za-z_]/.test(char)) {
       identifier.lastIndex = index;
-      const match = identifier.exec(document);
+      const match = identifier.exec(source);
       const name = match ? match[0] : char;
       const after = index + name.length;
-      const isAlias = /^\s*:/.test(document.slice(after));
-      const isSpread = document.slice(Math.max(0, index - 3), index) === "...";
+      const isAlias = /^\s*:/.test(source.slice(after));
+      const isSpread = source.slice(Math.max(0, index - 3), index) === "...";
       if (!isAlias && !isSpread) fields.push(name);
       index = after;
       continue;
@@ -87,7 +93,7 @@ export function describeOperation(document: string): OperationSummary {
   return { kind, fields };
 }
 
-// Personal API keys go in the Authorization header bare; a Bearer prefix is a silent 401.
+// Personal API keys go in the Authorization header bare, without a Bearer prefix.
 async function send<T>(
   request: typeof fetch,
   endpoint: string,

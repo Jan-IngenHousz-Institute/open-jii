@@ -2,6 +2,15 @@ import postgres from "postgres";
 
 const loopbackHosts = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
 
+// libpq-style URIs also accept host and hostaddr in the query string, so those count as well.
+function databaseHosts(databaseUrl: string): string[] {
+  const url = new URL(databaseUrl);
+  const fromQuery = ["host", "hostaddr"]
+    .flatMap((name) => url.searchParams.get(name)?.split(",") ?? [])
+    .map((host) => host.trim());
+  return [url.hostname, ...fromQuery].filter((host) => host.length > 0);
+}
+
 // Reading sign-in codes is a local-database trick. Against any reachable remote database it would
 // log in as anyone, so the same override the e2e fixtures use is the only way past this.
 export function assertLocalDatabase(
@@ -9,10 +18,11 @@ export function assertLocalDatabase(
   env: NodeJS.ProcessEnv = process.env,
 ): void {
   if (env.E2E_ALLOW_UNSAFE_DATABASE === "1") return;
-  const host = new URL(databaseUrl).hostname;
-  if (loopbackHosts.has(host)) return;
+  const hosts = databaseHosts(databaseUrl);
+  const remote = hosts.find((host) => !loopbackHosts.has(host));
+  if (hosts.length > 0 && remote === undefined) return;
   throw new Error(
-    `Refusing to read sign-in codes from ${host}; only a local database is allowed. Set E2E_ALLOW_UNSAFE_DATABASE=1 to override.`,
+    `Refusing to read sign-in codes from ${remote ?? "an unnamed host"}; only a local database is allowed. Set E2E_ALLOW_UNSAFE_DATABASE=1 to override.`,
   );
 }
 

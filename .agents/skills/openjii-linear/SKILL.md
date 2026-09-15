@@ -35,7 +35,7 @@ pbpaste | pnpm linear:auth --file   # fallback: .claude/.env, owner-only, gitign
 rotate, regenerate the key in Linear and run it again.
 
 Every call goes through the devkit. It resolves the key in-process (shell env, then keychain, then
-the env file), sends it bare in the `Authorization` header (a `Bearer` prefix is a silent 401),
+the env file), sends it bare in the `Authorization` header (no `Bearer` prefix),
 refuses any `*Delete` or `*Archive` mutation unless `--allow-destructive` is passed, and appends
 every mutation to `.claude/linear-writes.log`:
 
@@ -43,6 +43,10 @@ every mutation to `.claude/linear-writes.log`:
 pnpm linear:query --query '{ viewer { name } }'
 pnpm linear:query --file query.graphql --variables '{"id":"OJD-1755"}'
 ```
+
+`--file` takes only a `.graphql` or `.gql` document, and the client refuses any selection of
+`secret` or `clientSecret`: a webhook's signing secret is readable with a personal key and never
+belongs in a transcript.
 
 Never read `.claude/.env` or any other env file into the context. A hook blocks the obvious ways;
 the rule covers the rest. If no key is found, say so and ask; do not invent one or guess at ticket

@@ -75,7 +75,9 @@ and reversible first:
    for the six workspace-scoped labels that cannot be renamed into a team group.
 2. `renames`: a rename keeps every issue attached. No cost.
 3. `merges`: adds the target label to each source issue, verifies every issue carries it, then
-   retires the source. The six scope-driven merges run here too.
+   retires the source. An issue that already carries another label from the target's group is
+   skipped and listed, and the source stays until those are settled by hand. The six scope-driven
+   merges run here too.
 4. `retires`: check saved views for `Migrated` first; it sits on 50 or more issues.
 
 The command refuses `WBSO*`, `wayfinder:*` and the three labels marked undecided. Announce phases 3
