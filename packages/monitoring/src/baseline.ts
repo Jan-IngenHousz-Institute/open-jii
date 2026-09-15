@@ -41,6 +41,13 @@ export function evaluate({ metric, value, baseline, historyCount }: MetricReadin
   const rule = metric.baseline ?? {};
 
   if (value === null) {
+    // Absence IS the signal for a liveness metric, so it alarms whether or not history
+    // exists. Without this a collector that dies in its first four weeks reports as
+    // "never seen" and stays silent, which is the opposite of a dead-man switch.
+    if (rule.nodata === "alert") {
+      return { state: "anomaly", reason: "no datapoints, expected continuously" };
+    }
+
     // A series that used to report and now does not is itself the finding
     return historyCount > 0 ? { state: "missing" } : { state: "no-data" };
   }

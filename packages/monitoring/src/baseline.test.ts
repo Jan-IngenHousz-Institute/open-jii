@@ -111,7 +111,25 @@ describe("evaluate", () => {
     ).toBe("ok");
   });
 
-  it("never flags a liveness metric that carries no rule", () => {
+  it("never flags a liveness metric while it is reporting", () => {
     expect(evaluate(reading({ nodata: "alert" }, 1)).state).toBe("ok");
+  });
+
+  it("alarms when a liveness metric stops reporting, even with history", () => {
+    const result = evaluate(reading({ nodata: "alert" }, null, 1, 4));
+
+    expect(result.state).toBe("anomaly");
+    expect(result.reason).toBe("no datapoints, expected continuously");
+  });
+
+  it("alarms when a liveness metric never reported at all", () => {
+    // The dead-man must cover a collector that dies inside its first four weeks,
+    // when there is no baseline history to compare against.
+    expect(evaluate(reading({ nodata: "alert" }, null, null, 0)).state).toBe("anomaly");
+  });
+
+  it("leaves absence of an ordinary metric as a self-check, not an alarm", () => {
+    expect(evaluate(reading({ method: "threshold", max: 5 }, null, 10, 4)).state).toBe("missing");
+    expect(evaluate(reading({ method: "threshold", max: 5 }, null, null, 0)).state).toBe("no-data");
   });
 });

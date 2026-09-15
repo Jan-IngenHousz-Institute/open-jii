@@ -2,13 +2,22 @@ export type MetricFamily = "observability" | "usage";
 
 export type MetricSlot = "alert" | "exception" | "pulse" | "weekly" | "dashboard" | "s3";
 
+/** How the composer fetches a signal. Absent means CloudWatch, the original and only kind. */
+export type SignalKind = "cloudwatch" | "logs_insights" | "posthog";
+
 export interface MetricSignal {
+  kind?: SignalKind;
   namespace?: string;
   metric?: string;
   search?: string;
   stat?: string;
   region?: string;
   dimensions?: Record<string, string>;
+  /** logs_insights: the group to query and the query itself. */
+  logGroup?: string;
+  query?: string;
+  /** logs_insights and posthog: which field of the result row carries the value. */
+  resultField?: string;
 }
 
 export interface MetricBaseline {
@@ -19,11 +28,19 @@ export interface MetricBaseline {
   nodata?: "alert";
 }
 
+/**
+ * A cross-cutting view over observability entries. A performance signal is a level most
+ * days and an exception on regression, so it is both families at once; a lens keeps it out
+ * of the green-line digest without re-partitioning what family means.
+ */
+export type MetricLens = "performance";
+
 export interface CatalogMetric {
   num: number;
   id: string;
   name: string;
   family: MetricFamily;
+  lens?: MetricLens;
   source: string;
   phase: string;
   active: boolean;

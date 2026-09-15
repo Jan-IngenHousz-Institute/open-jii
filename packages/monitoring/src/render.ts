@@ -58,8 +58,11 @@ export function renderObservability(
         baseline: entry.baseline,
         reason: entry.evaluation.reason,
       });
+      // A nodata anomaly has no value; printing 0 would read as a healthy counter
+      const reading = entry.value === null ? "no data" : formatValue(entry.value);
+
       lines.push(
-        `• *${entry.metric.name}*: ${formatValue(entry.value ?? 0)} (${entry.evaluation.reason})` +
+        `• *${entry.metric.name}*: ${reading} (${entry.evaluation.reason})` +
           `${runbookLink(entry.metric, runbookBaseUrl)} · \`claude /openjii-triage ${entry.metric.id}\`` +
           `\n  \`${context}\``,
       );

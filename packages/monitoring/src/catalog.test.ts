@@ -123,4 +123,33 @@ describe("partitionByConfig", () => {
     expect(usable.map((entry) => entry.id)).toEqual(["good"]);
     expect(configErrors).toEqual(["broken"]);
   });
+
+  it("keeps a signal kind this composer cannot fetch, rather than calling it misconfigured", () => {
+    // buildQuery only knows the CloudWatch shapes. Probing with it would mark every
+    // logs_insights entry as a config error instead of merely unfetchable here.
+    const metrics = [
+      metric({
+        id: "route-latency",
+        signal: {
+          kind: "logs_insights",
+          logGroup: "/aws/ecs/${ENVIRONMENT}-backend",
+          query: "stats pct(duration, 95) by procedure",
+          resultField: "pct_duration_95",
+        },
+      }),
+    ];
+
+    const { usable, configErrors } = partitionByConfig(metrics, env);
+
+    expect(usable.map((entry) => entry.id)).toEqual(["route-latency"]);
+    expect(configErrors).toEqual([]);
+  });
+
+  it("still flags an unresolved placeholder inside a non-CloudWatch signal", () => {
+    const metrics = [
+      metric({ id: "bad-logs", signal: { kind: "logs_insights", logGroup: "${NOPE}" } }),
+    ];
+
+    expect(partitionByConfig(metrics, env).configErrors).toEqual(["bad-logs"]);
+  });
 });

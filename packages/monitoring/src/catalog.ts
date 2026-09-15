@@ -59,9 +59,28 @@ export function buildQuery(
   };
 }
 
+/** Every signal string that may carry a placeholder, whatever the signal kind. */
+function placeholderBearingStrings(metric: CatalogMetric): string[] {
+  const signal = metric.signal;
+  if (!signal) {
+    return [];
+  }
+
+  return [
+    signal.search,
+    signal.query,
+    signal.logGroup,
+    ...Object.values(signal.dimensions ?? {}).map(String),
+  ].filter((value): value is string => typeof value === "string");
+}
+
 /**
  * Drops metrics whose placeholders cannot resolve, so one misconfigured entry
  * costs its own line rather than the whole digest.
+ *
+ * The probe is placeholder resolution, deliberately not buildQuery: buildQuery only
+ * knows the CloudWatch shapes, so using it here would mark every entry of a newer
+ * signal kind as misconfigured rather than simply unfetchable by this composer.
  */
 export function partitionByConfig(
   metrics: CatalogMetric[],
@@ -72,7 +91,7 @@ export function partitionByConfig(
 
   for (const metric of metrics) {
     try {
-      buildQuery(metric, 0, env);
+      placeholderBearingStrings(metric).forEach((value) => resolvePlaceholders(value, env));
       usable.push(metric);
     } catch {
       configErrors.push(metric.id);

@@ -103,6 +103,22 @@ describe("renderObservability", () => {
     ).toContain("2 anomalies");
   });
 
+  it("renders a nodata anomaly as absent rather than as zero", () => {
+    const output = renderObservability(
+      [
+        {
+          ...reading("dlt-heartbeat", "Heartbeat collector dead-man", null),
+          evaluation: { state: "anomaly", reason: "no datapoints, expected continuously" },
+        },
+      ],
+      [],
+      options,
+    );
+
+    expect(output).toContain("Heartbeat collector dead-man*: no data");
+    expect(output).not.toContain(": 0 (");
+  });
+
   it("surfaces silent signals and config errors as self-check lines", () => {
     const output = renderObservability(
       [{ ...reading("gone", "Gone", null), evaluation: { state: "missing" } }],
