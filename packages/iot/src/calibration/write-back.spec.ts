@@ -25,16 +25,18 @@ function miniparConsole(overrides: Partial<Record<string, string>> = {}): MockTr
   const sent: string[] = [];
   const state: ConsoleState = { slope: 1, intercept: 0, channels: new Array<number>(18).fill(0) };
   const six = (value: number) => value.toFixed(6);
+  // The console stores the float it parsed and prints it back at two decimals.
+  const printed = (value: number) => value.toFixed(2);
 
   function reply(line: string): string {
     const [name, first, second] = line.split(",");
     switch (name) {
       case "cal_par_slope":
         state.slope = Number(first);
-        return `\n${first}\n`;
+        return `\n${printed(Number(first))}\n`;
       case "cal_par_intercept":
         state.intercept = Number(first);
-        return `\n${first}\n`;
+        return `\n${printed(Number(first))}\n`;
       case "get_cal_par":
         return `\nslope=${six(state.slope)},intercept=${six(state.intercept)}\n`;
       case "set_spec_coeff":
@@ -196,6 +198,46 @@ describe("writeCalibrationBlocks", () => {
       "cal_par_intercept,-1.08",
       "get_cal_par",
     ]);
+  });
+
+  // A real fit is not two-decimal exact, and the console prints its echo at two decimals
+  // while storing the whole float. Comparing the echo at full precision would fail every
+  // such write, stop the block before its second coefficient, and leave the sensor with a
+  // new slope against its old offset.
+  it("writes a fit the console can only echo to two decimals, and confirms it from the readback", async () => {
+    const transport = miniparConsole();
+    driver.initialize(transport);
+
+    const results = await writeCalibrationBlocks(
+      driver,
+      "minipar",
+      { par: { coefficients: { slope: 0.963412, intercept: -1.0826 } } },
+      noSleep,
+    );
+
+    expect(results).toEqual({ par: { verified: true } });
+    expect(transport.sent).toEqual([
+      "cal_par_slope,0.963412",
+      "cal_par_intercept,-1.0826",
+      "get_cal_par",
+    ]);
+    expect(transport.state).toMatchObject({ slope: 0.963412, intercept: -1.0826 });
+  });
+
+  // The echo still has to be the number that was sent, at the precision it is printed with.
+  it("reports a coefficient the console echoed as a different number", async () => {
+    const transport = miniparConsole({ cal_par_slope: "\n0.42\n" });
+    driver.initialize(transport);
+
+    const results = await writeCalibrationBlocks(
+      driver,
+      "minipar",
+      { par: { coefficients: { slope: 0.963412 } } },
+      noSleep,
+    );
+
+    expect(results.par.verified).toBe(false);
+    expect(results.par.error).toMatch(/did not confirm "par.slope"/);
   });
 
   // The bench procedure sleeps 300 ms between the two writes so the console keeps up.

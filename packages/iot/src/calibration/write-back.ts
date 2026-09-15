@@ -134,10 +134,18 @@ function parseJsonRecord(reply: unknown): Record<string, unknown> | null {
   }
 }
 
-/** The reply echoes the value. */
+/**
+ * The PAR console echoes what it parsed at two decimals, while it stores and reads back
+ * the full float. So the echo can only show the command was taken, to the precision it is
+ * printed with; the block's readback is what proves the stored value. Comparing the echo
+ * at full precision instead fails every fit whose third decimal is not zero.
+ */
+const PAR_ECHO_DECIMALS = 2;
+
 function verifyEcho(reply: unknown, value: number): boolean {
   const echoed = Number.parseFloat(replyText(reply));
-  return Number.isFinite(echoed) && matchesWritten(echoed, value);
+  const printedStep = 10 ** -PAR_ECHO_DECIMALS;
+  return Number.isFinite(echoed) && Math.abs(echoed - value) <= printedStep / 2 + 1e-9;
 }
 
 /** `{"spectrometer_coeff":{"channel":0,"value":0.007856}}`: the value as the firmware stored it. */
