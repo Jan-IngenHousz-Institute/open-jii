@@ -15,6 +15,7 @@
     "env:generate": "tsx src/generate-env.ts",
     "lint": "eslint",
     "login": "tsx src/commands/login.ts",
+    "release:cms": "tsx src/commands/release-cms.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
