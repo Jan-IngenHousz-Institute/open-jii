@@ -218,17 +218,26 @@ describe("useCalibrationRig", () => {
     expect(statusOf(result.current, "par_ref")?.kind).toBe("connected");
   });
 
-  it("drops a role whose port reports itself disconnected", async () => {
+  // A port reporting itself gone is a read-loop failure, not proof the writer is dead, so
+  // forgetting the role would leave the supply driving its last current with nothing left
+  // that could reach it.
+  it("releases a role whose port reports itself disconnected", async () => {
     const port = supplyPort();
     mockOpenSerialPort.mockResolvedValue(port.transport);
 
     const { result } = renderHook(() => useCalibrationRig(PROCEDURE, undefined));
     await act(() => result.current.connectRole("lamp"));
+    port.sent.length = 0;
 
-    act(() => port.emitStatus(false));
+    await act(async () => {
+      port.emitStatus(false);
+      await Promise.resolve();
+    });
 
     expect(statusOf(result.current, "lamp")).toEqual({ kind: "idle" });
     expect(result.current.bindings.lamp).toBeUndefined();
+    expect(port.sent).toEqual([KIPRIM_COMMANDS.setCurrent(0)]);
+    expect(port.disconnects).toBe(1);
   });
 
   it("discards a connect that lands after shutdownAll, closing its port", async () => {
@@ -334,6 +343,38 @@ describe("useCalibrationRig", () => {
       });
 
       expect(sent).toEqual(["arrun1,1,1,2,0,0,1,0,1,0,1,\n,"]);
+    });
+
+    // The device's port belongs to the connection hook, which closes it on the same unmount.
+    // Queued behind the bench's writes, its rest would lose the port mid-command.
+    it("rests the device before the bench, whose ports it owns itself", async () => {
+      const order: string[] = [];
+      const lamp = supplyPort();
+      const write = lamp.transport.send;
+      lamp.transport.send = (data: string) => {
+        order.push("lamp");
+        return write(data);
+      };
+      mockOpenSerialPort.mockResolvedValueOnce(lamp.transport);
+
+      const { driver } = fakeAmbit();
+      driver.execute = () => {
+        order.push("dut");
+        return Promise.resolve({ success: true });
+      };
+
+      const { result } = renderHook(() => useCalibrationRig(PROCEDURE, driver));
+      await act(() => result.current.connectRole("lamp"));
+      await act(async () => {
+        await result.current.bindings.dut?.setpoint?.applySetpoint("led_setting", 250);
+      });
+      order.length = 0;
+
+      await act(async () => {
+        await result.current.rest();
+      });
+
+      expect(order).toEqual(["dut", "lamp"]);
     });
 
     it("returns it to rest when the wizard unmounts", async () => {

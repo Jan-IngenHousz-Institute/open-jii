@@ -14,6 +14,8 @@ export interface FakePort {
   transport: ITransportAdapter;
   /** Every payload written to the port, in order. */
   sent: string[];
+  /** How many times the port was handed back, which a closed port alone does not show. */
+  disconnects: number;
   emitStatus(connected: boolean): void;
 }
 
@@ -33,6 +35,7 @@ function scriptedPort(answer: (payload: string) => string | undefined): FakePort
   let receive: ((data: string) => void) | undefined;
   let notifyStatus: ((connected: boolean, error?: Error) => void) | undefined;
   let connected = true;
+  let disconnects = 0;
 
   const transport: ITransportAdapter = {
     isConnected: () => connected,
@@ -52,6 +55,7 @@ function scriptedPort(answer: (payload: string) => string | undefined): FakePort
     },
     disconnect: () => {
       connected = false;
+      disconnects += 1;
       return Promise.resolve();
     },
   };
@@ -59,6 +63,9 @@ function scriptedPort(answer: (payload: string) => string | undefined): FakePort
   return {
     transport,
     sent,
+    get disconnects() {
+      return disconnects;
+    },
     emitStatus: (isConnected) => {
       connected = isConnected;
       notifyStatus?.(isConnected);
@@ -99,9 +106,4 @@ export function referencePort(values: number[]): FakePort {
 /** One fixed line for anything written: a port on the bench belonging to neither instrument. */
 export function unknownPort(banner: string): FakePort {
   return scriptedPort(() => `${banner}\r\n`);
-}
-
-/** Answers nothing, so every probe waits out its timeout. */
-export function silentPort(): FakePort {
-  return scriptedPort(() => undefined);
 }

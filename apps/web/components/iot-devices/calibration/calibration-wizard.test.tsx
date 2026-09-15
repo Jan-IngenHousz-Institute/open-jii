@@ -639,7 +639,14 @@ describe("CalibrationWizard", () => {
       attachMiniPar([420]);
       const supply = supplyPort();
       mockOpenSerialPort.mockResolvedValueOnce(supply.transport);
-      const onClose = renderWizard();
+      // The close unmounts the wizard, and with it the device's connection hook, so what
+      // the rig had not written by then it never writes.
+      let lastWriteWhenClosed: string | undefined;
+      const onClose = renderWizard(
+        vi.fn(() => {
+          lastWriteWhenClosed = supply.sent.at(-1);
+        }),
+      );
 
       await chooseProcedure();
       await connectBenchRole(0);
@@ -655,10 +662,10 @@ describe("CalibrationWizard", () => {
         await screen.findByRole("button", { name: "iot.calibration.cta.cancel" }),
       );
 
-      expect(onClose).toHaveBeenCalled();
       await waitFor(() => {
-        expect(supply.sent.at(-1)).toBe(KIPRIM_COMMANDS.setCurrent(0));
+        expect(onClose).toHaveBeenCalled();
       });
+      expect(lastWriteWhenClosed).toBe(KIPRIM_COMMANDS.setCurrent(0));
       expect(supply.transport.isConnected()).toBe(false);
     });
 

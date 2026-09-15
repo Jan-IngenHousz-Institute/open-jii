@@ -136,7 +136,7 @@ export function requiredSeriesNames(procedure: CaptureProcedure): string[] {
     .map((step) => step.series);
 }
 
-/** Roles a run cannot proceed without, in declaration order; an optional step's role is not one. */
+/** Roles a run cannot proceed without, in the order the steps name them; an optional step's role is not one. */
 export function requiredRoles(procedure: CaptureProcedure): string[] {
   const roles: string[] = [];
 

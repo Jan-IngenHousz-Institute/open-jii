@@ -272,8 +272,10 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
     }
   }
 
-  function closeWizard() {
-    void rig.shutdownAll();
+  // Awaited: the unmount that follows destroys the device's driver, and a rest racing
+  // that loses its port mid-write.
+  async function closeWizard() {
+    await rig.shutdownAll();
     onClose();
   }
 
@@ -312,7 +314,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
           >
             {t("iot.calibration.cta.next")}
           </Button>
-          <Button type="button" variant="outline" onClick={closeWizard}>
+          <Button type="button" variant="outline" onClick={() => void closeWizard()}>
             {t("iot.calibration.cta.cancel")}
           </Button>
         </div>
@@ -367,7 +369,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
               <Button type="button" onClick={retryCapture}>
                 {t("iot.calibration.capture.retry")}
               </Button>
-              <Button type="button" variant="outline" onClick={closeWizard}>
+              <Button type="button" variant="outline" onClick={() => void closeWizard()}>
                 {t("iot.calibration.cta.cancel")}
               </Button>
             </div>
@@ -425,7 +427,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
     return (
       <div className="space-y-4">
         <p className="text-sm">{hint}</p>
-        <Button type="button" onClick={closeWizard}>
+        <Button type="button" onClick={() => void closeWizard()}>
           {t("iot.calibration.done.close")}
         </Button>
       </div>

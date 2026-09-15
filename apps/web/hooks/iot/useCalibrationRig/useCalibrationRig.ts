@@ -78,6 +78,7 @@ export function useCalibrationRig(
   const [connected, setConnected] = useState<ReadonlyMap<string, ConnectedInstrument>>(new Map());
   const connectedRef = useRef(connected);
   connectedRef.current = connected;
+  const releasingRef = useRef(new Set<string>());
   // Bumped by shutdownAll so a connect already in flight cannot bind its port afterwards.
   const generationRef = useRef(0);
 
@@ -147,6 +148,29 @@ export function useCalibrationRig(
     });
   }, []);
 
+  const disconnectRole = useCallback(
+    async (role: string) => {
+      const entry = connectedRef.current.get(role);
+      // The ref only catches up on the next render, so an in-flight release is tracked here:
+      // closing a port fires its own status callback, which asks for this again.
+      if (!entry || releasingRef.current.has(role)) {
+        return;
+      }
+
+      releasingRef.current.add(role);
+      dropRole(role);
+
+      try {
+        await entry.instrument.destroy();
+      } catch (error) {
+        console.error("Rig disconnect error:", error);
+      }
+      await releasePort(entry.transport);
+      releasingRef.current.delete(role);
+    },
+    [dropRole],
+  );
+
   const connectRole = useCallback(
     async (role: string) => {
       const declared = declaredRoles.find((entry) => entry.role === role);
@@ -194,9 +218,12 @@ export function useCalibrationRig(
         }
 
         const port = transport;
+        // A port that reports itself gone is not necessarily closed: the adapter says so on
+        // a read-loop error while the writer still works, so the instrument is shut down and
+        // the port released rather than merely forgotten.
         port.onStatusChanged((isConnected) => {
           if (!isConnected) {
-            dropRole(role);
+            void disconnectRole(role);
           }
         });
 
@@ -210,35 +237,19 @@ export function useCalibrationRig(
         });
       }
     },
-    [declaredRoles, dropRole],
-  );
-
-  const disconnectRole = useCallback(
-    async (role: string) => {
-      const entry = connectedRef.current.get(role);
-      if (!entry) {
-        return;
-      }
-
-      dropRole(role);
-
-      try {
-        await entry.instrument.destroy();
-      } catch (error) {
-        console.error("Rig disconnect error:", error);
-      }
-      await releasePort(entry.transport);
-    },
-    [dropRole],
+    [declaredRoles, disconnectRole],
   );
 
   const rest = useCallback(async () => {
     const entries = [...connectedRef.current.values()];
-    await shutdownRig(entries.map((entry) => entry.instrument));
-    // The device latches what a sweep wrote to it, the same as the lamp does.
+
+    // The device first: its port belongs to the connection hook, which closes it on the
+    // same unmount, so its rest must not queue behind the bench's serial writes. The bench
+    // ports are this hook's own and outlive that race.
     await dutSetpointRef.current?.rest().catch((error: unknown) => {
       console.error("Device could not be returned to rest:", error);
     });
+    await shutdownRig(entries.map((entry) => entry.instrument));
   }, []);
 
   const restRef = useRef(rest);

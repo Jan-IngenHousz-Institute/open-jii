@@ -11,9 +11,13 @@ interface FakeConsole {
 }
 
 /** A console that records what was written to it, standing in for a family driver. */
-function fakeDevice(family: SensorFamily | undefined, reply: FakeConsole = { success: true }) {
-  const execute = vi.fn((_command: string | object, _options?: { expectReply?: boolean }) =>
-    Promise.resolve(reply),
+function fakeDevice(
+  family: SensorFamily | undefined,
+  reply: FakeConsole | ((command: string) => FakeConsole) = { success: true },
+) {
+  const answer = typeof reply === "function" ? reply : () => reply;
+  const execute = vi.fn((command: string | object, _options?: { expectReply?: boolean }) =>
+    Promise.resolve(answer(typeof command === "string" ? command : JSON.stringify(command))),
   );
 
   const driver: IDeviceDriver = {
@@ -177,6 +181,71 @@ describe("bindDeviceSetpoints", () => {
 
       await target.applySetpoint("led_setting", 10);
       await target.applySetpoint("led_setting", 250);
+      execute.mockClear();
+
+      await target.rest();
+
+      expect(execute.mock.calls.map(([command]) => command)).toEqual([
+        "arrun1,1,1,2,0,0,1,0,1,0,1,\n,",
+      ]);
+    });
+
+    // A console that refuses one LED at rest time must not leave the ones after it lit.
+    it("rests the setpoints after one the console refuses", async () => {
+      const refuseSecondRest = (command: string) =>
+        command === "ledDac+2+0+"
+          ? { success: false, error: new Error("port hiccup") }
+          : { success: true };
+      const { driver, execute } = fakeDevice("multispeq", refuseSecondRest);
+      const target = bindOrFail(driver);
+
+      await target.applySetpoint("led_1", 500);
+      await target.applySetpoint("led_2", 400);
+      await target.applySetpoint("led_3", 800);
+      execute.mockClear();
+
+      await expect(target.rest()).rejects.toThrow("port hiccup");
+
+      expect(execute.mock.calls.map(([command]) => command)).toEqual([
+        "ledDac+1+0+",
+        "ledDac+2+0+",
+        "ledDac+3+0+",
+      ]);
+    });
+
+    it("keeps only what it could not rest queued for the next attempt", async () => {
+      let refuse = true;
+      const console_ = (command: string) =>
+        refuse && command === "ledDac+1+0+"
+          ? { success: false, error: new Error("port closed") }
+          : { success: true };
+      const { driver, execute } = fakeDevice("multispeq", console_);
+      const target = bindOrFail(driver);
+
+      await target.applySetpoint("led_1", 500);
+      await target.applySetpoint("led_3", 800);
+      await expect(target.rest()).rejects.toThrow("port closed");
+      refuse = false;
+      execute.mockClear();
+
+      await target.rest();
+
+      expect(execute.mock.calls.map(([command]) => command)).toEqual(["ledDac+1+0+"]);
+    });
+
+    // The Ambit latches the level and only then answers; a console that fails that
+    // answer has still lit the LED, so the rig must know to turn it off.
+    it("rests a level the console latched before refusing to acknowledge it", async () => {
+      let refuse = true;
+      const console_ = (command: string) =>
+        refuse && command.includes(",250,")
+          ? { success: false, error: new Error("Ambit did not acknowledge arrun1") }
+          : { success: true };
+      const { driver, execute } = fakeDevice("ambit", console_);
+      const target = bindOrFail(driver);
+
+      await expect(target.applySetpoint("led_setting", 250)).rejects.toThrow("did not acknowledge");
+      refuse = false;
       execute.mockClear();
 
       await target.rest();

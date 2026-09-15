@@ -546,6 +546,58 @@ describe("zCaptureProcedure", () => {
       ]);
     });
 
+    // An operator read's prompt is the other place a placeholder can be published.
+    it("rejects a setpoint placeholder in a read step's operator prompt", () => {
+      const result = zCaptureProcedure.safeParse({
+        instruments: [{ role: "dut" }],
+        steps: [
+          {
+            kind: "read",
+            series: "par_check",
+            read: [
+              { instrument: "dut", command: "par", as: "par" },
+              { operator: "Enter the meter reading at {value} A", as: "par_ref", type: "number" },
+            ],
+          },
+        ],
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.success ? [] : result.error.issues.map((issue) => issue.path)).toContainEqual([
+        "steps",
+        0,
+        "read",
+        1,
+        "operator",
+      ]);
+    });
+
+    it("rejects a keyed placeholder in an operator prompt a sweep drives by instrument", () => {
+      const result = zCaptureProcedure.safeParse({
+        instruments: [{ role: "dut" }, { role: "lamp", handshake: "KIPRIM" }],
+        steps: [
+          {
+            kind: "sweep",
+            series: "par_sweep",
+            stimulus: { instrument: "lamp", set: "current_a", values: [0.8, 0] },
+            read: [
+              { instrument: "dut", command: "par_raw", as: "par_raw" },
+              { operator: "Enter the reading at {value.level}", as: "par_ref", type: "number" },
+            ],
+          },
+        ],
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.success ? [] : result.error.issues.map((issue) => issue.path)).toContainEqual([
+        "steps",
+        0,
+        "read",
+        1,
+        "operator",
+      ]);
+    });
+
     // Outside a sweep there is no setpoint, so the device would be sent the braces themselves.
     it("rejects a setpoint placeholder in a read step's command", () => {
       const result = zCaptureProcedure.safeParse({

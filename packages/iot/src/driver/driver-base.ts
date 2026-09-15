@@ -25,8 +25,8 @@ export interface ExecuteOptions {
    */
   timeoutMs?: number;
   /**
-   * False where the console answers nothing, so waiting for a reply would time
-   * out on a healthy device. A driver that frames every reply honours it.
+   * False where the console answers nothing, so waiting for a reply would time out
+   * on a healthy device. Only a driver that waits for a framed reply reads it.
    */
   expectReply?: boolean;
 }

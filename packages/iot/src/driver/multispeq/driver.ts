@@ -151,6 +151,11 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
         // out on a healthy device and send the cancel switch behind the command.
         if (options?.expectReply === false) {
           await settle(MULTISPEQ_FRAMING.SILENT_WRITE_SETTLE_MS);
+          // Nothing consumed a reply here, so anything the board did emit is dropped at a
+          // known point. A reply slower than the settle still lands in the next command's
+          // window, which no timeout can catch for a write nobody waits on.
+          this.dataBuffer = [];
+          this.bufferLength = 0;
           return { success: true };
         }
 

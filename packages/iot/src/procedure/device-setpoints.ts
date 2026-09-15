@@ -26,7 +26,7 @@ export interface DeviceSetpoint {
 /** Not confirmed against the firmware: the factory bench sweeps to 250. */
 const AMBIT_LED_MAX_STEP = 255;
 
-// The level latches until the next write, so a sweep ends by writing 0 to turn the LED off.
+// The level latches until something writes another one, so resting is what turns the LED off.
 const AMBIT_LED_SETTING: DeviceSetpoint = {
   name: "led_setting",
   unit: "step",
@@ -55,7 +55,8 @@ const MULTISPEQ_LED_SETPOINTS: readonly DeviceSetpoint[] = Array.from(
       max: MULTISPEQ_LED_MAX_DAC,
       integer: true,
       rest: 0,
-      // The bench writes this one silently and reads nothing back.
+      // The bench writes this one silently and reads nothing back. It repeats the write,
+      // having reopened the port for it; a session holds the port open, so one is enough.
       expectReply: false,
       command: (value) => `${MULTISPEQ_COMMANDS.LED_DAC}+${index}+${value}+`,
     };
@@ -115,15 +116,30 @@ export function bindDeviceSetpoints(driver: IDeviceDriver): DeviceSetpointTarget
         );
       }
 
-      await write(setpoint, value);
+      // Recorded before the write, not after: a console that latches the level and then
+      // fails its acknowledgement has still latched it. Resting one that never left the
+      // host costs a spare zero write; not resting one that landed is the hazard.
       driven.add(setpoint);
+      await write(setpoint, value);
     },
 
     rest: async () => {
-      for (const setpoint of driven) {
-        await write(setpoint, setpoint.rest);
+      let failure: Error | undefined;
+
+      // One console failure must not leave the setpoints after it driven, so every
+      // one is attempted; what did not land stays queued for the next attempt.
+      for (const setpoint of [...driven]) {
+        try {
+          await write(setpoint, setpoint.rest);
+          driven.delete(setpoint);
+        } catch (error) {
+          failure ??= error instanceof Error ? error : new Error(String(error));
+        }
       }
-      driven.clear();
+
+      if (failure) {
+        throw failure;
+      }
     },
   };
 }
