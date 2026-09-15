@@ -322,7 +322,10 @@ export function applyAxisType(
   detected: "date" | "category" | "linear",
 ): Partial<LayoutAxis> {
   const base = axis ?? {};
-  if (base.type && base.type !== "linear") return base;
+  const typeIsPinned = Boolean(base.type) && base.type !== "linear";
+  if (typeIsPinned) {
+    return base;
+  }
   if (detected === "date") return { ...base, type: "date" };
   if (detected === "category") {
     return { ...base, type: "category", categoryorder: "category ascending" };

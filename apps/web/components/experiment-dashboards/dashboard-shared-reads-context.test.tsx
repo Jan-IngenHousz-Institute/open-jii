@@ -307,7 +307,9 @@ describe("DashboardSharedReadsProvider", () => {
     const { wrapper } = setup(undefined, widgetsFor([a, b]));
 
     const { result } = renderHook(() => useOwnSharedRead(a), { wrapper });
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // Flush effects and microtasks: a subscribing provider would have started
+    // its request by now if it were going to.
+    await act(async () => Promise.resolve());
 
     expect(spy.called).toBe(false);
     expect(result.current).toBeUndefined();

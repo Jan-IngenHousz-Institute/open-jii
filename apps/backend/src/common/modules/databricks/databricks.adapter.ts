@@ -232,7 +232,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       return failure(AppError.internal("Export table name is missing"));
     }
 
-    if (format === null || !isExportFormat(format)) {
+    const hasKnownFormat = format !== null && isExportFormat(format);
+    if (!hasKnownFormat) {
       this.logger.error({
         msg: "Export has an unknown format",
         operation: "streamExport",

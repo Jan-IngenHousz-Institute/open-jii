@@ -92,14 +92,15 @@ export function useChartData(
   );
 
   const active = isSharing ? sharedRead : ownRead;
+
   // The group is ordered by one x; a member with another x sorts its own copy.
-  const needsOwnOrder =
-    isSharing && options.orderBy !== undefined && options.orderBy !== shared.orderBy;
   const orderBy = options.orderBy;
+  const ownOrderColumn =
+    isSharing && orderBy !== undefined && orderBy !== shared.orderBy ? orderBy : undefined;
   const rows = useMemo(() => {
     const fetched = active.data?.rows ?? [];
-    return needsOwnOrder && orderBy !== undefined ? sortRowsByColumn(fetched, orderBy) : fetched;
-  }, [active.data, needsOwnOrder, orderBy]);
+    return ownOrderColumn === undefined ? fetched : sortRowsByColumn(fetched, ownOrderColumn);
+  }, [active.data, ownOrderColumn]);
 
   if (providedData) {
     return { rows: providedData, isLoading: false, error: undefined };

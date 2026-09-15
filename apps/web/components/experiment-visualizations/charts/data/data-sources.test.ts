@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
-import { dataSourcesByRole, firstDataSourceByRole, makeDataSource } from "./data-sources";
+import {
+  dataSourcesByRole,
+  firstDataSourceByRole,
+  makeDataSource,
+  readColumnsOf,
+} from "./data-sources";
 
 function ds(
   role: ExperimentDataSourceConfig["role"],
@@ -63,5 +68,30 @@ describe("makeDataSource", () => {
     const ys = dataSourcesByRole(drafts, "y");
     expect(ys).toHaveLength(2);
     expect(ys.every(({ source }) => source.columnName === "")).toBe(true);
+  });
+});
+
+describe("readColumnsOf", () => {
+  it("collects every source's column and error column", () => {
+    const columns = readColumnsOf([
+      { tableName: "t", columnName: "time", role: "x" },
+      { tableName: "t", columnName: "load", role: "y", errorColumn: "load_sd" },
+    ]);
+    expect(columns).toEqual(["time", "load", "load_sd"]);
+  });
+
+  it("deduplicates a column shared by two sources", () => {
+    const columns = readColumnsOf([ds("x", "time"), ds("y", "load"), ds("color", "time")]);
+    expect(columns).toEqual(["time", "load"]);
+  });
+
+  // The inspector keeps half-configured sources around while the user picks.
+  it("drops sources with no column chosen yet", () => {
+    const columns = readColumnsOf([ds("x", "time"), ds("y", ""), makeDataSource("t", "color")]);
+    expect(columns).toEqual(["time"]);
+  });
+
+  it("returns nothing for no sources", () => {
+    expect(readColumnsOf([])).toEqual([]);
   });
 });

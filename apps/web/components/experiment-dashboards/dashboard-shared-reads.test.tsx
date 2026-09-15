@@ -7,7 +7,7 @@ import {
 } from "@/test/factories";
 import { stubIntersectionObserver } from "@/test/intersection-observer";
 import { server } from "@/test/msw/server";
-import { render, screen } from "@/test/test-utils";
+import { render, screen, waitFor } from "@/test/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -133,8 +133,16 @@ describe("dashboard shared reads", () => {
       body: vizes,
     });
 
-    render(<DashboardRenderer dashboard={buildDashboard()} experimentId={EXPERIMENT_ID} />);
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    const { container } = render(
+      <DashboardRenderer dashboard={buildDashboard()} experimentId={EXPERIMENT_ID} />,
+    );
+
+    // The cards render; only their contents wait on the observer.
+    await waitFor(() =>
+      expect(container.querySelectorAll("[data-dashboard-widget]")).toHaveLength(
+        buildDashboard().widgets.length,
+      ),
+    );
 
     expect(screen.queryByTestId("chart")).toBeNull();
     expect(listSpy.called).toBe(false);

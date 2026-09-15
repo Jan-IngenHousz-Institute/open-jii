@@ -36,9 +36,6 @@ interface ReadTrace {
   countMs?: number;
 }
 
-const tableMetadataCacheKey = (experimentId: string, tableName: string) =>
-  `table-metadata:${experimentId}:${tableName}`;
-
 @Injectable()
 export class ExperimentDataRepository {
   private readonly logger = new Logger(ExperimentDataRepository.name);
@@ -306,13 +303,17 @@ export class ExperimentDataRepository {
    * lookup is thrown through the cache so it is never stored, and callers
    * sharing the in-flight load all see the failure.
    */
+  private tableMetadataCacheKey(experimentId: string, tableName: string): string {
+    return `table-metadata:${experimentId}:${tableName}`;
+  }
+
   private async tableMetadata(
     experimentId: string,
     tableName: string,
   ): Promise<Result<ExperimentTableMetadata[]>> {
     try {
       const rows = await this.cachePort.tryCache(
-        tableMetadataCacheKey(experimentId, tableName),
+        this.tableMetadataCacheKey(experimentId, tableName),
         async () => {
           const result = await this.databricksPort.getExperimentTableMetadata(experimentId, {
             identifier: tableName,

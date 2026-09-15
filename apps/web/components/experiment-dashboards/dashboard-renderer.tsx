@@ -6,10 +6,8 @@ import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboard
 import { useTranslation } from "@repo/i18n";
 
 import { DashboardFiltersProvider } from "./dashboard-filters-context";
+import { DashboardGridCell } from "./dashboard-grid-cell";
 import { DashboardSharedReadsProvider } from "./dashboard-shared-reads-context";
-import { LazyWidget } from "./widgets/shell/lazy-widget";
-import { WidgetCard } from "./widgets/shell/widget-card";
-import { WidgetRenderer } from "./widgets/widget-renderer";
 
 interface DashboardRendererProps {
   dashboard: ExperimentDashboard;
@@ -43,23 +41,14 @@ export function DashboardRenderer({ dashboard, experimentId, scale = 1 }: Dashbo
           }}
         >
           {dashboard.widgets.map((widget) => (
-            <div
+            <DashboardGridCell
               key={widget.id}
-              style={{
-                gridColumn: `${widget.layout.col + 1} / span ${widget.layout.colSpan}`,
-                gridRow: `${widget.layout.row + 1} / span ${widget.layout.rowSpan}`,
-              }}
-            >
-              <WidgetCard>
-                <LazyWidget
-                  intrinsicHeight={
-                    (rowHeight * widget.layout.rowSpan + gap * (widget.layout.rowSpan - 1)) * scale
-                  }
-                >
-                  <WidgetRenderer widget={widget} experimentId={experimentId} />
-                </LazyWidget>
-              </WidgetCard>
-            </div>
+              widget={widget}
+              experimentId={experimentId}
+              rowHeight={rowHeight}
+              gap={gap}
+              scale={scale}
+            />
           ))}
         </div>
       </DashboardSharedReadsProvider>

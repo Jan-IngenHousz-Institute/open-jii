@@ -49,7 +49,11 @@ export function ActivityChart({ data, locale }: ActivityChartProps) {
   const [mode, setMode] = useState<ActivityMode>("daily");
 
   const isCumulative = mode === "cumulative";
-  const points = isCumulative ? recentYear(data) : recentDays(data);
+  // Memoised because everything below keys off its identity.
+  const points = useMemo(
+    () => (isCumulative ? recentYear(data) : recentDays(data)),
+    [data, isCumulative],
+  );
 
   const x = useMemo(() => points.map((day) => day.date), [points]);
   const y = useMemo(

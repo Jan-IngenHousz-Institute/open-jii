@@ -187,7 +187,9 @@ function memberOf(
   dataConfig: ExperimentChartDataConfig,
   filtersFor: FilterResolver,
 ): (GroupMember & Pick<ReadGroup, "tableName" | "filters">) | undefined {
-  if (!dataConfig.tableName || isAggregationActive(dataConfig.aggregation)) {
+  const canJoinGroup =
+    Boolean(dataConfig.tableName) && !isAggregationActive(dataConfig.aggregation);
+  if (!canJoinGroup) {
     return undefined;
   }
   const columns = readColumnsOf(dataConfig.dataSources);
@@ -224,7 +226,8 @@ function commonestX(members: GroupMember[]): string | undefined {
 }
 
 function covers(plan: SharedRead, own: OwnRead): boolean {
-  if (plan.tableName !== own.tableName || isAggregationActive(own.aggregation)) {
+  const sameTable = plan.tableName === own.tableName;
+  if (!sameTable || isAggregationActive(own.aggregation)) {
     return false;
   }
   if (JSON.stringify(plan.filters ?? []) !== JSON.stringify(own.filters ?? [])) {

@@ -38,6 +38,9 @@ type WebGLTraceType = "scattergl";
 
 const WEBGL_TRACE_TYPES: readonly WebGLTraceType[] = ["scattergl"];
 
+const isWebGLTrace = (type: string): type is WebGLTraceType =>
+  WEBGL_TRACE_TYPES.some((candidate) => candidate === type);
+
 /** What a WebGL trace falls back to when no context is free. */
 const SVG_TWIN = { scattergl: "scatter" } as const satisfies Record<WebGLTraceType, string>;
 
@@ -299,7 +302,9 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
 
       const resize = () => {
         const graphDiv = graphDivRef.current;
-        if (!graphDiv) return;
+        if (!graphDiv) {
+          return;
+        }
         resizeIsPendingRef.current = false;
         void loadRuntime().then(({ Plotly }) => Plotly.Plots.resize(graphDiv));
       };
@@ -370,8 +375,8 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       }
       let downgraded = false;
       const traces = safeData.map((trace: PlotData) => {
-        const type = (trace.type ?? "scatter") as WebGLTraceType;
-        if (!WEBGL_TRACE_TYPES.includes(type)) {
+        const type = trace.type ?? "scatter";
+        if (!isWebGLTrace(type)) {
           return trace;
         }
         downgraded = true;
@@ -385,11 +390,10 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     // WebGL relevance flips; the previous shape caused release/reacquire
     // churn on every keystroke in the editor.
     const needsWebGL = React.useMemo(() => {
-      if (!isWebGLEnabled) return false;
-      return safeData.some((trace: PlotData) => {
-        const type = (trace.type ?? "scatter") as WebGLTraceType;
-        return WEBGL_TRACE_TYPES.includes(type);
-      });
+      if (!isWebGLEnabled) {
+        return false;
+      }
+      return safeData.some((trace: PlotData) => isWebGLTrace(trace.type ?? "scatter"));
     }, [safeData, isWebGLEnabled]);
 
     useEffect(() => {

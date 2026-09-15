@@ -195,7 +195,9 @@ export function useChartSizing<T extends HTMLElement>(
 
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
-      if (!entry) return;
+      if (!entry) {
+        return;
+      }
       const { width, height } = entry.contentRect;
       if (!isOnScreen) {
         pending = { width, height };

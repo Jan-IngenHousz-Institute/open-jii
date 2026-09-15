@@ -1236,6 +1236,28 @@ describe("WebGLContextManager", () => {
 });
 
 describe("PlotlyChart container resizing", () => {
+  // This block sits outside `describe("PlotlyChart")`, so it needs its own
+  // fixture rather than inheriting one left behind by an earlier block.
+  const nativeResizeObserver = globalThis.ResizeObserver;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPlotComponent = vi.fn(({ data, layout, config, onError, loading, error, ...props }) => (
+      <div
+        data-testid="plotly-chart"
+        data-data={JSON.stringify(data)}
+        data-layout={JSON.stringify(layout)}
+        {...props}
+      />
+    ));
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    globalThis.ResizeObserver = nativeResizeObserver;
+  });
+
   it("relayouts the graph in place when its container resizes", async () => {
     let notify: (() => void) | undefined;
     class StubResizeObserver implements ResizeObserver {
