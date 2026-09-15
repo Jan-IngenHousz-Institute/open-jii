@@ -18207,6 +18207,17 @@
                           }
                         ]
                       },
+                      "lastSeenAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "addedAt": {
                         "type": "string",
                         "format": "date-time"
@@ -18220,6 +18231,7 @@
                       "status",
                       "boundExperimentCount",
                       "connected",
+                      "lastSeenAt",
                       "addedAt"
                     ]
                   }
@@ -18327,6 +18339,17 @@
                           }
                         ]
                       },
+                      "lastSeenAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "addedAt": {
                         "type": "string",
                         "format": "date-time"
@@ -18340,6 +18363,7 @@
                       "status",
                       "boundExperimentCount",
                       "connected",
+                      "lastSeenAt",
                       "addedAt"
                     ]
                   }
