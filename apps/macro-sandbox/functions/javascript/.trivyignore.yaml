@@ -3,26 +3,66 @@
 # HTTP, no IAM creds, macro code cannot spawn processes.
 # Verify with the ghcr trivy DB (mirror.gcr.io lags): --db-repository ghcr.io/aquasecurity/trivy-db:2
 
+# openssl-fips-provider-latest / openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2.
+# AWS names 3.5.8-1.amzn2023.0.1 as the fix but has not published it to the
+# AL2023 repos, so upgrading in the Dockerfile is a no-op ("Nothing to do").
+# Every id is a server-side TLS/DTLS/QUIC/CMP or CMS path: the sandbox runs no
+# such server, and macro code cannot reach OpenSSL because the vm context sets
+# require to undefined.
+# purls pin each suppression to the detected copy, so the 3.5.8 base re-fails
+# the scan instead of inheriting these.
 vulnerabilities:
-  # Runtime's bundled npm CLI (var/lang/lib/node_modules/npm/node_modules),
-  # never invoked by the sandbox.
-  # brace-expansion@5.0.7, two CVE ids for the same copy. Fixed in 5.0.8 / 5.0.9.
-  - id: CVE-2026-14257
-    statement: "brace-expansion ReDoS. npm never invoked at runtime."
+  - id: CVE-2026-14457
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "RPK server signature selection derefs a missing certificate. No TLS server."
     expired_at: 2026-11-05
-  - id: CVE-2026-69152
-    statement: "DoS via unbounded arrays, same copy."
+  - id: CVE-2026-18798
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "QUIC INITIAL packet double free. No QUIC server."
     expired_at: 2026-11-05
-  # tar@7.5.19, fixed in 7.5.21.
-  - id: CVE-2026-73566
-    statement: "tar DoS via crafted long-path archive. npm extracts nothing at runtime."
+  - id: CVE-2026-54874
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "DTLS future-epoch record buffering memory use. No DTLS."
     expired_at: 2026-11-05
-  # ip-address@10.2.0 (via socks), fixed in 10.3.1.
-  - id: CVE-2026-69192
-    statement: "ip-address octet-parsing confusion. No SOCKS proxying."
+  - id: CVE-2026-63072
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "CMS key unwrapping heap overflow. No CMS decryption."
     expired_at: 2026-11-05
-
-  # openssl-fips-provider-latest / openssl-snapsafe-libs@3.5.7-2.amzn2023.0.1, fixed in .0.2.
-  - id: CVE-2026-14456
-    statement: "QUIC server memory-growth DoS. Sandbox runs no QUIC or TLS server."
+  - id: CVE-2026-63073
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "CMP sender DN format string. No CMP client or server."
+    expired_at: 2026-11-05
+  - id: CVE-2026-63074
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "CMP ExtraCerts cache growth. No CMP client or server."
+    expired_at: 2026-11-05
+  - id: CVE-2026-63075
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "QUIC ACK-only packet retention memory exhaustion. No QUIC server."
+    expired_at: 2026-11-05
+  - id: CVE-2026-63076
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "CMP server protectionAlg invalid pointer deref. No CMP server."
+    expired_at: 2026-11-05
+  - id: CVE-2026-75803
+    purls:
+      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
+      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
+    statement: "ChaCha20-Poly1305 and AES-OCB empty-AAD decryption. No AEAD decryption."
     expired_at: 2026-11-05
