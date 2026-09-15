@@ -16,9 +16,11 @@ import type {
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { facetTierStyles, useChartSizing } from "./use-is-compact";
 import {
+  applyAxisType,
   applyReferenceLines,
   createBaseLayout,
   createPlotlyConfig,
+  detectAxisType,
   extendLayoutForFacets,
   getPlotType,
   getRenderer,
@@ -189,19 +191,28 @@ export function CartesianChart({
     [data, scatterPlotType],
   );
 
+  // Keyed on the data alone. The layout below also rebuilds on a resize tier
+  // flip and on a theme change, and re-reading every point for those is the
+  // most expensive thing this component does: a dashboard of large charts
+  // spends tens of milliseconds per resize scanning values that did not move.
+  // Horizontal bars swap x/y in `buildTrace`, so their X values come from
+  // `series.y`.
+  const axisScan = useMemo(() => {
+    const x = data.flatMap((s) => (s.orientation === "h" ? (s.y ?? []) : (s.x ?? [])));
+    const y = data
+      .filter((s) => s.axis !== "secondary")
+      .flatMap((s) => (s.orientation === "h" ? (s.x ?? []) : (s.y ?? [])));
+    return { x, y, xType: detectAxisType(x), yType: detectAxisType(y) };
+  }, [data]);
+
   const layout = useMemo(() => {
     const next = createBaseLayout(config, sizing);
 
-    // For axis-type detection use the values Plotly actually puts on each
-    // axis. Horizontal bars swap x/y in `buildTrace`, so their X-axis
-    // values come from `series.y`.
-    const xAxisValues = data.flatMap((s) => (s.orientation === "h" ? (s.y ?? []) : (s.x ?? [])));
-    const primaryYValues = data
-      .filter((s) => s.axis !== "secondary")
-      .flatMap((s) => (s.orientation === "h" ? (s.x ?? []) : (s.y ?? [])));
+    const xAxisValues = axisScan.x;
+    const primaryYValues = axisScan.y;
 
-    next.xaxis = refineAxisType(next.xaxis, xAxisValues);
-    next.yaxis = refineAxisType(next.yaxis, primaryYValues);
+    next.xaxis = applyAxisType(next.xaxis, axisScan.xType);
+    next.yaxis = applyAxisType(next.yaxis, axisScan.yType);
 
     // Bar-layout fields live on the layout, not on individual traces. Plotly
     // ignores them when no bar trace is present, so always passing them
@@ -289,7 +300,7 @@ export function CartesianChart({
 
     return next;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-  }, [config, sizing, data, subplots, themeVersion]);
+  }, [config, sizing, data, axisScan, subplots, themeVersion]);
 
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   return (

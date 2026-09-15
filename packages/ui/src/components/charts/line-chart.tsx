@@ -16,7 +16,8 @@ import {
   extendLayoutForFacets,
   getPlotType,
   getRenderer,
-  refineAxisType,
+  applyAxisType,
+  detectAxisType,
 } from "./utils";
 
 export interface LineSeriesData extends BaseSeries {
@@ -132,17 +133,22 @@ export function LineChart({
     [data, plotType],
   );
 
+  // Keyed on the data alone: the layout below rebuilds on a resize tier flip
+  // and a theme change too, and re-scanning every point for those costs more
+  // than everything else this component does.
+  const axisTypes = useMemo(
+    () => ({
+      x: detectAxisType(data.flatMap((s) => s.x ?? [])),
+      y: detectAxisType(data.flatMap((s) => s.y ?? [])),
+    }),
+    [data],
+  );
+
   const layout = useMemo(() => {
     const next = createBaseLayout(config, sizing);
 
-    next.xaxis = refineAxisType(
-      next.xaxis,
-      data.flatMap((s) => s.x ?? []),
-    );
-    next.yaxis = refineAxisType(
-      next.yaxis,
-      data.flatMap((s) => s.y ?? []),
-    );
+    next.xaxis = applyAxisType(next.xaxis, axisTypes.x);
+    next.yaxis = applyAxisType(next.yaxis, axisTypes.y);
 
     // Faceted layout: convert single-axis xaxis/yaxis (now refined to the
     // right type) into a grid of numbered axes + per-cell title
@@ -171,7 +177,7 @@ export function LineChart({
 
     return next;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-  }, [config, sizing, data, subplots, themeVersion]);
+  }, [config, sizing, data, axisTypes, subplots, themeVersion]);
 
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   return (

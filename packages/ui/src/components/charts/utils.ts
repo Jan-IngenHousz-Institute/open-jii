@@ -313,7 +313,21 @@ export function refineAxisType(
 ): Partial<LayoutAxis> {
   const base = axis ?? {};
   if (base.type && base.type !== "linear") return base;
-  const detected = detectAxisType(values);
+  return applyAxisType(base, detectAxisType(values));
+}
+
+/**
+ * The second half of `refineAxisType`, for callers that cache the scan.
+ * `detectAxisType` reads every value, so a chart holding tens of thousands of
+ * points must not re-run it for a resize or a theme change, neither of which
+ * can alter the answer.
+ */
+export function applyAxisType(
+  axis: Partial<LayoutAxis> | undefined,
+  detected: "date" | "category" | "linear",
+): Partial<LayoutAxis> {
+  const base = axis ?? {};
+  if (base.type && base.type !== "linear") return base;
   if (detected === "date") return { ...base, type: "date" };
   if (detected === "category") {
     return { ...base, type: "category", categoryorder: "category ascending" };

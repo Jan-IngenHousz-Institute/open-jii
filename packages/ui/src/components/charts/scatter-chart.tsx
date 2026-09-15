@@ -13,7 +13,8 @@ import {
   createPlotlyConfig,
   getPlotType,
   getRenderer,
-  refineAxisType,
+  applyAxisType,
+  detectAxisType,
 } from "./utils";
 
 export interface ScatterSeriesData extends BaseSeries {
@@ -151,21 +152,26 @@ export function ScatterChart({ data, config = {}, className, loading, error }: S
   // base layout uses this to either nudge the legend further right (full
   // size) or anchor it at the bottom (compact tiers).
   const hasColorbar = data.some((s) => s.marker?.showscale);
+
+  // Keyed on the data alone, so a resize or theme change does not re-scan
+  // every point to answer a question only the data can change.
+  const axisTypes = useMemo(
+    () => ({
+      x: detectAxisType(data.flatMap((s) => s.x ?? [])),
+      y: detectAxisType(data.flatMap((s) => s.y ?? [])),
+    }),
+    [data],
+  );
+
   const layout = useMemo(() => {
     const next = createBaseLayout(config, { ...sizing, hasColorbar });
 
-    next.xaxis = refineAxisType(
-      next.xaxis,
-      data.flatMap((s) => s.x ?? []),
-    );
-    next.yaxis = refineAxisType(
-      next.yaxis,
-      data.flatMap((s) => s.y ?? []),
-    );
+    next.xaxis = applyAxisType(next.xaxis, axisTypes.x);
+    next.yaxis = applyAxisType(next.yaxis, axisTypes.y);
 
     return next;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-  }, [config, sizing, hasColorbar, data, themeVersion]);
+  }, [config, sizing, hasColorbar, data, axisTypes, themeVersion]);
 
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   return (
