@@ -14,7 +14,7 @@ export interface AmbitDeviceInfo {
   adpdChipVersion: number | null;
   metadata: AmbitMetadata;
 
-  /** Stored coefficients. These are the values a write-back must restore on failure. */
+  /** Stored coefficients: what a write-back is checked against once the device reboots. */
   lightSlope: number;
   actLedCoeff: number;
   emitCoeff: number;
@@ -201,7 +201,7 @@ export function parseAmbitBootDump(dump: string): AmbitDeviceInfo {
   return info;
 }
 
-/** The coefficients a calibration write-back restores when a readback fails. */
+/** The coefficients the device holds, as the dump reports them. */
 export function ambitStoredCoefficients(info: AmbitDeviceInfo): Record<string, number> {
   return {
     spec: info.lightSlope,

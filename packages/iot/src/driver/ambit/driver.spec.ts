@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DEFAULT_MAX_BUFFER_SIZE } from "../driver-base";
 import type { MockTransport } from "../testing/mock-transport";
 import { createMockTransport } from "../testing/mock-transport";
+import { AMBIT_BASELINE_SAVED } from "./commands";
 import { AmbitDriver } from "./driver";
 
 const HELLO_REPLY = "NEW Name Here Ready\n";
@@ -17,6 +18,27 @@ function tableTransport(table: Partial<Record<string, string | string[]>>): Mock
       setTimeout(() => {
         for (const chunk of chunks) transport.simulateData(chunk);
       }, 0);
+    }
+    return Promise.resolve();
+  });
+  return transport;
+}
+
+/**
+ * Delivers a reply in pieces a gap apart, as a device that pauses mid-reply does.
+ * The gap is longer than the quiet window, so anything that leans on the window
+ * instead of the reply's own terminator comes back holding only the first piece.
+ */
+const PACED_GAP_MS = 60;
+
+function pacedTransport(table: Partial<Record<string, string[]>>): MockTransport {
+  const transport = createMockTransport();
+  vi.mocked(transport.send).mockImplementation((payload: string) => {
+    const chunks = table[payload];
+    if (chunks !== undefined) {
+      chunks.forEach((chunk, index) => {
+        setTimeout(() => transport.simulateData(chunk), index * PACED_GAP_MS);
+      });
     }
     return Promise.resolve();
   });
@@ -171,6 +193,140 @@ describe("AmbitDriver", () => {
     expect(result.data).toEqual({ objectC: 23.1, ambientC: 22.4, objectRawC: 23.0 });
   });
 
+  // The device samples for as long as it needs before answering, so the preamble
+  // arrives well ahead of the vector. Nothing but the vector may end the wait.
+  it("waits past the preamble for the six-channel dark vector", async () => {
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      "baseline,0\n": ["Measuring ADPD baseline\n", "1021,987,1103,954,1200,1015\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<number[]>("baseline,0");
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual([1021, 987, 1103, 954, 1200, 1015]);
+  });
+
+  // Six comma-separated digits are a vector only once the line has ended.
+  it("does not read a half-written count as the last channel", async () => {
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      "baseline,0\n": ["1021,987,1103,954,1200,10", "15\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<number[]>("baseline,0");
+
+    expect(result.data).toEqual([1021, 987, 1103, 954, 1200, 1015]);
+  });
+
+  // Half a measurement read as a whole one is worse than no measurement.
+  it("fails a baseline whose reply never carries six integers", async () => {
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      "baseline,0\n": ["Measuring ADPD baseline\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<number[]>("baseline,0", { timeoutMs: 120 });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.message).toContain("timeout");
+  });
+
+  it("collects an arrun2 trace to its terminator and parses each channel buffer", async () => {
+    // The second line the bench sends carries a trailing space; execute trims the
+    // command, so this driver puts a bare comma on the wire. Flagged for the desk run.
+    const wire = "arrun2,1,0,2,0,0,5,0,10,150,1,\n,\n";
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      [wire]: [
+        "Data:env,Length:3\t23,24,25\n",
+        "Data:s_630,Length:4\t159,164,170,171\n",
+        "Data sent\n",
+      ],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<Record<string, number[]>>(
+      "arrun2,1,0,2,0,0,5,0,10,150,1,\n,",
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({ env: [23, 24, 25], s_630: [159, 164, 170, 171] });
+    expect(transport.send).toHaveBeenCalledWith(wire);
+  });
+
+  // A buffer shorter than the line says it is would otherwise pass as a good one.
+  it("keeps a channel buffer as text when it holds fewer counts than declared", async () => {
+    const wire = "arrun2,1,0,2,0,0,5,0,10,150,1,\n,\n";
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      [wire]: ["Data:s_730,Length:5\t159,164\n", "Data sent\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<Record<string, number[] | string>>(
+      "arrun2,1,0,2,0,0,5,0,10,150,1,\n,",
+    );
+
+    expect(result.data).toEqual({ s_730: "159,164" });
+  });
+
+  it("finishes set_currents on its acknowledgement line", async () => {
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      "set_currents,0,0,0,\n": ["Currents ", "set\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<string>("set_currents,0,0,0,");
+
+    expect(result.success).toBe(true);
+    expect(result.data).toBe("Currents set");
+  });
+
+  it("returns the acknowledgement of a baseline write", async () => {
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      "set_baseline,1021,987,1103,954,1200,1015\n": [
+        AMBIT_BASELINE_SAVED.slice(0, 8),
+        `${AMBIT_BASELINE_SAVED.slice(8)}\n`,
+      ],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<string>("set_baseline,1021,987,1103,954,1200,1015");
+
+    expect(result.success).toBe(true);
+    expect(result.data).toBe(AMBIT_BASELINE_SAVED);
+  });
+
+  // The one writer that answers, so a refusal has to come back as itself rather
+  // than as a timeout the caller is left to interpret. The wording is the device's;
+  // only "not the acknowledgement" is established.
+  it("returns the refusing line when a baseline write is not acknowledged", async () => {
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      "set_baseline,0,0,0,0,0,0\n": ["Baseline verify failed\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<string>("set_baseline,0,0,0,0,0,0");
+
+    expect(result.success).toBe(true);
+    expect(result.data).toBe("Baseline verify failed");
+  });
+
   it("treats a silent set_spec as fire + settle + hello re-verify, in one write", async () => {
     const transport = tableTransport({ "hello\n": HELLO_REPLY });
     const driver = fastDriver();
@@ -194,6 +350,8 @@ describe("AmbitDriver", () => {
 
     expect(result.success).toBe(true);
     expect(result.data).toEqual({ acknowledged: "arrun1" });
+    // The bench's second line ends in a space; this driver trims the command, so
+    // what goes on the wire here ends at the comma.
     expect(transport.send).toHaveBeenCalledWith("arrun1,1,1,2,0,0,1,0,1,150,1,\n,\n");
   });
 

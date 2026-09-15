@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { AmbitDriver } from "../driver/ambit/driver";
 import { MiniParDriver } from "../driver/minipar/driver";
 import type { MockTransport } from "../driver/testing/mock-transport";
 import { createMockTransport } from "../driver/testing/mock-transport";
@@ -57,8 +58,80 @@ function miniparConsole(overrides: Partial<Record<string, string>> = {}): MockTr
   return Object.assign(transport, { sent, state });
 }
 
+interface AmbitState {
+  spec: number;
+  act: number;
+  adpd: number[];
+}
+
+/** The dump `reboot` prints, carrying the coefficients the device holds by then. */
+function ambitBootDump(state: AmbitState): string {
+  return [
+    "rst:0x1 boot:0x13",
+    `Calibration: ADPD: ${state.adpd.join("\t")}`,
+    `Calibration: Name:AmbitV004 Actinic:${state.act.toFixed(4)} Spec:${state.spec.toFixed(4)} Emit:0.9910`,
+    "FW: MAC:A0:B1:C2:D3:E4:F5\tSize:1245184\tDate:Mar  5 2026",
+    "FW: 1.1.3",
+    "",
+  ].join("\n");
+}
+
+/**
+ * An Ambit console as the firmware behaves: the gain writers answer nothing at all,
+ * the baseline writer answers its one fixed line, and `reboot` prints what the device
+ * now holds. The wake handshake belongs to the driver, so only the write-back's own
+ * lines are recorded.
+ */
+function ambitConsole(overrides: Partial<Record<string, string>> = {}): MockTransport & {
+  sent: string[];
+  state: AmbitState;
+} {
+  const transport = createMockTransport();
+  const sent: string[] = [];
+  const state: AmbitState = { spec: 1, act: 1, adpd: [0, 0, 0, 0, 0, 0] };
+
+  function reply(line: string): string {
+    const [name, ...args] = line.split(",");
+    switch (name) {
+      case "hello":
+        return "NEW Bench Ready\n";
+      case "set_spec":
+        state.spec = Number(args[0]);
+        return "";
+      case "set_act":
+        state.act = Number(args[0]);
+        return "";
+      case "set_baseline":
+        state.adpd = args.map(Number);
+        return "Baseline saved and verified\n";
+      case "reboot":
+        return ambitBootDump(state);
+      default:
+        return "BAD COMMAND\n";
+    }
+  }
+
+  vi.mocked(transport.send).mockImplementation((payload: string) => {
+    const line = payload.trim();
+    const [name = ""] = line.split(",");
+    if (name !== "hello") {
+      sent.push(line);
+    }
+    const answer = overrides[name] ?? reply(line);
+    setTimeout(() => transport.simulateData(answer), 0);
+    return Promise.resolve();
+  });
+  return Object.assign(transport, { sent, state });
+}
+
 const noSleep = { sleep: () => Promise.resolve() };
 const MINIPAR_BLOCKS = { par: { coefficients: { slope: 0.96, intercept: -1.08 } } };
+const AMBIT_BASELINE = [1021, 987, 1103, 954, 1200, 1015];
+const AMBIT_BLOCKS = {
+  par: { coefficients: { spec: 1.1893 } },
+  led: { coefficients: { act: 0.2412 } },
+  baseline: { coefficients: { channels: AMBIT_BASELINE } },
+};
 const SPECTRAL = [
   0.00785574, 0.00343847, 0.00284895, 0.00289513, 0.00246484, 0.00230161, 0.0025635, 0.000852164,
   -0.000739113, 0,
@@ -88,6 +161,10 @@ describe("canWriteCalibration", () => {
 
   it("accepts the MiniPAR spectral block", () => {
     expect(canWriteCalibration("minipar", SPECTRAL_BLOCKS)).toBe(true);
+  });
+
+  it("accepts the Ambit gain and baseline blocks", () => {
+    expect(canWriteCalibration("ambit", AMBIT_BLOCKS)).toBe(true);
   });
 
   it("refuses a family with no writers", () => {
@@ -336,6 +413,211 @@ describe("writeCalibrationBlocks", () => {
 
     expect(results.par.verified).toBe(false);
     expect(results.par.error).toMatch(/cannot write calibrations to a multispeq/);
+    expect(transport.sent).toEqual([]);
+  });
+});
+
+describe("writeCalibrationBlocks to an Ambit device", () => {
+  let driver: AmbitDriver;
+
+  beforeEach(() => {
+    vi.useRealTimers();
+    // A reboot dump ends on the console going quiet, and the firmware pauses mid-dump,
+    // so each of these spends the command's real 1.5 s window. Given room rather than
+    // left at the default, where a loaded machine turns the margin into a flake.
+    vi.setConfig({ testTimeout: 20_000 });
+    driver = new AmbitDriver({ quietWindowMs: 20, timeoutMs: 500 });
+  });
+
+  // The gains answer nothing and the boot dump is the only readback, so a session
+  // that writes everything still reboots the device once.
+  it("writes both gains and the baseline, then reads all three back from one reboot", async () => {
+    const transport = ambitConsole();
+    await driver.initialize(transport);
+
+    const results = await writeCalibrationBlocks(driver, "ambit", AMBIT_BLOCKS, noSleep);
+
+    expect(results).toEqual({
+      par: { verified: true },
+      led: { verified: true },
+      baseline: { verified: true },
+    });
+    expect(transport.sent).toEqual([
+      "set_spec, 1.1893",
+      "set_act, 0.2412",
+      "set_baseline,1021,987,1103,954,1200,1015",
+      "reboot",
+    ]);
+  });
+
+  // The baseline is the one Ambit writer that answers, and only one line counts.
+  it("reports the baseline unverified with what the device said instead", async () => {
+    const transport = ambitConsole({ set_baseline: "Baseline mismatch: channel 3\n" });
+    await driver.initialize(transport);
+
+    const results = await writeCalibrationBlocks(
+      driver,
+      "ambit",
+      { baseline: { coefficients: { channels: AMBIT_BASELINE } } },
+      noSleep,
+    );
+
+    expect(results.baseline.verified).toBe(false);
+    expect(results.baseline.error).toMatch(/Baseline mismatch: channel 3/);
+    expect(transport.sent).toEqual(["set_baseline,1021,987,1103,954,1200,1015"]);
+  });
+
+  // A gain the dump disagrees with leaves that block unverified and nothing else:
+  // the operator re-runs the sweep, the platform does not roll the device back.
+  it("reports the gain whose boot dump disagrees unverified, and leaves the device alone", async () => {
+    const transport = ambitConsole({
+      reboot: ambitBootDump({ spec: 1.18, act: 0.2412, adpd: AMBIT_BASELINE }),
+    });
+    await driver.initialize(transport);
+
+    const results = await writeCalibrationBlocks(driver, "ambit", AMBIT_BLOCKS, noSleep);
+
+    expect(results.par.verified).toBe(false);
+    expect(results.par.error).toMatch(/holds 1.18 for "par.spec" after writing 1.1893/);
+    expect(results.led).toEqual({ verified: true });
+    expect(results.baseline).toEqual({ verified: true });
+    // Nothing follows the reboot: the device keeps what it was given.
+    expect(transport.sent).toEqual([
+      "set_spec, 1.1893",
+      "set_act, 0.2412",
+      "set_baseline,1021,987,1103,954,1200,1015",
+      "reboot",
+    ]);
+  });
+
+  it("reports a block unverified when the boot dump never reaches its calibration line", async () => {
+    const transport = ambitConsole({ reboot: "rst:0x1 boot:0x13\n" });
+    await driver.initialize(transport);
+
+    const results = await writeCalibrationBlocks(
+      driver,
+      "ambit",
+      { par: { coefficients: { spec: 1.1893 } } },
+      noSleep,
+    );
+
+    expect(results.par.verified).toBe(false);
+    expect(results.par.error).toMatch(/could not be read/);
+  });
+
+  // A dump that reaches its version line but not its coefficients parses to zeros, and
+  // "the device holds 0" is a different and much worse claim than "nobody could read it".
+  it("does not read a dump that stops after the version line as a device holding zero", async () => {
+    const transport = ambitConsole({ reboot: "rst:0x1 boot:0x13\nFW: 1.1.3\n" });
+    await driver.initialize(transport);
+
+    const results = await writeCalibrationBlocks(
+      driver,
+      "ambit",
+      { par: { coefficients: { spec: 1.1893 } } },
+      noSleep,
+    );
+
+    expect(results.par.verified).toBe(false);
+    expect(results.par.error).toMatch(/could not be read/);
+    expect(results.par.error).not.toMatch(/holds 0/);
+  });
+
+  // The gain goes on the wire with four decimals, so the dump can only ever answer four.
+  // Without a tolerance matched to that, every fit with more digits reads as a bad write.
+  it("accepts a dump that holds the four decimals the gain was written with", async () => {
+    const transport = ambitConsole();
+    await driver.initialize(transport);
+
+    const results = await writeCalibrationBlocks(
+      driver,
+      "ambit",
+      { par: { coefficients: { spec: 1.189347 } } },
+      noSleep,
+    );
+
+    expect(results.par).toEqual({ verified: true });
+    expect(transport.sent).toEqual(["set_spec, 1.1893", "reboot"]);
+  });
+
+  it("names the value the wire carried when a gain disagrees, not the one behind it", async () => {
+    const transport = ambitConsole({
+      reboot: ambitBootDump({ spec: 1.18, act: 1, adpd: [0, 0, 0, 0, 0, 0] }),
+    });
+    await driver.initialize(transport);
+
+    const results = await writeCalibrationBlocks(
+      driver,
+      "ambit",
+      { par: { coefficients: { spec: 1.189347 } } },
+      noSleep,
+    );
+
+    expect(results.par.error).toMatch(/after writing 1.1893$/);
+  });
+
+  // The gains print nothing, so the driver's own fire, settle and hello re-verify is the
+  // only sign the console took the write at all.
+  it("reports a gain the console never came back ready from", async () => {
+    const transport = ambitConsole({ hello: "still busy\n" });
+    await driver.initialize(transport);
+
+    const results = await writeCalibrationBlocks(
+      driver,
+      "ambit",
+      { par: { coefficients: { spec: 1.1893 } } },
+      noSleep,
+    );
+
+    expect(results.par.verified).toBe(false);
+    expect(results.par.error).toMatch(/set_spec/);
+  });
+
+  // One command carries all six channels, so a value the firmware cannot store must
+  // never reach the wire: half a baseline is worse than none.
+  it("refuses a baseline channel outside the device's range before writing anything", async () => {
+    const transport = ambitConsole();
+    await driver.initialize(transport);
+
+    const results = await writeCalibrationBlocks(
+      driver,
+      "ambit",
+      { baseline: { coefficients: { channels: [1021, 987, 1103, 954, 1200, 16_777_216] } } },
+      noSleep,
+    );
+
+    expect(results.baseline.verified).toBe(false);
+    expect(results.baseline.error).toMatch(/needs whole numbers in \[0, 16777215\]/);
+    expect(transport.sent).toEqual([]);
+  });
+
+  it("refuses a scalar on the baseline writer", async () => {
+    const transport = ambitConsole();
+    await driver.initialize(transport);
+
+    const results = await writeCalibrationBlocks(
+      driver,
+      "ambit",
+      { baseline: { coefficients: { channels: 1021 } } },
+      noSleep,
+    );
+
+    expect(results.baseline.error).toMatch(/not an array/);
+    expect(transport.sent).toEqual([]);
+  });
+
+  it("refuses a baseline that is not six channels before writing anything", async () => {
+    const transport = ambitConsole();
+    await driver.initialize(transport);
+
+    const results = await writeCalibrationBlocks(
+      driver,
+      "ambit",
+      { baseline: { coefficients: { channels: [1021, 987, 1103] } } },
+      noSleep,
+    );
+
+    expect(results.baseline.error).toMatch(/needs 6 values, not 3/);
     expect(transport.sent).toEqual([]);
   });
 });

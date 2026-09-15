@@ -108,14 +108,16 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
   };
 
   /**
-   * Send one payload and collect the unframed reply: resolves once data has
-   * arrived and `quietWindowMs` passes without more, rejects on `timeoutMs`
-   * with nothing received.
+   * Send one payload and collect the unframed reply. A reply that frames itself
+   * ends on `isComplete` alone: no quiet window, because the device pauses
+   * mid-reply, and no partial on the deadline, because half a trace read as a
+   * whole one is worse than a failure. Everything else ends on the quiet window.
    */
   private async sendAndCollect(
     payload: string,
     quietWindowMs: number,
     timeoutMs: number,
+    isComplete?: (buffer: string) => boolean,
   ): Promise<string> {
     if (!this.transport) {
       throw new Error("Transport not initialized");
@@ -124,9 +126,11 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
     this.lastTrafficAt = Date.now();
     await this.transport.send(payload);
 
+    const framesItself = isComplete !== undefined;
     const reply = await collectReply(this.rxHooks, {
-      isComplete: () => false,
-      quietMs: quietWindowMs,
+      isComplete: isComplete ?? (() => false),
+      quietMs: framesItself ? undefined : quietWindowMs,
+      strictTimeout: framesItself,
       timeoutMs,
     });
     void this.emitter.emit("receivedReply", reply);
@@ -248,6 +252,7 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
           payload,
           override.quietWindowMs ?? this.quietWindowMs,
           options?.timeoutMs ?? override.timeoutMs ?? this.defaultTimeoutMs,
+          override.isComplete,
         );
         const text = reply.trim();
 

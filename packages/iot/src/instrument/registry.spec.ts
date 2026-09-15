@@ -3,7 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { MockTransport } from "../driver/testing/mock-transport";
 import { createMockTransport } from "../driver/testing/mock-transport";
 import { KIPRIM_COMMANDS } from "./kiprim/commands";
-import { benchInstrumentForHandshake, identifyBenchInstrument } from "./registry";
+import {
+  BENCH_INSTRUMENTS,
+  BENCH_PROBE_TIMEOUT_MS,
+  benchInstrumentForHandshake,
+  identifyBenchInstrument,
+} from "./registry";
 
 function respondingWith(reply: string): MockTransport {
   const transport = createMockTransport();
@@ -73,8 +78,15 @@ describe("bench instrument registry", () => {
     expect(await identifyBenchInstrument(transport)).toBeNull();
   });
 
-  it("returns null rather than hanging when the port stays silent", async () => {
+  // Every candidate asks the same port in turn, so the operator waiting on Connect pays
+  // the sum of them. Each gets the probe budget, not its own working timeout.
+  it("returns null rather than hanging when the port stays silent, within the probe budget", async () => {
+    const startedAt = performance.now();
+
     expect(await identifyBenchInstrument(createMockTransport())).toBeNull();
+
+    const spent = performance.now() - startedAt;
+    expect(spent).toBeLessThan(BENCH_INSTRUMENTS.length * BENCH_PROBE_TIMEOUT_MS * 1.5);
   });
 
   describe("procedure authoring", () => {
