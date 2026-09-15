@@ -42,6 +42,9 @@ const mockUtils = vi.hoisted(() => ({
   createBaseLayout: vi.fn().mockReturnValue({}),
   create3DLayout: vi.fn().mockReturnValue({}),
   createPlotlyConfig: vi.fn().mockReturnValue({}),
+  // Reached through `useChartThemeRefresh`, which the chart now subscribes to.
+  readThemeColor: vi.fn().mockReturnValue(undefined),
+  invalidateThemeTokenCache: vi.fn(),
 }));
 
 vi.mock("../../charts/utils", () => mockUtils);
@@ -975,6 +978,40 @@ describe("PlotlyChart", () => {
       expect(rendered.data[0]?.type).toBe("scatter");
 
       mockRequestContext.mockRestore();
+    });
+
+    // Plotly only destroys a gl scene when a plot stops being gl, so recolouring
+    // in place strands the old scene's contexts. Remounting routes it through
+    // `purge`, which releases them. A remount replaces the DOM node.
+    it("remounts a WebGL chart when the palette changes, and leaves an SVG one alone", async () => {
+      const originalManager = WebGLContextManager.getInstance();
+      vi.spyOn(originalManager, "requestContext").mockImplementation((_id, callback) => {
+        callback();
+        return true;
+      });
+      // The theme store watches the root with a MutationObserver, whose
+      // callback lands in a microtask.
+      const flipTheme = async () => {
+        await act(async () => {
+          document.documentElement.classList.toggle("dark");
+          await Promise.resolve();
+        });
+      };
+
+      const glData: Data[] = [{ type: "scattergl", x: [1, 2], y: [1, 2] }];
+      const gl = render(<PlotlyChart data={glData} layout={{}} />);
+      const glNode = screen.getByTestId("plotly-chart");
+      await flipTheme();
+      gl.rerender(<PlotlyChart data={glData} layout={{}} />);
+      expect(screen.getByTestId("plotly-chart")).not.toBe(glNode);
+      gl.unmount();
+
+      const svgData: Data[] = [{ type: "scatter", x: [1, 2], y: [1, 2] }];
+      const svg = render(<PlotlyChart data={svgData} layout={{}} />);
+      const svgNode = screen.getByTestId("plotly-chart");
+      await flipTheme();
+      svg.rerender(<PlotlyChart data={svgData} layout={{}} />);
+      expect(screen.getByTestId("plotly-chart")).toBe(svgNode);
     });
 
     it("keeps the WebGL trace when a context is granted", () => {

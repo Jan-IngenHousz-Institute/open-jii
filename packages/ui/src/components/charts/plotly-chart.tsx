@@ -6,6 +6,7 @@ import type { PlotParams } from "react-plotly.js";
 
 import { cn } from "../../lib/utils";
 import { withBrandedPngExport } from "./png-export";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 
 // Type definitions for better type safety
 interface SafeDimensions {
@@ -396,6 +397,14 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       return safeData.some((trace: PlotData) => isWebGLTrace(trace.type ?? "scatter"));
     }, [safeData, isWebGLEnabled]);
 
+    // The palette is `colorway`, which Plotly treats as `calc`. On a gl chart
+    // that recalc builds a fresh scene and abandons the old one's contexts:
+    // Plotly only destroys a scene when a plot stops being gl at all. Keying
+    // the remount on the theme routes it through `purge`, which does release
+    // them, at the cost of a rebuild the recalc was doing anyway.
+    const themeVersion = useChartThemeRefresh();
+    const plotKey = needsWebGL ? `gl-${themeVersion}` : "svg";
+
     useEffect(() => {
       const chartId = chartIdRef.current;
 
@@ -540,6 +549,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       >
         <Suspense fallback={<PlotLoadingComponent />}>
           <Plot
+            key={plotKey}
             data={renderData}
             layout={safeLayout}
             config={safeConfig}
