@@ -223,7 +223,7 @@ export function GroupCredentialsContent() {
                 connectivity={
                   member.connected === null
                     ? null
-                    : { connected: member.connected, lastSeenAt: null }
+                    : { connected: member.connected, lastSeenAt: member.lastSeenAt }
                 }
               />
             ) : undefined

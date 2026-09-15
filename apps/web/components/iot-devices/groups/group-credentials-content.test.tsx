@@ -118,6 +118,23 @@ describe("GroupCredentialsContent", () => {
     expect(dialog).toHaveTextContent("iot.groups.credentials.onlineWarning");
   });
 
+  it("reads an offline member the broker has seen before as offline, not never connected", async () => {
+    mountGroup([
+      createDeviceGroupMember({
+        name: "Gateway",
+        status: "registered",
+        connected: false,
+        lastSeenAt: "2025-01-09T00:00:00.000Z",
+      }),
+    ]);
+
+    render(<GroupCredentialsContent />);
+    await screen.findByText("Gateway");
+
+    expect(screen.getByText("iot.devices.connectivity.disconnected")).toBeInTheDocument();
+    expect(screen.queryByText("iot.devices.connectivity.never")).not.toBeInTheDocument();
+  });
+
   it("issues directly and delivers the one-time bundles", async () => {
     const user = userEvent.setup();
     const waiting = createDeviceGroupMember({ name: "Waiting", status: "registered" });

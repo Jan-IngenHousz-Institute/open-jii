@@ -373,7 +373,7 @@
         }
       },
       "credentials": {
-        "pendingDescription": "Dieses Gerät hat noch kein Zertifikat. Stellen Sie eines aus, um es zu aktivieren und die Verbindung zu AWS IoT zu ermöglichen.",
+        "registeredDescription": "Dieses Gerät hat noch kein Zertifikat. Stellen Sie eines aus, um es bereitzustellen und die Verbindung zu AWS IoT zu ermöglichen.",
         "issue": "Zertifikat ausstellen",
         "reissue": "Zertifikat neu ausstellen",
         "issueError": "Zertifikat konnte nicht ausgestellt werden",
@@ -712,7 +712,7 @@
         "actionIssue": "Ausstellen",
         "actionRotate": "Rotieren",
         "actionRevoke": "Widerrufen",
-        "issueHint": "Stellt ein Zertifikat für Geräte aus, die noch keins haben (ausstehend oder widerrufen).",
+        "issueHint": "Stellt ein Zertifikat für Geräte aus, die noch keins haben (registriert oder widerrufen).",
         "rotateHint": "Ersetzt das aktive Zertifikat auf jedem ausgewählten Gerät. Das alte Zertifikat funktioniert sofort nicht mehr.",
         "revokeHint": "Widerruft das Zertifikat jedes ausgewählten Geräts. Widerrufene Geräte können sich erst nach neuer Ausstellung wieder authentifizieren.",
         "devicesTitle": "Geräte",

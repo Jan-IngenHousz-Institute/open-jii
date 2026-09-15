@@ -59,6 +59,7 @@ export interface IotDeviceGroupMemberRecordDto extends IotDeviceGroupMemberDto {
 /** Roster row enriched with connectivity; null means the fleet index was unavailable. */
 export interface IotDeviceGroupMemberConnectivityDto extends IotDeviceGroupMemberBoundDto {
   connected: boolean | null;
+  lastSeenAt: string | null;
 }
 
 /** Per-device batch outcome; the batch itself succeeds even when rows fail. */

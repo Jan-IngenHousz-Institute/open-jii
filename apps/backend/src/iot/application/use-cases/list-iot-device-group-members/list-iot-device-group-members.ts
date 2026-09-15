@@ -39,6 +39,7 @@ export class ListIotDeviceGroupMembersUseCase {
         ...member,
         boundExperimentCount: bindings.get(member.deviceId) ?? 0,
         connected: connectivity?.get(thingName)?.connected ?? null,
+        lastSeenAt: connectivity?.get(thingName)?.lastSeenAt ?? null,
       })),
     );
   }

@@ -373,7 +373,7 @@
         }
       },
       "credentials": {
-        "pendingDescription": "Dit apparaat heeft nog geen certificaat. Geef er een uit om het te activeren en verbinding met AWS IoT toe te staan.",
+        "registeredDescription": "Dit apparaat heeft nog geen certificaat. Geef er een uit om het in te richten en verbinding met AWS IoT toe te staan.",
         "issue": "Certificaat uitgeven",
         "reissue": "Certificaat opnieuw uitgeven",
         "issueError": "Certificaat uitgeven mislukt",
@@ -712,7 +712,7 @@
         "actionIssue": "Uitgeven",
         "actionRotate": "Roteren",
         "actionRevoke": "Intrekken",
-        "issueHint": "Geeft een certificaat uit aan apparaten die er nog geen hebben (in afwachting of ingetrokken).",
+        "issueHint": "Geeft een certificaat uit aan apparaten die er nog geen hebben (geregistreerd of ingetrokken).",
         "rotateHint": "Vervangt het actieve certificaat op elk geselecteerd apparaat. Het oude certificaat werkt direct niet meer.",
         "revokeHint": "Trekt het certificaat van elk geselecteerd apparaat in. Ingetrokken apparaten kunnen zich pas na nieuwe uitgifte weer authenticeren.",
         "devicesTitle": "Apparaten",

@@ -116,10 +116,12 @@ export class ListExperimentDevicesUseCase {
     const unboundDevices = unboundDevicesResult.value;
 
     const thingNames = [...boundThings, ...unboundDevices.map((device) => device.thingName)];
-    const bindingCountsResult = await this.experimentDeviceRepository.countByDevices([
+    const deviceIds = [
       ...bindings.map((binding) => binding.device.id),
       ...unboundDevices.map((device) => device.id),
-    ]);
+    ];
+
+    const bindingCountsResult = await this.experimentDeviceRepository.countByDevices(deviceIds);
     if (bindingCountsResult.isFailure()) {
       return failure(bindingCountsResult.error);
     }

@@ -48,6 +48,9 @@ export const zIotDeviceGroupMember = z.object({
   boundExperimentCount: z.number().int().nonnegative(),
   // Fleet-index connectivity; null when the index is unavailable, never a guess.
   connected: z.boolean().nullable(),
+  // Rides along with it: without the last-seen the roster cannot tell an offline
+  // device from one the broker has never seen.
+  lastSeenAt: z.string().datetime().nullable(),
   addedAt: z.string().datetime(),
 });
 

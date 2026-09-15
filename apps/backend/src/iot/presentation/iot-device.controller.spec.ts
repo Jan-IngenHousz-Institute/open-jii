@@ -781,14 +781,18 @@ describe("IotDeviceController", () => {
       expect(response.body.status).toBe("revoked");
     });
 
-    it("retires an active device, revoking its certificate on the way (200)", async () => {
+    it("retires an active device, revoking and detaching its certificate on the way (200)", async () => {
+      const certificateArn = "arn:aws:iot:eu-central-1:000000000000:cert/cert-retire";
       vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
-      vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
+      vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(success([certificateArn]));
+      const detachThingPrincipal = vi
+        .spyOn(awsAdapter, "detachThingPrincipal")
+        .mockResolvedValue(success(undefined));
       const device = await testApp.createIotDevice({
         createdBy: userId,
         status: "active",
         certificateId: "cert-retire",
-        certificateArn: "arn:aws:iot:eu-central-1:000000000000:cert/cert-retire",
+        certificateArn,
       });
       const path = testApp.resolveOrpcPath(contract.iot.retireIotDevice, { deviceId: device.id });
 
@@ -799,6 +803,7 @@ describe("IotDeviceController", () => {
 
       expect(response.body.status).toBe("retired");
       expect(response.body.certificateId).toBeNull();
+      expect(detachThingPrincipal).toHaveBeenCalledWith(device.thingName, certificateArn);
     });
 
     it("reinstates a retired device as registered (200)", async () => {

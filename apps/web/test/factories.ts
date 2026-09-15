@@ -1174,6 +1174,7 @@ export function createDeviceGroupMember(
     status: "active",
     boundExperimentCount: 0,
     connected: null,
+    lastSeenAt: null,
     addedAt: new Date().toISOString(),
     ...overrides,
   };

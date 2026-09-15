@@ -373,7 +373,7 @@
         }
       },
       "credentials": {
-        "pendingDescription": "This device has no certificate yet. Issue one to activate it and let it connect to AWS IoT.",
+        "registeredDescription": "This device has no certificate yet. Issue one to provision it and let it connect to AWS IoT.",
         "issue": "Issue certificate",
         "reissue": "Re-issue certificate",
         "issueError": "Failed to issue certificate",
@@ -712,7 +712,7 @@
         "actionIssue": "Issue",
         "actionRotate": "Rotate",
         "actionRevoke": "Revoke",
-        "issueHint": "Issues a certificate to devices that have none yet (pending or revoked).",
+        "issueHint": "Issues a certificate to devices that have none yet (registered or revoked).",
         "rotateHint": "Replaces the active certificate on each selected device. The old certificate stops working immediately.",
         "revokeHint": "Revokes each selected device's certificate. Revoked devices cannot authenticate until new credentials are issued.",
         "devicesTitle": "Devices",

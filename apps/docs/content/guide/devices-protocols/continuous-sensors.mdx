@@ -35,7 +35,9 @@ and its record and history stay until you reinstate or delete it. Whether the
 device is currently on the broker is a separate live indicator beside the status:
 Online, Offline, Never connected, or Unknown when the fleet index is unavailable.
 A phone has no certificate and picks its experiment in the app, so it shows the
-connectivity indicator only, reading Idle when the app is closed.
+connectivity indicator only, reading Idle when the app is closed. Retiring one is
+the exception: it cuts the phone off by detaching the identity the app signs in
+with, and a retired phone carries the Retired badge like any other device.
 
 <Callout type="warn">
   Device credentials include private key material that is shown once. Store it securely and never

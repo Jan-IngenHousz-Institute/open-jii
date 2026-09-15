@@ -71,9 +71,25 @@ describe("zIotDeviceGroupMember", () => {
         status: "active",
         boundExperimentCount: 0,
         connected: null,
+        lastSeenAt: null,
         addedAt: new Date().toISOString(),
       }).success,
     ).toBe(true);
+  });
+
+  it("requires the last-seen alongside the connected flag", () => {
+    expect(
+      zIotDeviceGroupMember.safeParse({
+        deviceId: DEVICE_ID,
+        name: null,
+        serialNumber: "E8:F6:0A",
+        deviceType: "ambyte",
+        status: "active",
+        boundExperimentCount: 0,
+        connected: false,
+        addedAt: new Date().toISOString(),
+      }).success,
+    ).toBe(false);
   });
 });
 

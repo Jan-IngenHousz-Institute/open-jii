@@ -72,7 +72,7 @@ export function IotDeviceCredentialsCard({ device }: { device: IotDeviceWithConn
           <p className="text-muted-foreground text-sm">
             {device.status === "revoked"
               ? t("iot.devices.credentials.revokedDescription")
-              : t("iot.devices.credentials.pendingDescription")}
+              : t("iot.devices.credentials.registeredDescription")}
           </p>
           <Button className="w-fit" onClick={handleIssue} disabled={isIssuing}>
             {isIssuing ? (

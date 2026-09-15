@@ -25,7 +25,7 @@ import {
 import { TableCell, TableRow } from "@repo/ui/components/table";
 
 import { useFormatLastSeen } from "./device-connectivity";
-import { deviceNeedsCredentials } from "./device-next-action";
+import { deviceNextAction } from "./device-next-action";
 import { IotDeviceStatusBadge } from "./iot-device-status-badge";
 import { IOT_DEVICE_TABLE_COLUMN_CLASS } from "./iot-device-table-columns";
 
@@ -47,16 +47,12 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
   const displayName = resolveDevicePrimaryLabel(present, t);
   const roleLabels = resolveDeviceRoleLabels(present, t);
 
-  // The menu's first entry is the computed next step. Phones self-manage, so
-  // they get neither; a device without live credentials is pointed at them,
-  // everything else at onboarding.
-  const isMobileFamily = device.deviceType === "mobile";
+  // The menu's first entry is the computed next step, from the helper the
+  // overview chip reads: phones and retired devices are waiting on nothing.
+  const nextAction = deviceNextAction(device, device.boundExperimentCount);
 
   function renderNextActionItem() {
-    if (isMobileFamily) {
-      return null;
-    }
-    if (deviceNeedsCredentials(device)) {
+    if (nextAction === "issueCredentials") {
       return (
         <DropdownMenuItem asChild>
           <Link href={`${viewHref}/credentials`}>
@@ -66,14 +62,19 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
         </DropdownMenuItem>
       );
     }
-    return (
-      <DropdownMenuItem asChild>
-        <Link href={`${viewHref}/onboarding`}>
-          <Rocket className="mr-2 size-4" />
-          {t("iot.devices.nextAction.onboard")}
-        </Link>
-      </DropdownMenuItem>
-    );
+
+    if (nextAction === "onboard") {
+      return (
+        <DropdownMenuItem asChild>
+          <Link href={`${viewHref}/onboarding`}>
+            <Rocket className="mr-2 size-4" />
+            {t("iot.devices.nextAction.onboard")}
+          </Link>
+        </DropdownMenuItem>
+      );
+    }
+
+    return null;
   }
 
   // Delete is deliberately absent: the list payload carries no capabilities,

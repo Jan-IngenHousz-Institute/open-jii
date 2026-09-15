@@ -14,6 +14,9 @@ export const useReinstateIotDevice = (props: ReinstateIotDeviceProps = {}) => {
         await queryClient.invalidateQueries({ queryKey: orpc.iot.listIotDevices.key() });
         await queryClient.invalidateQueries({ queryKey: orpc.iot.getIotDevice.key() });
         await queryClient.invalidateQueries({ queryKey: orpc.iot.listIotDeviceGroupMembers.key() });
+        await queryClient.invalidateQueries({
+          queryKey: orpc.experiments.listExperimentDevices.key(),
+        });
       },
       onSuccess: () => {
         props.onSuccess?.();
