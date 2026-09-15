@@ -7,26 +7,19 @@ import { useInView } from "@repo/ui/hooks/use-in-view";
 // Far enough ahead that a widget is usually ready by the time it scrolls in.
 const ROOT_MARGIN = "200px";
 
-// Used where the caller has no grid to derive a height from, e.g. the editor.
+// Fallback for callers with no grid row height to derive one from.
 const DEFAULT_INTRINSIC_HEIGHT = 400;
 
 /**
- * Holds a widget's content back until its card comes near the viewport, so a
- * long dashboard neither queries nor draws what nobody has scrolled to. Once
- * mounted it stays mounted, so scrolling back never re-runs a query.
- *
- * Mounted is not free, though: a chart of any size is thousands of SVG nodes,
- * and the browser restyles and re-layerizes all of them on every viewport
- * change. `content-visibility` takes the ones nobody is looking at out of that
- * work while leaving them mounted, which measured at roughly a third off style
- * recalculation and not far off half the compositing on a dashboard of eleven
- * charts. It is only safe alongside the chart-side deferral that stops Plotly
- * resizing an off-screen chart, because Plotly decides a plot is hidden from
- * `display` alone and would otherwise lay out against a skipped subtree.
+ * Holds a widget's content back until its card comes near the viewport, and
+ * keeps it mounted once shown so scrolling back never refetches. Unseen
+ * widgets stay out of style and compositing work via `content-visibility`,
+ * which is only safe because the chart defers its own resize while off-screen:
+ * Plotly reads `display` to decide a plot is hidden, so it would otherwise
+ * lay out against a subtree the browser is skipping.
  */
 interface LazyWidgetProps {
   children: ReactNode;
-  /** What a skipped widget reserves in px, so scroll height holds steady. */
   intrinsicHeight?: number;
 }
 

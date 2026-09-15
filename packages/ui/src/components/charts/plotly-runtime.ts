@@ -22,8 +22,7 @@ import createPlotlyComponent from "react-plotly.js/factory";
 
 /**
  * Plotly core plus only the trace families the chart wrappers emit; scatter
- * ships with core. The stock build also carries maps, 3D and finance traces,
- * which is most of its weight. Loaded lazily by the chart, never at page load.
+ * ships with core. Loaded lazily by the chart, never at page load.
  */
 Plotly.register([
   bar,

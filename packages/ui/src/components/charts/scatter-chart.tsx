@@ -153,8 +153,8 @@ export function ScatterChart({ data, config = {}, className, loading, error }: S
   // size) or anchor it at the bottom (compact tiers).
   const hasColorbar = data.some((s) => s.marker?.showscale);
 
-  // Keyed on the data alone, so a resize or theme change does not re-scan
-  // every point to answer a question only the data can change.
+  // Keyed on the data alone: the layout below also rebuilds on a tier flip and
+  // a theme change, neither of which can alter an axis kind.
   const axisTypes = useMemo(
     () => ({
       x: detectAxisType(data.flatMap((s) => s.x ?? [])),

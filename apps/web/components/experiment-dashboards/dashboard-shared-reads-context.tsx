@@ -21,11 +21,8 @@ import { useDashboardFilterResolver } from "./dashboard-filters-context";
 /** One request serving every visualization on a table with the same filters. */
 export interface SharedRead {
   tableName: string;
-  /** Sorted union of the members' columns, error columns included. */
   columns: string[];
-  /** The visualization's own filters followed by the dashboard's, as the data hook merges them. */
   filters: ExperimentDataFilter[] | undefined;
-  /** The x column most members share; the rest sort client-side. */
   orderBy: string | undefined;
 }
 
@@ -95,7 +92,7 @@ export function DashboardSharedReadsProvider({
 /**
  * The shared read covering a chart's own read, or undefined when the chart is
  * outside a dashboard, alone on its table, or would read something the plan
- * does not carry. Any mismatch means the chart fetches alone, as it did before.
+ * does not carry. Any mismatch means the chart fetches alone.
  */
 export function useDashboardSharedRead(
   visualizationId: string,

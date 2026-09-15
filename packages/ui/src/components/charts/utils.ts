@@ -54,7 +54,7 @@ export function getPlotType(baseType: string, renderer: WebGLRenderer): string {
   if (renderer === "svg") return baseType;
 
   // Scatter is the only family with a WebGL twin in the bundle; everything
-  // else keeps its SVG type. (`heatmapgl` was removed in Plotly 3.)
+  // else keeps its SVG type.
   const webglTypes: Record<string, string> = {
     scatter: "scattergl",
     line: "scattergl",
@@ -316,12 +316,7 @@ export function refineAxisType(
   return applyAxisType(base, detectAxisType(values));
 }
 
-/**
- * The second half of `refineAxisType`, for callers that cache the scan.
- * `detectAxisType` reads every value, so a chart holding tens of thousands of
- * points must not re-run it for a resize or a theme change, neither of which
- * can alter the answer.
- */
+/** `refineAxisType` split so a caller can cache the scan across renders. */
 export function applyAxisType(
   axis: Partial<LayoutAxis> | undefined,
   detected: "date" | "category" | "linear",

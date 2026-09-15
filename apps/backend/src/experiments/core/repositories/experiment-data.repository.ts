@@ -162,9 +162,6 @@ export class ExperimentDataRepository {
           return dataQueryResult;
         }
 
-        // The count and the page are independent statements; the warehouse
-        // runs them side by side, so a filtered page waits for the slower one
-        // rather than the sum.
         const [[countResult, countMs], [dataResult, dataMs]] = await Promise.all([
           this.measure(() => this.executeQuery(countSql)),
           this.measure(() => this.executeQuery(dataQueryResult.value)),

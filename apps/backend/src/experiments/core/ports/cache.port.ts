@@ -8,6 +8,5 @@ export abstract class CachePort {
    */
   abstract tryCache<T>(key: string, fetchFn: () => Promise<T | null>): Promise<T | null>;
 
-  /** Invalidate a single cached entry. */
   abstract invalidate(key: string): Promise<void>;
 }

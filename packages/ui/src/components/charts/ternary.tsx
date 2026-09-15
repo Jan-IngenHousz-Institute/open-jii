@@ -121,7 +121,7 @@ export interface TernaryPlotProps extends BaseChartProps {
 }
 
 // Default parameter values are re-created on every render, which would defeat
-// the memos below. Shared frozen empties keep the identity stable.
+// the memos below. Shared empties keep the identity stable.
 const NO_BOUNDARIES: TernaryBoundary[] = [];
 const NO_AXIS: NonNullable<TernaryPlotProps["aaxis"]> = {};
 

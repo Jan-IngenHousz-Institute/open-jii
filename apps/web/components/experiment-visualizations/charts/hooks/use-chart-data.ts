@@ -73,8 +73,7 @@ export function useChartData(
       : NO_READ,
     canFetch && shared !== undefined,
   );
-  // One stale column in any member fails the whole group; that chart then
-  // reads alone, which is what every chart did before.
+  // One stale column in any member fails the whole group; that chart reads alone.
   const sharedFailed = shared !== undefined && Boolean(sharedRead.error);
   const isSharing = shared !== undefined && !sharedFailed;
 

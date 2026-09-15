@@ -157,8 +157,6 @@ export function DashboardCanvas({ experimentId }: DashboardCanvasProps) {
 
   const placementActive = tool !== "cursor";
 
-  // Charts watch their own container, so a moved or resized widget relayouts
-  // without any synthetic window event.
   const handleLayoutStop = useCallback(
     (next: Layout) => {
       persistLayout(next);

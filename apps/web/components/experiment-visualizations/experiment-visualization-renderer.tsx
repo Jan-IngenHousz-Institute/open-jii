@@ -25,8 +25,6 @@ export default function ExperimentVisualizationRenderer({
 }: ExperimentVisualizationRendererProps) {
   const def = getChartTypeDef(visualization.chartType);
 
-  // The chart wrapper, and with it Plotly's lazy import, only mounts once the
-  // data is in; fetching Plotly now lets the two downloads overlap.
   useEffect(() => {
     preloadPlotly();
   }, []);

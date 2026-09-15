@@ -3,8 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 
 const STALE_TIME = 2 * 60 * 1000;
 
-// The list endpoint's page ceiling. A dashboard referencing more visualizations
-// than this falls back to a per-widget read for the rest.
+// The list endpoint's page ceiling.
 const PAGE_SIZE = 100;
 
 /**

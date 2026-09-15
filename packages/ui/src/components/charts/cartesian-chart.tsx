@@ -191,12 +191,9 @@ export function CartesianChart({
     [data, scatterPlotType],
   );
 
-  // Keyed on the data alone. The layout below also rebuilds on a resize tier
-  // flip and on a theme change, and re-reading every point for those is the
-  // most expensive thing this component does: a dashboard of large charts
-  // spends tens of milliseconds per resize scanning values that did not move.
-  // Horizontal bars swap x/y in `buildTrace`, so their X values come from
-  // `series.y`.
+  // Keyed on the data alone: the layout below also rebuilds on a tier flip and
+  // a theme change, neither of which can alter an axis kind. Horizontal bars
+  // swap x/y in `buildTrace`, so their X values come from `series.y`.
   const axisScan = useMemo(() => {
     const x = data.flatMap((s) => (s.orientation === "h" ? (s.y ?? []) : (s.x ?? [])));
     const y = data

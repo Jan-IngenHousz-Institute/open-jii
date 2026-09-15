@@ -133,9 +133,8 @@ export function LineChart({
     [data, plotType],
   );
 
-  // Keyed on the data alone: the layout below rebuilds on a resize tier flip
-  // and a theme change too, and re-scanning every point for those costs more
-  // than everything else this component does.
+  // Keyed on the data alone: the layout below also rebuilds on a tier flip and
+  // a theme change, neither of which can alter an axis kind.
   const axisTypes = useMemo(
     () => ({
       x: detectAxisType(data.flatMap((s) => s.x ?? [])),

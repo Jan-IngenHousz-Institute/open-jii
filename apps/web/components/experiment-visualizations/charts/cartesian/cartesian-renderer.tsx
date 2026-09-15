@@ -83,15 +83,9 @@ export function CartesianRenderer({
     chartConfig.textposition,
   ]);
 
-  // WebGL avoids SVG jank on large datasets, but each gl trace holds a scarce
-  // browser WebGL context; a dashboard full of gl charts exhausts the pool and
-  // the data layer vanishes on context loss. Auto-enable only for genuinely
-  // large charts so small (grouped) ones stay on SVG and cost no context.
-  //
-  // Nothing in the UI sets `useWebGL`, and every chart type's defaults store
-  // `false`, so a stored `false` records the default rather than a choice.
-  // Reading it with `??` left this threshold unreachable for every chart ever
-  // created through the form: a 24k-point line chart drew 24k SVG nodes.
+  // Each gl chart holds scarce browser contexts, so only genuinely large ones
+  // earn them. Nothing in the UI sets `useWebGL` and every chart type's
+  // defaults store `false`, so only an explicit `true` counts as a choice.
   const totalPoints = chartSeries.reduce((sum, s) => sum + s.y.length, 0);
   const isLargeChart = totalPoints > WEBGL_POINT_THRESHOLD;
 

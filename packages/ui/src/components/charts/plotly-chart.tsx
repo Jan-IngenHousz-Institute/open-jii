@@ -89,11 +89,9 @@ export interface PlotlyChartProps extends Omit<PlotParams, "className"> {
   error?: string;
 }
 
-// Plotly's gl2d builds three canvases per chart, one each for the scene, the
-// pick buffer and the focus layer, and each holds its own WebGL context.
-// Browsers allow roughly 16 per tab and silently drop the oldest beyond that,
-// which blanks a chart's data layer. So the budget is charts, not contexts:
-// five charts is fifteen contexts, and the rest render on SVG instead.
+// Plotly's gl2d builds a canvas each for the scene, the pick buffer and the
+// focus layer, so one chart costs three contexts. Past the browser's budget
+// the oldest is dropped, which blanks that chart's data layer.
 const CONTEXTS_PER_GL_CHART = 3;
 const BROWSER_CONTEXT_BUDGET = 16;
 
@@ -172,11 +170,9 @@ const validateDimensions = (layout: Partial<Layout>): SafeDimensions => {
 const createSafeConfig = (config: Partial<Config> = {}): SafeConfig => {
   const baseConfig: SafeConfig = {
     displayModeBar: true, // Enable toolbar for export
-    // Plotly's own `responsive` adds a window resize listener that calls
-    // `Plots.resize` on every chart. This component already observes its
-    // container, which also catches resizes the window never sees and skips
-    // charts that are scrolled away. Two handlers means double the replots,
-    // and each replot of a gl chart tears down and rebuilds its contexts.
+    // Plotly's own `responsive` adds a second window resize listener. The
+    // container observer below already covers it, catches resizes the window
+    // never sees, and skips charts scrolled out of view.
     responsive: false,
     toImageButtonOptions: {
       format: "svg",
@@ -281,8 +277,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     // in place; a full `Plotly.react` is only for a changed figure.
     const containerRef = useRef<HTMLDivElement | null>(null);
     const graphDivRef = useRef<HTMLElement | null>(null);
-    // Without an IntersectionObserver every chart counts as on screen, which is
-    // the behaviour these two refs replace.
+    // Without an IntersectionObserver every chart counts as on screen.
     const isOnScreenRef = useRef(true);
     const resizeIsPendingRef = useRef(false);
 
@@ -314,10 +309,8 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
         // Coalesced: a drag emits an entry per frame.
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(() => {
-          // Plotly has no cheap reposition: a resize runs the whole plot
-          // pipeline again, redrawing every trace. On a dashboard that is one
-          // full redraw per chart per drag, including the charts scrolled out
-          // of sight. Those bank the change and redraw once, on the way back in.
+          // A Plotly resize reruns the whole plot pipeline, redrawing every
+          // trace, so an unseen chart banks the change for its way back in.
           if (!isOnScreenRef.current) {
             resizeIsPendingRef.current = true;
             return;
@@ -370,9 +363,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       return validatePlotlyData(data);
     }, [data]);
 
-    // What actually reaches Plotly: the WebGL traces drop to their SVG twin
-    // while this chart is waiting behind the context cap, so a dashboard with
-    // more large charts than contexts still draws all of them.
+    // Behind the context cap a chart draws its SVG twin rather than waiting.
     const renderData = React.useMemo(() => {
       if (isContextAvailable) {
         return safeData;

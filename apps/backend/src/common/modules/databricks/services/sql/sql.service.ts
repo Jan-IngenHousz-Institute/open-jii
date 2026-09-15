@@ -202,7 +202,6 @@ export class DatabricksSqlService {
     );
   }
 
-  /** Shape the terminal response and record how the statement ran. */
   private completeStatement(
     response: StatementResponse,
     startedAt: number,

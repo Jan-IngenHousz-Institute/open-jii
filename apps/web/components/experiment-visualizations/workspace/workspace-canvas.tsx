@@ -29,7 +29,6 @@ const PREVIEW_TIMESTAMP = "1970-01-01T00:00:00.000Z";
 export function WorkspaceCanvas({ control, experimentId, visualizationId }: WorkspaceCanvasProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  // The renderer only mounts once the preview data is in; start Plotly now.
   useEffect(() => {
     preloadPlotly();
   }, []);

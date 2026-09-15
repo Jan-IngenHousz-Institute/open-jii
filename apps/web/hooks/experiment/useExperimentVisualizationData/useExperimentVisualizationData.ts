@@ -209,7 +209,6 @@ export const useExperimentVisualizationData = (
       return tableData.data;
     }
 
-    // One copy per row for both concerns; a large response is walked once.
     const rows = tableData.data.rows.map((row: Record<string, unknown>) => {
       const out: Record<string, unknown> = { ...row };
       for (const [alias, original] of renamed) {
