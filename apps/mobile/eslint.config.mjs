@@ -8,6 +8,7 @@ const FEATURES = [
   "experiments",
   "home",
   "measurement-flow",
+  "organizations",
   "profile",
   "recent-measurements",
 ];

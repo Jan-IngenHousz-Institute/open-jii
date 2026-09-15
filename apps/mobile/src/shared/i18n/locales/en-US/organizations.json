@@ -1,0 +1,62 @@
+{
+  "title": "Organizations",
+  "memberCount_one": "{{count}} member",
+  "memberCount_other": "{{count}} members",
+  "search": {
+    "placeholder": "Search organizations",
+    "noResults": "No organizations match"
+  },
+  "empty": "No organizations yet",
+  "loading": "Loading organizations…",
+  "loadFailed": "Could not load organizations.",
+  "openOnWeb": "Open on web platform",
+  "openOnWebUnavailable": "Couldn't open the web platform.",
+  "type": {
+    "research_institute": "Research institute",
+    "non_profit": "Non-profit",
+    "private_company": "Private company",
+    "government_agency": "Government agency",
+    "university": "University"
+  },
+  "membership": {
+    "member": "Joined",
+    "requested": "Requested",
+    "private": "Private"
+  },
+  "role": {
+    "owner": "Owner",
+    "admin": "Admin",
+    "member": "Member"
+  },
+  "detail": {
+    "title": "Organization",
+    "members_one": "member",
+    "members_other": "members",
+    "resources_one": "resource",
+    "resources_other": "resources",
+    "resourcesVisible_one": "resource visible to you",
+    "resourcesVisible_other": "resources visible to you",
+    "noDescription": "This organization has not described itself yet.",
+    "website": "Website",
+    "websiteUnavailable": "Couldn't open this website.",
+    "since": "On openJII since",
+    "unavailable": "This organization isn't available",
+    "unavailableHint": "It may be private, or it may no longer exist."
+  },
+  "join": {
+    "cta": "Request to join",
+    "pending": "Your request is pending",
+    "cancel": "Cancel request",
+    "cancelConfirmTitle": "Cancel your request?",
+    "cancelConfirmBody": "Your request to join {{name}} is withdrawn. You can ask again later.",
+    "cancelled": "Your request was withdrawn",
+    "sheetTitle": "Request to join {{name}}",
+    "sheetHint": "Optional message to the organization's admins",
+    "messagePlaceholder": "Tell them who you are and why you would like to join",
+    "messageCounter": "{{n}} / {{max}}",
+    "send": "Send request",
+    "sending": "Sending…",
+    "sent": "Your request to join {{name}} was sent",
+    "offlineHint": "You're offline. Reconnect to send this."
+  }
+}

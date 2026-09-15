@@ -114,6 +114,22 @@ Constructor takes a `transportFactory` so tests inject a fake instead of mocking
 
 ---
 
+## Organizations
+
+### Organization directory
+
+The server-ordered list from `GET /organizations` with `scope: "all"`: every public organization plus the private ones the caller belongs to; personal workspaces never appear. Unpaged. Searched server-side, not filtered locally.
+
+### Membership status
+
+`none | pending_request | member`, carried on every organization read. The only source of the caller's join state; there is no local pending flag and no "my requests" list.
+
+### Join request
+
+The requester's ask to enter a public organization, with an optional message. Created and cancelled by organization id. Decided on web by owners and admins; approval admits as `member`.
+
+---
+
 ## Architecture conventions
 
 ### Boundaries
@@ -172,3 +188,4 @@ Provides the AsyncQueuer (concurrency + reactive state) and AsyncRetryer (per-it
 - "Concurrency" refers to Outbox pipeline depth, not "how many MQTT connections" (there is only ever one).
 - A "burst upload" = many Measurements enqueued at once after offline → online transition.
 - Don't say "settle bridge useEffect on the Recent screen" — the **Outbox bridge** is mounted once at the app root.
+- Say "Request to join", not "apply" or "subscribe". The pending tag reads "Requested".
