@@ -8,8 +8,9 @@ side is close-only. Status, labels and relations belong in Linear.
 
 One route: a personal API key, scoped to Read plus Write on team `OJD`, held by the OS keychain and
 used only inside `@repo/devkit`. There is no MCP server in this repo. Setup is
-`pbpaste | pnpm linear:auth`, or `--file` for the owner-only `.claude/.env` fallback; the
-`openjii-linear` skill has the details.
+`pbpaste | pnpm linear:auth`, or `--file` for the owner-only `.claude/.env` fallback;
+`tooling/devkit/README.md` is the guide a person follows and the `openjii-linear` skill has the
+query recipes.
 
 Agents call Linear through `pnpm linear:query` and the other `linear:*` commands, never with the key
 in a shell. The devkit refuses `*Delete` and `*Archive` mutations unless told otherwise and logs

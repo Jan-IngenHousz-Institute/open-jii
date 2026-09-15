@@ -33,48 +33,8 @@ pnpm dev:fb       # run web + backend (or `pnpm dev` for everything)
 
 This is a pnpm + Turborepo monorepo — see the [README](README.md#monorepo-layout) for the app/package layout. To work on a single app, use turbo filters, e.g. `pnpm --filter web dev` or `pnpm --filter backend test`.
 
-### Linear access for your coding agent
-
-Optional, and only for maintainers with a Linear seat. It lets your agent read and write `OJD`
-tickets: look one up, refine it, write the testing criteria before review, sweep the backlog. The
-repo works without it, and the `linear:*` commands say so rather than guessing.
-
-Mint a personal key at [Security and access](https://linear.app/settings/account/security). Scope
-it to **Read plus Write** and restrict it to team **OJD**. Do not create a full-access key.
-
-Store it without pasting it anywhere visible. Copy the key, then:
-
-```bash
-pbpaste | pnpm linear:auth          # macOS Keychain, or secret-tool on Linux
-pbpaste | pnpm linear:auth --file   # fallback: .claude/.env, owner-only, gitignored
-```
-
-The command checks the key against Linear before storing it and prints whose it is. It never echoes
-the key. To rotate, regenerate in Linear and run it again. Check it works:
-
-```bash
-pnpm linear:query --query '{ viewer { name } }'
-```
-
-The key is yours, not the team's: everything it writes is attributed to you. Never share it, never
-paste it into a ticket, a PR or a chat, and never put it in a command line. Everything else goes
-through `pnpm linear:query`, which refuses deletes and archives unless you ask for them explicitly
-and logs every write to `.claude/linear-writes.log`.
-
-Your agent picks up the rest from `AGENTS.md`: what a ticket contains, the labels, and the five
-`openjii-*` skills for designing a project, refining a ticket, writing testing criteria and
-triaging the backlog.
-
-### When the agent refuses a command
-
-`.claude/settings.json` and `.claude/hooks/protect-secrets.sh` stop an agent reading secrets into
-its context or publishing a release. Expect a refusal if you ask it to read a `.env`, print a
-token, dump the environment, search the keychain, or run `eas update`. That is working as intended
-and the message says what to do instead: the tool that needs a secret reads it itself.
-
-These rules are repo-wide and cannot be relaxed in your own settings, so if one blocks something
-legitimate, that is a bug worth reporting rather than a local workaround. Run those commands in
-your own terminal in the meantime.
+Local development commands that need a credential (a dev session, Linear access) live in
+`tooling/devkit`. See [its README](tooling/devkit/README.md) for the one-time setup.
 
 ## Making changes
 
