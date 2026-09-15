@@ -30,10 +30,13 @@ import {
 import { toast } from "@repo/ui/hooks/use-toast";
 
 /**
- * Experiments use their own settings card, so exclude them from this route
- * dispatch. Deriving the type keeps a newly publishable resource a compile error.
+ * Experiments have their own settings card and definitions have no page to host a control on;
+ * deriving the type keeps a new publishable resource a compile error.
  */
-type PublishSelectResourceType = Exclude<PublishableResourceType, "experiment">;
+type PublishSelectResourceType = Exclude<
+  PublishableResourceType,
+  "experiment" | "calibration_definition"
+>;
 
 /** Narrow horizontal hosts use a tooltip; full-width hosts keep the copy visible. */
 type PublishControlInfoPlacement = "block" | "tooltip";

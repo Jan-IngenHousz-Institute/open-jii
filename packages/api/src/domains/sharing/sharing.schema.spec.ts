@@ -14,6 +14,7 @@ import {
 describe("zSharingResourceType", () => {
   it("covers every resource type that can hold a grant, devices included", () => {
     expect([...zSharingResourceType.options].sort()).toEqual([
+      "calibration_definition",
       "device",
       "device_group",
       "experiment",
@@ -27,6 +28,7 @@ describe("zSharingResourceType", () => {
     // A device can be shared but never published: it stays private for good, so no
     // route may write its visibility.
     expect([...zPublishableResourceType.options].sort()).toEqual([
+      "calibration_definition",
       "experiment",
       "macro",
       "protocol",
