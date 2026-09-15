@@ -87,15 +87,21 @@ export function CartesianRenderer({
   // browser WebGL context; a dashboard full of gl charts exhausts the pool and
   // the data layer vanishes on context loss. Auto-enable only for genuinely
   // large charts so small (grouped) ones stay on SVG and cost no context.
+  //
+  // Nothing in the UI sets `useWebGL`, and every chart type's defaults store
+  // `false`, so a stored `false` records the default rather than a choice.
+  // Reading it with `??` left this threshold unreachable for every chart ever
+  // created through the form: a 24k-point line chart drew 24k SVG nodes.
   const totalPoints = chartSeries.reduce((sum, s) => sum + s.y.length, 0);
+  const isLargeChart = totalPoints > WEBGL_POINT_THRESHOLD;
 
   const effectiveConfig: PlotlyChartConfig = useMemo(
     () => ({
       ...chartConfig,
       xAxisType: useIndexForX ? "linear" : chartConfig.xAxisType,
-      useWebGL: chartConfig.useWebGL ?? totalPoints > WEBGL_POINT_THRESHOLD,
+      useWebGL: chartConfig.useWebGL === true || isLargeChart,
     }),
-    [chartConfig, useIndexForX, totalPoints],
+    [chartConfig, useIndexForX, isLargeChart],
   );
 
   return (

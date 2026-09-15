@@ -38,6 +38,9 @@ type WebGLTraceType = "scattergl";
 
 const WEBGL_TRACE_TYPES: readonly WebGLTraceType[] = ["scattergl"];
 
+/** What a WebGL trace falls back to when no context is free. */
+const SVG_TWIN: Record<WebGLTraceType, string> = { scattergl: "scatter" };
+
 // Regular trace types
 type StandardTraceType = "scatter" | "bar" | "line" | "area" | "pie" | "box" | "violin";
 
@@ -321,6 +324,25 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       return validatePlotlyData(data);
     }, [data]);
 
+    // What actually reaches Plotly: the WebGL traces drop to their SVG twin
+    // while this chart is waiting behind the context cap, so a dashboard with
+    // more large charts than contexts still draws all of them.
+    const renderData = React.useMemo(() => {
+      if (isContextAvailable) {
+        return safeData;
+      }
+      let downgraded = false;
+      const traces = safeData.map((trace: PlotData) => {
+        const type = (trace.type ?? "scatter") as WebGLTraceType;
+        if (!WEBGL_TRACE_TYPES.includes(type)) {
+          return trace;
+        }
+        downgraded = true;
+        return { ...trace, type: SVG_TWIN[type] };
+      });
+      return downgraded ? traces : safeData;
+    }, [safeData, isContextAvailable]);
+
     // Stable boolean drives the context-management effect. Memoizing a
     // primitive (vs `useCallback`) means the effect only re-runs when
     // WebGL relevance flips; the previous shape caused release/reacquire
@@ -345,9 +367,15 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       }
 
       let cancelled = false;
-      contextManager.requestContext(chartId, () => {
+      const granted = contextManager.requestContext(chartId, () => {
         if (!cancelled) setIsContextAvailable(true);
       });
+      // Queued behind the cap: draw on SVG now rather than hold the chart on a
+      // placeholder until some other chart unmounts. The callback still fires
+      // if a slot frees up, and the traces switch back to WebGL then.
+      if (!granted) {
+        setIsContextAvailable(false);
+      }
 
       return () => {
         cancelled = true;
@@ -464,23 +492,6 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       );
     }
 
-    // Show waiting state for WebGL charts when context not available
-    if (needsWebGL && !isContextAvailable) {
-      return (
-        <div
-          ref={setContainer}
-          className={cn("flex h-full items-center justify-center", className)}
-        >
-          <div className="text-center">
-            <div className="text-muted-foreground animate-pulse">Waiting for GPU resources...</div>
-            <div className="text-muted-foreground/60 mt-1 text-xs">
-              {contextManager.getActiveCount()}/{8} WebGL contexts active
-            </div>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div
         ref={setContainer}
@@ -488,7 +499,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       >
         <Suspense fallback={<PlotLoadingComponent />}>
           <Plot
-            data={safeData}
+            data={renderData}
             layout={safeLayout}
             config={safeConfig}
             {...plotProps}

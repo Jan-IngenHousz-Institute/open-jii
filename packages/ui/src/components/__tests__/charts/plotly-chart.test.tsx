@@ -958,22 +958,42 @@ describe("PlotlyChart", () => {
       });
     });
 
-    it("shows WebGL waiting state when context is not available", () => {
+    it("draws on SVG instead of waiting when no WebGL context is free", () => {
       const testData: Data[] = [{ type: "scattergl", x: [1, 2], y: [1, 2] }];
 
-      // Mock WebGLContextManager to simulate no available contexts
+      // Simulate a dashboard that has already spent every context.
       const originalManager = WebGLContextManager.getInstance();
       const mockRequestContext = vi.spyOn(originalManager, "requestContext").mockReturnValue(false);
-      const mockGetActiveCount = vi.spyOn(originalManager, "getActiveCount").mockReturnValue(6);
 
       render(<PlotlyChart data={testData} layout={{}} />);
 
-      expect(screen.getByText("Waiting for GPU resources...")).toBeInTheDocument();
-      expect(screen.getByText("6/8 WebGL contexts active")).toBeInTheDocument();
+      // The chart renders rather than parking on a placeholder, and its trace
+      // falls back to the SVG twin so nothing needs a context.
+      expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
+      expect(screen.queryByText("Waiting for GPU resources...")).not.toBeInTheDocument();
+      const rendered = mockPlotComponent.mock.calls.at(-1)?.[0] as { data: Data[] };
+      expect(rendered.data[0]?.type).toBe("scatter");
 
-      // Cleanup mocks
       mockRequestContext.mockRestore();
-      mockGetActiveCount.mockRestore();
+    });
+
+    it("keeps the WebGL trace when a context is granted", () => {
+      const testData: Data[] = [{ type: "scattergl", x: [1, 2], y: [1, 2] }];
+
+      const originalManager = WebGLContextManager.getInstance();
+      const mockRequestContext = vi
+        .spyOn(originalManager, "requestContext")
+        .mockImplementation((_id, callback) => {
+          callback();
+          return true;
+        });
+
+      render(<PlotlyChart data={testData} layout={{}} />);
+
+      const rendered = mockPlotComponent.mock.calls.at(-1)?.[0] as { data: Data[] };
+      expect(rendered.data[0]?.type).toBe("scattergl");
+
+      mockRequestContext.mockRestore();
     });
   });
 });
