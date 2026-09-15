@@ -111,13 +111,20 @@ describe("DataTableChartCell", () => {
       vi.useRealTimers();
     });
 
-    it("scrolls the chart into view on click", async () => {
-      const { root } = renderCell({ data: mockData, columnName: mockColumnName, rowId: mockRowId });
+    it("scrolls the chart into view on click and forwards data, columnName, and rowId", async () => {
+      const onClick = vi.fn();
+      const { root } = renderCell({
+        data: mockData,
+        columnName: mockColumnName,
+        rowId: mockRowId,
+        onClick,
+      });
 
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
       await user.click(root);
       vi.advanceTimersByTime(100);
 
+      expect(onClick).toHaveBeenCalledWith(mockData, mockColumnName, mockRowId);
       expect(chartTarget.scrollIntoView).toHaveBeenCalledWith({
         behavior: "smooth",
         block: "start",
