@@ -1,16 +1,19 @@
 "use client";
 
 import React, { useMemo } from "react";
+import type { OnChartClickHandler } from "~/components/data-table/data-table-columns";
 
 interface ExperimentDataTableChartCellProps {
   data: number[] | string;
   columnName: string;
-  onClick?: (data: number[], columnName: string) => void;
+  rowId: string;
+  onClick?: OnChartClickHandler;
 }
 
 export function DataTableChartCell({
   data,
   columnName,
+  rowId,
   onClick,
 }: ExperimentDataTableChartCellProps) {
   // Parse the array data - it comes as a string like "[1.2,3.4,5.6]" or JSON array
@@ -65,7 +68,7 @@ export function DataTableChartCell({
 
   const handleClick = () => {
     if (parsedData.length > 0) {
-      onClick?.(parsedData, columnName);
+      onClick?.(parsedData, columnName, rowId);
       // Scroll to the chart after a short delay to ensure it's rendered
       setTimeout(() => {
         const chartElement = document.getElementById("experiment-data-chart");

@@ -3,10 +3,16 @@ import type { Row, HeaderGroup } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import React from "react";
 import { DataTableAnnotationsCell } from "~/components/data-table/cells/annotations/data-table-annotations-cell";
-import type { DataRow, TableMetadata } from "~/components/data-table/data-table-columns";
+import type {
+  DataRow,
+  IsCellExpandedFn,
+  OnAnnotationHandler,
+  OnChartClickHandler,
+  OnToggleCellExpansionHandler,
+  TableMetadata,
+} from "~/components/data-table/data-table-columns";
 import { deviceDisplayName } from "~/components/experiment-visualizations/charts/data/device-cells";
 
-import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import {
   WellKnownColumnTypes,
   ExperimentColumnPrimitiveType,
@@ -77,11 +83,11 @@ export function formatValue(
   type: string,
   rowId: string,
   columnName?: string,
-  onChartClick?: (data: number[], columnName: string) => void,
-  onAddAnnotation?: (rowIds: string[], annotationType: ExperimentAnnotationType) => void,
-  onDeleteAnnotations?: (rowIds: string[], annotationType: ExperimentAnnotationType) => void,
-  onToggleCellExpansion?: (rowId: string, columnName: string) => void,
-  isCellExpanded?: (rowId: string, columnName: string) => boolean,
+  onChartClick?: OnChartClickHandler,
+  onAddAnnotation?: OnAnnotationHandler,
+  onDeleteAnnotations?: OnAnnotationHandler,
+  onToggleCellExpansion?: OnToggleCellExpansionHandler,
+  isCellExpanded?: IsCellExpandedFn,
   errorColumn?: string,
 ): string | React.JSX.Element {
   // Check if this is the error column
@@ -135,6 +141,7 @@ export function formatValue(
       <DataTableChartCell
         data={value as string}
         columnName={columnName ?? "Chart"}
+        rowId={rowId}
         onClick={onChartClick}
       />
     );

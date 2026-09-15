@@ -7,7 +7,6 @@ import type { OnChangeFn, PaginationState, RowSelectionState } from "@tanstack/r
 import { useTable } from "@tanstack/react-table";
 import React, { useCallback, useMemo, useState } from "react";
 
-import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { Checkbox } from "@repo/ui/components/checkbox";
@@ -30,7 +29,13 @@ import { Table, TableBody } from "@repo/ui/components/table";
 import { cn } from "@repo/ui/lib/utils";
 
 import { createTableColumns, sortColumnsForDisplay } from "./data-table-columns";
-import type { DataRow } from "./data-table-columns";
+import type {
+  DataRow,
+  IsCellExpandedFn,
+  OnAnnotationHandler,
+  OnChartClickHandler,
+  OnToggleCellExpansionHandler,
+} from "./data-table-columns";
 import { dataTableFeatures } from "./data-table-features";
 import { DataTableHeader, DataTableRows, formatValue, LoadingRows } from "./data-table-utils";
 
@@ -70,9 +75,9 @@ interface SelectionConfig {
 }
 
 interface CellHandlers {
-  onChartClick?: (data: number[], columnName: string) => void;
-  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
-  onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
+  onChartClick?: OnChartClickHandler;
+  onAddAnnotation?: OnAnnotationHandler;
+  onDeleteAnnotations?: OnAnnotationHandler;
 }
 
 export interface DataTableProps {
@@ -118,7 +123,7 @@ export function DataTable({
     null,
   );
 
-  const toggleCellExpansion = useCallback((rowId: string, columnName: string) => {
+  const toggleCellExpansion: OnToggleCellExpansionHandler = useCallback((rowId, columnName) => {
     setExpandedCell((previous) =>
       previous?.rowId === rowId && previous.columnName === columnName
         ? null
@@ -126,9 +131,8 @@ export function DataTable({
     );
   }, []);
 
-  const isCellExpanded = useCallback(
-    (rowId: string, columnName: string) =>
-      expandedCell?.rowId === rowId && expandedCell.columnName === columnName,
+  const isCellExpanded: IsCellExpandedFn = useCallback(
+    (rowId, columnName) => expandedCell?.rowId === rowId && expandedCell.columnName === columnName,
     [expandedCell],
   );
 
