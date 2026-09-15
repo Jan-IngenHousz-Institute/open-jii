@@ -184,7 +184,7 @@ metrics:
       stat: Maximum
       dimensions: { Environment: "${ENVIRONMENT}" }
     baseline: { method: same-weekday-4w, anomaly_pct: 100 }
-    runbook: docs/runbooks/dlt-heartbeat.md
+    runbook: docs/runbooks/gold-materialization-age.md
     notes: >
       Minutes since gold last materialized, from max(status_updated_at) in
       experiment_status. Split out of 10 during implementation: a fixed
