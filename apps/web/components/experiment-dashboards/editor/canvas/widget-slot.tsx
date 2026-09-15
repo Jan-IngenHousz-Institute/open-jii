@@ -4,6 +4,7 @@ import { memo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import type { DashboardFormValues } from "../../dashboard-form-shell";
+import { LazyWidget } from "../../widgets/shell/lazy-widget";
 import { WidgetCard } from "../../widgets/shell/widget-card";
 import { WidgetEditor } from "../../widgets/widget-editor";
 
@@ -29,12 +30,14 @@ export const WidgetSlot = memo(function WidgetSlot({
 
   return (
     <WidgetCard isSelected={isSelected} onSelect={() => onSelect(widgetId)}>
-      <WidgetEditor
-        widget={widget}
-        experimentId={experimentId}
-        widgetIndex={widgetIndex}
-        isSelected={isSelected}
-      />
+      <LazyWidget>
+        <WidgetEditor
+          widget={widget}
+          experimentId={experimentId}
+          widgetIndex={widgetIndex}
+          isSelected={isSelected}
+        />
+      </LazyWidget>
     </WidgetCard>
   );
 });

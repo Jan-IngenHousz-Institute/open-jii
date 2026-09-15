@@ -1,0 +1,44 @@
+import { act } from "@testing-library/react";
+import { vi } from "vitest";
+
+type IntersectionCallback = (entries: { isIntersecting: boolean }[]) => void;
+
+interface StubbedObserver {
+  callback: IntersectionCallback;
+  active: boolean;
+}
+
+/**
+ * Replaces `IntersectionObserver` with a stub the test drives by hand. jsdom
+ * has none, and the in-view hook then treats everything as visible, which
+ * hides lazy-mount behaviour. A disconnected observer stops receiving entries,
+ * as the real one does. Pair with `vi.unstubAllGlobals()` in `afterEach`.
+ */
+export function stubIntersectionObserver() {
+  const observers: StubbedObserver[] = [];
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      private readonly entry: StubbedObserver;
+      constructor(callback: IntersectionCallback) {
+        this.entry = { callback, active: true };
+        observers.push(this.entry);
+      }
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = () => {
+        this.entry.active = false;
+      };
+    },
+  );
+  const intersect = (isIntersecting: boolean) => {
+    act(() => {
+      for (const observer of observers) {
+        if (observer.active) {
+          observer.callback([{ isIntersecting }]);
+        }
+      }
+    });
+  };
+  return { intersect, activeObservers: () => observers.filter((o) => o.active).length };
+}

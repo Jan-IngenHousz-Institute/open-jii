@@ -1,11 +1,12 @@
 "use client";
 
 import type { PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
 import {
   createPlotlyConfig,
@@ -101,170 +102,185 @@ export interface CarpetPlotProps extends BaseChartProps {
   contourData?: CarpetContourSeriesData[];
 }
 
+// Default parameter values are re-created on every render, which would defeat
+// the memos below. Shared empties keep the identity stable.
+const NO_SCATTER: CarpetScatterSeriesData[] = [];
+const NO_CONTOUR: CarpetContourSeriesData[] = [];
+
 export function CarpetPlot({
   carpetData,
-  scatterData = [],
-  contourData = [],
+  scatterData = NO_SCATTER,
+  contourData = NO_CONTOUR,
   config = {},
   className,
   loading,
   error,
 }: CarpetPlotProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
 
-  const plotData: PlotData[] = [
-    // Carpet traces
-    ...carpetData.map(
-      (series, index) =>
-        ({
-          a: series.a,
-          b: series.b,
-          x: series.x,
-          y: series.y,
-          name: series.name || `Carpet ${index + 1}`,
-          type: "carpet",
-          carpet: `carpet${index + 1}`, // Add carpet ID
+  const plotData: PlotData[] = useMemo(
+    () => [
+      // Carpet traces
+      ...carpetData.map(
+        (series, index) =>
+          ({
+            a: series.a,
+            b: series.b,
+            x: series.x,
+            y: series.y,
+            name: series.name || `Carpet ${index + 1}`,
+            type: "carpet",
+            carpet: `carpet${index + 1}`, // Add carpet ID
 
-          aaxis: series.aaxis
-            ? {
-                title: series.aaxis.title || "A",
-                tickfont: { size: fontSizes.tick },
-                tickmode: series.aaxis.tickmode || "linear",
-                tick0: series.aaxis.tick0 || 0,
-                dtick: series.aaxis.dtick || 1,
-                tickvals: series.aaxis.tickvals,
-                ticktext: series.aaxis.ticktext,
-                gridcolor: series.aaxis.gridcolor || chartGridColor(),
-                linecolor: series.aaxis.linecolor || chartGridColor(),
-                showgrid: series.aaxis.showgrid !== false,
-                showline: series.aaxis.showline !== false,
-              }
-            : {
-                title: "A",
-                tickfont: { size: fontSizes.tick },
-                gridcolor: chartGridColor(),
-                linecolor: chartGridColor(),
-              },
+            aaxis: series.aaxis
+              ? {
+                  title: series.aaxis.title || "A",
+                  tickfont: { size: fontSizes.tick },
+                  tickmode: series.aaxis.tickmode || "linear",
+                  tick0: series.aaxis.tick0 || 0,
+                  dtick: series.aaxis.dtick || 1,
+                  tickvals: series.aaxis.tickvals,
+                  ticktext: series.aaxis.ticktext,
+                  gridcolor: series.aaxis.gridcolor || chartGridColor(),
+                  linecolor: series.aaxis.linecolor || chartGridColor(),
+                  showgrid: series.aaxis.showgrid !== false,
+                  showline: series.aaxis.showline !== false,
+                }
+              : {
+                  title: "A",
+                  tickfont: { size: fontSizes.tick },
+                  gridcolor: chartGridColor(),
+                  linecolor: chartGridColor(),
+                },
 
-          baxis: series.baxis
-            ? {
-                title: series.baxis.title || "B",
-                tickfont: { size: fontSizes.tick },
-                tickmode: series.baxis.tickmode || "linear",
-                tick0: series.baxis.tick0 || 0,
-                dtick: series.baxis.dtick || 1,
-                tickvals: series.baxis.tickvals,
-                ticktext: series.baxis.ticktext,
-                gridcolor: series.baxis.gridcolor || chartGridColor(),
-                linecolor: series.baxis.linecolor || chartGridColor(),
-                showgrid: series.baxis.showgrid !== false,
-                showline: series.baxis.showline !== false,
-              }
-            : {
-                title: "B",
-                tickfont: { size: fontSizes.tick },
-                gridcolor: chartGridColor(),
-                linecolor: chartGridColor(),
-              },
+            baxis: series.baxis
+              ? {
+                  title: series.baxis.title || "B",
+                  tickfont: { size: fontSizes.tick },
+                  tickmode: series.baxis.tickmode || "linear",
+                  tick0: series.baxis.tick0 || 0,
+                  dtick: series.baxis.dtick || 1,
+                  tickvals: series.baxis.tickvals,
+                  ticktext: series.baxis.ticktext,
+                  gridcolor: series.baxis.gridcolor || chartGridColor(),
+                  linecolor: series.baxis.linecolor || chartGridColor(),
+                  showgrid: series.baxis.showgrid !== false,
+                  showline: series.baxis.showline !== false,
+                }
+              : {
+                  title: "B",
+                  tickfont: { size: fontSizes.tick },
+                  gridcolor: chartGridColor(),
+                  linecolor: chartGridColor(),
+                },
 
-          visible: series.visible,
-          showlegend: series.showlegend,
-          legendgroup: series.legendgroup,
-        }) as any as PlotData,
-    ),
+            visible: series.visible,
+            showlegend: series.showlegend,
+            legendgroup: series.legendgroup,
+          }) as any as PlotData,
+      ),
 
-    // Scatter traces on carpet coordinates
-    ...scatterData.map(
-      (series, index) =>
-        ({
-          a: series.a,
-          b: series.b,
-          name: series.name || `Scatter ${index + 1}`,
-          type: "scattercarpet",
-          carpet: series.carpet || `carpet${index + 1}`,
-          mode: series.mode || "markers",
+      // Scatter traces on carpet coordinates
+      ...scatterData.map(
+        (series, index) =>
+          ({
+            a: series.a,
+            b: series.b,
+            name: series.name || `Scatter ${index + 1}`,
+            type: "scattercarpet",
+            carpet: series.carpet || `carpet${index + 1}`,
+            mode: series.mode || "markers",
 
-          marker: series.marker
-            ? {
-                size: series.marker.size || 8,
-                color: series.marker.color,
-                colorscale: series.marker.colorscale,
-                showscale: series.marker.showscale || false,
-                symbol: series.marker.symbol || "circle",
-                line: series.marker.line
-                  ? {
-                      width: series.marker.line.width || 1,
-                      color:
-                        series.marker.line.color ?? readThemeColor("--muted-foreground") ?? "#444",
-                    }
-                  : undefined,
-              }
-            : {
-                size: 8,
-                color: undefined,
-              },
+            marker: series.marker
+              ? {
+                  size: series.marker.size || 8,
+                  color: series.marker.color,
+                  colorscale: series.marker.colorscale,
+                  showscale: series.marker.showscale || false,
+                  symbol: series.marker.symbol || "circle",
+                  line: series.marker.line
+                    ? {
+                        width: series.marker.line.width || 1,
+                        color:
+                          series.marker.line.color ??
+                          readThemeColor("--muted-foreground") ??
+                          "#444",
+                      }
+                    : undefined,
+                }
+              : {
+                  size: 8,
+                  color: undefined,
+                },
 
-          line: series.line
-            ? {
-                width: series.line.width || 2,
-                color: series.line.color,
-                dash: series.line.dash,
-              }
-            : undefined,
+            line: series.line
+              ? {
+                  width: series.line.width || 2,
+                  color: series.line.color,
+                  dash: series.line.dash,
+                }
+              : undefined,
 
-          visible: series.visible,
-          showlegend: series.showlegend !== false,
-          legendgroup: series.legendgroup,
-        }) as any as PlotData,
-    ),
+            visible: series.visible,
+            showlegend: series.showlegend !== false,
+            legendgroup: series.legendgroup,
+          }) as any as PlotData,
+      ),
 
-    // Contour traces
-    ...contourData.map(
-      (series, index) =>
-        ({
-          z: series.z,
-          a: series.a,
-          b: series.b,
-          name: series.name || `Contour ${index + 1}`,
-          type: "contourcarpet",
-          carpet: series.carpet || `carpet${index + 1}`,
+      // Contour traces
+      ...contourData.map(
+        (series, index) =>
+          ({
+            z: series.z,
+            a: series.a,
+            b: series.b,
+            name: series.name || `Contour ${index + 1}`,
+            type: "contourcarpet",
+            carpet: series.carpet || `carpet${index + 1}`,
 
-          colorscale: series.colorscale || "Viridis",
-          reversescale: series.reversescale,
-          showscale: series.showscale !== false,
-          colorbar: series.colorbar || {
-            title: "Value",
-            titleside: "right",
-          },
+            colorscale: series.colorscale || "Viridis",
+            reversescale: series.reversescale,
+            showscale: series.showscale !== false,
+            colorbar: series.colorbar || {
+              title: "Value",
+              titleside: "right",
+            },
 
-          ncontours: series.ncontours || 15,
-          contours: series.contours
-            ? {
-                start: series.contours.start,
-                end: series.contours.end,
-                size: series.contours.size,
-                showlines: series.contours.showlines !== false,
-                showlabels: series.contours.showlabels || false,
-                coloring: series.contours.coloring || "fill",
-              }
-            : {
-                showlines: true,
-                coloring: "fill",
-              },
+            ncontours: series.ncontours || 15,
+            contours: series.contours
+              ? {
+                  start: series.contours.start,
+                  end: series.contours.end,
+                  size: series.contours.size,
+                  showlines: series.contours.showlines !== false,
+                  showlabels: series.contours.showlabels || false,
+                  coloring: series.contours.coloring || "fill",
+                }
+              : {
+                  showlines: true,
+                  coloring: "fill",
+                },
 
-          visible: series.visible,
-          showlegend: series.showlegend,
-          legendgroup: series.legendgroup,
-        }) as any as PlotData,
-    ),
-  ];
+            visible: series.visible,
+            showlegend: series.showlegend,
+            legendgroup: series.legendgroup,
+          }) as any as PlotData,
+      ),
+    ],
+    [carpetData, contourData, fontSizes.tick, scatterData],
+  );
 
   // Tier-aware chrome; the carpet axes live on the traces above.
-  const layout = responsiveChrome(config, sizing) as any;
+  const layout = useMemo(
+    () => responsiveChrome(config, sizing) as any,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+    [config, sizing, themeVersion],
+  );
 
-  const plotConfig = createPlotlyConfig(config, sizing);
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>

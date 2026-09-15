@@ -1,4 +1,5 @@
 import { Logger, Module } from "@nestjs/common";
+import type { MiddlewareConsumer, NestModule } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
 import { ScheduleModule } from "@nestjs/schedule";
@@ -19,6 +20,7 @@ import emailConfig from "./common/config/email.config";
 import githubConfig from "./common/config/github.config";
 import mailchimpConfig from "./common/config/mailchimp.config";
 import { DatabaseModule } from "./common/database/database.module";
+import { CompressionMiddleware } from "./common/middleware/compression.middleware";
 import { AnalyticsModule } from "./common/modules/analytics/analytics.module";
 import { createOrpcErrorLoggingInterceptor } from "./common/utils/orpc-error-logging";
 import { ExperimentModule } from "./experiments/experiment.module";
@@ -88,4 +90,8 @@ const orpcLogger = new Logger("ORPC");
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(CompressionMiddleware).forRoutes("{*path}");
+  }
+}

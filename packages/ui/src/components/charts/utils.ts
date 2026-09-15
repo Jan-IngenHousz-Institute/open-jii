@@ -53,17 +53,11 @@ export function validateDimensions(
 export function getPlotType(baseType: string, renderer: WebGLRenderer): string {
   if (renderer === "svg") return baseType;
 
-  // WebGL type mappings
+  // Scatter is the only family with a WebGL twin in the bundle; everything
+  // else keeps its SVG type.
   const webglTypes: Record<string, string> = {
     scatter: "scattergl",
     line: "scattergl",
-    bar: "bar", // Bar charts don't have WebGL equivalent
-    histogram: "histogram", // Histogram doesn't have WebGL equivalent
-    heatmap: "heatmapgl",
-    contour: "contour", // Contour doesn't have WebGL equivalent
-    scatter3d: "scatter3d", // 3D plots are already optimized
-    surface: "surface",
-    mesh3d: "mesh3d",
   };
 
   return webglTypes[baseType] || baseType;
@@ -319,7 +313,19 @@ export function refineAxisType(
 ): Partial<LayoutAxis> {
   const base = axis ?? {};
   if (base.type && base.type !== "linear") return base;
-  const detected = detectAxisType(values);
+  return applyAxisType(base, detectAxisType(values));
+}
+
+/** `refineAxisType` split so a caller can cache the scan across renders. */
+export function applyAxisType(
+  axis: Partial<LayoutAxis> | undefined,
+  detected: "date" | "category" | "linear",
+): Partial<LayoutAxis> {
+  const base = axis ?? {};
+  const typeIsPinned = Boolean(base.type) && base.type !== "linear";
+  if (typeIsPinned) {
+    return base;
+  }
   if (detected === "date") return { ...base, type: "date" };
   if (detected === "category") {
     return { ...base, type: "category", categoryorder: "category ascending" };
@@ -927,7 +933,8 @@ export function createPlotlyConfig(
     modeBarStyle = "default",
     downloadFilename = "plot",
     imageFormat = "png",
-    responsive = true,
+    // `PlotlyChart` observes each container itself; see the note there.
+    responsive = false,
   } = config;
   const veryCompact = options.veryCompact ?? false;
   const compact = options.compact ?? veryCompact;

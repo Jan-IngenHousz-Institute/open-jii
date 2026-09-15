@@ -1,10 +1,11 @@
 import { createVisualization } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { renderHook, waitFor } from "@/test/test-utils";
+import { createTestQueryClient, renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
+import { experimentVisualizationIndexOptions } from "../useExperimentVisualizationIndex/useExperimentVisualizationIndex";
 import { useExperimentVisualization } from "./useExperimentVisualization";
 
 describe("useExperimentVisualization", () => {
@@ -48,6 +49,27 @@ describe("useExperimentVisualization", () => {
 
     expect(spy.params.id).toBe(visualization.experimentId);
     expect(spy.params.visualizationId).toBe(visualization.id);
+  });
+
+  it("starts from the experiment's cached visualization list without a request", async () => {
+    const visualization = createVisualization();
+    const spy = server.mount(contract.experiments.getExperimentVisualization, {
+      body: visualization,
+    });
+    const queryClient = createTestQueryClient();
+    queryClient.setQueryData(
+      experimentVisualizationIndexOptions(visualization.experimentId).queryKey,
+      [visualization],
+    );
+
+    const { result } = renderHook(
+      () => useExperimentVisualization(visualization.id, visualization.experimentId),
+      { queryClient },
+    );
+
+    expect(result.current.data).toMatchObject({ id: visualization.id });
+    await waitFor(() => expect(result.current.isFetching).toBe(false));
+    expect(spy.called).toBe(false);
   });
 
   it("handles 404 error", async () => {

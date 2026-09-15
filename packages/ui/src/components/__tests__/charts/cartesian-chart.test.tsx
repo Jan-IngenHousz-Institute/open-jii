@@ -41,6 +41,8 @@ vi.mock("../../charts/utils", () => ({
   // Pass-through axis refinement so tests assert on trace plumbing rather
   // than on the inference rules (those have their own tests in utils.test.ts).
   refineAxisType: vi.fn((axis) => axis ?? {}),
+  applyAxisType: vi.fn((axis) => axis ?? {}),
+  detectAxisType: vi.fn(() => "linear"),
   extendLayoutForFacets: vi.fn((layout) => layout),
   applyReferenceLines: vi.fn(),
   truncateCategoryTicks: vi.fn((axis) => axis),
