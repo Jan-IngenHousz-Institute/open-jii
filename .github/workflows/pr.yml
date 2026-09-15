@@ -82,6 +82,71 @@ jobs:
         shell: bash
         run: pnpm format:check
 
+  # The monitoring lambda zips are committed so terraform can plan from a fresh
+  # checkout, but nothing else rebuilds them. Without this gate a catalog or
+  # @repo/monitoring edit ships a bundle that still carries the previous content,
+  # and the failure is silent: the lambda runs, it just runs the old rules.
+  lambda_bundle_check:
+    name: Monitoring Lambda Bundle Freshness
+    runs-on: ubuntu-latest
+    env:
+      DO_NOT_TRACK: 1
+      TURBO_TELEMETRY_DISABLED: 1
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "24"
+
+      - name: Build @repo/monitoring
+        shell: bash
+        run: pnpm turbo run build --filter=@repo/monitoring
+
+      # Compares content, not the zip bytes: zip output varies by tool and
+      # timestamp, so a byte comparison would fail on every rebuild.
+      - name: Compare each committed bundle against its sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=0
+
+          for dir in infrastructure/modules/monitoring/*/lambda; do
+            zip="$dir/function.zip"
+            [ -f "$zip" ] || continue
+
+            extracted=$(mktemp -d)
+            unzip -q "$zip" -d "$extracted"
+
+            if [ -f "$extracted/catalog.yaml" ] \
+              && ! diff -q "$extracted/catalog.yaml" docs/monitoring/metrics-catalog.yaml > /dev/null; then
+              echo "::error file=$zip::bundled catalog.yaml differs from docs/monitoring/metrics-catalog.yaml"
+              status=1
+            fi
+
+            for compiled in "$extracted"/lib/*.js; do
+              [ -e "$compiled" ] || break
+              fresh="packages/monitoring/dist/$(basename "$compiled")"
+
+              if [ ! -f "$fresh" ]; then
+                echo "::error file=$zip::bundle carries $(basename "$compiled") which @repo/monitoring no longer builds"
+                status=1
+              elif ! diff -q "$compiled" "$fresh" > /dev/null; then
+                echo "::error file=$zip::bundled $(basename "$compiled") differs from a fresh @repo/monitoring build"
+                status=1
+              fi
+            done
+          done
+
+          if [ "$status" -ne 0 ]; then
+            echo "Rebuild with: pnpm turbo run build --filter=@repo/monitoring, then npm run build in each lambda dir"
+            exit 1
+          fi
+
+          echo "All committed monitoring bundles match their sources"
+
   workspace_lint:
     name: Workspace Dependency Lint
     runs-on: ubuntu-latest
