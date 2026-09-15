@@ -62,8 +62,8 @@ describe("CalitoolSpectralBoard", () => {
     const reply = await instrument.identify();
 
     expect(reply).toContain("CaliTool");
-    // Both terminators: this is the one command written to a port not yet known.
-    expect(transport.send).toHaveBeenCalledWith("*IDN?\r\n");
+    // The terminator both this board and a newline-framed console accept.
+    expect(transport.send).toHaveBeenCalledWith("*IDN?\n");
   });
 
   // The board greets with up to three lines and the identity is not always the first.
