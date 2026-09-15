@@ -804,7 +804,19 @@
         "disconnect": "Verbinding verbreken",
         "unsupportedBrowser": "Deze browser heeft geen Web Serial. Gebruik een op Chromium gebaseerde browser op een desktop.",
         "unsupportedDevice": "Deze apparaatfamilie heeft geen seriële verbinding.",
-        "wrongFamily": "Er werd een {{expected}}-apparaat verwacht, maar een {{actual}} antwoordde. Verbind het juiste apparaat."
+        "wrongFamily": "Er werd een {{expected}}-apparaat verwacht, maar een {{actual}} antwoordde. Verbind het juiste apparaat.",
+        "roleHeading": "Instrumenten op de meetopstelling",
+        "roleHint": "Elk instrument gebruikt een eigen poort; de browser vraagt per verbinding om één poort.",
+        "roleHandshake": "Identificeert zich als",
+        "roleRequired": "De meting heeft dit instrument nodig.",
+        "roleOptional": "Optioneel. Stappen die het uitlezen worden overgeslagen als het ontbreekt.",
+        "roleAction": "Verbinden",
+        "roleConnecting": "Verbinden…",
+        "roleConnected": "Verbonden",
+        "roleMismatch": "Deze poort meldde zich als een ander instrument en is weer gesloten.",
+        "roleUnrecognised": "Op deze poort heeft zich geen bekend instrument gemeld.",
+        "roleFailed": "Deze poort kon niet worden geopend.",
+        "roleMissing": "Verbind de instrumenten die de meting nodig heeft voordat u verdergaat."
       },
       "prompt": {
         "confirmLabel": "Typ {{token}} om door te gaan",

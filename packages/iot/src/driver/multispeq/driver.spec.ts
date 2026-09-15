@@ -62,6 +62,31 @@ describe("MultispeqDriver", () => {
       );
     });
 
+    // A console write the firmware never answers. Waiting it out would time out on
+    // healthy hardware and put the cancel switch on the wire behind the command.
+    it("resolves a write the caller says carries no reply, and sends no cancel", async () => {
+      driver.initialize(transport);
+
+      const result = await driver.execute("ledDac+3+800+", { expectReply: false });
+
+      expect(result.success).toBe(true);
+      expect(vi.mocked(transport.send).mock.calls.map(([payload]) => payload)).toEqual([
+        `ledDac+3+800+${MULTISPEQ_FRAMING.LINE_ENDING}`,
+      ]);
+    });
+
+    it("still waits for a reply when the caller says nothing", async () => {
+      driver.initialize(transport);
+      vi.mocked(transport.send).mockImplementation(() => {
+        setTimeout(() => transport.simulateData('{"result":"ok"}ABCD1234\n'), 0);
+        return Promise.resolve();
+      });
+
+      const result = await driver.execute("hello");
+
+      expect(result.data).toEqual({ result: "ok" });
+    });
+
     it("should send command with line ending", async () => {
       driver.initialize(transport);
 

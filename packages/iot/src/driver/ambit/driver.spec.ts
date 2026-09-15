@@ -183,6 +183,20 @@ describe("AmbitDriver", () => {
     expect(transport.send).toHaveBeenCalledWith("set_spec,1.2340\n");
   });
 
+  // The LED latch prints nothing the host is documented to read, so waiting for a
+  // reply would stall every point of a sweep and then fail it.
+  it("latches the actinic LED without waiting for a reply", async () => {
+    const transport = tableTransport({ "hello\n": HELLO_REPLY });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute("arrun1,1,1,2,0,0,1,0,1,150,1,\n,");
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({ acknowledged: "arrun1" });
+    expect(transport.send).toHaveBeenCalledWith("arrun1,1,1,2,0,0,1,0,1,150,1,\n,\n");
+  });
+
   it("fails a silent writer when the hello re-verify stays silent", async () => {
     const transport = tableTransport({ "hello\n": HELLO_REPLY });
     const driver = fastDriver();

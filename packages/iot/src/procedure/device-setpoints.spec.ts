@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { SensorFamily } from "../core/families";
 import type { IDeviceDriver } from "../driver/driver-base";
 import { DEVICE_SETPOINTS, bindDeviceSetpoints } from "./device-setpoints";
-import type { SetpointTarget } from "./interpreter";
+import type { DeviceSetpointTarget } from "./device-setpoints";
 
 interface FakeConsole {
   success: boolean;
@@ -12,7 +12,7 @@ interface FakeConsole {
 
 /** A console that records what was written to it, standing in for a family driver. */
 function fakeDevice(family: SensorFamily | undefined, reply: FakeConsole = { success: true }) {
-  const execute = vi.fn((_command: string | object, _options?: { timeoutMs?: number }) =>
+  const execute = vi.fn((_command: string | object, _options?: { expectReply?: boolean }) =>
     Promise.resolve(reply),
   );
 
@@ -26,7 +26,7 @@ function fakeDevice(family: SensorFamily | undefined, reply: FakeConsole = { suc
   return { driver, execute };
 }
 
-function bindOrFail(driver: IDeviceDriver): SetpointTarget {
+function bindOrFail(driver: IDeviceDriver): DeviceSetpointTarget {
   const target = bindDeviceSetpoints(driver);
   if (!target) {
     throw new Error(`Expected ${String(driver.family)} to declare setpoints`);
@@ -119,12 +119,14 @@ describe("bindDeviceSetpoints", () => {
     );
   });
 
-  it("applies a MultispeQ LED brightness as its DAC command, with the short timeout", async () => {
+  // The board answers this write with nothing, so waiting for a reply would time
+  // out on healthy hardware and put the driver's cancel switch behind the command.
+  it("applies a MultispeQ LED brightness as a DAC command the driver must not wait on", async () => {
     const { driver, execute } = fakeDevice("multispeq");
 
     await bindOrFail(driver).applySetpoint("led_3", 800);
 
-    expect(execute).toHaveBeenCalledWith("ledDac+3+800+", { timeoutMs: 3_000 });
+    expect(execute).toHaveBeenCalledWith("ledDac+3+800+", { expectReply: false });
   });
 
   it("refuses a MultispeQ brightness past the DAC width", async () => {
@@ -136,20 +138,65 @@ describe("bindDeviceSetpoints", () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
-  it("declares one MultispeQ setpoint per LED the board drives", () => {
+  it("declares one MultispeQ setpoint per LED the bench drives", () => {
     const names = DEVICE_SETPOINTS.multispeq?.map((setpoint) => setpoint.name);
 
-    expect(names).toEqual([
-      "led_1",
-      "led_2",
-      "led_3",
-      "led_4",
-      "led_5",
-      "led_6",
-      "led_7",
-      "led_8",
-      "led_9",
-      "led_10",
-    ]);
+    expect(names).toEqual(["led_1", "led_2", "led_3", "led_4", "led_5", "led_6"]);
+  });
+
+  // A device latched at the last sweep point is the hazard the rig exists to avoid:
+  // the LED holds its level until something writes another one.
+  describe("resting the device", () => {
+    it("writes every setpoint it drove back to its safe level", async () => {
+      const { driver, execute } = fakeDevice("multispeq");
+      const target = bindOrFail(driver);
+
+      await target.applySetpoint("led_2", 500);
+      await target.applySetpoint("led_5", 800);
+      execute.mockClear();
+
+      await target.rest();
+
+      expect(execute.mock.calls.map(([command]) => command)).toEqual([
+        "ledDac+2+0+",
+        "ledDac+5+0+",
+      ]);
+    });
+
+    it("writes nothing for a device it never drove", async () => {
+      const { driver, execute } = fakeDevice("ambit");
+
+      await bindOrFail(driver).rest();
+
+      expect(execute).not.toHaveBeenCalled();
+    });
+
+    it("rests a setpoint once, however many times the sweep drove it", async () => {
+      const { driver, execute } = fakeDevice("ambit");
+      const target = bindOrFail(driver);
+
+      await target.applySetpoint("led_setting", 10);
+      await target.applySetpoint("led_setting", 250);
+      execute.mockClear();
+
+      await target.rest();
+
+      expect(execute.mock.calls.map(([command]) => command)).toEqual([
+        "arrun1,1,1,2,0,0,1,0,1,0,1,\n,",
+      ]);
+    });
+
+    it("forgets what it rested, so a second rest is silent", async () => {
+      const { driver, execute } = fakeDevice("ambit");
+      const target = bindOrFail(driver);
+
+      await target.applySetpoint("led_setting", 250);
+      await target.rest();
+      execute.mockClear();
+
+      await target.rest();
+
+      expect(execute).not.toHaveBeenCalled();
+    });
   });
 });

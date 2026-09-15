@@ -1,4 +1,5 @@
 import { useIotConnections } from "@/hooks/iot/useIotConnections/useIotConnections";
+import { referencePort, supplyPort } from "@/test/bench-ports";
 import {
   createCalibrationDefinition,
   createCalibrationDefinitionSummary,
@@ -7,19 +8,25 @@ import {
   createIotDeviceDetail,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, waitFor } from "@/test/test-utils";
+import { render, screen, waitFor, within } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ITransportAdapter } from "@repo/iot";
-import { MiniParDriver } from "@repo/iot";
+import { KIPRIM_COMMANDS, KiprimDcSource, MiniParDriver, MicroPythonParReference } from "@repo/iot";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { CalibrationWizard } from "./calibration-wizard";
 
 vi.mock("@/hooks/iot/useIotConnections/useIotConnections", () => ({
   useIotConnections: vi.fn(),
+}));
+
+const mockOpenSerialPort = vi.fn<() => Promise<ITransportAdapter>>();
+
+vi.mock("@/hooks/iot/useIotCommunication/useIotCommunication", () => ({
+  openSerialPort: () => mockOpenSerialPort(),
 }));
 
 // Plotly has no business in jsdom; the review test covers the chart's inputs.
@@ -101,6 +108,32 @@ const DEFINITION_WITH_CHECK = createCalibrationDefinition({
         read: [
           { instrument: "dut", command: "par", as: "par" },
           { operator: "Enter the reference meter reading", as: "par_ref", type: "number" },
+        ],
+      },
+    ],
+  },
+});
+
+const SWEEP_CURRENTS = [0.8, 2.4, 0];
+
+/** The same bench with the lamp and the reference on their own ports: no reading is typed in. */
+const AUTOMATED_DEFINITION = createCalibrationDefinition({
+  id: DEFINITION_ID,
+  family: "minipar",
+  captureProcedure: {
+    instruments: [
+      { role: "dut" },
+      { role: "lamp", handshake: new KiprimDcSource().identityToken },
+      { role: "par_ref", handshake: new MicroPythonParReference().identityToken },
+    ],
+    steps: [
+      {
+        kind: "sweep",
+        series: "par_sweep",
+        stimulus: { instrument: "lamp", set: "current_a", values: SWEEP_CURRENTS },
+        read: [
+          { instrument: "dut", command: "par_raw", as: "par_raw" },
+          { instrument: "par_ref", command: "par", as: "par_ref" },
         ],
       },
     ],
@@ -522,5 +555,155 @@ describe("CalibrationWizard", () => {
     renderWizard();
 
     expect(await screen.findByText("iot.calibration.choose.empty")).toBeInTheDocument();
+  });
+
+  describe("a procedure that declares bench instruments", () => {
+    beforeEach(() => {
+      Object.defineProperty(navigator, "serial", { value: {}, configurable: true });
+      mockOpenSerialPort.mockReset();
+      server.mount(contract.iot.getCalibrationDefinition, { body: AUTOMATED_DEFINITION });
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(navigator, "serial");
+    });
+
+    async function chooseProcedure() {
+      await userEvent.click(await screen.findByRole("radio"));
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+      await screen.findByText("iot.calibration.connect.roleHeading");
+    }
+
+    function benchRow(index: number) {
+      const bench = screen.getByRole("list", { name: "iot.calibration.connect.roleHeading" });
+      return within(bench).getAllByRole("listitem")[index];
+    }
+
+    async function connectBenchRole(index: number) {
+      await userEvent.click(
+        within(benchRow(index)).getByRole("button", {
+          name: "iot.calibration.connect.roleAction",
+        }),
+      );
+    }
+
+    it("runs a bench with a supply and a reference", async () => {
+      const device = attachMiniPar([420, 150, 8.33]);
+      const supply = supplyPort();
+      const reference = referencePort([402.12, 142.92, 6.92]);
+      mockOpenSerialPort
+        .mockResolvedValueOnce(supply.transport)
+        .mockResolvedValueOnce(reference.transport);
+      const createSpy = server.mount(contract.iot.createCalibrationRun, {
+        status: 201,
+        body: createCalibrationRun({ deviceId: DEVICE_ID, definitionId: DEFINITION_ID }),
+      });
+      renderWizard();
+
+      await chooseProcedure();
+      await connectBenchRole(0);
+      await connectBenchRole(1);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "iot.calibration.cta.next" })).toBeEnabled();
+      });
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+
+      await screen.findByRole("button", { name: "iot.calibration.review.approve" });
+
+      // Every reading came off an instrument, so no operator prompt stood between the points.
+      expect(createSpy.body).toMatchObject({
+        payload: {
+          par_sweep: [
+            { stimulus: 0.8, par_raw: 420, par_ref: 402.12 },
+            { stimulus: 2.4, par_raw: 150, par_ref: 142.92 },
+            { stimulus: 0, par_raw: 8.33, par_ref: 6.92 },
+          ],
+        },
+      });
+      expect(device.sent).toEqual(["par_raw", "par_raw", "par_raw"]);
+      await waitFor(() => {
+        expect(supply.sent).toEqual([
+          KIPRIM_COMMANDS.IDENTIFY,
+          KIPRIM_COMMANDS.setCurrent(0.8),
+          KIPRIM_COMMANDS.setCurrent(2.4),
+          KIPRIM_COMMANDS.setCurrent(0),
+          KIPRIM_COMMANDS.setCurrent(0),
+        ]);
+      });
+    });
+
+    // Walking away is the path an operator takes most often, and the one that would
+    // leave a lamp driving current with no page left to turn it off.
+    it("rests the bench and closes its ports when the operator leaves", async () => {
+      attachMiniPar([420]);
+      const supply = supplyPort();
+      mockOpenSerialPort.mockResolvedValueOnce(supply.transport);
+      const onClose = renderWizard();
+
+      await chooseProcedure();
+      await connectBenchRole(0);
+      await waitFor(() => {
+        expect(
+          within(benchRow(0)).getByText("iot.calibration.connect.roleConnected"),
+        ).toBeInTheDocument();
+      });
+
+      // Back to the picker, then out: the ports were opened and must not stay open.
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.back" }));
+      await userEvent.click(
+        await screen.findByRole("button", { name: "iot.calibration.cta.cancel" }),
+      );
+
+      expect(onClose).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(supply.sent.at(-1)).toBe(KIPRIM_COMMANDS.setCurrent(0));
+      });
+      expect(supply.transport.isConnected()).toBe(false);
+    });
+
+    it("returns the rig to rest when the run aborts", async () => {
+      attachMiniPar([420, 150, 8.33]);
+      const supply = supplyPort();
+      // One reading short: the second point cannot be read and the sweep stops there.
+      const reference = referencePort([402.12]);
+      mockOpenSerialPort
+        .mockResolvedValueOnce(supply.transport)
+        .mockResolvedValueOnce(reference.transport);
+      const createSpy = server.mount(contract.iot.createCalibrationRun, {
+        status: 201,
+        body: createCalibrationRun(),
+      });
+      renderWizard();
+
+      await chooseProcedure();
+      await connectBenchRole(0);
+      await connectBenchRole(1);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "iot.calibration.cta.next" })).toBeEnabled();
+      });
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+
+      expect(await screen.findByText("iot.calibration.capture.aborted")).toBeInTheDocument();
+      expect(createSpy.called).toBe(false);
+      expect(supply.sent).toContain(KIPRIM_COMMANDS.setCurrent(2.4));
+      await waitFor(() => {
+        expect(supply.sent.at(-1)).toBe(KIPRIM_COMMANDS.setCurrent(0));
+      });
+    });
+
+    it("holds the run back when a bench port answers as another instrument, and says what answered", async () => {
+      attachMiniPar([420]);
+      mockOpenSerialPort.mockResolvedValue(referencePort([402.12]).transport);
+      renderWizard();
+
+      await chooseProcedure();
+      await connectBenchRole(0);
+
+      expect(await screen.findByText("iot.calibration.connect.roleMismatch")).toBeInTheDocument();
+      expect(within(benchRow(0)).getByText(/raw REPL/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "iot.calibration.cta.next" })).toBeDisabled();
+    });
   });
 });

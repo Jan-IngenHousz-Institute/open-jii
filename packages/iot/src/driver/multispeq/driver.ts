@@ -27,6 +27,10 @@ import type {
 } from "./interface";
 import { resolveCommandTimeoutMs } from "./multispeq-protocol-estimator";
 
+function settle(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /** Truncate long commands (e.g. full protocol JSON) so logs stay readable. */
 function summarizeCommand(commandStr: string, maxLength = 120): string {
   if (commandStr.length <= maxLength) return commandStr;
@@ -142,6 +146,13 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
         this.dataBuffer = [];
         this.bufferLength = 0;
         await this.transport.send(commandWithEnding);
+
+        // A console write the firmware never answers: waiting it out would time
+        // out on a healthy device and send the cancel switch behind the command.
+        if (options?.expectReply === false) {
+          await settle(MULTISPEQ_FRAMING.SILENT_WRITE_SETTLE_MS);
+          return { success: true };
+        }
 
         // Wait for response
         const response = await this.waitForResponse(timeoutMs);

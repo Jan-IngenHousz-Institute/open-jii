@@ -6,6 +6,7 @@ import { useApproveCalibrationRun } from "@/hooks/iot/useApproveCalibrationRun/u
 import { useCalibrationDefinition } from "@/hooks/iot/useCalibrationDefinition/useCalibrationDefinition";
 import { useCalibrationDefinitions } from "@/hooks/iot/useCalibrationDefinitions/useCalibrationDefinitions";
 import { useCalibrationOperator } from "@/hooks/iot/useCalibrationOperator/useCalibrationOperator";
+import { useCalibrationRig } from "@/hooks/iot/useCalibrationRig/useCalibrationRig";
 import { useCreateCalibrationRun } from "@/hooks/iot/useCreateCalibrationRun/useCreateCalibrationRun";
 import { useIotConnections } from "@/hooks/iot/useIotConnections/useIotConnections";
 import { useRejectCalibrationRun } from "@/hooks/iot/useRejectCalibrationRun/useRejectCalibrationRun";
@@ -110,6 +111,10 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
   const active = useActiveDeviceCalibration(device.id);
   const connections = useIotConnections(family);
   const operator = useCalibrationOperator();
+  const rig = useCalibrationRig(
+    definition.data?.captureProcedure,
+    connections.connections.at(0)?.driver,
+  );
   const createRun = useCreateCalibrationRun();
   const approveRun = useApproveCalibrationRun();
   const rejectRun = useRejectCalibrationRun();
@@ -117,6 +122,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
 
   const connection = connections.connections.at(0);
   const isConnectedToFamily = connection?.family === family;
+  const canLeaveConnectStep = isConnectedToFamily && rig.hasEveryRequiredRole;
   const hasDefinition = definition.data !== undefined;
   // The device package drives fewer families than the platform registers, so writing back is offered only where a driver exists.
   const writableFamily = isSensorFamily(family) ? family : null;
@@ -126,6 +132,16 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
   const cancelOperator = operator.cancel;
   useEffect(() => cancelOperator, [cancelOperator]);
 
+  // The rig object is new on every render; the dependency lists below hold the ref instead.
+  const rigRef = useRef(rig);
+  rigRef.current = rig;
+
+  useEffect(() => {
+    if (step === "done") {
+      void rigRef.current.shutdownAll();
+    }
+  }, [step]);
+
   const startCapture = useCallback(async () => {
     if (!definition.data || !connection) return;
     setIsCapturing(true);
@@ -134,7 +150,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
 
     try {
       const result = await runCaptureProcedure(definition.data.captureProcedure, {
-        rig: { dut: { read: connection.driver } },
+        rig: rigRef.current.bindings,
         operator: operator.port,
         onProgress: (event) => setEvents((previous) => [...previous, event]),
       });
@@ -157,6 +173,8 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
     } catch (error) {
       setCaptureError(error instanceof Error ? error.message : String(error));
     } finally {
+      // A lamp left driven after an aborted sweep is what a bench must never see.
+      await rigRef.current.rest();
       setIsCapturing(false);
     }
   }, [connection, createRun, definition.data, device.id, operator.port]);
@@ -209,7 +227,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
       const postInfo = await readPostWriteInfo(connection.driver);
       const report = { calibrationId: applied.id, writeResults: results, postInfo };
       await reportWrite.mutateAsync(report);
-      const checked = await verifyOnDevice(definition.data.captureProcedure, connection, results);
+      const checked = await verifyOnDevice(definition.data.captureProcedure, results);
       if (checked) {
         await reportWrite.mutateAsync({ ...report, verification: checked });
       }
@@ -225,7 +243,6 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
   /** The procedure's check once something reached the device; a stop keeps what it read, and the write stands. */
   async function verifyOnDevice(
     procedure: CalibrationDefinition["captureProcedure"],
-    rigConnection: NonNullable<typeof connection>,
     results: CalibrationWriteResults,
   ): Promise<CalibrationRunPayload | undefined> {
     const hasCheck = (procedure.verify?.length ?? 0) > 0;
@@ -237,7 +254,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
     setVerificationError(null);
     try {
       const result = await runVerificationProcedure(procedure, {
-        rig: { dut: { read: rigConnection.driver } },
+        rig: rigRef.current.bindings,
         operator: operator.port,
         onProgress: (event) => setVerifyEvents((previous) => [...previous, event]),
       });
@@ -250,8 +267,14 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
       setVerification(partial);
       return Object.keys(partial).length > 0 ? partial : undefined;
     } finally {
+      await rig.rest();
       setIsVerifying(false);
     }
+  }
+
+  function closeWizard() {
+    void rig.shutdownAll();
+    onClose();
   }
 
   function renderStepHeader() {
@@ -289,7 +312,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
           >
             {t("iot.calibration.cta.next")}
           </Button>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={closeWizard}>
             {t("iot.calibration.cta.cancel")}
           </Button>
         </div>
@@ -305,11 +328,12 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
           connection={connection}
           isConnecting={connections.isConnecting}
           error={connections.error}
+          rig={rig}
           onConnect={() => void connections.connect("serial")}
           onDisconnect={() => void connections.disconnectAll()}
         />
         <div className="flex gap-2">
-          <Button type="button" onClick={() => setStep("capture")} disabled={!isConnectedToFamily}>
+          <Button type="button" onClick={() => setStep("capture")} disabled={!canLeaveConnectStep}>
             {t("iot.calibration.cta.next")}
           </Button>
           <Button type="button" variant="outline" onClick={() => setStep("choose")}>
@@ -343,7 +367,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
               <Button type="button" onClick={retryCapture}>
                 {t("iot.calibration.capture.retry")}
               </Button>
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" onClick={closeWizard}>
                 {t("iot.calibration.cta.cancel")}
               </Button>
             </div>
@@ -401,7 +425,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
     return (
       <div className="space-y-4">
         <p className="text-sm">{hint}</p>
-        <Button type="button" onClick={onClose}>
+        <Button type="button" onClick={closeWizard}>
           {t("iot.calibration.done.close")}
         </Button>
       </div>

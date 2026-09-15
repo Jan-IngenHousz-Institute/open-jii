@@ -804,7 +804,19 @@
         "disconnect": "Trennen",
         "unsupportedBrowser": "Dieser Browser hat kein Web Serial. Verwenden Sie einen Chromium-basierten Browser auf einem Desktop.",
         "unsupportedDevice": "Diese Gerätefamilie hat keine serielle Schnittstelle.",
-        "wrongFamily": "Ein {{expected}}-Gerät wurde erwartet, aber ein {{actual}} hat geantwortet. Verbinden Sie das richtige Gerät."
+        "wrongFamily": "Ein {{expected}}-Gerät wurde erwartet, aber ein {{actual}} hat geantwortet. Verbinden Sie das richtige Gerät.",
+        "roleHeading": "Instrumente am Messplatz",
+        "roleHint": "Jedes Instrument belegt einen eigenen Port; der Browser fragt pro Verbindung nach einem Port.",
+        "roleHandshake": "Identifiziert sich als",
+        "roleRequired": "Der Durchlauf benötigt dieses Instrument.",
+        "roleOptional": "Optional. Schritte, die es auslesen, werden übersprungen, wenn es fehlt.",
+        "roleAction": "Verbinden",
+        "roleConnecting": "Wird verbunden…",
+        "roleConnected": "Verbunden",
+        "roleMismatch": "Dieser Port hat sich als anderes Instrument gemeldet und wurde wieder geschlossen.",
+        "roleUnrecognised": "An diesem Port hat sich kein bekanntes Instrument gemeldet.",
+        "roleFailed": "Dieser Port konnte nicht geöffnet werden.",
+        "roleMissing": "Verbinden Sie die benötigten Instrumente, bevor Sie fortfahren."
       },
       "prompt": {
         "confirmLabel": "Geben Sie {{token}} ein, um fortzufahren",

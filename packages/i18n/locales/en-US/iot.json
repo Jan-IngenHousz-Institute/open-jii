@@ -804,7 +804,19 @@
         "disconnect": "Disconnect",
         "unsupportedBrowser": "This browser has no Web Serial. Use a Chromium-based browser on a desktop.",
         "unsupportedDevice": "This device family has no serial transport.",
-        "wrongFamily": "Expected a {{expected}} device but a {{actual}} answered. Connect the right device."
+        "wrongFamily": "Expected a {{expected}} device but a {{actual}} answered. Connect the right device.",
+        "roleHeading": "Bench instruments",
+        "roleHint": "Each instrument takes a port of its own, so the browser asks for one port per connection.",
+        "roleHandshake": "Identifies itself as",
+        "roleRequired": "The run needs this instrument.",
+        "roleOptional": "Optional. Steps that read it are skipped when it is missing.",
+        "roleAction": "Connect",
+        "roleConnecting": "Connecting…",
+        "roleConnected": "Connected",
+        "roleMismatch": "This port answered as a different instrument, so it was closed again.",
+        "roleUnrecognised": "Nothing on this port identified itself as an instrument the bench knows.",
+        "roleFailed": "This port could not be opened.",
+        "roleMissing": "Connect the instruments the run needs before continuing."
       },
       "prompt": {
         "confirmLabel": "Type {{token}} to continue",

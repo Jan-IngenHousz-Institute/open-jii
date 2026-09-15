@@ -35,6 +35,8 @@ export const AMBIT_SILENT_COMMANDS: readonly string[] = [
   AMBIT_COMMANDS.SET_ACT,
   AMBIT_COMMANDS.SET_EMIT,
   AMBIT_COMMANDS.SET_NAME,
+  // Latches the LED and prints nothing the host is documented to read.
+  AMBIT_COMMANDS.ARRUN1,
 ];
 
 /** Per-command overrides where the default quiet window / timeout is wrong. */
