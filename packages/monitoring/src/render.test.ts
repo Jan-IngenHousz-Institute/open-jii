@@ -55,7 +55,7 @@ describe("renderObservability", () => {
   it("is a single green line when nothing is wrong", () => {
     const output = renderObservability(
       [{ ...reading("a", "A", 1), evaluation: { state: "ok" } }],
-      [],
+      { configErrors: [], failedRegions: [] },
       options,
     );
 
@@ -76,7 +76,7 @@ describe("renderObservability", () => {
           evaluation: { state: "anomaly", reason: "above threshold 600000" },
         },
       ],
-      [],
+      { configErrors: [], failedRegions: [] },
       options,
     );
 
@@ -97,7 +97,7 @@ describe("renderObservability", () => {
     expect(
       renderObservability(
         [anomaly, { ...anomaly, metric: { ...anomaly.metric, id: "b" } }],
-        [],
+        { configErrors: [], failedRegions: [] },
         options,
       ),
     ).toContain("2 anomalies");
@@ -111,7 +111,7 @@ describe("renderObservability", () => {
           evaluation: { state: "anomaly", reason: "no datapoints, expected continuously" },
         },
       ],
-      [],
+      { configErrors: [], failedRegions: [] },
       options,
     );
 
@@ -122,12 +122,26 @@ describe("renderObservability", () => {
   it("surfaces silent signals and config errors as self-check lines", () => {
     const output = renderObservability(
       [{ ...reading("gone", "Gone", null), evaluation: { state: "missing" } }],
-      ["broken"],
+      { configErrors: ["broken"], failedRegions: [] },
       options,
     );
 
     expect(output).toContain("no datapoints for gone");
     expect(output).toContain("unresolved catalog placeholders for broken");
+  });
+
+  it("says a failed region is missing rather than healthy", () => {
+    // A green line assembled from a partial query is the worst possible output:
+    // it reads as "nothing is wrong" when the truth is "we could not look".
+    const output = renderObservability(
+      [{ ...reading("a", "A", 1), evaluation: { state: "ok" } }],
+      { configErrors: [], failedRegions: ["us-east-1"] },
+      options,
+    );
+
+    expect(output).toContain("🟢 *No anomalies*");
+    expect(output).toContain("CloudWatch queries failed in us-east-1");
+    expect(output).toContain("missing above, not healthy");
   });
 
   it("omits the runbook link when no base url is configured", () => {
@@ -138,7 +152,7 @@ describe("renderObservability", () => {
           evaluation: { state: "anomaly", reason: "r" },
         },
       ],
-      [],
+      { configErrors: [], failedRegions: [] },
       { environment: "dev" },
     );
 

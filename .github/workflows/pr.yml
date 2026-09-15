@@ -120,6 +120,11 @@ jobs:
             extracted=$(mktemp -d)
             unzip -q "$zip" -d "$extracted"
 
+            if ! diff -q "$extracted/index.js" "$dir/index.js" > /dev/null; then
+              echo "::error file=$zip::bundled index.js differs from $dir/index.js"
+              status=1
+            fi
+
             if [ -f "$extracted/catalog.yaml" ] \
               && ! diff -q "$extracted/catalog.yaml" docs/monitoring/metrics-catalog.yaml > /dev/null; then
               echo "::error file=$zip::bundled catalog.yaml differs from docs/monitoring/metrics-catalog.yaml"

@@ -151,7 +151,10 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    active: true
+    # Stays inactive until the export task that publishes CollectorHeartbeat lands.
+    # An absence rule against a producer that does not exist yet alarms on its first
+    # run and never stops, which is the failure this metric exists to detect.
+    active: false
     slots: [alert, dashboard]
     severity: critical
     signal:
@@ -162,9 +165,9 @@ metrics:
     baseline: { nodata: alert }
     runbook: docs/runbooks/dlt-heartbeat.md
     notes: >
-      Value is always 1; only its absence carries meaning. NoData-as-Alerting in
-      Grafana (P2b), and the composer self-check reports it when the series goes
-      silent. Deliberately has no threshold.
+      Value is always 1; only its absence carries meaning, so the absence rule is the
+      whole metric: the composer renders it as an anomaly and Grafana alerts on NoData.
+      Deliberately has no threshold.
 
   - num: 64
     id: gold-materialization-age
@@ -172,7 +175,8 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    active: true
+    # Inactive with 10 and 13: same producer, same export task.
+    active: false
     slots: [exception, dashboard]
     signal:
       namespace: OpenJII/Data
@@ -215,7 +219,8 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    active: true
+    # Inactive with 10 and 64: same producer, same export task.
+    active: false
     slots: [exception]
     signal:
       namespace: OpenJII/Data
@@ -436,13 +441,20 @@ metrics:
     source: pg
     phase: P1
     active: true
-    slots: [pulse, weekly]
+    # Weekly only: the publisher emits one datapoint per week, so a pulse slot would
+    # render 0 on six days in seven. It joins the pulse when the publisher goes daily.
+    slots: [weekly]
     signal:
       namespace: OpenJII/UserRegistrations
       metric: WeeklyNewUsers
       stat: Sum
+      dimensions: { Environment: "${ENVIRONMENT}" }
     baseline: { method: wow }
-    notes: Weekly granularity until metrics-publisher promotion (P3) adds daily counts.
+    notes: >
+      Weekly granularity until the metrics-publisher promotion adds daily counts. The
+      publisher backdates each datapoint to the Monday its ISO week started, so the
+      weekly digest's trailing window is offset from it by the digest's own start hour;
+      the promotion stamps at publish time and closes that gap.
 
   - num: 31
     id: active-users
@@ -544,7 +556,11 @@ metrics:
     phase: P1
     active: true
     slots: [exception]
-    notes: Built into the composer; active metrics with no datapoints are reported, never silently skipped.
+    notes: >
+      Built into the composer. An active metric with no datapoints takes one of three
+      routes: a nodata rule makes it an anomaly, prior history makes it a self-check
+      line, and neither makes it a silent no-data because a metric that has never
+      reported cannot be distinguished from one whose producer is not built yet.
 
   # Public metrics pipeline (post-landing)
   - num: 41

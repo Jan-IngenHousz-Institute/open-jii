@@ -36,9 +36,15 @@ function runbookLink(metric: CatalogMetric, runbookBaseUrl?: string): string {
   return ` · <${runbookBaseUrl}/${metric.runbook}|runbook>`;
 }
 
+/** Things that went wrong with the digest itself, as opposed to with the platform. */
+export interface SelfChecks {
+  configErrors: string[];
+  failedRegions: string[];
+}
+
 export function renderObservability(
   readings: EvaluatedReading[],
-  configErrors: string[],
+  { configErrors, failedRegions }: SelfChecks,
   { environment, runbookBaseUrl }: RenderOptions,
 ): string {
   const anomalies = readings.filter((entry) => entry.evaluation.state === "anomaly");
@@ -78,6 +84,15 @@ export function renderObservability(
 
   if (configErrors.length > 0) {
     lines.push(`⚠️ Self-check: unresolved catalog placeholders for ${configErrors.join(", ")}.`);
+  }
+
+  // Without this the digest would render a green line built from a partial query,
+  // which reads as "nothing is wrong" when the truth is "we could not look".
+  if (failedRegions.length > 0) {
+    lines.push(
+      `⚠️ Self-check: CloudWatch queries failed in ${failedRegions.join(", ")};` +
+        ` metrics from there are missing above, not healthy.`,
+    );
   }
 
   return lines.join("\n");
