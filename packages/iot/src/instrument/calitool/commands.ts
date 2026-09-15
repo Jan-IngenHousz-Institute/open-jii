@@ -5,7 +5,12 @@
 
 /** Mixed casing is the board's own: `setled` is lower case where the rest are not. */
 export const CALITOOL_COMMANDS = {
-  IDENTIFY: "*IDN?\r",
+  /**
+   * The only command written to a port before anything is known about it, so it carries
+   * both terminators: a console that ends lines on the newline would otherwise hold this
+   * as a partial command and read the next instrument's probe fused onto it.
+   */
+  IDENTIFY: "*IDN?\r\n",
   MEASURE: "measure\r",
   setLed: (milliamps: number) => `setled ${milliamps}\r`,
   setGain: (gain: number) => `setGain ${gain}\r`,

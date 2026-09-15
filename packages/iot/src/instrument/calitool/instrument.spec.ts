@@ -4,7 +4,7 @@ import { DEFAULT_MAX_BUFFER_SIZE } from "../../driver/driver-base";
 import type { MockTransport } from "../../driver/testing/mock-transport";
 import { createMockTransport } from "../../driver/testing/mock-transport";
 import { identityMatches } from "../interface";
-import { CALITOOL_LIMITS } from "./commands";
+import { CALITOOL_COMMANDS, CALITOOL_LIMITS } from "./commands";
 import { CalitoolSpectralBoard } from "./instrument";
 
 const GREETING = "boot ok\r\nCaliTool v1.2\r\n";
@@ -24,7 +24,7 @@ function board(options: BoardOptions = {}): MockTransport {
   const transport = createMockTransport();
   vi.mocked(transport.send).mockImplementation((sent: string) => {
     const answerFor = () => {
-      if (sent === "*IDN?\r") {
+      if (sent === CALITOOL_COMMANDS.IDENTIFY) {
         return greeting;
       }
       if (sent.startsWith("get ")) {
@@ -62,7 +62,8 @@ describe("CalitoolSpectralBoard", () => {
     const reply = await instrument.identify();
 
     expect(reply).toContain("CaliTool");
-    expect(transport.send).toHaveBeenCalledWith("*IDN?\r");
+    // Both terminators: this is the one command written to a port not yet known.
+    expect(transport.send).toHaveBeenCalledWith("*IDN?\r\n");
   });
 
   // The board greets with up to three lines and the identity is not always the first.

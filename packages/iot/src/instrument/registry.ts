@@ -37,7 +37,13 @@ export interface BenchIdentification {
   reply: string;
 }
 
-/** Ask each known instrument in turn; null means nothing recognised the reply. */
+/**
+ * Ask each known instrument in turn; null means nothing recognised the reply.
+ *
+ * Every candidate writes to the same port, so an identity probe has to end its line in
+ * a way any of these consoles will accept. One that left a partial command behind would
+ * have the next candidate's probe read fused onto it.
+ */
 export async function identifyBenchInstrument(
   transport: ITransportAdapter,
   logger?: Logger,

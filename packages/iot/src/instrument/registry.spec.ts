@@ -72,6 +72,36 @@ describe("bench instrument registry", () => {
     expect(transport.send).not.toHaveBeenCalledWith(KIPRIM_COMMANDS.setCurrent(0));
   });
 
+  // One probe is carriage-return framed and the reference console is newline framed, so
+  // without a terminator between candidates the reference reads the two fused together
+  // and never names itself.
+  it("identifies a newline-framed reference after a probe that ends its line differently", async () => {
+    const transport = createMockTransport();
+    let pending = "";
+    vi.mocked(transport.send).mockImplementation((sent: string) => {
+      pending += sent;
+
+      let newline;
+      while ((newline = pending.indexOf("\n")) >= 0) {
+        const line = pending.slice(0, newline).trim();
+        pending = pending.slice(newline + 1);
+        const answer =
+          line === "hello"
+            ? "MiniPAR,1.1,1.03\n"
+            : line === "get_name"
+              ? "Par_REF\n"
+              : "error:unknown_command\n";
+        setTimeout(() => transport.simulateData(answer), 0);
+      }
+      return Promise.resolve();
+    });
+
+    const identification = await identifyBenchInstrument(transport);
+
+    expect(identification?.instrument.model).toBe("minipar-reference");
+    expect(identification?.reply).toContain("Par_REF");
+  });
+
   it("returns null for an instrument nothing recognises", async () => {
     const transport = respondingWith("KEITHLEY INSTRUMENTS,MODEL 2450,04123456,1.7.12b\n");
 
