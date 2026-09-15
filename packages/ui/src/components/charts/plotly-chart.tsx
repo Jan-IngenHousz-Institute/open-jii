@@ -39,7 +39,7 @@ type WebGLTraceType = "scattergl";
 const WEBGL_TRACE_TYPES: readonly WebGLTraceType[] = ["scattergl"];
 
 /** What a WebGL trace falls back to when no context is free. */
-const SVG_TWIN: Record<WebGLTraceType, string> = { scattergl: "scatter" };
+const SVG_TWIN = { scattergl: "scatter" } as const satisfies Record<WebGLTraceType, string>;
 
 // Redraw a chart slightly before it is scrolled to, so the caught-up layout is
 // in place by the time it is on screen.
