@@ -11,6 +11,7 @@ import {
   TouchableOpacityProps,
   View,
 } from "react-native";
+import { cn } from "~/shared/ui/cn";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
 interface ButtonProps extends TouchableOpacityProps {
@@ -115,6 +116,7 @@ export function Button({
   multiline = false,
   numberOfLines,
   ellipsizeMode,
+  className,
   ...props
 }: ButtonProps) {
   const { colors } = useTheme();
@@ -134,11 +136,14 @@ export function Button({
   return (
     <TouchableOpacity
       key={renderId}
-      className={buttonVariants({
-        variant,
-        size: iconOnly ? undefined : size,
-        disabled: isDisabled,
-      })}
+      className={cn(
+        buttonVariants({
+          variant,
+          size: iconOnly ? undefined : size,
+          disabled: isDisabled,
+        }),
+        className,
+      )}
       style={style}
       disabled={isDisabled || isLoading}
       activeOpacity={0.7}

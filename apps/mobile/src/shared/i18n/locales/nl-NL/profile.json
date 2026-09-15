@@ -1,7 +1,5 @@
 {
   "accountInformation": "Accountinformatie",
-  "organization": "Organisatie",
-  "organizationNone": "N.v.t.",
   "loginExpires": "Login verloopt",
   "appearance": "Weergave",
   "themeLight": "Licht",
@@ -22,6 +20,8 @@
   },
   "account": {
     "section": "Account",
+    "organizations": "Organisaties",
+    "organizationsSub": "Organisaties vinden en lid worden",
     "appSettings": "App-instellingen",
     "appSettingsSub": "Thema, eenheden, offlinemodus",
     "helpFeedback": "Help & feedback",

@@ -19,7 +19,8 @@
       "No credentials, tokens, precise locations, private datasets, or expanded notification content are visible.",
       "The visible first name belongs to the user's dev testing account and was explicitly approved for publication.",
       "The public Google Play URL was verified, but the signed-in phone showed the account-specific Internal Beta listing and linked device names; that screenshot was rejected.",
-      "The Offline ready picker was recaptured with the visible Classroom search filter so only the meaningful demo experiment appears; no experiment data was renamed, deleted, or modified."
+      "The Offline ready picker was recaptured with the visible Classroom search filter so only the meaningful demo experiment appears; no experiment data was renamed, deleted, or modified.",
+      "The two organizations captures (2026-09-15) were taken on an Android emulator (1344x2992) against the local seeded stack as the seed persona otto@orgseed.local; only seeded organization names and a seeded message appear, and the join request shown was not sent. Reviewed and published by Vlad."
     ]
   },
   "assets": [
@@ -72,6 +73,22 @@
       "sha256": "0501541323247f09ecec9abf0dce880000adbd65945405a631c46067ffafa9d5",
       "disposition": "published",
       "scope": "Trimmed questions-only flow excerpt; excludes the dev experiment list and does not show final submission or MultispeQ hardware"
+    },
+    {
+      "path": "/img/mobile/organizations-directory.png",
+      "kind": "screenshot",
+      "sha256": "7ef3e14c0712a7022f1dd3161f94f397936d813dbcd4255cda582d70861e7b9c",
+      "disposition": "published",
+      "recapturedOn": "2026-09-15",
+      "scope": "Organization directory, light mode, four seeded organizations with a Joined tag on the persona's own organization"
+    },
+    {
+      "path": "/img/mobile/organizations-join-sheet.png",
+      "kind": "screenshot",
+      "sha256": "d9e115ebc2f4c9c5dd6adb8c01538814db132447c3e2b551e7ba922042c0b7cb",
+      "disposition": "published",
+      "recapturedOn": "2026-09-15",
+      "scope": "Request to join sheet over the seeded Canopy Lab profile with a seeded message and counter; request not sent"
     }
   ],
   "unmetCaptures": [

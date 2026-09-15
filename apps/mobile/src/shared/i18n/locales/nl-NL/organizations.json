@@ -1,0 +1,62 @@
+{
+  "title": "Organisaties",
+  "memberCount_one": "{{count}} lid",
+  "memberCount_other": "{{count}} leden",
+  "search": {
+    "placeholder": "Organisaties zoeken",
+    "noResults": "Geen organisatie past bij je zoekopdracht"
+  },
+  "empty": "Nog geen organisaties",
+  "loading": "Organisaties laden…",
+  "loadFailed": "Organisaties konden niet worden geladen.",
+  "openOnWeb": "Openen op het webplatform",
+  "openOnWebUnavailable": "Het webplatform kon niet worden geopend.",
+  "type": {
+    "research_institute": "Onderzoeksinstituut",
+    "non_profit": "Non-profit",
+    "private_company": "Particulier bedrijf",
+    "government_agency": "Overheidsinstantie",
+    "university": "Universiteit"
+  },
+  "membership": {
+    "member": "Lid geworden",
+    "requested": "Aangevraagd",
+    "private": "Privé"
+  },
+  "role": {
+    "owner": "Eigenaar",
+    "admin": "Beheerder",
+    "member": "Lid"
+  },
+  "detail": {
+    "title": "Organisatie",
+    "members_one": "lid",
+    "members_other": "leden",
+    "resources_one": "resource",
+    "resources_other": "resources",
+    "resourcesVisible_one": "voor jou zichtbare resource",
+    "resourcesVisible_other": "voor jou zichtbare resources",
+    "noDescription": "Deze organisatie heeft zichzelf nog niet beschreven.",
+    "website": "Website",
+    "websiteUnavailable": "Deze website kon niet worden geopend.",
+    "since": "Op openJII sinds",
+    "unavailable": "Deze organisatie is niet beschikbaar",
+    "unavailableHint": "Ze is mogelijk privé, of ze bestaat niet meer."
+  },
+  "join": {
+    "cta": "Lidmaatschap aanvragen",
+    "pending": "Je aanvraag is in behandeling",
+    "cancel": "Aanvraag intrekken",
+    "cancelConfirmTitle": "Je aanvraag intrekken?",
+    "cancelConfirmBody": "Je aanvraag bij {{name}} wordt ingetrokken. Je kunt later opnieuw aanvragen.",
+    "cancelled": "Je aanvraag is ingetrokken",
+    "sheetTitle": "Lidmaatschap bij {{name}} aanvragen",
+    "sheetHint": "Optioneel bericht aan de beheerders van de organisatie",
+    "messagePlaceholder": "Vertel kort wie je bent en waarom je lid wilt worden",
+    "messageCounter": "{{n}} / {{max}}",
+    "send": "Aanvraag versturen",
+    "sending": "Versturen…",
+    "sent": "Je aanvraag bij {{name}} is verstuurd",
+    "offlineHint": "Je bent offline. Maak verbinding om dit te versturen."
+  }
+}

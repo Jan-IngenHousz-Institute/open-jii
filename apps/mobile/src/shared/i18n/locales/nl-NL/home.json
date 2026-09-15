@@ -30,6 +30,11 @@
     "reconnectTitle": "Verbind {{name}} opnieuw",
     "reconnectSub": "Tik om je laatste apparaat opnieuw te verbinden"
   },
+  "organizations": {
+    "joinTitle": "Word lid van je organisatie",
+    "joinSubtitle": "Zoek je school of lab en vraag toegang aan",
+    "pendingTitle": "Aanvraag in behandeling"
+  },
   "recent": {
     "sectionTitle": "Recente metingen",
     "seeAll": "Bekijk alle",
