@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 
 import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 
+// Catch up on a deferred tier change slightly before the chart is scrolled to.
+const OFFSCREEN_MARGIN = "200px";
+
 // Four stacked breakpoints (`snug` includes `compact` includes
 // `veryCompact` includes `ultraCompact`); consumers check most-aggressive
 // first.
@@ -186,12 +189,43 @@ export function useChartSizing<T extends HTMLElement>(
     const rect = el.getBoundingClientRect();
     update(rect.width, rect.height);
 
+    // A tier flip restyles the chart, and Plotly has no cheap restyle: it
+    // redraws every trace. Off-screen charts hold the last size they saw and
+    // apply it when they come back, so a window drag cannot make a dashboard
+    // redraw the charts nobody is looking at.
+    let isOnScreen = true;
+    let pending: { width: number; height: number } | null = null;
+
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
-      if (entry) update(entry.contentRect.width, entry.contentRect.height);
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      if (!isOnScreen) {
+        pending = { width, height };
+        return;
+      }
+      update(width, height);
     });
     observer.observe(el);
-    return () => observer.disconnect();
+
+    const screenObserver =
+      typeof IntersectionObserver === "undefined"
+        ? null
+        : new IntersectionObserver(
+            (entries) => {
+              isOnScreen = entries.some((entry) => entry.isIntersecting);
+              if (isOnScreen && pending) {
+                update(pending.width, pending.height);
+                pending = null;
+              }
+            },
+            { rootMargin: OFFSCREEN_MARGIN },
+          );
+    screenObserver?.observe(el);
+    return () => {
+      observer.disconnect();
+      screenObserver?.disconnect();
+    };
   }, [gridRows, gridCols]);
 
   return [ref, sizing] as const;

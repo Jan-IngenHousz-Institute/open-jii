@@ -1279,4 +1279,70 @@ describe("PlotlyChart container resizing", () => {
 
     globalThis.ResizeObserver = original;
   });
+
+  // A dashboard keeps every chart it has shown mounted, and the grid resizes
+  // all of them together. A Plotly resize is a full redraw, so doing it for
+  // charts nobody can see is the bulk of the work in a window drag.
+  it("defers the redraw while the chart is off screen and runs it once on the way back", async () => {
+    let resized: (() => void) | undefined;
+    let intersect: ((isIntersecting: boolean) => void) | undefined;
+
+    class StubResizeObserver implements ResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resized = () => callback([], this);
+      }
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+    }
+    class StubIntersectionObserver {
+      constructor(callback: (entries: { isIntersecting: boolean }[]) => void) {
+        intersect = (isIntersecting) => callback([{ isIntersecting }]);
+      }
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+      takeRecords = vi.fn(() => []);
+      root = null;
+      rootMargin = "";
+      thresholds = [];
+    }
+
+    const originalResize = globalThis.ResizeObserver;
+    const originalIntersection = globalThis.IntersectionObserver;
+    globalThis.ResizeObserver = StubResizeObserver;
+    vi.stubGlobal("IntersectionObserver", StubIntersectionObserver);
+    const frame = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      callback(0);
+      return 1;
+    });
+
+    const { Plotly } = await import("../../charts/plotly-runtime");
+    vi.mocked(Plotly.Plots.resize).mockClear();
+
+    render(<PlotlyChart data={[]} layout={{}} />);
+    const graphDiv = document.createElement("div");
+    const plotProps = mockPlotComponent.mock.calls.at(-1)?.[0];
+    act(() => {
+      plotProps.onInitialized({ data: [], layout: {}, frames: null }, graphDiv);
+    });
+
+    // Scrolled away, then the grid resizes it several times.
+    act(() => intersect?.(false));
+    resized?.();
+    resized?.();
+    resized?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(Plotly.Plots.resize).not.toHaveBeenCalled();
+
+    // Back into view: one redraw, not one per resize it missed.
+    act(() => intersect?.(true));
+    await waitFor(() => expect(Plotly.Plots.resize).toHaveBeenCalledWith(graphDiv));
+    expect(vi.mocked(Plotly.Plots.resize).mock.calls).toHaveLength(1);
+
+    frame.mockRestore();
+    globalThis.ResizeObserver = originalResize;
+    globalThis.IntersectionObserver = originalIntersection;
+    vi.unstubAllGlobals();
+  });
 });

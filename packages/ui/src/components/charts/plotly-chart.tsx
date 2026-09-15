@@ -41,6 +41,10 @@ const WEBGL_TRACE_TYPES: readonly WebGLTraceType[] = ["scattergl"];
 /** What a WebGL trace falls back to when no context is free. */
 const SVG_TWIN: Record<WebGLTraceType, string> = { scattergl: "scatter" };
 
+// Redraw a chart slightly before it is scrolled to, so the caught-up layout is
+// in place by the time it is on screen.
+const OFFSCREEN_MARGIN = "200px";
+
 // Regular trace types
 type StandardTraceType = "scatter" | "bar" | "line" | "area" | "pie" | "box" | "violin";
 
@@ -267,6 +271,10 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     // in place; a full `Plotly.react` is only for a changed figure.
     const containerRef = useRef<HTMLDivElement | null>(null);
     const graphDivRef = useRef<HTMLElement | null>(null);
+    // Without an IntersectionObserver every chart counts as on screen, which is
+    // the behaviour these two refs replace.
+    const isOnScreenRef = useRef(true);
+    const resizeIsPendingRef = useRef(false);
 
     const setContainer = React.useCallback(
       (node: HTMLDivElement | null) => {
@@ -284,21 +292,49 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       const el = containerRef.current;
       if (!el) return;
 
+      const resize = () => {
+        const graphDiv = graphDivRef.current;
+        if (!graphDiv) return;
+        resizeIsPendingRef.current = false;
+        void loadRuntime().then(({ Plotly }) => Plotly.Plots.resize(graphDiv));
+      };
+
       let frame = 0;
-      const observer = new ResizeObserver(() => {
+      const sizeObserver = new ResizeObserver(() => {
         // Coalesced: a drag emits an entry per frame.
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(() => {
-          const graphDiv = graphDivRef.current;
-          if (!graphDiv) return;
-          void loadRuntime().then(({ Plotly }) => Plotly.Plots.resize(graphDiv));
+          // Plotly has no cheap reposition: a resize runs the whole plot
+          // pipeline again, redrawing every trace. On a dashboard that is one
+          // full redraw per chart per drag, including the charts scrolled out
+          // of sight. Those bank the change and redraw once, on the way back in.
+          if (!isOnScreenRef.current) {
+            resizeIsPendingRef.current = true;
+            return;
+          }
+          resize();
         });
       });
-      observer.observe(el);
+      sizeObserver.observe(el);
+
+      const screenObserver =
+        typeof IntersectionObserver === "undefined"
+          ? null
+          : new IntersectionObserver(
+              (entries) => {
+                isOnScreenRef.current = entries.some((entry) => entry.isIntersecting);
+                if (isOnScreenRef.current && resizeIsPendingRef.current) {
+                  resize();
+                }
+              },
+              { rootMargin: OFFSCREEN_MARGIN },
+            );
+      screenObserver?.observe(el);
 
       return () => {
         cancelAnimationFrame(frame);
-        observer.disconnect();
+        sizeObserver.disconnect();
+        screenObserver?.disconnect();
       };
     }, []);
 
