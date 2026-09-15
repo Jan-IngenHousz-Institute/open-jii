@@ -1001,9 +1001,21 @@ describe("PlotlyChart", () => {
 describe("WebGLContextManager", () => {
   let manager: WebGLContextManager;
 
+  // Read the cap off the manager rather than restating it, so these stay tests
+  // of the queueing behaviour when the browser context budget is re-tuned.
+  let CAP: number;
+
   beforeEach(() => {
     manager = WebGLContextManager.getInstance();
     // Clear any existing state
+    (manager as any).activeContexts.clear();
+    (manager as any).pendingCharts.clear();
+
+    CAP = 0;
+    while (manager.canCreateContext()) {
+      manager.requestContext(`cap-probe-${CAP}`, () => undefined);
+      CAP++;
+    }
     (manager as any).activeContexts.clear();
     (manager as any).pendingCharts.clear();
   });
@@ -1042,8 +1054,8 @@ describe("WebGLContextManager", () => {
     it("queues context requests when at the limit", () => {
       const callbacks: any[] = [];
 
-      // Fill up to the limit (8 contexts)
-      for (let i = 0; i < 8; i++) {
+      // Fill up to the limit
+      for (let i = 0; i < CAP; i++) {
         const callback = vi.fn();
         callbacks.push(callback);
         const result = manager.requestContext(`chart-${i}`, callback);
@@ -1051,7 +1063,7 @@ describe("WebGLContextManager", () => {
         expect(callback).toHaveBeenCalledOnce();
       }
 
-      expect(manager.getActiveCount()).toBe(8);
+      expect(manager.getActiveCount()).toBe(CAP);
 
       // Try to add one more - should be queued
       const queuedCallback = vi.fn();
@@ -1059,14 +1071,14 @@ describe("WebGLContextManager", () => {
 
       expect(result).toBe(false);
       expect(queuedCallback).not.toHaveBeenCalled();
-      expect(manager.getActiveCount()).toBe(8);
+      expect(manager.getActiveCount()).toBe(CAP);
     });
 
     it("correctly reports when context can be created", () => {
       expect(manager.canCreateContext()).toBe(true);
 
       // Fill up to the limit
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < CAP; i++) {
         manager.requestContext(`chart-${i}`, () => {});
       }
 
@@ -1085,7 +1097,7 @@ describe("WebGLContextManager", () => {
 
     it("processes queued charts when context is released", () => {
       // Fill up to the limit
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < CAP; i++) {
         manager.requestContext(`chart-${i}`, () => {});
       }
 
@@ -1099,7 +1111,7 @@ describe("WebGLContextManager", () => {
 
       // Queued chart should now be processed
       expect(queuedCallback).toHaveBeenCalledOnce();
-      expect(manager.getActiveCount()).toBe(8); // Still at limit, but different chart
+      expect(manager.getActiveCount()).toBe(CAP); // Still at limit, but different chart
     });
 
     it("handles release of non-existent context gracefully", () => {
@@ -1112,7 +1124,7 @@ describe("WebGLContextManager", () => {
 
     it("processes queue in FIFO order", () => {
       // Fill up to the limit
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < CAP; i++) {
         manager.requestContext(`chart-${i}`, () => {});
       }
 
@@ -1157,7 +1169,7 @@ describe("WebGLContextManager", () => {
 
     it("maintains queue integrity when same ID is queued multiple times", () => {
       // Fill up to the limit
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < CAP; i++) {
         manager.requestContext(`chart-${i}`, () => {});
       }
 
@@ -1189,7 +1201,7 @@ describe("WebGLContextManager", () => {
 
     it("releasing a non-active chart does not promote pending charts", () => {
       // Fill the cap with active contexts
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < CAP; i++) {
         manager.requestContext(`chart-${i}`, () => {});
       }
       const queuedCallback = vi.fn();
@@ -1199,12 +1211,12 @@ describe("WebGLContextManager", () => {
       // No-op release: chartId not in active set; should not promote.
       manager.releaseContext("never-acquired");
       expect(queuedCallback).not.toHaveBeenCalled();
-      expect(manager.getActiveCount()).toBe(8);
+      expect(manager.getActiveCount()).toBe(CAP);
     });
 
     it("releasing while still pending removes the chart from the pending queue", () => {
       // Fill up the cap so the next request gets queued.
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < CAP; i++) {
         manager.requestContext(`chart-${i}`, () => {});
       }
       const ghostCallback = vi.fn();
@@ -1218,7 +1230,7 @@ describe("WebGLContextManager", () => {
       // we queue another waiter.
       manager.releaseContext("chart-0");
       expect(ghostCallback).not.toHaveBeenCalled();
-      expect(manager.getActiveCount()).toBe(7);
+      expect(manager.getActiveCount()).toBe(CAP - 1);
     });
   });
 });

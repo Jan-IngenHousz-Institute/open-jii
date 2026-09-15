@@ -89,14 +89,19 @@ export interface PlotlyChartProps extends Omit<PlotParams, "className"> {
   error?: string;
 }
 
-// Browsers cap concurrent WebGL contexts (~8–16 per tab). Stay conservative so
-// a dashboard of charts degrades to "queued" instead of crashing the GPU
-// process. Charts not in the queue render via SVG immediately.
+// Plotly's gl2d builds three canvases per chart, one each for the scene, the
+// pick buffer and the focus layer, and each holds its own WebGL context.
+// Browsers allow roughly 16 per tab and silently drop the oldest beyond that,
+// which blanks a chart's data layer. So the budget is charts, not contexts:
+// five charts is fifteen contexts, and the rest render on SVG instead.
+const CONTEXTS_PER_GL_CHART = 3;
+const BROWSER_CONTEXT_BUDGET = 16;
+
 class WebGLContextManager {
   private static instance: WebGLContextManager;
   private activeContexts = new Set<string>();
   private pendingCharts = new Map<string, () => void>();
-  private readonly maxContexts = 8;
+  private readonly maxContexts = Math.floor(BROWSER_CONTEXT_BUDGET / CONTEXTS_PER_GL_CHART);
 
   static getInstance(): WebGLContextManager {
     if (!WebGLContextManager.instance) {
@@ -167,7 +172,12 @@ const validateDimensions = (layout: Partial<Layout>): SafeDimensions => {
 const createSafeConfig = (config: Partial<Config> = {}): SafeConfig => {
   const baseConfig: SafeConfig = {
     displayModeBar: true, // Enable toolbar for export
-    responsive: true,
+    // Plotly's own `responsive` adds a window resize listener that calls
+    // `Plots.resize` on every chart. This component already observes its
+    // container, which also catches resizes the window never sees and skips
+    // charts that are scrolled away. Two handlers means double the replots,
+    // and each replot of a gl chart tears down and rebuilds its contexts.
+    responsive: false,
     toImageButtonOptions: {
       format: "svg",
       width: 1200, // Much larger default width

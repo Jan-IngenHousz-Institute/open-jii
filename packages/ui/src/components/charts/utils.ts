@@ -935,7 +935,8 @@ export function createPlotlyConfig(
     modeBarStyle = "default",
     downloadFilename = "plot",
     imageFormat = "png",
-    responsive = true,
+    // `PlotlyChart` observes each container itself; see the note there.
+    responsive = false,
   } = config;
   const veryCompact = options.veryCompact ?? false;
   const compact = options.compact ?? veryCompact;

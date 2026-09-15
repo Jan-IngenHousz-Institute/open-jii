@@ -674,7 +674,9 @@ describe("utils", () => {
 
       expect(config).toMatchObject({
         displayModeBar: true,
-        responsive: true,
+        // PlotlyChart observes each container itself; Plotly's own window
+        // listener would double every replot.
+        responsive: false,
         plotGlPixelRatio: 1,
         staticPlot: false,
         doubleClick: "reset",
