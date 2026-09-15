@@ -5,6 +5,7 @@ import { useJsonFormatStyle } from "@/hooks/useJsonFormatStyle";
 import { reformatJsonString } from "@/lib/json-format";
 import { Check, ChevronDown, ChevronRight, Copy } from "lucide-react";
 import React from "react";
+import type { OnToggleCellExpansionHandler } from "~/components/data-table/data-table-columns";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -15,7 +16,7 @@ interface ExperimentDataTableVariantCellProps {
   columnName: string;
   rowId: string;
   isExpanded: boolean;
-  onToggleExpansion?: (rowId: string, columnName: string) => void;
+  onToggleExpansion?: OnToggleCellExpansionHandler;
 }
 
 /**

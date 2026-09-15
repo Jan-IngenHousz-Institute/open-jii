@@ -2,6 +2,7 @@
 
 import { MessageSquare, Trash2, Flag } from "lucide-react";
 import React from "react";
+import type { OnAnnotationHandler } from "~/components/data-table/data-table-columns";
 import { formatDate } from "~/util/date";
 
 import type {
@@ -150,8 +151,8 @@ interface CommentsPopoverProps {
   comments: ExperimentAnnotation[];
   commentCount: number;
   rowId: string;
-  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
-  onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
+  onAddAnnotation?: OnAnnotationHandler;
+  onDeleteAnnotations?: OnAnnotationHandler;
 }
 
 function CommentsPopover({
@@ -217,8 +218,8 @@ interface FlagsPopoverProps {
   flags: ExperimentAnnotation[];
   flagCount: number;
   rowId: string;
-  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
-  onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
+  onAddAnnotation?: OnAnnotationHandler;
+  onDeleteAnnotations?: OnAnnotationHandler;
 }
 
 function FlagsPopover({
@@ -279,7 +280,7 @@ function FlagsPopover({
 
 interface EmptyAnnotationsPopoverProps {
   rowId: string;
-  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
+  onAddAnnotation?: OnAnnotationHandler;
 }
 
 /** Only rendered for a caller who may add annotations — there is nothing to read. */
@@ -287,7 +288,7 @@ function EmptyAnnotationsPopover({
   rowId,
   onAddAnnotation,
 }: EmptyAnnotationsPopoverProps & {
-  onAddAnnotation: (rowIds: string[], type: ExperimentAnnotationType) => void;
+  onAddAnnotation: OnAnnotationHandler;
 }) {
   const { t } = useTranslation();
 
@@ -349,8 +350,8 @@ function EmptyAnnotationsPopover({
 interface ExperimentDataTableAnnotationsCellProps {
   data: string; // JSON string of annotations array
   rowId: string;
-  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
-  onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
+  onAddAnnotation?: OnAnnotationHandler;
+  onDeleteAnnotations?: OnAnnotationHandler;
 }
 
 export function DataTableAnnotationsCell({

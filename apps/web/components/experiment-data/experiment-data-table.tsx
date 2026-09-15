@@ -1,7 +1,11 @@
 "use client";
 
 import { DataTable } from "@/components/data-table/data-table";
-import type { TableMetadata } from "@/components/data-table/data-table-columns";
+import type {
+  OnAnnotationHandler,
+  OnChartClickHandler,
+  TableMetadata,
+} from "@/components/data-table/data-table-columns";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { PaginationState, RowSelectionState } from "@tanstack/react-table";
@@ -89,7 +93,7 @@ export function ExperimentDataTable({
 
   const { t } = useTranslation();
 
-  const toggleChartPin = useCallback((data: number[], columnName: string, rowId: string) => {
+  const toggleChartPin = useCallback<OnChartClickHandler>((data, columnName, rowId) => {
     setChartDisplay((prev) => {
       if (prev?.isPinned && prev.columnName === columnName && prev.rowId === rowId) {
         return null;
@@ -102,17 +106,14 @@ export function ExperimentDataTable({
     setChartDisplay(null);
   }, []);
 
-  const openAddAnnotationDialog = useCallback(
-    (rowIds: string[], type: ExperimentAnnotationType = "comment") => {
-      setAddAnnotationRowIds(rowIds);
-      setAddAnnotationType(type);
-      setAddAnnotationDialogOpen(true);
-    },
-    [],
-  );
+  const openAddAnnotationDialog = useCallback<OnAnnotationHandler>((rowIds, type = "comment") => {
+    setAddAnnotationRowIds(rowIds);
+    setAddAnnotationType(type);
+    setAddAnnotationDialogOpen(true);
+  }, []);
 
-  const openDeleteAnnotationsDialog = useCallback(
-    (rowIds: string[], type: ExperimentAnnotationType = "comment") => {
+  const openDeleteAnnotationsDialog = useCallback<OnAnnotationHandler>(
+    (rowIds, type = "comment") => {
       setDeleteAnnotationRowIds(rowIds);
       setDeleteAnnotationType(type);
       setDeleteAnnotationsDialogOpen(true);

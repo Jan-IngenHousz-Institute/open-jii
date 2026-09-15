@@ -21,16 +21,20 @@ import type { DataTableFeatures } from "./data-table-features";
 
 export type DataRow = Record<string, unknown>;
 export type OnChartClickHandler = (data: number[], columnName: string, rowId: string) => void;
+export type OnAnnotationHandler = (rowIds: string[], type: ExperimentAnnotationType) => void;
+export type OnToggleCellExpansionHandler = (rowId: string, columnName: string) => void;
+export type IsCellExpandedFn = (rowId: string, columnName: string) => boolean;
+
 export type DataRenderFunction = (
   value: unknown,
   type: string,
   rowId: string,
   columnName?: string,
   onChartClick?: OnChartClickHandler,
-  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void,
-  onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void,
-  onToggleCellExpansion?: (rowId: string, columnName: string) => void,
-  isCellExpanded?: (rowId: string, columnName: string) => boolean,
+  onAddAnnotation?: OnAnnotationHandler,
+  onDeleteAnnotations?: OnAnnotationHandler,
+  onToggleCellExpansion?: OnToggleCellExpansionHandler,
+  isCellExpanded?: IsCellExpandedFn,
   errorColumn?: string,
 ) => string | React.JSX.Element;
 
@@ -125,10 +129,10 @@ interface CreateTableColumnsParams {
   columns: ExperimentDataColumn[] | undefined;
   formatFunction?: DataRenderFunction;
   onChartClick?: OnChartClickHandler;
-  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
-  onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
-  onToggleCellExpansion?: (rowId: string, columnName: string) => void;
-  isCellExpanded?: (rowId: string, columnName: string) => boolean;
+  onAddAnnotation?: OnAnnotationHandler;
+  onDeleteAnnotations?: OnAnnotationHandler;
+  onToggleCellExpansion?: OnToggleCellExpansionHandler;
+  isCellExpanded?: IsCellExpandedFn;
   errorColumn?: string;
 }
 

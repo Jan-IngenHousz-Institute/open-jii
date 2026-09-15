@@ -5,12 +5,14 @@ import React from "react";
 import { DataTableAnnotationsCell } from "~/components/data-table/cells/annotations/data-table-annotations-cell";
 import type {
   DataRow,
+  IsCellExpandedFn,
+  OnAnnotationHandler,
   OnChartClickHandler,
+  OnToggleCellExpansionHandler,
   TableMetadata,
 } from "~/components/data-table/data-table-columns";
 import { deviceDisplayName } from "~/components/experiment-visualizations/charts/data/device-cells";
 
-import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import {
   WellKnownColumnTypes,
   ExperimentColumnPrimitiveType,
@@ -82,10 +84,10 @@ export function formatValue(
   rowId: string,
   columnName?: string,
   onChartClick?: OnChartClickHandler,
-  onAddAnnotation?: (rowIds: string[], annotationType: ExperimentAnnotationType) => void,
-  onDeleteAnnotations?: (rowIds: string[], annotationType: ExperimentAnnotationType) => void,
-  onToggleCellExpansion?: (rowId: string, columnName: string) => void,
-  isCellExpanded?: (rowId: string, columnName: string) => boolean,
+  onAddAnnotation?: OnAnnotationHandler,
+  onDeleteAnnotations?: OnAnnotationHandler,
+  onToggleCellExpansion?: OnToggleCellExpansionHandler,
+  isCellExpanded?: IsCellExpandedFn,
   errorColumn?: string,
 ): string | React.JSX.Element {
   // Check if this is the error column
