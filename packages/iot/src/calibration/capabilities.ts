@@ -54,7 +54,10 @@ export function familyCalibrationCapabilities(family: SensorFamily): FamilyCalib
   const blocks = CALIBRATION_WRITERS[family]?.blocks;
   const writableCoefficients: Record<string, string[]> = {};
   for (const [block, writers] of Object.entries(blocks ?? {})) {
-    writableCoefficients[block] = Object.keys(writers.coefficients);
+    // The registry is a partial record: a block it does not cover is simply not writable.
+    if (writers !== undefined) {
+      writableCoefficients[block] = Object.keys(writers.coefficients);
+    }
   }
 
   return {
