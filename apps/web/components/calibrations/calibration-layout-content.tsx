@@ -7,7 +7,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { ResourceDetailTabs } from "@/components/sharing/resource-detail-tabs";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { useUpdateCalibrationDefinition } from "@/hooks/iot/useUpdateCalibrationDefinition/useUpdateCalibrationDefinition";
-import { getSensorFamilyBadgeTone } from "@/util/sensor-family";
+import { getSensorFamilyBadgeTone, getSensorFamilyLabel } from "@/util/sensor-family";
 import { SlidersHorizontal } from "lucide-react";
 import { parseApiError } from "~/util/apiError";
 
@@ -56,11 +56,8 @@ export function CalibrationLayoutContent({
           icon={<SlidersHorizontal className="h-6 w-6" />}
           badges={
             <>
-              <StatusBadge
-                tone={getSensorFamilyBadgeTone(definition.family)}
-                className="capitalize"
-              >
-                {definition.family}
+              <StatusBadge tone={getSensorFamilyBadgeTone(definition.family)}>
+                {getSensorFamilyLabel(definition.family)}
               </StatusBadge>
               <VisibilityBadge visibility={definition.visibility} />
             </>

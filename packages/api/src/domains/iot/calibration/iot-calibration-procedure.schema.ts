@@ -24,6 +24,13 @@ const zAuxiliaryInstrument = z
   .object({
     role: zIdentifier,
     handshake: z.string().min(1).max(64),
+    /**
+     * Which bench instrument this role expects, by the model name the driver registry
+     * holds. A handshake naming one unit of a model ("Par_REF") says nothing about which
+     * model that is, so the setpoints and readings a step may name are only knowable from
+     * here. Absent means any instrument whose identity reply carries the handshake.
+     */
+    model: z.string().min(1).max(64).optional(),
   })
   .strict();
 
@@ -156,9 +163,12 @@ function isInstrumentStimulus(stimulus: Stimulus): stimulus is z.infer<typeof zI
   return "instrument" in stimulus;
 }
 
+/** A bench with more ports than this is a rig the browser cannot ask an operator to open. */
+export const MAX_RIG_INSTRUMENTS = 8;
+
 export const zCaptureProcedure = z
   .object({
-    instruments: z.array(zRigInstrument).min(1).max(8),
+    instruments: z.array(zRigInstrument).min(1).max(MAX_RIG_INSTRUMENTS),
     protocols: z
       .record(zIdentifier, zMeasurementProtocol)
       .refine((protocols) => Object.keys(protocols).length <= MAX_PROTOCOLS, {

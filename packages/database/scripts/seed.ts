@@ -1249,8 +1249,8 @@ submit(blocks)
       captureProcedure: {
         instruments: [
           { role: "dut" },
-          { role: "lamp", handshake: "KIPRIM" },
-          { role: "par_ref", handshake: "raw REPL" },
+          { role: "lamp", handshake: "KIPRIM", model: "kiprim-dc" },
+          { role: "par_ref", handshake: "raw REPL", model: "micropython-par-reference" },
         ],
         steps: [
           {
@@ -1363,9 +1363,9 @@ submit(blocks)
       captureProcedure: {
         instruments: [
           { role: "dut" },
-          { role: "lamp", handshake: "KIPRIM" },
-          { role: "par_ref", handshake: "Par_REF" },
-          { role: "emit_ref", handshake: "Emit_LED" },
+          { role: "lamp", handshake: "KIPRIM", model: "kiprim-dc" },
+          { role: "par_ref", handshake: "Par_REF", model: "minipar-reference" },
+          { role: "emit_ref", handshake: "Emit_LED", model: "minipar-reference" },
         ],
         steps: [
           {
@@ -1436,7 +1436,10 @@ submit(blocks)
       description:
         "Each of the first five LEDs is stepped through ten settings while a spectrometer board reads the channel that sees it best. One line per LED relates the setting to the light it produces.",
       captureProcedure: {
-        instruments: [{ role: "dut" }, { role: "calitool", handshake: "CaliTool" }],
+        instruments: [
+          { role: "dut" },
+          { role: "calitool", handshake: "CaliTool", model: "calitool-spectral-board" },
+        ],
         steps: [
           {
             kind: "operator",

@@ -835,7 +835,7 @@
         "roleAction": "Verbinden",
         "roleConnecting": "Wird verbunden…",
         "roleConnected": "Verbunden",
-        "roleMismatch": "Dieser Port hat sich als anderes Instrument gemeldet und wurde wieder geschlossen.",
+        "roleMismatch": "An diesem Anschluss meldete sich {{model}}, was diese Rolle nicht erwartet; er wurde wieder geschlossen.",
         "roleUnrecognised": "An diesem Port hat sich kein bekanntes Instrument gemeldet.",
         "roleFailed": "Dieser Port konnte nicht geöffnet werden.",
         "roleMissing": "Verbinden Sie die benötigten Instrumente, bevor Sie fortfahren."
@@ -938,6 +938,36 @@
         "notWritable": "Für {{coefficients}} gibt es keinen Konsolenbefehl. Ein Lauf wird protokolliert, die Werte erreichen das Gerät aber nie.",
         "describePlaceholder": "Beschreiben, was dieser Prüfstand misst und wogegen.",
         "readOnly": "Sie können diese Kalibrierung lesen, aber nicht ändern."
+      },
+      "rig": {
+        "hint": "Jedes Instrument belegt am Messplatz einen eigenen seriellen Anschluss. Eine Rolle umzubenennen benennt sie in jedem Schritt um, der sie verwendet.",
+        "dut": "Das Gerät, das kalibriert wird",
+        "role": "Rolle",
+        "instrument": "Instrument",
+        "handshake": "Meldet sich als",
+        "handshakeRequired": "Ein Instrument muss angeben, worauf es antwortet, sonst lässt sich dieser Rolle nichts zuordnen.",
+        "add": "Instrument hinzufügen",
+        "remove": "{{role}} entfernen",
+        "usedBy_one": "Von 1 Schritt verwendet und deshalb nicht entfernbar.",
+        "usedBy_other": "Von {{count}} Schritten verwendet und deshalb nicht entfernbar.",
+        "setpoints": "Sollwerte",
+        "readings": "Messwerte",
+        "none": "Keine",
+        "roleTaken": "Ein anderes Instrument in diesem Aufbau trägt diesen Namen bereits.",
+        "roleInvalid": "Kleinbuchstaben, Ziffern und Unterstriche, beginnend mit einem Buchstaben.",
+        "anyInstrument": "Beliebiges, das sich so meldet",
+        "anyInstrumentHint": "Jedes Instrument, dessen Kennung diesen Text enthält. Erst die Angabe des Instruments lässt die Schritte seine Sollwerte und Messwerte anbieten.",
+        "noDeviceSetpoints": "Keine, die die Plattform setzen kann"
+      },
+      "sidebar": {
+        "title": "Details",
+        "family": "Gerätefamilie",
+        "familyHint": "Gegen welches Gerät dies läuft, und damit auch die Instrumente und Koeffizienten, gegen die alles Übrige geprüft wird.",
+        "firmware": "Mindest-Firmware",
+        "firmwarePlaceholder": "Beliebig",
+        "firmwareHint": "Darunter wird ein Lauf abgelehnt. Ältere Firmware beantwortet unbekannte Befehle mit Zahlen, die wie Messwerte aussehen.",
+        "firmwareInvalid": "Nur Versionsnummern, etwa 1.03 oder 1.1.3.",
+        "saved": "Kalibrierung aktualisiert"
       }
     },
     "workbookBar": {

@@ -37,7 +37,7 @@ describe("ListCalibrationDefinitions", () => {
     await screen.findByText("PAR bench");
 
     await userEvent.click(screen.getByRole("combobox"));
-    await userEvent.click(await screen.findByRole("option", { name: "ambit" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Ambit" }));
 
     expect(screen.getByText("Factory bench")).toBeInTheDocument();
     expect(screen.queryByText("PAR bench")).toBeNull();

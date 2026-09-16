@@ -1,5 +1,4 @@
 import { CalibrationDefinitionDetail } from "@/components/calibrations/calibration-definition-detail";
-import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
 
 import initTranslations from "@repo/i18n/server";
@@ -18,9 +17,7 @@ export async function generateMetadata({
 }
 
 export default function CalibrationDefinitionPage() {
-  return (
-    <PageContainer width="reading" className="space-y-6">
-      <CalibrationDefinitionDetail />
-    </PageContainer>
-  );
+  // The layout already provides the page container; a second one here would narrow the
+  // sidebar and the editors to a reading column.
+  return <CalibrationDefinitionDetail />;
 }

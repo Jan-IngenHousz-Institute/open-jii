@@ -417,6 +417,46 @@ describe("useCalibrationRig", () => {
 
     // A role of the same name in the next definition may want another instrument, so a
     // port bound under the old one must not satisfy it unchecked.
+    // A handshake can name a unit rather than a model, so the reply alone does not say
+    // whether the right equipment is on the port.
+    it("refuses a port that answers the handshake but is not the instrument the role expects", async () => {
+      const port = supplyPort();
+      mockOpenSerialPort.mockResolvedValue(port.transport);
+      const wrongModel: CaptureProcedure = {
+        instruments: [
+          { role: "dut" },
+          { role: "lamp", handshake: SUPPLY_HANDSHAKE, model: "minipar-reference" },
+        ],
+        steps: [{ kind: "set", instrument: "lamp", set: "current_a", value: 0 }],
+      };
+
+      const { result } = renderHook(() => useCalibrationRig(wrongModel, undefined));
+      await act(() => result.current.connectRole("lamp"));
+
+      const status = statusOf(result.current, "lamp");
+      expect(status).toMatchObject({ kind: "mismatch", model: SUPPLY_MODEL });
+      expect(result.current.bindings.lamp).toBeUndefined();
+      expect(port.transport.isConnected()).toBe(false);
+    });
+
+    it("binds a port whose instrument is the one the role names", async () => {
+      const port = supplyPort();
+      mockOpenSerialPort.mockResolvedValue(port.transport);
+      const declared: CaptureProcedure = {
+        instruments: [
+          { role: "lamp", handshake: SUPPLY_HANDSHAKE, model: SUPPLY_MODEL },
+          { role: "dut" },
+        ],
+        steps: [{ kind: "set", instrument: "lamp", set: "current_a", value: 0 }],
+      };
+
+      const { result } = renderHook(() => useCalibrationRig(declared, undefined));
+      await act(() => result.current.connectRole("lamp"));
+
+      expect(statusOf(result.current, "lamp")?.kind).toBe("connected");
+      expect(result.current.bindings.lamp).toBeDefined();
+    });
+
     it("lets the bench go when the procedure declares a different rig", async () => {
       const supply = supplyPort();
       mockOpenSerialPort.mockResolvedValueOnce(supply.transport);

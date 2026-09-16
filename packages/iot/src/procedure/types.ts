@@ -12,6 +12,8 @@ export interface RigInstrument {
   role: string;
   /** Substring the instrument's identity reply must contain. Absent for the dut. */
   handshake?: string;
+  /** The bench instrument expected here; absent means any that answers the handshake. */
+  model?: string;
 }
 
 /** A sweep setpoint: a scalar, a label, or a compound of several axes. */

@@ -389,6 +389,19 @@ describe("zCaptureProcedure", () => {
       expect(result.success).toBe(false);
     });
 
+    // A handshake naming one unit of a model says nothing about which model it is, so
+    // the setpoints and readings a step may name are only knowable from the model.
+    it("accepts an instrument that names the model it expects", () => {
+      const result = zCaptureProcedure.safeParse({
+        ...manualMiniparProcedure,
+        instruments: [
+          { role: "dut" },
+          { role: "par_ref", handshake: "Par_REF", model: "minipar-reference" },
+        ],
+      });
+      expect(result.success).toBe(true);
+    });
+
     it("rejects an auxiliary instrument claiming the dut role", () => {
       const result = zCaptureProcedure.safeParse({
         ...manualMiniparProcedure,

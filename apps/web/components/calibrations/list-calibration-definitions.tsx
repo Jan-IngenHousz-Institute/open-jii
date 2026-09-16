@@ -7,6 +7,7 @@ import { useLocale } from "@/hooks/useLocale";
 import { Loader2, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { getSensorFamilyLabel } from "~/util/sensor-family";
 
 import { zCalibrationFamily } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import type { CalibrationFamily } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
@@ -26,7 +27,7 @@ import { starterDefinition } from "./starter-definition";
 
 const ALL_FAMILIES = "all";
 
-/** The bench procedures anyone can run, each at its newest version. */
+/** The bench procedures anyone can run. */
 export function ListCalibrationDefinitions() {
   const { t } = useTranslation("iot");
   const locale = useLocale();
@@ -55,19 +56,21 @@ export function ListCalibrationDefinitions() {
 
   function renderFamilyOption(option: CalibrationFamily) {
     return (
-      <SelectItem key={option} value={option} className="capitalize">
-        {option}
+      <SelectItem key={option} value={option}>
+        {getSensorFamilyLabel(option)}
       </SelectItem>
     );
+  }
+
+  function handleFamilyChange(value: string) {
+    // Parsed, not cast: the select lists the families a calibration can name, plus "all".
+    setFamily(value === ALL_FAMILIES ? ALL_FAMILIES : zCalibrationFamily.parse(value));
   }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Select
-          value={family}
-          onValueChange={(value) => setFamily(value as CalibrationFamily | typeof ALL_FAMILIES)}
-        >
+        <Select value={family} onValueChange={handleFamilyChange}>
           <SelectTrigger className="w-[200px]">
             <SelectValue />
           </SelectTrigger>

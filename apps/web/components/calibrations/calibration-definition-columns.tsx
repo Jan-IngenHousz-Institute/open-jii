@@ -3,7 +3,7 @@ import { overviewTableText } from "@/components/overview-table/overview-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { formatShortDate } from "@/util/date";
-import { getSensorFamilyBadgeTone } from "@/util/sensor-family";
+import { getSensorFamilyBadgeTone, getSensorFamilyLabel } from "@/util/sensor-family";
 import Link from "next/link";
 
 import type { CalibrationDefinitionSummary } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
@@ -41,8 +41,8 @@ export function getCalibrationDefinitionColumns(
       header: t("iot.calibration.library.columns.family"),
       className: "w-[130px]",
       cell: (definition) => (
-        <StatusBadge tone={getSensorFamilyBadgeTone(definition.family)} className="capitalize">
-          {definition.family}
+        <StatusBadge tone={getSensorFamilyBadgeTone(definition.family)}>
+          {getSensorFamilyLabel(definition.family)}
         </StatusBadge>
       ),
     },

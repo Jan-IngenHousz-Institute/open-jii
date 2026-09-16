@@ -128,7 +128,7 @@ export function CalibrationConnectStep({
         return (
           <Alert variant="destructive">
             <AlertDescription>
-              {t("iot.calibration.connect.roleMismatch")}
+              {t("iot.calibration.connect.roleMismatch", { model: status.model })}
               <span className="mt-1 block font-mono text-xs">{status.reply}</span>
             </AlertDescription>
           </Alert>

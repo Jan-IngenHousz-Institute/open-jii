@@ -25,7 +25,7 @@ export type RigRoleStatus =
   | { kind: "idle" }
   | { kind: "connecting" }
   | { kind: "connected"; model: string; reply: string }
-  | { kind: "mismatch"; reply: string }
+  | { kind: "mismatch"; model: string; reply: string }
   | { kind: "unrecognised" }
   | { kind: "failed"; message: string };
 
@@ -40,6 +40,7 @@ export interface RigRole {
 interface DeclaredRole {
   role: string;
   handshake: string;
+  model: string | undefined;
   required: boolean;
 }
 
@@ -96,6 +97,7 @@ export function useCalibrationRig(
             {
               role: instrument.role,
               handshake: instrument.handshake,
+              model: instrument.model,
               required: runNeeds.has(instrument.role),
             },
           ],
@@ -202,12 +204,16 @@ export function useCalibrationRig(
 
         const { instrument, reply } = identification;
         const answersToTheRole = handshakeMatches(reply, declared.handshake);
+        // A handshake that names one unit of a model says nothing about the model, so a
+        // supply answering to a name meant for a reference would otherwise be accepted.
+        const isTheDeclaredModel =
+          declared.model === undefined || declared.model === instrument.model;
 
         // A port bound to the wrong role is worse than no port at all.
-        if (!answersToTheRole) {
+        if (!answersToTheRole || !isTheDeclaredModel) {
           await instrument.destroy();
           await releasePort(transport);
-          report({ kind: "mismatch", reply });
+          report({ kind: "mismatch", model: instrument.model, reply });
           return;
         }
 
@@ -271,7 +277,9 @@ export function useCalibrationRig(
 
   // A rig the procedure no longer declares is torn down rather than carried into the
   // next definition, where a role of the same name may want a different instrument.
-  const rigSignature = declaredRoles.map((entry) => `${entry.role}:${entry.handshake}`).join("|");
+  const rigSignature = declaredRoles
+    .map((entry) => `${entry.role}:${entry.handshake}:${entry.model ?? ""}`)
+    .join("|");
 
   // Walking away from the wizard must not leave the lamp driving current.
   useEffect(() => {

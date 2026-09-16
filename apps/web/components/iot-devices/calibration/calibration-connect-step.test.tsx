@@ -109,7 +109,15 @@ describe("CalibrationConnectStep", () => {
 
   it("says what a mismatched port answered instead", () => {
     renderStep(
-      stubRig([role({ status: { kind: "mismatch", reply: "raw REPL; CTRL-B to exit" } })]),
+      stubRig([
+        role({
+          status: {
+            kind: "mismatch",
+            model: "micropython-par-reference",
+            reply: "raw REPL; CTRL-B to exit",
+          },
+        }),
+      ]),
     );
 
     expect(screen.getByText("iot.calibration.connect.roleMismatch")).toBeInTheDocument();
