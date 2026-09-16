@@ -15,6 +15,7 @@ import type {
   CalibrationDefinitionDetail as CalibrationDefinition,
   CalibrationOutputSchema,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
+import { zUpdateCalibrationDefinitionBody } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
 import { EmptyState } from "@repo/ui/components/empty-state";
@@ -22,11 +23,10 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { CalibrationDetailsSidebar } from "./calibration-details-sidebar";
-import { CalibrationOutputBlocks } from "./calibration-output-blocks";
+import { CalibrationOutputSchemaEditor } from "./calibration-output-schema-editor";
 import { CalibrationProcedureSummary } from "./calibration-procedure-summary";
 import { CalibrationRigEditor } from "./calibration-rig-editor";
 import { CalibrationScriptEditor } from "./calibration-script-editor";
-import { isRigComplete } from "./procedure-edits";
 
 /** The parts an author edits in place; the rest of the definition saves on its own. */
 interface DefinitionDraft {
@@ -43,8 +43,27 @@ function toDraft(definition: CalibrationDefinition): DefinitionDraft {
   };
 }
 
-function isSaveable(draft: DefinitionDraft | undefined): boolean {
-  return draft !== undefined && draft.script.trim() !== "" && isRigComplete(draft.captureProcedure);
+/**
+ * Why the page is not saving, in the contract's own words, or null when it is.
+ *
+ * An author is briefly between two valid documents on almost every keystroke, so a draft
+ * the contract would refuse is not an error to report at them. One that stays refused is:
+ * without this, editing would go on over a document that silently never lands.
+ */
+function saveBlocker(draft: DefinitionDraft | undefined): string | null {
+  if (draft === undefined) {
+    return null;
+  }
+
+  const parsed = zUpdateCalibrationDefinitionBody.safeParse(draft);
+  if (parsed.success) {
+    return null;
+  }
+
+  const [issue] = parsed.error.issues;
+  const where = issue.path.join(".");
+
+  return where === "" ? issue.message : `${where}: ${issue.message}`;
 }
 
 /**
@@ -83,17 +102,24 @@ export function CalibrationDefinitionDetail() {
     [definitionId, update],
   );
 
+  const blocker = saveBlocker(edited);
+
   const autosave = useAutosave<DefinitionDraft | undefined>({
     value: edited,
     toKey: (value) => JSON.stringify(value ?? null),
-    isValid: isSaveable,
+    isValid: (value) => value !== undefined && saveBlocker(value) === null,
     save,
     // Enabling anchors the saved copy to what the server sent, so the first edit is
     // the first thing saved.
     enabled: definition !== undefined && canEdit,
   });
 
-  useReportAutosaveStatus({ status: autosave.status, error: autosave.error });
+  // A blocked draft has no save state worth reporting: "all changes saved" would be a
+  // lie, and a spinner would promise a save that is not coming. The alert below says it.
+  useReportAutosaveStatus({
+    status: blocker === null ? autosave.status : null,
+    error: autosave.error,
+  });
 
   const handleDescriptionSave = useCallback(
     async (description: string) => {
@@ -123,6 +149,10 @@ export function CalibrationDefinitionDetail() {
     setDraft({ ...current, script });
   }
 
+  function editOutputSchema(outputSchema: CalibrationOutputSchema) {
+    setDraft({ ...current, outputSchema });
+  }
+
   return (
     <div className="flex flex-col gap-6 lg:flex-row">
       <CalibrationDetailsSidebar definitionId={definitionId} definition={definition} />
@@ -141,6 +171,15 @@ export function CalibrationDefinitionDetail() {
           </Alert>
         )}
 
+        {blocker !== null && (
+          <Alert variant="destructive">
+            <AlertDescription>
+              {t("iot.calibration.detail.notSaving")}
+              <span className="mt-1 block font-mono text-xs">{blocker}</span>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <PanelCard title={t("iot.calibration.detail.rig")}>
           <CalibrationRigEditor
             procedure={current.captureProcedure}
@@ -155,7 +194,12 @@ export function CalibrationDefinitionDetail() {
         </PanelCard>
 
         <PanelCard title={t("iot.calibration.detail.produces")}>
-          <CalibrationOutputBlocks family={definition.family} outputSchema={current.outputSchema} />
+          <CalibrationOutputSchemaEditor
+            family={definition.family}
+            outputSchema={current.outputSchema}
+            canEdit={canEdit}
+            onChange={editOutputSchema}
+          />
         </PanelCard>
 
         <PanelCard title={t("iot.calibration.detail.script")}>

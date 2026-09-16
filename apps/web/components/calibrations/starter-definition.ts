@@ -4,8 +4,7 @@ import type {
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { familyCalibrationCapabilities, isSensorFamily } from "@repo/iot";
 
-/** A placeholder the author sets to their sensor's channel count. */
-const STARTER_ARRAY_LENGTH = 10;
+import { specForWritable } from "./output-schema-edits";
 
 /**
  * What a brand new calibration opens with.
@@ -49,12 +48,7 @@ function writableStarterBlocks(
   const blocks: CreateCalibrationDefinitionBody["outputSchema"]["blocks"] = {};
   for (const [block, coefficients] of Object.entries(writable)) {
     for (const coefficient of coefficients ?? []) {
-      // A per-channel coefficient is submitted as an array; declaring it as a number
-      // would make the first real fit fail validation.
-      const spec = coefficient.isArray
-        ? ({ type: "number_array", length: STARTER_ARRAY_LENGTH } as const)
-        : ({ type: "number" } as const);
-      blocks[block] = { ...blocks[block], [coefficient.name]: spec };
+      blocks[block] = { ...blocks[block], [coefficient.name]: specForWritable(coefficient) };
     }
   }
 

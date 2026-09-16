@@ -13,25 +13,10 @@ import type {
   Stimulus,
 } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 
+import { uniqueName } from "./output-schema-edits";
+
 /** A role becomes a payload key and a python dict key; the contract's own rule for both. */
 export const ROLE_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
-
-/**
- * Whether the rig is one the contract would take. An author typing a role is briefly
- * between two valid names, and saving then would refuse the whole document.
- */
-export function isRigComplete(procedure: CaptureProcedure): boolean {
-  const roles = procedure.instruments.map((instrument) => instrument.role);
-
-  return (
-    new Set(roles).size === roles.length &&
-    procedure.instruments
-      .filter(isAuxiliaryInstrument)
-      .every(
-        (instrument) => ROLE_PATTERN.test(instrument.role) && instrument.handshake.trim() !== "",
-      )
-  );
-}
 
 /** Everything in the rig but the device under test, which declares no handshake of its own. */
 export type AuxiliaryInstrument = Extract<RigInstrument, { handshake: string }>;
@@ -106,17 +91,8 @@ export function removeInstrument(procedure: CaptureProcedure, role: string): Cap
 /** A role name derived from a model, numbered until nothing else holds it. */
 export function uniqueRole(base: string, taken: string[]): string {
   const stem = base.replace(/[^a-z0-9_]+/g, "_").replace(/^[^a-z]+/, "");
-  const candidate = stem === "" ? "instrument" : stem;
 
-  if (!taken.includes(candidate)) {
-    return candidate;
-  }
-  for (let suffix = 2; ; suffix++) {
-    const numbered = `${candidate}_${String(suffix)}`;
-    if (!taken.includes(numbered)) {
-      return numbered;
-    }
-  }
+  return uniqueName(stem === "" ? "instrument" : stem, taken);
 }
 
 function rolesNamedBy(step: ProcedureStep): string[] {

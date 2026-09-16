@@ -937,7 +937,8 @@
         "readTyped": "{{as}}: typed by the operator, {{prompt}}",
         "notWritable": "The platform has no console command for {{coefficients}}. A run producing these is recorded, but they never reach the device.",
         "describePlaceholder": "Say what this bench measures and against what.",
-        "readOnly": "You can read this calibration but not change it."
+        "readOnly": "You can read this calibration but not change it.",
+        "notSaving": "Not saving while the definition is incomplete."
       },
       "rig": {
         "hint": "Each instrument takes a serial port of its own at the bench. Renaming a role renames it in every step that uses it.",
@@ -958,6 +959,25 @@
         "anyInstrument": "Any that answers the handshake",
         "anyInstrumentHint": "Any instrument whose identity reply carries this handshake. Naming the instrument is what lets the steps offer its setpoints and readings.",
         "noDeviceSetpoints": "None the platform can drive"
+      },
+      "produces": {
+        "hint": "A block is written to a device as one unit and reviewed as one. The names the platform can write are offered here; min and max are what a fit is flagged against at review.",
+        "block": "Block",
+        "coefficient": "Coefficient",
+        "type": "Type",
+        "length": "Entries",
+        "min": "Min",
+        "max": "Max",
+        "addBlock": "Add block",
+        "addPlainBlock": "Block of my own",
+        "addCoefficient": "Add coefficient",
+        "addPlain": "Coefficient of my own",
+        "removeBlock": "Remove block {{block}}",
+        "removeCoefficient": "Remove {{name}}",
+        "blockTaken": "Another block already has this name.",
+        "nameTaken": "This block already has a coefficient with this name.",
+        "nameInvalid": "Lowercase letters, digits and underscores, starting with a letter.",
+        "recordedOnly": "Recorded with the run. The platform has no command to write this one."
       },
       "sidebar": {
         "title": "Details",

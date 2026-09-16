@@ -6,7 +6,6 @@ import { zCaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibra
 import {
   addInstrument,
   instrumentRoleUsage,
-  isRigComplete,
   removeInstrument,
   renameInstrumentRole,
   uniqueRole,
@@ -88,26 +87,6 @@ describe("instrumentRoleUsage", () => {
 
     expect(instrumentRoleUsage(withSpare).spare).toBeUndefined();
     expect(removeInstrument(withSpare, "spare").instruments).toHaveLength(3);
-  });
-});
-
-describe("isRigComplete", () => {
-  it("accepts a rig the contract accepts", () => {
-    expect(isRigComplete(procedure)).toBe(true);
-    expect(zCaptureProcedure.safeParse(procedure).success).toBe(true);
-  });
-
-  // Saving mid-rename would submit a document the contract refuses and report it to the
-  // author as a failure of the thing they were typing.
-  it("refuses a half typed role, and a handshake nothing could answer", () => {
-    expect(isRigComplete(renameInstrumentRole(procedure, "lamp", "Lamp"))).toBe(false);
-    expect(isRigComplete(renameInstrumentRole(procedure, "lamp", "par_ref"))).toBe(false);
-    expect(
-      isRigComplete({
-        ...procedure,
-        instruments: [{ role: "dut" }, { role: "lamp", handshake: " " }],
-      }),
-    ).toBe(false);
   });
 });
 

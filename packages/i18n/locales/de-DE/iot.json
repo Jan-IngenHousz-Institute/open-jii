@@ -937,7 +937,8 @@
         "readTyped": "{{as}}: von der Bedienperson eingegeben, {{prompt}}",
         "notWritable": "Für {{coefficients}} gibt es keinen Konsolenbefehl. Ein Lauf wird protokolliert, die Werte erreichen das Gerät aber nie.",
         "describePlaceholder": "Beschreiben, was dieser Prüfstand misst und wogegen.",
-        "readOnly": "Sie können diese Kalibrierung lesen, aber nicht ändern."
+        "readOnly": "Sie können diese Kalibrierung lesen, aber nicht ändern.",
+        "notSaving": "Wird nicht gespeichert, solange die Definition unvollständig ist."
       },
       "rig": {
         "hint": "Jedes Instrument belegt am Messplatz einen eigenen seriellen Anschluss. Eine Rolle umzubenennen benennt sie in jedem Schritt um, der sie verwendet.",
@@ -958,6 +959,25 @@
         "anyInstrument": "Beliebiges, das sich so meldet",
         "anyInstrumentHint": "Jedes Instrument, dessen Kennung diesen Text enthält. Erst die Angabe des Instruments lässt die Schritte seine Sollwerte und Messwerte anbieten.",
         "noDeviceSetpoints": "Keine, die die Plattform setzen kann"
+      },
+      "produces": {
+        "hint": "Ein Block wird als Einheit auf ein Gerät geschrieben und als Einheit geprüft. Die Namen, die die Plattform schreiben kann, werden hier angeboten; Min und Max sind die Werte, gegen die eine Anpassung bei der Prüfung geprüft wird.",
+        "block": "Block",
+        "coefficient": "Koeffizient",
+        "type": "Typ",
+        "length": "Einträge",
+        "min": "Min",
+        "max": "Max",
+        "addBlock": "Block hinzufügen",
+        "addPlainBlock": "Eigener Block",
+        "addCoefficient": "Koeffizient hinzufügen",
+        "addPlain": "Eigener Koeffizient",
+        "removeBlock": "Block {{block}} entfernen",
+        "removeCoefficient": "{{name}} entfernen",
+        "blockTaken": "Ein anderer Block trägt diesen Namen bereits.",
+        "nameTaken": "Dieser Block enthält bereits einen Koeffizienten dieses Namens.",
+        "nameInvalid": "Kleinbuchstaben, Ziffern und Unterstriche, beginnend mit einem Buchstaben.",
+        "recordedOnly": "Wird mit dem Lauf aufgezeichnet. Die Plattform hat keinen Befehl, um diesen zu schreiben."
       },
       "sidebar": {
         "title": "Details",

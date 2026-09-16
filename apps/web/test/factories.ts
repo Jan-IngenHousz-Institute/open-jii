@@ -41,6 +41,7 @@ import type { ExperimentVisualization } from "@repo/api/domains/experiment/visua
 import type {
   ActiveDeviceCalibration,
   CalibrationDefinition,
+  CalibrationDefinitionDetail,
   CalibrationDefinitionSummary,
   CalibrationRun,
   CalibrationRunDetail,
@@ -1145,6 +1146,16 @@ export function createCalibrationDefinition(
     createdBy: crypto.randomUUID(),
     createdAt: "2026-09-01T00:00:00.000Z",
     updatedAt: "2026-09-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function createCalibrationDefinitionDetail(
+  overrides: Partial<CalibrationDefinitionDetail> = {},
+): CalibrationDefinitionDetail {
+  return {
+    ...createCalibrationDefinition(overrides),
+    capabilities: createCapabilities(),
     ...overrides,
   };
 }

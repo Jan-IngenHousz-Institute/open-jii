@@ -937,7 +937,8 @@
         "readTyped": "{{as}}: door de operator ingevoerd, {{prompt}}",
         "notWritable": "Het platform heeft geen console-opdracht voor {{coefficients}}. Een run wordt vastgelegd, maar deze waarden bereiken het apparaat nooit.",
         "describePlaceholder": "Beschrijf wat deze opstelling meet en waartegen.",
-        "readOnly": "Je kunt deze kalibratie lezen maar niet wijzigen."
+        "readOnly": "Je kunt deze kalibratie lezen maar niet wijzigen.",
+        "notSaving": "Wordt niet opgeslagen zolang de definitie onvolledig is."
       },
       "rig": {
         "hint": "Elk instrument krijgt aan de meetbank een eigen seriële poort. Een rol hernoemen hernoemt die in elke stap die hem gebruikt.",
@@ -958,6 +959,25 @@
         "anyInstrument": "Elk instrument dat zich zo meldt",
         "anyInstrumentHint": "Elk instrument waarvan de identificatie deze tekst bevat. Pas als het instrument benoemd is, kunnen de stappen zijn instelwaarden en meetwaarden aanbieden.",
         "noDeviceSetpoints": "Geen die het platform kan zetten"
+      },
+      "produces": {
+        "hint": "Een blok wordt als geheel naar een apparaat geschreven en als geheel beoordeeld. De namen die het platform kan schrijven worden hier aangeboden; min en max zijn waartegen een fit bij de beoordeling wordt afgezet.",
+        "block": "Blok",
+        "coefficient": "Coëfficiënt",
+        "type": "Type",
+        "length": "Waarden",
+        "min": "Min",
+        "max": "Max",
+        "addBlock": "Blok toevoegen",
+        "addPlainBlock": "Eigen blok",
+        "addCoefficient": "Coëfficiënt toevoegen",
+        "addPlain": "Eigen coëfficiënt",
+        "removeBlock": "Blok {{block}} verwijderen",
+        "removeCoefficient": "{{name}} verwijderen",
+        "blockTaken": "Een ander blok heeft deze naam al.",
+        "nameTaken": "Dit blok heeft al een coëfficiënt met deze naam.",
+        "nameInvalid": "Kleine letters, cijfers en liggende streepjes, beginnend met een letter.",
+        "recordedOnly": "Wordt met de meting vastgelegd. Het platform heeft geen commando om deze te schrijven."
       },
       "sidebar": {
         "title": "Details",

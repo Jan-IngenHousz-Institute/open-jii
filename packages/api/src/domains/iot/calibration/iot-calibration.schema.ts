@@ -20,10 +20,13 @@ const zNumberCoefficientSpec = z
   })
   .strict();
 
+/** Entries in a per-channel coefficient, bounded by the widest sensor the platform writes. */
+export const MAX_COEFFICIENT_ARRAY_LENGTH = 64;
+
 const zIntegerArrayCoefficientSpec = z
   .object({
     type: z.literal("integer_array"),
-    length: z.number().int().min(1).max(64),
+    length: z.number().int().min(1).max(MAX_COEFFICIENT_ARRAY_LENGTH),
     min: z.number().int().optional(),
     max: z.number().int().optional(),
   })
@@ -33,7 +36,7 @@ const zIntegerArrayCoefficientSpec = z
 const zNumberArrayCoefficientSpec = z
   .object({
     type: z.literal("number_array"),
-    length: z.number().int().min(1).max(64),
+    length: z.number().int().min(1).max(MAX_COEFFICIENT_ARRAY_LENGTH),
     min: z.number().finite().optional(),
     max: z.number().finite().optional(),
   })

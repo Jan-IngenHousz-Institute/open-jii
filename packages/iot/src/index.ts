@@ -143,6 +143,7 @@ export type {
   BenchInstrumentSummary,
   DeviceSetpointSummary,
   FamilyCalibrationCapabilities,
+  WritableCoefficient,
 } from "./calibration/capabilities";
 
 // Calibration write-back: approved coefficients become family console commands.
