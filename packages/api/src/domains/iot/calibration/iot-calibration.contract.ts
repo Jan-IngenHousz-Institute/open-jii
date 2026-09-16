@@ -11,6 +11,7 @@ import {
   zCalibrationRunList,
   zCalibrationRunPathParam,
   zCreateCalibrationDefinitionBody,
+  zUpdateCalibrationDefinitionBody,
   zCreateCalibrationRunBody,
   zCreateExternalCalibrationRunBody,
   zActiveDeviceCalibration,
@@ -37,6 +38,14 @@ export const iotCalibrationContract = {
   createCalibrationDefinition: oc
     .route({ method: "POST", path: "/api/v1/calibration-definitions", successStatus: 201 })
     .input(zCreateCalibrationDefinitionBody)
+    .output(zCalibrationDefinition),
+  updateCalibrationDefinition: oc
+    .route({
+      method: "PATCH",
+      path: "/api/v1/calibration-definitions/{definitionId}",
+      successStatus: 200,
+    })
+    .input(zCalibrationDefinitionPathParam.merge(zUpdateCalibrationDefinitionBody))
     .output(zCalibrationDefinition),
   deleteCalibrationDefinition: oc
     .route({

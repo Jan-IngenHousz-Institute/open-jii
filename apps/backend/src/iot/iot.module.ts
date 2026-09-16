@@ -63,6 +63,7 @@ import { RevokeIotCredentialsUseCase } from "./application/use-cases/revoke-iot-
 import { RevokeIotDeviceGroupCredentialsUseCase } from "./application/use-cases/revoke-iot-device-group-credentials/revoke-iot-device-group-credentials";
 import { RotateIotCredentialsUseCase } from "./application/use-cases/rotate-iot-credentials/rotate-iot-credentials";
 import { RotateIotDeviceGroupCredentialsUseCase } from "./application/use-cases/rotate-iot-device-group-credentials/rotate-iot-device-group-credentials";
+import { UpdateCalibrationDefinitionUseCase } from "./application/use-cases/update-calibration-definition/update-calibration-definition";
 import { UpdateIotDeviceGroupUseCase } from "./application/use-cases/update-iot-device-group/update-iot-device-group";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { CALIBRATION_SANDBOX_PORT } from "./core/ports/calibration-sandbox.port";
@@ -146,6 +147,7 @@ import { IotController } from "./presentation/iot.controller";
     ListCalibrationDefinitionsUseCase,
     GetCalibrationDefinitionUseCase,
     DeleteCalibrationDefinitionUseCase,
+    UpdateCalibrationDefinitionUseCase,
     CreateCalibrationRunUseCase,
     CreateExternalCalibrationRunUseCase,
     ListDeviceCalibrationRunsUseCase,

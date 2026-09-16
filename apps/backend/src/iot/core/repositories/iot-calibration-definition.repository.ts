@@ -5,9 +5,11 @@ import {
   zCalibrationFamily,
   zCalibrationOutputSchema,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
+import type { UpdateCalibrationDefinitionBody } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import {
   and,
   calibrationDefinitions,
+  calibrationRuns,
   desc,
   ensurePersonalOrganization,
   eq,
@@ -121,6 +123,31 @@ export class IotCalibrationDefinitionRepository {
         .from(calibrationDefinitions)
         .where(eq(calibrationDefinitions.id, definitionId));
       return results.length > 0 ? this.parseRows(results)[0] : null;
+    });
+  }
+
+  async update(
+    definitionId: string,
+    changes: UpdateCalibrationDefinitionBody,
+  ): Promise<Result<CalibrationDefinitionDto | null>> {
+    return tryCatch(async () => {
+      const results = await this.database
+        .update(calibrationDefinitions)
+        .set({ ...changes, updatedAt: new Date() })
+        .where(eq(calibrationDefinitions.id, definitionId))
+        .returning();
+      return results.length > 0 ? this.parseRows(results)[0] : null;
+    });
+  }
+
+  /** A definition a run points at cannot be edited: the run would appear to have done something else. */
+  async countRuns(definitionId: string): Promise<Result<number>> {
+    return tryCatch(async () => {
+      const [row] = await this.database
+        .select({ runs: sql<number>`count(*)::int` })
+        .from(calibrationRuns)
+        .where(eq(calibrationRuns.definitionId, definitionId));
+      return row.runs;
     });
   }
 

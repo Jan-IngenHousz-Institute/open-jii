@@ -155,6 +155,20 @@ export const zCreateCalibrationDefinitionBody = z.object({
   organizationId: z.string().uuid().optional(),
 });
 
+/**
+ * Family is not updatable: the procedure's instruments, the script's inputs and the
+ * coefficients the platform can write are all validated against it, so changing it would
+ * invalidate the other three artefacts at once. Author a new definition instead.
+ */
+export const zUpdateCalibrationDefinitionBody = z.object({
+  name: z.string().trim().min(1).max(255).optional(),
+  description: z.string().max(2000).nullable().optional(),
+  captureProcedure: zCaptureProcedure.optional(),
+  script: z.string().min(1).max(1_000_000).optional(),
+  outputSchema: zCalibrationOutputSchema.optional(),
+  minFirmwareVersion: zFirmwareVersion.nullable().optional(),
+});
+
 export const zCalibrationDefinitionPathParam = z.object({
   definitionId: z.string().uuid(),
 });
@@ -329,6 +343,7 @@ export type CalibrationInputSource = z.infer<typeof zCalibrationInputSource>;
 export type CalibrationDefinition = z.infer<typeof zCalibrationDefinition>;
 export type CalibrationDefinitionSummary = z.infer<typeof zCalibrationDefinitionSummary>;
 export type CreateCalibrationDefinitionBody = z.infer<typeof zCreateCalibrationDefinitionBody>;
+export type UpdateCalibrationDefinitionBody = z.infer<typeof zUpdateCalibrationDefinitionBody>;
 export type CalibrationRunPayload = z.infer<typeof zCalibrationRunPayload>;
 export type CalibrationRun = z.infer<typeof zCalibrationRun>;
 export type CalibrationRunDetail = z.infer<typeof zCalibrationRunDetail>;

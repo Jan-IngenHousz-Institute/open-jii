@@ -22,6 +22,7 @@ import { ListDeviceCalibrationRunsUseCase } from "../application/use-cases/list-
 import { ListDeviceCalibrationsUseCase } from "../application/use-cases/list-device-calibrations/list-device-calibrations";
 import { RejectCalibrationRunUseCase } from "../application/use-cases/reject-calibration-run/reject-calibration-run";
 import { ReportDeviceCalibrationWriteUseCase } from "../application/use-cases/report-device-calibration-write/report-device-calibration-write";
+import { UpdateCalibrationDefinitionUseCase } from "../application/use-cases/update-calibration-definition/update-calibration-definition";
 
 @Controller()
 export class IotCalibrationController {
@@ -32,6 +33,7 @@ export class IotCalibrationController {
     private readonly listCalibrationDefinitionsUseCase: ListCalibrationDefinitionsUseCase,
     private readonly getCalibrationDefinitionUseCase: GetCalibrationDefinitionUseCase,
     private readonly deleteCalibrationDefinitionUseCase: DeleteCalibrationDefinitionUseCase,
+    private readonly updateCalibrationDefinitionUseCase: UpdateCalibrationDefinitionUseCase,
     private readonly createCalibrationRunUseCase: CreateCalibrationRunUseCase,
     private readonly createExternalCalibrationRunUseCase: CreateExternalCalibrationRunUseCase,
     private readonly listDeviceCalibrationRunsUseCase: ListDeviceCalibrationRunsUseCase,
@@ -100,6 +102,27 @@ export class IotCalibrationController {
         }
 
         return throwOrpcFailure(result, this.logger, "createCalibrationDefinition");
+      },
+    );
+  }
+
+  @CanAccess({ resource: "calibration_definition", action: "manage", param: "definitionId" })
+  @Implement(iotCalibrationContract.updateCalibrationDefinition)
+  updateCalibrationDefinition(@Session() session: UserSession) {
+    return implement(iotCalibrationContract.updateCalibrationDefinition).handler(
+      async ({ input }) => {
+        const { definitionId, ...changes } = input;
+        const result = await this.updateCalibrationDefinitionUseCase.execute(
+          definitionId,
+          changes,
+          session.user.id,
+        );
+
+        if (result.isSuccess()) {
+          return result.value;
+        }
+
+        return throwOrpcFailure(result, this.logger, "updateCalibrationDefinition");
       },
     );
   }
