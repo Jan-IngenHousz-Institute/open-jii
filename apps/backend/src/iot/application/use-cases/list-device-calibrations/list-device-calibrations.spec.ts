@@ -67,7 +67,9 @@ describe("ListDeviceCalibrationsUseCase", () => {
       deviceId,
       requestedBy: userId,
       inputSource: "bench_wizard",
-      status: "running",
+      // The only status the repository is ever asked to approve; the use case refuses
+      // anything else, and approve() now re-asserts it inside its transaction.
+      status: "computed",
     });
     assertSuccess(run);
     const approved = await runRepository.approve(
