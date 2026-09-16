@@ -308,10 +308,7 @@ describe("runCaptureProcedure", () => {
     // A fixed sweep that cannot be corrected wastes the whole session over one point.
     it("takes the point again and keeps the second reading", async () => {
       const port = operator({
-        confirmReading: vi
-          .fn()
-          .mockResolvedValueOnce(false)
-          .mockResolvedValue(true),
+        confirmReading: vi.fn().mockResolvedValueOnce(false).mockResolvedValue(true),
       });
 
       const result = await runCaptureProcedure(

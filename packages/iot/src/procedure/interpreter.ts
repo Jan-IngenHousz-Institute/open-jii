@@ -53,7 +53,11 @@ export interface ProcedureContext {
 
 const realSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Where a reading the operator took again is kept, beside the series it was taken for. */
+/**
+ * Where a reading the operator took again is kept, beside the series it was taken for.
+ * The contract layer owns this convention and validates payloads against it; this package
+ * cannot import it, so the two must agree by spelling.
+ */
 export const DISCARDED_SERIES_SUFFIX = "_retaken";
 
 export async function runCaptureProcedure(

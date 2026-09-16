@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
 import {
-  procedureSeriesNames,
+  acceptedSeriesNames,
   requiredProcedureSeriesNames,
 } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 import type { CreateCalibrationRunBody } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
@@ -126,7 +126,7 @@ export class CreateCalibrationRunUseCase {
     definition: CalibrationDefinitionDto,
     payload: CreateCalibrationRunBody["payload"],
   ): string | null {
-    const known = new Set(procedureSeriesNames(definition.captureProcedure));
+    const known = new Set(acceptedSeriesNames(definition.captureProcedure));
     const required = requiredProcedureSeriesNames(definition.captureProcedure);
     const provided = new Set(Object.keys(payload));
 

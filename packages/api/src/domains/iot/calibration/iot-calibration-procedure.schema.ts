@@ -348,6 +348,21 @@ export const zCaptureProcedure = z
   });
 
 /** Every series a procedure can produce; the run payload may carry no others. */
+/**
+ * A reading the operator took again is kept beside the series it was taken for, under
+ * this suffix. The fit never sees it and it is never required; it is there so a reviewer
+ * can tell that a point was taken twice and what the discarded attempt said.
+ */
+export const RETAKEN_SERIES_SUFFIX = "_retaken";
+
+/** The series a payload may carry: those the procedure declares, and their retaken companions. */
+export function acceptedSeriesNames(procedure: CaptureProcedure): string[] {
+  return procedureSeriesNames(procedure).flatMap((name) => [
+    name,
+    `${name}${RETAKEN_SERIES_SUFFIX}`,
+  ]);
+}
+
 export function procedureSeriesNames(procedure: CaptureProcedure): string[] {
   const names: string[] = [];
   for (const step of procedure.steps) {

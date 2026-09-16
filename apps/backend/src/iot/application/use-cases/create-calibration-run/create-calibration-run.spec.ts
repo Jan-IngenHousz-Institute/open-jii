@@ -150,6 +150,16 @@ describe("CreateCalibrationRunUseCase", () => {
     expect(result.error.message).toContain("does not produce");
   });
 
+  // A reading the operator took again travels beside its series so the discarded attempt
+  // stays on the record. No procedure declares it, and refusing it would throw away the
+  // whole session over the one point the operator corrected.
+  it("accepts the retaken companion of a series the procedure declares", async () => {
+    const result = await run({
+      payload: { ...PAYLOAD, par_sweep_retaken: [{ stimulus: 0.8, par_raw: 1, par_ref: 2 }] },
+    });
+    assertSuccess(result);
+  });
+
   // The route guard authorizes the device, not the definition named in the body,
   // so an unreadable definition must be refused by the use case itself.
   it("refuses to run a definition the caller cannot read", async () => {
