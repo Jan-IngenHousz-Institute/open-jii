@@ -235,6 +235,13 @@ export async function releaseCms(
       : defaultLocale;
     fields[key] = { ...fields[key], [locale]: value };
   }
+  // An explicit --version asserts what was reviewed, so a stale one is refused before the no-op
+  // below: matching fields do not mean the entry is unchanged, and it would be returned as reviewed.
+  if (current && options.version !== undefined && current.sys.version !== options.version) {
+    throw new Error(
+      `Updating an existing note requires its reviewed --version ${current.sys.version}`,
+    );
+  }
   if (current && isDeepStrictEqual(fields, current.fields)) {
     return { unchanged: true, entry: current };
   }

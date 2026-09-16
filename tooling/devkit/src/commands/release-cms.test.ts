@@ -164,6 +164,22 @@ describe("release CMS", () => {
     expect(request).toHaveBeenCalledTimes(4);
   });
 
+  it("refuses a stale reviewed version even when the fields already match", async () => {
+    const request = discovery(1, [existing]);
+    await expect(
+      releaseCms(
+        {
+          action: "draft",
+          note: { locale: "en-US", fields: { slug: "september", title: "Old title" } },
+          version: 3,
+        },
+        config,
+        request,
+      ),
+    ).rejects.toThrow("reviewed --version 4");
+    expect(request).toHaveBeenCalledTimes(4);
+  });
+
   it("refuses duplicates and edits without the reviewed version", async () => {
     const duplicates = discovery(2, [existing, existing]);
     await expect(releaseCms({ action: "draft", note }, config, duplicates)).rejects.toThrow(
