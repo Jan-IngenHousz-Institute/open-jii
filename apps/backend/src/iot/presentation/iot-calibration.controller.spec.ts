@@ -6,6 +6,7 @@ import type {
   CalibrationDefinition,
   CalibrationDefinitionSummary,
   CalibrationRun,
+  CalibrationRunDetail,
   DeviceCalibration,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { calibrationDefinitions, eq } from "@repo/database";
@@ -323,11 +324,17 @@ describe("IotCalibrationController", () => {
         .expect(StatusCodes.OK);
       expect(list.body.map((run) => run.id)).toEqual([created.body.id]);
 
-      const single: SuperTestResponse<CalibrationRun> = await testApp
+      const single: SuperTestResponse<CalibrationRunDetail> = await testApp
         .get(testApp.resolveOrpcPath(contract.iot.getCalibrationRun, { runId: created.body.id }))
         .withAuth(userId)
         .expect(StatusCodes.OK);
       expect(single.body.id).toBe(created.body.id);
+
+      // The readings a fit was computed from are what lets anyone re-derive or argue with
+      // it later, so one run carries them. The list is read on every device page and does
+      // not.
+      expect(single.body.payload).toEqual(PAYLOAD);
+      expect(list.body[0]).not.toHaveProperty("payload");
     });
 
     it("approves a run into the device's active calibration (201)", async () => {

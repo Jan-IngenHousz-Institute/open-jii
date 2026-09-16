@@ -7,6 +7,7 @@ import {
   zCalibrationDefinitionList,
   zCalibrationDefinitionPathParam,
   zCalibrationRun,
+  zCalibrationRunDetail,
   zCalibrationRunList,
   zCalibrationRunPathParam,
   zCreateCalibrationDefinitionBody,
@@ -72,7 +73,7 @@ export const iotCalibrationContract = {
   getCalibrationRun: oc
     .route({ method: "GET", path: "/api/v1/calibration-runs/{runId}", successStatus: 200 })
     .input(zCalibrationRunPathParam)
-    .output(zCalibrationRun),
+    .output(zCalibrationRunDetail),
 
   // Approval supersedes the active calibration; rejection is terminal and keeps the diagnostics.
   approveCalibrationRun: oc

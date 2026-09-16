@@ -209,6 +209,15 @@ export const zCalibrationRun = z.object({
 
 export const zCalibrationRunList = z.array(zCalibrationRun);
 
+/**
+ * One run with the readings it was computed from. They are what a fit can be re-derived,
+ * re-examined or argued with afterwards, so they travel with the single run rather than
+ * with the list, which is read on every device page.
+ */
+export const zCalibrationRunDetail = zCalibrationRun.extend({
+  payload: zCalibrationRunPayload.nullable(),
+});
+
 /** Run-level operator values (a lamp's certified output, a fixture id); the script sees them as params. */
 export const zCalibrationRunParams = z.record(
   z.string(),
@@ -298,6 +307,7 @@ export type CalibrationDefinitionSummary = z.infer<typeof zCalibrationDefinition
 export type CreateCalibrationDefinitionBody = z.infer<typeof zCreateCalibrationDefinitionBody>;
 export type CalibrationRunPayload = z.infer<typeof zCalibrationRunPayload>;
 export type CalibrationRun = z.infer<typeof zCalibrationRun>;
+export type CalibrationRunDetail = z.infer<typeof zCalibrationRunDetail>;
 export type CreateCalibrationRunBody = z.infer<typeof zCreateCalibrationRunBody>;
 export type CreateExternalCalibrationRunBody = z.infer<typeof zCreateExternalCalibrationRunBody>;
 export type ReportDeviceCalibrationWriteBody = z.infer<typeof zReportDeviceCalibrationWriteBody>;
