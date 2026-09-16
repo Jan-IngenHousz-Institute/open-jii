@@ -13,6 +13,7 @@ import { Button } from "@repo/ui/components/button";
 
 import { CalibrationBlockCard } from "./calibration-block-card";
 import { CalibrationFitChart } from "./calibration-fit-chart";
+import { CalibrationSeriesTable } from "./calibration-series-table";
 import { fitLineFromCoefficients, fitPointsFromPayload } from "./fit-points";
 
 interface CalibrationReviewProps {
@@ -55,6 +56,10 @@ export function CalibrationReview({
     );
   }
 
+  function renderSeries([series, rows]: [string, CalibrationRunPayload[string]]) {
+    return <CalibrationSeriesTable key={series} series={series} rows={rows} />;
+  }
+
   function renderBlock([name, block]: (typeof blocks)[number]) {
     return (
       <CalibrationBlockCard
@@ -90,6 +95,7 @@ export function CalibrationReview({
       <p className="text-muted-foreground text-sm">{t("iot.calibration.review.hint")}</p>
       {renderChart()}
       <div className="grid gap-4 md:grid-cols-2">{blocks.map(renderBlock)}</div>
+      <div className="space-y-4">{Object.entries(payload).map(renderSeries)}</div>
       <div className="flex gap-2">
         <Button type="button" onClick={onApprove} disabled={isBusy}>
           {isApproving && <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />}

@@ -35,6 +35,18 @@ function renderReview(overrides: Partial<Parameters<typeof CalibrationReview>[0]
 }
 
 describe("CalibrationReview", () => {
+  // Coefficients alone cannot show a reviewer a point that went wrong, and three of the
+  // seeded procedures draw no chart at all, so the measured points are always on screen.
+  it("shows the points the fit was drawn from", () => {
+    renderReview();
+
+    expect(screen.getByRole("table")).toBeInTheDocument();
+    const rows = screen.getAllByRole("row");
+    expect(rows).toHaveLength(PAYLOAD.par_sweep.length + 1);
+    expect(screen.getByText("402.12")).toBeInTheDocument();
+    expect(screen.getByText("8.33")).toBeInTheDocument();
+  });
+
   it("shows each computed block with its new coefficients and quality", () => {
     renderReview();
 

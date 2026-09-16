@@ -850,7 +850,8 @@
         "points": "Erfasste Punkte",
         "fitLine": "Angepasste Gerade",
         "xLabel": "Gerätemesswert",
-        "yLabel": "Referenzmesswert"
+        "yLabel": "Referenzmesswert",
+        "seriesCaption": "{{series}}, {{points}} Punkte"
       },
       "write": {
         "hint": "Schreiben Sie die freigegebenen Koeffizienten auf das Gerät. Jeder Block wird durch Zurücklesen bestätigt.",

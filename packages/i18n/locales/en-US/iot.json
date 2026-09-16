@@ -850,7 +850,8 @@
         "points": "Captured points",
         "fitLine": "Fitted line",
         "xLabel": "Device reading",
-        "yLabel": "Reference reading"
+        "yLabel": "Reference reading",
+        "seriesCaption": "{{series}}, {{points}} points"
       },
       "write": {
         "hint": "Write the approved coefficients to the device. Each block is confirmed by reading it back.",

@@ -850,7 +850,8 @@
         "points": "Vastgelegde punten",
         "fitLine": "Gefitte lijn",
         "xLabel": "Apparaatmeting",
-        "yLabel": "Referentiemeting"
+        "yLabel": "Referentiemeting",
+        "seriesCaption": "{{series}}, {{points}} punten"
       },
       "write": {
         "hint": "Schrijf de goedgekeurde coëfficiënten naar het apparaat. Elk blok wordt bevestigd door het terug te lezen.",
