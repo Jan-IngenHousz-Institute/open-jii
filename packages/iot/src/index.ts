@@ -134,6 +134,17 @@ export {
 } from "./instrument/registry";
 export type { BenchInstrumentFactory, BenchIdentification } from "./instrument/registry";
 
+// What a definition may declare, summarised from the registries that decide it.
+export {
+  benchInstrumentSummaries,
+  familyCalibrationCapabilities,
+} from "./calibration/capabilities";
+export type {
+  BenchInstrumentSummary,
+  DeviceSetpointSummary,
+  FamilyCalibrationCapabilities,
+} from "./calibration/capabilities";
+
 // Calibration write-back: approved coefficients become family console commands.
 export {
   CALIBRATION_WRITERS,
