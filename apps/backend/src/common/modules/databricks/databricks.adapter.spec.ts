@@ -703,19 +703,20 @@ describe("DatabricksAdapter", () => {
           status: { state: "SUCCEEDED" },
           manifest: {
             schema: {
-              column_count: 4,
+              column_count: 5,
               columns: [
                 { name: "export_id", type_name: "string", type_text: "string", position: 0 },
                 { name: "file_path", type_name: "string", type_text: "string", position: 1 },
                 { name: "table_name", type_name: "string", type_text: "string", position: 2 },
-                { name: "completed_at", type_name: "string", type_text: "string", position: 3 },
+                { name: "format", type_name: "string", type_text: "string", position: 3 },
+                { name: "completed_at", type_name: "string", type_text: "string", position: 4 },
               ],
             },
             total_row_count: 1,
             truncated: false,
           },
           result: {
-            data_array: [[exportId, filePath, "raw_data", "2026-01-02 03:04:05"]],
+            data_array: [[exportId, filePath, "raw_data", "csv", "2026-01-02 03:04:05"]],
             chunk_index: 0,
             row_count: 1,
             row_offset: 0,
@@ -740,6 +741,7 @@ describe("DatabricksAdapter", () => {
       assertSuccess(result);
       expect(result.value.filePath).toBe(filePath);
       expect(result.value.tableName).toBe("raw_data");
+      expect(result.value.format).toBe("csv");
       expect(result.value.completedAt).toBe("2026-01-02 03:04:05");
       expect(result.value.stream).toBeInstanceOf(Object);
     });
@@ -762,18 +764,19 @@ describe("DatabricksAdapter", () => {
           status: { state: "SUCCEEDED" },
           manifest: {
             schema: {
-              column_count: 3,
+              column_count: 4,
               columns: [
                 { name: "export_id", type_name: "string", type_text: "string", position: 0 },
                 { name: "file_path", type_name: "string", type_text: "string", position: 1 },
                 { name: "table_name", type_name: "string", type_text: "string", position: 2 },
+                { name: "format", type_name: "string", type_text: "string", position: 3 },
               ],
             },
             total_row_count: 1,
             truncated: false,
           },
           result: {
-            data_array: [[exportId, filePath, "raw_data"]],
+            data_array: [[exportId, filePath, "raw_data", "csv"]],
             chunk_index: 0,
             row_count: 1,
             row_offset: 0,
@@ -951,18 +954,19 @@ describe("DatabricksAdapter", () => {
           status: { state: "SUCCEEDED" },
           manifest: {
             schema: {
-              column_count: 3,
+              column_count: 4,
               columns: [
                 { name: "export_id", type_name: "string", type_text: "string", position: 0 },
                 { name: "file_path", type_name: "string", type_text: "string", position: 1 },
                 { name: "table_name", type_name: "string", type_text: "string", position: 2 },
+                { name: "format", type_name: "string", type_text: "string", position: 3 },
               ],
             },
             total_row_count: 1,
             truncated: false,
           },
           result: {
-            data_array: [[exportId, filePath, "raw_data"]],
+            data_array: [[exportId, filePath, "raw_data", "parquet"]],
             chunk_index: 0,
             row_count: 1,
             row_offset: 0,
@@ -987,6 +991,51 @@ describe("DatabricksAdapter", () => {
       assertSuccess(result);
       expect(result.value.filePath).toBe(filePath);
       expect(result.value.tableName).toBe("raw_data");
+      expect(result.value.format).toBe("parquet");
+    });
+
+    it("should return internal error when the format is unknown", async () => {
+      const exportId = "export-abc";
+      const experimentId = "exp-456";
+      const filePath = "/volumes/catalog/schema/exports/export-abc/raw_data.tsv";
+
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .post(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/`)
+        .reply(200, {
+          statement_id: "stmt-6",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 4,
+              columns: [
+                { name: "export_id", type_name: "string", type_text: "string", position: 0 },
+                { name: "file_path", type_name: "string", type_text: "string", position: 1 },
+                { name: "table_name", type_name: "string", type_text: "string", position: 2 },
+                { name: "format", type_name: "string", type_text: "string", position: 3 },
+              ],
+            },
+            total_row_count: 1,
+            truncated: false,
+          },
+          result: {
+            data_array: [[exportId, filePath, "raw_data", "tsv"]],
+            chunk_index: 0,
+            row_count: 1,
+            row_offset: 0,
+          },
+        });
+
+      const result = await databricksAdapter.streamExport(exportId, experimentId);
+
+      assertFailure(result);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(result.error.message).toContain("Export format is unknown");
     });
   });
 

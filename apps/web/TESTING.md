@@ -10,6 +10,7 @@ test/
 ├── setup.ts         # Global mocks + MSW lifecycle (loaded via vitest setupFiles)
 ├── test-utils.tsx   # render() / renderHook() wrapped in QueryClientProvider
 ├── factories.ts     # createExperiment(), createSession(), etc.
+├── intersection-observer.ts  # stubIntersectionObserver() for lazy-mount tests
 └── msw/
     ├── handlers.ts  # Empty — each test mounts its own endpoints
     ├── mount.ts     # server.mount() implementation
@@ -56,6 +57,15 @@ These are already mocked globally. **Do not re-declare them in test files.**
 Environment variables come from `.env.test` (Vitest auto-loads it). The zod schema in `env.ts` provides defaults for most values; `.env.test` only sets non-default ones like PostHog keys. To override env in a single test file, use `vi.mock("~/env")` — per-file mocks take precedence.
 
 **Do not mock** `@repo/ui/components`, `next/link`, `next/image`, `lucide-react` — they work fine in jsdom.
+
+**Exception: `@repo/ui/components/charts/*`.** Plotly needs a real layout engine and WebGL, so chart components render nothing useful under jsdom and are slow to mount. Mock the specific chart component your test renders, and assert on the props it receives. Use the partial form so the rest of the module survives:
+
+```tsx
+vi.mock("@repo/ui/components/charts/plotly-chart", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@repo/ui/components/charts/plotly-chart")>()),
+  PlotlyChart: () => <div data-testid="chart" />,
+}));
+```
 
 ## Per-test overrides
 
@@ -121,6 +131,22 @@ const spy = server.mount(contract.macros.createMacro, {
 expect(spy.body).toMatchObject({ name: "Test" });
 expect(spy.params.id).toBe("new-1");
 ```
+
+## Lazy-mounted components
+
+Dashboard widgets and charts mount only once they scroll near the viewport. jsdom ships no `IntersectionObserver`, and the in-view hook treats its absence as "everything is visible", which hides that behaviour entirely.
+
+`stubIntersectionObserver()` from [test/intersection-observer.ts](test/intersection-observer.ts) installs one you drive by hand. Pair it with `vi.unstubAllGlobals()` in `afterEach`, or the stub leaks into later files in the same worker and their lazy content never appears.
+
+```tsx
+const { intersect } = stubIntersectionObserver();
+render(<DashboardRenderer dashboard={dashboard} experimentId="exp-1" />);
+expect(screen.queryByTestId("widget")).toBeNull();
+intersect(true);
+expect(screen.getByTestId("widget")).toBeInTheDocument();
+```
+
+**Proving something did _not_ happen** needs a positive signal first, not a `setTimeout`. Wait for something that must render, then assert the absence — otherwise the test passes when the work was merely slow.
 
 ## Factories (`test/factories.ts`)
 

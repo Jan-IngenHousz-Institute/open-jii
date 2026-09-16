@@ -1,10 +1,14 @@
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Module } from "@nestjs/common";
+import type { Cache } from "cache-manager";
 
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
 import { AnalyticsModule } from "../common/modules/analytics/analytics.module";
 // Adapters & External Modules
 import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
+import { CacheAdapter } from "../common/modules/cache/cache.adapter";
+import { CacheModule } from "../common/modules/cache/cache.module";
 import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
 import { EmailAdapter } from "../common/modules/email/services/email.adapter";
@@ -78,6 +82,7 @@ import { UpgradeWorkbookVersionUseCase } from "./application/use-cases/upgrade-w
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 // Ports
 import { AWS_PORT } from "./core/ports/aws.port";
+import { CACHE_PORT } from "./core/ports/cache.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { EMAIL_PORT } from "./core/ports/email.port";
 import { ExperimentDashboardRepository } from "./core/repositories/experiment-dashboard.repository";
@@ -114,6 +119,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
 @Module({
   imports: [
     MetricsModule,
+    CacheModule,
     DatabricksModule,
     AwsModule,
     EmailModule,
@@ -157,6 +163,15 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     {
       provide: ANALYTICS_PORT,
       useExisting: AnalyticsAdapter,
+    },
+    {
+      provide: CACHE_PORT,
+      // Table metadata is read before every warehouse statement. A minute
+      // spares that round trip yet keeps the row counts behind pagination
+      // totals close to the pipeline's cadence.
+      useFactory: (cache: Cache) =>
+        new CacheAdapter(cache, { prefix: "experiment:", ttlMs: 60 * 1000 }),
+      inject: [CACHE_MANAGER],
     },
 
     // Repositories

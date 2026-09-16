@@ -43,6 +43,7 @@ vi.mock("../../charts/utils", () => ({
   // inference (covered separately in utils.test.ts).
   detectAxisType: vi.fn(() => "linear"),
   refineAxisType: vi.fn((axis) => axis ?? {}),
+  applyAxisType: vi.fn((axis) => axis ?? {}),
 }));
 
 describe("ScatterChart", () => {

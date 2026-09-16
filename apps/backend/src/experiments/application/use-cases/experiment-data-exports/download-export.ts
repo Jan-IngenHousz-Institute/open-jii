@@ -4,6 +4,7 @@ import { Readable } from "stream";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, AppError, failure, success } from "../../../../common/utils/fp-utils";
 import { buildExportFilename } from "../../../core/export-filename";
+import type { ExportFormat } from "../../../core/models/experiment-data-exports.model";
 import { ExperimentDataExportsRepository } from "../../../core/repositories/experiment-data-exports.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
@@ -24,7 +25,7 @@ export class DownloadExportUseCase {
     experimentId: string,
     exportId: string,
     userId: string,
-  ): Promise<Result<{ stream: Readable; filename: string }>> {
+  ): Promise<Result<{ stream: Readable; filename: string; format: ExportFormat }>> {
     this.logger.debug({
       msg: "Starting export download",
       operation: "downloadExport",
@@ -60,7 +61,7 @@ export class DownloadExportUseCase {
       return downloadResult;
     }
 
-    const { stream, filePath, tableName, completedAt } = downloadResult.value;
+    const { stream, filePath, tableName, format, completedAt } = downloadResult.value;
 
     const filename = buildExportFilename({
       experimentName: experimentResult.value.name,
@@ -84,6 +85,7 @@ export class DownloadExportUseCase {
     return success({
       stream,
       filename,
+      format,
     });
   }
 }

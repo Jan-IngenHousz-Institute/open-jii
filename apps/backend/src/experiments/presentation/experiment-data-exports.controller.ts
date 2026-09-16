@@ -11,6 +11,16 @@ import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { DownloadExportUseCase } from "../application/use-cases/experiment-data-exports/download-export";
 import { InitiateExportUseCase } from "../application/use-cases/experiment-data-exports/initiate-export";
 import { ListExportsUseCase } from "../application/use-cases/experiment-data-exports/list-exports";
+import type { ExportFormat } from "../core/models/experiment-data-exports.model";
+
+// Text formats compress on the way out; Parquet and XLSX are already compressed.
+const DOWNLOAD_CONTENT_TYPES: Record<ExportFormat, string> = {
+  csv: "text/csv",
+  ndjson: "application/x-ndjson",
+  "json-array": "application/json",
+  parquet: "application/vnd.apache.parquet",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+};
 
 @Controller()
 export class ExperimentDataExportsController {
@@ -69,19 +79,23 @@ export class ExperimentDataExportsController {
       );
 
       if (result.isSuccess()) {
-        const { stream, filename } = result.value;
-        return this.toDownloadFile(stream, filename);
+        const { stream, filename, format } = result.value;
+        return this.toDownloadFile(stream, filename, format);
       }
 
       return throwOrpcFailure(result, this.logger);
     });
   }
 
-  private async toDownloadFile(stream: Readable, filename: string): Promise<File> {
+  private async toDownloadFile(
+    stream: Readable,
+    filename: string,
+    format: ExportFormat,
+  ): Promise<File> {
     const chunks: Buffer[] = [];
     for await (const chunk of stream) {
       chunks.push(Buffer.from(chunk as Buffer));
     }
-    return new File([Buffer.concat(chunks)], filename, { type: "application/octet-stream" });
+    return new File([Buffer.concat(chunks)], filename, { type: DOWNLOAD_CONTENT_TYPES[format] });
   }
 }

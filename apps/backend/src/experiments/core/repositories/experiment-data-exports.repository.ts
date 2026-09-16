@@ -3,7 +3,7 @@ import { Readable } from "stream";
 
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success } from "../../../common/utils/fp-utils";
-import type { ExportMetadata } from "../models/experiment-data-exports.model";
+import type { ExportFormat, ExportMetadata } from "../models/experiment-data-exports.model";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 
@@ -236,11 +236,14 @@ export class ExperimentDataExportsRepository {
    * Download a completed export file by export ID
    * Returns a stream of the exported file
    */
-  async downloadExport(params: {
-    experimentId: string;
-    exportId: string;
-  }): Promise<
-    Result<{ stream: Readable; filePath: string; tableName: string; completedAt: string | null }>
+  async downloadExport(params: { experimentId: string; exportId: string }): Promise<
+    Result<{
+      stream: Readable;
+      filePath: string;
+      tableName: string;
+      format: ExportFormat;
+      completedAt: string | null;
+    }>
   > {
     const { experimentId, exportId } = params;
 

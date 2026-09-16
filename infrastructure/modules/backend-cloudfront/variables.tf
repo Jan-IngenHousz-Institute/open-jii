@@ -48,6 +48,8 @@ variable "forwarded_headers" {
   description = "List of headers to forward to the origin"
   type        = list(string)
   default = [
+    # The origin compresses its own responses, so it has to see what the viewer accepts.
+    "Accept-Encoding",
     "Authorization",
     "Host",
     "Origin",
