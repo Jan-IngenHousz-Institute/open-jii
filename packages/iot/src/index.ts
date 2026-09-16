@@ -138,6 +138,7 @@ export type { BenchInstrumentFactory, BenchIdentification } from "./instrument/r
 export {
   CALIBRATION_WRITERS,
   canWriteCalibration,
+  writableCalibrationBlocks,
   formatCoefficient,
   writeCalibrationBlocks,
 } from "./calibration/write-back";

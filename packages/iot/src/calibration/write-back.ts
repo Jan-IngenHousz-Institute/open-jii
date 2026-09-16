@@ -291,17 +291,35 @@ export const CALIBRATION_WRITERS: Partial<Record<SensorFamily, FamilyCalibration
   },
 };
 
+/** The blocks this family can write in full; the rest are recorded but never sent. */
+export function writableCalibrationBlocks(
+  family: SensorFamily,
+  blocks: AppliedCalibrationBlocks,
+): string[] {
+  const writers = CALIBRATION_WRITERS[family];
+  if (!writers) return [];
+  return Object.entries(blocks)
+    .filter(([block, { coefficients }]) =>
+      Object.keys(coefficients).every(
+        (name) => writers.blocks[block]?.coefficients[name] !== undefined,
+      ),
+    )
+    .map(([block]) => block);
+}
+
+/**
+ * Whether anything at all can reach the device.
+ *
+ * Deliberately not "every block": a device whose vendor tool owns one coefficient would
+ * otherwise have its entire calibration recorded and never written, under a message that
+ * reads like the family is unsupported. Blocks without writers are reported unwritten,
+ * one by one, by the write itself.
+ */
 export function canWriteCalibration(
   family: SensorFamily,
   blocks: AppliedCalibrationBlocks,
 ): boolean {
-  const writers = CALIBRATION_WRITERS[family];
-  if (!writers) return false;
-  return Object.entries(blocks).every(([block, { coefficients }]) =>
-    Object.keys(coefficients).every(
-      (name) => writers.blocks[block]?.coefficients[name] !== undefined,
-    ),
-  );
+  return writableCalibrationBlocks(family, blocks).length > 0;
 }
 
 /** Spaces every command in one session by the family's pause. */

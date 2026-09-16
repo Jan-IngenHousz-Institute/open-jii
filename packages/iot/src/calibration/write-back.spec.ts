@@ -4,7 +4,12 @@ import { AmbitDriver } from "../driver/ambit/driver";
 import { MiniParDriver } from "../driver/minipar/driver";
 import type { MockTransport } from "../driver/testing/mock-transport";
 import { createMockTransport } from "../driver/testing/mock-transport";
-import { canWriteCalibration, formatCoefficient, writeCalibrationBlocks } from "./write-back";
+import {
+  canWriteCalibration,
+  formatCoefficient,
+  writableCalibrationBlocks,
+  writeCalibrationBlocks,
+} from "./write-back";
 
 interface ConsoleState {
   slope: number;
@@ -175,6 +180,19 @@ describe("canWriteCalibration", () => {
 
   it("refuses a coefficient the family has no command for", () => {
     expect(canWriteCalibration("minipar", { par: { coefficients: { gain: 2 } } })).toBe(false);
+  });
+
+  // A device whose vendor tool owns one coefficient would otherwise have its entire
+  // calibration recorded and never written, under a message blaming the family.
+  it("offers the write when only some blocks can be written", () => {
+    const mixed = { ...MINIPAR_BLOCKS, telemetry: { coefficients: { gain: 2 } } };
+
+    expect(writableCalibrationBlocks("minipar", mixed)).toEqual(["par"]);
+    expect(canWriteCalibration("minipar", mixed)).toBe(true);
+  });
+
+  it("names nothing writable for a family with no writers at all", () => {
+    expect(writableCalibrationBlocks("multispeq", MINIPAR_BLOCKS)).toEqual([]);
   });
 });
 
