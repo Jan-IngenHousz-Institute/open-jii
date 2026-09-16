@@ -1,6 +1,7 @@
 import { Logger } from "@nestjs/common";
 import type { Cache } from "cache-manager";
 
+import type { CachePort as ExperimentCachePort } from "../../../experiments/core/ports/cache.port";
 import type { CachePort as MacroCachePort } from "../../../macros/core/ports/cache.port";
 import type { CachePort as MetricsCachePort } from "../../../metrics/core/ports/cache.port";
 
@@ -26,7 +27,7 @@ function sharedLoad<T>(running: Promise<unknown>): Promise<T | null> {
   return running as Promise<T | null>;
 }
 
-export class CacheAdapter implements MacroCachePort, MetricsCachePort {
+export class CacheAdapter implements MacroCachePort, MetricsCachePort, ExperimentCachePort {
   private readonly logger = new Logger(CacheAdapter.name);
 
   /** Loads already running, so a cold key costs one fetch rather than one per caller. */

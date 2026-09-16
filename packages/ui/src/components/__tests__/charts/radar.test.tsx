@@ -31,8 +31,9 @@ vi.mock("../../charts/utils", () => ({
     responsive: config.responsive !== false,
   })),
   getRenderer: vi.fn((useWebGL?: boolean) => (useWebGL ? "webgl" : "svg")),
+  // Mirrors the real map: only scatter has a WebGL twin in the bundle.
   getPlotType: vi.fn((type: string, renderer: string) =>
-    renderer === "webgl" ? `${type}gl` : type,
+    renderer === "webgl" && (type === "scatter" || type === "line") ? "scattergl" : type,
   ),
   legendAnchorFor: vi.fn(() => ({})),
   responsiveChrome: vi.fn((config: any) => ({
@@ -410,12 +411,11 @@ describe("RadarPlot", () => {
     expect(plotData[1]?.r).toEqual([2, 3, 4, 5, 3]);
   });
 
-  it("handles WebGL renderer", () => {
+  it("keeps radar traces on their SVG type under the WebGL renderer", () => {
     render(<RadarPlot data={sampleData} config={{ useWebGL: true }} />);
 
     const plotData = JSON.parse(screen.getByTestId("plot-data").textContent || "[]");
-    // Our mock returns "webgl" when useWebGL is true, so we expect the GL version
-    expect(plotData[0]?.type).toBe("scatterpolargl");
+    expect(plotData[0]?.type).toBe("scatterpolar");
   });
 
   it("applies custom layout configuration", () => {

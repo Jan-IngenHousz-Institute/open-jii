@@ -94,32 +94,12 @@ function isWindowOnlyAggregation(aggregation: ExperimentDataAggregation): boolea
   return fns.every((f) => WINDOW_FUNCTIONS.has(f.function));
 }
 
-// Flatten CONTRIBUTOR/DEVICE structs to their display field so the chart layer sees plain strings.
-function flattenStructCells<
-  T extends {
-    columns: { name: string; type_text: string }[];
-    rows: Record<string, unknown>[];
-  },
->(table: T): T {
-  const structColumns = table.columns.filter(
-    (c) =>
-      c.type_text === WellKnownColumnTypes.CONTRIBUTOR ||
-      c.type_text === WellKnownColumnTypes.DEVICE,
+// CONTRIBUTOR/DEVICE structs flatten to their display field so the chart layer sees plain strings.
+function isDisplayStructColumn(column: { type_text: string }): boolean {
+  return (
+    column.type_text === WellKnownColumnTypes.CONTRIBUTOR ||
+    column.type_text === WellKnownColumnTypes.DEVICE
   );
-  if (structColumns.length === 0) {
-    return table;
-  }
-  const rows = table.rows.map((row) => {
-    const out: Record<string, unknown> = { ...row };
-    for (const col of structColumns) {
-      out[col.name] =
-        col.type_text === WellKnownColumnTypes.DEVICE
-          ? deviceDisplayName(row[col.name])
-          : contributorDisplayName(row[col.name]);
-    }
-    return out;
-  });
-  return { ...table, rows };
 }
 
 // Resolves a user-facing orderBy column to its post-aggregation alias.
@@ -222,35 +202,34 @@ export const useExperimentVisualizationData = (
     if (!tableData?.data) {
       return undefined;
     }
-    const afterAlias = (() => {
-      if (!aggregationActive || !aggregation) {
-        return tableData.data;
-      }
-      const aliasMap = buildAliasMap(aggregation);
-      const remappedRows = tableData.data.rows.map((row: Record<string, unknown>) => {
-        const out: Record<string, unknown> = { ...row };
-        for (const [alias, original] of Object.entries(aliasMap)) {
-          if (alias === original) {
-            continue;
-          }
-          if (alias in row) {
-            out[original] = row[alias];
-            delete out[alias];
-          }
+    const aliasMap = aggregationActive && aggregation ? buildAliasMap(aggregation) : {};
+    const renamed = Object.entries(aliasMap).filter(([alias, original]) => alias !== original);
+    const structColumns = tableData.data.columns.filter(isDisplayStructColumn);
+    if (renamed.length === 0 && structColumns.length === 0) {
+      return tableData.data;
+    }
+
+    const rows = tableData.data.rows.map((row: Record<string, unknown>) => {
+      const out: Record<string, unknown> = { ...row };
+      for (const [alias, original] of renamed) {
+        if (alias in row) {
+          out[original] = row[alias];
+          delete out[alias];
         }
-        return out;
-      });
-      const remappedColumns = tableData.data.columns.map((col) => ({
-        ...col,
-        name: aliasMap[col.name] ?? col.name,
-      }));
-      return {
-        ...tableData.data,
-        columns: remappedColumns,
-        rows: remappedRows,
-      };
-    })();
-    return flattenStructCells(afterAlias);
+      }
+      for (const col of structColumns) {
+        out[col.name] =
+          col.type_text === WellKnownColumnTypes.DEVICE
+            ? deviceDisplayName(row[col.name])
+            : contributorDisplayName(row[col.name]);
+      }
+      return out;
+    });
+    const columns = tableData.data.columns.map((col) => ({
+      ...col,
+      name: aliasMap[col.name] ?? col.name,
+    }));
+    return { ...tableData.data, columns, rows };
   }, [tableData, aggregation, aggregationActive]);
 
   return {

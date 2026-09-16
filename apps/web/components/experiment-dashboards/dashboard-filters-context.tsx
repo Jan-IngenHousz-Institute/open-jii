@@ -123,6 +123,17 @@ export function useDashboardFiltersForTable(tableName: string | undefined): Expe
   return ctx.getFiltersForTable(tableName);
 }
 
+const EMPTY_RESOLVER = (): ExperimentDataFilter[] => EMPTY_FILTERS;
+
+/**
+ * Table to AND-merged filters, for callers that plan across many tables. A new
+ * function only when a filter widget's config or value changes.
+ */
+export function useDashboardFilterResolver(): (tableName: string) => ExperimentDataFilter[] {
+  const ctx = useContext(DashboardFiltersContext);
+  return ctx?.getFiltersForTable ?? EMPTY_RESOLVER;
+}
+
 export function useDashboardFilterWidget(widgetId: string) {
   const ctx = useContext(DashboardFiltersContext);
   if (!ctx) {

@@ -1,11 +1,12 @@
 "use client";
 
 import type { PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig, ErrorBarConfig } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
 import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
 
@@ -66,73 +67,83 @@ export function BarChart({
   bargroupgap,
 }: BarChartProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("bar", renderer);
 
-  const plotData: PlotData[] = data.map(
-    (series) =>
-      ({
-        x: series.x,
-        y: series.y,
-        name: series.name,
-        type: plotType,
-        orientation: series.orientation || "v",
+  const plotData: PlotData[] = useMemo(
+    () =>
+      data.map(
+        (series) =>
+          ({
+            x: series.x,
+            y: series.y,
+            name: series.name,
+            type: plotType,
+            orientation: series.orientation || "v",
 
-        width: series.width,
-        offset: series.offset,
-        base: series.base,
+            width: series.width,
+            offset: series.offset,
+            base: series.base,
 
-        marker: {
-          color: series.marker?.color || series.color,
-          opacity: series.marker?.opacity || series.opacity || 0.8,
-          line: series.marker?.line,
-          colorscale: series.marker?.colorscale,
-          showscale: series.marker?.showscale || false,
-          colorbar: series.marker?.colorbar,
-          pattern: series.marker?.pattern,
-        },
+            marker: {
+              color: series.marker?.color || series.color,
+              opacity: series.marker?.opacity || series.opacity || 0.8,
+              line: series.marker?.line,
+              colorscale: series.marker?.colorscale,
+              showscale: series.marker?.showscale || false,
+              colorbar: series.marker?.colorbar,
+              pattern: series.marker?.pattern,
+            },
 
-        text: series.text,
-        textposition: series.textposition || "auto",
-        textangle: series.textangle,
-        textfont: series.textfont,
+            text: series.text,
+            textposition: series.textposition || "auto",
+            textangle: series.textangle,
+            textfont: series.textfont,
 
-        error_x: series.error_x,
-        error_y: series.error_y,
+            error_x: series.error_x,
+            error_y: series.error_y,
 
-        cliponaxis: series.cliponaxis,
-        constraintext: series.constraintext || "inside",
-        insidetextanchor: series.insidetextanchor || "middle",
-        outsidetextfont: series.outsidetextfont,
+            cliponaxis: series.cliponaxis,
+            constraintext: series.constraintext || "inside",
+            insidetextanchor: series.insidetextanchor || "middle",
+            outsidetextfont: series.outsidetextfont,
 
-        opacity: series.opacity || 1,
-        visible: series.visible,
-        showlegend: series.showlegend,
-        legendgroup: series.legendgroup,
-        hovertemplate: series.hovertemplate,
-        hoverinfo: series.hoverinfo,
-        customdata: series.customdata,
-      }) as unknown as PlotData,
+            opacity: series.opacity || 1,
+            visible: series.visible,
+            showlegend: series.showlegend,
+            legendgroup: series.legendgroup,
+            hovertemplate: series.hovertemplate,
+            hoverinfo: series.hoverinfo,
+            customdata: series.customdata,
+          }) as unknown as PlotData,
+      ),
+    [data, plotType],
   );
 
-  const layout = {
-    ...createBaseLayout(config, sizing),
-    barmode,
-    barnorm,
-    bargap,
-    bargroupgap,
-  };
-
-  // Fix for horizontal bar charts - ensure categorical axis
-  const hasHorizontalBars = plotData.some((series) => series.orientation === "h");
-  if (hasHorizontalBars) {
-    layout.yaxis = {
-      ...layout.yaxis,
-      type: "category",
+  const layout = useMemo(() => {
+    const next = {
+      ...createBaseLayout(config, sizing),
+      barmode,
+      barnorm,
+      bargap,
+      bargroupgap,
     };
-  }
 
-  const plotConfig = createPlotlyConfig(config, sizing);
+    // Fix for horizontal bar charts - ensure categorical axis
+    const hasHorizontalBars = plotData.some((series) => series.orientation === "h");
+    if (hasHorizontalBars) {
+      next.yaxis = {
+        ...next.yaxis,
+        type: "category",
+      };
+    }
+
+    return next;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+  }, [config, sizing, barmode, barnorm, bargap, bargroupgap, plotData, themeVersion]);
+
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
@@ -153,9 +164,12 @@ export interface HorizontalBarChartProps extends Omit<BarChartProps, "data"> {
 }
 
 export function HorizontalBarChart({ data, ...props }: HorizontalBarChartProps) {
-  return (
-    <BarChart data={data.map((series) => ({ ...series, orientation: "h" as const }))} {...props} />
+  const horizontal = useMemo(
+    () => data.map((series) => ({ ...series, orientation: "h" as const })),
+    [data],
   );
+
+  return <BarChart data={horizontal} {...props} />;
 }
 
 // Stacked bar chart component

@@ -1,11 +1,12 @@
 "use client";
 
 import type { PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, LineConfig, MarkerConfig } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
 import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
 
@@ -43,58 +44,67 @@ export function AreaChart({
   stackgroup,
 }: AreaChartProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatter", renderer);
 
-  const plotData: PlotData[] = data.map(
-    (series, index) =>
-      ({
-        x: series.x,
-        y: series.y,
-        name: series.name,
-        type: plotType,
-        mode: series.mode || "lines",
+  const plotData: PlotData[] = useMemo(
+    () =>
+      data.map(
+        (series, index) =>
+          ({
+            x: series.x,
+            y: series.y,
+            name: series.name,
+            type: plotType,
+            mode: series.mode || "lines",
 
-        fill: series.fill || (index === 0 ? "tozeroy" : "tonexty"),
-        fillcolor: series.fillcolor || series.color,
+            fill: series.fill || (index === 0 ? "tozeroy" : "tonexty"),
+            fillcolor: series.fillcolor || series.color,
 
-        line: {
-          color: series.line?.color || series.color,
-          width: series.line?.width || 0, // Often no line for area charts
-          dash: series.line?.dash || "solid",
-          shape: series.line?.shape || "linear",
-          smoothing: series.line?.smoothing,
-        },
+            line: {
+              color: series.line?.color || series.color,
+              width: series.line?.width || 0, // Often no line for area charts
+              dash: series.line?.dash || "solid",
+              shape: series.line?.shape || "linear",
+              smoothing: series.line?.smoothing,
+            },
 
-        marker: series.marker
-          ? {
-              color: series.marker.color || series.color,
-              size: series.marker.size || 0, // Usually no markers for area charts
-              symbol: series.marker.symbol,
-              opacity: series.marker.opacity || series.opacity,
-            }
-          : undefined,
+            marker: series.marker
+              ? {
+                  color: series.marker.color || series.color,
+                  size: series.marker.size || 0, // Usually no markers for area charts
+                  symbol: series.marker.symbol,
+                  opacity: series.marker.opacity || series.opacity,
+                }
+              : undefined,
 
-        connectgaps: series.connectgaps !== false,
-        stackgroup: series.stackgroup || stackgroup,
-        groupnorm: series.groupnorm,
+            connectgaps: series.connectgaps !== false,
+            stackgroup: series.stackgroup || stackgroup,
+            groupnorm: series.groupnorm,
 
-        text: series.text,
-        textposition: series.textposition,
-        textfont: series.textfont,
+            text: series.text,
+            textposition: series.textposition,
+            textfont: series.textfont,
 
-        opacity: series.opacity || 0.7,
-        visible: series.visible,
-        showlegend: series.showlegend,
-        legendgroup: series.legendgroup,
-        hovertemplate: series.hovertemplate,
-        hoverinfo: series.hoverinfo,
-        customdata: series.customdata,
-      }) as unknown as PlotData,
+            opacity: series.opacity || 0.7,
+            visible: series.visible,
+            showlegend: series.showlegend,
+            legendgroup: series.legendgroup,
+            hovertemplate: series.hovertemplate,
+            hoverinfo: series.hoverinfo,
+            customdata: series.customdata,
+          }) as unknown as PlotData,
+      ),
+    [data, plotType, stackgroup],
   );
 
-  const layout = createBaseLayout(config, sizing);
-  const plotConfig = createPlotlyConfig(config, sizing);
+  const layout = useMemo(
+    () => createBaseLayout(config, sizing),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+    [config, sizing, themeVersion],
+  );
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>

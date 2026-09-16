@@ -6,6 +6,7 @@ import type { PlotParams } from "react-plotly.js";
 
 import { cn } from "../../lib/utils";
 import { withBrandedPngExport } from "./png-export";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 
 // Type definitions for better type safety
 interface SafeDimensions {
@@ -33,24 +34,39 @@ interface SafeConfig extends Partial<Config> {
   toImageButtonOptions?: ToImageButtonOptions;
 }
 
-// WebGL trace types that require special handling
-type WebGLTraceType = "scatter3d" | "surface" | "mesh3d" | "scattergl" | "scattermapbox";
+// The only WebGL trace the bundle registers; see `plotly-runtime`.
+type WebGLTraceType = "scattergl";
 
-const WEBGL_TRACE_TYPES: readonly WebGLTraceType[] = [
-  "scatter3d",
-  "surface",
-  "mesh3d",
-  "scattergl",
-  "scattermapbox",
-];
+const WEBGL_TRACE_TYPES: readonly WebGLTraceType[] = ["scattergl"];
+
+const isWebGLTrace = (type: string): type is WebGLTraceType =>
+  WEBGL_TRACE_TYPES.some((candidate) => candidate === type);
+
+/** What a WebGL trace falls back to when no context is free. */
+const SVG_TWIN = { scattergl: "scatter" } as const satisfies Record<WebGLTraceType, string>;
+
+// Redraw a chart slightly before it is scrolled to, so the caught-up layout is
+// in place by the time it is on screen.
+const OFFSCREEN_MARGIN = "200px";
 
 // Regular trace types
 type StandardTraceType = "scatter" | "bar" | "line" | "area" | "pie" | "box" | "violin";
 
 type PlotlyTraceType = WebGLTraceType | StandardTraceType | string;
 
-// Lazy load Plotly to avoid SSR issues
-const Plot = lazy(() => import("react-plotly.js"));
+// Plotly touches `window` on import, so it only loads on the client, and only
+// once a chart is actually rendered.
+const loadRuntime = () => import("./plotly-runtime");
+const Plot = lazy(() => loadRuntime().then((runtime) => ({ default: runtime.Plot })));
+
+/**
+ * Starts the Plotly download before any chart has data to draw, so it overlaps
+ * the data wait instead of following it. The import is cached, so this only
+ * moves the download forward.
+ */
+export function preloadPlotly(): void {
+  void loadRuntime();
+}
 
 // h-full, not h-96: Plotly is lazy-loaded, and a fixed 384px fallback inside a
 // 40px sparkline slot shoves the layout on first paint.
@@ -77,14 +93,17 @@ export interface PlotlyChartProps extends Omit<PlotParams, "className"> {
   error?: string;
 }
 
-// Browsers cap concurrent WebGL contexts (~8–16 per tab). Stay conservative so
-// a dashboard of charts degrades to "queued" instead of crashing the GPU
-// process. Charts not in the queue render via SVG immediately.
+// Plotly's gl2d builds a canvas each for the scene, the pick buffer and the
+// focus layer, so one chart costs three contexts. Past the browser's budget
+// the oldest is dropped, which blanks that chart's data layer.
+const CONTEXTS_PER_GL_CHART = 3;
+const BROWSER_CONTEXT_BUDGET = 16;
+
 class WebGLContextManager {
   private static instance: WebGLContextManager;
   private activeContexts = new Set<string>();
   private pendingCharts = new Map<string, () => void>();
-  private readonly maxContexts = 8;
+  private readonly maxContexts = Math.floor(BROWSER_CONTEXT_BUDGET / CONTEXTS_PER_GL_CHART);
 
   static getInstance(): WebGLContextManager {
     if (!WebGLContextManager.instance) {
@@ -155,7 +174,10 @@ const validateDimensions = (layout: Partial<Layout>): SafeDimensions => {
 const createSafeConfig = (config: Partial<Config> = {}): SafeConfig => {
   const baseConfig: SafeConfig = {
     displayModeBar: true, // Enable toolbar for export
-    responsive: true,
+    // Plotly's own `responsive` adds a second window resize listener. The
+    // container observer below already covers it, catches resizes the window
+    // never sees, and skips charts scrolled out of view.
+    responsive: false,
     toImageButtonOptions: {
       format: "svg",
       width: 1200, // Much larger default width
@@ -255,10 +277,13 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     // react-plotly's own resize handler listens to `window` only, so a
     // container that changes width without the window changing (collapsing the
     // sidebar, dragging a panel) never reaches Plotly and the plot keeps its
-    // old pixel width. Bumping `revision` re-runs `Plotly.react`, which
-    // re-measures the container because the layout is autosized.
+    // old pixel width. `Plots.resize` re-measures the container and relayouts
+    // in place; a full `Plotly.react` is only for a changed figure.
     const containerRef = useRef<HTMLDivElement | null>(null);
-    const [resizeRevision, setResizeRevision] = useState(0);
+    const graphDivRef = useRef<HTMLElement | null>(null);
+    // Without an IntersectionObserver every chart counts as on screen.
+    const isOnScreenRef = useRef(true);
+    const resizeIsPendingRef = useRef(false);
 
     const setContainer = React.useCallback(
       (node: HTMLDivElement | null) => {
@@ -276,22 +301,67 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       const el = containerRef.current;
       if (!el) return;
 
+      const resize = () => {
+        const graphDiv = graphDivRef.current;
+        if (!graphDiv) {
+          return;
+        }
+        resizeIsPendingRef.current = false;
+        void loadRuntime().then(({ Plotly }) => Plotly.Plots.resize(graphDiv));
+      };
+
       let frame = 0;
-      const observer = new ResizeObserver(() => {
-        // Coalesced: a drag emits an entry per frame, and each one would
-        // otherwise be a separate Plotly.react.
+      const sizeObserver = new ResizeObserver(() => {
+        // Coalesced: a drag emits an entry per frame.
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(() => {
-          setResizeRevision((previous) => previous + 1);
+          // A Plotly resize reruns the whole plot pipeline, redrawing every
+          // trace, so an unseen chart banks the change for its way back in.
+          if (!isOnScreenRef.current) {
+            resizeIsPendingRef.current = true;
+            return;
+          }
+          resize();
         });
       });
-      observer.observe(el);
+      sizeObserver.observe(el);
+
+      const screenObserver =
+        typeof IntersectionObserver === "undefined"
+          ? null
+          : new IntersectionObserver(
+              (entries) => {
+                isOnScreenRef.current = entries.some((entry) => entry.isIntersecting);
+                if (isOnScreenRef.current && resizeIsPendingRef.current) {
+                  resize();
+                }
+              },
+              { rootMargin: OFFSCREEN_MARGIN },
+            );
+      screenObserver?.observe(el);
 
       return () => {
         cancelAnimationFrame(frame);
-        observer.disconnect();
+        sizeObserver.disconnect();
+        screenObserver?.disconnect();
       };
     }, []);
+
+    const { onInitialized, onPurge } = plotProps;
+    const handleInitialized = React.useCallback<NonNullable<PlotParams["onInitialized"]>>(
+      (figure, graphDiv) => {
+        graphDivRef.current = graphDiv;
+        onInitialized?.(figure, graphDiv);
+      },
+      [onInitialized],
+    );
+    const handlePurge = React.useCallback<NonNullable<PlotParams["onPurge"]>>(
+      (figure, graphDiv) => {
+        graphDivRef.current = null;
+        onPurge?.(figure, graphDiv);
+      },
+      [onPurge],
+    );
 
     // Validate and sanitize data
     const safeData = React.useMemo(() => {
@@ -299,17 +369,41 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       return validatePlotlyData(data);
     }, [data]);
 
+    // Behind the context cap a chart draws its SVG twin rather than waiting.
+    const renderData = React.useMemo(() => {
+      if (isContextAvailable) {
+        return safeData;
+      }
+      let downgraded = false;
+      const traces = safeData.map((trace: PlotData) => {
+        const type = trace.type ?? "scatter";
+        if (!isWebGLTrace(type)) {
+          return trace;
+        }
+        downgraded = true;
+        return { ...trace, type: SVG_TWIN[type] };
+      });
+      return downgraded ? traces : safeData;
+    }, [safeData, isContextAvailable]);
+
     // Stable boolean drives the context-management effect. Memoizing a
     // primitive (vs `useCallback`) means the effect only re-runs when
     // WebGL relevance flips; the previous shape caused release/reacquire
     // churn on every keystroke in the editor.
     const needsWebGL = React.useMemo(() => {
-      if (!isWebGLEnabled) return false;
-      return safeData.some((trace: PlotData) => {
-        const type = (trace.type ?? "scatter") as WebGLTraceType;
-        return WEBGL_TRACE_TYPES.includes(type);
-      });
+      if (!isWebGLEnabled) {
+        return false;
+      }
+      return safeData.some((trace: PlotData) => isWebGLTrace(trace.type ?? "scatter"));
     }, [safeData, isWebGLEnabled]);
+
+    // The palette is `colorway`, which Plotly treats as `calc`. On a gl chart
+    // that recalc builds a fresh scene and abandons the old one's contexts:
+    // Plotly only destroys a scene when a plot stops being gl at all. Keying
+    // the remount on the theme routes it through `purge`, which does release
+    // them, at the cost of a rebuild the recalc was doing anyway.
+    const themeVersion = useChartThemeRefresh();
+    const plotKey = needsWebGL ? `gl-${themeVersion}` : "svg";
 
     useEffect(() => {
       const chartId = chartIdRef.current;
@@ -323,9 +417,15 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       }
 
       let cancelled = false;
-      contextManager.requestContext(chartId, () => {
+      const granted = contextManager.requestContext(chartId, () => {
         if (!cancelled) setIsContextAvailable(true);
       });
+      // Queued behind the cap: draw on SVG now rather than hold the chart on a
+      // placeholder until some other chart unmounts. The callback still fires
+      // if a slot frees up, and the traces switch back to WebGL then.
+      if (!granted) {
+        setIsContextAvailable(false);
+      }
 
       return () => {
         cancelled = true;
@@ -442,23 +542,6 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       );
     }
 
-    // Show waiting state for WebGL charts when context not available
-    if (needsWebGL && !isContextAvailable) {
-      return (
-        <div
-          ref={setContainer}
-          className={cn("flex h-full items-center justify-center", className)}
-        >
-          <div className="text-center">
-            <div className="text-muted-foreground animate-pulse">Waiting for GPU resources...</div>
-            <div className="text-muted-foreground/60 mt-1 text-xs">
-              {contextManager.getActiveCount()}/{8} WebGL contexts active
-            </div>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div
         ref={setContainer}
@@ -466,7 +549,8 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       >
         <Suspense fallback={<PlotLoadingComponent />}>
           <Plot
-            data={safeData}
+            key={plotKey}
+            data={renderData}
             layout={safeLayout}
             config={safeConfig}
             {...plotProps}
@@ -484,8 +568,8 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
                 setIsWebGLEnabled(false);
               }
             }}
-            useResizeHandler={true}
-            revision={resizeRevision}
+            onInitialized={handleInitialized}
+            onPurge={handlePurge}
           />
         </Suspense>
       </div>
