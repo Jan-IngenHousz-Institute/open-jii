@@ -90,6 +90,30 @@ describe("CalibrationReview", () => {
     expect(props.onReject).toHaveBeenCalledTimes(1);
   });
 
+  // A ten-channel coefficient wraps over several lines. Laid out side by side, the old
+  // value ends up floating halfway down the new one and reads as a rendering fault.
+  it("stacks the comparison for a per-channel coefficient", () => {
+    renderReview({
+      run: createCalibrationRun({
+        blocks: {
+          spec: {
+            status: "computed",
+            coefficients: { channel_coefficients: [-2.03393, 0.60675, 0.100565] },
+          },
+        },
+      }),
+    });
+
+    const value = screen.getByText("[-2.03393, 0.60675, 0.100565]");
+    expect(value.parentElement).toHaveClass("flex-col");
+  });
+
+  it("keeps the comparison side by side for a single coefficient", () => {
+    renderReview();
+
+    expect(screen.getByText("0.96").parentElement).not.toHaveClass("flex-col");
+  });
+
   // R-squared says a fit is poor without saying which reading made it poor, which is the
   // one thing an operator can act on at the bench.
   it("names the reading furthest from the fit, by the setpoint that produced it", () => {

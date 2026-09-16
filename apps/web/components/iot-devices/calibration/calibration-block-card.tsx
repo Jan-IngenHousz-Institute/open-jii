@@ -50,19 +50,26 @@ export function CalibrationBlockCard({ name, block, previous }: CalibrationBlock
 
   function renderCoefficient([coefficient, value]: [string, number | number[]]) {
     const before = previous?.coefficients?.[coefficient];
+    // A per-channel coefficient wraps over several lines, and a side-by-side comparison
+    // then leaves the old value floating halfway down the new one. Stacked, the arrow
+    // still separates them and both stay readable.
+    const isStacked = Array.isArray(value) || Array.isArray(before);
+
     return (
       <div key={coefficient} className="contents">
         <dt className="text-muted-foreground">{coefficient}</dt>
-        <dd className="flex items-center gap-2 font-mono">
+        <dd
+          className={
+            isStacked ? "flex flex-col gap-1 font-mono" : "flex items-center gap-2 font-mono"
+          }
+        >
           {hasComparison && (
-            <>
-              <span className="text-muted-foreground">
-                {before === undefined
-                  ? t("iot.calibration.review.previousUnknown")
-                  : formatCoefficientValue(before)}
-              </span>
-              <ArrowRight className="text-muted-foreground size-3" aria-hidden />
-            </>
+            <span className="text-muted-foreground flex items-center gap-2">
+              {before === undefined
+                ? t("iot.calibration.review.previousUnknown")
+                : formatCoefficientValue(before)}
+              <ArrowRight className="size-3 shrink-0" aria-hidden />
+            </span>
           )}
           <span>{formatCoefficientValue(value)}</span>
         </dd>
