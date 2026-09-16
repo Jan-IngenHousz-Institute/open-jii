@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import { parseNumericArray } from "./parse-numeric-array";
 
@@ -25,5 +25,30 @@ describe("parseNumericArray", () => {
 
   it("returns an empty array for an unparseable string", () => {
     expect(parseNumericArray("invalid-data-that-cannot-be-parsed-[{")).toEqual([]);
+  });
+
+  it("returns an empty array when stripping brackets leaves nothing, after JSON.parse fails", () => {
+    // "[" alone isn't valid JSON, so it falls through to the comma-separated
+    // fallback, where stripping the leading bracket leaves an empty string.
+    expect(parseNumericArray("[")).toEqual([]);
+  });
+
+  it("returns an empty array when the string parses as valid JSON that isn't an array", () => {
+    expect(parseNumericArray('{"not": "an array"}')).toEqual([]);
+  });
+
+  it("warns and returns an empty array when the comma-separated fallback itself throws", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const replaceSpy = vi.spyOn(String.prototype, "replace").mockImplementationOnce(() => {
+      throw new Error("boom");
+    });
+
+    expect(parseNumericArray("not json, falls through to the fallback")).toEqual([]);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    const [, details] = warnSpy.mock.calls[0] as [string, { value: string; error: unknown }];
+    expect(details.error).toBeInstanceOf(Error);
+
+    replaceSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 });
