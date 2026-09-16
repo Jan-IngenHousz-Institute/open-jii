@@ -1,7 +1,10 @@
 "use client";
 
 import { DataTable } from "@/components/data-table/data-table";
-import type { TableMetadata } from "@/components/data-table/data-table-columns";
+import type {
+  OnAnnotationHandler,
+  TableMetadata,
+} from "@/components/data-table/data-table-columns";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { PaginationState, RowSelectionState } from "@tanstack/react-table";
@@ -11,6 +14,7 @@ import z from "zod";
 import { AddAnnotationDialog } from "~/components/experiment-data/annotations/add-annotation-dialog";
 import { BulkActionsBar } from "~/components/experiment-data/annotations/bulk-actions-bar";
 import { DeleteAnnotationsDialog } from "~/components/experiment-data/annotations/delete-annotations-dialog";
+import { useChartDisplay } from "~/hooks/useChartDisplay";
 import { useUrlDataFilters } from "~/hooks/useUrlDataFilters";
 
 import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
@@ -80,38 +84,18 @@ export function ExperimentDataTable({
     defaultValues: { selectedRowIds: [] },
   });
 
-  const [chartDisplay, setChartDisplay] = useState<{
-    data: number[];
-    columnName: string;
-    isPinned: boolean;
-  } | null>(null);
+  const { chartDisplay, toggleChartPin, closePinnedChart } = useChartDisplay();
 
   const { t } = useTranslation();
 
-  const toggleChartPin = useCallback((data: number[], columnName: string) => {
-    setChartDisplay((prev) => {
-      if (prev?.isPinned && prev.columnName === columnName) {
-        return null;
-      }
-      return { data, columnName, isPinned: true };
-    });
+  const openAddAnnotationDialog = useCallback<OnAnnotationHandler>((rowIds, type = "comment") => {
+    setAddAnnotationRowIds(rowIds);
+    setAddAnnotationType(type);
+    setAddAnnotationDialogOpen(true);
   }, []);
 
-  const closePinnedChart = useCallback(() => {
-    setChartDisplay(null);
-  }, []);
-
-  const openAddAnnotationDialog = useCallback(
-    (rowIds: string[], type: ExperimentAnnotationType = "comment") => {
-      setAddAnnotationRowIds(rowIds);
-      setAddAnnotationType(type);
-      setAddAnnotationDialogOpen(true);
-    },
-    [],
-  );
-
-  const openDeleteAnnotationsDialog = useCallback(
-    (rowIds: string[], type: ExperimentAnnotationType = "comment") => {
+  const openDeleteAnnotationsDialog = useCallback<OnAnnotationHandler>(
+    (rowIds, type = "comment") => {
       setDeleteAnnotationRowIds(rowIds);
       setDeleteAnnotationType(type);
       setDeleteAnnotationsDialogOpen(true);

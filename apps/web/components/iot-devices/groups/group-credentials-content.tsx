@@ -20,6 +20,7 @@ import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -40,9 +41,9 @@ type CredentialAction = "issue" | "rotate" | "revoke";
 const MAX_BATCH = 100;
 
 const ELIGIBLE_STATUSES: Record<CredentialAction, readonly IotDeviceGroupMember["status"][]> = {
-  issue: ["pending", "revoked"],
+  issue: ["registered", "revoked"],
   rotate: ["active"],
-  revoke: ["active", "rotating"],
+  revoke: ["active"],
 };
 
 /** Phones authenticate through the user's session; certificates never apply. */
@@ -192,11 +193,11 @@ export function GroupCredentialsContent() {
     if (member.deviceType === "mobile") {
       return t("iot.groups.credentials.mobileIneligible");
     }
+    if (member.status === "retired") {
+      return t("iot.groups.credentials.retiredIneligible");
+    }
     if (action === "issue") {
       return t("iot.groups.credentials.hasCredentialsIneligible");
-    }
-    if (member.status === "rotating") {
-      return t("iot.groups.credentials.rotatingIneligible");
     }
     return t("iot.groups.credentials.noCertificateIneligible");
   }
@@ -218,10 +219,11 @@ export function GroupCredentialsContent() {
           status={
             eligibleMember ? (
               <ConnectivityDot
+                deviceType={member.deviceType}
                 connectivity={
                   member.connected === null
                     ? null
-                    : { connected: member.connected, lastSeenAt: null }
+                    : { connected: member.connected, lastSeenAt: member.lastSeenAt }
                 }
               />
             ) : undefined
@@ -338,12 +340,14 @@ export function GroupCredentialsContent() {
 
         <div className="lg:sticky lg:top-20 lg:self-start">
           <Card className="shadow-none">
-            <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardHeader>
               <CardTitle className="text-base">
                 {t("iot.groups.credentials.resultsTitle")}
               </CardTitle>
               {batch === null && (
-                <Badge variant="outline">{t("iot.onboarding.rail.preview")}</Badge>
+                <CardAction>
+                  <Badge variant="outline">{t("iot.onboarding.rail.preview")}</Badge>
+                </CardAction>
               )}
             </CardHeader>
             <CardContent className="space-y-3">

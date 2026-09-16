@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { MetricsActivityDay } from "@repo/api/domains/metrics/metrics.schema";
 import { useTranslation } from "@repo/i18n";
@@ -49,26 +49,43 @@ export function ActivityChart({ data, locale }: ActivityChartProps) {
   const [mode, setMode] = useState<ActivityMode>("daily");
 
   const isCumulative = mode === "cumulative";
-  const points = isCumulative ? recentYear(data) : recentDays(data);
+  // Memoised because everything below keys off its identity.
+  const points = useMemo(
+    () => (isCumulative ? recentYear(data) : recentDays(data)),
+    [data, isCumulative],
+  );
 
-  const x = points.map((day) => day.date);
-  const y = points.map((day) => (isCumulative ? day.cumulativeMeasurements : day.measurements));
+  const x = useMemo(() => points.map((day) => day.date), [points]);
+  const y = useMemo(
+    () => points.map((day) => (isCumulative ? day.cumulativeMeasurements : day.measurements)),
+    [points, isCumulative],
+  );
   const label = t(`activityChart.${mode}`);
 
-  const config: PlotlyChartConfig = {
-    showLegend: false,
-    showModeBar: false,
-    // A display chart: hover reads values, drag would zoom or select.
-    dragMode: false,
-    scrollZoom: false,
-    showGrid: true,
-    backgroundColor: "rgba(0,0,0,0)",
-    xAxisType: detectAxisType(x),
-    // Plotly hangs the year off the first date tick on a second line. The
-    // twelve-month view needs it; a month of days does not.
-    xAxisTickFormat: isCumulative ? undefined : "%b %-d",
-    locale,
-  };
+  const config: PlotlyChartConfig = useMemo(
+    () => ({
+      showLegend: false,
+      showModeBar: false,
+      showHoverName: false,
+      // A display chart: hover reads values, drag would zoom or select.
+      dragMode: false,
+      scrollZoom: false,
+      showGrid: true,
+      backgroundColor: "rgba(0,0,0,0)",
+      xAxisType: detectAxisType(x),
+      // Plotly hangs the year off the first date tick on a second line. The
+      // twelve-month view needs it; a month of days does not.
+      xAxisTickFormat: isCumulative ? undefined : "%b %-d",
+      locale,
+    }),
+    [x, isCumulative, locale],
+  );
+
+  const areaSeries = useMemo(
+    () => [{ x, y, name: label, fill: "tozeroy" as const, mode: "lines" as const }],
+    [x, y, label],
+  );
+  const barSeries = useMemo(() => [{ x, y, name: label }], [x, y, label]);
 
   const renderModeButton = (candidate: ActivityMode) => (
     <button
@@ -93,13 +110,9 @@ export function ActivityChart({ data, locale }: ActivityChartProps) {
         </div>
       </div>
       {isCumulative ? (
-        <AreaChart
-          data={[{ x, y, name: label, fill: "tozeroy", mode: "lines" }]}
-          config={config}
-          className="h-48 w-full sm:h-56"
-        />
+        <AreaChart data={areaSeries} config={config} className="h-48 w-full sm:h-56" />
       ) : (
-        <BarChart data={[{ x, y, name: label }]} config={config} className="h-48 w-full sm:h-56" />
+        <BarChart data={barSeries} config={config} className="h-48 w-full sm:h-56" />
       )}
     </div>
   );

@@ -52,7 +52,7 @@ describe("GroupOnboardingContent", () => {
   it("preselects eligible devices and marks ineligible ones", async () => {
     mountGroup([
       createDeviceGroupMember({ name: "Gateway", status: "active" }),
-      createDeviceGroupMember({ name: "Waiting", status: "pending" }),
+      createDeviceGroupMember({ name: "Waiting", status: "registered" }),
       createDeviceGroupMember({ name: "Phone", deviceType: "mobile" }),
     ]);
 

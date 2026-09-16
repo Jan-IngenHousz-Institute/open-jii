@@ -91,7 +91,7 @@ export function DeviceGroupContent() {
           )}
 
           {(members ?? []).length === 0 ? (
-            <Card className="shadow-none">
+            <Card padding="none" className="shadow-none">
               <CardContent className="text-muted-foreground py-10 text-center text-sm">
                 {t("iot.groups.noMembers")}
               </CardContent>
@@ -121,7 +121,11 @@ export function DeviceGroupContent() {
                         {getSensorFamilyLabel(member.deviceType)}
                       </TableCell>
                       <TableCell>
-                        <IotDeviceStatusBadge status={member.status} />
+                        <IotDeviceStatusBadge
+                          status={member.status}
+                          deviceType={member.deviceType}
+                          boundExperimentCount={member.boundExperimentCount}
+                        />
                       </TableCell>
                       {canContribute && (
                         <TableCell>

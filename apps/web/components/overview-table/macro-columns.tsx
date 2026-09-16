@@ -70,7 +70,8 @@ export function getMacroColumns(
     },
     {
       header: t("macros.columns.activity"),
-      className: "w-48",
+      // Gated like the other secondary columns: ungated, it left the name ~90px.
+      className: "hidden w-48 lg:table-cell",
       cell: (macro) => (
         <ResourceMetricsCell activity={macro.activity ?? null} windowDays={30} kind="macro" />
       ),

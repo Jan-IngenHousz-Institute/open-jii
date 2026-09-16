@@ -20,7 +20,7 @@ export function ExperimentDashboardsEmptyState({
 }: ExperimentDashboardsEmptyStateProps) {
   const { t } = useTranslation("experimentDashboards");
   return (
-    <Card className="shadow-none">
+    <Card padding="none" className="shadow-none">
       <CardContent className="flex flex-col items-center justify-center py-12">
         <div className="bg-muted mb-4 flex h-24 w-24 items-center justify-center rounded-full">
           <LayoutGrid className="text-muted-foreground h-12 w-12" />

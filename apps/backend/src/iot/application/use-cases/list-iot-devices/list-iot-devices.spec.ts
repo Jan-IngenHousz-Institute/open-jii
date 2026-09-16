@@ -1,7 +1,14 @@
 import { AwsAdapter } from "../../../../common/modules/aws/aws.adapter";
-import { AppError, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
+import {
+  AppError,
+  assertFailure,
+  assertSuccess,
+  failure,
+  success,
+} from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import type { ThingConnectivity } from "../../../core/ports/aws.port";
+import { ExperimentDeviceRepository } from "../../../core/repositories/experiment-device.repository";
 import { ListIotDevicesUseCase } from "./list-iot-devices";
 
 describe("ListIotDevicesUseCase", () => {
@@ -101,5 +108,15 @@ describe("ListIotDevicesUseCase", () => {
     assertSuccess(result);
     expect(result.value).toHaveLength(0);
     expect(search).not.toHaveBeenCalled();
+  });
+
+  it("fails when the binding count cannot be read, rather than listing every device as unbound", async () => {
+    await testApp.createIotDevice({ createdBy: userId });
+    vi.spyOn(
+      testApp.module.get(ExperimentDeviceRepository),
+      "countByDevices",
+    ).mockResolvedValueOnce(failure(AppError.internal("db down")));
+
+    assertFailure(await useCase.execute(userId));
   });
 });

@@ -15,10 +15,15 @@ export interface ExperimentDeviceDto {
   addedAt: Date;
 }
 
+/** The identity the Devices tab renders: the bound row plus its binding count. */
+export type ExperimentDeviceIdentityDto = ExperimentDeviceDto["device"] & {
+  boundExperimentCount: number;
+};
+
 // One device on the experiment's Devices tab: bound, observed publishing into
 // the experiment, or both. `device` is null for a publisher with no registry row.
 export interface ExperimentDeviceEntryDto {
-  device: ExperimentDeviceDto["device"] | null;
+  device: ExperimentDeviceIdentityDto | null;
   clientId: string;
   binding: { addedBy: string; addedAt: Date } | null;
   connectivity: { connected: boolean; lastSeenAt: string | null } | null;

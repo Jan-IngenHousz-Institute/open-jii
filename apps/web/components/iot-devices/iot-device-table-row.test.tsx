@@ -23,7 +23,7 @@ describe("IotDeviceTableRow", () => {
     renderRow(createIotDevice({ name: "Greenhouse 1", status: "active" }));
 
     expect(screen.getByRole("link", { name: "Greenhouse 1" })).toBeInTheDocument();
-    expect(screen.getByText("iot.devices.status.active")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.status.provisioned")).toBeInTheDocument();
   });
 
   it("shows since-when in the last-seen cell for an online device", () => {
@@ -111,9 +111,9 @@ describe("IotDeviceTableRow", () => {
     expect(router.push).not.toHaveBeenCalled();
   });
 
-  it("leads the menu with issue-certificate for a pending device", async () => {
+  it("leads the menu with issue-certificate for a registered device", async () => {
     const user = userEvent.setup();
-    renderRow(createIotDevice({ status: "pending" }));
+    renderRow(createIotDevice({ status: "registered" }));
 
     await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
 
@@ -131,6 +131,30 @@ describe("IotDeviceTableRow", () => {
     expect(
       await screen.findByRole("menuitem", { name: /iot.devices.nextAction.onboard/ }),
     ).toBeInTheDocument();
+  });
+
+  it("offers no next step for a device already bound to an experiment", async () => {
+    const user = userEvent.setup();
+    renderRow(createIotDevice({ status: "active", boundExperimentCount: 2 }));
+
+    await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
+
+    await screen.findByRole("menuitem", { name: /iot.devices.actions.view/ });
+    expect(
+      screen.queryByRole("menuitem", { name: /iot.devices.nextAction/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers no next step for a retired device, which is out of service", async () => {
+    const user = userEvent.setup();
+    renderRow(createIotDevice({ status: "retired" }));
+
+    await user.click(screen.getByRole("button", { name: "iot.devices.actions.more" }));
+
+    await screen.findByRole("menuitem", { name: /iot.devices.actions.view/ });
+    expect(
+      screen.queryByRole("menuitem", { name: /iot.devices.nextAction/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("offers no next step for a phone, which sets itself up", async () => {

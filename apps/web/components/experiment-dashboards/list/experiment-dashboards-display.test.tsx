@@ -1,35 +1,38 @@
 import { createExperimentDashboard } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
 import ExperimentDashboardsDisplay from "./experiment-dashboards-display";
 
-// Embla carousel uses IntersectionObserver; jsdom doesn't ship one.
+// Embla carousel uses IntersectionObserver; jsdom doesn't ship one. Test files
+// share a worker here, so the stub is removed again rather than left behind
+// for the next file, whose lazy widgets would wait on it forever.
 beforeAll(() => {
-  if (typeof globalThis.IntersectionObserver === "undefined") {
-    class IO {
-      observe() {
-        /* noop */
-      }
-      unobserve() {
-        /* noop */
-      }
-      disconnect() {
-        /* noop */
-      }
-      takeRecords() {
-        return [];
-      }
-      root = null;
-      rootMargin = "";
-      thresholds: number[] = [];
+  class IO {
+    observe() {
+      /* noop */
     }
-    Object.defineProperty(globalThis, "IntersectionObserver", { value: IO, writable: true });
-    Object.defineProperty(window, "IntersectionObserver", { value: IO, writable: true });
+    unobserve() {
+      /* noop */
+    }
+    disconnect() {
+      /* noop */
+    }
+    takeRecords() {
+      return [];
+    }
+    root = null;
+    rootMargin = "";
+    thresholds: number[] = [];
   }
+  vi.stubGlobal("IntersectionObserver", IO);
+});
+
+afterAll(() => {
+  vi.unstubAllGlobals();
 });
 
 // FeaturedDashboardCard pulls in DashboardThumbnail and the renderer; the

@@ -1,17 +1,17 @@
 import "@testing-library/jest-dom";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import type { Data, Layout } from "plotly.js";
+import { act, render, screen, waitFor, fireEvent } from "@testing-library/react";
+import type { Config, Data, Layout } from "plotly.js";
 import * as React from "react";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import { PlotlyChart, WebGLContextManager } from "../../charts/plotly-chart";
 
-// Mock react-plotly.js with configurable behavior
+// Mock the Plotly runtime with configurable behavior
 let mockPlotComponent: any;
 
-vi.mock("react-plotly.js", () => ({
-  __esModule: true,
-  default: (props: any) => mockPlotComponent(props),
+vi.mock("../../charts/plotly-runtime", () => ({
+  Plot: (props: any) => mockPlotComponent(props),
+  Plotly: { Plots: { resize: vi.fn() } },
 }));
 
 // Mock React.lazy to return our mock component directly
@@ -42,6 +42,9 @@ const mockUtils = vi.hoisted(() => ({
   createBaseLayout: vi.fn().mockReturnValue({}),
   create3DLayout: vi.fn().mockReturnValue({}),
   createPlotlyConfig: vi.fn().mockReturnValue({}),
+  // Reached through `useChartThemeRefresh`, which the chart now subscribes to.
+  readThemeColor: vi.fn().mockReturnValue(undefined),
+  invalidateThemeTokenCache: vi.fn(),
 }));
 
 vi.mock("../../charts/utils", () => mockUtils);
@@ -495,6 +498,69 @@ describe("PlotlyChart", () => {
   });
 
   describe("Config Handling", () => {
+    it("adds the branded download only in the wrapper and keeps it stable across rerenders", async () => {
+      const { createPlotlyConfig } =
+        await vi.importActual<typeof import("../../charts/utils")>("../../charts/utils");
+      const config = createPlotlyConfig({ downloadFilename: "field-trial" });
+      expect(config.modeBarButtonsToAdd ?? []).toEqual([]);
+      expect(config.modeBarButtonsToRemove).not.toContain("toImage");
+      const data: Data[] = [{ type: "scatter", x: [1, 2], y: [2, 3] }];
+      const { rerender } = render(<PlotlyChart data={data} layout={{}} config={config} />);
+      const exportedConfig = mockPlotComponent.mock.lastCall[0].config;
+      expect(exportedConfig.modeBarButtonsToAdd).toEqual([
+        expect.objectContaining({ name: "downloadBrandedPng", click: expect.any(Function) }),
+      ]);
+      expect(
+        exportedConfig.modeBarButtonsToRemove.filter((name: string) => name === "toImage"),
+      ).toHaveLength(1);
+      expect(exportedConfig.toImageButtonOptions.filename).toBe("field-trial");
+
+      rerender(<PlotlyChart data={data} layout={{ title: { text: "Updated" } }} config={config} />);
+      expect(mockPlotComponent.mock.lastCall[0].config.modeBarButtonsToAdd[0]).toBe(
+        exportedConfig.modeBarButtonsToAdd[0],
+      );
+    });
+
+    it.each(["png", "svg", "jpeg", "webp"] as const)(
+      "preserves %s export settings on initial render and after WebGL fallback",
+      (format) => {
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        const options = { format, width: 1800, height: 1000, scale: 3, filename: "field-trial" };
+        render(
+          <PlotlyChart
+            data={[{ type: "scatter", x: [1, 2], y: [2, 3] }]}
+            layout={{}}
+            config={{ toImageButtonOptions: options }}
+          />,
+        );
+
+        const expectExportConfig = (config: Partial<Config>) => {
+          expect(config.toImageButtonOptions).toEqual(options);
+          if (format === "png") {
+            expect(config.modeBarButtonsToRemove).toContain("toImage");
+            expect(config.modeBarButtonsToAdd).toEqual(
+              expect.arrayContaining([expect.objectContaining({ name: "downloadBrandedPng" })]),
+            );
+          } else {
+            expect(config.modeBarButtonsToRemove ?? []).not.toContain("toImage");
+            expect(config.modeBarButtonsToAdd ?? []).not.toEqual(
+              expect.arrayContaining([expect.objectContaining({ name: "downloadBrandedPng" })]),
+            );
+          }
+        };
+
+        for (const [props] of mockPlotComponent.mock.calls) expectExportConfig(props.config);
+
+        fireEvent(window, new Event("webglcontextlost"));
+        expect(screen.getByText("Chart Error")).toBeInTheDocument();
+        mockPlotComponent.mockClear();
+        fireEvent.click(screen.getByText("Retry with fallback rendering"));
+
+        expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
+        expectExportConfig(mockPlotComponent.mock.lastCall[0].config);
+      },
+    );
+
     it("handles custom toImageButtonOptions with minimum dimensions", () => {
       const testData: Data[] = [{ type: "scatter", x: [1, 2], y: [1, 2] }];
       const customConfig = {
@@ -515,6 +581,10 @@ describe("PlotlyChart", () => {
               height: 800, // Minimum enforced
               format: "png",
             }),
+            modeBarButtonsToRemove: expect.arrayContaining(["toImage"]),
+            modeBarButtonsToAdd: expect.arrayContaining([
+              expect.objectContaining({ name: "downloadBrandedPng" }),
+            ]),
           }),
         }),
       );
@@ -627,23 +697,6 @@ describe("PlotlyChart", () => {
   });
 
   describe("WebGL Context Management", () => {
-    it("detects WebGL requirement for scatter3d charts", () => {
-      mockUtils.getPlotType.mockReturnValue("scatter3d");
-
-      const testData: Data[] = [
-        {
-          type: "scatter3d",
-          x: [1, 2, 3],
-          y: [1, 2, 3],
-          z: [1, 2, 3],
-        },
-      ];
-
-      render(<PlotlyChart data={testData} layout={{}} />);
-
-      expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
-    });
-
     it("detects WebGL requirement for scattergl charts", () => {
       mockUtils.getPlotType.mockReturnValue("scattergl");
 
@@ -660,53 +713,8 @@ describe("PlotlyChart", () => {
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
     });
 
-    it("detects WebGL requirement for surface charts", () => {
-      const testData: Data[] = [
-        {
-          type: "surface",
-          z: [
-            [1, 2],
-            [3, 4],
-          ],
-        },
-      ];
-
-      render(<PlotlyChart data={testData} layout={{}} />);
-
-      expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
-    });
-
-    it("detects WebGL requirement for mesh3d charts", () => {
-      const testData: Data[] = [
-        {
-          type: "mesh3d",
-          x: [1, 2, 3],
-          y: [1, 2, 3],
-          z: [1, 2, 3],
-        },
-      ];
-
-      render(<PlotlyChart data={testData} layout={{}} />);
-
-      expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
-    });
-
-    it("detects WebGL requirement for scattermapbox charts", () => {
-      const testData: Data[] = [
-        {
-          type: "scattermapbox",
-          lat: [45.5, 43.4],
-          lon: [-73.5, -79.4],
-        },
-      ];
-
-      render(<PlotlyChart data={testData} layout={{}} />);
-
-      expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
-    });
-
     it("handles WebGL context lost events", () => {
-      const testData: Data[] = [{ type: "scatter3d", x: [1, 2], y: [1, 2], z: [1, 2] }];
+      const testData: Data[] = [{ type: "scattergl", x: [1, 2], y: [1, 2] }];
       const consoleSpy = vi.spyOn(console, "warn");
 
       render(<PlotlyChart data={testData} layout={{}} />);
@@ -953,22 +961,76 @@ describe("PlotlyChart", () => {
       });
     });
 
-    it("shows WebGL waiting state when context is not available", () => {
-      const testData: Data[] = [{ type: "scatter3d", x: [1, 2], y: [1, 2], z: [1, 2] }];
+    it("draws on SVG instead of waiting when no WebGL context is free", () => {
+      const testData: Data[] = [{ type: "scattergl", x: [1, 2], y: [1, 2] }];
 
-      // Mock WebGLContextManager to simulate no available contexts
+      // Simulate a dashboard that has already spent every context.
       const originalManager = WebGLContextManager.getInstance();
       const mockRequestContext = vi.spyOn(originalManager, "requestContext").mockReturnValue(false);
-      const mockGetActiveCount = vi.spyOn(originalManager, "getActiveCount").mockReturnValue(6);
 
       render(<PlotlyChart data={testData} layout={{}} />);
 
-      expect(screen.getByText("Waiting for GPU resources...")).toBeInTheDocument();
-      expect(screen.getByText("6/8 WebGL contexts active")).toBeInTheDocument();
+      // The chart renders rather than parking on a placeholder, and its trace
+      // falls back to the SVG twin so nothing needs a context.
+      expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
+      expect(screen.queryByText("Waiting for GPU resources...")).not.toBeInTheDocument();
+      const rendered = mockPlotComponent.mock.calls.at(-1)?.[0] as { data: Data[] };
+      expect(rendered.data[0]?.type).toBe("scatter");
 
-      // Cleanup mocks
       mockRequestContext.mockRestore();
-      mockGetActiveCount.mockRestore();
+    });
+
+    // Plotly only destroys a gl scene when a plot stops being gl, so recolouring
+    // in place strands the old scene's contexts. Remounting routes it through
+    // `purge`, which releases them. A remount replaces the DOM node.
+    it("remounts a WebGL chart when the palette changes, and leaves an SVG one alone", async () => {
+      const originalManager = WebGLContextManager.getInstance();
+      vi.spyOn(originalManager, "requestContext").mockImplementation((_id, callback) => {
+        callback();
+        return true;
+      });
+      // The theme store watches the root with a MutationObserver, whose
+      // callback lands in a microtask.
+      const flipTheme = async () => {
+        await act(async () => {
+          document.documentElement.classList.toggle("dark");
+          await Promise.resolve();
+        });
+      };
+
+      const glData: Data[] = [{ type: "scattergl", x: [1, 2], y: [1, 2] }];
+      const gl = render(<PlotlyChart data={glData} layout={{}} />);
+      const glNode = screen.getByTestId("plotly-chart");
+      await flipTheme();
+      gl.rerender(<PlotlyChart data={glData} layout={{}} />);
+      expect(screen.getByTestId("plotly-chart")).not.toBe(glNode);
+      gl.unmount();
+
+      const svgData: Data[] = [{ type: "scatter", x: [1, 2], y: [1, 2] }];
+      const svg = render(<PlotlyChart data={svgData} layout={{}} />);
+      const svgNode = screen.getByTestId("plotly-chart");
+      await flipTheme();
+      svg.rerender(<PlotlyChart data={svgData} layout={{}} />);
+      expect(screen.getByTestId("plotly-chart")).toBe(svgNode);
+    });
+
+    it("keeps the WebGL trace when a context is granted", () => {
+      const testData: Data[] = [{ type: "scattergl", x: [1, 2], y: [1, 2] }];
+
+      const originalManager = WebGLContextManager.getInstance();
+      const mockRequestContext = vi
+        .spyOn(originalManager, "requestContext")
+        .mockImplementation((_id, callback) => {
+          callback();
+          return true;
+        });
+
+      render(<PlotlyChart data={testData} layout={{}} />);
+
+      const rendered = mockPlotComponent.mock.calls.at(-1)?.[0] as { data: Data[] };
+      expect(rendered.data[0]?.type).toBe("scattergl");
+
+      mockRequestContext.mockRestore();
     });
   });
 });
@@ -976,9 +1038,21 @@ describe("PlotlyChart", () => {
 describe("WebGLContextManager", () => {
   let manager: WebGLContextManager;
 
+  // Read the cap off the manager rather than restating it, so these stay tests
+  // of the queueing behaviour when the browser context budget is re-tuned.
+  let CAP: number;
+
   beforeEach(() => {
     manager = WebGLContextManager.getInstance();
     // Clear any existing state
+    (manager as any).activeContexts.clear();
+    (manager as any).pendingCharts.clear();
+
+    CAP = 0;
+    while (manager.canCreateContext()) {
+      manager.requestContext(`cap-probe-${CAP}`, () => undefined);
+      CAP++;
+    }
     (manager as any).activeContexts.clear();
     (manager as any).pendingCharts.clear();
   });
@@ -1017,8 +1091,8 @@ describe("WebGLContextManager", () => {
     it("queues context requests when at the limit", () => {
       const callbacks: any[] = [];
 
-      // Fill up to the limit (8 contexts)
-      for (let i = 0; i < 8; i++) {
+      // Fill up to the limit
+      for (let i = 0; i < CAP; i++) {
         const callback = vi.fn();
         callbacks.push(callback);
         const result = manager.requestContext(`chart-${i}`, callback);
@@ -1026,7 +1100,7 @@ describe("WebGLContextManager", () => {
         expect(callback).toHaveBeenCalledOnce();
       }
 
-      expect(manager.getActiveCount()).toBe(8);
+      expect(manager.getActiveCount()).toBe(CAP);
 
       // Try to add one more - should be queued
       const queuedCallback = vi.fn();
@@ -1034,14 +1108,14 @@ describe("WebGLContextManager", () => {
 
       expect(result).toBe(false);
       expect(queuedCallback).not.toHaveBeenCalled();
-      expect(manager.getActiveCount()).toBe(8);
+      expect(manager.getActiveCount()).toBe(CAP);
     });
 
     it("correctly reports when context can be created", () => {
       expect(manager.canCreateContext()).toBe(true);
 
       // Fill up to the limit
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < CAP; i++) {
         manager.requestContext(`chart-${i}`, () => {});
       }
 
@@ -1060,7 +1134,7 @@ describe("WebGLContextManager", () => {
 
     it("processes queued charts when context is released", () => {
       // Fill up to the limit
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < CAP; i++) {
         manager.requestContext(`chart-${i}`, () => {});
       }
 
@@ -1074,7 +1148,7 @@ describe("WebGLContextManager", () => {
 
       // Queued chart should now be processed
       expect(queuedCallback).toHaveBeenCalledOnce();
-      expect(manager.getActiveCount()).toBe(8); // Still at limit, but different chart
+      expect(manager.getActiveCount()).toBe(CAP); // Still at limit, but different chart
     });
 
     it("handles release of non-existent context gracefully", () => {
@@ -1087,7 +1161,7 @@ describe("WebGLContextManager", () => {
 
     it("processes queue in FIFO order", () => {
       // Fill up to the limit
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < CAP; i++) {
         manager.requestContext(`chart-${i}`, () => {});
       }
 
@@ -1132,7 +1206,7 @@ describe("WebGLContextManager", () => {
 
     it("maintains queue integrity when same ID is queued multiple times", () => {
       // Fill up to the limit
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < CAP; i++) {
         manager.requestContext(`chart-${i}`, () => {});
       }
 
@@ -1164,7 +1238,7 @@ describe("WebGLContextManager", () => {
 
     it("releasing a non-active chart does not promote pending charts", () => {
       // Fill the cap with active contexts
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < CAP; i++) {
         manager.requestContext(`chart-${i}`, () => {});
       }
       const queuedCallback = vi.fn();
@@ -1174,12 +1248,12 @@ describe("WebGLContextManager", () => {
       // No-op release: chartId not in active set; should not promote.
       manager.releaseContext("never-acquired");
       expect(queuedCallback).not.toHaveBeenCalled();
-      expect(manager.getActiveCount()).toBe(8);
+      expect(manager.getActiveCount()).toBe(CAP);
     });
 
     it("releasing while still pending removes the chart from the pending queue", () => {
       // Fill up the cap so the next request gets queued.
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < CAP; i++) {
         manager.requestContext(`chart-${i}`, () => {});
       }
       const ghostCallback = vi.fn();
@@ -1193,7 +1267,153 @@ describe("WebGLContextManager", () => {
       // we queue another waiter.
       manager.releaseContext("chart-0");
       expect(ghostCallback).not.toHaveBeenCalled();
-      expect(manager.getActiveCount()).toBe(7);
+      expect(manager.getActiveCount()).toBe(CAP - 1);
     });
+  });
+});
+
+describe("PlotlyChart container resizing", () => {
+  // This block sits outside `describe("PlotlyChart")`, so it needs its own
+  // fixture rather than inheriting one left behind by an earlier block.
+  const nativeResizeObserver = globalThis.ResizeObserver;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPlotComponent = vi.fn(({ data, layout, config, onError, loading, error, ...props }) => (
+      <div
+        data-testid="plotly-chart"
+        data-data={JSON.stringify(data)}
+        data-layout={JSON.stringify(layout)}
+        {...props}
+      />
+    ));
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    globalThis.ResizeObserver = nativeResizeObserver;
+  });
+
+  it("relayouts the graph in place when its container resizes", async () => {
+    let notify: (() => void) | undefined;
+    class StubResizeObserver implements ResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        notify = () => callback([], this);
+      }
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+    }
+    const original = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = StubResizeObserver;
+    const frame = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      callback(0);
+      return 1;
+    });
+
+    render(<PlotlyChart data={[]} layout={{}} />);
+    const graphDiv = document.createElement("div");
+    const plotProps = mockPlotComponent.mock.calls.at(-1)?.[0];
+    act(() => {
+      plotProps.onInitialized({ data: [], layout: {}, frames: null }, graphDiv);
+    });
+
+    notify?.();
+    const { Plotly } = await import("../../charts/plotly-runtime");
+    await waitFor(() => expect(Plotly.Plots.resize).toHaveBeenCalledWith(graphDiv));
+
+    frame.mockRestore();
+    globalThis.ResizeObserver = original;
+  });
+
+  it("observes its own container, not just the window", () => {
+    // react-plotly's useResizeHandler binds to `window` resize, so collapsing
+    // the sidebar left every chart at its previous pixel width.
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+
+    class StubResizeObserver implements ResizeObserver {
+      observe = observe;
+      unobserve = vi.fn();
+      disconnect = disconnect;
+    }
+
+    const original = globalThis.ResizeObserver;
+    globalThis.ResizeObserver = StubResizeObserver;
+
+    const { unmount } = render(<PlotlyChart data={[]} layout={{}} />);
+    expect(observe).toHaveBeenCalled();
+
+    unmount();
+    expect(disconnect).toHaveBeenCalled();
+
+    globalThis.ResizeObserver = original;
+  });
+
+  // A dashboard keeps every chart it has shown mounted, and the grid resizes
+  // all of them together. A Plotly resize is a full redraw, so doing it for
+  // charts nobody can see is the bulk of the work in a window drag.
+  it("defers the redraw while the chart is off screen and runs it once on the way back", async () => {
+    let resized: (() => void) | undefined;
+    let intersect: ((isIntersecting: boolean) => void) | undefined;
+
+    class StubResizeObserver implements ResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resized = () => callback([], this);
+      }
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+    }
+    class StubIntersectionObserver {
+      constructor(callback: (entries: { isIntersecting: boolean }[]) => void) {
+        intersect = (isIntersecting) => callback([{ isIntersecting }]);
+      }
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+      takeRecords = vi.fn(() => []);
+      root = null;
+      rootMargin = "";
+      thresholds = [];
+    }
+
+    const originalResize = globalThis.ResizeObserver;
+    const originalIntersection = globalThis.IntersectionObserver;
+    globalThis.ResizeObserver = StubResizeObserver;
+    vi.stubGlobal("IntersectionObserver", StubIntersectionObserver);
+    const frame = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      callback(0);
+      return 1;
+    });
+
+    const { Plotly } = await import("../../charts/plotly-runtime");
+    vi.mocked(Plotly.Plots.resize).mockClear();
+
+    render(<PlotlyChart data={[]} layout={{}} />);
+    const graphDiv = document.createElement("div");
+    const plotProps = mockPlotComponent.mock.calls.at(-1)?.[0];
+    act(() => {
+      plotProps.onInitialized({ data: [], layout: {}, frames: null }, graphDiv);
+    });
+
+    // Scrolled away, then the grid resizes it several times.
+    act(() => intersect?.(false));
+    resized?.();
+    resized?.();
+    resized?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(Plotly.Plots.resize).not.toHaveBeenCalled();
+
+    // Back into view: one redraw, not one per resize it missed.
+    act(() => intersect?.(true));
+    await waitFor(() => expect(Plotly.Plots.resize).toHaveBeenCalledWith(graphDiv));
+    expect(vi.mocked(Plotly.Plots.resize).mock.calls).toHaveLength(1);
+
+    frame.mockRestore();
+    globalThis.ResizeObserver = originalResize;
+    globalThis.IntersectionObserver = originalIntersection;
+    vi.unstubAllGlobals();
   });
 });

@@ -1,12 +1,13 @@
 "use client";
 
 import type { PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import type { FacetGridConfig } from "./cartesian-chart";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing, facetTierStyles } from "./use-is-compact";
 import {
   applyReferenceLines,
@@ -195,140 +196,149 @@ export function Histogram({
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>(
     subplots ? { grid: { rows: subplots.rows, columns: subplots.columns } } : {},
   );
+  const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("histogram", renderer);
 
-  const plotData: PlotData[] = data.map(
-    (series) =>
-      ({
-        // Transform sets x or y per orientation; don't swap.
-        x: series.x,
-        y: series.y,
-        // Per-trace subplot routing for facets. Plotly reads `xaxis` /
-        // `yaxis` strings (`"x"`, `"x2"`, ...) at the trace level and
-        // matches them to the numbered axis configs in `layout`.
-        xaxis: series.xaxisId,
-        yaxis: series.yaxisId,
-        name: series.name,
-        type: plotType,
+  const plotData: PlotData[] = useMemo(() => {
+    const traces: PlotData[] = data.map(
+      (series) =>
+        ({
+          // Transform sets x or y per orientation; don't swap.
+          x: series.x,
+          y: series.y,
+          // Per-trace subplot routing for facets. Plotly reads `xaxis` /
+          // `yaxis` strings (`"x"`, `"x2"`, ...) at the trace level and
+          // matches them to the numbered axis configs in `layout`.
+          xaxis: series.xaxisId,
+          yaxis: series.yaxisId,
+          name: series.name,
+          type: plotType,
 
-        // Binning
-        nbinsx: series.nbinsx,
-        nbinsy: series.nbinsy,
-        xbins: series.xbins,
-        ybins: series.ybins,
-        autobinx: series.autobinx !== false,
-        autobiny: series.autobiny !== false,
-        bingroup: series.bingroup,
+          // Binning
+          nbinsx: series.nbinsx,
+          nbinsy: series.nbinsy,
+          xbins: series.xbins,
+          ybins: series.ybins,
+          autobinx: series.autobinx !== false,
+          autobiny: series.autobiny !== false,
+          bingroup: series.bingroup,
 
-        // Histogram function and normalization
-        histfunc: series.histfunc || "count",
-        histnorm: series.histnorm || "",
+          // Histogram function and normalization
+          histfunc: series.histfunc || "count",
+          histnorm: series.histnorm || "",
 
-        // Cumulative
-        cumulative: series.cumulative
-          ? {
-              enabled: series.cumulative.enabled || false,
-              direction: series.cumulative.direction || "increasing",
-              currentbin: series.cumulative.currentbin || "include",
-            }
-          : { enabled: false },
-
-        // Styling
-        marker: {
-          color: series.marker?.color || series.color,
-          opacity: series.marker?.opacity || series.opacity || 0.7,
-          line: series.marker?.line
+          // Cumulative
+          cumulative: series.cumulative
             ? {
-                color: series.marker.line.color,
-                width: series.marker.line.width || 0.5,
+                enabled: series.cumulative.enabled || false,
+                direction: series.cumulative.direction || "increasing",
+                currentbin: series.cumulative.currentbin || "include",
               }
-            : undefined,
-        },
+            : { enabled: false },
 
-        text: series.text,
-        textposition: series.textposition,
-        textfont: series.textfont,
+          // Styling
+          marker: {
+            color: series.marker?.color || series.color,
+            opacity: series.marker?.opacity || series.opacity || 0.7,
+            line: series.marker?.line
+              ? {
+                  color: series.marker.line.color,
+                  width: series.marker.line.width || 0.5,
+                }
+              : undefined,
+          },
 
-        orientation: (series.orientation || orientation) === "h" ? "h" : "v",
+          text: series.text,
+          textposition: series.textposition,
+          textfont: series.textfont,
 
-        visible: series.visible,
-        showlegend: series.showlegend,
-        legendgroup: series.legendgroup,
-        hovertemplate: series.hovertemplate,
-        hoverinfo: series.hoverinfo,
-        customdata: series.customdata,
-      }) as any as PlotData,
-  );
+          orientation: (series.orientation || orientation) === "h" ? "h" : "v",
 
-  if (fitOverlay === "normal") {
-    for (let i = 0; i < data.length; i++) {
-      const series = data[i];
-      if (!series) continue;
-      const seriesOrientation = series.orientation || orientation;
-      const valuesForFit = seriesOrientation === "v" ? series.x : series.y;
-      if (!valuesForFit || valuesForFit.length === 0) continue;
-      const seriesNbins = seriesOrientation === "v" ? series.nbinsx : series.nbinsy;
-      const fit = buildNormalFit(
-        valuesForFit,
-        Boolean(series.cumulative?.enabled),
-        series.histnorm,
-        seriesNbins,
-      );
-      if (!fit) continue;
-      const lineColor = series.marker?.color || series.color;
-      const fitTrace = {
-        x: seriesOrientation === "v" ? fit.xs : fit.ys,
-        y: seriesOrientation === "v" ? fit.ys : fit.xs,
-        xaxis: series.xaxisId,
-        yaxis: series.yaxisId,
-        name: `${series.name ?? `series ${i + 1}`} (normal fit)`,
-        type: "scatter",
-        mode: "lines",
-        line: { color: lineColor, width: 2 },
-        // Share legendgroup so the parent's toggle hides the fit too.
-        legendgroup: series.legendgroup ?? series.name,
-        showlegend: series.showlegend !== false,
-        hovertemplate: `μ=${fit.mean.toFixed(3)}<br>σ=${fit.std.toFixed(3)}<extra></extra>`,
-      } as unknown as PlotData;
-      plotData.push(fitTrace);
+          visible: series.visible,
+          showlegend: series.showlegend,
+          legendgroup: series.legendgroup,
+          hovertemplate: series.hovertemplate,
+          hoverinfo: series.hoverinfo,
+          customdata: series.customdata,
+        }) as any as PlotData,
+    );
+
+    if (fitOverlay === "normal") {
+      for (let i = 0; i < data.length; i++) {
+        const series = data[i];
+        if (!series) continue;
+        const seriesOrientation = series.orientation || orientation;
+        const valuesForFit = seriesOrientation === "v" ? series.x : series.y;
+        if (!valuesForFit || valuesForFit.length === 0) continue;
+        const seriesNbins = seriesOrientation === "v" ? series.nbinsx : series.nbinsy;
+        const fit = buildNormalFit(
+          valuesForFit,
+          Boolean(series.cumulative?.enabled),
+          series.histnorm,
+          seriesNbins,
+        );
+        if (!fit) continue;
+        const lineColor = series.marker?.color || series.color;
+        const fitTrace = {
+          x: seriesOrientation === "v" ? fit.xs : fit.ys,
+          y: seriesOrientation === "v" ? fit.ys : fit.xs,
+          xaxis: series.xaxisId,
+          yaxis: series.yaxisId,
+          name: `${series.name ?? `series ${i + 1}`} (normal fit)`,
+          type: "scatter",
+          mode: "lines",
+          line: { color: lineColor, width: 2 },
+          // Share legendgroup so the parent's toggle hides the fit too.
+          legendgroup: series.legendgroup ?? series.name,
+          showlegend: series.showlegend !== false,
+          hovertemplate: `μ=${fit.mean.toFixed(3)}<br>σ=${fit.std.toFixed(3)}<extra></extra>`,
+        } as unknown as PlotData;
+        traces.push(fitTrace);
+      }
     }
-  }
 
-  const layout = createBaseLayout(config, sizing);
+    return traces;
+  }, [data, orientation, plotType, fitOverlay]);
 
-  // Faceted layout: convert single-canvas xaxis/yaxis into a grid of
-  // numbered axes + per-cell title annotations. Mirrors what
-  // CartesianChart does for the cartesian wrapper.
-  if (subplots) {
-    const { cellTitleFontSize } = facetTierStyles(sizing);
-    const forceSharedTitles = sizing.cellVeryCompact;
-    const effectiveSharedXTitle = forceSharedTitles || subplots.sharedXTitle === true;
-    const effectiveSharedYTitle = forceSharedTitles || subplots.sharedYTitle === true;
-    const faceted = extendLayoutForFacets(layout, subplots.cells, {
-      rows: subplots.rows,
-      columns: subplots.columns,
-      sharedX: subplots.sharedX,
-      sharedY: subplots.sharedY,
-      sharedXTitle: effectiveSharedXTitle,
-      sharedYTitle: effectiveSharedYTitle,
-      roworder: subplots.roworder,
-      titleFontSize: cellTitleFontSize,
-      ultraCompactCells: sizing.cellUltraCompact,
-    });
-    Object.assign(layout, faceted);
-  }
+  const layout = useMemo(() => {
+    const next = createBaseLayout(config, sizing);
 
-  // Add histogram specific layout properties
-  (layout as any).barmode = barmode;
-  if (barnorm) {
-    (layout as any).barnorm = barnorm;
-  }
+    // Faceted layout: convert single-canvas xaxis/yaxis into a grid of
+    // numbered axes + per-cell title annotations. Mirrors what
+    // CartesianChart does for the cartesian wrapper.
+    if (subplots) {
+      const { cellTitleFontSize } = facetTierStyles(sizing);
+      const forceSharedTitles = sizing.cellVeryCompact;
+      const effectiveSharedXTitle = forceSharedTitles || subplots.sharedXTitle === true;
+      const effectiveSharedYTitle = forceSharedTitles || subplots.sharedYTitle === true;
+      const faceted = extendLayoutForFacets(next, subplots.cells, {
+        rows: subplots.rows,
+        columns: subplots.columns,
+        sharedX: subplots.sharedX,
+        sharedY: subplots.sharedY,
+        sharedXTitle: effectiveSharedXTitle,
+        sharedYTitle: effectiveSharedYTitle,
+        roworder: subplots.roworder,
+        titleFontSize: cellTitleFontSize,
+        ultraCompactCells: sizing.cellUltraCompact,
+      });
+      Object.assign(next, faceted);
+    }
 
-  applyReferenceLines(layout, config.referenceLines, { cells: subplots?.cells });
+    // Add histogram specific layout properties
+    (next as any).barmode = barmode;
+    if (barnorm) {
+      (next as any).barnorm = barnorm;
+    }
 
-  const plotConfig = createPlotlyConfig(config, sizing);
+    applyReferenceLines(next, config.referenceLines, { cells: subplots?.cells });
 
+    return next;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+  }, [config, sizing, subplots, barmode, barnorm, themeVersion]);
+
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart

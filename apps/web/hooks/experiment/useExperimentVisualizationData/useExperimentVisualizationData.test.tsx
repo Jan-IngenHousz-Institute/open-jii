@@ -1,6 +1,6 @@
 import { createExperimentDataTable } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { renderHook, waitFor } from "@/test/test-utils";
+import { act, createTestQueryClient, renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -342,6 +342,95 @@ describe("useExperimentVisualizationData", () => {
 
     expect(result.current.isLoading).toBe(false);
     expect(spy.called).toBe(false);
+  });
+
+  // The chart wrappers skip a Plotly redraw only while the rows keep their
+  // reference; a refetch that changes nothing must not break that.
+  it("keeps the same row set when a refetch returns identical data", async () => {
+    const spy = server.mount(contract.experiments.getExperimentData, {
+      body: [
+        createExperimentDataTable({
+          name: "measurements",
+          totalRows: 1,
+          data: {
+            columns: [{ name: "value", type_name: "DOUBLE", type_text: "DOUBLE" }],
+            rows: [{ value: 1 }],
+            totalRows: 1,
+            truncated: false,
+          },
+        }),
+      ],
+    });
+    const queryClient = createTestQueryClient();
+
+    const { result } = renderHook(
+      () =>
+        useExperimentVisualizationData("exp-123", {
+          tableName: "measurements",
+          columns: ["value"],
+        }),
+      { queryClient },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    const before = result.current.data;
+
+    await act(() => queryClient.refetchQueries());
+
+    expect(spy.callCount).toBe(2);
+    expect(result.current.data).toBe(before);
+  });
+
+  it("remaps groupBy aliases and flattens display structs in the same pass", async () => {
+    server.mount(contract.experiments.getExperimentData, {
+      body: [
+        createExperimentDataTable({
+          name: "measurements",
+          totalRows: 1,
+          data: {
+            columns: [
+              { name: "timestamp_hour", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+              {
+                name: "contributor",
+                type_name: "STRUCT",
+                type_text: "STRUCT<id: STRING, name: STRING, avatar: STRING>",
+              },
+              { name: "value_avg", type_name: "DOUBLE", type_text: "DOUBLE" },
+            ],
+            rows: [
+              {
+                timestamp_hour: "2024-01-01T10:00:00",
+                contributor: JSON.stringify({ id: "u1", name: "Alice", avatar: "https://a" }),
+                value_avg: 1.5,
+              },
+            ],
+            totalRows: 1,
+            truncated: false,
+          },
+        }),
+      ],
+    });
+
+    const { result } = renderHook(() =>
+      useExperimentVisualizationData("exp-123", {
+        tableName: "measurements",
+        aggregation: {
+          groupBy: [{ column: "timestamp", timeBucket: "hour" }, { column: "contributor" }],
+          functions: [{ column: "value", function: "avg" }],
+        },
+      }),
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.data?.columns.map((c) => c.name)).toEqual([
+      "timestamp",
+      "contributor",
+      "value_avg",
+    ]);
+    expect(result.current.data?.rows).toEqual([
+      { timestamp: "2024-01-01T10:00:00", contributor: "Alice", value_avg: 1.5 },
+    ]);
   });
 
   it("flattens CONTRIBUTOR struct cells to their `name` field for the chart layer", async () => {

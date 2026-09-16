@@ -306,4 +306,15 @@ describe("ListExperimentDevicesUseCase", () => {
     assertFailure(result);
     expect(result.error.statusCode).toBe(403);
   });
+
+  it("fails when the binding counts cannot be read, rather than rendering every device as provisioned", async () => {
+    const device = await testApp.createIotDevice({ createdBy: userId });
+    const { experiment } = await testApp.createExperiment({ name: "Counts", userId });
+    await repository.addExperiments(device.id, [experiment.id], userId);
+    vi.spyOn(repository, "countByDevices").mockResolvedValueOnce(
+      failure(AppError.internal("db down")),
+    );
+
+    assertFailure(await useCase.execute(experiment.id, userId));
+  });
 });

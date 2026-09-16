@@ -5,6 +5,7 @@ import { useJsonFormatStyle } from "@/hooks/useJsonFormatStyle";
 import { reformatJsonString } from "@/lib/json-format";
 import { Check, ChevronDown, ChevronRight, Copy } from "lucide-react";
 import React from "react";
+import type { OnToggleCellExpansionHandler } from "~/components/data-table/data-table-columns";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -15,7 +16,7 @@ interface ExperimentDataTableVariantCellProps {
   columnName: string;
   rowId: string;
   isExpanded: boolean;
-  onToggleExpansion?: (rowId: string, columnName: string) => void;
+  onToggleExpansion?: OnToggleCellExpansionHandler;
 }
 
 /**
@@ -89,7 +90,9 @@ export function VariantExpandedContent({ data }: { data: string }) {
       <Button
         variant="ghost"
         size="sm"
-        className="z-1 shadow-xs backdrop-blur-xs bg-card/90 hover:bg-card absolute right-6 top-6 h-7 border px-2"
+        // right-10, not right-6: the p-4 wrapper plus the scrollbar take ~32px,
+        // so 24px lands on the scrollbar. Outside the <pre>, so it stays put.
+        className="z-1 shadow-xs backdrop-blur-xs bg-card/90 hover:bg-card absolute right-10 top-6 h-7 border px-2"
         onClick={handleCopy}
         title={t("common.copy")}
       >

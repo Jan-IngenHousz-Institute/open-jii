@@ -28,6 +28,7 @@ import type {
   ExperimentAccess,
   ExperimentExportRecord,
   ExperimentFlowGraph,
+  ExperimentListItem,
   ExperimentUploadMetadata,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
@@ -79,7 +80,7 @@ import type { Session } from "@repo/auth/types";
 
 let experimentSeq = 0;
 
-export function createExperiment(overrides: Partial<Experiment> = {}): Experiment {
+export function createExperiment(overrides: Partial<ExperimentListItem> = {}): ExperimentListItem {
   experimentSeq++;
   return {
     id: `exp-${experimentSeq}-${crypto.randomUUID().slice(0, 8)}`,
@@ -1062,7 +1063,7 @@ export function createIotDevice(
     serialNumber: `SN-${iotDeviceSeq}`,
     name: `Device ${iotDeviceSeq}`,
     deviceType: "ambyte",
-    status: "pending",
+    status: "registered",
     certificateId: null,
     certificateArn: null,
     createdBy: crypto.randomUUID(),
@@ -1072,6 +1073,7 @@ export function createIotDevice(
     updatedAt: "2025-01-10T00:00:00.000Z",
     // Unknown by default: the fleet index is an enrichment, not a given.
     connectivity: null,
+    boundExperimentCount: 0,
     ...overrides,
   };
 }
@@ -1170,7 +1172,9 @@ export function createDeviceGroupMember(
     serialNumber: "AA:BB:CC:DD",
     deviceType: "ambyte",
     status: "active",
+    boundExperimentCount: 0,
     connected: null,
+    lastSeenAt: null,
     addedAt: new Date().toISOString(),
     ...overrides,
   };

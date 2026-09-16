@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import nock from "nock";
 
 import { TestHarness } from "../../../../../test/test-harness";
@@ -163,6 +164,8 @@ describe("DatabricksSqlService", () => {
           },
         });
 
+      const logSpy = vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
+
       // Execute SQL query
       const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
 
@@ -170,6 +173,18 @@ describe("DatabricksSqlService", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toEqual(mockTableData);
+
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: "Warehouse statement completed",
+          statementId,
+          pollAttempts: 2,
+          rowCount: 2,
+          truncated: false,
+          durationMs: expect.any(Number) as number,
+        }),
+      );
+      logSpy.mockRestore();
     });
 
     it("should handle SQL execution errors", async () => {

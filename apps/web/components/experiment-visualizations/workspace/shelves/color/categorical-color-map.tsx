@@ -16,7 +16,7 @@ import { FormColorInput } from "@repo/ui/components/form-color-input";
 import { useExperimentDistinctValues } from "../../../../../hooks/experiment/useExperimentDistinctValues/useExperimentDistinctValues";
 import type { ChartFormValues } from "../../../charts/chart-config";
 import {
-  CATEGORY_PALETTE,
+  categoryPalette,
   composeColorMapKey,
   getCategoryColor,
 } from "../../../charts/colors/palettes";
@@ -296,13 +296,15 @@ function PalettePreview() {
         {t("workspace.shelves.preview")}
       </div>
       <div className="flex flex-wrap gap-1.5">
-        {CATEGORY_PALETTE.slice(0, 12).map((color) => (
-          <div
-            key={color}
-            className="border-border h-4 w-4 rounded-sm border"
-            style={{ background: color }}
-          />
-        ))}
+        {categoryPalette()
+          .slice(0, 12)
+          .map((color) => (
+            <div
+              key={color}
+              className="border-border h-4 w-4 rounded-sm border"
+              style={{ background: color }}
+            />
+          ))}
       </div>
       <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
         {t("workspace.shelves.colorModeCategoricalHelp")}

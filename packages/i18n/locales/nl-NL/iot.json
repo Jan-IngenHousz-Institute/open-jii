@@ -60,10 +60,11 @@
         "created": "Geregistreerd"
       },
       "status": {
-        "pending": "In behandeling",
-        "active": "Actief",
-        "rotating": "Roteren",
-        "revoked": "Ingetrokken"
+        "registered": "Geregistreerd",
+        "provisioned": "Geprovisioneerd",
+        "onboarded": "Gekoppeld",
+        "revoked": "Ingetrokken",
+        "retired": "Buiten gebruik"
       },
       "tabs": {
         "all": "Alle"
@@ -81,12 +82,13 @@
         "firmware": "Firmware"
       },
       "connectivity": {
-        "connected": "Verbonden",
+        "connected": "Online",
         "connectedNow": "Momenteel verbonden",
         "onlineSince": "Online sinds {{time}}",
-        "disconnected": "Niet verbonden",
+        "disconnected": "Offline",
         "unknown": "Onbekend",
-        "never": "Nooit verbonden"
+        "never": "Nooit verbonden",
+        "idle": "Inactief"
       },
       "lineage": {
         "title": "Herkomst",
@@ -242,7 +244,9 @@
         "more": "Apparaatacties",
         "view": "Details bekijken",
         "delete": "Verwijderen",
-        "title": "Acties"
+        "title": "Acties",
+        "retire": "Buiten gebruik stellen",
+        "reinstate": "Weer in gebruik nemen"
       },
       "empty": {
         "title": "Nog geen apparaten",
@@ -369,7 +373,7 @@
         }
       },
       "credentials": {
-        "pendingDescription": "Dit apparaat heeft nog geen certificaat. Geef er een uit om het te activeren en verbinding met AWS IoT toe te staan.",
+        "registeredDescription": "Dit apparaat heeft nog geen certificaat. Geef er een uit om het in te richten en verbinding met AWS IoT toe te staan.",
         "issue": "Certificaat uitgeven",
         "reissue": "Certificaat opnieuw uitgeven",
         "issueError": "Certificaat uitgeven mislukt",
@@ -378,7 +382,6 @@
         "rotateTitle": "Certificaat roteren",
         "rotateConfirm": "Het apparaat krijgt een nieuw certificaat en het huidige werkt direct niet meer. Het publiceert pas weer zodra de nieuwe inloggegevens zijn geïnstalleerd.",
         "disconnectWarning": "Dit apparaat is momenteel verbonden en wordt losgekoppeld.",
-        "rotatingDescription": "U heeft een nieuw certificaat uitgegeven en het oude wordt ingetrokken. Het apparaat blijft streamen met wat het heeft totdat u de nieuwe bundel laadt; dit duurt meestal minder dan een minuut.",
         "revokedDescription": "Het certificaat is ingetrokken, waardoor dit apparaat zich niet meer bij AWS IoT kan authenticeren. Geef een nieuw certificaat uit om de toegang te herstellen.",
         "revoke": "Certificaat intrekken",
         "revokeTitle": "Certificaat intrekken",
@@ -419,7 +422,8 @@
           "step3": "Roteer om het apparaat een vers certificaat te geven, of wanneer het van eigenaar wisselt. Intrekken sluit de toegang direct af.",
           "step4": "Een ingetrokken apparaat kan pas weer verbinden zodra een nieuw certificaat is uitgegeven."
         },
-        "certificateIdLabel": "Certificaat-ID"
+        "certificateIdLabel": "Certificaat-ID",
+        "retiredDescription": "Dit apparaat is buiten gebruik. Neem het via het actiemenu weer in gebruik voordat u een certificaat uitgeeft."
       },
       "nextAction": {
         "issueCredentials": "Certificaat uitgeven",
@@ -471,7 +475,22 @@
         "loadError": "De vlootactiviteit kon niet worden geladen.",
         "reasonCredentials": "Certificaat nodig",
         "reasonNeverConnected": "Nooit verbonden",
-        "reasonSilent": "Verbonden, geen data"
+        "reasonSilent": "Verbonden, geen data",
+        "fromDevice": "Meest recent van {{device}}",
+        "offlineCount_one": "{{count}} offline",
+        "offlineCount_other": "{{count}} offline"
+      },
+      "retire": {
+        "title": "Apparaat buiten gebruik stellen",
+        "confirm": "{{name}} wordt buiten gebruik gesteld. Het certificaat wordt ingetrokken en het apparaat verdwijnt uit alle aandachtslijsten en keuzelijsten. Record en geschiedenis blijven bewaard.",
+        "success": "Apparaat buiten gebruik gesteld",
+        "error": "Het apparaat kon niet buiten gebruik worden gesteld"
+      },
+      "reinstate": {
+        "title": "Apparaat weer in gebruik nemen",
+        "confirm": "{{name}} keert terug in het register als geregistreerd apparaat. Geef een nieuw certificaat uit om het weer in gebruik te nemen.",
+        "success": "Apparaat weer in gebruik genomen",
+        "error": "Het apparaat kon niet weer in gebruik worden genomen"
       }
     },
     "onboarding": {
@@ -543,7 +562,8 @@
       "filterExperiments": "Experimenten filteren",
       "filterNoMatches": "Geen experimenten passen bij dit filter.",
       "answeredOfRequired": "{{answered}} van {{required}} verplicht",
-      "reissueHint": "Opnieuw uitgeven genereert het bestand opnieuw voor alles wat nu gebonden is; er komt niets nieuws bij."
+      "reissueHint": "Opnieuw uitgeven genereert het bestand opnieuw voor alles wat nu gebonden is; er komt niets nieuws bij.",
+      "retiredDevice": "Dit apparaat is buiten gebruik en kan niet worden gekoppeld."
     },
     "experimentDevices": {
       "tabLabel": "Apparaten",
@@ -692,7 +712,7 @@
         "actionIssue": "Uitgeven",
         "actionRotate": "Roteren",
         "actionRevoke": "Intrekken",
-        "issueHint": "Geeft een certificaat uit aan apparaten die er nog geen hebben (in afwachting of ingetrokken).",
+        "issueHint": "Geeft een certificaat uit aan apparaten die er nog geen hebben (geregistreerd of ingetrokken).",
         "rotateHint": "Vervangt het actieve certificaat op elk geselecteerd apparaat. Het oude certificaat werkt direct niet meer.",
         "revokeHint": "Trekt het certificaat van elk geselecteerd apparaat in. Ingetrokken apparaten kunnen zich pas na nieuwe uitgifte weer authenticeren.",
         "devicesTitle": "Apparaten",
@@ -701,7 +721,6 @@
         "mobileIneligible": "Niet van toepassing op telefoons",
         "hasCredentialsIneligible": "Heeft al inloggegevens",
         "noCertificateIneligible": "Geen certificaat",
-        "rotatingIneligible": "Rotatie bezig",
         "submitIssue_one": "{{count}} certificaat uitgeven",
         "submitIssue_other": "{{count}} certificaten uitgeven",
         "submitRotate_one": "{{count}} certificaat roteren",
@@ -726,7 +745,8 @@
         "downloadAll_other": "{{count}} pakketten downloaden (zip)",
         "actionTitle": "Actie",
         "actionDescription": "De geschiktheid verschilt per actie; de apparaatlijst hieronder volgt de keuze.",
-        "railEmpty": "Voer een actie uit om hier resultaten en downloads per apparaat te zien."
+        "railEmpty": "Voer een actie uit om hier resultaten en downloads per apparaat te zien.",
+        "retiredIneligible": "Buiten gebruik"
       },
       "overview": {
         "title": "Overzicht",

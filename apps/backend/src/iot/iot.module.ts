@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common";
 
-import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
 import { AnalyticsModule } from "../common/modules/analytics/analytics.module";
 import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
@@ -45,14 +44,15 @@ import { ListIotFirmwareReleasesUseCase } from "./application/use-cases/list-iot
 import { OnboardDeviceUseCase } from "./application/use-cases/onboard-device/onboard-device";
 import { OnboardIotDeviceGroupUseCase } from "./application/use-cases/onboard-iot-device-group/onboard-iot-device-group";
 import { RegisterIotDeviceUseCase } from "./application/use-cases/register-iot-device/register-iot-device";
+import { ReinstateIotDeviceUseCase } from "./application/use-cases/reinstate-iot-device/reinstate-iot-device";
 import { RemoveExperimentDeviceUseCase } from "./application/use-cases/remove-experiment-device/remove-experiment-device";
 import { RemoveIotDeviceGroupMemberUseCase } from "./application/use-cases/remove-iot-device-group-member/remove-iot-device-group-member";
+import { RetireIotDeviceUseCase } from "./application/use-cases/retire-iot-device/retire-iot-device";
 import { RevokeIotCredentialsUseCase } from "./application/use-cases/revoke-iot-credentials/revoke-iot-credentials";
 import { RevokeIotDeviceGroupCredentialsUseCase } from "./application/use-cases/revoke-iot-device-group-credentials/revoke-iot-device-group-credentials";
 import { RotateIotCredentialsUseCase } from "./application/use-cases/rotate-iot-credentials/rotate-iot-credentials";
 import { RotateIotDeviceGroupCredentialsUseCase } from "./application/use-cases/rotate-iot-device-group-credentials/rotate-iot-device-group-credentials";
 import { UpdateIotDeviceGroupUseCase } from "./application/use-cases/update-iot-device-group/update-iot-device-group";
-import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { IOT_DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { GITHUB_PORT } from "./core/ports/github.port";
@@ -105,6 +105,8 @@ import { IotController } from "./presentation/iot.controller";
     DeleteIotDeviceUseCase,
     IssueIotCredentialsUseCase,
     RevokeIotCredentialsUseCase,
+    RetireIotDeviceUseCase,
+    ReinstateIotDeviceUseCase,
     RotateIotCredentialsUseCase,
     OnboardDeviceUseCase,
     OnboardIotDeviceGroupUseCase,
@@ -136,10 +138,6 @@ import { IotController } from "./presentation/iot.controller";
     {
       provide: GITHUB_PORT,
       useExisting: GithubAdapter,
-    },
-    {
-      provide: ANALYTICS_PORT,
-      useExisting: AnalyticsAdapter,
     },
     {
       provide: IOT_DATABRICKS_PORT,

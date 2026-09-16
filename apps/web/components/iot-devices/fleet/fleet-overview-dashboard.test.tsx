@@ -21,7 +21,7 @@ const devices = [
   createIotDevice({
     id: PENDING_ID,
     name: "Bench unit",
-    status: "pending",
+    status: "registered",
     connectivity: { connected: false, lastSeenAt: null },
   }),
 ];
@@ -62,9 +62,15 @@ describe("FleetOverviewDashboard", () => {
     expect(await screen.findByText("iot.groups.monitoring.onlineValue")).toBeInTheDocument();
     // 12 + 30 measurements in range.
     expect(await screen.findByText("42")).toBeInTheDocument();
-    // The pending device is the one attention entry, counted and listed.
-    expect(await screen.findByText("iot.devices.fleet.reasonCredentials")).toBeInTheDocument();
+    // The registered device is the one attention entry. The reason appears twice:
+    // once in the tile footer, so it is answerable without scrolling, and once
+    // against the device in the panel below.
+    expect(await screen.findAllByText("iot.devices.fleet.reasonCredentials")).toHaveLength(2);
     expect(screen.getByText("Bench unit")).toBeInTheDocument();
+
+    // The other two tiles carry a fact rather than an empty footer.
+    expect(screen.getByText("iot.devices.fleet.offlineCount")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.fleet.fromDevice")).toBeInTheDocument();
   });
 
   it("renders nothing over an empty registry, whose empty state owns the page", async () => {

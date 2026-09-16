@@ -251,7 +251,12 @@
     },
     "empty": "Geen stappen beschikbaar.",
     "error": "Kon experiment niet laden. Probeer het opnieuw.",
-    "loading": "Experiment laden..."
+    "loading": "Experiment laden...",
+    "resumeUnavailable": {
+      "title": "Deze meting kan niet worden hervat",
+      "body": "De protocollen en macro's van deze meting staan niet meer op het toestel. Sluit de meting af en start een nieuwe.",
+      "exit": "Meting afsluiten"
+    }
   },
   "result": {
     "comment": "Opmerking",

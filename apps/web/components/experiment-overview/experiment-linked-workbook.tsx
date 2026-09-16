@@ -70,7 +70,7 @@ export function ExperimentLinkedWorkbook({
       </div>
 
       <Card className="shadow-none">
-        <CardContent className="pt-6">
+        <CardContent>
           <div className="flex items-center gap-3">
             <div className="bg-muted flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
               <BookOpen className="text-muted-foreground h-5 w-5" />

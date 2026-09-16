@@ -2,6 +2,7 @@
 
 import { ChevronDown, ChevronRight } from "lucide-react";
 import React, { useRef } from "react";
+import type { OnToggleCellExpansionHandler } from "~/components/data-table/data-table-columns";
 
 import { Button } from "@repo/ui/components/button";
 import { Collapsible, CollapsibleTrigger } from "@repo/ui/components/collapsible";
@@ -11,7 +12,7 @@ interface ExperimentDataTableStructCellProps {
   columnName: string;
   rowId: string;
   isExpanded: boolean;
-  onToggleExpansion?: (rowId: string, columnName: string) => void;
+  onToggleExpansion?: OnToggleCellExpansionHandler;
 }
 
 type ParsedStructData = Record<string, unknown>;

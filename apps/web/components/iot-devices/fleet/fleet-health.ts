@@ -2,7 +2,6 @@ import type { IotDeviceGroupMemberHealth } from "@repo/api/domains/iot/device-gr
 import type {
   IotDeviceWithConnectivity,
   IotFleetDeviceActivity,
-  IotFleetThroughputBucket,
 } from "@repo/api/domains/iot/iot.schema";
 
 import { deviceNeedsCredentials } from "../device-next-action";
@@ -40,8 +39,8 @@ export interface FleetAttentionEntry {
  * actionable first. A missing certificate outranks everything because nothing
  * else about the device can move until it exists; "never connected" is a
  * credentialed device the broker has still not seen; "silent" reuses the
- * shared connected-but-not-delivering policy. Phones are exempt throughout,
- * and an unknown fleet index claims nothing.
+ * shared connected-but-not-delivering policy. Phones and retired devices are
+ * exempt throughout, and an unknown fleet index claims nothing.
  */
 export function fleetAttention(
   devices: IotDeviceWithConnectivity[],
@@ -54,7 +53,7 @@ export function fleetAttention(
 
   const entries: FleetAttentionEntry[] = [];
   for (const device of devices) {
-    if (device.deviceType === "mobile") {
+    if (device.deviceType === "mobile" || device.status === "retired") {
       continue;
     }
     if (deviceNeedsCredentials(device)) {
@@ -79,19 +78,4 @@ export function fleetAttention(
     silent: 2,
   };
   return entries.sort((a, b) => priority[a.reason] - priority[b.reason]);
-}
-
-/**
- * Total volume per axis bucket for the hero sparkline, zero-filled so silent
- * stretches stay visible as real dips instead of a compressed line.
- */
-export function foldSparkValues(throughput: IotFleetThroughputBucket[], axis: string[]): number[] {
-  const byBucket = new Map<string, number>();
-  for (const bucket of throughput) {
-    if (bucket.bucketStart === null) {
-      continue;
-    }
-    byBucket.set(bucket.bucketStart, (byBucket.get(bucket.bucketStart) ?? 0) + bucket.count);
-  }
-  return axis.map((bucketStart) => byBucket.get(bucketStart) ?? 0);
 }

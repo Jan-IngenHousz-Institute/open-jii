@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
 
-import { fleetAttention, foldSparkValues, toFleetHealth } from "./fleet-health";
+import { fleetAttention, toFleetHealth } from "./fleet-health";
 
 const NOW = new Date("2026-08-24T12:00:00.000Z").getTime();
 const FRESH = "2026-08-24T11:30:00.000Z";
@@ -33,7 +33,7 @@ describe("toFleetHealth", () => {
 
 describe("fleetAttention", () => {
   it("ranks a missing certificate above everything else", () => {
-    const pending = device({ status: "pending", connectivity: null });
+    const pending = device({ status: "registered", connectivity: null });
     const silent = device({ connectivity: { connected: true, lastSeenAt: FRESH } });
 
     const entries = fleetAttention(
@@ -45,6 +45,17 @@ describe("fleetAttention", () => {
 
     expect(entries.map((entry) => entry.reason)).toEqual(["credentials", "silent"]);
     expect(entries[0].device.id).toBe(pending.id);
+  });
+
+  it("leaves a retired device out of the attention list, whatever it lacks", () => {
+    // Retired means taken out of service on purpose: no certificate and no
+    // broker sighting are the expected state, not something to fix.
+    const shelved = device({
+      status: "retired",
+      connectivity: { connected: false, lastSeenAt: null },
+    });
+
+    expect(fleetAttention([shelved], [], false, NOW)).toEqual([]);
   });
 
   it("flags a credentialed device the broker has never seen", () => {
@@ -70,7 +81,7 @@ describe("fleetAttention", () => {
   it("leaves phones alone: they set themselves up and connect on their own schedule", () => {
     const phone = device({
       deviceType: "mobile",
-      status: "pending",
+      status: "registered",
       connectivity: { connected: false, lastSeenAt: null },
     });
 
@@ -83,23 +94,5 @@ describe("fleetAttention", () => {
     expect(
       fleetAttention([offline], [{ deviceId: offline.id, lastDataAt: STALE }], false, NOW),
     ).toEqual([]);
-  });
-});
-
-describe("foldSparkValues", () => {
-  it("zero-fills the axis and drops rows the warehouse could not bucket", () => {
-    const axis = ["t1", "t2", "t3"];
-
-    const values = foldSparkValues(
-      [
-        { bucketStart: "t1", deviceId: null, count: 3 },
-        { bucketStart: "t1", deviceId: null, count: 2 },
-        { bucketStart: "t3", deviceId: null, count: 7 },
-        { bucketStart: null, deviceId: null, count: 99 },
-      ],
-      axis,
-    );
-
-    expect(values).toEqual([5, 0, 7]);
   });
 });

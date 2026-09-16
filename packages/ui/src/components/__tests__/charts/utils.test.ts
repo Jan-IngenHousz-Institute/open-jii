@@ -3,19 +3,20 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 
 import type { PlotlyChartConfig } from "../../charts/types";
 import {
-  detectWebGLSupport,
-  getRenderer,
-  validateDimensions,
-  getPlotType,
-  createBaseLayout,
-  createSubplotLayout,
-  create3DLayout,
-  createPlotlyConfig,
-  detectAxisType,
-  refineAxisType,
-  extendLayoutForFacets,
-  defaultFacetColumns,
   applyReferenceLines,
+  create3DLayout,
+  createBaseLayout,
+  createPlotlyConfig,
+  createSubplotLayout,
+  defaultFacetColumns,
+  detectAxisType,
+  detectWebGLSupport,
+  extendLayoutForFacets,
+  getPlotType,
+  getRenderer,
+  invalidateThemeTokenCache,
+  refineAxisType,
+  validateDimensions,
 } from "../../charts/utils";
 import type { ReferenceLineSpec } from "../../charts/utils";
 
@@ -49,6 +50,8 @@ Object.defineProperty(document, "createElement", {
 describe("utils", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // These set theme tokens on the root; nothing observes that without a chart.
+    invalidateThemeTokenCache();
   });
 
   afterEach(() => {
@@ -175,19 +178,19 @@ describe("utils", () => {
     it("converts to WebGL types when using webgl renderer", () => {
       expect(getPlotType("scatter", "webgl")).toBe("scattergl");
       expect(getPlotType("line", "webgl")).toBe("scattergl");
-      expect(getPlotType("heatmap", "webgl")).toBe("heatmapgl");
     });
 
     it("keeps non-WebGL types unchanged even with webgl renderer", () => {
       expect(getPlotType("bar", "webgl")).toBe("bar");
       expect(getPlotType("histogram", "webgl")).toBe("histogram");
       expect(getPlotType("contour", "webgl")).toBe("contour");
+      expect(getPlotType("heatmap", "webgl")).toBe("heatmap");
     });
 
-    it("preserves 3D plot types", () => {
-      expect(getPlotType("scatter3d", "webgl")).toBe("scatter3d");
-      expect(getPlotType("surface", "webgl")).toBe("surface");
-      expect(getPlotType("mesh3d", "webgl")).toBe("mesh3d");
+    it("passes types without a WebGL twin in the bundle through unchanged", () => {
+      expect(getPlotType("scatterpolar", "webgl")).toBe("scatterpolar");
+      expect(getPlotType("box", "webgl")).toBe("box");
+      expect(getPlotType("pie", "webgl")).toBe("pie");
     });
 
     it("returns original type for unknown types", () => {
@@ -504,6 +507,15 @@ describe("utils", () => {
       expect(layout.hoverlabel?.font?.size).toBe(10);
     });
 
+    it("keeps Plotly's trace-name chip by default and drops it on request", () => {
+      expect(createBaseLayout(baseConfig).hoverlabel?.namelength).toBeUndefined();
+      // 0 empties the name, and Plotly removes the chip rather than drawing an
+      // empty one. It is the only hover surface `hoverlabel` cannot colour.
+      expect(createBaseLayout({ ...baseConfig, showHoverName: false }).hoverlabel?.namelength).toBe(
+        0,
+      );
+    });
+
     it("shrinks cell-axis fonts and adds nticks cap under cellCompact", () => {
       const layout = createBaseLayout(baseConfig, { cellCompact: true });
       expect(layout.xaxis?.tickfont?.size).toBe(10);
@@ -662,7 +674,9 @@ describe("utils", () => {
 
       expect(config).toMatchObject({
         displayModeBar: true,
-        responsive: true,
+        // PlotlyChart observes each container itself; Plotly's own window
+        // listener would double every replot.
+        responsive: false,
         plotGlPixelRatio: 1,
         staticPlot: false,
         doubleClick: "reset",

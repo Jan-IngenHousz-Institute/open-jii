@@ -46,8 +46,10 @@ export interface QuestionContent {
 
 // Hydrated onto the node from the workbook version (snapshot code + cell name)
 // so scan + upload read offline off the node. See hydrate-flow-nodes.
+// `code` is undefined only while stripped from the persisted slice and not yet
+// re-hydrated; an empty snapshot is `[]` / `""`.
 export interface ResolvedProtocol {
-  code: unknown;
+  code?: unknown;
   name?: string;
   family?: unknown;
 }
@@ -57,7 +59,7 @@ export interface ResolvedMacro {
   name: string;
   filename: string;
   language: string;
-  code: string;
+  code?: string;
 }
 
 // An inline device command (raw string / JSON / YAML) carried on a measurement

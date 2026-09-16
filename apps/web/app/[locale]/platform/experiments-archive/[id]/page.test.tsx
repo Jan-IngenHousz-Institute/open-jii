@@ -24,8 +24,8 @@ vi.mock("~/components/experiment-overview/experiment-description", () => ({
 vi.mock("~/components/experiment-overview/experiment-details/experiment-details-card", () => ({
   ExperimentDetailsCard: () => <section aria-label="details" />,
 }));
-vi.mock("~/components/experiment-overview/experiment-measurements", () => ({
-  ExperimentMeasurements: () => <section aria-label="measurements" />,
+vi.mock("~/components/experiment-overview/experiment-data-inventory", () => ({
+  ExperimentDataInventory: () => <section aria-label="data-inventory" />,
 }));
 vi.mock("@/components/experiment-visualizations/experiment-visualizations-display", () => ({
   default: () => <section aria-label="visualizations" />,

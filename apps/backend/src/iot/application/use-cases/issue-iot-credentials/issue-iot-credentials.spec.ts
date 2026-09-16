@@ -42,7 +42,7 @@ describe("IssueIotCredentialsUseCase", () => {
     await testApp.teardown();
   });
 
-  const createDevice = async (status: "pending" | "active" | "revoked" = "pending") => {
+  const createDevice = async (status: "registered" | "active" | "revoked" = "registered") => {
     seq++;
     const created = await repo.create(
       {
@@ -81,7 +81,7 @@ describe("IssueIotCredentialsUseCase", () => {
 
   it("issues a certificate, activates the device, and returns the show-once bundle", async () => {
     mockHappyPath();
-    const device = await createDevice("pending");
+    const device = await createDevice("registered");
 
     const result = await useCase.execute(device.id, userId);
 
@@ -127,7 +127,7 @@ describe("IssueIotCredentialsUseCase", () => {
     const revokeSpy = vi
       .spyOn(awsAdapter, "setCertificateStatus")
       .mockResolvedValue(success(undefined));
-    const device = await createDevice("pending");
+    const device = await createDevice("registered");
 
     const result = await useCase.execute(device.id, userId);
 
@@ -136,14 +136,14 @@ describe("IssueIotCredentialsUseCase", () => {
 
     const stored = await repo.findById(device.id);
     assertSuccess(stored);
-    expect(stored.value?.status).toBe("pending");
+    expect(stored.value?.status).toBe("registered");
   });
 
   it("propagates the failure when the certificate cannot be created", async () => {
     vi.spyOn(awsAdapter, "createDeviceCertificate").mockResolvedValue(
       failure(AppError.internal("cert failed")),
     );
-    const device = await createDevice("pending");
+    const device = await createDevice("registered");
 
     const result = await useCase.execute(device.id, userId);
 
@@ -179,7 +179,7 @@ describe("IssueIotCredentialsUseCase", () => {
     const revokeSpy = vi
       .spyOn(awsAdapter, "setCertificateStatus")
       .mockResolvedValue(success(undefined));
-    const device = await createDevice("pending");
+    const device = await createDevice("registered");
 
     const result = await useCase.execute(device.id, userId);
 
@@ -189,7 +189,7 @@ describe("IssueIotCredentialsUseCase", () => {
 
     const stored = await repo.findById(device.id);
     assertSuccess(stored);
-    expect(stored.value?.status).toBe("pending");
+    expect(stored.value?.status).toBe("registered");
   });
 
   it("rolls the certificate back when persistence fails", async () => {
@@ -198,7 +198,7 @@ describe("IssueIotCredentialsUseCase", () => {
       .spyOn(awsAdapter, "setCertificateStatus")
       .mockResolvedValue(success(undefined));
     vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
-    const device = await createDevice("pending");
+    const device = await createDevice("registered");
     vi.spyOn(repo, "update").mockResolvedValue(failure(AppError.internal("write failed")));
 
     const result = await useCase.execute(device.id, userId);
@@ -212,7 +212,7 @@ describe("IssueIotCredentialsUseCase", () => {
     mockHappyPath();
     vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
     vi.spyOn(awsAdapter, "detachThingPrincipal").mockResolvedValue(success(undefined));
-    const device = await createDevice("pending");
+    const device = await createDevice("registered");
     vi.spyOn(repo, "update").mockResolvedValue(success(undefined));
 
     const result = await useCase.execute(device.id, userId);
@@ -233,11 +233,17 @@ describe("IssueIotCredentialsUseCase", () => {
     vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(
       failure(AppError.internal("revoke failed")),
     );
-    const device = await createDevice("pending");
+    const device = await createDevice("registered");
 
     const result = await useCase.execute(device.id, userId);
 
     assertFailure(result);
     expect(result.error.message).toBe("policy failed");
+  });
+
+  it("refuses a retired device until it is reinstated", async () => {
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "retired" });
+
+    assertFailure(await useCase.execute(device.id, userId));
   });
 });

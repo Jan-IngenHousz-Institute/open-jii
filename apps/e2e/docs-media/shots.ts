@@ -186,7 +186,6 @@ export const SHOTS: readonly Shot[] = [
     // Needs a local experiment whose id matches one that has published data in
     // the dev lakehouse; the seed alone yields an empty roster.
     route: async () => `/platform/experiments/${await experimentId("Ambyte Field Trial")}/devices`,
-    featureFlags: ["iot-devices"],
     async prepare(page) {
       await page.getByRole("table").waitFor({ timeout: 60_000 });
       await settle(page, 1500);
