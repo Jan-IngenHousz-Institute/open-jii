@@ -41,6 +41,25 @@ describe("ExperimentDataInventory", () => {
     expect(within(rows[2]).getByText("field-notes-sept")).toBeInTheDocument();
   });
 
+  it("keeps every dataset in the list and scrolls past the fifth", async () => {
+    const many = Array.from({ length: 20 }, (_, i) => ({
+      identifier: `table_${i}`,
+      tableType: "static" as const,
+      displayName: `Dataset ${i}`,
+      totalRows: i * 10,
+    }));
+    server.mount(contract.experiments.getExperimentTables, { body: many });
+
+    render(<ExperimentDataInventory experimentId={EXPERIMENT_ID} />);
+
+    const rows = await screen.findAllByRole("listitem");
+    expect(rows).toHaveLength(many.length);
+
+    const list = rows[0]?.closest("ul");
+    expect(list).toHaveClass("overflow-y-auto");
+    expect(list?.className).toMatch(/max-h-/);
+  });
+
   it("drops the backend's wrapper around a macro table's name", async () => {
     server.mount(contract.experiments.getExperimentTables, { body: tables });
 
