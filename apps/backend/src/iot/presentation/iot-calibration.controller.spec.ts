@@ -184,6 +184,31 @@ describe("IotCalibrationController", () => {
       expect(response.body.captureProcedure).toEqual(PROCEDURE);
     });
 
+    // The response is what the author's page adopts, so a shape the contract refuses
+    // reads to them as a save that failed, with the change already written.
+    it("returns the edited definition in the shape the contract declares (200)", async () => {
+      const created = await createDefinition();
+      const rig: CaptureProcedure = {
+        ...PROCEDURE,
+        instruments: [{ role: "dut" }, { role: "lamp", handshake: "KIPRIM", model: "kiprim-dc" }],
+        steps: [{ kind: "set", instrument: "lamp", set: "current_a", value: 0 }],
+      };
+
+      const response: SuperTestResponse<CalibrationDefinition> = await testApp
+        .patch(
+          testApp.resolveOrpcPath(contract.iot.updateCalibrationDefinition, {
+            definitionId: created.body.id,
+          }),
+        )
+        .withAuth(userId)
+        .send({ captureProcedure: rig, family: "ambit" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body.captureProcedure).toEqual(rig);
+      expect(response.body.family).toBe("ambit");
+      expect(typeof response.body.updatedAt).toBe("string");
+    });
+
     // A definition is a shared recipe, public unless its owner withdraws it.
     it("serves another user's definition while it is public, and 403 once private", async () => {
       const created = await createDefinition();

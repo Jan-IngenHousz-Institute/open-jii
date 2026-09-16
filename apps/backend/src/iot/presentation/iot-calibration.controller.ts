@@ -122,7 +122,7 @@ export class IotCalibrationController {
         );
 
         if (result.isSuccess()) {
-          return result.value;
+          return formatDates(result.value);
         }
 
         return throwOrpcFailure(result, this.logger, "updateCalibrationDefinition");

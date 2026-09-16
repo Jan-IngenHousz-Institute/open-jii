@@ -60,7 +60,7 @@ describe("GetCalibrationDefinitionUseCase", () => {
   // Detail is what the bench wizard interprets and the sandbox executes, so it
   // carries the procedure and script the list projection omits.
   it("returns the procedure, script, and output schema", async () => {
-    const result = await useCase.execute(definitionId);
+    const result = await useCase.execute(definitionId, userId);
 
     assertSuccess(result);
     expect(result.value.captureProcedure).toEqual(PROCEDURE);
@@ -69,7 +69,7 @@ describe("GetCalibrationDefinitionUseCase", () => {
   });
 
   it("reports a missing definition", async () => {
-    const result = await useCase.execute(crypto.randomUUID());
+    const result = await useCase.execute(crypto.randomUUID(), userId);
     assertFailure(result);
     expect(result.error.statusCode).toBe(404);
   });
