@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 
-import type { OperatorPort } from "@repo/iot";
+import type { OperatorPort, OperatorReading } from "@repo/iot";
 
 export type OperatorRequest =
   | {
@@ -16,6 +16,12 @@ export type OperatorRequest =
       prompt: string;
       type: "number" | "text";
       resolve: (value: number | string) => void;
+      reject: (reason: Error) => void;
+    }
+  | {
+      kind: "confirmReading";
+      reading: OperatorReading;
+      resolve: (kept: boolean) => void;
       reject: (reason: Error) => void;
     };
 
@@ -63,11 +69,29 @@ export function useCalibrationOperator() {
           pendingRef.current = request;
           setPending(request);
         }),
+      confirmReading: (reading) =>
+        new Promise<boolean>((resolve, reject) => {
+          const request: OperatorRequest = {
+            kind: "confirmReading",
+            reading,
+            resolve: (kept) => {
+              settle();
+              resolve(kept);
+            },
+            reject: (reason) => {
+              settle();
+              reject(reason);
+            },
+          };
+          pendingRef.current = request;
+          setPending(request);
+        }),
     }),
     [settle],
   );
 
-  // Leaving mid-prompt: an open acknowledge is declined and an open read fails, so the run aborts either way.
+  // Leaving mid-prompt: an open acknowledge is declined and anything awaiting an answer
+  // fails, so the run aborts either way rather than capturing with nobody at the bench.
   const cancel = useCallback(() => {
     const request = pendingRef.current;
     if (!request) return;

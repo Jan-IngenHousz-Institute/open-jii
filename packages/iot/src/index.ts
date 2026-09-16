@@ -167,7 +167,7 @@ export type {
   SetpointTarget,
 } from "./procedure/interpreter";
 export { ProcedureAborted, ProcedureDeclined, ProcedureRigError } from "./procedure/operator";
-export type { OperatorPort, ProcedureProgress } from "./procedure/operator";
+export type { OperatorPort, OperatorReading, ProcedureProgress } from "./procedure/operator";
 export {
   requiredSeriesNames,
   requiredRoles,

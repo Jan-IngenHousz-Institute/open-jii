@@ -198,6 +198,10 @@ async function captureThreePoints() {
     );
     await userEvent.type(await screen.findByRole("textbox"), reference);
     await userEvent.click(screen.getByRole("button", { name: "iot.calibration.prompt.submit" }));
+    // Every point the operator sets up is offered back before the sweep moves on.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.prompt.keepReading" }),
+    );
   }
 }
 
@@ -261,13 +265,16 @@ describe("CalibrationWizard", () => {
     expect(await screen.findByText("iot.calibration.connect.connected")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
 
-    // Three light levels: acknowledge the instruction, then type the reference.
+    // Three light levels: acknowledge the instruction, type the reference, keep the point.
     for (const reference of ["402.12", "142.92", "6.92"]) {
       await userEvent.click(
         await screen.findByRole("button", { name: "iot.calibration.prompt.continue" }),
       );
       await userEvent.type(await screen.findByRole("textbox"), reference);
       await userEvent.click(screen.getByRole("button", { name: "iot.calibration.prompt.submit" }));
+      await userEvent.click(
+        await screen.findByRole("button", { name: "iot.calibration.prompt.keepReading" }),
+      );
     }
 
     // Review what came back and approve it.
@@ -287,6 +294,9 @@ describe("CalibrationWizard", () => {
     );
     await userEvent.type(await screen.findByRole("textbox"), "398.5");
     await userEvent.click(screen.getByRole("button", { name: "iot.calibration.prompt.submit" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.prompt.keepReading" }),
+    );
     expect(await screen.findByText("398.5")).toBeInTheDocument();
 
     await waitFor(() => {
@@ -389,11 +399,66 @@ describe("CalibrationWizard", () => {
     );
     await userEvent.type(await screen.findByRole("textbox"), "402.12");
     await userEvent.click(screen.getByRole("button", { name: "iot.calibration.prompt.submit" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.prompt.keepReading" }),
+    );
 
     await waitFor(() => {
       expect(console.sent).toEqual(["par_raw"]);
     });
     expect(screen.queryByText("iot.calibration.capture.aborted")).toBeNull();
+  });
+
+  // A filter that slipped or a reference that had not settled is only correctable here.
+  // Before this, one bad reading cost the whole session.
+  it("takes a reading again and sends the second one, keeping the first as evidence", async () => {
+    const device = attachMiniPar([420, 999, 150, 8.33]);
+    const createSpy = server.mount(contract.iot.createCalibrationRun, {
+      status: 201,
+      body: createCalibrationRun({ deviceId: DEVICE_ID, definitionId: DEFINITION_ID }),
+    });
+    renderWizard();
+
+    await userEvent.click(await screen.findByRole("radio"));
+    await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+    await screen.findByText("iot.calibration.connect.connected");
+    await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+
+    // The first point is taken, rejected, and taken again at the same setpoint.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.prompt.continue" }),
+    );
+    await userEvent.type(await screen.findByRole("textbox"), "402.12");
+    await userEvent.click(screen.getByRole("button", { name: "iot.calibration.prompt.submit" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.prompt.retakeReading" }),
+    );
+
+    for (const reference of ["402.12", "142.92", "6.92"]) {
+      await userEvent.click(
+        await screen.findByRole("button", { name: "iot.calibration.prompt.continue" }),
+      );
+      await userEvent.type(await screen.findByRole("textbox"), reference);
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.prompt.submit" }));
+      await userEvent.click(
+        await screen.findByRole("button", { name: "iot.calibration.prompt.keepReading" }),
+      );
+    }
+
+    await screen.findByRole("button", { name: "iot.calibration.review.approve" });
+
+    expect(createSpy.body).toMatchObject({
+      payload: {
+        par_sweep: [
+          { stimulus: "bright", par_raw: 999, par_ref: 402.12 },
+          { stimulus: "medium", par_raw: 150, par_ref: 142.92 },
+          { stimulus: "dim", par_raw: 8.33, par_ref: 6.92 },
+        ],
+        par_sweep_retaken: [{ stimulus: "bright", par_raw: 420, par_ref: 402.12 }],
+      },
+    });
+    // The device was read four times for three points.
+    expect(device.sent).toEqual(["par_raw", "par_raw", "par_raw", "par_raw"]);
   });
 
   it("offers to connect when no device is attached, and can go back to choosing", async () => {

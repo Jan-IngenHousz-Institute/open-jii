@@ -83,6 +83,7 @@ function operator(overrides?: Partial<OperatorPort>): OperatorPort {
   return {
     acknowledge: vi.fn(() => Promise.resolve(true)),
     readValue: vi.fn(() => Promise.resolve(0)),
+    confirmReading: vi.fn(() => Promise.resolve(true)),
     ...overrides,
   };
 }
@@ -275,6 +276,107 @@ describe("runCaptureProcedure", () => {
         series: "led_sweep",
         reason: 'instrument "emit_ref" is not connected',
       });
+    });
+  });
+
+  describe("retaking a reading", () => {
+    /** A probe whose reading changes each time it is read, so a retake is visible. */
+    function drifting(command, values) {
+      let call = 0;
+      return {
+        read: {
+          execute: vi.fn(() =>
+            Promise.resolve({ success: true, data: values[Math.min(call++, values.length - 1)] }),
+          ),
+        },
+      };
+    }
+
+    const MANUAL: CaptureProcedure = {
+      instruments: [{ role: "dut" }],
+      steps: [
+        {
+          kind: "sweep",
+          series: "spec_sweep",
+          stimulus: { operator: "Cover the sensor with {value}", values: ["no filter"] },
+          read: [{ instrument: "dut", command: "spec", as: "spec" }],
+        },
+      ],
+    };
+
+    // The bench tools this replaces are a REPL: a filter slips, the operator reads again.
+    // A fixed sweep that cannot be corrected wastes the whole session over one point.
+    it("takes the point again and keeps the second reading", async () => {
+      const port = operator({
+        confirmReading: vi
+          .fn()
+          .mockResolvedValueOnce(false)
+          .mockResolvedValue(true),
+      });
+
+      const result = await runCaptureProcedure(
+        MANUAL,
+        context({ rig: { dut: drifting("spec", [11, 22]) }, operator: port }),
+      );
+
+      expect(result.payload.spec_sweep).toEqual([{ stimulus: "no filter", spec: 22 }]);
+    });
+
+    // The discarded reading is evidence: a reviewer should see a point was taken twice.
+    it("keeps the reading it replaced beside the series", async () => {
+      const port = operator({
+        confirmReading: vi.fn().mockResolvedValueOnce(false).mockResolvedValue(true),
+      });
+
+      const result = await runCaptureProcedure(
+        MANUAL,
+        context({ rig: { dut: drifting("spec", [11, 22]) }, operator: port }),
+      );
+
+      expect(result.payload.spec_sweep_retaken).toEqual([{ stimulus: "no filter", spec: 11 }]);
+    });
+
+    // Repositioning is usually why a reading was wrong, so the operator is asked to set the
+    // point up again rather than the rig silently re-reading the same arrangement.
+    it("asks the operator to set the point up again", async () => {
+      const port = operator({
+        confirmReading: vi.fn().mockResolvedValueOnce(false).mockResolvedValue(true),
+      });
+
+      await runCaptureProcedure(
+        MANUAL,
+        context({ rig: { dut: drifting("spec", [11, 22]) }, operator: port }),
+      );
+
+      expect(port.acknowledge).toHaveBeenCalledTimes(2);
+    });
+
+    it("reports each retake so the capture log shows it happened", async () => {
+      const events: ProcedureProgress[] = [];
+      const port = operator({
+        confirmReading: vi.fn().mockResolvedValueOnce(false).mockResolvedValue(true),
+      });
+
+      await runCaptureProcedure(
+        MANUAL,
+        context({
+          rig: { dut: drifting("spec", [11, 22]) },
+          operator: port,
+          onProgress: (event) => events.push(event),
+        }),
+      );
+
+      expect(events).toContainEqual({ kind: "retake", series: "spec_sweep", index: 0, attempt: 1 });
+    });
+
+    // Nobody is standing over a sweep the rig drives, so nothing should be offered back.
+    it("never offers a reading from a sweep the rig drove", async () => {
+      const { rig } = fullRig();
+      const port = operator();
+
+      await runCaptureProcedure(AMBIT_PROCEDURE, context({ rig, operator: port }));
+
+      expect(port.confirmReading).not.toHaveBeenCalled();
     });
   });
 

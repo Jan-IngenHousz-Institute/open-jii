@@ -845,7 +845,11 @@
         "invalidNumber": "Geben Sie eine Zahl ein.",
         "continue": "Weiter",
         "submit": "Erfassen",
-        "decline": "Ich kann diesen Schritt nicht ausführen"
+        "decline": "Ich kann diesen Schritt nicht ausführen",
+        "confirmReading": "Diesen Messwert übernehmen?",
+        "confirmReadingAt": "Messwert bei {{stimulus}} übernehmen?",
+        "keepReading": "Übernehmen",
+        "retakeReading": "Erneut messen"
       },
       "capture": {
         "step": "Schritt {{index}} von {{total}}: {{description}}",

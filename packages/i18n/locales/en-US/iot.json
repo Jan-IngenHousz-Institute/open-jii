@@ -845,7 +845,11 @@
         "invalidNumber": "Enter a number.",
         "continue": "Continue",
         "submit": "Record",
-        "decline": "I can't do this step"
+        "decline": "I can't do this step",
+        "confirmReading": "Keep this reading?",
+        "confirmReadingAt": "Keep this reading at {{stimulus}}?",
+        "keepReading": "Keep",
+        "retakeReading": "Take it again"
       },
       "capture": {
         "step": "Step {{index}} of {{total}}: {{description}}",

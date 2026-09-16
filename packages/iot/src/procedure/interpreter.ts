@@ -53,6 +53,9 @@ export interface ProcedureContext {
 
 const realSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Where a reading the operator took again is kept, beside the series it was taken for. */
+export const DISCARDED_SERIES_SUFFIX = "_retaken";
+
 export async function runCaptureProcedure(
   procedure: CaptureProcedure,
   context: ProcedureContext,
@@ -150,13 +153,31 @@ class ProcedureRunner {
     const unavailable = this.missingRole(step.read);
     if (unavailable) return this.skipOrFail(step, unavailable);
 
-    if (step.prompt) {
-      const accepted = await this.context.operator.acknowledge(step.prompt);
-      if (!accepted) return this.skipOrFail(step, `operator declined: ${step.prompt}`);
-    }
+    for (let attempt = 1; ; attempt++) {
+      if (step.prompt) {
+        const accepted = await this.context.operator.acknowledge(step.prompt);
+        if (!accepted) return this.skipOrFail(step, `operator declined: ${step.prompt}`);
+      }
 
-    const row = await this.takeReads(step.read);
-    this.commit(step.series, [row]);
+      const row = await this.takeReads(step.read);
+
+      // Only a step the operator was asked to set up can be set up again.
+      const isKept =
+        step.prompt === undefined ||
+        (await this.context.operator.confirmReading({
+          series: step.series,
+          stimulus: undefined,
+          row,
+        }));
+
+      if (isKept) {
+        this.commit(step.series, [row]);
+        return;
+      }
+
+      this.discard(step.series, row);
+      this.report({ kind: "retake", series: step.series, index: 0, attempt });
+    }
   }
 
   private async runSweepStep(step: SweepStep): Promise<void> {
@@ -169,6 +190,9 @@ class ProcedureRunner {
 
     const rows: SeriesRow[] = [];
     const values = step.stimulus.values;
+    // Nobody is standing over a sweep the rig drives, so only an operator-driven one can
+    // be taken again.
+    const isOperatorDriven = !isInstrumentStimulus(step.stimulus);
 
     for (const [index, value] of values.entries()) {
       this.report({
@@ -179,14 +203,33 @@ class ProcedureRunner {
         value,
       });
 
-      const applied = await this.applyStimulus(step, index);
-      if (!applied) return this.skipOrFail(step, `operator declined a setpoint in ${step.series}`);
+      for (let attempt = 1; ; attempt++) {
+        const applied = await this.applyStimulus(step, index);
+        if (!applied) {
+          return this.skipOrFail(step, `operator declined a setpoint in ${step.series}`);
+        }
 
-      if (step.settleMs) await this.sleep(step.settleMs);
+        if (step.settleMs) await this.sleep(step.settleMs);
 
-      const row = await this.takeReads(step.read, value);
-      row[SWEEP_STIMULUS_COLUMN] = value;
-      rows.push(row);
+        const row = await this.takeReads(step.read, value);
+        row[SWEEP_STIMULUS_COLUMN] = value;
+
+        const isKept =
+          !isOperatorDriven ||
+          (await this.context.operator.confirmReading({
+            series: step.series,
+            stimulus: value,
+            row,
+          }));
+
+        if (isKept) {
+          rows.push(row);
+          break;
+        }
+
+        this.discard(step.series, row);
+        this.report({ kind: "retake", series: step.series, index, attempt });
+      }
     }
 
     this.commit(step.series, rows);
@@ -315,6 +358,16 @@ class ProcedureRunner {
   private commit(series: string, rows: SeriesRow[]): void {
     this.payload[series] = rows;
     this.report({ kind: "series", series, rows: rows.length });
+  }
+
+  /**
+   * A reading the operator took again is kept beside the series rather than dropped. The
+   * fit never sees it, and a reviewer can still see that a point was taken twice and what
+   * the first attempt said.
+   */
+  private discard(series: string, row: SeriesRow): void {
+    const name = `${series}${DISCARDED_SERIES_SUFFIX}`;
+    this.payload[name] = [...(this.payload[name] ?? []), row];
   }
 
   private report(event: ProcedureProgress): void {

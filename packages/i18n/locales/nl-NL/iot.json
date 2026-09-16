@@ -845,7 +845,11 @@
         "invalidNumber": "Voer een getal in.",
         "continue": "Doorgaan",
         "submit": "Vastleggen",
-        "decline": "Ik kan deze stap niet uitvoeren"
+        "decline": "Ik kan deze stap niet uitvoeren",
+        "confirmReading": "Deze meting behouden?",
+        "confirmReadingAt": "Meting bij {{stimulus}} behouden?",
+        "keepReading": "Behouden",
+        "retakeReading": "Opnieuw meten"
       },
       "capture": {
         "step": "Stap {{index}} van {{total}}: {{description}}",
