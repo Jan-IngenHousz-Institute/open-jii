@@ -51,8 +51,9 @@ Getting a device attached is the `openjii-mobile-device` skill; driving it to th
 ### Web
 
 After the user authorizes resetting local data, bring the stack up (`pnpm db:setup`,
-`pnpm --filter database db:seed`, `pnpm dev:fb`), obtain a development session with
-`pnpm local:login`, and capture the real authenticated UI rather than a login wall.
+`pnpm --filter database db:seed`, `pnpm dev:fb`) and capture the real authenticated UI rather than
+a login wall. The capture tool signs in on its own through the Playwright setup project and keeps
+the session in `apps/e2e/.auth/`, which is never read or copied.
 
 Use the capture tool rather than ad-hoc Playwright, so every asset lands on the one
 published frame:

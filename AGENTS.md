@@ -54,7 +54,8 @@ Task guides live in `.agents/skills/<name>/SKILL.md`. They are plain markdown an
 read the file when the situation matches. `.claude/skills/` holds symlinks to the same files so
 Claude Code auto-discovers them, but the files under `.agents/` are the source. The symlink layer
 assumes the team's supported macOS/Linux development environments. The shared hooks require Bash,
-Git, and `jq`; a missing `jq` prints a warning and skips the hook.
+Git and Node, with `jq` as the fallback parser. Without either parser the main-branch guard and the
+docs reminder print a warning and step aside; the secrets guard blocks instead.
 
 | Skill                     | Read it when                                                                     |
 | ------------------------- | -------------------------------------------------------------------------------- |
@@ -84,6 +85,30 @@ screenshot showing the affected screen is re-captured rather than reused. The
 A `Stop` hook in `.claude/settings.json` gives Claude Code one reminder per session when `apps/web`
 or `apps/mobile` change without `apps/docs/content`. It is a nudge, not a gate, and it only reaches
 Claude Code. Per-machine overrides belong in `.claude/settings.local.json`, which stays untracked.
+
+## Secrets stay out of the context window
+
+Local env files (`.env`, `.env.local` and the other gitignored variants), Playwright's
+`apps/e2e/.auth/` state, device certificates (`.pem`, `.p12`, `.pfx`) and `.claude/session.header`
+hold secrets and are never read, printed, copied or sourced by an agent. Neither are the developer's
+own credential files under their home directory.
+
+The tool that needs a secret reads it itself: each app and the devkit load their own `.env`, and a
+session header file is read by `curl -H @file` rather than passed around. Copying an env file into
+another checkout's env file is fine; copying it anywhere else is not. Search with `rg`, `git grep`
+or the Grep tool, which skip gitignored files. Never put a secret on a command line, print one, or
+write one into a ticket, PR, canvas or log.
+
+Releases and infrastructure are run by people, never by an agent. Publishing a build, an over-the-air
+update or CMS content is refused.
+
+Two layers hold this up. `.claude/settings.json` denies the file tools those paths, which the client
+enforces directly. `.claude/hooks/protect-secrets.sh` covers what a deny rule cannot see; it matches
+command text, so it raises the bar rather than closing every path. Read it when you need the detail.
+The Bash sandbox is opt-in through `/sandbox`, and once it is on the tracked `sandbox.credentials`
+entries keep the developer's CLI logins out of sandboxed commands.
+
+`.env.example`, `.env.default` and `.env.test` hold no secrets and are fine to read.
 
 ## main is protected
 
