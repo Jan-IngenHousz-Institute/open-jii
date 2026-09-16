@@ -1032,6 +1032,49 @@ describe("PlotlyChart", () => {
 
       mockRequestContext.mockRestore();
     });
+
+    // Plotly wires its pick layer only when parcoords is present, and ships no
+    // SVG parallel-coordinates trace to fall back to.
+    it("asks for a third context for parcoords and only two for scattergl", () => {
+      const originalManager = WebGLContextManager.getInstance();
+      const mockRequestContext = vi
+        .spyOn(originalManager, "requestContext")
+        .mockImplementation((_id, callback) => {
+          callback();
+          return true;
+        });
+
+      const parcoords = render(<PlotlyChart data={[{ type: "parcoords" }]} layout={{}} />);
+      expect(mockRequestContext).toHaveBeenLastCalledWith(
+        expect.any(String),
+        expect.any(Function),
+        { contexts: 3, mandatory: true },
+      );
+      parcoords.unmount();
+
+      render(<PlotlyChart data={[{ type: "scattergl", x: [1], y: [1] }]} layout={{}} />);
+      expect(mockRequestContext).toHaveBeenLastCalledWith(
+        expect.any(String),
+        expect.any(Function),
+        { contexts: 2, mandatory: false },
+      );
+
+      mockRequestContext.mockRestore();
+    });
+
+    it("leaves parcoords on WebGL when no context is free, having no SVG twin", () => {
+      const testData: Data[] = [{ type: "parcoords" }];
+
+      const originalManager = WebGLContextManager.getInstance();
+      const mockRequestContext = vi.spyOn(originalManager, "requestContext").mockReturnValue(false);
+
+      render(<PlotlyChart data={testData} layout={{}} />);
+
+      const rendered = mockPlotComponent.mock.calls.at(-1)?.[0] as { data: Data[] };
+      expect(rendered.data[0]?.type).toBe("parcoords");
+
+      mockRequestContext.mockRestore();
+    });
   });
 });
 
@@ -1268,6 +1311,63 @@ describe("WebGLContextManager", () => {
       manager.releaseContext("chart-0");
       expect(ghostCallback).not.toHaveBeenCalled();
       expect(manager.getActiveCount()).toBe(CAP - 1);
+    });
+  });
+
+  // A parcoords chart holds three contexts where a scattergl one holds two, so
+  // the budget is spent in contexts rather than counted in charts.
+  describe("Weighted Demands", () => {
+    const WIDE = { contexts: 3, mandatory: false };
+
+    it("fits fewer three-context charts than two-context ones", () => {
+      let admitted = 0;
+      while (manager.requestContext(`wide-${admitted}`, () => undefined, WIDE)) {
+        admitted++;
+      }
+
+      expect(admitted).toBeGreaterThan(0);
+      expect(admitted).toBeLessThan(CAP);
+    });
+
+    it("admits a mandatory chart over budget, since it cannot draw on SVG", () => {
+      for (let i = 0; i < CAP; i++) {
+        manager.requestContext(`chart-${i}`, () => undefined);
+      }
+      expect(manager.canCreateContext()).toBe(false);
+
+      const callback = vi.fn();
+      const granted = manager.requestContext("pinned", callback, {
+        contexts: 3,
+        mandatory: true,
+      });
+
+      expect(granted).toBe(true);
+      expect(callback).toHaveBeenCalledOnce();
+      expect(manager.getActiveCount()).toBe(CAP + 1);
+    });
+
+    it("promotes several waiters when a three-context chart is released", () => {
+      manager.requestContext("wide", () => undefined, WIDE);
+      let filled = 0;
+      while (manager.canCreateContext()) {
+        manager.requestContext(`chart-${filled}`, () => undefined);
+        filled++;
+      }
+
+      const first = vi.fn();
+      const second = vi.fn();
+      const third = vi.fn();
+      manager.requestContext("waiting-1", first);
+      manager.requestContext("waiting-2", second);
+      manager.requestContext("waiting-3", third);
+      expect(first).not.toHaveBeenCalled();
+
+      manager.releaseContext("wide");
+
+      // Three freed contexts cover two waiters; the queue then stops in order.
+      expect(first).toHaveBeenCalledOnce();
+      expect(second).toHaveBeenCalledOnce();
+      expect(third).not.toHaveBeenCalled();
     });
   });
 });
