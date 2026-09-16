@@ -906,11 +906,9 @@
         "create": "Nieuwe kalibratie",
         "allFamilies": "Alle apparaatfamilies",
         "empty": "Er is nog geen kalibratieprocedure geschreven.",
-        "versionOf": "v{{version}} van {{count}}",
         "columns": {
           "name": "Procedure",
           "family": "Familie",
-          "version": "Versie",
           "visibility": "Zichtbaarheid",
           "updated": "Bijgewerkt"
         },

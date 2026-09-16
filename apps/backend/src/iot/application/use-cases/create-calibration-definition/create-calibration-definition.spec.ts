@@ -49,10 +49,9 @@ describe("CreateCalibrationDefinitionUseCase", () => {
     ...overrides,
   });
 
-  it("creates version 1 in the author's personal organization", async () => {
+  it("creates a definition in the author's personal organization", async () => {
     const created = await useCase.execute(body(), userId);
     assertSuccess(created);
-    expect(created.value.version).toBe(1);
     expect(created.value.organizationId).toBe(await testApp.personalOrganizationId(userId));
   });
 
@@ -64,86 +63,35 @@ describe("CreateCalibrationDefinitionUseCase", () => {
     expect(created.value.minFirmwareVersion).toBe("1.05");
   });
 
-  it("adds a version to a line the author owns", async () => {
+  // Versioning is deferred until the program's first cut has landed. Until then a name
+  // names one procedure, and taking it twice is a mistake rather than an edit.
+  it("refuses a name that is already taken", async () => {
     const first = await useCase.execute(body(), userId);
     assertSuccess(first);
 
     const second = await useCase.execute(body(), userId);
-    assertSuccess(second);
-    expect(second.value.version).toBe(2);
-    expect(second.value.organizationId).toBe(first.value.organizationId);
+    assertFailure(second);
+    expect(second.error.message).toContain("already exists");
   });
 
-  it("refuses a version that would change the line's family", async () => {
-    const first = await useCase.execute(body(), userId);
-    assertSuccess(first);
-
-    const wrongFamily = await useCase.execute(body({ family: "ambit" }), userId);
-    assertFailure(wrongFamily);
-    expect(wrongFamily.error.message).toContain("already exists for family");
-  });
-
-  /**
-   * `@CanCreateInOrg` only vets an organizationId the body carries. A new
-   * version inherits the line's owning organization, so without an explicit
-   * check an outsider could plant a version inside another organization's line
-   * and hold creator control over it.
-   */
-  it("refuses an outsider adding a version to another organization's line", async () => {
-    const organizationId = await testApp.createOrganization("Photosynthesis Lab");
-    await testApp.addOrganizationMember(organizationId, userId, "owner");
-
-    const first = await useCase.execute(body({ organizationId }), userId);
-    assertSuccess(first);
-    expect(first.value.organizationId).toBe(organizationId);
-
-    const outsider = await testApp.createTestUser({ name: "Otto Outsider" });
-    const planted = await useCase.execute(body(), outsider);
-
-    assertFailure(planted);
-    expect(planted.error.statusCode).toBe(403);
-  });
-
-  it("refuses an outsider adding a version to a personally owned line", async () => {
+  it("refuses a name another author took, whatever the family", async () => {
     const first = await useCase.execute(body(), userId);
     assertSuccess(first);
 
     const outsider = await testApp.createTestUser({ name: "Otto Outsider" });
-    const planted = await useCase.execute(body(), outsider);
+    const clash = await useCase.execute(body({ family: "ambit" }), outsider);
 
-    assertFailure(planted);
-    expect(planted.error.statusCode).toBe(403);
+    assertFailure(clash);
+    expect(clash.error.message).toContain("already exists");
   });
 
-  // A line lives in one organization; a version cannot move it, even when
-  // the author is a member of both.
-  it("refuses a version aimed at a different organization than the line's", async () => {
-    const homeOrg = await testApp.createOrganization("Photosynthesis Lab");
-    const otherOrg = await testApp.createOrganization("Field Station");
-    await testApp.addOrganizationMember(homeOrg, userId, "owner");
-    await testApp.addOrganizationMember(otherOrg, userId, "owner");
-
-    const first = await useCase.execute(body({ organizationId: homeOrg }), userId);
-    assertSuccess(first);
-
-    const moved = await useCase.execute(body({ organizationId: otherOrg }), userId);
-    assertFailure(moved);
-    expect(moved.error.statusCode).toBe(400);
-    expect(moved.error.message).toContain("different organization");
-  });
-
-  it("lets a fellow organization member add a version", async () => {
+  it("creates in an organization the author belongs to", async () => {
     const organizationId = await testApp.createOrganization("Photosynthesis Lab");
     await testApp.addOrganizationMember(organizationId, userId, "owner");
-    const colleague = await testApp.createTestUser({ name: "Mel Member" });
-    await testApp.addOrganizationMember(organizationId, colleague, "member");
 
-    const first = await useCase.execute(body({ organizationId }), userId);
-    assertSuccess(first);
+    const created = await useCase.execute(body({ organizationId }), userId);
 
-    const second = await useCase.execute(body(), colleague);
-    assertSuccess(second);
-    expect(second.value.version).toBe(2);
-    expect(second.value.organizationId).toBe(organizationId);
+    assertSuccess(created);
+    expect(created.value.organizationId).toBe(organizationId);
   });
 });

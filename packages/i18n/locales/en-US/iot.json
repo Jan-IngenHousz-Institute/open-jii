@@ -906,11 +906,9 @@
         "create": "New calibration",
         "allFamilies": "All device families",
         "empty": "No calibration procedure has been written yet.",
-        "versionOf": "v{{version}} of {{count}}",
         "columns": {
           "name": "Procedure",
           "family": "Family",
-          "version": "Version",
           "visibility": "Visibility",
           "updated": "Updated"
         },

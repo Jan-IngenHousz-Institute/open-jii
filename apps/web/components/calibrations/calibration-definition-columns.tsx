@@ -6,33 +6,32 @@ import { formatShortDate } from "@/util/date";
 import { getSensorFamilyBadgeTone } from "@/util/sensor-family";
 import Link from "next/link";
 
+import type { CalibrationDefinitionSummary } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { cn } from "@repo/ui/lib/utils";
-
-import type { CalibrationVersionLine } from "./calibration-version-lines";
 
 export function getCalibrationDefinitionColumns(
   t: (key: string, values?: Record<string, unknown>) => string,
   locale: string,
-): OverviewTableColumn<CalibrationVersionLine>[] {
+): OverviewTableColumn<CalibrationDefinitionSummary>[] {
   return [
     {
       header: t("iot.calibration.library.columns.name"),
-      cell: (line, href) => (
+      cell: (definition, href) => (
         <div className="min-w-0 space-y-0.5">
           <Link
             href={href}
-            title={line.name}
+            title={definition.name}
             onClick={(event) => event.stopPropagation()}
             className={cn(
               "focus-visible:ring-primary/40 focus-visible:outline-hidden block min-w-0 truncate text-[13px] font-semibold hover:underline focus-visible:ring-2",
               overviewTableText.strong,
             )}
           >
-            {line.name}
+            {definition.name}
           </Link>
-          {line.latest.description !== null && (
+          {definition.description !== null && (
             <p className={cn("truncate text-xs", overviewTableText.muted)}>
-              {line.latest.description}
+              {definition.description}
             </p>
           )}
         </div>
@@ -41,35 +40,23 @@ export function getCalibrationDefinitionColumns(
     {
       header: t("iot.calibration.library.columns.family"),
       className: "w-[130px]",
-      cell: (line) => (
-        <StatusBadge tone={getSensorFamilyBadgeTone(line.latest.family)} className="capitalize">
-          {line.latest.family}
+      cell: (definition) => (
+        <StatusBadge tone={getSensorFamilyBadgeTone(definition.family)} className="capitalize">
+          {definition.family}
         </StatusBadge>
-      ),
-    },
-    {
-      header: t("iot.calibration.library.columns.version"),
-      className: "w-[120px]",
-      cell: (line) => (
-        <span className={cn("text-xs", overviewTableText.muted)}>
-          {t("iot.calibration.library.versionOf", {
-            version: line.latest.version,
-            count: line.versions.length,
-          })}
-        </span>
       ),
     },
     {
       header: t("iot.calibration.library.columns.visibility"),
       className: "w-[120px]",
-      cell: (line) => <VisibilityBadge visibility={line.latest.visibility} />,
+      cell: (definition) => <VisibilityBadge visibility={definition.visibility} />,
     },
     {
       header: t("iot.calibration.library.columns.updated"),
       className: "w-[130px]",
-      cell: (line) => (
+      cell: (definition) => (
         <span className={cn("text-xs", overviewTableText.muted)}>
-          {formatShortDate(line.latest.updatedAt, locale)}
+          {formatShortDate(definition.updatedAt, locale)}
         </span>
       ),
     },

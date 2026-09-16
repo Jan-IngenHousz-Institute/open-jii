@@ -28,39 +28,14 @@ export class CreateCalibrationDefinitionUseCase {
       userId,
     });
 
-    // A name is one version line; it cannot change family or organization mid-line.
-    const latest = await this.definitionRepository.findLatestByName(body.name);
-    if (latest.isFailure()) {
-      return failure(latest.error);
+    // One definition per name. Versioning is deferred until the program's first cut has
+    // landed, so a name that is taken is a conflict rather than the next version of it.
+    const existing = await this.definitionRepository.findLatestByName(body.name);
+    if (existing.isFailure()) {
+      return failure(existing.error);
     }
-    if (latest.value && latest.value.family !== body.family) {
-      return failure(
-        AppError.badRequest(
-          `Definition "${body.name}" already exists for family "${latest.value.family}"`,
-        ),
-      );
-    }
-    // A new version joins the line's owning organization. @CanCreateInOrg only vets an
-    // organizationId the body carries, so this stops an outsider planting a version in another's line.
-    if (latest.value) {
-      if (
-        body.organizationId !== undefined &&
-        body.organizationId !== latest.value.organizationId
-      ) {
-        return failure(
-          AppError.badRequest(`Definition "${body.name}" belongs to a different organization`),
-        );
-      }
-
-      const owningOrg = latest.value.organizationId;
-      const permitted = owningOrg
-        ? await this.authz.isOrgMember(userId, owningOrg)
-        : latest.value.createdBy === userId;
-      if (!permitted) {
-        return failure(
-          AppError.forbidden(`You cannot add a version to the definition "${body.name}"`),
-        );
-      }
+    if (existing.value) {
+      return failure(AppError.badRequest(`A calibration named "${body.name}" already exists`));
     }
 
     const result = await this.definitionRepository.create(
@@ -77,7 +52,7 @@ export class CreateCalibrationDefinitionUseCase {
         minFirmwareVersion: body.minFirmwareVersion ?? null,
       },
       userId,
-      latest.value ? latest.value.organizationId : (body.organizationId ?? null),
+      body.organizationId ?? null,
     );
     if (result.isFailure()) {
       return failure(result.error);

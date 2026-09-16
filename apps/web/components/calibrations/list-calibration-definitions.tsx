@@ -20,11 +20,10 @@ import {
 } from "@repo/ui/components/select";
 
 import { getCalibrationDefinitionColumns } from "./calibration-definition-columns";
-import { toVersionLines } from "./calibration-version-lines";
 
 const ALL_FAMILIES = "all";
 
-/** The bench procedures anyone can run, one row per version line. */
+/** The bench procedures anyone can run, each at its newest version. */
 export function ListCalibrationDefinitions() {
   const { t } = useTranslation("iot");
   const locale = useLocale();
@@ -34,14 +33,9 @@ export function ListCalibrationDefinitions() {
 
   // Left undefined while the list is unread, so a failure reaches the table as an error
   // rather than as an empty library.
-  const lines =
-    definitions.data === undefined
-      ? undefined
-      : toVersionLines(
-          definitions.data.filter(
-            (definition) => family === ALL_FAMILIES || definition.family === family,
-          ),
-        );
+  const visible = definitions.data?.filter(
+    (definition) => family === ALL_FAMILIES || definition.family === family,
+  );
 
   function renderFamilyOption(option: CalibrationFamily) {
     return (
@@ -76,14 +70,14 @@ export function ListCalibrationDefinitions() {
 
       <OverviewTable
         columns={getCalibrationDefinitionColumns(t, locale)}
-        items={lines}
+        items={visible}
         isLoading={definitions.isLoading}
         error={definitions.error}
         onRetry={() => void definitions.refetch()}
         errorMessage={t("iot.calibration.loadError")}
         retryLabel={t("iot.calibration.library.retry")}
-        getRowKey={(line) => line.name}
-        getRowHref={(line) => `/${locale}/platform/calibrations/${line.latest.id}`}
+        getRowKey={(definition) => definition.id}
+        getRowHref={(definition) => `/${locale}/platform/calibrations/${definition.id}`}
         emptyMessage={t("iot.calibration.library.empty")}
       />
     </div>

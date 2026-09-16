@@ -906,11 +906,9 @@
         "create": "Neue Kalibrierung",
         "allFamilies": "Alle Gerätefamilien",
         "empty": "Es wurde noch kein Kalibrierverfahren geschrieben.",
-        "versionOf": "v{{version}} von {{count}}",
         "columns": {
           "name": "Verfahren",
           "family": "Familie",
-          "version": "Version",
           "visibility": "Sichtbarkeit",
           "updated": "Aktualisiert"
         },
