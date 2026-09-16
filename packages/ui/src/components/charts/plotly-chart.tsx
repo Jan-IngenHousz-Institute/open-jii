@@ -93,17 +93,21 @@ export interface PlotlyChartProps extends Omit<PlotParams, "className"> {
   error?: string;
 }
 
-// Plotly's gl2d builds a canvas each for the scene, the pick buffer and the
-// focus layer, so one chart costs three contexts. Past the browser's budget
-// the oldest is dropped, which blanks that chart's data layer.
-const CONTEXTS_PER_GL_CHART = 3;
+// Of the three canvases Plotly's gl2d builds per chart, only two take a
+// context: the pick layer is skipped unless a parcoords trace is present.
+// Past the browser's budget the oldest context is dropped, which blanks that
+// chart's data layer, and a rebuild allocates before it releases, so one
+// chart's worth of headroom is reserved for that overlap.
+const CONTEXTS_PER_GL_CHART = 2;
 const BROWSER_CONTEXT_BUDGET = 16;
 
 class WebGLContextManager {
   private static instance: WebGLContextManager;
   private activeContexts = new Set<string>();
   private pendingCharts = new Map<string, () => void>();
-  private readonly maxContexts = Math.floor(BROWSER_CONTEXT_BUDGET / CONTEXTS_PER_GL_CHART);
+  private readonly maxContexts = Math.floor(
+    (BROWSER_CONTEXT_BUDGET - CONTEXTS_PER_GL_CHART) / CONTEXTS_PER_GL_CHART,
+  );
 
   static getInstance(): WebGLContextManager {
     if (!WebGLContextManager.instance) {
