@@ -56,13 +56,14 @@ Claude Code auto-discovers them, but the files under `.agents/` are the source. 
 assumes the team's supported macOS/Linux development environments. The shared hooks require Bash,
 Git, and `jq`; a missing `jq` prints a warning and skips the hook.
 
-| Skill                    | Read it when                                                              |
-| ------------------------ | ------------------------------------------------------------------------- |
-| `openjii-local-stack`    | Preparing a local checkout, seeding, or getting a dev session cookie.     |
-| `openjii-mobile-device`  | Getting a dev build onto a real Android phone, over cable or Wi-Fi.       |
-| `openjii-mobile-control` | Driving a connected phone to verify or reproduce mobile behaviour.        |
-| `openjii-docs-update`    | A change alters what a user sees or does, so docs and screenshots follow. |
-| `unslop`                 | Writing or editing prose a human will read: docs, PR bodies, changelogs.  |
+| Skill                     | Read it when                                                                     |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| `openjii-local-stack`     | Preparing a local checkout, seeding, or getting a dev session cookie.            |
+| `openjii-mobile-device`   | Getting a dev build onto a real Android phone, over cable or Wi-Fi.              |
+| `openjii-mobile-control`  | Driving a connected phone to verify or reproduce mobile behaviour.               |
+| `openjii-docs-update`     | A change alters what a user sees or does, so docs and screenshots follow.        |
+| `openjii-prepare-release` | Preparing or rehearsing a release, CMS notes, a mobile gate, or a Linear update. |
+| `unslop`                  | Writing or editing prose a human will read: docs, PR bodies, changelogs.         |
 
 `unslop` comes from a third party rather than from this repo, so it does not open with
 `Read AGENTS.md first` like the `openjii-*` guides do. It carries no repo-specific paths and needs
