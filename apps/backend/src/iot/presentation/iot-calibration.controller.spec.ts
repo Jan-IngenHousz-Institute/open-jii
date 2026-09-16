@@ -7,6 +7,7 @@ import type {
   CalibrationDefinitionSummary,
   CalibrationRun,
   CalibrationRunDetail,
+  ActiveDeviceCalibration,
   DeviceCalibration,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { calibrationDefinitions, eq } from "@repo/database";
@@ -344,11 +345,14 @@ describe("IotCalibrationController", () => {
       expect(applied.body.runId).toBe(run.body.id);
       expect(applied.body.blocks).toEqual({ par: { coefficients: { spec: 1.19 } } });
 
-      const active: SuperTestResponse<DeviceCalibration | null> = await testApp
+      // What is in force is composed per block, so it names the approval each one came
+      // from rather than being one approval itself.
+      const active: SuperTestResponse<ActiveDeviceCalibration | null> = await testApp
         .get(testApp.resolveOrpcPath(contract.iot.getActiveDeviceCalibration, { deviceId }))
         .withAuth(userId)
         .expect(StatusCodes.OK);
-      expect(active.body?.id).toBe(applied.body.id);
+      expect(active.body?.blocks.par.calibrationId).toBe(applied.body.id);
+      expect(active.body?.blocks.par.coefficients).toEqual({ spec: 1.19 });
 
       const history: SuperTestResponse<DeviceCalibration[]> = await testApp
         .get(testApp.resolveOrpcPath(contract.iot.listDeviceCalibrations, { deviceId }))

@@ -39,6 +39,7 @@ import type {
 import type { ExperimentTransferRequest } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import type {
+  ActiveDeviceCalibration,
   CalibrationDefinition,
   CalibrationDefinitionSummary,
   CalibrationRun,
@@ -1200,6 +1201,25 @@ export function createCalibrationRunDetail(
         { stimulus: 0.8, par_raw: 209.5, par_ref: 200 },
         { stimulus: 2.4, par_raw: 626.2, par_ref: 600 },
       ],
+    },
+    ...overrides,
+  };
+}
+
+export function createActiveDeviceCalibration(
+  overrides: Partial<ActiveDeviceCalibration> = {},
+): ActiveDeviceCalibration {
+  return {
+    deviceId: crypto.randomUUID(),
+    blocks: {
+      par: {
+        coefficients: { slope: 0.96, intercept: -1.08 },
+        calibrationId: crypto.randomUUID(),
+        runId: crypto.randomUUID(),
+        validFrom: "2026-09-01T10:05:00.000Z",
+        writtenToDeviceAt: null,
+        writeResult: null,
+      },
     },
     ...overrides,
   };

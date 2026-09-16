@@ -4,8 +4,8 @@ import { Loader2 } from "lucide-react";
 
 import type {
   CalibrationRun,
+  ActiveDeviceCalibration,
   CalibrationRunPayload,
-  DeviceCalibration,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
@@ -19,7 +19,7 @@ import { fitLineFromBlocks, fitPointsFromPayload } from "./fit-points";
 interface CalibrationReviewProps {
   run: CalibrationRun;
   payload: CalibrationRunPayload;
-  active: DeviceCalibration | null;
+  active: ActiveDeviceCalibration | null;
   isApproving: boolean;
   isRejecting: boolean;
   onApprove: () => void;

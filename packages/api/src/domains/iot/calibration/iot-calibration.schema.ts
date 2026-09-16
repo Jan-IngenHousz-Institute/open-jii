@@ -278,6 +278,30 @@ export const zDeviceCalibration = z.object({
 
 export const zDeviceCalibrationList = z.array(zDeviceCalibration);
 
+/**
+ * One block of coefficients the device is running on, and the session that put it there.
+ *
+ * A device holds its blocks independently and a session need not produce all of them, so
+ * what is in force is assembled from the newest approval per block rather than read off
+ * the newest approval. Without that, re-running one bench procedure would make the record
+ * claim the device had lost everything the other procedures calibrated.
+ */
+export const zActiveCalibrationBlock = z.object({
+  coefficients: z.record(zCoefficientName, zCoefficientValue),
+  fit: zBlockRecord.optional(),
+  quality: zBlockRecord.optional(),
+  calibrationId: z.string().uuid(),
+  runId: z.string().uuid(),
+  validFrom: z.string().datetime(),
+  writtenToDeviceAt: z.string().datetime().nullable(),
+  writeResult: zCalibrationWriteResult.nullable(),
+});
+
+export const zActiveDeviceCalibration = z.object({
+  deviceId: z.string().uuid(),
+  blocks: z.record(zCoefficientName, zActiveCalibrationBlock),
+});
+
 export const zDeviceCalibrationPathParam = z.object({
   calibrationId: z.string().uuid(),
 });
@@ -312,3 +336,5 @@ export type CreateCalibrationRunBody = z.infer<typeof zCreateCalibrationRunBody>
 export type CreateExternalCalibrationRunBody = z.infer<typeof zCreateExternalCalibrationRunBody>;
 export type ReportDeviceCalibrationWriteBody = z.infer<typeof zReportDeviceCalibrationWriteBody>;
 export type DeviceCalibration = z.infer<typeof zDeviceCalibration>;
+export type ActiveCalibrationBlock = z.infer<typeof zActiveCalibrationBlock>;
+export type ActiveDeviceCalibration = z.infer<typeof zActiveDeviceCalibration>;

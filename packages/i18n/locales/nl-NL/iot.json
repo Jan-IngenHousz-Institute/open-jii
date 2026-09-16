@@ -771,7 +771,8 @@
         "none": "Dit apparaat is nog nooit gekalibreerd.",
         "written": "Naar het apparaat geschreven",
         "notWritten": "Nog niet naar het apparaat geschreven",
-        "validFrom": "Sinds {{date}}"
+        "validFrom": "Sinds {{date}}",
+        "unconfirmed": "Geschreven maar niet bevestigd"
       },
       "runs": {
         "title": "Meetbanksessies",

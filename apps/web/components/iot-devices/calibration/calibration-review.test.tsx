@@ -1,4 +1,4 @@
-import { createCalibrationRun, createDeviceCalibration } from "@/test/factories";
+import { createActiveDeviceCalibration, createCalibrationRun } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -59,8 +59,17 @@ describe("CalibrationReview", () => {
   // The old-versus-new comparison is the reviewer's main evidence.
   it("shows the coefficients currently in force beside the new ones", () => {
     renderReview({
-      active: createDeviceCalibration({
-        blocks: { par: { coefficients: { slope: 0.91, intercept: -0.5 } } },
+      active: createActiveDeviceCalibration({
+        blocks: {
+          par: {
+            coefficients: { slope: 0.91, intercept: -0.5 },
+            calibrationId: "33333333-3333-4333-8333-333333333333",
+            runId: "44444444-4444-4444-8444-444444444444",
+            validFrom: "2026-09-01T10:05:00.000Z",
+            writtenToDeviceAt: null,
+            writeResult: null,
+          },
+        },
       }),
     });
 

@@ -13,6 +13,7 @@ import {
   zCreateCalibrationDefinitionBody,
   zCreateCalibrationRunBody,
   zCreateExternalCalibrationRunBody,
+  zActiveDeviceCalibration,
   zDeviceCalibration,
   zDeviceCalibrationList,
   zListCalibrationDefinitionsQuery,
@@ -88,7 +89,7 @@ export const iotCalibrationContract = {
   getActiveDeviceCalibration: oc
     .route({ method: "GET", path: "/api/v1/devices/{deviceId}/calibration", successStatus: 200 })
     .input(zIotDevicePathParam)
-    .output(zDeviceCalibration.nullable()),
+    .output(zActiveDeviceCalibration.nullable()),
   listDeviceCalibrations: oc
     .route({ method: "GET", path: "/api/v1/devices/{deviceId}/calibrations", successStatus: 200 })
     .input(zIotDevicePathParam)

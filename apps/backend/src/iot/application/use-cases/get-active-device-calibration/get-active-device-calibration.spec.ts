@@ -61,7 +61,7 @@ describe("GetActiveDeviceCalibrationUseCase", () => {
     await testApp.teardown();
   });
 
-  const approveRun = async (spec: number) => {
+  const approveRun = async (blocks: Record<string, { coefficients: Record<string, number> }>) => {
     const run = await runRepository.create({
       definitionId,
       deviceId,
@@ -72,12 +72,7 @@ describe("GetActiveDeviceCalibrationUseCase", () => {
       status: "computed",
     });
     assertSuccess(run);
-    const approved = await runRepository.approve(
-      run.value.id,
-      deviceId,
-      { par: { coefficients: { spec } } },
-      userId,
-    );
+    const approved = await runRepository.approve(run.value.id, deviceId, blocks, userId);
     assertSuccess(approved);
     return approved.value.id;
   };
@@ -88,15 +83,34 @@ describe("GetActiveDeviceCalibrationUseCase", () => {
     expect(result.value).toBeNull();
   });
 
-  it("returns the calibration currently in force, not a superseded one", async () => {
-    await approveRun(1.19);
-    const newest = await approveRun(1.21);
+  it("returns the newest value of a block, not a superseded one", async () => {
+    await approveRun({ par: { coefficients: { spec: 1.19 } } });
+    const newest = await approveRun({ par: { coefficients: { spec: 1.21 } } });
 
     const result = await useCase.execute(deviceId);
 
     assertSuccess(result);
-    expect(result.value?.id).toBe(newest);
     expect(result.value?.blocks.par.coefficients).toEqual({ spec: 1.21 });
-    expect(result.value?.supersededAt).toBeNull();
+    expect(result.value?.blocks.par.calibrationId).toBe(newest);
+  });
+
+  // Two bench procedures can calibrate different parts of the same device. Reading only
+  // the newest approval would report that re-running one of them had erased the other.
+  it("keeps a block a later session did not produce", async () => {
+    await approveRun({
+      par: { coefficients: { slope: 0.96 } },
+      spec: { coefficients: { channel_coefficients: [1, 2, 3] } },
+    });
+    const parOnly = await approveRun({ par: { coefficients: { slope: 0.99 } } });
+
+    const result = await useCase.execute(deviceId);
+
+    assertSuccess(result);
+    expect(Object.keys(result.value?.blocks ?? {}).sort()).toEqual(["par", "spec"]);
+    expect(result.value?.blocks.par.coefficients).toEqual({ slope: 0.99 });
+    expect(result.value?.blocks.par.calibrationId).toBe(parOnly);
+    // The spectral numbers are still on the device, and still from the session that set them.
+    expect(result.value?.blocks.spec.coefficients).toEqual({ channel_coefficients: [1, 2, 3] });
+    expect(result.value?.blocks.spec.calibrationId).not.toBe(parOnly);
   });
 });

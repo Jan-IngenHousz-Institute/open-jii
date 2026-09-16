@@ -771,7 +771,8 @@
         "none": "Dieses Gerät wurde noch nie kalibriert.",
         "written": "Auf das Gerät geschrieben",
         "notWritten": "Noch nicht auf das Gerät geschrieben",
-        "validFrom": "Seit {{date}}"
+        "validFrom": "Seit {{date}}",
+        "unconfirmed": "Geschrieben, aber nicht bestätigt"
       },
       "runs": {
         "title": "Messbank-Sitzungen",

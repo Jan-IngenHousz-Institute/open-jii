@@ -771,7 +771,8 @@
         "none": "This device has never been calibrated.",
         "written": "Written to device",
         "notWritten": "Not yet written to device",
-        "validFrom": "Since {{date}}"
+        "validFrom": "Since {{date}}",
+        "unconfirmed": "Written but not confirmed"
       },
       "runs": {
         "title": "Bench sessions",
