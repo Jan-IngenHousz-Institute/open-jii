@@ -21,7 +21,12 @@ const BLOCK_STATUS_TONE: Record<CalibrationBlockStatus, StatusTone> = {
 interface CalibrationBlockCardProps {
   name: string;
   block: CalibrationBlock;
-  previous: Record<string, number | number[]> | undefined;
+  /**
+   * What these coefficients are held against: the ones in force at review time, whose
+   * own absence is worth showing, or null on a session read back from the record, where
+   * what the run replaced is no longer knowable.
+   */
+  previous: { coefficients: Record<string, number | number[]> | undefined } | null;
 }
 
 export function CalibrationBlockCard({ name, block, previous }: CalibrationBlockCardProps) {
@@ -32,19 +37,24 @@ export function CalibrationBlockCard({ name, block, previous }: CalibrationBlock
   const reasons = Array.isArray(quality?.reasons) ? quality.reasons.map(String) : [];
   const r2 = typeof quality?.r2 === "number" ? quality.r2 : null;
   const nrmse = typeof quality?.nrmse === "number" ? quality.nrmse : null;
+  const hasComparison = previous !== null;
 
   function renderCoefficient([coefficient, value]: [string, number | number[]]) {
-    const before = previous?.[coefficient];
+    const before = previous?.coefficients?.[coefficient];
     return (
       <div key={coefficient} className="contents">
         <dt className="text-muted-foreground">{coefficient}</dt>
         <dd className="flex items-center gap-2 font-mono">
-          <span className="text-muted-foreground">
-            {before === undefined
-              ? t("iot.calibration.review.previousUnknown")
-              : formatCoefficientValue(before)}
-          </span>
-          <ArrowRight className="text-muted-foreground size-3" aria-hidden />
+          {hasComparison && (
+            <>
+              <span className="text-muted-foreground">
+                {before === undefined
+                  ? t("iot.calibration.review.previousUnknown")
+                  : formatCoefficientValue(before)}
+              </span>
+              <ArrowRight className="text-muted-foreground size-3" aria-hidden />
+            </>
+          )}
           <span>{formatCoefficientValue(value)}</span>
         </dd>
       </div>

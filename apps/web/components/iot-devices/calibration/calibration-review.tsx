@@ -58,7 +58,7 @@ export function CalibrationReview({
         key={name}
         name={name}
         block={block}
-        previous={active?.blocks[name]?.coefficients}
+        previous={{ coefficients: active?.blocks[name]?.coefficients }}
       />
     );
   }

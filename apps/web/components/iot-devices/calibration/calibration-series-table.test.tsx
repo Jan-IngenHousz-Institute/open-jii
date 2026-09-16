@@ -35,17 +35,15 @@ describe("CalibrationSeriesTable", () => {
 
   // A device that answers a structured reading lands it whole in one cell, and a reviewer
   // still has to be able to read the row it sits in.
-  it("renders a structured reading without pushing the row apart", () => {
+  it("keeps a long reading whole in the row it sits in", () => {
     const channels = Array.from({ length: 10 }, (_, index) => index * 111);
-    render(
-      <CalibrationSeriesTable
-        series="adpd_baseline"
-        rows={[{ channels, note: "x".repeat(120) }]}
-      />,
-    );
+    const settings = "model=AS7341,available=1,atime=100,astep=999,gain=2,led_ma=0";
+    render(<CalibrationSeriesTable series="adpd_baseline" rows={[{ channels, settings }]} />);
 
     expect(screen.getByText(/^0, 111, 222/)).toBeInTheDocument();
-    expect(screen.getByText(/…$/)).toBeInTheDocument();
+    // Cutting the text down would put the reading itself out of reach of a copy or a
+    // find, on the one page whose job is to hold the evidence.
+    expect(screen.getByText(settings)).toHaveClass("truncate");
   });
 
   // Instruments and operators answer with more than numbers: a gate is a boolean, a

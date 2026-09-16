@@ -70,9 +70,7 @@ export function CalibrationRunDetail({ runId, deviceId, onBack }: CalibrationRun
   }
 
   function renderBlock([name, block]: (typeof blocks)[number]) {
-    // The device's current coefficients are not what this run replaced, so nothing is
-    // offered as the previous value.
-    return <CalibrationBlockCard key={name} name={name} block={block} previous={undefined} />;
+    return <CalibrationBlockCard key={name} name={name} block={block} previous={null} />;
   }
 
   function renderSeries([series, rows]: (typeof payload)[number]) {

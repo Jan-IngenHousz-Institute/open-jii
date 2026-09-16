@@ -18,9 +18,6 @@ type Cell = SeriesRow[string];
 /** The column every sweep carries, holding the setpoint that produced the row. */
 const STIMULUS = "stimulus";
 
-/** Long enough to read, short enough not to push the numeric columns off the row. */
-const MAX_CELL_LENGTH = 48;
-
 // Rows in one series need not carry every column, so a cell can genuinely be absent.
 function formatCell(value: Cell | undefined): string {
   if (value === null || value === undefined) {
@@ -37,9 +34,7 @@ function formatCell(value: Cell | undefined): string {
       .map(([key, entry]) => `${key}: ${String(entry)}`)
       .join(", ");
   }
-
-  const text = String(value);
-  return text.length > MAX_CELL_LENGTH ? `${text.slice(0, MAX_CELL_LENGTH)}…` : text;
+  return String(value);
 }
 
 /** Columns in the order the procedure named them, with the setpoint first. */
@@ -74,14 +69,23 @@ export function CalibrationSeriesTable({ series, rows }: { series: string; rows:
     return null;
   }
 
+  // A long reading is held inside its cell rather than cut down, so the row stays
+  // readable while the measurement itself can still be selected, copied or searched.
+  function renderCell(row: SeriesRow, column: string) {
+    const text = formatCell(row[column]);
+    return (
+      <TableCell key={column} className="px-3 py-1.5 font-mono text-xs">
+        <span className="max-w-88 block truncate" title={text}>
+          {text}
+        </span>
+      </TableCell>
+    );
+  }
+
   function renderRow(row: SeriesRow, index: number) {
     return (
       <TableRow key={`${series}:${String(index)}`}>
-        {columns.map((column) => (
-          <TableCell key={column} className="px-3 py-1.5 font-mono text-xs">
-            {formatCell(row[column])}
-          </TableCell>
-        ))}
+        {columns.map((column) => renderCell(row, column))}
       </TableRow>
     );
   }
@@ -89,7 +93,7 @@ export function CalibrationSeriesTable({ series, rows }: { series: string; rows:
   return (
     <div className="overflow-x-auto rounded-md border">
       <Table>
-        <TableCaption className="mb-3 mt-2 text-left text-sm font-medium">
+        <TableCaption className="mb-3 mt-2 caption-top text-left text-sm font-medium">
           {t("iot.calibration.review.seriesCaption", { series, points: rows.length })}
         </TableCaption>
         <TableHeader>

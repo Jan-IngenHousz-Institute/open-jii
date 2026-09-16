@@ -39,6 +39,9 @@ describe("CalibrationRunDetail", () => {
     // The captured points, not just the fitted line.
     expect(await screen.findByText("209.5")).toBeInTheDocument();
     expect(screen.getByText("626.2")).toBeInTheDocument();
+    // What this run replaced is not what the device holds today, so no coefficient is
+    // shown as a change from anything.
+    expect(screen.queryByText("iot.calibration.review.previousUnknown")).toBeNull();
   });
 
   // Approval and the write are separate events; a run can be approved on record with
