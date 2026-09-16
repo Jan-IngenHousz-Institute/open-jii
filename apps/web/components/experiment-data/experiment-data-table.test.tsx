@@ -54,9 +54,6 @@ vi.mock("~/components/experiment-data/annotations/delete-annotations-dialog", ()
 vi.mock("./data-export-modal/data-export-modal", () => ({
   DataExportModal: () => null,
 }));
-vi.mock("./table-chart/experiment-data-table-chart", () => ({
-  ExperimentDataTableChart: () => <div>Chart</div>,
-}));
 
 vi.mock("~/components/data-table/data-table-utils", () => ({
   DataTableHeader: ({ headerGroups }: { headerGroups: unknown[] }) => (

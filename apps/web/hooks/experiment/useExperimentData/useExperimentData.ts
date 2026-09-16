@@ -35,7 +35,6 @@ export interface UseExperimentDataParams {
    */
   filters?: ExperimentDataFilter[];
   formatFunction?: DataRenderFunction;
-  onChartClick?: (data: number[], columnName: string) => void;
   onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
   onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
   onToggleCellExpansion?: (rowId: string, columnName: string) => void;
@@ -64,7 +63,6 @@ function compactFilters(
  * @param params.orderBy Optional column name to order results by
  * @param params.orderDirection Optional sort direction for ordering (ASC or DESC)
  * @param params.formatFunction Function used to render the column value
- * @param params.onChartClick Event handler for when a chart is clicked
  * @param params.onAddAnnotation Event handler for adding annotations
  * @param params.onDeleteAnnotations Event handler for deleting annotations
  * @param params.onToggleCellExpansion Event handler for toggling cell expansion
@@ -82,7 +80,6 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
     orderDirection,
     filters,
     formatFunction,
-    onChartClick,
     onAddAnnotation,
     onDeleteAnnotations,
     onToggleCellExpansion,
@@ -124,7 +121,6 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
           columns: createTableColumns({
             columns: tableData.data?.columns,
             formatFunction,
-            onChartClick,
             onAddAnnotation,
             onDeleteAnnotations,
             onToggleCellExpansion,
@@ -153,7 +149,6 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
   }, [
     tableData,
     formatFunction,
-    onChartClick,
     onAddAnnotation,
     onDeleteAnnotations,
     onToggleCellExpansion,
