@@ -33,7 +33,6 @@ import type {
   DataRow,
   IsCellExpandedFn,
   OnAnnotationHandler,
-  OnChartClickHandler,
   OnToggleCellExpansionHandler,
 } from "./data-table-columns";
 import { dataTableFeatures } from "./data-table-features";
@@ -75,7 +74,6 @@ interface SelectionConfig {
 }
 
 interface CellHandlers {
-  onChartClick?: OnChartClickHandler;
   onAddAnnotation?: OnAnnotationHandler;
   onDeleteAnnotations?: OnAnnotationHandler;
 }
@@ -142,7 +140,6 @@ export function DataTable({
     const dataColumns = createTableColumns({
       columns,
       formatFunction: formatValue,
-      onChartClick: cellHandlers?.onChartClick,
       onAddAnnotation: cellHandlers?.onAddAnnotation,
       onDeleteAnnotations: cellHandlers?.onDeleteAnnotations,
       onToggleCellExpansion: toggleCellExpansion,
@@ -244,6 +241,7 @@ export function DataTable({
                 tableRows={rows}
                 columns={orderedColumns}
                 errorColumn={errorColumn}
+                onToggleCellExpansion={toggleCellExpansion}
               />
             )}
           </TableBody>

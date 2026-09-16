@@ -1,4 +1,4 @@
-import { render, screen } from "@/test/test-utils";
+import { render, screen, userEvent } from "@/test/test-utils";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
@@ -24,6 +24,14 @@ vi.mock("./cells/struct/data-table-struct-cell", () => ({
 vi.mock("./cells/variant/data-table-variant-cell", () => ({
   VariantExpandedContent: ({ data }: { data: string }) => (
     <div data-testid="variant-content">{data}</div>
+  ),
+}));
+
+vi.mock("./cells/chart/chart-expanded-content", () => ({
+  ChartExpandedContent: ({ data, columnName }: { data: string; columnName: string }) => (
+    <div data-testid="chart-content">
+      {columnName}:{data}
+    </div>
   ),
 }));
 
@@ -95,5 +103,34 @@ describe("DataTableCellCollapsible", () => {
   it("renders StructExpandedContent for STRUCT<...> type", () => {
     renderInTable(<DataTableCellCollapsible {...defaultProps} columnType="STRUCT<field:string>" />);
     expect(screen.getByTestId("struct-content")).toHaveTextContent("some data");
+  });
+
+  it("renders ChartExpandedContent for a numeric array type, passing columnName through", () => {
+    renderInTable(
+      <DataTableCellCollapsible {...defaultProps} columnType="ARRAY<DOUBLE>" cellData="[1,2,3]" />,
+    );
+    expect(screen.getByTestId("chart-content")).toHaveTextContent("test_col:[1,2,3]");
+  });
+
+  it("shows the column name in the header", () => {
+    renderInTable(<DataTableCellCollapsible {...defaultProps} columnType="VARIANT" />);
+    expect(screen.getByText("test_col")).toBeInTheDocument();
+  });
+
+  it("renders a close button that calls onClose when clicked, reachable regardless of scroll position", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    renderInTable(
+      <DataTableCellCollapsible {...defaultProps} columnType="VARIANT" onClose={onClose} />,
+    );
+
+    // The header (with the close button) sits in the `sticky left-0` wrapper,
+    // so it stays visible even if the table is scrolled far horizontally.
+    const closeButton = screen.getByRole("button", { name: "common.close" });
+    expect(closeButton.closest(".sticky")).toBeInTheDocument();
+
+    await user.click(closeButton);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

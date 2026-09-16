@@ -20,7 +20,6 @@ import {
 import type { DataTableFeatures } from "./data-table-features";
 
 export type DataRow = Record<string, unknown>;
-export type OnChartClickHandler = (data: number[], columnName: string, rowId: string) => void;
 export type OnAnnotationHandler = (rowIds: string[], type: ExperimentAnnotationType) => void;
 export type OnToggleCellExpansionHandler = (rowId: string, columnName: string) => void;
 export type IsCellExpandedFn = (rowId: string, columnName: string) => boolean;
@@ -30,7 +29,6 @@ export type DataRenderFunction = (
   type: string,
   rowId: string,
   columnName?: string,
-  onChartClick?: OnChartClickHandler,
   onAddAnnotation?: OnAnnotationHandler,
   onDeleteAnnotations?: OnAnnotationHandler,
   onToggleCellExpansion?: OnToggleCellExpansionHandler,
@@ -128,7 +126,6 @@ export function getColumnWidth(typeText: string, columnName?: string): number | 
 interface CreateTableColumnsParams {
   columns: ExperimentDataColumn[] | undefined;
   formatFunction?: DataRenderFunction;
-  onChartClick?: OnChartClickHandler;
   onAddAnnotation?: OnAnnotationHandler;
   onDeleteAnnotations?: OnAnnotationHandler;
   onToggleCellExpansion?: OnToggleCellExpansionHandler;
@@ -144,7 +141,6 @@ interface CreateTableColumnsParams {
 export function createTableColumns({
   columns: dataColumns,
   formatFunction,
-  onChartClick,
   onAddAnnotation,
   onDeleteAnnotations,
   onToggleCellExpansion,
@@ -175,7 +171,6 @@ export function createTableColumns({
         typeName,
         rowId ?? "",
         columnName,
-        onChartClick,
         onAddAnnotation,
         onDeleteAnnotations,
         onToggleCellExpansion,

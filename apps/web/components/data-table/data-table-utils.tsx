@@ -7,7 +7,6 @@ import type {
   DataRow,
   IsCellExpandedFn,
   OnAnnotationHandler,
-  OnChartClickHandler,
   OnToggleCellExpansionHandler,
   TableMetadata,
 } from "~/components/data-table/data-table-columns";
@@ -83,7 +82,6 @@ export function formatValue(
   type: string,
   rowId: string,
   columnName?: string,
-  onChartClick?: OnChartClickHandler,
   onAddAnnotation?: OnAnnotationHandler,
   onDeleteAnnotations?: OnAnnotationHandler,
   onToggleCellExpansion?: OnToggleCellExpansionHandler,
@@ -142,7 +140,7 @@ export function formatValue(
         data={value as string}
         columnName={columnName ?? "Chart"}
         rowId={rowId}
-        onClick={onChartClick}
+        onToggleExpansion={onToggleCellExpansion}
       />
     );
   }
@@ -262,6 +260,7 @@ export function DataTableRows({
   tableRows,
   columns = [],
   errorColumn,
+  onToggleCellExpansion,
 }: {
   rows: Row<DataTableFeatures, DataRow>[];
   columnCount: number;
@@ -269,6 +268,7 @@ export function DataTableRows({
   tableRows?: DataRow[];
   columns?: TableMetadata["rawColumns"];
   errorColumn?: string;
+  onToggleCellExpansion?: OnToggleCellExpansionHandler;
 }) {
   const { t } = useTranslation();
 
@@ -293,12 +293,17 @@ export function DataTableRows({
       expandedCell?.rowId === rowId
         ? columns.find((col) => col.name === expandedCell.columnName)
         : undefined;
+    const isExpandedRow = !!expandedColumn;
 
     return (
       <React.Fragment key={row.id}>
         <TableRow
           data-state={row.getIsSelected() && "selected"}
-          className={cn("", hasError && "border-l-destructive bg-destructive/5 border-l-2")}
+          className={cn(
+            "",
+            hasError && "border-l-destructive bg-destructive/5 border-l-2",
+            isExpandedRow && "border-l-status-active-foreground bg-status-active/20 border-l-2",
+          )}
         >
           {row.getVisibleCells().map((cell, cellIndex) => (
             <TableCell
@@ -321,6 +326,7 @@ export function DataTableRows({
             columnName={expandedColumn.name}
             columnType={expandedColumn.type_text}
             cellData={row.original[expandedColumn.name]}
+            onClose={() => onToggleCellExpansion?.(rowId, expandedColumn.name)}
           />
         )}
       </React.Fragment>

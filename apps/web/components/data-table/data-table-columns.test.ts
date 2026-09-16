@@ -147,7 +147,6 @@ describe("createTableColumns", () => {
       undefined,
       undefined,
       undefined,
-      undefined,
     );
   });
 

@@ -1,5 +1,5 @@
 import { render, userEvent, within } from "@/test/test-utils";
-import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import { DataTableChartCell } from "./data-table-chart-cell";
 
@@ -94,51 +94,33 @@ describe("DataTableChartCell", () => {
     expect(root).toHaveClass("relative");
   });
 
-  describe("click → scrollIntoView", () => {
-    // Real DOM element with the id the component reads; scrollIntoView is
-    // globally stubbed in setup.ts so we assert against its call args.
-    let chartTarget: HTMLDivElement;
-
-    beforeEach(() => {
-      vi.useFakeTimers({ shouldAdvanceTime: true });
-      chartTarget = document.createElement("div");
-      chartTarget.id = "experiment-data-chart";
-      document.body.appendChild(chartTarget);
+  it("calls onToggleExpansion with the row id and column name when clicked", async () => {
+    const onToggleExpansion = vi.fn();
+    const { root } = renderCell({
+      data: mockData,
+      columnName: mockColumnName,
+      rowId: mockRowId,
+      onToggleExpansion,
     });
 
-    afterEach(() => {
-      chartTarget.remove();
-      vi.useRealTimers();
+    const user = userEvent.setup();
+    await user.click(root);
+
+    expect(onToggleExpansion).toHaveBeenCalledWith(mockRowId, mockColumnName);
+  });
+
+  it("doesn't call onToggleExpansion when the cell is the empty-state branch", async () => {
+    const onToggleExpansion = vi.fn();
+    const { scoped } = renderCell({
+      data: [],
+      columnName: mockColumnName,
+      rowId: mockRowId,
+      onToggleExpansion,
     });
 
-    it("scrolls the chart into view on click and forwards data, columnName, and rowId", async () => {
-      const onClick = vi.fn();
-      const { root } = renderCell({
-        data: mockData,
-        columnName: mockColumnName,
-        rowId: mockRowId,
-        onClick,
-      });
+    const user = userEvent.setup();
+    await user.click(scoped.getByText("No data"));
 
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
-      await user.click(root);
-      vi.advanceTimersByTime(100);
-
-      expect(onClick).toHaveBeenCalledWith(mockData, mockColumnName, mockRowId);
-      expect(chartTarget.scrollIntoView).toHaveBeenCalledWith({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
-
-    it("doesn't scroll when the cell is the empty-state branch", async () => {
-      const { scoped } = renderCell({ data: [], columnName: mockColumnName, rowId: mockRowId });
-
-      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
-      await user.click(scoped.getByText("No data"));
-      vi.advanceTimersByTime(100);
-
-      expect(chartTarget.scrollIntoView).not.toHaveBeenCalled();
-    });
+    expect(onToggleExpansion).not.toHaveBeenCalled();
   });
 });
