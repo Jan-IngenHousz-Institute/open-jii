@@ -9,7 +9,6 @@ interface ChartExpandedContentProps {
   columnName: string;
 }
 
-// Expanded content component for rendering the full trace chart in a table row
 export function ChartExpandedContent({ data, columnName }: ChartExpandedContentProps) {
   const parsedData = parseNumericArray(data);
 
