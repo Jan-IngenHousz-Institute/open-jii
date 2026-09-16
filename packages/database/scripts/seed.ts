@@ -1029,11 +1029,14 @@ else:
     submit({"spec": rejected, "par": rejected})
 `;
 
-  // Eleven coefficients are fitted, so the sweep has to determine eleven parameters. The
-  // bench does that by varying the light and recording as it goes, appending readings
-  // across a session rather than taking one per filter, so each filter is read at more
-  // than one level here. Two is the minimum that clears the parameter count with margin;
-  // the number of levels is the one thing here that should come from their own practice.
+  /**
+   * The eleven filters the bench's own readings were taken through. Ten channel
+   * coefficients and an intercept are fitted from them, which eleven distinct spectra
+   * cannot determine: the fit is rejected for conditioning, and sampling each filter at
+   * more light levels does not help, because brightness moves along a spectrum rather
+   * than adding a new one. What would help is more distinct sources, which is a question
+   * about the optics on the bench.
+   */
   const spectralFilters = [
     "no filter",
     "filter e002",
@@ -1048,13 +1051,7 @@ else:
     "filter e017",
   ];
 
-  const spectralSweepPoints = [
-    ...spectralFilters.flatMap((filter) => [
-      { filter, light: "bright" },
-      { filter, light: "dim" },
-    ]),
-    { filter: "the dark cap", light: "off" },
-  ];
+  const spectralSweepPoints = [...spectralFilters, "the dark cap"];
 
   const miniparSpectralOutputSchema = {
     blocks: {
@@ -1312,7 +1309,7 @@ submit(blocks)
             series: "spec_sweep",
             stimulus: {
               operator:
-                "Cover both sensors with {value.filter} and set the lamp {value.light}, then wait for the readings to settle before continuing.",
+                "Cover both sensors with {value}, then wait for the readings to settle before continuing.",
               values: spectralSweepPoints,
             },
             settleMs: 1000,
@@ -1339,7 +1336,7 @@ submit(blocks)
             series: "spec_check",
             stimulus: {
               operator:
-                "Cover both sensors with {value.filter} and set the lamp {value.light}, then wait for the readings to settle before continuing.",
+                "Cover both sensors with {value}, then wait for the readings to settle before continuing.",
               values: ["no filter", "filter e004", "the dark cap"],
             },
             settleMs: 1000,
