@@ -124,8 +124,9 @@ describe("formatValue", () => {
   });
 
   it("renders chart cell for numeric array types", () => {
-    const result = formatValue("[1.5, 2.3]", "ARRAY<DOUBLE>", "row-1", "col", vi.fn());
-    expect(React.isValidElement(result)).toBe(true);
+    const result = formatValue("[1.5, 2.3]", "ARRAY<DOUBLE>", "row-1", "col");
+    render(<div>{result}</div>);
+    expect(screen.getByText("chart:[1.5, 2.3]")).toBeInTheDocument();
   });
 
   it("renders annotations cell for annotation struct type", () => {
@@ -135,7 +136,6 @@ describe("formatValue", () => {
       "ARRAY<STRUCT<id: STRING, rowId: STRING, type: STRING, content: STRUCT<text: STRING, flagType: STRING>, createdBy: STRING, createdByName: STRING, createdAt: TIMESTAMP, updatedAt: TIMESTAMP>>",
       "row-1",
       "annotations",
-      undefined,
       vi.fn(),
       vi.fn(),
     );
