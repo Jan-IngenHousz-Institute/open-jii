@@ -18,6 +18,36 @@ MAX_MONOTONIC_REVERSAL = 0.02
 # is what shows it. A real bench fit of this model sits around 650; a fit with one degree of
 # freedom left sits in the thousands.
 MAX_CONDITION_NUMBER = 1000.0
+# A bench sweep is a handful of points. The cap only stops a pathological run putting a
+# megabyte of residuals into a record that is read back with every run.
+MAX_REPORTED_RESIDUALS = 200
+
+
+def _residual_report(residual, y_span, labels=None):
+    """Per-point residuals, in the order the caller passed its points.
+
+    A reviewer can see that a fit is poor from the summary numbers, but not which reading
+    made it poor. The index is only meaningful within what the caller fitted, which may be
+    a subset of a stored series, so the worst point is also named by its setpoint where
+    the caller supplied one.
+    """
+    usable = bool(residual) and all(math.isfinite(value) for value in residual)
+    truncated = len(residual) > MAX_REPORTED_RESIDUALS
+    worst = (
+        max(range(len(residual)), key=lambda index: abs(residual[index])) if usable else None
+    )
+    return {
+        "residuals": residual if usable and not truncated else [],
+        "residuals_truncated": usable and truncated,
+        "worst_index": worst,
+        "worst_residual": residual[worst] if worst is not None else math.nan,
+        "worst_residual_fraction": (
+            abs(residual[worst]) / y_span if worst is not None and y_span > 0 else math.inf
+        ),
+        "worst_stimulus": (
+            labels[worst] if worst is not None and labels and worst < len(labels) else None
+        ),
+    }
 
 
 def assess_origin_fit(x_values, y_values, stimulus, *, coefficient_min, coefficient_max):
@@ -114,6 +144,7 @@ def assess_origin_fit(x_values, y_values, stimulus, *, coefficient_min, coeffici
         "free_slope": free_slope,
         "free_intercept": free_intercept,
         "free_intercept_fraction": intercept_fraction,
+        **_residual_report(residual, y_span, drive),
         "thresholds": {
             "coefficient_min": coefficient_min,
             "coefficient_max": coefficient_max,
@@ -218,6 +249,7 @@ def assess_linear_fit(
         "nrmse": nrmse,
         "max_residual_fraction": max_residual_fraction,
         "points": len(x),
+        **_residual_report(residual, y_span, drive),
         "thresholds": {
             "min_r2": MIN_R2,
             "max_nrmse": MAX_NRMSE,
@@ -233,6 +265,7 @@ def assess_linear_fit(
 def assess_multilinear_fit(
     rows,
     y_values,
+    stimulus=None,
     *,
     coefficient_min=-math.inf,
     coefficient_max=math.inf,
@@ -341,6 +374,7 @@ def assess_multilinear_fit(
         "rank": rank,
         "points": len(x),
         "channels": channels,
+        **_residual_report(residual, y_span, stimulus),
         "thresholds": {
             "min_r2": MIN_R2,
             "max_nrmse": MAX_NRMSE,

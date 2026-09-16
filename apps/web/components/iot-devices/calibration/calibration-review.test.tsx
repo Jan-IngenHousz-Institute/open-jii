@@ -90,6 +90,48 @@ describe("CalibrationReview", () => {
     expect(props.onReject).toHaveBeenCalledTimes(1);
   });
 
+  // R-squared says a fit is poor without saying which reading made it poor, which is the
+  // one thing an operator can act on at the bench.
+  it("names the reading furthest from the fit, by the setpoint that produced it", () => {
+    renderReview({
+      run: createCalibrationRun({
+        blocks: {
+          par: {
+            status: "computed",
+            coefficients: { slope: 0.96 },
+            quality: {
+              passed: false,
+              reasons: [],
+              worst_index: 2,
+              worst_stimulus: "dim",
+              worst_residual_fraction: 0.1342,
+            },
+          },
+        },
+      }),
+    });
+
+    expect(screen.getByText("iot.calibration.review.worstPoint")).toBeInTheDocument();
+  });
+
+  // Saying "furthest reading" with nothing to name would send the operator looking for a
+  // row that the record cannot identify.
+  it("says nothing about a furthest reading when the fit named none", () => {
+    renderReview({
+      run: createCalibrationRun({
+        blocks: {
+          par: {
+            status: "computed",
+            coefficients: { slope: 0.96 },
+            quality: { passed: true, reasons: [], worst_index: null, worst_stimulus: null },
+          },
+        },
+      }),
+    });
+
+    expect(screen.queryByText("iot.calibration.review.worstPoint")).toBeNull();
+  });
+
   // A block can compute and still fail its own quality gates; the reviewer
   // needs the gate's reasons in front of the approve button.
   it("lists the quality reasons of a computed block that failed its gates", () => {

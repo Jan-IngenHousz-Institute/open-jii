@@ -994,6 +994,7 @@ points = inputs["spec_sweep"]
 fit = assess_multilinear_fit(
     [channel_counts(line) for line in points["spec"]],
     points["par_ref"],
+    list(points["stimulus"]),
     intercept_min=-100.0,
     intercept_max=100.0,
 )

@@ -37,6 +37,15 @@ export function CalibrationBlockCard({ name, block, previous }: CalibrationBlock
   const reasons = Array.isArray(quality?.reasons) ? quality.reasons.map(String) : [];
   const r2 = typeof quality?.r2 === "number" ? quality.r2 : null;
   const nrmse = typeof quality?.nrmse === "number" ? quality.nrmse : null;
+  // Which reading made the fit poor, named by the setpoint that produced it. The index is
+  // only meaningful inside what the script fitted, which can be a subset of a series.
+  const worstStimulus = quality?.worst_stimulus;
+  const worstFraction =
+    typeof quality?.worst_residual_fraction === "number" ? quality.worst_residual_fraction : null;
+  const hasWorstPoint =
+    worstFraction !== null &&
+    Number.isFinite(worstFraction) &&
+    (typeof worstStimulus === "number" || typeof worstStimulus === "string");
   const hasComparison = previous !== null;
 
   function renderCoefficient([coefficient, value]: [string, number | number[]]) {
@@ -74,6 +83,14 @@ export function CalibrationBlockCard({ name, block, previous }: CalibrationBlock
             <span>{t("iot.calibration.review.nrmse", { value: (nrmse * 100).toFixed(2) })}</span>
           )}
         </p>
+        {hasWorstPoint && (
+          <p className="text-muted-foreground">
+            {t("iot.calibration.review.worstPoint", {
+              stimulus: String(worstStimulus),
+              percent: (worstFraction * 100).toFixed(2),
+            })}
+          </p>
+        )}
         {reasons.length > 0 && (
           <ul className="text-destructive list-disc pl-4">
             {reasons.map((reason) => (

@@ -219,3 +219,74 @@ class AssessMultilinearFitTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ResidualReportTest(unittest.TestCase):
+    """The summary numbers say a fit is poor; the residuals say which reading made it so."""
+
+    def test_clean_sweep_reports_one_residual_per_point(self):
+        record = assess_origin_fit(CLEAN_X, CLEAN_Y, CLEAN_DRIVE, **BOUNDS)
+        self.assertEqual(len(record["residuals"]), len(CLEAN_X))
+        self.assertFalse(record["residuals_truncated"])
+        self.assertLess(abs(record["worst_residual_fraction"]), 0.10)
+
+    def test_one_bad_reading_is_named(self):
+        spoiled = list(CLEAN_Y)
+        spoiled[3] = spoiled[3] * 1.4
+        record = assess_origin_fit(CLEAN_X, spoiled, CLEAN_DRIVE, **BOUNDS)
+        self.assertEqual(record["worst_index"], 3)
+        self.assertGreater(abs(record["worst_residual"]), 0.0)
+
+    def test_linear_fit_names_the_reading_that_dragged_it(self):
+        spoiled = list(CLEAN_Y)
+        spoiled[1] = spoiled[1] + 300.0
+        record = assess_linear_fit(
+            CLEAN_X, spoiled, CLEAN_DRIVE, slope_min=0.05, slope_max=100.0
+        )
+        self.assertEqual(record["worst_index"], 1)
+
+    # Enough points that the outlier cannot simply pull the fit onto itself: with only as
+    # many points as parameters its leverage hides it, and the largest residual lands
+    # somewhere innocent.
+    def test_multilinear_fit_names_the_reading_that_dragged_it(self):
+        rows = [
+            [1.0, 0.0], [0.0, 1.0], [2.0, 1.0], [1.0, 2.0], [3.0, 1.0],
+            [1.0, 3.0], [2.0, 2.0], [4.0, 1.0], [1.0, 4.0], [3.0, 3.0],
+        ]
+        y = [2.0 * a + 3.0 * b + 1.0 for a, b in rows]
+        y[3] += 50.0
+        record = assess_multilinear_fit(rows, y)
+        self.assertEqual(record["worst_index"], 3)
+        self.assertEqual(len(record["residuals"]), len(rows))
+
+    def test_non_finite_residuals_report_none(self):
+        record = assess_origin_fit(
+            [float("inf"), *CLEAN_X[1:]], CLEAN_Y, CLEAN_DRIVE, **BOUNDS
+        )
+        self.assertEqual(record["residuals"], [])
+        self.assertIsNone(record["worst_index"])
+
+
+class WorstStimulusTest(unittest.TestCase):
+    """The index is only meaningful inside the fitted set; the setpoint names the reading."""
+
+    def test_origin_fit_names_the_setpoint(self):
+        spoiled = list(CLEAN_Y)
+        spoiled[3] = spoiled[3] * 1.4
+        record = assess_origin_fit(CLEAN_X, spoiled, CLEAN_DRIVE, **BOUNDS)
+        self.assertEqual(record["worst_stimulus"], CLEAN_DRIVE[3])
+
+    def test_multilinear_fit_names_a_non_numeric_setpoint(self):
+        rows = [
+            [1.0, 0.0], [0.0, 1.0], [2.0, 1.0], [1.0, 2.0], [3.0, 1.0],
+            [1.0, 3.0], [2.0, 2.0], [4.0, 1.0], [1.0, 4.0], [3.0, 3.0],
+        ]
+        y = [2.0 * a + 3.0 * b + 1.0 for a, b in rows]
+        y[3] += 50.0
+        filters = [f"filter e{index:03d}" for index in range(len(rows))]
+        record = assess_multilinear_fit(rows, y, filters)
+        self.assertEqual(record["worst_stimulus"], "filter e003")
+
+    def test_setpoint_is_absent_when_the_caller_gave_none(self):
+        record = assess_linear_fit(CLEAN_X, CLEAN_Y, slope_min=0.05, slope_max=100.0)
+        self.assertIsNone(record["worst_stimulus"])

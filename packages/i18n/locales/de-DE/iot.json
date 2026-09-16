@@ -868,6 +868,7 @@
         "failed": "Qualitätsprüfung nicht bestanden",
         "r2": "R² {{value}}",
         "nrmse": "NRMSE {{value}} %",
+        "worstPoint": "Größte Abweichung bei {{stimulus}}: {{percent}}% des Messbereichs",
         "points": "Erfasste Punkte",
         "fitLine": "Angepasste Gerade",
         "xLabel": "Gerätemesswert",

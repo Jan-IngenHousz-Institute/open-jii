@@ -868,6 +868,7 @@
         "failed": "Quality gates failed",
         "r2": "R² {{value}}",
         "nrmse": "NRMSE {{value}}%",
+        "worstPoint": "Furthest reading at {{stimulus}}, off by {{percent}}% of range",
         "points": "Captured points",
         "fitLine": "Fitted line",
         "xLabel": "Device reading",
