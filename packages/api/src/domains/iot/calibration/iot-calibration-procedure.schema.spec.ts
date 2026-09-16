@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   procedureSeriesNames,
   requiredProcedureSeriesNames,
+  acceptedSeriesNames,
+  acceptedVerificationSeriesNames,
   verificationSeriesNames,
   zCaptureProcedure,
 } from "./iot-calibration-procedure.schema";
@@ -257,6 +259,27 @@ describe("zCaptureProcedure", () => {
       expect(verificationSeriesNames(parsed)).toEqual(["par_check"]);
       expect(procedureSeriesNames(parsed)).toEqual(["par_sweep"]);
       expect(verificationSeriesNames(zCaptureProcedure.parse(manualMiniparProcedure))).toEqual([]);
+    });
+
+    // Both phases retake readings, so both allow-lists must carry the companions.
+    it("accepts the retaken companion of every declared series, in both phases", () => {
+      const parsed = zCaptureProcedure.parse(automatedMiniparProcedure);
+      expect(acceptedSeriesNames(parsed)).toEqual(["par_sweep", "par_sweep_retaken"]);
+      expect(acceptedVerificationSeriesNames(parsed)).toEqual(["par_check", "par_check_retaken"]);
+    });
+
+    // A step declaring such a name would silently absorb another step's discarded rows
+    // and feed them to the fit as real data.
+    it("refuses a declared series named like a retaken one", () => {
+      const procedure = {
+        ...automatedMiniparProcedure,
+        steps: automatedMiniparProcedure.steps.map((step) =>
+          "series" in step ? { ...step, series: "par_sweep_retaken" } : step,
+        ),
+      };
+
+      const parsed = zCaptureProcedure.safeParse(procedure);
+      expect(parsed.success).toBe(false);
     });
 
     // A bench without the Emit_LED MiniPAR and without the dark fixture still

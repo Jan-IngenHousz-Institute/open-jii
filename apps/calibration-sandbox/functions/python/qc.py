@@ -31,6 +31,9 @@ def _residual_report(residual, y_span, labels=None):
     a subset of a stored series, so the worst point is also named by its setpoint where
     the caller supplied one.
     """
+    # A caller may hand this a DataFrame column rather than a list. The truth of a pandas
+    # Series is an error rather than a length, and indexing one goes by label, not position.
+    setpoints = None if labels is None else list(labels)
     usable = bool(residual) and all(math.isfinite(value) for value in residual)
     truncated = len(residual) > MAX_REPORTED_RESIDUALS
     worst = (
@@ -45,7 +48,9 @@ def _residual_report(residual, y_span, labels=None):
             abs(residual[worst]) / y_span if worst is not None and y_span > 0 else math.inf
         ),
         "worst_stimulus": (
-            labels[worst] if worst is not None and labels and worst < len(labels) else None
+            setpoints[worst]
+            if worst is not None and setpoints is not None and worst < len(setpoints)
+            else None
         ),
     }
 

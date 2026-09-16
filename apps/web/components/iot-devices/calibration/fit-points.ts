@@ -1,3 +1,4 @@
+import { RETAKEN_SERIES_SUFFIX } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 import type {
   CalibrationBlocks,
   CalibrationRunPayload,
@@ -8,9 +9,16 @@ import type { FitPoint } from "./calibration-fit-chart";
 /**
  * Read off the captured series by convention: the first two numeric columns of the
  * first series, device first and reference second.
+ *
+ * Readings the operator took again are skipped. A retake at the first setpoint puts the
+ * discarded rows into the payload before the kept ones, so charting the first series
+ * positionally would show the approver exactly the readings that were thrown away.
  */
 export function fitPointsFromPayload(payload: CalibrationRunPayload): FitPoint[] {
-  const series = Object.values(payload).at(0);
+  const series = Object.entries(payload)
+    .filter(([name]) => !name.endsWith(RETAKEN_SERIES_SUFFIX))
+    .map(([, rows]) => rows)
+    .at(0);
   const first = series?.at(0);
   if (series === undefined || first === undefined) return [];
 

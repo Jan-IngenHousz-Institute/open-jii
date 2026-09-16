@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { verificationSeriesNames } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
+import { acceptedVerificationSeriesNames } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 import type { ReportDeviceCalibrationWriteBody } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
@@ -102,7 +102,7 @@ export class ReportDeviceCalibrationWriteUseCase {
       return failure(AppError.notFound("Calibration definition not found"));
     }
 
-    const known = new Set(verificationSeriesNames(definition.value.captureProcedure));
+    const known = new Set(acceptedVerificationSeriesNames(definition.value.captureProcedure));
     const unexpected = Object.keys(verification).filter((name) => !known.has(name));
     if (unexpected.length > 0) {
       return failure(

@@ -32,6 +32,24 @@ describe("fitPointsFromPayload", () => {
   it("has nothing to plot for an empty payload", () => {
     expect(fitPointsFromPayload({})).toEqual([]);
   });
+
+  // A retake at the first setpoint puts the discarded rows into the payload BEFORE the
+  // kept ones, so charting the first series positionally showed the approver exactly the
+  // readings that were thrown away.
+  it("charts the kept readings, not the ones the operator took again", () => {
+    const points = fitPointsFromPayload({
+      par_sweep_retaken: [{ stimulus: "bright", par_raw: 999, par_ref: 402.12 }],
+      par_sweep: [
+        { stimulus: "bright", par_raw: 420, par_ref: 402.12 },
+        { stimulus: "dim", par_raw: 8.33, par_ref: 6.92 },
+      ],
+    });
+
+    expect(points).toEqual([
+      { x: 420, y: 402.12 },
+      { x: 8.33, y: 6.92 },
+    ]);
+  });
 });
 
 describe("fitLineFromCoefficients", () => {

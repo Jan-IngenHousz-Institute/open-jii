@@ -193,6 +193,25 @@ describe("ReportDeviceCalibrationWriteUseCase", () => {
     expect(result.error.message).toContain("par_sweep");
   });
 
+  // The verify phase retakes readings exactly as the capture phase does. Refusing the
+  // companion series loses the whole report, and with it the record that coefficients
+  // reached the device.
+  it("accepts a check reading the operator took again", async () => {
+    const result = await useCase.execute(
+      {
+        calibrationId,
+        writeResults: { par: { verified: true } },
+        verification: {
+          par_check: [{ par: 200, par_ref: 200 }],
+          par_check_retaken: [{ par: 13.7, par_ref: 200 }],
+        },
+      },
+      userId,
+    );
+
+    assertSuccess(result);
+  });
+
   it("refuses results naming a block this calibration did not apply", async () => {
     const result = await useCase.execute(
       { calibrationId, writeResults: { led: { verified: true } } },

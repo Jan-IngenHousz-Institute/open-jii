@@ -250,6 +250,16 @@ export const zCaptureProcedure = z
             path: [phase, stepIndex, "series"],
           });
         }
+        // Readings the operator took again are kept under this suffix, so a declared
+        // series ending in it would absorb another step's discarded rows and feed them
+        // to the fit as real data.
+        if (step.series.endsWith(RETAKEN_SERIES_SUFFIX)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `A series name may not end in "${RETAKEN_SERIES_SUFFIX}"; that names the readings a step's operator took again`,
+            path: [phase, stepIndex, "series"],
+          });
+        }
         seriesNames.add(step.series);
 
         const isSweep = step.kind === "sweep";
@@ -396,6 +406,14 @@ export function verificationSeriesNames(procedure: CaptureProcedure): string[] {
     }
   }
   return names;
+}
+
+/** The verify phase retakes readings like the capture phase does, and reports them the same way. */
+export function acceptedVerificationSeriesNames(procedure: CaptureProcedure): string[] {
+  return verificationSeriesNames(procedure).flatMap((name) => [
+    name,
+    `${name}${RETAKEN_SERIES_SUFFIX}`,
+  ]);
 }
 
 export type RigInstrument = z.infer<typeof zRigInstrument>;
