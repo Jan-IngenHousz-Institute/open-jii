@@ -16,20 +16,16 @@ describe("local login", () => {
           ],
         }),
       );
-    const writes: string[] = [];
-
     await expect(
       loginLocal("seed@openjii.local", {
         root: "/repo",
         env: { DATABASE_URL: "postgres://localhost/openjii" },
         request,
         readOtp: () => Promise.resolve("123456"),
-        write: (text) => writes.push(text),
       }),
     ).resolves.toBe("better-auth.session_token=signed");
 
     expect(request).toHaveBeenCalledTimes(2);
-    expect(writes).toEqual(["better-auth.session_token=signed\n"]);
   });
 
   it("aborts an authentication request that exceeds its deadline", async () => {
@@ -48,7 +44,6 @@ describe("local login", () => {
         request,
         requestTimeoutMs: 1,
         readOtp: () => Promise.resolve("123456"),
-        write: () => undefined,
       }),
     ).rejects.toThrow(
       "Authentication request timed out after 1 ms: " +
