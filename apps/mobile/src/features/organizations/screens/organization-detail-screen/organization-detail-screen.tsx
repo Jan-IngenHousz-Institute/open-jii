@@ -16,6 +16,7 @@ import type { SupportedLocale } from "~/shared/i18n";
 import { useTranslation } from "~/shared/i18n";
 import { showAlert } from "~/shared/ui/AlertDialog";
 import { Avatar } from "~/shared/ui/Avatar";
+import { Button } from "~/shared/ui/Button";
 import { Card } from "~/shared/ui/Card";
 import { Tag } from "~/shared/ui/Tag";
 import { cn } from "~/shared/ui/cn";
@@ -34,7 +35,7 @@ export function OrganizationDetailScreen() {
   const navigation = useNavigation();
   const themeColors = useThemeColors();
   const { t, i18n } = useTranslation(["common", "organizations"]);
-  const { organization, isLoading, error, isNotFound } = useOrganization(id);
+  const { organization, isLoading, isPaused, error, isNotFound, refetch } = useOrganization(id);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -56,6 +57,17 @@ export function OrganizationDetailScreen() {
   // stays readable offline.
   if (isNotFound || (!organization && error)) {
     return <OrganizationUnavailable />;
+  }
+
+  // Paused means offlineFirst gave up before the network with nothing cached,
+  // so there is no error and the spinner would never end.
+  if (!organization && isPaused) {
+    return (
+      <View className="flex-1 items-center gap-3 px-6 py-16">
+        <Text className="text-error text-center">{t("organizations:detail.offline")}</Text>
+        <Button title={t("common:retry")} onPress={() => void refetch()} variant="light" />
+      </View>
+    );
   }
 
   if (isLoading || !organization) {
@@ -82,10 +94,11 @@ export function OrganizationDetailScreen() {
   const website = resolveOrganizationWebsite(organization.website);
   const openWebsite = async () => {
     if (!website?.href) return;
-    const canOpen = await Linking.canOpenURL(website.href);
-    if (canOpen) {
+    try {
+      const canOpen = await Linking.canOpenURL(website.href);
+      if (!canOpen) throw new Error("cannot open");
       await Linking.openURL(website.href);
-    } else {
+    } catch {
       showAlert(t("common:errorTitle"), t("organizations:detail.websiteUnavailable"));
     }
   };

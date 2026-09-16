@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react-native";
 import React from "react";
-import { TouchableOpacity } from "react-native";
+import { TextInput, TouchableOpacity } from "react-native";
 import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -106,6 +106,14 @@ describe("JoinRequestSheet", () => {
 
     expect(buttonStates(UNSAFE_queryAllByType).send).toBe(false);
     expect(queryByText("You're offline. Reconnect to send this.")).toBeNull();
+  });
+
+  it("gives the message box an accessible name", () => {
+    const { UNSAFE_getAllByType } = renderSheet();
+    const input = UNSAFE_getAllByType(TextInput)[0];
+
+    expect(input?.props.accessibilityLabel).toBe("Optional message");
+    expect(input?.props.placeholder).toBe("Tell them who you are");
   });
 
   it("disables both buttons while a request is in flight", () => {

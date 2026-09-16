@@ -9,6 +9,7 @@
   "empty": "No organizations yet",
   "loading": "Loading organizations…",
   "loadFailed": "Could not load organizations.",
+  "offline": "You're offline. Connect to load organizations.",
   "openOnWeb": "Open on web platform",
   "openOnWebUnavailable": "Couldn't open the web platform.",
   "type": {
@@ -29,6 +30,7 @@
     "member": "Member"
   },
   "detail": {
+    "offline": "You're offline. Connect to load this organization.",
     "title": "Organization",
     "members_one": "member",
     "members_other": "members",

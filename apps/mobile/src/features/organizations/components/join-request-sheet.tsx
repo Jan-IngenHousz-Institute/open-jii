@@ -81,6 +81,7 @@ export const JoinRequestSheet = forwardRef<BottomSheetModal, JoinRequestSheetPro
               value={message}
               onChangeText={setMessage}
               placeholder={t("organizations:join.messagePlaceholder")}
+              accessibilityLabel={t("organizations:join.sheetHint")}
               multiline
               numberOfLines={4}
               maxLength={JOIN_MESSAGE_MAX_LENGTH}

@@ -8,7 +8,7 @@ interface UseOrganizationDirectoryArgs {
 export function useOrganizationDirectory({ search }: UseOrganizationDirectoryArgs = {}) {
   const trimmed = search?.trim() ?? "";
 
-  const { data, isLoading, isFetching, error, refetch, isRefetching } = useQuery(
+  const { data, isLoading, isFetching, isPaused, error, refetch, isRefetching } = useQuery(
     orpc.organizations.listOrganizations.queryOptions({
       // An empty search must be `undefined`, not `""`: the two mean the same
       // thing but are different cache keys, and Home shares the unfiltered one.
@@ -27,6 +27,9 @@ export function useOrganizationDirectory({ search }: UseOrganizationDirectoryArg
     organizations: data?.organizations,
     isLoading,
     isFetching,
+    // Paused means offlineFirst gave up before reaching the network: no data and
+    // no error either, so it is not a failure to report as one.
+    isPaused,
     error,
     refetch,
     isRefetching,

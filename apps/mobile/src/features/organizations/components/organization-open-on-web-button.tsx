@@ -22,10 +22,11 @@ export function OrganizationOpenOnWebButton({
 
   const openOnWeb = async () => {
     const url = `${getEnvVar("NEXT_AUTH_URI")}/en-US/platform/organizations/${organizationId}`;
-    const canOpen = await Linking.canOpenURL(url);
-    if (canOpen) {
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (!canOpen) throw new Error("cannot open");
       await Linking.openURL(url);
-    } else {
+    } catch {
       showAlert(t("common:errorTitle"), t("organizations:openOnWebUnavailable"));
     }
   };

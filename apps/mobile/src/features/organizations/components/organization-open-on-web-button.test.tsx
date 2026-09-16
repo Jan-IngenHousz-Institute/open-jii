@@ -67,6 +67,31 @@ describe("OrganizationOpenOnWebButton", () => {
     expect(openURL).not.toHaveBeenCalled();
   });
 
+  it("explains itself when opening the link rejects rather than returning false", async () => {
+    openURL.mockRejectedValue(new Error("no activity found"));
+
+    render(<OrganizationOpenOnWebButton organizationId={ORG_ID} />);
+
+    fireEvent.press(screen.getByLabelText("Open on web platform"));
+
+    await vi.waitFor(() =>
+      expect(mockShowAlert).toHaveBeenCalledWith("Error", "Couldn't open the web platform."),
+    );
+  });
+
+  it("explains itself when the reachability check itself rejects", async () => {
+    canOpenURL.mockRejectedValue(new Error("bad url"));
+
+    render(<OrganizationOpenOnWebButton organizationId={ORG_ID} />);
+
+    fireEvent.press(screen.getByLabelText("Open on web platform"));
+
+    await vi.waitFor(() =>
+      expect(mockShowAlert).toHaveBeenCalledWith("Error", "Couldn't open the web platform."),
+    );
+    expect(openURL).not.toHaveBeenCalled();
+  });
+
   it("carries an accessible label, since it renders as a bare icon", () => {
     render(<OrganizationOpenOnWebButton organizationId={ORG_ID} />);
 

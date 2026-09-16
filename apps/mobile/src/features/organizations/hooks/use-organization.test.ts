@@ -57,6 +57,13 @@ describe("useOrganization", () => {
     expect(mockGetOrganization).toHaveBeenCalledWith({ id: "org-1" });
   });
 
+  it("reports isPaused so the screen can tell offline from loading", async () => {
+    const { result } = renderHook(() => useOrganization("org-1"), { wrapper });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.isPaused).toBe(false);
+  });
+
   it("does not fetch without an id", () => {
     renderHook(() => useOrganization(undefined), { wrapper });
 

@@ -120,6 +120,13 @@ describe("useOrganizationDirectory", () => {
     await waitFor(() => expect(result.current.organizations?.map((o) => o.id)).toEqual(["2"]));
   });
 
+  it("reports isPaused so the screen can tell offline from failed", async () => {
+    const { result } = renderHook(() => useOrganizationDirectory(), { wrapper });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.isPaused).toBe(false);
+  });
+
   it("leaves organizations undefined when no response has arrived", async () => {
     mockListOrganizations.mockRejectedValue(new Error("offline"));
 

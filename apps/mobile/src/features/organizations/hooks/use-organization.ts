@@ -7,7 +7,7 @@ function isNotFoundError(error: unknown): boolean {
 }
 
 export function useOrganization(id: string | undefined) {
-  const { data, isLoading, error, refetch, isRefetching } = useQuery(
+  const { data, isLoading, isPaused, error, refetch, isRefetching } = useQuery(
     orpc.organizations.getOrganization.queryOptions({
       input: { id: id ?? "" },
       enabled: !!id,
@@ -24,6 +24,7 @@ export function useOrganization(id: string | undefined) {
   return {
     organization: data,
     isLoading,
+    isPaused,
     error,
     // TanStack keeps the last good `data` when a refetch fails, so callers must
     // check this before trusting `organization`.

@@ -9,6 +9,7 @@
   "empty": "Nog geen organisaties",
   "loading": "Organisaties laden…",
   "loadFailed": "Organisaties konden niet worden geladen.",
+  "offline": "Je bent offline. Maak verbinding om organisaties te laden.",
   "openOnWeb": "Openen op het webplatform",
   "openOnWebUnavailable": "Het webplatform kon niet worden geopend.",
   "type": {
@@ -29,13 +30,14 @@
     "member": "Lid"
   },
   "detail": {
+    "offline": "Je bent offline. Maak verbinding om deze organisatie te laden.",
     "title": "Organisatie",
     "members_one": "lid",
     "members_other": "leden",
-    "resources_one": "resource",
-    "resources_other": "resources",
-    "resourcesVisible_one": "voor jou zichtbare resource",
-    "resourcesVisible_other": "voor jou zichtbare resources",
+    "resources_one": "hulpbron",
+    "resources_other": "hulpbronnen",
+    "resourcesVisible_one": "hulpbron zichtbaar voor jou",
+    "resourcesVisible_other": "hulpbronnen zichtbaar voor jou",
     "noDescription": "Deze organisatie heeft zichzelf nog niet beschreven.",
     "website": "Website",
     "websiteUnavailable": "Deze website kon niet worden geopend.",

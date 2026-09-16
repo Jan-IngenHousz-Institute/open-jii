@@ -17,6 +17,7 @@ import {
 } from "~/features/organizations/hooks/use-debounced-value";
 import { useOrganizationDirectory } from "~/features/organizations/hooks/use-organization-directory";
 import { useTranslation } from "~/shared/i18n";
+import { Button } from "~/shared/ui/Button";
 import { Input } from "~/shared/ui/Input";
 import { Tag } from "~/shared/ui/Tag";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
@@ -24,11 +25,11 @@ import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 export function OrganizationsDirectoryScreen() {
   const themeColors = useThemeColors();
   const navigation = useNavigation();
-  const { t } = useTranslation("organizations");
+  const { t } = useTranslation(["organizations", "common"]);
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
-  const { organizations, isLoading, isFetching, error, refetch, isRefetching } =
+  const { organizations, isLoading, isFetching, isPaused, error, refetch, isRefetching } =
     useOrganizationDirectory({ search: debouncedSearch });
 
   useLayoutEffect(() => {
@@ -79,8 +80,13 @@ export function OrganizationsDirectoryScreen() {
           <Text className="text-muted-body mt-3 text-center">{t("loading")}</Text>
         </View>
       ) : !organizations || (error && organizations.length === 0) ? (
-        <View className="items-center py-10">
-          <Text className="text-error text-center">{t("loadFailed")}</Text>
+        <View className="items-center gap-3 py-10">
+          {/* Paused means offlineFirst gave up before the network, so there is
+              no error to report as one. */}
+          <Text className="text-error text-center">
+            {t(isPaused && !error ? "offline" : "loadFailed")}
+          </Text>
+          <Button title={t("common:retry")} onPress={() => void refetch()} variant="light" />
         </View>
       ) : (
         <FlatList
