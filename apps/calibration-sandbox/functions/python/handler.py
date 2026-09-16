@@ -225,7 +225,11 @@ def _run_script_in_subprocess(payload):
                 # least of all its credentials.
                 env={
                     "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
-                    "HOME": "/tmp",
+                    # Both point at the directory this run is torn down with, so a script
+                    # that writes a temp file or a cache cannot leave it for the next
+                    # tenant on a warm container.
+                    "HOME": workdir,
+                    "TMPDIR": workdir,
                     "PYTHONPATH": os.path.dirname(RUNNER_PATH),
                     "PYTHONDONTWRITEBYTECODE": "1",
                 },

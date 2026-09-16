@@ -89,6 +89,41 @@ class IsolationTest(unittest.TestCase):
         self.assertEqual(after["blocks"]["par"]["status"], "rejected")
         self.assertFalse(after["blocks"]["par"]["quality"]["passed"])
 
+    # The only channel back is one JSON document on stdout. Anyone debugging a fit adds a
+    # print, and that used to make a calibration that worked come back unparseable.
+    def test_a_script_that_prints_still_returns_its_blocks(self):
+        script = (
+            'print("halfway through the fit")\n'
+            'print("some more chatter")\n'
+            'submit({"par": {"status": "skipped", "reason": "nothing to do"}})'
+        )
+        result = run(script, series={})
+
+        self.assertEqual(result["status"], "computed", result)
+        self.assertEqual(result["blocks"]["par"]["status"], "skipped")
+
+    # A warm container keeps /tmp. A script's own temporary files must not outlive it.
+    def test_one_run_cannot_leave_a_temp_file_for_the_next(self):
+        writer = (
+            "import tempfile, os\n"
+            "path = os.path.join(tempfile.gettempdir(), 'left-behind.txt')\n"
+            "open(path, 'w').write('from the previous tenant')\n"
+            'submit({"par": {"status": "skipped", "reason": path}})'
+        )
+        first = run(writer, series={})
+        self.assertEqual(first["status"], "computed", first)
+        left = first["blocks"]["par"]["reason"]
+
+        reader = (
+            "import os\n"
+            f"found = os.path.exists({left!r})\n"
+            'submit({"par": {"status": "rejected", "reason": "found" if found else "gone"}})'
+        )
+        second = run(reader, series={})
+
+        self.assertEqual(second["status"], "computed", second)
+        self.assertEqual(second["blocks"]["par"]["reason"], "gone")
+
     def test_a_script_that_never_finishes_is_stopped(self):
         original = handler_module.SCRIPT_TIMEOUT_SECONDS
         handler_module.SCRIPT_TIMEOUT_SECONDS = 2

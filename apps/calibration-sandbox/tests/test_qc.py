@@ -290,3 +290,18 @@ class WorstStimulusTest(unittest.TestCase):
     def test_setpoint_is_absent_when_the_caller_gave_none(self):
         record = assess_linear_fit(CLEAN_X, CLEAN_Y, slope_min=0.05, slope_max=100.0)
         self.assertIsNone(record["worst_stimulus"])
+
+
+class ZeroSpanTest(unittest.TestCase):
+    """A reference stuck on one value must fail the gate, not crash the run."""
+
+    def test_origin_fit_survives_a_reference_that_never_moved(self):
+        record = assess_origin_fit([1.0, 2.0, 3.0], [5.0, 5.0, 5.0], [0.0, 1.0, 2.0], **BOUNDS)
+        self.assertFalse(record["passed"])
+        self.assertTrue(any("non-zero" in reason for reason in record["reasons"]))
+
+    def test_linear_fit_survives_a_reference_that_never_moved(self):
+        record = assess_linear_fit(
+            [1.0, 2.0, 3.0], [5.0, 5.0, 5.0], [0.0, 1.0, 2.0], slope_min=0.05, slope_max=100.0
+        )
+        self.assertFalse(record["passed"])

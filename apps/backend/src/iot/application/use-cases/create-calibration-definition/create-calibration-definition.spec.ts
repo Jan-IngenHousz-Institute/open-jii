@@ -56,6 +56,14 @@ describe("CreateCalibrationDefinitionUseCase", () => {
     expect(created.value.organizationId).toBe(await testApp.personalOrganizationId(userId));
   });
 
+  // Older firmware answers unknown commands with numbers that look like readings, so a
+  // definition that names a floor must keep it: dropping it leaves the gate open forever.
+  it("keeps the firmware floor the caller declared", async () => {
+    const created = await useCase.execute(body({ minFirmwareVersion: "1.05" }), userId);
+    assertSuccess(created);
+    expect(created.value.minFirmwareVersion).toBe("1.05");
+  });
+
   it("adds a version to a line the author owns", async () => {
     const first = await useCase.execute(body(), userId);
     assertSuccess(first);

@@ -7,6 +7,8 @@ next tenant's run in a warm container. The only channel back is one JSON
 document on stdout.
 """
 
+import contextlib
+import io
 import json
 import math
 import sys
@@ -54,14 +56,22 @@ def _run(event):
         submissions.append(blocks)
 
     scope = {"inputs": inputs, "params": params, "submit": submit}
+    # The only channel back to the handler is one JSON document on stdout, so anything the
+    # script prints has to be kept off it. A print() while debugging a fit would otherwise
+    # turn a calibration that worked into an unparseable reply.
+    printed = io.StringIO()
     try:
-        exec(compile(event["script"], "<calibration-script>", "exec"), scope)
+        with contextlib.redirect_stdout(printed):
+            exec(compile(event["script"], "<calibration-script>", "exec"), scope)
     # BaseException: a script that calls exit() is a script fault, not a sandbox failure.
     except BaseException as exc:
         return {
             "outcome": "script_failed",
             "error": "".join(traceback.format_exception_only(type(exc), exc)).strip(),
-            "trace": "".join(traceback.format_exc()).splitlines()[-TRACEBACK_TAIL_LINES:],
+            "trace": (
+                "".join(traceback.format_exc()).splitlines()[-TRACEBACK_TAIL_LINES:]
+                + printed.getvalue().splitlines()[-TRACEBACK_TAIL_LINES:]
+            ),
         }
 
     if len(submissions) == 0:

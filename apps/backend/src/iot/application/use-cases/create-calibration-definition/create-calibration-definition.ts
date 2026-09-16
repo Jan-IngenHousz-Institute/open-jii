@@ -71,6 +71,10 @@ export class CreateCalibrationDefinitionUseCase {
         captureProcedure: body.captureProcedure,
         script: body.script,
         outputSchema: body.outputSchema,
+        // Dropping this silently would leave the firmware gate on every definition the
+        // API creates permanently open, and older firmware answers unknown commands with
+        // numbers that look like readings.
+        minFirmwareVersion: body.minFirmwareVersion ?? null,
       },
       userId,
       latest.value ? latest.value.organizationId : (body.organizationId ?? null),

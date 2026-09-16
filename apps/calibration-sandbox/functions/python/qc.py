@@ -114,7 +114,9 @@ def assess_origin_fit(x_values, y_values, stimulus, *, coefficient_min, coeffici
         else math.inf
     )
 
-    if finite and len(x) >= 2 and x_span > 0:
+    # A reference stuck on one value spans nothing, which is already refused above; the
+    # free fit must not divide by that span on the way to reporting it.
+    if finite and len(x) >= 2 and x_span > 0 and y_span > 0:
         x_mean = sum(x) / len(x)
         covariance = sum((a - x_mean) * (b - y_mean) for a, b in zip(x, y))
         variance = sum((value - x_mean) ** 2 for value in x)
