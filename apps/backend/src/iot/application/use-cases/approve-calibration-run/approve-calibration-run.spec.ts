@@ -120,6 +120,25 @@ describe("ApproveCalibrationRunUseCase", () => {
     expect(active.value?.id).toBe(second.value.id);
   });
 
+  // Two reviewers can open the same run. The status is read before the transaction opens,
+  // so without the transaction re-asserting it, both decisions would land and the run
+  // could end up rejected with an active calibration still standing behind it.
+  it("lets only one of two concurrent approvals of the same run take effect", async () => {
+    const runId = await seedRun(PARTIAL);
+
+    const [first, second] = await Promise.all([
+      useCase.execute(runId, userId),
+      useCase.execute(runId, userId),
+    ]);
+
+    const applied = [first, second].filter((outcome) => outcome.isSuccess());
+    expect(applied).toHaveLength(1);
+
+    const calibrations = await runRepository.listCalibrationsByDevice(deviceId);
+    assertSuccess(calibrations);
+    expect(calibrations.value.filter((row) => row.supersededAt === null)).toHaveLength(1);
+  });
+
   it("refuses a run that is not computed", async () => {
     const result = await useCase.execute(await seedRun(PARTIAL, "running"), userId);
     assertFailure(result);

@@ -114,10 +114,17 @@ export class IotCalibrationRunRepository {
   ): Promise<Result<DeviceCalibrationDto>> {
     return tryCatch(async () => {
       return this.database.transaction(async (tx) => {
-        await tx
+        // The status was checked before this transaction opened. Re-asserting it here is
+        // what stops a concurrent reject from leaving the run rejected with an active
+        // calibration still standing behind it.
+        const claimed = await tx
           .update(calibrationRuns)
           .set({ status: "approved", reviewedBy, reviewedAt: new Date() })
-          .where(eq(calibrationRuns.id, runId));
+          .where(and(eq(calibrationRuns.id, runId), eq(calibrationRuns.status, "computed")))
+          .returning({ id: calibrationRuns.id });
+        if (claimed.length === 0) {
+          throw new Error("This run was already reviewed");
+        }
 
         await tx
           .update(deviceCalibrations)
@@ -138,10 +145,14 @@ export class IotCalibrationRunRepository {
 
   async reject(runId: string, reviewedBy: string): Promise<Result<CalibrationRunWithVersionDto>> {
     return tryCatch(async () => {
-      await this.database
+      const claimed = await this.database
         .update(calibrationRuns)
         .set({ status: "rejected", reviewedBy, reviewedAt: new Date() })
-        .where(eq(calibrationRuns.id, runId));
+        .where(and(eq(calibrationRuns.id, runId), eq(calibrationRuns.status, "computed")))
+        .returning({ id: calibrationRuns.id });
+      if (claimed.length === 0) {
+        throw new Error("This run was already reviewed");
+      }
       return this.withVersion(runId);
     });
   }
