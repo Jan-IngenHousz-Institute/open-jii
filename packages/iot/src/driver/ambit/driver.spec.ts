@@ -341,15 +341,16 @@ describe("AmbitDriver", () => {
 
   // The LED latch prints nothing the host is documented to read, so waiting for a
   // reply would stall every point of a sweep and then fail it.
-  // The firmware runs the array and then prints one line, so this waits for it rather
-  // than firing blind. Its argument reader takes ten comma-terminated values, all of them
-  // on the first line, so the second line completes nothing and its exact form never
-  // reaches the reader.
+  // The firmware puts the console in plotting mode, runs the array, and only then prints
+  // one line. The run streams while it works and pauses between points, so a quiet window
+  // would hand back whatever had arrived so far; nothing but that last line ends the wait.
+  // Its argument reader takes ten comma-terminated values, all on the first line, so the
+  // second line completes nothing and its exact form never reaches the reader.
   it("waits for the actinic LED run to report that it finished", async () => {
     const wire = "arrun1,1,1,2,0,0,1,0,1,150,1,\n,\n";
     const transport = pacedTransport({
       "hello\n": [HELLO_REPLY],
-      [wire]: ["Done\n"],
+      [wire]: ["4605,4604\n", "4611,4609\n", "Done\n"],
     });
     const driver = fastDriver();
     await driver.initialize(transport);
@@ -357,7 +358,7 @@ describe("AmbitDriver", () => {
     const result = await driver.execute("arrun1,1,1,2,0,0,1,0,1,150,1,\n,");
 
     expect(result.success).toBe(true);
-    expect(result.data).toBe("Done");
+    expect(String(result.data)).toContain("Done");
     expect(transport.send).toHaveBeenCalledWith(wire);
   });
 
