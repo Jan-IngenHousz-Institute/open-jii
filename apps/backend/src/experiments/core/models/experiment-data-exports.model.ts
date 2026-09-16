@@ -1,7 +1,13 @@
+export const EXPORT_FORMATS = ["csv", "ndjson", "json-array", "parquet", "xlsx"] as const;
+
 /**
  * Export format types
  */
-export type ExportFormat = "csv" | "ndjson" | "json-array" | "parquet" | "xlsx";
+export type ExportFormat = (typeof EXPORT_FORMATS)[number];
+
+export function isExportFormat(value: string): value is ExportFormat {
+  return EXPORT_FORMATS.some((format) => format === value);
+}
 
 /**
  * Export status types

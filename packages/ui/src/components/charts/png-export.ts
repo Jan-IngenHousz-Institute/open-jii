@@ -1,4 +1,3 @@
-/// <reference path="./plotly-dist.d.ts" />
 import type { Config, ModeBarButton, ModeBarButtonAny, PlotlyHTMLElement } from "plotly.js";
 
 import { toast } from "../../hooks/use-toast";
@@ -19,7 +18,7 @@ export async function downloadBrandedPng(
   graph: PlotlyHTMLElement,
   options: Config["toImageButtonOptions"] = {},
 ): Promise<void> {
-  const Plotly = await import("plotly.js/dist/plotly");
+  const { Plotly } = await import("./plotly-runtime");
   const [chart, logo] = await Promise.all([
     Plotly.toImage(graph, {
       format: "png",

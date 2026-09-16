@@ -13,6 +13,7 @@ import { useLiveViz } from "../../editor/context/live-viz-context";
 import { ExpandableWidget } from "../shell/expandable-widget";
 import { WidgetEmptyState } from "../shell/widget-empty-state";
 import { WidgetHeader } from "../shell/widget-header";
+import { WidgetLoading } from "../shell/widget-loading";
 
 export interface LoadedVisualizationViewProps {
   widget: ExperimentVisualizationWidget;
@@ -53,11 +54,7 @@ export function LoadedVisualizationView({
   }, [data, live, visualizationId]);
 
   if (isLoading) {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-        {t("ui.messages.loading")}
-      </div>
-    );
+    return <WidgetLoading />;
   }
 
   if (error || !body) {
