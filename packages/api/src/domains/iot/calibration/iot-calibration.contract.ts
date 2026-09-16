@@ -4,6 +4,7 @@ import { z } from "zod";
 import { zIotDevicePathParam } from "../iot.schema";
 import {
   zCalibrationDefinition,
+  zCalibrationDefinitionDetail,
   zCalibrationDefinitionList,
   zCalibrationDefinitionPathParam,
   zCalibrationRun,
@@ -34,7 +35,7 @@ export const iotCalibrationContract = {
       successStatus: 200,
     })
     .input(zCalibrationDefinitionPathParam)
-    .output(zCalibrationDefinition),
+    .output(zCalibrationDefinitionDetail),
   createCalibrationDefinition: oc
     .route({ method: "POST", path: "/api/v1/calibration-definitions", successStatus: 201 })
     .input(zCreateCalibrationDefinitionBody)

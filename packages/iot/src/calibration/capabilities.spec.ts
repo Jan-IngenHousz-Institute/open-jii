@@ -29,7 +29,17 @@ describe("familyCalibrationCapabilities", () => {
     const minipar = familyCalibrationCapabilities("minipar");
 
     expect(Object.keys(minipar.writableCoefficients).sort()).toEqual(["par", "spec"]);
-    expect(minipar.writableCoefficients.par.sort()).toEqual(["intercept", "slope"]);
+    expect(minipar.writableCoefficients.par?.map((entry) => entry.name).sort()).toEqual([
+      "intercept",
+      "slope",
+    ]);
+
+    // A per-channel coefficient is submitted as an array, so a definition that declares it
+    // as a number fails validation on its first real fit.
+    expect(minipar.writableCoefficients.spec).toEqual([
+      { name: "channel_coefficients", isArray: true },
+    ]);
+    expect(minipar.writableCoefficients.par?.every((entry) => !entry.isArray)).toBe(true);
   });
 
   it("carries the setpoints the device under test can be driven through", () => {

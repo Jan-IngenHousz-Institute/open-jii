@@ -1,7 +1,8 @@
-import { createCalibrationDefinitionSummary } from "@/test/factories";
+import { createCalibrationDefinition, createCalibrationDefinitionSummary } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, within } from "@/test/test-utils";
+import { render, screen, waitFor, within } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
+import { useRouter } from "next/navigation";
 import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -42,16 +43,31 @@ describe("ListCalibrationDefinitions", () => {
     expect(screen.queryByText("PAR bench")).toBeNull();
   });
 
-  it("offers a way to write a new one", async () => {
+  // Creating one opens it: nothing stands between the author and the page they write it
+  // on, and a definition cannot exist without a procedure, script and schema anyway.
+  it("creates a calibration and opens it", async () => {
     server.mount(contract.iot.listCalibrationDefinitions, { body: [] });
+    const created = createCalibrationDefinition({ name: "Untitled calibration" });
+    const spy = server.mount(contract.iot.createCalibrationDefinition, {
+      status: 201,
+      body: created,
+    });
 
     render(<ListCalibrationDefinitions />);
-
     expect(await screen.findByText("iot.calibration.library.empty")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /library.create/ })).toHaveAttribute(
-      "href",
-      "/en-US/platform/calibrations/new",
-    );
+
+    await userEvent.click(screen.getByRole("button", { name: /library.create/ }));
+
+    await waitFor(() => {
+      expect(spy.body).toMatchObject({ name: "Untitled calibration", family: "minipar" });
+    });
+    // The starter has to satisfy the contract's required artefacts on its own.
+    expect(spy.body).toHaveProperty("captureProcedure");
+    expect(spy.body).toHaveProperty("outputSchema");
+    const router = useRouter();
+    await waitFor(() => {
+      expect(router.push).toHaveBeenCalledWith(`/en-US/platform/calibrations/${created.id}`);
+    });
   });
 
   it("says so when the list could not be read", async () => {

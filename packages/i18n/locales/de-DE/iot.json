@@ -912,7 +912,8 @@
           "visibility": "Sichtbarkeit",
           "updated": "Aktualisiert"
         },
-        "retry": "Erneut versuchen"
+        "retry": "Erneut versuchen",
+        "createFailed": "Diese Kalibrierung konnte nicht erstellt werden."
       },
       "detail": {
         "rig": "Benötigter Aufbau",
@@ -934,7 +935,9 @@
         "gatedBy": "{{prompt}} (bestätigt durch Eingabe von {{token}})",
         "readInstrument": "{{as}}: {{instrument}} {{source}}",
         "readTyped": "{{as}}: von der Bedienperson eingegeben, {{prompt}}",
-        "notWritable": "Für {{coefficients}} gibt es keinen Konsolenbefehl. Ein Lauf wird protokolliert, die Werte erreichen das Gerät aber nie."
+        "notWritable": "Für {{coefficients}} gibt es keinen Konsolenbefehl. Ein Lauf wird protokolliert, die Werte erreichen das Gerät aber nie.",
+        "describePlaceholder": "Beschreiben, was dieser Prüfstand misst und wogegen.",
+        "readOnly": "Sie können diese Kalibrierung lesen, aber nicht ändern."
       }
     },
     "workbookBar": {

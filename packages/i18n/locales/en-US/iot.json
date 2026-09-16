@@ -912,7 +912,8 @@
           "visibility": "Visibility",
           "updated": "Updated"
         },
-        "retry": "Try again"
+        "retry": "Try again",
+        "createFailed": "That calibration could not be created."
       },
       "detail": {
         "rig": "The rig it needs",
@@ -934,7 +935,9 @@
         "gatedBy": "{{prompt}} (confirmed by typing {{token}})",
         "readInstrument": "{{as}}: {{instrument}} {{source}}",
         "readTyped": "{{as}}: typed by the operator, {{prompt}}",
-        "notWritable": "The platform has no console command for {{coefficients}}. A run producing these is recorded, but they never reach the device."
+        "notWritable": "The platform has no console command for {{coefficients}}. A run producing these is recorded, but they never reach the device.",
+        "describePlaceholder": "Say what this bench measures and against what.",
+        "readOnly": "You can read this calibration but not change it."
       }
     },
     "workbookBar": {

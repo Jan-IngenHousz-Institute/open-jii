@@ -75,9 +75,12 @@ export class IotCalibrationController {
 
   @CanAccess({ resource: "calibration_definition", action: "read", param: "definitionId" })
   @Implement(iotCalibrationContract.getCalibrationDefinition)
-  getCalibrationDefinition() {
+  getCalibrationDefinition(@Session() session: UserSession) {
     return implement(iotCalibrationContract.getCalibrationDefinition).handler(async ({ input }) => {
-      const result = await this.getCalibrationDefinitionUseCase.execute(input.definitionId);
+      const result = await this.getCalibrationDefinitionUseCase.execute(
+        input.definitionId,
+        session.user.id,
+      );
 
       if (result.isSuccess()) {
         return formatDates(result.value);

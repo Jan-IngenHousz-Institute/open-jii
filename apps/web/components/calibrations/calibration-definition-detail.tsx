@@ -1,27 +1,47 @@
 "use client";
 
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
-import { StatusBadge } from "@/components/shared/status-badge";
-import { VisibilityBadge } from "@/components/visibility/visibility-badge";
+import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
 import { useCalibrationDefinition } from "@/hooks/iot/useCalibrationDefinition/useCalibrationDefinition";
+import { useUpdateCalibrationDefinition } from "@/hooks/iot/useUpdateCalibrationDefinition/useUpdateCalibrationDefinition";
 import { useLocale } from "@/hooks/useLocale";
-import { getSensorFamilyBadgeTone } from "@/util/sensor-family";
 import { useParams } from "next/navigation";
+import { parseApiError } from "~/util/apiError";
 
+import type { UpdateCalibrationDefinitionBody } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
+import { Alert, AlertDescription } from "@repo/ui/components/alert";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { CalibrationOutputBlocks } from "./calibration-output-blocks";
 import { CalibrationProcedureSummary } from "./calibration-procedure-summary";
+import { CalibrationScriptEditor } from "./calibration-script-editor";
 
-/** One bench procedure in full: the rig it needs, what it does, how it fits, what it produces. */
+/**
+ * One bench procedure, read and written on the same page.
+ *
+ * Editing is in place rather than behind a form: an author works a piece at a time,
+ * trying the procedure at the bench between changes. A definition a run already points at
+ * is frozen, because the run records which definition it ran rather than a copy of it.
+ */
 export function CalibrationDefinitionDetail() {
   const { t } = useTranslation("iot");
   const locale = useLocale();
   const params = useParams<{ definitionId: string }>();
 
   const { data: definition, isLoading, isError } = useCalibrationDefinition(params.definitionId);
+  const { mutateAsync: update } = useUpdateCalibrationDefinition(params.definitionId);
+
+  async function save(changes: UpdateCalibrationDefinitionBody) {
+    try {
+      await update({ definitionId: params.definitionId, ...changes });
+    } catch (error) {
+      toast({ description: parseApiError(error)?.message, variant: "destructive" });
+      throw error;
+    }
+  }
 
   if (isLoading) {
     return <Skeleton className="h-96 w-full" />;
@@ -31,6 +51,7 @@ export function CalibrationDefinitionDetail() {
   }
 
   const instruments = definition.captureProcedure.instruments;
+  const canEdit = definition.capabilities.canUpdate;
 
   function renderFact([label, value]: [string, string]) {
     return (
@@ -64,17 +85,19 @@ export function CalibrationDefinitionDetail() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-xl font-semibold">{definition.name}</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusBadge tone={getSensorFamilyBadgeTone(definition.family)} className="capitalize">
-            {definition.family}
-          </StatusBadge>
-          <VisibilityBadge visibility={definition.visibility} />
-        </div>
-        {definition.description !== null && (
-          <p className="text-muted-foreground text-sm">{definition.description}</p>
-        )}
+        <InlineEditableDescription
+          description={definition.description ?? ""}
+          hasAccess={canEdit}
+          onSave={(description) => save({ description })}
+          placeholder={t("iot.calibration.detail.describePlaceholder")}
+        />
       </div>
+
+      {!canEdit && (
+        <Alert>
+          <AlertDescription>{t("iot.calibration.detail.readOnly")}</AlertDescription>
+        </Alert>
+      )}
 
       <PanelCard title={t("iot.calibration.detail.rig")}>
         <div className="space-y-3">
@@ -97,9 +120,11 @@ export function CalibrationDefinitionDetail() {
       </PanelCard>
 
       <PanelCard title={t("iot.calibration.detail.script")}>
-        <pre className="bg-muted/40 overflow-x-auto rounded-md p-3 font-mono text-xs">
-          {definition.script}
-        </pre>
+        <CalibrationScriptEditor
+          script={definition.script}
+          canEdit={canEdit}
+          onSave={(script) => save({ script })}
+        />
       </PanelCard>
     </div>
   );

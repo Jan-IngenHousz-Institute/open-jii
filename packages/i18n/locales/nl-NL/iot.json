@@ -912,7 +912,8 @@
           "visibility": "Zichtbaarheid",
           "updated": "Bijgewerkt"
         },
-        "retry": "Opnieuw proberen"
+        "retry": "Opnieuw proberen",
+        "createFailed": "Deze kalibratie kon niet worden aangemaakt."
       },
       "detail": {
         "rig": "Benodigde opstelling",
@@ -934,7 +935,9 @@
         "gatedBy": "{{prompt}} (bevestigd door {{token}} te typen)",
         "readInstrument": "{{as}}: {{instrument}} {{source}}",
         "readTyped": "{{as}}: door de operator ingevoerd, {{prompt}}",
-        "notWritable": "Het platform heeft geen console-opdracht voor {{coefficients}}. Een run wordt vastgelegd, maar deze waarden bereiken het apparaat nooit."
+        "notWritable": "Het platform heeft geen console-opdracht voor {{coefficients}}. Een run wordt vastgelegd, maar deze waarden bereiken het apparaat nooit.",
+        "describePlaceholder": "Beschrijf wat deze opstelling meet en waartegen.",
+        "readOnly": "Je kunt deze kalibratie lezen maar niet wijzigen."
       }
     },
     "workbookBar": {

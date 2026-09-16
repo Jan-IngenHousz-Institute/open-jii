@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { zResourceCapabilities } from "../../authorization/capabilities.schema";
 import { zSensorFamily } from "../../protocol/protocol.schema";
 import { zVisibility } from "../../visibility/visibility.schema";
 import { zIotDevicePathParam } from "../iot.schema";
@@ -133,6 +134,11 @@ export const zCalibrationDefinition = z.object({
   updatedAt: z.string().datetime(),
 });
 
+/** A definition plus what the caller may do with it; the detail route only. */
+export const zCalibrationDefinitionDetail = zCalibrationDefinition.extend({
+  capabilities: zResourceCapabilities,
+});
+
 export const zCalibrationDefinitionSummary = zCalibrationDefinition.omit({
   captureProcedure: true,
   script: true,
@@ -156,11 +162,13 @@ export const zCreateCalibrationDefinitionBody = z.object({
 });
 
 /**
- * Family is not updatable: the procedure's instruments, the script's inputs and the
- * coefficients the platform can write are all validated against it, so changing it would
- * invalidate the other three artefacts at once. Author a new definition instead.
+ * Everything is editable until a run has recorded what the definition did, which is the
+ * guard the use case applies. Family is included: it decides which instruments, setpoints
+ * and writable coefficients the rest is checked against, and it only binds at run time,
+ * where the device's own type has to match it.
  */
 export const zUpdateCalibrationDefinitionBody = z.object({
+  family: zCalibrationFamily.optional(),
   name: z.string().trim().min(1).max(255).optional(),
   description: z.string().max(2000).nullable().optional(),
   captureProcedure: zCaptureProcedure.optional(),
@@ -341,6 +349,7 @@ export type CalibrationWriteResults = z.infer<typeof zCalibrationWriteResults>;
 export type CalibrationRunStatus = z.infer<typeof zCalibrationRunStatus>;
 export type CalibrationInputSource = z.infer<typeof zCalibrationInputSource>;
 export type CalibrationDefinition = z.infer<typeof zCalibrationDefinition>;
+export type CalibrationDefinitionDetail = z.infer<typeof zCalibrationDefinitionDetail>;
 export type CalibrationDefinitionSummary = z.infer<typeof zCalibrationDefinitionSummary>;
 export type CreateCalibrationDefinitionBody = z.infer<typeof zCreateCalibrationDefinitionBody>;
 export type UpdateCalibrationDefinitionBody = z.infer<typeof zUpdateCalibrationDefinitionBody>;

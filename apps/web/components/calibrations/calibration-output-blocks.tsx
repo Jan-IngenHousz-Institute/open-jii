@@ -33,7 +33,7 @@ export function CalibrationOutputBlocks({ family, outputSchema }: CalibrationOut
   const blocks = Object.entries(outputSchema.blocks);
 
   function isWritable(block: string, coefficient: string): boolean {
-    return writable[block]?.includes(coefficient) ?? false;
+    return writable[block]?.some((entry) => entry.name === coefficient) ?? false;
   }
 
   const unwritable = blocks.flatMap(([block, coefficients]) =>

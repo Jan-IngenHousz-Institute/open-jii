@@ -153,11 +153,6 @@ export const mainNavigation = {
         icon: "SlidersHorizontal",
         items: [
           {
-            titleKey: "sidebar.newCalibration",
-            namespace: "navigation",
-            url: (locale: string) => `/${locale}/platform/calibrations/new`,
-          },
-          {
             titleKey: "sidebar.overview",
             namespace: "navigation",
             url: (locale: string) => `/${locale}/platform/calibrations`,

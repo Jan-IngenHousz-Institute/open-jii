@@ -31,6 +31,13 @@ export interface DeviceSetpointSummary {
   integer: boolean;
 }
 
+/** One coefficient the platform can write, and whether the device holds many of them. */
+export interface WritableCoefficient {
+  name: string;
+  /** A per-channel coefficient: written entry by entry, and submitted as an array. */
+  isArray: boolean;
+}
+
 export interface FamilyCalibrationCapabilities {
   family: SensorFamily;
   deviceSetpoints: DeviceSetpointSummary[];
@@ -38,7 +45,7 @@ export interface FamilyCalibrationCapabilities {
    * Block name to the coefficients the platform has a console command for. Partial: a
    * block the registry does not cover is absent, not empty.
    */
-  writableCoefficients: Partial<Record<string, string[]>>;
+  writableCoefficients: Partial<Record<string, WritableCoefficient[]>>;
 }
 
 export function benchInstrumentSummaries(): BenchInstrumentSummary[] {
@@ -55,11 +62,14 @@ export function benchInstrumentSummaries(): BenchInstrumentSummary[] {
 
 export function familyCalibrationCapabilities(family: SensorFamily): FamilyCalibrationCapabilities {
   const blocks = CALIBRATION_WRITERS[family]?.blocks;
-  const writableCoefficients: Partial<Record<string, string[]>> = {};
+  const writableCoefficients: Partial<Record<string, WritableCoefficient[]>> = {};
   for (const [block, writers] of Object.entries(blocks ?? {})) {
     // The registry is a partial record: a block it does not cover is simply not writable.
     if (writers !== undefined) {
-      writableCoefficients[block] = Object.keys(writers.coefficients);
+      writableCoefficients[block] = Object.entries(writers.coefficients).map(([name, writer]) => ({
+        name,
+        isArray: writer?.kind !== "scalar",
+      }));
     }
   }
 
