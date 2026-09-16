@@ -13,6 +13,11 @@ MAX_NRMSE = 0.05
 MAX_FULL_SCALE_RESIDUAL = 0.10
 MAX_INTERCEPT_FRACTION = 0.05
 MAX_MONOTONIC_REVERSAL = 0.02
+# A multi-channel fit can satisfy every residual gate on channels that move together, and
+# then answer nonsense for any spectrum outside the ones it was shown. The condition number
+# is what shows it. A real bench fit of this model sits around 650; a fit with one degree of
+# freedom left sits in the thousands.
+MAX_CONDITION_NUMBER = 1000.0
 
 
 def assess_origin_fit(x_values, y_values, stimulus, *, coefficient_min, coefficient_max):
@@ -286,6 +291,13 @@ def assess_multilinear_fit(
     # Rank only says something once the points could have determined every parameter.
     if finite and len(x) > parameters and rank < parameters:
         reasons.append("channel readings are collinear, so the coefficients are not unique")
+    # Like rank, this says nothing until the points could have determined every parameter,
+    # and a non-finite input is already reported as such.
+    if finite and len(x) > parameters and condition_number > MAX_CONDITION_NUMBER:
+        reasons.append(
+            f"channel readings are too close to collinear to determine the coefficients "
+            f"(condition number must be at most {MAX_CONDITION_NUMBER})"
+        )
 
     ss_res = sum(value * value for value in residual) if residual else math.inf
     y_mean = sum(y) / len(y) if y else 0.0
@@ -333,6 +345,7 @@ def assess_multilinear_fit(
             "min_r2": MIN_R2,
             "max_nrmse": MAX_NRMSE,
             "max_full_scale_residual": MAX_FULL_SCALE_RESIDUAL,
+            "max_condition_number": MAX_CONDITION_NUMBER,
             "coefficient_min": coefficient_min,
             "coefficient_max": coefficient_max,
             "intercept_min": intercept_min,
