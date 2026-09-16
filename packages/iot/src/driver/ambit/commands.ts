@@ -18,9 +18,9 @@ export const AMBIT_COMMANDS = {
   GET_PAR:      "get_par",      // raw PAR float, then 10 CSV spectral channels
   PAR:          "PAR",          // calibrated PAR (raw x spec coeff), then channels
   TEMP:         "temp",         // "obj\tamb\tobj_r" (MLX90632, 3 floats)
-  ARRUN1:       "arrun1",       // arrun1,1,1,2,0,0,1,0,1,<level>,1,\n, two lines, latches the actinic LED
+  ARRUN1:       "arrun1",       // arrun1,1,1,2,0,0,1,0,1,<level>,1, latches the LED, answers "Done"
   ARRUN2:       "arrun2",       // arrun2,1,0,2,0,<nh>,<nl>,<fh>,<fl>,<act>,1,\n, two lines, ADPD trace
-  BASELINE:     "baseline",     // baseline,0  measures the six-channel ADPD dark vector, persists nothing
+  BASELINE:     "baseline",     // baseline,0 measures the dark vector; baseline,1 also persists it
 
   // Calibration writers (persist to NVS; the firmware replies NOTHING)
   SET_SPEC:     "set_spec",     // set_spec,<float>  PAR gain
@@ -29,7 +29,6 @@ export const AMBIT_COMMANDS = {
   SET_NAME:     "set_name",     // set_name,<string <=15>
 
   // Writers that do answer
-  SET_BASELINE: "set_baseline", // set_baseline,v1,..,v6 (no spaces); persists the dark vector
   SET_CURRENTS: "set_currents", // set_currents,0,0,0,  zeroes the pulse currents
 } as const;
 
@@ -42,15 +41,32 @@ export const AMBIT_SILENT_COMMANDS: readonly string[] = [
   AMBIT_COMMANDS.SET_ACT,
   AMBIT_COMMANDS.SET_EMIT,
   AMBIT_COMMANDS.SET_NAME,
-  // Latches the LED and prints nothing the host is documented to read.
-  AMBIT_COMMANDS.ARRUN1,
 ];
 
-/** The only line that acknowledges a `set_baseline`; anything else is a refusal. */
-export const AMBIT_BASELINE_SAVED = "Baseline saved and verified";
+/** The device kept the vector it had just measured. */
+export const AMBIT_BASELINE_SAVED = "Baseline saved";
+
+/**
+ * The device refused to keep it. The dark limit belongs to the firmware, not to us: it
+ * declines rather than storing a baseline measured under light.
+ */
+export const AMBIT_BASELINE_TOO_HIGH = "Baseline too high";
+
+/**
+ * Measure and persist in one step, which is the only way this firmware stores a baseline.
+ * It keeps what it has just measured, so an approved vector cannot be sent to it.
+ */
+export const AMBIT_BASELINE_PERSIST = "baseline,1";
+
+/** Ends a persisting baseline, which prints its vector first and its verdict second. */
+export const baselinePersistComplete = (buffer: string): boolean =>
+  buffer.includes(AMBIT_BASELINE_SAVED) || buffer.includes(AMBIT_BASELINE_TOO_HIGH);
 
 /** Carried by the line acknowledging a `set_currents`. */
 export const AMBIT_CURRENTS_SET = "Currents set";
+
+/** Closes an `arrun1`, which runs the trace and then says so. */
+export const AMBIT_RUN_DONE = "Done";
 
 /** Closes an `arrun2` trace, after one line per channel buffer. */
 export const AMBIT_TRACE_DONE = "Data sent";
@@ -102,10 +118,11 @@ export const AMBIT_COMMAND_OVERRIDES: Record<string, AmbitCommandOverride> = {
     isComplete: (buffer) => completedLines(buffer).includes(AMBIT_CURRENTS_SET),
   },
 
-  // A refusal is a complete line too, so any line ends the wait and the caller
-  // reads what the device said instead of waiting out the deadline.
-  [AMBIT_COMMANDS.SET_BASELINE]: {
-    isComplete: (buffer) => completedLines(buffer).trim().length > 0,
+  // Runs the trace and prints one line when it has finished, so the wait ends on that
+  // rather than on a quiet window that would return before the LED had settled.
+  [AMBIT_COMMANDS.ARRUN1]: {
+    isComplete: (buffer) => completedLines(buffer).includes(AMBIT_RUN_DONE),
+    timeoutMs: 15_000,
   },
 };
 

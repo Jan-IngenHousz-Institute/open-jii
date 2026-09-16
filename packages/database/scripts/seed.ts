@@ -992,7 +992,7 @@ def channel_counts(line):
 
 points = inputs["spec_sweep"]
 fit = assess_multilinear_fit(
-    [channel_counts(line) for line in points["spec_raw"]],
+    [channel_counts(line) for line in points["spec"]],
     points["par_ref"],
     intercept_min=-100.0,
     intercept_max=100.0,
@@ -1287,7 +1287,10 @@ submit(blocks)
             },
             settleMs: 1000,
             read: [
-              { instrument: "dut", command: "spec_raw", as: "spec_raw" },
+              // Basic counts, which is what the firmware multiplies its stored coefficients
+              // by. Fitting the raw counts instead scales every later reading by the
+              // gain and integration time the sweep happened to run at.
+              { instrument: "dut", command: "spec", as: "spec" },
               {
                 operator: "Enter the PAR value shown by the reference sensor",
                 as: "par_ref",
@@ -1409,8 +1412,12 @@ submit(blocks)
             prompt:
               "Seat the sensor on the tool board so its LEDs shine into the spectrometer window, and shield the pair from room light.",
           },
+          // The board lights its own LED at power-up and only a zero clears it, and its
+          // integration step survives a port close, so both are set rather than assumed.
+          { kind: "set", instrument: "calitool", set: "led_ma", value: 0 },
           { kind: "set", instrument: "calitool", set: "gain", value: 1 },
           { kind: "set", instrument: "calitool", set: "atime", value: 200 },
+          { kind: "set", instrument: "calitool", set: "astep", value: 200 },
           ...multispeqLedChannels.flatMap(({ led, channel, from }) => [
             {
               kind: "sweep",

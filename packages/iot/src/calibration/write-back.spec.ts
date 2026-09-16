@@ -103,9 +103,19 @@ function ambitConsole(overrides: Partial<Record<string, string>> = {}): MockTran
       case "set_act":
         state.act = Number(args[0]);
         return "";
-      case "set_baseline":
-        state.adpd = args.map(Number);
-        return "Baseline saved and verified\n";
+      case "baseline": {
+        // baseline,0 measures only; baseline,1 measures and keeps it, refusing a vector
+        // whose first channel is above the firmware's own dark limit.
+        const measured = ambitMeasuredBaseline;
+        if (args[0] !== "1") {
+          return `${measured.join(",")}\n`;
+        }
+        if (measured[0] > 400) {
+          return `${measured.join(",")}\nBaseline too high\n`;
+        }
+        state.adpd = [...measured];
+        return `${measured.join(",")}\nBaseline saved\n`;
+      }
       case "reboot":
         return ambitBootDump(state);
       default:
@@ -126,9 +136,13 @@ function ambitConsole(overrides: Partial<Record<string, string>> = {}): MockTran
   return Object.assign(transport, { sent, state });
 }
 
+/** What a covered sensor reads; the console keeps what it measures, never what it is sent. */
+let ambitMeasuredBaseline = [312, 287, 301, 294, 318, 305];
+
 const noSleep = { sleep: () => Promise.resolve() };
 const MINIPAR_BLOCKS = { par: { coefficients: { slope: 0.96, intercept: -1.08 } } };
-const AMBIT_BASELINE = [1021, 987, 1103, 954, 1200, 1015];
+// Under the firmware's own dark limit of 400; anything above it is refused.
+const AMBIT_BASELINE = [312, 287, 301, 294, 318, 305];
 const AMBIT_BLOCKS = {
   par: { coefficients: { spec: 1.1893 } },
   led: { coefficients: { act: 0.2412 } },
@@ -464,6 +478,7 @@ describe("writeCalibrationBlocks to an Ambit device", () => {
 
   beforeEach(() => {
     vi.useRealTimers();
+    ambitMeasuredBaseline = [312, 287, 301, 294, 318, 305];
     // A reboot dump ends on the console going quiet, and the firmware pauses mid-dump,
     // so each of these spends the command's real 1.5 s window. Given room rather than
     // left at the default, where a loaded machine turns the margin into a flake.
@@ -484,17 +499,14 @@ describe("writeCalibrationBlocks to an Ambit device", () => {
       led: { verified: true },
       baseline: { verified: true },
     });
-    expect(transport.sent).toEqual([
-      "set_spec, 1.1893",
-      "set_act, 0.2412",
-      "set_baseline,1021,987,1103,954,1200,1015",
-      "reboot",
-    ]);
+    expect(transport.sent).toEqual(["set_spec, 1.1893", "set_act, 0.2412", "baseline,1", "reboot"]);
   });
 
-  // The baseline is the one Ambit writer that answers, and only one line counts.
-  it("reports the baseline unverified with what the device said instead", async () => {
-    const transport = ambitConsole({ set_baseline: "Baseline mismatch: channel 3\n" });
+  // The firmware keeps a baseline only if the one it just measured is dark enough, and
+  // says so itself. The vector the bench approved is never sent to it.
+  it("reports the baseline unverified when the device refuses to keep it", async () => {
+    const transport = ambitConsole();
+    ambitMeasuredBaseline = [1900, 1870, 1903, 1894, 1918, 1905];
     await driver.initialize(transport);
 
     const results = await writeCalibrationBlocks(
@@ -505,8 +517,8 @@ describe("writeCalibrationBlocks to an Ambit device", () => {
     );
 
     expect(results.baseline.verified).toBe(false);
-    expect(results.baseline.error).toMatch(/Baseline mismatch: channel 3/);
-    expect(transport.sent).toEqual(["set_baseline,1021,987,1103,954,1200,1015"]);
+    expect(results.baseline.error).toMatch(/Baseline too high/);
+    expect(transport.sent).toEqual(["baseline,1"]);
   });
 
   // A gain the dump disagrees with leaves that block unverified and nothing else:
@@ -524,12 +536,7 @@ describe("writeCalibrationBlocks to an Ambit device", () => {
     expect(results.led).toEqual({ verified: true });
     expect(results.baseline).toEqual({ verified: true });
     // Nothing follows the reboot: the device keeps what it was given.
-    expect(transport.sent).toEqual([
-      "set_spec, 1.1893",
-      "set_act, 0.2412",
-      "set_baseline,1021,987,1103,954,1200,1015",
-      "reboot",
-    ]);
+    expect(transport.sent).toEqual(["set_spec, 1.1893", "set_act, 0.2412", "baseline,1", "reboot"]);
   });
 
   it("reports a block unverified when the boot dump never reaches its calibration line", async () => {

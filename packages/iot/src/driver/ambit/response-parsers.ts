@@ -1,3 +1,4 @@
+import { AMBIT_BASELINE_SAVED, AMBIT_BASELINE_TOO_HIGH } from "./commands";
 import type { AmbitParReading, AmbitTempReading } from "./interface";
 
 /**
@@ -41,6 +42,13 @@ export const BASELINE_MAX_COUNT = 0xff_ffff;
  * matched.
  */
 export function parseBaselineReply(text: string): number[] | null {
+  // The persisting form prints the same vector and then says whether it kept it. That
+  // verdict is the whole point of the write, so such a reply is handed through as text
+  // rather than reduced to the numbers.
+  if (text.includes(AMBIT_BASELINE_SAVED) || text.includes(AMBIT_BASELINE_TOO_HIGH)) {
+    return null;
+  }
+
   for (const line of text.split("\n")) {
     const fields = line.split(",").map((field) => field.trim());
     if (fields.length !== BASELINE_CHANNELS) {

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DEFAULT_MAX_BUFFER_SIZE } from "../driver-base";
 import type { MockTransport } from "../testing/mock-transport";
 import { createMockTransport } from "../testing/mock-transport";
-import { AMBIT_BASELINE_SAVED } from "./commands";
+import { AMBIT_BASELINE_SAVED, AMBIT_BASELINE_TOO_HIGH, baselinePersistComplete } from "./commands";
 import { AmbitDriver } from "./driver";
 
 const HELLO_REPLY = "NEW Name Here Ready\n";
@@ -293,38 +293,44 @@ describe("AmbitDriver", () => {
     expect(result.data).toBe("Currents set");
   });
 
-  it("returns the acknowledgement of a baseline write", async () => {
+  // The firmware has no command that stores a vector it is handed: baseline,1 measures and
+  // keeps what it just read, printing the vector first and its verdict second. A caller
+  // that stopped at the vector would never learn whether the device kept it.
+  it("waits past the measured vector for the verdict on a persisting baseline", async () => {
     const transport = pacedTransport({
       "hello\n": [HELLO_REPLY],
-      "set_baseline,1021,987,1103,954,1200,1015\n": [
-        AMBIT_BASELINE_SAVED.slice(0, 8),
-        `${AMBIT_BASELINE_SAVED.slice(8)}\n`,
-      ],
+      "baseline,1\n": ["1021,987,1103,954,1200,1015\n", `${AMBIT_BASELINE_SAVED}\n`],
     });
     const driver = fastDriver();
     await driver.initialize(transport);
 
-    const result = await driver.execute<string>("set_baseline,1021,987,1103,954,1200,1015");
+    const result = await driver.execute<string>("baseline,1", {
+      isComplete: baselinePersistComplete,
+    });
 
     expect(result.success).toBe(true);
-    expect(result.data).toBe(AMBIT_BASELINE_SAVED);
+    expect(String(result.data)).toContain(AMBIT_BASELINE_SAVED);
   });
 
   // The one writer that answers, so a refusal has to come back as itself rather
   // than as a timeout the caller is left to interpret. The wording is the device's;
   // only "not the acknowledgement" is established.
-  it("returns the refusing line when a baseline write is not acknowledged", async () => {
+  // The dark limit is the firmware's own: it declines a baseline measured under light
+  // rather than storing it, and says so on the line after the vector.
+  it("returns the refusal when the device will not keep the baseline it measured", async () => {
     const transport = pacedTransport({
       "hello\n": [HELLO_REPLY],
-      "set_baseline,0,0,0,0,0,0\n": ["Baseline verify failed\n"],
+      "baseline,1\n": ["1900,1870,1903,1894,1918,1905\n", `${AMBIT_BASELINE_TOO_HIGH}\n`],
     });
     const driver = fastDriver();
     await driver.initialize(transport);
 
-    const result = await driver.execute<string>("set_baseline,0,0,0,0,0,0");
+    const result = await driver.execute<string>("baseline,1", {
+      isComplete: baselinePersistComplete,
+    });
 
     expect(result.success).toBe(true);
-    expect(result.data).toBe("Baseline verify failed");
+    expect(String(result.data)).toContain(AMBIT_BASELINE_TOO_HIGH);
   });
 
   it("treats a silent set_spec as fire + settle + hello re-verify, in one write", async () => {
@@ -341,18 +347,24 @@ describe("AmbitDriver", () => {
 
   // The LED latch prints nothing the host is documented to read, so waiting for a
   // reply would stall every point of a sweep and then fail it.
-  it("latches the actinic LED without waiting for a reply", async () => {
-    const transport = tableTransport({ "hello\n": HELLO_REPLY });
+  // The firmware runs the trace and then prints one line, so this waits for it rather
+  // than firing blind. Its argument parser takes ten comma-terminated values, all of
+  // them on the first line, so the second line completes nothing and its exact form
+  // never reaches the parser.
+  it("waits for the actinic LED run to report that it finished", async () => {
+    const wire = "arrun1,1,1,2,0,0,1,0,1,150,1,\n,\n";
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      [wire]: ["Done\n"],
+    });
     const driver = fastDriver();
     await driver.initialize(transport);
 
     const result = await driver.execute("arrun1,1,1,2,0,0,1,0,1,150,1,\n,");
 
     expect(result.success).toBe(true);
-    expect(result.data).toEqual({ acknowledged: "arrun1" });
-    // The bench's second line ends in a space; this driver trims the command, so
-    // what goes on the wire here ends at the comma.
-    expect(transport.send).toHaveBeenCalledWith("arrun1,1,1,2,0,0,1,0,1,150,1,\n,\n");
+    expect(result.data).toBe("Done");
+    expect(transport.send).toHaveBeenCalledWith(wire);
   });
 
   it("fails a silent writer when the hello re-verify stays silent", async () => {
