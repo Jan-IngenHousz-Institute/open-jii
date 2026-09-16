@@ -9,19 +9,19 @@ import { JoinRequestSheet } from "./join-request-sheet";
 interface SheetTestState {
   online: boolean | undefined;
   isPending: boolean;
-  requestJoinAsync: Mock<(input: unknown) => Promise<unknown>>;
+  requestJoin: Mock<(input: unknown, callbacks?: { onSuccess?: () => void }) => void>;
 }
 
 const state = vi.hoisted<SheetTestState>(() => ({
   online: true,
   isPending: false,
-  requestJoinAsync: vi.fn<(input: unknown) => Promise<unknown>>(),
+  requestJoin: vi.fn<(input: unknown, callbacks?: { onSuccess?: () => void }) => void>(),
 }));
 
 vi.mock("~/shared/ui/hooks/use-is-online", () => ({ useIsOnline: () => ({ data: state.online }) }));
 vi.mock("~/features/organizations/hooks/use-request-join-organization", () => ({
   useRequestJoinOrganization: () => ({
-    requestJoinAsync: state.requestJoinAsync,
+    requestJoin: state.requestJoin,
     isPending: state.isPending,
   }),
 }));
@@ -71,8 +71,7 @@ function renderSheet() {
 beforeEach(() => {
   state.online = true;
   state.isPending = false;
-  state.requestJoinAsync.mockReset();
-  state.requestJoinAsync.mockResolvedValue({});
+  state.requestJoin.mockReset();
 });
 
 describe("JoinRequestSheet", () => {

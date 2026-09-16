@@ -31,7 +31,6 @@ export function useRequestJoinOrganization(organizationName: string) {
 
   return {
     requestJoin: mutation.mutate,
-    requestJoinAsync: mutation.mutateAsync,
     isPending: mutation.isPending,
   };
 }

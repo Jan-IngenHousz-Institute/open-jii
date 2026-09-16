@@ -24,7 +24,7 @@ export const JoinRequestSheet = forwardRef<BottomSheetModal, JoinRequestSheetPro
     const { t } = useTranslation(["common", "organizations"]);
     const insets = useSafeAreaInsets();
     const [message, setMessage] = useState("");
-    const { requestJoinAsync, isPending } = useRequestJoinOrganization(organizationName);
+    const { requestJoin, isPending } = useRequestJoinOrganization(organizationName);
     // Connectivity can drop after the CTA opened this sheet; an offlineFirst
     // mutation submitted then pauses and fires by itself on reconnect.
     const { data: online } = useIsOnline();
@@ -41,18 +41,19 @@ export const JoinRequestSheet = forwardRef<BottomSheetModal, JoinRequestSheetPro
       if (ref && typeof ref !== "function") ref.current?.dismiss();
     };
 
-    const send = async () => {
+    const send = () => {
       if (isOffline || isPending) return;
-      try {
-        await requestJoinAsync({
-          id: organizationId,
-          message: normalizeJoinMessage(message),
-        });
-        setMessage("");
-        dismiss();
-      } catch {
-        // The hook owns the error toast; keep the sheet open for a retry.
-      }
+      requestJoin(
+        { id: organizationId, message: normalizeJoinMessage(message) },
+        // No onError: the hook owns the toast, and a failure must leave the
+        // sheet open with the message intact so the user can retry.
+        {
+          onSuccess: () => {
+            setMessage("");
+            dismiss();
+          },
+        },
+      );
     };
 
     return (
@@ -99,7 +100,7 @@ export const JoinRequestSheet = forwardRef<BottomSheetModal, JoinRequestSheetPro
           <View className="mt-4 gap-2">
             <Button
               title={isPending ? t("organizations:join.sending") : t("organizations:join.send")}
-              onPress={() => void send()}
+              onPress={send}
               isLoading={isPending}
               isDisabled={isPending || isOffline}
               size="lg"

@@ -29,7 +29,6 @@ export function useCancelMyJoinRequest() {
 
   return {
     cancelRequest: mutation.mutate,
-    cancelRequestAsync: mutation.mutateAsync,
     isPending: mutation.isPending,
   };
 }
