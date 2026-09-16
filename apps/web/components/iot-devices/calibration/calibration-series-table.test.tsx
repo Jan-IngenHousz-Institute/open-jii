@@ -48,6 +48,31 @@ describe("CalibrationSeriesTable", () => {
     expect(screen.getByText(/…$/)).toBeInTheDocument();
   });
 
+  // Instruments and operators answer with more than numbers: a gate is a boolean, a
+  // sensor's settings are text, and a compound setpoint is a record.
+  it("renders every kind of cell a reading can hold", () => {
+    render(
+      <CalibrationSeriesTable
+        series="spec_check"
+        rows={[
+          {
+            spec: "AS7341,19,53",
+            channels: [0.00785574, 0.00343847],
+            dark: true,
+            lamp: { current: 0.8, unit: "A" },
+            par: 398.123456789,
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("AS7341,19,53")).toBeInTheDocument();
+    expect(screen.getByText("0.00785574, 0.00343847")).toBeInTheDocument();
+    expect(screen.getByText("true")).toBeInTheDocument();
+    expect(screen.getByText("current: 0.8, unit: A")).toBeInTheDocument();
+    expect(screen.getByText("398.123")).toBeInTheDocument();
+  });
+
   it("renders nothing for a series with no points", () => {
     const { container } = render(<CalibrationSeriesTable series="empty" rows={[]} />);
 

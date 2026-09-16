@@ -119,7 +119,9 @@ describe("CalibrationWriteStep", () => {
       });
 
       expect(screen.getByText("iot.calibration.write.verifyHeading")).toBeInTheDocument();
-      expect(screen.getByText("par_check")).toBeInTheDocument();
+      // The same table the captured readings are shown in, so a column means the same
+      // thing on both sides of the write.
+      expect(screen.getByText("iot.calibration.review.seriesCaption")).toBeInTheDocument();
       expect(screen.getByText("398.1")).toBeInTheDocument();
       expect(screen.getByText("398.5")).toBeInTheDocument();
     });

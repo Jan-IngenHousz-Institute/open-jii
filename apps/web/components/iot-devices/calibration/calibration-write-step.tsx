@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from "@repo/ui/components/alert";
 import { Button } from "@repo/ui/components/button";
 
 import { CalibrationCaptureProgress } from "./calibration-capture-progress";
-import { CalibrationVerificationReadings } from "./calibration-verification-readings";
+import { CalibrationSeriesTable } from "./calibration-series-table";
 
 interface CalibrationWriteStepProps {
   applied: DeviceCalibration;
@@ -77,6 +77,10 @@ export function CalibrationWriteStep({
     );
   }
 
+  function renderSeries([series, rows]: [string, CalibrationRunPayload[string]]) {
+    return <CalibrationSeriesTable key={series} series={series} rows={rows} />;
+  }
+
   function renderCheck() {
     if (!showsCheck) return null;
     return (
@@ -93,7 +97,9 @@ export function CalibrationWriteStep({
             </AlertDescription>
           </Alert>
         )}
-        {hasVerification && <CalibrationVerificationReadings verification={verification} />}
+        {hasVerification && (
+          <div className="space-y-3">{Object.entries(verification).map(renderSeries)}</div>
+        )}
       </div>
     );
   }
