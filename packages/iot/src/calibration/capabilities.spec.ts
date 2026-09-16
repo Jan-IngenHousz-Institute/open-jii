@@ -42,6 +42,22 @@ describe("familyCalibrationCapabilities", () => {
     expect(minipar.writableCoefficients.par?.every((entry) => !entry.isArray)).toBe(true);
   });
 
+  // A read step names a console command, and a misremembered one only fails at the bench.
+  it("offers the console commands the family's driver knows", () => {
+    const minipar = familyCalibrationCapabilities("minipar");
+
+    expect(minipar.commands).toContain("par_raw");
+    expect(minipar.commands).toContain("hello");
+    expect(minipar.commands).toEqual([...minipar.commands].sort());
+    expect(new Set(minipar.commands).size).toBe(minipar.commands.length);
+    expect(familyCalibrationCapabilities("ambit").commands).toContain("get_par");
+  });
+
+  // Ambyte is a gateway: its measurements arrive through ingest, not over a console.
+  it("offers no commands for a family with no console driver", () => {
+    expect(familyCalibrationCapabilities("ambyte").commands).toEqual([]);
+  });
+
   it("carries the setpoints the device under test can be driven through", () => {
     const ambit = familyCalibrationCapabilities("ambit");
 

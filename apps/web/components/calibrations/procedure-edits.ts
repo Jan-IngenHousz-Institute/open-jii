@@ -12,8 +12,153 @@ import type {
   RigInstrument,
   Stimulus,
 } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
+import { DUT_ROLE } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 
 import { uniqueName } from "./output-schema-edits";
+
+/** A procedure runs its capture phase, and its verify phase after the write. */
+export type ProcedurePhase = "steps" | "verify";
+
+export type StepKind = ProcedureStep["kind"];
+
+export const STEP_KINDS: StepKind[] = ["operator", "settle", "set", "read", "sweep"];
+
+export function phaseSteps(procedure: CaptureProcedure, phase: ProcedurePhase): ProcedureStep[] {
+  return (phase === "steps" ? procedure.steps : procedure.verify) ?? [];
+}
+
+/** An empty verify phase is not a phase; the contract refuses one. */
+function withPhase(
+  procedure: CaptureProcedure,
+  phase: ProcedurePhase,
+  steps: ProcedureStep[],
+): CaptureProcedure {
+  if (phase === "steps") {
+    return { ...procedure, steps };
+  }
+
+  const { verify: _dropped, ...rest } = procedure;
+
+  return steps.length === 0 ? rest : { ...rest, verify: steps };
+}
+
+export function addStep(
+  procedure: CaptureProcedure,
+  phase: ProcedurePhase,
+  step: ProcedureStep,
+): CaptureProcedure {
+  return withPhase(procedure, phase, [...phaseSteps(procedure, phase), step]);
+}
+
+export function replaceStep(
+  procedure: CaptureProcedure,
+  phase: ProcedurePhase,
+  index: number,
+  step: ProcedureStep,
+): CaptureProcedure {
+  const steps = phaseSteps(procedure, phase).map((current, at) => (at === index ? step : current));
+
+  return withPhase(procedure, phase, steps);
+}
+
+export function removeStep(
+  procedure: CaptureProcedure,
+  phase: ProcedurePhase,
+  index: number,
+): CaptureProcedure {
+  const steps = phaseSteps(procedure, phase).filter((_step, at) => at !== index);
+
+  return withPhase(procedure, phase, steps);
+}
+
+/** Order is the running order, so a step that moves past the end of the phase does not. */
+export function moveStep(
+  procedure: CaptureProcedure,
+  phase: ProcedurePhase,
+  index: number,
+  to: number,
+): CaptureProcedure {
+  const steps = [...phaseSteps(procedure, phase)];
+  const moved = steps.splice(index, 1).at(0);
+  if (moved === undefined || to < 0 || to >= steps.length + 1) {
+    return procedure;
+  }
+  steps.splice(to, 0, moved);
+
+  return withPhase(procedure, phase, steps);
+}
+
+/** Series name each phase already holds, so a new step cannot take one twice. */
+export function takenSeries(procedure: CaptureProcedure, phase: ProcedurePhase): string[] {
+  return phaseSteps(procedure, phase).flatMap((step) =>
+    step.kind === "read" || step.kind === "sweep" ? [step.series] : [],
+  );
+}
+
+/**
+ * A step of the given kind that the contract already accepts, so adding one never leaves
+ * the document unsaveable. What it does is a placeholder; what it is, is valid.
+ */
+export function newStep(
+  kind: StepKind,
+  taken: string[],
+  read: ProcedureRead = { instrument: DUT_ROLE, command: "hello", as: "reply" },
+): ProcedureStep {
+  switch (kind) {
+    case "operator":
+      return { kind, prompt: "Tell the operator what to do here." };
+    case "settle":
+      return { kind, ms: 1000 };
+    case "set":
+      return { kind, instrument: DUT_ROLE, set: "setpoint", value: 0 };
+    case "read":
+      return { kind, series: uniqueName("reading", taken), read: [read] };
+    case "sweep":
+      return {
+        kind,
+        series: uniqueName("sweep", taken),
+        stimulus: {
+          operator: "Set up {value}, then wait for the reading to settle.",
+          values: [1, 2],
+        },
+        read: [read],
+      };
+  }
+}
+
+/** The reads a step takes at each point; only read and sweep steps have any. */
+export function stepReads(step: ProcedureStep): ProcedureRead[] {
+  return step.kind === "read" || step.kind === "sweep" ? step.read : [];
+}
+
+export function replaceRead(
+  step: ProcedureStep,
+  index: number,
+  read: ProcedureRead,
+): ProcedureStep {
+  if (step.kind !== "read" && step.kind !== "sweep") {
+    return step;
+  }
+
+  return { ...step, read: step.read.map((current, at) => (at === index ? read : current)) };
+}
+
+export function addRead(step: ProcedureStep, read: ProcedureRead): ProcedureStep {
+  if (step.kind !== "read" && step.kind !== "sweep") {
+    return step;
+  }
+
+  return { ...step, read: [...step.read, read] };
+}
+
+/** A step with no reads produces nothing, so the last one stays. */
+export function removeRead(step: ProcedureStep, index: number): ProcedureStep {
+  if ((step.kind !== "read" && step.kind !== "sweep") || step.read.length === 1) {
+    return step;
+  }
+
+  return { ...step, read: step.read.filter((_read, at) => at !== index) };
+}
 
 /** A role becomes a payload key and a python dict key; the contract's own rule for both. */
 export const ROLE_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;

@@ -72,9 +72,9 @@ describe("retypeCoefficient", () => {
     const asArray = retypeCoefficient({ type: "number", min: 0 }, "number_array");
 
     expect(asArray).toEqual({ type: "number_array", length: 10, min: 0 });
-    expect(retypeCoefficient({ ...asArray, length: 6 }, "integer_array")).toMatchObject({
-      length: 6,
-    });
+    expect(
+      retypeCoefficient({ type: "number_array", length: 6, min: 0 }, "integer_array"),
+    ).toMatchObject({ length: 6 });
   });
 
   // The contract takes whole bounds only on an integer array, so a fractional one has to

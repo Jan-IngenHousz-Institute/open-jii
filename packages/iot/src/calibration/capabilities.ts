@@ -8,10 +8,26 @@
  * Summarising the registries here lets the authoring surface offer them and check them.
  */
 import type { SensorFamily } from "../core/families";
+import { AMBIT_COMMANDS } from "../driver/ambit/commands";
+import { GENERIC_COMMANDS } from "../driver/generic/commands";
+import { MINIPAR_COMMANDS } from "../driver/minipar/commands";
+import { MULTISPEQ_COMMANDS } from "../driver/multispeq/commands";
 import type { InstrumentReading, InstrumentSetpoint } from "../instrument/interface";
 import { BENCH_INSTRUMENTS } from "../instrument/registry";
 import { DEVICE_SETPOINTS } from "../procedure/device-setpoints";
 import { CALIBRATION_WRITERS } from "./write-back";
+
+/**
+ * The console surface each family's driver knows. A read step names one of these, and a
+ * misremembered one only fails at the bench, where it reads as a device that will not
+ * answer. Ambyte is absent: it is a gateway, and its measurements arrive through ingest.
+ */
+const FAMILY_COMMANDS: Partial<Record<SensorFamily, Record<string, string>>> = {
+  minipar: MINIPAR_COMMANDS,
+  ambit: AMBIT_COMMANDS,
+  multispeq: MULTISPEQ_COMMANDS,
+  generic: GENERIC_COMMANDS,
+};
 
 /** One piece of bench equipment a procedure can declare, as an author must refer to it. */
 export interface BenchInstrumentSummary {
@@ -41,6 +57,8 @@ export interface WritableCoefficient {
 export interface FamilyCalibrationCapabilities {
   family: SensorFamily;
   deviceSetpoints: DeviceSetpointSummary[];
+  /** Console commands the driver knows, as a read step would name one. */
+  commands: string[];
   /**
    * Block name to the coefficients the platform has a console command for. Partial: a
    * block the registry does not cover is absent, not empty.
@@ -75,6 +93,7 @@ export function familyCalibrationCapabilities(family: SensorFamily): FamilyCalib
 
   return {
     family,
+    commands: [...new Set(Object.values(FAMILY_COMMANDS[family] ?? {}))].sort(),
     deviceSetpoints: (DEVICE_SETPOINTS[family] ?? []).map((setpoint) => ({
       name: setpoint.name,
       unit: setpoint.unit,

@@ -4,10 +4,20 @@ import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-cal
 import { zCaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 
 import {
+  STEP_KINDS,
   addInstrument,
+  addRead,
+  addStep,
   instrumentRoleUsage,
+  moveStep,
+  newStep,
   removeInstrument,
+  removeRead,
+  removeStep,
   renameInstrumentRole,
+  replaceStep,
+  stepReads,
+  takenSeries,
   uniqueRole,
 } from "./procedure-edits";
 
@@ -95,5 +105,57 @@ describe("uniqueRole", () => {
     expect(uniqueRole("kiprim_dc", [])).toBe("kiprim_dc");
     expect(uniqueRole("kiprim_dc", ["kiprim_dc"])).toBe("kiprim_dc_2");
     expect(uniqueRole("kiprim_dc", ["kiprim_dc", "kiprim_dc_2"])).toBe("kiprim_dc_3");
+  });
+});
+
+describe("step edits", () => {
+  it("adds a step of each kind that the contract already accepts", () => {
+    for (const kind of STEP_KINDS) {
+      const added = addStep(procedure, "steps", newStep(kind, takenSeries(procedure, "steps")));
+
+      expect(zCaptureProcedure.safeParse(added).success).toBe(true);
+    }
+  });
+
+  it("moves a step within its phase and leaves the others in order", () => {
+    const moved = moveStep(procedure, "steps", 0, 1);
+
+    expect(moved.steps.map((step) => step.kind)).toEqual(["sweep", "set"]);
+    expect(moveStep(procedure, "steps", 0, 5)).toEqual(procedure);
+  });
+
+  it("replaces and removes a step by position", () => {
+    const replaced = replaceStep(procedure, "steps", 0, { kind: "settle", ms: 500 });
+
+    expect(replaced.steps[0]).toEqual({ kind: "settle", ms: 500 });
+    expect(removeStep(procedure, "steps", 0).steps).toHaveLength(1);
+  });
+
+  // An empty verify phase is not a phase: the contract refuses `verify: []`.
+  it("drops the verify phase with its last step, and creates it with its first", () => {
+    const emptied = removeStep(procedure, "verify", 0);
+
+    expect(emptied).not.toHaveProperty("verify");
+    expect(zCaptureProcedure.safeParse(emptied).success).toBe(true);
+
+    const restored = addStep(emptied, "verify", newStep("settle", []));
+    expect(restored.verify).toHaveLength(1);
+  });
+
+  it("names each new series once per phase", () => {
+    const first = addStep(procedure, "steps", newStep("read", takenSeries(procedure, "steps")));
+    const second = addStep(first, "steps", newStep("read", takenSeries(first, "steps")));
+
+    expect(zCaptureProcedure.safeParse(second).success).toBe(true);
+  });
+
+  // A step with no reads records nothing, so the last one stays put.
+  it("adds and removes readings, keeping one", () => {
+    const step = procedure.steps[1];
+    const added = addRead(step, { instrument: "dut", command: "par", as: "par" });
+
+    expect(stepReads(added)).toHaveLength(3);
+    expect(stepReads(removeRead(added, 0))).toHaveLength(2);
+    expect(stepReads(removeRead(newStep("read", []), 0))).toHaveLength(1);
   });
 });
