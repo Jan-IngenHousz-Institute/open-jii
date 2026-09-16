@@ -33,6 +33,9 @@ pnpm dev:fb       # run web + backend (or `pnpm dev` for everything)
 
 This is a pnpm + Turborepo monorepo — see the [README](README.md#monorepo-layout) for the app/package layout. To work on a single app, use turbo filters, e.g. `pnpm --filter web dev` or `pnpm --filter backend test`.
 
+Local development commands that need a credential (a dev session, Linear access) live in
+`tooling/devkit`. See [its README](tooling/devkit/README.md) for the one-time setup.
+
 ## Making changes
 
 1. Create a branch from `main`.
