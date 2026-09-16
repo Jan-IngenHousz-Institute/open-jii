@@ -729,7 +729,8 @@ describe("PlotlyChart", () => {
 
     // A dead context leaves Plotly's gl layer blank while the axes and legend
     // keep drawing, so the chart has to notice and rebuild rather than sit there.
-    it("rebuilds a WebGL chart when its context is lost, then settles on SVG", () => {
+    it("rebuilds a WebGL chart when its context is lost, then settles on SVG until it can retry", () => {
+      vi.useFakeTimers();
       const testData: Data[] = [{ type: "scattergl", x: [1, 2], y: [1, 2] }];
 
       const originalManager = WebGLContextManager.getInstance();
@@ -754,7 +755,12 @@ describe("PlotlyChart", () => {
       expect(readRenderedTypes()).toEqual(["scatter"]);
       expect(screen.queryByText("Chart Error")).not.toBeInTheDocument();
 
+      // Temporary, not for the life of the page.
+      act(() => vi.advanceTimersByTime(30_000));
+      expect(readRenderedTypes()).toEqual(["scattergl"]);
+
       mockRequestContext.mockRestore();
+      vi.useRealTimers();
     });
 
     it("handles WebGL detection with null/undefined data", () => {

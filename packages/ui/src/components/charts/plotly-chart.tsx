@@ -132,6 +132,10 @@ interface PendingChart {
 // that keep another alive, which loses its context in turn.
 const MAX_GL_RECOVERIES = 1;
 
+// Settling on SVG is temporary. A context is usually lost to a passing squeeze,
+// and without a way back a dashboard decays to all-SVG as you use it.
+const GL_RETRY_AFTER_MS = 30_000;
+
 class WebGLContextManager {
   private static instance: WebGLContextManager;
   private activeContexts = new Map<string, number>();
@@ -327,6 +331,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     const [localError, setLocalError] = useState<string | null>(null);
     const [glGeneration, setGlGeneration] = useState(0);
     const glRecoveriesRef = useRef(0);
+    const glRetryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const chartIdRef = useRef<string>(`chart-${Math.random().toString(36).slice(2, 11)}`);
     const contextManager = WebGLContextManager.getInstance();
 
@@ -506,14 +511,22 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     // is what react-plotly surfaces here.
     const handleWebGlContextLost = React.useCallback(() => {
       if (glRecoveriesRef.current >= MAX_GL_RECOVERIES) {
-        // Rebuilding again would only take the contexts back off another chart.
+        // Rebuilding again would only take the contexts back off another chart,
+        // so draw on SVG and come back to it once the page has settled.
         setIsWebGLEnabled(false);
+        clearTimeout(glRetryTimerRef.current);
+        glRetryTimerRef.current = setTimeout(() => {
+          glRecoveriesRef.current = 0;
+          setIsWebGLEnabled(true);
+        }, GL_RETRY_AFTER_MS);
       } else {
         glRecoveriesRef.current += 1;
         setGlGeneration((generation) => generation + 1);
       }
       onWebGlContextLost?.();
     }, [onWebGlContextLost]);
+
+    useEffect(() => () => clearTimeout(glRetryTimerRef.current), []);
 
     // Validate and prepare layout
     const safeLayout = React.useMemo(() => {
