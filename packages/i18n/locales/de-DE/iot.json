@@ -913,6 +913,28 @@
           "updated": "Aktualisiert"
         },
         "retry": "Erneut versuchen"
+      },
+      "detail": {
+        "rig": "Benötigter Aufbau",
+        "procedure": "Ablauf am Prüfstand",
+        "produces": "Ergebnis",
+        "script": "Auswertung",
+        "steps": "Aufnahme",
+        "verify": "Prüfung nach dem Schreiben",
+        "optional": "Optional",
+        "theDevice": "das zu kalibrierende Gerät",
+        "answers": "antwortet {{handshake}}",
+        "created": "Erstellt",
+        "firmwareFloor": "Benötigt Firmware",
+        "settle": "{{ms}} ms warten",
+        "set": "{{instrument}} {{setpoint}} auf {{value}} setzen",
+        "read": "{{series}} aufzeichnen",
+        "sweepInstrument": "{{instrument}} {{setpoint}} über {{points}} Punkte führen, {{series}} aufzeichnen",
+        "sweepOperator": "{{points}} Aufbauten erfragen, {{series}} aufzeichnen",
+        "gatedBy": "{{prompt}} (bestätigt durch Eingabe von {{token}})",
+        "readInstrument": "{{as}}: {{instrument}} {{source}}",
+        "readTyped": "{{as}}: von der Bedienperson eingegeben, {{prompt}}",
+        "notWritable": "Für {{coefficients}} gibt es keinen Konsolenbefehl. Ein Lauf wird protokolliert, die Werte erreichen das Gerät aber nie."
       }
     },
     "workbookBar": {

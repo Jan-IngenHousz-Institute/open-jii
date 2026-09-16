@@ -34,8 +34,11 @@ export interface DeviceSetpointSummary {
 export interface FamilyCalibrationCapabilities {
   family: SensorFamily;
   deviceSetpoints: DeviceSetpointSummary[];
-  /** Block name to the coefficients the platform has a console command for. */
-  writableCoefficients: Record<string, string[]>;
+  /**
+   * Block name to the coefficients the platform has a console command for. Partial: a
+   * block the registry does not cover is absent, not empty.
+   */
+  writableCoefficients: Partial<Record<string, string[]>>;
 }
 
 export function benchInstrumentSummaries(): BenchInstrumentSummary[] {
@@ -52,7 +55,7 @@ export function benchInstrumentSummaries(): BenchInstrumentSummary[] {
 
 export function familyCalibrationCapabilities(family: SensorFamily): FamilyCalibrationCapabilities {
   const blocks = CALIBRATION_WRITERS[family]?.blocks;
-  const writableCoefficients: Record<string, string[]> = {};
+  const writableCoefficients: Partial<Record<string, string[]>> = {};
   for (const [block, writers] of Object.entries(blocks ?? {})) {
     // The registry is a partial record: a block it does not cover is simply not writable.
     if (writers !== undefined) {

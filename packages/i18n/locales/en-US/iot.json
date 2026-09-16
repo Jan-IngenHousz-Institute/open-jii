@@ -913,6 +913,28 @@
           "updated": "Updated"
         },
         "retry": "Try again"
+      },
+      "detail": {
+        "rig": "The rig it needs",
+        "procedure": "What it does at the bench",
+        "produces": "What it produces",
+        "script": "How it fits",
+        "steps": "Capture",
+        "verify": "Check after the write",
+        "optional": "Optional",
+        "theDevice": "the device being calibrated",
+        "answers": "answers {{handshake}}",
+        "created": "Created",
+        "firmwareFloor": "Needs firmware",
+        "settle": "Wait {{ms}} ms",
+        "set": "Set {{instrument}} {{setpoint}} to {{value}}",
+        "read": "Record {{series}}",
+        "sweepInstrument": "Step {{instrument}} {{setpoint}} through {{points}} points, recording {{series}}",
+        "sweepOperator": "Ask the operator for {{points}} setups, recording {{series}}",
+        "gatedBy": "{{prompt}} (confirmed by typing {{token}})",
+        "readInstrument": "{{as}}: {{instrument}} {{source}}",
+        "readTyped": "{{as}}: typed by the operator, {{prompt}}",
+        "notWritable": "The platform has no console command for {{coefficients}}. A run producing these is recorded, but they never reach the device."
       }
     },
     "workbookBar": {

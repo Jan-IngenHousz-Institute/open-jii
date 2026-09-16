@@ -913,6 +913,28 @@
           "updated": "Bijgewerkt"
         },
         "retry": "Opnieuw proberen"
+      },
+      "detail": {
+        "rig": "Benodigde opstelling",
+        "procedure": "Wat het doet op de opstelling",
+        "produces": "Wat het oplevert",
+        "script": "Hoe het fit",
+        "steps": "Opname",
+        "verify": "Controle na het schrijven",
+        "optional": "Optioneel",
+        "theDevice": "het te kalibreren apparaat",
+        "answers": "antwoordt {{handshake}}",
+        "created": "Aangemaakt",
+        "firmwareFloor": "Vereist firmware",
+        "settle": "{{ms}} ms wachten",
+        "set": "{{instrument}} {{setpoint}} op {{value}} zetten",
+        "read": "{{series}} vastleggen",
+        "sweepInstrument": "{{instrument}} {{setpoint}} langs {{points}} punten sturen, {{series}} vastleggen",
+        "sweepOperator": "Vraag de operator om {{points}} opstellingen, {{series}} vastleggen",
+        "gatedBy": "{{prompt}} (bevestigd door {{token}} te typen)",
+        "readInstrument": "{{as}}: {{instrument}} {{source}}",
+        "readTyped": "{{as}}: door de operator ingevoerd, {{prompt}}",
+        "notWritable": "Het platform heeft geen console-opdracht voor {{coefficients}}. Een run wordt vastgelegd, maar deze waarden bereiken het apparaat nooit."
       }
     },
     "workbookBar": {

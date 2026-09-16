@@ -11,6 +11,7 @@ import { generateMetadata as generateApiKeysMetadata } from "../account/api-keys
 import { generateMetadata as generateInvitationsMetadata } from "../account/invitations/page";
 import { generateMetadata as generateAccountMetadata } from "../account/page";
 import { generateMetadata as generateSecurityMetadata } from "../account/security/page";
+import { generateMetadata as generateCalibrationsMetadata } from "../calibrations/page";
 import { generateMetadata as generateDevicesMetadata } from "../devices/page";
 import { generateMetadata as generateExperimentsArchiveMetadata } from "../experiments-archive/page";
 import { generateMetadata as generateNewExperimentMetadata } from "../experiments/new/page";
@@ -162,8 +163,8 @@ function ownsTitleMetadata(source: string): boolean {
 describe("platform metadata ownership inventory", () => {
   const pageRoutes = findPageRoutes(platformDirectory).sort();
 
-  it("covers all 60 current page routes", () => {
-    expect(pageRoutes).toHaveLength(60);
+  it("covers all 62 current page routes", () => {
+    expect(pageRoutes).toHaveLength(62);
   });
 
   it.each(pageRoutes)("gives %s title ownership or a documented redirect exception", (route) => {
@@ -238,6 +239,7 @@ const { translations } = vi.hoisted(() => ({
       "common:transferRequest.yourRequests": "Your Transfer Requests",
       "dashboard:title": "Dashboard",
       "iot:iot.devices.title": "Devices",
+      "iot:iot.calibration.library.title": "Calibrations",
       "macro:macros.newMacro": "New Macro",
       "macro:macros.title": "Macros",
       "common:organizations.createAction": "Create organization",
@@ -258,6 +260,7 @@ const { translations } = vi.hoisted(() => ({
       "common:transferRequest.yourRequests": "Ihre Transferanfragen",
       "dashboard:title": "Dashboard",
       "iot:iot.devices.title": "Geräte",
+      "iot:iot.calibration.library.title": "Kalibrierungen",
       "macro:macros.newMacro": "Neues Makro",
       "macro:macros.title": "Makros",
       "common:organizations.createAction": "Organisation erstellen",
@@ -296,6 +299,7 @@ const routes = [
   ["macros", generateMacrosMetadata],
   ["newMacro", generateNewMacroMetadata],
   ["protocols", generateProtocolsMetadata],
+  ["calibrations", generateCalibrationsMetadata],
   ["newProtocol", generateNewProtocolMetadata],
   ["workbooks", generateWorkbooksMetadata],
   ["transferRequest", generateTransferRequestMetadata],
@@ -321,6 +325,7 @@ const expectedTitles: Record<
     macros: "Macros",
     newMacro: "New Macro",
     protocols: "Protocols",
+    calibrations: "Calibrations",
     newProtocol: "New Protocol",
     workbooks: "Workbooks",
     transferRequest: "Request Project Transfer",
@@ -341,6 +346,7 @@ const expectedTitles: Record<
     macros: "Makros",
     newMacro: "Neues Makro",
     protocols: "Protokolle",
+    calibrations: "Kalibrierungen",
     newProtocol: "Neues Protokoll",
     workbooks: "Arbeitsmappen",
     transferRequest: "Projekttransfer beantragen",
