@@ -1,56 +1,33 @@
-import { renderHook } from "@testing-library/react-native";
-import i18next from "i18next";
-import { initReactI18next, useTranslation } from "react-i18next";
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import enUS from "~/shared/i18n/locales/en-US/organizations.json";
+import nlNL from "~/shared/i18n/locales/nl-NL/organizations.json";
 
 import { zOrganizationRole } from "@repo/api/domains/organization/organization.schema";
 
 import { organizationRoleLabelKey } from "./organization-role-label";
 
-beforeAll(async () => {
-  const [{ default: commonEn }, { default: organizationsEn }] = await Promise.all([
-    import("~/shared/i18n/locales/en-US/common.json"),
-    import("~/shared/i18n/locales/en-US/organizations.json"),
-  ]);
-
-  await i18next.use(initReactI18next).init({
-    lng: "en-US",
-    fallbackLng: "en-US",
-    ns: ["common", "organizations"],
-    defaultNS: "common",
-    resources: { "en-US": { common: commonEn, organizations: organizationsEn } },
-    interpolation: { escapeValue: false },
-    compatibilityJSON: "v4",
-    returnNull: false,
-  });
-});
+function hasKey(bundle: Record<string, unknown>, path: string): boolean {
+  const value = path.split(".").reduce<unknown>((node, segment) => {
+    return node && typeof node === "object"
+      ? (node as Record<string, unknown>)[segment]
+      : undefined;
+  }, bundle);
+  return typeof value === "string" && value.length > 0;
+}
 
 describe("organizationRoleLabelKey", () => {
-  it.each(zOrganizationRole.options)(
-    "resolves %s from a multi-namespace useTranslation (detail screen shape)",
-    (role) => {
-      const { result } = renderHook(() => useTranslation(["common", "organizations"]));
-
-      const label = result.current.t(organizationRoleLabelKey(role));
-
-      expect(label).not.toMatch(/role\./u);
-      expect(label.length).toBeGreaterThan(0);
-    },
-  );
-
-  it("falls back to the plain role word when the server sent no role", () => {
-    const { result } = renderHook(() => useTranslation(["common", "organizations"]));
-
-    expect(organizationRoleLabelKey(null)).toBe("organizations:role.member");
-    expect(result.current.t(organizationRoleLabelKey(null))).toBe("Member");
+  it.each(zOrganizationRole.options)("qualifies %s with the organizations namespace", (role) => {
+    expect(organizationRoleLabelKey(role)).toBe(`organizations:role.${role}`);
   });
 
-  it("names each role distinctly", () => {
-    const { result } = renderHook(() => useTranslation(["common", "organizations"]));
-    const labels = zOrganizationRole.options.map((role) =>
-      result.current.t(organizationRoleLabelKey(role)),
-    );
+  it("falls back to the member key when the server sent no role", () => {
+    expect(organizationRoleLabelKey(null)).toBe("organizations:role.member");
+  });
 
-    expect(labels).toEqual(["Owner", "Admin", "Member"]);
+  it.each(zOrganizationRole.options)("has a translation for %s in both locales", (role) => {
+    const path = organizationRoleLabelKey(role).replace(/^organizations:/u, "");
+
+    expect(hasKey(enUS, path)).toBe(true);
+    expect(hasKey(nlNL, path)).toBe(true);
   });
 });

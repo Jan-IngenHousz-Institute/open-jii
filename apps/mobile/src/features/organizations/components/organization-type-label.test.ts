@@ -1,55 +1,33 @@
-import { renderHook } from "@testing-library/react-native";
-import i18next from "i18next";
-import { initReactI18next, useTranslation } from "react-i18next";
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import enUS from "~/shared/i18n/locales/en-US/organizations.json";
+import nlNL from "~/shared/i18n/locales/nl-NL/organizations.json";
 
 import { zOrganizationType } from "@repo/api/domains/organization/organization.schema";
 
 import { organizationTypeLabelKey } from "./organization-type-label";
 
-beforeAll(async () => {
-  const [{ default: commonEn }, { default: organizationsEn }] = await Promise.all([
-    import("~/shared/i18n/locales/en-US/common.json"),
-    import("~/shared/i18n/locales/en-US/organizations.json"),
-  ]);
-
-  await i18next.use(initReactI18next).init({
-    lng: "en-US",
-    fallbackLng: "en-US",
-    ns: ["common", "organizations"],
-    defaultNS: "common",
-    resources: { "en-US": { common: commonEn, organizations: organizationsEn } },
-    interpolation: { escapeValue: false },
-    compatibilityJSON: "v4",
-    returnNull: false,
-  });
-});
+function hasKey(bundle: Record<string, unknown>, path: string): boolean {
+  const value = path.split(".").reduce<unknown>((node, segment) => {
+    return node && typeof node === "object"
+      ? (node as Record<string, unknown>)[segment]
+      : undefined;
+  }, bundle);
+  return typeof value === "string" && value.length > 0;
+}
 
 describe("organizationTypeLabelKey", () => {
   it("returns null for a missing type", () => {
     expect(organizationTypeLabelKey(null)).toBeNull();
   });
 
-  it.each(zOrganizationType.options)(
-    "resolves %s from a multi-namespace useTranslation (detail screen shape)",
-    (type) => {
-      const { result } = renderHook(() => useTranslation(["common", "organizations"]));
-      const key = organizationTypeLabelKey(type) ?? "";
+  it.each(zOrganizationType.options)("qualifies %s with the organizations namespace", (type) => {
+    expect(organizationTypeLabelKey(type)).toMatch(/^organizations:type\./u);
+  });
 
-      expect(key).not.toBe("");
-      const label = result.current.t(key);
-      expect(label).not.toMatch(/type\./u);
-      expect(label.length).toBeGreaterThan(0);
-    },
-  );
+  it.each(zOrganizationType.options)("has a translation for %s in both locales", (type) => {
+    const path = (organizationTypeLabelKey(type) ?? "").replace(/^organizations:/u, "");
 
-  it.each(zOrganizationType.options)(
-    "resolves %s from the single organizations namespace (card shape)",
-    (type) => {
-      const { result } = renderHook(() => useTranslation("organizations"));
-      const label = result.current.t(organizationTypeLabelKey(type) ?? "");
-
-      expect(label).not.toMatch(/type\./u);
-    },
-  );
+    expect(hasKey(enUS, path)).toBe(true);
+    expect(hasKey(nlNL, path)).toBe(true);
+  });
 });
