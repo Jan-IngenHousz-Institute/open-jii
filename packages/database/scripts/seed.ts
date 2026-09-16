@@ -1003,21 +1003,64 @@ fit = assess_multilinear_fit(
 fitted = all(math.isfinite(value) for value in fit["coefficients"]) and math.isfinite(
     fit["intercept"]
 )
+settings = {reading for reading in points["settings"]}
+if len(settings) != 1:
+    raise ValueError(f"the sweep ran at more than one spectrometer setting: {sorted(settings)}")
+
 if fitted:
-    block = {
-        "status": "computed",
-        # The device applies the channel coefficients; the intercept stays on the run.
-        "coefficients": {"channel_coefficients": fit["coefficients"]},
-        "fit": {"intercept": fit["intercept"]},
-        "quality": fit,
-    }
+    # par = par_raw * slope + intercept, and par_raw is the channel sum. Leaving the
+    # previous line in place would scale this fit by it, so the line is set here too.
+    submit(
+        {
+            "spec": {
+                "status": "computed",
+                "coefficients": {"channel_coefficients": fit["coefficients"]},
+                "quality": fit,
+            },
+            "par": {
+                "status": "computed",
+                "coefficients": {"slope": 1.0, "intercept": fit["intercept"]},
+                "quality": {"passed": True, "reasons": [], "settings": settings.pop()},
+            },
+        }
+    )
 else:
-    block = {"status": "rejected", "reason": "; ".join(fit["reasons"]), "quality": fit}
-submit({"spec": block})
+    rejected = {"status": "rejected", "reason": "; ".join(fit["reasons"]), "quality": fit}
+    submit({"spec": rejected, "par": rejected})
 `;
 
+  // Eleven coefficients are fitted, so the sweep has to determine eleven parameters. The
+  // bench does that by varying the light and recording as it goes, appending readings
+  // across a session rather than taking one per filter, so each filter is read at more
+  // than one level here. Two is the minimum that clears the parameter count with margin;
+  // the number of levels is the one thing here that should come from their own practice.
+  const spectralFilters = [
+    "no filter",
+    "filter e002",
+    "filter e003",
+    "filter e004",
+    "filter e007",
+    "filter e008",
+    "filter e009",
+    "filter e010",
+    "filter e013",
+    "filter e015",
+    "filter e017",
+  ];
+
+  const spectralSweepPoints = [
+    ...spectralFilters.flatMap((filter) => [
+      { filter, light: "bright" },
+      { filter, light: "dim" },
+    ]),
+    { filter: "the dark cap", light: "off" },
+  ];
+
   const miniparSpectralOutputSchema = {
-    blocks: { spec: { channel_coefficients: { type: "number_array", length: 10 } } },
+    blocks: {
+      spec: { channel_coefficients: { type: "number_array", length: 10 } },
+      par: { slope: { type: "number" }, intercept: { type: "number" } },
+    },
   };
 
   const ambitFactoryScript = `import json
@@ -1269,21 +1312,8 @@ submit(blocks)
             series: "spec_sweep",
             stimulus: {
               operator:
-                "Cover both sensors with {value}, then wait for the readings to settle before continuing.",
-              values: [
-                "no filter",
-                "filter e002",
-                "filter e003",
-                "filter e004",
-                "filter e007",
-                "filter e008",
-                "filter e009",
-                "filter e010",
-                "filter e013",
-                "filter e015",
-                "filter e017",
-                "the dark cap",
-              ],
+                "Cover both sensors with {value.filter} and set the lamp {value.light}, then wait for the readings to settle before continuing.",
+              values: spectralSweepPoints,
             },
             settleMs: 1000,
             read: [
@@ -1291,6 +1321,9 @@ submit(blocks)
               // by. Fitting the raw counts instead scales every later reading by the
               // gain and integration time the sweep happened to run at.
               { instrument: "dut", command: "spec", as: "spec" },
+              // The coefficients are only valid at the gain and integration time they were
+              // derived at, so every point carries the settings it was taken at.
+              { instrument: "dut", command: "status", as: "settings" },
               {
                 operator: "Enter the PAR value shown by the reference sensor",
                 as: "par_ref",
@@ -1306,7 +1339,7 @@ submit(blocks)
             series: "spec_check",
             stimulus: {
               operator:
-                "Cover both sensors with {value}, then wait for the readings to settle before continuing.",
+                "Cover both sensors with {value.filter} and set the lamp {value.light}, then wait for the readings to settle before continuing.",
               values: ["no filter", "filter e004", "the dark cap"],
             },
             settleMs: 1000,
