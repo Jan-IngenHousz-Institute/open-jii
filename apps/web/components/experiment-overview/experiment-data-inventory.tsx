@@ -80,7 +80,7 @@ export function ExperimentDataInventory({
 
       <Card padding="none" className="overflow-hidden shadow-none">
         <CardContent className="p-0">
-          <ul>
+          <ul className="max-h-54 overflow-y-auto">
             {tables.map((table) => (
               <ExperimentDataInventoryRow key={table.identifier} table={table} />
             ))}

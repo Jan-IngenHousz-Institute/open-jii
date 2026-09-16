@@ -6,16 +6,11 @@ import type { PlotParams } from "react-plotly.js";
 
 import { cn } from "../../lib/utils";
 import { withBrandedPngExport } from "./png-export";
-import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 
 // Type definitions for better type safety
 interface SafeDimensions {
   width?: number;
   height?: number;
-}
-
-interface WebGLErrorEvent extends Event {
-  message?: string;
 }
 
 interface PlotlyErrorEvent {
@@ -34,16 +29,24 @@ interface SafeConfig extends Partial<Config> {
   toImageButtonOptions?: ToImageButtonOptions;
 }
 
-// The only WebGL trace the bundle registers; see `plotly-runtime`.
-type WebGLTraceType = "scattergl";
+// The WebGL traces the bundle registers; see `plotly-runtime`. Both are
+// regl-backed and draw into the graph div's shared gl canvases.
+type WebGLTraceType = "scattergl" | "parcoords";
 
-const WEBGL_TRACE_TYPES: readonly WebGLTraceType[] = ["scattergl"];
+const WEBGL_TRACE_TYPES: readonly WebGLTraceType[] = ["scattergl", "parcoords"];
 
 const isWebGLTrace = (type: string): type is WebGLTraceType =>
   WEBGL_TRACE_TYPES.some((candidate) => candidate === type);
 
-/** What a WebGL trace falls back to when no context is free. */
-const SVG_TWIN = { scattergl: "scatter" } as const satisfies Record<WebGLTraceType, string>;
+/**
+ * What a WebGL trace falls back to when no context is free. Plotly ships no SVG
+ * parallel-coordinates trace, so parcoords has no entry and never falls back.
+ */
+const SVG_TWIN = { scattergl: "scatter" } as const satisfies Partial<
+  Record<WebGLTraceType, string>
+>;
+
+const hasSvgTwin = (type: string): type is keyof typeof SVG_TWIN => Object.hasOwn(SVG_TWIN, type);
 
 // Redraw a chart slightly before it is scrolled to, so the caught-up layout is
 // in place by the time it is on screen.
@@ -93,17 +96,51 @@ export interface PlotlyChartProps extends Omit<PlotParams, "className"> {
   error?: string;
 }
 
-// Plotly's gl2d builds a canvas each for the scene, the pick buffer and the
-// focus layer, so one chart costs three contexts. Past the browser's budget
-// the oldest is dropped, which blanks that chart's data layer.
-const CONTEXTS_PER_GL_CHART = 3;
+// Plotly's gl2d builds three canvases per chart but only wires two of them to a
+// context: the pick layer is skipped unless a parcoords trace is present, so a
+// parcoords chart costs one more than a scattergl one. Past the browser's budget
+// the oldest context is dropped, which blanks that chart's data layer, and a
+// rebuild allocates before it releases, so one chart's worth of headroom is
+// reserved for that overlap.
+const CONTEXTS_PER_GL_CHART = 2;
+const CONTEXTS_PER_PARCOORDS_CHART = 3;
 const BROWSER_CONTEXT_BUDGET = 16;
+
+interface ContextDemand {
+  contexts: number;
+  /** A chart with no SVG twin draws on WebGL or not at all, so it is never refused. */
+  mandatory: boolean;
+}
+
+const SCATTERGL_DEMAND: ContextDemand = {
+  contexts: CONTEXTS_PER_GL_CHART,
+  mandatory: false,
+};
+
+const PARCOORDS_DEMAND: ContextDemand = {
+  contexts: CONTEXTS_PER_PARCOORDS_CHART,
+  mandatory: true,
+};
+
+interface PendingChart {
+  demand: ContextDemand;
+  callback: () => void;
+}
+
+// One rebuild attempt after a lost context, then the chart settles on SVG.
+// Rebuilding without a limit thrashes: reviving one chart takes the contexts
+// that keep another alive, which loses its context in turn.
+const MAX_GL_RECOVERIES = 1;
+
+// Settling on SVG is temporary. A context is usually lost to a passing squeeze,
+// and without a way back a dashboard decays to all-SVG as you use it.
+const GL_RETRY_AFTER_MS = 30_000;
 
 class WebGLContextManager {
   private static instance: WebGLContextManager;
-  private activeContexts = new Set<string>();
-  private pendingCharts = new Map<string, () => void>();
-  private readonly maxContexts = Math.floor(BROWSER_CONTEXT_BUDGET / CONTEXTS_PER_GL_CHART);
+  private activeContexts = new Map<string, number>();
+  private pendingCharts = new Map<string, PendingChart>();
+  private readonly contextBudget = BROWSER_CONTEXT_BUDGET - CONTEXTS_PER_GL_CHART;
 
   static getInstance(): WebGLContextManager {
     if (!WebGLContextManager.instance) {
@@ -113,43 +150,64 @@ class WebGLContextManager {
   }
 
   canCreateContext(): boolean {
-    return this.activeContexts.size < this.maxContexts;
+    return this.fits(SCATTERGL_DEMAND);
   }
 
-  // Idempotent: if `chartId` already holds a slot, fire the callback and
-  // return true without double-counting against the cap.
-  requestContext(chartId: string, callback: () => void): boolean {
-    if (this.activeContexts.has(chartId)) {
+  // Idempotent on `chartId`: a repeat request refreshes the cost and fires the
+  // callback without double-counting. A mandatory chart is admitted over budget
+  // because refusing it leaves a blank chart rather than an SVG one.
+  requestContext(
+    chartId: string,
+    callback: () => void,
+    demand: ContextDemand = SCATTERGL_DEMAND,
+  ): boolean {
+    if (this.activeContexts.has(chartId) || this.fits(demand) || demand.mandatory) {
+      this.activeContexts.set(chartId, demand.contexts);
       callback();
       return true;
     }
-    if (this.activeContexts.size < this.maxContexts) {
-      this.activeContexts.add(chartId);
-      callback();
-      return true;
-    }
-    this.pendingCharts.set(chartId, callback);
+    this.pendingCharts.set(chartId, { demand, callback });
     return false;
   }
 
   // Releasing both clears any pending callback for this chart (avoids the
   // dead-component leak where an unmounted chart's pending callback would
   // later be promoted into `activeContexts` with nothing left to release it)
-  // and only promotes the next waiter when a slot was actually freed.
+  // and only promotes waiters when contexts were actually freed.
   releaseContext(chartId: string): void {
     this.pendingCharts.delete(chartId);
     if (!this.activeContexts.delete(chartId)) return;
 
-    const nextEntry = this.pendingCharts.entries().next();
-    if (nextEntry.done) return;
-    const [nextChartId, nextCallback] = nextEntry.value;
-    this.pendingCharts.delete(nextChartId);
-    this.activeContexts.add(nextChartId);
-    nextCallback();
+    this.promotePending();
   }
 
   getActiveCount(): number {
     return this.activeContexts.size;
+  }
+
+  private usedContexts(): number {
+    let total = 0;
+    for (const contexts of this.activeContexts.values()) {
+      total += contexts;
+    }
+    return total;
+  }
+
+  private fits(demand: ContextDemand): boolean {
+    return this.usedContexts() + demand.contexts <= this.contextBudget;
+  }
+
+  // Freeing a parcoords chart can admit more than one waiter. Stopping at the
+  // first that does not fit keeps the queue in order, so a chart wanting three
+  // contexts is not starved by a run of cheaper ones behind it.
+  private promotePending(): void {
+    for (const [chartId, pending] of this.pendingCharts) {
+      if (!this.fits(pending.demand)) return;
+
+      this.pendingCharts.delete(chartId);
+      this.activeContexts.set(chartId, pending.demand.contexts);
+      pending.callback();
+    }
   }
 }
 
@@ -271,6 +329,9 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     const [isWebGLEnabled, setIsWebGLEnabled] = useState(true);
     const [isContextAvailable, setIsContextAvailable] = useState(false);
     const [localError, setLocalError] = useState<string | null>(null);
+    const [glGeneration, setGlGeneration] = useState(0);
+    const glRecoveriesRef = useRef(0);
+    const glRetryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const chartIdRef = useRef<string>(`chart-${Math.random().toString(36).slice(2, 11)}`);
     const contextManager = WebGLContextManager.getInstance();
 
@@ -347,7 +408,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       };
     }, []);
 
-    const { onInitialized, onPurge } = plotProps;
+    const { onInitialized, onPurge, onWebGlContextLost } = plotProps;
     const handleInitialized = React.useCallback<NonNullable<PlotParams["onInitialized"]>>(
       (figure, graphDiv) => {
         graphDivRef.current = graphDiv;
@@ -369,23 +430,6 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       return validatePlotlyData(data);
     }, [data]);
 
-    // Behind the context cap a chart draws its SVG twin rather than waiting.
-    const renderData = React.useMemo(() => {
-      if (isContextAvailable) {
-        return safeData;
-      }
-      let downgraded = false;
-      const traces = safeData.map((trace: PlotData) => {
-        const type = trace.type ?? "scatter";
-        if (!isWebGLTrace(type)) {
-          return trace;
-        }
-        downgraded = true;
-        return { ...trace, type: SVG_TWIN[type] };
-      });
-      return downgraded ? traces : safeData;
-    }, [safeData, isContextAvailable]);
-
     // Stable boolean drives the context-management effect. Memoizing a
     // primitive (vs `useCallback`) means the effect only re-runs when
     // WebGL relevance flips; the previous shape caused release/reacquire
@@ -397,13 +441,38 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       return safeData.some((trace: PlotData) => isWebGLTrace(trace.type ?? "scatter"));
     }, [safeData, isWebGLEnabled]);
 
-    // The palette is `colorway`, which Plotly treats as `calc`. On a gl chart
-    // that recalc builds a fresh scene and abandons the old one's contexts:
-    // Plotly only destroys a scene when a plot stops being gl at all. Keying
-    // the remount on the theme routes it through `purge`, which does release
-    // them, at the cost of a rebuild the recalc was doing anyway.
-    const themeVersion = useChartThemeRefresh();
-    const plotKey = needsWebGL ? `gl-${themeVersion}` : "svg";
+    // A primitive for the same reason as `needsWebGL`. One fact settles the
+    // whole demand: parcoords is what wires the pick layer, and it is also the
+    // trace with no SVG twin to fall back to.
+    const hasParcoords = React.useMemo(
+      () => safeData.some((trace: PlotData) => (trace.type ?? "scatter") === "parcoords"),
+      [safeData],
+    );
+
+    // Behind the context cap, or once WebGL has been given up on, a chart draws
+    // its SVG twin rather than waiting.
+    const usesWebGL = needsWebGL && isContextAvailable;
+    const renderData = React.useMemo(() => {
+      if (usesWebGL) {
+        return safeData;
+      }
+      let downgraded = false;
+      const traces = safeData.map((trace: PlotData) => {
+        const type = trace.type ?? "scatter";
+        if (!hasSvgTwin(type)) {
+          return trace;
+        }
+        downgraded = true;
+        return { ...trace, type: SVG_TWIN[type] };
+      });
+      return downgraded ? traces : safeData;
+    }, [safeData, usesWebGL]);
+
+    // Past the browser's budget a context is taken away rather than refused,
+    // which leaves Plotly drawing into a dead scene: the plot keeps its axes and
+    // legend but loses its data. Remounting routes the rebuild through `purge`,
+    // which `Plotly.react` on its own would not do.
+    const plotKey = needsWebGL ? `gl-${glGeneration}` : "svg";
 
     useEffect(() => {
       const chartId = chartIdRef.current;
@@ -417,9 +486,13 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       }
 
       let cancelled = false;
-      const granted = contextManager.requestContext(chartId, () => {
-        if (!cancelled) setIsContextAvailable(true);
-      });
+      const granted = contextManager.requestContext(
+        chartId,
+        () => {
+          if (!cancelled) setIsContextAvailable(true);
+        },
+        hasParcoords ? PARCOORDS_DEMAND : SCATTERGL_DEMAND,
+      );
       // Queued behind the cap: draw on SVG now rather than hold the chart on a
       // placeholder until some other chart unmounts. The callback still fires
       // if a slot frees up, and the traces switch back to WebGL then.
@@ -431,24 +504,29 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
         cancelled = true;
         contextManager.releaseContext(chartId);
       };
-    }, [needsWebGL, contextManager]);
+    }, [needsWebGL, hasParcoords, contextManager]);
 
-    // Handle WebGL errors gracefully
-    useEffect(() => {
-      const handleWebGLError = (event: WebGLErrorEvent) => {
-        console.warn("WebGL context lost, falling back to SVG rendering");
+    // `webglcontextlost` is dispatched on the canvas and does not bubble, so a
+    // window listener never hears it. Plotly re-emits it on the graph div, which
+    // is what react-plotly surfaces here.
+    const handleWebGlContextLost = React.useCallback(() => {
+      if (glRecoveriesRef.current >= MAX_GL_RECOVERIES) {
+        // Rebuilding again would only take the contexts back off another chart,
+        // so draw on SVG and come back to it once the page has settled.
         setIsWebGLEnabled(false);
-        setLocalError("WebGL context lost, using fallback rendering");
-      };
-
-      // Listen for WebGL context loss
-      if (typeof window !== "undefined") {
-        window.addEventListener("webglcontextlost", handleWebGLError);
-        return () => window.removeEventListener("webglcontextlost", handleWebGLError);
+        clearTimeout(glRetryTimerRef.current);
+        glRetryTimerRef.current = setTimeout(() => {
+          glRecoveriesRef.current = 0;
+          setIsWebGLEnabled(true);
+        }, GL_RETRY_AFTER_MS);
+      } else {
+        glRecoveriesRef.current += 1;
+        setGlGeneration((generation) => generation + 1);
       }
+      onWebGlContextLost?.();
+    }, [onWebGlContextLost]);
 
-      return;
-    }, []);
+    useEffect(() => () => clearTimeout(glRetryTimerRef.current), []);
 
     // Validate and prepare layout
     const safeLayout = React.useMemo(() => {
@@ -570,6 +648,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
             }}
             onInitialized={handleInitialized}
             onPurge={handlePurge}
+            onWebGlContextLost={handleWebGlContextLost}
           />
         </Suspense>
       </div>
