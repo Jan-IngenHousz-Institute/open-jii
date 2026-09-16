@@ -153,7 +153,7 @@ export class CalitoolSpectralBoard implements BenchInstrument {
     await this.expectAck("measure");
 
     await transport.send(CALITOOL_COMMANDS.getChannel(reading.channel));
-    const answer = await this.awaitLine(this.replyTimeoutMs);
+    const answer = await this.awaitLine(timeoutMs ?? this.replyTimeoutMs);
     return this.parseChannelValue(answer);
   }
 

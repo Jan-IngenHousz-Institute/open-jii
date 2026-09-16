@@ -8,8 +8,8 @@
  * Summarising the registries here lets the authoring surface offer them and check them.
  */
 import type { SensorFamily } from "../core/families";
-import { BENCH_INSTRUMENTS } from "../instrument/registry";
 import type { InstrumentReading, InstrumentSetpoint } from "../instrument/interface";
+import { BENCH_INSTRUMENTS } from "../instrument/registry";
 import { DEVICE_SETPOINTS } from "../procedure/device-setpoints";
 import { CALIBRATION_WRITERS } from "./write-back";
 
@@ -50,13 +50,11 @@ export function benchInstrumentSummaries(): BenchInstrumentSummary[] {
   });
 }
 
-export function familyCalibrationCapabilities(
-  family: SensorFamily,
-): FamilyCalibrationCapabilities {
-  const writers = CALIBRATION_WRITERS[family];
+export function familyCalibrationCapabilities(family: SensorFamily): FamilyCalibrationCapabilities {
+  const blocks = CALIBRATION_WRITERS[family]?.blocks;
   const writableCoefficients: Record<string, string[]> = {};
-  for (const [block, { coefficients }] of Object.entries(writers?.blocks ?? {})) {
-    writableCoefficients[block] = Object.keys(coefficients);
+  for (const [block, writers] of Object.entries(blocks ?? {})) {
+    writableCoefficients[block] = Object.keys(writers.coefficients);
   }
 
   return {

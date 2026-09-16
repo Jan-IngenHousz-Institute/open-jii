@@ -73,7 +73,7 @@ export class MicroPythonParReference implements BenchInstrument {
     await transport.send(MICROPYTHON_COMMANDS.GET_PAR);
 
     // Line one is the REPL echoing the call; line two is the value.
-    const [, valueLine] = await this.awaitLines(2, this.readTimeoutMs);
+    const [, valueLine] = await this.awaitLines(2, timeoutMs ?? this.readTimeoutMs);
     const value = Number.parseFloat(valueLine);
     if (!Number.isFinite(value)) {
       throw new Error(`MicroPython PAR reference answered "${valueLine}", not a number`);

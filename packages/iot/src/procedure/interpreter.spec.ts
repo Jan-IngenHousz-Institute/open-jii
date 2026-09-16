@@ -281,7 +281,7 @@ describe("runCaptureProcedure", () => {
 
   describe("retaking a reading", () => {
     /** A probe whose reading changes each time it is read, so a retake is visible. */
-    function drifting(command, values) {
+    function drifting(values: number[]): RigBinding {
       let call = 0;
       return {
         read: {
@@ -313,7 +313,7 @@ describe("runCaptureProcedure", () => {
 
       const result = await runCaptureProcedure(
         MANUAL,
-        context({ rig: { dut: drifting("spec", [11, 22]) }, operator: port }),
+        context({ rig: { dut: drifting([11, 22]) }, operator: port }),
       );
 
       expect(result.payload.spec_sweep).toEqual([{ stimulus: "no filter", spec: 22 }]);
@@ -327,7 +327,7 @@ describe("runCaptureProcedure", () => {
 
       const result = await runCaptureProcedure(
         MANUAL,
-        context({ rig: { dut: drifting("spec", [11, 22]) }, operator: port }),
+        context({ rig: { dut: drifting([11, 22]) }, operator: port }),
       );
 
       expect(result.payload.spec_sweep_retaken).toEqual([{ stimulus: "no filter", spec: 11 }]);
@@ -342,7 +342,7 @@ describe("runCaptureProcedure", () => {
 
       await runCaptureProcedure(
         MANUAL,
-        context({ rig: { dut: drifting("spec", [11, 22]) }, operator: port }),
+        context({ rig: { dut: drifting([11, 22]) }, operator: port }),
       );
 
       expect(port.acknowledge).toHaveBeenCalledTimes(2);
@@ -357,7 +357,7 @@ describe("runCaptureProcedure", () => {
       await runCaptureProcedure(
         MANUAL,
         context({
-          rig: { dut: drifting("spec", [11, 22]) },
+          rig: { dut: drifting([11, 22]) },
           operator: port,
           onProgress: (event) => events.push(event),
         }),
