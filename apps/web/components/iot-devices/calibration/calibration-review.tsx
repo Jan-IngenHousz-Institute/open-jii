@@ -14,7 +14,7 @@ import { Button } from "@repo/ui/components/button";
 import { CalibrationBlockCard } from "./calibration-block-card";
 import { CalibrationFitChart } from "./calibration-fit-chart";
 import { CalibrationSeriesTable } from "./calibration-series-table";
-import { fitLineFromCoefficients, fitPointsFromPayload } from "./fit-points";
+import { fitLineFromBlocks, fitPointsFromPayload } from "./fit-points";
 
 interface CalibrationReviewProps {
   run: CalibrationRun;
@@ -43,17 +43,9 @@ export function CalibrationReview({
   const points = fitPointsFromPayload(payload);
 
   function renderChart() {
-    const lineBlock = blocks
-      .map(([, block]) => (block.coefficients ? fitLineFromCoefficients(block.coefficients) : null))
-      .find((line) => line !== null);
-    if (!lineBlock || points.length === 0) return null;
-    return (
-      <CalibrationFitChart
-        points={points}
-        slope={lineBlock.slope}
-        intercept={lineBlock.intercept}
-      />
-    );
+    const line = fitLineFromBlocks(run.blocks);
+    if (line === null || points.length === 0) return null;
+    return <CalibrationFitChart points={points} slope={line.slope} intercept={line.intercept} />;
   }
 
   function renderSeries([series, rows]: [string, CalibrationRunPayload[string]]) {

@@ -14,27 +14,39 @@ interface CalibrationRunsListProps {
   runs: CalibrationRun[] | undefined;
   isLoading: boolean;
   isError: boolean;
+  onSelectRun: (runId: string) => void;
 }
 
-export function CalibrationRunsList({ runs, isLoading, isError }: CalibrationRunsListProps) {
+export function CalibrationRunsList({
+  runs,
+  isLoading,
+  isError,
+  onSelectRun,
+}: CalibrationRunsListProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
 
   function renderRun(run: CalibrationRun) {
     return (
-      <li key={run.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-        <div className="min-w-0">
-          <p className="text-sm">
-            {new Date(run.createdAt).toLocaleString(locale)}
-            <span className="text-muted-foreground ml-2 text-xs">
-              {t("iot.calibration.runs.definition", { version: run.definitionVersion })}
-            </span>
-          </p>
-          {run.errorMessage !== null && (
-            <p className="text-destructive truncate text-xs">{run.errorMessage}</p>
-          )}
-        </div>
-        <CalibrationRunStatusBadge status={run.status} />
+      <li key={run.id}>
+        <button
+          type="button"
+          onClick={() => onSelectRun(run.id)}
+          className="hover:bg-muted/50 flex w-full flex-wrap items-center justify-between gap-2 rounded-sm px-2 py-2 text-left"
+        >
+          <div className="min-w-0">
+            <p className="text-sm">
+              {new Date(run.createdAt).toLocaleString(locale)}
+              <span className="text-muted-foreground ml-2 text-xs">
+                {t("iot.calibration.runs.definition", { version: run.definitionVersion })}
+              </span>
+            </p>
+            {run.errorMessage !== null && (
+              <p className="text-destructive truncate text-xs">{run.errorMessage}</p>
+            )}
+          </div>
+          <CalibrationRunStatusBadge status={run.status} />
+        </button>
       </li>
     );
   }

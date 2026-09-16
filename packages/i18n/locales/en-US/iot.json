@@ -778,6 +778,27 @@
         "empty": "No calibration has been run on this device yet.",
         "definition": "v{{version}}"
       },
+      "run": {
+        "back": "All sessions",
+        "title": "Session record",
+        "definition": "Procedure",
+        "definitionUnknown": "Unknown procedure",
+        "started": "Started",
+        "finished": "Finished",
+        "reviewed": "Reviewed",
+        "firmware": "Firmware",
+        "source": "Recorded by",
+        "sourceWizard": "Bench wizard",
+        "sourceExternal": "External bench",
+        "readings": "What the bench measured",
+        "deviceState": "Device state",
+        "infoBefore": "Before the session",
+        "infoAfter": "After the write",
+        "writeTitle": "Written to the device",
+        "writeNever": "These coefficients were approved on record and never written to the device.",
+        "writtenAt": "Written {{date}}",
+        "verificationTitle": "Check with the new coefficients"
+      },
       "cta": {
         "calibrate": "Calibrate",
         "next": "Continue",

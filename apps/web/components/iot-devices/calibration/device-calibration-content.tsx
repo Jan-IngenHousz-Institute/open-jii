@@ -14,6 +14,7 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
 import { ActiveCalibrationCard } from "./active-calibration-card";
+import { CalibrationRunDetail } from "./calibration-run-detail";
 import { CalibrationRunsList } from "./calibration-runs-list";
 import { CalibrationWizard } from "./calibration-wizard";
 
@@ -25,6 +26,7 @@ export default function DeviceCalibrationContent() {
   const router = useRouter();
 
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 
   const { data: device } = useIotDevice(deviceId);
   const family = zCalibrationFamily.safeParse(device?.deviceType);
@@ -54,11 +56,26 @@ export default function DeviceCalibrationContent() {
     );
   }
 
+  function renderRunDetail(runId: string) {
+    return (
+      <CalibrationRunDetail
+        runId={runId}
+        deviceId={deviceId}
+        onBack={() => setSelectedRunId(null)}
+      />
+    );
+  }
+
   function renderOverview() {
     return (
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="space-y-6">
-          <CalibrationRunsList runs={runs.data} isLoading={runs.isLoading} isError={runs.isError} />
+          <CalibrationRunsList
+            runs={runs.data}
+            isLoading={runs.isLoading}
+            isError={runs.isError}
+            onSelectRun={setSelectedRunId}
+          />
         </div>
         <div className="space-y-6 lg:sticky lg:top-20 lg:self-start">
           <ActiveCalibrationCard
@@ -71,7 +88,8 @@ export default function DeviceCalibrationContent() {
     );
   }
 
-  const canStartWizard = !isWizardOpen && device.capabilities.canManage;
+  const isViewingRun = selectedRunId !== null;
+  const canStartWizard = !isWizardOpen && !isViewingRun && device.capabilities.canManage;
 
   return (
     <div>
@@ -87,7 +105,11 @@ export default function DeviceCalibrationContent() {
           </Button>
         </div>
       )}
-      {isWizardOpen ? renderWizard(calibrationFamily) : renderOverview()}
+      {isWizardOpen
+        ? renderWizard(calibrationFamily)
+        : selectedRunId !== null
+          ? renderRunDetail(selectedRunId)
+          : renderOverview()}
     </div>
   );
 }

@@ -1,4 +1,7 @@
-import type { CalibrationRunPayload } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
+import type {
+  CalibrationBlocks,
+  CalibrationRunPayload,
+} from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 
 import type { FitPoint } from "./calibration-fit-chart";
 
@@ -36,4 +39,15 @@ export function fitLineFromCoefficients(
   if (typeof slope !== "number") return null;
   const intercept = coefficients.intercept;
   return { slope, intercept: typeof intercept === "number" ? intercept : 0 };
+}
+
+/** The first block that describes a line, which is the one the chart draws. */
+export function fitLineFromBlocks(
+  blocks: CalibrationBlocks | null,
+): { slope: number; intercept: number } | null {
+  return (
+    Object.values(blocks ?? {})
+      .map((block) => (block.coefficients ? fitLineFromCoefficients(block.coefficients) : null))
+      .find((line) => line !== null) ?? null
+  );
 }

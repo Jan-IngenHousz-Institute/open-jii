@@ -42,6 +42,7 @@ import type {
   CalibrationDefinition,
   CalibrationDefinitionSummary,
   CalibrationRun,
+  CalibrationRunDetail,
   DeviceCalibration,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import type {
@@ -1185,6 +1186,21 @@ export function createCalibrationRun(overrides: Partial<CalibrationRun> = {}): C
     finishedAt: "2026-09-01T10:00:05.000Z",
     createdAt: "2026-09-01T10:00:00.000Z",
     updatedAt: "2026-09-01T10:00:05.000Z",
+    ...overrides,
+  };
+}
+
+export function createCalibrationRunDetail(
+  overrides: Partial<CalibrationRunDetail> = {},
+): CalibrationRunDetail {
+  return {
+    ...createCalibrationRun(),
+    payload: {
+      par_sweep: [
+        { stimulus: 0.8, par_raw: 209.5, par_ref: 200 },
+        { stimulus: 2.4, par_raw: 626.2, par_ref: 600 },
+      ],
+    },
     ...overrides,
   };
 }

@@ -778,6 +778,27 @@
         "empty": "Op dit apparaat is nog geen kalibratie uitgevoerd.",
         "definition": "v{{version}}"
       },
+      "run": {
+        "back": "Alle sessies",
+        "title": "Sessieverslag",
+        "definition": "Procedure",
+        "definitionUnknown": "Onbekende procedure",
+        "started": "Gestart",
+        "finished": "Beëindigd",
+        "reviewed": "Beoordeeld",
+        "firmware": "Firmware",
+        "source": "Vastgelegd door",
+        "sourceWizard": "Kalibratiewizard",
+        "sourceExternal": "Externe meetopstelling",
+        "readings": "Wat de meetopstelling heeft gemeten",
+        "deviceState": "Apparaatstatus",
+        "infoBefore": "Voor de sessie",
+        "infoAfter": "Na het schrijven",
+        "writeTitle": "Naar het apparaat geschreven",
+        "writeNever": "Deze coëfficiënten zijn alleen vastgelegd en nooit naar het apparaat geschreven.",
+        "writtenAt": "Geschreven op {{date}}",
+        "verificationTitle": "Controle met de nieuwe coëfficiënten"
+      },
       "cta": {
         "calibrate": "Kalibreren",
         "next": "Doorgaan",

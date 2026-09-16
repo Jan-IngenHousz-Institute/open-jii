@@ -778,6 +778,27 @@
         "empty": "Auf diesem Gerät wurde noch keine Kalibrierung ausgeführt.",
         "definition": "v{{version}}"
       },
+      "run": {
+        "back": "Alle Sitzungen",
+        "title": "Sitzungsprotokoll",
+        "definition": "Verfahren",
+        "definitionUnknown": "Unbekanntes Verfahren",
+        "started": "Begonnen",
+        "finished": "Beendet",
+        "reviewed": "Geprüft",
+        "firmware": "Firmware",
+        "source": "Erfasst von",
+        "sourceWizard": "Kalibrierassistent",
+        "sourceExternal": "Externer Prüfstand",
+        "readings": "Messwerte des Prüfstands",
+        "deviceState": "Gerätezustand",
+        "infoBefore": "Vor der Sitzung",
+        "infoAfter": "Nach dem Schreiben",
+        "writeTitle": "Auf das Gerät geschrieben",
+        "writeNever": "Diese Koeffizienten wurden nur protokolliert und nie auf das Gerät geschrieben.",
+        "writtenAt": "Geschrieben am {{date}}",
+        "verificationTitle": "Prüfung mit den neuen Koeffizienten"
+      },
       "cta": {
         "calibrate": "Kalibrieren",
         "next": "Weiter",

@@ -1,6 +1,7 @@
 import {
   createCalibrationDefinitionSummary,
   createCalibrationRun,
+  createCalibrationRunDetail,
   createCapabilities,
   createDeviceCalibration,
   createIotDeviceDetail,
@@ -65,6 +66,33 @@ describe("DeviceCalibrationContent", () => {
     server.mount(contract.iot.listDeviceCalibrationRuns, { status: 500 });
     render(<DeviceCalibrationContent />);
     expect(await screen.findByText("iot.calibration.loadError")).toBeInTheDocument();
+  });
+
+  // A finished session keeps the readings, the fit and the write outcome; the list only
+  // carries its verdict, so the record has to be reachable from it.
+  it("opens a session on record from the list", async () => {
+    const run = createCalibrationRun({ deviceId: DEVICE_ID, status: "approved" });
+    mountDevice({ capabilities: createCapabilities({ canManage: true }) });
+    server.mount(contract.iot.getActiveDeviceCalibration, { body: null });
+    server.mount(contract.iot.listDeviceCalibrationRuns, { body: [run] });
+    server.mount(contract.iot.listDeviceCalibrations, { body: [] });
+    server.mount(contract.iot.getCalibrationRun, {
+      body: createCalibrationRunDetail({ id: run.id, deviceId: DEVICE_ID }),
+    });
+
+    render(<DeviceCalibrationContent />);
+
+    await userEvent.click(await screen.findByRole("button", { name: /iot.calibration.status/ }));
+
+    expect(await screen.findByText("iot.calibration.run.title")).toBeInTheDocument();
+    // Nothing invites a new session while a past one is being read.
+    expect(screen.queryByRole("button", { name: "iot.calibration.cta.calibrate" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "iot.calibration.run.back" }));
+
+    expect(
+      await screen.findByRole("button", { name: "iot.calibration.cta.calibrate" }),
+    ).toBeInTheDocument();
   });
 
   it("opens the wizard from the call to action for a manager", async () => {
