@@ -891,7 +891,8 @@
         "reportFailed": "Het apparaat is beschreven, maar het resultaat kon niet worden vastgelegd.",
         "verifyHeading": "Controle met de nieuwe coëfficiënten",
         "verifying": "Het apparaat wordt uitgelezen met de nieuwe coëfficiënten…",
-        "verificationStopped": "De controle is voortijdig gestopt: {{reason}}. De hierboven geschreven coëfficiënten blijven staan."
+        "verificationStopped": "De controle is voortijdig gestopt: {{reason}}. De hierboven geschreven coëfficiënten blijven staan.",
+        "disconnected": "Het apparaat is losgekoppeld. Verbind het opnieuw en schrijf nogmaals."
       },
       "done": {
         "close": "Sluiten",

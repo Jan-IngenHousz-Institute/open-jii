@@ -1,4 +1,4 @@
-import type { CaptureResult, SeriesCell, SeriesRow } from "./types";
+import type { CaptureResult, SeriesCell, SeriesRow, SetpointValue } from "./types";
 
 /** How a procedure reaches the person at the bench; the interpreter never draws anything. */
 
@@ -59,7 +59,7 @@ export interface OperatorReading {
 /** Progress a wizard renders while a procedure runs. */
 export type ProcedureProgress =
   | { kind: "step"; index: number; total: number; description: string }
-  | { kind: "setpoint"; series: string; index: number; total: number; value: unknown }
+  | { kind: "setpoint"; series: string; index: number; total: number; value: SetpointValue }
   | { kind: "series"; series: string; rows: number }
   | { kind: "skipped"; series: string; reason: string }
   | { kind: "retake"; series: string; index: number; attempt: number };

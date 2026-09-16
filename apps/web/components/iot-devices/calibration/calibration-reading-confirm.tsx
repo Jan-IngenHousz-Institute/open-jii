@@ -6,27 +6,9 @@ import { RotateCcw } from "lucide-react";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
-type ConfirmRequest = Extract<OperatorRequest, { kind: "confirmReading" }>;
-type Reading = ConfirmRequest["reading"];
-type Cell = Reading["row"][string];
+import { formatSeriesValue } from "./format-series-value";
 
-function formatCell(value: Cell | undefined): string {
-  if (value === null || value === undefined) {
-    return "";
-  }
-  if (typeof value === "number") {
-    return Number(value.toPrecision(6)).toString();
-  }
-  if (Array.isArray(value)) {
-    return value.map((entry) => Number(entry.toPrecision(6))).join(", ");
-  }
-  if (typeof value === "object") {
-    return Object.entries(value)
-      .map(([key, entry]) => `${key}: ${String(entry)}`)
-      .join(", ");
-  }
-  return String(value);
-}
+type ConfirmRequest = Extract<OperatorRequest, { kind: "confirmReading" }>;
 
 /**
  * The point the operator just took, offered back before the sweep moves on. A filter that
@@ -43,7 +25,7 @@ export function CalibrationReadingConfirm({ request }: { request: ConfirmRequest
     return (
       <div key={column} className="contents">
         <dt className="text-muted-foreground">{column}</dt>
-        <dd className="font-mono">{formatCell(reading.row[column])}</dd>
+        <dd className="font-mono">{formatSeriesValue(reading.row[column])}</dd>
       </div>
     );
   }
@@ -54,7 +36,7 @@ export function CalibrationReadingConfirm({ request }: { request: ConfirmRequest
         {reading.stimulus === undefined
           ? t("iot.calibration.prompt.confirmReading")
           : t("iot.calibration.prompt.confirmReadingAt", {
-              stimulus: formatCell(reading.stimulus),
+              stimulus: formatSeriesValue(reading.stimulus),
             })}
       </p>
       <dl className="grid max-w-md grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-sm">

@@ -70,13 +70,13 @@ export class MiniParReference implements BenchInstrument {
     return Promise.reject(new Error(`MiniPAR reference has no setpoint "${name}"`));
   }
 
-  async read(name: string): Promise<number | string> {
+  async read(name: string, timeoutMs?: number): Promise<number | string> {
     const reading = findReading(this, name);
     if (!reading) {
       throw new Error(`MiniPAR reference has no reading "${name}"`);
     }
 
-    const text = await this.run(reading.name, this.readTimeoutMs);
+    const text = await this.run(reading.name, timeoutMs ?? this.readTimeoutMs);
     if (this.spectralReadings.includes(reading.name)) {
       return text;
     }

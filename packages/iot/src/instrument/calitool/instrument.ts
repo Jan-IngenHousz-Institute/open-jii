@@ -141,7 +141,7 @@ export class CalitoolSpectralBoard implements BenchInstrument {
     await this.expectAck(name);
   }
 
-  async read(name: string): Promise<number> {
+  async read(name: string, timeoutMs?: number): Promise<number> {
     const reading = this.findChannelReading(name);
     if (!reading) {
       throw new Error(`Spectral tool board has no reading "${name}"`);

@@ -12,30 +12,12 @@ import {
   TableRow,
 } from "@repo/ui/components/table";
 
+import { formatSeriesValue } from "./format-series-value";
+
 type SeriesRow = CalibrationRunPayload[string][number];
-type Cell = SeriesRow[string];
 
 /** The column every sweep carries, holding the setpoint that produced the row. */
 const STIMULUS = "stimulus";
-
-// Rows in one series need not carry every column, so a cell can genuinely be absent.
-function formatCell(value: Cell | undefined): string {
-  if (value === null || value === undefined) {
-    return "";
-  }
-  if (typeof value === "number") {
-    return Number(value.toPrecision(6)).toString();
-  }
-  if (Array.isArray(value)) {
-    return value.map((entry) => Number(entry.toPrecision(6))).join(", ");
-  }
-  if (typeof value === "object") {
-    return Object.entries(value)
-      .map(([key, entry]) => `${key}: ${String(entry)}`)
-      .join(", ");
-  }
-  return String(value);
-}
 
 /** Columns in the order the procedure named them, with the setpoint first. */
 function columnsOf(rows: SeriesRow[]): string[] {
@@ -72,7 +54,7 @@ export function CalibrationSeriesTable({ series, rows }: { series: string; rows:
   // A long reading is held inside its cell rather than cut down, so the row stays
   // readable while the measurement itself can still be selected, copied or searched.
   function renderCell(row: SeriesRow, column: string) {
-    const text = formatCell(row[column]);
+    const text = formatSeriesValue(row[column]);
     return (
       <TableCell key={column} className="px-3 py-1.5 font-mono text-xs">
         <span className="max-w-88 block truncate" title={text}>

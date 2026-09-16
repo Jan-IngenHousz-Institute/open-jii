@@ -891,7 +891,8 @@
         "reportFailed": "The device was written but the result could not be recorded.",
         "verifyHeading": "Check with the new coefficients",
         "verifying": "Reading the device with the new coefficients…",
-        "verificationStopped": "The check stopped early: {{reason}}. The coefficients written above stand."
+        "verificationStopped": "The check stopped early: {{reason}}. The coefficients written above stand.",
+        "disconnected": "The device was disconnected. Reconnect it and write again."
       },
       "done": {
         "close": "Close",

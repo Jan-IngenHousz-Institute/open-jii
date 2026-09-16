@@ -132,6 +132,8 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
   const cancelOperator = operator.cancel;
   useEffect(() => cancelOperator, [cancelOperator]);
 
+  const isCapturingRef = useRef(false);
+
   // The rig object is new on every render; the dependency lists below hold the ref instead.
   const rigRef = useRef(rig);
   rigRef.current = rig;
@@ -143,7 +145,11 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
   }, [step]);
 
   const startCapture = useCallback(async () => {
-    if (!definition.data || !connection) return;
+    // Retry is on screen while the aborted run's rig is still being rested, and a second
+    // click would drive the bench from two procedures at once. A ref, because the flag is
+    // read by a callback that must not be rebuilt every time capture starts or stops.
+    if (!definition.data || !connection || isCapturingRef.current) return;
+    isCapturingRef.current = true;
     setIsCapturing(true);
     setCaptureError(null);
     setEvents([]);
@@ -175,6 +181,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
     } finally {
       // A lamp left driven after an aborted sweep is what a bench must never see.
       await rigRef.current.rest();
+      isCapturingRef.current = false;
       setIsCapturing(false);
     }
   }, [connection, createRun, definition.data, device.id, operator.port]);
@@ -213,7 +220,13 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
   }
 
   async function write() {
-    if (!applied || !connection || writableFamily === null || !definition.data) return;
+    if (!applied || writableFamily === null || !definition.data) return;
+    // The port can be pulled between approving and writing. Returning quietly here left an
+    // enabled button that did nothing at all.
+    if (!connection) {
+      setWriteError(t("iot.calibration.write.disconnected"));
+      return;
+    }
     setIsWriting(true);
     setWriteError(null);
     try {

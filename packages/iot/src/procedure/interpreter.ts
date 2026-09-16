@@ -488,7 +488,9 @@ export function bindBenchInstrument(instrument: BenchInstrument): RigBinding {
   const read = instrument.read?.bind(instrument);
   if (read) {
     binding.read = {
-      execute: async (command) => {
+      // The options carry the read's declared timeout. Dropping them let a bench
+      // instrument answer on its own default while the procedure asked for longer.
+      execute: async (command, options) => {
         if (typeof command !== "string") {
           return {
             success: false,
@@ -496,7 +498,7 @@ export function bindBenchInstrument(instrument: BenchInstrument): RigBinding {
           };
         }
         try {
-          return { success: true, data: await read(command) };
+          return { success: true, data: await read(command, options?.timeoutMs) };
         } catch (error) {
           return {
             success: false,

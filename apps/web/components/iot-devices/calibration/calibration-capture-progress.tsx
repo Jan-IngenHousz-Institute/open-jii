@@ -5,6 +5,8 @@ import { CheckCircle2, Loader2, SkipForward } from "lucide-react";
 import { useTranslation } from "@repo/i18n";
 import type { ProcedureProgress } from "@repo/iot";
 
+import { formatSeriesValue } from "./format-series-value";
+
 export function CalibrationCaptureProgress({
   events,
   isRunning,
@@ -55,7 +57,7 @@ export function CalibrationCaptureProgress({
           {t("iot.calibration.capture.setpoint", {
             index: setpoint.index + 1,
             total: setpoint.total,
-            value: String(setpoint.value),
+            value: formatSeriesValue(setpoint.value),
           })}
         </p>
       )}

@@ -36,8 +36,11 @@ export interface BenchInstrument {
 
   applySetpoint(name: string, value: number): Promise<void>;
 
-  /** Take one reading by name. Present exactly when `readings` is. */
-  read?(name: string): Promise<number | string>;
+  /**
+   * Take one reading by name. Present exactly when `readings` is. A procedure may declare
+   * a longer wait than the instrument's own default for a reading that takes its time.
+   */
+  read?(name: string, timeoutMs?: number): Promise<number | string>;
 
   /** Return to a state safe to walk away from: a lamp left at 6.6 A after an aborted sweep is a hazard. */
   shutdown(): Promise<void>;

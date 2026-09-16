@@ -64,7 +64,7 @@ export class MicroPythonParReference implements BenchInstrument {
     return Promise.reject(new Error(`MicroPython PAR reference has no setpoint "${name}"`));
   }
 
-  async read(name: string): Promise<number> {
+  async read(name: string, timeoutMs?: number): Promise<number> {
     if (!findReading(this, name)) {
       throw new Error(`MicroPython PAR reference has no reading "${name}"`);
     }
