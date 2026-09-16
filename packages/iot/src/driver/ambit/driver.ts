@@ -252,7 +252,7 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
           payload,
           override.quietWindowMs ?? this.quietWindowMs,
           options?.timeoutMs ?? override.timeoutMs ?? this.defaultTimeoutMs,
-          options?.isComplete ?? override.isComplete,
+          override.isComplete,
         );
         const text = reply.trim();
 

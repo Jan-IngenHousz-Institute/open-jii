@@ -29,14 +29,6 @@ export interface ExecuteOptions {
    * on a healthy device. Only a driver that waits for a framed reply reads it.
    */
   expectReply?: boolean;
-
-  /**
-   * Ends the wait for this one command, overriding whatever the family's table says.
-   * For a console where one command name has two shapes that finish differently, the
-   * table cannot tell them apart but the caller can. Only a driver that frames its own
-   * replies reads it.
-   */
-  isComplete?: (buffer: string) => boolean;
 }
 
 /** Abstract device driver interface */

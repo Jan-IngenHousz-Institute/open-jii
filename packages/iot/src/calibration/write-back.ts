@@ -4,12 +4,7 @@
  * can read back is checked against what it holds afterwards.
  */
 import type { SensorFamily } from "../core/families";
-import {
-  AMBIT_BASELINE_PERSIST,
-  AMBIT_BASELINE_SAVED,
-  AMBIT_COMMANDS,
-  baselinePersistComplete,
-} from "../driver/ambit/commands";
+import { AMBIT_BASELINE_SAVED, AMBIT_COMMANDS } from "../driver/ambit/commands";
 import { parseAmbitBootDump } from "../driver/ambit/device-info";
 import type { AmbitDeviceInfo } from "../driver/ambit/device-info";
 import { BASELINE_CHANNELS, BASELINE_MAX_COUNT } from "../driver/ambit/response-parsers";
@@ -58,8 +53,6 @@ export type CoefficientWriter =
       command: (values: number[]) => string;
       verify: (reply: unknown, values: number[]) => boolean;
       entries: VectorEntryRange;
-      /** Ends the wait where the family's own table cannot tell this command's shape apart. */
-      waitFor?: (buffer: string) => boolean;
     };
 
 /** How far a readback may sit from what was written before the block counts as unverified. */
@@ -285,18 +278,14 @@ export const CALIBRATION_WRITERS: Partial<Record<SensorFamily, FamilyCalibration
       },
       baseline: {
         coefficients: {
-          // The firmware has no command that stores a vector it is handed. It measures and
-          // persists in one step, keeping what it has just read, and it declines a baseline
-          // taken under light on its own. So the approved vector is a record of what the
-          // bench saw, and the write asks the device to take and keep its own.
           channels: {
             kind: "vector",
-            command: () => AMBIT_BASELINE_PERSIST,
-            verify: (reply) => replyText(reply).includes(AMBIT_BASELINE_SAVED),
-            waitFor: baselinePersistComplete,
+            command: (values) => `${AMBIT_COMMANDS.SET_BASELINE},${values.join(",")}`,
+            verify: (reply) => replyText(reply) === AMBIT_BASELINE_SAVED,
             entries: { count: BASELINE_CHANNELS, min: 0, max: BASELINE_MAX_COUNT },
           },
         },
+        readback: ambitBootDumpReadback((info) => ({ channels: info.adpdCalibration })),
       },
     },
   },
@@ -493,7 +482,6 @@ async function writeVector(
     writer.command(value),
     (reply) => writer.verify(reply, value),
     label,
-    writer.waitFor,
   );
 }
 
@@ -514,9 +502,8 @@ async function sendAndVerify(
   command: string,
   verify: (reply: unknown) => boolean,
   label: string,
-  waitFor?: (buffer: string) => boolean,
 ): Promise<string | null> {
-  const result = await driver.execute(command, waitFor ? { isComplete: waitFor } : undefined);
+  const result = await driver.execute(command);
   if (!result.success) {
     return result.error?.message ?? `Writing "${label}" failed`;
   }

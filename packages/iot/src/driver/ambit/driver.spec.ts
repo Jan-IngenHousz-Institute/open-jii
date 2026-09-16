@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DEFAULT_MAX_BUFFER_SIZE } from "../driver-base";
 import type { MockTransport } from "../testing/mock-transport";
 import { createMockTransport } from "../testing/mock-transport";
-import { AMBIT_BASELINE_SAVED, AMBIT_BASELINE_TOO_HIGH, baselinePersistComplete } from "./commands";
+import { AMBIT_BASELINE_SAVED } from "./commands";
 import { AmbitDriver } from "./driver";
 
 const HELLO_REPLY = "NEW Name Here Ready\n";
@@ -293,44 +293,38 @@ describe("AmbitDriver", () => {
     expect(result.data).toBe("Currents set");
   });
 
-  // The firmware has no command that stores a vector it is handed: baseline,1 measures and
-  // keeps what it just read, printing the vector first and its verdict second. A caller
-  // that stopped at the vector would never learn whether the device kept it.
-  it("waits past the measured vector for the verdict on a persisting baseline", async () => {
+  it("returns the acknowledgement of a baseline write", async () => {
     const transport = pacedTransport({
       "hello\n": [HELLO_REPLY],
-      "baseline,1\n": ["1021,987,1103,954,1200,1015\n", `${AMBIT_BASELINE_SAVED}\n`],
+      "set_baseline,1021,987,1103,954,1200,1015\n": [
+        AMBIT_BASELINE_SAVED.slice(0, 8),
+        `${AMBIT_BASELINE_SAVED.slice(8)}\n`,
+      ],
     });
     const driver = fastDriver();
     await driver.initialize(transport);
 
-    const result = await driver.execute<string>("baseline,1", {
-      isComplete: baselinePersistComplete,
-    });
+    const result = await driver.execute<string>("set_baseline,1021,987,1103,954,1200,1015");
 
     expect(result.success).toBe(true);
-    expect(String(result.data)).toContain(AMBIT_BASELINE_SAVED);
+    expect(result.data).toBe(AMBIT_BASELINE_SAVED);
   });
 
   // The one writer that answers, so a refusal has to come back as itself rather
   // than as a timeout the caller is left to interpret. The wording is the device's;
   // only "not the acknowledgement" is established.
-  // The dark limit is the firmware's own: it declines a baseline measured under light
-  // rather than storing it, and says so on the line after the vector.
-  it("returns the refusal when the device will not keep the baseline it measured", async () => {
+  it("returns the refusing line when a baseline write is not acknowledged", async () => {
     const transport = pacedTransport({
       "hello\n": [HELLO_REPLY],
-      "baseline,1\n": ["1900,1870,1903,1894,1918,1905\n", `${AMBIT_BASELINE_TOO_HIGH}\n`],
+      "set_baseline,0,0,0,0,0,0\n": ["Baseline verify failed\n"],
     });
     const driver = fastDriver();
     await driver.initialize(transport);
 
-    const result = await driver.execute<string>("baseline,1", {
-      isComplete: baselinePersistComplete,
-    });
+    const result = await driver.execute<string>("set_baseline,0,0,0,0,0,0");
 
     expect(result.success).toBe(true);
-    expect(String(result.data)).toContain(AMBIT_BASELINE_TOO_HIGH);
+    expect(result.data).toBe("Baseline verify failed");
   });
 
   it("treats a silent set_spec as fire + settle + hello re-verify, in one write", async () => {
@@ -347,10 +341,10 @@ describe("AmbitDriver", () => {
 
   // The LED latch prints nothing the host is documented to read, so waiting for a
   // reply would stall every point of a sweep and then fail it.
-  // The firmware runs the trace and then prints one line, so this waits for it rather
-  // than firing blind. Its argument parser takes ten comma-terminated values, all of
-  // them on the first line, so the second line completes nothing and its exact form
-  // never reaches the parser.
+  // The firmware runs the array and then prints one line, so this waits for it rather
+  // than firing blind. Its argument reader takes ten comma-terminated values, all of them
+  // on the first line, so the second line completes nothing and its exact form never
+  // reaches the reader.
   it("waits for the actinic LED run to report that it finished", async () => {
     const wire = "arrun1,1,1,2,0,0,1,0,1,150,1,\n,\n";
     const transport = pacedTransport({
