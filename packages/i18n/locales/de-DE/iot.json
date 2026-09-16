@@ -900,6 +900,21 @@
         "rejectedHint": "Der Lauf wurde abgelehnt. Seine Diagnose bleibt gespeichert; nichts wurde übernommen.",
         "writtenHint": "Die Kalibrierung ist gültig und auf dem Gerät bestätigt.",
         "notWrittenHint": "Die Kalibrierung ist im Datensatz gültig. Einige Blöcke wurden auf dem Gerät nicht bestätigt; prüfen Sie die Schreibergebnisse."
+      },
+      "library": {
+        "title": "Kalibrierungen",
+        "create": "Neue Kalibrierung",
+        "allFamilies": "Alle Gerätefamilien",
+        "empty": "Es wurde noch kein Kalibrierverfahren geschrieben.",
+        "versionOf": "v{{version}} von {{count}}",
+        "columns": {
+          "name": "Verfahren",
+          "family": "Familie",
+          "version": "Version",
+          "visibility": "Sichtbarkeit",
+          "updated": "Aktualisiert"
+        },
+        "retry": "Erneut versuchen"
       }
     },
     "workbookBar": {

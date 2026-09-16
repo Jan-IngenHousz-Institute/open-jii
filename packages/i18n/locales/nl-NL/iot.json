@@ -900,6 +900,21 @@
         "rejectedHint": "De run is afgewezen. De diagnose blijft bewaard; er is niets toegepast.",
         "writtenHint": "De kalibratie geldt en is op het apparaat bevestigd.",
         "notWrittenHint": "De kalibratie geldt in het record. Sommige blokken zijn niet op het apparaat bevestigd; controleer de schrijfresultaten."
+      },
+      "library": {
+        "title": "Kalibraties",
+        "create": "Nieuwe kalibratie",
+        "allFamilies": "Alle apparaatfamilies",
+        "empty": "Er is nog geen kalibratieprocedure geschreven.",
+        "versionOf": "v{{version}} van {{count}}",
+        "columns": {
+          "name": "Procedure",
+          "family": "Familie",
+          "version": "Versie",
+          "visibility": "Zichtbaarheid",
+          "updated": "Bijgewerkt"
+        },
+        "retry": "Opnieuw proberen"
       }
     },
     "workbookBar": {

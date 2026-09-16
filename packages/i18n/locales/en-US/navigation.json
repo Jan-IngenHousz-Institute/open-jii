@@ -42,7 +42,9 @@
     "otherDevices": "Other devices",
     "otherDevice1": "Other device 1",
     "organizations": "Organizations",
-    "newOrganization": "New organization"
+    "newOrganization": "New organization",
+    "calibrations": "Calibrations",
+    "newCalibration": "New calibration"
   },
   "breadcrumbs": {
     "home": "Home",

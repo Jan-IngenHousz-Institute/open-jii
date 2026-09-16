@@ -900,6 +900,21 @@
         "rejectedHint": "The run was rejected. Its diagnostics stay on record; nothing was applied.",
         "writtenHint": "The calibration is in force and confirmed on the device.",
         "notWrittenHint": "The calibration is in force on record. Some blocks were not confirmed on the device; check the write results."
+      },
+      "library": {
+        "title": "Calibrations",
+        "create": "New calibration",
+        "allFamilies": "All device families",
+        "empty": "No calibration procedure has been written yet.",
+        "versionOf": "v{{version}} of {{count}}",
+        "columns": {
+          "name": "Procedure",
+          "family": "Family",
+          "version": "Version",
+          "visibility": "Visibility",
+          "updated": "Updated"
+        },
+        "retry": "Try again"
       }
     },
     "workbookBar": {
