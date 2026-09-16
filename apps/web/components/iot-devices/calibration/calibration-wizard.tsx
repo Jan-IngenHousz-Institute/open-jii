@@ -3,12 +3,13 @@
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
 import { useActiveDeviceCalibration } from "@/hooks/iot/useActiveDeviceCalibration/useActiveDeviceCalibration";
 import { useApproveCalibrationRun } from "@/hooks/iot/useApproveCalibrationRun/useApproveCalibrationRun";
+import {
+  toRunPayload,
+  useCalibrationCapture,
+} from "@/hooks/iot/useCalibrationCapture/useCalibrationCapture";
 import { useCalibrationDefinition } from "@/hooks/iot/useCalibrationDefinition/useCalibrationDefinition";
 import { useCalibrationDefinitions } from "@/hooks/iot/useCalibrationDefinitions/useCalibrationDefinitions";
-import { useCalibrationOperator } from "@/hooks/iot/useCalibrationOperator/useCalibrationOperator";
-import { useCalibrationRig } from "@/hooks/iot/useCalibrationRig/useCalibrationRig";
 import { useCreateCalibrationRun } from "@/hooks/iot/useCreateCalibrationRun/useCreateCalibrationRun";
-import { useIotConnections } from "@/hooks/iot/useIotConnections/useIotConnections";
 import { useRejectCalibrationRun } from "@/hooks/iot/useRejectCalibrationRun/useRejectCalibrationRun";
 import { useReportDeviceCalibrationWrite } from "@/hooks/iot/useReportDeviceCalibrationWrite/useReportDeviceCalibrationWrite";
 import { Loader2 } from "lucide-react";
@@ -25,12 +26,11 @@ import type {
 import { zFirmwareVersion } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import type { IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
-import type { CapturePayload, IDeviceDriver, ProcedureProgress } from "@repo/iot";
+import type { IDeviceDriver, ProcedureProgress } from "@repo/iot";
 import {
   ProcedureAborted,
   canWriteCalibration,
   isSensorFamily,
-  runCaptureProcedure,
   runVerificationProcedure,
   writeCalibrationBlocks,
 } from "@repo/iot";
@@ -75,27 +75,13 @@ async function readPostWriteInfo(
   }
 }
 
-/** The interpreter never yields null cells in practice; the contract has no room for them. */
-function toRunPayload(payload: CapturePayload): CalibrationRunPayload {
-  const result: CalibrationRunPayload = {};
-  for (const [series, rows] of Object.entries(payload)) {
-    result[series] = rows.map((row) =>
-      Object.fromEntries(Object.entries(row).filter(([, cell]) => cell !== null)),
-    );
-  }
-  return result;
-}
-
 /** Bench to coefficient in one sitting; the interpreter asks the operator for what it cannot do itself. */
 export function CalibrationWizard({ device, family, onClose }: CalibrationWizardProps) {
   const { t } = useTranslation("iot");
 
   const [step, setStep] = useState<WizardStep>("choose");
   const [definitionId, setDefinitionId] = useState<string | null>(null);
-  const [events, setEvents] = useState<ProcedureProgress[]>([]);
   const [payload, setPayload] = useState<CalibrationRunPayload | null>(null);
-  const [captureError, setCaptureError] = useState<string | null>(null);
-  const [isCapturing, setIsCapturing] = useState(false);
   const [run, setRun] = useState<CalibrationRun | null>(null);
   const [applied, setApplied] = useState<DeviceCalibration | null>(null);
   const [writeResults, setWriteResults] = useState<CalibrationWriteResults | null>(null);
@@ -109,30 +95,18 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
   const definitions = useCalibrationDefinitions(family);
   const definition = useCalibrationDefinition(definitionId);
   const active = useActiveDeviceCalibration(device.id);
-  const connections = useIotConnections(family);
-  const operator = useCalibrationOperator();
-  const rig = useCalibrationRig(
-    definition.data?.captureProcedure,
-    connections.connections.at(0)?.driver,
-  );
+  const capture = useCalibrationCapture(definition.data?.captureProcedure, family);
+  const { operator, rig } = capture;
   const createRun = useCreateCalibrationRun();
   const approveRun = useApproveCalibrationRun();
   const rejectRun = useRejectCalibrationRun();
   const reportWrite = useReportDeviceCalibrationWrite();
 
-  const connection = connections.connections.at(0);
-  const isConnectedToFamily = connection?.family === family;
-  const canLeaveConnectStep = isConnectedToFamily && rig.hasEveryRequiredRole;
+  const connection = capture.connection;
   const hasDefinition = definition.data !== undefined;
   // The device package drives fewer families than the platform registers, so writing back is offered only where a driver exists.
   const writableFamily = isSensorFamily(family) ? family : null;
   const stepIndex = STEP_ORDER.indexOf(step);
-
-  // Leaving mid-run must not leave the interpreter awaiting a prompt; the port closes with the connection hook.
-  const cancelOperator = operator.cancel;
-  useEffect(() => cancelOperator, [cancelOperator]);
-
-  const isCapturingRef = useRef(false);
 
   // The rig object is new on every render; the dependency lists below hold the ref instead.
   const rigRef = useRef(rig);
@@ -144,25 +118,15 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
     }
   }, [step]);
 
+  const runCapture = capture.capture;
+  const setCaptureError = capture.setError;
+
   const startCapture = useCallback(async () => {
-    // Retry is on screen while the aborted run's rig is still being rested, and a second
-    // click would drive the bench from two procedures at once. A ref, because the flag is
-    // read by a callback that must not be rebuilt every time capture starts or stops.
-    if (!definition.data || !connection || isCapturingRef.current) return;
-    isCapturingRef.current = true;
-    setIsCapturing(true);
-    setCaptureError(null);
-    setEvents([]);
+    const runPayload = await runCapture();
+    if (!runPayload || !definition.data || !connection) return;
+    setPayload(runPayload);
 
     try {
-      const result = await runCaptureProcedure(definition.data.captureProcedure, {
-        rig: rigRef.current.bindings,
-        operator: operator.port,
-        onProgress: (event) => setEvents((previous) => [...previous, event]),
-      });
-      const runPayload = toRunPayload(result.payload);
-      setPayload(runPayload);
-
       // A version the contract would refuse is left out rather than failing the submission.
       const reported = connection.identity.firmwareVersion;
       const firmwareVersion = zFirmwareVersion.safeParse(reported).success ? reported : undefined;
@@ -178,13 +142,8 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
       setStep("review");
     } catch (error) {
       setCaptureError(error instanceof Error ? error.message : String(error));
-    } finally {
-      // A lamp left driven after an aborted sweep is what a bench must never see.
-      await rigRef.current.rest();
-      isCapturingRef.current = false;
-      setIsCapturing(false);
     }
-  }, [connection, createRun, definition.data, device.id, operator.port]);
+  }, [connection, createRun, definition.data, device.id, runCapture, setCaptureError]);
 
   // A retry stays on the step, so it starts the procedure itself; the effect would not re-fire for an unchanged step.
   const captureStartedRef = useRef(false);
@@ -341,14 +300,14 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
         <CalibrationConnectStep
           family={family}
           connection={connection}
-          isConnecting={connections.isConnecting}
-          error={connections.error}
+          isConnecting={capture.isConnecting}
+          error={capture.connectError}
           rig={rig}
-          onConnect={() => void connections.connect("serial")}
-          onDisconnect={() => void connections.disconnectAll()}
+          onConnect={capture.connect}
+          onDisconnect={capture.disconnect}
         />
         <div className="flex gap-2">
-          <Button type="button" onClick={() => setStep("capture")} disabled={!canLeaveConnectStep}>
+          <Button type="button" onClick={() => setStep("capture")} disabled={!capture.canStart}>
             {t("iot.calibration.cta.next")}
           </Button>
           <Button type="button" variant="outline" onClick={() => setStep("choose")}>
@@ -363,19 +322,19 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
     return (
       <div className="space-y-4">
         {operator.pending !== null && <CalibrationOperatorPrompt request={operator.pending} />}
-        <CalibrationCaptureProgress events={events} isRunning={isCapturing} />
-        {isCapturing && operator.pending === null && createRun.isPending && (
+        <CalibrationCaptureProgress events={capture.events} isRunning={capture.isCapturing} />
+        {capture.isCapturing && operator.pending === null && createRun.isPending && (
           <p className="text-muted-foreground flex items-center gap-2 text-sm">
             <Loader2 className="size-4 animate-spin" aria-hidden />
             {t("iot.calibration.capture.submitting")}
           </p>
         )}
-        {captureError !== null && (
+        {capture.error !== null && (
           <div className="space-y-3">
             <Alert variant="destructive">
               <AlertDescription>
                 {t("iot.calibration.capture.aborted")}
-                <span className="mt-1 block font-mono text-xs">{captureError}</span>
+                <span className="mt-1 block font-mono text-xs">{capture.error}</span>
               </AlertDescription>
             </Alert>
             <div className="flex gap-2">
