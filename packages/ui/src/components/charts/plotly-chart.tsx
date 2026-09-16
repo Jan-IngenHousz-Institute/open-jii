@@ -6,16 +6,11 @@ import type { PlotParams } from "react-plotly.js";
 
 import { cn } from "../../lib/utils";
 import { withBrandedPngExport } from "./png-export";
-import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 
 // Type definitions for better type safety
 interface SafeDimensions {
   width?: number;
   height?: number;
-}
-
-interface WebGLErrorEvent extends Event {
-  message?: string;
 }
 
 interface PlotlyErrorEvent {
@@ -131,6 +126,11 @@ interface PendingChart {
   demand: ContextDemand;
   callback: () => void;
 }
+
+// One rebuild attempt after a lost context, then the chart settles on SVG.
+// Rebuilding without a limit thrashes: reviving one chart takes the contexts
+// that keep another alive, which loses its context in turn.
+const MAX_GL_RECOVERIES = 1;
 
 class WebGLContextManager {
   private static instance: WebGLContextManager;
@@ -325,6 +325,8 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     const [isWebGLEnabled, setIsWebGLEnabled] = useState(true);
     const [isContextAvailable, setIsContextAvailable] = useState(false);
     const [localError, setLocalError] = useState<string | null>(null);
+    const [glGeneration, setGlGeneration] = useState(0);
+    const glRecoveriesRef = useRef(0);
     const chartIdRef = useRef<string>(`chart-${Math.random().toString(36).slice(2, 11)}`);
     const contextManager = WebGLContextManager.getInstance();
 
@@ -401,7 +403,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       };
     }, []);
 
-    const { onInitialized, onPurge } = plotProps;
+    const { onInitialized, onPurge, onWebGlContextLost } = plotProps;
     const handleInitialized = React.useCallback<NonNullable<PlotParams["onInitialized"]>>(
       (figure, graphDiv) => {
         graphDivRef.current = graphDiv;
@@ -423,23 +425,6 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       return validatePlotlyData(data);
     }, [data]);
 
-    // Behind the context cap a chart draws its SVG twin rather than waiting.
-    const renderData = React.useMemo(() => {
-      if (isContextAvailable) {
-        return safeData;
-      }
-      let downgraded = false;
-      const traces = safeData.map((trace: PlotData) => {
-        const type = trace.type ?? "scatter";
-        if (!hasSvgTwin(type)) {
-          return trace;
-        }
-        downgraded = true;
-        return { ...trace, type: SVG_TWIN[type] };
-      });
-      return downgraded ? traces : safeData;
-    }, [safeData, isContextAvailable]);
-
     // Stable boolean drives the context-management effect. Memoizing a
     // primitive (vs `useCallback`) means the effect only re-runs when
     // WebGL relevance flips; the previous shape caused release/reacquire
@@ -459,13 +444,30 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       [safeData],
     );
 
-    // The palette is `colo1rway`, which Plotly treats as `calc`. On a gl chart
-    // that recalc builds a fresh scene and abandons the old one's contexts:
-    // Plotly only destroys a scene when a plot stops being gl at all. Keying
-    // the remount on the theme routes it through `purge`, which does release
-    // them, at the cost of a rebuild the recalc was doing anyway.
-    const themeVersion = useChartThemeRefresh();
-    const plotKey = needsWebGL ? `gl-${themeVersion}` : "svg";
+    // Behind the context cap, or once WebGL has been given up on, a chart draws
+    // its SVG twin rather than waiting.
+    const usesWebGL = needsWebGL && isContextAvailable;
+    const renderData = React.useMemo(() => {
+      if (usesWebGL) {
+        return safeData;
+      }
+      let downgraded = false;
+      const traces = safeData.map((trace: PlotData) => {
+        const type = trace.type ?? "scatter";
+        if (!hasSvgTwin(type)) {
+          return trace;
+        }
+        downgraded = true;
+        return { ...trace, type: SVG_TWIN[type] };
+      });
+      return downgraded ? traces : safeData;
+    }, [safeData, usesWebGL]);
+
+    // Past the browser's budget a context is taken away rather than refused,
+    // which leaves Plotly drawing into a dead scene: the plot keeps its axes and
+    // legend but loses its data. Remounting routes the rebuild through `purge`,
+    // which `Plotly.react` on its own would not do.
+    const plotKey = needsWebGL ? `gl-${glGeneration}` : "svg";
 
     useEffect(() => {
       const chartId = chartIdRef.current;
@@ -499,22 +501,19 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       };
     }, [needsWebGL, hasParcoords, contextManager]);
 
-    // Handle WebGL errors gracefully
-    useEffect(() => {
-      const handleWebGLError = (event: WebGLErrorEvent) => {
-        console.warn("WebGL context lost, falling back to SVG rendering");
+    // `webglcontextlost` is dispatched on the canvas and does not bubble, so a
+    // window listener never hears it. Plotly re-emits it on the graph div, which
+    // is what react-plotly surfaces here.
+    const handleWebGlContextLost = React.useCallback(() => {
+      if (glRecoveriesRef.current >= MAX_GL_RECOVERIES) {
+        // Rebuilding again would only take the contexts back off another chart.
         setIsWebGLEnabled(false);
-        setLocalError("WebGL context lost, using fallback rendering");
-      };
-
-      // Listen for WebGL context loss
-      if (typeof window !== "undefined") {
-        window.addEventListener("webglcontextlost", handleWebGLError);
-        return () => window.removeEventListener("webglcontextlost", handleWebGLError);
+      } else {
+        glRecoveriesRef.current += 1;
+        setGlGeneration((generation) => generation + 1);
       }
-
-      return;
-    }, []);
+      onWebGlContextLost?.();
+    }, [onWebGlContextLost]);
 
     // Validate and prepare layout
     const safeLayout = React.useMemo(() => {
@@ -636,6 +635,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
             }}
             onInitialized={handleInitialized}
             onPurge={handlePurge}
+            onWebGlContextLost={handleWebGlContextLost}
           />
         </Suspense>
       </div>
