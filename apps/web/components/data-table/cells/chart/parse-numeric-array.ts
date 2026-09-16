@@ -7,13 +7,13 @@
  */
 export function parseNumericArray(value: number[] | string): number[] {
   if (Array.isArray(value)) {
-    return value;
+    return value.filter(Number.isFinite);
   }
 
   try {
     const jsonParsed: unknown = JSON.parse(value);
     if (Array.isArray(jsonParsed)) {
-      return jsonParsed.map((num) => parseFloat(String(num))).filter((num) => !isNaN(num));
+      return jsonParsed.map((num) => parseFloat(String(num))).filter(Number.isFinite);
     }
   } catch {
     try {
@@ -22,7 +22,7 @@ export function parseNumericArray(value: number[] | string): number[] {
       return cleanString
         .split(",")
         .map((str) => parseFloat(str.trim()))
-        .filter((num) => !isNaN(num));
+        .filter(Number.isFinite);
     } catch (error) {
       console.warn("Failed to parse array data:", { value, error });
       return [];

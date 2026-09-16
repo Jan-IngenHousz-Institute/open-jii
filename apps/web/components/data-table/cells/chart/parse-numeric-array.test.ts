@@ -19,6 +19,18 @@ describe("parseNumericArray", () => {
     expect(parseNumericArray("1,invalid,3,NaN,5")).toEqual([1, 3, 5]);
   });
 
+  it("filters out Infinity and -Infinity tokens from a comma-separated string", () => {
+    expect(parseNumericArray("1,Infinity,3,-Infinity,5")).toEqual([1, 3, 5]);
+  });
+
+  it("filters out Infinity and -Infinity values from a JSON-array string", () => {
+    expect(parseNumericArray("[1, Infinity, 3, -Infinity, 5]")).toEqual([1, 3, 5]);
+  });
+
+  it("filters out NaN and non-finite values from an already-parsed array", () => {
+    expect(parseNumericArray([1, NaN, 3, Infinity, -Infinity, 5])).toEqual([1, 3, 5]);
+  });
+
   it("returns an empty array for an empty array literal string", () => {
     expect(parseNumericArray("[]")).toEqual([]);
   });
