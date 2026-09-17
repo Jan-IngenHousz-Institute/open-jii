@@ -96,7 +96,13 @@ export type {
 export { AmbitDriver } from "./driver/ambit/driver";
 export type { AmbitDriverConfig } from "./driver/ambit/config";
 export { AMBIT_SERIAL_DEFAULTS, AMBIT_FRAMING } from "./driver/ambit/config";
-export { AMBIT_COMMANDS, AMBIT_SILENT_COMMANDS } from "./driver/ambit/commands";
+export {
+  AMBIT_COMMANDS,
+  AMBIT_SILENT_COMMANDS,
+  AMBIT_BASELINE_SAVED,
+  AMBIT_CURRENTS_SET,
+  AMBIT_TRACE_DONE,
+} from "./driver/ambit/commands";
 
 // Bench instruments: rig equipment a calibration drives but never measures with.
 export type {
@@ -132,6 +138,13 @@ export type {
   AmbitTempReading,
   AmbitStreamEvents,
 } from "./driver/ambit/interface";
+export {
+  parseAmbitBootDump,
+  parseAmbitBootLine,
+  ambitStoredCoefficients,
+  AMBIT_BOOT_DUMP_MAX_LINES,
+} from "./driver/ambit/device-info";
+export type { AmbitDeviceInfo, AmbitMetadata } from "./driver/ambit/device-info";
 
 // ── MiniPAR driver (LINE + JSON protocol modes) ─────
 export { MiniParDriver } from "./driver/minipar/driver";
