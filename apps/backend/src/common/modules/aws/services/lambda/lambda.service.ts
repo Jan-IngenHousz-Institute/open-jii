@@ -12,6 +12,7 @@ import type { InvokeLambdaRequest, InvokeLambdaResponse } from "./lambda.types";
 @Injectable()
 export class AwsLambdaService {
   private readonly lambdaClient: LambdaClient;
+  private readonly endpointClients = new Map<string, LambdaClient>();
 
   // Hard cap on decompressed Lambda response.
   private static readonly MAX_DECOMPRESSED_BYTES = 50 * 1024 * 1024;
@@ -29,7 +30,7 @@ export class AwsLambdaService {
   async invoke<TPayload = Record<string, unknown>>(
     request: InvokeLambdaRequest,
   ): Promise<Result<InvokeLambdaResponse<TPayload>>> {
-    const { functionName, payload, invocationType = "RequestResponse" } = request;
+    const { functionName, payload, invocationType = "RequestResponse", endpoint } = request;
 
     return tryCatch(
       async () => {
@@ -40,7 +41,7 @@ export class AwsLambdaService {
         };
 
         const command = new InvokeCommand(input);
-        const response = await this.lambdaClient.send(command);
+        const response = await this.clientFor(endpoint).send(command);
 
         const rawPayload: unknown = response.Payload
           ? JSON.parse(new TextDecoder().decode(response.Payload))
@@ -61,13 +62,58 @@ export class AwsLambdaService {
           functionError: response.FunctionError,
         };
       },
-      (error) => {
-        if (error instanceof AppError) {
-          return error;
-        }
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        return AppError.internal(errorMessage, ErrorCodes.AWS_OPERATION_FAILED);
-      },
+      (error) => this.describeInvokeError(error, endpoint),
+    );
+  }
+
+  /**
+   * A local runtime interface emulator never throttles and ignores the request
+   * signature, so its client makes one attempt with placeholder credentials: a
+   * real access key must never reach a container that runs user-authored code.
+   */
+  private clientFor(endpoint: string | undefined): LambdaClient {
+    if (!endpoint) {
+      return this.lambdaClient;
+    }
+
+    const existing = this.endpointClients.get(endpoint);
+    if (existing) {
+      return existing;
+    }
+
+    const client = new LambdaClient({
+      region: this.configService.region,
+      endpoint,
+      maxAttempts: 1,
+      credentials: { accessKeyId: "local", secretAccessKey: "local" },
+    });
+    this.endpointClients.set(endpoint, client);
+    return client;
+  }
+
+  private describeInvokeError(error: unknown, endpoint: string | undefined): AppError {
+    if (error instanceof AppError) {
+      return error;
+    }
+
+    const refusedByLocalEndpoint = endpoint !== undefined && this.isConnectionRefused(error);
+    if (refusedByLocalEndpoint) {
+      return AppError.internal(
+        `Lambda endpoint ${endpoint} refused the connection; is the local container running?`,
+        ErrorCodes.AWS_OPERATION_FAILED,
+      );
+    }
+
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return AppError.internal(errorMessage, ErrorCodes.AWS_OPERATION_FAILED);
+  }
+
+  private isConnectionRefused(error: unknown): boolean {
+    return (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "ECONNREFUSED"
     );
   }
 
