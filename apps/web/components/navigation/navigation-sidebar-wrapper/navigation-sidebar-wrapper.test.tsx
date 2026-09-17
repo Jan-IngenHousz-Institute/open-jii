@@ -178,7 +178,7 @@ describe("NavigationSidebarWrapper", () => {
       }[];
     };
 
-    const macros = navigationData.navLibrary[0].children[1];
+    const macros = navigationData.navLibrary[0].children[2];
     expect(macros).toMatchObject({
       title: "sidebar.macros",
       url: "/en/platform/macros",
@@ -188,6 +188,12 @@ describe("NavigationSidebarWrapper", () => {
     expect(macros.items[0]).toMatchObject({
       title: "sidebar.newMacro",
       url: "/en/platform/macros/new",
+    });
+
+    const calibrations = navigationData.navLibrary[0].children[1];
+    expect(calibrations).toMatchObject({
+      title: "sidebar.calibrations",
+      url: "/en/platform/calibrations",
     });
   });
 

@@ -41,12 +41,13 @@ describe("navigation-config", () => {
     it("library is not navigable and has children", () => {
       expect(mainNavigation.library.navigable).toBe(false);
       expect(mainNavigation.library.children).toBeDefined();
-      expect(mainNavigation.library.children.length).toBe(2);
+      expect(mainNavigation.library.children.length).toBe(3);
     });
 
     it("library children generate correct URLs", () => {
-      const [protocols, macros] = mainNavigation.library.children;
+      const [protocols, calibrations, macros] = mainNavigation.library.children;
       expect(protocols.url(locale)).toBe(`/${locale}/platform/protocols`);
+      expect(calibrations.url(locale)).toBe(`/${locale}/platform/calibrations`);
       expect(macros.url(locale)).toBe(`/${locale}/platform/macros`);
     });
 
