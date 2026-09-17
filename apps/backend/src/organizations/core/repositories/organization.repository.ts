@@ -5,6 +5,7 @@ import type { ResourceScope } from "@repo/api/shared/listing";
 import {
   and,
   asc,
+  calibrationDefinitions,
   desc,
   eq,
   exists,
@@ -83,6 +84,7 @@ const OWNED_RESOURCE_TABLES = {
   workbook: workbooks,
   device: iotDevices,
   device_group: deviceGroups,
+  calibration_definition: calibrationDefinitions,
 } as const satisfies Record<
   ResourceType,
   { id: AnyColumn; organizationId: AnyColumn; visibility: AnyColumn }
@@ -104,6 +106,7 @@ const RESOURCE_NAME_SQL: Record<ResourceType, SQL> = {
   workbook: sql`${workbooks.name}`,
   device: sql`COALESCE(${iotDevices.name}, ${iotDevices.thingName})`,
   device_group: sql`${deviceGroups.name}`,
+  calibration_definition: sql`${calibrationDefinitions.name}`,
 };
 
 /**
@@ -684,6 +687,7 @@ export class OrganizationRepository {
         workbook: row.workbook ?? 0,
         device: row.device ?? 0,
         device_group: row.device_group ?? 0,
+        calibration_definition: row.calibration_definition ?? 0,
       };
     });
   }

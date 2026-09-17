@@ -13,6 +13,7 @@ export interface AwsConfig {
     macroSandboxPythonFunctionName: string;
     macroSandboxJavascriptFunctionName: string;
     macroSandboxRFunctionName: string;
+    calibrationSandboxFunctionName: string;
   };
   s3: {
     iotArchiveBucketName: string;
@@ -35,6 +36,8 @@ export const awsConfigSchema = z.object({
     macroSandboxPythonFunctionName: z.string().min(1),
     macroSandboxJavascriptFunctionName: z.string().min(1),
     macroSandboxRFunctionName: z.string().min(1),
+    // Empty until the calibration infra provisions the function.
+    calibrationSandboxFunctionName: z.string(),
   }),
   s3: z.object({
     iotArchiveBucketName: z.string().min(1),
