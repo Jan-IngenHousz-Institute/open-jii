@@ -52,7 +52,11 @@ export default function DeviceCalibrationContent() {
   function renderWizard(family: NonNullable<typeof calibrationFamily>) {
     if (device === undefined) return null;
     return (
-      <CalibrationWizard device={device} family={family} onClose={() => setIsWizardOpen(false)} />
+      <CalibrationWizard
+        deviceId={deviceId}
+        family={family}
+        onClose={() => setIsWizardOpen(false)}
+      />
     );
   }
 

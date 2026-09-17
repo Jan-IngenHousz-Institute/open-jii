@@ -1003,6 +1003,13 @@
         "removeRead": "{{column}} verwijderen",
         "operatorReadPrompt": "Referentiewaarde invoeren"
       },
+      "trial": {
+        "action": "Uitvoeren aan de meetbank",
+        "title": "Kalibratie uitvoeren",
+        "chooseDevice": "Welk apparaat",
+        "chooseHint": "Een sessie aan de meetbank wordt vastgelegd bij één apparaat. Kies een {{family}}-apparaat om deze procedure op te proberen; de meting die daaruit komt kan net als elke andere worden afgewezen.",
+        "noDevices": "Er is geen apparaat van deze familie op uw naam geregistreerd. Registreer er een om deze procedure aan de meetbank te proberen."
+      },
       "produces": {
         "hint": "Een blok wordt als geheel naar een apparaat geschreven en als geheel beoordeeld. De namen die het platform kan schrijven worden hier aangeboden; min en max zijn waartegen een fit bij de beoordeling wordt afgezet.",
         "block": "Blok",

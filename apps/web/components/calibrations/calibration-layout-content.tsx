@@ -18,6 +18,12 @@ interface CalibrationLayoutContentProps {
   definitionId: string;
   definition: CalibrationDefinitionDetail;
   children: React.ReactNode;
+  actions?: React.ReactNode;
+  /**
+   * The bench subroute renders through this same shell, but it is a full-page tool with
+   * its own Back action; no tab strip belongs above it.
+   */
+  showTabs?: boolean;
 }
 
 /** The chrome a definition keeps across its routes: its name, what it is for, and saving. */
@@ -25,6 +31,8 @@ export function CalibrationLayoutContent({
   definitionId,
   definition,
   children,
+  actions,
+  showTabs = true,
 }: CalibrationLayoutContentProps) {
   const { mutateAsync: update, isPending: isUpdating } =
     useUpdateCalibrationDefinition(definitionId);
@@ -62,18 +70,23 @@ export function CalibrationLayoutContent({
               <VisibilityBadge visibility={definition.visibility} />
             </>
           }
+          actions={actions}
         />
         <AutosaveIndicator status={indicatorStatus} />
       </div>
 
-      <ResourceDetailTabs
-        resourceType="calibration_definition"
-        resourceId={definitionId}
-        canShare={canShare}
-        canLeave={canLeave}
-      >
-        {children}
-      </ResourceDetailTabs>
+      {showTabs ? (
+        <ResourceDetailTabs
+          resourceType="calibration_definition"
+          resourceId={definitionId}
+          canShare={canShare}
+          canLeave={canLeave}
+        >
+          {children}
+        </ResourceDetailTabs>
+      ) : (
+        children
+      )}
     </div>
   );
 }

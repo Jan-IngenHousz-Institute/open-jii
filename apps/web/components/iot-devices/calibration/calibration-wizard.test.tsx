@@ -5,7 +5,6 @@ import {
   createCalibrationDefinitionSummary,
   createCalibrationRun,
   createDeviceCalibration,
-  createIotDeviceDetail,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, within } from "@/test/test-utils";
@@ -175,13 +174,7 @@ function attachMiniPar(readings: number[]) {
 }
 
 function renderWizard(onClose = vi.fn()) {
-  render(
-    <CalibrationWizard
-      device={createIotDeviceDetail({ id: DEVICE_ID, deviceType: "minipar" })}
-      family="minipar"
-      onClose={onClose}
-    />,
-  );
+  render(<CalibrationWizard deviceId={DEVICE_ID} family="minipar" onClose={onClose} />);
   return onClose;
 }
 
@@ -249,13 +242,7 @@ describe("CalibrationWizard", () => {
     });
 
     const onClose = vi.fn();
-    render(
-      <CalibrationWizard
-        device={createIotDeviceDetail({ id: DEVICE_ID, deviceType: "minipar" })}
-        family="minipar"
-        onClose={onClose}
-      />,
-    );
+    render(<CalibrationWizard deviceId={DEVICE_ID} family="minipar" onClose={onClose} />);
 
     // Choose the procedure.
     await userEvent.click(await screen.findByRole("radio"));
@@ -367,13 +354,7 @@ describe("CalibrationWizard", () => {
       body: createCalibrationRun(),
     });
 
-    render(
-      <CalibrationWizard
-        device={createIotDeviceDetail({ id: DEVICE_ID, deviceType: "minipar" })}
-        family="minipar"
-        onClose={vi.fn()}
-      />,
-    );
+    render(<CalibrationWizard deviceId={DEVICE_ID} family="minipar" onClose={vi.fn()} />);
 
     await userEvent.click(await screen.findByRole("radio"));
     await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));

@@ -24,7 +24,6 @@ import type {
   DeviceCalibration,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { zFirmwareVersion } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
-import type { IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 import type { IDeviceDriver, ProcedureProgress } from "@repo/iot";
 import {
@@ -57,8 +56,13 @@ const STEP_ORDER: readonly WizardStep[] = [
 ];
 
 interface CalibrationWizardProps {
-  device: IotDeviceDetail;
+  deviceId: string;
   family: CalibrationFamily;
+  /**
+   * Entered from a definition rather than from a device: that procedure is fixed, and the
+   * wizard opens on Connect.
+   */
+  presetDefinitionId?: string;
   onClose: () => void;
 }
 
@@ -76,11 +80,19 @@ async function readPostWriteInfo(
 }
 
 /** Bench to coefficient in one sitting; the interpreter asks the operator for what it cannot do itself. */
-export function CalibrationWizard({ device, family, onClose }: CalibrationWizardProps) {
+export function CalibrationWizard({
+  deviceId,
+  family,
+  presetDefinitionId,
+  onClose,
+}: CalibrationWizardProps) {
   const { t } = useTranslation("iot");
 
-  const [step, setStep] = useState<WizardStep>("choose");
-  const [definitionId, setDefinitionId] = useState<string | null>(null);
+  const isProcedureChosen = presetDefinitionId !== undefined;
+  const stepOrder = isProcedureChosen ? STEP_ORDER.filter((name) => name !== "choose") : STEP_ORDER;
+
+  const [step, setStep] = useState<WizardStep>(isProcedureChosen ? "connect" : "choose");
+  const [definitionId, setDefinitionId] = useState<string | null>(presetDefinitionId ?? null);
   const [payload, setPayload] = useState<CalibrationRunPayload | null>(null);
   const [run, setRun] = useState<CalibrationRun | null>(null);
   const [applied, setApplied] = useState<DeviceCalibration | null>(null);
@@ -94,7 +106,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
 
   const definitions = useCalibrationDefinitions(family);
   const definition = useCalibrationDefinition(definitionId);
-  const active = useActiveDeviceCalibration(device.id);
+  const active = useActiveDeviceCalibration(deviceId);
   const capture = useCalibrationCapture(definition.data?.captureProcedure, family);
   const { operator, rig } = capture;
   const createRun = useCreateCalibrationRun();
@@ -106,7 +118,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
   const hasDefinition = definition.data !== undefined;
   // The device package drives fewer families than the platform registers, so writing back is offered only where a driver exists.
   const writableFamily = isSensorFamily(family) ? family : null;
-  const stepIndex = STEP_ORDER.indexOf(step);
+  const stepIndex = stepOrder.indexOf(step);
 
   // The rig object is new on every render; the dependency lists below hold the ref instead.
   const rigRef = useRef(rig);
@@ -132,7 +144,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
       const firmwareVersion = zFirmwareVersion.safeParse(reported).success ? reported : undefined;
 
       const created = await createRun.mutateAsync({
-        deviceId: device.id,
+        deviceId,
         definitionId: definition.data.id,
         payload: runPayload,
         firmwareVersion,
@@ -143,7 +155,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
     } catch (error) {
       setCaptureError(error instanceof Error ? error.message : String(error));
     }
-  }, [connection, createRun, definition.data, device.id, runCapture, setCaptureError]);
+  }, [connection, createRun, definition.data, deviceId, runCapture, setCaptureError]);
 
   // A retry stays on the step, so it starts the procedure itself; the effect would not re-fire for an unchanged step.
   const captureStartedRef = useRef(false);
@@ -254,7 +266,7 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
   function renderStepHeader() {
     return (
       <ol className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
-        {STEP_ORDER.map((name, index) => (
+        {stepOrder.map((name, index) => (
           <li
             key={name}
             className={index === stepIndex ? "text-foreground font-medium" : undefined}
@@ -310,8 +322,12 @@ export function CalibrationWizard({ device, family, onClose }: CalibrationWizard
           <Button type="button" onClick={() => setStep("capture")} disabled={!capture.canStart}>
             {t("iot.calibration.cta.next")}
           </Button>
-          <Button type="button" variant="outline" onClick={() => setStep("choose")}>
-            {t("iot.calibration.cta.back")}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => (isProcedureChosen ? void closeWizard() : setStep("choose"))}
+          >
+            {isProcedureChosen ? t("iot.calibration.cta.cancel") : t("iot.calibration.cta.back")}
           </Button>
         </div>
       </div>

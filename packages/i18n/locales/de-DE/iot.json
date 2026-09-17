@@ -1003,6 +1003,13 @@
         "removeRead": "{{column}} entfernen",
         "operatorReadPrompt": "Referenzwert eingeben"
       },
+      "trial": {
+        "action": "Am Messplatz ausführen",
+        "title": "Kalibrierung ausführen",
+        "chooseDevice": "Welches Gerät",
+        "chooseHint": "Eine Messplatzsitzung wird zu genau einem Gerät aufgezeichnet. Wählen Sie ein {{family}}-Gerät für diesen Versuch; der entstehende Lauf lässt sich wie jeder andere ablehnen.",
+        "noDevices": "Für Sie ist kein Gerät dieser Familie registriert. Registrieren Sie eines, um diese Prozedur am Messplatz zu erproben."
+      },
       "produces": {
         "hint": "Ein Block wird als Einheit auf ein Gerät geschrieben und als Einheit geprüft. Die Namen, die die Plattform schreiben kann, werden hier angeboten; Min und Max sind die Werte, gegen die eine Anpassung bei der Prüfung geprüft wird.",
         "block": "Block",

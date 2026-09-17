@@ -1003,6 +1003,13 @@
         "removeRead": "Remove {{column}}",
         "operatorReadPrompt": "Enter the reference reading"
       },
+      "trial": {
+        "action": "Run at the bench",
+        "title": "Run a calibration",
+        "chooseDevice": "Which device",
+        "chooseHint": "A bench session is recorded against one device. Pick a {{family}} to try this procedure on; the run it produces can be rejected like any other.",
+        "noDevices": "No device of this family is registered to you. Register one to try this procedure at the bench."
+      },
       "produces": {
         "hint": "A block is written to a device as one unit and reviewed as one. The names the platform can write are offered here; min and max are what a fit is flagged against at review.",
         "block": "Block",
