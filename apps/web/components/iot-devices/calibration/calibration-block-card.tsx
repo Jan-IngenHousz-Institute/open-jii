@@ -1,0 +1,131 @@
+"use client";
+
+import { StatusBadge } from "@/components/shared/status-badge";
+import type { StatusTone } from "@/components/shared/status-badge";
+import { ArrowRight } from "lucide-react";
+
+import type {
+  CalibrationBlock,
+  CalibrationBlockStatus,
+} from "@repo/api/domains/iot/calibration/iot-calibration.schema";
+import { useTranslation } from "@repo/i18n";
+
+import { formatCoefficientValue } from "./format-coefficient-value";
+
+const BLOCK_STATUS_TONE: Record<CalibrationBlockStatus, StatusTone> = {
+  computed: "published",
+  rejected: "destructive",
+  skipped: "archived",
+};
+
+interface CalibrationBlockCardProps {
+  name: string;
+  block: CalibrationBlock;
+  /**
+   * What these coefficients are held against: the ones in force at review time, whose
+   * own absence is worth showing, or null on a session read back from the record, where
+   * what the run replaced is no longer knowable.
+   */
+  previous: { coefficients: Record<string, number | number[]> | undefined } | null;
+}
+
+export function CalibrationBlockCard({ name, block, previous }: CalibrationBlockCardProps) {
+  const { t } = useTranslation("iot");
+
+  const quality = block.quality;
+  const isPassed = quality?.passed === true;
+  const reasons = Array.isArray(quality?.reasons) ? quality.reasons.map(String) : [];
+  const r2 = typeof quality?.r2 === "number" ? quality.r2 : null;
+  const nrmse = typeof quality?.nrmse === "number" ? quality.nrmse : null;
+  // Which reading made the fit poor, named by the setpoint that produced it. The index is
+  // only meaningful inside what the script fitted, which can be a subset of a series.
+  const worstStimulus = quality?.worst_stimulus;
+  const worstFraction =
+    typeof quality?.worst_residual_fraction === "number" ? quality.worst_residual_fraction : null;
+  const hasWorstPoint =
+    worstFraction !== null &&
+    Number.isFinite(worstFraction) &&
+    (typeof worstStimulus === "number" || typeof worstStimulus === "string");
+  const hasComparison = previous !== null;
+
+  function renderCoefficient([coefficient, value]: [string, number | number[]]) {
+    const before = previous?.coefficients?.[coefficient];
+    // A per-channel coefficient wraps over several lines, and a side-by-side comparison
+    // then leaves the old value floating halfway down the new one. Stacked, the arrow
+    // still separates them and both stay readable.
+    const isStacked = Array.isArray(value) || Array.isArray(before);
+
+    return (
+      <div key={coefficient} className="contents">
+        <dt className="text-muted-foreground">{coefficient}</dt>
+        <dd
+          className={
+            isStacked ? "flex flex-col gap-1 font-mono" : "flex items-center gap-2 font-mono"
+          }
+        >
+          {hasComparison && (
+            <span className="text-muted-foreground flex items-center gap-2">
+              {before === undefined
+                ? t("iot.calibration.review.previousUnknown")
+                : formatCoefficientValue(before)}
+              <ArrowRight className="size-3 shrink-0" aria-hidden />
+            </span>
+          )}
+          <span>{formatCoefficientValue(value)}</span>
+        </dd>
+      </div>
+    );
+  }
+
+  function renderQuality() {
+    if (!quality) return null;
+    return (
+      <div className="space-y-1 text-xs">
+        <p className="flex flex-wrap items-center gap-3">
+          <span className={isPassed ? "text-status-active-foreground" : "text-destructive"}>
+            {isPassed ? t("iot.calibration.review.passed") : t("iot.calibration.review.failed")}
+          </span>
+          {r2 !== null && <span>{t("iot.calibration.review.r2", { value: r2.toFixed(4) })}</span>}
+          {nrmse !== null && (
+            <span>{t("iot.calibration.review.nrmse", { value: (nrmse * 100).toFixed(2) })}</span>
+          )}
+        </p>
+        {hasWorstPoint && (
+          <p className="text-muted-foreground">
+            {t("iot.calibration.review.worstPoint", {
+              stimulus: String(worstStimulus),
+              percent: (worstFraction * 100).toFixed(2),
+            })}
+          </p>
+        )}
+        {reasons.length > 0 && (
+          <ul className="text-destructive list-disc pl-4">
+            {reasons.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 rounded-md border p-4">
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-medium">{name}</p>
+        <StatusBadge tone={BLOCK_STATUS_TONE[block.status]}>
+          {t(`iot.calibration.block.${block.status}`)}
+        </StatusBadge>
+      </div>
+      {block.reason !== undefined && (
+        <p className="text-muted-foreground text-sm">{block.reason}</p>
+      )}
+      {block.coefficients !== undefined && (
+        <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
+          {Object.entries(block.coefficients).map(renderCoefficient)}
+        </dl>
+      )}
+      {renderQuality()}
+    </div>
+  );
+}
