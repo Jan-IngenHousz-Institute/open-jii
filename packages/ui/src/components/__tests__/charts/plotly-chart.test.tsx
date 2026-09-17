@@ -42,12 +42,26 @@ const mockUtils = vi.hoisted(() => ({
   createBaseLayout: vi.fn().mockReturnValue({}),
   create3DLayout: vi.fn().mockReturnValue({}),
   createPlotlyConfig: vi.fn().mockReturnValue({}),
-  // Reached through `useChartThemeRefresh`, which the chart now subscribes to.
-  readThemeColor: vi.fn().mockReturnValue(undefined),
-  invalidateThemeTokenCache: vi.fn(),
 }));
 
 vi.mock("../../charts/utils", () => mockUtils);
+
+/**
+ * `webglcontextlost` fires on the canvas and does not bubble, so a window event
+ * proves nothing. Plotly re-emits it on the graph div and react-plotly forwards
+ * that as `onWebGlContextLost`, which is the path the chart actually uses.
+ */
+function loseWebGlContext() {
+  const props = mockPlotComponent.mock.lastCall?.[0] as { onWebGlContextLost?: () => void };
+  act(() => {
+    props.onWebGlContextLost?.();
+  });
+}
+
+function readRenderedTypes(): (string | undefined)[] {
+  const props = mockPlotComponent.mock.lastCall?.[0] as { data: { type?: string }[] };
+  return props.data.map((trace) => trace.type);
+}
 
 describe("PlotlyChart", () => {
   beforeEach(() => {
@@ -524,7 +538,6 @@ describe("PlotlyChart", () => {
     it.each(["png", "svg", "jpeg", "webp"] as const)(
       "preserves %s export settings on initial render and after WebGL fallback",
       (format) => {
-        vi.spyOn(console, "warn").mockImplementation(() => {});
         const options = { format, width: 1800, height: 1000, scale: 3, filename: "field-trial" };
         render(
           <PlotlyChart
@@ -551,11 +564,12 @@ describe("PlotlyChart", () => {
 
         for (const [props] of mockPlotComponent.mock.calls) expectExportConfig(props.config);
 
-        fireEvent(window, new Event("webglcontextlost"));
-        expect(screen.getByText("Chart Error")).toBeInTheDocument();
-        mockPlotComponent.mockClear();
-        fireEvent.click(screen.getByText("Retry with fallback rendering"));
+        // Past the retry limit the chart settles on SVG. It must keep drawing,
+        // not turn into an error box, and keep its export settings.
+        loseWebGlContext();
+        loseWebGlContext();
 
+        expect(screen.queryByText("Chart Error")).not.toBeInTheDocument();
         expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
         expectExportConfig(mockPlotComponent.mock.lastCall[0].config);
       },
@@ -713,19 +727,40 @@ describe("PlotlyChart", () => {
       expect(screen.getByTestId("plotly-chart")).toBeInTheDocument();
     });
 
-    it("handles WebGL context lost events", () => {
+    // A dead context leaves Plotly's gl layer blank while the axes and legend
+    // keep drawing, so the chart has to notice and rebuild rather than sit there.
+    it("rebuilds a WebGL chart when its context is lost, then settles on SVG until it can retry", () => {
+      vi.useFakeTimers();
       const testData: Data[] = [{ type: "scattergl", x: [1, 2], y: [1, 2] }];
-      const consoleSpy = vi.spyOn(console, "warn");
+
+      const originalManager = WebGLContextManager.getInstance();
+      const mockRequestContext = vi
+        .spyOn(originalManager, "requestContext")
+        .mockImplementation((_id, callback) => {
+          callback();
+          return true;
+        });
 
       render(<PlotlyChart data={testData} layout={{}} />);
+      const firstNode = screen.getByTestId("plotly-chart");
+      expect(readRenderedTypes()).toEqual(["scattergl"]);
 
-      // Simulate WebGL context lost event
-      const webglContextLostEvent = new CustomEvent("webglcontextlost");
-      window.dispatchEvent(webglContextLostEvent);
+      // First loss: remount, which routes the rebuild through `purge`.
+      loseWebGlContext();
+      expect(screen.getByTestId("plotly-chart")).not.toBe(firstNode);
+      expect(readRenderedTypes()).toEqual(["scattergl"]);
 
-      expect(consoleSpy).toHaveBeenCalledWith("WebGL context lost, falling back to SVG rendering");
+      // Second loss: stop fighting for contexts and draw on SVG.
+      loseWebGlContext();
+      expect(readRenderedTypes()).toEqual(["scatter"]);
+      expect(screen.queryByText("Chart Error")).not.toBeInTheDocument();
 
-      consoleSpy.mockRestore();
+      // Temporary, not for the life of the page.
+      act(() => vi.advanceTimersByTime(30_000));
+      expect(readRenderedTypes()).toEqual(["scattergl"]);
+
+      mockRequestContext.mockRestore();
+      vi.useRealTimers();
     });
 
     it("handles WebGL detection with null/undefined data", () => {
@@ -980,38 +1015,26 @@ describe("PlotlyChart", () => {
       mockRequestContext.mockRestore();
     });
 
-    // Plotly only destroys a gl scene when a plot stops being gl, so recolouring
-    // in place strands the old scene's contexts. Remounting routes it through
-    // `purge`, which releases them. A remount replaces the DOM node.
-    it("remounts a WebGL chart when the palette changes, and leaves an SVG one alone", async () => {
+    // Measured: recolouring in place costs no extra contexts, while remounting
+    // every gl chart on a palette flip churns them and makes the browser evict
+    // the oldest, which blanks the charts at the top of a dashboard.
+    it("recolours a WebGL chart in place rather than remounting it", async () => {
       const originalManager = WebGLContextManager.getInstance();
       vi.spyOn(originalManager, "requestContext").mockImplementation((_id, callback) => {
         callback();
         return true;
       });
-      // The theme store watches the root with a MutationObserver, whose
-      // callback lands in a microtask.
-      const flipTheme = async () => {
-        await act(async () => {
-          document.documentElement.classList.toggle("dark");
-          await Promise.resolve();
-        });
-      };
-
       const glData: Data[] = [{ type: "scattergl", x: [1, 2], y: [1, 2] }];
       const gl = render(<PlotlyChart data={glData} layout={{}} />);
       const glNode = screen.getByTestId("plotly-chart");
-      await flipTheme();
-      gl.rerender(<PlotlyChart data={glData} layout={{}} />);
-      expect(screen.getByTestId("plotly-chart")).not.toBe(glNode);
-      gl.unmount();
 
-      const svgData: Data[] = [{ type: "scatter", x: [1, 2], y: [1, 2] }];
-      const svg = render(<PlotlyChart data={svgData} layout={{}} />);
-      const svgNode = screen.getByTestId("plotly-chart");
-      await flipTheme();
-      svg.rerender(<PlotlyChart data={svgData} layout={{}} />);
-      expect(screen.getByTestId("plotly-chart")).toBe(svgNode);
+      // The palette lands as a new `layout`, which Plotly applies in place.
+      await act(async () => {
+        document.documentElement.classList.toggle("dark");
+        await Promise.resolve();
+      });
+      gl.rerender(<PlotlyChart data={glData} layout={{ colorway: ["#123456"] }} />);
+      expect(screen.getByTestId("plotly-chart")).toBe(glNode);
     });
 
     it("keeps the WebGL trace when a context is granted", () => {
@@ -1029,6 +1052,49 @@ describe("PlotlyChart", () => {
 
       const rendered = mockPlotComponent.mock.calls.at(-1)?.[0] as { data: Data[] };
       expect(rendered.data[0]?.type).toBe("scattergl");
+
+      mockRequestContext.mockRestore();
+    });
+
+    // Plotly wires its pick layer only when parcoords is present, and ships no
+    // SVG parallel-coordinates trace to fall back to.
+    it("asks for a third context for parcoords and only two for scattergl", () => {
+      const originalManager = WebGLContextManager.getInstance();
+      const mockRequestContext = vi
+        .spyOn(originalManager, "requestContext")
+        .mockImplementation((_id, callback) => {
+          callback();
+          return true;
+        });
+
+      const parcoords = render(<PlotlyChart data={[{ type: "parcoords" }]} layout={{}} />);
+      expect(mockRequestContext).toHaveBeenLastCalledWith(
+        expect.any(String),
+        expect.any(Function),
+        { contexts: 3, mandatory: true },
+      );
+      parcoords.unmount();
+
+      render(<PlotlyChart data={[{ type: "scattergl", x: [1], y: [1] }]} layout={{}} />);
+      expect(mockRequestContext).toHaveBeenLastCalledWith(
+        expect.any(String),
+        expect.any(Function),
+        { contexts: 2, mandatory: false },
+      );
+
+      mockRequestContext.mockRestore();
+    });
+
+    it("leaves parcoords on WebGL when no context is free, having no SVG twin", () => {
+      const testData: Data[] = [{ type: "parcoords" }];
+
+      const originalManager = WebGLContextManager.getInstance();
+      const mockRequestContext = vi.spyOn(originalManager, "requestContext").mockReturnValue(false);
+
+      render(<PlotlyChart data={testData} layout={{}} />);
+
+      const rendered = mockPlotComponent.mock.calls.at(-1)?.[0] as { data: Data[] };
+      expect(rendered.data[0]?.type).toBe("parcoords");
 
       mockRequestContext.mockRestore();
     });
@@ -1268,6 +1334,39 @@ describe("WebGLContextManager", () => {
       manager.releaseContext("chart-0");
       expect(ghostCallback).not.toHaveBeenCalled();
       expect(manager.getActiveCount()).toBe(CAP - 1);
+    });
+  });
+
+  // A parcoords chart holds three contexts where a scattergl one holds two, so
+  // the budget is spent in contexts rather than counted in charts.
+  describe("Weighted Demands", () => {
+    const WIDE = { contexts: 3, mandatory: false };
+
+    it("fits fewer three-context charts than two-context ones", () => {
+      let admitted = 0;
+      while (manager.requestContext(`wide-${admitted}`, () => undefined, WIDE)) {
+        admitted++;
+      }
+
+      expect(admitted).toBeGreaterThan(0);
+      expect(admitted).toBeLessThan(CAP);
+    });
+
+    it("admits a mandatory chart over budget, since it cannot draw on SVG", () => {
+      for (let i = 0; i < CAP; i++) {
+        manager.requestContext(`chart-${i}`, () => undefined);
+      }
+      expect(manager.canCreateContext()).toBe(false);
+
+      const callback = vi.fn();
+      const granted = manager.requestContext("pinned", callback, {
+        contexts: 3,
+        mandatory: true,
+      });
+
+      expect(granted).toBe(true);
+      expect(callback).toHaveBeenCalledOnce();
+      expect(manager.getActiveCount()).toBe(CAP + 1);
     });
   });
 });

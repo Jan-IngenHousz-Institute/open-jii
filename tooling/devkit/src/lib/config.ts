@@ -8,7 +8,7 @@ export function repositoryRoot(): string {
   return fileURLToPath(new URL("../../../..", import.meta.url));
 }
 
-async function readEnvFile(path: string): Promise<EnvRecord> {
+export async function readEnvFile(path: string): Promise<EnvRecord> {
   try {
     return parse(await readFile(path));
   } catch (error) {
