@@ -8,6 +8,8 @@ export const RESOURCE_ROUTE_SEGMENTS: Record<SharingResourceType, string> = {
   workbook: "workbooks",
   device: "devices",
   device_group: "devices/groups",
+  // Definitions have no page of their own; a device's Calibration tab is where they are used.
+  calibration_definition: "devices",
 };
 
 /** The resource's own detail route — the Overview of its tab strip. */
