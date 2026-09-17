@@ -11,6 +11,7 @@ export const zSharingResourceType = z.enum([
   "workbook",
   "device",
   "device_group",
+  "calibration_definition",
 ]);
 
 /**

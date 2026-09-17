@@ -756,6 +756,7 @@ export const resourceTypeEnum = pgEnum("resource_type", [
   "workbook",
   "device",
   "device_group",
+  "calibration_definition",
 ]);
 export const granteeTypeEnum = pgEnum("grantee_type", ["user", "organization", "team"]);
 

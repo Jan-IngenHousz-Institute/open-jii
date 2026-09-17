@@ -30,7 +30,7 @@ describe("GlobalSearchUseCase", () => {
     await testApp.teardown();
   });
 
-  it("returns ranked matches across experiments, protocols, macros, workbooks and organizations", async () => {
+  it("returns ranked matches across every searchable resource", async () => {
     await testApp.createExperiment({
       name: "Photosynthesis trial",
       userId,
@@ -39,6 +39,10 @@ describe("GlobalSearchUseCase", () => {
     await testApp.createProtocol({ name: "Photosynthesis protocol", createdBy: userId });
     await testApp.createMacro({ name: "Photosynthesis macro", createdBy: userId });
     await testApp.createWorkbook({ name: "Photosynthesis workbook", createdBy: userId });
+    await testApp.createCalibrationDefinition({
+      name: "Photosynthesis bench calibration",
+      createdBy: userId,
+    });
     await testApp.createOrganization("Photosynthesis Lab", { visibility: "public" });
 
     const result = await useCase.execute(userId, "photosynthesis", 20);
@@ -49,7 +53,12 @@ describe("GlobalSearchUseCase", () => {
     expect(types).toContain("protocol");
     expect(types).toContain("macro");
     expect(types).toContain("workbook");
+    expect(types).toContain("calibration_definition");
     expect(types).toContain("organization");
+    // A definition is browsed by family, so that is the label it carries.
+    const calibration = result.value.results.find((r) => r.type === "calibration_definition");
+    expect(calibration?.title).toBe("Photosynthesis bench calibration");
+    expect(calibration?.meta).toBe("minipar");
     // The workbook result carries no type-specific meta label (like experiments).
     const workbook = result.value.results.find((r) => r.type === "workbook");
     expect(workbook?.title).toBe("Photosynthesis workbook");

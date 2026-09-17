@@ -580,6 +580,36 @@ describe("SharingController", () => {
       });
     });
 
+    // A calibration method belongs to whoever owns the bench that produced it, and that
+    // can change hands like any other artifact.
+    it("moves a calibration definition too", async () => {
+      const organizationId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(organizationId, owner, "owner");
+      const definition = await testApp.createCalibrationDefinition({
+        name: `PAR bench ${crypto.randomUUID()}`,
+        createdBy: owner,
+        organizationId,
+      });
+      const personal = await testApp.personalOrganizationId(owner);
+
+      const res = await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.sharing.transferResourceOrganization, {
+            resourceType: "calibration_definition",
+            id: definition.id,
+          }),
+        )
+        .withAuth(owner)
+        .send({ targetOrganizationId: personal })
+        .expect(StatusCodes.OK);
+
+      expect(res.body).toEqual({
+        resourceType: "calibration_definition",
+        resourceId: definition.id,
+        organizationId: personal,
+      });
+    });
+
     it("refuses a device before any handler sees it", async () => {
       const device = await testApp.createIotDevice({ createdBy: owner });
       const personal = await testApp.personalOrganizationId(owner);

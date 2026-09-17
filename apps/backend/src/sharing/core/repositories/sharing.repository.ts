@@ -20,6 +20,7 @@ import {
   inArray,
   isNull,
   or,
+  calibrationDefinitions,
   isNotPersonalOrgSql,
   listResourceGrants,
   macros,
@@ -127,6 +128,7 @@ const TRANSFERABLE_RESOURCE_TABLES = {
   macro: macros,
   protocol: protocols,
   workbook: workbooks,
+  calibration_definition: calibrationDefinitions,
 } as const satisfies Record<TransferableResourceType, unknown>;
 
 /** Refusals shared by the pre-flight transfer gate and its re-checks under lock. */
