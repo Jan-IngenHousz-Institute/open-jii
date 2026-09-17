@@ -79,7 +79,8 @@
         "collaborators": "Mitwirkende",
         "lineage": "Herkunft",
         "monitoring": "Überwachung",
-        "firmware": "Firmware"
+        "firmware": "Firmware",
+        "calibration": "Kalibrierung"
       },
       "connectivity": {
         "connected": "Online",
@@ -764,6 +765,159 @@
       "showFewer": "Weniger Gruppen anzeigen",
       "searchPlaceholder": "Gruppen durchsuchen",
       "searchNoMatches": "Keine Gruppen entsprechen der Suche."
+    },
+    "calibration": {
+      "title": "Kalibrierung",
+      "description": "Was dieses Gerät gegen eine Referenz misst, die gültigen Koeffizienten und jede aufgezeichnete Messbank-Sitzung.",
+      "loadError": "Die Kalibrierungsdaten konnten nicht geladen werden.",
+      "status": {
+        "running": "Läuft",
+        "computed": "Berechnet",
+        "compute_failed": "Berechnung fehlgeschlagen",
+        "error": "Fehler",
+        "approved": "Freigegeben",
+        "rejected": "Abgelehnt"
+      },
+      "block": {
+        "computed": "Berechnet",
+        "rejected": "Abgelehnt",
+        "skipped": "Übersprungen"
+      },
+      "active": {
+        "title": "Gültig",
+        "none": "Dieses Gerät wurde noch nie kalibriert.",
+        "written": "Auf das Gerät geschrieben",
+        "notWritten": "Noch nicht auf das Gerät geschrieben",
+        "validFrom": "Seit {{date}}",
+        "unconfirmed": "Geschrieben, aber nicht bestätigt"
+      },
+      "runs": {
+        "title": "Messbank-Sitzungen",
+        "empty": "Auf diesem Gerät wurde noch keine Kalibrierung ausgeführt.",
+        "definition": "v{{version}}"
+      },
+      "run": {
+        "back": "Alle Sitzungen",
+        "title": "Sitzungsprotokoll",
+        "definition": "Verfahren",
+        "definitionUnknown": "Unbekanntes Verfahren",
+        "started": "Begonnen",
+        "finished": "Beendet",
+        "reviewed": "Geprüft",
+        "firmware": "Firmware",
+        "source": "Erfasst von",
+        "sourceWizard": "Kalibrierassistent",
+        "sourceExternal": "Externer Prüfstand",
+        "readings": "Messwerte des Prüfstands",
+        "deviceState": "Gerätezustand",
+        "infoBefore": "Vor der Sitzung",
+        "infoAfter": "Nach dem Schreiben",
+        "writeTitle": "Auf das Gerät geschrieben",
+        "writeNever": "Diese Koeffizienten wurden nur protokolliert und nie auf das Gerät geschrieben.",
+        "writtenAt": "Geschrieben am {{date}}",
+        "verificationTitle": "Prüfung mit den neuen Koeffizienten"
+      },
+      "cta": {
+        "calibrate": "Kalibrieren",
+        "next": "Weiter",
+        "back": "Zurück",
+        "cancel": "Abbrechen"
+      },
+      "steps": {
+        "choose": "Verfahren",
+        "connect": "Verbinden",
+        "capture": "Erfassen",
+        "review": "Prüfen",
+        "write": "Schreiben",
+        "done": "Fertig"
+      },
+      "choose": {
+        "hint": "Wählen Sie das Verfahren für dieses Gerät. Jedes benennt die Schritte an der Messbank und was es berechnet.",
+        "empty": "Für diese Gerätefamilie ist noch kein Kalibrierverfahren veröffentlicht."
+      },
+      "connect": {
+        "hint": "Schließen Sie das Gerät per USB an und öffnen Sie den Port. Die Plattform erreicht die Hardware nie selbst; dieser Browser ist die Brücke.",
+        "action": "Gerät verbinden",
+        "connecting": "Wird verbunden…",
+        "connected": "Verbunden mit {{name}}",
+        "disconnect": "Trennen",
+        "unsupportedBrowser": "Dieser Browser hat kein Web Serial. Verwenden Sie einen Chromium-basierten Browser auf einem Desktop.",
+        "unsupportedDevice": "Diese Gerätefamilie hat keine serielle Schnittstelle.",
+        "wrongFamily": "Ein {{expected}}-Gerät wurde erwartet, aber ein {{actual}} hat geantwortet. Verbinden Sie das richtige Gerät.",
+        "roleHeading": "Instrumente am Messplatz",
+        "roleHint": "Jedes Instrument belegt einen eigenen Port; der Browser fragt pro Verbindung nach einem Port.",
+        "roleHandshake": "Identifiziert sich als",
+        "roleRequired": "Der Durchlauf benötigt dieses Instrument.",
+        "roleOptional": "Optional. Schritte, die es auslesen, werden übersprungen, wenn es fehlt.",
+        "roleAction": "Verbinden",
+        "roleConnecting": "Wird verbunden…",
+        "roleConnected": "Verbunden",
+        "roleMismatch": "An diesem Anschluss meldete sich {{model}}, was diese Rolle nicht erwartet; er wurde wieder geschlossen.",
+        "roleUnrecognised": "An diesem Port hat sich kein bekanntes Instrument gemeldet.",
+        "roleFailed": "Dieser Port konnte nicht geöffnet werden.",
+        "roleMissing": "Verbinden Sie die benötigten Instrumente, bevor Sie fortfahren."
+      },
+      "prompt": {
+        "confirmLabel": "Geben Sie {{token}} ein, um fortzufahren",
+        "valueLabel": "Wert",
+        "invalidNumber": "Geben Sie eine Zahl ein.",
+        "continue": "Weiter",
+        "submit": "Erfassen",
+        "decline": "Ich kann diesen Schritt nicht ausführen",
+        "confirmReading": "Diesen Messwert übernehmen?",
+        "confirmReadingAt": "Messwert bei {{stimulus}} übernehmen?",
+        "keepReading": "Übernehmen",
+        "retakeReading": "Erneut messen"
+      },
+      "capture": {
+        "step": "Schritt {{index}} von {{total}}: {{description}}",
+        "setpoint": "Sollwert {{index}} von {{total}}: {{value}}",
+        "series": "{{series}}: {{rows}} Zeilen erfasst",
+        "skipped": "{{series}} übersprungen: {{reason}}",
+        "submitting": "Koeffizienten werden berechnet…",
+        "aborted": "Das Verfahren wurde vor dem Abschluss beendet.",
+        "retry": "Erneut ausführen"
+      },
+      "review": {
+        "hint": "Die Freigabe übernimmt die berechneten Blöcke in den Datensatz dieses Geräts. Die Hardware wird erst im nächsten Schritt beschrieben.",
+        "computeFailed": "Das Skript hat keine Koeffizienten erzeugt.",
+        "approve": "Freigeben",
+        "reject": "Ablehnen",
+        "approveFailed": "Dieser Lauf konnte nicht freigegeben werden.",
+        "rejectFailed": "Dieser Lauf konnte nicht abgelehnt werden.",
+        "previousUnknown": "unbekannt",
+        "passed": "Qualitätsprüfung bestanden",
+        "failed": "Qualitätsprüfung nicht bestanden",
+        "r2": "R² {{value}}",
+        "nrmse": "NRMSE {{value}} %",
+        "worstPoint": "Größte Abweichung bei {{stimulus}}: {{percent}}% des Messbereichs",
+        "points": "Erfasste Punkte",
+        "fitLine": "Angepasste Gerade",
+        "xLabel": "Gerätemesswert",
+        "yLabel": "Referenzmesswert",
+        "seriesCaption": "{{series}}, {{points}} Punkte"
+      },
+      "write": {
+        "hint": "Schreiben Sie die freigegebenen Koeffizienten auf das Gerät. Jeder Block wird durch Zurücklesen bestätigt.",
+        "action": "Auf Gerät schreiben",
+        "writing": "Wird geschrieben…",
+        "verified": "geschrieben und bestätigt",
+        "failed": "nicht bestätigt",
+        "partial": "Ein nicht bestätigter Block kann das Gerät teilweise erreicht haben. Führen Sie diese Kalibrierung erneut aus, bevor Sie dem Gerät vertrauen.",
+        "unsupported": "Die Plattform kann für diese Gerätefamilie noch keine Koeffizienten schreiben. Die Kalibrierung ist nur im Datensatz freigegeben.",
+        "skip": "Ohne Schreiben abschließen",
+        "reportFailed": "Das Gerät wurde beschrieben, das Ergebnis konnte aber nicht gespeichert werden.",
+        "verifyHeading": "Prüfung mit den neuen Koeffizienten",
+        "verifying": "Das Gerät wird mit den neuen Koeffizienten ausgelesen…",
+        "verificationStopped": "Die Prüfung wurde vorzeitig beendet: {{reason}}. Die oben geschriebenen Koeffizienten bleiben bestehen.",
+        "disconnected": "Das Gerät wurde getrennt. Erneut verbinden und noch einmal schreiben."
+      },
+      "done": {
+        "close": "Schließen",
+        "rejectedHint": "Der Lauf wurde abgelehnt. Seine Diagnose bleibt gespeichert; nichts wurde übernommen.",
+        "writtenHint": "Die Kalibrierung ist gültig und auf dem Gerät bestätigt.",
+        "notWrittenHint": "Die Kalibrierung ist im Datensatz gültig. Einige Blöcke wurden auf dem Gerät nicht bestätigt; prüfen Sie die Schreibergebnisse."
+      }
     },
     "workbookBar": {
       "mock": "Mock",
