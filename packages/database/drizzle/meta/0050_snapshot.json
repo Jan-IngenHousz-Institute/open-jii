@@ -1,6 +1,6 @@
 {
-  "id": "8b2b4482-dc18-40b3-aab7-2950336b972e",
-  "prevId": "8c77f954-247c-4764-b2b4-848d3460de69",
+  "id": "578d419e-d2be-4ef1-be1e-e3e0828c8f8f",
+  "prevId": "d9d6a1a7-412e-4040-bc8b-aed6a78208b9",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -619,15 +619,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "params": {
-          "name": "params",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
         "payload_s3_key": {
           "name": "payload_s3_key",
           "type": "varchar(512)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "params": {
+          "name": "params",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -857,6 +857,12 @@
         },
         "write_results": {
           "name": "write_results",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "verification": {
+          "name": "verification",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
@@ -2269,7 +2275,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'pending'"
+          "default": "'registered'"
         },
         "certificate_id": {
           "name": "certificate_id",
@@ -4577,10 +4583,10 @@
       "name": "device_status",
       "schema": "public",
       "values": [
-        "pending",
+        "registered",
         "active",
-        "rotating",
-        "revoked"
+        "revoked",
+        "retired"
       ]
     },
     "public.experiment_members_role": {

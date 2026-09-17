@@ -56,7 +56,7 @@ describe("RegisterIotDeviceUseCase", () => {
     expect(result.value.thingName).toBe(RETURNED_THING.thingName);
     expect(result.value.thingArn).toBe(RETURNED_THING.thingArn);
     expect(result.value.serialNumber).toBe(body.serialNumber);
-    expect(result.value.status).toBe("pending");
+    expect(result.value.status).toBe("registered");
     expect(spy).toHaveBeenCalledWith(
       expect.objectContaining({
         attributes: { deviceType: "ambyte", serialNumber: body.serialNumber },

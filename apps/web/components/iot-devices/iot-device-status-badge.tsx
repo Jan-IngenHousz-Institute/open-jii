@@ -2,27 +2,50 @@
 
 import { StatusBadge } from "@/components/shared/status-badge";
 import type { StatusTone } from "@/components/shared/status-badge";
-import { CheckCircle2, Clock, RefreshCw, XCircle } from "lucide-react";
+import { Archive, CheckCircle2, Clock, KeyRound, XCircle } from "lucide-react";
 
-import type { IotDeviceStatus } from "@repo/api/domains/iot/iot.schema";
+import type { IotDevice, IotDeviceRung } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 
-const STATUS_CONFIG: Record<IotDeviceStatus, { icon: typeof Clock; tone: StatusTone }> = {
-  pending: { icon: Clock, tone: "stale" },
-  active: { icon: CheckCircle2, tone: "active" },
-  rotating: { icon: RefreshCw, tone: "published" },
+import { deviceRung } from "./device-rung";
+
+const RUNG_CONFIG: Record<IotDeviceRung, { icon: typeof Clock; tone: StatusTone }> = {
+  registered: { icon: Clock, tone: "stale" },
+  provisioned: { icon: KeyRound, tone: "published" },
+  onboarded: { icon: CheckCircle2, tone: "active" },
   revoked: { icon: XCircle, tone: "destructive" },
+  retired: { icon: Archive, tone: "stale" },
 };
 
-export function IotDeviceStatusBadge({ status }: { status: IotDeviceStatus }) {
+interface IotDeviceStatusBadgeProps {
+  status: IotDevice["status"];
+  deviceType: IotDevice["deviceType"];
+  boundExperimentCount: number;
+}
+
+/**
+ * A phone has no certificate and picks its experiment in the app, so it has no
+ * ladder to climb: it shows nothing here unless it was retired.
+ */
+export function IotDeviceStatusBadge({
+  status,
+  deviceType,
+  boundExperimentCount,
+}: IotDeviceStatusBadgeProps) {
   const { t } = useTranslation("iot");
-  const config = STATUS_CONFIG[status];
+
+  if (deviceType === "mobile" && status !== "retired") {
+    return null;
+  }
+
+  const rung = deviceRung(status, boundExperimentCount);
+  const config = RUNG_CONFIG[rung];
   const Icon = config.icon;
 
   return (
     <StatusBadge tone={config.tone}>
       <Icon className="h-3 w-3" />
-      {t(`iot.devices.status.${status}`)}
+      {t(`iot.devices.status.${rung}`)}
     </StatusBadge>
   );
 }

@@ -14,6 +14,7 @@ const DEVICE = node({
   label: "Gateway",
   family: "ambyte",
   status: "active",
+  boundExperimentCount: 1,
   firmwareVersion: null,
 });
 const BROKER = node({

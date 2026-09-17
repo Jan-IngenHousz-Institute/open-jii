@@ -60,10 +60,11 @@
         "created": "Registriert"
       },
       "status": {
-        "pending": "Ausstehend",
-        "active": "Aktiv",
-        "rotating": "Rotierend",
-        "revoked": "Widerrufen"
+        "registered": "Registriert",
+        "provisioned": "Bereitgestellt",
+        "onboarded": "Eingebunden",
+        "revoked": "Widerrufen",
+        "retired": "Außer Betrieb"
       },
       "tabs": {
         "all": "Alle"
@@ -82,12 +83,13 @@
         "calibration": "Kalibrierung"
       },
       "connectivity": {
-        "connected": "Verbunden",
+        "connected": "Online",
         "connectedNow": "Derzeit verbunden",
         "onlineSince": "Online seit {{time}}",
-        "disconnected": "Getrennt",
+        "disconnected": "Offline",
         "unknown": "Unbekannt",
-        "never": "Nie verbunden"
+        "never": "Nie verbunden",
+        "idle": "Inaktiv"
       },
       "lineage": {
         "title": "Herkunft",
@@ -243,7 +245,9 @@
         "more": "Geräteaktionen",
         "view": "Details anzeigen",
         "delete": "Löschen",
-        "title": "Aktionen"
+        "title": "Aktionen",
+        "retire": "Außer Betrieb nehmen",
+        "reinstate": "Wieder aufnehmen"
       },
       "empty": {
         "title": "Noch keine Geräte",
@@ -370,7 +374,7 @@
         }
       },
       "credentials": {
-        "pendingDescription": "Dieses Gerät hat noch kein Zertifikat. Stellen Sie eines aus, um es zu aktivieren und die Verbindung zu AWS IoT zu ermöglichen.",
+        "registeredDescription": "Dieses Gerät hat noch kein Zertifikat. Stellen Sie eines aus, um es bereitzustellen und die Verbindung zu AWS IoT zu ermöglichen.",
         "issue": "Zertifikat ausstellen",
         "reissue": "Zertifikat neu ausstellen",
         "issueError": "Zertifikat konnte nicht ausgestellt werden",
@@ -379,7 +383,6 @@
         "rotateTitle": "Zertifikat rotieren",
         "rotateConfirm": "Das Gerät erhält ein neues Zertifikat, das aktuelle funktioniert sofort nicht mehr. Es sendet erst weiter, wenn die neuen Zugangsdaten installiert sind.",
         "disconnectWarning": "Dieses Gerät ist derzeit verbunden und wird getrennt.",
-        "rotatingDescription": "Sie haben ein neues Zertifikat ausgestellt und das alte wird zurückgezogen. Das Gerät sendet mit dem vorhandenen weiter, bis Sie das neue Paket aufspielen; das dauert in der Regel unter einer Minute.",
         "revokedDescription": "Das Zertifikat wurde widerrufen, sodass sich dieses Gerät nicht mehr bei AWS IoT authentifizieren kann. Stellen Sie ein neues Zertifikat aus, um den Zugang wiederherzustellen.",
         "revoke": "Zertifikat widerrufen",
         "revokeTitle": "Zertifikat widerrufen",
@@ -420,7 +423,8 @@
           "step3": "Rotieren Sie, um dem Gerät ein frisches Zertifikat zu geben, oder wenn es den Besitzer wechselt. Widerrufen kappt den Zugang sofort.",
           "step4": "Ein widerrufenes Gerät kann sich erst wieder verbinden, wenn ein neues Zertifikat ausgestellt ist."
         },
-        "certificateIdLabel": "Zertifikat-ID"
+        "certificateIdLabel": "Zertifikat-ID",
+        "retiredDescription": "Dieses Gerät ist außer Betrieb. Nehmen Sie es über das Aktionsmenü wieder auf, bevor Sie ein Zertifikat ausstellen."
       },
       "nextAction": {
         "issueCredentials": "Zertifikat ausstellen",
@@ -476,6 +480,18 @@
         "fromDevice": "Zuletzt von {{device}}",
         "offlineCount_one": "{{count}} offline",
         "offlineCount_other": "{{count}} offline"
+      },
+      "retire": {
+        "title": "Gerät außer Betrieb nehmen",
+        "confirm": "{{name}} wird außer Betrieb genommen. Das Zertifikat wird widerrufen und das Gerät verschwindet aus allen Hinweislisten und Auswahlen. Eintrag und Verlauf bleiben erhalten.",
+        "success": "Gerät außer Betrieb genommen",
+        "error": "Das Gerät konnte nicht außer Betrieb genommen werden"
+      },
+      "reinstate": {
+        "title": "Gerät wieder aufnehmen",
+        "confirm": "{{name}} kehrt als registriertes Gerät in die Registry zurück. Stellen Sie ein neues Zertifikat aus, um es wieder in Betrieb zu nehmen.",
+        "success": "Gerät wieder aufgenommen",
+        "error": "Das Gerät konnte nicht wieder aufgenommen werden"
       }
     },
     "onboarding": {
@@ -547,7 +563,8 @@
       "filterExperiments": "Experimente filtern",
       "filterNoMatches": "Keine Experimente passen zu diesem Filter.",
       "answeredOfRequired": "{{answered}} von {{required}} Pflichtfeldern",
-      "reissueHint": "Neu ausstellen erzeugt die Datei für alles derzeit Gebundene neu; es kommt nichts Neues hinzu."
+      "reissueHint": "Neu ausstellen erzeugt die Datei für alles derzeit Gebundene neu; es kommt nichts Neues hinzu.",
+      "retiredDevice": "Dieses Gerät ist außer Betrieb und kann nicht eingebunden werden."
     },
     "experimentDevices": {
       "tabLabel": "Geräte",
@@ -696,7 +713,7 @@
         "actionIssue": "Ausstellen",
         "actionRotate": "Rotieren",
         "actionRevoke": "Widerrufen",
-        "issueHint": "Stellt ein Zertifikat für Geräte aus, die noch keins haben (ausstehend oder widerrufen).",
+        "issueHint": "Stellt ein Zertifikat für Geräte aus, die noch keins haben (registriert oder widerrufen).",
         "rotateHint": "Ersetzt das aktive Zertifikat auf jedem ausgewählten Gerät. Das alte Zertifikat funktioniert sofort nicht mehr.",
         "revokeHint": "Widerruft das Zertifikat jedes ausgewählten Geräts. Widerrufene Geräte können sich erst nach neuer Ausstellung wieder authentifizieren.",
         "devicesTitle": "Geräte",
@@ -705,7 +722,6 @@
         "mobileIneligible": "Für Telefone nicht anwendbar",
         "hasCredentialsIneligible": "Hat bereits Zugangsdaten",
         "noCertificateIneligible": "Kein Zertifikat",
-        "rotatingIneligible": "Rotation läuft",
         "submitIssue_one": "{{count}} Zertifikat ausstellen",
         "submitIssue_other": "{{count}} Zertifikate ausstellen",
         "submitRotate_one": "{{count}} Zertifikat rotieren",
@@ -730,7 +746,8 @@
         "downloadAll_other": "{{count}} Pakete herunterladen (ZIP)",
         "actionTitle": "Aktion",
         "actionDescription": "Die Berechtigung unterscheidet sich je Aktion; die Geräteliste unten folgt der Auswahl.",
-        "railEmpty": "Führen Sie eine Aktion aus, um hier Ergebnisse und Downloads pro Gerät zu sehen."
+        "railEmpty": "Führen Sie eine Aktion aus, um hier Ergebnisse und Downloads pro Gerät zu sehen.",
+        "retiredIneligible": "Außer Betrieb"
       },
       "overview": {
         "title": "Übersicht",

@@ -227,7 +227,7 @@ describe("IotDevicesTableView", () => {
     server.mount(contract.iot.listIotDevices, {
       body: [
         createIotDevice({ name: "ActiveOne", status: "active" }),
-        createIotDevice({ name: "PendingOne", status: "pending" }),
+        createIotDevice({ name: "PendingOne", status: "registered" }),
       ],
     });
     const user = userEvent.setup();
@@ -236,7 +236,7 @@ describe("IotDevicesTableView", () => {
     await screen.findByRole("link", { name: "ActiveOne" });
 
     // A chip's accessible name carries its count, so match on the label alone.
-    await user.click(screen.getByRole("button", { name: /devices\.status\.active/ }));
+    await user.click(screen.getByRole("button", { name: /devices\.status\.provisioned/ }));
 
     await waitFor(() =>
       expect(screen.queryByRole("link", { name: "PendingOne" })).not.toBeInTheDocument(),

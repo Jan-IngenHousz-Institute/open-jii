@@ -55,7 +55,7 @@ describe("OnboardIotDeviceGroupUseCase", () => {
 
   it("re-issues a config per member and continues past ineligible devices", async () => {
     const active = await testApp.createIotDevice({ createdBy: userId, status: "active" });
-    const pending = await testApp.createIotDevice({ createdBy: userId, status: "pending" });
+    const pending = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
     const groupId = await seedGroup([active.id, pending.id]);
 
     const result = await useCase.execute(

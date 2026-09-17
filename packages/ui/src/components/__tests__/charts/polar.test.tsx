@@ -28,8 +28,9 @@ vi.mock("../../charts/utils", () => ({
     responsive: config.responsive !== false,
   })),
   getRenderer: vi.fn((useWebGL?: boolean) => (useWebGL ? "webgl" : "svg")),
+  // Mirrors the real map: only scatter has a WebGL twin in the bundle.
   getPlotType: vi.fn((type: string, renderer: string) =>
-    renderer === "webgl" ? `${type}gl` : type,
+    renderer === "webgl" && (type === "scatter" || type === "line") ? "scattergl" : type,
   ),
   legendAnchorFor: vi.fn(() => ({})),
   responsiveChrome: vi.fn((config: any) => ({
@@ -295,10 +296,10 @@ describe("PolarPlot", () => {
         type: "barpolar",
       },
       {
-        name: "Scatter Polar GL",
+        name: "Scatter Polar",
         r: [2, 3, 4],
         theta: [45, 135, 225],
-        type: "scatterpolargl",
+        type: "scatterpolar",
       },
     ];
 
@@ -306,7 +307,7 @@ describe("PolarPlot", () => {
 
     const chartData = JSON.parse(getByTestId("chart-data").textContent || "[]");
     expect(chartData[0].type).toBe("barpolar");
-    expect(chartData[1].type).toBe("scatterpolargl");
+    expect(chartData[1].type).toBe("scatterpolar");
   });
 
   it("handles string theta values", () => {
@@ -493,11 +494,11 @@ describe("PolarPlot", () => {
     expect(chartData[1].name).toBe("Series 2");
   });
 
-  it("handles WebGL renderer", () => {
+  it("keeps polar traces on their SVG type under the WebGL renderer", () => {
     const { getByTestId } = render(<PolarPlot data={mockData} config={{ useWebGL: true }} />);
 
     const chartData = JSON.parse(getByTestId("chart-data").textContent || "[]");
-    expect(chartData[0].type).toBe("scatterpolargl");
+    expect(chartData[0].type).toBe("scatterpolar");
   });
 
   it("applies custom layout configuration", () => {

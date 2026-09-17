@@ -20,16 +20,19 @@ import {
 import type { DataTableFeatures } from "./data-table-features";
 
 export type DataRow = Record<string, unknown>;
+export type OnAnnotationHandler = (rowIds: string[], type: ExperimentAnnotationType) => void;
+export type OnToggleCellExpansionHandler = (rowId: string, columnName: string) => void;
+export type IsCellExpandedFn = (rowId: string, columnName: string) => boolean;
+
 export type DataRenderFunction = (
   value: unknown,
   type: string,
   rowId: string,
   columnName?: string,
-  onChartClick?: (data: number[], columnName: string) => void,
-  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void,
-  onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void,
-  onToggleCellExpansion?: (rowId: string, columnName: string) => void,
-  isCellExpanded?: (rowId: string, columnName: string) => boolean,
+  onAddAnnotation?: OnAnnotationHandler,
+  onDeleteAnnotations?: OnAnnotationHandler,
+  onToggleCellExpansion?: OnToggleCellExpansionHandler,
+  isCellExpanded?: IsCellExpandedFn,
   errorColumn?: string,
 ) => string | React.JSX.Element;
 
@@ -123,11 +126,10 @@ export function getColumnWidth(typeText: string, columnName?: string): number | 
 interface CreateTableColumnsParams {
   columns: ExperimentDataColumn[] | undefined;
   formatFunction?: DataRenderFunction;
-  onChartClick?: (data: number[], columnName: string) => void;
-  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
-  onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
-  onToggleCellExpansion?: (rowId: string, columnName: string) => void;
-  isCellExpanded?: (rowId: string, columnName: string) => boolean;
+  onAddAnnotation?: OnAnnotationHandler;
+  onDeleteAnnotations?: OnAnnotationHandler;
+  onToggleCellExpansion?: OnToggleCellExpansionHandler;
+  isCellExpanded?: IsCellExpandedFn;
   errorColumn?: string;
 }
 
@@ -139,7 +141,6 @@ interface CreateTableColumnsParams {
 export function createTableColumns({
   columns: dataColumns,
   formatFunction,
-  onChartClick,
   onAddAnnotation,
   onDeleteAnnotations,
   onToggleCellExpansion,
@@ -170,7 +171,6 @@ export function createTableColumns({
         typeName,
         rowId ?? "",
         columnName,
-        onChartClick,
         onAddAnnotation,
         onDeleteAnnotations,
         onToggleCellExpansion,

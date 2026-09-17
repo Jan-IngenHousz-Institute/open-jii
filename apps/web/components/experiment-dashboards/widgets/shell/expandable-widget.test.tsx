@@ -52,6 +52,23 @@ describe("ExpandableWidget", () => {
     expect(screen.getByRole("heading", { name: "Plot" })).toBeInTheDocument();
   });
 
+  it("expands to the viewport rather than the dialog's default width", async () => {
+    const user = userEvent.setup();
+    render(
+      <WidgetCard>
+        <ExpandableWidget title="Plot">
+          <div>chart body</div>
+        </ExpandableWidget>
+      </WidgetCard>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "widget.expand" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.className).toMatch(/sm:max-w-\[9\d?vw\]/);
+    expect(dialog.className).not.toMatch(/sm:max-w-lg/);
+  });
+
   it("mounts the children in exactly one slot at a time (no double-render)", async () => {
     const user = userEvent.setup();
     render(

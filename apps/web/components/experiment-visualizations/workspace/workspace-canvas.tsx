@@ -2,13 +2,14 @@
 
 import { InsetPanel } from "@/components/shared/inset-panel";
 import { BarChart3, Loader2 } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import type { Control } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Card } from "@repo/ui/components/card";
+import { preloadPlotly } from "@repo/ui/components/charts/plotly-chart";
 
 import { useExperimentVisualizationData } from "../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import "../../../styles/plotly-chart.css";
@@ -27,6 +28,10 @@ const PREVIEW_TIMESTAMP = "1970-01-01T00:00:00.000Z";
 
 export function WorkspaceCanvas({ control, experimentId, visualizationId }: WorkspaceCanvasProps) {
   const { t } = useTranslation("experimentVisualizations");
+
+  useEffect(() => {
+    preloadPlotly();
+  }, []);
 
   // Slice-level watch; bare `useWatch({ control })` would force a Plotly redraw per keystroke.
   const chartType = useWatch({ control, name: "chartType" });

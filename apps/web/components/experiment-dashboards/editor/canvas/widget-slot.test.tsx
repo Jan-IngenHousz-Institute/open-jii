@@ -1,6 +1,7 @@
+import { stubIntersectionObserver } from "@/test/intersection-observer";
 import { server } from "@/test/msw/server";
 import { renderWithForm, screen, userEvent } from "@/test/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type {
@@ -54,8 +55,20 @@ function setup({
 }
 
 describe("WidgetSlot", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("renders the widget card with the widget content visible", () => {
     setup();
+    expect(screen.getByText(/hello world/)).toBeInTheDocument();
+  });
+
+  it("holds the widget's content back until the card is near the viewport", () => {
+    const { intersect } = stubIntersectionObserver();
+    setup();
+    expect(screen.queryByText(/hello world/)).toBeNull();
+    intersect(true);
     expect(screen.getByText(/hello world/)).toBeInTheDocument();
   });
 

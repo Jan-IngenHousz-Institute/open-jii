@@ -813,11 +813,13 @@ export const experimentDashboards = pgTable(
   (t) => [index("experiment_dashboards_experiment_id_idx").on(t.experimentId)],
 );
 
+// Setup progress, not connectivity. "active" is never shown as a word: the
+// badge reads it with the device's binding count as Provisioned or Onboarded.
 export const deviceStatusEnum = pgEnum("device_status", [
-  "pending",
+  "registered",
   "active",
-  "rotating",
   "revoked",
+  "retired",
 ]);
 
 export const iotDevices = pgTable(
@@ -829,7 +831,7 @@ export const iotDevices = pgTable(
     serialNumber: text("serial_number").notNull().unique(),
     name: varchar("name", { length: 255 }),
     deviceType: sensorFamilyEnum("device_type").notNull(),
-    status: deviceStatusEnum("status").default("pending").notNull(),
+    status: deviceStatusEnum("status").default("registered").notNull(),
     certificateId: text("certificate_id"),
     certificateArn: text("certificate_arn"),
     // Org-scoped access control. RESTRICT (not cascade, unlike other resources):

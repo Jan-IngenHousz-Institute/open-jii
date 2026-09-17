@@ -25,6 +25,7 @@ describe("VisualizationWidgetView", () => {
 
   it("renders the linked visualization once data has loaded", async () => {
     const viz = createVisualization({ name: "My Chart" });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
     server.mount(contract.experiments.getExperimentVisualization, { body: viz });
     const widget = createVisualizationWidget({
       config: { visualizationId: viz.id, showTitle: true, showDescription: false },
@@ -34,7 +35,23 @@ describe("VisualizationWidgetView", () => {
     await waitFor(() => expect(screen.getByTestId("viz-renderer")).toHaveTextContent("My Chart"));
   });
 
+  it("reads the visualization from the experiment's list instead of its own request", async () => {
+    const viz = createVisualization({ name: "Listed Chart" });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [viz] });
+    const single = server.mount(contract.experiments.getExperimentVisualization, { body: viz });
+    const widget = createVisualizationWidget({
+      config: { visualizationId: viz.id, showTitle: true, showDescription: false },
+    });
+
+    render(<VisualizationWidgetView widget={widget} experimentId="exp-1" />);
+    await waitFor(() =>
+      expect(screen.getByTestId("viz-renderer")).toHaveTextContent("Listed Chart"),
+    );
+    expect(single.called).toBe(false);
+  });
+
   it("shows the missing-viz empty state when the fetch errors out", async () => {
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [] });
     server.mount(contract.experiments.getExperimentVisualization, { status: 404 });
     const widget = createVisualizationWidget({
       config: {

@@ -4,10 +4,12 @@ import { zWorkbookCellArray } from "@repo/api/domains/workbook/workbook-cells.sc
 import { zEntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
 import {
   and,
+  count,
   desc,
   eq,
   experimentDevices,
   experiments,
+  inArray,
   iotDevices,
   workbookVersions,
 } from "@repo/database";
@@ -72,6 +74,21 @@ export class ExperimentDeviceRepository {
 
   // One round-trip: null means the device does not exist, an empty list means
   // it exists with no bindings. Who may see it is the caller's (guard's) job.
+  /** Bindings per device, in one query; a device with none is absent from the map. */
+  async countByDevices(deviceIds: string[]): Promise<Result<Map<string, number>>> {
+    return tryCatch(async () => {
+      if (deviceIds.length === 0) {
+        return new Map<string, number>();
+      }
+      const rows = await this.database
+        .select({ deviceId: experimentDevices.deviceId, bindings: count() })
+        .from(experimentDevices)
+        .where(inArray(experimentDevices.deviceId, deviceIds))
+        .groupBy(experimentDevices.deviceId);
+      return new Map(rows.map((row) => [row.deviceId, row.bindings]));
+    });
+  }
+
   async listExperimentsByDevice(deviceId: string): Promise<Result<DeviceExperimentDto[] | null>> {
     return tryCatch(async () => {
       const rows = await this.database

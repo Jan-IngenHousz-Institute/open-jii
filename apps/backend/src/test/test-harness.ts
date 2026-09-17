@@ -647,8 +647,8 @@ export class TestHarness {
     thingName?: string;
     /** Explicit `null` seeds a nameless device — the column is nullable in reality. */
     name?: string | null;
-    deviceType?: "multispeq" | "ambyte" | "minipar" | "generic";
-    status?: "pending" | "active" | "rotating" | "revoked";
+    deviceType?: "multispeq" | "ambyte" | "minipar" | "generic" | "ambit" | "mobile";
+    status?: "registered" | "active" | "revoked" | "retired";
     certificateId?: string;
     certificateArn?: string;
     visibility?: "private" | "public";
@@ -669,7 +669,7 @@ export class TestHarness {
         serialNumber,
         name: data.name === undefined ? "Test device" : data.name,
         deviceType: data.deviceType ?? "generic",
-        status: data.status ?? "pending",
+        status: data.status ?? "registered",
         certificateId: data.certificateId ?? null,
         certificateArn: data.certificateArn ?? null,
         createdBy: data.createdBy,

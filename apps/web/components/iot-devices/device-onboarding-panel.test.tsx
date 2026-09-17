@@ -223,7 +223,7 @@ describe("DeviceOnboardingPanel", () => {
     server.mount(contract.iot.listDeviceExperiments, { body: [] });
     server.mount(contract.experiments.listExperiments, { body: [fresh] });
 
-    render(<DeviceOnboardingPanel device={createIotDevice({ status: "pending" })} />);
+    render(<DeviceOnboardingPanel device={createIotDevice({ status: "registered" })} />);
 
     await waitFor(() => {
       expect(screen.getAllByText("iot.onboarding.inactiveDevice").length).toBeGreaterThan(0);
@@ -232,6 +232,22 @@ describe("DeviceOnboardingPanel", () => {
     expect(
       screen.getAllByRole("link", { name: "iot.onboarding.inactiveDeviceAction" }).length,
     ).toBe(2);
+    expect(screen.getByRole("button", { name: /iot.onboarding.onboard/ })).toBeDisabled();
+  });
+
+  it("tells a retired device it cannot be onboarded, with no certificate to go and fix", async () => {
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.experiments.listExperiments, { body: [fresh] });
+
+    render(<DeviceOnboardingPanel device={createIotDevice({ status: "retired" })} />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("iot.onboarding.retiredDevice").length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText("iot.onboarding.inactiveDevice")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "iot.onboarding.inactiveDeviceAction" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /iot.onboarding.onboard/ })).toBeDisabled();
   });
 

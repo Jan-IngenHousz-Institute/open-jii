@@ -38,7 +38,7 @@ describe("DeviceCredentialsPage", () => {
 
   it("offers the certificate lifecycle to someone who may manage the device", async () => {
     server.mount(contract.iot.getIotDevice, {
-      body: createIotDeviceDetail({ id: DEVICE_ID, status: "pending" }),
+      body: createIotDeviceDetail({ id: DEVICE_ID, status: "registered" }),
     });
 
     renderPage();
@@ -52,7 +52,7 @@ describe("DeviceCredentialsPage", () => {
     server.mount(contract.iot.getIotDevice, {
       body: createIotDeviceDetail({
         id: DEVICE_ID,
-        status: "pending",
+        status: "registered",
         capabilities: { ...readOnlyCapabilities, canLeave: true },
       }),
     });

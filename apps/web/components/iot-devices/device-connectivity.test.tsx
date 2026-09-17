@@ -20,6 +20,26 @@ describe("ConnectivityDot", () => {
     expect(screen.getByText("iot.devices.connectivity.disconnected")).toBeInTheDocument();
   });
 
+  it("reads an offline phone as idle, since it connects only while the app is open", () => {
+    render(
+      <ConnectivityDot
+        connectivity={{ connected: false, lastSeenAt: "2026-09-01T00:00:00.000Z" }}
+        deviceType="mobile"
+      />,
+    );
+
+    expect(screen.getByText("iot.devices.connectivity.idle")).toBeInTheDocument();
+    expect(screen.queryByText("iot.devices.connectivity.disconnected")).not.toBeInTheDocument();
+  });
+
+  it("says never connected for an instrument the broker has not seen at all", () => {
+    render(
+      <ConnectivityDot connectivity={{ connected: false, lastSeenAt: null }} deviceType="ambyte" />,
+    );
+
+    expect(screen.getByText("iot.devices.connectivity.never")).toBeInTheDocument();
+  });
+
   it("shows unknown when the fleet index is unavailable", () => {
     render(<ConnectivityDot connectivity={null} />);
 

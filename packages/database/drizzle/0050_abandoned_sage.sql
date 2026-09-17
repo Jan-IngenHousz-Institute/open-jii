@@ -1,5 +1,6 @@
 CREATE TYPE "public"."calibration_input_source" AS ENUM('bench_wizard', 'external_bench');--> statement-breakpoint
 CREATE TYPE "public"."calibration_run_status" AS ENUM('running', 'computed', 'compute_failed', 'error', 'approved', 'rejected');--> statement-breakpoint
+ALTER TYPE "public"."resource_type" ADD VALUE IF NOT EXISTS 'calibration_definition';--> statement-breakpoint
 CREATE TABLE "calibration_definitions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"family" "sensor_family" NOT NULL,
@@ -50,6 +51,7 @@ CREATE TABLE "device_calibrations" (
 	"superseded_at" timestamp,
 	"written_to_device_at" timestamp,
 	"write_results" jsonb,
+	"verification" jsonb,
 	"created_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL,
 	"updated_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL
 );

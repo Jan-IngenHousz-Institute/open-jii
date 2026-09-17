@@ -122,3 +122,19 @@ describe("teardownFlow", () => {
     expect(mockSetSelectedExperimentId).toHaveBeenCalledWith(undefined);
   });
 });
+
+describe("teardownFlow snapshots", () => {
+  it("clears the flow's persisted snapshots", async () => {
+    const { useFlowSnapshotsStore } = await import(
+      "~/features/measurement-flow/stores/use-flow-snapshots-store"
+    );
+    useFlowSnapshotsStore
+      .getState()
+      .setSnapshots("version-17", { protocols: {}, macros: { m1: { code: "print(1)" } } });
+
+    teardownFlow();
+
+    expect(useFlowSnapshotsStore.getState().workbookVersionId).toBeUndefined();
+    expect(useFlowSnapshotsStore.getState().entitySnapshots).toBeUndefined();
+  });
+});

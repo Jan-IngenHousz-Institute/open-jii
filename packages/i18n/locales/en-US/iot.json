@@ -60,10 +60,11 @@
         "created": "Registered"
       },
       "status": {
-        "pending": "Pending",
-        "active": "Active",
-        "rotating": "Rotating",
-        "revoked": "Revoked"
+        "registered": "Registered",
+        "provisioned": "Provisioned",
+        "onboarded": "Onboarded",
+        "revoked": "Revoked",
+        "retired": "Retired"
       },
       "tabs": {
         "all": "All"
@@ -82,12 +83,13 @@
         "calibration": "Calibration"
       },
       "connectivity": {
-        "connected": "Connected",
+        "connected": "Online",
         "connectedNow": "Currently connected",
         "onlineSince": "Online since {{time}}",
-        "disconnected": "Disconnected",
+        "disconnected": "Offline",
         "unknown": "Unknown",
-        "never": "Never connected"
+        "never": "Never connected",
+        "idle": "Idle"
       },
       "lineage": {
         "title": "Lineage",
@@ -243,7 +245,9 @@
         "more": "Device actions",
         "view": "View details",
         "delete": "Delete",
-        "title": "Actions"
+        "title": "Actions",
+        "retire": "Retire",
+        "reinstate": "Reinstate"
       },
       "empty": {
         "title": "No devices yet",
@@ -370,7 +374,7 @@
         }
       },
       "credentials": {
-        "pendingDescription": "This device has no certificate yet. Issue one to activate it and let it connect to AWS IoT.",
+        "registeredDescription": "This device has no certificate yet. Issue one to provision it and let it connect to AWS IoT.",
         "issue": "Issue certificate",
         "reissue": "Re-issue certificate",
         "issueError": "Failed to issue certificate",
@@ -379,7 +383,6 @@
         "rotateTitle": "Rotate certificate",
         "rotateConfirm": "The device gets a new certificate and the current one stops working immediately. It keeps publishing only after the new credentials are installed.",
         "disconnectWarning": "This device is currently connected and will be disconnected.",
-        "rotatingDescription": "You issued a new certificate and the old one is being retired. The device keeps streaming on whichever it holds until you load the new bundle; this usually settles within a minute.",
         "revokedDescription": "The certificate was revoked, so this device can no longer authenticate to AWS IoT. Issue a new certificate to restore credential access.",
         "revoke": "Revoke certificate",
         "revokeTitle": "Revoke certificate",
@@ -420,7 +423,8 @@
           "step3": "Rotate to hand the device a fresh certificate, or when it changes hands. Revoke to cut access immediately.",
           "step4": "A revoked device cannot reconnect until a new certificate is issued."
         },
-        "certificateIdLabel": "Certificate ID"
+        "certificateIdLabel": "Certificate ID",
+        "retiredDescription": "This device is retired. Reinstate it from the actions menu before issuing a certificate."
       },
       "nextAction": {
         "issueCredentials": "Issue certificate",
@@ -476,6 +480,18 @@
         "fromDevice": "Most recent from {{device}}",
         "offlineCount_one": "{{count}} offline",
         "offlineCount_other": "{{count}} offline"
+      },
+      "retire": {
+        "title": "Retire device",
+        "confirm": "{{name}} will be taken out of service. Its certificate is revoked and it leaves every attention list and picker. Its record and history stay.",
+        "success": "Device retired",
+        "error": "Could not retire the device"
+      },
+      "reinstate": {
+        "title": "Reinstate device",
+        "confirm": "{{name}} returns to the registry as a registered device. Issue a new certificate to bring it back into service.",
+        "success": "Device reinstated",
+        "error": "Could not reinstate the device"
       }
     },
     "onboarding": {
@@ -547,7 +563,8 @@
       "filterExperiments": "Filter experiments",
       "filterNoMatches": "No experiments match that filter.",
       "answeredOfRequired": "{{answered}} of {{required}} required",
-      "reissueHint": "Re-issuing regenerates the file for everything currently bound; it adds nothing new."
+      "reissueHint": "Re-issuing regenerates the file for everything currently bound; it adds nothing new.",
+      "retiredDevice": "This device is retired and cannot be onboarded."
     },
     "experimentDevices": {
       "tabLabel": "Devices",
@@ -696,7 +713,7 @@
         "actionIssue": "Issue",
         "actionRotate": "Rotate",
         "actionRevoke": "Revoke",
-        "issueHint": "Issues a certificate to devices that have none yet (pending or revoked).",
+        "issueHint": "Issues a certificate to devices that have none yet (registered or revoked).",
         "rotateHint": "Replaces the active certificate on each selected device. The old certificate stops working immediately.",
         "revokeHint": "Revokes each selected device's certificate. Revoked devices cannot authenticate until new credentials are issued.",
         "devicesTitle": "Devices",
@@ -705,7 +722,6 @@
         "mobileIneligible": "Not applicable to phones",
         "hasCredentialsIneligible": "Already has credentials",
         "noCertificateIneligible": "No certificate",
-        "rotatingIneligible": "Rotation in progress",
         "submitIssue_one": "Issue {{count}} certificate",
         "submitIssue_other": "Issue {{count}} certificates",
         "submitRotate_one": "Rotate {{count}} certificate",
@@ -730,7 +746,8 @@
         "downloadAll_other": "Download {{count}} bundles (zip)",
         "actionTitle": "Action",
         "actionDescription": "Eligibility differs per action; the device list below follows the choice.",
-        "railEmpty": "Run an action to see per-device results and downloads here."
+        "railEmpty": "Run an action to see per-device results and downloads here.",
+        "retiredIneligible": "Retired"
       },
       "overview": {
         "title": "Overview",

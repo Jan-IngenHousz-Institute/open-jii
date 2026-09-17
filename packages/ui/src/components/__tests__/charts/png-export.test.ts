@@ -6,7 +6,7 @@ import { downloadBrandedPng, withBrandedPngExport } from "../../charts/png-expor
 import { createPlotlyConfig } from "../../charts/utils";
 
 const { toImage } = vi.hoisted(() => ({ toImage: vi.fn() }));
-vi.mock("plotly.js/dist/plotly", () => ({ toImage }));
+vi.mock("../../charts/plotly-runtime", () => ({ Plotly: { toImage } }));
 vi.mock("../../../hooks/use-toast", () => ({ toast: vi.fn() }));
 
 const graph = document.createElement("div") as unknown as PlotlyHTMLElement;

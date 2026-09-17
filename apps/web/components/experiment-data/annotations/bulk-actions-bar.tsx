@@ -4,8 +4,8 @@ import {
   parseAnnotations,
   groupAnnotations,
 } from "~/components/data-table/cells/annotations/data-table-annotations-cell";
+import type { OnAnnotationHandler } from "~/components/data-table/data-table-columns";
 
-import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -20,8 +20,8 @@ interface BulkActionsBarProps {
   rowIds: string[];
   tableRows?: { id?: unknown; annotations?: unknown }[];
   downloadTable: () => void;
-  onAddAnnotation: (rowIds: string[], type: ExperimentAnnotationType) => void;
-  onDeleteAnnotations: (rowIds: string[], type: ExperimentAnnotationType) => void;
+  onAddAnnotation: OnAnnotationHandler;
+  onDeleteAnnotations: OnAnnotationHandler;
   /**
    * `can(contribute)`. Annotating is a write, so the actions menu is hidden
    * without it — download stays, since reading the table implies exporting it.

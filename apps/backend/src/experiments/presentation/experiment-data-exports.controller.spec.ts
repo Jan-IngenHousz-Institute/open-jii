@@ -8,6 +8,7 @@ import { TestHarness } from "../../test/test-harness";
 import { DownloadExportUseCase } from "../application/use-cases/experiment-data-exports/download-export";
 import { InitiateExportUseCase } from "../application/use-cases/experiment-data-exports/initiate-export";
 import { ListExportsUseCase } from "../application/use-cases/experiment-data-exports/list-exports";
+import type { ExportFormat } from "../core/models/experiment-data-exports.model";
 
 /* eslint-disable @typescript-eslint/unbound-method */
 
@@ -155,7 +156,11 @@ describe("ExperimentDataExportsController", () => {
       const fileContents = "col1,col2\n1,2\n";
 
       vi.spyOn(downloadExportUseCase, "execute").mockResolvedValue(
-        success({ stream: Readable.from([Buffer.from(fileContents)]), filename: "raw_data.csv" }),
+        success({
+          stream: Readable.from([Buffer.from(fileContents)]),
+          filename: "raw_data.csv",
+          format: "csv",
+        }),
       );
 
       const response = await testApp
@@ -164,12 +169,54 @@ describe("ExperimentDataExportsController", () => {
         .expect(200);
 
       expect(response.headers["content-disposition"]).toContain("raw_data.csv");
+      expect(response.text).toBe(fileContents);
       expect(downloadExportUseCase.execute).toHaveBeenCalledWith(
         experimentId,
         exportId,
         testUserId,
       );
     });
+
+    // Bodies past the compression threshold, so the encoding decision rests on the type alone.
+    const downloadTypes: { format: ExportFormat; contentType: string; encoding?: string }[] = [
+      { format: "csv", contentType: "text/csv", encoding: "gzip" },
+      { format: "ndjson", contentType: "application/x-ndjson", encoding: "gzip" },
+      { format: "json-array", contentType: "application/json", encoding: "gzip" },
+      { format: "parquet", contentType: "application/vnd.apache.parquet" },
+      {
+        format: "xlsx",
+        contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+    ];
+
+    it.each(downloadTypes)(
+      "should type a $format download as $contentType",
+      async ({ format, contentType, encoding }) => {
+        const experimentId = readableExperimentId;
+        const exportId = faker.string.uuid();
+        // Valid JSON so the client can parse the json-array case it is told to.
+        const fileContents = JSON.stringify(
+          Array.from({ length: 200 }, (_, index) => ({ col1: index, col2: index })),
+        );
+
+        vi.spyOn(downloadExportUseCase, "execute").mockResolvedValue(
+          success({
+            stream: Readable.from([Buffer.from(fileContents)]),
+            filename: `raw_data.${format}`,
+            format,
+          }),
+        );
+
+        const response = await testApp
+          .get(`/api/v1/experiments/${experimentId}/data/exports/${exportId}`)
+          .withAuth(testUserId)
+          .set("Accept-Encoding", "gzip")
+          .expect(200);
+
+        expect(response.headers["content-type"]).toBe(contentType);
+        expect(response.headers["content-encoding"]).toBe(encoding);
+      },
+    );
 
     it("should return 404 when export not found", async () => {
       const experimentId = readableExperimentId;

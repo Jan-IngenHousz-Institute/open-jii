@@ -22,6 +22,7 @@ export type LineageNodeModel =
       label: string;
       family: IotDeviceDetail["deviceType"];
       status: IotDeviceDetail["status"];
+      boundExperimentCount: number;
       firmwareVersion: string | null;
     }
   | {
@@ -131,6 +132,7 @@ export function buildDeviceLineage(input: BuildDeviceLineageInput): DeviceLineag
     label: input.deviceLabel,
     family: device.deviceType,
     status: device.status,
+    boundExperimentCount: device.boundExperimentCount,
     firmwareVersion: latestReportedVersion(monitoring.firmwareHistory),
   });
   nodes.push({

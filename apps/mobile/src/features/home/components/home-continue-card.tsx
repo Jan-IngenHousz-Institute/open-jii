@@ -3,6 +3,7 @@ import React from "react";
 import { Text, View } from "react-native";
 import { useShallow } from "zustand/react/shallow";
 import { useHomeContinueAction } from "~/features/home/hooks/use-home-continue-action";
+import { useFlowStepInfo } from "~/features/measurement-flow/hooks/use-flow-step-info";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { useTranslation } from "~/shared/i18n";
 import { Button } from "~/shared/ui/Button";
@@ -10,16 +11,17 @@ import { Card } from "~/shared/ui/Card";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 
 export function HomeContinueCard() {
-  const { experimentId, experimentLabel, currentFlowStep, totalSteps, isQuestionsSubmitPending } =
+  const { experimentId, experimentLabel, currentFlowStep, isQuestionsSubmitPending } =
     useMeasurementFlowStore(
       useShallow((s) => ({
         experimentId: s.experimentId,
         experimentLabel: s.experimentLabel,
         currentFlowStep: s.currentFlowStep,
-        totalSteps: s.flowNodes.length,
         isQuestionsSubmitPending: s.isQuestionsSubmitPending,
       })),
     );
+  // Same numbers as the FlowHero, so the card and the flow header never disagree.
+  const { currentStep: step, totalSteps: total, progress } = useFlowStepInfo();
   const continueAction = useHomeContinueAction();
   const { t } = useTranslation("home");
   const colors = useThemeColors();
@@ -28,10 +30,6 @@ export function HomeContinueCard() {
   // picker (currentFlowStep > 0) or is on the questions-only submit screen.
   const isInProgress = !!experimentId && (currentFlowStep > 0 || isQuestionsSubmitPending);
   if (!isInProgress) return null;
-
-  const total = Math.max(totalSteps, 1);
-  const step = Math.min(currentFlowStep + 1, total);
-  const progress = Math.min(Math.max((step - 1) / total, 0), 1);
 
   return (
     <Card

@@ -5,14 +5,16 @@ import { zDeviceConnectivity, zIotDevice } from "../../iot/iot.schema";
 // The registry identity of a device on the tab. Certificate and governance
 // fields are deliberately omitted: experiment members see the devices serving
 // their experiment, not the credential or org state of hardware they may not own.
-export const zExperimentDeviceIdentity = zIotDevice.pick({
-  id: true,
-  thingName: true,
-  serialNumber: true,
-  name: true,
-  deviceType: true,
-  status: true,
-});
+export const zExperimentDeviceIdentity = zIotDevice
+  .pick({
+    id: true,
+    thingName: true,
+    serialNumber: true,
+    name: true,
+    deviceType: true,
+    status: true,
+  })
+  .extend({ boundExperimentCount: z.number().int().nonnegative() });
 
 export const zExperimentDeviceBinding = z.object({
   addedBy: z.string().uuid(),

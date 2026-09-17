@@ -1,11 +1,12 @@
 "use client";
 
 import type { PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
 import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
 
@@ -69,6 +70,7 @@ export function Histogram2D({
   contourFill = false,
 }: Histogram2DProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   // `histogram2dcontour` has no WebGL variant; `getPlotType` falls back
   // to the SVG path automatically.
@@ -77,51 +79,59 @@ export function Histogram2D({
     renderer,
   );
 
-  const plotData: PlotData[] = data.map(
-    (series) =>
-      ({
-        x: series.x,
-        y: series.y,
-        z: series.z,
-        name: series.name,
-        type: plotType,
-        // Contour-only: Plotly's `contours.coloring` controls whether
-        // the contour layer is filled bands or just iso-lines.
-        ...(renderMode === "contour"
-          ? { contours: { coloring: contourFill ? "fill" : "lines" } }
-          : {}),
+  const plotData: PlotData[] = useMemo(
+    () =>
+      data.map(
+        (series) =>
+          ({
+            x: series.x,
+            y: series.y,
+            z: series.z,
+            name: series.name,
+            type: plotType,
+            // Contour-only: Plotly's `contours.coloring` controls whether
+            // the contour layer is filled bands or just iso-lines.
+            ...(renderMode === "contour"
+              ? { contours: { coloring: contourFill ? "fill" : "lines" } }
+              : {}),
 
-        // Binning
-        nbinsx: series.nbinsx,
-        nbinsy: series.nbinsy,
-        xbins: series.xbins,
-        ybins: series.ybins,
-        autobinx: series.autobinx !== false,
-        autobiny: series.autobiny !== false,
+            // Binning
+            nbinsx: series.nbinsx,
+            nbinsy: series.nbinsy,
+            xbins: series.xbins,
+            ybins: series.ybins,
+            autobinx: series.autobinx !== false,
+            autobiny: series.autobiny !== false,
 
-        // Histogram function and normalization
-        histfunc: series.histfunc || "count",
-        histnorm: series.histnorm || "",
+            // Histogram function and normalization
+            histfunc: series.histfunc || "count",
+            histnorm: series.histnorm || "",
 
-        // Color scale
-        colorscale: series.colorscale || "Viridis",
-        reversescale: series.reversescale === true,
-        showscale: series.showscale !== false,
-        colorbar: series.colorbar || {
-          title: { text: "Count", side: "right" },
-        },
+            // Color scale
+            colorscale: series.colorscale || "Viridis",
+            reversescale: series.reversescale === true,
+            showscale: series.showscale !== false,
+            colorbar: series.colorbar || {
+              title: { text: "Count", side: "right" },
+            },
 
-        visible: series.visible,
-        showlegend: series.showlegend,
-        legendgroup: series.legendgroup,
-        hovertemplate: series.hovertemplate,
-        hoverinfo: series.hoverinfo,
-        customdata: series.customdata,
-      }) as any as PlotData,
+            visible: series.visible,
+            showlegend: series.showlegend,
+            legendgroup: series.legendgroup,
+            hovertemplate: series.hovertemplate,
+            hoverinfo: series.hoverinfo,
+            customdata: series.customdata,
+          }) as any as PlotData,
+      ),
+    [contourFill, data, plotType, renderMode],
   );
 
-  const layout = createBaseLayout(config, sizing);
-  const plotConfig = createPlotlyConfig(config, sizing);
+  const layout = useMemo(
+    () => createBaseLayout(config, sizing),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+    [config, sizing, themeVersion],
+  );
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>

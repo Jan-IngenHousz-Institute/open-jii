@@ -55,10 +55,12 @@ import { ListIotFirmwareReleasesUseCase } from "./application/use-cases/list-iot
 import { OnboardDeviceUseCase } from "./application/use-cases/onboard-device/onboard-device";
 import { OnboardIotDeviceGroupUseCase } from "./application/use-cases/onboard-iot-device-group/onboard-iot-device-group";
 import { RegisterIotDeviceUseCase } from "./application/use-cases/register-iot-device/register-iot-device";
+import { ReinstateIotDeviceUseCase } from "./application/use-cases/reinstate-iot-device/reinstate-iot-device";
 import { RejectCalibrationRunUseCase } from "./application/use-cases/reject-calibration-run/reject-calibration-run";
 import { RemoveExperimentDeviceUseCase } from "./application/use-cases/remove-experiment-device/remove-experiment-device";
 import { RemoveIotDeviceGroupMemberUseCase } from "./application/use-cases/remove-iot-device-group-member/remove-iot-device-group-member";
 import { ReportDeviceCalibrationWriteUseCase } from "./application/use-cases/report-device-calibration-write/report-device-calibration-write";
+import { RetireIotDeviceUseCase } from "./application/use-cases/retire-iot-device/retire-iot-device";
 import { RevokeIotCredentialsUseCase } from "./application/use-cases/revoke-iot-credentials/revoke-iot-credentials";
 import { RevokeIotDeviceGroupCredentialsUseCase } from "./application/use-cases/revoke-iot-device-group-credentials/revoke-iot-device-group-credentials";
 import { RotateIotCredentialsUseCase } from "./application/use-cases/rotate-iot-credentials/rotate-iot-credentials";
@@ -122,6 +124,8 @@ import { IotController } from "./presentation/iot.controller";
     DeleteIotDeviceUseCase,
     IssueIotCredentialsUseCase,
     RevokeIotCredentialsUseCase,
+    RetireIotDeviceUseCase,
+    ReinstateIotDeviceUseCase,
     RotateIotCredentialsUseCase,
     OnboardDeviceUseCase,
     OnboardIotDeviceGroupUseCase,

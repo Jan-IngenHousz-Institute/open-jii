@@ -3,10 +3,15 @@ import type { Row, HeaderGroup } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import React from "react";
 import { DataTableAnnotationsCell } from "~/components/data-table/cells/annotations/data-table-annotations-cell";
-import type { DataRow, TableMetadata } from "~/components/data-table/data-table-columns";
+import type {
+  DataRow,
+  IsCellExpandedFn,
+  OnAnnotationHandler,
+  OnToggleCellExpansionHandler,
+  TableMetadata,
+} from "~/components/data-table/data-table-columns";
 import { deviceDisplayName } from "~/components/experiment-visualizations/charts/data/device-cells";
 
-import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import {
   WellKnownColumnTypes,
   ExperimentColumnPrimitiveType,
@@ -77,11 +82,10 @@ export function formatValue(
   type: string,
   rowId: string,
   columnName?: string,
-  onChartClick?: (data: number[], columnName: string) => void,
-  onAddAnnotation?: (rowIds: string[], annotationType: ExperimentAnnotationType) => void,
-  onDeleteAnnotations?: (rowIds: string[], annotationType: ExperimentAnnotationType) => void,
-  onToggleCellExpansion?: (rowId: string, columnName: string) => void,
-  isCellExpanded?: (rowId: string, columnName: string) => boolean,
+  onAddAnnotation?: OnAnnotationHandler,
+  onDeleteAnnotations?: OnAnnotationHandler,
+  onToggleCellExpansion?: OnToggleCellExpansionHandler,
+  isCellExpanded?: IsCellExpandedFn,
   errorColumn?: string,
 ): string | React.JSX.Element {
   // Check if this is the error column
@@ -135,7 +139,8 @@ export function formatValue(
       <DataTableChartCell
         data={value as string}
         columnName={columnName ?? "Chart"}
-        onClick={onChartClick}
+        rowId={rowId}
+        onToggleExpansion={onToggleCellExpansion}
       />
     );
   }
@@ -255,6 +260,7 @@ export function DataTableRows({
   tableRows,
   columns = [],
   errorColumn,
+  onToggleCellExpansion,
 }: {
   rows: Row<DataTableFeatures, DataRow>[];
   columnCount: number;
@@ -262,6 +268,7 @@ export function DataTableRows({
   tableRows?: DataRow[];
   columns?: TableMetadata["rawColumns"];
   errorColumn?: string;
+  onToggleCellExpansion?: OnToggleCellExpansionHandler;
 }) {
   const { t } = useTranslation();
 
@@ -286,12 +293,17 @@ export function DataTableRows({
       expandedCell?.rowId === rowId
         ? columns.find((col) => col.name === expandedCell.columnName)
         : undefined;
+    const isExpandedRow = !!expandedColumn;
 
     return (
       <React.Fragment key={row.id}>
         <TableRow
           data-state={row.getIsSelected() && "selected"}
-          className={cn("", hasError && "border-l-destructive bg-destructive/5 border-l-2")}
+          className={cn(
+            "",
+            hasError && "border-l-destructive bg-destructive/5 border-l-2",
+            isExpandedRow && "border-l-status-active-foreground bg-status-active/20 border-l-2",
+          )}
         >
           {row.getVisibleCells().map((cell, cellIndex) => (
             <TableCell
@@ -314,6 +326,7 @@ export function DataTableRows({
             columnName={expandedColumn.name}
             columnType={expandedColumn.type_text}
             cellData={row.original[expandedColumn.name]}
+            onClose={() => onToggleCellExpansion?.(rowId, expandedColumn.name)}
           />
         )}
       </React.Fragment>

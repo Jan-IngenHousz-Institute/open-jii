@@ -16,8 +16,21 @@ vi.mock("./charts/basic/scatter/renderer", () => ({
   ),
 }));
 
+const { preloadPlotly } = vi.hoisted(() => ({ preloadPlotly: vi.fn() }));
+
+vi.mock("@repo/ui/components/charts/plotly-chart", () => ({ preloadPlotly }));
+
 describe("ExperimentVisualizationRenderer", () => {
   const experimentId = "exp-123";
+
+  it("starts the Plotly download on mount, before any data is in", () => {
+    preloadPlotly.mockClear();
+    const visualization = createVisualization({ chartType: "line" });
+    render(
+      <ExperimentVisualizationRenderer visualization={visualization} experimentId={experimentId} />,
+    );
+    expect(preloadPlotly).toHaveBeenCalledTimes(1);
+  });
 
   it("dispatches to LineRenderer for chartType=line", () => {
     const visualization = createVisualization({ chartType: "line", name: "My Line" });

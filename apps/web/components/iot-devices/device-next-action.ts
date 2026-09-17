@@ -13,7 +13,8 @@ export type DeviceNextAction = "issueCredentials" | "onboard" | null;
 /** No live certificate, so nothing else about the device can proceed. */
 export function deviceNeedsCredentials(device: Pick<IotDevice, "status" | "deviceType">): boolean {
   return (
-    device.deviceType !== "mobile" && (device.status === "pending" || device.status === "revoked")
+    device.deviceType !== "mobile" &&
+    (device.status === "registered" || device.status === "revoked")
   );
 }
 
@@ -22,7 +23,7 @@ export function deviceNextAction(
   device: Pick<IotDevice, "status" | "deviceType">,
   boundExperimentCount: number | null,
 ): DeviceNextAction {
-  if (device.deviceType === "mobile") {
+  if (device.deviceType === "mobile" || device.status === "retired") {
     return null;
   }
   if (deviceNeedsCredentials(device)) {

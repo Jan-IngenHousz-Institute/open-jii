@@ -117,6 +117,8 @@ export enum ErrorCodes {
   IOT_CREDENTIALS_ISSUE_FAILED = "IOT_CREDENTIALS_ISSUE_FAILED", // Failed to issue device certificate
   IOT_CREDENTIALS_REVOKE_FAILED = "IOT_CREDENTIALS_REVOKE_FAILED", // Failed to revoke device certificate
   IOT_CREDENTIALS_ROTATE_FAILED = "IOT_CREDENTIALS_ROTATE_FAILED", // Failed to rotate device certificate
+  IOT_DEVICE_RETIRE_FAILED = "IOT_DEVICE_RETIRE_FAILED", // Failed to take a device out of service
+  IOT_DEVICE_REINSTATE_FAILED = "IOT_DEVICE_REINSTATE_FAILED", // Failed to return a retired device to the registry
   GITHUB_RELEASES_FAILED = "GITHUB_RELEASES_FAILED", // Failed to read firmware releases from GitHub
 
   // ==================== Domain Operations - Users ====================
