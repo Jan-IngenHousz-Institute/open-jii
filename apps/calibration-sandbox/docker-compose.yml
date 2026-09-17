@@ -1,0 +1,20 @@
+# Local dev: runs the calibration Lambda container via RIE on port 9004, which is what
+# AWS_LAMBDA_CALIBRATION_SANDBOX_ENDPOINT points the backend at.
+
+services:
+  python:
+    build:
+      context: .
+      dockerfile: functions/python/Dockerfile
+    ports:
+      - "${CALIBRATION_PORT:-9004}:8080"
+    environment:
+      - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=1024
+    mem_limit: 1024m
+    memswap_limit: 1024m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -so /dev/null http://localhost:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
