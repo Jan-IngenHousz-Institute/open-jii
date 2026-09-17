@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { MockTransport } from "../driver/testing/mock-transport";
 import { createMockTransport } from "../driver/testing/mock-transport";
+import { KIPRIM_COMMANDS } from "./kiprim/commands";
 import {
   BENCH_INSTRUMENTS,
   BENCH_PROBE_TIMEOUT_MS,
@@ -38,6 +39,20 @@ describe("bench instrument registry", () => {
   });
 
   // The reference answers Ctrl-A, not *IDN?, so the probe order has to reach it.
+  it("identifies a MicroPython reference by its raw-REPL banner", async () => {
+    const transport = createMockTransport();
+    vi.mocked(transport.send).mockImplementation((sent: string) => {
+      if (sent === "\x01") {
+        setTimeout(() => transport.simulateData("raw REPL; CTRL-B to exit\r\n>"), 0);
+      }
+      return Promise.resolve();
+    });
+
+    const identification = await identifyBenchInstrument(transport);
+
+    expect(identification?.instrument.model).toBe("micropython-par-reference");
+  });
+
   // Two roles can be served by one instrument class and told apart only by the name
   // the unit reports, so the class alone does not answer "is this the declared role".
   it("surfaces the identity reply beside the instrument, so a caller can match a declared role", async () => {
@@ -46,6 +61,45 @@ describe("bench instrument registry", () => {
     const identification = await identifyBenchInstrument(transport);
 
     expect(identification?.reply).toBe("KIPRIM,DC310S,25011669,FV:V5.2.0");
+  });
+
+  it("does not drive a port whose instrument it did not recognise", async () => {
+    const transport = respondingWith("raw REPL; CTRL-B to exit\r\n>");
+
+    const identification = await identifyBenchInstrument(transport);
+
+    expect(identification?.instrument.model).toBe("micropython-par-reference");
+    expect(transport.send).not.toHaveBeenCalledWith(KIPRIM_COMMANDS.setCurrent(0));
+  });
+
+  // One probe is carriage-return framed and the reference console is newline framed, so
+  // without a terminator between candidates the reference reads the two fused together
+  // and never names itself.
+  it("identifies a newline-framed reference after a probe that ends its line differently", async () => {
+    const transport = createMockTransport();
+    let pending = "";
+    vi.mocked(transport.send).mockImplementation((sent: string) => {
+      pending += sent;
+
+      let newline;
+      while ((newline = pending.indexOf("\n")) >= 0) {
+        const line = pending.slice(0, newline).trim();
+        pending = pending.slice(newline + 1);
+        const answer =
+          line === "hello"
+            ? "MiniPAR,1.1,1.03\n"
+            : line === "get_name"
+              ? "Par_REF\n"
+              : "error:unknown_command\n";
+        setTimeout(() => transport.simulateData(answer), 0);
+      }
+      return Promise.resolve();
+    });
+
+    const identification = await identifyBenchInstrument(transport);
+
+    expect(identification?.instrument.model).toBe("minipar-reference");
+    expect(identification?.reply).toContain("Par_REF");
   });
 
   it("returns null for an instrument nothing recognises", async () => {
@@ -70,6 +124,14 @@ describe("bench instrument registry", () => {
     // nothing the platform can drive, before anyone carries a rig to a bench.
     it("resolves a declared handshake without touching hardware", () => {
       expect(benchInstrumentForHandshake("KIPRIM")?.model).toBe("kiprim-dc");
+      expect(benchInstrumentForHandshake("raw REPL")?.model).toBe("micropython-par-reference");
+      expect(benchInstrumentForHandshake("Par_REF")).toBeNull();
+    });
+
+    it("declares the readings a procedure may take from a reference", () => {
+      const reference = benchInstrumentForHandshake("raw REPL");
+
+      expect(reference?.readings?.map((reading) => reading.name)).toEqual(["par"]);
     });
 
     it("declares the setpoints a procedure may drive, with their limits", () => {
