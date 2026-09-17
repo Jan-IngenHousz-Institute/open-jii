@@ -5,6 +5,8 @@ import { CalitoolSpectralBoard } from "./calitool/instrument";
 import type { BenchInstrument } from "./interface";
 import { identityMatches } from "./interface";
 import { KiprimDcSource } from "./kiprim/instrument";
+import { MicroPythonParReference } from "./micropython-par/instrument";
+import { MiniParReference } from "./minipar-reference/instrument";
 
 export type BenchInstrumentFactory = (logger?: Logger) => BenchInstrument;
 
@@ -15,9 +17,17 @@ export type BenchInstrumentFactory = (logger?: Logger) => BenchInstrument;
  */
 export const BENCH_PROBE_TIMEOUT_MS = 1_000;
 
+/**
+ * Probe order matters, and the MicroPython prompt stays last: its Ctrl-A would drop any
+ * other instrument into whatever it makes of a control byte, and on a board that does
+ * not answer it the recovery byte is never sent. Every probe ahead of it is plain text
+ * that an instrument which does not know it answers with an error line.
+ */
 export const BENCH_INSTRUMENTS: readonly BenchInstrumentFactory[] = [
   (logger) => new KiprimDcSource({ identifyTimeoutMs: BENCH_PROBE_TIMEOUT_MS }, logger),
   (logger) => new CalitoolSpectralBoard({ identifyTimeoutMs: BENCH_PROBE_TIMEOUT_MS }, logger),
+  (logger) => new MiniParReference({ identifyTimeoutMs: BENCH_PROBE_TIMEOUT_MS }, logger),
+  (logger) => new MicroPythonParReference({ identifyTimeoutMs: BENCH_PROBE_TIMEOUT_MS }, logger),
 ];
 
 export interface BenchIdentification {
