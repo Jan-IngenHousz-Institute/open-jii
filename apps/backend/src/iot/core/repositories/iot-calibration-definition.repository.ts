@@ -19,6 +19,7 @@ import {
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import { seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import type {
@@ -119,10 +120,18 @@ export class IotCalibrationDefinitionRepository {
   async findById(definitionId: string): Promise<Result<CalibrationDefinitionDto | null>> {
     return tryCatch(async () => {
       const results = await this.database
-        .select()
+        .select({
+          definition: calibrationDefinitions,
+          organizationName: owningOrganizationNameSql("calibration_definitions"),
+        })
         .from(calibrationDefinitions)
         .where(eq(calibrationDefinitions.id, definitionId));
-      return results.length > 0 ? this.parseRows(results)[0] : null;
+      if (results.length === 0) {
+        return null;
+      }
+
+      const [parsed] = this.parseRows(results.map((row) => row.definition));
+      return { ...parsed, organizationName: results[0].organizationName };
     });
   }
 

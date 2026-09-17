@@ -1,6 +1,8 @@
 "use client";
 
+import { OwningOrganizationField } from "@/components/organizations/owning-organization-field";
 import { DetailsSidebarCard } from "@/components/shared/details-sidebar-card";
+import { ResourcePublishControl } from "@/components/visibility/resource-publish-control";
 import { useUpdateCalibrationDefinition } from "@/hooks/iot/useUpdateCalibrationDefinition/useUpdateCalibrationDefinition";
 import { formatDate } from "@/util/date";
 import { useId, useState } from "react";
@@ -53,7 +55,8 @@ export function CalibrationDetailsSidebar({
   const firmwareId = useId();
   const [firmware, setFirmware] = useState(definition.minFirmwareVersion ?? "");
 
-  const { canUpdate } = definition.capabilities;
+  // Capability, not ownership: publishing is manage, moving it out is transfer.
+  const { canUpdate, canManage, canTransfer } = definition.capabilities;
   const isFirmwareMalformed = firmware !== "" && !FIRMWARE_PATTERN.test(firmware);
 
   async function save(changes: UpdateCalibrationDefinitionBody) {
@@ -138,6 +141,23 @@ export function CalibrationDetailsSidebar({
         <h4 className="text-sm font-medium">{tCommon("common.created")}</h4>
         <p className="text-muted-foreground text-sm">{formatDate(definition.createdAt)}</p>
       </div>
+
+      <OwningOrganizationField
+        resourceType="calibration_definition"
+        resourceId={definitionId}
+        organizationId={definition.organizationId}
+        organizationName={definition.organizationName}
+        canTransfer={canTransfer}
+      />
+
+      {/* Visibility and the one-way publish action. A method other labs can copy is the
+          point of writing one down. */}
+      <ResourcePublishControl
+        resourceType="calibration_definition"
+        resourceId={definitionId}
+        visibility={definition.visibility}
+        canManage={canManage}
+      />
 
       <div className="space-y-1">
         <h4 className="text-sm font-medium">{tCommon("common.updated")}</h4>

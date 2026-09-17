@@ -50,7 +50,10 @@ export const selectDeviceCalibrationSchema = createSelectSchema(deviceCalibratio
 });
 
 export type CreateCalibrationDefinitionDto = z.infer<typeof createCalibrationDefinitionSchema>;
-export type CalibrationDefinitionDto = z.infer<typeof selectCalibrationDefinitionSchema>;
+/** The detail read names the owning organization; the list rows do not join for it. */
+export type CalibrationDefinitionDto = z.infer<typeof selectCalibrationDefinitionSchema> & {
+  organizationName?: string | null;
+};
 export type CalibrationRunDto = z.infer<typeof selectCalibrationRunSchema>;
 export type DeviceCalibrationDto = z.infer<typeof selectDeviceCalibrationSchema>;
 

@@ -209,6 +209,50 @@ describe("IotCalibrationController", () => {
       expect(typeof response.body.updatedAt).toBe("string");
     });
 
+    describe("publishing", () => {
+      const visibilityPath = (definitionId: string) =>
+        testApp.resolveOrpcPath(contract.iot.setCalibrationDefinitionVisibility, { definitionId });
+
+      it("publishes a private definition and returns its new visibility (200)", async () => {
+        const created = await createDefinition();
+        await testApp.database
+          .update(calibrationDefinitions)
+          .set({ visibility: "private" })
+          .where(eq(calibrationDefinitions.id, created.body.id));
+
+        const response = await testApp
+          .patch(visibilityPath(created.body.id))
+          .withAuth(userId)
+          .send({ visibility: "public" })
+          .expect(StatusCodes.OK);
+
+        expect(response.body).toEqual({ id: created.body.id, visibility: "public" });
+      });
+
+      // Publishing is one way: a method other labs may already have copied cannot be
+      // taken back by making the row private again.
+      it("refuses to take a public definition back to private (400)", async () => {
+        const created = await createDefinition();
+
+        await testApp
+          .patch(visibilityPath(created.body.id))
+          .withAuth(userId)
+          .send({ visibility: "private" })
+          .expect(StatusCodes.BAD_REQUEST);
+      });
+
+      it("returns 403 to someone who cannot manage it", async () => {
+        const created = await createDefinition();
+        const outsider = await testApp.createTestUser({ name: "Otto Outsider" });
+
+        await testApp
+          .patch(visibilityPath(created.body.id))
+          .withAuth(outsider)
+          .send({ visibility: "public" })
+          .expect(StatusCodes.FORBIDDEN);
+      });
+    });
+
     // A definition is a shared recipe, public unless its owner withdraws it.
     it("serves another user's definition while it is public, and 403 once private", async () => {
       const created = await createDefinition();

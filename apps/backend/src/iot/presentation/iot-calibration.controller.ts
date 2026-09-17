@@ -9,6 +9,7 @@ import { CanAccess } from "../../authorization/can-access.decorator";
 import { CanCreateInOrg } from "../../authorization/can-create-in-org.guard";
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { SetVisibilityUseCase } from "../../visibility/application/use-cases/set-visibility/set-visibility";
 import { ApproveCalibrationRunUseCase } from "../application/use-cases/approve-calibration-run/approve-calibration-run";
 import { CreateCalibrationDefinitionUseCase } from "../application/use-cases/create-calibration-definition/create-calibration-definition";
 import { CreateCalibrationRunUseCase } from "../application/use-cases/create-calibration-run/create-calibration-run";
@@ -34,6 +35,7 @@ export class IotCalibrationController {
     private readonly getCalibrationDefinitionUseCase: GetCalibrationDefinitionUseCase,
     private readonly deleteCalibrationDefinitionUseCase: DeleteCalibrationDefinitionUseCase,
     private readonly updateCalibrationDefinitionUseCase: UpdateCalibrationDefinitionUseCase,
+    private readonly setVisibilityUseCase: SetVisibilityUseCase,
     private readonly createCalibrationRunUseCase: CreateCalibrationRunUseCase,
     private readonly createExternalCalibrationRunUseCase: CreateExternalCalibrationRunUseCase,
     private readonly listDeviceCalibrationRunsUseCase: ListDeviceCalibrationRunsUseCase,
@@ -126,6 +128,27 @@ export class IotCalibrationController {
         }
 
         return throwOrpcFailure(result, this.logger, "updateCalibrationDefinition");
+      },
+    );
+  }
+
+  // Publishing is manage-gated and one way; the shared use case owns the transition rules.
+  @CanAccess({ resource: "calibration_definition", action: "manage", param: "definitionId" })
+  @Implement(iotCalibrationContract.setCalibrationDefinitionVisibility)
+  setCalibrationDefinitionVisibility() {
+    return implement(iotCalibrationContract.setCalibrationDefinitionVisibility).handler(
+      async ({ input }) => {
+        const result = await this.setVisibilityUseCase.execute(
+          "calibration_definition",
+          input.definitionId,
+          input.visibility,
+        );
+
+        if (result.isSuccess()) {
+          return result.value;
+        }
+
+        return throwOrpcFailure(result, this.logger, "setCalibrationDefinitionVisibility");
       },
     );
   }

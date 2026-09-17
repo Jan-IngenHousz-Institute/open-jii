@@ -1,11 +1,17 @@
 import { Injectable } from "@nestjs/common";
 
-import type { CalibrationDefinitionDetail } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
+import type { ResourceCapabilities } from "@repo/api/domains/authorization/capabilities.schema";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { resolveResourceCapabilities } from "../../../../authorization/resource-capabilities";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
+import type { CalibrationDefinitionDto } from "../../../core/models/iot-calibration.model";
 import { IotCalibrationDefinitionRepository } from "../../../core/repositories/iot-calibration-definition.repository";
+
+/** Row plus what the caller may do with it; the controller formats its dates. */
+type CalibrationDefinitionWithCapabilities = CalibrationDefinitionDto & {
+  capabilities: ResourceCapabilities;
+};
 
 @Injectable()
 export class GetCalibrationDefinitionUseCase {
@@ -17,7 +23,7 @@ export class GetCalibrationDefinitionUseCase {
   async execute(
     definitionId: string,
     userId: string,
-  ): Promise<Result<CalibrationDefinitionDetail>> {
+  ): Promise<Result<CalibrationDefinitionWithCapabilities>> {
     const result = await this.definitionRepository.findById(definitionId);
     if (result.isFailure()) {
       return failure(result.error);

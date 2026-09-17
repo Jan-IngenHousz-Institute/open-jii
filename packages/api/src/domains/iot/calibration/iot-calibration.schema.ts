@@ -131,6 +131,8 @@ export const zCalibrationDefinition = z.object({
   // Older firmware is refused: unknown commands would produce numbers that look like data.
   minFirmwareVersion: zFirmwareVersion.nullable(),
   organizationId: z.string().uuid().nullable(),
+  /** Absent for a personal workspace, which is not a name anyone should be shown. */
+  organizationName: z.string().nullish(),
   visibility: zVisibility,
   createdBy: z.string().uuid(),
   createdAt: z.string().datetime(),

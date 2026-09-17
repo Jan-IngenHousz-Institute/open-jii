@@ -713,6 +713,41 @@ export class TestHarness {
     return macro;
   }
 
+  public async createCalibrationDefinition(data: {
+    name: string;
+    createdBy: string;
+    family?: "minipar" | "ambit" | "multispeq" | "generic" | "ambyte";
+    visibility?: "private" | "public";
+    organizationId?: string;
+  }) {
+    const organizationId =
+      data.organizationId ??
+      (await ensurePersonalOrganization(this.database, { id: data.createdBy }));
+    const [definition] = await this.database
+      .insert(calibrationDefinitions)
+      .values({
+        name: data.name,
+        family: data.family ?? "minipar",
+        captureProcedure: {
+          instruments: [{ role: "dut" }],
+          steps: [
+            {
+              kind: "read",
+              series: "reading",
+              read: [{ instrument: "dut", command: "hello", as: "reply" }],
+            },
+          ],
+        },
+        script: "submit({})",
+        outputSchema: { blocks: { par: { slope: { type: "number" } } } },
+        createdBy: data.createdBy,
+        organizationId,
+        ...(data.visibility ? { visibility: data.visibility } : {}),
+      })
+      .returning();
+    return definition;
+  }
+
   public async createWorkbook(data: {
     name: string;
     description?: string;

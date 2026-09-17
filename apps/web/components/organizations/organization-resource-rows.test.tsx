@@ -402,6 +402,7 @@ describe("<OrganizationResourceRows />", () => {
         "macro",
         "protocol",
         "workbook",
+        "calibration_definition",
       ]);
     });
 
