@@ -146,6 +146,42 @@ export {
 } from "./driver/ambit/device-info";
 export type { AmbitDeviceInfo, AmbitMetadata } from "./driver/ambit/device-info";
 
+// Capture procedures: the declared steps a calibration runs at a bench.
+export {
+  runCaptureProcedure,
+  runVerificationProcedure,
+  bindBenchInstrument,
+  shutdownRig,
+} from "./procedure/interpreter";
+export type {
+  ProcedureContext,
+  RigBinding,
+  ReadTarget,
+  SetpointTarget,
+} from "./procedure/interpreter";
+export { ProcedureAborted, ProcedureDeclined, ProcedureRigError } from "./procedure/operator";
+export type { OperatorPort, OperatorReading, ProcedureProgress } from "./procedure/operator";
+export {
+  requiredSeriesNames,
+  requiredRoles,
+  DUT_ROLE,
+  SWEEP_STIMULUS_COLUMN,
+} from "./procedure/types";
+
+// Setpoints the device under test applies itself, the sibling of a bench instrument's.
+export { DEVICE_SETPOINTS, bindDeviceSetpoints } from "./procedure/device-setpoints";
+export type { DeviceSetpoint } from "./procedure/device-setpoints";
+export type {
+  CaptureProcedure,
+  CaptureResult,
+  CapturePayload,
+  ProcedureStep,
+  ProcedureRead,
+  SeriesRow,
+  SeriesCell,
+  SetpointValue,
+} from "./procedure/types";
+
 // ── MiniPAR driver (LINE + JSON protocol modes) ─────
 export { MiniParDriver } from "./driver/minipar/driver";
 export type { MiniParDriverConfig } from "./driver/minipar/config";

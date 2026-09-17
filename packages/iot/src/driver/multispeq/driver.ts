@@ -27,6 +27,10 @@ import type {
 } from "./interface";
 import { resolveCommandTimeoutMs } from "./multispeq-protocol-estimator";
 
+function settle(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /** Truncate long commands (e.g. full protocol JSON) so logs stay readable. */
 function summarizeCommand(commandStr: string, maxLength = 120): string {
   if (commandStr.length <= maxLength) return commandStr;
@@ -141,10 +145,34 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
         // to the next queued execute(). See OJD-1565.
         this.dataBuffer = [];
         this.bufferLength = 0;
-        await this.transport.send(commandWithEnding);
 
-        // Wait for response
-        const response = await this.waitForResponse(timeoutMs);
+        // Start listening before the write, not after it. send() resolves when the
+        // writer takes the bytes, which can be later than the board's answer; a reply
+        // emitted with nobody waiting is dropped for good, and the command then times
+        // out and puts the cancel switch on the wire behind a write that worked.
+        const pending = options?.expectReply === false ? null : this.waitForResponse(timeoutMs);
+        void pending?.catch(() => undefined);
+
+        try {
+          await this.transport.send(commandWithEnding);
+        } catch (error) {
+          this.pendingAbort?.();
+          throw error;
+        }
+
+        // A console write the firmware never answers: waiting it out would time
+        // out on a healthy device and send the cancel switch behind the command.
+        if (pending === null) {
+          await settle(MULTISPEQ_FRAMING.SILENT_WRITE_SETTLE_MS);
+          // Nothing consumed a reply here, so anything the board did emit is dropped at a
+          // known point. A reply slower than the settle still lands in the next command's
+          // window, which no timeout can catch for a write nobody waits on.
+          this.dataBuffer = [];
+          this.bufferLength = 0;
+          return { success: true };
+        }
+
+        const response = await pending;
 
         this.log.debug("command completed", { elapsedMs: Date.now() - startedAt, timeoutMs });
         return {
