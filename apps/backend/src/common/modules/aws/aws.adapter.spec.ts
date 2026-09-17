@@ -322,6 +322,25 @@ describe("AwsAdapter", () => {
       expect(result.isSuccess()).toBe(true);
     });
 
+    it("sends the run to the local endpoint when one is configured", async () => {
+      vi.spyOn(awsConfigService, "lambdaConfig", "get").mockReturnValue({
+        ...awsConfigService.lambdaConfig,
+        calibrationSandboxFunctionName: "function",
+        calibrationSandboxEndpoint: "http://localhost:9004",
+      });
+      const invoke = vi
+        .spyOn(awsLambdaService, "invoke")
+        .mockResolvedValue(success({ statusCode: 200, payload: {} }));
+
+      await awsAdapter.invokeCalibrationSandbox({ script: "submit({})" });
+
+      expect(invoke).toHaveBeenCalledWith({
+        functionName: "function",
+        payload: { script: "submit({})" },
+        endpoint: "http://localhost:9004",
+      });
+    });
+
     // A deployment without the function must fail the run visibly rather than
     // invoke a Lambda named "".
     it("fails without invoking when no function is configured", async () => {
