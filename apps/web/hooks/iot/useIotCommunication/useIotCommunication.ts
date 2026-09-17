@@ -57,6 +57,11 @@ export async function createAdapter(
   return WebSerialAdapter.requestAndConnect(serialDefaults);
 }
 
+/** A port opened with no family in mind: bench instruments are not registered devices. */
+export function openSerialPort(): Promise<ITransportAdapter> {
+  return WebSerialAdapter.requestAndConnect(GENERIC_SERIAL_DEFAULTS);
+}
+
 export function createDriver(sensorFamily: SensorFamily): IDeviceDriver {
   switch (sensorFamily) {
     case "multispeq":
