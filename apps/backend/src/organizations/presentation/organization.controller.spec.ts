@@ -17,6 +17,7 @@ import { zSharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { assertSuccess } from "../../common/utils/fp-utils";
 import { CreateIotDeviceGroupUseCase } from "../../iot/application/use-cases/create-iot-device-group/create-iot-device-group";
+import { IotCalibrationDefinitionRepository } from "../../iot/core/repositories/iot-calibration-definition.repository";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { OrganizationRepository } from "../core/repositories/organization.repository";
@@ -561,6 +562,28 @@ describe("OrganizationController", () => {
         .get(CreateIotDeviceGroupUseCase)
         .execute({ name: "Rooftop array", organizationId }, ownerId);
       assertSuccess(group);
+      const definition = await testApp.module.get(IotCalibrationDefinitionRepository).create(
+        {
+          family: "minipar",
+          name: "PAR bench calibration",
+          description: null,
+          captureProcedure: {
+            instruments: [{ role: "dut" }],
+            steps: [
+              {
+                kind: "read",
+                series: "par_sweep",
+                read: [{ instrument: "dut", command: "get_par", as: "par_raw" }],
+              },
+            ],
+          },
+          script: "submit({})",
+          outputSchema: { blocks: { par: { spec: { type: "number" } } } },
+        },
+        ownerId,
+        organizationId,
+      );
+      assertSuccess(definition);
 
       return { live, archived };
     }
@@ -603,6 +626,7 @@ describe("OrganizationController", () => {
         workbook: 1,
         device: 1,
         device_group: 1,
+        calibration_definition: 1,
       });
       // The archived row carries its status, which is the only surface that shows it.
       expect(response.body.resources.find((row) => row.id === archived.id)).toMatchObject({
@@ -690,6 +714,7 @@ describe("OrganizationController", () => {
         workbook: 0,
         device: 0,
         device_group: 0,
+        calibration_definition: 0,
       });
       // Scoped exactly like the rows: the private experiment is behind neither.
       expect(asOutsider.body.totals.experiment).toBe(1);

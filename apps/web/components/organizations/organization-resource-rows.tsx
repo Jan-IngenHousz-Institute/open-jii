@@ -85,6 +85,7 @@ function metaBadge(
     // reads as footer text beside the type instead.
     case "workbook":
     case "device_group":
+    case "calibration_definition":
       return null;
   }
 }
