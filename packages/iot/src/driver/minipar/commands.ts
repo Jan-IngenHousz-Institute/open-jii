@@ -35,9 +35,10 @@ export const MINIPAR_COMMANDS = {
   SET_NAME:       "set_name",       // set_name,<string <=20>
   GET_NAME:       "get_name",
 
-  // Calibration writers
+  // Calibration writers and their readbacks
   CAL_PAR_SLOPE:     "cal_par_slope",     // cal_par_slope,<float>: echo
   CAL_PAR_INTERCEPT: "cal_par_intercept", // cal_par_intercept,<float>: echo
-  SET_SPEC_COEFF:    "set_spec_coeff",    // set_spec_coeff,<ch>,<v>
-  GET_SPEC_COEFF:    "get_spec_coeff",
+  GET_CAL_PAR:       "get_cal_par",       // "slope=<6dp>,intercept=<6dp>"
+  SET_SPEC_COEFF:    "set_spec_coeff",    // set_spec_coeff,<ch>,<v>: {"spectrometer_coeff":{"channel":<ch>,"value":<6dp>}}
+  GET_SPEC_COEFF:    "get_spec_coeff",    // all 18 channel coefficients as CSV, 6dp
 } as const;
