@@ -116,6 +116,11 @@ export { KIPRIM_COMMANDS, KIPRIM_LIMITS } from "./instrument/kiprim/commands";
 export { CalitoolSpectralBoard } from "./instrument/calitool/instrument";
 export type { CalitoolConfig } from "./instrument/calitool/instrument";
 export { CALITOOL_COMMANDS, CALITOOL_LIMITS } from "./instrument/calitool/commands";
+export { MicroPythonParReference } from "./instrument/micropython-par/instrument";
+export type { MicroPythonParConfig } from "./instrument/micropython-par/instrument";
+export { MICROPYTHON_COMMANDS } from "./instrument/micropython-par/commands";
+export { MiniParReference } from "./instrument/minipar-reference/instrument";
+export type { MiniParReferenceConfig } from "./instrument/minipar-reference/instrument";
 export {
   BENCH_INSTRUMENTS,
   identifyBenchInstrument,
