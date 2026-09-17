@@ -687,6 +687,7 @@ export class OrganizationRepository {
         workbook: row.workbook ?? 0,
         device: row.device ?? 0,
         device_group: row.device_group ?? 0,
+        calibration_definition: row.calibration_definition ?? 0,
       };
     });
   }
