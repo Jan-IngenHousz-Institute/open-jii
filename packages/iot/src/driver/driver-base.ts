@@ -24,6 +24,11 @@ export interface ExecuteOptions {
    * estimated runtime).
    */
   timeoutMs?: number;
+  /**
+   * False where the console answers nothing, so waiting for a reply would time out
+   * on a healthy device. Only a driver that waits for a framed reply reads it.
+   */
+  expectReply?: boolean;
 }
 
 /** Abstract device driver interface */
