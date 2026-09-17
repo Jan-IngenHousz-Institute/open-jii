@@ -66,8 +66,9 @@ const MULTISPEQ_COMMANDS_BASE = {
   SET_USER_DEFINED:       "set_user_defined",       // set_user_defined+<location>+<value>
 
   // LED / Light
-  LIGHT: "light", // turn on 5 V light: light<number>
-  ON_5V: "on_5v", // turn on 5 V for 30 s
+  LIGHT:   "light",  // turn on 5 V light: light<number>
+  ON_5V:   "on_5v",  // turn on 5 V for 30 s
+  LED_DAC: "ledDac", // ledDac+<index>+<level>+  drives one LED's DAC directly
 
   // Hardware / I2C
   SCAN_I2C:   "scan_i2c",
