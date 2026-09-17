@@ -71,6 +71,8 @@ interface CellWrapperProps {
   forceActionsVisible?: boolean;
   deleteIcon?: ReactNode;
   deleteLabel?: string;
+  collapseLabel?: string;
+  expandLabel?: string;
   children: ReactNode;
   className?: string;
   executionStatus?: ExecutionStatus;
@@ -92,6 +94,8 @@ export function CellWrapper({
   forceActionsVisible = false,
   deleteIcon,
   deleteLabel,
+  collapseLabel,
+  expandLabel,
   children,
   className,
   executionStatus,
@@ -134,7 +138,14 @@ export function CellWrapper({
         >
           {!readOnly && (
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                aria-label={
+                  collapsed ? (expandLabel ?? "Expand cell") : (collapseLabel ?? "Collapse cell")
+                }
+              >
                 {collapsed ? (
                   <ChevronRight className="h-4 w-4" />
                 ) : (
@@ -186,6 +197,7 @@ export function CellWrapper({
                         size="sm"
                         className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
                         onClick={onDelete}
+                        aria-label={deleteLabel ?? "Delete cell"}
                       >
                         {deleteIcon ?? <Trash2 className="h-3.5 w-3.5" />}
                       </Button>
