@@ -960,10 +960,27 @@
           "read": "Messwerte an einem Punkt aufzeichnen",
           "sweep": "Einen Bereich durchfahren und an jedem Punkt aufzeichnen"
         },
+        "kindName": {
+          "operator": "Bitten",
+          "settle": "Warten",
+          "set": "Setzen",
+          "read": "Aufzeichnen",
+          "sweep": "Durchfahren"
+        },
+        "label": {
+          "settle": "{{ms}} ms warten",
+          "set": "{{instrument}} {{setpoint}} auf {{value}}",
+          "read": "{{series}} aufzeichnen",
+          "sweepInstrument": "{{instrument}} {{setpoint}} durchfahren, {{points}} Punkte",
+          "sweepOperator": "Von Hand durchfahren, {{points}} Punkte"
+        },
         "moveUp": "Schritt {{position}} nach oben",
         "moveDown": "Schritt {{position}} nach unten",
         "removeStep": "Schritt {{position}} entfernen",
+        "collapseStep": "Schritt {{position}} zuklappen",
+        "expandStep": "Schritt {{position}} aufklappen",
         "optional": "Optional",
+        "optionalHint": "Diesen Schritt überspringen, wenn das benötigte Instrument fehlt",
         "waitFor": "Warten (ms)",
         "prompt": "Was zu tun ist",
         "promptPlaceholder": "Alles, was vor dieser Messung zu tun ist",
@@ -1001,7 +1018,9 @@
         "interval": "Alle (ms)",
         "timeout": "Zeitlimit (ms)",
         "removeRead": "{{column}} entfernen",
-        "operatorReadPrompt": "Referenzwert eingeben"
+        "operatorReadPrompt": "Referenzwert eingeben",
+        "nothingToDrive": "In diesem Aufbau hat nichts einen Sollwert zum Setzen",
+        "emptyPhase": "Keine Schritte."
       },
       "trial": {
         "action": "Am Messplatz ausführen",
@@ -1028,6 +1047,10 @@
         "nameTaken": "Dieser Block enthält bereits einen Koeffizienten dieses Namens.",
         "nameInvalid": "Kleinbuchstaben, Ziffern und Unterstriche, beginnend mit einem Buchstaben.",
         "recordedOnly": "Wird mit dem Lauf aufgezeichnet. Die Plattform hat keinen Befehl, um diesen zu schreiben."
+      },
+      "fit": {
+        "label": "Anpassung, liefert {{coefficients}} Koeffizienten in {{blocks}} Blöcken",
+        "submits": "Was sie liefert"
       },
       "sidebar": {
         "title": "Details",

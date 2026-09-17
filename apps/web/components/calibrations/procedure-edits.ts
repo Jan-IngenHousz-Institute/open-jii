@@ -50,6 +50,19 @@ export function addStep(
   return withPhase(procedure, phase, [...phaseSteps(procedure, phase), step]);
 }
 
+/** A step goes where the author asked for it, not at the end. */
+export function insertStep(
+  procedure: CaptureProcedure,
+  phase: ProcedurePhase,
+  index: number,
+  step: ProcedureStep,
+): CaptureProcedure {
+  const steps = [...phaseSteps(procedure, phase)];
+  steps.splice(index, 0, step);
+
+  return withPhase(procedure, phase, steps);
+}
+
 export function replaceStep(
   procedure: CaptureProcedure,
   phase: ProcedurePhase,

@@ -1,6 +1,5 @@
 "use client";
 
-import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
 import { useReportAutosaveStatus } from "@/components/shared/autosave/autosave-status-context";
 import { InlineEditableDescription } from "@/components/shared/inline-editable-description";
 import { useCalibrationDefinition } from "@/hooks/iot/useCalibrationDefinition/useCalibrationDefinition";
@@ -23,9 +22,8 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { CalibrationDetailsSidebar } from "./calibration-details-sidebar";
-import { CalibrationOutputSchemaEditor } from "./calibration-output-schema-editor";
-import { CalibrationRigEditor } from "./calibration-rig-editor";
-import { CalibrationScriptEditor } from "./calibration-script-editor";
+import { CalibrationFitCell } from "./calibration-fit-cell";
+import { CalibrationRigStrip } from "./calibration-rig-strip";
 import { CalibrationStepsEditor } from "./calibration-steps-editor";
 
 /** The parts an author edits in place; the rest of the definition saves on its own. */
@@ -180,57 +178,57 @@ export function CalibrationDefinitionDetail() {
           </Alert>
         )}
 
-        <PanelCard title={t("iot.calibration.detail.rig")}>
-          <CalibrationRigEditor
+        <section className="space-y-2">
+          <h2 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+            {t("iot.calibration.detail.rig")}
+          </h2>
+          <CalibrationRigStrip
             procedure={current.captureProcedure}
             family={definition.family}
             canEdit={canEdit}
             onChange={editProcedure}
           />
-        </PanelCard>
+        </section>
 
-        <PanelCard title={t("iot.calibration.detail.procedure")}>
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">{t("iot.calibration.detail.steps")}</h3>
-              <CalibrationStepsEditor
-                procedure={current.captureProcedure}
-                phase="steps"
-                family={definition.family}
-                canEdit={canEdit}
-                onChange={editProcedure}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">{t("iot.calibration.detail.verify")}</h3>
-              <CalibrationStepsEditor
-                procedure={current.captureProcedure}
-                phase="verify"
-                family={definition.family}
-                canEdit={canEdit}
-                onChange={editProcedure}
-              />
-            </div>
-          </div>
-        </PanelCard>
-
-        <PanelCard title={t("iot.calibration.detail.produces")}>
-          <CalibrationOutputSchemaEditor
+        <section className="space-y-2">
+          <h2 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+            {t("iot.calibration.detail.steps")}
+          </h2>
+          <CalibrationStepsEditor
+            procedure={current.captureProcedure}
+            phase="steps"
             family={definition.family}
-            outputSchema={current.outputSchema}
             canEdit={canEdit}
-            onChange={editOutputSchema}
+            onChange={editProcedure}
           />
-        </PanelCard>
+        </section>
 
-        <PanelCard title={t("iot.calibration.detail.script")}>
-          <CalibrationScriptEditor
-            script={current.script}
+        <section className="space-y-2">
+          <h2 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+            {t("iot.calibration.detail.verify")}
+          </h2>
+          <CalibrationStepsEditor
+            procedure={current.captureProcedure}
+            phase="verify"
+            family={definition.family}
             canEdit={canEdit}
-            onChange={editScript}
+            onChange={editProcedure}
           />
-        </PanelCard>
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+            {t("iot.calibration.detail.script")}
+          </h2>
+          <CalibrationFitCell
+            script={current.script}
+            outputSchema={current.outputSchema}
+            family={definition.family}
+            canEdit={canEdit}
+            onScriptChange={editScript}
+            onSchemaChange={editOutputSchema}
+          />
+        </section>
       </div>
     </div>
   );

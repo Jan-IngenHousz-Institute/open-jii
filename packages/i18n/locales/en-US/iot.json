@@ -960,10 +960,27 @@
           "read": "Record readings at one point",
           "sweep": "Step through a range, recording at each point"
         },
+        "kindName": {
+          "operator": "Ask",
+          "settle": "Wait",
+          "set": "Set",
+          "read": "Record",
+          "sweep": "Sweep"
+        },
+        "label": {
+          "settle": "Wait {{ms}} ms",
+          "set": "{{instrument}} {{setpoint}} to {{value}}",
+          "read": "Record {{series}}",
+          "sweepInstrument": "Sweep {{instrument}} {{setpoint}}, {{points}} points",
+          "sweepOperator": "Sweep by hand, {{points}} points"
+        },
         "moveUp": "Move step {{position}} up",
         "moveDown": "Move step {{position}} down",
         "removeStep": "Remove step {{position}}",
+        "collapseStep": "Close step {{position}}",
+        "expandStep": "Open step {{position}}",
         "optional": "Optional",
+        "optionalHint": "Skip this step when the instrument it needs is missing",
         "waitFor": "Wait (ms)",
         "prompt": "What to do",
         "promptPlaceholder": "Anything the operator should do before this reading",
@@ -1001,7 +1018,9 @@
         "interval": "Every (ms)",
         "timeout": "Timeout (ms)",
         "removeRead": "Remove {{column}}",
-        "operatorReadPrompt": "Enter the reference reading"
+        "operatorReadPrompt": "Enter the reference reading",
+        "nothingToDrive": "Nothing in this rig has a setpoint to drive",
+        "emptyPhase": "No steps."
       },
       "trial": {
         "action": "Run at the bench",
@@ -1028,6 +1047,10 @@
         "nameTaken": "This block already has a coefficient with this name.",
         "nameInvalid": "Lowercase letters, digits and underscores, starting with a letter.",
         "recordedOnly": "Recorded with the run. The platform has no command to write this one."
+      },
+      "fit": {
+        "label": "Fit, submitting {{coefficients}} coefficients in {{blocks}} blocks",
+        "submits": "What it submits"
       },
       "sidebar": {
         "title": "Details",

@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
+import { CellWrapper } from "@/components/workbook/cell-wrapper";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { useId } from "react";
 
 import type { ProcedureStep } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
@@ -16,8 +17,9 @@ import { CalibrationReadStep } from "./calibration-read-step";
 import { CalibrationSetStep } from "./calibration-set-step";
 import { CalibrationSweepStep } from "./calibration-sweep-step";
 import type { ReadSource, SetpointTarget } from "./rig-sources";
+import { stepAppearance, stepLabel } from "./step-appearance";
 
-interface CalibrationStepCardProps {
+interface CalibrationStepCellProps {
   step: ProcedureStep;
   index: number;
   count: number;
@@ -32,12 +34,14 @@ interface CalibrationStepCardProps {
 }
 
 /**
- * One step of a procedure, in the order the bench will run it.
+ * One step of a procedure, as a cell of the same kind a workbook is written in.
  *
- * Order is the procedure: a settle before a read is the difference between a sensor that
- * has caught up with the light and one that has not.
+ * A procedure is an executable document, which this platform already knows how to draw:
+ * an identity colour and icon per kind, a line that says what the step does while it is
+ * closed, and the run, collapse and delete affordances in the places they live everywhere
+ * else. What is inside the cell is the only part particular to calibration.
  */
-export function CalibrationStepCard({
+export function CalibrationStepCell({
   step,
   index,
   count,
@@ -48,11 +52,13 @@ export function CalibrationStepCard({
   onChange,
   onMove,
   onRemove,
-}: CalibrationStepCardProps) {
+}: CalibrationStepCellProps) {
   const { t } = useTranslation("iot");
   const optionalId = useId();
 
+  const { icon: Icon, accent } = stepAppearance(step.kind);
   const isSkippable = step.kind === "read" || step.kind === "sweep";
+  const isOptional = isSkippable && step.optional === true;
 
   function renderBody() {
     switch (step.kind) {
@@ -105,67 +111,72 @@ export function CalibrationStepCard({
     }
 
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 pt-1">
         <Switch
           id={optionalId}
-          checked={step.optional === true}
+          checked={isOptional}
           onCheckedChange={(optional) => onChange({ ...step, optional: optional || undefined })}
           disabled={!canEdit}
         />
         <Label htmlFor={optionalId} className="text-muted-foreground text-xs">
-          {t("iot.calibration.procedure.optional")}
+          {t("iot.calibration.procedure.optionalHint")}
         </Label>
       </div>
     );
   }
 
+  const headerActions = (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="text-muted-foreground h-7 w-7 p-0"
+        onClick={() => onMove(index - 1)}
+        disabled={index === 0}
+        aria-label={t("iot.calibration.procedure.moveUp", { position: index + 1 })}
+      >
+        <ArrowUp className="h-3.5 w-3.5" />
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="text-muted-foreground h-7 w-7 p-0"
+        onClick={() => onMove(index + 1)}
+        disabled={index === count - 1}
+        aria-label={t("iot.calibration.procedure.moveDown", { position: index + 1 })}
+      >
+        <ArrowDown className="h-3.5 w-3.5" />
+      </Button>
+    </>
+  );
+
   return (
-    <li className="space-y-3 rounded-md border p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-muted-foreground font-mono text-xs">{index + 1}</span>
-        <Badge variant="outline" className="font-mono text-[10px] uppercase">
-          {step.kind}
-        </Badge>
-
-        <div className="ml-auto flex items-center gap-2">
-          {renderOptionalToggle()}
-          {canEdit && (
-            <>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => onMove(index - 1)}
-                disabled={index === 0}
-                aria-label={t("iot.calibration.procedure.moveUp", { position: index + 1 })}
-              >
-                <ArrowUp className="size-4" aria-hidden />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => onMove(index + 1)}
-                disabled={index === count - 1}
-                aria-label={t("iot.calibration.procedure.moveDown", { position: index + 1 })}
-              >
-                <ArrowDown className="size-4" aria-hidden />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={onRemove}
-                aria-label={t("iot.calibration.procedure.removeStep", { position: index + 1 })}
-              >
-                <Trash2 className="size-4" aria-hidden />
-              </Button>
-            </>
-          )}
-        </div>
+    <CellWrapper
+      icon={<Icon className="h-4 w-4" />}
+      label={<span data-testid="step-label">{stepLabel(step, t)}</span>}
+      labelText={stepLabel(step, t)}
+      accentColor={accent}
+      onDelete={canEdit ? onRemove : undefined}
+      deleteLabel={t("iot.calibration.procedure.removeStep", { position: index + 1 })}
+      collapseLabel={t("iot.calibration.procedure.collapseStep", { position: index + 1 })}
+      expandLabel={t("iot.calibration.procedure.expandStep", { position: index + 1 })}
+      headerActions={headerActions}
+      headerBadges={
+        isOptional ? (
+          <Badge variant="secondary" className="text-[10px]">
+            {t("iot.calibration.procedure.optional")}
+          </Badge>
+        ) : undefined
+      }
+      readOnly={!canEdit}
+      className="border"
+    >
+      <div className="space-y-3 px-4 py-3">
+        {renderBody()}
+        {renderOptionalToggle()}
       </div>
-
-      {renderBody()}
-    </li>
+    </CellWrapper>
   );
 }

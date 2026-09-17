@@ -81,8 +81,9 @@ describe("CalibrationDefinitionDetail", () => {
     renderDetail();
     await screen.findByText("iot.calibration.detail.rig");
 
-    const handshake = screen.getByDisplayValue("KIPRIM");
-    await userEvent.clear(handshake);
+    // The rig is a strip of instruments now; a role's details open from its chip.
+    await userEvent.click(screen.getByRole("button", { name: /lamp/ }));
+    await userEvent.clear(await screen.findByDisplayValue("KIPRIM"));
 
     expect(await screen.findByText("iot.calibration.detail.notSaving")).toBeInTheDocument();
     expect(screen.getByText(/captureProcedure.instruments/)).toBeInTheDocument();
@@ -105,9 +106,11 @@ describe("CalibrationDefinitionDetail", () => {
     renderDetail();
 
     expect(await screen.findByText("iot.calibration.detail.readOnly")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("KIPRIM")).toBeDisabled();
     expect(
       screen.queryByRole("button", { name: /iot.calibration.rig.add/ }),
     ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /lamp/ }));
+    expect(await screen.findByDisplayValue("KIPRIM")).toBeDisabled();
   });
 });

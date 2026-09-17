@@ -960,10 +960,27 @@
           "read": "Meetwaarden op één punt vastleggen",
           "sweep": "Een bereik doorlopen en op elk punt vastleggen"
         },
+        "kindName": {
+          "operator": "Vragen",
+          "settle": "Wachten",
+          "set": "Zetten",
+          "read": "Vastleggen",
+          "sweep": "Doorlopen"
+        },
+        "label": {
+          "settle": "{{ms}} ms wachten",
+          "set": "{{instrument}} {{setpoint}} op {{value}}",
+          "read": "{{series}} vastleggen",
+          "sweepInstrument": "{{instrument}} {{setpoint}} doorlopen, {{points}} punten",
+          "sweepOperator": "Met de hand doorlopen, {{points}} punten"
+        },
         "moveUp": "Stap {{position}} omhoog",
         "moveDown": "Stap {{position}} omlaag",
         "removeStep": "Stap {{position}} verwijderen",
+        "collapseStep": "Stap {{position}} inklappen",
+        "expandStep": "Stap {{position}} uitklappen",
         "optional": "Optioneel",
+        "optionalHint": "Sla deze stap over als het benodigde instrument ontbreekt",
         "waitFor": "Wachten (ms)",
         "prompt": "Wat er moet gebeuren",
         "promptPlaceholder": "Alles wat vóór deze meting moet gebeuren",
@@ -1001,7 +1018,9 @@
         "interval": "Elke (ms)",
         "timeout": "Tijdslimiet (ms)",
         "removeRead": "{{column}} verwijderen",
-        "operatorReadPrompt": "Referentiewaarde invoeren"
+        "operatorReadPrompt": "Referentiewaarde invoeren",
+        "nothingToDrive": "Niets in deze opstelling heeft een instelwaarde om te zetten",
+        "emptyPhase": "Geen stappen."
       },
       "trial": {
         "action": "Uitvoeren aan de meetbank",
@@ -1028,6 +1047,10 @@
         "nameTaken": "Dit blok heeft al een coëfficiënt met deze naam.",
         "nameInvalid": "Kleine letters, cijfers en liggende streepjes, beginnend met een letter.",
         "recordedOnly": "Wordt met de meting vastgelegd. Het platform heeft geen commando om deze te schrijven."
+      },
+      "fit": {
+        "label": "Fit, levert {{coefficients}} coëfficiënten in {{blocks}} blokken",
+        "submits": "Wat het oplevert"
       },
       "sidebar": {
         "title": "Details",
