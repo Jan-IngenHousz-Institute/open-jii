@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsDarkTheme } from "@/hooks/useIsDarkTheme";
 import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime } from "@/util/date";
 import type { Edge, Node, NodeTypes } from "@xyflow/react";
@@ -41,6 +42,7 @@ interface DeviceLineageFlowProps {
 /** Read-only lineage canvas: layout and selection only, no editing surface. */
 export function DeviceLineageFlow({ model, selectedNodeId, onSelect }: DeviceLineageFlowProps) {
   const locale = useLocale();
+  const isDark = useIsDarkTheme();
 
   // Layout is selection-independent, so clicking a node never re-lays out.
   const { layoutNodes, edges } = useMemo(() => {
@@ -84,6 +86,7 @@ export function DeviceLineageFlow({ model, selectedNodeId, onSelect }: DeviceLin
       data-testid="lineage-flow"
     >
       <ReactFlow
+        colorMode={isDark ? "dark" : "light"}
         nodes={nodes}
         edges={edges}
         nodeTypes={NODE_TYPES}

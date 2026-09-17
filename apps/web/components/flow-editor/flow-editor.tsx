@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsDarkTheme } from "@/hooks/useIsDarkTheme";
 import type { Node, Edge, Connection } from "@xyflow/react";
 import { MarkerType } from "@xyflow/react";
 import {
@@ -72,6 +73,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
     const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
     const [selectedNode, setSelectedNode] = useState<Node | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const isDark = useIsDarkTheme();
 
     const initialData = initialFlow
       ? FlowMapper.toReactFlow(initialFlow)
@@ -397,6 +399,7 @@ export const FlowEditor = forwardRef<FlowEditorHandle, FlowEditorProps>(
                       isDisabled={isDisabled}
                     >
                       <ReactFlow
+                        colorMode={isDark ? "dark" : "light"}
                         attributionPosition="bottom-left"
                         nodes={nodes}
                         edges={styledEdges}
