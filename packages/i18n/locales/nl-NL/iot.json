@@ -79,7 +79,8 @@
         "collaborators": "Medewerkers",
         "lineage": "Herkomst",
         "monitoring": "Monitoring",
-        "firmware": "Firmware"
+        "firmware": "Firmware",
+        "calibration": "Kalibratie"
       },
       "connectivity": {
         "connected": "Online",
@@ -764,6 +765,159 @@
       "showFewer": "Minder groepen tonen",
       "searchPlaceholder": "Groepen zoeken",
       "searchNoMatches": "Geen groepen voldoen aan de zoekopdracht."
+    },
+    "calibration": {
+      "title": "Kalibratie",
+      "description": "Wat dit apparaat meet tegenover een referentie, de geldende coëfficiënten en elke vastgelegde meetbanksessie.",
+      "loadError": "De kalibratiegegevens konden niet worden geladen.",
+      "status": {
+        "running": "Bezig",
+        "computed": "Berekend",
+        "compute_failed": "Berekening mislukt",
+        "error": "Fout",
+        "approved": "Goedgekeurd",
+        "rejected": "Afgewezen"
+      },
+      "block": {
+        "computed": "Berekend",
+        "rejected": "Afgewezen",
+        "skipped": "Overgeslagen"
+      },
+      "active": {
+        "title": "Geldend",
+        "none": "Dit apparaat is nog nooit gekalibreerd.",
+        "written": "Naar het apparaat geschreven",
+        "notWritten": "Nog niet naar het apparaat geschreven",
+        "validFrom": "Sinds {{date}}",
+        "unconfirmed": "Geschreven maar niet bevestigd"
+      },
+      "runs": {
+        "title": "Meetbanksessies",
+        "empty": "Op dit apparaat is nog geen kalibratie uitgevoerd.",
+        "definition": "v{{version}}"
+      },
+      "run": {
+        "back": "Alle sessies",
+        "title": "Sessieverslag",
+        "definition": "Procedure",
+        "definitionUnknown": "Onbekende procedure",
+        "started": "Gestart",
+        "finished": "Beëindigd",
+        "reviewed": "Beoordeeld",
+        "firmware": "Firmware",
+        "source": "Vastgelegd door",
+        "sourceWizard": "Kalibratiewizard",
+        "sourceExternal": "Externe meetopstelling",
+        "readings": "Wat de meetopstelling heeft gemeten",
+        "deviceState": "Apparaatstatus",
+        "infoBefore": "Voor de sessie",
+        "infoAfter": "Na het schrijven",
+        "writeTitle": "Naar het apparaat geschreven",
+        "writeNever": "Deze coëfficiënten zijn alleen vastgelegd en nooit naar het apparaat geschreven.",
+        "writtenAt": "Geschreven op {{date}}",
+        "verificationTitle": "Controle met de nieuwe coëfficiënten"
+      },
+      "cta": {
+        "calibrate": "Kalibreren",
+        "next": "Doorgaan",
+        "back": "Terug",
+        "cancel": "Annuleren"
+      },
+      "steps": {
+        "choose": "Procedure",
+        "connect": "Verbinden",
+        "capture": "Vastleggen",
+        "review": "Beoordelen",
+        "write": "Schrijven",
+        "done": "Klaar"
+      },
+      "choose": {
+        "hint": "Kies de procedure voor dit apparaat. Elke procedure benoemt de stappen op de meetbank en wat ze berekent.",
+        "empty": "Voor deze apparaatfamilie is nog geen kalibratieprocedure gepubliceerd."
+      },
+      "connect": {
+        "hint": "Sluit het apparaat aan via USB en open de poort. Het platform bereikt de hardware nooit zelf; deze browser is de brug.",
+        "action": "Apparaat verbinden",
+        "connecting": "Verbinden…",
+        "connected": "Verbonden met {{name}}",
+        "disconnect": "Verbinding verbreken",
+        "unsupportedBrowser": "Deze browser heeft geen Web Serial. Gebruik een op Chromium gebaseerde browser op een desktop.",
+        "unsupportedDevice": "Deze apparaatfamilie heeft geen seriële verbinding.",
+        "wrongFamily": "Er werd een {{expected}}-apparaat verwacht, maar een {{actual}} antwoordde. Verbind het juiste apparaat.",
+        "roleHeading": "Instrumenten op de meetopstelling",
+        "roleHint": "Elk instrument gebruikt een eigen poort; de browser vraagt per verbinding om één poort.",
+        "roleHandshake": "Identificeert zich als",
+        "roleRequired": "De meting heeft dit instrument nodig.",
+        "roleOptional": "Optioneel. Stappen die het uitlezen worden overgeslagen als het ontbreekt.",
+        "roleAction": "Verbinden",
+        "roleConnecting": "Verbinden…",
+        "roleConnected": "Verbonden",
+        "roleMismatch": "Deze poort meldde zich als {{model}}, wat deze rol niet verwacht, dus is hij weer gesloten.",
+        "roleUnrecognised": "Op deze poort heeft zich geen bekend instrument gemeld.",
+        "roleFailed": "Deze poort kon niet worden geopend.",
+        "roleMissing": "Verbind de instrumenten die de meting nodig heeft voordat u verdergaat."
+      },
+      "prompt": {
+        "confirmLabel": "Typ {{token}} om door te gaan",
+        "valueLabel": "Waarde",
+        "invalidNumber": "Voer een getal in.",
+        "continue": "Doorgaan",
+        "submit": "Vastleggen",
+        "decline": "Ik kan deze stap niet uitvoeren",
+        "confirmReading": "Deze meting behouden?",
+        "confirmReadingAt": "Meting bij {{stimulus}} behouden?",
+        "keepReading": "Behouden",
+        "retakeReading": "Opnieuw meten"
+      },
+      "capture": {
+        "step": "Stap {{index}} van {{total}}: {{description}}",
+        "setpoint": "Instelpunt {{index}} van {{total}}: {{value}}",
+        "series": "{{series}}: {{rows}} rijen vastgelegd",
+        "skipped": "{{series}} overgeslagen: {{reason}}",
+        "submitting": "Coëfficiënten berekenen…",
+        "aborted": "De procedure is gestopt voordat ze klaar was.",
+        "retry": "Opnieuw uitvoeren"
+      },
+      "review": {
+        "hint": "Goedkeuren past de berekende blokken toe op het record van dit apparaat. De hardware wordt pas in de volgende stap beschreven.",
+        "computeFailed": "Het script heeft geen coëfficiënten opgeleverd.",
+        "approve": "Goedkeuren",
+        "reject": "Afwijzen",
+        "approveFailed": "Deze run kon niet worden goedgekeurd.",
+        "rejectFailed": "Deze run kon niet worden afgewezen.",
+        "previousUnknown": "onbekend",
+        "passed": "Kwaliteitscontrole geslaagd",
+        "failed": "Kwaliteitscontrole mislukt",
+        "r2": "R² {{value}}",
+        "nrmse": "NRMSE {{value}}%",
+        "worstPoint": "Grootste afwijking bij {{stimulus}}: {{percent}}% van het bereik",
+        "points": "Vastgelegde punten",
+        "fitLine": "Gefitte lijn",
+        "xLabel": "Apparaatmeting",
+        "yLabel": "Referentiemeting",
+        "seriesCaption": "{{series}}, {{points}} punten"
+      },
+      "write": {
+        "hint": "Schrijf de goedgekeurde coëfficiënten naar het apparaat. Elk blok wordt bevestigd door het terug te lezen.",
+        "action": "Naar apparaat schrijven",
+        "writing": "Schrijven…",
+        "verified": "geschreven en bevestigd",
+        "failed": "niet bevestigd",
+        "partial": "Een niet bevestigd blok kan het apparaat gedeeltelijk hebben bereikt. Voer deze kalibratie opnieuw uit voordat u op het apparaat vertrouwt.",
+        "unsupported": "Het platform kan voor deze apparaatfamilie nog geen coëfficiënten schrijven. De kalibratie is alleen in het record goedgekeurd.",
+        "skip": "Afronden zonder te schrijven",
+        "reportFailed": "Het apparaat is beschreven, maar het resultaat kon niet worden vastgelegd.",
+        "verifyHeading": "Controle met de nieuwe coëfficiënten",
+        "verifying": "Het apparaat wordt uitgelezen met de nieuwe coëfficiënten…",
+        "verificationStopped": "De controle is voortijdig gestopt: {{reason}}. De hierboven geschreven coëfficiënten blijven staan.",
+        "disconnected": "Het apparaat is losgekoppeld. Verbind het opnieuw en schrijf nogmaals."
+      },
+      "done": {
+        "close": "Sluiten",
+        "rejectedHint": "De run is afgewezen. De diagnose blijft bewaard; er is niets toegepast.",
+        "writtenHint": "De kalibratie geldt en is op het apparaat bevestigd.",
+        "notWrittenHint": "De kalibratie geldt in het record. Sommige blokken zijn niet op het apparaat bevestigd; controleer de schrijfresultaten."
+      }
     },
     "workbookBar": {
       "mock": "Mock",
