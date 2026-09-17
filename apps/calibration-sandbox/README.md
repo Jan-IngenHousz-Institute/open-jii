@@ -48,3 +48,14 @@ Author a script against an exported bench payload without any of the above:
 ```bash
 uv run python devshim.py my_script.py payload.json
 ```
+
+## Invoke it from the backend
+
+The generated backend env already points at the local container:
+`AWS_LAMBDA_CALIBRATION_SANDBOX_ENDPOINT=http://localhost:9004` and
+`AWS_LAMBDA_CALIBRATION_SANDBOX_FUNCTION_NAME=function`. The name is not
+arbitrary: `function` is what the Lambda runtime interface emulator answers to,
+so the backend's request is the same one `pnpm invoke` sends. With the container
+up and `pnpm dev:fb` running, a calibration run created from the platform is
+computed here. A stopped container surfaces on the run as a refused connection.
+Unset the endpoint to invoke the deployed function instead.

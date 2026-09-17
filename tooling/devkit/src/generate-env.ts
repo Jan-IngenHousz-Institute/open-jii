@@ -15,6 +15,10 @@ const localNotes = new Map([
     "AWS_LAMBDA_CALIBRATION_SANDBOX_FUNCTION_NAME",
     "The name the local runtime emulator answers to; in AWS, the deployed function's name.",
   ],
+  [
+    "AWS_LAMBDA_CALIBRATION_SANDBOX_ENDPOINT",
+    "Leave unset to invoke the deployed function instead of the local container.",
+  ],
 ]);
 
 export function renderEnvExample(target: EnvTarget): string {

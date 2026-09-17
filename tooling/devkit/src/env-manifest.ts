@@ -80,6 +80,7 @@ export const envManifest: readonly EnvVar[] = [
   env("AWS_LAMBDA_MACRO_SANDBOX_R_FUNCTION_NAME", set, "local-disabled-r", backend),
   // `function` is the name the runtime interface emulator answers to in the local container.
   env("AWS_LAMBDA_CALIBRATION_SANDBOX_FUNCTION_NAME", set, "function", backend),
+  env("AWS_LAMBDA_CALIBRATION_SANDBOX_ENDPOINT", set, "http://localhost:9004", backend),
   env("AWS_IOT_ARCHIVE_BUCKET_NAME", set, "local-openjii-iot-archive", backend),
   env("AWS_IOT_LARGE_PAYLOAD_BUCKET_NAME", set, "local-openjii-large-payloads", backend),
   env("AWS_SESSION_TOKEN", set, undefined, web),
