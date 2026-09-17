@@ -39,6 +39,42 @@ describe("pivotToMatrix", () => {
     expect(result.z[yi][xi]).toBe(40);
   });
 
+  it("sorts a temporal axis chronologically regardless of row order", () => {
+    // Hour buckets come back from GROUP BY as ISO strings in no particular
+    // order; a device x hour heatmap must still read left to right in time.
+    const rows = [
+      { x: "2026-09-14T10:00:00.000Z", y: "AMBYTE_82", z: 12 },
+      { x: "2026-09-14T08:00:00.000Z", y: "AMBYTE_73", z: 11 },
+      { x: "2026-09-13T23:00:00.000Z", y: "AMBYTE_82", z: 9 },
+      { x: "2026-09-14T09:00:00.000Z", y: "AMBYTE_82", z: 12 },
+    ];
+    const result = pivotToMatrix(rows, "x", "y", "z");
+    expect(result.xCategories).toEqual([
+      "2026-09-13T23:00:00.000Z",
+      "2026-09-14T08:00:00.000Z",
+      "2026-09-14T09:00:00.000Z",
+      "2026-09-14T10:00:00.000Z",
+    ]);
+    // Device names are not timestamps, so the y axis keeps first-seen order.
+    expect(result.yCategories).toEqual(["AMBYTE_82", "AMBYTE_73"]);
+    // z stays aligned to the sorted axis: (x=08:00, y=AMBYTE_73) => 11.
+    expect(result.z[1][1]).toBe(11);
+  });
+
+  it("keeps first-seen order when only some categories look like timestamps", () => {
+    const rows = [
+      { x: "2026-09-14T10:00:00.000Z", y: "a", z: 1 },
+      { x: "not a date", y: "a", z: 2 },
+      { x: "2026-09-14T08:00:00.000Z", y: "a", z: 3 },
+    ];
+    const result = pivotToMatrix(rows, "x", "y", "z");
+    expect(result.xCategories).toEqual([
+      "2026-09-14T10:00:00.000Z",
+      "not a date",
+      "2026-09-14T08:00:00.000Z",
+    ]);
+  });
+
   it("emits z indexed as `z[yIndex][xIndex]`", () => {
     const rows = [
       { x: "a", y: "p", z: 1 },

@@ -7,7 +7,10 @@ import { coerceCell } from "./cell-coercion";
  *
  * Numeric axes are sorted ascending so the grid is monotonic regardless of
  * row order (an unsorted numeric axis makes `contour` draw scrambled iso-
- * lines). Genuine string-category axes keep first-seen order.
+ * lines). Temporal axes are sorted chronologically for the same reason:
+ * bucketed timestamps arrive as ISO strings in whatever order the GROUP BY
+ * produced them, and the chart-data path sends no ORDER BY. Genuine
+ * string-category axes keep first-seen order.
  */
 export function pivotToMatrix(
   rows: Record<string, unknown>[],
@@ -65,11 +68,31 @@ export function pivotToMatrix(
   return { xCategories, yCategories, z };
 }
 
-/** Sort a fully-numeric axis ascending; leave categorical axes first-seen. */
+// Matches the ISO-8601 shapes Databricks emits for TIMESTAMP cells
+// (`2026-09-14T08:00:00.000Z`, with or without fraction / offset) and the
+// space-separated form `date_trunc` buckets can take. Anchored so that a
+// device name or a numeric-looking code never qualifies.
+const ISO_TIMESTAMP =
+  /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/;
+
+/**
+ * Sort a fully-numeric axis ascending and a fully-temporal axis
+ * chronologically; leave categorical axes first-seen.
+ */
 function orderCategories(categories: (string | number)[]): (string | number)[] {
-  const allNumeric = categories.every((c) => typeof c === "number");
-  if (!allNumeric) {
-    return categories;
+  if (categories.every((c) => typeof c === "number")) {
+    return [...categories].sort((a, b) => Number(a) - Number(b));
   }
-  return [...categories].sort((a, b) => Number(a) - Number(b));
+  const epochs = new Map<string | number, number>();
+  for (const c of categories) {
+    if (typeof c !== "string" || !ISO_TIMESTAMP.test(c)) {
+      return categories;
+    }
+    const epoch = Date.parse(c);
+    if (!Number.isFinite(epoch)) {
+      return categories;
+    }
+    epochs.set(c, epoch);
+  }
+  return [...categories].sort((a, b) => (epochs.get(a) ?? 0) - (epochs.get(b) ?? 0));
 }
