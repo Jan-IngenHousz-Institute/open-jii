@@ -12,6 +12,20 @@ export class AwsConfigService {
   constructor(private readonly configService: ConfigService) {
     this.config = this.loadConfig();
     this.validateConfig();
+    this.warnWhenLocalEndpointSet();
+  }
+
+  // A local endpoint in a deployed environment would send every calibration to
+  // the wrong place, so its presence is loud from the first log line.
+  private warnWhenLocalEndpointSet(): void {
+    const endpoint = this.config.lambda.calibrationSandboxEndpoint;
+    if (endpoint) {
+      this.logger.warn({
+        msg: "Calibration sandbox invokes go to a local endpoint",
+        operation: "loadConfig",
+        endpoint,
+      });
+    }
   }
 
   /**
@@ -50,6 +64,8 @@ export class AwsConfigService {
         // Empty until the calibration infra provisions it; the invoke path refuses instead of failing boot.
         calibrationSandboxFunctionName:
           this.configService.get<string>("aws.lambda.calibrationSandboxFunctionName") ?? "",
+        calibrationSandboxEndpoint:
+          this.configService.get<string>("aws.lambda.calibrationSandboxEndpoint") ?? "",
       },
       s3: {
         iotArchiveBucketName: this.configService.getOrThrow<string>("aws.s3.iotArchiveBucketName"),
