@@ -31,7 +31,10 @@ describe("validateCalibrationBlocks", () => {
   });
 
   it("flags missing and undeclared blocks", () => {
-    const reasons = validateCalibrationBlocks({ extra: { coefficients: { x: 1 } } }, AMBIT_SCHEMA);
+    const reasons = validateCalibrationBlocks(
+      { extra: { status: "computed", coefficients: { x: 1 } } },
+      AMBIT_SCHEMA,
+    );
     expect(reasons.some((r) => r.includes("'par' is required"))).toBe(true);
     expect(reasons.some((r) => r.includes("'baseline' is required"))).toBe(true);
     expect(reasons.some((r) => r.includes("'extra' is not declared"))).toBe(true);

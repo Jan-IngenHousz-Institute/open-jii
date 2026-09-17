@@ -61,7 +61,9 @@ describe("GetActiveDeviceCalibrationUseCase", () => {
     await testApp.teardown();
   });
 
-  const approveRun = async (blocks: Record<string, { coefficients: Record<string, number> }>) => {
+  const approveRun = async (
+    blocks: Record<string, { coefficients: Record<string, number | number[]> }>,
+  ) => {
     const run = await runRepository.create({
       definitionId,
       deviceId,

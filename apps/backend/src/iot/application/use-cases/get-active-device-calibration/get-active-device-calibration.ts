@@ -1,9 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
-import type {
-  ActiveCalibrationBlock,
-  ActiveDeviceCalibration,
-} from "@repo/api/domains/iot/calibration/iot-calibration.schema";
+import type { ActiveCalibrationBlock } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 
 import { Result, failure, success } from "../../../../common/utils/fp-utils";
 import type { DeviceCalibrationDto } from "../../../core/models/iot-calibration.model";
@@ -17,11 +14,23 @@ import { IotCalibrationRunRepository } from "../../../core/repositories/iot-cali
  * simply absent. Reading the newest approval alone would therefore report that the device
  * had lost coefficients it is demonstrably still holding.
  */
+
+/** The rows carry Dates; the controller's `formatDates` is what makes the wire shape. */
+type ActiveBlockRow = Omit<ActiveCalibrationBlock, "validFrom" | "writtenToDeviceAt"> & {
+  validFrom: Date;
+  writtenToDeviceAt: Date | null;
+};
+
+interface ActiveDeviceCalibrationRow {
+  deviceId: string;
+  blocks: Record<string, ActiveBlockRow>;
+}
+
 @Injectable()
 export class GetActiveDeviceCalibrationUseCase {
   constructor(private readonly runRepository: IotCalibrationRunRepository) {}
 
-  async execute(deviceId: string): Promise<Result<ActiveDeviceCalibration | null>> {
+  async execute(deviceId: string): Promise<Result<ActiveDeviceCalibrationRow | null>> {
     const history = await this.runRepository.listCalibrationsByDevice(deviceId);
     if (history.isFailure()) {
       return failure(history.error);
@@ -34,10 +43,8 @@ export class GetActiveDeviceCalibrationUseCase {
   }
 
   /** Approvals arrive newest first, so the first sighting of a block is the one in force. */
-  private newestBlockPerName(
-    history: DeviceCalibrationDto[],
-  ): Record<string, ActiveCalibrationBlock> {
-    const inForce: Record<string, ActiveCalibrationBlock> = {};
+  private newestBlockPerName(history: DeviceCalibrationDto[]): Record<string, ActiveBlockRow> {
+    const inForce: Record<string, ActiveBlockRow> = {};
 
     for (const calibration of history) {
       for (const [name, block] of Object.entries(calibration.blocks)) {

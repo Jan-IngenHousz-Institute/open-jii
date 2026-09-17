@@ -255,9 +255,9 @@ export class AwsAdapter implements IotAwsPort, LambdaPort, CalibrationSandboxPor
   }
 
   /** Invoke the calibration sandbox Lambda synchronously. */
-  async invokeCalibrationSandbox<TResponse = Record<string, unknown>>(
+  async invokeCalibrationSandbox(
     payload: object,
-  ): Promise<Result<InvokeLambdaResponse<TResponse>>> {
+  ): Promise<Result<InvokeLambdaResponse<Record<string, unknown>>>> {
     const { calibrationSandboxFunctionName: functionName, calibrationSandboxEndpoint: endpoint } =
       this.awsConfigService.lambdaConfig;
     if (!functionName) {
@@ -268,7 +268,7 @@ export class AwsAdapter implements IotAwsPort, LambdaPort, CalibrationSandboxPor
         ),
       );
     }
-    return this.awsLambdaService.invoke<TResponse>({
+    return this.awsLambdaService.invoke<Record<string, unknown>>({
       functionName,
       payload,
       ...(endpoint ? { endpoint } : {}),
