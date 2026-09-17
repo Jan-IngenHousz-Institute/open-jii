@@ -1696,7 +1696,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'pending'"
+          "default": "'registered'"
         },
         "certificate_id": {
           "name": "certificate_id",
@@ -3984,10 +3984,10 @@
       "name": "device_status",
       "schema": "public",
       "values": [
-        "pending",
+        "registered",
         "active",
-        "rotating",
-        "revoked"
+        "revoked",
+        "retired"
       ]
     },
     "public.experiment_members_role": {
