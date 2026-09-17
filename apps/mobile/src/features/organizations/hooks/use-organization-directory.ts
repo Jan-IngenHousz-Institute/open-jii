@@ -3,16 +3,26 @@ import { orpc } from "~/shared/api/orpc";
 
 interface UseOrganizationDirectoryArgs {
   search?: string;
+  scope?: "related" | "all";
+  enabled?: boolean;
 }
 
-export function useOrganizationDirectory({ search }: UseOrganizationDirectoryArgs = {}) {
+export function useOrganizationDirectory({
+  search,
+  scope = "all",
+  enabled = true,
+}: UseOrganizationDirectoryArgs = {}) {
   const trimmed = search?.trim() ?? "";
 
   const { data, isLoading, isFetching, isPaused, error, refetch, isRefetching } = useQuery(
     orpc.organizations.listOrganizations.queryOptions({
       // An empty search must be `undefined`, not `""`: the two mean the same
       // thing but are different cache keys, and Home shares the unfiltered one.
-      input: { search: trimmed.length > 0 ? trimmed : undefined, scope: "all" as const },
+      input: { search: trimmed.length > 0 ? trimmed : undefined, scope },
+      enabled,
+      // Callers render their own inline failure; a toast would double it, and on
+      // Home it would shout about a card the user cannot see.
+      meta: { suppressToast: true },
       networkMode: "offlineFirst",
       // Both default to false app-wide.
       refetchOnMount: true,

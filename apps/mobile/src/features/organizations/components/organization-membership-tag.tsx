@@ -12,14 +12,12 @@ interface OrganizationMembershipTagsProps {
   visibility: OrganizationVisibility;
   membershipStatus: OrganizationMembershipStatus;
   showMemberTag?: boolean;
-  className?: string;
 }
 
 export function OrganizationMembershipTags({
   visibility,
   membershipStatus,
   showMemberTag = true,
-  className = "flex-row items-center gap-1.5",
 }: OrganizationMembershipTagsProps) {
   const { t } = useTranslation("organizations");
 
@@ -29,7 +27,7 @@ export function OrganizationMembershipTags({
   if (!isPrivate && !isMember && !isPending) return null;
 
   return (
-    <View className={className}>
+    <View className="flex-row items-center gap-1.5">
       {isPrivate ? <Tag>{t("membership.private")}</Tag> : null}
       {isMember ? <Tag variant="sensor">{t("membership.member")}</Tag> : null}
       {isPending ? <Tag variant="queued">{t("membership.requested")}</Tag> : null}

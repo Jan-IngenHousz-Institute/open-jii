@@ -5,17 +5,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useOrganizationDirectory } from "./use-organization-directory";
 
-const { mockListOrganizations } = vi.hoisted(() => ({ mockListOrganizations: vi.fn() }));
+const { mockListOrganizations, capturedOptions } = vi.hoisted(() => ({
+  mockListOrganizations: vi.fn(),
+  capturedOptions: [] as Record<string, unknown>[],
+}));
 
 vi.mock("~/shared/api/orpc", () => ({
   orpc: {
     organizations: {
       listOrganizations: {
-        queryOptions: ({ input, ...opts }: { input: unknown }) => ({
-          queryKey: ["organizations", input],
-          queryFn: () => mockListOrganizations(input),
-          ...opts,
-        }),
+        queryOptions: ({ input, ...opts }: { input: unknown }) => {
+          capturedOptions.push({ input, ...opts });
+          return {
+            queryKey: ["organizations", input],
+            queryFn: () => mockListOrganizations(input),
+            ...opts,
+          };
+        },
       },
     },
   },
@@ -45,6 +51,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  capturedOptions.length = 0;
   queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   mockListOrganizations.mockResolvedValue({ organizations: [] });
 });
@@ -125,6 +132,35 @@ describe("useOrganizationDirectory", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.isPaused).toBe(false);
+  });
+
+  it("defaults to the whole directory", async () => {
+    const { result } = renderHook(() => useOrganizationDirectory(), { wrapper });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(mockListOrganizations).toHaveBeenCalledWith({ search: undefined, scope: "all" });
+  });
+
+  it("narrows to the caller's own organizations when asked", async () => {
+    const { result } = renderHook(() => useOrganizationDirectory({ scope: "related" }), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(mockListOrganizations).toHaveBeenCalledWith({ search: undefined, scope: "related" });
+  });
+
+  it("passes enabled through to the query", () => {
+    renderHook(() => useOrganizationDirectory({ enabled: false }), { wrapper });
+
+    expect(capturedOptions[0]?.enabled).toBe(false);
+    expect(mockListOrganizations).not.toHaveBeenCalled();
+  });
+
+  it("suppresses the global toast, since callers show their own inline failure", () => {
+    renderHook(() => useOrganizationDirectory(), { wrapper });
+
+    expect(capturedOptions[0]?.meta).toEqual({ suppressToast: true });
   });
 
   it("leaves organizations undefined when no response has arrived", async () => {
