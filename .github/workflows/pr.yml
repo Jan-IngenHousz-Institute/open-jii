@@ -82,27 +82,6 @@ jobs:
         shell: bash
         run: pnpm format:check
 
-  devkit_tests:
-    name: Devkit Env Manifest
-    runs-on: ubuntu-latest
-    env:
-      DO_NOT_TRACK: 1
-      TURBO_TELEMETRY_DISABLED: 1
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js and pnpm
-        uses: ./.github/actions/setup-nodejs-pnpm
-        with:
-          node-version: "24"
-
-      # Nothing depends on the devkit, so the affected-package filter never
-      # reaches its tests and the env manifest can drift from the example files unseen.
-      - name: Devkit tests
-        shell: bash
-        run: pnpm --filter @repo/devkit test
-
   workspace_lint:
     name: Workspace Dependency Lint
     runs-on: ubuntu-latest

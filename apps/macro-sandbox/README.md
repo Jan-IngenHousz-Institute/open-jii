@@ -173,6 +173,11 @@ curl -XPOST http://localhost:9001/2015-03-31/functions/function/invocations \
   -d @test/event.json
 ```
 
+The backend's Lambda service accepts an optional `endpoint` per invoke, which sends the
+call to a local emulator such as these containers instead of AWS. Macro execution is not
+wired to it yet, so a macro run from the platform still needs the deployed functions; the
+`invoke:*` scripts remain the local loop.
+
 ## Testing
 
 Focused container tests build all three runtimes and verify unchanged `data`

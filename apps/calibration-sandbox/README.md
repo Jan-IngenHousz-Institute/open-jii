@@ -56,3 +56,14 @@ they are actually shipped.
 on the line the manual bench really fitted, so a healthy container answers a
 slope of 0.96 and an intercept of -1.08. No recording of a real sweep exists;
 the notebooks the procedures come from saved only their results.
+
+## Invoke it from the backend
+
+The generated backend env already points at the local container:
+`AWS_LAMBDA_CALIBRATION_SANDBOX_ENDPOINT=http://localhost:9004` and
+`AWS_LAMBDA_CALIBRATION_SANDBOX_FUNCTION_NAME=function`. The name is not
+arbitrary: `function` is what the Lambda runtime interface emulator answers to,
+so the backend's request is the same one `pnpm invoke` sends. With the container
+up and `pnpm dev:fb` running, a calibration run created from the platform is
+computed here. A stopped container surfaces on the run as a refused connection.
+Unset the endpoint to invoke the deployed function instead.

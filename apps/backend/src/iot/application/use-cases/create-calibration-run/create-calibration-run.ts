@@ -157,6 +157,7 @@ export class CreateCalibrationRunUseCase {
         params: body.params ?? {},
         outputSchema: definition.outputSchema,
       },
+      this.awsPort.getCalibrationSandboxEndpoint(),
     );
 
     if (invoke.isFailure()) {
