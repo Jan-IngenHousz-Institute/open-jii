@@ -426,6 +426,32 @@ function parseFirmwareVersion(value: string): [number, number, number] | null {
 }
 
 /**
+ * Why a device's firmware does not meet a definition's floor, or null when it does. Older
+ * firmware answers unknown commands with numbers that look like data, so a run is refused
+ * rather than recorded against a device that cannot have produced it.
+ */
+export function firmwareFloorIssue(
+  required: string | null,
+  reported: string | undefined,
+): string | null {
+  if (!required) {
+    return null;
+  }
+  if (!reported) {
+    return `This calibration requires firmware ${required}; the device did not report a version`;
+  }
+
+  const comparison = compareFirmwareVersions(reported, required);
+  if (comparison === null) {
+    return `Could not compare the device firmware ${reported} against the required ${required}`;
+  }
+  if (comparison < 0) {
+    return `This calibration requires firmware ${required}; the device reports ${reported}`;
+  }
+  return null;
+}
+
+/**
  * Why produced blocks do not satisfy the definition's output schema, empty when they do.
  *
  * A cross-document rule: zod validates one document, and cannot say that these coefficient

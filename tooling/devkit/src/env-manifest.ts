@@ -78,6 +78,7 @@ export const envManifest: readonly EnvVar[] = [
     backend,
   ),
   env("AWS_LAMBDA_MACRO_SANDBOX_R_FUNCTION_NAME", set, "local-disabled-r", backend),
+  env("AWS_LAMBDA_CALIBRATION_SANDBOX_FUNCTION_NAME", set, "local-disabled-calibration", backend),
   env("AWS_IOT_ARCHIVE_BUCKET_NAME", set, "local-openjii-iot-archive", backend),
   env("AWS_IOT_LARGE_PAYLOAD_BUCKET_NAME", set, "local-openjii-large-payloads", backend),
   env("AWS_SESSION_TOKEN", set, undefined, web),

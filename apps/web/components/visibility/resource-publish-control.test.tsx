@@ -182,6 +182,29 @@ describe("<ResourcePublishControl />", () => {
     expect(workbookSpy.params).toMatchObject({ id: "wb-1" });
   });
 
+  // The calibration route names its own id, so the control has to translate rather than
+  // send `id` at a path that expects `definitionId`.
+  it("uses the calibration endpoint, under the id that route names", async () => {
+    const user = userEvent.setup();
+    const calibrationSpy = server.mount(contract.iot.setCalibrationDefinitionVisibility, {
+      body: { id: "definition-1", visibility: "public" },
+    });
+
+    renderControl({
+      resourceType: "calibration_definition",
+      resourceId: "definition-1",
+      visibility: "private",
+    });
+
+    await choose(user, "resourceVisibility.publicStatus");
+    await user.click(
+      screen.getByRole("button", { name: "resourceVisibility.publishConfirmButton" }),
+    );
+
+    await waitFor(() => expect(calibrationSpy.called).toBe(true));
+    expect(calibrationSpy.params).toMatchObject({ definitionId: "definition-1" });
+  });
+
   it("stays private and reports the failure when publishing is rejected", async () => {
     const user = userEvent.setup();
     server.mount(contract.macros.setVisibility, {

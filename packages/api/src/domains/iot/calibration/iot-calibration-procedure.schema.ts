@@ -434,6 +434,29 @@ export function acceptedVerificationSeriesNames(procedure: CaptureProcedure): st
   ]);
 }
 
+/**
+ * Why a payload does not match the procedure, or null when it does. Every required series
+ * has to be present and nothing may be carried that the procedure cannot produce; optional
+ * steps may be absent, because a bench missing a reference still produces a useful run.
+ */
+export function payloadSeriesIssue(
+  procedure: CaptureProcedure,
+  payload: Record<string, unknown>,
+): string | null {
+  const known = new Set(acceptedSeriesNames(procedure));
+  const provided = new Set(Object.keys(payload));
+
+  const missing = requiredProcedureSeriesNames(procedure).filter((name) => !provided.has(name));
+  if (missing.length > 0) {
+    return `Payload is missing required series: ${missing.join(", ")}`;
+  }
+  const unexpected = [...provided].filter((name) => !known.has(name));
+  if (unexpected.length > 0) {
+    return `Payload carries series the procedure does not produce: ${unexpected.join(", ")}`;
+  }
+  return null;
+}
+
 export type RigInstrument = z.infer<typeof zRigInstrument>;
 export type MeasurementProtocol = z.infer<typeof zMeasurementProtocol>;
 export type Stimulus = z.infer<typeof zStimulus>;

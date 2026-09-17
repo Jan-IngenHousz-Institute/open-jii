@@ -4,6 +4,7 @@ import type { SearchResult, SearchResultType } from "@repo/api/domains/search/se
 
 import { Result, isFailure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
+import { IotCalibrationDefinitionRepository } from "../../../../iot/core/repositories/iot-calibration-definition.repository";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
 import { OrganizationRepository } from "../../../../organizations/core/repositories/organization.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
@@ -26,6 +27,7 @@ export class GlobalSearchUseCase {
     private readonly protocolRepository: ProtocolRepository,
     private readonly macroRepository: MacroRepository,
     private readonly workbookRepository: WorkbookRepository,
+    private readonly calibrationDefinitionRepository: IotCalibrationDefinitionRepository,
     private readonly organizationRepository: OrganizationRepository,
   ) {}
 
@@ -40,24 +42,27 @@ export class GlobalSearchUseCase {
     // by exactly the same rules: there is one search definition per entity, and global search
     // is purely a consumer of it. Overfetching `limit` per type removes any per-type recall
     // ceiling, so the 9th-best experiment can still outrank every macro.
-    const [experiments, protocols, macros, workbooks, organizations] = await Promise.all([
-      this.experimentRepository.findAll(userId, undefined, undefined, query, limit),
-      // Pass the caller so each findAll applies the same access scoping it uses
-      // for listing: global search must not surface private resources the caller
-      // cannot access.
-      this.protocolRepository.findAll(query, undefined, userId, limit),
-      this.macroRepository.findAll({ search: query, userId }, limit),
-      this.workbookRepository.findAll({ search: query, userId }, limit),
-      // Organizations are a grantee, never a grantable resource, so their boundary is
-      // the directory's own — public or the caller's, personal workspaces never —
-      // rather than the shared resource access scope.
-      this.organizationRepository.searchDirectory(userId, query, limit),
-    ]);
+    const [experiments, protocols, macros, workbooks, calibrations, organizations] =
+      await Promise.all([
+        this.experimentRepository.findAll(userId, undefined, undefined, query, limit),
+        // Pass the caller so each findAll applies the same access scoping it uses
+        // for listing: global search must not surface private resources the caller
+        // cannot access.
+        this.protocolRepository.findAll(query, undefined, userId, limit),
+        this.macroRepository.findAll({ search: query, userId }, limit),
+        this.workbookRepository.findAll({ search: query, userId }, limit),
+        this.calibrationDefinitionRepository.search(query, userId, limit),
+        // Organizations are a grantee, never a grantable resource, so their boundary is
+        // the directory's own — public or the caller's, personal workspaces never —
+        // rather than the shared resource access scope.
+        this.organizationRepository.searchDirectory(userId, query, limit),
+      ]);
 
     if (isFailure(experiments)) return experiments;
     if (isFailure(protocols)) return protocols;
     if (isFailure(macros)) return macros;
     if (isFailure(workbooks)) return workbooks;
+    if (isFailure(calibrations)) return calibrations;
     if (isFailure(organizations)) return organizations;
 
     // The repositories compute one comparable score per row (same lexical base, same capped
@@ -68,6 +73,7 @@ export class GlobalSearchUseCase {
       ...toResults(protocols.value, "protocol", (p) => p.family),
       ...toResults(macros.value, "macro", (m) => m.language),
       ...toResults(workbooks.value, "workbook", () => null),
+      ...toResults(calibrations.value, "calibration_definition", (c) => c.family),
       ...toResults(organizations.value, "organization", (o) => o.type),
     ]
       .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
