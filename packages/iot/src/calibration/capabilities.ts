@@ -1,0 +1,106 @@
+/**
+ * What a calibration definition may declare, derived from the registries that decide it.
+ *
+ * An author writing a procedure has to name instruments by the handshake they answer,
+ * setpoints and readings the instrument actually has, and blocks the platform can write
+ * back. None of that is guessable, and the last one fails silently: a block no writer
+ * covers computes, passes review and is approved, and then never reaches the device.
+ * Summarising the registries here lets the authoring surface offer them and check them.
+ */
+import type { SensorFamily } from "../core/families";
+import { AMBIT_COMMANDS } from "../driver/ambit/commands";
+import { GENERIC_COMMANDS } from "../driver/generic/commands";
+import { MINIPAR_COMMANDS } from "../driver/minipar/commands";
+import { MULTISPEQ_COMMANDS } from "../driver/multispeq/commands";
+import type { InstrumentReading, InstrumentSetpoint } from "../instrument/interface";
+import { BENCH_INSTRUMENTS } from "../instrument/registry";
+import { DEVICE_SETPOINTS } from "../procedure/device-setpoints";
+import { CALIBRATION_WRITERS } from "./write-back";
+
+/**
+ * The console surface each family's driver knows. A read step names one of these, and a
+ * misremembered one only fails at the bench, where it reads as a device that will not
+ * answer. Ambyte is absent: it is a gateway, and its measurements arrive through ingest.
+ */
+const FAMILY_COMMANDS: Partial<Record<SensorFamily, Record<string, string>>> = {
+  minipar: MINIPAR_COMMANDS,
+  ambit: AMBIT_COMMANDS,
+  multispeq: MULTISPEQ_COMMANDS,
+  generic: GENERIC_COMMANDS,
+};
+
+/** One piece of bench equipment a procedure can declare, as an author must refer to it. */
+export interface BenchInstrumentSummary {
+  model: string;
+  /** What a declared `handshake` is matched against, case-insensitively. */
+  identityToken: string;
+  setpoints: readonly InstrumentSetpoint[];
+  readings: readonly InstrumentReading[];
+}
+
+/** A setpoint on the device under test itself, which a family declares rather than an instrument. */
+export interface DeviceSetpointSummary {
+  name: string;
+  unit: string;
+  min: number;
+  max: number;
+  integer: boolean;
+}
+
+/** One coefficient the platform can write, and whether the device holds many of them. */
+export interface WritableCoefficient {
+  name: string;
+  /** A per-channel coefficient: written entry by entry, and submitted as an array. */
+  isArray: boolean;
+}
+
+export interface FamilyCalibrationCapabilities {
+  family: SensorFamily;
+  deviceSetpoints: DeviceSetpointSummary[];
+  /** Console commands the driver knows, as a read step would name one. */
+  commands: string[];
+  /**
+   * Block name to the coefficients the platform has a console command for. Partial: a
+   * block the registry does not cover is absent, not empty.
+   */
+  writableCoefficients: Partial<Record<string, WritableCoefficient[]>>;
+}
+
+export function benchInstrumentSummaries(): BenchInstrumentSummary[] {
+  return BENCH_INSTRUMENTS.map((create) => {
+    const instrument = create();
+    return {
+      model: instrument.model,
+      identityToken: instrument.identityToken,
+      setpoints: instrument.setpoints,
+      readings: instrument.readings ?? [],
+    };
+  });
+}
+
+export function familyCalibrationCapabilities(family: SensorFamily): FamilyCalibrationCapabilities {
+  const blocks = CALIBRATION_WRITERS[family]?.blocks;
+  const writableCoefficients: Partial<Record<string, WritableCoefficient[]>> = {};
+  for (const [block, writers] of Object.entries(blocks ?? {})) {
+    // The registry is a partial record: a block it does not cover is simply not writable.
+    if (writers !== undefined) {
+      writableCoefficients[block] = Object.entries(writers.coefficients).map(([name, writer]) => ({
+        name,
+        isArray: writer?.kind !== "scalar",
+      }));
+    }
+  }
+
+  return {
+    family,
+    commands: [...new Set(Object.values(FAMILY_COMMANDS[family] ?? {}))].sort(),
+    deviceSetpoints: (DEVICE_SETPOINTS[family] ?? []).map((setpoint) => ({
+      name: setpoint.name,
+      unit: setpoint.unit,
+      min: setpoint.min,
+      max: setpoint.max,
+      integer: setpoint.integer ?? false,
+    })),
+    writableCoefficients,
+  };
+}
