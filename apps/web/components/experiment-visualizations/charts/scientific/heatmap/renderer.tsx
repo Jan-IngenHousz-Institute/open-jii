@@ -28,12 +28,18 @@ export function HeatmapRenderer({
     if (visualization.chartType !== "heatmap") {
       return { series: [], degenerateReason: null };
     }
-    return transformHeatmapData(rows, dataSources, chartConfig);
+    return transformHeatmapData(rows, dataSources, chartConfig, {
+      present: t("workspace.style.heatmapBinaryPresent"),
+      absent: t("workspace.style.heatmapBinaryAbsent"),
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- leaf-listed; see KEEP IN SYNC comment.
   }, [
     rows,
     dataSources,
     visualization.chartType,
+    t,
+    chartConfig.heatmapBinary,
+    chartConfig.heatmapBinaryThreshold,
     chartConfig.heatmapColorscale,
     chartConfig.heatmapReverseScale,
     chartConfig.heatmapShowColorbar,

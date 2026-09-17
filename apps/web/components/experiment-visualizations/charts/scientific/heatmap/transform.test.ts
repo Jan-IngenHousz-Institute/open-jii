@@ -119,4 +119,72 @@ describe("transformHeatmapData", () => {
     const r2 = transformHeatmapData(rows, sources, cfgBest);
     expect(r2.series[0].zsmooth).toBe("best");
   });
+
+  it("never interpolates across empty cells", () => {
+    const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
+    const rows = [
+      { x: "a", y: "p", z: 1 },
+      { x: "a", y: "q", z: 2 },
+      { x: "b", y: "p", z: 3 },
+    ];
+    const result = transformHeatmapData(rows, sources, baseConfig);
+    expect(result.series[0].connectgaps).toBe(false);
+    expect(result.series[0].z[1][1]).toBeNaN();
+  });
+
+  describe("present / absent mode", () => {
+    const sources = [ds("x", "x"), ds("y", "y"), ds("z", "z")];
+    // (b, q) has no row at all; (a, q) is below a threshold of 5.
+    const rows = [
+      { x: "a", y: "p", z: 12 },
+      { x: "a", y: "q", z: 3 },
+      { x: "b", y: "p", z: 12 },
+    ];
+
+    it("maps cells to 0 / 1 against the threshold and treats empty cells as absent", () => {
+      const cfg: ChartFormConfig = { heatmapBinary: true, heatmapBinaryThreshold: 5 };
+      const result = transformHeatmapData(rows, sources, cfg, { present: "on", absent: "off" });
+      expect(result.degenerateReason).toBeNull();
+      const series = result.series[0];
+      expect(series.z).toEqual([
+        [1, 1],
+        [0, 0],
+      ]);
+      expect(series.zmin).toBe(0);
+      expect(series.zmax).toBe(1);
+      expect(series.zauto).toBe(false);
+      expect(series.connectgaps).toBe(false);
+      expect(series.colorbar?.ticktext).toEqual(["off", "on"]);
+    });
+
+    it("defaults the threshold to 1 and uses a two-step colourscale", () => {
+      const cfg: ChartFormConfig = { heatmapBinary: true };
+      const series = transformHeatmapData(rows, sources, cfg).series[0];
+      expect(series.z).toEqual([
+        [1, 1],
+        [1, 0],
+      ]);
+      const scale = series.colorscale as [number, string][];
+      expect(scale.map(([stop]) => stop)).toEqual([0, 0.5, 0.5, 1]);
+      expect(scale[0][1]).toBe(scale[1][1]);
+      expect(scale[2][1]).toBe(scale[3][1]);
+      expect(scale[0][1]).not.toBe(scale[3][1]);
+    });
+
+    it("does not flag an all-present grid as flat", () => {
+      const full = [
+        { x: "a", y: "p", z: 12 },
+        { x: "a", y: "q", z: 12 },
+        { x: "b", y: "p", z: 12 },
+        { x: "b", y: "q", z: 12 },
+      ];
+      const cfg: ChartFormConfig = { heatmapBinary: true };
+      const result = transformHeatmapData(full, sources, cfg);
+      expect(result.degenerateReason).toBeNull();
+      expect(result.series[0].z).toEqual([
+        [1, 1],
+        [1, 1],
+      ]);
+    });
+  });
 });

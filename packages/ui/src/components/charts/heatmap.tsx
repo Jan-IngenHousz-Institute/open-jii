@@ -11,10 +11,25 @@ import { useChartSizing } from "./use-is-compact";
 import {
   createBaseLayout,
   createPlotlyConfig,
+  detectAxisType,
   getRenderer,
   getPlotType,
   truncateCategoryTicks,
 } from "./utils";
+
+/**
+ * Timestamps get a real date axis so Plotly picks readable tick intervals
+ * instead of one rotated label per bucket. Other strings stay categorical in
+ * first-seen order; numbers stay linear.
+ */
+function heatmapAxisType(
+  values: ReadonlyArray<string | number | Date> | undefined,
+): "date" | "category" | "linear" {
+  if (!values || values.length === 0) return "linear";
+  if (detectAxisType(values) === "date") return "date";
+  const first = values[0];
+  return typeof first === "string" || first instanceof Date ? "category" : "linear";
+}
 
 export interface HeatmapSeriesData extends BaseSeries {
   x?: (string | number | Date)[];
@@ -140,21 +155,8 @@ export function Heatmap({
     // Determine axis types based on data
     const firstSeries = data[0];
 
-    // Check X-axis data type
-    const xAxisType =
-      firstSeries?.x && firstSeries.x.length > 0
-        ? typeof firstSeries.x[0] === "string" || firstSeries.x[0] instanceof Date
-          ? "category"
-          : "linear"
-        : "linear";
-
-    // Check Y-axis data type
-    const yAxisType =
-      firstSeries?.y && firstSeries.y.length > 0
-        ? typeof firstSeries.y[0] === "string" || firstSeries.y[0] instanceof Date
-          ? "category"
-          : "linear"
-        : "linear";
+    const xAxisType = heatmapAxisType(firstSeries?.x);
+    const yAxisType = heatmapAxisType(firstSeries?.y);
 
     // Bound long category labels so automargin can't eat the plot area.
     next.xaxis = truncateCategoryTicks(

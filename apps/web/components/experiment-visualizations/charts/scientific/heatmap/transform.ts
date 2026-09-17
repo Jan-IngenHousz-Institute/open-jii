@@ -20,6 +20,15 @@ export interface HeatmapTransformResult {
   degenerateReason: HeatmapDegenerateReason | null;
 }
 
+/** Colourbar tick labels for present / absent mode; translated by the renderer. */
+export interface HeatmapBinaryLabels {
+  present: string;
+  absent: string;
+}
+
+const BINARY_ABSENT_COLOR = "#d62728";
+const BINARY_PRESENT_COLOR = "#2ca02c";
+
 /**
  * Pure data transform for the heatmap chart type. Pivots `(x, y, z)` rows
  * into the matrix shape Plotly's heatmap trace expects, then runs four
@@ -31,6 +40,7 @@ export function transformHeatmapData(
   rows: Record<string, unknown>[],
   dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
+  binaryLabels?: HeatmapBinaryLabels,
 ): HeatmapTransformResult {
   const xColumn = dataSourcesByRole(dataSources, "x")[0]?.source.columnName;
   const yColumn = dataSourcesByRole(dataSources, "y")[0]?.source.columnName;
@@ -61,6 +71,15 @@ export function transformHeatmapData(
 
   if (xCategories.length < 2 || yCategories.length < 2) {
     return { series: [], degenerateReason: "singleAxisValue" };
+  }
+
+  // Present / absent mode fills every cell, so the flat-Z and sparse-grid
+  // checks below do not apply: an all-present grid is a legitimate reading.
+  if (chartConfig.heatmapBinary) {
+    return {
+      series: [binarySeries(xCategories, yCategories, z, chartConfig, binaryLabels)],
+      degenerateReason: null,
+    };
   }
 
   // Single pass: count finite cells, detect distinct values for the
@@ -115,6 +134,9 @@ export function transformHeatmapData(
         reversescale: Boolean(chartConfig.heatmapReverseScale),
         showscale: chartConfig.heatmapShowColorbar !== false,
         zsmooth,
+        // An empty cell means no observation. The component's default would
+        // interpolate a value into it from its neighbours and colour it.
+        connectgaps: false,
         text,
         texttemplate: showText ? "%{text}" : undefined,
         colorbar:
@@ -124,5 +146,43 @@ export function transformHeatmapData(
       },
     ],
     degenerateReason: null,
+  };
+}
+
+function binarySeries(
+  x: (string | number)[],
+  y: (string | number)[],
+  z: number[][],
+  chartConfig: ChartFormConfig,
+  labels: HeatmapBinaryLabels | undefined,
+): HeatmapSeriesData {
+  const threshold = chartConfig.heatmapBinaryThreshold ?? 1;
+  const binaryZ = z.map((row) => row.map((v) => (Number.isFinite(v) && v >= threshold ? 1 : 0)));
+  return {
+    x,
+    y,
+    z: binaryZ,
+    // Stepped at the midpoint so 0 and 1 each get one flat colour.
+    colorscale: [
+      [0, BINARY_ABSENT_COLOR],
+      [0.5, BINARY_ABSENT_COLOR],
+      [0.5, BINARY_PRESENT_COLOR],
+      [1, BINARY_PRESENT_COLOR],
+    ],
+    zmin: 0,
+    zmax: 1,
+    zauto: false,
+    zsmooth: false,
+    connectgaps: false,
+    showscale: chartConfig.heatmapShowColorbar !== false,
+    colorbar: {
+      tickmode: "array",
+      tickvals: [0, 1],
+      ticktext: [labels?.absent ?? "0", labels?.present ?? "1"],
+      title:
+        chartConfig.heatmapColorbarTitle && chartConfig.heatmapColorbarTitle.length > 0
+          ? { text: chartConfig.heatmapColorbarTitle, side: "right" }
+          : undefined,
+    },
   };
 }

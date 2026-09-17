@@ -17,6 +17,8 @@ export function heatmapDefaultConfig(): ChartFormConfig {
     heatmapZsmooth: "false",
     heatmapShowText: false,
     heatmapTextDecimals: 2,
+    heatmapBinary: false,
+    heatmapBinaryThreshold: 1,
   };
 }
 

@@ -2,6 +2,7 @@
 
 import { Grid2X2, Settings2 } from "lucide-react";
 import { useId } from "react";
+import { useWatch } from "react-hook-form";
 
 import { useTranslation } from "@repo/i18n";
 import { Checkbox } from "@repo/ui/components/checkbox";
@@ -30,9 +31,61 @@ function HeatmapOptions({ form, flat }: ChartPanelProps) {
   const { t } = useTranslation("experimentVisualizations");
   const showColorbarId = useId();
   const showTextId = useId();
+  const binaryId = useId();
+  const isBinary = Boolean(useWatch({ control: form.control, name: "config.heatmapBinary" }));
 
   return (
     <CollapsibleStyleSection title={t("workspace.style.heatmapOptions")} flat={flat}>
+      <StyleSubsection title={t("workspace.style.heatmapCellMode")}>
+        <FormField
+          control={form.control}
+          name="config.heatmapBinary"
+          render={({ field }) => (
+            <FormItem className="flex items-center gap-2 space-y-0">
+              <FormControl>
+                <Checkbox
+                  id={binaryId}
+                  checked={Boolean(field.value)}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <FormLabel htmlFor={binaryId} className="text-xs font-medium">
+                {t("workspace.style.heatmapBinary")}
+              </FormLabel>
+            </FormItem>
+          )}
+        />
+
+        {isBinary && (
+          <FormField
+            control={form.control}
+            name="config.heatmapBinaryThreshold"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-medium">
+                  {t("workspace.style.heatmapBinaryThreshold")}
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="any"
+                    value={typeof field.value === "number" ? field.value : 1}
+                    onChange={(e) => {
+                      const next = Number(e.target.value);
+                      field.onChange(Number.isFinite(next) ? next : 1);
+                    }}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+      </StyleSubsection>
+
       <FormField
         control={form.control}
         name="config.heatmapZsmooth"
