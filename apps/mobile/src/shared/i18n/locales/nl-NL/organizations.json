@@ -4,7 +4,8 @@
   "memberCount_other": "{{count}} leden",
   "search": {
     "placeholder": "Organisaties zoeken",
-    "noResults": "Geen organisatie past bij je zoekopdracht"
+    "noResults": "Geen organisatie past bij je zoekopdracht",
+    "clear": "Zoekopdracht wissen"
   },
   "empty": "Nog geen organisaties",
   "loading": "Organisaties laden…",
@@ -31,6 +32,7 @@
   },
   "detail": {
     "offline": "Je bent offline. Maak verbinding om deze organisatie te laden.",
+    "loadFailed": "Deze organisatie kon niet worden geladen.",
     "title": "Organisatie",
     "members_one": "lid",
     "members_other": "leden",

@@ -58,6 +58,8 @@ export function OrganizationsDirectoryScreen() {
                 <TouchableOpacity
                   className="bg-gray-background rounded-md p-1"
                   onPress={() => setSearch("")}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("search.clear")}
                 >
                   <X size={18} color={themeColors.onSurface} />
                 </TouchableOpacity>

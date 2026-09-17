@@ -17,6 +17,13 @@ interface DirectoryArgs {
   enabled?: boolean;
 }
 
+interface DirectoryResult {
+  organizations?: unknown[];
+  isLoading?: boolean;
+  error?: unknown;
+  isPaused?: boolean;
+}
+
 function entry(id: string, membershipStatus: "none" | "pending_request" | "member") {
   return {
     id,
@@ -34,16 +41,16 @@ function entry(id: string, membershipStatus: "none" | "pending_request" | "membe
 }
 
 /** Answers each of the hook's two queries by the scope it asked for. */
-function directoryReturns(byScope: {
-  related?: unknown[];
-  all?: unknown[];
-  relatedLoading?: boolean;
-}) {
-  mockUseOrganizationDirectory.mockImplementation((args: DirectoryArgs) =>
-    args.scope === "related"
-      ? { organizations: byScope.related, isLoading: byScope.relatedLoading ?? false }
-      : { organizations: byScope.all, isLoading: false },
-  );
+function directoryReturns(byScope: { related?: DirectoryResult; all?: DirectoryResult }) {
+  mockUseOrganizationDirectory.mockImplementation((args: DirectoryArgs) => {
+    const result = (args.scope === "related" ? byScope.related : byScope.all) ?? {};
+    return {
+      organizations: result.organizations,
+      isLoading: result.isLoading ?? false,
+      error: result.error ?? null,
+      isPaused: result.isPaused ?? false,
+    };
+  });
 }
 
 function argsFor(scope: "related" | "all"): DirectoryArgs | undefined {
@@ -58,7 +65,7 @@ beforeEach(() => {
 
 describe("useOrganizationOnboardingState", () => {
   it("answers member from the related query without fetching the whole directory", () => {
-    directoryReturns({ related: [entry("a", "member")] });
+    directoryReturns({ related: { organizations: [entry("a", "member")] } });
 
     const { result } = renderHook(() => useOrganizationOnboardingState());
 
@@ -68,7 +75,7 @@ describe("useOrganizationOnboardingState", () => {
   });
 
   it("has no state at all until the related query answers", () => {
-    directoryReturns({ related: undefined, relatedLoading: true });
+    directoryReturns({ related: { isLoading: true } });
 
     const { result } = renderHook(() => useOrganizationOnboardingState());
 
@@ -78,7 +85,7 @@ describe("useOrganizationOnboardingState", () => {
   });
 
   it("enables the wide query only once related came back empty", () => {
-    directoryReturns({ related: [], all: undefined });
+    directoryReturns({ related: { organizations: [] }, all: { isLoading: true } });
 
     renderHook(() => useOrganizationOnboardingState());
 
@@ -87,7 +94,10 @@ describe("useOrganizationOnboardingState", () => {
 
   it("derives pending from the wide directory, which is the only place it shows", () => {
     const pending = entry("b", "pending_request");
-    directoryReturns({ related: [], all: [entry("a", "none"), pending] });
+    directoryReturns({
+      related: { organizations: [] },
+      all: { organizations: [entry("a", "none"), pending] },
+    });
 
     const { result } = renderHook(() => useOrganizationOnboardingState());
 
@@ -95,7 +105,10 @@ describe("useOrganizationOnboardingState", () => {
   });
 
   it("derives none when the wide directory holds nothing for this user", () => {
-    directoryReturns({ related: [], all: [entry("a", "none")] });
+    directoryReturns({
+      related: { organizations: [] },
+      all: { organizations: [entry("a", "none")] },
+    });
 
     const { result } = renderHook(() => useOrganizationOnboardingState());
 
@@ -103,10 +116,53 @@ describe("useOrganizationOnboardingState", () => {
   });
 
   it("stays undecided while the wide query is still in flight", () => {
-    directoryReturns({ related: [], all: undefined });
+    directoryReturns({ related: { organizations: [] }, all: { isLoading: true } });
 
     const { result } = renderHook(() => useOrganizationOnboardingState());
 
     expect(result.current.state).toBeUndefined();
+  });
+
+  it("stops loading and surfaces the error when the related query fails", () => {
+    const failure = new Error("offline");
+    directoryReturns({ related: { error: failure } });
+
+    const { result } = renderHook(() => useOrganizationOnboardingState());
+
+    expect(result.current.state).toBeUndefined();
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBe(failure);
+  });
+
+  it("stops loading when the wide query fails after an empty related result", () => {
+    const failure = new Error("offline");
+    directoryReturns({ related: { organizations: [] }, all: { error: failure } });
+
+    const { result } = renderHook(() => useOrganizationOnboardingState());
+
+    expect(result.current.state).toBeUndefined();
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBe(failure);
+  });
+
+  it("reports paused from either query", () => {
+    directoryReturns({ related: { organizations: [] }, all: { isPaused: true } });
+
+    const { result } = renderHook(() => useOrganizationOnboardingState());
+
+    expect(result.current.isPaused).toBe(true);
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it("ignores the disabled wide query's flags while related says member", () => {
+    directoryReturns({
+      related: { organizations: [entry("a", "member")] },
+      all: { isLoading: true },
+    });
+
+    const { result } = renderHook(() => useOrganizationOnboardingState());
+
+    expect(result.current.state).toEqual({ kind: "member" });
+    expect(result.current.isLoading).toBe(false);
   });
 });

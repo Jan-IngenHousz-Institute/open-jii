@@ -11,10 +11,8 @@ export function useOrganizationOnboardingState() {
   // `related` filters on membership, so it can never carry a pending request.
   // Only the unfiltered directory can, which is why the wide fetch exists at
   // all; it waits until the cheap query has ruled membership out.
-  const directory = useOrganizationDirectory({
-    scope: "all",
-    enabled: hasRelated && !isMember,
-  });
+  const directoryEnabled = hasRelated && !isMember;
+  const directory = useOrganizationDirectory({ scope: "all", enabled: directoryEnabled });
 
   const state = useMemo(() => {
     if (isMember) return { kind: "member" } as const;
@@ -22,5 +20,10 @@ export function useOrganizationOnboardingState() {
     return deriveOnboardingState(directory.organizations);
   }, [isMember, hasRelated, directory.organizations]);
 
-  return { state, isLoading: state === undefined };
+  return {
+    state,
+    isLoading: related.isLoading || (directoryEnabled && directory.isLoading),
+    error: related.error ?? directory.error,
+    isPaused: related.isPaused || directory.isPaused,
+  };
 }

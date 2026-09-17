@@ -53,18 +53,22 @@ export function OrganizationDetailScreen() {
     });
   }, [navigation, organization, isNotFound, themeColors.onSurface, t]);
 
-  // A 404 outranks cached data; any other failure keeps it, so the profile
-  // stays readable offline.
-  if (isNotFound || (!organization && error)) {
+  // Only a 404 is a dead end. It outranks cached data; every other failure
+  // keeps it, so the profile stays readable offline.
+  if (isNotFound) {
     return <OrganizationUnavailable />;
   }
 
-  // Paused means offlineFirst gave up before the network with nothing cached,
-  // so there is no error and the spinner would never end.
-  if (!organization && isPaused) {
+  // Nothing cached and the read did not land: errored, or paused before the
+  // network, which carries no error and would otherwise spin forever.
+  if (!organization && (error || isPaused)) {
     return (
       <View className="flex-1 items-center gap-3 px-6 py-16">
-        <Text className="text-error text-center">{t("organizations:detail.offline")}</Text>
+        <Text className="text-error text-center">
+          {t(
+            isPaused && !error ? "organizations:detail.offline" : "organizations:detail.loadFailed",
+          )}
+        </Text>
         <Button title={t("common:retry")} onPress={() => void refetch()} variant="light" />
       </View>
     );

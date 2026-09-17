@@ -4,7 +4,8 @@
   "memberCount_other": "{{count}} members",
   "search": {
     "placeholder": "Search organizations",
-    "noResults": "No organizations match"
+    "noResults": "No organizations match",
+    "clear": "Clear search"
   },
   "empty": "No organizations yet",
   "loading": "Loading organizations…",
@@ -31,6 +32,7 @@
   },
   "detail": {
     "offline": "You're offline. Connect to load this organization.",
+    "loadFailed": "Could not load this organization.",
     "title": "Organization",
     "members_one": "member",
     "members_other": "members",
