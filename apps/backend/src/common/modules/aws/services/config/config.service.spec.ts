@@ -1,6 +1,8 @@
 import { ConfigService } from "@nestjs/config";
+import type { ConfigType } from "@nestjs/config";
 
 import { TestHarness } from "../../../../../test/test-harness";
+import type awsConfig from "../../../../config/aws.config";
 import { AwsConfigService } from "./config.service";
 
 describe("AwsConfigService", () => {
@@ -63,14 +65,29 @@ describe("AwsConfigService", () => {
       expect(service.deviceThingGroupName).toBe(process.env.AWS_IOT_DEVICE_THING_GROUP_NAME);
     });
 
-    it("reads the calibration sandbox function name", () => {
+    it("reads the calibration sandbox function name and leaves the endpoint empty when unset", () => {
       expect(service.lambdaConfig.calibrationSandboxFunctionName).toBe(
         process.env.AWS_LAMBDA_CALIBRATION_SANDBOX_FUNCTION_NAME,
       );
+      expect(service.lambdaConfig.calibrationSandboxEndpoint).toBe("");
     });
   });
 
   describe("config validation", () => {
+    it("rejects a calibration sandbox endpoint that is not a URL", () => {
+      const aws = testApp.module.get(ConfigService).get<ConfigType<typeof awsConfig>>("aws");
+      if (!aws) {
+        throw new Error("The aws configuration namespace is not loaded");
+      }
+      const withBadEndpoint = new ConfigService({
+        aws: { ...aws, lambda: { ...aws.lambda, calibrationSandboxEndpoint: "not-a-url" } },
+      });
+
+      expect(() => new AwsConfigService(withBadEndpoint)).toThrow(
+        "AWS configuration validation failed",
+      );
+    });
+
     it("should throw error for invalid config during construction", () => {
       // Create a mock ConfigService that returns invalid data
       const configService = testApp.module.get(ConfigService);

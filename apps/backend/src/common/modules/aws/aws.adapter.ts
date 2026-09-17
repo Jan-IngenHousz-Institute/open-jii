@@ -258,7 +258,8 @@ export class AwsAdapter implements IotAwsPort, LambdaPort, CalibrationSandboxPor
   async invokeCalibrationSandbox(
     payload: object,
   ): Promise<Result<InvokeLambdaResponse<Record<string, unknown>>>> {
-    const { calibrationSandboxFunctionName: functionName } = this.awsConfigService.lambdaConfig;
+    const { calibrationSandboxFunctionName: functionName, calibrationSandboxEndpoint: endpoint } =
+      this.awsConfigService.lambdaConfig;
     if (!functionName) {
       return failure(
         AppError.internal(
@@ -267,7 +268,11 @@ export class AwsAdapter implements IotAwsPort, LambdaPort, CalibrationSandboxPor
         ),
       );
     }
-    return this.awsLambdaService.invoke<Record<string, unknown>>({ functionName, payload });
+    return this.awsLambdaService.invoke<Record<string, unknown>>({
+      functionName,
+      payload,
+      ...(endpoint ? { endpoint } : {}),
+    });
   }
 
   /**
