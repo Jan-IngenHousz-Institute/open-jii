@@ -1,6 +1,7 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
 
+import { zSetVisibilityBody, zSetVisibilityResponse } from "../../visibility/visibility.schema";
 import { zIotDevicePathParam } from "../iot.schema";
 import {
   zCalibrationDefinition,
@@ -56,6 +57,15 @@ export const iotCalibrationContract = {
     })
     .input(zCalibrationDefinitionPathParam)
     .output(z.void()),
+  // Publish (monotonic private→public, gated on `manage`).
+  setCalibrationDefinitionVisibility: oc
+    .route({
+      method: "PATCH",
+      path: "/api/v1/calibration-definitions/{definitionId}/visibility",
+      successStatus: 200,
+    })
+    .input(zCalibrationDefinitionPathParam.merge(zSetVisibilityBody))
+    .output(zSetVisibilityResponse),
 
   createCalibrationRun: oc
     .route({

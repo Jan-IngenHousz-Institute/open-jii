@@ -62,6 +62,12 @@ describe("AwsConfigService", () => {
     it("should return the correct deviceThingGroupName", () => {
       expect(service.deviceThingGroupName).toBe(process.env.AWS_IOT_DEVICE_THING_GROUP_NAME);
     });
+
+    it("reads the calibration sandbox function name", () => {
+      expect(service.lambdaConfig.calibrationSandboxFunctionName).toBe(
+        process.env.AWS_LAMBDA_CALIBRATION_SANDBOX_FUNCTION_NAME,
+      );
+    });
   });
 
   describe("config validation", () => {

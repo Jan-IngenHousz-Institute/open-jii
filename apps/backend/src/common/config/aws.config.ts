@@ -23,6 +23,7 @@ export default registerAs("aws", () => ({
     macroSandboxJavascriptFunctionName:
       process.env.AWS_LAMBDA_MACRO_SANDBOX_JAVASCRIPT_FUNCTION_NAME,
     macroSandboxRFunctionName: process.env.AWS_LAMBDA_MACRO_SANDBOX_R_FUNCTION_NAME,
+    calibrationSandboxFunctionName: process.env.AWS_LAMBDA_CALIBRATION_SANDBOX_FUNCTION_NAME,
   },
   s3: {
     iotArchiveBucketName: process.env.AWS_IOT_ARCHIVE_BUCKET_NAME,

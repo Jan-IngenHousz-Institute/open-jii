@@ -47,6 +47,9 @@ export class AwsConfigService {
         macroSandboxRFunctionName: this.configService.getOrThrow<string>(
           "aws.lambda.macroSandboxRFunctionName",
         ),
+        // Empty until the calibration infra provisions it; the invoke path refuses instead of failing boot.
+        calibrationSandboxFunctionName:
+          this.configService.get<string>("aws.lambda.calibrationSandboxFunctionName") ?? "",
       },
       s3: {
         iotArchiveBucketName: this.configService.getOrThrow<string>("aws.s3.iotArchiveBucketName"),
