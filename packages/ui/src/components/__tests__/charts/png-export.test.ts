@@ -12,12 +12,17 @@ vi.mock("../../../hooks/use-toast", () => ({ toast: vi.fn() }));
 const graph = document.createElement("div") as unknown as PlotlyHTMLElement;
 const drawImage = vi.fn();
 const fillRect = vi.fn();
+const requestedSrcs: string[] = [];
+let cornerPixel: number[];
+let context: { fillStyle: string };
 let canvas: HTMLCanvasElement;
 let downloaded: { name: string; href: string } | undefined;
 
 beforeEach(() => {
   vi.clearAllMocks();
   downloaded = undefined;
+  requestedSrcs.length = 0;
+  cornerPixel = [255, 255, 255, 255];
   toImage.mockResolvedValue("data:image/png;base64,chart");
   vi.stubGlobal(
     "Image",
@@ -26,7 +31,8 @@ beforeEach(() => {
       naturalHeight = 1600;
       onload?: () => void;
       set src(value: string) {
-        if (value.endsWith(".svg")) {
+        requestedSrcs.push(value);
+        if (value.includes("openJII")) {
           this.naturalWidth = 414;
           this.naturalHeight = 122;
         }
@@ -38,7 +44,13 @@ beforeEach(() => {
     this: HTMLCanvasElement,
   ) {
     canvas = this;
-    return { drawImage, fillRect, fillStyle: "" } as unknown as CanvasRenderingContext2D;
+    context = {
+      drawImage,
+      fillRect,
+      fillStyle: "",
+      getImageData: () => ({ data: Uint8ClampedArray.from(cornerPixel) }),
+    };
+    return context as unknown as CanvasRenderingContext2D;
   });
   vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation((callback) => {
     callback(new Blob(["png"], { type: "image/png" }));
@@ -58,6 +70,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  document.documentElement.classList.remove("dark");
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -84,6 +97,23 @@ describe("branded PNG export", () => {
     expect(drawImage).toHaveBeenNthCalledWith(2, expect.anything(), 1925, 1643, 432, 127);
     expect(downloaded).toEqual({ name: "field-trial.png", href: "blob:chart" });
     expect(document.querySelector("a[download]")).toBeNull();
+  });
+
+  it("continues the chart's own background under the footer instead of a white band", async () => {
+    cornerPixel = [17, 24, 39, 255];
+
+    await downloadBrandedPng(graph);
+
+    expect(context.fillStyle).toBe("rgba(17,24,39,1)");
+  });
+
+  it("swaps to the light mark on a dark theme, where the teal one would vanish", async () => {
+    document.documentElement.classList.add("dark");
+
+    await downloadBrandedPng(graph);
+
+    expect(requestedSrcs).toContain("/openJII_logo_RGB_horizontal_yellow_transparentBG.png");
+    expect(requestedSrcs).not.toContain("/openJII_logo_RGB_horizontal_green_yellow_trimmed.svg");
   });
 
   it("uses the graph dimensions when none are configured", async () => {

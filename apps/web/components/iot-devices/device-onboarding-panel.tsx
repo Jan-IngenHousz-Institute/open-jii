@@ -383,7 +383,15 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
 
     return (
       <>
-        {isLongList ? <ScrollArea className="max-h-96 overflow-y-auto">{list}</ScrollArea> : list}
+        {isLongList ? (
+          // Radix's viewport wrapper is `display: table`, which shrink-wraps to
+          // the widest row and defeats each row's own truncation.
+          <ScrollArea className="max-h-96 overflow-y-auto [&_[data-radix-scroll-area-viewport]>div]:!block">
+            {list}
+          </ScrollArea>
+        ) : (
+          list
+        )}
         {selectable.length === 0 && hasBindings && (
           <p className="text-muted-foreground text-xs">{t("iot.onboarding.allOnboarded")}</p>
         )}

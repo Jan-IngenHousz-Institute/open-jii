@@ -35,6 +35,8 @@ interface IotDeviceDetailTabsProps {
   canLeave: boolean;
   /** Gates real AWS certificate issue/rotate/revoke controls that require `manage`. */
   canManage: boolean;
+  /** Sits at the end of the tab row rather than above it. */
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -49,6 +51,7 @@ export function IotDeviceDetailTabs({
   canShare,
   canLeave,
   canManage,
+  actions,
   children,
 }: IotDeviceDetailTabsProps) {
   const { t } = useTranslation("iot");
@@ -78,15 +81,20 @@ export function IotDeviceDetailTabs({
 
   return (
     <NavTabs value={activeTab} className="mt-8 flex w-full min-w-0 flex-1 flex-col">
-      <NavTabsList>
-        {tabs.map((tab) => (
-          <NavTabsTrigger key={tab.value} value={tab.value} asChild>
-            <Link href={tab.segment ? `${basePath}/${tab.segment}` : basePath}>
-              {t(`iot.devices.detailTabs.${tab.value}`)}
-            </Link>
-          </NavTabsTrigger>
-        ))}
-      </NavTabsList>
+      <div className="flex min-w-0 items-end gap-3">
+        <div className="min-w-0 flex-1">
+          <NavTabsList>
+            {tabs.map((tab) => (
+              <NavTabsTrigger key={tab.value} value={tab.value} asChild>
+                <Link href={tab.segment ? `${basePath}/${tab.segment}` : basePath}>
+                  {t(`iot.devices.detailTabs.${tab.value}`)}
+                </Link>
+              </NavTabsTrigger>
+            ))}
+          </NavTabsList>
+        </div>
+        {actions === undefined ? null : <div className="shrink-0">{actions}</div>}
+      </div>
 
       <WorkspaceBand className="mt-6">{children}</WorkspaceBand>
     </NavTabs>

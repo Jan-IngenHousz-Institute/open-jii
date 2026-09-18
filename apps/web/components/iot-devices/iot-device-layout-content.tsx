@@ -63,9 +63,6 @@ export function IotDeviceLayoutContent({
               <ConnectivityDot connectivity={device.connectivity} deviceType={device.deviceType} />
             </div>
           </div>
-          <div className="ml-auto shrink-0">
-            <DeviceHeaderActions device={device} />
-          </div>
         </div>
       </div>
 
@@ -76,6 +73,7 @@ export function IotDeviceLayoutContent({
         canManage={device.capabilities.canManage}
         isMobileFamily={device.deviceType === "mobile"}
         hasManagedFirmware={hasManagedFirmware(device.deviceType)}
+        actions={<DeviceHeaderActions device={device} />}
       >
         {children}
       </IotDeviceDetailTabs>

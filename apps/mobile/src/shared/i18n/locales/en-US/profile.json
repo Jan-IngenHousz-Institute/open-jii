@@ -1,7 +1,5 @@
 {
   "accountInformation": "Account Information",
-  "organization": "Organization",
-  "organizationNone": "N/A",
   "loginExpires": "Login Expires",
   "appearance": "Appearance",
   "themeLight": "Light",
@@ -22,6 +20,8 @@
   },
   "account": {
     "section": "Account",
+    "organizations": "Organizations",
+    "organizationsSub": "Find and join organizations",
     "appSettings": "App settings",
     "appSettingsSub": "Theme, units, offline mode",
     "helpFeedback": "Help & feedback",

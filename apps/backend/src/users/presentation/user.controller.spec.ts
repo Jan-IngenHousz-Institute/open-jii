@@ -80,10 +80,13 @@ describe("UserController", () => {
     });
 
     it("should search users by name", async () => {
-      // Create users with specific names
+      // Create users with specific names.
+      // Search is trigram-fuzzy and the ambient test user gets a random real name, so a
+      // plain "Alice" also matches a generated "Alison". Keep the term unique.
+      const firstName = `Alice${faker.string.alphanumeric(10)}`;
       await testApp.createTestUser({
-        name: "Alice Smith",
-        email: "alice@example.com",
+        name: `${firstName} Smith`,
+        email: `${firstName.toLowerCase()}@example.com`,
       });
       await testApp.createTestUser({
         name: "Bob Johnson",
@@ -93,18 +96,21 @@ describe("UserController", () => {
       const response: SuperTestResponse<UserProfileList> = await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
-        .query({ query: "Alice" })
+        .query({ query: firstName })
         .expect(StatusCodes.OK);
 
       expect(response.body).toHaveLength(1);
-      expect(`${response.body[0].firstName} ${response.body[0].lastName}`).toBe("Alice Smith");
+      expect(`${response.body[0].firstName} ${response.body[0].lastName}`).toBe(
+        `${firstName} Smith`,
+      );
     });
 
     it("should search users by email", async () => {
       // Create users with specific emails
+      const email = `alice${faker.string.alphanumeric(10)}@example.com`;
       await testApp.createTestUser({
         name: "Alice Smith",
-        email: "alice@example.com",
+        email,
       });
       await testApp.createTestUser({
         name: "Bob Johnson",
@@ -114,32 +120,33 @@ describe("UserController", () => {
       const response: SuperTestResponse<UserList> = await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
-        .query({ query: "alice@example.com" })
+        .query({ query: email })
         .expect(StatusCodes.OK);
 
       expect(response.body).toHaveLength(1);
-      expect(response.body[0].email).toBe("alice@example.com");
+      expect(response.body[0].email).toBe(email);
     });
 
     it("should search users with partial name match", async () => {
       // Create users with similar names
+      const firstName = `Alice${faker.string.alphanumeric(10)}`;
       await testApp.createTestUser({
-        name: "Alice Smith",
-        email: "alice@example.com",
+        name: `${firstName} Smith`,
+        email: `${firstName.toLowerCase()}@example.com`,
       });
       await testApp.createTestUser({
-        name: "Alice Johnson",
-        email: "alice.johnson@example.com",
+        name: `${firstName} Johnson`,
+        email: `${firstName.toLowerCase()}.johnson@example.com`,
       });
 
       const response: SuperTestResponse<UserProfileList> = await testApp
         .get(testApp.resolveOrpcPath(contract.users.searchUsers))
         .withAuth(testUserId)
-        .query({ query: "Alice" })
+        .query({ query: firstName })
         .expect(StatusCodes.OK);
 
       expect(response.body).toHaveLength(2);
-      expect(response.body.every((u) => `${u.firstName} ${u.lastName}`.includes("Alice"))).toBe(
+      expect(response.body.every((u) => `${u.firstName} ${u.lastName}`.includes(firstName))).toBe(
         true,
       );
     });
