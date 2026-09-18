@@ -1,0 +1,15 @@
+# Calibration sandbox image (public.ecr.aws/lambda/python:3.12).
+#
+# No suppressions are recorded yet. The image shares its base with the macro
+# sandbox and will report the same AWS-managed openssl findings, but that file's
+# justifications do not carry over: the macro sandbox reaches its verdict through
+# a builtins allowlist with no __import__, while a calibration script runs in a
+# subprocess with a stripped environment and ordinary builtins, so it can import
+# ssl. Each finding needs its own verdict against this image before it is
+# suppressed here.
+#
+# Do NOT merge into the root .trivyignore: that one is read by the dependency
+# scan of our own lockfile, which must keep catching these CVEs in app code.
+# Verify with the ghcr trivy DB (mirror.gcr.io lags): --db-repository ghcr.io/aquasecurity/trivy-db:2
+
+vulnerabilities: []

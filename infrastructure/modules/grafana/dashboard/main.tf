@@ -37,6 +37,7 @@ locals {
     macro_sandbox_python_function_name = lookup(var.macro_sandbox_function_names, "python", "")
     macro_sandbox_js_function_name     = lookup(var.macro_sandbox_function_names, "js", "")
     macro_sandbox_r_function_name      = lookup(var.macro_sandbox_function_names, "r", "")
+    calibration_sandbox_function_name  = var.calibration_sandbox_function_name
   }
 }
 
@@ -1091,6 +1092,243 @@ EOT
     labels = {
       severity = "critical"
       service  = "macro-sandbox"
+      category = "security"
+    }
+  }
+}
+
+# Calibration Sandbox Alerts
+# A bench session produces a handful of invocations a day, so the macro sandbox's
+# "more than 10 errors in 5 minutes" would never fire here. The thresholds below are
+# set for that volume: a couple of failures running together is the feature being down.
+resource "grafana_rule_group" "calibration_sandbox_health" {
+  count = var.calibration_sandbox_function_name != "" ? 1 : 0
+
+  provider           = grafana.amg
+  name               = "Calibration Sandbox Health"
+  folder_uid         = grafana_folder.folder.uid
+  interval_seconds   = 60
+  disable_provenance = true
+
+  rule {
+    name      = "Calibration Sandbox Errors"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/Lambda"
+        metricName = "Errors"
+        statistic  = "Sum"
+        period     = "300"
+        dimensions = {
+          FunctionName = var.calibration_sandbox_function_name
+        }
+        expression = "FILL(m1, 0)"
+        id         = "m1"
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"sum"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"sum","refId":"B","type":"reduce"}
+EOT
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 2"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description = "Calibration sandbox Lambda has more than 2 errors in the last 5 minutes"
+      summary     = "Calibration sandbox error rate high"
+    }
+    labels = {
+      severity = "warning"
+      service  = "calibration-sandbox"
+    }
+  }
+
+  rule {
+    name      = "Calibration Sandbox Throttles"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/Lambda"
+        metricName = "Throttles"
+        statistic  = "Sum"
+        period     = "300"
+        dimensions = {
+          FunctionName = var.calibration_sandbox_function_name
+        }
+        expression = "FILL(m1, 0)"
+        id         = "m1"
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"sum"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"sum","refId":"B","type":"reduce"}
+EOT
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description = "Calibration sandbox Lambda is being throttled, so a bench session cannot compute its coefficients"
+      summary     = "Calibration sandbox throttling detected"
+    }
+    labels = {
+      severity = "critical"
+      service  = "calibration-sandbox"
+    }
+  }
+
+  rule {
+    name      = "Calibration Sandbox Rejected Traffic"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/CalibrationSandbox"
+        metricName = "CalibrationSandboxRejectedTraffic-${var.environment}"
+        statistic  = "Sum"
+        period     = "300"
+        expression = "FILL(m1, 0)"
+        id         = "m1"
+      })
+
+      relative_time_range {
+        from = 300
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = <<EOT
+{"conditions":[{"evaluator":{"params":[0,0],"type":"gt"},"operator":{"type":"and"},"query":{"params":["A"]},"reducer":{"params":[],"type":"sum"},"type":"query"}],"datasource":{"name":"Expression","type":"__expr__","uid":"__expr__"},"expression":"A","hide":false,"intervalMs":1000,"maxDataPoints":43200,"reducer":"sum","refId":"B","type":"reduce"}
+EOT
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 100"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description = "High rejected traffic from calibration-sandbox isolated subnets, a possible escape attempt"
+      summary     = "Calibration sandbox rejected VPC traffic anomaly"
+    }
+    labels = {
+      severity = "critical"
+      service  = "calibration-sandbox"
       category = "security"
     }
   }
