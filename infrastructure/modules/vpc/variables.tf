@@ -71,6 +71,12 @@ variable "create_macro_sandbox_resources" {
   default     = true
 }
 
+variable "create_calibration_sandbox_resources" {
+  description = "Whether to create calibration-sandbox Lambda security group and rules"
+  type        = bool
+  default     = true
+}
+
 variable "create_metrics_publisher_resources" {
   description = "Whether to create the metrics-publisher Lambda security group and Aurora ingress rule"
   type        = bool
