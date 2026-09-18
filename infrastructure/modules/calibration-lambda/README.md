@@ -6,18 +6,18 @@ Consumed by [`../calibration-sandbox`](../calibration-sandbox), which supplies t
 
 ## 🧱 What it creates
 
-| Resource                                | Purpose                                                                 |
-| --------------------------------------- | ----------------------------------------------------------------------- |
-| `aws_iam_role.lambda`                   | Execution role                                                          |
-| `aws_iam_role_policy.lambda_logs`       | Write to this function's log group only                                 |
-| `aws_iam_role_policy.lambda_vpc`        | ENI management, required to run in a VPC                                |
-| `aws_iam_role_policy.lambda_ecr`        | Pull the image, scoped to the one repository                            |
-| `aws_iam_role_policy.lambda_deny`       | Explicit deny on every data-bearing service                             |
-| `aws_cloudwatch_log_group.lambda`       | Function logs, retention per environment                                |
-| `aws_lambda_function.this`              | The function itself, image packaged, in the isolated subnets            |
-| `aws_lambda_function_event_invoke_config.this` | Retries disabled                                                 |
-| `aws_iam_policy.invoke`                 | `lambda:InvokeFunction`, attached to the backend task role              |
-| `aws_cloudwatch_log_metric_filter.rejected_traffic` | Counts REJECT lines in the subnet flow logs                 |
+| Resource                                            | Purpose                                                      |
+| --------------------------------------------------- | ------------------------------------------------------------ |
+| `aws_iam_role.lambda`                               | Execution role                                               |
+| `aws_iam_role_policy.lambda_logs`                   | Write to this function's log group only                      |
+| `aws_iam_role_policy.lambda_vpc`                    | ENI management, required to run in a VPC                     |
+| `aws_iam_role_policy.lambda_ecr`                    | Pull the image, scoped to the one repository                 |
+| `aws_iam_role_policy.lambda_deny`                   | Explicit deny on every data-bearing service                  |
+| `aws_cloudwatch_log_group.lambda`                   | Function logs, retention per environment                     |
+| `aws_lambda_function.this`                          | The function itself, image packaged, in the isolated subnets |
+| `aws_lambda_function_event_invoke_config.this`      | Retries disabled                                             |
+| `aws_iam_policy.invoke`                             | `lambda:InvokeFunction`, attached to the backend task role   |
+| `aws_cloudwatch_log_metric_filter.rejected_traffic` | Counts REJECT lines in the subnet flow logs                  |
 
 ## 🔒 The deny policy
 
