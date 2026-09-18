@@ -1,6 +1,5 @@
 CREATE TYPE "public"."calibration_input_source" AS ENUM('bench_wizard', 'external_bench');--> statement-breakpoint
 CREATE TYPE "public"."calibration_run_status" AS ENUM('running', 'computed', 'compute_failed', 'error', 'approved', 'rejected');--> statement-breakpoint
-ALTER TYPE "public"."resource_type" ADD VALUE IF NOT EXISTS 'calibration_definition';--> statement-breakpoint
 CREATE TABLE "calibration_definitions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"family" "sensor_family" NOT NULL,
