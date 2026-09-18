@@ -312,6 +312,50 @@ resource "aws_security_group_rule" "vpc_endpoint_ingress_from_migration" {
   security_group_id        = aws_security_group.macro_sandbox_vpc_endpoints[0].id
   description              = "Allow migration tasks to reach ECR and Logs VPC endpoints"
 }
+
+# -------------------------
+# Calibration Sandbox Lambda Security Group
+# -------------------------
+# Its own SG rather than sharing the macro-sandbox one, so the two sandboxes stay
+# independently revocable. The VPC endpoints they reach (ECR API, ECR DKR, Logs) are shared.
+resource "aws_security_group" "calibration_sandbox_lambda" {
+  count = var.create_calibration_sandbox_resources ? 1 : 0
+
+  name        = "${var.environment}-calibration-sandbox-lambda-sg"
+  description = "Lambda calibration execution - no inbound, HTTPS to VPC endpoints only"
+  vpc_id      = aws_vpc.this.id
+
+  tags = merge(var.tags, {
+    Name     = "${var.environment}-calibration-sandbox-lambda-sg"
+    Security = "isolated"
+  })
+}
+
+resource "aws_security_group_rule" "calibration_sandbox_lambda_egress" {
+  count = var.create_calibration_sandbox_resources ? 1 : 0
+
+  type              = "egress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = [aws_vpc.this.cidr_block]
+  security_group_id = aws_security_group.calibration_sandbox_lambda[0].id
+  description       = "HTTPS to VPC endpoints (ECR API, ECR DKR, CloudWatch Logs)"
+}
+
+# The endpoint SG is created alongside the macro sandbox, so calibration can only
+# be admitted to it where that one exists too.
+resource "aws_security_group_rule" "vpc_endpoint_ingress_from_calibration_sandbox" {
+  count = (var.create_macro_sandbox_resources && var.create_calibration_sandbox_resources) ? 1 : 0
+
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.calibration_sandbox_lambda[0].id
+  security_group_id        = aws_security_group.macro_sandbox_vpc_endpoints[0].id
+  description              = "Allow Lambda calibration-sandbox to reach VPC endpoints"
+}
 # ---------------
 # Public Subnets
 # ---------------

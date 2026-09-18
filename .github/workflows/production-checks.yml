@@ -63,6 +63,20 @@ jobs:
           trivyignores: apps/macro-sandbox/functions/${{ matrix.language }}/.trivyignore.yaml
           use-gha-cache: "false"
 
+  calibration-sandbox:
+    name: Docker Build (Calibration Sandbox)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || inputs.is-dependabot || contains(fromJSON(inputs.affected-apps), 'calibration-sandbox')
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/docker-build-check
+        with:
+          image-name: calibration-sandbox:pr-check
+          dockerfile: apps/calibration-sandbox/functions/python/Dockerfile
+          context: apps/calibration-sandbox
+          trivyignores: apps/calibration-sandbox/functions/python/.trivyignore.yaml
+          use-gha-cache: "false"
+
   web-opennext:
     name: OpenNext Build (Web)
     runs-on: ubuntu-latest
