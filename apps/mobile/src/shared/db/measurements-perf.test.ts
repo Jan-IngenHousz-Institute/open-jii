@@ -381,6 +381,21 @@ async function timeAsync<T>(fn: () => Promise<T>): Promise<{ result: T; ms: numb
   return { result, ms: performance.now() - t0 };
 }
 
+/**
+ * Lowest of `runs` timings. Contention only ever adds time, so the minimum is the
+ * closest estimate of the real cost. A single `time()` is fine for the diagnostic
+ * tables, but a sample that happened to span a scheduler preemption is not a number
+ * a regression gate can divide: on a loaded runner a 2 ms measurement inflates ~10x
+ * while a 13 ms one inflates ~2x, which collapses the ratio between them.
+ */
+function bestOf(runs: number, fn: () => unknown): number {
+  let best = Infinity;
+  for (let i = 0; i < runs; i++) {
+    best = Math.min(best, time(fn).ms);
+  }
+  return best;
+}
+
 function report(rows: { scenario: string; ms: number; note: string }[]) {
   const maxLabel = Math.max(...rows.map((r) => r.scenario.length));
   console.log("\n" + "─".repeat(80));
@@ -878,6 +893,10 @@ describe("Scenario H — SCALE: full pipeline @ multiple row counts", () => {
 // measured total gap clear the floor so Gate 3's ratio is stable.
 const COUNTS_N = 500;
 const COUNTS_ITERATIONS = 200;
+// ITERATIONS alone was not enough: the indexed side still totals ~2 ms, under one
+// scheduler quantum, so a single preemption inflated it ~10x and inverted Gate 3 on
+// a loaded runner. Take the best of several trials as well.
+const COUNTS_TRIALS = 5;
 
 describe("Scenario I — countMeasurementsByStatus", () => {
   let dbNoIdx: ReturnType<typeof Database>;
@@ -904,10 +923,13 @@ describe("Scenario I — countMeasurementsByStatus", () => {
     stmtNoIdx.all();
     stmtIdx.all();
 
-    const { ms: msNoIdx } = time(() => {
+    // Best-of, not single-shot: this pair feeds the tightest regression gate in the
+    // file (2x, against a real speedup of ~5x), and the indexed side is only ~10 µs
+    // per query, so one preemption during it is enough to invert the comparison.
+    const msNoIdx = bestOf(COUNTS_TRIALS, () => {
       for (let i = 0; i < COUNTS_ITERATIONS; i++) stmtNoIdx.all();
     });
-    const { ms: msIdx } = time(() => {
+    const msIdx = bestOf(COUNTS_TRIALS, () => {
       for (let i = 0; i < COUNTS_ITERATIONS; i++) stmtIdx.all();
     });
 
