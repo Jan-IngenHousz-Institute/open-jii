@@ -23,7 +23,7 @@ on:
         type: boolean
         default: false
       deploy_app:
-        description: "Comma-separated apps to force deploy (e.g. web,backend). Leave empty for change detection. Options: web, backend, migration, databricks, docs, macro-sandbox"
+        description: "Comma-separated apps to force deploy (e.g. web,backend). Leave empty for change detection. Options: web, backend, migration, databricks, docs, macro-sandbox, calibration-sandbox"
         required: false
         type: string
         default: ""
