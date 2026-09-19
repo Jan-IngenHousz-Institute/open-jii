@@ -8,13 +8,23 @@ import dlt
 from pyspark.sql import functions as F
 
 from data_repair import apply_inline_repairs
-from enrich.macro_execution import make_execute_macro_udf
+from enrich.macro_execution import distribute_macro_execution_rows, make_execute_macro_udf
 from openjii.centrum import (
     EXPERIMENT_MACRO_DATA_TABLE,
     EXPERIMENT_RAW_DATA_TABLE,
     MACRO_ID_UUID_PATTERN,
 )
 from openjii.centrum.runtime import ENVIRONMENT
+
+# COMMAND ----------
+
+# The incident workload put 184,358 rows into two HTTP-bound tasks, including a
+# 118,825-row straggler. A 128-way round-robin shuffle makes that measured batch
+# roughly 1,441 rows per task on an even distribution. This is not a fixed
+# bound: task size still grows with the micro-batch. HTTP concurrency remains
+# one to preserve backend load.
+MACRO_EXECUTION_PARTITIONS = 128
+MACRO_HTTP_MAX_CONCURRENCY = 1
 
 # COMMAND ----------
 
@@ -34,7 +44,11 @@ from openjii.centrum.runtime import ENVIRONMENT
 def experiment_macro_data():
     """Process macros with VARIANT output column."""
 
-    sandbox_macro_udf = make_execute_macro_udf(ENVIRONMENT, dbutils)
+    sandbox_macro_udf = make_execute_macro_udf(
+        ENVIRONMENT,
+        dbutils,
+        max_concurrency=MACRO_HTTP_MAX_CONCURRENCY,
+    )
 
     base_df = (
         dlt.read_stream(EXPERIMENT_RAW_DATA_TABLE)
@@ -93,6 +107,12 @@ def experiment_macro_data():
     return (
         base_df
         .transform(lambda df: apply_inline_repairs(df, EXPERIMENT_MACRO_DATA_TABLE))
+        .transform(
+            lambda df: distribute_macro_execution_rows(
+                df,
+                MACRO_EXECUTION_PARTITIONS,
+            )
+        )
         # NULL.rlike(...) returns NULL (treated as false in F.when), so the
         # explicit isNotNull() guard is required, otherwise null macro_ids
         # would silently land with no output and no error.

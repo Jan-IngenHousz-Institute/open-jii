@@ -18,6 +18,7 @@ import json
 from typing import Any
 
 import pandas as pd
+from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType, StructField, StructType
 
@@ -81,11 +82,25 @@ MACRO_RESULT_SCHEMA = StructType(
 )
 
 
+def distribute_macro_execution_rows(df: DataFrame, partition_count: int) -> DataFrame:
+    """Spread macro rows across more, smaller Spark tasks.
+
+    This is a task-size reduction, not a row or duration bound: task size still
+    grows when a streaming micro-batch grows. ``repartition`` uses a shuffle so
+    physical row order is intentionally unspecified, as it already is for a
+    Spark table; stable row ids and macro results are unchanged.
+    """
+    if partition_count < 1:
+        raise ValueError("partition_count must be at least 1")
+    return df.repartition(partition_count)
+
+
 def make_execute_macro_udf(
     environment: str,
     dbutils,
     timeout: int = 30,
     max_batch_size: int = 25,
+    max_concurrency: int = 1,
     scope_override: str | None = None,
 ):
     """
@@ -105,6 +120,8 @@ def make_execute_macro_udf(
         dbutils: Databricks dbutils for secrets retrieval.
         timeout: Per-Lambda timeout in seconds (1-60).
         max_batch_size: Max items per HTTP request to backend.
+        max_concurrency: Maximum simultaneous backend requests per Spark task.
+            The default of one preserves existing backend load.
         scope_override: Override the secrets scope name (default: node-webhook-secret-scope-{env}).
 
     Returns:
@@ -169,6 +186,7 @@ def make_execute_macro_udf(
                 items=items,
                 timeout=timeout,
                 max_batch_size=max_batch_size,
+                max_concurrency=max_concurrency,
             )
         except BackendIntegrationError as e:
             # Mark all items in this batch as failed

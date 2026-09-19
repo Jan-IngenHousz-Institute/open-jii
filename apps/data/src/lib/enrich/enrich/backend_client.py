@@ -8,7 +8,9 @@ from Databricks pipelines.
 import hashlib
 import hmac
 import json
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from urllib.parse import urljoin
 
@@ -83,7 +85,12 @@ class BackendClient:
 
         return signature
 
-    def _make_request(self, endpoint: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def _make_request(
+        self,
+        endpoint: str,
+        payload: dict[str, Any],
+        session: requests.Session | None = None,
+    ) -> dict[str, Any]:
         """
         Make authenticated request to backend API.
 
@@ -119,7 +126,12 @@ class BackendClient:
             canonical_payload = json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
             # Use data with explicit content-type to ensure the exact canonical format is preserved
-            response = self.session.post(url, data=canonical_payload, headers=headers, timeout=self.timeout)
+            response = (session or self.session).post(
+                url,
+                data=canonical_payload,
+                headers=headers,
+                timeout=self.timeout,
+            )
 
             response.raise_for_status()
 
@@ -266,6 +278,7 @@ class BackendClient:
         items: list[dict[str, Any]],
         timeout: int = 30,
         max_batch_size: int = 500,
+        max_concurrency: int = 1,
     ) -> dict[str, Any]:
         """
         Execute macros via the backend batch endpoint.
@@ -279,6 +292,8 @@ class BackendClient:
                 workbook_version_id/context.
             timeout: Per-Lambda timeout in seconds (1-60).
             max_batch_size: Max items per HTTP request (default 500, API limit 5000).
+            max_concurrency: Maximum simultaneous HTTP requests. Defaults to one
+                to preserve the existing backend load.
 
         Returns:
             Dict with 'results' list and optional 'errors' list.
@@ -289,6 +304,10 @@ class BackendClient:
         """
         if not items:
             return {"results": []}
+        if max_batch_size < 1:
+            raise ValueError("max_batch_size must be at least 1")
+        if max_concurrency < 1:
+            raise ValueError("max_concurrency must be at least 1")
 
         # Keep each HTTP chunk as homogeneous as possible. A macro UUID may
         # point at different immutable code across workbook versions.
@@ -300,28 +319,30 @@ class BackendClient:
             ),
         )
 
-        all_results: list[dict[str, Any]] = []
-        all_errors: list[str] = []
+        batches = [sorted_items[i : i + max_batch_size] for i in range(0, len(sorted_items), max_batch_size)]
 
-        # Chunk into batches to avoid payload size limits
-        for i in range(0, len(sorted_items), max_batch_size):
-            batch = sorted_items[i : i + max_batch_size]
+        def execute_chunk(
+            batch: list[dict[str, Any]],
+            session: requests.Session | None = None,
+        ) -> tuple[list[dict[str, Any]], list[str]]:
             payload = {"items": batch, "timeout": timeout}
 
             try:
-                result = self._make_request(self.WEBHOOK_MACRO_BATCH_PATH, payload)
-                all_results.extend(result.get("results", []))
-                batch_errors = result.get("errors", [])
-                if batch_errors:
-                    all_errors.extend(batch_errors)
+                result = self._make_request(
+                    self.WEBHOOK_MACRO_BATCH_PATH,
+                    payload,
+                    session=session,
+                )
+                return result.get("results", []), result.get("errors", [])
             except BackendIntegrationError as e:
                 # Don't lose other chunks: synthesize per-item failure entries
                 # so the caller can map them back via (id, macro_id), and keep
                 # iterating. A transient 5xx on one chunk shouldn't take down
                 # the rest of the partition.
                 chunk_error = f"Chunk failed: {str(e)[:500]}"
+                failures = []
                 for item in batch:
-                    all_results.append(
+                    failures.append(
                         {
                             "id": item.get("id"),
                             "macro_id": item.get("macro_id"),
@@ -329,9 +350,43 @@ class BackendClient:
                             "error": chunk_error,
                         }
                     )
-                all_errors.append(chunk_error)
+                return failures, [chunk_error]
             except Exception as e:
                 raise BackendIntegrationError(f"Unexpected error in macro batch execution: {e!s}") from e
+
+        if max_concurrency == 1:
+            chunk_responses = [execute_chunk(batch) for batch in batches]
+        else:
+            worker_state = threading.local()
+            worker_sessions: list[requests.Session] = []
+            worker_sessions_lock = threading.Lock()
+
+            def execute_chunk_in_worker(
+                batch: list[dict[str, Any]],
+            ) -> tuple[list[dict[str, Any]], list[str]]:
+                session = getattr(worker_state, "session", None)
+                if session is None:
+                    session = self._create_session()
+                    worker_state.session = session
+                    with worker_sessions_lock:
+                        worker_sessions.append(session)
+                return execute_chunk(batch, session=session)
+
+            try:
+                with ThreadPoolExecutor(
+                    max_workers=min(max_concurrency, len(batches)),
+                    thread_name_prefix="macro-http",
+                ) as executor:
+                    # executor.map returns in input order even when later chunks
+                    # finish first, preserving the sequential implementation's
+                    # deterministic result and error ordering.
+                    chunk_responses = list(executor.map(execute_chunk_in_worker, batches))
+            finally:
+                for session in worker_sessions:
+                    session.close()
+
+        all_results = [result for results, _ in chunk_responses for result in results]
+        all_errors = [error for _, errors in chunk_responses for error in errors]
 
         response: dict[str, Any] = {"results": all_results}
         if all_errors:
