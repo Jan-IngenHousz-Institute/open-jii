@@ -1,6 +1,7 @@
 import json
 import math
 from collections import Counter
+from uuid import uuid4
 
 import pandas as pd
 from enrich import macro_execution
@@ -165,6 +166,40 @@ def test_distribute_macro_execution_rows_preserves_small_batch_without_nonempty_
 
     assert sum(row_count for _, row_count, _ in summaries) == 31
     assert 1 <= len(summaries) <= 31
+
+
+def test_distribute_macro_execution_rows_executes_in_streaming_query(spark, tmp_path) -> None:
+    input_path = tmp_path / "macro-input"
+    checkpoint_path = tmp_path / "checkpoint"
+    schema = "id string, macro_id string, workbook_version_id string"
+    rows = [
+        (f"row-{index:03d}", f"macro-{index % 3}", None if index % 2 else "version-1") for index in range(96)
+    ]
+    spark.createDataFrame(rows, schema).write.mode("overwrite").parquet(str(input_path))
+
+    source = spark.readStream.schema(schema).parquet(str(input_path))
+    distributed = distribute_macro_execution_rows(source, 16)
+    query_name = f"macro_range_stream_{uuid4().hex}"
+
+    assert source.isStreaming
+    assert distributed.isStreaming
+
+    query = (
+        distributed.writeStream.format("memory")
+        .queryName(query_name)
+        .outputMode("append")
+        .option("checkpointLocation", str(checkpoint_path))
+        .trigger(availableNow=True)
+        .start()
+    )
+    try:
+        assert query.awaitTermination(30)
+        output = spark.table(query_name)
+        assert output.count() == len(rows)
+        assert {(row.id, row.macro_id, row.workbook_version_id) for row in output.collect()} == set(rows)
+    finally:
+        query.stop()
+        spark.catalog.dropTempView(query_name)
 
 
 def test_macro_udf_forwards_http_limits_and_preserves_row_order(monkeypatch: MonkeyPatch) -> None:
