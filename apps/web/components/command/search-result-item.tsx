@@ -2,7 +2,7 @@
 
 import { organizationTypeLabelKey } from "@/components/organizations/organization-labels";
 import { stripHtml } from "@/util/strip-html";
-import { BookOpen, Building2, Code, FileSliders, Leaf } from "lucide-react";
+import { BookOpen, Building2, Code, FileSliders, Leaf, Microscope } from "lucide-react";
 import * as React from "react";
 
 import { zOrganizationType } from "@repo/api/domains/organization/organization.schema";
@@ -16,6 +16,7 @@ const ICONS: Record<SearchResultType, React.ComponentType<{ className?: string }
   protocol: FileSliders,
   macro: Code,
   workbook: BookOpen,
+  calibration_definition: Microscope,
   organization: Building2,
 };
 

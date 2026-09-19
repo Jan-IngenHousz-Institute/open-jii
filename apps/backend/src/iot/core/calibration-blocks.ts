@@ -1,0 +1,121 @@
+import type {
+  AppliedCalibrationBlocks,
+  CalibrationBlocks,
+  CalibrationOutputSchema,
+  CoefficientSpec,
+} from "@repo/api/domains/iot/calibration/iot-calibration.schema";
+
+/**
+ * Validate produced blocks against the output schema. Only computed blocks carry
+ * coefficients; rejected and skipped ones are recorded outcomes, not violations.
+ */
+export function validateCalibrationBlocks(
+  blocks: CalibrationBlocks,
+  outputSchema: CalibrationOutputSchema,
+): string[] {
+  const reasons: string[] = [];
+  const specByBlock = new Map(Object.entries(outputSchema.blocks));
+
+  for (const name of specByBlock.keys()) {
+    if (!(name in blocks)) {
+      reasons.push(`Block '${name}' is required by the output schema but missing`);
+    }
+  }
+  for (const name of Object.keys(blocks)) {
+    if (!specByBlock.has(name)) {
+      reasons.push(`Block '${name}' is not declared in the output schema`);
+    }
+  }
+
+  for (const [blockName, block] of Object.entries(blocks)) {
+    const coefficientSpecs = specByBlock.get(blockName);
+    if (!coefficientSpecs) {
+      continue;
+    }
+    if (block.status !== "computed" || !block.coefficients) {
+      continue;
+    }
+
+    const specByCoefficient = new Map(Object.entries(coefficientSpecs));
+    const coefficients = block.coefficients;
+
+    for (const name of specByCoefficient.keys()) {
+      if (!(name in coefficients)) {
+        reasons.push(`Coefficient '${blockName}.${name}' is required but missing`);
+      }
+    }
+    for (const [name, value] of Object.entries(coefficients)) {
+      const coefficientSpec = specByCoefficient.get(name);
+      if (!coefficientSpec) {
+        reasons.push(`Coefficient '${blockName}.${name}' is not declared in the output schema`);
+        continue;
+      }
+      reasons.push(...checkCoefficient(`${blockName}.${name}`, value, coefficientSpec));
+    }
+    // A failed quality record is advisory: the thresholds are the platform's until a
+    // scientist supplies real ones, so it travels with the block and the reviewer decides.
+  }
+
+  return reasons;
+}
+
+/** The blocks approval applies: the computed ones, stripped of their status. */
+export function appliedCalibrationBlocks(blocks: CalibrationBlocks): AppliedCalibrationBlocks {
+  const applied: AppliedCalibrationBlocks = {};
+  for (const [name, block] of Object.entries(blocks)) {
+    if (block.status === "computed" && block.coefficients) {
+      applied[name] = {
+        coefficients: block.coefficients,
+        ...(block.fit ? { fit: block.fit } : {}),
+        ...(block.quality ? { quality: block.quality } : {}),
+      };
+    }
+  }
+  return applied;
+}
+
+/** Whether any block produced coefficients; a run with none is a failure. */
+export function hasComputedBlock(blocks: CalibrationBlocks): boolean {
+  return Object.values(blocks).some((block) => block.status === "computed");
+}
+
+function checkCoefficient(
+  label: string,
+  value: number | number[],
+  spec: CoefficientSpec,
+): string[] {
+  if (spec.type === "number") {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      return [`Coefficient '${label}' must be a finite number`];
+    }
+    const reasons: string[] = [];
+    if (spec.min !== undefined && value < spec.min) {
+      reasons.push(`Coefficient '${label}' is below the allowed minimum ${spec.min}`);
+    }
+    if (spec.max !== undefined && value > spec.max) {
+      reasons.push(`Coefficient '${label}' is above the allowed maximum ${spec.max}`);
+    }
+    return reasons;
+  }
+
+  const isIntegerArray = spec.type === "integer_array";
+  if (!Array.isArray(value)) {
+    return [`Coefficient '${label}' must be ${isIntegerArray ? "an integer" : "a number"} array`];
+  }
+  if (value.length !== spec.length) {
+    return [`Coefficient '${label}' must have exactly ${spec.length} entries`];
+  }
+  const reasons: string[] = [];
+  value.forEach((entry, index) => {
+    if (isIntegerArray && !Number.isInteger(entry)) {
+      reasons.push(`Coefficient '${label}[${index}]' must be an integer`);
+    } else if (!Number.isFinite(entry)) {
+      reasons.push(`Coefficient '${label}[${index}]' must be a finite number`);
+    } else if (spec.min !== undefined && entry < spec.min) {
+      reasons.push(`Coefficient '${label}[${index}]' is below the allowed minimum`);
+    } else if (spec.max !== undefined && entry > spec.max) {
+      reasons.push(`Coefficient '${label}[${index}]' is above the allowed maximum`);
+    }
+  });
+  return reasons;
+}
