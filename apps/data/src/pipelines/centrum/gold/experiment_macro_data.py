@@ -19,10 +19,11 @@ from openjii.centrum.runtime import ENVIRONMENT
 # COMMAND ----------
 
 # The incident workload put 184,358 rows into two HTTP-bound tasks, including a
-# 118,825-row straggler. A 128-way round-robin shuffle makes that measured batch
-# roughly 1,441 rows per task on an even distribution. This is not a fixed
-# bound: task size still grows with the micro-batch. Backend requests remain
-# sequential within each active Spark task.
+# 118,825-row straggler. A 128-way range shuffle by macro, workbook version, and
+# row id kept measured production samples short while avoiding the HTTP-chunk
+# fragmentation caused by round-robin distribution. This is not a fixed bound:
+# sampled boundaries vary, equal keys can remain skewed, and task size still
+# grows with the micro-batch. Requests remain sequential within each task.
 MACRO_EXECUTION_PARTITIONS = 128
 
 # This is a conditional request-start bound, not a distributed rate limiter.

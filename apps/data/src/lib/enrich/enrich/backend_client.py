@@ -9,6 +9,7 @@ import hashlib
 import hmac
 import json
 import time
+from collections import defaultdict, deque
 from typing import Any
 from urllib.parse import urljoin
 
@@ -341,17 +342,31 @@ class BackendClient:
                     self.WEBHOOK_MACRO_BATCH_PATH,
                     payload,
                 )
-                # The backend reassembles group results into request order.
-                # Pair them with the captured source positions so results from
-                # multiple homogeneous POSTs return in caller input order.
-                indexed_results = [
-                    (source_index, result)
-                    for (source_index, _), result in zip(
-                        batch,
-                        response.get("results", []),
-                        strict=False,
+                returned_results = response.get("results", [])
+                if len(returned_results) != len(batch):
+                    print(
+                        "[BackendClient] Macro batch response cardinality mismatch: "
+                        f"expected {len(batch)} results, received {len(returned_results)}"
                     )
-                ]
+
+                # Do not assume the backend response order. Queue source
+                # positions per key so duplicate macro entries retain their
+                # multiplicity instead of overwriting each other in a dict.
+                source_positions: dict[tuple[Any, Any], deque[int]] = defaultdict(deque)
+                for source_index, item in batch:
+                    source_positions[(item.get("id"), item.get("macro_id"))].append(source_index)
+
+                indexed_results = []
+                for result in returned_results:
+                    key = (result.get("id"), result.get("macro_id"))
+                    positions = source_positions.get(key)
+                    if positions:
+                        indexed_results.append((positions.popleft(), result))
+                    else:
+                        # Preserve unexpected backend results after all known
+                        # inputs rather than silently dropping them.
+                        print(f"[BackendClient] Unexpected macro result key: {key}")
+                        indexed_results.append((len(items), result))
                 return indexed_results, response.get("errors") or []
             except BackendIntegrationError as e:
                 # Don't lose other chunks: synthesize per-item failure entries

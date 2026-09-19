@@ -191,7 +191,7 @@ def test_execute_macro_batch_uses_homogeneous_chunks_and_restores_input_order(
                             "success": True,
                             "output": {"source": item["id"]},
                         }
-                        for item in payload["items"]
+                        for item in reversed(payload["items"])
                     ],
                 }
             ),
@@ -221,6 +221,29 @@ def test_execute_macro_batch_uses_homogeneous_chunks_and_restores_input_order(
         assert len(sent) <= 2
         assert len({(item["macro_id"], item.get("workbook_version_id")) for item in sent}) == 1
     assert [item["id"] for item in result["results"]] == [item["id"] for item in items]
+
+
+@responses.activate
+def test_execute_macro_batch_reports_response_cardinality_mismatch(
+    client: BackendClient,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    responses.add(
+        responses.POST,
+        f"{BASE_URL}/api/v1/macros/execute-batch",
+        json={"success": True, "results": []},
+        status=200,
+    )
+
+    response = client.execute_macro_batch(
+        [
+            {"id": "row-1", "macro_id": "macro", "data": {}},
+            {"id": "row-2", "macro_id": "macro", "data": {}},
+        ]
+    )
+
+    assert response["results"] == []
+    assert "expected 2 results, received 0" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize("status", [429, 503])
