@@ -79,13 +79,16 @@ jobs:
         with:
           node-version: "24"
 
-      # apps/data tests through uv; the regenerate path runs the full test suite.
+      # apps/data and apps/calibration-sandbox test through uv; the regenerate
+      # path runs the full test suite.
       - name: Setup uv (only if regenerating coverage)
         if: steps.download.outcome != 'success'
         uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
         with:
           enable-cache: true
-          cache-dependency-glob: "apps/data/uv.lock"
+          cache-dependency-glob: |
+            apps/data/uv.lock
+            apps/calibration-sandbox/uv.lock
 
       - name: Regenerate coverage if artifacts not found
         if: steps.download.outcome != 'success'

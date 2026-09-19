@@ -229,4 +229,86 @@ describe("AwsLambdaService", () => {
       expect(result.error.code).toBe("AWS_OPERATION_FAILED");
     });
   });
+
+  describe("local endpoint", () => {
+    const LOCAL = "http://localhost:9004";
+    const emptyPayload = () => new TextEncoder().encode(JSON.stringify({}));
+
+    function clientBehind(callIndex: number): LambdaClient {
+      const client: unknown = lambdaMock.commandCalls(InvokeCommand)[callIndex].thisValue;
+      if (!(client instanceof LambdaClient)) {
+        throw new Error("InvokeCommand was not sent through a LambdaClient");
+      }
+      return client;
+    }
+
+    it("sends the invoke through a client bound to the endpoint, once, with placeholder credentials", async () => {
+      lambdaMock.on(InvokeCommand).resolves({ StatusCode: 200, Payload: emptyPayload() });
+
+      const result = await service.invoke({
+        functionName: "function",
+        payload: {},
+        endpoint: LOCAL,
+      });
+
+      assertSuccess(result);
+      const client = clientBehind(0);
+      await expect(client.config.endpoint?.()).resolves.toEqual(
+        expect.objectContaining({ hostname: "localhost", port: 9004 }),
+      );
+      await expect(client.config.maxAttempts()).resolves.toBe(1);
+      await expect(client.config.credentials()).resolves.toEqual(
+        expect.objectContaining({ accessKeyId: "local" }),
+      );
+    });
+
+    it("reuses one client per endpoint and keeps AWS invokes on the default client", async () => {
+      lambdaMock.on(InvokeCommand).resolves({ StatusCode: 200, Payload: emptyPayload() });
+
+      await service.invoke({ functionName: "function", payload: {}, endpoint: LOCAL });
+      await service.invoke({ functionName: "function", payload: {}, endpoint: LOCAL });
+      await service.invoke({
+        functionName: "function",
+        payload: {},
+        endpoint: "http://localhost:9005",
+      });
+      await service.invoke({ functionName: "my-function", payload: {} });
+
+      expect(clientBehind(1)).toBe(clientBehind(0));
+      expect(clientBehind(2)).not.toBe(clientBehind(0));
+      expect(clientBehind(3)).not.toBe(clientBehind(0));
+      await expect(clientBehind(3).config.maxAttempts()).resolves.toBe(5);
+    });
+
+    it("explains a refused connection to a local endpoint", async () => {
+      lambdaMock
+        .on(InvokeCommand)
+        .rejects(
+          Object.assign(new Error("connect ECONNREFUSED ::1:9004"), { code: "ECONNREFUSED" }),
+        );
+
+      const result = await service.invoke({
+        functionName: "function",
+        payload: {},
+        endpoint: LOCAL,
+      });
+
+      assertFailure(result);
+      expect(result.error.message).toBe(
+        `Lambda endpoint ${LOCAL} refused the connection; is the local container running?`,
+      );
+      expect(result.error.code).toBe("AWS_OPERATION_FAILED");
+    });
+
+    it("leaves a refused connection to AWS as the SDK reported it", async () => {
+      lambdaMock
+        .on(InvokeCommand)
+        .rejects(Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" }));
+
+      const result = await service.invoke({ functionName: "my-function", payload: {} });
+
+      assertFailure(result);
+      expect(result.error.message).toBe("connect ECONNREFUSED");
+    });
+  });
 });
