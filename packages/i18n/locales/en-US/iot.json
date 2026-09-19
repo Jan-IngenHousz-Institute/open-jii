@@ -989,7 +989,8 @@
         "notWritable": "The platform has no console command for {{coefficients}}. A run producing these is recorded, but they never reach the device.",
         "describePlaceholder": "Say what this bench measures and against what.",
         "readOnly": "You can read this calibration but not change it.",
-        "notSaving": "Not saving while the definition is incomplete."
+        "notSaving": "Not saving while the definition is incomplete.",
+        "verifyOptional": "optional"
       },
       "rig": {
         "hint": "Each instrument takes a serial port of its own at the bench. Renaming a role renames it in every step that uses it.",
@@ -1123,6 +1124,14 @@
         "firmwareHint": "A run is refused below this. Older firmware answers unknown commands with numbers that look like data.",
         "firmwareInvalid": "Version numbers only, like 1.03 or 1.1.3.",
         "saved": "Calibration updated"
+      },
+      "seam": {
+        "produces": "The capture records",
+        "submits": "The fit submits",
+        "optional": "may be absent",
+        "reachesDevice": "reaches the device",
+        "recordedOnly": "recorded only",
+        "recordsNothing": "No step records a reading yet, so the fit receives nothing."
       },
       "phase": {
         "setUp": "Set up",

@@ -989,7 +989,8 @@
         "notWritable": "Für {{coefficients}} gibt es keinen Konsolenbefehl. Ein Lauf wird protokolliert, die Werte erreichen das Gerät aber nie.",
         "describePlaceholder": "Beschreiben, was dieser Prüfstand misst und wogegen.",
         "readOnly": "Sie können diese Kalibrierung lesen, aber nicht ändern.",
-        "notSaving": "Wird nicht gespeichert, solange die Definition unvollständig ist."
+        "notSaving": "Wird nicht gespeichert, solange die Definition unvollständig ist.",
+        "verifyOptional": "optional"
       },
       "rig": {
         "hint": "Jedes Instrument belegt am Messplatz einen eigenen seriellen Anschluss. Eine Rolle umzubenennen benennt sie in jedem Schritt um, der sie verwendet.",
@@ -1123,6 +1124,14 @@
         "firmwareHint": "Darunter wird ein Lauf abgelehnt. Ältere Firmware beantwortet unbekannte Befehle mit Zahlen, die wie Messwerte aussehen.",
         "firmwareInvalid": "Nur Versionsnummern, etwa 1.03 oder 1.1.3.",
         "saved": "Kalibrierung aktualisiert"
+      },
+      "seam": {
+        "produces": "Die Aufnahme erfasst",
+        "submits": "Der Fit liefert",
+        "optional": "kann fehlen",
+        "reachesDevice": "erreicht das Gerät",
+        "recordedOnly": "nur erfasst",
+        "recordsNothing": "Noch erfasst kein Schritt eine Messung, der Fit erhält also nichts."
       },
       "phase": {
         "setUp": "Aufbau",

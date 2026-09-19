@@ -989,7 +989,8 @@
         "notWritable": "Het platform heeft geen console-opdracht voor {{coefficients}}. Een run wordt vastgelegd, maar deze waarden bereiken het apparaat nooit.",
         "describePlaceholder": "Beschrijf wat deze opstelling meet en waartegen.",
         "readOnly": "Je kunt deze kalibratie lezen maar niet wijzigen.",
-        "notSaving": "Wordt niet opgeslagen zolang de definitie onvolledig is."
+        "notSaving": "Wordt niet opgeslagen zolang de definitie onvolledig is.",
+        "verifyOptional": "optioneel"
       },
       "rig": {
         "hint": "Elk instrument krijgt aan de meetbank een eigen seriële poort. Een rol hernoemen hernoemt die in elke stap die hem gebruikt.",
@@ -1123,6 +1124,14 @@
         "firmwareHint": "Daaronder wordt een meting geweigerd. Oudere firmware beantwoordt onbekende commando's met getallen die op meetwaarden lijken.",
         "firmwareInvalid": "Alleen versienummers, zoals 1.03 of 1.1.3.",
         "saved": "Kalibratie bijgewerkt"
+      },
+      "seam": {
+        "produces": "De opname legt vast",
+        "submits": "De fit levert",
+        "optional": "kan ontbreken",
+        "reachesDevice": "bereikt het apparaat",
+        "recordedOnly": "alleen vastgelegd",
+        "recordsNothing": "Nog geen stap legt een meting vast, dus de fit krijgt niets."
       },
       "phase": {
         "setUp": "Opbouw",

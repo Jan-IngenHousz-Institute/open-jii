@@ -21,10 +21,14 @@ import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { CalibrationBlocksSeam } from "./calibration-blocks-seam";
 import { CalibrationDetailsSidebar } from "./calibration-details-sidebar";
 import { CalibrationFitCell } from "./calibration-fit-cell";
 import { CalibrationRigStrip } from "./calibration-rig-strip";
+import { CalibrationSeriesSeam } from "./calibration-series-seam";
+import { CalibrationStage } from "./calibration-stage";
 import { CalibrationStepsEditor } from "./calibration-steps-editor";
+import { producedSeries } from "./produced-series";
 
 /** The parts an author edits in place; the rest of the definition saves on its own. */
 interface DefinitionDraft {
@@ -176,22 +180,16 @@ export function CalibrationDefinitionDetail() {
           </Alert>
         )}
 
-        <section className="space-y-2">
-          <h2 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-            {t("iot.calibration.detail.rig")}
-          </h2>
+        <CalibrationStage index={1} title={t("iot.calibration.detail.rig")}>
           <CalibrationRigStrip
             procedure={current.captureProcedure}
             family={definition.family}
             canEdit={canEdit}
             onChange={editProcedure}
           />
-        </section>
+        </CalibrationStage>
 
-        <section className="space-y-2">
-          <h2 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-            {t("iot.calibration.detail.steps")}
-          </h2>
+        <CalibrationStage index={2} title={t("iot.calibration.detail.steps")}>
           <CalibrationStepsEditor
             procedure={current.captureProcedure}
             phase="steps"
@@ -199,25 +197,11 @@ export function CalibrationDefinitionDetail() {
             canEdit={canEdit}
             onChange={editProcedure}
           />
-        </section>
+        </CalibrationStage>
 
-        <section className="space-y-2">
-          <h2 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-            {t("iot.calibration.detail.verify")}
-          </h2>
-          <CalibrationStepsEditor
-            procedure={current.captureProcedure}
-            phase="verify"
-            family={definition.family}
-            canEdit={canEdit}
-            onChange={editProcedure}
-          />
-        </section>
+        <CalibrationSeriesSeam series={producedSeries(current.captureProcedure, "steps")} />
 
-        <section className="space-y-2">
-          <h2 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-            {t("iot.calibration.detail.script")}
-          </h2>
+        <CalibrationStage index={3} title={t("iot.calibration.detail.script")}>
           <CalibrationFitCell
             script={current.script}
             outputSchema={current.outputSchema}
@@ -226,7 +210,23 @@ export function CalibrationDefinitionDetail() {
             onScriptChange={editScript}
             onSchemaChange={editOutputSchema}
           />
-        </section>
+        </CalibrationStage>
+
+        <CalibrationBlocksSeam outputSchema={current.outputSchema} family={definition.family} />
+
+        <CalibrationStage
+          index={4}
+          title={t("iot.calibration.detail.verify")}
+          note={t("iot.calibration.detail.verifyOptional")}
+        >
+          <CalibrationStepsEditor
+            procedure={current.captureProcedure}
+            phase="verify"
+            family={definition.family}
+            canEdit={canEdit}
+            onChange={editProcedure}
+          />
+        </CalibrationStage>
       </div>
     </div>
   );
