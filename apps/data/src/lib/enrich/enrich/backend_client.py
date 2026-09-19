@@ -293,7 +293,7 @@ class BackendClient:
             timeout: Per-Lambda timeout in seconds (1-60).
             max_batch_size: Max items per HTTP request (default 500, API limit 5000).
             max_concurrency: Maximum simultaneous HTTP requests. Defaults to one
-                to preserve the existing backend load.
+                to preserve the existing per-task request behavior.
 
         Returns:
             Dict with 'results' list and optional 'errors' list.

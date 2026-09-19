@@ -22,7 +22,7 @@ from openjii.centrum.runtime import ENVIRONMENT
 # 118,825-row straggler. A 128-way round-robin shuffle makes that measured batch
 # roughly 1,441 rows per task on an even distribution. This is not a fixed
 # bound: task size still grows with the micro-batch. HTTP concurrency remains
-# one to preserve backend load.
+# one to avoid multiplying the request load within each active Spark task.
 MACRO_EXECUTION_PARTITIONS = 128
 MACRO_HTTP_MAX_CONCURRENCY = 1
 

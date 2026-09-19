@@ -121,7 +121,7 @@ def make_execute_macro_udf(
         timeout: Per-Lambda timeout in seconds (1-60).
         max_batch_size: Max items per HTTP request to backend.
         max_concurrency: Maximum simultaneous backend requests per Spark task.
-            The default of one preserves existing backend load.
+            The default of one preserves existing per-task request behavior.
         scope_override: Override the secrets scope name (default: node-webhook-secret-scope-{env}).
 
     Returns:
