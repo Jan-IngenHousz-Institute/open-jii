@@ -38,7 +38,7 @@ def raw_data():
         .option("streamName", KINESIS_STREAM_NAME)
         .option("initialPosition", "TRIM_HORIZON")
         .option("serviceCredential", SERVICE_CREDENTIAL_NAME)
-        .option("maxRecordsPerFetch", "25000")
+        .option("maxRecordsPerFetch", "10000")
         .load()
         .withColumn("ingestion_timestamp", F.current_timestamp())
         # Capture Kinesis metadata
