@@ -366,8 +366,9 @@ module "node_cluster_policy" {
       value = "r5d.large"
     }
     num_workers = {
-      type  = "fixed"
-      value = 1
+      type     = "range"
+      minValue = 1
+      maxValue = 4
     }
   })
 
@@ -689,7 +690,7 @@ module "centrum_pipeline" {
   serverless       = false
 
   node_type_id = "r5d.large"
-  num_workers  = 1
+  num_workers  = 4
   policy_id    = module.node_cluster_policy.policy_id
 
   run_as = {
