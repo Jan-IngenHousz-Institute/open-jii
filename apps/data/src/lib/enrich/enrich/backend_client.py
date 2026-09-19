@@ -333,7 +333,7 @@ class BackendClient:
                     payload,
                     session=session,
                 )
-                return result.get("results", []), result.get("errors", [])
+                return result.get("results", []), result.get("errors") or []
             except BackendIntegrationError as e:
                 # Don't lose other chunks: synthesize per-item failure entries
                 # so the caller can map them back via (id, macro_id), and keep
