@@ -117,14 +117,14 @@ export {
   findReading,
 } from "./instrument/interface";
 export { KiprimDcSource } from "./instrument/kiprim/instrument";
+export { MicroPythonParReference } from "./instrument/micropython-par/instrument";
+export type { MicroPythonParConfig } from "./instrument/micropython-par/instrument";
+export { MICROPYTHON_COMMANDS } from "./instrument/micropython-par/commands";
 export type { KiprimConfig } from "./instrument/kiprim/instrument";
 export { KIPRIM_COMMANDS, KIPRIM_LIMITS } from "./instrument/kiprim/commands";
 export { CalitoolSpectralBoard } from "./instrument/calitool/instrument";
 export type { CalitoolConfig } from "./instrument/calitool/instrument";
 export { CALITOOL_COMMANDS, CALITOOL_LIMITS } from "./instrument/calitool/commands";
-export { MicroPythonParReference } from "./instrument/micropython-par/instrument";
-export type { MicroPythonParConfig } from "./instrument/micropython-par/instrument";
-export { MICROPYTHON_COMMANDS } from "./instrument/micropython-par/commands";
 export { MiniParReference } from "./instrument/minipar-reference/instrument";
 export type { MiniParReferenceConfig } from "./instrument/minipar-reference/instrument";
 export {
@@ -133,11 +133,75 @@ export {
   benchInstrumentForHandshake,
 } from "./instrument/registry";
 export type { BenchInstrumentFactory, BenchIdentification } from "./instrument/registry";
+
+// What a definition may declare, summarised from the registries that decide it.
+export {
+  benchInstrumentSummaries,
+  familyCalibrationCapabilities,
+} from "./calibration/capabilities";
 export type {
-  AmbitParReading,
-  AmbitTempReading,
-  AmbitStreamEvents,
-} from "./driver/ambit/interface";
+  BenchInstrumentSummary,
+  DeviceSetpointSummary,
+  FamilyCalibrationCapabilities,
+  WritableCoefficient,
+} from "./calibration/capabilities";
+
+// Calibration write-back: approved coefficients become family console commands.
+export {
+  CALIBRATION_WRITERS,
+  canWriteCalibration,
+  writableCalibrationBlocks,
+  formatCoefficient,
+  writeCalibrationBlocks,
+} from "./calibration/write-back";
+export type {
+  AppliedCalibrationBlocks,
+  BlockReadback,
+  BlockWriters,
+  CalibrationWriteResults,
+  CoefficientValue,
+  CoefficientWriteResult,
+  CoefficientWriter,
+  FamilyCalibrationWriters,
+  WriteCalibrationOptions,
+} from "./calibration/write-back";
+
+// Capture procedures: the declared steps a calibration runs at a bench.
+export {
+  runCaptureProcedure,
+  runVerificationProcedure,
+  bindBenchInstrument,
+  shutdownRig,
+} from "./procedure/interpreter";
+export type {
+  ProcedureContext,
+  RigBinding,
+  ReadTarget,
+  SetpointTarget,
+} from "./procedure/interpreter";
+export { ProcedureAborted, ProcedureDeclined, ProcedureRigError } from "./procedure/operator";
+export type { OperatorPort, OperatorReading, ProcedureProgress } from "./procedure/operator";
+export {
+  requiredSeriesNames,
+  requiredRoles,
+  DUT_ROLE,
+  SWEEP_STIMULUS_COLUMN,
+} from "./procedure/types";
+
+// Setpoints the device under test applies itself, the sibling of a bench instrument's.
+export { DEVICE_SETPOINTS, bindDeviceSetpoints } from "./procedure/device-setpoints";
+export type { DeviceSetpoint } from "./procedure/device-setpoints";
+export type {
+  CaptureProcedure,
+  CaptureResult,
+  CapturePayload,
+  ProcedureStep,
+  ProcedureRead,
+  SeriesRow,
+  SeriesCell,
+  SetpointValue,
+} from "./procedure/types";
+
 export {
   parseAmbitBootDump,
   applyAmbitBootLine,
@@ -145,6 +209,11 @@ export {
   AMBIT_BOOT_DUMP_MAX_LINES,
 } from "./driver/ambit/device-info";
 export type { AmbitDeviceInfo, AmbitMetadata } from "./driver/ambit/device-info";
+export type {
+  AmbitParReading,
+  AmbitTempReading,
+  AmbitStreamEvents,
+} from "./driver/ambit/interface";
 
 // ── MiniPAR driver (LINE + JSON protocol modes) ─────
 export { MiniParDriver } from "./driver/minipar/driver";

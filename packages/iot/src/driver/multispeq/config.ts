@@ -37,6 +37,9 @@ export const MULTISPEQ_FRAMING = {
   CHECKSUM_LENGTH: 8,
 
   DEFAULT_TIMEOUT: 60_000,
+
+  /** Settle after a write the firmware does not answer, so the next one is not sent on top of it. */
+  SILENT_WRITE_SETTLE_MS: 50,
 } as const;
 
 /** Supported MultispeQ transport types */
