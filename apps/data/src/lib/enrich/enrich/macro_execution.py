@@ -15,9 +15,11 @@ ran unsandboxed code on Databricks workers.
 """
 
 import json
+from collections import defaultdict, deque
 from typing import Any
 
 import pandas as pd
+from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType, StructField, StructType
 
@@ -81,11 +83,33 @@ MACRO_RESULT_SCHEMA = StructType(
 )
 
 
+def distribute_macro_execution_rows(df: DataFrame, partition_count: int) -> DataFrame:
+    """Spread macro rows across more, smaller Spark tasks.
+
+    This is a task-size reduction, not a row or duration bound: task size still
+    grows when a streaming micro-batch grows. Range partitioning keeps macro and
+    workbook-version groups adjacent to reduce homogeneous HTTP-chunk
+    fragmentation; high-cardinality row ids still let large groups span tasks.
+    Sampled range boundaries can vary between runs, and equal full keys can
+    remain skewed. Physical row order is intentionally unspecified, as it
+    already is for a Spark table; stable row ids and macro results are unchanged.
+    """
+    if partition_count < 1:
+        raise ValueError("partition_count must be at least 1")
+    return df.repartitionByRange(
+        partition_count,
+        F.col("macro_id"),
+        F.coalesce(F.col("workbook_version_id"), F.lit("")),
+        F.col("id"),
+    )
+
+
 def make_execute_macro_udf(
     environment: str,
     dbutils,
     timeout: int = 30,
     max_batch_size: int = 25,
+    request_delay_seconds: float = 0,
     scope_override: str | None = None,
 ):
     """
@@ -105,6 +129,7 @@ def make_execute_macro_udf(
         dbutils: Databricks dbutils for secrets retrieval.
         timeout: Per-Lambda timeout in seconds (1-60).
         max_batch_size: Max items per HTTP request to backend.
+        request_delay_seconds: Full delay before every backend HTTP request.
         scope_override: Override the secrets scope name (default: node-webhook-secret-scope-{env}).
 
     Returns:
@@ -169,6 +194,7 @@ def make_execute_macro_udf(
                 items=items,
                 timeout=timeout,
                 max_batch_size=max_batch_size,
+                request_delay_seconds=request_delay_seconds,
             )
         except BackendIntegrationError as e:
             # Mark all items in this batch as failed
@@ -176,19 +202,24 @@ def make_execute_macro_udf(
                 errors[idx] = f"Backend API error: {e!s}"
             return pd.DataFrame({"result": results, "error": errors})
 
-        # Map results back by (id, macro_id) to handle multiple macros per row
-        result_by_key = {}
+        # Use FIFO queues rather than a plain dict: a workbook may list the
+        # same macro more than once, producing duplicate association keys that
+        # must retain one result per exploded row.
+        results_by_key: dict[tuple[Any, Any], deque[dict[str, Any]]] = defaultdict(deque)
         for r in response.get("results", []):
             rid = r.get("id")
             rmid = r.get("macro_id")
             if rid is not None:
-                result_by_key[(rid, rmid)] = r
+                results_by_key[(rid, rmid)].append(r)
 
         for item, df_idx in zip(items, idx_map, strict=True):
-            match = result_by_key.get((item["id"], item["macro_id"]))
-            if match is None:
+            matches = results_by_key.get((item["id"], item["macro_id"]))
+            if not matches:
                 errors[df_idx] = f"No result returned for item {item['id']}"
-            elif match.get("success"):
+                continue
+
+            match = matches.popleft()
+            if match.get("success"):
                 results[df_idx] = (
                     json.dumps(match["output"]) if "output" in match and match["output"] is not None else None
                 )

@@ -9,6 +9,7 @@ import hashlib
 import hmac
 import json
 import time
+from collections import defaultdict, deque
 from typing import Any
 from urllib.parse import urljoin
 
@@ -83,7 +84,12 @@ class BackendClient:
 
         return signature
 
-    def _make_request(self, endpoint: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def _make_request(
+        self,
+        endpoint: str,
+        payload: dict[str, Any],
+        session: requests.Session | None = None,
+    ) -> dict[str, Any]:
         """
         Make authenticated request to backend API.
 
@@ -119,7 +125,12 @@ class BackendClient:
             canonical_payload = json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
             # Use data with explicit content-type to ensure the exact canonical format is preserved
-            response = self.session.post(url, data=canonical_payload, headers=headers, timeout=self.timeout)
+            response = (session or self.session).post(
+                url,
+                data=canonical_payload,
+                headers=headers,
+                timeout=self.timeout,
+            )
 
             response.raise_for_status()
 
@@ -266,6 +277,7 @@ class BackendClient:
         items: list[dict[str, Any]],
         timeout: int = 30,
         max_batch_size: int = 500,
+        request_delay_seconds: float = 0,
     ) -> dict[str, Any]:
         """
         Execute macros via the backend batch endpoint.
@@ -279,6 +291,8 @@ class BackendClient:
                 workbook_version_id/context.
             timeout: Per-Lambda timeout in seconds (1-60).
             max_batch_size: Max items per HTTP request (default 500, API limit 5000).
+            request_delay_seconds: Full delay charged before every HTTP request,
+                including the first request made by a new client or task.
 
         Returns:
             Dict with 'results' list and optional 'errors' list.
@@ -289,49 +303,98 @@ class BackendClient:
         """
         if not items:
             return {"results": []}
+        if max_batch_size < 1:
+            raise ValueError("max_batch_size must be at least 1")
+        if request_delay_seconds < 0:
+            raise ValueError("request_delay_seconds must not be negative")
 
-        # Keep each HTTP chunk as homogeneous as possible. A macro UUID may
-        # point at different immutable code across workbook versions.
-        sorted_items = sorted(
-            items,
-            key=lambda item: (
+        # The backend makes one invokeLambda call for each macro + workbook-
+        # version group in a POST. Build chunks from one group only so one POST
+        # cannot fan out to several logical calls. Keep original positions
+        # because grouping changes request order but must not change the public
+        # result order.
+        groups: dict[tuple[str, str], list[tuple[int, dict[str, Any]]]] = {}
+        for index, item in enumerate(items):
+            key = (
                 item.get("macro_id") or "",
                 item.get("workbook_version_id") or "",
-            ),
-        )
+            )
+            groups.setdefault(key, []).append((index, item))
 
-        all_results: list[dict[str, Any]] = []
-        all_errors: list[str] = []
+        batches = [
+            group[start : start + max_batch_size]
+            for group in groups.values()
+            for start in range(0, len(group), max_batch_size)
+        ]
 
-        # Chunk into batches to avoid payload size limits
-        for i in range(0, len(sorted_items), max_batch_size):
-            batch = sorted_items[i : i + max_batch_size]
-            payload = {"items": batch, "timeout": timeout}
+        def execute_chunk(
+            batch: list[tuple[int, dict[str, Any]]],
+        ) -> tuple[list[tuple[int, dict[str, Any]]], list[str]]:
+            payload = {"items": [item for _, item in batch], "timeout": timeout}
 
             try:
-                result = self._make_request(self.WEBHOOK_MACRO_BATCH_PATH, payload)
-                all_results.extend(result.get("results", []))
-                batch_errors = result.get("errors", [])
-                if batch_errors:
-                    all_errors.extend(batch_errors)
+                # Charge even a new task/client's first request. A delay only
+                # between requests can be reset by rapid Spark task turnover
+                # and does not produce a fleet request-start bound.
+                if request_delay_seconds:
+                    time.sleep(request_delay_seconds)
+                response = self._make_request(
+                    self.WEBHOOK_MACRO_BATCH_PATH,
+                    payload,
+                )
+                returned_results = response.get("results", [])
+                if len(returned_results) != len(batch):
+                    print(
+                        "[BackendClient] Macro batch response cardinality mismatch: "
+                        f"expected {len(batch)} results, received {len(returned_results)}"
+                    )
+
+                # Do not assume the backend response order. Queue source
+                # positions per key so duplicate macro entries retain their
+                # multiplicity instead of overwriting each other in a dict.
+                source_positions: dict[tuple[Any, Any], deque[int]] = defaultdict(deque)
+                for source_index, item in batch:
+                    source_positions[(item.get("id"), item.get("macro_id"))].append(source_index)
+
+                indexed_results = []
+                for result in returned_results:
+                    key = (result.get("id"), result.get("macro_id"))
+                    positions = source_positions.get(key)
+                    if positions:
+                        indexed_results.append((positions.popleft(), result))
+                    else:
+                        # Preserve unexpected backend results after all known
+                        # inputs rather than silently dropping them.
+                        print(f"[BackendClient] Unexpected macro result key: {key}")
+                        indexed_results.append((len(items), result))
+                return indexed_results, response.get("errors") or []
             except BackendIntegrationError as e:
                 # Don't lose other chunks: synthesize per-item failure entries
                 # so the caller can map them back via (id, macro_id), and keep
                 # iterating. A transient 5xx on one chunk shouldn't take down
                 # the rest of the partition.
                 chunk_error = f"Chunk failed: {str(e)[:500]}"
-                for item in batch:
-                    all_results.append(
-                        {
-                            "id": item.get("id"),
-                            "macro_id": item.get("macro_id"),
-                            "success": False,
-                            "error": chunk_error,
-                        }
+                failures = []
+                for source_index, item in batch:
+                    failures.append(
+                        (
+                            source_index,
+                            {
+                                "id": item.get("id"),
+                                "macro_id": item.get("macro_id"),
+                                "success": False,
+                                "error": chunk_error,
+                            },
+                        )
                     )
-                all_errors.append(chunk_error)
+                return failures, [chunk_error]
             except Exception as e:
                 raise BackendIntegrationError(f"Unexpected error in macro batch execution: {e!s}") from e
+
+        chunk_responses = [execute_chunk(batch) for batch in batches]
+        indexed_results = [result for results, _ in chunk_responses for result in results]
+        all_results = [result for _, result in sorted(indexed_results, key=lambda pair: pair[0])]
+        all_errors = [error for _, errors in chunk_responses for error in errors]
 
         response: dict[str, Any] = {"results": all_results}
         if all_errors:
