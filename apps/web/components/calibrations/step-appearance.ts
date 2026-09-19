@@ -1,9 +1,6 @@
 /**
- * How each kind of step reads at a glance: its identity colour, its icon, and the one line
- * that stands for it when the cell is closed.
- *
- * The colours are the workbook cell tokens, for the same reason they exist there: six
- * categories that have to be told apart down a long document.
+ * How each kind of step reads at a glance. The colours are the workbook cell tokens, for
+ * the same reason they exist there: six categories told apart down a long document.
  */
 import { Hand, Microscope, SlidersHorizontal, Timer, TrendingUp } from "lucide-react";
 

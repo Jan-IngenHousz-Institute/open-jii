@@ -16,7 +16,6 @@ import { IotCalibrationRunRepository } from "../../../core/repositories/iot-cali
 import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 import { CreateCalibrationRunUseCase } from "./create-calibration-run";
 
-// The Ambit shape in miniature: one required sweep, one optional one.
 const PROCEDURE: CaptureProcedure = {
   instruments: [{ role: "dut" }],
   steps: [

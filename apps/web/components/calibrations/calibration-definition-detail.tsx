@@ -42,11 +42,9 @@ function toDraft(definition: CalibrationDefinition): DefinitionDraft {
 }
 
 /**
- * Why the page is not saving, in the contract's own words, or null when it is.
- *
- * An author is briefly between two valid documents on almost every keystroke, so a draft
- * the contract would refuse is not an error to report at them. One that stays refused is:
- * without this, editing would go on over a document that silently never lands.
+ * Why the page is not saving, or null when it is. A draft is briefly invalid on almost
+ * every keystroke, so only a refusal that persists is worth showing: without it, editing
+ * goes on over a document that silently never lands.
  */
 function saveBlocker(draft: DefinitionDraft | undefined): string | null {
   if (draft === undefined) {

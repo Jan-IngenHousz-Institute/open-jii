@@ -71,7 +71,6 @@ export class IotCalibrationDefinitionRepository {
     });
   }
 
-  /** The newest version of a name, or null. */
   async findLatestByName(name: string): Promise<Result<CalibrationDefinitionDto | null>> {
     return tryCatch(async () => {
       const results = await this.database

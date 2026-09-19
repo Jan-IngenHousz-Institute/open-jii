@@ -6,15 +6,6 @@ import { Result, failure, success } from "../../../../common/utils/fp-utils";
 import type { DeviceCalibrationDto } from "../../../core/models/iot-calibration.model";
 import { IotCalibrationRunRepository } from "../../../core/repositories/iot-calibration-run.repository";
 
-/**
- * What the device is running on, assembled from the newest approval per block.
- *
- * A bench session need not produce every block: one procedure may calibrate the PAR line
- * while another calibrates the spectral channels, and a block whose fit was rejected is
- * simply absent. Reading the newest approval alone would therefore report that the device
- * had lost coefficients it is demonstrably still holding.
- */
-
 /** The rows carry Dates; the controller's `formatDates` is what makes the wire shape. */
 type ActiveBlockRow = Omit<ActiveCalibrationBlock, "validFrom" | "writtenToDeviceAt"> & {
   validFrom: Date;
@@ -25,6 +16,15 @@ interface ActiveDeviceCalibrationRow {
   deviceId: string;
   blocks: Record<string, ActiveBlockRow>;
 }
+
+/**
+ * What the device is running on, assembled from the newest approval per block.
+ *
+ * A bench session need not produce every block: one procedure may calibrate the PAR line
+ * while another calibrates the spectral channels, and a block whose fit was rejected is
+ * simply absent. Reading the newest approval alone would therefore report that the device
+ * had lost coefficients it is demonstrably still holding.
+ */
 
 @Injectable()
 export class GetActiveDeviceCalibrationUseCase {

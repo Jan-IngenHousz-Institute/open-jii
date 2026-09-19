@@ -1,9 +1,7 @@
 /**
- * What the rig a procedure declares can be asked for, and driven through.
- *
- * The step fields offer these rather than taking free text, because every one of them is
- * a name that only fails at the bench: a reading an instrument does not have, a setpoint
- * it cannot drive, a command the firmware never answers.
+ * What the rig a procedure declares can be asked for, and driven through. The step fields
+ * offer these rather than free text because each is a name that only fails at the bench: a
+ * reading an instrument lacks, a setpoint it cannot drive, a command firmware never answers.
  */
 import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 import type { CalibrationFamily } from "@repo/api/domains/iot/calibration/iot-calibration.schema";

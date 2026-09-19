@@ -1,9 +1,7 @@
 /**
- * Edits on a capture procedure: one document in, one document out.
- *
- * A role is a name three other places point at, so renaming one in the rig alone would
- * leave the steps naming an instrument that no longer exists. The editors hold no
- * knowledge of that; they call these.
+ * Edits on a capture procedure: one document in, one document out. A role is a name three
+ * other places point at, so renaming one in the rig alone would leave the steps naming an
+ * instrument that no longer exists.
  */
 import type {
   CaptureProcedure,

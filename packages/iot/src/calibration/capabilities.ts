@@ -1,11 +1,7 @@
 /**
- * What a calibration definition may declare, derived from the registries that decide it.
- *
- * An author writing a procedure has to name instruments by the handshake they answer,
- * setpoints and readings the instrument actually has, and blocks the platform can write
- * back. None of that is guessable, and the last one fails silently: a block no writer
- * covers computes, passes review and is approved, and then never reaches the device.
- * Summarising the registries here lets the authoring surface offer them and check them.
+ * What a definition may declare, summarised from the registries that decide it, so the
+ * authoring surface can offer and check those names. A block no writer covers is the
+ * silent one: it computes, passes review, is approved, and never reaches the device.
  */
 import type { SensorFamily } from "../core/families";
 import { AMBIT_COMMANDS } from "../driver/ambit/commands";

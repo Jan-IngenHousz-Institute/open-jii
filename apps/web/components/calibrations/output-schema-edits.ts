@@ -1,9 +1,7 @@
 /**
- * Edits on a calibration's output schema: one document in, one document out.
- *
- * Block and coefficient names are what the script submits and what the writer registry
- * matches on, so they are records rather than lists and their order is kept: the page
- * saves on a key built from the document, and a reordered record would look like a change.
+ * Edits on a calibration's output schema: one document in, one document out. Names are
+ * records rather than lists, and their order is kept: the page autosaves on a key built
+ * from the document, so a reordered record would read as a change.
  */
 import type {
   CalibrationOutputSchema,

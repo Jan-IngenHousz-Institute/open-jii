@@ -115,7 +115,6 @@ describe("validateCalibrationBlocks", () => {
     ]);
   });
 
-  // A spectral block holds one fractional coefficient per channel.
   describe("number arrays", () => {
     const SPECTRAL_SCHEMA: CalibrationOutputSchema = {
       blocks: {
