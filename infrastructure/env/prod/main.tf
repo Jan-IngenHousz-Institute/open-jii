@@ -368,7 +368,7 @@ module "node_cluster_policy" {
     num_workers = {
       type     = "range"
       minValue = 1
-      maxValue = 2
+      maxValue = 4
     }
   })
 
@@ -690,7 +690,7 @@ module "centrum_pipeline" {
   serverless       = false
 
   node_type_id = "r5d.large"
-  num_workers  = 2
+  num_workers  = 4
   policy_id    = module.node_cluster_policy.policy_id
 
   run_as = {
