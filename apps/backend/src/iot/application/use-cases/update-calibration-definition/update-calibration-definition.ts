@@ -50,16 +50,6 @@ export class UpdateCalibrationDefinitionUseCase {
       );
     }
 
-    if (body.name !== undefined && body.name !== existing.value.name) {
-      const clash = await this.definitionRepository.findLatestByName(body.name);
-      if (clash.isFailure()) {
-        return failure(clash.error);
-      }
-      if (clash.value) {
-        return failure(AppError.badRequest(`A calibration named "${body.name}" already exists`));
-      }
-    }
-
     const updated = await this.definitionRepository.update(definitionId, body);
     if (updated.isFailure()) {
       return failure(updated.error);

@@ -14,8 +14,7 @@ CREATE TABLE "calibration_definitions" (
 	"visibility" "visibility" DEFAULT 'public' NOT NULL,
 	"created_by" uuid NOT NULL,
 	"created_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL,
-	"updated_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL,
-	CONSTRAINT "calibration_definitions_name_version_uniq" UNIQUE("name","version")
+	"updated_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "calibration_runs" (

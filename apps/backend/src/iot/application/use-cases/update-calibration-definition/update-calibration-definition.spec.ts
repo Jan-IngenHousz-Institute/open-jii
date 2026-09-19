@@ -100,7 +100,7 @@ describe("UpdateCalibrationDefinitionUseCase", () => {
     expect(updated.error.message).toContain("cannot be edited");
   });
 
-  it("refuses a rename onto a name another definition holds", async () => {
+  it("allows a rename onto a name another definition holds", async () => {
     const definitionId = await create();
     await create("Spectral bench calibration");
 
@@ -110,8 +110,8 @@ describe("UpdateCalibrationDefinitionUseCase", () => {
       userId,
     );
 
-    assertFailure(updated);
-    expect(updated.error.message).toContain("already exists");
+    assertSuccess(updated);
+    expect(updated.value.name).toBe("Spectral bench calibration");
   });
 
   it("lets a definition keep its own name", async () => {

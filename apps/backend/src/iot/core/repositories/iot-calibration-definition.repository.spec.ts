@@ -60,17 +60,15 @@ describe("IotCalibrationDefinitionRepository", () => {
     return created.value[0];
   };
 
-  it("creates version 1 and versions the same name by supersession", async () => {
-    const v1 = await createDefinition(userId, "MiniPAR factory calibration");
-    expect(v1.version).toBe(1);
+  // Names are not unique here any more than they are for a protocol or a workbook, so
+  // two definitions may share one and neither supersedes the other.
+  it("keeps two definitions that share a name as separate rows", async () => {
+    const first = await createDefinition(userId, "MiniPAR factory calibration");
+    const second = await createDefinition(userId, "MiniPAR factory calibration");
 
-    const v2 = await createDefinition(userId, "MiniPAR factory calibration");
-    expect(v2.version).toBe(2);
-    expect(v2.id).not.toBe(v1.id);
-
-    const latest = await repository.findLatestByName("MiniPAR factory calibration");
-    assertSuccess(latest);
-    expect(latest.value?.version).toBe(2);
+    expect(second.id).not.toBe(first.id);
+    expect(first.version).toBe(1);
+    expect(second.version).toBe(1);
   });
 
   it("round-trips the procedure and output schema through jsonb", async () => {

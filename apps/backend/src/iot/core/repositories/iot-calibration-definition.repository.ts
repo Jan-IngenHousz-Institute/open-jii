@@ -34,10 +34,6 @@ export class IotCalibrationDefinitionRepository {
     private readonly database: DatabaseInstance,
   ) {}
 
-  /**
-   * Versioned by supersession: the next version is assigned in the transaction that reads
-   * the current one, so concurrent creates collide on the (name, version) unique.
-   */
   async create(
     dto: CreateCalibrationDefinitionDto,
     userId: string,
@@ -47,15 +43,11 @@ export class IotCalibrationDefinitionRepository {
       const organizationId =
         targetOrganizationId ?? (await ensurePersonalOrganization(this.database, { id: userId }));
 
+      // One transaction so a definition never exists without the grant that owns it.
       return this.database.transaction(async (tx) => {
-        const [latest] = await tx
-          .select({ version: sql<number>`COALESCE(MAX(${calibrationDefinitions.version}), 0)` })
-          .from(calibrationDefinitions)
-          .where(eq(calibrationDefinitions.name, dto.name));
-
         const results = await tx
           .insert(calibrationDefinitions)
-          .values({ ...dto, version: latest.version + 1, createdBy: userId, organizationId })
+          .values({ ...dto, createdBy: userId, organizationId })
           .returning();
 
         await seedCreatorControl(
@@ -68,18 +60,6 @@ export class IotCalibrationDefinitionRepository {
 
         return this.parseRows(results);
       });
-    });
-  }
-
-  async findLatestByName(name: string): Promise<Result<CalibrationDefinitionDto | null>> {
-    return tryCatch(async () => {
-      const results = await this.database
-        .select()
-        .from(calibrationDefinitions)
-        .where(eq(calibrationDefinitions.name, name))
-        .orderBy(desc(calibrationDefinitions.version))
-        .limit(1);
-      return results.length > 0 ? this.parseRows(results)[0] : null;
     });
   }
 

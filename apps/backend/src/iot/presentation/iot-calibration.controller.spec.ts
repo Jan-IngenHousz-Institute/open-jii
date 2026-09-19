@@ -106,7 +106,7 @@ describe("IotCalibrationController", () => {
   }
 
   describe("calibration definitions", () => {
-    it("creates version 1 of a definition (201)", async () => {
+    it("creates a definition (201)", async () => {
       const response = await createDefinition();
 
       expect(response.body.version).toBe(1);
@@ -127,18 +127,6 @@ describe("IotCalibrationController", () => {
         .post(testApp.resolveOrpcPath(contract.iot.createCalibrationDefinition))
         .withAuth(userId)
         .send({ ...DEFINITION_BODY, captureProcedure: { instruments: [], steps: [] } })
-        .expect(StatusCodes.BAD_REQUEST);
-    });
-
-    // A line keeps its family for life; the platform refuses the version and
-    // reports why rather than silently forking a second line.
-    it("returns 400 for a version that would change the line's family", async () => {
-      await createDefinition();
-
-      await testApp
-        .post(testApp.resolveOrpcPath(contract.iot.createCalibrationDefinition))
-        .withAuth(userId)
-        .send({ ...DEFINITION_BODY, family: "ambit" })
         .expect(StatusCodes.BAD_REQUEST);
     });
 

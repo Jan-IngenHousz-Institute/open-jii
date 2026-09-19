@@ -962,7 +962,6 @@ export const calibrationDefinitions = pgTable(
     ...timestamps,
   },
   (t) => [
-    unique("calibration_definitions_name_version_uniq").on(t.name, t.version),
     index("calibration_definitions_family_idx").on(t.family),
     index("calibration_definitions_organization_id_idx").on(t.organizationId),
     index("calibration_definitions_created_by_idx").on(t.createdBy),

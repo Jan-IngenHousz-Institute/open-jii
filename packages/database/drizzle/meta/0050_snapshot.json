@@ -1,5 +1,5 @@
 {
-  "id": "e3f3372a-c929-4477-a57d-0e1f82645566",
+  "id": "4763d523-8204-4a91-a798-a80d4b029ea0",
   "prevId": "d9d6a1a7-412e-4040-bc8b-aed6a78208b9",
   "version": "7",
   "dialect": "postgresql",
@@ -555,16 +555,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "calibration_definitions_name_version_uniq": {
-          "name": "calibration_definitions_name_version_uniq",
-          "nullsNotDistinct": false,
-          "columns": [
-            "name",
-            "version"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

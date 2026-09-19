@@ -1,6 +1,6 @@
 import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { CreateCalibrationDefinitionUseCase } from "./create-calibration-definition";
 
@@ -63,26 +63,25 @@ describe("CreateCalibrationDefinitionUseCase", () => {
     expect(created.value.minFirmwareVersion).toBe("1.05");
   });
 
-  // Versioning is deferred until the program's first cut has landed. Until then a name
-  // names one procedure, and taking it twice is a mistake rather than an edit.
-  it("refuses a name that is already taken", async () => {
+  // A name is a label, not a key, exactly as it is for a protocol or a workbook.
+  it("accepts a name that is already taken", async () => {
     const first = await useCase.execute(body(), userId);
     assertSuccess(first);
 
     const second = await useCase.execute(body(), userId);
-    assertFailure(second);
-    expect(second.error.message).toContain("already exists");
+    assertSuccess(second);
+    expect(second.value.id).not.toBe(first.value.id);
   });
 
-  it("refuses a name another author took, whatever the family", async () => {
+  it("accepts a name another author took, whatever the family", async () => {
     const first = await useCase.execute(body(), userId);
     assertSuccess(first);
 
     const outsider = await testApp.createTestUser({ name: "Otto Outsider" });
-    const clash = await useCase.execute(body({ family: "ambit" }), outsider);
+    const alongside = await useCase.execute(body({ family: "ambit" }), outsider);
 
-    assertFailure(clash);
-    expect(clash.error.message).toContain("already exists");
+    assertSuccess(alongside);
+    expect(alongside.value.id).not.toBe(first.value.id);
   });
 
   it("creates in an organization the author belongs to", async () => {
