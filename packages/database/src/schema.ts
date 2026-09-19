@@ -959,6 +959,10 @@ export const calibrationDefinitions = pgTable(
     createdBy: uuid("created_by")
       .references(() => users.id)
       .notNull(),
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      (): SQL =>
+        sql`setweight(to_tsvector('english', coalesce(${calibrationDefinitions.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${calibrationDefinitions.description}, '')), 'B')`,
+    ),
     ...timestamps,
   },
   (t) => [

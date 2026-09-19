@@ -11,8 +11,7 @@ export const RESOURCE_SEGMENT: Record<SharingResourceType, string> = {
   workbook: "workbooks",
   device: "devices",
   device_group: "devices/groups",
-  // Definitions have no page of their own; a device's Calibration tab is where they are used.
-  calibration_definition: "devices",
+  calibration_definition: "calibrations",
 };
 
 /**

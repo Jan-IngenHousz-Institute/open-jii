@@ -13,12 +13,14 @@ import {
   desc,
   ensurePersonalOrganization,
   eq,
+  getTableColumns,
   or,
   sql,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { ftsMatch, ftsRank, searchScore } from "../../../common/utils/fts";
 import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
 import { seedCreatorControl } from "../../../sharing/core/resource-staffing";
@@ -26,6 +28,9 @@ import type {
   CalibrationDefinitionDto,
   CreateCalibrationDefinitionDto,
 } from "../models/iot-calibration.model";
+
+const { searchVector: _searchVector, ...definitionColumns } =
+  getTableColumns(calibrationDefinitions);
 
 @Injectable()
 export class IotCalibrationDefinitionRepository {
@@ -87,11 +92,56 @@ export class IotCalibrationDefinitionRepository {
       }
 
       const results = await this.database
-        .select()
+        .select(definitionColumns)
         .from(calibrationDefinitions)
         .where(and(...filters))
         .orderBy(desc(calibrationDefinitions.createdAt));
       return this.parseRows(results);
+    });
+  }
+
+  /**
+   * Relevance-ranked search over the same rows `listAccessible` would return, so global
+   * search can never surface a definition its caller cannot open.
+   */
+  async search(
+    query: string,
+    userId: string,
+    limit: number,
+  ): Promise<Result<(CalibrationDefinitionDto & { score: number })[]>> {
+    return tryCatch(async () => {
+      const scope = accessibleResourceCondition({
+        database: this.database,
+        resourceType: "calibration_definition",
+        resourceIdColumn: calibrationDefinitions.id,
+        organizationIdColumn: calibrationDefinitions.organizationId,
+        visibilityColumn: calibrationDefinitions.visibility,
+        userId,
+      });
+      const visible = or(eq(calibrationDefinitions.createdBy, userId), scope);
+
+      // No related table to probe, so the tier term is zero and relevance alone orders these.
+      const score = searchScore(
+        ftsRank(calibrationDefinitions.searchVector, calibrationDefinitions.name, query),
+        sql<number>`0::numeric`,
+      );
+
+      const results = await this.database
+        .select({ ...definitionColumns, score })
+        .from(calibrationDefinitions)
+        .where(
+          and(
+            visible,
+            ftsMatch(calibrationDefinitions.searchVector, calibrationDefinitions.name, query),
+          ),
+        )
+        .orderBy(desc(score), calibrationDefinitions.id)
+        .limit(limit);
+
+      return results.map(({ score: rowScore, ...row }) => ({
+        ...this.parseRows([row])[0],
+        score: Number(rowScore),
+      }));
     });
   }
 
@@ -100,7 +150,7 @@ export class IotCalibrationDefinitionRepository {
     return tryCatch(async () => {
       const results = await this.database
         .select({
-          definition: calibrationDefinitions,
+          definition: definitionColumns,
           organizationName: owningOrganizationNameSql("calibration_definitions"),
         })
         .from(calibrationDefinitions)
@@ -150,7 +200,7 @@ export class IotCalibrationDefinitionRepository {
   }
 
   /** jsonb columns come back untyped; the contract schemas are the narrowing gate. */
-  private parseRows(rows: (typeof calibrationDefinitions.$inferSelect)[]) {
+  private parseRows(rows: Omit<typeof calibrationDefinitions.$inferSelect, "searchVector">[]) {
     return rows.map((row) => ({
       ...row,
       family: zCalibrationFamily.parse(row.family),

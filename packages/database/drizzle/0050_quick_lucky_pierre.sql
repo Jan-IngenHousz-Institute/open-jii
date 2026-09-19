@@ -13,6 +13,7 @@ CREATE TABLE "calibration_definitions" (
 	"organization_id" uuid,
 	"visibility" "visibility" DEFAULT 'public' NOT NULL,
 	"created_by" uuid NOT NULL,
+	"search_vector" "tsvector" GENERATED ALWAYS AS (setweight(to_tsvector('english', coalesce("calibration_definitions"."name", '')), 'A') || setweight(to_tsvector('english', coalesce("calibration_definitions"."description", '')), 'B')) STORED,
 	"created_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL,
 	"updated_at" timestamp DEFAULT (now() AT TIME ZONE 'UTC') NOT NULL
 );
@@ -71,3 +72,6 @@ CREATE INDEX "calibration_runs_definition_id_idx" ON "calibration_runs" USING bt
 CREATE INDEX "calibration_runs_status_idx" ON "calibration_runs" USING btree ("status");--> statement-breakpoint
 CREATE UNIQUE INDEX "device_calibrations_active_uniq" ON "device_calibrations" USING btree ("device_id") WHERE "device_calibrations"."superseded_at" IS NULL;--> statement-breakpoint
 CREATE INDEX "device_calibrations_run_id_idx" ON "device_calibrations" USING btree ("run_id");
+--> statement-breakpoint
+CREATE INDEX "calibration_definitions_search_vector_idx" ON "calibration_definitions" USING gin ("search_vector");--> statement-breakpoint
+CREATE INDEX "calibration_definitions_name_trgm_idx" ON "calibration_definitions" USING gin ("name" gin_trgm_ops);

@@ -193,6 +193,8 @@ export function CommandPalette({ locale }: { locale: string }) {
           return navigate(`/${locale}/platform/macros/${result.id}`);
         case "workbook":
           return navigate(`/${locale}/platform/workbooks/${result.id}`);
+        case "calibration_definition":
+          return navigate(`/${locale}/platform/calibrations/${result.id}`);
         case "organization":
           return navigate(`/${locale}/platform/organizations/${result.id}`);
       }

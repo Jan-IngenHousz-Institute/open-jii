@@ -14,6 +14,7 @@ export const zSearchResultType = z.enum([
   "protocol",
   "macro",
   "workbook",
+  "calibration_definition",
   "organization",
 ]);
 

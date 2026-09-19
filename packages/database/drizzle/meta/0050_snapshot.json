@@ -1,5 +1,5 @@
 {
-  "id": "4763d523-8204-4a91-a798-a80d4b029ea0",
+  "id": "0987bc22-ff95-428c-86c8-081d9c47916f",
   "prevId": "d9d6a1a7-412e-4040-bc8b-aed6a78208b9",
   "version": "7",
   "dialect": "postgresql",
@@ -463,6 +463,16 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "search_vector": {
+          "name": "search_vector",
+          "type": "tsvector",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "setweight(to_tsvector('english', coalesce(\"calibration_definitions\".\"name\", '')), 'A') || setweight(to_tsvector('english', coalesce(\"calibration_definitions\".\"description\", '')), 'B')",
+            "type": "stored"
+          }
         },
         "created_at": {
           "name": "created_at",

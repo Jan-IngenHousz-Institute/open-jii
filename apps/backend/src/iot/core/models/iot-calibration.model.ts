@@ -21,6 +21,7 @@ export const createCalibrationDefinitionSchema = createInsertSchema(calibrationD
     createdBy: true,
     organizationId: true,
     version: true,
+    searchVector: true,
   })
   .extend({
     family: zCalibrationFamily,
@@ -29,11 +30,13 @@ export const createCalibrationDefinitionSchema = createInsertSchema(calibrationD
   });
 
 // Narrower than the sensor enum: phones have no calibrations.
-export const selectCalibrationDefinitionSchema = createSelectSchema(calibrationDefinitions).extend({
-  family: zCalibrationFamily,
-  captureProcedure: zCaptureProcedure,
-  outputSchema: zCalibrationOutputSchema,
-});
+export const selectCalibrationDefinitionSchema = createSelectSchema(calibrationDefinitions)
+  .omit({ searchVector: true })
+  .extend({
+    family: zCalibrationFamily,
+    captureProcedure: zCaptureProcedure,
+    outputSchema: zCalibrationOutputSchema,
+  });
 
 export const selectCalibrationRunSchema = createSelectSchema(calibrationRuns).extend({
   payload: zCalibrationRunPayload.nullable(),
