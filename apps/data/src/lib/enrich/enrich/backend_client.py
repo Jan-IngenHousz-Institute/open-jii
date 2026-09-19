@@ -8,9 +8,7 @@ from Databricks pipelines.
 import hashlib
 import hmac
 import json
-import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from urllib.parse import urljoin
 
@@ -278,7 +276,7 @@ class BackendClient:
         items: list[dict[str, Any]],
         timeout: int = 30,
         max_batch_size: int = 500,
-        max_concurrency: int = 1,
+        request_delay_seconds: float = 0,
     ) -> dict[str, Any]:
         """
         Execute macros via the backend batch endpoint.
@@ -292,8 +290,8 @@ class BackendClient:
                 workbook_version_id/context.
             timeout: Per-Lambda timeout in seconds (1-60).
             max_batch_size: Max items per HTTP request (default 500, API limit 5000).
-            max_concurrency: Maximum simultaneous HTTP requests. Defaults to one
-                to preserve the existing per-task request behavior.
+            request_delay_seconds: Full delay charged before every HTTP request,
+                including the first request made by a new client or task.
 
         Returns:
             Dict with 'results' list and optional 'errors' list.
@@ -306,34 +304,55 @@ class BackendClient:
             return {"results": []}
         if max_batch_size < 1:
             raise ValueError("max_batch_size must be at least 1")
-        if max_concurrency < 1:
-            raise ValueError("max_concurrency must be at least 1")
+        if request_delay_seconds < 0:
+            raise ValueError("request_delay_seconds must not be negative")
 
-        # Keep each HTTP chunk as homogeneous as possible. A macro UUID may
-        # point at different immutable code across workbook versions.
-        sorted_items = sorted(
-            items,
-            key=lambda item: (
+        # The backend makes one invokeLambda call for each macro + workbook-
+        # version group in a POST. Build chunks from one group only so one POST
+        # cannot fan out to several logical calls. Keep original positions
+        # because grouping changes request order but must not change the public
+        # result order.
+        groups: dict[tuple[str, str], list[tuple[int, dict[str, Any]]]] = {}
+        for index, item in enumerate(items):
+            key = (
                 item.get("macro_id") or "",
                 item.get("workbook_version_id") or "",
-            ),
-        )
+            )
+            groups.setdefault(key, []).append((index, item))
 
-        batches = [sorted_items[i : i + max_batch_size] for i in range(0, len(sorted_items), max_batch_size)]
+        batches = [
+            group[start : start + max_batch_size]
+            for group in groups.values()
+            for start in range(0, len(group), max_batch_size)
+        ]
 
         def execute_chunk(
-            batch: list[dict[str, Any]],
-            session: requests.Session | None = None,
-        ) -> tuple[list[dict[str, Any]], list[str]]:
-            payload = {"items": batch, "timeout": timeout}
+            batch: list[tuple[int, dict[str, Any]]],
+        ) -> tuple[list[tuple[int, dict[str, Any]]], list[str]]:
+            payload = {"items": [item for _, item in batch], "timeout": timeout}
 
             try:
-                result = self._make_request(
+                # Charge even a new task/client's first request. A delay only
+                # between requests can be reset by rapid Spark task turnover
+                # and does not produce a fleet request-start bound.
+                if request_delay_seconds:
+                    time.sleep(request_delay_seconds)
+                response = self._make_request(
                     self.WEBHOOK_MACRO_BATCH_PATH,
                     payload,
-                    session=session,
                 )
-                return result.get("results", []), result.get("errors") or []
+                # The backend reassembles group results into request order.
+                # Pair them with the captured source positions so results from
+                # multiple homogeneous POSTs return in caller input order.
+                indexed_results = [
+                    (source_index, result)
+                    for (source_index, _), result in zip(
+                        batch,
+                        response.get("results", []),
+                        strict=False,
+                    )
+                ]
+                return indexed_results, response.get("errors") or []
             except BackendIntegrationError as e:
                 # Don't lose other chunks: synthesize per-item failure entries
                 # so the caller can map them back via (id, macro_id), and keep
@@ -341,51 +360,25 @@ class BackendClient:
                 # the rest of the partition.
                 chunk_error = f"Chunk failed: {str(e)[:500]}"
                 failures = []
-                for item in batch:
+                for source_index, item in batch:
                     failures.append(
-                        {
-                            "id": item.get("id"),
-                            "macro_id": item.get("macro_id"),
-                            "success": False,
-                            "error": chunk_error,
-                        }
+                        (
+                            source_index,
+                            {
+                                "id": item.get("id"),
+                                "macro_id": item.get("macro_id"),
+                                "success": False,
+                                "error": chunk_error,
+                            },
+                        )
                     )
                 return failures, [chunk_error]
             except Exception as e:
                 raise BackendIntegrationError(f"Unexpected error in macro batch execution: {e!s}") from e
 
-        if max_concurrency == 1:
-            chunk_responses = [execute_chunk(batch) for batch in batches]
-        else:
-            worker_state = threading.local()
-            worker_sessions: list[requests.Session] = []
-            worker_sessions_lock = threading.Lock()
-
-            def execute_chunk_in_worker(
-                batch: list[dict[str, Any]],
-            ) -> tuple[list[dict[str, Any]], list[str]]:
-                session = getattr(worker_state, "session", None)
-                if session is None:
-                    session = self._create_session()
-                    worker_state.session = session
-                    with worker_sessions_lock:
-                        worker_sessions.append(session)
-                return execute_chunk(batch, session=session)
-
-            try:
-                with ThreadPoolExecutor(
-                    max_workers=min(max_concurrency, len(batches)),
-                    thread_name_prefix="macro-http",
-                ) as executor:
-                    # executor.map returns in input order even when later chunks
-                    # finish first, preserving the sequential implementation's
-                    # deterministic result and error ordering.
-                    chunk_responses = list(executor.map(execute_chunk_in_worker, batches))
-            finally:
-                for session in worker_sessions:
-                    session.close()
-
-        all_results = [result for results, _ in chunk_responses for result in results]
+        chunk_responses = [execute_chunk(batch) for batch in batches]
+        indexed_results = [result for results, _ in chunk_responses for result in results]
+        all_results = [result for _, result in sorted(indexed_results, key=lambda pair: pair[0])]
         all_errors = [error for _, errors in chunk_responses for error in errors]
 
         response: dict[str, Any] = {"results": all_results}

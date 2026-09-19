@@ -131,7 +131,7 @@ def test_macro_udf_forwards_http_limits_and_preserves_row_order(monkeypatch: Mon
         FakeDbutils(),
         timeout=30,
         max_batch_size=25,
-        max_concurrency=2,
+        request_delay_seconds=6,
     )
 
     result = execute_macro(
@@ -145,7 +145,7 @@ def test_macro_udf_forwards_http_limits_and_preserves_row_order(monkeypatch: Mon
 
     assert captured["timeout"] == 30
     assert captured["max_batch_size"] == 25
-    assert captured["max_concurrency"] == 2
+    assert captured["request_delay_seconds"] == 6
     assert [json.loads(value) for value in result["result"]] == [
         {"row": "first"},
         {"row": "second"},

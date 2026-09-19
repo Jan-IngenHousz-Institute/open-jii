@@ -100,7 +100,7 @@ def make_execute_macro_udf(
     dbutils,
     timeout: int = 30,
     max_batch_size: int = 25,
-    max_concurrency: int = 1,
+    request_delay_seconds: float = 0,
     scope_override: str | None = None,
 ):
     """
@@ -120,8 +120,7 @@ def make_execute_macro_udf(
         dbutils: Databricks dbutils for secrets retrieval.
         timeout: Per-Lambda timeout in seconds (1-60).
         max_batch_size: Max items per HTTP request to backend.
-        max_concurrency: Maximum simultaneous backend requests per Spark task.
-            The default of one preserves existing per-task request behavior.
+        request_delay_seconds: Full delay before every backend HTTP request.
         scope_override: Override the secrets scope name (default: node-webhook-secret-scope-{env}).
 
     Returns:
@@ -186,7 +185,7 @@ def make_execute_macro_udf(
                 items=items,
                 timeout=timeout,
                 max_batch_size=max_batch_size,
-                max_concurrency=max_concurrency,
+                request_delay_seconds=request_delay_seconds,
             )
         except BackendIntegrationError as e:
             # Mark all items in this batch as failed

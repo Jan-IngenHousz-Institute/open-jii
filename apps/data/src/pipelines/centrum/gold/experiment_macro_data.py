@@ -21,10 +21,17 @@ from openjii.centrum.runtime import ENVIRONMENT
 # The incident workload put 184,358 rows into two HTTP-bound tasks, including a
 # 118,825-row straggler. A 128-way round-robin shuffle makes that measured batch
 # roughly 1,441 rows per task on an even distribution. This is not a fixed
-# bound: task size still grows with the micro-batch. HTTP concurrency remains
-# one to avoid multiplying the request load within each active Spark task.
+# bound: task size still grows with the micro-batch. Backend requests remain
+# sequential within each active Spark task.
 MACRO_EXECUTION_PARTITIONS = 128
-MACRO_HTTP_MAX_CONCURRENCY = 1
+
+# This is a conditional request-start bound, not a distributed rate limiter.
+# It is load-bearing on production remaining capped at four workers and on the
+# observed runtime having no more than eight simultaneous macro task attempts.
+# Charging every attempt before its first and subsequent POSTs yields at most
+# 8 * (floor(300 / 6) + 1) = 408 macro POST starts in any rolling five minutes.
+# Raising the worker-policy ceiling invalidates that bound and requires review.
+MACRO_REQUEST_DELAY_SECONDS = 6
 
 # COMMAND ----------
 
@@ -47,7 +54,7 @@ def experiment_macro_data():
     sandbox_macro_udf = make_execute_macro_udf(
         ENVIRONMENT,
         dbutils,
-        max_concurrency=MACRO_HTTP_MAX_CONCURRENCY,
+        request_delay_seconds=MACRO_REQUEST_DELAY_SECONDS,
     )
 
     base_df = (
