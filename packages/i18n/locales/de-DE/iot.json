@@ -967,6 +967,9 @@
         "title": "Kalibrierungen",
         "create": "Neue Kalibrierung",
         "allFamilies": "Alle Gerätefamilien",
+        "searchPlaceholder": "Kalibrierungen suchen...",
+        "clearSearch": "Suche löschen",
+        "noMatches": "Keine Kalibrierung passt zu dieser Suche.",
         "empty": "Es wurde noch kein Kalibrierverfahren geschrieben.",
         "columns": {
           "name": "Verfahren",
@@ -1089,7 +1092,7 @@
         "action": "Am Messplatz ausführen",
         "title": "Kalibrierung ausführen",
         "chooseDevice": "Welches Gerät",
-        "chooseHint": "Eine Messplatzsitzung wird zu genau einem Gerät aufgezeichnet. Wählen Sie ein {{family}}-Gerät für diesen Versuch; der entstehende Lauf lässt sich wie jeder andere ablehnen.",
+        "chooseHint": "Eine Messplatzsitzung wird zu genau einem Gerät aufgezeichnet. Wählen Sie das {{family}}-Gerät für diesen Versuch; der entstehende Lauf lässt sich wie jeder andere ablehnen.",
         "noDevices": "Für Sie ist kein Gerät dieser Familie registriert. Registrieren Sie eines, um diese Prozedur am Messplatz zu erproben."
       },
       "produces": {
@@ -1116,6 +1119,7 @@
         "submits": "Was sie liefert"
       },
       "sidebar": {
+        "id": "Kalibrierungs-ID",
         "title": "Details",
         "family": "Gerätefamilie",
         "familyHint": "Gegen welches Gerät dies läuft, und damit auch die Instrumente und Koeffizienten, gegen die alles Übrige geprüft wird.",

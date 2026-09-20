@@ -93,8 +93,13 @@ export function CalibrationDetailsSidebar({
   return (
     <DetailsSidebarCard
       title={t("iot.calibration.sidebar.title")}
-      collapsedSummary={`${tCommon("common.updated")} ${formatDate(definition.updatedAt)}`}
+      collapsedSummary={`${tCommon("common.updated")} ${formatDate(definition.updatedAt)}, ${t("iot.calibration.sidebar.id")} ${definition.id.slice(0, 8)}...`}
     >
+      <div className="space-y-1">
+        <h4 className="text-sm font-medium">{t("iot.calibration.sidebar.id")}</h4>
+        <p className="text-muted-foreground font-mono text-sm">{definition.id}</p>
+      </div>
+
       <div className="space-y-1">
         <Label htmlFor={familyId}>{t("iot.calibration.sidebar.family")}</Label>
         {canUpdate ? (
@@ -138,6 +143,11 @@ export function CalibrationDetailsSidebar({
       </div>
 
       <div className="space-y-1">
+        <h4 className="text-sm font-medium">{tCommon("common.updated")}</h4>
+        <p className="text-muted-foreground text-sm">{formatDate(definition.updatedAt)}</p>
+      </div>
+
+      <div className="space-y-1">
         <h4 className="text-sm font-medium">{tCommon("common.created")}</h4>
         <p className="text-muted-foreground text-sm">{formatDate(definition.createdAt)}</p>
       </div>
@@ -158,11 +168,6 @@ export function CalibrationDetailsSidebar({
         visibility={definition.visibility}
         canManage={canManage}
       />
-
-      <div className="space-y-1">
-        <h4 className="text-sm font-medium">{tCommon("common.updated")}</h4>
-        <p className="text-muted-foreground text-sm">{formatDate(definition.updatedAt)}</p>
-      </div>
     </DetailsSidebarCard>
   );
 }

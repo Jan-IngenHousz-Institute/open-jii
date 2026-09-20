@@ -1,18 +1,19 @@
 "use client";
 
+import { OPEN_CALIBRATION_CREATE_EVENT } from "@/components/navigation/site-header/platform-header-events";
 import { OverviewTable } from "@/components/overview-table/overview-table";
+import { OverviewToolbar } from "@/components/overview-toolbar";
 import { useAllCalibrationDefinitions } from "@/hooks/iot/useAllCalibrationDefinitions/useAllCalibrationDefinitions";
 import { useCreateCalibrationDefinition } from "@/hooks/iot/useCreateCalibrationDefinition/useCreateCalibrationDefinition";
 import { useLocale } from "@/hooks/useLocale";
-import { Loader2, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getSensorFamilyLabel } from "~/util/sensor-family";
 
 import { zCalibrationFamily } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import type { CalibrationFamily } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components/button";
+import { SearchInput } from "@repo/ui/components/search-input";
 import {
   Select,
   SelectContent,
@@ -31,8 +32,9 @@ const ALL_FAMILIES = "all";
 export function ListCalibrationDefinitions() {
   const { t } = useTranslation("iot");
   const locale = useLocale();
-  const [family, setFamily] = useState<CalibrationFamily | typeof ALL_FAMILIES>(ALL_FAMILIES);
   const router = useRouter();
+  const [family, setFamily] = useState<CalibrationFamily | typeof ALL_FAMILIES>(ALL_FAMILIES);
+  const [search, setSearch] = useState("");
 
   const definitions = useAllCalibrationDefinitions();
   const { mutate: create, isPending: isCreating } = useCreateCalibrationDefinition({
@@ -43,15 +45,36 @@ export function ListCalibrationDefinitions() {
 
   // Named and given a family on its own page like everything else, so creating one is a
   // single click rather than a form standing between the author and the thing.
-  function createDefinition() {
+  const createDefinition = useCallback(() => {
+    if (isCreating) return;
     const taken = (definitions.data ?? []).map((definition) => definition.name);
     create({ ...starterDefinition("minipar"), name: untitledCalibrationName(taken) });
+  }, [create, definitions.data, isCreating]);
+
+  // The create action sits in the page header, as on every library page, and reaches
+  // this list as an event.
+  useEffect(() => {
+    window.addEventListener(OPEN_CALIBRATION_CREATE_EVENT, createDefinition);
+    return () => window.removeEventListener(OPEN_CALIBRATION_CREATE_EVENT, createDefinition);
+  }, [createDefinition]);
+
+  const needle = search.trim().toLowerCase();
+  const hasSearch = needle !== "";
+
+  function matchesSearch(name: string, description: string | null) {
+    return (
+      !hasSearch ||
+      name.toLowerCase().includes(needle) ||
+      (description ?? "").toLowerCase().includes(needle)
+    );
   }
 
   // Left undefined while the list is unread, so a failure reaches the table as an error
   // rather than as an empty library.
   const visible = definitions.data?.filter(
-    (definition) => family === ALL_FAMILIES || definition.family === family,
+    (definition) =>
+      (family === ALL_FAMILIES || definition.family === family) &&
+      matchesSearch(definition.name, definition.description),
   );
 
   function renderFamilyOption(option: CalibrationFamily) {
@@ -69,25 +92,30 @@ export function ListCalibrationDefinitions() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Select value={family} onValueChange={handleFamilyChange}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_FAMILIES}>{t("iot.calibration.library.allFamilies")}</SelectItem>
-            {zCalibrationFamily.options.map(renderFamilyOption)}
-          </SelectContent>
-        </Select>
-        <Button type="button" onClick={createDefinition} disabled={isCreating}>
-          {isCreating ? (
-            <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
-          ) : (
-            <Plus className="mr-2 size-4" aria-hidden />
-          )}
-          {t("iot.calibration.library.create")}
-        </Button>
-      </div>
+      <OverviewToolbar
+        search={
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder={t("iot.calibration.library.searchPlaceholder")}
+            clearLabel={t("iot.calibration.library.clearSearch")}
+            className="md:w-55 w-full"
+          />
+        }
+        filters={
+          <Select value={family} onValueChange={handleFamilyChange}>
+            <SelectTrigger className="md:w-50 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_FAMILIES}>
+                {t("iot.calibration.library.allFamilies")}
+              </SelectItem>
+              {zCalibrationFamily.options.map(renderFamilyOption)}
+            </SelectContent>
+          </Select>
+        }
+      />
 
       <OverviewTable
         columns={getCalibrationDefinitionColumns(t, locale)}
@@ -99,7 +127,9 @@ export function ListCalibrationDefinitions() {
         retryLabel={t("iot.calibration.library.retry")}
         getRowKey={(definition) => definition.id}
         getRowHref={(definition) => `/${locale}/platform/calibrations/${definition.id}`}
-        emptyMessage={t("iot.calibration.library.empty")}
+        emptyMessage={t(
+          hasSearch ? "iot.calibration.library.noMatches" : "iot.calibration.library.empty",
+        )}
       />
     </div>
   );

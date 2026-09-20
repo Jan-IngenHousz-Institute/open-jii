@@ -1,6 +1,8 @@
+import { OPEN_CALIBRATION_CREATE_EVENT } from "@/components/navigation/site-header/platform-header-events";
 import { createCalibrationDefinition, createCalibrationDefinitionSummary } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, within } from "@/test/test-utils";
+import { act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";
 import { describe, expect, it } from "vitest";
@@ -43,9 +45,43 @@ describe("ListCalibrationDefinitions", () => {
     expect(screen.queryByText("PAR bench")).toBeNull();
   });
 
+  // The description is where a procedure says what it is for, so a search reads it too.
+  it("narrows by name or description as the operator types", async () => {
+    server.mount(contract.iot.listCalibrationDefinitions, {
+      body: [
+        createCalibrationDefinitionSummary({
+          name: "PAR bench",
+          description: "A lamp sweep against a reference sensor.",
+        }),
+        createCalibrationDefinitionSummary({
+          name: "Factory bench",
+          description: "A dark baseline of six channels.",
+        }),
+      ],
+    });
+
+    render(<ListCalibrationDefinitions />);
+    await screen.findByText("PAR bench");
+
+    await userEvent.type(
+      screen.getByPlaceholderText("iot.calibration.library.searchPlaceholder"),
+      "baseline",
+    );
+
+    expect(screen.getByText("Factory bench")).toBeInTheDocument();
+    expect(screen.queryByText("PAR bench")).toBeNull();
+
+    await userEvent.type(
+      screen.getByPlaceholderText("iot.calibration.library.searchPlaceholder"),
+      " of nothing",
+    );
+    expect(screen.getByText("iot.calibration.library.noMatches")).toBeInTheDocument();
+  });
+
   // Creating one opens it: nothing stands between the author and the page they write it
-  // on, and a definition cannot exist without a procedure, script and schema anyway.
-  it("creates a calibration and opens it", async () => {
+  // on, and a definition cannot exist without a procedure, script and schema anyway. The
+  // action itself sits in the page header and arrives here as an event.
+  it("creates a calibration on the header's event and opens it", async () => {
     server.mount(contract.iot.listCalibrationDefinitions, { body: [] });
     const created = createCalibrationDefinition({ name: "Untitled calibration" });
     const spy = server.mount(contract.iot.createCalibrationDefinition, {
@@ -56,7 +92,9 @@ describe("ListCalibrationDefinitions", () => {
     render(<ListCalibrationDefinitions />);
     expect(await screen.findByText("iot.calibration.library.empty")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /library.create/ }));
+    act(() => {
+      window.dispatchEvent(new Event(OPEN_CALIBRATION_CREATE_EVENT));
+    });
 
     await waitFor(() => {
       expect(spy.body).toMatchObject({ name: "Untitled calibration", family: "minipar" });

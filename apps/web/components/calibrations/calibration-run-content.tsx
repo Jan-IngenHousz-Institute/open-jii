@@ -5,6 +5,7 @@ import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
 import { useCalibrationDefinition } from "@/hooks/iot/useCalibrationDefinition/useCalibrationDefinition";
 import { useIotDevices } from "@/hooks/iot/useIotDevices/useIotDevices";
 import { useLocale } from "@/hooks/useLocale";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -51,7 +52,7 @@ export function CalibrationRunContent() {
       <PanelCard title={t("iot.calibration.trial.chooseDevice")}>
         <div className="space-y-3">
           <p className="text-muted-foreground text-sm">
-            {t("iot.calibration.trial.chooseHint", { family })}
+            {t("iot.calibration.trial.chooseHint", { family: getSensorFamilyLabel(family) })}
           </p>
           <CalibrationDevicePicker
             devices={candidates}

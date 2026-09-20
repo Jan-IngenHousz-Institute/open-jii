@@ -17,29 +17,40 @@ export function getCalibrationDefinitionColumns(
     {
       header: t("iot.calibration.library.columns.name"),
       cell: (definition, href) => (
-        <div className="min-w-0 space-y-0.5">
-          <Link
-            href={href}
-            title={definition.name}
-            onClick={(event) => event.stopPropagation()}
-            className={cn(
-              "focus-visible:ring-primary/40 focus-visible:outline-hidden block min-w-0 truncate text-[13px] font-semibold hover:underline focus-visible:ring-2",
-              overviewTableText.strong,
-            )}
-          >
-            {definition.name}
-          </Link>
+        <>
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              href={href}
+              title={definition.name}
+              onClick={(event) => event.stopPropagation()}
+              className={cn(
+                "focus-visible:ring-primary/40 focus-visible:outline-hidden min-w-0 truncate text-[13px] font-semibold hover:underline focus-visible:ring-2",
+                overviewTableText.strong,
+              )}
+            >
+              {definition.name}
+            </Link>
+            {/* The family column is gone on a phone; the badge rides with the name there. */}
+            <StatusBadge
+              tone={getSensorFamilyBadgeTone(definition.family)}
+              className="shrink-0 sm:hidden"
+            >
+              {getSensorFamilyLabel(definition.family)}
+            </StatusBadge>
+            {/* Only when private: "public" is the unremarkable default. */}
+            <VisibilityBadge visibility={definition.visibility} privateOnly className="shrink-0" />
+          </div>
           {definition.description !== null && (
-            <p className={cn("truncate text-xs", overviewTableText.muted)}>
+            <p className={cn("mt-0.5 truncate text-[13px]", overviewTableText.muted)}>
               {definition.description}
             </p>
           )}
-        </div>
+        </>
       ),
     },
     {
       header: t("iot.calibration.library.columns.family"),
-      className: "w-[130px]",
+      className: "hidden w-36 sm:table-cell",
       cell: (definition) => (
         <StatusBadge tone={getSensorFamilyBadgeTone(definition.family)}>
           {getSensorFamilyLabel(definition.family)}
@@ -48,14 +59,14 @@ export function getCalibrationDefinitionColumns(
     },
     {
       header: t("iot.calibration.library.columns.visibility"),
-      className: "w-[120px]",
+      className: "hidden w-40 lg:table-cell",
       cell: (definition) => <VisibilityBadge visibility={definition.visibility} />,
     },
     {
       header: t("iot.calibration.library.columns.updated"),
-      className: "w-[130px]",
+      className: "hidden w-40 lg:table-cell",
       cell: (definition) => (
-        <span className={cn("text-xs", overviewTableText.muted)}>
+        <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
           {formatShortDate(definition.updatedAt, locale)}
         </span>
       ),

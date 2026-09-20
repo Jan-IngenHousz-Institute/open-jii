@@ -30,9 +30,11 @@ describe("CalibrationDetailsSidebar", () => {
     expect(screen.getByRole("combobox", { name: "resourceVisibility.statusLabel" })).toBeDisabled();
   });
 
-  it("keeps the family and the firmware floor editable", () => {
-    renderSidebar(createCalibrationDefinitionDetail({ minFirmwareVersion: "1.03" }));
+  it("names the calibration by its id and keeps the family and the firmware floor editable", () => {
+    const definition = createCalibrationDefinitionDetail({ minFirmwareVersion: "1.03" });
+    renderSidebar(definition);
 
+    expect(screen.getByText(definition.id)).toBeInTheDocument();
     expect(screen.getByDisplayValue("1.03")).toBeEnabled();
     expect(screen.getByLabelText("iot.calibration.sidebar.family")).toBeInTheDocument();
   });

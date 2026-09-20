@@ -13,6 +13,7 @@ import { mainNavigation, userNavigation } from "../navigation-config";
 import type { NavLink } from "../navigation-config";
 import { usePlatformHeaderDetail } from "./platform-header-context";
 import {
+  OPEN_CALIBRATION_CREATE_EVENT,
   OPEN_DEVICE_BULK_REGISTER_EVENT,
   OPEN_DEVICE_REGISTER_EVENT,
   OPEN_WORKBOOK_CREATE_EVENT,
@@ -214,6 +215,15 @@ function overviewActions(pathname: string, locale: string, t: Translate) {
       <EventCreateAction
         event={OPEN_WORKBOOK_CREATE_EVENT}
         label={t("workbooks.create", { ns: "workbook" })}
+      />
+    );
+  }
+
+  if (pathname === `/${locale}/platform/calibrations`) {
+    return (
+      <EventCreateAction
+        event={OPEN_CALIBRATION_CREATE_EVENT}
+        label={t("iot.calibration.library.create", { ns: "iot" })}
       />
     );
   }

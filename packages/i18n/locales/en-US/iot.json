@@ -967,6 +967,9 @@
         "title": "Calibrations",
         "create": "New calibration",
         "allFamilies": "All device families",
+        "searchPlaceholder": "Search calibrations...",
+        "clearSearch": "Clear search",
+        "noMatches": "No calibration matches that search.",
         "empty": "No calibration procedure has been written yet.",
         "columns": {
           "name": "Procedure",
@@ -1089,7 +1092,7 @@
         "action": "Run at the bench",
         "title": "Run a calibration",
         "chooseDevice": "Which device",
-        "chooseHint": "A bench session is recorded against one device. Pick a {{family}} to try this procedure on; the run it produces can be rejected like any other.",
+        "chooseHint": "A bench session is recorded against one device. Pick the {{family}} device to try this procedure on; the run it produces can be rejected like any other.",
         "noDevices": "No device of this family is registered to you. Register one to try this procedure at the bench."
       },
       "produces": {
@@ -1116,6 +1119,7 @@
         "submits": "What it submits"
       },
       "sidebar": {
+        "id": "Calibration ID",
         "title": "Details",
         "family": "Device family",
         "familyHint": "Which device this runs against, and with it the instruments and coefficients everything else is checked against.",

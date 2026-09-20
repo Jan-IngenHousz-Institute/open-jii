@@ -967,6 +967,9 @@
         "title": "Kalibraties",
         "create": "Nieuwe kalibratie",
         "allFamilies": "Alle apparaatfamilies",
+        "searchPlaceholder": "Kalibraties zoeken...",
+        "clearSearch": "Zoekopdracht wissen",
+        "noMatches": "Geen kalibratie komt overeen met deze zoekopdracht.",
         "empty": "Er is nog geen kalibratieprocedure geschreven.",
         "columns": {
           "name": "Procedure",
@@ -1089,7 +1092,7 @@
         "action": "Uitvoeren aan de meetbank",
         "title": "Kalibratie uitvoeren",
         "chooseDevice": "Welk apparaat",
-        "chooseHint": "Een sessie aan de meetbank wordt vastgelegd bij één apparaat. Kies een {{family}}-apparaat om deze procedure op te proberen; de meting die daaruit komt kan net als elke andere worden afgewezen.",
+        "chooseHint": "Een sessie aan de meetbank wordt vastgelegd bij één apparaat. Kies het {{family}}-apparaat om deze procedure op te proberen; de meting die daaruit komt kan net als elke andere worden afgewezen.",
         "noDevices": "Er is geen apparaat van deze familie op uw naam geregistreerd. Registreer er een om deze procedure aan de meetbank te proberen."
       },
       "produces": {
@@ -1116,6 +1119,7 @@
         "submits": "Wat het oplevert"
       },
       "sidebar": {
+        "id": "Kalibratie-ID",
         "title": "Details",
         "family": "Apparaatfamilie",
         "familyHint": "Tegen welk apparaat dit draait, en daarmee de instrumenten en coëfficiënten waartegen de rest gecontroleerd wordt.",
