@@ -18,7 +18,8 @@ vi.mock("../../charts/plotly-chart", () => ({
   ),
 }));
 
-vi.mock("../../charts/utils", () => ({
+vi.mock("../../charts/utils", async (importOriginal) => ({
+  detectAxisType: (await importOriginal<typeof import("../../charts/utils")>()).detectAxisType,
   chartGridColor: vi.fn(() => "#E6E6E6"),
   readThemeColor: vi.fn(() => undefined),
   createBaseLayout: vi.fn((config: any) => ({
@@ -215,6 +216,13 @@ describe("Heatmap", () => {
     });
   });
 
+  it("leaves gaps blank unless connectgaps is opted in", () => {
+    const { getByTestId } = render(<Heatmap data={mockHeatmapData} />);
+
+    const chartData = JSON.parse(getByTestId("chart-data").textContent || "[]");
+    expect(chartData[0].connectgaps).toBe(false);
+  });
+
   it("handles gap and spacing configuration", () => {
     const dataWithGaps: HeatmapSeriesData[] = [
       {
@@ -331,8 +339,28 @@ describe("Heatmap", () => {
     const { getByTestId } = render(<Heatmap data={dateData} />);
 
     const layoutData = JSON.parse(getByTestId("chart-layout").textContent || "{}");
+    expect(layoutData.yaxis.type).toBe("date");
+    expect(layoutData.xaxis.type).toBe("category");
+  });
+
+  it("gives ISO timestamp strings a date axis", () => {
+    const isoData: HeatmapSeriesData[] = [
+      {
+        name: "Hourly Heatmap",
+        z: [
+          [1, 2, 3],
+          [4, 5, 6],
+        ],
+        x: ["2026-09-12T00:00:00Z", "2026-09-12T01:00:00Z", "2026-09-12T02:00:00Z"],
+        y: ["dev-a", "dev-b"],
+      },
+    ];
+
+    const { getByTestId } = render(<Heatmap data={isoData} />);
+
+    const layoutData = JSON.parse(getByTestId("chart-layout").textContent || "{}");
+    expect(layoutData.xaxis.type).toBe("date");
     expect(layoutData.yaxis.type).toBe("category");
-    expect(layoutData.xaxis.type).toBe("category"); // strings should also be category
   });
 
   it("handles Date values in x-axis data", () => {
@@ -351,8 +379,8 @@ describe("Heatmap", () => {
     const { getByTestId } = render(<Heatmap data={dateData} />);
 
     const layoutData = JSON.parse(getByTestId("chart-layout").textContent || "{}");
-    expect(layoutData.xaxis.type).toBe("category");
-    expect(layoutData.yaxis.type).toBe("category"); // strings should also be category
+    expect(layoutData.xaxis.type).toBe("date");
+    expect(layoutData.yaxis.type).toBe("category");
   });
 
   it("applies aspect ratio configuration", () => {
