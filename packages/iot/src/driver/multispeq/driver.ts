@@ -194,16 +194,13 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
   }
 
   async getDeviceInfo(): Promise<MultispeqDeviceInfo> {
-    // device_info returns JSON with name, version, id, battery, firmware, config
-    // const result = await this.execute<MultispeqDeviceInfo>(MULTISPEQ_COMMANDS.DEVICE_INFO);
-
-    // if (result.success && typeof result.data === "object") {
-    //   return result.data;
-    // }
-
-    // Fallback: try battery command alone (older firmware or partial failure)
-    const batteryResult = await this.execute<string>(MULTISPEQ_COMMANDS.BATTERY);
-    const helloResult = await this.execute<string>(MULTISPEQ_COMMANDS.HELLO);
+    // What a board without device_info still answers: its battery line and its hello name.
+    const batteryResult = await this.execute<string>(MULTISPEQ_COMMANDS.BATTERY, {
+      timeoutMs: MULTISPEQ_FRAMING.IDENTITY_TIMEOUT,
+    });
+    const helloResult = await this.execute<string>(MULTISPEQ_COMMANDS.HELLO, {
+      timeoutMs: MULTISPEQ_FRAMING.IDENTITY_TIMEOUT,
+    });
 
     const info: MultispeqDeviceInfo = {};
 
@@ -229,7 +226,7 @@ export class MultispeqDriver extends DeviceDriver<MultispeqStreamEvents> {
   async getDeviceIdentity(): Promise<DeviceIdentity> {
     // Identity runs during connect; never let it hang on the 60s console default.
     const result = await this.execute<Record<string, unknown>>(MULTISPEQ_COMMANDS.DEVICE_INFO, {
-      timeoutMs: 5_000,
+      timeoutMs: MULTISPEQ_FRAMING.IDENTITY_TIMEOUT,
     });
     if (result.success && typeof result.data === "object") {
       const data = result.data;

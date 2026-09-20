@@ -289,6 +289,23 @@ describe("MultispeqDriver", () => {
 
       expect(info).toEqual({});
     });
+
+    // Identity runs during connect. A board that answers neither question must cost two
+    // identity deadlines, not two of the console default sized for a measurement.
+    it("bounds each fallback question to the identity timeout on a silent board", async () => {
+      vi.useFakeTimers();
+      try {
+        driver.initialize(transport);
+        vi.mocked(transport.send).mockResolvedValue(undefined);
+
+        const pending = driver.getDeviceInfo();
+        await vi.advanceTimersByTimeAsync(2 * MULTISPEQ_FRAMING.IDENTITY_TIMEOUT + 2);
+
+        await expect(pending).resolves.toEqual({});
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   describe("getDeviceIdentity", () => {
