@@ -75,10 +75,10 @@ function orderCategories(categories: (string | number)[]): (string | number)[] {
     return [...categories].sort((a, b) => Number(a) - Number(b));
   }
 
-  // Uniform ISO strings from one column sort chronologically by code unit.
+  // Parsed, not code-unit: offsets and fractional seconds break string order.
   const allDates = detectAxisType(categories) === "date";
   if (allDates) {
-    return [...categories].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    return [...categories].sort((a, b) => Date.parse(String(a)) - Date.parse(String(b)));
   }
 
   return categories;

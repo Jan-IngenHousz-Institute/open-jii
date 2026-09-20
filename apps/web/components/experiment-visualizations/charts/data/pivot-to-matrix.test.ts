@@ -59,6 +59,23 @@ describe("pivotToMatrix", () => {
     expect(result.z[1][1]).toBe(2);
   });
 
+  it("orders timestamps by instant, not by string, across offsets and precision", () => {
+    // Instants: 01:30Z, 01:00:00.5Z, 01:00Z, 01:45Z.
+    const rows = [
+      { x: "2026-09-12T03:30:00+02:00", y: "dev-a", z: 1 },
+      { x: "2026-09-12T01:00:00.500Z", y: "dev-a", z: 2 },
+      { x: "2026-09-12T01:00:00Z", y: "dev-a", z: 3 },
+      { x: "2026-09-12T00:45:00-01:00", y: "dev-a", z: 4 },
+    ];
+    const result = pivotToMatrix(rows, "x", "y", "z");
+    expect(result.xCategories).toEqual([
+      "2026-09-12T01:00:00Z",
+      "2026-09-12T01:00:00.500Z",
+      "2026-09-12T03:30:00+02:00",
+      "2026-09-12T00:45:00-01:00",
+    ]);
+  });
+
   it("emits z indexed as `z[yIndex][xIndex]`", () => {
     const rows = [
       { x: "a", y: "p", z: 1 },
