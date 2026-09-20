@@ -425,8 +425,9 @@ export function validateCalibrationBlocks(
       }
       reasons.push(...checkCoefficient(`${blockName}.${name}`, value, coefficientSpec));
     }
-    // A failed quality record is advisory: the thresholds are the platform's until a
-    // scientist supplies real ones, so it travels with the block and the reviewer decides.
+    // A failed quality record does not fail the block here: whether it travels as advice or
+    // rejects the block is the script's decision, and the seeded scripts reject it, as the
+    // bench tool keeps the existing gain.
   }
 
   return reasons;

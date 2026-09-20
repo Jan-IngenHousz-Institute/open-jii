@@ -168,9 +168,9 @@ describe("validateCalibrationBlocks", () => {
     });
   });
 
-  // The thresholds behind a quality record are the platform's, not the scientist's,
-  // so a failed record travels with the block and the reviewer decides.
-  it("treats a failed QC record as advisory, not a violation", () => {
+  // Whether a failed quality record rejects the block is the script's decision, not the
+  // contract's: a script may still submit it computed, and the record then travels with it.
+  it("does not fail a computed block on a failed QC record", () => {
     const reasons = validateCalibrationBlocks(
       {
         par: {
