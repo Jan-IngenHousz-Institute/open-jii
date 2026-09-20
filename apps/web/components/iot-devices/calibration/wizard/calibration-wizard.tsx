@@ -12,7 +12,7 @@ import { useCalibrationDefinitions } from "@/hooks/iot/useCalibrationDefinitions
 import { useCreateCalibrationRun } from "@/hooks/iot/useCreateCalibrationRun/useCreateCalibrationRun";
 import { useRejectCalibrationRun } from "@/hooks/iot/useRejectCalibrationRun/useRejectCalibrationRun";
 import { useReportDeviceCalibrationWrite } from "@/hooks/iot/useReportDeviceCalibrationWrite/useReportDeviceCalibrationWrite";
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, CircleDashed, Loader2, TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type {
@@ -36,7 +36,9 @@ import {
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
 import { Button } from "@repo/ui/components/button";
 import { WizardStepIndicator } from "@repo/ui/components/wizard-step-indicator";
+import { useIsMobile } from "@repo/ui/hooks/use-mobile";
 import { toast } from "@repo/ui/hooks/use-toast";
+import { cn } from "@repo/ui/lib/utils";
 
 import { CalibrationCaptureProgress } from "./calibration-capture-progress";
 import { CalibrationConnectStep } from "./calibration-connect-step";
@@ -89,6 +91,7 @@ export function CalibrationWizard({
   onClose,
 }: CalibrationWizardProps) {
   const { t } = useTranslation("iot");
+  const isMobile = useIsMobile();
 
   const isProcedureChosen = presetDefinitionId !== undefined;
   const stepOrder = isProcedureChosen ? STEP_ORDER.filter((name) => name !== "choose") : STEP_ORDER;
@@ -377,11 +380,16 @@ export function CalibrationWizard({
   }
 
   function renderCapture() {
+    const request = operator.pending;
     return (
-      <div className="space-y-4">
-        {operator.pending !== null && <CalibrationOperatorPrompt request={operator.pending} />}
-        <CalibrationCaptureProgress events={capture.events} isRunning={capture.isCapturing} />
-        {capture.isCapturing && operator.pending === null && createRun.isPending && (
+      <div className="space-y-6">
+        <CalibrationCaptureProgress
+          events={capture.events}
+          isRunning={capture.isCapturing}
+          isWaitingOnOperator={request !== null}
+        />
+        {request !== null && <CalibrationOperatorPrompt request={request} />}
+        {capture.isCapturing && request === null && createRun.isPending && (
           <p className="text-muted-foreground flex items-center gap-2 text-sm">
             <Loader2 className="size-4 animate-spin" aria-hidden />
             {t("iot.calibration.capture.submitting")}
@@ -462,7 +470,7 @@ export function CalibrationWizard({
   function renderWrite() {
     if (!applied) return null;
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         {operator.pending !== null && <CalibrationOperatorPrompt request={operator.pending} />}
         <CalibrationWriteStep
           applied={applied}
@@ -517,12 +525,30 @@ export function CalibrationWizard({
     const isApproved = applied !== null;
     const isConfirmed =
       writeResults !== null && Object.values(writeResults).every((result) => result.verified);
-    const hint = !isApproved
-      ? t("iot.calibration.done.rejectedHint")
-      : isConfirmed
-        ? t("iot.calibration.done.writtenHint")
-        : t("iot.calibration.done.notWrittenHint");
-    return <p className="text-sm">{hint}</p>;
+    const outcome = !isApproved ? "rejected" : isConfirmed ? "confirmed" : "unconfirmed";
+    const hint = {
+      rejected: t("iot.calibration.done.rejectedHint"),
+      confirmed: t("iot.calibration.done.writtenHint"),
+      unconfirmed: t("iot.calibration.done.notWrittenHint"),
+    }[outcome];
+    const Glyph = { rejected: CircleDashed, confirmed: CheckCircle2, unconfirmed: TriangleAlert }[
+      outcome
+    ];
+
+    return (
+      <div className="flex items-start gap-3">
+        <Glyph
+          className={cn(
+            "mt-0.5 size-5 shrink-0",
+            outcome === "confirmed" && "text-status-active",
+            outcome === "unconfirmed" && "text-destructive",
+            outcome === "rejected" && "text-muted-foreground",
+          )}
+          aria-hidden
+        />
+        <p className="text-sm">{hint}</p>
+      </div>
+    );
   }
 
   function renderDoneActions() {
@@ -563,9 +589,12 @@ export function CalibrationWizard({
     }
   }
 
+  // A bench session is a single column of instructions, readings and one decision, so it
+  // is held to a reading width like the other guided flows in this area. The step names are
+  // the card's title on a phone, where the rail has no room for them.
   return (
-    <div className="space-y-6">
-      <WizardStepIndicator steps={stepTitles} currentIndex={stepIndex} />
+    <div className="max-w-3xl space-y-6">
+      <WizardStepIndicator steps={stepTitles} currentIndex={stepIndex} showTitles={!isMobile} />
       <PanelCard title={t(`iot.calibration.steps.${step}`)} description={stepDescription()}>
         {renderStep()}
       </PanelCard>

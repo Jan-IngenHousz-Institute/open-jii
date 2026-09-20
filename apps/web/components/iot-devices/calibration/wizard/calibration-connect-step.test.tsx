@@ -142,11 +142,13 @@ describe("CalibrationConnectStep", () => {
     expect(screen.getByText("No port was selected")).toBeInTheDocument();
   });
 
-  it("marks a row the run needs apart from one whose steps it can skip", () => {
+  // Being needed is the default and the list below names what is still missing, so only
+  // the row that can be left out says anything about it.
+  it("marks the row whose steps the run can skip, and says nothing on the ones it needs", () => {
     renderStep(stubRig([role({ role: "lamp" }), role({ role: "stray_ref", required: false })]));
 
     const rows = benchRows();
-    expect(within(rows[0]).getByText("iot.calibration.connect.roleRequired")).toBeInTheDocument();
+    expect(within(rows[0]).queryByText("iot.calibration.connect.roleOptional")).toBeNull();
     expect(within(rows[1]).getByText("iot.calibration.connect.roleOptional")).toBeInTheDocument();
   });
 

@@ -24,6 +24,10 @@ interface CalibrationConnectStepProps {
   onDisconnect: () => void;
 }
 
+const SECTION_HEADING = "text-muted-foreground text-xs font-medium uppercase tracking-wide";
+const PORT_ROW =
+  "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border px-4 py-3";
+
 /** The platform never reaches hardware; this browser session is the only bridge. */
 export function CalibrationConnectStep({
   family,
@@ -80,32 +84,32 @@ export function CalibrationConnectStep({
     );
   }
 
-  function renderDeviceStatus(connected: IotDeviceConnection) {
+  function renderConnectedLine(label: string, detail: string | undefined) {
     return (
-      <p className="flex items-center gap-2 text-sm">
-        <Cable className="size-4" aria-hidden />
-        {t("iot.calibration.connect.connected", { name: connected.label })}
-        {connected.identity.firmwareVersion !== undefined && (
-          <span className="text-muted-foreground font-mono text-xs">
-            {connected.identity.firmwareVersion}
-          </span>
+      <p className="flex w-full flex-wrap items-center gap-2 text-sm">
+        <Cable className="size-4 shrink-0" aria-hidden />
+        {label}
+        {detail !== undefined && (
+          <span className="text-muted-foreground font-mono text-xs">{detail}</span>
         )}
       </p>
     );
   }
 
-  // The same card as every instrument below: the device is one more port on the rig.
+  // The same row as every instrument below: the device is one more port on the rig.
   function renderDevice() {
     return (
-      <div className="space-y-2 rounded-md border p-3">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="space-y-1">
-            <p className="text-sm font-medium">{t("iot.calibration.connect.deviceTitle")}</p>
-            <p className="text-muted-foreground text-xs">{getSensorFamilyLabel(family)}</p>
-          </div>
+      <section className="space-y-2">
+        <h3 className={SECTION_HEADING}>{t("iot.calibration.connect.deviceTitle")}</h3>
+        <div className={PORT_ROW}>
+          <p className="text-sm font-medium">{getSensorFamilyLabel(family)}</p>
           {renderDeviceAction()}
+          {connection !== undefined &&
+            renderConnectedLine(
+              t("iot.calibration.connect.connected", { name: connection.label }),
+              connection.identity.firmwareVersion,
+            )}
         </div>
-        {connection !== undefined && renderDeviceStatus(connection)}
         {wrongFamilyMessage !== null && (
           <Alert variant="destructive">
             <AlertDescription>{wrongFamilyMessage}</AlertDescription>
@@ -121,7 +125,7 @@ export function CalibrationConnectStep({
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-      </div>
+      </section>
     );
   }
 
@@ -132,13 +136,7 @@ export function CalibrationConnectStep({
       case "connecting":
         return null;
       case "connected":
-        return (
-          <p className="flex items-center gap-2 text-sm">
-            <Cable className="size-4" aria-hidden />
-            {t("iot.calibration.connect.roleConnected")}
-            <span className="text-muted-foreground font-mono text-xs">{status.model}</span>
-          </p>
-        );
+        return renderConnectedLine(t("iot.calibration.connect.roleConnected"), status.model);
       case "mismatch":
         return (
           <Alert variant="destructive">
@@ -202,24 +200,24 @@ export function CalibrationConnectStep({
     );
   }
 
+  // Being needed is the default, so only an optional role says anything about it; what is
+  // still missing is named once, under the list, where it blocks the run.
   function renderRole(role: RigRole) {
     return (
-      <li key={role.role} className="space-y-2 rounded-md border p-3">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="space-y-1">
-            <p className="text-sm font-medium">{role.role}</p>
+      <li key={role.role} className={PORT_ROW}>
+        <div className="min-w-0 space-y-0.5">
+          <p className="text-sm font-medium">{role.role}</p>
+          <p className="text-muted-foreground text-xs">
+            {t("iot.calibration.connect.roleHandshake")}{" "}
+            <span className="font-mono">{role.handshake}</span>
+          </p>
+          {!role.required && (
             <p className="text-muted-foreground text-xs">
-              {t("iot.calibration.connect.roleHandshake")}{" "}
-              <span className="font-mono">{role.handshake}</span>
+              {t("iot.calibration.connect.roleOptional")}
             </p>
-            <p className="text-muted-foreground text-xs">
-              {role.required
-                ? t("iot.calibration.connect.roleRequired")
-                : t("iot.calibration.connect.roleOptional")}
-            </p>
-          </div>
-          {renderRoleAction(role)}
+          )}
         </div>
+        {renderRoleAction(role)}
         {renderRoleStatus(role)}
       </li>
     );
@@ -231,23 +229,21 @@ export function CalibrationConnectStep({
     }
 
     return (
-      <div className="space-y-3">
-        <h3 id={benchHeadingId} className="text-sm font-medium">
+      <section className="space-y-2">
+        <h3 id={benchHeadingId} className={SECTION_HEADING}>
           {t("iot.calibration.connect.roleHeading")}
         </h3>
         <p className="text-muted-foreground text-sm">{t("iot.calibration.connect.roleHint")}</p>
-        <ul aria-labelledby={benchHeadingId} className="space-y-3">
+        <ul aria-labelledby={benchHeadingId} className="space-y-2">
           {rig.roles.map(renderRole)}
         </ul>
         {hasMissingRoles && (
-          <Alert>
-            <AlertDescription>
-              {t("iot.calibration.connect.roleMissing")}
-              <span className="mt-1 block font-mono text-xs">{missingRoleNames}</span>
-            </AlertDescription>
-          </Alert>
+          <p className="text-muted-foreground text-sm">
+            {t("iot.calibration.connect.roleMissing")}{" "}
+            <span className="font-mono">{missingRoleNames}</span>
+          </p>
         )}
-      </div>
+      </section>
     );
   }
 

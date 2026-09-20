@@ -52,12 +52,12 @@ export function CalibrationWriteStep({
 
   function renderOutcomeIcon(result: WriteResult | undefined) {
     if (result === undefined) {
-      return <CircleDashed className="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden />;
+      return <CircleDashed className="text-muted-foreground size-4 shrink-0" aria-hidden />;
     }
     return result.verified ? (
-      <CheckCircle2 className="text-status-active mt-0.5 size-4 shrink-0" aria-hidden />
+      <CheckCircle2 className="text-status-active size-4 shrink-0" aria-hidden />
     ) : (
-      <XCircle className="text-destructive mt-0.5 size-4 shrink-0" aria-hidden />
+      <XCircle className="text-destructive size-4 shrink-0" aria-hidden />
     );
   }
 
@@ -71,25 +71,22 @@ export function CalibrationWriteStep({
   function renderBlock([name, block]: (typeof blocks)[number]) {
     const result = results?.[name];
     return (
-      <li key={name} className="flex items-start gap-2 text-sm">
+      <li key={name} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-sm">
         {renderOutcomeIcon(result)}
-        <span className="min-w-0">
-          <span className="font-medium">{name}</span>
-          {result !== undefined && (
-            <span className="text-muted-foreground">
-              {" "}
-              {result.verified
-                ? t("iot.calibration.write.verified")
-                : t("iot.calibration.write.failed")}
-            </span>
-          )}
-          <span className="text-muted-foreground block font-mono text-xs">
-            {formatCoefficients(block)}
+        <span className="font-medium">{name}</span>
+        {result !== undefined && (
+          <span className="text-muted-foreground">
+            {result.verified
+              ? t("iot.calibration.write.verified")
+              : t("iot.calibration.write.failed")}
           </span>
-          {result?.error !== undefined && (
-            <span className="text-muted-foreground block font-mono text-xs">{result.error}</span>
-          )}
+        )}
+        <span className="text-muted-foreground ml-auto font-mono text-xs">
+          {formatCoefficients(block)}
         </span>
+        {result?.error !== undefined && (
+          <span className="text-destructive w-full font-mono text-xs">{result.error}</span>
+        )}
       </li>
     );
   }
@@ -101,8 +98,10 @@ export function CalibrationWriteStep({
   function renderCheck() {
     if (!showsCheck) return null;
     return (
-      <div className="space-y-3 rounded-md border p-4">
-        <p className="text-sm font-medium">{t("iot.calibration.write.verifyHeading")}</p>
+      <section className="space-y-3">
+        <h3 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+          {t("iot.calibration.write.verifyHeading")}
+        </h3>
         {isVerifying && (
           <p className="text-muted-foreground text-sm">{t("iot.calibration.write.verifying")}</p>
         )}
@@ -117,7 +116,7 @@ export function CalibrationWriteStep({
         {hasVerification && (
           <div className="space-y-3">{Object.entries(verification).map(renderSeries)}</div>
         )}
-      </div>
+      </section>
     );
   }
 
@@ -130,13 +129,13 @@ export function CalibrationWriteStep({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {error !== null && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      <ul className="space-y-2">{blocks.map(renderBlock)}</ul>
+      <ul className="divide-y overflow-hidden rounded-lg border">{blocks.map(renderBlock)}</ul>
       {hasUnconfirmedBlock && (
         <Alert variant="destructive">
           <AlertDescription>{t("iot.calibration.write.partial")}</AlertDescription>

@@ -55,10 +55,12 @@ export function CalibrationReview({ run, payload, active }: CalibrationReviewPro
   function renderReadings() {
     if (series.length === 0) return null;
     return (
-      <div className="space-y-4">
-        <p className="text-sm font-medium">{t("iot.calibration.run.readings")}</p>
+      <section className="space-y-3">
+        <h3 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+          {t("iot.calibration.run.readings")}
+        </h3>
         {series.map(renderSeries)}
-      </div>
+      </section>
     );
   }
 

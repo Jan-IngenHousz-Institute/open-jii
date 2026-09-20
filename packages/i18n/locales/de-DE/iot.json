@@ -876,7 +876,8 @@
       },
       "capture": {
         "step": "Schritt {{index}} von {{total}}: {{description}}",
-        "setpoint": "Sollwert {{index}} von {{total}}: {{value}}",
+        "stepCounter": "Schritt {{index}} von {{total}}",
+        "setpoint": "Sollwert {{index}} von {{total}}, bei {{value}}",
         "series": "{{series}}: {{rows}} Zeilen erfasst",
         "skipped": "{{series}} übersprungen: {{reason}}",
         "hint": "Der Messplatz arbeitet das Verfahren ab und zeichnet jede Messung auf, sobald sie eintrifft. Beantworten Sie unterwegs, was er fragt.",

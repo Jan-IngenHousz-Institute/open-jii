@@ -71,7 +71,9 @@ export function CalibrationAnswerPrompt({ request }: { request: AnswerRequest })
         control={form.control}
         name="answer"
         render={({ field }) => (
-          <FormItem>
+          // A confirmation token is a handful of characters and a reading is a number;
+          // a field the width of the card invites neither.
+          <FormItem className="max-w-xs">
             <FormLabel>
               {isGated
                 ? t("iot.calibration.prompt.confirmLabel", { token: request.confirm ?? "" })
@@ -95,16 +97,20 @@ export function CalibrationAnswerPrompt({ request }: { request: AnswerRequest })
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(submit)} className="space-y-4" aria-live="polite">
-        <p className="text-base">{request.prompt}</p>
+        <p className="text-sm font-medium">{request.prompt}</p>
         {renderField()}
-        <div className="flex gap-2">
-          <Button type="submit" disabled={request.kind === "acknowledge" && !isTokenTyped}>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="submit"
+            size="sm"
+            disabled={request.kind === "acknowledge" && !isTokenTyped}
+          >
             {request.kind === "acknowledge"
               ? t("iot.calibration.prompt.continue")
               : t("iot.calibration.prompt.submit")}
           </Button>
           {request.kind === "acknowledge" && (
-            <Button type="button" variant="outline" onClick={decline}>
+            <Button type="button" variant="outline" size="sm" onClick={decline}>
               {t("iot.calibration.prompt.decline")}
             </Button>
           )}

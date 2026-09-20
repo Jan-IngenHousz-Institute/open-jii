@@ -30,4 +30,31 @@ describe("CalibrationCaptureProgress", () => {
     expect(screen.getByText("iot.calibration.capture.series")).toBeInTheDocument();
     expect(screen.getByText("iot.calibration.capture.skipped")).toBeInTheDocument();
   });
+
+  // The steps behind the one running, so a long sweep says how far along it is without
+  // the operator counting lines.
+  it("carries the procedure's progress as a bar", () => {
+    const { container, rerender } = render(
+      <CalibrationCaptureProgress
+        events={[{ kind: "step", index: 2, total: 4, description: "Read adpd_baseline" }]}
+        isRunning
+      />,
+    );
+
+    // Two of four steps are behind the one running, so the bar is half filled.
+    const bar = container.querySelector('[role="progressbar"]');
+    expect(bar?.firstElementChild).toHaveStyle({ transform: "translateX(-50%)" });
+
+    rerender(<CalibrationCaptureProgress events={EVENTS} isRunning={false} />);
+    expect(container.querySelector('[role="progressbar"]')).toBeNull();
+  });
+
+  // The request the operator is answering states the step in its own words; printing the
+  // description again above it said the same sentence twice.
+  it("counts the step without repeating its description while the operator is answering", () => {
+    render(<CalibrationCaptureProgress events={EVENTS} isRunning isWaitingOnOperator />);
+
+    expect(screen.getByText("iot.calibration.capture.stepCounter")).toBeInTheDocument();
+    expect(screen.queryByText("iot.calibration.capture.step")).toBeNull();
+  });
 });

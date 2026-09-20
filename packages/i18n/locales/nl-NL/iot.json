@@ -876,7 +876,8 @@
       },
       "capture": {
         "step": "Stap {{index}} van {{total}}: {{description}}",
-        "setpoint": "Instelpunt {{index}} van {{total}}: {{value}}",
+        "stepCounter": "Stap {{index}} van {{total}}",
+        "setpoint": "Instelpunt {{index}} van {{total}}, bij {{value}}",
         "series": "{{series}}: {{rows}} rijen vastgelegd",
         "skipped": "{{series}} overgeslagen: {{reason}}",
         "hint": "De meetopstelling doorloopt de procedure en legt elke meting vast zodra die binnenkomt. Beantwoord onderweg wat er wordt gevraagd.",

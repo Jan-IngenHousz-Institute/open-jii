@@ -27,17 +27,26 @@ export function CalibrationDefinitionPicker({
   function renderDefinition(definition: CalibrationDefinitionSummary) {
     const inputId = `calibration-definition-${definition.id}`;
     return (
-      <div key={definition.id} className="flex items-start gap-3 rounded-md border p-3">
-        <RadioGroupItem value={definition.id} id={inputId} className="mt-1" />
-        <Label htmlFor={inputId} className="flex-1 cursor-pointer space-y-1 font-normal">
-          <span className="block text-sm font-medium">
+      <div
+        key={definition.id}
+        className="hover:bg-muted/40 flex items-start gap-3 rounded-lg border px-4 py-3 transition-colors"
+      >
+        <RadioGroupItem value={definition.id} id={inputId} className="mt-0.5" />
+        {/* The shared label is a row; the name has to sit above the description, not beside it. */}
+        <Label
+          htmlFor={inputId}
+          className="min-w-0 flex-1 cursor-pointer flex-col items-start gap-1 font-normal"
+        >
+          <span className="text-sm font-medium">
             {definition.name}
-            <span className="text-muted-foreground ml-2 text-xs">
+            <span className="text-muted-foreground ml-2 text-xs font-normal">
               {t("iot.calibration.runs.definition", { version: definition.version })}
             </span>
           </span>
           {definition.description !== null && (
-            <span className="text-muted-foreground block text-xs">{definition.description}</span>
+            <span className="text-muted-foreground text-xs leading-relaxed">
+              {definition.description}
+            </span>
           )}
         </Label>
       </div>

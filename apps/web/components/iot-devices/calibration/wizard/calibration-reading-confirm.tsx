@@ -32,21 +32,21 @@ export function CalibrationReadingConfirm({ request }: { request: ConfirmRequest
 
   return (
     <div className="space-y-4" aria-live="polite">
-      <p className="text-base">
+      <p className="text-sm font-medium">
         {reading.stimulus === undefined
           ? t("iot.calibration.prompt.confirmReading")
           : t("iot.calibration.prompt.confirmReadingAt", {
               stimulus: formatSeriesValue(reading.stimulus),
             })}
       </p>
-      <dl className="grid max-w-md grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-sm">
+      <dl className="bg-background grid max-w-sm grid-cols-[max-content_1fr] gap-x-6 gap-y-1 rounded-md border px-3 py-2 text-sm">
         {columns.map(renderCell)}
       </dl>
-      <div className="flex gap-2">
-        <Button type="button" onClick={() => request.resolve(true)}>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" onClick={() => request.resolve(true)}>
           {t("iot.calibration.prompt.keepReading")}
         </Button>
-        <Button type="button" variant="outline" onClick={() => request.resolve(false)}>
+        <Button type="button" variant="outline" size="sm" onClick={() => request.resolve(false)}>
           <RotateCcw className="mr-2 size-4" aria-hidden />
           {t("iot.calibration.prompt.retakeReading")}
         </Button>
