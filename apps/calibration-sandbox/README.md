@@ -30,9 +30,10 @@ ported from a notebook and reads as one.
 `tests/test_isolation.py` holds both walls, including a script that tries to
 disable the quality gate for whoever calibrates next.
 
-Human approval remains the gate before any coefficient reaches a device, and a
-quality record is advisory: the thresholds are the platform's until a scientist
-supplies real ones.
+Human approval remains the gate before any coefficient reaches a device. A block
+whose quality gate failed is rejected by the script and kept on record with its
+reasons, as the bench tool keeps a device's existing gain; the thresholds are the
+platform's until a scientist supplies real ones.
 
 `lib/helpers/qc.py` holds one set of quality gates for every definition, so two
 scripts fitting the same kind of curve cannot disagree about what passes.
