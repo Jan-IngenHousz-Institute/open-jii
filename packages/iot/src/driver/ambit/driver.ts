@@ -236,6 +236,17 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
           this.lastTrafficAt = Date.now();
           await this.transport.send(payload);
           await delay(AMBIT_FRAMING.SETTLE_MS);
+
+          // Success is silence. Anything printed in the settle is the firmware refusing
+          // the value, in its own words, which beat a readback disagreement later.
+          const refusal = this.rxBuffer
+            .split("\n")
+            .map((line) => line.trim())
+            .find((line) => line.length > 0);
+          if (refusal !== undefined) {
+            throw new Error(`Ambit refused ${token}: ${refusal}`);
+          }
+
           const verify = await this.sendAndCollect(
             `${AMBIT_COMMANDS.HELLO}${AMBIT_FRAMING.LINE_ENDING}`,
             this.quietWindowMs,

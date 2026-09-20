@@ -8,19 +8,25 @@ import {
 } from "./device-info";
 
 /**
- * A boot dump in the shapes the firmware prints. Values are plausible rather
- * than captured: no recorded device dump exists in this repository, so these
- * tests prove the format, not the bytes a unit emits.
+ * A boot dump in the shape the firmware prints it: every line tab-separated, the MAC as
+ * twelve hex digits with no separators, fourteen MLX coefficients, and the free-text
+ * `info1` among the metadata. Values are plausible rather than captured, but the widths
+ * and separators are the firmware's, so a parser that only satisfies this fixture also
+ * satisfies a device.
  */
+const MLX_COEFFICIENTS = 14;
+
 const DUMP = [
   "NEW AmbitV004 Ready",
   "ADPD Found, chip version: 192",
-  "Metadata: lon:5.6634 lat:51.9851 alt:12 time:1787000000 acc:3 vacc:5 x:-12 y:4 z:1001",
+  "Metadata: lon:5.663400\tlat:51.985100\talt:12.000000\ttime:1787000000\tacc:3.000000" +
+    "\tvacc:5.000000\tinfo1:field unit 4\tx:-12.000000\ty:4.000000\tz:1001.000000",
   "Calibration: ADPD: 1021\t987\t1103\t954\t1200\t1015",
-  "Calibration: Act_50:983 Act_100:2032 Act_150:3121 Act_200:4174 Act_250:5233",
-  "Calibration: Name:AmbitV004 Actinic:0.2412 Spec:1.1893 Emit:0.9910 Sun:1.0 Temp_offset:-0.35 Temp_slope:1.002",
-  "MLX: 16384 32768 4096",
-  "FW: MAC:A0:B1:C2:D3:E4:F5\tSize:1245184\tDate:Mar  5 2026",
+  "Calibration: Act_50:983\tAct_100:2032\tAct_150:3121\tAct_200:4174\tAct_250:5233",
+  "Calibration: Name:AmbitV004\tActinic:0.241200\tSpec:1.189300\tEmit:0.991000" +
+    "\tSun:1.000000\tTemp_offset:-0.350000\tTemp_slope:1.002000",
+  `MLX: ${Array.from({ length: MLX_COEFFICIENTS }, (_, i) => 100 + i).join("\t")}\t`,
+  "FW: MAC:a0b1c2d3e4f5\tSize:1245184\tDate:Mar  5 2026",
   "FW: 1.1.3",
 ].join("\n");
 
@@ -36,7 +42,7 @@ describe("parseAmbitBootDump", () => {
   it("reads the identity a hello reply cannot supply", () => {
     const info = parsed(DUMP);
 
-    expect(info.mac).toBe("A0:B1:C2:D3:E4:F5");
+    expect(info.mac).toBe("a0b1c2d3e4f5");
     expect(info.firmwareVersion).toBe("1.1.3");
     expect(info.name).toBe("AmbitV004");
   });
@@ -79,10 +85,13 @@ describe("parseAmbitBootDump", () => {
     expect(metadata.lat).toBeCloseTo(51.9851, 4);
     expect(metadata.alt).toBe(12);
     expect(metadata.z).toBe(1001);
+    // Tab-separated in the firmware because `info1` is free text an operator types.
+    expect(metadata.info1).toBe("field unit 4");
   });
 
-  it("reads the MLX vector", () => {
-    expect(parsed(DUMP).mlxCalibration).toEqual([16384, 32768, 4096]);
+  it("reads the MLX vector, all fourteen coefficients", () => {
+    expect(parsed(DUMP).mlxCalibration).toHaveLength(MLX_COEFFICIENTS);
+    expect(parsed(DUMP).mlxCalibration?.[0]).toBe(100);
   });
 });
 
@@ -98,7 +107,7 @@ describe("what the dump did not say", () => {
     const info = parsed(
       [
         "ADPD Found, chip version: ?",
-        "Metadata: lon:n/a alt:12",
+        "Metadata: lon:n/a\talt:12",
         "Calibration: Name:AmbitV004 Spec:abc",
         "FW: MAC:A0:B1:C2:D3:E4:F5\tSize:big",
         "FW: 1.1.3",

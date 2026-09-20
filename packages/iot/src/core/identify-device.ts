@@ -184,7 +184,10 @@ function classifyHelloReply(reply: string): DeviceIdentity | null {
     // Ambit firmware currently hardcodes the text before "Ready".  It is a
     // family signature, not a device name, so do not leak the placeholder into
     // $device.name.
-    return { family: "ambit", raw };
+    // The build after the sentinel is the only version an Ambit states before a reboot;
+    // its numeric core is what a calibration's firmware floor compares, the rest stays in raw.
+    const firmwareVersion = /\bFW:(\d+(?:\.\d+){1,2})/i.exec(text)?.[1];
+    return { family: "ambit", ...(firmwareVersion ? { firmwareVersion } : {}), raw };
   }
 
   return null;

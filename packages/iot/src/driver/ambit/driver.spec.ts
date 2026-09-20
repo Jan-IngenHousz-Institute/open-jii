@@ -339,6 +339,22 @@ describe("AmbitDriver", () => {
     expect(transport.send).toHaveBeenCalledWith("set_spec,1.2340\n");
   });
 
+  // valid_actinic_coefficient() answers a value it will not store with one line and keeps
+  // the old value; the hello that follows still says ready, so only that line tells.
+  it("surfaces the firmware's own line when a silent writer is refused", async () => {
+    const transport = tableTransport({
+      "set_act,0.0100\n": "Actinic coefficient rejected\n",
+      "hello\n": HELLO_REPLY,
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute("set_act,0.0100");
+
+    expect(result.success).toBe(false);
+    expect(result.error?.message).toBe("Ambit refused set_act: Actinic coefficient rejected");
+  });
+
   // The LED latch prints nothing the host is documented to read, so waiting for a
   // reply would stall every point of a sweep and then fail it.
   // The firmware puts the console in plotting mode, runs the array, and only then prints

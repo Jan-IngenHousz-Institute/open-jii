@@ -139,9 +139,11 @@ export function parseAmbitBootLine(line: string): AmbitDeviceInfo {
     return adpdChipVersion !== undefined ? { adpdChipVersion } : {};
   }
 
+  // Tab-separated like the FW line, and for the same reason: `info1` is free text an
+  // operator types, so a whitespace split would end it at the first space.
   if (text.startsWith("Metadata:")) {
     const metadata: AmbitMetadata = {};
-    for (const [key, value] of keyValuePairs(text.slice("Metadata:".length))) {
+    for (const [key, value] of keyValuePairs(text.slice("Metadata:".length), true)) {
       metadata[key] = coerceNumber(value);
     }
     return { metadata };
