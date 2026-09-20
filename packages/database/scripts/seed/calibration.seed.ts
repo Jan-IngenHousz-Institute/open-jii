@@ -33,10 +33,10 @@ ${orderedByStimulus ? '    points["stimulus"],\n' : ""}    slope_min=0.1,
     intercept_max=100.0,
 )
 
-# The thresholds are the platform's until the scientist supplies real ones: a
-# failed gate travels with the block as advice and the reviewer decides.
+# A failed gate rejects the block and keeps its record, as the bench tool keeps the
+# existing gain; the thresholds are the platform's until the scientist supplies real ones.
 fitted = math.isfinite(fit["slope"]) and math.isfinite(fit["intercept"])
-if fitted:
+if fitted and fit["passed"]:
     block = {
         "status": "computed",
         "coefficients": {"slope": fit["slope"], "intercept": fit["intercept"]},
@@ -77,8 +77,8 @@ fit = assess_multilinear_fit(
     intercept_max=100.0,
 )
 
-# The thresholds are the platform's until the scientist supplies real ones: a
-# failed gate travels with the block as advice and the reviewer decides.
+# A failed gate rejects the block and keeps its record, as the bench tool keeps the
+# existing gain; the thresholds are the platform's until the scientist supplies real ones.
 fitted = all(math.isfinite(value) for value in fit["coefficients"]) and math.isfinite(
     fit["intercept"]
 )
@@ -86,7 +86,7 @@ settings = {reading for reading in points["settings"]}
 if len(settings) != 1:
     raise ValueError(f"the sweep ran at more than one spectrometer setting: {sorted(settings)}")
 
-if fitted:
+if fitted and fit["passed"]:
     # par = par_raw * slope + intercept, and par_raw is the channel sum. Leaving the
     # previous line in place would scale this fit by it, so the line is set here too.
     submit(
@@ -184,7 +184,7 @@ is_dark = channels[0] <= CHANNEL_0_DARK_MAX
 
 
 def gain_block(fit, name):
-    if math.isfinite(fit["coefficient"]):
+    if math.isfinite(fit["coefficient"]) and fit["passed"]:
         return {
             "status": "computed",
             "coefficients": {name: fit["coefficient"]},
@@ -193,22 +193,29 @@ def gain_block(fit, name):
     return {"status": "rejected", "reason": "; ".join(fit["reasons"]), "quality": fit}
 
 
-# A baseline that never went dark is advice, not a refusal: the reviewer decides,
-# the same way a failed fit gate travels with its block.
+# A baseline that never went dark is rejected with its record kept, as the bench tool
+# keeps the existing one; the firmware refuses such a vector at the write in any case.
+baseline_quality = {
+    "passed": is_dark,
+    "reasons": [] if is_dark else ["the first channel is too bright for a dark baseline"],
+    "channel_0": channels[0],
+    "thresholds": {"channel_0_max": CHANNEL_0_DARK_MAX},
+}
+baseline_block = (
+    {"status": "computed", "coefficients": {"channels": channels}, "quality": baseline_quality}
+    if is_dark
+    else {
+        "status": "rejected",
+        "reason": "; ".join(baseline_quality["reasons"]),
+        "quality": baseline_quality,
+    }
+)
+
 submit(
     {
         "par": gain_block(par_fit, "spec"),
         "led": gain_block(led_fit, "act"),
-        "baseline": {
-            "status": "computed",
-            "coefficients": {"channels": channels},
-            "quality": {
-                "passed": is_dark,
-                "reasons": [] if is_dark else ["the first channel is too bright for a dark baseline"],
-                "channel_0": channels[0],
-                "thresholds": {"channel_0_max": CHANNEL_0_DARK_MAX},
-            },
-        },
+        "baseline": baseline_block,
     }
 )
 `;
@@ -251,7 +258,7 @@ for led in [${multispeqLedChannels.map(({ led }) => led).join(", ")}]:
         intercept_max=100000.0,
     )
     fitted = math.isfinite(fit["slope"]) and math.isfinite(fit["intercept"])
-    if fitted:
+    if fitted and fit["passed"]:
         blocks[f"led{led}"] = {
             "status": "computed",
             "coefficients": {"slope": fit["slope"], "intercept": fit["intercept"]},
@@ -445,6 +452,9 @@ submit(blocks)
     {
       family: "ambit",
       name: "[Seed] Ambit factory calibration",
+      // The release the factory bench flashes: the first console with set_baseline and the
+      // gain validators. Older units write gains unchecked and answer set_baseline BAD COMMAND.
+      minFirmwareVersion: "1.1.3",
       description:
         "The factory bench in one procedure: a lamp sweep against a PAR reference fits the sensor's PAR gain, an actinic sweep against a second reference fits its LED gain, and a covered sensor measures the dark baseline of its six detector channels.",
       captureProcedure: {
