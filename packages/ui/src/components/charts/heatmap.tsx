@@ -11,6 +11,7 @@ import { useChartSizing } from "./use-is-compact";
 import {
   createBaseLayout,
   createPlotlyConfig,
+  detectAxisType,
   getRenderer,
   getPlotType,
   truncateCategoryTicks,
@@ -62,6 +63,11 @@ export interface HeatmapSeriesData extends BaseSeries {
     color?: string;
   };
   hoverongaps?: boolean;
+  /**
+   * Off by default: a missing cell stays blank instead of taking a value
+   * interpolated from its neighbours, which for a presence matrix would
+   * invent readings that never happened.
+   */
   connectgaps?: boolean;
   xgap?: number;
   ygap?: number;
@@ -118,7 +124,7 @@ export function Heatmap({
 
           // Gaps and layout
           hoverongaps: series.hoverongaps !== false,
-          connectgaps: series.connectgaps !== false,
+          connectgaps: series.connectgaps === true,
           xgap: series.xgap || 1,
           ygap: series.ygap || 1,
           transpose: series.transpose || false,
@@ -137,37 +143,18 @@ export function Heatmap({
   const layout = useMemo(() => {
     const next = createBaseLayout(config, sizing);
 
-    // Determine axis types based on data
     const firstSeries = data[0];
+    const xValues = firstSeries?.x ?? [];
+    const yValues = firstSeries?.y ?? [];
 
-    // Check X-axis data type
-    const xAxisType =
-      firstSeries?.x && firstSeries.x.length > 0
-        ? typeof firstSeries.x[0] === "string" || firstSeries.x[0] instanceof Date
-          ? "category"
-          : "linear"
-        : "linear";
-
-    // Check Y-axis data type
-    const yAxisType =
-      firstSeries?.y && firstSeries.y.length > 0
-        ? typeof firstSeries.y[0] === "string" || firstSeries.y[0] instanceof Date
-          ? "category"
-          : "linear"
-        : "linear";
+    // ISO timestamps get a date axis so Plotly ticks at sensible intervals
+    // instead of one rotated label per bucket.
+    const xAxisType = detectAxisType(xValues);
+    const yAxisType = detectAxisType(yValues);
 
     // Bound long category labels so automargin can't eat the plot area.
-    next.xaxis = truncateCategoryTicks(
-      { ...next.xaxis, type: xAxisType },
-      firstSeries?.x ?? [],
-      sizing,
-    );
-
-    next.yaxis = truncateCategoryTicks(
-      { ...next.yaxis, type: yAxisType },
-      firstSeries?.y ?? [],
-      sizing,
-    );
+    next.xaxis = truncateCategoryTicks({ ...next.xaxis, type: xAxisType }, xValues, sizing);
+    next.yaxis = truncateCategoryTicks({ ...next.yaxis, type: yAxisType }, yValues, sizing);
 
     // Set aspect ratio if specified
     if (aspectRatio === "equal") {

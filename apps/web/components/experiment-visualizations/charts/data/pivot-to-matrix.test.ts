@@ -39,6 +39,26 @@ describe("pivotToMatrix", () => {
     expect(result.z[yi][xi]).toBe(40);
   });
 
+  it("sorts an ISO-timestamp axis chronologically regardless of row order", () => {
+    // Hour buckets come back from the warehouse in no particular order.
+    const rows = [
+      { x: "2026-09-12T03:00:00Z", y: "dev-a", z: 1 },
+      { x: "2026-09-12T01:00:00Z", y: "dev-b", z: 2 },
+      { x: "2026-09-11T23:00:00Z", y: "dev-a", z: 3 },
+      { x: "2026-09-12T01:00:00Z", y: "dev-a", z: 4 },
+    ];
+    const result = pivotToMatrix(rows, "x", "y", "z");
+    expect(result.xCategories).toEqual([
+      "2026-09-11T23:00:00Z",
+      "2026-09-12T01:00:00Z",
+      "2026-09-12T03:00:00Z",
+    ]);
+    expect(result.yCategories).toEqual(["dev-a", "dev-b"]);
+    // z stays aligned to the sorted axis: (x=01:00, y=dev-a) => 4.
+    expect(result.z[0][1]).toBe(4);
+    expect(result.z[1][1]).toBe(2);
+  });
+
   it("emits z indexed as `z[yIndex][xIndex]`", () => {
     const rows = [
       { x: "a", y: "p", z: 1 },

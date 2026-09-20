@@ -1,3 +1,5 @@
+import { detectAxisType } from "@repo/ui/components/charts/utils";
+
 import { coerceCell } from "./cell-coercion";
 
 /**
@@ -5,9 +7,10 @@ import { coerceCell } from "./cell-coercion";
  * yCategories, z[][])` triple Plotly's `heatmap` and `contour` traces
  * expect. Plotly's z layout is `z[yIndex][xIndex]`.
  *
- * Numeric axes are sorted ascending so the grid is monotonic regardless of
- * row order (an unsorted numeric axis makes `contour` draw scrambled iso-
- * lines). Genuine string-category axes keep first-seen order.
+ * Numeric and ISO-timestamp axes are sorted ascending so the grid is
+ * monotonic regardless of row order (an unsorted numeric axis makes
+ * `contour` draw scrambled iso-lines; the warehouse returns time buckets in
+ * no particular order). Genuine string-category axes keep first-seen order.
  */
 export function pivotToMatrix(
   rows: Record<string, unknown>[],
@@ -65,11 +68,18 @@ export function pivotToMatrix(
   return { xCategories, yCategories, z };
 }
 
-/** Sort a fully-numeric axis ascending; leave categorical axes first-seen. */
+/** Sort numeric and ISO-timestamp axes ascending; leave categorical axes first-seen. */
 function orderCategories(categories: (string | number)[]): (string | number)[] {
   const allNumeric = categories.every((c) => typeof c === "number");
-  if (!allNumeric) {
-    return categories;
+  if (allNumeric) {
+    return [...categories].sort((a, b) => Number(a) - Number(b));
   }
-  return [...categories].sort((a, b) => Number(a) - Number(b));
+
+  // Uniform ISO strings from one column sort chronologically by code unit.
+  const allDates = detectAxisType(categories) === "date";
+  if (allDates) {
+    return [...categories].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  }
+
+  return categories;
 }
