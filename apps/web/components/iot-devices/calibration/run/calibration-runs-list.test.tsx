@@ -70,6 +70,23 @@ describe("CalibrationRunsList", () => {
     expect(screen.getByText("iot.calibration.status.compute_failed")).toBeInTheDocument();
   });
 
+  // A bench unit collects sessions for years, and the panel beside it holds only the
+  // coefficients in force.
+  it("keeps a long history inside the panel", () => {
+    render(
+      <CalibrationRunsList
+        runs={Array.from({ length: 30 }, () => createCalibrationRun())}
+        definitionNames={NO_NAMES}
+        isLoading={false}
+        isError={false}
+        onSelectRun={vi.fn()}
+      />,
+    );
+
+    const list = screen.getAllByRole("listitem")[0].parentElement;
+    expect(list).toHaveClass("max-h-96", "overflow-y-auto");
+  });
+
   it("seats the action it is given in its header", () => {
     render(
       <CalibrationRunsList

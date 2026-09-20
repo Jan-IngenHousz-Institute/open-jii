@@ -4,13 +4,16 @@ import type { RigRole, useCalibrationRig } from "@/hooks/iot/useCalibrationRig/u
 import { useIotBrowserSupport } from "@/hooks/iot/useIotBrowserSupport";
 import type { IotDeviceConnection } from "@/hooks/iot/useIotConnections/useIotConnections";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
-import { Cable, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useId } from "react";
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
 import { Button } from "@repo/ui/components/button";
+
+import { CalibrationPortRow } from "./calibration-port-row";
+import type { PortState } from "./calibration-port-row";
 
 export type CalibrationRig = ReturnType<typeof useCalibrationRig>;
 
@@ -25,8 +28,15 @@ interface CalibrationConnectStepProps {
 }
 
 const SECTION_HEADING = "text-muted-foreground text-xs font-medium uppercase tracking-wide";
-const PORT_ROW =
-  "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border px-4 py-3";
+
+const ROLE_STATE: Record<RigRole["status"]["kind"], PortState> = {
+  idle: "idle",
+  connecting: "connecting",
+  connected: "connected",
+  mismatch: "failed",
+  unrecognised: "failed",
+  failed: "failed",
+};
 
 /** The platform never reaches hardware; this browser session is the only bridge. */
 export function CalibrationConnectStep({
@@ -62,81 +72,101 @@ export function CalibrationConnectStep({
         ? t("iot.calibration.connect.unsupportedDevice")
         : null;
 
-  function renderDeviceAction() {
-    if (isConnected) {
-      return (
-        <Button type="button" variant="outline" size="sm" onClick={onDisconnect}>
-          {t("iot.calibration.connect.disconnect")}
-        </Button>
-      );
-    }
+  // Opening a port is the step's work, repeated once per instrument; the wizard's own
+  // Continue is the only filled button on the page.
+  function renderPortButton(label: string, isOpening: boolean, onClick: () => void) {
     return (
-      <Button type="button" size="sm" onClick={onConnect} disabled={isPortActionBlocked}>
-        {isConnecting ? (
-          <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
-        ) : (
-          <Cable className="mr-2 size-4" aria-hidden />
-        )}
-        {isConnecting
-          ? t("iot.calibration.connect.connecting")
-          : t("iot.calibration.connect.action")}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={isPortActionBlocked}
+        onClick={onClick}
+      >
+        {isOpening && <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />}
+        {label}
       </Button>
     );
   }
 
-  function renderConnectedLine(label: string, detail: string | undefined) {
+  function renderReleaseButton(onClick: () => void) {
     return (
-      <p className="flex w-full flex-wrap items-center gap-2 text-sm">
-        <Cable className="size-4 shrink-0" aria-hidden />
-        {label}
-        {detail !== undefined && (
-          <span className="text-muted-foreground font-mono text-xs">{detail}</span>
-        )}
-      </p>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={isPortActionBlocked}
+        onClick={onClick}
+      >
+        {t("iot.calibration.connect.disconnect")}
+      </Button>
     );
   }
 
-  // The same row as every instrument below: the device is one more port on the rig.
+  function renderDetail(label: string, value: string | undefined) {
+    return (
+      <>
+        {label} {value !== undefined && <span className="font-mono">{value}</span>}
+      </>
+    );
+  }
+
   function renderDevice() {
+    // Nothing to say about a port that has not been opened; the family is the row's title.
+    const detail =
+      connection === undefined
+        ? undefined
+        : renderDetail(
+            t("iot.calibration.connect.connected", { name: connection.label }),
+            connection.identity.firmwareVersion,
+          );
+
     return (
       <section className="space-y-2">
         <h3 className={SECTION_HEADING}>{t("iot.calibration.connect.deviceTitle")}</h3>
-        <div className={PORT_ROW}>
-          <p className="text-sm font-medium">{getSensorFamilyLabel(family)}</p>
-          {renderDeviceAction()}
-          {connection !== undefined &&
-            renderConnectedLine(
-              t("iot.calibration.connect.connected", { name: connection.label }),
-              connection.identity.firmwareVersion,
-            )}
-        </div>
-        {wrongFamilyMessage !== null && (
-          <Alert variant="destructive">
-            <AlertDescription>{wrongFamilyMessage}</AlertDescription>
-          </Alert>
-        )}
-        {!isConnected && unsupportedReason !== null && (
-          <Alert>
-            <AlertDescription>{unsupportedReason}</AlertDescription>
-          </Alert>
-        )}
-        {!isConnected && error !== null && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+        <CalibrationPortRow
+          state={isConnected ? "connected" : isConnecting ? "connecting" : "idle"}
+          title={getSensorFamilyLabel(family)}
+          detail={detail}
+          action={
+            isConnected
+              ? renderReleaseButton(onDisconnect)
+              : renderPortButton(
+                  isConnecting
+                    ? t("iot.calibration.connect.connecting")
+                    : t("iot.calibration.connect.action"),
+                  isConnecting,
+                  onConnect,
+                )
+          }
+        >
+          {wrongFamilyMessage !== null && (
+            <Alert variant="destructive">
+              <AlertDescription>{wrongFamilyMessage}</AlertDescription>
+            </Alert>
+          )}
+          {!isConnected && unsupportedReason !== null && (
+            <Alert>
+              <AlertDescription>{unsupportedReason}</AlertDescription>
+            </Alert>
+          )}
+          {!isConnected && error !== null && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+        </CalibrationPortRow>
       </section>
     );
   }
 
-  function renderRoleStatus(role: RigRole) {
+  function renderRoleRefusal(role: RigRole) {
     const status = role.status;
     switch (status.kind) {
       case "idle":
       case "connecting":
-        return null;
       case "connected":
-        return renderConnectedLine(t("iot.calibration.connect.roleConnected"), status.model);
+        return null;
       case "mismatch":
         return (
           <Alert variant="destructive">
@@ -164,61 +194,36 @@ export function CalibrationConnectStep({
     }
   }
 
-  function renderRoleAction(role: RigRole) {
-    if (role.status.kind === "connected") {
-      return (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={isPortActionBlocked}
-          onClick={() => void rig.disconnectRole(role.role)}
-        >
-          {t("iot.calibration.connect.disconnect")}
-        </Button>
-      );
-    }
-
-    const isOpening = role.status.kind === "connecting";
-
-    return (
-      <Button
-        type="button"
-        size="sm"
-        disabled={isPortActionBlocked}
-        onClick={() => void rig.connectRole(role.role)}
-      >
-        {isOpening ? (
-          <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
-        ) : (
-          <Cable className="mr-2 size-4" aria-hidden />
-        )}
-        {isOpening
-          ? t("iot.calibration.connect.roleConnecting")
-          : t("iot.calibration.connect.roleAction")}
-      </Button>
-    );
-  }
-
   // Being needed is the default, so only an optional role says anything about it; what is
   // still missing is named once, under the list, where it blocks the run.
   function renderRole(role: RigRole) {
+    const status = role.status;
+    const detail =
+      status.kind === "connected"
+        ? renderDetail(t("iot.calibration.connect.roleConnected"), status.model)
+        : renderDetail(t("iot.calibration.connect.roleHandshake"), role.handshake);
+
     return (
-      <li key={role.role} className={PORT_ROW}>
-        <div className="min-w-0 space-y-0.5">
-          <p className="text-sm font-medium">{role.role}</p>
-          <p className="text-muted-foreground text-xs">
-            {t("iot.calibration.connect.roleHandshake")}{" "}
-            <span className="font-mono">{role.handshake}</span>
-          </p>
-          {!role.required && (
-            <p className="text-muted-foreground text-xs">
-              {t("iot.calibration.connect.roleOptional")}
-            </p>
-          )}
-        </div>
-        {renderRoleAction(role)}
-        {renderRoleStatus(role)}
+      <li key={role.role}>
+        <CalibrationPortRow
+          state={ROLE_STATE[status.kind]}
+          title={role.role}
+          detail={detail}
+          note={role.required ? undefined : t("iot.calibration.connect.roleOptional")}
+          action={
+            status.kind === "connected"
+              ? renderReleaseButton(() => void rig.disconnectRole(role.role))
+              : renderPortButton(
+                  status.kind === "connecting"
+                    ? t("iot.calibration.connect.roleConnecting")
+                    : t("iot.calibration.connect.roleAction"),
+                  status.kind === "connecting",
+                  () => void rig.connectRole(role.role),
+                )
+          }
+        >
+          {renderRoleRefusal(role)}
+        </CalibrationPortRow>
       </li>
     );
   }

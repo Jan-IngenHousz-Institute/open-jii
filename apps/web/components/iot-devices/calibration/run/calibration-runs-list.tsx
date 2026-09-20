@@ -72,7 +72,11 @@ export function CalibrationRunsList({
     if (!runs || runs.length === 0) {
       return <EmptyState size="inline" description={t("iot.calibration.runs.empty")} />;
     }
-    return <ul className="divide-y overflow-hidden rounded-lg border">{runs.map(renderRun)}</ul>;
+    // Every session a device has ever had is on this list, and a bench unit collects them
+    // for years; bounded, it stays one panel beside the coefficients in force.
+    return (
+      <ul className="max-h-96 divide-y overflow-y-auto rounded-lg border">{runs.map(renderRun)}</ul>
+    );
   }
 
   return (

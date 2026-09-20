@@ -1,4 +1,5 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@/test/test-utils";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { CalibrationSeriesTable } from "./calibration-series-table";
@@ -24,8 +25,7 @@ describe("CalibrationSeriesTable", () => {
     expect(within(rows[2]).getByText("600")).toBeInTheDocument();
   });
 
-  // The setpoint is what a reader scans down, so it leads whatever order the columns
-  // arrived in.
+  // The setpoint leads, which the shared table would otherwise reorder by type.
   it("puts the setpoint first", () => {
     render(<CalibrationSeriesTable series="led_sweep" rows={[{ emit_ref: 41.5, stimulus: 10 }]} />);
 
@@ -33,42 +33,62 @@ describe("CalibrationSeriesTable", () => {
     expect(headers).toEqual(["stimulus", "emit_ref"]);
   });
 
-  // A device that answers a structured reading lands it whole in one cell, and a reviewer
-  // still has to be able to read the row it sits in.
-  it("keeps a long reading whole in the row it sits in", () => {
-    const channels = Array.from({ length: 10 }, (_, index) => index * 111);
-    const settings = "model=AS7341,available=1,atime=100,astep=999,gain=2,led_ma=0";
-    render(<CalibrationSeriesTable series="adpd_baseline" rows={[{ channels, settings }]} />);
-
-    expect(screen.getByText(/^0, 111, 222/)).toBeInTheDocument();
-    // Cutting the text down would put the reading itself out of reach of a copy or a
-    // find, on the one page whose job is to hold the evidence.
-    expect(screen.getByText(settings)).toHaveClass("truncate");
-  });
-
-  // Instruments and operators answer with more than numbers: a gate is a boolean, a
-  // sensor's settings are text, and a compound setpoint is a record.
-  it("renders every kind of cell a reading can hold", () => {
+  // The dark point of a baseline reads zero everywhere, and a blank cell there would look
+  // like a reading that never arrived.
+  it("shows a zero reading as the measurement it is", () => {
     render(
       <CalibrationSeriesTable
-        series="spec_check"
-        rows={[
-          {
-            spec: "AS7341,19,53",
-            channels: [0.00785574, 0.00343847],
-            dark: true,
-            lamp: { current: 0.8, unit: "A" },
-            par: 398.123456789,
-          },
-        ]}
+        series="par_sweep"
+        rows={[{ stimulus: 0, par_raw: 0, par_ref: 0 }]}
       />,
     );
 
-    expect(screen.getByText("AS7341,19,53")).toBeInTheDocument();
-    expect(screen.getByText("0.00785574, 0.00343847")).toBeInTheDocument();
+    const row = screen.getAllByRole("row")[1];
+    expect(within(row).getAllByText("0")).toHaveLength(3);
+  });
+
+  // A device that answers a structured reading lands it whole in one cell; the reviewer
+  // opens the one they are checking rather than reading JSON across the row.
+  it("opens a structured reading in place", async () => {
+    render(
+      <CalibrationSeriesTable
+        series="par_sweep"
+        rows={[{ stimulus: 0.8, par: '{"par":160,"channels":[496,352]}' }]}
+      />,
+    );
+
+    expect(screen.getByText("2 fields")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button"));
+
+    expect(await screen.findByText("par:")).toBeInTheDocument();
+    expect(screen.getByText("160")).toBeInTheDocument();
+  });
+
+  // Six detector channels are a shape, not six numbers to read one at a time.
+  it("draws a per-channel reading as its trace", () => {
+    const { container } = render(
+      <CalibrationSeriesTable
+        series="adpd_baseline"
+        rows={[{ channels: [312, 198, 245, 187, 203, 176] }]}
+      />,
+    );
+
+    expect(container.querySelector("svg path")).toBeInTheDocument();
+  });
+
+  // Instruments and operators answer with more than numbers: a gate is a boolean and a
+  // sensor's settings are text.
+  it("renders the readings that are neither numbers nor structures", () => {
+    render(
+      <CalibrationSeriesTable
+        series="spec_sweep"
+        rows={[{ stimulus: "no filter", dark: true, settings: "atime=200,astep=200" }]}
+      />,
+    );
+
+    expect(screen.getByText("no filter")).toBeInTheDocument();
     expect(screen.getByText("true")).toBeInTheDocument();
-    expect(screen.getByText("current: 0.8, unit: A")).toBeInTheDocument();
-    expect(screen.getByText("398.123")).toBeInTheDocument();
+    expect(screen.getByText("atime=200,astep=200")).toBeInTheDocument();
   });
 
   it("renders nothing for a series with no points", () => {

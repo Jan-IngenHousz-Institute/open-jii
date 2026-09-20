@@ -70,6 +70,29 @@ describe("CalibrationReview", () => {
 
     expect(screen.getByText("0.91")).toBeInTheDocument();
     expect(screen.getByText("-0.5")).toBeInTheDocument();
+    expect(screen.getAllByText("iot.calibration.review.previousLabel")).toHaveLength(2);
+  });
+
+  // A recalibration that lands on the number already in force is the common case, and
+  // printing it twice buried the coefficients that did move.
+  it("says a coefficient is unchanged instead of showing it twice", () => {
+    renderReview({
+      active: createActiveDeviceCalibration({
+        blocks: {
+          par: {
+            coefficients: { slope: 0.96, intercept: -1.08 },
+            calibrationId: "33333333-3333-4333-8333-333333333333",
+            runId: "44444444-4444-4444-8444-444444444444",
+            validFrom: "2026-09-01T10:05:00.000Z",
+            writtenToDeviceAt: null,
+            writeResult: null,
+          },
+        },
+      }),
+    });
+
+    expect(screen.getAllByText("iot.calibration.review.unchanged")).toHaveLength(2);
+    expect(screen.getAllByText("0.96")).toHaveLength(1);
   });
 
   it("says the previous coefficient is unknown when nothing is in force", () => {
@@ -84,9 +107,8 @@ describe("CalibrationReview", () => {
     expect(screen.getByTestId("fit-chart")).toHaveTextContent("0.96|-1.08");
   });
 
-  // A ten-channel coefficient wraps over several lines. Laid out side by side, the old
-  // value ends up floating halfway down the new one and reads as a rendering fault.
-  it("stacks the comparison for a per-channel coefficient", () => {
+  // A ten-channel coefficient is one value, however many lines it wraps over.
+  it("keeps a per-channel coefficient whole", () => {
     renderReview({
       run: createCalibrationRun({
         blocks: {
@@ -98,14 +120,8 @@ describe("CalibrationReview", () => {
       }),
     });
 
-    const value = screen.getByText("[-2.03393, 0.60675, 0.100565]");
-    expect(value.parentElement).toHaveClass("flex-col");
-  });
-
-  it("keeps the comparison side by side for a single coefficient", () => {
-    renderReview();
-
-    expect(screen.getByText("0.96").parentElement).not.toHaveClass("flex-col");
+    expect(screen.getByText("[-2.03393, 0.60675, 0.100565]")).toBeInTheDocument();
+    expect(screen.getByText("channel_coefficients")).toBeInTheDocument();
   });
 
   // R-squared says a fit is poor without saying which reading made it poor, which is the
