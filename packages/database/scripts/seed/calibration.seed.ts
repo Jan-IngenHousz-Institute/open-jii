@@ -169,6 +169,15 @@ led_fit = assess_origin_fit(
     coefficient_max=1.0,
 )
 
+# The device takes an actinic gain strictly above 0.01 where the fit's gate is inclusive,
+# so a coefficient on that edge is flagged: approved, it would be refused at the write.
+ACTINIC_MIN_EXCLUSIVE = 0.01
+if math.isfinite(led_fit["coefficient"]) and led_fit["coefficient"] <= ACTINIC_MIN_EXCLUSIVE:
+    led_fit["passed"] = False
+    led_fit["reasons"] = led_fit["reasons"] + [
+        f"the device refuses an actinic coefficient at or below {ACTINIC_MIN_EXCLUSIVE}"
+    ]
+
 CHANNEL_0_DARK_MAX = 400
 channels = [int(value) for value in inputs["adpd_baseline"]["channels"][0]]
 is_dark = channels[0] <= CHANNEL_0_DARK_MAX

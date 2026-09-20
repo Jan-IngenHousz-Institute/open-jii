@@ -16,6 +16,8 @@ export interface FakePort {
   sent: string[];
   /** How many times the port was handed back, which a closed port alone does not show. */
   disconnects: number;
+  /** Payloads written after the port was handed back, which the real adapter refuses. */
+  refused: string[];
   emitStatus(connected: boolean): void;
 }
 
@@ -32,14 +34,22 @@ const NO_VALUE_LEFT = "NameError: name 'getPAR' isn't defined";
 /** The concrete adapters keep one data callback and replace it, so a fake holding several would flatter them. */
 function scriptedPort(answer: (payload: string) => string | undefined): FakePort {
   const sent: string[] = [];
+  const refused: string[] = [];
   let receive: ((data: string) => void) | undefined;
   let notifyStatus: ((connected: boolean, error?: Error) => void) | undefined;
   let connected = true;
+  // Distinct from `connected`: a port that reports itself gone still has a working writer;
+  // only handing the port back releases it, as the real adapter does.
+  let closed = false;
   let disconnects = 0;
 
   const transport: ITransportAdapter = {
     isConnected: () => connected,
     send: (data) => {
+      if (closed) {
+        refused.push(data);
+        return Promise.reject(new Error("Writer not initialized"));
+      }
       sent.push(data);
       const reply = answer(data);
       if (reply !== undefined) {
@@ -55,7 +65,10 @@ function scriptedPort(answer: (payload: string) => string | undefined): FakePort
     },
     disconnect: () => {
       connected = false;
+      closed = true;
       disconnects += 1;
+      // The real adapter reports its own close through the callback a pulled cable uses.
+      notifyStatus?.(false);
       return Promise.resolve();
     },
   };
@@ -63,6 +76,7 @@ function scriptedPort(answer: (payload: string) => string | undefined): FakePort
   return {
     transport,
     sent,
+    refused,
     get disconnects() {
       return disconnects;
     },

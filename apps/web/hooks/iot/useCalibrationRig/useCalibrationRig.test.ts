@@ -189,6 +189,10 @@ describe("useCalibrationRig", () => {
     expect(lamp.sent.at(-1)).toBe(KIPRIM_COMMANDS.setCurrent(0));
     expect(lamp.transport.isConnected()).toBe(false);
     expect(reference.transport.isConnected()).toBe(false);
+    // A port reports its own close through the disconnect callback; that must not send
+    // the supply's rest again into a port that is already gone.
+    expect(lamp.refused).toEqual([]);
+    expect(reference.refused).toEqual([]);
     expect(result.current.roles.every((entry) => entry.status.kind === "idle")).toBe(true);
     expect(result.current.bindings).toEqual({});
   });

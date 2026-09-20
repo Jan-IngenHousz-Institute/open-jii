@@ -262,14 +262,24 @@ export function useCalibrationRig(
   restRef.current = rest;
 
   const shutdownAll = useCallback(async () => {
-    const entries = [...connectedRef.current.values()];
+    const entries = [...connectedRef.current.entries()];
     generationRef.current += 1;
 
     setConnected(new Map());
     setStatuses(new Map());
 
     await restRef.current();
-    await Promise.all(entries.map((entry) => releasePort(entry.transport)));
+
+    // Closing a port reports the close through the same callback a pulled cable uses, which
+    // asks for the role to be released again. The instruments are rested by now, so that
+    // second release could only write to a port that is already gone.
+    for (const [role] of entries) {
+      releasingRef.current.add(role);
+    }
+    await Promise.all(entries.map(([, entry]) => releasePort(entry.transport)));
+    for (const [role] of entries) {
+      releasingRef.current.delete(role);
+    }
   }, []);
 
   const shutdownAllRef = useRef(shutdownAll);
