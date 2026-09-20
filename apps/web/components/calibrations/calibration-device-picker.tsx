@@ -34,13 +34,18 @@ export function CalibrationDevicePicker({
   function renderDevice(device: IotDevice) {
     const inputId = `calibration-device-${device.id}`;
     return (
-      <div key={device.id} className="flex items-start gap-3 rounded-md border p-3">
-        <RadioGroupItem value={device.id} id={inputId} className="mt-1" />
-        <Label htmlFor={inputId} className="flex-1 cursor-pointer space-y-1 font-normal">
-          <span className="block text-sm font-medium">{device.name}</span>
-          <span className="text-muted-foreground block font-mono text-xs">
-            {device.serialNumber}
-          </span>
+      <div
+        key={device.id}
+        className="hover:bg-muted/40 flex items-start gap-3 rounded-lg border px-4 py-3 transition-colors"
+      >
+        <RadioGroupItem value={device.id} id={inputId} className="mt-0.5" />
+        {/* The shared label is a row; the name has to sit above the serial, not beside it. */}
+        <Label
+          htmlFor={inputId}
+          className="min-w-0 flex-1 cursor-pointer flex-col items-start gap-1 font-normal"
+        >
+          <span className="text-sm font-medium">{device.name}</span>
+          <span className="text-muted-foreground font-mono text-xs">{device.serialNumber}</span>
         </Label>
       </div>
     );
