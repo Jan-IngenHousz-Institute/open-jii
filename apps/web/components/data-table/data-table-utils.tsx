@@ -124,7 +124,9 @@ export function formatValue(
     ),
   };
 
-  if (!value) {
+  // Only an absent reading is blank. A zero is a measurement, and on a dark baseline it is
+  // the measurement the row exists for.
+  if (value === null || value === undefined) {
     return "";
   }
 
@@ -238,7 +240,14 @@ export function DataTableHeader({
               onClick={() => isSortable && onSort(actualSortColumn, columnType)}
             >
               {header.isPlaceholder ? null : (
-                <div className="flex items-center justify-between">
+                // A numeric column is read up its right edge, so its name belongs over the
+                // digits rather than at the far side of the cell.
+                <div
+                  className={cn(
+                    "flex items-center",
+                    isNumericColumn ? "justify-end gap-1" : "justify-between",
+                  )}
+                >
                   <span>
                     <FlexRender header={header} />
                   </span>
