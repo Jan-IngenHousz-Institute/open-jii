@@ -63,6 +63,7 @@ Use one relation per issue so Linear attaches every issue to this PR:
 - [ ] My changes generate no new warnings
 - [ ] I have reviewed my own code
 - [ ] My PR title and Linear relation lines follow the release metadata contract
+- [ ] The Linear ticket carries `## How it was built` and `## Testing criteria`
 
 ## Screenshots/Recordings
 

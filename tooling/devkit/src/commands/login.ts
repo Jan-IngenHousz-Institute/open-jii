@@ -1,3 +1,6 @@
+import { chmod, mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
+
 import { repositoryRoot, resolveDatabaseUrl } from "../lib/config.js";
 import { readLatestSignInOtp } from "../lib/otp.js";
 
@@ -7,7 +10,6 @@ interface LoginDependencies {
   request: typeof fetch;
   requestTimeoutMs: number;
   readOtp: typeof readLatestSignInOtp;
-  write: (text: string) => void;
 }
 
 const requestTimeoutMs = 10_000;
@@ -68,7 +70,6 @@ export async function loginLocal(
     request: fetch,
     requestTimeoutMs,
     readOtp: readLatestSignInOtp,
-    write: (text) => process.stdout.write(text),
     ...dependencies,
   };
   const databaseUrl = await resolveDatabaseUrl(deps.root, deps.env);
@@ -94,16 +95,32 @@ export async function loginLocal(
   );
   const session = [...jar].find(([key]) => key.endsWith("session_token"));
   if (!session) throw new Error("Sign-in succeeded without returning a session cookie");
-  const cookie = `${session[0]}=${session[1]}`;
-  deps.write(`${cookie}\n`);
-  return cookie;
+  return `${session[0]}=${session[1]}`;
+}
+
+// curl reads the header straight from the file (-H @file), so the cookie never enters a shell.
+export async function writeSessionHeader(path: string, cookie: string): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `cookie: ${cookie}\n`, { mode: 0o600 });
+  await chmod(path, 0o600);
 }
 
 async function run(args: string[]): Promise<number> {
   const emailIndex = args.indexOf("--email");
   const email = emailIndex >= 0 ? args[emailIndex + 1] : "seed@openjii.local";
   if (!email) throw new Error("--email requires an address");
-  await loginLocal(email);
+
+  const cookie = await loginLocal(email);
+  if (args.includes("--print")) {
+    process.stdout.write(`${cookie}\n`);
+    return 0;
+  }
+
+  await writeSessionHeader(`${repositoryRoot()}/.claude/session.header`, cookie);
+  process.stdout.write(
+    "Session header written to .claude/session.header (mode 600). " +
+      "Use it without reading it: curl -H @.claude/session.header http://127.0.0.1:3020/api/v1/...\n",
+  );
   return 0;
 }
 
