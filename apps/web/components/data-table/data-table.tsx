@@ -95,6 +95,11 @@ export interface DataTableProps {
   errorColumn?: string;
   /** Rows rendered as skeletons while a page is in flight. */
   loadingRowCount?: number;
+  /**
+   * Render the columns in the order given rather than by type. For callers whose order is
+   * itself information, such as a sweep whose setpoint leads the readings it produced.
+   */
+  preserveColumnOrder?: boolean;
   className?: string;
 }
 
@@ -116,6 +121,7 @@ export function DataTable({
   cellHandlers,
   errorColumn,
   loadingRowCount = 10,
+  preserveColumnOrder = false,
   className,
 }: DataTableProps) {
   const { t } = useTranslation();
@@ -137,7 +143,10 @@ export function DataTable({
     [expandedCell],
   );
 
-  const orderedColumns = useMemo(() => sortColumnsForDisplay(columns), [columns]);
+  const orderedColumns = useMemo(
+    () => (preserveColumnOrder ? columns : sortColumnsForDisplay(columns)),
+    [columns, preserveColumnOrder],
+  );
 
   const tableColumns = useMemo(() => {
     const dataColumns = createTableColumns({
@@ -148,10 +157,19 @@ export function DataTable({
       onToggleCellExpansion: toggleCellExpansion,
       isCellExpanded,
       errorColumn,
+      preserveOrder: preserveColumnOrder,
     });
 
     return selection === undefined ? dataColumns : [selectionColumn(), ...dataColumns];
-  }, [columns, cellHandlers, toggleCellExpansion, isCellExpanded, errorColumn, selection]);
+  }, [
+    columns,
+    cellHandlers,
+    toggleCellExpansion,
+    isCellExpanded,
+    errorColumn,
+    selection,
+    preserveColumnOrder,
+  ]);
 
   const isPaged = pagination !== undefined;
   const isServerPaged = pagination?.mode === "server";
