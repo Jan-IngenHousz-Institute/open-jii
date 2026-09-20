@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  payloadSeriesIssue,
   procedureSeriesNames,
   requiredProcedureSeriesNames,
   acceptedSeriesNames,
@@ -259,6 +260,45 @@ describe("zCaptureProcedure", () => {
       expect(verificationSeriesNames(parsed)).toEqual(["par_check"]);
       expect(procedureSeriesNames(parsed)).toEqual(["par_sweep"]);
       expect(verificationSeriesNames(zCaptureProcedure.parse(manualMiniparProcedure))).toEqual([]);
+    });
+
+    describe("payloadSeriesIssue", () => {
+      const parsed = zCaptureProcedure.parse(ambitFactoryProcedure);
+      const complete = { par_sweep: {}, led_sweep: {}, adpd_baseline: {} };
+
+      it("accepts a payload carrying exactly the series the procedure produces", () => {
+        expect(payloadSeriesIssue(parsed, complete)).toBeNull();
+      });
+
+      it("names every required series the payload left out", () => {
+        expect(payloadSeriesIssue(parsed, { par_sweep: {} })).toBe(
+          "Payload is missing required series: led_sweep, adpd_baseline",
+        );
+      });
+
+      it("refuses series the procedure cannot have produced", () => {
+        expect(payloadSeriesIssue(parsed, { ...complete, par_check: {} })).toBe(
+          "Payload carries series the procedure does not produce: par_check",
+        );
+      });
+
+      // A bench missing a reference still produces a useful run.
+      it("lets an optional step's series be absent", () => {
+        const withOptional = zCaptureProcedure.parse({
+          ...automatedMiniparProcedure,
+          steps: [
+            ...automatedMiniparProcedure.steps,
+            {
+              kind: "read",
+              series: "stray_light",
+              optional: true,
+              read: [{ instrument: "par_ref", command: "par", as: "stray" }],
+            },
+          ],
+        });
+        expect(payloadSeriesIssue(withOptional, { par_sweep: {} })).toBeNull();
+        expect(payloadSeriesIssue(withOptional, { par_sweep: {}, stray_light: {} })).toBeNull();
+      });
     });
 
     // Both phases retake readings, so both allow-lists must carry the companions.
