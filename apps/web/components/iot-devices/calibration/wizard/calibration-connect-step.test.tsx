@@ -3,6 +3,8 @@ import { render, screen, within } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { MiniParDriver } from "@repo/iot";
+
 import type { CalibrationRig } from "./calibration-connect-step";
 import { CalibrationConnectStep } from "./calibration-connect-step";
 
@@ -203,5 +205,34 @@ describe("CalibrationConnectStep", () => {
       screen.getByRole("button", { name: "iot.calibration.connect.roleAction" }),
     ).toBeDisabled();
     expect(screen.getByRole("button", { name: "iot.calibration.connect.action" })).toBeDisabled();
+  });
+
+  // The device is one more port on the rig, so it gets the same card as every instrument.
+  it("shows the device as a card of its own, with what answered on its port", () => {
+    render(
+      <CalibrationConnectStep
+        family="minipar"
+        connection={{
+          id: "conn-1",
+          label: "MiniPAR",
+          family: "minipar",
+          identity: { family: "minipar", firmwareVersion: "1.03", raw: {} },
+          driver: new MiniParDriver({ timeoutMs: 500, protocolTimeoutMs: 500 }),
+        }}
+        isConnecting={false}
+        error={null}
+        rig={stubRig([role()])}
+        onConnect={vi.fn()}
+        onDisconnect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("iot.calibration.connect.deviceTitle")).toBeInTheDocument();
+    expect(screen.getByText("iot.calibration.connect.connected")).toBeInTheDocument();
+    expect(screen.getByText("1.03")).toBeInTheDocument();
+    // The instrument beside it is still idle, so the device's is the only Disconnect.
+    expect(
+      screen.getAllByRole("button", { name: "iot.calibration.connect.disconnect" }),
+    ).toHaveLength(1);
   });
 });

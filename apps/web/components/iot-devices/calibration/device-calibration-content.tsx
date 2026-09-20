@@ -2,6 +2,7 @@
 
 import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
 import { useActiveDeviceCalibration } from "@/hooks/iot/useActiveDeviceCalibration/useActiveDeviceCalibration";
+import { useCalibrationDefinitions } from "@/hooks/iot/useCalibrationDefinitions/useCalibrationDefinitions";
 import { useDeviceCalibrationRuns } from "@/hooks/iot/useDeviceCalibrationRuns/useDeviceCalibrationRuns";
 import { useIotDevice } from "@/hooks/iot/useIotDevice/useIotDevice";
 import { useLocale } from "@/hooks/useLocale";
@@ -31,13 +32,19 @@ export default function DeviceCalibrationContent() {
   const { data: device } = useIotDevice(deviceId);
   const family = zCalibrationFamily.safeParse(device?.deviceType);
   const calibrationFamily = family.success ? family.data : undefined;
+  const isCalibrationFamily = calibrationFamily !== undefined;
 
-  const active = useActiveDeviceCalibration(deviceId, { enabled: calibrationFamily !== undefined });
-  const runs = useDeviceCalibrationRuns(deviceId, { enabled: calibrationFamily !== undefined });
+  const active = useActiveDeviceCalibration(deviceId, { enabled: isCalibrationFamily });
+  const runs = useDeviceCalibrationRuns(deviceId, { enabled: isCalibrationFamily });
+  // A session names its procedure by id; the family's published list is where the names are.
+  const definitions = useCalibrationDefinitions(calibrationFamily);
+  const definitionNames = new Map(
+    (definitions.data ?? []).map((definition) => [definition.id, definition.name]),
+  );
 
   // A phone or an edge device has no coefficients to write; a direct visit leaves.
   const detailPath = `/${locale}/platform/devices/${deviceId}`;
-  const hasNoSurface = device !== undefined && calibrationFamily === undefined;
+  const hasNoSurface = device !== undefined && !isCalibrationFamily;
 
   useEffect(() => {
     if (hasNoSurface) {
@@ -49,8 +56,9 @@ export default function DeviceCalibrationContent() {
     return null;
   }
 
+  const canManage = device.capabilities.canManage;
+
   function renderWizard(family: NonNullable<typeof calibrationFamily>) {
-    if (device === undefined) return null;
     return (
       <CalibrationWizard
         deviceId={deviceId}
@@ -70,14 +78,25 @@ export default function DeviceCalibrationContent() {
     );
   }
 
+  function renderCalibrateAction() {
+    return (
+      <Button type="button" size="sm" onClick={() => setIsWizardOpen(true)}>
+        <SlidersHorizontal className="mr-2 size-4" aria-hidden />
+        {t("iot.calibration.cta.calibrate")}
+      </Button>
+    );
+  }
+
   function renderOverview() {
     return (
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="space-y-6">
           <CalibrationRunsList
             runs={runs.data}
+            definitionNames={definitionNames}
             isLoading={runs.isLoading}
             isError={runs.isError}
+            action={canManage ? renderCalibrateAction() : undefined}
             onSelectRun={setSelectedRunId}
           />
         </div>
@@ -92,23 +111,12 @@ export default function DeviceCalibrationContent() {
     );
   }
 
-  const isViewingRun = selectedRunId !== null;
-  const canStartWizard = !isWizardOpen && !isViewingRun && device.capabilities.canManage;
-
   return (
     <div>
       <TabBodyHeader
         title={t("iot.calibration.title")}
         description={t("iot.calibration.description")}
       />
-      {canStartWizard && (
-        <div className="mb-6 flex justify-end">
-          <Button type="button" onClick={() => setIsWizardOpen(true)}>
-            <SlidersHorizontal className="mr-2 size-4" aria-hidden />
-            {t("iot.calibration.cta.calibrate")}
-          </Button>
-        </div>
-      )}
       {isWizardOpen
         ? renderWizard(calibrationFamily)
         : selectedRunId !== null

@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, CircleDashed, XCircle } from "lucide-react";
 
 import type {
   CalibrationRunPayload,
@@ -10,43 +10,39 @@ import type {
 import { useTranslation } from "@repo/i18n";
 import type { ProcedureProgress } from "@repo/iot";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
-import { Button } from "@repo/ui/components/button";
 
 import { CalibrationSeriesTable } from "../result/calibration-series-table";
+import { formatCoefficientValue } from "../result/format-coefficient-value";
 import { CalibrationCaptureProgress } from "./calibration-capture-progress";
 
 interface CalibrationWriteStepProps {
   applied: DeviceCalibration;
   canWrite: boolean;
   results: CalibrationWriteResults | null;
-  isWriting: boolean;
   error: string | null;
   verifyEvents: ProcedureProgress[];
   isVerifying: boolean;
   verification: CalibrationRunPayload | null;
   verificationError: string | null;
-  onWrite: () => void;
-  onFinish: () => void;
 }
 
-/** Approval alone changes nothing on the hardware; this step does. */
+type AppliedBlock = DeviceCalibration["blocks"][string];
+type WriteResult = CalibrationWriteResults[string];
+
+/** Approval alone changes nothing on the hardware; this step does. The write itself is the wizard's action. */
 export function CalibrationWriteStep({
   applied,
   canWrite,
   results,
-  isWriting,
   error,
   verifyEvents,
   isVerifying,
   verification,
   verificationError,
-  onWrite,
-  onFinish,
 }: CalibrationWriteStepProps) {
   const { t } = useTranslation("iot");
 
-  const isWritten = results !== null;
-  const blockNames = Object.keys(applied.blocks);
+  const blocks = Object.entries(applied.blocks);
   // Nothing is rolled back, so an unconfirmed block can have reached the device
   // in part. The operator has to know before the unit goes back into service.
   const hasUnconfirmedBlock = Object.values(results ?? {}).some((result) => !result.verified);
@@ -54,22 +50,43 @@ export function CalibrationWriteStep({
   const showsCheck =
     isVerifying || verifyEvents.length > 0 || hasVerification || verificationError !== null;
 
-  function renderResult(block: string) {
-    const result = results?.[block];
-    if (!result) return null;
+  function renderOutcomeIcon(result: WriteResult | undefined) {
+    if (result === undefined) {
+      return <CircleDashed className="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden />;
+    }
+    return result.verified ? (
+      <CheckCircle2 className="text-status-active mt-0.5 size-4 shrink-0" aria-hidden />
+    ) : (
+      <XCircle className="text-destructive mt-0.5 size-4 shrink-0" aria-hidden />
+    );
+  }
+
+  function formatCoefficients(block: AppliedBlock) {
+    return Object.entries(block.coefficients)
+      .map(([name, value]) => `${name} ${formatCoefficientValue(value)}`)
+      .join(", ");
+  }
+
+  // Every block that is about to go to the device, then what became of each one.
+  function renderBlock([name, block]: (typeof blocks)[number]) {
+    const result = results?.[name];
     return (
-      <li key={block} className="flex items-start gap-2 text-sm">
-        {result.verified ? (
-          <CheckCircle2 className="text-status-active mt-0.5 size-4" aria-hidden />
-        ) : (
-          <XCircle className="text-destructive mt-0.5 size-4" aria-hidden />
-        )}
-        <span>
-          <span className="font-medium">{block}</span>{" "}
-          {result.verified
-            ? t("iot.calibration.write.verified")
-            : t("iot.calibration.write.failed")}
-          {result.error !== undefined && (
+      <li key={name} className="flex items-start gap-2 text-sm">
+        {renderOutcomeIcon(result)}
+        <span className="min-w-0">
+          <span className="font-medium">{name}</span>
+          {result !== undefined && (
+            <span className="text-muted-foreground">
+              {" "}
+              {result.verified
+                ? t("iot.calibration.write.verified")
+                : t("iot.calibration.write.failed")}
+            </span>
+          )}
+          <span className="text-muted-foreground block font-mono text-xs">
+            {formatCoefficients(block)}
+          </span>
+          {result?.error !== undefined && (
             <span className="text-muted-foreground block font-mono text-xs">{result.error}</span>
           )}
         </span>
@@ -106,45 +123,26 @@ export function CalibrationWriteStep({
 
   if (!canWrite) {
     return (
-      <div className="space-y-4">
-        <Alert>
-          <AlertDescription>{t("iot.calibration.write.unsupported")}</AlertDescription>
-        </Alert>
-        <Button type="button" variant="outline" onClick={onFinish}>
-          {t("iot.calibration.write.skip")}
-        </Button>
-      </div>
+      <Alert>
+        <AlertDescription>{t("iot.calibration.write.unsupported")}</AlertDescription>
+      </Alert>
     );
   }
 
   return (
     <div className="space-y-4">
-      <p className="text-muted-foreground text-sm">{t("iot.calibration.write.hint")}</p>
       {error !== null && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      {isWritten && <ul className="space-y-1">{blockNames.map(renderResult)}</ul>}
+      <ul className="space-y-2">{blocks.map(renderBlock)}</ul>
       {hasUnconfirmedBlock && (
         <Alert variant="destructive">
           <AlertDescription>{t("iot.calibration.write.partial")}</AlertDescription>
         </Alert>
       )}
       {renderCheck()}
-      <div className="flex gap-2">
-        {!isWritten && (
-          <Button type="button" onClick={onWrite} disabled={isWriting}>
-            {isWriting && <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />}
-            {isWriting ? t("iot.calibration.write.writing") : t("iot.calibration.write.action")}
-          </Button>
-        )}
-        {isWritten && (
-          <Button type="button" onClick={onFinish} disabled={isWriting}>
-            {t("iot.calibration.done.close")}
-          </Button>
-        )}
-      </div>
     </div>
   );
 }

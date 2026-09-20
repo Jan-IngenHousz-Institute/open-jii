@@ -759,4 +759,37 @@ describe("CalibrationWizard", () => {
       expect(screen.getByRole("button", { name: "iot.calibration.cta.next" })).toBeDisabled();
     });
   });
+
+  // A script that produced nothing used to leave the operator with no button at all.
+  it("offers another pass or the exit when the script produced nothing", async () => {
+    attachMiniPar([420, 150, 8.33, 420, 150, 8.33]);
+    server.mount(contract.iot.createCalibrationRun, {
+      status: 201,
+      body: createCalibrationRun({
+        deviceId: DEVICE_ID,
+        definitionId: DEFINITION_ID,
+        status: "compute_failed",
+        blocks: null,
+        errorMessage: "No block produced coefficients",
+      }),
+    });
+    const onClose = renderWizard();
+
+    await captureThreePoints();
+
+    expect(await screen.findByText("iot.calibration.review.computeFailed")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "iot.calibration.review.approve" })).toBeNull();
+
+    // Another pass starts the bench over without reconnecting anything.
+    await userEvent.click(screen.getByRole("button", { name: "iot.calibration.capture.retry" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.prompt.decline" }),
+    );
+    expect(await screen.findByText("iot.calibration.capture.aborted")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.cancel" }));
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
 });

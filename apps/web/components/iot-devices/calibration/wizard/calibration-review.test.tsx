@@ -1,6 +1,5 @@
 import { createActiveDeviceCalibration, createCalibrationRun } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
-import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { CalibrationReview } from "./calibration-review";
@@ -24,10 +23,6 @@ function renderReview(overrides: Partial<Parameters<typeof CalibrationReview>[0]
     run: createCalibrationRun(),
     payload: PAYLOAD,
     active: null,
-    isApproving: false,
-    isRejecting: false,
-    onApprove: vi.fn(),
-    onReject: vi.fn(),
     ...overrides,
   };
   render(<CalibrationReview {...props} />);
@@ -87,16 +82,6 @@ describe("CalibrationReview", () => {
     renderReview();
 
     expect(screen.getByTestId("fit-chart")).toHaveTextContent("0.96|-1.08");
-  });
-
-  it("approves and rejects through the callbacks", async () => {
-    const props = renderReview();
-
-    await userEvent.click(screen.getByRole("button", { name: "iot.calibration.review.approve" }));
-    await userEvent.click(screen.getByRole("button", { name: "iot.calibration.review.reject" }));
-
-    expect(props.onApprove).toHaveBeenCalledTimes(1);
-    expect(props.onReject).toHaveBeenCalledTimes(1);
   });
 
   // A ten-channel coefficient wraps over several lines. Laid out side by side, the old
@@ -184,7 +169,7 @@ describe("CalibrationReview", () => {
     expect(screen.getByText("R-squared must be at least 0.99")).toBeInTheDocument();
   });
 
-  it("offers no decision on a run that did not compute", () => {
+  it("explains a run that did not compute, with the readings it was given", () => {
     renderReview({
       run: createCalibrationRun({
         status: "compute_failed",
@@ -195,7 +180,7 @@ describe("CalibrationReview", () => {
 
     expect(screen.getByText("iot.calibration.review.computeFailed")).toBeInTheDocument();
     expect(screen.getByText(/above the allowed maximum/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "iot.calibration.review.approve" })).toBeNull();
+    expect(screen.getByText("402.12")).toBeInTheDocument();
   });
 
   // When every block was rejected, the run fails as a whole but each block's
@@ -213,7 +198,6 @@ describe("CalibrationReview", () => {
 
     expect(screen.getByText("at least three calibration points are required")).toBeInTheDocument();
     expect(screen.getByText("iot.calibration.block.rejected")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "iot.calibration.review.reject" })).toBeNull();
   });
 
   it("shows a rejected block's reason without coefficients", () => {

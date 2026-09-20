@@ -2,6 +2,7 @@
 
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
 import { useLocale } from "@/hooks/useLocale";
+import type { ReactNode } from "react";
 
 import type { CalibrationRun } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
@@ -12,15 +13,20 @@ import { CalibrationRunStatusBadge } from "./calibration-run-status-badge";
 
 interface CalibrationRunsListProps {
   runs: CalibrationRun[] | undefined;
+  /** Procedure names by definition id; a session whose procedure is no longer listed is named unknown. */
+  definitionNames: ReadonlyMap<string, string>;
   isLoading: boolean;
   isError: boolean;
+  action?: ReactNode;
   onSelectRun: (runId: string) => void;
 }
 
 export function CalibrationRunsList({
   runs,
+  definitionNames,
   isLoading,
   isError,
+  action,
   onSelectRun,
 }: CalibrationRunsListProps) {
   const { t } = useTranslation("iot");
@@ -32,19 +38,22 @@ export function CalibrationRunsList({
         <button
           type="button"
           onClick={() => onSelectRun(run.id)}
-          className="hover:bg-muted/50 flex w-full flex-wrap items-center justify-between gap-2 rounded-sm px-2 py-2 text-left"
+          className="hover:bg-muted/40 flex w-full flex-wrap items-center gap-2 px-4 py-3 text-left transition-colors"
         >
-          <div className="min-w-0">
-            <p className="text-sm">
-              {new Date(run.createdAt).toLocaleString(locale)}
-              <span className="text-muted-foreground ml-2 text-xs">
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium">
+              {definitionNames.get(run.definitionId) ?? t("iot.calibration.run.definitionUnknown")}
+              <span className="text-muted-foreground ml-2 text-xs font-normal">
                 {t("iot.calibration.runs.definition", { version: run.definitionVersion })}
               </span>
-            </p>
+            </span>
             {run.errorMessage !== null && (
-              <p className="text-destructive truncate text-xs">{run.errorMessage}</p>
+              <span className="text-destructive block truncate text-xs">{run.errorMessage}</span>
             )}
-          </div>
+          </span>
+          <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+            {new Date(run.createdAt).toLocaleString(locale)}
+          </span>
           <CalibrationRunStatusBadge status={run.status} />
         </button>
       </li>
@@ -63,8 +72,12 @@ export function CalibrationRunsList({
     if (!runs || runs.length === 0) {
       return <EmptyState size="inline" description={t("iot.calibration.runs.empty")} />;
     }
-    return <ul className="divide-y">{runs.map(renderRun)}</ul>;
+    return <ul className="divide-y overflow-hidden rounded-lg border">{runs.map(renderRun)}</ul>;
   }
 
-  return <PanelCard title={t("iot.calibration.runs.title")}>{renderBody()}</PanelCard>;
+  return (
+    <PanelCard title={t("iot.calibration.runs.title")} action={action}>
+      {renderBody()}
+    </PanelCard>
+  );
 }

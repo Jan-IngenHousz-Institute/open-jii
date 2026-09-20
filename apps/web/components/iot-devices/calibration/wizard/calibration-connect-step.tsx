@@ -3,6 +3,7 @@
 import type { RigRole, useCalibrationRig } from "@/hooks/iot/useCalibrationRig/useCalibrationRig";
 import { useIotBrowserSupport } from "@/hooks/iot/useIotBrowserSupport";
 import type { IotDeviceConnection } from "@/hooks/iot/useIotConnections/useIotConnections";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { Cable, Loader2 } from "lucide-react";
 import { useId } from "react";
 
@@ -37,7 +38,11 @@ export function CalibrationConnectStep({
   const support = useIotBrowserSupport(family);
   const benchHeadingId = useId();
 
-  const isWrongFamily = connection !== undefined && connection.family !== family;
+  const isConnected = connection !== undefined;
+  const wrongFamilyMessage =
+    connection !== undefined && connection.family !== family
+      ? t("iot.calibration.connect.wrongFamily", { expected: family, actual: connection.family })
+      : null;
   // Each port needs a gesture of its own, so nothing else opens while one request is in flight.
   const isOpeningPort = isConnecting || rig.isConnecting;
   const isPortActionBlocked = isOpeningPort || !support.serial;
@@ -53,59 +58,69 @@ export function CalibrationConnectStep({
         ? t("iot.calibration.connect.unsupportedDevice")
         : null;
 
-  function renderConnected(connected: IotDeviceConnection) {
-    return (
-      <div className="space-y-3">
-        <p className="flex items-center gap-2 text-sm">
-          <Cable className="size-4" aria-hidden />
-          {t("iot.calibration.connect.connected", { name: connected.label })}
-          {connected.identity.firmwareVersion !== undefined && (
-            <span className="text-muted-foreground font-mono text-xs">
-              {connected.identity.firmwareVersion}
-            </span>
-          )}
-        </p>
-        {isWrongFamily && (
-          <Alert variant="destructive">
-            <AlertDescription>
-              {t("iot.calibration.connect.wrongFamily", {
-                expected: family,
-                actual: connected.family,
-              })}
-            </AlertDescription>
-          </Alert>
-        )}
+  function renderDeviceAction() {
+    if (isConnected) {
+      return (
         <Button type="button" variant="outline" size="sm" onClick={onDisconnect}>
           {t("iot.calibration.connect.disconnect")}
         </Button>
-      </div>
+      );
+    }
+    return (
+      <Button type="button" size="sm" onClick={onConnect} disabled={isPortActionBlocked}>
+        {isConnecting ? (
+          <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
+        ) : (
+          <Cable className="mr-2 size-4" aria-hidden />
+        )}
+        {isConnecting
+          ? t("iot.calibration.connect.connecting")
+          : t("iot.calibration.connect.action")}
+      </Button>
     );
   }
 
-  function renderDisconnected() {
+  function renderDeviceStatus(connected: IotDeviceConnection) {
     return (
-      <div className="space-y-3">
-        <p className="text-muted-foreground text-sm">{t("iot.calibration.connect.hint")}</p>
-        {unsupportedReason !== null && (
+      <p className="flex items-center gap-2 text-sm">
+        <Cable className="size-4" aria-hidden />
+        {t("iot.calibration.connect.connected", { name: connected.label })}
+        {connected.identity.firmwareVersion !== undefined && (
+          <span className="text-muted-foreground font-mono text-xs">
+            {connected.identity.firmwareVersion}
+          </span>
+        )}
+      </p>
+    );
+  }
+
+  // The same card as every instrument below: the device is one more port on the rig.
+  function renderDevice() {
+    return (
+      <div className="space-y-2 rounded-md border p-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="space-y-1">
+            <p className="text-sm font-medium">{t("iot.calibration.connect.deviceTitle")}</p>
+            <p className="text-muted-foreground text-xs">{getSensorFamilyLabel(family)}</p>
+          </div>
+          {renderDeviceAction()}
+        </div>
+        {connection !== undefined && renderDeviceStatus(connection)}
+        {wrongFamilyMessage !== null && (
+          <Alert variant="destructive">
+            <AlertDescription>{wrongFamilyMessage}</AlertDescription>
+          </Alert>
+        )}
+        {!isConnected && unsupportedReason !== null && (
           <Alert>
             <AlertDescription>{unsupportedReason}</AlertDescription>
           </Alert>
         )}
-        {error !== null && (
+        {!isConnected && error !== null && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <Button type="button" onClick={onConnect} disabled={isPortActionBlocked}>
-          {isConnecting ? (
-            <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
-          ) : (
-            <Cable className="mr-2 size-4" aria-hidden />
-          )}
-          {isConnecting
-            ? t("iot.calibration.connect.connecting")
-            : t("iot.calibration.connect.action")}
-        </Button>
       </div>
     );
   }
@@ -238,7 +253,7 @@ export function CalibrationConnectStep({
 
   return (
     <div className="space-y-6">
-      {connection ? renderConnected(connection) : renderDisconnected()}
+      {renderDevice()}
       {renderBench()}
     </div>
   );

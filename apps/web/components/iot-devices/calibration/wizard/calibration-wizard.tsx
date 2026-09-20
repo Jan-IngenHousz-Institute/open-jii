@@ -35,6 +35,7 @@ import {
 } from "@repo/iot";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
 import { Button } from "@repo/ui/components/button";
+import { WizardStepIndicator } from "@repo/ui/components/wizard-step-indicator";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { CalibrationCaptureProgress } from "./calibration-capture-progress";
@@ -42,6 +43,7 @@ import { CalibrationConnectStep } from "./calibration-connect-step";
 import { CalibrationDefinitionPicker } from "./calibration-definition-picker";
 import { CalibrationOperatorPrompt } from "./calibration-operator-prompt";
 import { CalibrationReview } from "./calibration-review";
+import { CalibrationWizardActions } from "./calibration-wizard-actions";
 import { CalibrationWriteStep } from "./calibration-write-step";
 
 type WizardStep = "choose" | "connect" | "capture" | "review" | "write" | "done";
@@ -119,6 +121,14 @@ export function CalibrationWizard({
   // The device package drives fewer families than the platform registers, so writing back is offered only where a driver exists.
   const writableFamily = isSensorFamily(family) ? family : null;
   const stepIndex = stepOrder.indexOf(step);
+  const stepTitles = stepOrder.map((name) => t(`iot.calibration.steps.${name}`));
+  const isRunComputed = run?.status === "computed";
+  const isDeciding = approveRun.isPending || rejectRun.isPending;
+  const isWritten = writeResults !== null;
+  const canWrite =
+    applied !== null &&
+    writableFamily !== null &&
+    canWriteCalibration(writableFamily, applied.blocks);
 
   // The rig object is new on every render; the dependency lists below hold the ref instead.
   const rigRef = useRef(rig);
@@ -166,6 +176,12 @@ export function CalibrationWizard({
   }, [step, startCapture]);
 
   function retryCapture() {
+    void startCapture();
+  }
+
+  // A run that computed nothing leaves the bench as it stands, so another pass starts at once.
+  function runAgain() {
+    setStep("capture");
     void startCapture();
   }
 
@@ -263,34 +279,56 @@ export function CalibrationWizard({
     onClose();
   }
 
-  function renderStepHeader() {
+  function stepDescription(): string | undefined {
+    switch (step) {
+      case "choose":
+        return t("iot.calibration.choose.hint");
+      case "connect":
+        return t("iot.calibration.connect.hint");
+      case "capture":
+        return t("iot.calibration.capture.hint");
+      case "review":
+        return isRunComputed ? t("iot.calibration.review.hint") : undefined;
+      case "write":
+        return canWrite ? t("iot.calibration.write.hint") : undefined;
+      case "done":
+        return undefined;
+    }
+  }
+
+  function renderCancel() {
     return (
-      <ol className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
-        {stepOrder.map((name, index) => (
-          <li
-            key={name}
-            className={index === stepIndex ? "text-foreground font-medium" : undefined}
-            aria-current={index === stepIndex ? "step" : undefined}
-          >
-            {index + 1}. {t(`iot.calibration.steps.${name}`)}
-          </li>
-        ))}
-      </ol>
+      <Button type="button" variant="outline" onClick={() => void closeWizard()}>
+        {t("iot.calibration.cta.cancel")}
+      </Button>
+    );
+  }
+
+  function renderClose() {
+    return (
+      <Button type="button" onClick={() => void closeWizard()}>
+        {t("iot.calibration.done.close")}
+      </Button>
     );
   }
 
   function renderChoose() {
     return (
-      <div className="space-y-4">
-        <p className="text-muted-foreground text-sm">{t("iot.calibration.choose.hint")}</p>
-        <CalibrationDefinitionPicker
-          definitions={definitions.data}
-          isLoading={definitions.isLoading}
-          isError={definitions.isError}
-          selectedId={definitionId}
-          onSelect={setDefinitionId}
-        />
-        <div className="flex gap-2">
+      <CalibrationDefinitionPicker
+        definitions={definitions.data}
+        isLoading={definitions.isLoading}
+        isError={definitions.isError}
+        selectedId={definitionId}
+        onSelect={setDefinitionId}
+      />
+    );
+  }
+
+  function renderChooseActions() {
+    return (
+      <CalibrationWizardActions
+        secondary={renderCancel()}
+        primary={
           <Button
             type="button"
             onClick={() => setStep("connect")}
@@ -298,39 +336,43 @@ export function CalibrationWizard({
           >
             {t("iot.calibration.cta.next")}
           </Button>
-          <Button type="button" variant="outline" onClick={() => void closeWizard()}>
-            {t("iot.calibration.cta.cancel")}
-          </Button>
-        </div>
-      </div>
+        }
+      />
     );
   }
 
   function renderConnect() {
     return (
-      <div className="space-y-4">
-        <CalibrationConnectStep
-          family={family}
-          connection={connection}
-          isConnecting={capture.isConnecting}
-          error={capture.connectError}
-          rig={rig}
-          onConnect={capture.connect}
-          onDisconnect={capture.disconnect}
-        />
-        <div className="flex gap-2">
+      <CalibrationConnectStep
+        family={family}
+        connection={connection}
+        isConnecting={capture.isConnecting}
+        error={capture.connectError}
+        rig={rig}
+        onConnect={capture.connect}
+        onDisconnect={capture.disconnect}
+      />
+    );
+  }
+
+  function renderConnectActions() {
+    const secondary = isProcedureChosen ? (
+      renderCancel()
+    ) : (
+      <Button type="button" variant="outline" onClick={() => setStep("choose")}>
+        {t("iot.calibration.cta.back")}
+      </Button>
+    );
+
+    return (
+      <CalibrationWizardActions
+        secondary={secondary}
+        primary={
           <Button type="button" onClick={() => setStep("capture")} disabled={!capture.canStart}>
             {t("iot.calibration.cta.next")}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => (isProcedureChosen ? void closeWizard() : setStep("choose"))}
-          >
-            {isProcedureChosen ? t("iot.calibration.cta.cancel") : t("iot.calibration.cta.back")}
-          </Button>
-        </div>
-      </div>
+        }
+      />
     );
   }
 
@@ -346,38 +388,73 @@ export function CalibrationWizard({
           </p>
         )}
         {capture.error !== null && (
-          <div className="space-y-3">
-            <Alert variant="destructive">
-              <AlertDescription>
-                {t("iot.calibration.capture.aborted")}
-                <span className="mt-1 block font-mono text-xs">{capture.error}</span>
-              </AlertDescription>
-            </Alert>
-            <div className="flex gap-2">
-              <Button type="button" onClick={retryCapture}>
-                {t("iot.calibration.capture.retry")}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => void closeWizard()}>
-                {t("iot.calibration.cta.cancel")}
-              </Button>
-            </div>
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>
+              {t("iot.calibration.capture.aborted")}
+              <span className="mt-1 block font-mono text-xs">{capture.error}</span>
+            </AlertDescription>
+          </Alert>
         )}
       </div>
     );
   }
 
+  function renderCaptureActions() {
+    if (capture.error === null) return null;
+    return (
+      <CalibrationWizardActions
+        secondary={renderCancel()}
+        primary={
+          <Button type="button" onClick={retryCapture}>
+            {t("iot.calibration.capture.retry")}
+          </Button>
+        }
+      />
+    );
+  }
+
   function renderReview() {
     if (!run || !payload) return null;
+    return <CalibrationReview run={run} payload={payload} active={active.data ?? null} />;
+  }
+
+  function renderReviewActions() {
+    if (!run) return null;
+    if (!isRunComputed) {
+      return (
+        <CalibrationWizardActions
+          secondary={
+            <Button type="button" variant="outline" onClick={() => void closeWizard()}>
+              {t("iot.calibration.done.close")}
+            </Button>
+          }
+          primary={
+            <Button type="button" onClick={runAgain}>
+              {t("iot.calibration.capture.retry")}
+            </Button>
+          }
+        />
+      );
+    }
     return (
-      <CalibrationReview
-        run={run}
-        payload={payload}
-        active={active.data ?? null}
-        isApproving={approveRun.isPending}
-        isRejecting={rejectRun.isPending}
-        onApprove={() => void approve()}
-        onReject={() => void reject()}
+      <CalibrationWizardActions
+        secondary={
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void reject()}
+            disabled={isDeciding}
+          >
+            {rejectRun.isPending && <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />}
+            {t("iot.calibration.review.reject")}
+          </Button>
+        }
+        primary={
+          <Button type="button" onClick={() => void approve()} disabled={isDeciding}>
+            {approveRun.isPending && <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />}
+            {t("iot.calibration.review.approve")}
+          </Button>
+        }
       />
     );
   }
@@ -389,37 +466,67 @@ export function CalibrationWizard({
         {operator.pending !== null && <CalibrationOperatorPrompt request={operator.pending} />}
         <CalibrationWriteStep
           applied={applied}
-          canWrite={writableFamily !== null && canWriteCalibration(writableFamily, applied.blocks)}
+          canWrite={canWrite}
           results={writeResults}
-          isWriting={isWriting}
           error={writeError}
           verifyEvents={verifyEvents}
           isVerifying={isVerifying}
           verification={verification}
           verificationError={verificationError}
-          onWrite={() => void write()}
-          onFinish={() => setStep("done")}
         />
       </div>
     );
   }
 
+  function renderWriteActions() {
+    if (!canWrite) {
+      return (
+        <CalibrationWizardActions
+          primary={
+            <Button type="button" variant="outline" onClick={() => setStep("done")}>
+              {t("iot.calibration.write.skip")}
+            </Button>
+          }
+        />
+      );
+    }
+    if (!isWritten) {
+      return (
+        <CalibrationWizardActions
+          primary={
+            <Button type="button" onClick={() => void write()} disabled={isWriting}>
+              {isWriting && <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />}
+              {isWriting ? t("iot.calibration.write.writing") : t("iot.calibration.write.action")}
+            </Button>
+          }
+        />
+      );
+    }
+    return (
+      <CalibrationWizardActions
+        primary={
+          <Button type="button" onClick={() => setStep("done")} disabled={isWriting}>
+            {t("iot.calibration.done.close")}
+          </Button>
+        }
+      />
+    );
+  }
+
   function renderDone() {
     const isApproved = applied !== null;
-    const isWritten = writeResults !== null && Object.values(writeResults).every((r) => r.verified);
+    const isConfirmed =
+      writeResults !== null && Object.values(writeResults).every((result) => result.verified);
     const hint = !isApproved
       ? t("iot.calibration.done.rejectedHint")
-      : isWritten
+      : isConfirmed
         ? t("iot.calibration.done.writtenHint")
         : t("iot.calibration.done.notWrittenHint");
-    return (
-      <div className="space-y-4">
-        <p className="text-sm">{hint}</p>
-        <Button type="button" onClick={() => void closeWizard()}>
-          {t("iot.calibration.done.close")}
-        </Button>
-      </div>
-    );
+    return <p className="text-sm">{hint}</p>;
+  }
+
+  function renderDoneActions() {
+    return <CalibrationWizardActions primary={renderClose()} />;
   }
 
   function renderStep() {
@@ -439,12 +546,30 @@ export function CalibrationWizard({
     }
   }
 
+  function renderActions() {
+    switch (step) {
+      case "choose":
+        return renderChooseActions();
+      case "connect":
+        return renderConnectActions();
+      case "capture":
+        return renderCaptureActions();
+      case "review":
+        return renderReviewActions();
+      case "write":
+        return renderWriteActions();
+      case "done":
+        return renderDoneActions();
+    }
+  }
+
   return (
-    <PanelCard title={t(`iot.calibration.steps.${step}`)}>
-      <div className="space-y-6">
-        {renderStepHeader()}
+    <div className="space-y-6">
+      <WizardStepIndicator steps={stepTitles} currentIndex={stepIndex} />
+      <PanelCard title={t(`iot.calibration.steps.${step}`)} description={stepDescription()}>
         {renderStep()}
-      </div>
-    </PanelCard>
+      </PanelCard>
+      {renderActions()}
+    </div>
   );
 }

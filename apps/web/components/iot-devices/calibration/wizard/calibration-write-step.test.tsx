@@ -1,7 +1,6 @@
 import { createDeviceCalibration } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { CalibrationWriteStep } from "./calibration-write-step";
 
@@ -10,14 +9,11 @@ function renderStep(overrides: Partial<Parameters<typeof CalibrationWriteStep>[0
     applied: createDeviceCalibration(),
     canWrite: true,
     results: null,
-    isWriting: false,
     error: null,
     verifyEvents: [],
     isVerifying: false,
     verification: null,
     verificationError: null,
-    onWrite: vi.fn(),
-    onFinish: vi.fn(),
     ...overrides,
   };
   render(<CalibrationWriteStep {...props} />);
@@ -25,12 +21,13 @@ function renderStep(overrides: Partial<Parameters<typeof CalibrationWriteStep>[0
 }
 
 describe("CalibrationWriteStep", () => {
-  it("offers the write before anything has been written", async () => {
-    const props = renderStep();
+  // What is about to reach the hardware is on screen before the operator sends it.
+  it("lists each block and its coefficients before anything has been written", () => {
+    renderStep();
 
-    await userEvent.click(screen.getByRole("button", { name: "iot.calibration.write.action" }));
-
-    expect(props.onWrite).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("par")).toBeInTheDocument();
+    expect(screen.getByText("slope 0.96, intercept -1.08")).toBeInTheDocument();
+    expect(screen.queryByText("iot.calibration.write.verified")).toBeNull();
   });
 
   it("reports each block as confirmed or not once written", () => {
@@ -42,7 +39,6 @@ describe("CalibrationWriteStep", () => {
 
     expect(screen.getByText("iot.calibration.write.failed")).toBeInTheDocument();
     expect(screen.getByText(/did not confirm "par.intercept"/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "iot.calibration.write.action" })).toBeNull();
   });
 
   // Nothing is rolled back, so an unconfirmed block may be half on the device.
@@ -58,7 +54,8 @@ describe("CalibrationWriteStep", () => {
     expect(screen.queryByText("iot.calibration.write.partial")).toBeNull();
   });
 
-  it("lists only the blocks the results account for", () => {
+  // A block the write never reached stays listed without a verdict, rather than vanishing.
+  it("lists every block, marking only the ones the write accounted for", () => {
     renderStep({
       applied: createDeviceCalibration({
         blocks: { par: { coefficients: { slope: 0.96 } }, led: { coefficients: { act: 1 } } },
@@ -66,29 +63,17 @@ describe("CalibrationWriteStep", () => {
       results: { par: { verified: true } },
     });
 
-    expect(screen.getAllByRole("listitem")).toHaveLength(1);
-    expect(screen.getByText("par")).toBeInTheDocument();
-  });
-
-  it("closes once the results are on record", async () => {
-    const props = renderStep({ results: { par: { verified: true } } });
-
-    expect(screen.getByText("iot.calibration.write.verified")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "iot.calibration.done.close" }));
-
-    expect(props.onFinish).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    expect(screen.getAllByText("iot.calibration.write.verified")).toHaveLength(1);
   });
 
   // A family the package cannot drive yet is approved on record only, and the
   // step must say so rather than pretend to write.
-  it("explains when the platform cannot write to this family", async () => {
-    const props = renderStep({ canWrite: false });
+  it("explains when the platform cannot write to this family", () => {
+    renderStep({ canWrite: false });
 
     expect(screen.getByText("iot.calibration.write.unsupported")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "iot.calibration.write.action" })).toBeNull();
-
-    await userEvent.click(screen.getByRole("button", { name: "iot.calibration.write.skip" }));
-    expect(props.onFinish).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("listitem")).toBeNull();
   });
 
   // The procedure's check after the write is the operator's evidence the new
@@ -100,16 +85,14 @@ describe("CalibrationWriteStep", () => {
       expect(screen.queryByText("iot.calibration.write.verifyHeading")).toBeNull();
     });
 
-    it("shows the check running and keeps the close button back until it is done", () => {
+    it("shows the check running", () => {
       renderStep({
         results: { par: { verified: true } },
-        isWriting: true,
         isVerifying: true,
         verifyEvents: [{ kind: "step", index: 0, total: 1, description: "Read par_check" }],
       });
 
       expect(screen.getByText("iot.calibration.write.verifying")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "iot.calibration.done.close" })).toBeDisabled();
     });
 
     it("tables what the device and the reference read afterwards", () => {

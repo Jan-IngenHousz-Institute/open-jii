@@ -5,11 +5,10 @@ import { useCalibrationDefinition } from "@/hooks/iot/useCalibrationDefinition/u
 import { useCalibrationRun } from "@/hooks/iot/useCalibrationRun/useCalibrationRun";
 import { useDeviceCalibrations } from "@/hooks/iot/useDeviceCalibrations/useDeviceCalibrations";
 import { useLocale } from "@/hooks/useLocale";
-import { ArrowLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
-import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
@@ -189,10 +188,9 @@ export function CalibrationRunDetail({ runId, deviceId, onBack }: CalibrationRun
         )}
 
         {payload.length > 0 && (
-          <div className="space-y-4">
-            <p className="text-sm font-medium">{t("iot.calibration.run.readings")}</p>
-            {payload.map(renderSeries)}
-          </div>
+          <PanelCard title={t("iot.calibration.run.readings")}>
+            <div className="space-y-4">{payload.map(renderSeries)}</div>
+          </PanelCard>
         )}
       </div>
     );
@@ -200,10 +198,14 @@ export function CalibrationRunDetail({ runId, deviceId, onBack }: CalibrationRun
 
   return (
     <div className="space-y-6">
-      <Button type="button" variant="ghost" size="sm" className="-ml-2" onClick={onBack}>
-        <ArrowLeft className="mr-2 size-4" aria-hidden />
+      <button
+        type="button"
+        onClick={onBack}
+        className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-sm"
+      >
+        <ChevronLeft className="size-4" aria-hidden />
         {t("iot.calibration.run.back")}
-      </Button>
+      </button>
       {renderBody()}
     </div>
   );
