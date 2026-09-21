@@ -28,7 +28,13 @@ vi.mock("@/hooks/iot/useIotCommunication/useIotCommunication", () => ({
   openSerialPort: () => mockOpenSerialPort(),
 }));
 
-// Plotly has no business in jsdom; the chart's own tests cover what it is given.
+// Plotly has no business in jsdom; the chart's own tests cover what it is given. Mocked at
+// the wrapper, because that is where the dynamic import happens, and so that a chart added
+// to the capture or the review later costs this suite nothing.
+vi.mock("@/components/charts/scatter-chart", () => ({
+  ScatterChart: () => <div data-testid="scatter" />,
+}));
+
 vi.mock("@/components/iot-devices/calibration/result/calibration-block-chart", () => ({
   CalibrationBlockChart: () => <div data-testid="block-chart" />,
 }));

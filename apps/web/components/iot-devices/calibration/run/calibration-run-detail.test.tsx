@@ -12,6 +12,16 @@ import { contract } from "@repo/api/contract";
 
 import { CalibrationRunDetail } from "./calibration-run-detail";
 
+// Plotly has no business in jsdom; each chart's own tests cover what it is given. Mocked at
+// the wrapper, because that is where the dynamic import happens.
+vi.mock("@/components/charts/scatter-chart", () => ({
+  ScatterChart: () => <div data-testid="scatter" />,
+}));
+
+vi.mock("@/components/charts/bar-chart", () => ({
+  BarChart: () => <div data-testid="bar" />,
+}));
+
 const RUN_ID = "22222222-2222-4222-8222-222222222222";
 const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
 

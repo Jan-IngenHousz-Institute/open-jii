@@ -6,6 +6,10 @@ import { describe, expect, it, vi } from "vitest";
 import { CalibrationReview } from "./calibration-review";
 
 // Plotly has no business in jsdom; the chart's own tests cover what it is given.
+vi.mock("@/components/charts/scatter-chart", () => ({
+  ScatterChart: () => <div data-testid="scatter" />,
+}));
+
 vi.mock("../result/calibration-block-chart", () => ({
   CalibrationBlockChart: ({ block }: { block: { coefficients?: Record<string, unknown> } }) => (
     <div data-testid="block-chart">{JSON.stringify(block.coefficients)}</div>
