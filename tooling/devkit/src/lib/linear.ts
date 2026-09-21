@@ -107,6 +107,12 @@ async function send<T>(
     body: JSON.stringify({ query: document, variables }),
   });
   const text = await response.text();
+  if (response.status === 401) {
+    throw new Error(
+      "Linear rejected the key (401). It was probably revoked or rotated; mint a new one and run " +
+        "pbpaste | pnpm linear:auth in the main checkout, which serves every worktree",
+    );
+  }
   if (!response.ok) {
     throw new Error(`Linear returned ${response.status}: ${text}`);
   }
