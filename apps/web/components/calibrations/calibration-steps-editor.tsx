@@ -4,7 +4,6 @@ import type {
   CaptureProcedure,
   ProcedureStep,
 } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
-import { DUT_ROLE } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 import type { CalibrationFamily } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
 
@@ -21,10 +20,8 @@ import {
   replaceStep,
   takenSeries,
 } from "./procedure-edits";
+import { defaultRead } from "./read-columns";
 import { readSources, setpointTargets } from "./rig-sources";
-
-/** Every family's driver answers this, and a rig always declares the device. */
-const FALLBACK_COMMAND = "hello";
 
 interface CalibrationStepsEditorProps {
   procedure: CaptureProcedure;
@@ -61,16 +58,7 @@ export function CalibrationStepsEditor({
     targets.length === 0 ? { set: t("iot.calibration.procedure.nothingToDrive") } : {};
 
   function buildStep(kind: StepKind): ProcedureStep {
-    const source = sources.at(0);
-    // A device's command list is alphabetical, and its first entry is as likely to be
-    // "battery" as anything worth recording; its handshake is at least always answered.
-    const offered = source?.isExhaustive === true ? source.offered.at(0) : FALLBACK_COMMAND;
-    const read = {
-      instrument: source?.role ?? DUT_ROLE,
-      command: offered ?? FALLBACK_COMMAND,
-      as: "value",
-    };
-    const step = newStep(kind, series, read);
+    const step = newStep(kind, series, defaultRead(sources, []));
     const target = targets.at(0);
     if (target === undefined) {
       return step;

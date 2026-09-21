@@ -33,23 +33,29 @@ export interface SetpointTarget {
 export function readSources(procedure: CaptureProcedure, family: CalibrationFamily): ReadSource[] {
   const commands = isSensorFamily(family) ? familyCalibrationCapabilities(family).commands : [];
 
-  return procedure.instruments.map((instrument) => {
-    if (!isAuxiliaryInstrument(instrument)) {
-      // A device answers whatever its firmware knows; the driver's table is the
-      // documented part of that, not the whole of it.
-      return { role: instrument.role, offered: commands, isExhaustive: false };
-    }
+  return (
+    procedure.instruments
+      .map((instrument) => {
+        if (!isAuxiliaryInstrument(instrument)) {
+          // A device answers whatever its firmware knows; the driver's table is the
+          // documented part of that, not the whole of it.
+          return { role: instrument.role, offered: commands, isExhaustive: false };
+        }
 
-    const model = benchInstrumentSummaries().find(
-      (candidate) => candidate.model === instrument.model,
-    );
+        const model = benchInstrumentSummaries().find(
+          (candidate) => candidate.model === instrument.model,
+        );
 
-    return {
-      role: instrument.role,
-      offered: (model?.readings ?? []).map((reading) => reading.name),
-      isExhaustive: model !== undefined,
-    };
-  });
+        return {
+          role: instrument.role,
+          offered: (model?.readings ?? []).map((reading) => reading.name),
+          isExhaustive: model !== undefined,
+        };
+      })
+      // A supply drives and answers nothing. Offering it as somewhere to read from puts a
+      // role in the field that has no command behind it.
+      .filter((source) => !source.isExhaustive || source.offered.length > 0)
+  );
 }
 
 /** Roles with something to drive; one with nothing to set is not a target at all. */

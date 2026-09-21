@@ -6,18 +6,13 @@ import type {
   ProcedureRead,
   ProcedureStep,
 } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
-import { DUT_ROLE } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 
 import { CalibrationReadRow } from "./calibration-read-row";
-import { uniqueName } from "./output-schema-edits";
 import { addRead, removeRead, replaceRead, stepReads } from "./procedure-edits";
-import { columnForRead } from "./read-columns";
+import { defaultRead } from "./read-columns";
 import type { ReadSource } from "./rig-sources";
-
-/** Every family's driver answers this, and a rig always declares the device. */
-const FALLBACK_COMMAND = "hello";
 
 interface CalibrationReadListProps {
   step: ProcedureStep;
@@ -38,20 +33,8 @@ export function CalibrationReadList({
   const reads = stepReads(step);
   const columns = reads.map((read) => read.as);
 
-  // Named after what it reads, because that is the name the script will index by.
   function handleAdd() {
-    const first = sources.at(0);
-    const taken: ProcedureRead = {
-      instrument: first?.role ?? DUT_ROLE,
-      command: first?.offered.at(0) ?? FALLBACK_COMMAND,
-      as: "",
-    };
-    const read: ProcedureRead = {
-      ...taken,
-      as: uniqueName(columnForRead(taken, sources), columns),
-    };
-
-    onChange(addRead(step, read));
+    onChange(addRead(step, defaultRead(sources, reads)));
   }
 
   function renderRead(read: ProcedureRead, index: number) {

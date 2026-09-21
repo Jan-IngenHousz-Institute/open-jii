@@ -1,9 +1,14 @@
 import type { ProcedureRead } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
+import { DUT_ROLE } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 
+import { uniqueName } from "./output-schema-edits";
 import type { ReadSource } from "./rig-sources";
 
 /** When nothing about a reading suggests a name. */
 const FALLBACK_COLUMN = "value";
+
+/** Every family's driver answers this, and a rig always declares the device. */
+const FALLBACK_COMMAND = "hello";
 
 /** What the operator types is the reference the device is held against. */
 const OPERATOR_COLUMN = "reference";
@@ -37,6 +42,34 @@ export function columnForRead(read: ProcedureRead, sources: ReadSource[]): strin
   }
 
   return toColumnName(read.command ?? read.instrument);
+}
+
+/**
+ * The reading a step opens with, and the one an author adds next.
+ *
+ * A bench records the device against a reference at every point, so the next reading is
+ * the role nothing in this step has asked yet. A device's command list is alphabetical
+ * and its first entry is as likely to be "battery" as anything worth recording, so it
+ * opens on the handshake every driver answers instead.
+ */
+export function defaultRead(sources: ReadSource[], taken: ProcedureRead[]): ProcedureRead {
+  const asked = taken.flatMap((read) => ("instrument" in read ? [read.instrument] : []));
+  const source = sources.find((candidate) => !asked.includes(candidate.role)) ?? sources.at(0);
+
+  const read: ProcedureRead = {
+    instrument: source?.role ?? DUT_ROLE,
+    command:
+      (source?.isExhaustive === true ? source.offered.at(0) : FALLBACK_COMMAND) ?? FALLBACK_COMMAND,
+    as: "",
+  };
+
+  return {
+    ...read,
+    as: uniqueName(
+      columnForRead(read, sources),
+      taken.map((entry) => entry.as),
+    ),
+  };
 }
 
 /**

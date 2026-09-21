@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { columnForRead, isDefaultColumn } from "./read-columns";
+import { columnForRead, defaultRead, isDefaultColumn } from "./read-columns";
 import type { ReadSource } from "./rig-sources";
 
 const SOURCES: ReadSource[] = [
@@ -35,6 +35,38 @@ describe("columnForRead", () => {
     expect(columnForRead({ operator: "Read the meter", as: "", type: "number" }, SOURCES)).toBe(
       "reference",
     );
+  });
+});
+
+describe("defaultRead", () => {
+  // A device's commands are alphabetical, so its first is as likely to be "battery" as
+  // anything worth recording. The handshake is the one every driver answers.
+  it("opens a step on the device, asking what it always answers", () => {
+    expect(defaultRead(SOURCES, [])).toEqual({
+      instrument: "dut",
+      command: "hello",
+      as: "hello",
+    });
+  });
+
+  // Every bench procedure records the device against a reference at the same point.
+  it("adds the role nothing in the step has asked yet", () => {
+    const first = defaultRead(SOURCES, []);
+
+    expect(defaultRead(SOURCES, [first])).toEqual({
+      instrument: "par_ref",
+      command: "par",
+      as: "par_ref",
+    });
+  });
+
+  it("falls back to the first source once every role is read, and numbers the column", () => {
+    const reads = [
+      { instrument: "dut", command: "hello", as: "hello" },
+      { instrument: "par_ref", command: "par", as: "par_ref" },
+    ];
+
+    expect(defaultRead(SOURCES, reads)).toMatchObject({ instrument: "dut", as: "hello_2" });
   });
 });
 
