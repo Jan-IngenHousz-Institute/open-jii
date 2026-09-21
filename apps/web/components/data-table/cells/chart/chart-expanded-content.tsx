@@ -1,5 +1,6 @@
+import { LineChart } from "@/components/charts/line-chart";
+
 import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
-import { LineChart } from "@repo/ui/components/charts/line-chart";
 import { readThemeColor } from "@repo/ui/components/charts/utils";
 
 import { parseNumericArray } from "./parse-numeric-array";

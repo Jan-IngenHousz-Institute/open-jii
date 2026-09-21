@@ -29,6 +29,14 @@ eight confident guesses.
 The same goes for the rest: do not guess the persona, do not assert a benefit nobody stated, do not
 pick a project because the name sounds close.
 
+## The other rule
+
+**Write in proper English.** Every bullet is a whole sentence with a subject and a verb, and so are
+the WHO, WHAT and WHY lines. "Sortable: name, status, updated. Confirm" is a list of words; "Name,
+status and updated date are sortable. Confirm this set." is a sentence. When the body runs over
+budget, remove a criterion. Never save characters by dropping the grammar; a person reads this,
+and a ticket that cannot be read is not shorter, it is unfinished.
+
 ## Working a new ticket
 
 Fill the gaps in this order. Stop and ask as soon as an answer would change the ticket rather than
@@ -48,8 +56,14 @@ decorate it.
 7. Leave `## How it was built` and `## Testing criteria` empty. The developer fills them through
    `openjii-testing-criteria` before review.
 
+Write it as a draft file in the format `tooling/devkit/README.md` describes; `.claude/tickets/` is
+gitignored and a good home. That is what `pnpm linear:check` reads and `pnpm linear:create` creates
+from. Implementation pointers that do not fit the budget go after the `<!-- comment -->` marker,
+which becomes a comment on the created ticket.
+
 Search before creating: `searchIssues` on two or three of the user's own words. If a close match
-exists, say so and offer to refine that one instead.
+exists, say so and offer to refine that one instead. Existing tickets are not precedents for shape
+or wording; most predate this standard. The shape comes from `ticket-standard.md` and nowhere else.
 
 ## Bringing an existing ticket up to the gate
 
@@ -77,12 +91,14 @@ there is no epic to create. Blocking relations only where order genuinely matter
 
 ## Before you write it back
 
-- The prose standard from `ticket-standard.md`, mechanically: heading set equals the shape, length
-  within budget, longest bullet under 25 words, zero em dashes, no authorship banner, at most one
-  "not" clarification.
-- A failed check stops there. Fix the body before going on.
+- `pnpm linear:check <draft.md>`. A failed check stops there; fix the body before going on. Do not
+  reconstruct the check by hand.
 - Then the `unslop` skill.
 - Set the state deliberately: a ticket that passes the gate goes to `Ready`; one still carrying open
   questions stays in `Backlog` with `needs-info`.
 - Show the user the body before creating or updating, and wait. Nothing is written to Linear that a
   person has not read.
+- Then `pnpm linear:create <draft.md>` for the dry run, and `--apply` once they have read it. It
+  refuses a failing draft, resolves the project and labels by name, rewrites `{{N}}` references to
+  real identifiers, posts each comment block, sets `blocks:` relations, and resumes from its state
+  file if interrupted. Updating an existing ticket is still `issueUpdate` through `linear:query`.

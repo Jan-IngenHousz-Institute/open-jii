@@ -1,9 +1,9 @@
 "use client";
 
+import { DensityPlot2D } from "@/components/charts/density-plot-2d";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { DensityPlot2D } from "@repo/ui/components/charts/density-plot-2d";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";

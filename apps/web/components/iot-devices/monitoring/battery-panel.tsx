@@ -1,11 +1,11 @@
 "use client";
 
+import { LineChart } from "@/components/charts/line-chart";
 import { useLocale } from "@/hooks/useLocale";
 import { useState } from "react";
 
 import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
-import { LineChart } from "@repo/ui/components/charts/line-chart";
 import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 import {
   Table,

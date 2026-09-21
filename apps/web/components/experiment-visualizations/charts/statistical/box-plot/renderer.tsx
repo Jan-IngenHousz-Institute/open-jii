@@ -1,9 +1,9 @@
 "use client";
 
+import { BoxPlot } from "@/components/charts/box-plot";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { BoxPlot } from "@repo/ui/components/charts/box-plot";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";

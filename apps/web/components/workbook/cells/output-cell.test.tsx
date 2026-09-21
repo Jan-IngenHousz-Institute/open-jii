@@ -12,7 +12,7 @@ vi.mock("@/hooks/protocol/useProtocol/useProtocol", () => ({
 
 // Plotly cannot run in jsdom; render stubs that expose the series for assertions.
 // Mock factories are hoisted so we use React.createElement (no JSX) to avoid runtime ordering issues.
-vi.mock("@repo/ui/components/charts/line-chart", async (importOriginal) => {
+vi.mock("@/components/charts/line-chart", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   const { createElement } = await import("react");
   return {
@@ -36,7 +36,7 @@ interface MockPlotlyTrace {
   y?: number[];
 }
 
-vi.mock("@repo/ui/components/charts/plotly-chart", async (importOriginal) => {
+vi.mock("@/components/charts/plotly-chart", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   const { createElement } = await import("react");
   return {

@@ -1,9 +1,9 @@
 "use client";
 
+import { LollipopChart } from "@/components/charts/dot-plot";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { LollipopChart } from "@repo/ui/components/charts/dot-plot";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 
 import { narrowChartConfig } from "../../chart-config";

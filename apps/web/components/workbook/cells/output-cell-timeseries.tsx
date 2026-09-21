@@ -1,5 +1,6 @@
 "use client";
 
+import { PlotlyChart } from "@/components/charts/plotly-chart";
 import { InsetPanel } from "@/components/shared/inset-panel";
 import { extractMeasurement } from "@/lib/multispeq/detect";
 import type { InputRecord, OutputRecord, ProtocolJson } from "@/lib/multispeq/pipeline";
@@ -9,7 +10,6 @@ import { useIsDarkTheme } from "~/hooks/useIsDarkTheme";
 
 import { useTranslation } from "@repo/i18n";
 import { Card } from "@repo/ui/components/card";
-import { PlotlyChart } from "@repo/ui/components/charts/plotly-chart";
 // Plotly's own types are a workspace dep of @repo/ui, not of apps/web —
 // re-export them through the UI charts module so we don't pull plotly.js
 // into web's package.json just to type a layout object.

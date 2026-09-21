@@ -1,10 +1,10 @@
 "use client";
 
+import { HorizontalBarChart } from "@/components/charts/bar-chart";
 import { formatRelativeTime } from "@/util/date";
 
 import type { IotDeviceGroupExperimentBucket } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
-import { HorizontalBarChart } from "@repo/ui/components/charts/bar-chart";
 import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 import { EmptyState } from "@repo/ui/components/empty-state";
 

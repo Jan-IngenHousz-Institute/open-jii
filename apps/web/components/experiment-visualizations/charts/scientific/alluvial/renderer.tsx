@@ -1,9 +1,9 @@
 "use client";
 
+import { Alluvial } from "@/components/charts/parallel-coordinates";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { Alluvial } from "@repo/ui/components/charts/parallel-coordinates";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";
