@@ -5,6 +5,7 @@ import {
   answersTextStyle,
   STATUS_ICON,
 } from "~/features/recent-measurements/components/measurement-row-visuals";
+import { UploadFailureNote } from "~/features/recent-measurements/components/upload-failure-note";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useIsProcessing } from "~/features/recent-measurements/hooks/use-outbox-state";
 import { useTranslation } from "~/shared/i18n";
@@ -18,6 +19,7 @@ interface MeasurementItemProps {
   timestamp: string;
   experimentName: string;
   status: MeasurementStatus;
+  failureReason?: string | null;
   questions?: AnswerData[];
   onPress?: (id: string) => void;
   onSync?: (id: string) => void;
@@ -35,6 +37,7 @@ export const MeasurementItem = memo(function MeasurementItem({
   timestamp,
   experimentName,
   status,
+  failureReason = null,
   questions,
   onPress,
   onSync,
@@ -118,6 +121,8 @@ export const MeasurementItem = memo(function MeasurementItem({
           {STATUS_ICON[status](colors)}
         </View>
       </View>
+
+      {status === "failed" && <UploadFailureNote reason={failureReason} />}
     </Pressable>
   );
 });

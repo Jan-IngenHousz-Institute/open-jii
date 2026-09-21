@@ -57,17 +57,29 @@ vi.mock("~/shared/observability/trace", () => ({
 // match - silently flipping terminal errors into retryable ones.
 async function freshOutbox(
   transport: Transport,
-  opts?: { concurrency?: number; retryBackoffMs?: readonly number[] },
+  opts?: {
+    concurrency?: number;
+    retryBackoffMs?: readonly number[];
+    largeTransport?: Transport;
+  },
 ) {
   vi.resetModules();
   const outboxMod = await import("~/features/recent-measurements/services/outbox");
   const errorsMod = await import("~/features/connection/services/mqtt/mqtt-errors");
+  const largeErrorsMod = await import(
+    "~/features/recent-measurements/services/large-upload-errors"
+  );
   const outbox = outboxMod.createOutbox({
     transport,
+    largeTransport: opts?.largeTransport ?? makeTransport(),
     concurrency: opts?.concurrency ?? 1,
     retryBackoffMs: opts?.retryBackoffMs ?? [],
   });
-  return { outbox, MqttError: errorsMod.MqttError };
+  return {
+    outbox,
+    MqttError: errorsMod.MqttError,
+    LargeUploadError: largeErrorsMod.LargeUploadError,
+  };
 }
 
 function makeTransport(): Transport & {
@@ -121,8 +133,23 @@ const row = (
   },
 });
 
-async function flushMicrotasks(n = 8) {
-  for (let i = 0; i < n; i++) await Promise.resolve();
+// The worker yields to the event loop before measuring the payload, so a
+// microtask-only pump would never reach the publish. Each round drains the
+// microtask queue and then lets one macrotask through.
+// Drains microtasks and lets one macrotask through per round, until the
+// condition holds or the bound is reached.
+async function waitUntil(done: () => boolean, rounds = 20) {
+  for (let i = 0; i < rounds && !done(); i++) {
+    await Promise.resolve();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  }
+}
+
+async function flushTasks(n = 8) {
+  for (let i = 0; i < n; i++) {
+    await Promise.resolve();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  }
 }
 
 // Narrowing helper: asserts a captured callback is present and returns it
@@ -158,7 +185,7 @@ describe("Outbox", () => {
 
       const transport = makeTransport();
       const { outbox } = await freshOutbox(transport);
-      await flushMicrotasks();
+      await flushTasks();
 
       expect(mockGetMeasurements).toHaveBeenCalledWith(["pending", "failed"]);
       expect(outbox.isProcessing("a")).toBe(true);
@@ -168,7 +195,7 @@ describe("Outbox", () => {
     it("registers a network state listener and a foreground listener", async () => {
       const transport = makeTransport();
       await freshOutbox(transport);
-      await flushMicrotasks();
+      await flushTasks();
 
       expect(mockOnlineSubscribe).toHaveBeenCalledTimes(1);
       expect(mockOnAppForeground).toHaveBeenCalledTimes(1);
@@ -191,7 +218,7 @@ describe("Outbox", () => {
       expect(outbox.isProcessing("row-1")).toBe(true);
 
       // Wait for the worker to call transport.publish.
-      for (let i = 0; i < 20 && transport.calls.length === 0; i++) await Promise.resolve();
+      await waitUntil(() => transport.calls.length > 0, 20);
       expect(transport.calls).toHaveLength(1);
       expect(transport.calls[0].topic).toBe("exp/p");
       expect(transport.calls[0].payload).toEqual({
@@ -202,7 +229,7 @@ describe("Outbox", () => {
       });
 
       transport.resolveNext();
-      await flushMicrotasks(20);
+      await flushTasks(20);
 
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("row-1");
       expect(mockMarkAsFailed).not.toHaveBeenCalled();
@@ -222,9 +249,9 @@ describe("Outbox", () => {
       outbox.subscribeSettled(settled);
 
       outbox.enqueue("db-1");
-      for (let i = 0; i < 20 && transport.calls.length === 0; i++) await Promise.resolve();
+      await waitUntil(() => transport.calls.length > 0, 20);
       transport.resolveNext();
-      await flushMicrotasks(40);
+      await flushTasks(40);
 
       expect(mockMarkAsFailed).not.toHaveBeenCalled();
       expect(settled).toHaveBeenCalledTimes(1);
@@ -240,7 +267,7 @@ describe("Outbox", () => {
       const { outbox } = await freshOutbox(transport);
 
       outbox.enqueue("ghost");
-      await flushMicrotasks(20);
+      await flushTasks(20);
 
       expect(transport.calls).toHaveLength(0);
       expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
@@ -254,7 +281,7 @@ describe("Outbox", () => {
       const { outbox } = await freshOutbox(transport);
 
       outbox.enqueue("row-1");
-      await flushMicrotasks(20);
+      await flushTasks(20);
 
       expect(transport.calls).toHaveLength(0);
       expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
@@ -268,11 +295,11 @@ describe("Outbox", () => {
       const { outbox, MqttError } = await freshOutbox(transport);
 
       outbox.enqueue("row-1");
-      for (let i = 0; i < 20 && transport.calls.length === 0; i++) await Promise.resolve();
+      await waitUntil(() => transport.calls.length > 0, 20);
       transport.rejectNext(new MqttError("CredentialError", "no creds"));
-      await flushMicrotasks(40);
+      await flushTasks(40);
 
-      expect(mockMarkAsFailed).toHaveBeenCalledWith("row-1");
+      expect(mockMarkAsFailed).toHaveBeenCalledWith("row-1", "CredentialError");
       expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
     });
 
@@ -285,15 +312,15 @@ describe("Outbox", () => {
       const { outbox, MqttError } = await freshOutbox(transport, { retryBackoffMs: [0] });
 
       outbox.enqueue("row-1");
-      for (let i = 0; i < 20 && transport.calls.length === 0; i++) await Promise.resolve();
+      await waitUntil(() => transport.calls.length > 0, 20);
       transport.rejectNext(new MqttError("Disconnected", "kicked"));
-      await flushMicrotasks(40);
+      await flushTasks(40);
 
       // A retry happened - second publish call landed.
-      for (let i = 0; i < 30 && transport.calls.length < 2; i++) await Promise.resolve();
+      await waitUntil(() => transport.calls.length >= 2, 30);
       expect(transport.calls.length).toBe(2);
       transport.resolveNext();
-      await flushMicrotasks(40);
+      await flushTasks(40);
 
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("row-1");
       expect(mockMarkAsFailed).not.toHaveBeenCalled();
@@ -311,20 +338,22 @@ describe("Outbox", () => {
       outbox.subscribeSettled(settled);
 
       outbox.enqueue("ex-1");
-      for (let i = 0; i < 20 && transport.calls.length === 0; i++) await Promise.resolve();
+      await waitUntil(() => transport.calls.length > 0, 20);
       transport.rejectNext(new MqttError("Disconnected", "kicked-1"));
-      await flushMicrotasks(40);
+      await flushTasks(40);
 
       // Retry fired - second (final) attempt publishes, then also rejects.
-      for (let i = 0; i < 30 && transport.calls.length < 2; i++) await Promise.resolve();
+      await waitUntil(() => transport.calls.length >= 2, 30);
       expect(transport.calls.length).toBe(2);
       transport.rejectNext(new MqttError("Disconnected", "kicked-2"));
-      await flushMicrotasks(40);
+      await flushTasks(40);
 
-      expect(mockMarkAsFailed).toHaveBeenCalledWith("ex-1");
+      expect(mockMarkAsFailed).toHaveBeenCalledWith("ex-1", "Disconnected");
       expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
       expect(settled).toHaveBeenCalledTimes(1);
-      expect(settled.mock.calls[0][0]).toEqual([{ id: "ex-1", status: "failed" }]);
+      expect(settled.mock.calls[0][0]).toEqual([
+        { id: "ex-1", status: "failed", reason: "Disconnected" },
+      ]);
       expect(outbox.isProcessing("ex-1")).toBe(false);
     });
   });
@@ -339,7 +368,7 @@ describe("Outbox", () => {
 
       outbox.enqueue("row-1");
       outbox.enqueue("row-1");
-      await flushMicrotasks(10);
+      await flushTasks(10);
 
       // markEnqueued is the state source of truth - a duplicate enqueue
       // bails before adding to the underlying queue.
@@ -353,7 +382,7 @@ describe("Outbox", () => {
 
       outbox.enqueue("a");
       outbox.enqueueMany(["a", "b", "c"]);
-      await flushMicrotasks(10);
+      await flushTasks(10);
 
       expect(outbox.isProcessing("a")).toBe(true);
       expect(outbox.isProcessing("b")).toBe(true);
@@ -367,7 +396,7 @@ describe("Outbox", () => {
 
       expect(outbox.isProcessing("unknown")).toBe(false);
       outbox.enqueue("known");
-      await flushMicrotasks(4);
+      await flushTasks(4);
       expect(outbox.isProcessing("known")).toBe(true);
     });
   });
@@ -384,7 +413,7 @@ describe("Outbox", () => {
       mockGetMeasurements.mockResolvedValueOnce([]);
       const transport = makeTransport();
       const { outbox } = await freshOutbox(transport);
-      await flushMicrotasks();
+      await flushTasks();
 
       // Bypass the 10 s cooldown by advancing the clock.
       vi.useFakeTimers();
@@ -402,7 +431,7 @@ describe("Outbox", () => {
       expect(foregroundCb).not.toBeNull();
       assertDefined<() => void>(foregroundCb, "foreground callback")();
       vi.useRealTimers();
-      await flushMicrotasks(40);
+      await flushTasks(40);
 
       expect(mockGetMeasurements).toHaveBeenCalledTimes(2);
       expect(outbox.isProcessing("fg-a")).toBe(true);
@@ -418,14 +447,14 @@ describe("Outbox", () => {
       mockGetMeasurements.mockResolvedValue([]);
       const transport = makeTransport();
       await freshOutbox(transport);
-      await flushMicrotasks();
+      await flushTasks();
       const cold = mockGetMeasurements.mock.calls.length;
 
       // Foregrounded immediately after cold start - well inside the
       // REHYDRATE_COOLDOWN_MS window (10s). The second call should be
       // skipped entirely.
       assertDefined<() => void>(foregroundCb, "foreground callback")();
-      await flushMicrotasks(10);
+      await flushTasks(10);
 
       expect(mockGetMeasurements).toHaveBeenCalledTimes(cold);
     });
@@ -437,13 +466,13 @@ describe("Outbox", () => {
       mockGetMeasurementById.mockResolvedValueOnce(row({ id: "after-fail" }));
       const transport = makeTransport();
       const { outbox } = await freshOutbox(transport);
-      await flushMicrotasks(20);
+      await flushTasks(20);
 
       outbox.enqueue("after-fail");
-      for (let i = 0; i < 20 && transport.calls.length === 0; i++) await Promise.resolve();
+      await waitUntil(() => transport.calls.length > 0, 20);
       expect(transport.calls).toHaveLength(1);
       transport.resolveNext();
-      await flushMicrotasks(20);
+      await flushTasks(20);
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("after-fail");
     });
   });
@@ -459,21 +488,21 @@ describe("Outbox", () => {
       mockGetMeasurementById.mockResolvedValue(row({ id: "net-a" }));
       const transport = makeTransport();
       const { outbox } = await freshOutbox(transport);
-      await flushMicrotasks();
+      await flushTasks();
       expect(onlineCb).not.toBeNull();
 
       // Offline: the queue is stopped, so the worker does not pick up the item.
       assertDefined<(online: boolean) => void>(onlineCb, "online callback")(false);
       outbox.enqueue("net-a");
-      await flushMicrotasks(10);
+      await flushTasks(10);
       expect(transport.calls).toHaveLength(0);
 
       // Back online: the queue drains and the worker publishes.
       assertDefined<(online: boolean) => void>(onlineCb, "online callback")(true);
-      for (let i = 0; i < 30 && transport.calls.length === 0; i++) await Promise.resolve();
+      await waitUntil(() => transport.calls.length > 0, 30);
       expect(transport.calls).toHaveLength(1);
       transport.resolveNext();
-      await flushMicrotasks(20);
+      await flushTasks(20);
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("net-a");
     });
 
@@ -488,17 +517,17 @@ describe("Outbox", () => {
       mockGetMeasurementById.mockResolvedValue(row({ id: "net-b" }));
       const transport = makeTransport();
       const { outbox } = await freshOutbox(transport);
-      await flushMicrotasks();
+      await flushTasks();
 
       outbox.enqueue("net-b");
-      await flushMicrotasks(10);
+      await flushTasks(10);
       expect(transport.calls).toHaveLength(0);
 
       assertDefined<(online: boolean) => void>(onlineCb, "online callback")(true);
-      for (let i = 0; i < 30 && transport.calls.length === 0; i++) await Promise.resolve();
+      await waitUntil(() => transport.calls.length > 0, 30);
       expect(transport.calls).toHaveLength(1);
       transport.resolveNext();
-      await flushMicrotasks(20);
+      await flushTasks(20);
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("net-b");
     });
   });
@@ -515,7 +544,7 @@ describe("Outbox", () => {
       outbox.subscribeProcessing("b", bCb);
 
       outbox.enqueue("a");
-      await flushMicrotasks(4);
+      await flushTasks(4);
 
       expect(aCb).toHaveBeenCalledTimes(1);
       expect(bCb).not.toHaveBeenCalled();
@@ -530,7 +559,7 @@ describe("Outbox", () => {
       const unsubscribe = outbox.subscribeProcessing("x", cb);
       unsubscribe();
       outbox.enqueue("x");
-      await flushMicrotasks(4);
+      await flushTasks(4);
 
       expect(cb).not.toHaveBeenCalled();
     });
@@ -545,7 +574,7 @@ describe("Outbox", () => {
 
       expect(outbox.getSnapshot()).toEqual({ isUploading: false, count: 0 });
       outbox.enqueue("s1");
-      await flushMicrotasks(4);
+      await flushTasks(4);
       expect(outbox.getSnapshot()).toEqual({ isUploading: true, count: 1 });
       expect(cb).toHaveBeenCalled();
     });
@@ -567,13 +596,13 @@ describe("Outbox", () => {
       outbox.subscribeSettled(settled);
 
       outbox.enqueueMany(["b1", "b2"]);
-      for (let i = 0; i < 30 && transport.calls.length < 2; i++) await Promise.resolve();
+      await waitUntil(() => transport.calls.length >= 2, 30);
       expect(transport.calls).toHaveLength(2);
 
       // Resolve both publishes in the same turn.
       transport.resolveNext();
       transport.resolveNext();
-      await flushMicrotasks(40);
+      await flushTasks(40);
 
       expect(settled).toHaveBeenCalledTimes(1);
       const items = settled.mock.calls[0][0] as readonly { id: string; status: string }[];
@@ -590,12 +619,14 @@ describe("Outbox", () => {
       outbox.subscribeSettled(settled);
 
       outbox.enqueue("f1");
-      for (let i = 0; i < 20 && transport.calls.length === 0; i++) await Promise.resolve();
+      await waitUntil(() => transport.calls.length > 0, 20);
       transport.rejectNext(new MqttError("CredentialError", "no creds"));
-      await flushMicrotasks(40);
+      await flushTasks(40);
 
       expect(settled).toHaveBeenCalledTimes(1);
-      expect(settled.mock.calls[0][0]).toEqual([{ id: "f1", status: "failed" }]);
+      expect(settled.mock.calls[0][0]).toEqual([
+        { id: "f1", status: "failed", reason: "CredentialError" },
+      ]);
     });
 
     it("subscribeSettled emits nothing for skip paths (row gone / already successful)", async () => {
@@ -607,7 +638,7 @@ describe("Outbox", () => {
       outbox.subscribeSettled(settled);
 
       outbox.enqueue("ghost");
-      await flushMicrotasks(40);
+      await flushTasks(40);
 
       expect(settled).not.toHaveBeenCalled();
     });
@@ -622,7 +653,7 @@ describe("Outbox", () => {
 
       const transport = makeTransport();
       const { outbox } = await freshOutbox(transport);
-      await flushMicrotasks();
+      await flushTasks();
 
       outbox.destroy();
 
@@ -636,11 +667,11 @@ describe("Outbox", () => {
 
       const transport = makeTransport();
       const { outbox } = await freshOutbox(transport);
-      await flushMicrotasks();
+      await flushTasks();
 
       outbox.destroy();
       outbox.enqueue("late");
-      await flushMicrotasks(20);
+      await flushTasks(20);
 
       expect(outbox.isProcessing("late")).toBe(false);
       expect(transport.calls).toHaveLength(0);
@@ -653,12 +684,106 @@ describe("Outbox", () => {
 
       const transport = makeTransport();
       const { outbox } = await freshOutbox(transport);
-      await flushMicrotasks();
+      await flushTasks();
 
       outbox.destroy();
       outbox.destroy();
 
       expect(removeNetwork).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("transport routing by payload size", () => {
+    // `{"blob":"<n>","_client_id":"row-1"}` is the serialized payload, and the
+    // literal characters around the blob account for the difference.
+    const ENVELOPE_CHARS = 32;
+    const LIMIT = 128 * 1024;
+
+    async function runOne(result: object) {
+      const mqtt = makeTransport();
+      const large = makeTransport();
+      mockGetMeasurementById.mockResolvedValue(row({ result }));
+      const { outbox } = await freshOutbox(mqtt, { largeTransport: large });
+      await flushTasks();
+
+      outbox.enqueue("row-1");
+      await flushTasks(20);
+      mqtt.resolveNext();
+      large.resolveNext();
+      await flushTasks(20);
+
+      return { mqtt, large };
+    }
+
+    it("publishes over MQTT at exactly the broker limit", async () => {
+      const { mqtt, large } = await runOne({ blob: "x".repeat(LIMIT - ENVELOPE_CHARS) });
+
+      expect(mqtt.calls).toHaveLength(1);
+      expect(large.calls).toHaveLength(0);
+    });
+
+    it("routes to the large transport one byte past the limit", async () => {
+      const { mqtt, large } = await runOne({ blob: "x".repeat(LIMIT - ENVELOPE_CHARS + 1) });
+
+      expect(mqtt.calls).toHaveLength(0);
+      expect(large.calls).toHaveLength(1);
+    });
+
+    it("counts UTF-8 bytes, not characters", async () => {
+      // Every one of these is three bytes, so the payload is under the limit in
+      // characters and over it in bytes.
+      const chars = Math.ceil((LIMIT - ENVELOPE_CHARS) / 3) + 1;
+      const { mqtt, large } = await runOne({ blob: "\u4e2d".repeat(chars) });
+
+      expect(chars).toBeLessThan(LIMIT - ENVELOPE_CHARS);
+      expect(mqtt.calls).toHaveLength(0);
+      expect(large.calls).toHaveLength(1);
+    });
+
+    it("marks a row failed without retrying when the large transport is terminal", async () => {
+      const mqtt = makeTransport();
+      const large = makeTransport();
+      mockGetMeasurementById.mockResolvedValue(row({ result: { blob: "x".repeat(LIMIT) } }));
+      const { outbox, LargeUploadError } = await freshOutbox(mqtt, {
+        largeTransport: large,
+        retryBackoffMs: [0, 0],
+      });
+      await flushTasks();
+
+      outbox.enqueue("row-1");
+      await waitUntil(() => large.calls.length > 0, 30);
+      large.rejectNext(new LargeUploadError("Forbidden", "not a contributor", false));
+      await flushTasks(40);
+
+      expect(large.calls).toHaveLength(1);
+      expect(mockMarkAsFailed).toHaveBeenCalledWith("row-1", "Forbidden");
+      expect(mqtt.calls).toHaveLength(0);
+    });
+
+    it("retries a large upload the transport says is worth repeating", async () => {
+      const mqtt = makeTransport();
+      const large = makeTransport();
+      mockGetMeasurementById.mockResolvedValue(row({ result: { blob: "x".repeat(LIMIT) } }));
+      const { outbox, LargeUploadError } = await freshOutbox(mqtt, {
+        largeTransport: large,
+        retryBackoffMs: [0],
+      });
+      await flushTasks();
+
+      outbox.enqueue("row-1");
+      await waitUntil(() => large.calls.length > 0, 30);
+      large.rejectNext(new LargeUploadError("Network", "socket hang up", true));
+      await flushTasks(40);
+
+      await waitUntil(() => large.calls.length >= 2, 40);
+      expect(large.calls).toHaveLength(2);
+    });
+
+    it("marks the row successful when the large transport accepts it", async () => {
+      const { large } = await runOne({ blob: "x".repeat(LIMIT) });
+
+      expect(large.calls).toHaveLength(1);
+      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("row-1");
     });
   });
 });

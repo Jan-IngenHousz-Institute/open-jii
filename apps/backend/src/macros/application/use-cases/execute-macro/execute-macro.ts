@@ -4,6 +4,7 @@ import type {
   MacroExecutionRequestBody,
   MacroExecutionResponse,
 } from "@repo/api/domains/macro/macro.schema";
+import { restoreMacroInputInContext } from "@repo/api/transforms/macro-context-ref";
 import { normalizeMacroInput } from "@repo/api/transforms/normalize-macro-input";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
@@ -89,7 +90,17 @@ export class ExecuteMacroUseCase {
 
     const payload: LambdaExecutionPayload = {
       script: macro.code,
-      items: [{ id: itemId, data: normalized.value, context: request.context }],
+      items: [
+        {
+          id: itemId,
+          data: normalized.value,
+          // A mobile upload leaves a marker where ctx held this same
+          // measurement; macro code must still see the capture-time value.
+          context: request.context
+            ? restoreMacroInputInContext(request.context, request.data)
+            : request.context,
+        },
+      ],
       timeout: request.timeout ?? 30,
     };
 

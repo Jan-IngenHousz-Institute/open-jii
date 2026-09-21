@@ -30,6 +30,7 @@ function item(id: string, status: Status): MeasurementItem {
     hasComment: false,
     dayKey: "2026-01-01",
     workbookRunId: "",
+    failureReason: null,
   };
 }
 

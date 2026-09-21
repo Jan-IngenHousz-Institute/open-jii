@@ -105,7 +105,7 @@ describe("buildUploadPayload payload construction", () => {
   });
 
   it("serializes workbook version and device-scoped macro context", () => {
-    const macroContext = { measurement: { phi2: 0.8 }, $device: { id: "device-1" } };
+    const macroContext = { baseline: { phi2: 0.4 }, $device: { id: "device-1" } };
     const payload = buildUploadPayload({
       ...baseArgs,
       rawMeasurement: { sample: [{ phi2: 0.8 }] },
@@ -118,6 +118,22 @@ describe("buildUploadPayload payload construction", () => {
       workbook_version_id: "version-1",
       workbook_id: "workbook-1",
       macro_context: JSON.stringify(macroContext),
+    });
+  });
+
+  it("replaces the macro context entry that repeats the measurement", () => {
+    const scan = { phi2: 0.8 };
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { sample: [scan] },
+      macroContext: { measurement: scan, $device: { id: "device-1" } },
+    });
+
+    expect(payload).toMatchObject({
+      macro_context: JSON.stringify({
+        measurement: { $macroInput: true },
+        $device: { id: "device-1" },
+      }),
     });
   });
 

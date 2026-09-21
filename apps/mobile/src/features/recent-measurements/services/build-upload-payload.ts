@@ -4,6 +4,8 @@ import type { ClientMetadata } from "~/shared/measurements/client-metadata";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
 
+import { elideMacroInputFromContext } from "@repo/api/transforms/macro-context-ref";
+
 export interface MacroInfo {
   id: string;
   name: string;
@@ -67,6 +69,12 @@ export function buildUploadPayload({
 }: BuildUploadPayloadArgs) {
   const macroFilenames = macro?.filename ? [macro.filename] : [];
 
+  // A macro that follows its measurement reads that measurement through ctx, so
+  // the scan would ride again here, uncompressed, beside the compressed `sample`.
+  const leanMacroContext = macroContext
+    ? elideMacroInputFromContext(macroContext, rawMeasurement)
+    : undefined;
+
   let injectedSample: unknown;
   const hasInjectableSample = "sample" in rawMeasurement && rawMeasurement.sample;
   if (hasInjectableSample) {
@@ -115,7 +123,7 @@ export function buildUploadPayload({
     workbook_run_id: workbookRunId,
     workbook_version_id: workbookVersionId,
     ...(workbookId ? { workbook_id: workbookId } : {}),
-    ...(macroContext ? { macro_context: JSON.stringify(macroContext) } : {}),
+    ...(leanMacroContext ? { macro_context: JSON.stringify(leanMacroContext) } : {}),
     ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
     // Phone provenance. Spread last but never overwrites device-native keys:
     // every key is `client_`-prefixed, disjoint from the sensor's `device_*`.

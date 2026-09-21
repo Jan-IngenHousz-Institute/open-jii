@@ -5,6 +5,7 @@ import type {
   MacroBatchExecutionResponse,
   MacroBatchExecutionResultItem,
 } from "@repo/api/domains/macro/macro.schema";
+import { restoreMacroInputInContext } from "@repo/api/transforms/macro-context-ref";
 import { normalizeMacroInput } from "@repo/api/transforms/normalize-macro-input";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
@@ -231,7 +232,9 @@ export class ExecuteMacroBatchUseCase {
       items: validItems.map(({ item, data }) => ({
         id: item.id,
         data,
-        context: item.context,
+        // A mobile upload leaves a marker where ctx held this same measurement;
+        // macro code must still see the value it saw at capture time.
+        context: item.context ? restoreMacroInputInContext(item.context, item.data) : item.context,
       })),
       timeout,
     };

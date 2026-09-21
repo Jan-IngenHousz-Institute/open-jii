@@ -9,6 +9,7 @@ interface SwipeableMeasurementRowProps {
   timestamp: string;
   experimentName: string;
   status: MeasurementStatus;
+  failureReason?: string | null;
   questions?: AnswerData[];
   onPress?: (id: string) => void;
   onComment?: (id: string) => void;
@@ -25,6 +26,7 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
   timestamp,
   experimentName,
   status,
+  failureReason,
   questions,
   onPress,
   onComment,
@@ -49,6 +51,7 @@ export const SwipeableMeasurementRow = memo(function SwipeableMeasurementRow({
         timestamp={timestamp}
         experimentName={experimentName}
         status={status}
+        failureReason={failureReason}
         questions={questions}
         onPress={onPress}
         hideActions
