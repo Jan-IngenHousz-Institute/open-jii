@@ -24,7 +24,7 @@ flowchart TD
 Each invocation:
 
 1. **Handler** validates the event, base64-decodes the user script, writes it and the input items to temp files.
-2. **Wrapper** is spawned as a subprocess with a minimal environment (no AWS credentials). It loads helpers, compiles the user script once, then iterates over each item - injecting the item's `data` unchanged as `json` and a fresh `output` object into the script's scope.
+2. **Wrapper** is spawned as a subprocess with a minimal environment, so the function's credentials are not in the script's own `os.environ`. That stripping is not a boundary on its own: the subprocess shares the runtime's user, and the Python wrapper's `np`, `pd` and `scipy` can read any path, open any URL and write any file. Before the batch runs, the Python wrapper therefore installs a `sys.addaudithook` that refuses every `open` for writing, every `open` for reading outside the interpreter and the helpers, and every socket, process, filesystem and `ctypes` event, and the Python image runs as an unprivileged user so its own files are read-only to a macro. The boundary that holds is the function's: an execution role that may only write its own logs, and a security group that reaches only the VPC endpoints. The wrapper loads helpers, compiles the user script once, then iterates over each item - injecting the item's `data` unchanged as `json` and a fresh `output` object into the script's scope.
 3. **Helpers** provide domain-specific functions (`MathMEAN`, `MathROUND`, `ArrayNth`, `TransformTrace`, etc.) mirroring the MultispeQ ecosystem.
 
 ### Limits

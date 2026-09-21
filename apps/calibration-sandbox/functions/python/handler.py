@@ -16,14 +16,55 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 
 BLOCK_KEYS = {"status", "coefficients", "fit", "quality", "reason"}
 BLOCK_STATUSES = {"computed", "rejected", "skipped"}
 
+# The API's own limits on a block's free text, mirrored so a block this handler accepts
+# is one the platform stores; one it would refuse is explained here, where the reason
+# reaches the operator, rather than lost as an unrecognised payload.
+REASON_MAX_CHARS = 2000
+RECORD_MAX_BYTES = 16 * 1024
+
 WRAPPER_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "wrappers", "wrapper.py")
 SCRIPT_TIMEOUT_SECONDS = 30
 MAX_RUNNER_OUTPUT_BYTES = 10 * 1024 * 1024
+MAX_RUNNER_STDERR_BYTES = 64 * 1024
 TEMP_PREFIX = "calibration_"
+
+
+class _Drain(threading.Thread):
+    """Reads a pipe to its end as it fills, keeping the first `cap` bytes.
+
+    Collecting a pipe after the process exits means holding everything it wrote, so a
+    script that submits megabytes takes the function down instead of failing its run.
+    Once the cap is passed the process is killed and the rest is read and dropped.
+    """
+
+    def __init__(self, stream, cap, process):
+        super().__init__(daemon=True)
+        self.stream = stream
+        self.cap = cap
+        self.process = process
+        self.kept = bytearray()
+        self.total = 0
+        self.start()
+
+    def run(self):
+        while True:
+            chunk = self.stream.read(65536)
+            if not chunk:
+                return
+            room = self.cap - len(self.kept)
+            if room > 0:
+                self.kept.extend(chunk[:room])
+            self.total += len(chunk)
+            if self.total > self.cap:
+                self.process.kill()
+
+    def text(self):
+        return bytes(self.kept).decode("utf-8", errors="replace")
 
 
 def handler(event, context):
@@ -99,9 +140,18 @@ def _validate_blocks(blocks, spec):
         for key in ("fit", "quality"):
             if key in block and not isinstance(block[key], dict):
                 reasons.append(f"Block '{name}' {key} must be a dict")
+            elif key in block and len(json.dumps(block[key])) > RECORD_MAX_BYTES:
+                reasons.append(
+                    f"Block '{name}' {key} must serialise to at most {RECORD_MAX_BYTES} bytes"
+                )
+        reason = block.get("reason")
+        if reason is not None and (not isinstance(reason, str) or len(reason) > REASON_MAX_CHARS):
+            reasons.append(
+                f"Block '{name}' reason must be a string of at most {REASON_MAX_CHARS} characters"
+            )
 
         status = block.get("status")
-        if status not in BLOCK_STATUSES:
+        if not isinstance(status, str) or status not in BLOCK_STATUSES:
             reasons.append(
                 f"Block '{name}' needs a status of {', '.join(sorted(BLOCK_STATUSES))}"
             )
@@ -214,43 +264,56 @@ def _run_script_in_subprocess(payload):
         ) as handle:
             json.dump(payload, handle)
 
+        process = subprocess.Popen(
+            # The interpreter that already has numpy, pandas and scipy.
+            [sys.executable, WRAPPER_PATH, event_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            # The environment is stripped so nothing of the function's reaches the script
+            # by name; what shares the function's user is the wrapper's audit hook's job.
+            env={
+                "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
+                # Both point at the directory this run is torn down with, so a cache a
+                # library writes on its own cannot outlive the run on a warm container.
+                "HOME": workdir,
+                "TMPDIR": workdir,
+                "PYTHONPATH": os.path.dirname(WRAPPER_PATH),
+                "PYTHONDONTWRITEBYTECODE": "1",
+            },
+        )
+        out = _Drain(process.stdout, MAX_RUNNER_OUTPUT_BYTES, process)
+        err = _Drain(process.stderr, MAX_RUNNER_STDERR_BYTES, process)
         try:
-            completed = subprocess.run(
-                # The interpreter that already has numpy, pandas and scipy.
-                [sys.executable, WRAPPER_PATH, event_path],
-                capture_output=True,
-                text=True,
-                timeout=SCRIPT_TIMEOUT_SECONDS,
-                # Nothing of this function's environment reaches the script,
-                # least of all its credentials.
-                env={
-                    "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
-                    # Both point at the directory this run is torn down with, so a script
-                    # that writes a temp file or a cache cannot leave it for the next
-                    # tenant on a warm container.
-                    "HOME": workdir,
-                    "TMPDIR": workdir,
-                    "PYTHONPATH": os.path.dirname(WRAPPER_PATH),
-                    "PYTHONDONTWRITEBYTECODE": "1",
-                },
-            )
+            process.wait(timeout=SCRIPT_TIMEOUT_SECONDS)
         except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+            _close_pipes(process, out, err)
             return {
                 "outcome": "timed_out",
                 "error": f"Script exceeded {SCRIPT_TIMEOUT_SECONDS}s",
             }
+        _close_pipes(process, out, err)
 
-        stdout = completed.stdout.strip()
-        if len(stdout) > MAX_RUNNER_OUTPUT_BYTES:
+        if out.total > MAX_RUNNER_OUTPUT_BYTES:
             return {"outcome": "too_large"}
+        stdout = out.text().strip()
         if not stdout:
-            return {"outcome": "no_output", "error": _tail(completed.stderr)}
+            return {"outcome": "no_output", "error": _tail(err.text())}
         try:
             return json.loads(stdout)
         except json.JSONDecodeError:
             return {"outcome": "bad_output"}
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
+
+
+def _close_pipes(process, out, err):
+    """Wait for both drains, then release the pipes the process left behind."""
+    out.join()
+    err.join()
+    process.stdout.close()
+    process.stderr.close()
 
 
 def _remove_stale_temp_dirs():

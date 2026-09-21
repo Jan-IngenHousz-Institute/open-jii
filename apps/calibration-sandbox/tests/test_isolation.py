@@ -190,5 +190,83 @@ class IsolationTest(unittest.TestCase):
         self.assertEqual(leftovers, [])
 
 
+class LibraryEscapeTest(unittest.TestCase):
+    """The allowlisted libraries can read, write and connect on their own; the audit hook cannot be bypassed by them."""
+
+    # A stripped environment says nothing about the runtime's own process, which shares
+    # this user and holds the function's credentials in its environment.
+    def test_pandas_cannot_read_a_file_off_the_host(self):
+        for path in ["/etc/passwd", "/proc/1/environ"]:
+            with self.subTest(path=path):
+                script = f'import pandas as pd\npd.read_csv("{path}", sep="\\0", header=None)\n{SKIP}'
+                self.assertIn("may not open", refusal(script))
+
+    def test_pandas_cannot_reach_the_network(self):
+        script = 'import pandas as pd\npd.read_csv("http://127.0.0.1:9/never.csv")\n' + SKIP
+        self.assertIn("may not use", refusal(script))
+
+    def test_pandas_cannot_load_code_from_a_pickle(self):
+        script = 'import pandas as pd\npd.read_pickle("/etc/passwd")\n' + SKIP
+        self.assertIn("may not open", refusal(script))
+
+    # A warm container keeps /tmp between runs; a file a script writes there is what the
+    # next run could read back.
+    def test_the_libraries_cannot_write_a_file(self):
+        target = "/tmp/left-behind-by-a-script.csv"
+        if os.path.exists(target):
+            os.remove(target)
+
+        for writer in [
+            f'import pandas as pd\npd.DataFrame({{"a": [1]}}).to_csv("{target}")',
+            f'import numpy as np\nnp.save("{target}", np.zeros(2))',
+            f'import numpy as np\nnp.savetxt("{target}", np.zeros(2))',
+        ]:
+            with self.subTest(writer=writer.splitlines()[-1]):
+                self.assertIn("may not open", refusal(f"{writer}\n{SKIP}"))
+        self.assertFalse(os.path.exists(target))
+
+    def test_numpy_cannot_read_a_file_off_the_host(self):
+        script = 'import numpy as np\nnp.fromfile("/etc/passwd", dtype="uint8")\n' + SKIP
+        self.assertIn("may not open", refusal(script))
+
+    # The gates and the numerical stack still import lazily under the hook, which opens
+    # files under the interpreter; a fit must not be the thing the hook breaks.
+    def test_the_libraries_still_work_under_the_hook(self):
+        script = (
+            "import numpy as np\n"
+            "import pandas as pd\n"
+            "from scipy import stats\n"
+            "frame = pd.DataFrame({'x': [1.0, 2.0, 3.0], 'y': [2.0, 4.0, 6.0]})\n"
+            "slope = float(stats.linregress(frame['x'], frame['y']).slope)\n"
+            'submit({"par": {"status": "skipped", "reason": f"{slope:.1f}-{int(np.sum([1, 2]))}"}})'
+        )
+        result = run(script, series={})
+
+        self.assertEqual(result["status"], "computed", result)
+        self.assertEqual(result["blocks"]["par"]["reason"], "2.0-3")
+
+
+class OutputBoundsTest(unittest.TestCase):
+    """What a script sends back is bounded as it arrives, not after it has all been held."""
+
+    def test_a_script_that_prints_without_end_still_returns_its_blocks(self):
+        script = 'for i in range(200000):\n    print("row", i, "x" * 100)\n' + SKIP
+        result = run(script, series={})
+
+        self.assertEqual(result["status"], "computed", result)
+
+    # A submission of megabytes is refused as a script fault, with the process killed
+    # once the cap is passed rather than the function running out of memory first.
+    def test_a_submission_beyond_the_output_cap_fails_the_run_not_the_function(self):
+        script = (
+            'submit({"par": {"status": "skipped", "reason": "big",'
+            ' "quality": {"data": list(range(3000000))}}})'
+        )
+        result = run(script, series={})
+
+        self.assertEqual(result["status"], "compute_failed", result)
+        self.assertIn("more output", result["error"])
+
+
 if __name__ == "__main__":
     unittest.main()

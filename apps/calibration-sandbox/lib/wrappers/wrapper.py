@@ -40,9 +40,108 @@ TRACEBACK_TAIL_LINES = 20
 # line number instead of being killed from outside with nothing to show.
 SCRIPT_ALARM_SECONDS = 25
 
+# What a script prints is kept for its traceback and nothing else, so a loop that prints
+# on every row is cut here rather than buffered until the function runs out of memory.
+PRINT_CAP_CHARS = 64 * 1024
+
 # A device console answers JSON as often as it answers a bare number, so a script that
-# parses a reply needs it; none of these reaches the filesystem or the network.
+# parses a reply needs it. The modules themselves can read files and open sockets; the
+# audit hook below is what stops that, not the import list.
 ALLOWED_IMPORTS = {"qc", "numpy", "pandas", "scipy", "math", "statistics", "json", "re"}
+
+HELPERS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../src/helpers")
+
+# Where a script may read from: the interpreter, whose lazily imported modules open files
+# under it, and the shared gates. Nothing else on the host, and nowhere at all to write.
+READABLE_ROOTS = tuple(
+    os.path.realpath(root) for root in (sys.prefix, sys.base_prefix, HELPERS_DIR)
+)
+WRITE_MODE_CHARS = set("wax+")
+WRITE_FLAGS = os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND
+
+# Audit events a fit never raises and an escape always does: sockets and the clients
+# built on them, other processes, and anything that changes the filesystem.
+DENIED_EVENT_PREFIXES = (
+    "socket.",
+    "urllib.",
+    "http.client.",
+    "ftplib.",
+    "smtplib.",
+    "poplib.",
+    "imaplib.",
+    "nntplib.",
+    "telnetlib.",
+    "subprocess.",
+    "os.system",
+    "os.exec",
+    "os.posix_spawn",
+    "os.spawn",
+    "os.fork",
+    "os.kill",
+    "os.remove",
+    "os.rename",
+    "os.rmdir",
+    "os.mkdir",
+    "os.chmod",
+    "os.chown",
+    "os.link",
+    "os.symlink",
+    "os.truncate",
+    "os.unlink",
+    "os.utime",
+    "shutil.",
+    "tempfile.",
+    "pty.",
+    "ctypes.",
+    "webbrowser.",
+    "sqlite3.",
+)
+
+
+class CappedBuffer(io.StringIO):
+    """Keeps the first PRINT_CAP_CHARS a script prints and drops the rest unbuffered."""
+
+    def write(self, text):
+        room = PRINT_CAP_CHARS - self.tell()
+        if room > 0:
+            super().write(text[:room])
+        return len(text)
+
+
+def _open_is_allowed(args):
+    path, mode, flags = args[0], args[1], args[2]
+    # A descriptor already open came from a read this hook allowed.
+    if isinstance(path, int):
+        return True
+    if not isinstance(path, (str, bytes, os.PathLike)):
+        return False
+
+    wants_write = (
+        bool(set(mode) & WRITE_MODE_CHARS)
+        if isinstance(mode, str)
+        else bool((flags or 0) & WRITE_FLAGS)
+    )
+    if wants_write:
+        return False
+
+    real = os.path.realpath(os.fsdecode(path))
+    return any(real == root or real.startswith(root + os.sep) for root in READABLE_ROOTS)
+
+
+def _deny_escapes(event, args):
+    """Refuse, at the interpreter, what the allowlisted libraries could otherwise reach.
+
+    pandas reads any path and any URL, numpy saves to any path, and a subprocess with a
+    stripped environment still shares the function's user with the runtime that holds its
+    credentials. Process isolation is not a boundary against that; this is the layer that
+    turns each of those into an error at the call.
+    """
+    if event == "open":
+        if _open_is_allowed(args):
+            return
+        raise PermissionError(f"a calibration script may not open {args[0]!r}")
+    if event.startswith(DENIED_EVENT_PREFIXES):
+        raise PermissionError(f"a calibration script may not use {event}")
 
 
 class SafeModule:
@@ -301,11 +400,14 @@ def _run(event):
     # The only channel back to the handler is one JSON document on stdout, so anything the
     # script prints has to be kept off it. A print() while debugging a fit would otherwise
     # turn a calibration that worked into an unparseable reply.
-    printed = io.StringIO()
+    printed = CappedBuffer()
     try:
         signal.signal(signal.SIGALRM, _raise_timeout)
         signal.alarm(SCRIPT_ALARM_SECONDS)
         tree = _reject_dunder_access(event["script"])
+        # Installed after the script is compiled and never removed: from here on this
+        # process may only compute and print its one line.
+        sys.addaudithook(_deny_escapes)
         with contextlib.redirect_stdout(printed):
             exec(compile(tree, "<calibration-script>", "exec"), scope)
         signal.alarm(0)
@@ -328,7 +430,17 @@ def _run(event):
     if not isinstance(submissions[0], dict):
         return {"outcome": "not_a_dict"}
 
-    return {"outcome": "submitted", "blocks": _jsonable(submissions[0])}
+    # A submission that cannot be serialised (a cycle, most likely) is the script's
+    # fault and is reported as one, not as the sandbox failing.
+    try:
+        blocks = _jsonable(submissions[0])
+    except Exception as exc:
+        return {
+            "outcome": "script_failed",
+            "error": f"{type(exc).__name__}: submit() was given a value that cannot be serialised",
+            "trace": printed.getvalue().splitlines()[-TRACEBACK_TAIL_LINES:],
+        }
+    return {"outcome": "submitted", "blocks": blocks}
 
 
 def main():

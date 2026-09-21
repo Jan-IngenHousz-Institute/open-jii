@@ -339,6 +339,43 @@ class HandlerTest(unittest.TestCase):
         self.assertEqual(result["status"], "compute_failed")
         self.assertTrue(any("exactly 6" in reason for reason in result["reasons"]))
 
+    # The API caps a block's free text; a block that passed here and failed there
+    # reached the record as an unrecognised payload, with the explanation lost.
+    def test_reason_longer_than_the_contract_allows_fails_validation(self):
+        script = f'submit({{"par": {{"status": "skipped", "reason": "{"x" * 2001}"}}}})'
+        result = handler(event(script), None)
+
+        self.assertEqual(result["status"], "compute_failed", result)
+        self.assertIn("reason must be a string of at most 2000", "; ".join(result["reasons"]))
+
+    def test_record_larger_than_the_contract_allows_fails_validation(self):
+        script = (
+            'submit({"par": {"status": "computed", "coefficients": {"spec": 1.0},'
+            ' "quality": {"note": "x" * 20000}}})'
+        )
+        result = handler(event(script), None)
+
+        self.assertEqual(result["status"], "compute_failed", result)
+        self.assertIn("quality must serialise to at most", "; ".join(result["reasons"]))
+
+    # A status that is not even a string is a script fault, not a handler crash.
+    def test_status_that_is_not_a_string_fails_validation(self):
+        result = handler(event('submit({"par": {"status": []}})'), None)
+
+        self.assertEqual(result["status"], "compute_failed", result)
+        self.assertIn("needs a status", "; ".join(result["reasons"]))
+
+    def test_a_cyclic_submission_is_the_scripts_fault(self):
+        script = (
+            "record = {}\n"
+            'record["self"] = record\n'
+            'submit({"par": {"status": "skipped", "reason": "loop", "quality": record}})'
+        )
+        result = handler(event(script), None)
+
+        self.assertEqual(result["status"], "compute_failed", result)
+        self.assertIn("cannot be serialised", result["error"])
+
     def test_failed_qc_gates_are_advisory_and_travel_with_the_block(self):
         script = (
             'submit({"par": {"status": "computed", "coefficients": {"spec": 1.0}, '
