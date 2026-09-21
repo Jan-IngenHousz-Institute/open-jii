@@ -43,8 +43,9 @@ What this deliberately does not cover.
 
 ## Design
 
-Links: design canvas, ADR, contract changes in `packages/api`. A short system design or a pointer.
-The precedent in the codebase this follows.
+The project's resources, linked: the deep dive, the sketches or design canvas, the ADR, and the
+contract changes in `packages/api`. A short system design or a pointer. The precedent in the
+codebase this follows.
 
 ## Deliverables
 
@@ -59,7 +60,33 @@ in the Team Process document.
 ```
 
 Nothing in the body about which agent created it, when the container was made, or which issues
-were inventoried. That is bookkeeping and it goes in a comment or nowhere.
+were inventoried. That is bookkeeping, and it goes in one of the project's documents or nowhere.
+Never in a project update: Linear's project updates are the status post the team reads in its
+feed, so an inventory posted there reaches nine people as news.
+
+### Project resources
+
+A project carries its design and its grounding as Linear documents on the project itself, so a
+reader who opens the project finds them without being sent elsewhere. Four are the standard set,
+and a project carries more when the work needs it. Each is titled `<Project>: <thing>`, which is
+how the index links them without knowing their ids.
+
+| Document                   | What it holds                                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `implementation deep dive` | How the area works today, against a named commit, with mermaid diagrams, and where each ticket cuts in |
+| `screen sketches`          | The screens with no design yet, drawn in the platform's own tokens, as one uploaded HTML file          |
+| `live ticket view`         | A pointer to the project's shared ticket view                                                          |
+| `artifact index`           | A short front page linking the three above and the project                                             |
+
+Two rules decide whether something belongs here. A resource complements the project and its
+tickets, so a page that restates the deliverables or copies the ticket list is not one; the reader
+has both already. And a sketch takes its tokens, type and components from `apps/web`, so a reader
+sees the product rather than a generic wireframe.
+
+`pnpm linear:document` publishes one and refuses to write until the prose rules pass and every
+mermaid block parses. `pnpm linear:upload` puts a sketch file in Linear's asset store so it opens
+without an account. `pnpm linear:view` creates the shared view and its document. The formats are in
+`tooling/devkit/README.md`.
 
 ### Project lifecycle
 
@@ -72,8 +99,9 @@ were inventoried. That is bookkeeping and it goes in a comment or nowhere.
 | `Canceled`    | Dropped, with a one-line reason in the body | terminal                                                                 |
 
 **Project gate** (`Backlog` to `Planned`), checkable by a script: every heading above present and
-non-empty, a lead, a target date, at least one ticket in `Ready`, and a design link under
-`## Design` when the work is user-facing.
+non-empty, a lead, a target date, at least one ticket in `Ready`, and a resource linked under
+`## Design`. That resource is a design canvas or the sketches when the work is user-facing, and the
+deep dive otherwise.
 
 ## Ticket shapes
 
@@ -262,6 +290,10 @@ and a list of words is not a ticket.
     (`DISCOVERY:` is a label, not a title), no list of three. Project names are the outcome in
     three to six words.
 14. Then the `unslop` skill.
+
+A document holds diagrams as well as prose, and a mermaid block Linear cannot parse renders as a
+red error box where the picture should be. `pnpm linear:document` parses every block with mermaid
+itself before it writes, so a diagram is never published broken.
 
 `pnpm linear:check <draft.md>` runs the mechanical half before a body is shown: every bullet and
 every WHO, WHAT and WHY line ends as a sentence and no bullet is a semicolon chain; heading set
