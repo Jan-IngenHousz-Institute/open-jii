@@ -17,10 +17,8 @@ interface CalibrationLiveSeriesProps {
 /**
  * The sweep as it is being measured.
  *
- * Before this the bench showed a progress bar and named the setpoint, and the readings only
- * became visible as a table once the whole session was over. A point that went wrong was
- * therefore found after the rig had been packed away. The curve drawing itself is what puts
- * that back in the operator's hands while the bench is still standing.
+ * The curve drawing itself is what puts a bad point in the operator's hands while the rig
+ * is still standing, rather than in a table once the session is over.
  */
 export function CalibrationLiveSeries({ events, procedure }: CalibrationLiveSeriesProps) {
   const { t } = useTranslation("iot");

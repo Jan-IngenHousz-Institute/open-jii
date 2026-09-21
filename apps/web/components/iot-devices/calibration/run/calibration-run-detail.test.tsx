@@ -172,8 +172,7 @@ describe("CalibrationRunDetail", () => {
     expect(screen.queryByText("iot.calibration.run.skippedTitle")).toBeNull();
   });
 
-  // The decision used to live only inside the live wizard, so a run left computed when the
-  // tab closed could never be approved or rejected again.
+  // A run left computed when the tab closed is decided here or nowhere.
   describe("deciding a run that is still computed", () => {
     it("approves it from the record", async () => {
       const approveSpy = server.mount(contract.iot.approveCalibrationRun, {

@@ -413,8 +413,8 @@ describe("CalibrationWizard", () => {
     expect(screen.queryByText("iot.calibration.capture.aborted")).toBeNull();
   });
 
-  // A filter that slipped or a reference that had not settled is only correctable here.
-  // Before this, one bad reading cost the whole session.
+  // A filter that slipped or a reference that had not settled is only correctable here,
+  // and one bad reading must not cost the whole session.
   it("takes a reading again and sends the second one, keeping the first as evidence", async () => {
     const device = attachMiniPar([420, 999, 150, 8.33]);
     const createSpy = server.mount(contract.iot.createCalibrationRun, {
@@ -783,7 +783,7 @@ describe("CalibrationWizard", () => {
     });
   });
 
-  // A script that produced nothing used to leave the operator with no button at all.
+  // A script that produces nothing must still leave the operator a way on.
   it("offers another pass or the exit when the script produced nothing", async () => {
     attachMiniPar([420, 150, 8.33, 420, 150, 8.33]);
     server.mount(contract.iot.createCalibrationRun, {
@@ -816,8 +816,8 @@ describe("CalibrationWizard", () => {
     });
   });
 
-  // Before this there was no way out of a running bench but to leave the page, which is
-  // what left a lamp driving current with nothing able to turn it off.
+  // Leaving the page is the only other way out of a running bench, and it leaves a lamp
+  // driving current with nothing able to turn it off.
   describe("stopping a run that is under way", () => {
     it("stops on the operator's word, reads nothing further and keeps the session open", async () => {
       const device = attachMiniPar([420, 150, 8.33]);

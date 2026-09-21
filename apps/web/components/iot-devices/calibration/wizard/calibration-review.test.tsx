@@ -34,8 +34,8 @@ function renderReview(overrides: Partial<Parameters<typeof CalibrationReview>[0]
 describe("CalibrationReview", () => {
   // Coefficients alone cannot show a reviewer a point that went wrong, and three of the
   // seeded procedures draw no chart at all, so the measured points are always on screen.
-  // Every point is still the evidence behind a bad reading, but open it ran to several
-  // screens and pushed the decision itself below the fold.
+  // Every point is still the evidence behind a bad reading, but open they run to several
+  // screens and push the decision below the fold.
   it("keeps the points the fit was drawn from one click away", async () => {
     renderReview();
 

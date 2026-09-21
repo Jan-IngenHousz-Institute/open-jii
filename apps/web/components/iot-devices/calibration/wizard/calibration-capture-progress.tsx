@@ -27,8 +27,8 @@ export function CalibrationCaptureProgress({
 
   const current = events.findLast((event) => event.kind === "step");
   const setpoint = events.findLast((event) => event.kind === "setpoint");
-  // A point taken again is part of the run's story, not noise: it is the operator correcting
-  // a filter that slipped, and it was collected and then dropped from view until now.
+  // A retake is part of the run's story, not noise: it is the operator correcting a filter
+  // that slipped.
   const completed = events.filter(
     (event) => event.kind === "series" || event.kind === "skipped" || event.kind === "retake",
   );
@@ -74,8 +74,8 @@ export function CalibrationCaptureProgress({
     if (step === null) {
       return null;
     }
-    // The label leads and the bar measures it. The other way round, an empty bar at the
-    // first step sat under the step's own description and read as a rule across the card.
+    // The label leads and the bar measures it. The other way round, an empty bar on the
+    // first step reads as a rule across the card.
     return (
       <div className="space-y-2">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">

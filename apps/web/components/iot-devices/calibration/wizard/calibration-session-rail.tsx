@@ -36,10 +36,8 @@ const SECTION = "text-muted-foreground text-xs font-medium uppercase tracking-wi
  * The session as an instrument panel: what is on the ports, what the procedure will do, and
  * where the run has got to.
  *
- * Before this existed the wizard answered those questions only by stepping backwards, and
- * during a sweep it answered them not at all. It reads as a preview while a procedure is
- * being chosen and as live status once the run starts, because it is the same three
- * questions either way.
+ * It reads as a preview while a procedure is being chosen and as live status once the run
+ * starts, because it is the same three questions either way.
  */
 export function CalibrationSessionRail({
   family,
@@ -210,7 +208,7 @@ export function CalibrationSessionRail({
   }
 
   // A well, not a card: the step's own work is the page's subject and this is the context
-  // beside it. Two cards of equal weight side by side is what made the flow read flat.
+  // beside it.
   return (
     <InsetPanel padding="lg" className="lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
       <aside aria-label={t("iot.calibration.rail.title")} className="space-y-5">

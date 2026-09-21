@@ -10,9 +10,8 @@ function format(seconds: number): string {
 /**
  * How long the run has been going, counted from the moment this mounts.
  *
- * A sweep is minutes of waiting at a bench and the screen said nothing about how long it had
- * been. Mounting only while a phase runs is what makes the count honest without the wizard
- * having to hold a start time it would then have to reset.
+ * Mounting only while a phase runs is what keeps the count honest without the wizard holding
+ * a start time it would then have to reset.
  */
 export function CalibrationElapsed() {
   const [seconds, setSeconds] = useState(0);

@@ -24,9 +24,8 @@ interface CalibrationWriteBlockProps {
 /**
  * One block on its way to the device: what will be sent, then what became of it.
  *
- * The values were flattened into a single line of the outcome list, which is the one place a
- * reviewer might still catch a coefficient that is not what they approved a step earlier.
- * They get the same room here as they did on the review.
+ * The coefficients get the same room they had on the review, because this is the last place
+ * a reviewer can still catch one that is not what they approved a step earlier.
  */
 export function CalibrationWriteBlock({ name, block, result }: CalibrationWriteBlockProps) {
   const { t } = useTranslation("iot");
@@ -59,8 +58,8 @@ export function CalibrationWriteBlock({ name, block, result }: CalibrationWriteB
     );
   }
 
-  // Stacked, like the review card that showed the same numbers a step earlier. Right-aligned
-  // across a narrow card, a six-element vector wrapped and left its closing bracket alone.
+  // Stacked, like the review card that showed the same numbers a step earlier: right-aligned
+  // across a narrow card, a six-element vector wraps and strands its closing bracket.
   function renderCoefficient([coefficient, value]: (typeof coefficients)[number]) {
     return (
       <div key={coefficient} className="space-y-0.5">

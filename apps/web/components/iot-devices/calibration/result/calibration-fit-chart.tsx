@@ -49,8 +49,8 @@ export function CalibrationFitChart({ points, line, xLabel, yLabel }: Calibratio
     <ScatterChart
       className="h-52"
       data={[captured, ...fitted]}
-      // Below the plot, not over it: these sit two to a row beside the session rail, and an
-      // inside legend covered the very points it was naming.
+      // Below the plot, not over it: these sit two to a row beside the session rail, where an
+      // inside legend covers the points it names.
       config={{
         xAxisTitle: xLabel,
         yAxisTitle: yLabel,

@@ -18,9 +18,8 @@ interface CalibrationDoneSummaryProps {
 /**
  * What the session actually left behind.
  *
- * The last screen used to be one sentence, which said how it ended but nothing about what
- * happened: how much was measured, what was decided, and how much of it is on the hardware.
- * Those are the three things someone writes in a log book afterwards.
+ * How much was measured, what was decided, and how much of it is on the hardware: the three
+ * things someone writes in a log book afterwards.
  */
 export function CalibrationDoneSummary({
   payload,

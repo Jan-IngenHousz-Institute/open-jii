@@ -46,10 +46,8 @@ function axisLabel(step: ReturnType<typeof producingStep>): string | null {
 /**
  * The series being measured right now, as points to draw.
  *
- * A sweep is minutes of waiting and its shape is the thing an instrument person reads
- * instantly, so the curve is built from the points as they are kept rather than shown as a
- * table once the whole run is over. Only numeric columns can be drawn; a structured reply or
- * a typed note still reaches the record, it just is not a line.
+ * Only numeric columns can be drawn; a structured reply or a typed note still reaches the
+ * record, it just is not a line.
  */
 export function liveSeriesData(
   events: ProcedureProgress[],

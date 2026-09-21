@@ -46,8 +46,7 @@ interface CalibrationBlockCardProps {
  *
  * The verdict comes first because it is what a reviewer is deciding about; then the numbers
  * against the bounds they were judged by and what they replace; then the picture; then, for
- * whoever wants it, the residuals the script computed and the thresholds it applied. Those
- * last were fetched with every run and shown nowhere.
+ * whoever wants it, the residuals the script computed and the thresholds it applied.
  */
 export function CalibrationBlockCard({ name, block, previous, spec }: CalibrationBlockCardProps) {
   const { t } = useTranslation("iot");
@@ -124,8 +123,8 @@ export function CalibrationBlockCard({ name, block, previous, spec }: Calibratio
     if (!hasVerdict) {
       return null;
     }
-    // The verdict on its own line and the figures under it, rather than one wrapping row
-    // where R² rode up beside the verdict and NRMSE dropped below it.
+    // The verdict on its own line and the figures under it: one wrapping row splits them
+    // wherever the card happens to end.
     return (
       <div className="space-y-1">
         <p

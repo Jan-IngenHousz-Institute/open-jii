@@ -48,9 +48,9 @@ type WizardStep = "choose" | "connect" | "capture" | "review" | "write" | "done"
 /**
  * The three things a session actually consists of, which the six steps are phases of.
  *
- * Six equal circles said a session was six comparable tasks. Choosing a procedure takes a
- * moment, a capture takes minutes at a bench, and approving is a decision; giving them the
- * same rail slot misreports the work. The step still names itself, in the card's title.
+ * Choosing a procedure takes a moment, a capture takes minutes at a bench, and approving is
+ * a decision; six equal circles would give them the same weight. The step still names
+ * itself, in the card's title.
  */
 type WizardPhase = "setUp" | "measure" | "decide";
 

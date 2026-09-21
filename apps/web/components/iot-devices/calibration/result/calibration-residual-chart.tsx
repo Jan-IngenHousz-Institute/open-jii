@@ -9,9 +9,8 @@ import type { ResidualReport } from "./residual-data";
 /**
  * How far the fit missed at each point, against the band the gate allowed.
  *
- * A single R² says a line fits; it does not say where it does not. The scripts compute every
- * residual and the threshold each was judged against, and until now the record kept both and
- * showed neither, so a systematic bend at the bright end read the same as noise.
+ * A single R² says a line fits; it does not say where it does not, and a systematic bend at
+ * the bright end reads the same as noise until the residuals are drawn.
  */
 export function CalibrationResidualChart({ report }: { report: ResidualReport }) {
   const { t } = useTranslation("iot");

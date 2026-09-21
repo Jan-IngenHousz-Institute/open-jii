@@ -32,9 +32,8 @@ function numeric(value: unknown): number | null {
  * The span the residuals were judged against.
  *
  * The scripts report a worst residual both in the reading's own units and as a fraction of
- * the fitted range, so the range is the ratio between them. Deriving it is what lets every
- * residual be drawn on the same axis as the threshold the gate applied, rather than in units
- * the threshold is not expressed in.
+ * the fitted range, so the range is the ratio between them. Without it the residuals and the
+ * threshold cannot share an axis.
  */
 function fullScale(quality: Record<string, unknown>): number | null {
   const worst = numeric(quality.worst_residual);

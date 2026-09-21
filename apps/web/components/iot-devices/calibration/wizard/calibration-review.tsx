@@ -58,8 +58,7 @@ export function CalibrationReview({ run, payload, active, outputSchema }: Calibr
    * Every point the bench took, one table per series, folded away.
    *
    * They are the evidence behind a point that went wrong, so they have to be here; open,
-   * they ran to several screens and put the decision itself below the fold, which is the
-   * one thing the step exists for.
+   * they run to several screens and put the decision below the fold.
    */
   function renderReadings() {
     if (series.length === 0) return null;

@@ -14,7 +14,7 @@ const EVENTS: ProcedureProgress[] = [
 
 describe("CalibrationCaptureProgress", () => {
   // A filter that slipped is why a point gets taken again, and the operator needs to see
-  // that it happened. These events were collected and then dropped from the view.
+  // that it happened.
   it("says when a point was taken again, and which attempt it is on", () => {
     render(
       <CalibrationCaptureProgress
