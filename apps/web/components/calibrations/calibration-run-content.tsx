@@ -42,12 +42,15 @@ export function CalibrationRunContent() {
 
   const family = definition.family;
   const candidates = devices.data?.filter((device) => device.deviceType === family);
+  // The unit that answers the port has to be the device chosen here, which the wizard
+  // can only check against what the platform has that device registered as.
+  const device = candidates?.find((candidate) => candidate.id === deviceId);
 
   function leave() {
     router.push(`/${locale}/platform/calibrations/${definitionId}`);
   }
 
-  if (deviceId === null) {
+  if (device === undefined) {
     return (
       <PanelCard title={t("iot.calibration.trial.chooseDevice")}>
         <div className="space-y-3">
@@ -68,8 +71,9 @@ export function CalibrationRunContent() {
 
   return (
     <CalibrationWizard
-      deviceId={deviceId}
+      deviceId={device.id}
       family={family}
+      serialNumber={device.serialNumber}
       presetDefinitionId={definitionId}
       onClose={leave}
     />

@@ -95,11 +95,12 @@ export function removeCoefficient(
 
 /**
  * How a coefficient the platform can write is declared. A per-channel one is submitted as
- * an array, so declaring it as a number makes the first real fit fail validation.
+ * an array, so declaring it as a number makes the first real fit fail validation. Where the
+ * writer knows how many entries the device holds, that is the length rather than a guess.
  */
 export function specForWritable(coefficient: WritableCoefficient): CoefficientSpec {
   return coefficient.isArray
-    ? { type: "number_array", length: DEFAULT_ARRAY_LENGTH }
+    ? { type: "number_array", length: coefficient.length ?? DEFAULT_ARRAY_LENGTH }
     : { type: "number" };
 }
 

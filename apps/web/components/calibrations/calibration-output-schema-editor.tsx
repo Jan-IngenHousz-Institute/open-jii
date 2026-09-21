@@ -29,8 +29,9 @@ import {
   uniqueName,
 } from "./output-schema-edits";
 
-/** What a block the author adds by hand is called before they rename it. */
+/** What a block and its first coefficient are called before the author renames them. */
 const NEW_BLOCK = "block";
+const NEW_COEFFICIENT = "coefficient";
 
 interface CalibrationOutputSchemaEditorProps {
   family: CalibrationFamily;
@@ -78,8 +79,15 @@ export function CalibrationOutputSchemaEditor({
     onChange(next);
   }
 
+  // The contract refuses a block that declares no coefficient, so one is started here
+  // rather than leaving the author with a block that cannot be saved.
   function addPlainBlock() {
-    onChange(addBlock(outputSchema, uniqueName(NEW_BLOCK, declared)));
+    const block = uniqueName(NEW_BLOCK, declared);
+    onChange(
+      setCoefficient(addBlock(outputSchema, block), block, NEW_COEFFICIENT, {
+        type: "number",
+      }),
+    );
   }
 
   function renderOfferedBlock(block: string) {

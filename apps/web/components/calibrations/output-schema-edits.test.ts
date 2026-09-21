@@ -124,6 +124,15 @@ describe("specForWritable", () => {
     });
     expect(specForWritable({ name: "slope", isArray: false })).toEqual({ type: "number" });
   });
+
+  // A vector written in one command has exactly as many entries as that command carries,
+  // which the writer knows and the author should not have to count.
+  it("takes the length from the writer where it knows one", () => {
+    expect(specForWritable({ name: "channels", isArray: true, length: 6 })).toEqual({
+      type: "number_array",
+      length: 6,
+    });
+  });
 });
 
 describe("uniqueName", () => {

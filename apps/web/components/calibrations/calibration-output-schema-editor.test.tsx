@@ -94,6 +94,19 @@ describe("CalibrationOutputSchemaEditor", () => {
     });
   });
 
+  // The contract refuses a block with no coefficients in it, so a block added by hand
+  // would otherwise be unsaveable until the author noticed why.
+  it("starts a hand-written block with a coefficient in it", async () => {
+    const { onChange, user } = renderEditor();
+
+    await user.click(screen.getByRole("button", { name: /iot.calibration.produces.addBlock/ }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: "iot.calibration.produces.addPlainBlock" }),
+    );
+
+    expect(onChange.mock.calls[0][0].blocks.block).toEqual({ coefficient: { type: "number" } });
+  });
+
   it("offers the coefficients this block is missing", async () => {
     const { onChange, user } = renderEditor();
 
