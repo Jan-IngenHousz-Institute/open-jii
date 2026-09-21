@@ -44,8 +44,11 @@ export interface AwsPort {
   searchThingsConnectivity(thingNames: string[]): Promise<Result<Map<string, ThingConnectivity>>>;
 
   getCalibrationSandboxFunctionName(): string;
+  /** Undefined unless a local container is configured, which sends the invoke there instead of to AWS. */
+  getCalibrationSandboxEndpoint(): string | undefined;
   invokeLambda<TResponse = Record<string, unknown>>(
     functionName: string,
     payload: object,
+    endpoint?: string,
   ): Promise<Result<InvokeLambdaResponse<TResponse>>>;
 }

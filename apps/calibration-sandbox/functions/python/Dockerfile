@@ -1,4 +1,4 @@
-# Python macro sandbox Lambda
+# Calibration sandbox Lambda
 
 FROM public.ecr.aws/lambda/python:3.12
 
@@ -11,14 +11,14 @@ RUN pip install --no-cache-dir \
            /var/lang/lib/python3.12/ensurepip
 
 COPY lib/wrappers/wrapper.py ${LAMBDA_TASK_ROOT}/wrappers/wrapper.py
-COPY lib/helpers/helpers.py ${LAMBDA_TASK_ROOT}/src/helpers/helpers.py
+COPY lib/helpers/qc.py ${LAMBDA_TASK_ROOT}/src/helpers/qc.py
 
 # Lambda handler
 COPY functions/python/handler.py ${LAMBDA_TASK_ROOT}/handler.py
 
-# The runtime, and with it every macro, runs unprivileged: the files above stay
-# read-only to it, so a macro cannot rewrite the helpers for the next batch.
-RUN echo "sandbox:x:1001:1001:macro sandbox:/tmp:/sbin/nologin" >> /etc/passwd \
+# The runtime, and with it every script, runs unprivileged: the files above stay
+# read-only to it, so a script cannot rewrite the gates for whoever calibrates next.
+RUN echo "sandbox:x:1001:1001:calibration sandbox:/tmp:/sbin/nologin" >> /etc/passwd \
  && echo "sandbox:x:1001:" >> /etc/group
 USER 1001
 

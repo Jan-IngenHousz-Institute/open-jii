@@ -249,12 +249,22 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
   async invokeLambda<TResponse = Record<string, unknown>>(
     functionName: string,
     payload: object,
+    endpoint?: string,
   ): Promise<Result<InvokeLambdaResponse<TResponse>>> {
-    return this.awsLambdaService.invoke<TResponse>({ functionName, payload });
+    return this.awsLambdaService.invoke<TResponse>({
+      functionName,
+      payload,
+      ...(endpoint ? { endpoint } : {}),
+    });
   }
 
   getCalibrationSandboxFunctionName(): string {
     return this.awsConfigService.lambdaConfig.calibrationSandboxFunctionName;
+  }
+
+  /** Empty unless a local container is configured, which sends the invoke there instead of to AWS. */
+  getCalibrationSandboxEndpoint(): string | undefined {
+    return this.awsConfigService.lambdaConfig.calibrationSandboxEndpoint || undefined;
   }
 
   /**
