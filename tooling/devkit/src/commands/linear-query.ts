@@ -1,6 +1,6 @@
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 
-import { repositoryRoot, resolveLinearApiKey } from "../lib/config.js";
+import { pathFromRoot, repositoryRoot, requireLinearApiKey } from "../lib/config.js";
 import { createFileAudit, createLinearClient } from "../lib/linear.js";
 import type { LinearClient } from "../lib/linear.js";
 
@@ -9,6 +9,8 @@ export interface QueryArgs {
   file: string | null;
   variables: Record<string, unknown>;
   allowDestructive: boolean;
+  // pnpm prints its own lines around stdout, so a caller that wants clean JSON names a file.
+  output: string | null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -41,7 +43,13 @@ export function parseArgs(args: string[]): QueryArgs {
     variables = parsed;
   }
 
-  return { document, file, variables, allowDestructive: args.includes("--allow-destructive") };
+  return {
+    document,
+    file,
+    variables,
+    allowDestructive: args.includes("--allow-destructive"),
+    output: optionAfter(args, "--output"),
+  };
 }
 
 export async function runQuery(
@@ -60,23 +68,32 @@ async function run(args: string[]): Promise<number> {
   if (parsed.document !== null) {
     document = parsed.document;
   } else if (parsed.file !== null) {
-    document = await readFile(parsed.file, "utf8");
+    document = await readFile(pathFromRoot(parsed.file, repositoryRoot()), "utf8");
   } else {
     throw new Error("Pass exactly one of --query <document> or --file <path>");
   }
 
   const root = repositoryRoot();
-  const apiKey = await resolveLinearApiKey(root, process.env);
-  if (!apiKey) throw new Error("No Linear key found; run pnpm linear:auth first");
+  const apiKey = await requireLinearApiKey(root, process.env);
 
   const client = createLinearClient({
     apiKey,
     allowDestructive: parsed.allowDestructive,
     audit: createFileAudit(root),
   });
+  const output = parsed.output === null ? null : pathFromRoot(parsed.output, root);
+  if (output === null) {
+    await runQuery(document, parsed.variables, client, (text) => {
+      process.stdout.write(text);
+    });
+    return 0;
+  }
+  let json = "";
   await runQuery(document, parsed.variables, client, (text) => {
-    process.stdout.write(text);
+    json += text;
   });
+  await writeFile(output, json);
+  process.stdout.write(`wrote ${output}\n`);
   return 0;
 }
 

@@ -1,12 +1,12 @@
 "use client";
 
+import { LineChart } from "@/components/charts/line-chart";
 import { X } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card } from "@repo/ui/components/card";
 import type { LineSeriesData } from "@repo/ui/components/charts/line-chart";
-import { LineChart } from "@repo/ui/components/charts/line-chart";
 import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 import { readThemeColor } from "@repo/ui/components/charts/utils";
 

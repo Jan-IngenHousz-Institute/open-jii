@@ -1,5 +1,7 @@
 "use client";
 
+import { BarChart } from "@/components/charts/bar-chart";
+import { LineChart } from "@/components/charts/line-chart";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 
@@ -12,8 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import { BarChart } from "@repo/ui/components/charts/bar-chart";
-import { LineChart } from "@repo/ui/components/charts/line-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 import { detectAxisType, platformChartColor } from "@repo/ui/components/charts/utils";

@@ -1,9 +1,9 @@
 "use client";
 
+import { SPCChart } from "@/components/charts/spc-chart";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { SPCChart } from "@repo/ui/components/charts/spc-chart";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";

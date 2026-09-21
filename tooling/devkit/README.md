@@ -11,6 +11,8 @@ Run them from the repo root through the aliases in the root `package.json`.
 | `pnpm local:login`                        | Signs in the seed user and writes a session header file |
 | `pnpm linear:auth`                        | Stores your Linear key in `tooling/devkit/.env`         |
 | `pnpm linear:query`                       | Runs one GraphQL document against Linear                |
+| `pnpm linear:check`                       | Checks a ticket draft against the ticket standard       |
+| `pnpm linear:create`                      | Creates the tickets in a draft, with comments and links |
 | `pnpm linear:taxonomy`                    | Plans and applies the `OJD` label taxonomy              |
 | `pnpm linear:apply`                       | Applies a reviewed per-ticket change file in batches    |
 | `pnpm --filter @repo/devkit env:generate` | Regenerates the `.env.example` files from the manifest  |
@@ -21,8 +23,11 @@ Optional, and only for maintainers with a Linear seat. It lets you and your agen
 tickets: look one up, refine it, write the testing criteria before review, sweep the backlog. The
 repo works without it, and the `linear:*` commands say so rather than guessing.
 
-Mint a personal key at [Security and access](https://linear.app/settings/account/security). Scope
-it to **Read plus Write** and restrict it to team **OJD**. Do not create a full-access key.
+Mint a personal key at [Security and access](https://linear.app/settings/account/security). Give
+it the **Read** and **Write** scopes and restrict it to team **OJD**; do not create a full-access
+key. Linear also offers narrower scopes such as `issues:create`. A key minted that way creates
+tickets fine and then fails its first comment with `Invalid scope: write or comments:create
+required`, so if you go narrower than Write, include `comments:create` as well.
 
 Copy the key, then pipe it in so it is never typed or echoed:
 
@@ -32,7 +37,11 @@ pbpaste | pnpm linear:auth
 
 It lands in `tooling/devkit/.env`, owner-only and gitignored, the same way each app owns its own
 `.env`. The command checks the key against Linear before storing anything and prints whose it is,
-never the key. To rotate, regenerate it in Linear and run this again. Confirm it works:
+never the key. To rotate, regenerate it in Linear and run this again.
+
+The commands look for the key in the shell, then in this checkout's `tooling/devkit/.env`, then in
+the main worktree's, so running `linear:auth` once in the main checkout serves every worktree. A
+refusal names each path it tried. Confirm it works:
 
 ```bash
 pnpm linear:query --query '{ viewer { name } }'
@@ -42,12 +51,78 @@ The key is yours, not the team's. Everything it writes is attributed to you, so 
 never paste it into a ticket, a PR or a chat, and never put it in a command line.
 
 `pnpm linear:query` takes `--query '<document>'` or `--file <path.graphql>`, plus
-`--variables '<json>'`. It refuses any `*Delete` or `*Archive` mutation unless you pass
-`--allow-destructive`, refuses to select a webhook's `secret`, and appends every mutation to
-`.claude/linear-writes.log`.
+`--variables '<json>'`. Pass `--output <file>` to write the JSON to a file instead of stdout; pnpm
+prints its own lines around stdout, so anything that parses the result should read the file. The
+command refuses any `*Delete` or `*Archive` mutation unless you pass `--allow-destructive`,
+refuses to select a webhook's `secret`, and appends every mutation to `.claude/linear-writes.log`.
+Each log line names the agent session (`CLAUDE_CODE_SESSION_ID`, or `shell`) and the checkout that
+wrote it, and marks destructive mutations, so a key shared by several sessions still answers who
+did what. Linear itself only ever sees the key's owner.
 
 What to write into a ticket, which labels exist, and the skills that do the writing are in
 `AGENTS.md` and `docs/agents/`.
+
+## Writing tickets from a draft
+
+A draft is one Markdown file holding one or more tickets. `pnpm linear:check` runs the mechanical
+half of the ticket standard on it, and `pnpm linear:create` creates what it holds. `.claude/tickets/`
+is gitignored and a good place to keep drafts.
+
+```markdown
+---
+project: Platform home and research discovery
+team: OJD
+state: Backlog
+---
+
+# Researcher can sort any resource list by up to two columns
+
+labels: Feature, Fullstack
+blocks: 2
+
+## User story
+
+**WHO:** A researcher browsing any of the five resource lists.
+
+...
+
+## Testing criteria
+
+<!-- comment -->
+
+Suggested implementation. Add a shared `sort` input in `shared/listing.ts`; {{2}} adds the facets.
+
+# Researcher can filter any resource list and share the filtered view
+
+labels: Feature, Fullstack
+
+## User story
+
+...
+```
+
+The front matter names the project (required to create), the team (default `OJD`) and the state
+(default `Backlog`). Each level-one heading starts a ticket; `labels:` and `blocks:` may sit
+between it and the first level-two heading. Everything after `<!-- comment -->` is posted as a comment once the
+ticket exists, which is where implementation pointers go when the body has no room. `{{2}}`
+anywhere in a body or comment becomes the second ticket's identifier.
+
+```bash
+pnpm linear:check .claude/tickets/home.md            # sentences, shape, budget, bullets, dashes, title, gate
+pnpm linear:create .claude/tickets/home.md           # dry run: resolves names, prints the plan
+pnpm linear:create .claude/tickets/home.md --apply   # creates, then references, comments, relations
+```
+
+The check is the mechanical half of `docs/agents/ticket-standard.md`. Its first concern is that
+the ticket is written in sentences: every bullet and every WHO, WHAT and WHY line must end as one,
+and a bullet chained with semicolons fails. It cannot judge grammar, so a fragment that ends in a
+full stop still needs a reader; the check exists to stop the obvious telegraphic draft, not to
+replace the person who reads the body before it is written.
+
+`linear:create` refuses a draft that fails the check, resolves team, project, state and labels by
+name, and records every step in `<draft>.created.json` next to the draft. A run that stops halfway
+resumes from that file instead of creating anything twice. A relative path, here and on every other
+command, is taken from the repo root.
 
 ## A local session without a browser
 

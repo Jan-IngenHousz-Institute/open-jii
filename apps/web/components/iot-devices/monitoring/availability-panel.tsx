@@ -1,11 +1,11 @@
 "use client";
 
+import { BarChart } from "@/components/charts/bar-chart";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDateTime, formatRelativeTime } from "@/util/date";
 
 import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
-import { BarChart } from "@repo/ui/components/charts/bar-chart";
 import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 import { readThemeColor } from "@repo/ui/components/charts/utils";
 

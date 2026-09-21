@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { PlotlyPreload } from "@/components/charts/plotly-preload";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
-import { preloadPlotly } from "@repo/ui/components/charts/plotly-chart";
 
 import "../../styles/plotly-chart.css";
 import { getChartTypeDef } from "./charts/chart-registry";
@@ -25,12 +24,9 @@ export default function ExperimentVisualizationRenderer({
 }: ExperimentVisualizationRendererProps) {
   const def = getChartTypeDef(visualization.chartType);
 
-  useEffect(() => {
-    preloadPlotly();
-  }, []);
-
   return (
     <div className="flex h-full w-full flex-col">
+      <PlotlyPreload />
       {(showTitle || showDescription) && (
         <div className="mb-6">
           {showTitle && <h2 className="text-2xl font-bold">{visualization.name}</h2>}
