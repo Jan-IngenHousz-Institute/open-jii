@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { isDeepStrictEqual, parseArgs } from "node:util";
 
-import { readEnvFile, repositoryRoot } from "../lib/config.js";
+import { devkitEnvPath, readEnvFile, repositoryRoot } from "../lib/config.js";
 
 type Fields = Partial<Record<string, Record<string, unknown>>>;
 interface Entry {
@@ -79,7 +79,7 @@ function validateNote(value: unknown): asserts value is Note {
 }
 
 async function loadConfig(root: string, env: NodeJS.ProcessEnv): Promise<Config> {
-  const file = await readEnvFile(`${root}/.env`);
+  const file = await readEnvFile(devkitEnvPath(root));
   const values = { ...file, ...env };
   return {
     space: values.CONTENTFUL_SPACE_ID?.trim() ?? "",
