@@ -6,6 +6,7 @@ rule retries, and what it cannot place is dropped. Any nonzero value alarms.
 ## Decide between a burst and a ceiling
 
 ```bash
+# On Linux, GNU date wants -d '24 hours ago' where BSD date wants -v-24H
 aws cloudwatch get-metric-statistics \
   --namespace AWS/Kinesis --metric-name IncomingRecords \
   --dimensions Name=StreamName,Value=open-jii-<env>-data-ingest-stream \

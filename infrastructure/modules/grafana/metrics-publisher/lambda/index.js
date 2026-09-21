@@ -53,6 +53,11 @@ exports.handler = async () => {
     `;
 
     const environment = process.env.ENVIRONMENT ?? "unknown";
+    // Every point carries an Environment dimension. Points published before this
+    // change carry none, and CloudWatch treats those as a different series, so
+    // history starts at the first run after deploy and the first week has nothing
+    // to compare against. Dual-publishing the old undimensioned series would mean
+    // guessing which environment wrote it, so it is deliberately not done.
     const dimensions = [{ Name: "Environment", Value: environment }];
 
     // Stamped at publish time, not at the start of the week being reported. A
@@ -60,9 +65,13 @@ exports.handler = async () => {
     // week with no signups rather than as last week's count.
     const publishedAt = new Date();
 
-    const metricData = rows.map(({ user_count }) => ({
+    // A week with no signups still publishes a zero. Without it, a quiet week and a
+    // publisher that never ran are both absence, and the digest cannot tell them apart.
+    const weeklyCounts = rows.length > 0 ? rows.map((row) => row.user_count) : [0];
+
+    const metricData = weeklyCounts.map((count) => ({
       MetricName: "WeeklyNewUsers",
-      Value: user_count,
+      Value: count,
       Unit: StandardUnit.Count,
       Timestamp: publishedAt,
       Dimensions: dimensions,

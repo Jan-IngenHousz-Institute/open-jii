@@ -10,6 +10,7 @@ flapping links.
 The three Connect errors mean different things and have different fixes:
 
 ```bash
+# On Linux, GNU date wants -d '24 hours ago' where BSD date wants -v-24H
 aws cloudwatch get-metric-statistics --namespace AWS/IoT \
   --metric-name Connect.AuthError \
   --start-time "$(date -u -v-24H +%Y-%m-%dT%H:%M:%SZ)" \

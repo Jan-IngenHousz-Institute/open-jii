@@ -15,6 +15,7 @@ also firing, fix that first: this metric will recover on its own once the produc
 ## Confirm the shape
 
 ```bash
+# On Linux, GNU date wants -d '6 hours ago' where BSD date wants -v-6H
 aws cloudwatch get-metric-statistics \
   --namespace AWS/Kinesis --metric-name GetRecords.IteratorAgeMilliseconds \
   --dimensions Name=StreamName,Value=open-jii-<env>-data-ingest-stream \

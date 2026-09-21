@@ -40,6 +40,10 @@ async function fetchWindow(metrics, start, end, failedRegions) {
 
   const results = new Array(metrics.length).fill(null);
 
+  // Absent and unasked are different facts. Without this an absent Sum from a failed
+  // region normalizes to zero, so an error counter we could not read reports healthy.
+  const unqueried = new Set();
+
   for (const [region, entries] of byRegion) {
     let response;
 
@@ -59,6 +63,9 @@ async function fetchWindow(metrics, start, end, failedRegions) {
     } catch (error) {
       console.error(JSON.stringify({ region, message: error.message }));
       failedRegions.add(region === "default" ? (process.env.AWS_REGION ?? "default") : region);
+      for (const { index } of entries) {
+        unqueried.add(index);
+      }
       continue;
     }
 
@@ -76,7 +83,9 @@ async function fetchWindow(metrics, start, end, failedRegions) {
     }
   }
 
-  return results.map((value, index) => normalizeAbsent(value, metrics[index].signal.stat));
+  return results.map((value, index) =>
+    unqueried.has(index) ? null : normalizeAbsent(value, metrics[index].signal.stat),
+  );
 }
 
 async function collectDaily(metrics, now, failedRegions) {
@@ -138,6 +147,11 @@ function postToSlack(webhookUrl, text) {
       } else {
         reject(new Error(`Slack webhook returned ${response.statusCode}`));
       }
+    });
+    // Node sets no socket timeout, so a hung webhook would otherwise burn the whole
+    // Lambda timeout and lose the log line that says what went wrong.
+    request.setTimeout(10_000, () => {
+      request.destroy(new Error("Slack webhook timed out after 10s"));
     });
     request.on("error", reject);
     request.end(payload);

@@ -158,7 +158,10 @@ jobs:
               status=1
             fi
 
-            for source in index.js catalog.yaml lib/*.js; do
+            # Globbed from inside $rebuilt, because a bare lib/*.js expands against the
+            # working directory, stays literal when it matches nothing, and silently
+            # skips every compiled file it was meant to compare.
+            for source in index.js catalog.yaml $(cd "$rebuilt" && ls lib/*.js 2>/dev/null); do
               [ -e "$rebuilt/$source" ] || continue
               if ! diff -q "$committed/$source" "$rebuilt/$source" > /dev/null 2>&1; then
                 echo "::error file=$dir/function.zip::committed $source differs from a fresh build"

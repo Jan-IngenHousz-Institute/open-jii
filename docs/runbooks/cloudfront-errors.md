@@ -9,6 +9,7 @@ A query against the regional endpoint returns nothing and looks exactly like an 
 ## Origin or edge
 
 ```bash
+# On Linux, GNU date wants -d '3 hours ago' where BSD date wants -v-3H
 aws cloudwatch get-metric-statistics --region us-east-1 \
   --namespace AWS/CloudFront --metric-name 5xxErrorRate \
   --dimensions Name=DistributionId,Value=<id> Name=Region,Value=Global \
