@@ -1,6 +1,7 @@
 "use client";
 
 import { usePublicMetrics } from "@/hooks/metrics/usePublicMetrics/usePublicMetrics";
+import { formatLocaleNumber } from "@/util/format-locale-number";
 import { useEffect, useState } from "react";
 
 import type { MetricsCaption } from "@repo/api/domains/metrics/metrics.schema";
@@ -61,7 +62,7 @@ export function MilestoneBanner({ locale }: MilestoneBannerProps) {
     <div className="border-status-active-foreground/30 bg-status-active text-status-active-foreground flex items-center justify-between gap-3 rounded-lg border px-4 py-2 text-sm">
       <span>
         {t("dashboard.milestone", {
-          ordinal: new Intl.NumberFormat(locale).format(milestone.ordinal),
+          ordinal: formatLocaleNumber(milestone.ordinal, locale),
           date: formattedDate,
         })}
       </span>

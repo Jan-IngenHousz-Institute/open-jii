@@ -1,5 +1,6 @@
 "use client";
 
+import { formatLocaleNumber } from "@/util/format-locale-number";
 import { useEffect, useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
@@ -47,7 +48,7 @@ export function ActivityIndicator({
 
   const label =
     measurements24h > 0
-      ? t("indicator.active", { count: new Intl.NumberFormat(locale).format(measurements24h) })
+      ? t("indicator.active", { count: formatLocaleNumber(measurements24h, locale) })
       : t("indicator.quiet", { date: quietSince });
 
   return (

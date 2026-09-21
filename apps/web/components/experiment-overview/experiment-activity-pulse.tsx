@@ -1,5 +1,6 @@
 "use client";
 
+import { formatLocaleNumber } from "@/util/format-locale-number";
 import { MetricStatCard } from "~/components/metrics/metric-stat-card";
 import { MetricTrendCard } from "~/components/metrics/metric-trend-card";
 import {
@@ -37,7 +38,6 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
     return null;
   }
 
-  const number = new Intl.NumberFormat(locale);
   const compact = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 });
   // Warehouse days are UTC.
   const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
@@ -47,6 +47,7 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
   const isCollecting = scoped.measurements30d > 0;
 
   const peak = scoped.peak;
+  const dailyAverage = Math.round(scoped.measurements30d / windowDays);
 
   // Device-published rows carry no contributor, so the slot names the devices
   // that did the recording rather than crediting nobody.
@@ -58,7 +59,7 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
     <MetricStatCard
       locale={locale}
       label={t("experiment.contributors")}
-      value={number.format(scoped.contributors30d)}
+      value={formatLocaleNumber(scoped.contributors30d, locale)}
       note={
         devices === null
           ? t("experiment.window", { days: windowDays })
@@ -72,7 +73,7 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
     <MetricStatCard
       locale={locale}
       label={t("experiment.devices")}
-      value={number.format(count)}
+      value={formatLocaleNumber(count, locale)}
       note={t("experiment.devicesNote")}
       context={window}
     />
@@ -95,7 +96,7 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
           locale={locale}
           label={t("experiment.measurements")}
           value={compact.format(scoped.measurements30d)}
-          title={number.format(scoped.measurements30d)}
+          title={formatLocaleNumber(scoped.measurements30d, locale)}
           comparison={{
             current: scoped.measurements30d,
             previous: scoped.previousMeasurements,
@@ -117,8 +118,8 @@ export function ExperimentActivityPulse({ experimentId }: ExperimentActivityPuls
         {!hasContributors && devices !== null && devices > 0 ? renderDevices(devices) : null}
         <MetricTrendCard
           label={t("dailyAverage")}
-          value={compact.format(Math.round(scoped.measurements30d / windowDays))}
-          title={number.format(Math.round(scoped.measurements30d / windowDays))}
+          value={compact.format(dailyAverage)}
+          title={formatLocaleNumber(dailyAverage, locale)}
           seriesName={t("experiment.trend")}
           days={scoped.activity}
           peakDate={peak?.date ?? null}

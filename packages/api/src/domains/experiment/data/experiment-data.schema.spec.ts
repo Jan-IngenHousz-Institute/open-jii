@@ -273,6 +273,15 @@ describe("data queries & tables", () => {
     expect(d3.orderDirection).toBe("DESC");
   });
 
+  it("zExperimentDataQuery allows pageSize up to 1000, rejects above", () => {
+    const d4 = zExperimentDataQuery.parse({ tableName: "test_table", pageSize: "1000" });
+    expect(d4.pageSize).toBe(1000);
+
+    expect(
+      zExperimentDataQuery.safeParse({ tableName: "test_table", pageSize: "1001" }).success,
+    ).toBe(false);
+  });
+
   it("zExperimentDataTable valid", () => {
     const info = {
       name: "t1",

@@ -2,6 +2,7 @@
 
 import { useTrackExports } from "@/components/activity/use-track-exports";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { formatLocaleNumber } from "@/util/format-locale-number";
 import {
   FileText,
   Download,
@@ -18,6 +19,7 @@ import {
 import * as React from "react";
 import { useDownloadExport } from "~/hooks/experiment/useDownloadExport/useDownloadExport";
 import { useListExports } from "~/hooks/experiment/useListExports/useListExports";
+import { useLocale } from "~/hooks/useLocale";
 import { parseApiError } from "~/util/apiError";
 import { formatFileSize } from "~/util/format-file-size";
 
@@ -132,6 +134,7 @@ const ExportCard = ({
   index: number;
 }) => {
   const { t } = useTranslation("experimentData");
+  const locale = useLocale();
 
   const canDownload = exportRecord.status === "completed" && exportRecord.exportId;
   const isFailed = exportRecord.status === "failed";
@@ -148,7 +151,7 @@ const ExportCard = ({
   if (exportRecord.rowCount != null) {
     metaItems.push({
       icon: Rows3,
-      label: `${exportRecord.rowCount.toLocaleString()} ${t("experimentData.exportModal.rows").toLowerCase()}`,
+      label: `${formatLocaleNumber(exportRecord.rowCount, locale)} ${t("experimentData.exportModal.rows").toLowerCase()}`,
     });
   }
 
