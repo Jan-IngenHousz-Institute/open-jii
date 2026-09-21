@@ -804,6 +804,14 @@ module "pipeline_scheduler" {
       key         = "trigger_centrum_pipeline"
       task_type   = "pipeline"
       pipeline_id = module.centrum_pipeline.pipeline_id
+    },
+    # Macro execution reads experiment_raw_data, so it follows rather than runs
+    # beside. Prod needs no equivalent: both pipelines are continuous there.
+    {
+      key         = "trigger_macro_execution_pipeline"
+      task_type   = "pipeline"
+      pipeline_id = module.macro_execution_pipeline.pipeline_id
+      depends_on  = "trigger_centrum_pipeline"
     }
   ]
 
@@ -818,7 +826,7 @@ module "pipeline_scheduler" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.centrum_pipeline]
+  depends_on = [module.centrum_pipeline, module.macro_execution_pipeline]
 }
 
 # Macro execution is a separate deployment, not a separate domain: it publishes
