@@ -96,12 +96,55 @@ export type {
 export { AmbitDriver } from "./driver/ambit/driver";
 export type { AmbitDriverConfig } from "./driver/ambit/config";
 export { AMBIT_SERIAL_DEFAULTS, AMBIT_FRAMING } from "./driver/ambit/config";
-export { AMBIT_COMMANDS, AMBIT_SILENT_COMMANDS } from "./driver/ambit/commands";
+export {
+  AMBIT_COMMANDS,
+  AMBIT_SILENT_COMMANDS,
+  AMBIT_BASELINE_SAVED,
+  AMBIT_CURRENTS_SET,
+  AMBIT_TRACE_DONE,
+} from "./driver/ambit/commands";
+
+// Bench instruments: rig equipment a calibration drives but never measures with.
+export type {
+  BenchInstrument,
+  InstrumentReading,
+  InstrumentSetpoint,
+} from "./instrument/interface";
+export {
+  identityMatches,
+  handshakeMatches,
+  findSetpoint,
+  findReading,
+} from "./instrument/interface";
+export { KiprimDcSource } from "./instrument/kiprim/instrument";
+export type { KiprimConfig } from "./instrument/kiprim/instrument";
+export { KIPRIM_COMMANDS, KIPRIM_LIMITS } from "./instrument/kiprim/commands";
+export { CalitoolSpectralBoard } from "./instrument/calitool/instrument";
+export type { CalitoolConfig } from "./instrument/calitool/instrument";
+export { CALITOOL_COMMANDS, CALITOOL_LIMITS } from "./instrument/calitool/commands";
+export { MicroPythonParReference } from "./instrument/micropython-par/instrument";
+export type { MicroPythonParConfig } from "./instrument/micropython-par/instrument";
+export { MICROPYTHON_COMMANDS } from "./instrument/micropython-par/commands";
+export { MiniParReference } from "./instrument/minipar-reference/instrument";
+export type { MiniParReferenceConfig } from "./instrument/minipar-reference/instrument";
+export {
+  BENCH_INSTRUMENTS,
+  identifyBenchInstrument,
+  benchInstrumentForHandshake,
+} from "./instrument/registry";
+export type { BenchInstrumentFactory, BenchIdentification } from "./instrument/registry";
 export type {
   AmbitParReading,
   AmbitTempReading,
   AmbitStreamEvents,
 } from "./driver/ambit/interface";
+export {
+  parseAmbitBootDump,
+  parseAmbitBootLine,
+  ambitStoredCoefficients,
+  AMBIT_BOOT_DUMP_MAX_LINES,
+} from "./driver/ambit/device-info";
+export type { AmbitDeviceInfo, AmbitMetadata } from "./driver/ambit/device-info";
 
 // ── MiniPAR driver (LINE + JSON protocol modes) ─────
 export { MiniParDriver } from "./driver/minipar/driver";
