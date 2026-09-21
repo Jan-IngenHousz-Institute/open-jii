@@ -123,6 +123,36 @@ test("fixed overview columns keep workbook row actions fully clickable", async (
   await expect(page.getByRole("menuitem", { name: "Open" })).toBeVisible();
 });
 
+test("pinned assistant keeps the experiment name and header actions visible at laptop width", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(`/${locale}/platform/experiments`, { waitUntil: "networkidle" });
+  await dismissCookieBanner(page);
+
+  const assistantTrigger = page.getByRole("button", { name: "Open assistant" });
+  test.skip((await assistantTrigger.count()) === 0, "assistant feature flag is disabled");
+  await assistantTrigger.click();
+
+  const nameHeader = page.getByRole("columnheader", { name: "Name" });
+  const createAction = page.getByRole("link", { name: "Create Experiment" });
+  const pageHeader = createAction.locator("xpath=ancestor::header");
+  const assistantPanel = page.locator("#assistant-panel");
+  const [nameBox, createBox, headerBox, panelBox] = await Promise.all([
+    nameHeader.boundingBox(),
+    createAction.boundingBox(),
+    pageHeader.boundingBox(),
+    assistantPanel.boundingBox(),
+  ]);
+  if (!nameBox || !createBox || !headerBox || !panelBox) {
+    throw new Error("Pinned assistant layout is missing a measurable region");
+  }
+
+  expect(nameBox.width).toBeGreaterThanOrEqual(160);
+  expect(createBox.x + createBox.width).toBeLessThanOrEqual(headerBox.x + headerBox.width);
+  expect(headerBox.x + headerBox.width).toBeLessThanOrEqual(panelBox.x);
+});
+
 test.fixme("direct account-page loads hydrate without browser errors", async ({ page }) => {
   await page.goto(`/${locale}/platform/account`, { waitUntil: "networkidle" });
   await expect(page.getByRole("tab", { name: "General" })).toBeVisible();

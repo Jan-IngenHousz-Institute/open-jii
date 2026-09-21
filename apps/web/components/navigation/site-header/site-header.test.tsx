@@ -83,9 +83,7 @@ describe("SiteHeader", () => {
     expect(transfer.querySelector("svg")).toBeInTheDocument();
   });
 
-  // Three actions beside an open sidebar left the section label ~30px at md,
-  // rendering it as "E..", so both text labels wait for lg.
-  it("holds the experiments action labels back until lg", () => {
+  it("sizes experiment action labels from the page container", () => {
     renderHeader("/en/platform/experiments");
 
     const archive = screen.getByRole("link", { name: "experiments.viewArchived" });
@@ -93,9 +91,13 @@ describe("SiteHeader", () => {
 
     for (const action of [archive, transfer]) {
       const label = action.querySelector("span");
-      expect(label).toHaveClass("hidden", "lg:inline");
-      expect(label?.className).not.toMatch(/\bmd:inline\b/);
+      expect(label).toHaveClass("platform-header-secondary-action-label");
+      expect(label?.className).not.toMatch(/\b(lg|xl):inline\b/);
     }
+
+    expect(
+      screen.getByRole("link", { name: "experiments.create" }).querySelector("span"),
+    ).toHaveClass("platform-header-primary-action-label");
   });
 
   it("uses plus icons for both device registration actions", () => {

@@ -1,0 +1,40 @@
+---
+title: "Assistant proof-of-concept runtime"
+description: "The local assistant spike, its authorization boundary, model selection and release gates."
+---
+
+Date: 2026-09-21. Status: accepted for the local spike; shared deployment is not approved by this decision.
+
+## Context
+
+Researchers need answers tied to accessible experiments and sources, then reviewable drafts of protocols, macros, workbooks and experiments. The existing platform owns authorization and writes. A model must not gain the operator's broader data access.
+
+## Decision
+
+The web assistant calls authenticated oRPC endpoints in Nest. A separate Python Custom Agent orchestrates model calls and returns typed tool requests through an encrypted, expiring continuation. Nest executes each tool as the researcher. Creating a resource requires a separate explicit confirmation and fresh authorization checks. The model cannot execute platform writes itself.
+
+The user selected the development Databricks Luna endpoint for this spike. The Python gateway restricts the workspace and enabled model names. Compatibility settings live in `apps/assistant-agent/model_profiles.json`; the environment allowlist grants access independently. The Luna tool profile disables unsupported reasoning for Chat Completions. There is no silent model fallback.
+
+Corpus admission requires source-specific rights and parse review. Local starter reading copies include attribution and generated-page labels. They omit figures and tables; the assistant cannot use those copies as evidence for omitted numerical material. Reviewed preprints must retain their version and status.
+
+## What the spike establishes
+
+The local stack can retrieve admitted literature, answer an authenticated research question, prepare a draft, accept edits, confirm creation and open the saved entity. Tests also exercise continuation integrity, bounded tools, authorization and token reservations. Model evaluation with synthetic tool outputs is separate from real browser workflow evidence.
+
+The backend reserves a bounded token allowance and reconciles measured usage. Failed turns with incomplete accounting retain the reservation. Preflight token estimation is conservative, not a provider billing guarantee. Daily token counts do not establish currency cost.
+
+## Alternatives and findings
+
+A model appearing in Unity Catalog did not establish callable serving access. GLM and DeepSeek remained serving/configuration candidates; this spike does not approve reserved capacity or cross-region processing. Historical Qwen and GPT-OSS results are retained as evidence but are not deployment choices.
+
+A Databricks-hosted App needs its own service-principal permissions, secrets and an end-to-end deployment check. Local CLI authentication does not prove that route. The proof of concept keeps tool execution in Nest because the signed-in researcher is the authorization principal there.
+
+## Before merge and shared release
+
+A draft PR is a review boundary, not permission to enable the assistant for researchers. Resolve security review findings, verify feature-gate consistency, and make migrations and local setup reproducible before proposing a merge. The current JSON-backed knowledge metadata store and local file lifecycle require durable multi-instance storage and governed deletion before shared deployment. Corpus curator authority must be distinct from ordinary organization administration.
+
+Before cohort release, verify hosted authentication, removal across parsed/indexed copies, crash-safe draft finalization, failed-turn history, responsive layouts and the actual protocol/macro/workbook workflows. Hardware recipes require device-specific review; successful JSON validation is not successful equipment operation. Experiment privacy follows the platform's embargo policy, including scheduled publication.
+
+Model operations still need dated price records, currency spending limits/alerts, a verified kill switch, comparable task evaluations, operator rollout/rollback controls, and measured quality/latency/cost trends. Record model, tool-contract version, prompt version and code revision per evaluation. Adding a model should start with explicit access and compatibility checks, then the same evaluation suite, not a change of name alone.
+
+Conversation history is not automatically approved training data. Retention, access, deletion, contributor notice and permissions for future training and skill extraction need a recorded decision before those uses are enabled. Prompt text stays out of aggregate product analytics.

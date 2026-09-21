@@ -199,7 +199,7 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-4 pt-2">
+      <SidebarFooter className="p-4 pt-2">
         {/* One row, identity first: SidebarFooter is a column, so a separate child
             stacks. flex-1 rather than the row's leftovers, which left the name
             68px inside a 216px sidebar. */}

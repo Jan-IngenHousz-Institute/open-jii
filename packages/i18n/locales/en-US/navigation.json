@@ -70,6 +70,8 @@
       "organizations": "Organizations",
       "transferRequests": "Transfer requests",
       "settings": "Settings",
+      "assistantWorkspace": "Assistant workspace",
+      "openAssistant": "Open assistant",
       "createExperiment": "Create experiment",
       "openWhatsNew": "Open What's new",
       "showKeyboardShortcuts": "Show keyboard shortcuts",

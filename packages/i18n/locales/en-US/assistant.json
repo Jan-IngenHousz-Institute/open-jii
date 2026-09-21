@@ -1,0 +1,313 @@
+{
+  "title": "Assistant",
+  "description": "Ask openJII about this page, your work, or the research library.",
+  "open": "Open assistant",
+  "close": "Close assistant",
+  "newThread": "Start a new thread",
+  "entity": {
+    "experiment": "Experiment",
+    "protocol": "Protocol",
+    "workbook": "Workbook",
+    "macro": "Macro",
+    "dashboard": "Dashboard",
+    "visualization": "Visualization"
+  },
+  "context": {
+    "answeringAbout": "Answering about",
+    "page": "this page",
+    "experiment": "this experiment",
+    "protocol": "this protocol",
+    "workbook": "this workbook",
+    "macro": "this macro",
+    "dashboard": "this dashboard"
+  },
+  "history": {
+    "title": "Threads",
+    "description": "Return to an earlier conversation.",
+    "open": "Open thread history",
+    "back": "Back to the conversation",
+    "loading": "Loading threads...",
+    "empty": "Your assistant threads will appear here."
+  },
+  "thread": {
+    "loading": "Loading the conversation...",
+    "messagesLabel": "Assistant messages",
+    "jumpToLatest": "Jump to latest"
+  },
+  "empty": {
+    "title": "What are you working on?",
+    "description": "Ask about the current page, your data, public work, the documentation, or the admitted literature corpus.",
+    "prompts": {
+      "capabilities": "What can you do here?",
+      "findProtocol": "Find a protocol for PAR measurements",
+      "startExperiment": "Help me start an experiment from a starter"
+    }
+  },
+  "pending": {
+    "toolLoop": "Checking sources",
+    "running": "running",
+    "description": "The model is deciding which permitted sources and tools it needs."
+  },
+  "tool": { "completed": "done", "failed": "failed" },
+  "rating": { "helpful": "Mark this answer helpful", "notHelpful": "Mark this answer not helpful" },
+  "sources": { "count_one": "{{count}} source", "count_other": "{{count}} sources" },
+  "composer": {
+    "label": "Message the assistant",
+    "placeholder": "Ask about this page, your data, or the docs...",
+    "send": "Send message",
+    "confirmationHint": "Writes wait for your confirmation"
+  },
+  "quota": {
+    "title": "Daily assistant budget",
+    "remaining": "{{count}} tokens left today",
+    "resets": "Resets {{date}}",
+    "exhaustedTitle": "Daily budget reached",
+    "exhaustedDescription": "The assistant will answer again after the budget resets. Search and the documentation still work."
+  },
+  "errors": {
+    "dismiss": "Dismiss",
+    "ASSISTANT_DISABLED": {
+      "title": "Assistant unavailable",
+      "description": "Your account is not in the assistant cohort."
+    },
+    "ASSISTANT_QUOTA_EXCEEDED": {
+      "title": "Daily budget reached",
+      "description": "Try again after the daily budget resets."
+    },
+    "PROVIDER_MODEL_UNAVAILABLE": {
+      "title": "Selected model unavailable",
+      "description": "The selected model is not enabled for this workspace. Your question is saved in the composer. An administrator must configure model access before you can retry."
+    },
+    "PROVIDER_UNAVAILABLE": {
+      "title": "Model unavailable",
+      "description": "The model provider could not be reached. Your question is still in the composer so you can retry."
+    },
+    "TOOL_LOOP_LIMIT": {
+      "title": "Too many tool steps",
+      "description": "The assistant stopped before it could finish. Narrow the question and try again."
+    },
+    "UNKNOWN": {
+      "title": "The assistant could not answer",
+      "description": "Check your connection and try again. No write was made."
+    }
+  },
+  "draft": {
+    "title": "Draft {{type}}",
+    "description": {
+      "pending": "Nothing has been saved yet.",
+      "confirming": "Creating after your confirmation...",
+      "confirmed": "Created after your confirmation.",
+      "discarded": "Discarded. Nothing was saved."
+    },
+    "basedOn": "Based on",
+    "edit": "Edit fields",
+    "discard": "Discard",
+    "confirm": "Create {{type}}",
+    "retryConfirmation": "Retry confirmation",
+    "retryConfirmationHelp": "Creation was interrupted. Retry to finish setup without creating another copy.",
+    "cancelEdit": "Cancel",
+    "saveChanges": "Save changes",
+    "invalidJson": "Enter valid JSON before saving.",
+    "openCreated": "Open {{name}}",
+    "actionError": "This draft could not be changed. It may no longer be pending, or your access may have changed.",
+    "status": {
+      "pending": "Needs confirmation",
+      "confirming": "Creating",
+      "confirmed": "Created",
+      "discarded": "Discarded"
+    },
+    "visualization": {
+      "destination": "Destination experiment",
+      "fields": {
+        "name": "Name",
+        "description": "Description",
+        "chartFamily": "Chart family",
+        "chartType": "Chart type",
+        "config": "Chart configuration",
+        "dataConfig": "Data configuration"
+      }
+    }
+  },
+  "workspace": {
+    "open": "Open assistant workspace",
+    "eyebrow": "Research assistant",
+    "title": "Assistant workspace",
+    "description": "Browse reusable work, manage the sources the assistant may cite, and see usage without exposing prompt text.",
+    "loading": "Loading...",
+    "tabs": { "starters": "Starters", "knowledge": "Knowledge", "usage": "Usage" },
+    "error": {
+      "title": "Could not load this section",
+      "description": "The server returned an error. Retry after checking the capability status."
+    }
+  },
+  "starters": {
+    "search": "Search starters and public work...",
+    "typeFilter": "Filter by type",
+    "sortLabel": "Sort starters",
+    "types": { "all": "All types" },
+    "sort": { "reuse": "Most reused", "updated": "Recently updated" },
+    "curated": "Curated",
+    "curatedTitle": "Curated by JII",
+    "curatedDescription": "Reviewed starting points from the Jan IngenHousz Institute.",
+    "publicTitle": "Public work",
+    "publicDescription": "Public experiments, protocols, workbooks, and macros that can be copied into your organization.",
+    "noDescription": "No description was provided.",
+    "community": "openJII community",
+    "reused_one": "Reused {{count}} time",
+    "reused_other": "Reused {{count}} times",
+    "start": "Start from this",
+    "empty": "No public work matches these filters.",
+    "copy": {
+      "title": "Choose where to create the copy",
+      "description": "{{name}} will be copied as a private resource and linked to its source.",
+      "organization": "Owning organization",
+      "selectOrganization": "Select an organization",
+      "privateHint": "The copy starts private. You can publish it later from its own page.",
+      "action": "Create private copy",
+      "created": "Copy created",
+      "open": "Open the copy",
+      "error": "The copy could not be created. Check your permission in the selected organization."
+    }
+  },
+  "knowledge": {
+    "organization": "Organization",
+    "selectOrganization": "Select an organization",
+    "capabilities": { "title": "Some knowledge providers are unavailable" },
+    "provider": {
+      "docs": "Documentation search",
+      "documentIntelligence": "Document parsing",
+      "genie": "Public dataset questions"
+    },
+    "errorCode": {
+      "DATABRICKS_NOT_CONFIGURED": "Databricks is not configured.",
+      "DATABRICKS_AUTH_FAILED": "Databricks authentication failed.",
+      "DOCUMENT_INTELLIGENCE_UNAVAILABLE": "Document Intelligence is unavailable in this workspace or region.",
+      "DOCUMENT_TYPE_UNSUPPORTED": "The file type is not supported.",
+      "DOCUMENT_TOO_LARGE": "The file exceeds the 100 MB or 500-page limit.",
+      "DOCUMENT_NOT_UPLOADED": "No uploaded file is attached.",
+      "DOCUMENT_PARSE_FAILED": "The parser could not read the file.",
+      "GENIE_NOT_CONFIGURED": "Genie is not configured.",
+      "GENIE_DATASET_NOT_PUBLIC": "The configured Genie dataset is not public.",
+      "DOCS_ROOT_UNAVAILABLE": "The documentation source is unavailable."
+    },
+    "corpus": {
+      "title": "Literature corpus",
+      "description": "Researchers can inspect this list and its rights records. Only curators can change admission.",
+      "empty": "No literature works have been added for this organization.",
+      "add": "Add literature work",
+      "file": "Source document",
+      "upload": "Upload source",
+      "uploadError": "The source document could not be uploaded.",
+      "parse": "Parse document",
+      "review": "Review parse and rights",
+      "admit": "Admit to assistant",
+      "remove": "Remove",
+      "createTitle": "Add a literature work",
+      "createDescription": "A work stays held until its parse and reuse rights are approved.",
+      "create": "Add held work",
+      "createError": "The work could not be added.",
+      "fields": {
+        "title": "Title",
+        "authors": "Authors, comma-separated",
+        "year": "Year",
+        "tags": "Topic tags, comma-separated",
+        "sourceUrl": "Open source URL"
+      },
+      "status": {
+        "held": "Held",
+        "uploaded": "Uploaded",
+        "parsing": "Parsing",
+        "review": "Needs review",
+        "active": "Active",
+        "rejected": "Rejected",
+        "removed": "Removed",
+        "failed": "Failed"
+      }
+    },
+    "rights": {
+      "pending": "Rights pending",
+      "approved": "Rights approved",
+      "rejected": "Rights rejected"
+    },
+    "basis": {
+      "open-access": "Open access",
+      "author-owned": "Author owned",
+      "licensed": "Licensed",
+      "public-domain": "Public domain",
+      "authored-fixture": "Authored development fixture"
+    },
+    "parse": {
+      "status": "Parse status",
+      "pages": "Pages",
+      "confidence": "Average confidence",
+      "preview": "Parsed content preview",
+      "elementPage": "Page {{page}}",
+      "kind": {
+        "text": "Text",
+        "table": "Table",
+        "figure": "Figure",
+        "heading": "Heading",
+        "other": "Other"
+      },
+      "notAvailable": "Not available",
+      "pageCount_one": "{{count}} page",
+      "pageCount_other": "{{count}} pages",
+      "state": {
+        "not-started": "Not started",
+        "parsing": "Parsing",
+        "review": "Needs review",
+        "accepted": "Accepted",
+        "rejected": "Rejected",
+        "failed": "Failed"
+      }
+    },
+    "documents": {
+      "title": "Private documents",
+      "description": "Upload a protocol sheet or paper for your own organization. Private documents never enter the shared corpus or public tools.",
+      "file": "PDF, image, Word, or PowerPoint file",
+      "privateHint": "Visible only to you in the selected organization.",
+      "upload": "Upload document",
+      "uploadError": "The document could not be uploaded.",
+      "removeSelected": "Remove selected file",
+      "parse": "Parse",
+      "delete": "Delete private document",
+      "unavailableTitle": "Document upload unavailable",
+      "unavailableDescription": "The server has disabled private document upload. Check the capability details above."
+    },
+    "review": {
+      "title": "Review parse and reuse rights",
+      "rightsTitle": "Rights must be explicit",
+      "rightsDescription": "Approval records the existing licence, attribution, and rights basis. It does not infer rights from a URL or free-text note.",
+      "parseDecision": "Parse decision",
+      "rightsDecision": "Platform corpus rights",
+      "externalDecision": "Public endpoint rights",
+      "basis": "Rights basis",
+      "licenceId": "Licence identifier",
+      "licenceUrl": "Licence URL",
+      "attribution": "Required attribution",
+      "note": "Parse review note",
+      "accept": "Accept parse and rights"
+    }
+  },
+  "usage": {
+    "yours": { "title": "Your usage", "description": "Prompts are not included in these totals." },
+    "turns": "Assistant turns",
+    "tokensUsed": "Tokens used today",
+    "toolCalls": "Tool calls",
+    "starterCopies": "Starter copies",
+    "approvals": "Draft approvals"
+  },
+  "operator": {
+    "title": "Operator controls",
+    "description": "Cohort-wide totals and controls. Analytics carry organization and entity type, never prompt text.",
+    "error": "Operator metrics could not be loaded.",
+    "budget": { "title": "Default daily token budget", "save": "Save budget" },
+    "collections": {
+      "title": "Starter collections",
+      "name": "Collection name",
+      "description": "Description",
+      "create": "Create collection",
+      "save": "Save collection items"
+    }
+  }
+}

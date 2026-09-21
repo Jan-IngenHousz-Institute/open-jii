@@ -351,6 +351,27 @@
       "when": 1789392438702,
       "tag": "0049_device_status_ladder",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1790007056616,
+      "tag": "0050_ai_assistant_poc",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1790008235402,
+      "tag": "0051_ai_assistant_macro_and_claim",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1790010333584,
+      "tag": "0052_assistant_visualization_drafts",
+      "breakpoints": true
     }
   ]
 }

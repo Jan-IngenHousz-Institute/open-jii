@@ -74,6 +74,6 @@ import { MacroController } from "./presentation/macro.controller";
     ExecuteMacroUseCase,
     ExecuteMacroBatchUseCase,
   ],
-  exports: [MacroRepository],
+  exports: [MacroRepository, CreateMacroUseCase, GetMacroUseCase],
 })
 export class MacroModule {}

@@ -130,8 +130,13 @@ export function OverviewTable<T extends RowData>({
   }
 
   return (
-    <div className={cn("overflow-hidden rounded-md border", TABLE_BORDER)}>
-      <Table className="table-fixed">
+    <div
+      className={cn(
+        "overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-md border",
+        TABLE_BORDER,
+      )}
+    >
+      <Table className="min-w-[32rem] table-fixed">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow

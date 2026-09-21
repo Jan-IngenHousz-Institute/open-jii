@@ -129,7 +129,7 @@ export class DatabricksSqlService {
           msg: "Failed to execute SQL query",
           errorCode: ErrorCodes.DATABRICKS_SQL_FAILED,
           operation: "executeSqlQuery",
-          error,
+          reason: getAxiosErrorMessage(error),
         });
         // Preserve AppError instances (e.g. badRequest for invalid column references)
         if (error instanceof AppError) {
@@ -188,7 +188,7 @@ export class DatabricksSqlService {
           msg: "Error polling SQL statement execution",
           errorCode: ErrorCodes.DATABRICKS_SQL_FAILED,
           operation: "pollStatementExecution",
-          error,
+          reason: getAxiosErrorMessage(error),
         });
         return failure(
           AppError.internal(`Databricks SQL polling failed: ${getAxiosErrorMessage(error)}`),

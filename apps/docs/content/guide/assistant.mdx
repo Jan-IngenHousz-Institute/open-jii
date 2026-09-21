@@ -1,0 +1,145 @@
+---
+title: "Research assistant"
+description: "Ask about your work, reuse a starter, and manage the sources the openJII assistant may use."
+---
+
+The research assistant is available to selected accounts during the pilot. When your account has
+access, the **AI** button appears at the bottom-right of the main workspace. Press <kbd>Ctrl</kbd>+<kbd>J</kbd>, or
+
+<kbd>⌘</kbd>+<kbd>J</kbd> on macOS, to open the same panel.
+
+The chat pins to the right and the whole page frame resizes beside it. The page and chat share aligned frames above a borderless bottom toolbar. The toolbar uses the same background as the navigation sidebar. Long page content scrolls inside its frame. You can continue using the page while chatting. Close the chat with its **Close assistant** button or toggle it with **AI**. The panel stays open when you move between platform pages. Its context strip names the experiment,
+protocol, workbook, macro, or dashboard included with your next question. Starting a new thread does
+not change or save the resource you are viewing.
+
+## Ask a sourced question
+
+Type a question and press <kbd>Enter</kbd>. Use <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line. The
+answer appears after the model turn finishes. Tool cards show which permitted openJII reads completed or
+failed while the turn is running.
+
+Answers support tables, lists, links, and fenced code blocks with syntax highlighting and copy
+controls. The panel follows new answer text only while you are already at the bottom. If you
+scroll up to read, it keeps your place and offers **Jump to latest** instead of pulling you away.
+
+Retrieved sources appear below an answer. A chip shows a retrieval result; it does not establish that every claim in the answer is supported. Open the passage and check its relevance. A source chip can refer to:
+
+- an openJII entity you can open;
+- a page on this documentation site;
+- public research;
+- an admitted literature work, including its year and page when the source provides them.
+
+Documentation chips and links open this documentation site. This also applies when you reopen an
+older thread. Literature chips open a source detail page with the authors, year, recorded licence,
+and parsed passages. The page checks your access again; a removed or inaccessible work is no
+longer readable. If the work has an external source URL, use **Open source URL** to visit it.
+
+The assistant uses your openJII session. It cannot read a private resource that you cannot open
+yourself. A missing source, denied permission, provider outage, or unsupported question appears as
+an error. The panel does not replace a failed model call with a canned answer.
+
+Use the thumbs buttons below an answer to rate it. Open **Threads** in the panel header to return to
+an earlier conversation.
+
+## Review a proposed write
+
+The assistant may draft an experiment, protocol, workbook, macro, or experiment visualization. A draft card lists the values it
+would save. You can edit its fields, discard the draft, or confirm it.
+
+An experiment's description holds the written study plan. It does not configure collection fields.
+Use a workbook with question cells for sample identifiers, treatments and other collection metadata.
+When a workbook needs a new protocol or macro, confirm those resources first, then ask the assistant
+to use their saved identifiers in the workbook. Review the actual cells and code before confirmation.
+
+During this PoC, newly authored macro drafts use Python. Existing JavaScript and R resources remain
+available through the normal platform tools. Macro source is editable as multiline text. Saving code
+is not proof that it runs: test it with representative valid and invalid inputs in the macro sandbox.
+The assistant does not execute code. Likewise, a protocol that passes JSON validation still needs
+validation on the intended equipment before collecting scientific measurements.
+
+Drafts default to private. Experiments follow the platform's scheduled-publication policy; check
+the saved experiment's visibility and embargo date rather than assuming it remains private indefinitely.
+
+A visualization draft names its destination experiment and shows the chart type, chart configuration,
+table, data sources, filters, and aggregation. Structured configuration is editable as JSON and must
+be valid before the card can be saved or confirmed.
+
+Nothing is created before you press the create button on that card. At confirmation time, the
+server checks your permission in the destination organization again. It also checks access to any
+starter used as the source. The assistant does not offer delete actions.
+
+After a successful confirmation, the card links to the new resource. A discarded draft remains in
+the thread as a record that nothing was saved.
+
+When an experiment draft names a workbook, confirmation attaches a published workbook version and
+builds its collection flow. Open **Design** to inspect the saved questions, protocol and macro cells.
+If creation succeeds but attachment is interrupted, the card offers **Retry confirmation**. This
+continues setup of the recorded experiment rather than creating a second one. The card exposes its
+resource link only after confirmation finishes.
+
+## Start from existing work
+
+Open the **Assistant workspace** from the panel header or command palette. The **Starters** tab puts
+JII-curated starters and public community work in one list. Filter by type, sort by reuse or recent
+updates, then choose **Start from this**.
+
+Select an organization where you may create resources. The copy starts private and records the
+source it came from. If the source later becomes private, it leaves the gallery. Existing copies
+keep their lineage.
+
+## Private documents and the literature corpus
+
+The **Knowledge** tab reports which search and parsing providers are configured. An unavailable
+provider stays visible with its setup or error code.
+
+Private document upload accepts PDF, image, Word, and PowerPoint files when Document Intelligence
+is available in the configured development region. The current parsing limits are 100 MB and 500
+pages. The selected-file card shows the name, type, and size before upload. The upload belongs to
+you and the selected organization. It never enters the shared
+literature corpus or a public data tool.
+
+The literature corpus lists each work's parse status, page count, confidence, topic tags, and rights
+review. Researchers can inspect the list. Curators can parse a work, review the result and recorded
+licence, admit it, or remove it. A work cannot become active until both the parse and reuse rights
+are approved. A URL or free-text rights claim is not enough.
+
+## Usage and daily budget
+
+The **Usage** tab shows your assistant turns, tool calls, starter copies, and remaining daily token
+budget. Prompt text is not part of these totals. If you reach the limit, the composer stays disabled
+until the reset time shown in the panel. The rest of openJII, search, and the documentation remain
+available.
+
+Platform operators also see cohort totals, the default daily budget, and starter collection
+controls. Those controls are hidden from ordinary researchers.
+
+## If the assistant button is missing
+
+Your account is not in the pilot cohort, or the assistant flag has not loaded. There is no hidden
+fallback route. Continue with the standard platform tools or ask an openJII administrator whether
+your account should be included.
+
+## Related guides
+
+- [A tour of the platform](/guide/get-started/platform-tour)
+- [Creating an experiment](/guide/experiments/creating)
+- [Managing experiment workbooks](/guide/experiments/workbooks)
+- [Organizations, people, and roles](/guide/organizations/people-and-roles)
+
+## Configure documentation links
+
+Operators should set the web app's `NEXT_PUBLIC_DOCS_URL` and the backend's `DOCS_URL` to the same
+documentation origin. For local development, use `http://localhost:3010` and run the docs site on
+that port. In a deployment, set both values to that environment's external docs origin, such as
+`https://docs.dev.openjii.org`. Web configuration is read when the web app is built.
+
+`ASSISTANT_DOCS_ROOT` selects the backend's MDX content directory, usually `apps/docs/content`.
+It does not set the public URL. Retrieved routes use `/guide`, `/developers`, and `/api` without a
+`/docs` prefix. Stored source chips retain relative routes; the web app resolves them when rendered.
+The anonymous MCP tool returns absolute documentation links for clients outside the platform.
+For corpus hits, MCP links to the recorded HTTP or HTTPS source URL. Missing URLs and older
+records with another URL scheme have no public link. New corpus entries accept only HTTP or HTTPS
+source URLs. The authenticated corpus detail page is not a public redistribution endpoint.
+
+If `DOCS_URL` is unset, the backend uses `http://localhost:3010` when `NODE_ENV=development` and
+`https://docs.openjii.org` otherwise. Set it explicitly for a non-production deployment.

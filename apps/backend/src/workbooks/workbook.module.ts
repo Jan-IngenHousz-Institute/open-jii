@@ -38,6 +38,8 @@ import { WorkbookController } from "./presentation/workbook.controller";
     WorkbookVersionRepository,
     PublishVersionUseCase,
     IsWorkbookUpgradableUseCase,
+    CreateWorkbookUseCase,
+    GetWorkbookUseCase,
   ],
 })
 export class WorkbookModule {}

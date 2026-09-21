@@ -155,6 +155,52 @@ describe("posthog-server", () => {
     });
   });
 
+  describe("isAssistantEnabled", () => {
+    it("allows the explicit local development override without querying PostHog", async () => {
+      vi.resetModules();
+      vi.doMock("~/env", () => ({
+        env: {
+          NODE_ENV: "development",
+          ASSISTANT_ENABLED: "true",
+          NEXT_PUBLIC_POSTHOG_KEY: "phc_0000",
+          NEXT_PUBLIC_POSTHOG_HOST: "https://eu.i.posthog.com",
+        },
+      }));
+
+      const { isAssistantEnabled } = await import("./posthog-server");
+
+      await expect(isAssistantEnabled("local-user")).resolves.toBe(true);
+      expect(mockPostHogInstance.isFeatureEnabled).not.toHaveBeenCalled();
+
+      vi.doUnmock("~/env");
+      vi.resetModules();
+    });
+
+    it("does not apply the local override in production", async () => {
+      vi.resetModules();
+      vi.doMock("~/env", () => ({
+        env: {
+          NODE_ENV: "production",
+          ASSISTANT_ENABLED: "true",
+          NEXT_PUBLIC_POSTHOG_KEY: "phc_test_key_123",
+          NEXT_PUBLIC_POSTHOG_HOST: "https://eu.i.posthog.com",
+        },
+      }));
+      mockPostHogInstance.isFeatureEnabled.mockResolvedValue(false);
+
+      const { isAssistantEnabled } = await import("./posthog-server");
+
+      await expect(isAssistantEnabled("production-user")).resolves.toBe(false);
+      expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
+        FEATURE_FLAGS.ASSISTANT,
+        "production-user",
+      );
+
+      vi.doUnmock("~/env");
+      vi.resetModules();
+    });
+  });
+
   describe("shutdownPostHog", () => {
     it("should shutdown PostHog client when it exists", async () => {
       mockPostHogInstance.isFeatureEnabled.mockResolvedValue(true);

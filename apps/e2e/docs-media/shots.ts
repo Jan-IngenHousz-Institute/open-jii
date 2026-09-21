@@ -228,6 +228,141 @@ export const SHOTS: readonly Shot[] = [
     scope: "Command palette open over the dashboard",
   },
   {
+    slug: "assistant-panel",
+    publish: "img/guide/web/assistant-panel.webp",
+    frame: "desktop",
+    route: "/platform/experiments",
+    featureFlags: ["assistant"],
+    async prepare(page) {
+      await activate(page, /^open assistant$/i);
+    },
+    scope:
+      "Pinned research assistant column opened from the bottom-right AI button, showing the current-page context, empty state, composer and daily budget",
+  },
+  {
+    slug: "assistant-research-history",
+    publish: "img/guide/web/assistant-research-history.webm",
+    frame: "desktop",
+    route: "/platform/experiments",
+    featureFlags: ["assistant"],
+    async perform(page) {
+      await activate(page, /^open assistant$/i);
+      await activate(page, /^open thread history$/i);
+      await page
+        .getByRole("button", { name: /^I have a MultispeQ and want to compare light-adapted/ })
+        .click();
+      await page.getByText("Created after your confirmation.", { exact: true }).waitFor();
+      await settle(page, 2500);
+      await page
+        .getByRole("link", { name: "Open [PoC] Bean fluorescence pilot", exact: true })
+        .scrollIntoViewIfNeeded();
+      await settle(page, 2500);
+    },
+    scope:
+      "Replay of an actual saved Luna research conversation and confirmed, manually edited private experiment. Requires the local bean pilot walkthrough; no inference during capture.",
+  },
+  {
+    slug: "assistant-confirm-collection",
+    publish: "img/guide/web/assistant-confirm-collection.webm",
+    frame: "desktop",
+    route: "/platform/experiments",
+    featureFlags: ["assistant"],
+    async prepare(page) {
+      await activate(page, /^open assistant$/i);
+      await activate(page, /^open thread history$/i);
+      await page
+        .getByRole("button", {
+          name: /^Create a NEW private experiment draft named/,
+        })
+        .click();
+      await page
+        .getByRole("button", { name: "Create Experiment", exact: true })
+        .last()
+        .scrollIntoViewIfNeeded();
+    },
+    async perform(page) {
+      await settle(page, 2500);
+      await page.getByRole("button", { name: "Create Experiment", exact: true }).last().click();
+      await page
+        .getByRole("link", { name: "Open [PoC] Sun shade collection check", exact: true })
+        .waitFor();
+      await settle(page, 2000);
+      await page
+        .getByRole("link", { name: "Open [PoC] Sun shade collection check", exact: true })
+        .click();
+      await page
+        .getByRole("heading", { name: "[PoC] Sun shade collection check", exact: true })
+        .waitFor();
+      await page.getByRole("tab", { name: "Design", exact: true }).click();
+      await page
+        .getByText("No workbook linked to this experiment.", { exact: true })
+        .waitFor({ state: "hidden" });
+      await settle(page, 3500);
+    },
+    scope:
+      "One-time confirmation of an inspected real Luna draft, followed by its saved collection design. Requires the pending Sun shade collection check draft; fails if already confirmed. No inference, hardware operation or fabricated measurements during capture.",
+  },
+  {
+    slug: "assistant-knowledge-usage",
+    publish: "img/guide/web/assistant-knowledge-usage.webm",
+    frame: "desktop",
+    route: "/platform/assistant",
+    featureFlags: ["assistant"],
+    async prepare(page) {
+      await page.getByRole("tab", { name: "Knowledge", exact: true }).click();
+      await page
+        .getByText(
+          "MultispeQ Beta: a tool for large-scale plant phenotyping connected to the open PhotosynQ network",
+          { exact: true },
+        )
+        .first()
+        .waitFor();
+    },
+    async perform(page) {
+      await page
+        .getByText(
+          "MultispeQ Beta: a tool for large-scale plant phenotyping connected to the open PhotosynQ network",
+          { exact: true },
+        )
+        .first()
+        .scrollIntoViewIfNeeded();
+      await settle(page, 3000);
+      await page.getByRole("tab", { name: "Usage", exact: true }).click();
+      await settle(page, 3000);
+    },
+    scope:
+      "Actual local corpus and provider status, followed by usage and budget controls. Seed identity only; no uploads or configuration changes during capture.",
+  },
+  {
+    slug: "assistant-created-experiment",
+    publish: "img/guide/web/assistant-created-experiment.webm",
+    frame: "desktop",
+    route: async () =>
+      `/platform/experiments/${await experimentId("[PoC] Bean fluorescence pilot")}`,
+    featureFlags: ["assistant"],
+    async perform(page) {
+      await page
+        .getByRole("heading", { name: "[PoC] Bean fluorescence pilot", exact: true })
+        .waitFor();
+      await settle(page, 2500);
+      await page.getByRole("tab", { name: "Design", exact: true }).click();
+      await settle(page, 2500);
+      await activate(page, /^open assistant$/i);
+      await settle(page, 2000);
+    },
+    scope:
+      "The real confirmed bean pilot experiment and its design view. Demonstrates persisted description and privacy policy, not collected measurements or validated hardware execution.",
+  },
+  {
+    slug: "assistant-workspace",
+    publish: "img/guide/web/assistant-workspace.webp",
+    frame: "desktop",
+    route: "/platform/assistant",
+    featureFlags: ["assistant"],
+    scope:
+      "Authenticated assistant workspace with the real starter library, knowledge capabilities and usage tabs",
+  },
+  {
     slug: "cheatsheet",
     publish: "img/chrome-refresh/cheatsheet.webp",
     frame: "desktop",

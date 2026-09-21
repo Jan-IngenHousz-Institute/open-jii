@@ -111,14 +111,15 @@ describe("OverviewTable", () => {
     expect(router.push).toHaveBeenCalledWith("/platform/stubs/b");
   });
 
-  it("uses a fixed, bordered layout and clips cell content before it can crowd later columns", () => {
+  it("uses a fixed, scrollable layout and clips cell content before it can crowd later columns", () => {
     renderStubTable([{ id: "a", name: "A name that is deliberately much wider than its cell" }]);
 
     const table = screen.getByRole("table");
-    expect(table).toHaveClass("table-fixed");
+    expect(table).toHaveClass("min-w-[32rem]", "table-fixed");
     expect(table.parentElement?.parentElement).toHaveClass(
       "border",
-      "overflow-hidden",
+      "overflow-x-auto",
+      "overflow-y-hidden",
       "rounded-md",
     );
     expect(table.parentElement?.parentElement).not.toHaveClass("border-y");
@@ -180,14 +181,22 @@ describe("experiment overview columns", () => {
     expect(label.parentElement).toHaveAttribute("title", "status.archived");
   });
 
-  it("does not sacrifice the name column to the updated date on phones", () => {
+  it("sizes secondary experiment columns from the content container", () => {
     renderExperiments([createExperiment({ id: "e-1", name: "Photosynthesis" })]);
 
-    expectColumnHiddenBelowItsBreakpoint("columns.updated");
-    expectColumnHiddenBelowItsBreakpoint("columns.activity");
-    expect(screen.getByRole("columnheader", { name: "columns.updated" })).toHaveClass(
-      "lg:table-cell",
+    expect(screen.getByRole("columnheader", { name: "columns.owner" })).toHaveClass(
+      "experiment-table-owner-column",
     );
+    expect(screen.getByRole("columnheader", { name: "columns.organization" })).toHaveClass(
+      "experiment-table-organization-column",
+    );
+    expect(screen.getByRole("columnheader", { name: "columns.activity" })).toHaveClass(
+      "experiment-table-activity-column",
+    );
+    expect(screen.getByRole("columnheader", { name: "columns.updated" })).toHaveClass(
+      "experiment-table-updated-column",
+    );
+    expect(screen.getByRole("columnheader", { name: "columns.status" })).not.toHaveClass("hidden");
   });
 });
 

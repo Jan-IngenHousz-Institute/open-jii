@@ -5,6 +5,7 @@
 import { env } from "~/env";
 
 import type { FeatureFlagKey } from "@repo/analytics";
+import { FEATURE_FLAGS } from "@repo/analytics";
 import {
   initializePostHogServer,
   isFeatureFlagEnabled as isFeatureFlagEnabledBase,
@@ -42,6 +43,13 @@ export async function isFeatureFlagEnabled(
 ): Promise<boolean> {
   await ensureInitialized();
   return isFeatureFlagEnabledBase(flagKey, distinctId);
+}
+
+export async function isAssistantEnabled(distinctId: string): Promise<boolean> {
+  if (env.NODE_ENV === "development" && env.ASSISTANT_ENABLED === "true") {
+    return true;
+  }
+  return isFeatureFlagEnabled(FEATURE_FLAGS.ASSISTANT, distinctId);
 }
 
 /**

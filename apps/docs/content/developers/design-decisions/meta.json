@@ -2,6 +2,7 @@
   "title": "Design Decisions",
   "pages": [
     "index",
+    "assistant-poc-adr",
     "centrum-data-architecture-adr",
     "orpc-migration-adr",
     "workbook-versioning-adr",

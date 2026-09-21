@@ -921,3 +921,178 @@ export const deviceGroupMembers = pgTable(
     index("device_group_members_device_idx").on(t.deviceId),
   ],
 );
+
+// Research-assistant PoC. Threads and every child row are owned by one platform
+// user; controllers always include that owner in reads and mutations.
+export const assistantThreads = pgTable(
+  "assistant_threads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 255 }).notNull(),
+    context: jsonb("context"),
+    ...timestamps,
+  },
+  (t) => [index("assistant_threads_user_updated_idx").on(t.userId, t.updatedAt)],
+);
+
+export const assistantMessages = pgTable(
+  "assistant_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    threadId: uuid("thread_id")
+      .notNull()
+      .references(() => assistantThreads.id, { onDelete: "cascade" }),
+    role: text("role").notNull(),
+    content: text("content").notNull(),
+    sources: jsonb("sources").notNull().default([]),
+    toolCalls: jsonb("tool_calls").notNull().default([]),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    clientRequestId: uuid("client_request_id"),
+    rating: text("rating"),
+    createdAt: timestamps.createdAt,
+  },
+  (t) => [
+    check("assistant_messages_role_check", sql`${t.role} IN ('user', 'assistant')`),
+    check(
+      "assistant_messages_rating_check",
+      sql`${t.rating} IS NULL OR ${t.rating} IN ('up', 'down')`,
+    ),
+    uniqueIndex("assistant_messages_thread_client_request_uniq")
+      .on(t.threadId, t.clientRequestId)
+      .where(sql`${t.clientRequestId} IS NOT NULL`),
+    index("assistant_messages_thread_created_idx").on(t.threadId, t.createdAt),
+  ],
+);
+
+export const assistantDrafts = pgTable(
+  "assistant_drafts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    threadId: uuid("thread_id")
+      .notNull()
+      .references(() => assistantThreads.id, { onDelete: "cascade" }),
+    messageId: uuid("message_id").references(() => assistantMessages.id, { onDelete: "set null" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    status: text("status").notNull().default("pending"),
+    payload: jsonb("payload").notNull(),
+    source: jsonb("source"),
+    createdEntity: jsonb("created_entity"),
+    ...timestamps,
+  },
+  (t) => [
+    check(
+      "assistant_drafts_kind_check",
+      sql`${t.kind} IN ('experiment', 'protocol', 'workbook', 'macro', 'visualization')`,
+    ),
+    check(
+      "assistant_drafts_status_check",
+      sql`${t.status} IN ('pending', 'confirming', 'confirmed', 'discarded')`,
+    ),
+    index("assistant_drafts_user_status_idx").on(t.userId, t.status),
+    index("assistant_drafts_thread_idx").on(t.threadId),
+  ],
+);
+
+export const assistantUsageEvents = pgTable(
+  "assistant_usage_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    threadId: uuid("thread_id").references(() => assistantThreads.id, { onDelete: "set null" }),
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "set null",
+    }),
+    eventType: text("event_type").notNull(),
+    entityType: text("entity_type"),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    metadata: jsonb("metadata").notNull().default({}),
+    createdAt: timestamps.createdAt,
+  },
+  (t) => [
+    index("assistant_usage_events_user_created_idx").on(t.userId, t.createdAt),
+    index("assistant_usage_events_type_created_idx").on(t.eventType, t.createdAt),
+  ],
+);
+
+export const assistantSettings = pgTable("assistant_settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+  ...timestamps,
+});
+
+export const assistantStarterCollections = pgTable(
+  "assistant_starter_collections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 120 }).notNull(),
+    description: text("description"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("assistant_starter_collections_name_uniq").on(t.name)],
+);
+
+export const assistantStarterCollectionItems = pgTable(
+  "assistant_starter_collection_items",
+  {
+    collectionId: uuid("collection_id")
+      .notNull()
+      .references(() => assistantStarterCollections.id, { onDelete: "cascade" }),
+    resourceType: text("resource_type").notNull(),
+    resourceId: uuid("resource_id").notNull(),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamps.createdAt,
+  },
+  (t) => [
+    check(
+      "assistant_starter_items_type_check",
+      sql`${t.resourceType} IN ('experiment', 'protocol', 'workbook', 'macro')`,
+    ),
+    primaryKey({ columns: [t.collectionId, t.resourceType, t.resourceId] }),
+    index("assistant_starter_items_resource_idx").on(t.resourceType, t.resourceId),
+  ],
+);
+
+export const assistantStarterCopies = pgTable(
+  "assistant_starter_copies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sourceType: text("source_type").notNull(),
+    sourceId: uuid("source_id").notNull(),
+    createdType: text("created_type").notNull(),
+    createdId: uuid("created_id").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamps.createdAt,
+  },
+  (t) => [
+    check(
+      "assistant_starter_copies_source_type_check",
+      sql`${t.sourceType} IN ('experiment', 'protocol', 'workbook', 'macro')`,
+    ),
+    check(
+      "assistant_starter_copies_created_type_check",
+      sql`${t.createdType} IN ('experiment', 'protocol', 'workbook', 'macro')`,
+    ),
+    uniqueIndex("assistant_starter_copies_created_uniq").on(t.createdType, t.createdId),
+    index("assistant_starter_copies_source_idx").on(t.sourceType, t.sourceId),
+  ],
+);

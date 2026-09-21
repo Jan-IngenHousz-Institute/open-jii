@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "status": "candidate-library-not-runtime-enabled",
+  "skills": [
+    {
+      "name": "prepare-experiment",
+      "path": "prepare-experiment/SKILL.md",
+      "version": "0.1.0",
+      "basis": "current-docs-and-assistant-contract"
+    },
+    {
+      "name": "prepare-workbook",
+      "path": "prepare-workbook/SKILL.md",
+      "version": "0.1.0",
+      "basis": "current-docs-and-historical-promo-workflow"
+    },
+    {
+      "name": "build-analysis-dashboard",
+      "path": "build-analysis-dashboard/SKILL.md",
+      "version": "0.1.1",
+      "basis": "current-docs-historical-promo-and-inspected-sandbox-dashboard-configurations"
+    }
+  ],
+  "historicalSources": [
+    {
+      "epicId": "bddf2751-4429-4e4f-b937-c4908344889d",
+      "agentId": "e4669be6-bcce-4871-aa09-ca6ad04baccb",
+      "title": "Promo \u2014 Workbook & Data Stager",
+      "evidence": "Locally retained visible conversation messages; historical outcomes are self-reported and not re-executed in this extraction.",
+      "extractedLessons": [
+        "Check serving-table readiness after upload",
+        "Verify rendered charts, not only saved entities",
+        "Distinguish simulated device flow from real hardware evidence"
+      ]
+    }
+  ]
+}

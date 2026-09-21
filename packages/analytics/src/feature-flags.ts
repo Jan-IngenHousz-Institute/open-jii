@@ -3,6 +3,7 @@
  * Defines all available feature flags and their default values
  */
 export const FEATURE_FLAGS = {
+  ASSISTANT: "assistant",
   MULTI_LANGUAGE: "multi-language",
   PROTOCOL_VALIDATION_AS_WARNING: "protocol-validation-as-warning",
   PROTOCOL_DELETION: "protocol-deletion",
@@ -18,6 +19,7 @@ export type FeatureFlagKey = (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS];
  * Use conservative defaults (features disabled) for safety
  */
 export const FEATURE_FLAG_DEFAULTS: Record<FeatureFlagKey, boolean> = {
+  [FEATURE_FLAGS.ASSISTANT]: false,
   [FEATURE_FLAGS.MULTI_LANGUAGE]: false, // Default to single language
   [FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING]: true, // Default to warnings enabled
   [FEATURE_FLAGS.PROTOCOL_DELETION]: false, // Default to disabled for safety

@@ -2,6 +2,7 @@
   "name": "open-jii",
   "private": true,
   "scripts": {
+    "assistant:check-contract": "turbo build --filter=backend... && node apps/assistant-agent/evaluation/export-contract.mjs --check",
     "build": "turbo build --concurrency 20",
     "build:apps": "turbo build --filter=./apps/*",
     "build:packages": "turbo build --filter=./packages/*",

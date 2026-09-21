@@ -1,5 +1,6 @@
 "use client";
 
+import { useAssistant } from "@/components/assistant/assistant-context";
 import { iconMap } from "@/components/navigation/navigation-config";
 import {
   CHEATSHEET_OPEN_EVENT,
@@ -41,6 +42,7 @@ export function CommandPalette({ locale }: { locale: string }) {
   const [query, setQuery] = React.useState("");
   const router = useRouter();
   const { t } = useTranslation("navigation");
+  const assistant = useAssistant();
 
   React.useEffect(() => {
     const onOpen = () => setOpen(true);
@@ -131,6 +133,18 @@ export function CommandPalette({ locale }: { locale: string }) {
         shortcut: "G S",
         run: () => navigate(`/${locale}/platform/account`),
       },
+      ...(assistant.enabled
+        ? [
+            {
+              id: "page.assistant",
+              labelKey: "commandPalette.entries.assistantWorkspace",
+              group: "pages" as const,
+              icon: Sparkles,
+              shortcut: undefined,
+              run: () => navigate(`/${locale}/platform/assistant`),
+            },
+          ]
+        : []),
       {
         id: "action.create-experiment",
         labelKey: "commandPalette.entries.createExperiment",
@@ -149,6 +163,21 @@ export function CommandPalette({ locale }: { locale: string }) {
           window.dispatchEvent(new Event(WHATS_NEW_OPEN_EVENT));
         },
       },
+      ...(assistant.enabled
+        ? [
+            {
+              id: "action.open-assistant",
+              labelKey: "commandPalette.entries.openAssistant",
+              group: "actions" as const,
+              icon: Sparkles,
+              shortcut: "⌘ J",
+              run: () => {
+                setOpen(false);
+                assistant.openAssistant();
+              },
+            },
+          ]
+        : []),
       {
         id: "action.cheatsheet",
         labelKey: "commandPalette.entries.showKeyboardShortcuts",
@@ -171,7 +200,7 @@ export function CommandPalette({ locale }: { locale: string }) {
         },
       },
     ],
-    [locale, navigate],
+    [assistant, locale, navigate],
   );
 
   // Filtering is disabled on the Command (server results are pre-ranked), so we filter the static

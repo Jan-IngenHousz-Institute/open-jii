@@ -92,7 +92,7 @@ export function SiteHeader({ locale }: { locale: string }) {
 
   return (
     <header
-      className="bg-background before:bg-background sticky z-40 flex h-12 w-full shrink-0 items-center gap-2 border-b px-4 before:absolute before:inset-x-0 before:-top-2 before:h-2 before:content-['']"
+      className="bg-background before:bg-background sticky z-40 flex h-12 w-full min-w-0 shrink-0 items-center gap-2 border-b px-4 before:absolute before:inset-x-0 before:-top-2 before:h-2 before:content-['']"
       style={{
         top: "calc(var(--banner-offset, 0px) + var(--sidebar-inset-offset, 0px))",
       }}
@@ -135,7 +135,9 @@ export function SiteHeader({ locale }: { locale: string }) {
           )}
         </nav>
       )}
-      {actions && <div className="ml-auto flex shrink-0 items-center gap-1.5">{actions}</div>}
+      {actions !== null && (
+        <div className="ml-auto flex max-w-full shrink-0 items-center gap-1.5">{actions}</div>
+      )}
     </header>
   );
 }
@@ -151,7 +153,7 @@ function CreateAction({ href, label }: { href: string; label: string }) {
     <Button asChild size="sm" title={label}>
       <Link href={href} aria-label={label}>
         <Plus className="size-4" aria-hidden />
-        <span className="hidden sm:inline">{label}</span>
+        <span className="platform-header-primary-action-label">{label}</span>
       </Link>
     </Button>
   );
@@ -161,7 +163,7 @@ function EventCreateAction({ event, label }: { event: PlatformHeaderEvent; label
   return (
     <Button size="sm" title={label} aria-label={label} onClick={() => dispatch(event)}>
       <Plus className="size-4" aria-hidden />
-      <span className="hidden sm:inline">{label}</span>
+      <span className="platform-header-primary-action-label">{label}</span>
     </Button>
   );
 }
@@ -175,15 +177,13 @@ function overviewActions(pathname: string, locale: string, t: Translate) {
         <Button asChild variant="ghost" size="sm" title={archiveLabel}>
           <Link href={`/${locale}/platform/experiments-archive`} aria-label={archiveLabel}>
             <Archive className="size-4" aria-hidden />
-            <span className="hidden lg:inline">{archiveLabel}</span>
+            <span className="platform-header-secondary-action-label">{archiveLabel}</span>
           </Link>
         </Button>
         <Button asChild variant="secondary" size="sm" title={transferLabel}>
           <Link href={`/${locale}/platform/transfer-request`} aria-label={transferLabel}>
             <ArrowRightLeft className="size-4" aria-hidden />
-            {/* Three actions plus an open sidebar leave the section label ~30px at
-                md; the label waits for lg so the breadcrumb stays readable. */}
-            <span className="hidden lg:inline">{transferLabel}</span>
+            <span className="platform-header-secondary-action-label">{transferLabel}</span>
           </Link>
         </Button>
         <CreateAction
@@ -233,7 +233,7 @@ function overviewActions(pathname: string, locale: string, t: Translate) {
         <Button
           variant="outline"
           size="sm"
-          className="hidden md:inline-flex"
+          className="platform-header-wide-action"
           aria-label={t("iot.devices.bulkDialog.open", { ns: "iot" })}
           onClick={() => dispatch(OPEN_DEVICE_BULK_REGISTER_EVENT)}
         >

@@ -1,0 +1,14 @@
+command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+env:
+  - name: ASSISTANT_DATABRICKS_HOST
+    value: https://dbc-6efd58ae-21b6.cloud.databricks.com
+  - name: ASSISTANT_ALLOWED_MODELS
+    valueFrom: assistant-model
+  - name: ASSISTANT_GATEWAY_TOKEN
+    valueFrom: assistant-gateway-token
+  - name: ASSISTANT_TRACING_ENABLED
+    value: "true"
+  - name: MLFLOW_TRACKING_URI
+    value: databricks
+  - name: MLFLOW_EXPERIMENT_ID
+    valueFrom: assistant-traces
