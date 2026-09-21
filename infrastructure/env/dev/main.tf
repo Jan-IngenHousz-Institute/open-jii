@@ -708,7 +708,6 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_raw_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_device_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_devices",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_macro_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_uploaded_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_table_metadata",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_contributors",
@@ -812,6 +811,58 @@ module "pipeline_scheduler" {
     {
       principal_application_id = module.node_service_principal.service_principal_application_id
       permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.centrum_pipeline]
+}
+
+# Macro execution is a separate deployment, not a separate domain: it publishes
+# fact_macro_result into centrum like any other gold table. It runs on its own
+# compute because the sandbox call is sequential HTTP from a Spark task, and
+# sharing centrum's cluster meant those tasks held the slots the Kinesis reader
+# needs for its prefetch job.
+module "macro_execution_pipeline" {
+  source = "../../modules/databricks/pipeline"
+
+  name         = "Macro-Execution-DLT-Pipeline-DEV"
+  schema_name  = "centrum"
+  catalog_name = module.databricks_catalog.catalog_name
+
+  notebook_paths = [
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/experiment_macro_data",
+  ]
+
+  configuration = {
+    "CATALOG_NAME"        = module.databricks_catalog.catalog_name
+    "CENTRUM_SCHEMA_NAME" = "centrum"
+    "ENVIRONMENT"         = var.environment
+  }
+
+  continuous_mode  = false
+  development_mode = true
+  serverless       = false
+
+  node_type_id = "r5d.large"
+  num_workers  = 1
+  policy_id    = module.node_cluster_policy.policy_id
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_RUN"
+    },
+    {
+      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE"
     }
   ]
 

@@ -69,7 +69,7 @@ def test_invalid_timezone_is_dropped_without_dropping_measurement(spark):
         (
             "enriched_experiment_macro_data.py",
             "enriched_experiment_macro_data",
-            "EXPERIMENT_MACRO_DATA_TABLE",
+            "FACT_MACRO_RESULT_TABLE",
             "macro",
         ),
     ],
@@ -95,6 +95,13 @@ def test_enriched_views_guard_timezone(
     monkeypatch.setattr(
         fake_dlt, "read", lambda name: source if name == source_table else MagicMock(name=name)
     )
+    # The macro fact belongs to the macro-execution pipeline, so the enriched
+    # table reaches it by qualified name rather than as a dlt dataset.
+    if source_kind == "macro":
+        session = MagicMock(name="spark")
+        session.conf.get.return_value = "open_jii_test"
+        session.read.table.side_effect = lambda name: source if name.endswith(source_table) else MagicMock()
+        monkeypatch.setattr(pipeline, "spark", session, raising=False)
     monkeypatch.setattr(pipeline, "add_annotation_column", lambda frame, _source: frame)
     monkeypatch.setattr(pipeline, "add_custom_metadata_column", lambda frame, _source: frame)
     guard = MagicMock(name="drop_invalid_timezone")

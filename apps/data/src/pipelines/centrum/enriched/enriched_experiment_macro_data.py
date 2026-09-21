@@ -15,7 +15,7 @@ from openjii.centrum import (
     ENRICHED_MACRO_DATA_VIEW,
     EXPERIMENT_CONTRIBUTORS_TABLE,
     EXPERIMENT_DEVICES_TABLE,
-    EXPERIMENT_MACRO_DATA_TABLE,
+    FACT_MACRO_RESULT_TABLE,
     METADATA_SOURCE_TABLE,
 )
 
@@ -37,7 +37,13 @@ from openjii.centrum import (
 )
 def enriched_experiment_macro_data():
     """Enriched macro data with user profiles, annotations, and user metadata."""
-    macro_data = dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
+    # Same schema, but the macro-execution pipeline owns it now, and dlt.read
+    # only resolves datasets declared in this one. Read the catalog off the
+    # session rather than openjii.centrum.runtime: that module requires six
+    # confs this file has no use for, and importing it makes the notebook
+    # unloadable in a test.
+    catalog = spark.conf.get("CATALOG_NAME")
+    macro_data = spark.read.table(f"{catalog}.centrum.{FACT_MACRO_RESULT_TABLE}")
     contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
     devices = dlt.read(EXPERIMENT_DEVICES_TABLE)
     annotations_source = dlt.read(ANNOTATIONS_SOURCE_TABLE)

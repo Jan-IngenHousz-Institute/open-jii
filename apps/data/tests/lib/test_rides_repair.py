@@ -48,3 +48,16 @@ class TestLooksDeInterleaved:
         # All-lows-then-all-highs has only one crossing.
         block = [1, 2, 3, 4, 5, 96, 97, 98, 99, 100]
         assert _looks_de_interleaved(block) is True
+
+
+def test_repair_targets_the_table_the_macro_pipeline_writes() -> None:
+    """The repair keys on a table name string, and the pipeline passes its own
+    constant. Nothing at runtime notices when the two drift: a repair for an
+    unknown table is silently skipped, so the de-interleave would stop applying
+    with no error and unphysical NPQt would land in gold again."""
+    from data_repair.manifest import list_repairs
+    from openjii.centrum import FACT_MACRO_RESULT_TABLE
+
+    rides = [r for r in list_repairs() if r.issue == "OJD-571 / GH#1056"]
+
+    assert [r.table for r in rides] == [FACT_MACRO_RESULT_TABLE]
