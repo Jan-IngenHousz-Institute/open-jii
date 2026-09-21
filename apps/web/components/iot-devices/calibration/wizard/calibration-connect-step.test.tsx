@@ -268,9 +268,10 @@ describe("CalibrationConnectStep", () => {
       expect(screen.queryByText("iot.calibration.connect.unitConfirmed")).toBeNull();
     });
 
-    // MiniPAR firmware names no unit, so nothing can be compared and the row says so
-    // rather than letting silence read as a match.
-    it("says when the family reports no serial at all", () => {
+    // MiniPAR firmware names no unit, and an Ambit's MAC is not in its connect handshake,
+    // so nothing can be compared and the row says so rather than letting silence read as
+    // a match.
+    it("says when the unit on the port announced no serial", () => {
       renderConnected({ kind: "unnamed" });
 
       expect(screen.getByText("iot.calibration.connect.unnamedUnit")).toBeInTheDocument();

@@ -865,7 +865,7 @@
         "roleMissing": "Connect the instruments the run needs before continuing.",
         "unitConfirmed": "Serial {{serial}} matches this device's record.",
         "wrongUnit": "This unit reports serial {{reported}}, but this device is registered as {{expected}}. Coefficients would go to the wrong unit, so the run cannot start.",
-        "unnamedUnit": "This device family does not report a serial number, so the unit on the port cannot be checked against the record. Make sure the right one is connected."
+        "unnamedUnit": "The unit on this port did not report a serial number, so it cannot be checked against this device's record. Make sure the right one is connected."
       },
       "prompt": {
         "confirmLabel": "Type {{token}} to continue",

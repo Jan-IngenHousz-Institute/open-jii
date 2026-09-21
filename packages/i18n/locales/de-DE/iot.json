@@ -865,7 +865,7 @@
         "roleMissing": "Verbinden Sie die benötigten Instrumente, bevor Sie fortfahren.",
         "unitConfirmed": "Seriennummer {{serial}} stimmt mit dem Datensatz dieses Geräts überein.",
         "wrongUnit": "Dieses Gerät meldet die Seriennummer {{reported}}, registriert ist dieses Gerät aber als {{expected}}. Die Koeffizienten gingen an das falsche Gerät, daher kann der Lauf nicht starten.",
-        "unnamedUnit": "Diese Gerätefamilie meldet keine Seriennummer, daher lässt sich das Gerät am Port nicht mit dem Datensatz abgleichen. Stellen Sie sicher, dass das richtige angeschlossen ist."
+        "unnamedUnit": "Das Gerät an diesem Port hat keine Seriennummer gemeldet, daher lässt es sich nicht mit dem Datensatz dieses Geräts abgleichen. Stellen Sie sicher, dass das richtige angeschlossen ist."
       },
       "prompt": {
         "confirmLabel": "Geben Sie {{token}} ein, um fortzufahren",

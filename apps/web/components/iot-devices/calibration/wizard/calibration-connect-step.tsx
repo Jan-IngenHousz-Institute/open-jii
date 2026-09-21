@@ -116,8 +116,8 @@ export function CalibrationConnectStep({
   }
 
   // Coefficients are written to whatever is on the port, so what answered has to be the
-  // device the session is for. A family that announces no identifier cannot be checked,
-  // and the row says that rather than implying it passed.
+  // device the session is for. A unit whose handshake announced no identifier cannot be
+  // checked, and the row says that rather than implying it passed.
   function renderIdentity() {
     if (unit === undefined) {
       return null;
