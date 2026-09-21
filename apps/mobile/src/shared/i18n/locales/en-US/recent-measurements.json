@@ -113,5 +113,12 @@
     "uploadNotAvailable": "Upload not available, upload it later from Recent",
     "answersSaveFailed": "Answers could not be saved on this device. Please export your data now to avoid losing it.",
     "savedQueued": "Saved. Uploading in the background."
+  },
+  "failureReason": {
+    "connection": "Could not reach the server. Swipe to try again.",
+    "credentials": "Your session expired. Sign in again to upload.",
+    "permission": "You can no longer upload to this experiment.",
+    "rejected": "The server would not accept this measurement.",
+    "unknown": "Upload failed. Swipe to try again."
   }
 }

@@ -119,6 +119,7 @@ const makeItem = (
   hasComment: false,
   dayKey: "2026-01-01",
   workbookRunId: "",
+  failureReason: null,
 });
 
 const mockAllMeasurements: MeasurementItem[] = [

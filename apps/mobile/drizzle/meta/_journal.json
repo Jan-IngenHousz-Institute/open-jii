@@ -43,6 +43,13 @@
       "when": 1786968000000,
       "tag": "0005_add_workbook_run_id",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790008812731,
+      "tag": "0006_add_failure_reason",
+      "breakpoints": true
     }
   ]
 }

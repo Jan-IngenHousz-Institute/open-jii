@@ -16,6 +16,10 @@ export interface PublishMeta {
   // When provided, transport lifecycle events (queued/wire_send/puback) are
   // attached to that trace so the canonical wide event covers DB → MQTT.
   traceId?: string;
+  // The payload already serialized by the caller. Supplied when the caller had
+  // to serialize anyway (to size the payload), so a multi-megabyte measurement
+  // is not stringified twice per attempt.
+  serialized?: string;
 }
 
 export interface Transport {
@@ -39,6 +43,7 @@ interface Pending {
   sentAt: number | null;
   timeoutHandle: TimerHandle | null;
   traceId?: string;
+  serialized?: string;
   settled: boolean;
 }
 
@@ -83,6 +88,7 @@ class TransportImpl implements Transport {
         sentAt: null,
         timeoutHandle: null,
         traceId: meta?.traceId,
+        serialized: meta?.serialized,
         settled: false,
       };
       item.timeoutHandle = setTimeout(() => {
@@ -172,7 +178,7 @@ class TransportImpl implements Transport {
       // stringify inside the try: a circular / non-serializable payload throws
       // here. Without the catch that rejection would be dropped (sendItem is
       // fire-and-forget from publish()) and the caller would hang to timeout.
-      const serialized = JSON.stringify(payload);
+      const serialized = item.serialized ?? JSON.stringify(payload);
       item.sentAt = getSyncedUtcNow();
       const handle = session.publish({ topic: item.topic, payload: serialized });
       if (item.settled) {

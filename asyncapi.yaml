@@ -191,7 +191,12 @@ components:
             type: string
             description: >
               JSON-encoded macro execution context; stays a string because
-              its keys are dynamic.
+              its keys are dynamic. An entry whose value is exactly
+              {"$macroInput": true} is a marker standing in for this
+              measurement's own `sample`, which the publisher removes so the
+              scan is not carried twice in one message. Consumers that run the
+              macro substitute the decompressed `sample` back in; consumers
+              that only read the context see the marker rather than the scan.
           macros:
             type: array
             description: >

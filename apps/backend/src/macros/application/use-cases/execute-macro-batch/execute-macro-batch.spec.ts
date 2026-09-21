@@ -193,6 +193,45 @@ describe("ExecuteMacroBatchUseCase", () => {
       );
     });
 
+    it("restores the measurement into a context the upload left marked", async () => {
+      const macro = await createTestMacro();
+      const invokeSpy = vi.spyOn(lambdaPort, "invokeLambda").mockResolvedValue(
+        success({
+          statusCode: 200,
+          payload: {
+            status: "success",
+            results: [{ id: "item-1", success: true, output: {} }],
+          },
+        }),
+      );
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+
+      const scan = { phi2: 0.8 };
+      await useCase.execute({
+        items: [
+          {
+            id: "item-1",
+            macro_id: macro.id,
+            data: { sample: [scan] },
+            context: { measurement_node: { $macroInput: true }, baseline: { value: 3 } },
+          },
+        ],
+      });
+
+      expect(invokeSpy).toHaveBeenCalledWith(
+        "test-fn",
+        expect.objectContaining({
+          items: [
+            {
+              id: "item-1",
+              data: scan,
+              context: { measurement_node: scan, baseline: { value: 3 } },
+            },
+          ],
+        }),
+      );
+    });
+
     it("uses the published snapshot and separates versions of the same macro", async () => {
       const macroId = faker.string.uuid();
       const version1 = faker.string.uuid();

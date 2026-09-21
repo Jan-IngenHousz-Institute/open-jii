@@ -36,6 +36,7 @@ function item(id: string, status: "pending" | "failed" | "successful"): Measurem
     hasComment: false,
     dayKey: "2026-01-01",
     workbookRunId: "",
+    failureReason: null,
   };
 }
 
