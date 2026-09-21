@@ -53,7 +53,7 @@
           "statistic": "Maximum",
           "period": "604800",
           "region": "${aws_region}",
-          "dimensions": {},
+          "dimensions": { "Environment": "${environment}" },
           "matchExact": true
         }
       ]
@@ -94,7 +94,7 @@
           "statistic": "Maximum",
           "period": "604800",
           "region": "${aws_region}",
-          "dimensions": {},
+          "dimensions": { "Environment": "${environment}" },
           "matchExact": true
         }
       ]
@@ -135,7 +135,7 @@
           "statistic": "Maximum",
           "period": "604800",
           "region": "${aws_region}",
-          "dimensions": {},
+          "dimensions": { "Environment": "${environment}" },
           "matchExact": true
         }
       ]

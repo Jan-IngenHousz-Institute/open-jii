@@ -23,3 +23,9 @@ variable "heartbeat_prefix" {
   type        = string
   default     = "heartbeat/"
 }
+
+variable "log_retention_days" {
+  description = "CloudWatch log retention for the forwarder's log group"
+  type        = number
+  default     = 7
+}

@@ -37,7 +37,12 @@ from openjii.heartbeat import (
     observation,
     to_ndjson,
 )
-from openjii.metrics import ACTIVITY_WINDOWS_TABLE, OPS_DEVICE_SILENCE_TABLE, OPS_INGEST_QUALITY_TABLE
+from openjii.metrics import (
+    ACTIVITY_WINDOW_DAYS,
+    ACTIVITY_WINDOWS_TABLE,
+    OPS_DEVICE_SILENCE_TABLE,
+    OPS_INGEST_QUALITY_TABLE,
+)
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
@@ -91,11 +96,18 @@ def collect_experiment_status(now: datetime) -> list[dict]:
 
     experiment_status only recomputes when the centrum pipeline runs, so the
     newest status_updated_at doubles as "when gold last materialized".
+
+    experiment_status marks every experiment that ever finished as stale, so
+    the count and roster are limited to experiments that received data inside
+    the activity window: those are the ones that stopped, not the ones that
+    ended. Newest to go quiet first, since that is the one someone can act on.
     """
+    in_window = f"latest_processed_timestamp >= current_timestamp() - INTERVAL {ACTIVITY_WINDOW_DAYS} DAYS"
+
     totals = spark.sql(f"""
         SELECT
             COUNT(*) AS experiments,
-            COUNT_IF(status = 'stale') AS stale,
+            COUNT_IF(status = 'stale' AND {in_window}) AS stale,
             MAX(status_updated_at) AS last_materialized
         FROM {EXPERIMENT_STATUS}
     """).first()
@@ -108,15 +120,15 @@ def collect_experiment_status(now: datetime) -> list[dict]:
 
     age = minutes_since(totals["last_materialized"], now)
     if age is not None:
-        records.append(data_point(GOLD_AGE_METRIC, age, now))
+        records.append(data_point(GOLD_AGE_METRIC, age, now, "None"))
 
     records.append(data_point(STALE_EXPERIMENTS_METRIC, totals["stale"], now))
 
     roster = spark.sql(f"""
         SELECT experiment_id, latest_processed_timestamp
         FROM {EXPERIMENT_STATUS}
-        WHERE status = 'stale'
-        ORDER BY latest_processed_timestamp ASC
+        WHERE status = 'stale' AND {in_window}
+        ORDER BY latest_processed_timestamp DESC
         LIMIT {MAX_DETAIL_ROWS}
     """).collect()
     records.append(
@@ -141,7 +153,7 @@ def collect_metrics_tables(now: datetime) -> list[dict]:
 
     age = minutes_since(row["computed_at"], now)
     if age is not None:
-        records.append(data_point(METRICS_AGE_METRIC, age, now))
+        records.append(data_point(METRICS_AGE_METRIC, age, now, "None"))
 
     records.append(usage_point(MEASUREMENTS_24H_METRIC, row["measurements_24h"], now))
     records.append(usage_point(ACTIVE_DEVICES_30D_METRIC, row["devices_30d"], now))

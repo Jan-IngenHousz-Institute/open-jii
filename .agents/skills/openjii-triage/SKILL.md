@@ -23,7 +23,9 @@ is your hypothesis list: confirm or eliminate them, don't restate them.
 
 Two entry fields change what you should do:
 
-- `active: false` means nothing publishes it yet. Say so and stop; there is no data to find.
+- `active: false` means the composer does not consume it. It does not mean the data is absent:
+  some inactive entries have live producers (AWS vitals, PostHog captures) and only lack a rule.
+  Read the entry's notes and runbook for which it is, and query the source when one exists.
 - `source:` tells you where evidence lives: `aws` in CloudWatch, `dbx` in the heartbeat files,
   `pg` in the metrics-publisher Lambda's namespace, `posthog` outside AWS entirely.
 
@@ -57,9 +59,11 @@ Most incidents are somebody's deploy. Check whether the onset lines up with a re
 (`git log --since`) or a `DORA/Metrics` `DeploymentFrequency` datapoint. A cause that coincides with
 a deploy is worth far more than one that merely sounds plausible.
 
-Check the neighbours too, because these metrics fail in chains. `stale-experiments` is usually a symptom of
-`ingest-lag` or `ingest-forwarding-failures` upstream, and `metrics-mv-freshness` is often downstream
-of `dlt-heartbeat`. Diagnose the top of the chain, not the loudest link.
+Check the neighbours too, because these metrics fail in chains. `stale-experiments` is usually a
+symptom of `ingest-lag` or `ingest-forwarding-failures` upstream, and `metrics-mv-freshness` sits
+downstream of `gold-materialization-age` and `ingest-lag`. `dlt-heartbeat` is different: when it
+fires, the other lakehouse entries do not go stale, they stop reporting, because the same export
+writes all of them. Diagnose the top of the chain, not the loudest link.
 
 ## 5. Report
 

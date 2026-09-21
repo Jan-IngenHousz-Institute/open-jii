@@ -34,7 +34,9 @@ def ops_ingest_quality():
     """
     now = F.current_timestamp()
     unparseable = F.col("parsed_data").isNull()
-    unroutable = F.col("experiment_id").isNull()
+    # Bronze coalesces two regexp_extract calls, and a non-match yields an empty
+    # string rather than null, so an unroutable row is empty, never null.
+    unroutable = F.col("experiment_id").isNull() | (F.length("experiment_id") == 0)
     missing_timestamp = F.col("parsed_data.timestamp").isNull()
 
     return (

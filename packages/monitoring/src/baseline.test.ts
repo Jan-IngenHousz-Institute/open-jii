@@ -111,6 +111,21 @@ describe("evaluate", () => {
     ).toBe("ok");
   });
 
+  it("flags a count that leaves a zero baseline, which has no finite deviation", () => {
+    // Four weeks of zero and then one: the percentage is undefined, and reading that
+    // as "ok" is how the first stale experiment or silent device goes unreported.
+    const result = evaluate(reading({ method: "same-weekday-4w", anomaly_pct: 100 }, 1, 0));
+
+    expect(result.state).toBe("anomaly");
+    expect(result.reason).toBe("nonzero after a zero 4-week baseline");
+  });
+
+  it("stays ok at zero against a zero baseline", () => {
+    expect(evaluate(reading({ method: "same-weekday-4w", anomaly_pct: 100 }, 0, 0)).state).toBe(
+      "ok",
+    );
+  });
+
   it("never flags a liveness metric while it is reporting", () => {
     expect(evaluate(reading({ nodata: "alert" }, 1)).state).toBe("ok");
   });

@@ -747,6 +747,7 @@ module "metrics_pipeline" {
     "CATALOG_NAME"        = module.databricks_catalog.catalog_name
     "CENTRUM_SCHEMA_NAME" = "centrum"
     "SILVER_TABLE"        = "clean_data"
+    "BRONZE_TABLE"        = "raw_data"
   }
 
   continuous_mode  = false
@@ -867,7 +868,7 @@ module "metrics_pipeline_scheduler" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.metrics_pipeline]
+  depends_on = [module.metrics_pipeline, module.heartbeat_external_location]
 }
 
 module "centrum_backup_job" {

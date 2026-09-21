@@ -100,7 +100,7 @@ metrics:
     slots: [alert, weekly]
     severity: warning
     runbook: docs/runbooks/cert-expiry-horizon.md
-    notes: Certs <30d to expiry; devices stuck pending/rotating.
+    notes: Certs <30d to expiry; devices whose rotation did not complete.
 
   - num: 7
     id: kinesis-incoming
@@ -179,8 +179,8 @@ metrics:
     runbook: docs/runbooks/dlt-heartbeat.md
     notes: >
       Value is always 1; only its absence carries meaning, so the absence rule is the
-      whole metric: the composer renders it as an anomaly and Grafana alerts on NoData.
-      Deliberately has no threshold.
+      whole metric: the composer renders it as an anomaly, and the Grafana NoData rule
+      does the same once it lands. Deliberately has no threshold.
 
   - num: 64
     id: gold-materialization-age
@@ -470,14 +470,15 @@ metrics:
     signal:
       namespace: OpenJII/UserRegistrations
       metric: WeeklyNewUsers
-      stat: Sum
+      # Maximum, not Sum: the publisher writes one gauge a week at publish time, and a
+      # Sum would turn a week the publisher failed into "0 signups" instead of silence.
+      stat: Maximum
       dimensions: { Environment: "${ENVIRONMENT}" }
     baseline: { method: wow }
     notes: >
-      Weekly granularity until the metrics-publisher promotion adds daily counts. The
-      publisher backdates each datapoint to the Monday its ISO week started, so the
-      weekly digest's trailing window is offset from it by the digest's own start hour;
-      the promotion stamps at publish time and closes that gap.
+      Weekly granularity until the metrics-publisher promotion adds daily counts. Stamped
+      at publish time (Monday 06:00 UTC), one hour before the weekly note's window closes,
+      so the trailing seven-day window always contains it.
 
   - num: 31
     id: active-users
@@ -506,7 +507,9 @@ metrics:
     phase: P2
     # Inactive until the heartbeat export task that publishes this lands.
     active: false
-    slots: [pulse, weekly]
+    # Pulse only: Maximum over a seven-day window would report the peak day as if it
+    # were the week, so the weekly note has no honest way to render a 24h gauge.
+    slots: [pulse]
     signal:
       namespace: OpenJII/Usage
       metric: Measurements24h

@@ -36,28 +36,32 @@ from openjii.metrics.runtime import SILVER_TABLE, centrum_table
 def ops_device_silence():
     """One row per silent device.
 
-    Cadence is the median gap between a device's consecutive measurements in
-    the activity window, so a daily logger and a ten-second logger are each
-    judged against their own rhythm. A device with a single measurement has
-    no cadence and is judged against the floor alone.
+    Cadence is the median gap between a device's consecutive arrivals in the
+    activity window, so a daily logger and a ten-second logger are each judged
+    against their own rhythm. A device with a single measurement has no cadence
+    and is judged against the floor alone.
+
+    Arrival time (processed_timestamp) rather than the payload's own clock: a
+    device with a drifted RTC would otherwise read as permanently silent while
+    publishing normally, which is what experiment_status already avoids.
     """
     now = F.current_timestamp()
-    by_device = Window.partitionBy("client_id").orderBy("timestamp")
+    by_device = Window.partitionBy("client_id").orderBy("processed_timestamp")
 
     cadence = (
         spark.table(centrum_table(SILVER_TABLE))
         .filter(within_plausible_range(F.col("timestamp"), now))
-        .filter(F.col("timestamp") >= now - F.expr(f"INTERVAL {ACTIVITY_WINDOW_DAYS} DAYS"))
+        .filter(F.col("processed_timestamp") >= now - F.expr(f"INTERVAL {ACTIVITY_WINDOW_DAYS} DAYS"))
         .filter(F.col("client_id").isNotNull())
-        .withColumn("previous_at", F.lag("timestamp").over(by_device))
+        .withColumn("previous_at", F.lag("processed_timestamp").over(by_device))
         .withColumn(
             "gap_seconds",
-            F.unix_timestamp("timestamp") - F.unix_timestamp("previous_at"),
+            F.unix_timestamp("processed_timestamp") - F.unix_timestamp("previous_at"),
         )
         .groupBy("client_id")
         .agg(
             F.percentile_approx("gap_seconds", 0.5).alias("median_interval_seconds"),
-            F.max("timestamp").alias("last_data_at"),
+            F.max("processed_timestamp").alias("last_data_at"),
         )
     )
 
@@ -84,7 +88,11 @@ def ops_device_silence():
             "last_data_at",
             "median_interval_seconds",
             (F.col("quiet_seconds") / 60).cast("long").alias("silent_for_minutes"),
-            (F.col("last_event_type") == "connected").alias("silent_while_connected"),
+            # Devices with no lifecycle event (Cognito publishers) are unknown, not
+            # disconnected; false keeps the roster boolean rather than tri-state.
+            F.coalesce(F.col("last_event_type") == "connected", F.lit(False)).alias(
+                "silent_while_connected"
+            ),
             "last_event_at",
         )
         .withColumn("computed_at", now)

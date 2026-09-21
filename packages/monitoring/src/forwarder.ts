@@ -1,7 +1,7 @@
 import type { ForwarderDatum, SkippedLine } from "./types.js";
 
 /** Namespaces the forwarder role is allowed to publish into. */
-export const ALLOWED_NAMESPACES = new Set(["OpenJII/Ingest", "OpenJII/Data", "OpenJII/Usage"]);
+export const ALLOWED_NAMESPACES = new Set(["OpenJII/Data", "OpenJII/Usage"]);
 
 export interface ParseResult {
   observations: ForwarderDatum[];

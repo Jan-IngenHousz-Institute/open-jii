@@ -8,7 +8,7 @@ the platform broke or one user is iterating.
 ## One macro or many
 
 ```bash
-aws logs tail /aws/lambda/<env>-macro-<runtime> --since 1h --filter-pattern "ERROR"
+aws logs tail /aws/lambda/macro-sandbox-<runtime>-<env> --since 1h --filter-pattern "ERROR"
 ```
 
 The runtimes are separate functions, so start with whichever the digest named. Errors concentrated
@@ -21,8 +21,9 @@ across many macro ids are the platform, and that is worth working.
 macro in one language while other languages are fine, that is the image.
 
 **Concurrency exhaustion.** The pipeline executes macros in batches during enrichment, which can
-saturate reserved concurrency and cause throttles rather than errors. Check the function's Throttles
-metric alongside Errors; the two have different fixes and the digest reports them together.
+saturate reserved concurrency and cause throttles rather than errors. The digest watches Errors
+only, so check the function's Throttles metric yourself; a throttled batch is invisible here and
+has a different fix.
 
 **A data-shape change.** A macro that worked yesterday and fails today on unchanged code means its
 input changed. That points at the pipeline, not the sandbox, and it usually affects every macro

@@ -13,14 +13,16 @@ CloudWatch, because per-experiment identifiers are deliberately kept out of metr
 
 ```bash
 aws s3 ls s3://open-jii-heartbeat-<env>/heartbeat/$(date -u +%Y/%m/%d)/ | tail -1
-aws s3 cp s3://open-jii-heartbeat-<env>/heartbeat/<newest>.json - \
-  | grep '"detail":"stale_experiments"'
+aws s3 cp s3://open-jii-heartbeat-<env>/heartbeat/YYYY/MM/DD/<HHMMSS>.json - \
+  | grep '"detail": "stale_experiments"'
 ```
 
-The roster names the experiments and how long each has been quiet, oldest first, and reports the
-true total separately from the rows shown so a truncated list still tells you the real scale. The
-`openjii-triage` skill reads the same file; the digest itself does not, so the count in Slack is
-the whole of what the digest knows.
+The roster names the experiments and when each last received data, newest to go quiet first, and
+reports the true total separately from the rows shown so a truncated list still tells you the real
+scale. Both the count and the roster cover only experiments that received data in the last thirty
+days: an experiment that ended months ago is also "stale" in `experiment_status`, and counting
+those would bury the one that stopped this morning. The `openjii-triage` skill reads the same file;
+the digest itself does not, so the count in Slack is the whole of what the digest knows.
 
 **Many experiments at once** means the ingest path, not the experiments. Check
 `ingest-forwarding-failures`, `ingest-lag` and `kinesis-write-throttling` in the same digest and work

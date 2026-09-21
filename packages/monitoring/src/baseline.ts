@@ -63,6 +63,13 @@ export function evaluate({ metric, value, baseline, historyCount }: MetricReadin
   }
 
   if (typeof rule.anomaly_pct === "number") {
+    // A count that sat at zero for four weeks and is now nonzero has no finite
+    // deviation, and it is exactly the transition this rule exists to catch. Letting
+    // the arithmetic's null read as "ok" is how a first stale experiment goes unreported.
+    if (baseline === 0 && value > 0) {
+      return { state: "anomaly", reason: "nonzero after a zero 4-week baseline" };
+    }
+
     const deviation = deviationPercent(value, baseline);
     if (deviation !== null && Math.abs(deviation) > rule.anomaly_pct) {
       return {

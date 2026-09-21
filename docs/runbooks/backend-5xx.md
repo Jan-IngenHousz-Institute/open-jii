@@ -17,7 +17,7 @@ back first and understanding second is the right order when users are affected.
 ## Read the errors
 
 ```bash
-aws logs tail /ecs/backend-<env> --since 1h --filter-pattern '{ $.level >= 50 }'
+aws logs tail /aws/ecs/backend-service-<env> --since 1h --filter-pattern '{ $.level >= 50 }'
 ```
 
 The backend logs structured JSON through pino, so filtering on level gets errors without matching
@@ -35,9 +35,10 @@ request, it queues every other request in that task behind it. Under that condit
 broad and the cause is narrow.
 
 **Only lakehouse-backed endpoints.** Data pages, exports and visualizations fail while the rest of
-the API is fine. That is the warehouse, not the backend: check `dbx-sql-from-backend` and whether
-the SQL warehouse is awake. A warehouse that has scaled to zero makes the first request after idle
-pay the resume, which surfaces as timeouts rather than as errors.
+the API is fine. That is the warehouse, not the backend. No metric covers the backend's SQL port
+yet, so check the SQL warehouse's state in the Databricks console directly. A warehouse that has
+scaled to zero makes the first request after idle pay the resume, which surfaces as timeouts rather
+than as errors.
 
 ## Closing
 

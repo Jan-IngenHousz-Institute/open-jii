@@ -28,9 +28,11 @@ Repeat for `Connect.ClientError` and `Connect.ServerError`.
 ## Match it against the fleet
 
 A sharp step usually maps to a batch of devices rather than to one. The registry knows which:
-devices stuck mid-rotation, or with certificates near expiry, are the population most likely to be
-failing. Check `cert-expiry-horizon` in the same digest, and query the device registry for rows in a
-non-active state, which is where a half-completed credential rotation leaves them.
+devices whose certificate was rotated recently, or is near expiry, are the population most likely
+to be failing. Check `cert-expiry-horizon` in the same digest. Note that a rotation never changes a
+device's status; a half-completed one leaves the row `active` with a new certificate the hardware
+may never have received, so query for devices whose certificate changed in the window rather than
+for a status.
 
 ## The failure this metric cannot see
 

@@ -1,7 +1,7 @@
 data "aws_caller_identity" "current" {}
 
 locals {
-  namespaces = ["OpenJII/Ingest", "OpenJII/Data", "OpenJII/Usage"]
+  namespaces = ["OpenJII/Data", "OpenJII/Usage"]
 
   tags = {
     Environment = var.environment
@@ -120,4 +120,13 @@ resource "aws_s3_bucket_notification" "heartbeat" {
   }
 
   depends_on = [aws_lambda_permission.allow_s3]
+}
+
+# Declared up front: a group the Lambda auto-creates cannot be adopted later
+# without an import, and it would keep every line forever.
+resource "aws_cloudwatch_log_group" "metrics_forwarder" {
+  name              = "/aws/lambda/${aws_lambda_function.metrics_forwarder.function_name}"
+  retention_in_days = var.log_retention_days
+
+  tags = local.tags
 }

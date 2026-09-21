@@ -25,7 +25,7 @@ than in a metric:
 
 ```bash
 aws s3 ls s3://open-jii-heartbeat-<env>/heartbeat/$(date -u +%Y/%m/%d)/ | tail -5
-aws s3 cp s3://open-jii-heartbeat-<env>/heartbeat/<newest>.json - | grep '"detail"'
+aws s3 cp s3://open-jii-heartbeat-<env>/heartbeat/YYYY/MM/DD/<HHMMSS>.json - | grep '"detail"'
 ```
 
 A device republishing its backlog after a long offline period is the usual cause and needs no

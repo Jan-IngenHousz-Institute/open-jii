@@ -8,26 +8,33 @@ enrichment, which is why it is worth an alarm rather than a dashboard.
 ## Establish the direction
 
 ```bash
-aws logs tail /ecs/backend-<env> --since 1h --filter-pattern "HmacGuard"
+aws logs tail /aws/ecs/backend-service-<env> --since 1h --filter-pattern "HmacGuard"
 ```
 
 Rejections logged by the backend mean Databricks called and was refused. Silence in the backend
 while the pipeline reports failures means the call never arrived, which is a network or URL problem
 rather than an authentication one.
 
-## The three rejection reasons are diagnostic
+## The rejection message is diagnostic
 
-The guard distinguishes them, and each points somewhere different.
+The guard logs a distinct message for each failure, and they fall into four groups that point
+somewhere different.
 
-**Unknown key id.** The two sides are using different credentials. This almost always means a
-rotation was applied on one side only: the backend takes its keys from configuration, Databricks
-from a secret scope, and they are updated by separate mechanisms.
+**Key id problems: "Missing API key ID", "Invalid API key ID provided", "API key not found".** The
+two sides are using different credentials. This almost always means a rotation was applied on one
+side only: the backend takes its keys from configuration, Databricks from a secret scope, and they
+are updated by separate mechanisms.
 
-**Bad signature.** Same key id, different secret, or the payload was altered in transit. Check
-whether the secret scope value matches what the backend expects before suspecting anything exotic.
+**"Missing signature or timestamp headers".** The caller is not signing at all. That is a client
+regression or a request that reached the guarded route by a path that bypasses the signing client,
+not a credential problem.
 
-**Stale timestamp.** The request is outside the replay window. This is clock drift or a genuinely
-slow call, and it is the only one of the three that can resolve on its own.
+**"Invalid signature provided" or "Signature comparison failed".** Same key id, different secret,
+or the payload was altered in transit. Check whether the secret scope value matches what the
+backend expects before suspecting anything exotic.
+
+**"Invalid timestamp".** The request is outside the replay window. This is clock drift or a
+genuinely slow call, and it is the only group that can resolve on its own.
 
 ## When nothing reaches the backend
 

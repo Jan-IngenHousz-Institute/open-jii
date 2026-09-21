@@ -26,6 +26,37 @@ def test_namespaces_are_the_ones_the_forwarder_may_publish_to():
     assert {DATA_NAMESPACE, USAGE_NAMESPACE} == {"OpenJII/Data", "OpenJII/Usage"}
 
 
+def test_metric_names_are_the_literals_the_catalog_binds():
+    # Each is hard-coded independently in docs/monitoring/metrics-catalog.yaml. A rename
+    # here leaves every Python test green while the series the rules watch goes dark.
+    assert heartbeat.COLLECTOR_HEARTBEAT_METRIC == "CollectorHeartbeat"
+    assert heartbeat.GOLD_AGE_METRIC == "GoldMaterializationAgeMinutes"
+    assert heartbeat.METRICS_AGE_METRIC == "MetricsPipelineAgeMinutes"
+    assert heartbeat.STALE_EXPERIMENTS_METRIC == "StaleExperimentsCount"
+    assert heartbeat.SILENT_DEVICES_METRIC == "SilentDevicesCount"
+    assert heartbeat.INGEST_BAD_PAYLOAD_RATE_METRIC == "IngestBadPayloadRate"
+    assert heartbeat.MEASUREMENTS_24H_METRIC == "Measurements24h"
+    assert heartbeat.ACTIVE_DEVICES_30D_METRIC == "ActiveDevices30d"
+
+
+def test_to_ndjson_serializes_the_datetimes_a_roster_row_carries():
+    # Spark rows carry datetimes. Without default=str the write raises outside every
+    # collector's guard, no file lands, and the dead-man reports the collector gone.
+    roster = detail("silent_devices", [{"client_id": "a", "last_data_at": NOW.replace(tzinfo=None)}])
+
+    row = json.loads(to_ndjson([roster]))["rows"][0]
+
+    assert row["last_data_at"] == "2026-08-16 06:15:00"
+
+
+def test_minutes_since_accepts_the_naive_datetimes_spark_returns():
+    # Both production call sites feed naive values; tz-aware inputs alone would let
+    # the _as_utc normalisation be deleted with every test still green.
+    naive_earlier = (NOW - timedelta(minutes=30)).replace(tzinfo=None)
+
+    assert minutes_since(naive_earlier, NOW) == 30.0
+
+
 def test_every_metric_and_detail_name_is_exported():
     for name in (
         "COLLECTOR_HEARTBEAT_METRIC",

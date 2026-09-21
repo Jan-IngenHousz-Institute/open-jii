@@ -4,7 +4,7 @@ Turns the heartbeat files the Databricks job writes into CloudWatch datapoints. 
 
 - Lines carrying a `metric` key become datapoints, published with the observation timestamp from the payload so a delayed or replayed file does not skew the series.
 - Lines carrying a `detail` key are roster data that stay in S3. The openjii-triage skill and whoever is holding an incident read them there; the digest does not read them yet. Forwarding them would put per-experiment cardinality into CloudWatch, which the catalog's cardinality rule forbids.
-- Publishing is restricted by IAM condition to the `OpenJII/Ingest`, `OpenJII/Data` and `OpenJII/Usage` namespaces.
+- Publishing is restricted by IAM condition to the `OpenJII/Data` and `OpenJII/Usage` namespaces.
 
 This module also owns the IAM policy that lets the Unity Catalog storage credential write those files; attach `databricks_write_policy_arn` to the credential's `additional_policy_arns`.
 

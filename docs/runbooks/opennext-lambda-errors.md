@@ -6,7 +6,7 @@ did not render for someone.
 ## Read the actual errors
 
 ```bash
-aws logs tail /aws/lambda/<env>-server --since 1h --filter-pattern "ERROR"
+aws logs tail /aws/lambda/open-jii-<env>-opennext-server --since 1h --filter-pattern "ERROR"
 ```
 
 Correlate the onset with `git log --since="6 hours ago" --oneline origin/main`. A web deploy is the

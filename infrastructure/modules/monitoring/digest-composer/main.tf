@@ -122,3 +122,12 @@ resource "aws_lambda_permission" "digest" {
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.digest[each.key].arn
 }
+
+# Declared up front: a group the Lambda auto-creates cannot be adopted later
+# without an import, and it would keep every rendered digest forever.
+resource "aws_cloudwatch_log_group" "digest_composer" {
+  name              = "/aws/lambda/${aws_lambda_function.digest_composer.function_name}"
+  retention_in_days = var.log_retention_days
+
+  tags = local.tags
+}

@@ -9,14 +9,16 @@ exists as a horizon rather than as a failure count.
 
 ## Find the affected devices
 
-The device registry is the source of truth. Certificates near expiry and devices left in a
-non-active state are two different populations and need different handling:
+The device registry is the source of truth. Certificates near expiry and devices whose rotation did
+not complete are two different populations and need different handling:
 
 - **Near expiry, otherwise healthy.** Rotate on the normal path, in batches, before the horizon
   closes.
-- **Stuck mid-rotation.** A rotation that failed partway leaves a device with a new certificate that
-  was never activated or an old one that was never retired. These do not fix themselves and they do
-  not always show as failures yet, because the old credential may still be valid.
+- **Rotation did not complete.** The status never changes during a rotation, so there is no status
+  to query for. A rotation that failed partway either rolled its new certificate back, or left the
+  row `active` with a new certificate and an old one that was never retired. These do not fix
+  themselves and they do not always show as failures yet, because the old credential may still be
+  valid. Query for devices whose certificate changed recently and confirm each is connecting.
 
 ## Rotation is not free
 

@@ -57,3 +57,9 @@ variable "runbook_base_url" {
   type        = string
   default     = "https://github.com/Jan-IngenHousz-Institute/open-jii/blob/main"
 }
+
+variable "log_retention_days" {
+  description = "CloudWatch log retention for the composer's log group"
+  type        = number
+  default     = 7
+}

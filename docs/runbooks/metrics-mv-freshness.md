@@ -24,9 +24,11 @@ the right immediate action is to disable it rather than to retry.
 
 ## What the public sees meanwhile
 
-The backend serves the endpoint from cache with stale-on-error, so the page keeps rendering rather
-than erroring. That is a deliberate degradation and it buys time, but the numbers on screen are as
-old as this metric says.
+The backend caches the snapshot for a fixed time. Inside that window the page keeps rendering
+numbers as old as this metric says. Once it lapses with the warehouse still down, the endpoint
+returns an empty snapshot and the page renders with no numbers at all; there is no stale-on-error
+fallback. That is the point at which this stops being a data-freshness incident and becomes a
+visible outage, so escalate accordingly.
 
 ## Closing
 
