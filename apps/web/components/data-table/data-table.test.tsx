@@ -90,6 +90,24 @@ describe("DataTable", () => {
     expect(onChange).toHaveBeenCalled();
   });
 
+  it("comma-separates a total row count of a thousand or more", () => {
+    render(
+      <DataTable
+        columns={COLUMNS}
+        rows={ROWS}
+        pagination={{
+          mode: "server",
+          state: { pageIndex: 0, pageSize: 1000 },
+          onChange: vi.fn(),
+          totalRows: 12345,
+          totalPages: 13,
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/dataTable.totalRows.*12,345/)).toBeInTheDocument();
+  });
+
   it("pages rows it already holds, at the size the caller asks for", async () => {
     const user = userEvent.setup();
     const many: DataRow[] = Array.from({ length: 7 }, (_, index) => ({
