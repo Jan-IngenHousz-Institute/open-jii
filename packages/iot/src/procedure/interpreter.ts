@@ -5,7 +5,12 @@
 import type { BenchInstrument } from "../instrument/interface";
 import type { Logger } from "../utils/logger/logger";
 import { defaultLogger } from "../utils/logger/logger";
-import { ProcedureAborted, ProcedureDeclined, ProcedureRigError } from "./operator";
+import {
+  ProcedureAborted,
+  ProcedureDeclined,
+  ProcedureRigError,
+  ProcedureStopped,
+} from "./operator";
 import type { OperatorPort, ProcedureProgress } from "./operator";
 import { DUT_ROLE, SWEEP_STIMULUS_COLUMN, isInstrumentRead, isInstrumentStimulus } from "./types";
 import type {
@@ -49,9 +54,22 @@ export interface ProcedureContext {
   logger?: Logger;
   /** Injected so tests do not wait out real settle times. */
   sleep?: (ms: number) => Promise<void>;
+  /**
+   * Stops the run between steps, setpoints, reads and inside a settle. Without it the
+   * only way out of a sweep was to close the ports under it, and a setpoint could land
+   * after the rig had been rested.
+   */
+  signal?: AbortSignal;
 }
 
 const realSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * The longest text a payload cell may carry. The contract in `packages/api` holds the
+ * same number and refuses a longer cell at submit, after the whole session; this package
+ * cannot import it, so the two agree by value, and the refusal happens at the read.
+ */
+export const MAX_SERIES_CELL_TEXT = 65_536;
 
 /**
  * Where a reading the operator took again is kept, beside the series it was taken for.
@@ -82,6 +100,7 @@ class ProcedureRunner {
   private readonly skipped: CaptureResult["skipped"] = [];
   private readonly log: Logger;
   private readonly sleep: (ms: number) => Promise<void>;
+  private readonly signal: AbortSignal | undefined;
 
   constructor(
     private readonly procedure: CaptureProcedure,
@@ -90,6 +109,7 @@ class ProcedureRunner {
   ) {
     this.log = context.logger ?? defaultLogger;
     this.sleep = context.sleep ?? realSleep;
+    this.signal = context.signal;
   }
 
   async run(): Promise<CaptureResult> {
@@ -104,6 +124,7 @@ class ProcedureRunner {
         description: describeStep(step),
       });
       try {
+        this.stopIfRequested();
         await this.runStep(step);
       } catch (error) {
         throw new ProcedureAborted(error instanceof Error ? error : new Error(String(error)), {
@@ -114,6 +135,34 @@ class ProcedureRunner {
     }
 
     return { payload: this.payload, skipped: this.skipped };
+  }
+
+  private stopIfRequested(): void {
+    if (this.signal?.aborted) {
+      throw new ProcedureStopped();
+    }
+  }
+
+  /** A settle that a stop cuts short, rather than one the rig keeps driving through. */
+  private pause(ms: number): Promise<void> {
+    const signal = this.signal;
+    if (!signal) {
+      return this.sleep(ms);
+    }
+    this.stopIfRequested();
+
+    return new Promise<void>((resolve, reject) => {
+      const stop = () => reject(new ProcedureStopped());
+      signal.addEventListener("abort", stop, { once: true });
+      this.sleep(ms).then(() => {
+        signal.removeEventListener("abort", stop);
+        if (signal.aborted) {
+          reject(new ProcedureStopped());
+        } else {
+          resolve();
+        }
+      }, reject);
+    });
   }
 
   private assertRigDeclaresDut(): void {
@@ -130,7 +179,7 @@ class ProcedureRunner {
         return;
       }
       case "settle":
-        await this.sleep(step.ms);
+        await this.pause(step.ms);
         return;
       case "set":
         await this.runSetStep(step);
@@ -160,7 +209,9 @@ class ProcedureRunner {
     for (let attempt = 1; ; attempt++) {
       if (step.prompt) {
         const accepted = await this.context.operator.acknowledge(step.prompt);
-        if (!accepted) return this.skipOrFail(step, `operator declined: ${step.prompt}`);
+        if (!accepted) {
+          return this.skipOrFail(step, `operator declined: ${step.prompt}`, step.prompt);
+        }
       }
 
       const row = await this.takeReads(step.read);
@@ -198,42 +249,56 @@ class ProcedureRunner {
     // be taken again.
     const isOperatorDriven = !isInstrumentStimulus(step.stimulus);
 
-    for (const [index, value] of values.entries()) {
-      this.report({
-        kind: "setpoint",
-        series: step.series,
-        index,
-        total: values.length,
-        value,
-      });
+    try {
+      for (const [index, value] of values.entries()) {
+        this.stopIfRequested();
+        this.report({
+          kind: "setpoint",
+          series: step.series,
+          index,
+          total: values.length,
+          value,
+        });
 
-      for (let attempt = 1; ; attempt++) {
-        const applied = await this.applyStimulus(step, index);
-        if (!applied) {
-          return this.skipOrFail(step, `operator declined a setpoint in ${step.series}`);
+        for (let attempt = 1; ; attempt++) {
+          const applied = await this.applyStimulus(step, index);
+          if (!applied) {
+            return this.skipOrFail(
+              step,
+              `operator declined a setpoint in ${step.series}`,
+              describeStep(step),
+            );
+          }
+
+          if (step.settleMs) await this.pause(step.settleMs);
+
+          const row = await this.takeReads(step.read, value);
+          row[SWEEP_STIMULUS_COLUMN] = value;
+
+          const isKept =
+            !isOperatorDriven ||
+            (await this.context.operator.confirmReading({
+              series: step.series,
+              stimulus: value,
+              row,
+            }));
+
+          if (isKept) {
+            rows.push(row);
+            break;
+          }
+
+          this.discard(step.series, row);
+          this.report({ kind: "retake", series: step.series, index, attempt });
         }
-
-        if (step.settleMs) await this.sleep(step.settleMs);
-
-        const row = await this.takeReads(step.read, value);
-        row[SWEEP_STIMULUS_COLUMN] = value;
-
-        const isKept =
-          !isOperatorDriven ||
-          (await this.context.operator.confirmReading({
-            series: step.series,
-            stimulus: value,
-            row,
-          }));
-
-        if (isKept) {
-          rows.push(row);
-          break;
-        }
-
-        this.discard(step.series, row);
-        this.report({ kind: "retake", series: step.series, index, attempt });
       }
+    } catch (error) {
+      // A fault at the ninth point of ten must not discard the eight confirmed before it;
+      // the run still aborts, and the record shows how far the sweep got.
+      if (rows.length > 0) {
+        this.commit(step.series, rows);
+      }
+      throw error;
     }
 
     this.commit(step.series, rows);
@@ -287,7 +352,8 @@ class ProcedureRunner {
     const samples: SeriesCell[] = [];
     const repeat = read.repeat ?? 1;
     for (let index = 0; index < repeat; index++) {
-      if (index > 0 && read.intervalMs) await this.sleep(read.intervalMs);
+      if (index > 0 && read.intervalMs) await this.pause(read.intervalMs);
+      this.stopIfRequested();
       samples.push(await this.readOnce(target, read, value));
     }
 
@@ -313,7 +379,16 @@ class ProcedureRunner {
     if (!result.success) {
       throw result.error ?? new Error(`Read "${read.as}" failed`);
     }
-    return toCell(result.data);
+
+    const cell = toCell(result.data);
+    // Refused here, at the bench, where the step can be retaken; the contract refuses the
+    // same cell at submit, after the whole session, with nothing left to retry but the run.
+    if (typeof cell === "string" && cell.length > MAX_SERIES_CELL_TEXT) {
+      throw new Error(
+        `Read "${read.as}" answered ${String(cell.length)} characters; a cell holds at most ${String(MAX_SERIES_CELL_TEXT)}`,
+      );
+    }
+    return cell;
   }
 
   /** A read names a protocol; the device gets the declared object, whole, or a clone per setpoint. */
@@ -349,10 +424,15 @@ class ProcedureRunner {
     return this.context.rig[role]?.setpoint ? undefined : `instrument "${role}" is not connected`;
   }
 
-  /** An absent instrument skips an optional step and aborts a required one. */
-  private skipOrFail(step: ReadStep | SweepStep, reason: string): void {
+  /**
+   * An absent instrument skips an optional step and aborts a required one. A decline is
+   * the operator's, not the rig's, and is raised as one so the wizard can say so.
+   */
+  private skipOrFail(step: ReadStep | SweepStep, reason: string, declinedPrompt?: string): void {
     if (!step.optional) {
-      throw new ProcedureRigError(`Step "${step.series}" cannot run: ${reason}`);
+      throw declinedPrompt === undefined
+        ? new ProcedureRigError(`Step "${step.series}" cannot run: ${reason}`)
+        : new ProcedureDeclined(declinedPrompt);
     }
     this.log.warn(`Skipping optional calibration step "${step.series}": ${reason}`);
     this.skipped.push({ series: step.series, reason });
@@ -512,9 +592,23 @@ export function bindBenchInstrument(instrument: BenchInstrument): RigBinding {
   return binding;
 }
 
-/** Return every bench instrument in a rig to a safe state. */
+/**
+ * Return every bench instrument in a rig to a safe state. Every instrument is attempted
+ * whatever the others did, and a failure is then raised rather than dropped: a supply
+ * that could not be zeroed is the one thing a bench operator must be told.
+ */
 export async function shutdownRig(instruments: Iterable<BenchInstrument>): Promise<void> {
+  const failures: string[] = [];
   for (const instrument of instruments) {
-    await instrument.shutdown().catch(() => undefined);
+    try {
+      await instrument.shutdown();
+    } catch (error) {
+      failures.push(
+        `${instrument.model}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  if (failures.length > 0) {
+    throw new Error(`The rig is not at rest. ${failures.join("; ")}`);
   }
 }

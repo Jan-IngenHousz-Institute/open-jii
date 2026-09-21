@@ -465,6 +465,24 @@ describe("writeCalibrationBlocks", () => {
     expect(transport.sent).toEqual([]);
   });
 
+  // The writers used to be resolved as the block was sent, so a block with one uncovered
+  // coefficient was already half on the device when the refusal came back.
+  it("refuses a block with one uncovered coefficient before sending any of it", async () => {
+    const transport = miniparConsole();
+    driver.initialize(transport);
+
+    const results = await writeCalibrationBlocks(
+      driver,
+      "minipar",
+      { par: { coefficients: { slope: 0.96, gain: 1.5 } } },
+      noSleep,
+    );
+
+    expect(results.par.verified).toBe(false);
+    expect(results.par.error).toMatch(/No writer for coefficient "par.gain"/);
+    expect(transport.sent).toEqual([]);
+  });
+
   it("reports every block of an unsupported family without touching the device", async () => {
     const transport = miniparConsole();
     driver.initialize(transport);

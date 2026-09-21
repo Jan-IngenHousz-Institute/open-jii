@@ -172,6 +172,7 @@ export {
   runVerificationProcedure,
   bindBenchInstrument,
   shutdownRig,
+  MAX_SERIES_CELL_TEXT,
 } from "./procedure/interpreter";
 export type {
   ProcedureContext,
@@ -179,7 +180,12 @@ export type {
   ReadTarget,
   SetpointTarget,
 } from "./procedure/interpreter";
-export { ProcedureAborted, ProcedureDeclined, ProcedureRigError } from "./procedure/operator";
+export {
+  ProcedureAborted,
+  ProcedureDeclined,
+  ProcedureRigError,
+  ProcedureStopped,
+} from "./procedure/operator";
 export type { OperatorPort, OperatorReading, ProcedureProgress } from "./procedure/operator";
 export {
   requiredSeriesNames,

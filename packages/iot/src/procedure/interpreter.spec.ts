@@ -12,7 +12,12 @@ import {
   shutdownRig,
 } from "./interpreter";
 import type { ProcedureContext, RigBinding } from "./interpreter";
-import { ProcedureAborted, ProcedureDeclined, ProcedureRigError } from "./operator";
+import {
+  ProcedureAborted,
+  ProcedureDeclined,
+  ProcedureRigError,
+  ProcedureStopped,
+} from "./operator";
 import type { OperatorPort, ProcedureProgress } from "./operator";
 import type { CaptureProcedure } from "./types";
 
@@ -1004,10 +1009,125 @@ describe("runCaptureProcedure", () => {
     });
   });
 
+  describe("stopping a run", () => {
+    // Without a way to stop, the wizard's only exit closed the ports under a running
+    // sweep, and a setpoint could land after the rig had been rested.
+    it("stops between setpoints and keeps the rows it had confirmed", async () => {
+      const { rig } = fullRig();
+      const controller = new AbortController();
+      const applied: [string, number][] = [];
+      // The operator presses Stop while the second point is being set up.
+      const lamp: RigBinding = {
+        setpoint: {
+          applySetpoint: (name, value) => {
+            applied.push([name, value]);
+            if (applied.length === 2) {
+              controller.abort();
+            }
+            return Promise.resolve();
+          },
+        },
+      };
+
+      const aborted = await abortOf(
+        runCaptureProcedure(
+          AMBIT_PROCEDURE,
+          context({ rig: { ...rig, lamp }, signal: controller.signal }),
+        ),
+      );
+
+      expect(aborted.reason).toBeInstanceOf(ProcedureStopped);
+      // The first point was read and confirmed; the second never was.
+      expect(aborted.partial.payload.par_sweep).toHaveLength(1);
+      expect(applied).toEqual([
+        ["current_a", 0.8],
+        ["current_a", 2.4],
+      ]);
+    });
+
+    it("cuts a settle short rather than driving the rig through it", async () => {
+      const { rig } = fullRig();
+      const controller = new AbortController();
+      const procedure: CaptureProcedure = {
+        ...AMBIT_PROCEDURE,
+        steps: [{ kind: "settle", ms: 60_000 }],
+      };
+      const run = abortOf(
+        runCaptureProcedure(
+          procedure,
+          context({ rig, signal: controller.signal, sleep: () => new Promise(() => undefined) }),
+        ),
+      );
+      controller.abort();
+
+      const aborted = await run;
+
+      expect(aborted.reason).toBeInstanceOf(ProcedureStopped);
+    });
+
+    it("does not start a run whose signal is already aborted", async () => {
+      const { rig, lamp } = fullRig();
+      const controller = new AbortController();
+      controller.abort();
+
+      const aborted = await abortOf(
+        runCaptureProcedure(AMBIT_PROCEDURE, context({ rig, signal: controller.signal })),
+      );
+
+      expect(aborted.reason).toBeInstanceOf(ProcedureStopped);
+      expect(lamp.applied).toEqual([]);
+    });
+  });
+
+  describe("what a step is refused for", () => {
+    // The contract refuses the same cell at submit, after the whole session; at the read
+    // the step can be retaken and the definition corrected.
+    it("refuses a device reply longer than a cell holds, at the read", async () => {
+      const { rig } = fullRig();
+      const verbose = reader({ get_par: { data_raw: "x".repeat(70_000) } });
+
+      const aborted = await abortOf(
+        runCaptureProcedure(AMBIT_PROCEDURE, context({ rig: { ...rig, dut: verbose } })),
+      );
+
+      expect(aborted.reason.message).toMatch(/a cell holds at most/);
+    });
+
+    // A decline is the operator's decision, and the wizard says so; a rig fault reads as
+    // a bench that needs fixing.
+    it("raises a declined required read as a decline, not a rig fault", async () => {
+      const { rig } = fullRig();
+      const procedure: CaptureProcedure = {
+        ...AMBIT_PROCEDURE,
+        steps: [
+          {
+            kind: "read",
+            series: "compass",
+            prompt: "Rotate the device in a figure 8",
+            read: [{ instrument: "dut", command: "get_par", as: "heading" }],
+          },
+        ],
+      };
+
+      const aborted = await abortOf(
+        runCaptureProcedure(
+          procedure,
+          context({
+            rig,
+            operator: operator({ acknowledge: vi.fn(() => Promise.resolve(false)) }),
+          }),
+        ),
+      );
+
+      expect(aborted.reason).toBeInstanceOf(ProcedureDeclined);
+    });
+  });
+
   describe("shutdownRig", () => {
     // Leaving a lamp driven because a sibling instrument's port died is the
-    // one outcome a bench must never see.
-    it("returns every instrument to rest even when one fails", async () => {
+    // one outcome a bench must never see, and the failure to zero it the one
+    // thing the operator must be told.
+    it("returns every instrument to rest even when one fails, then says which failed", async () => {
       const failing = createMockTransport();
       vi.mocked(failing.send).mockRejectedValue(new Error("port closed"));
       const healthy = createMockTransport();
@@ -1016,7 +1136,7 @@ describe("runCaptureProcedure", () => {
       await first.initialize(failing);
       await second.initialize(healthy);
 
-      await shutdownRig([first, second]);
+      await expect(shutdownRig([first, second])).rejects.toThrow(/not at rest.*port closed/);
 
       expect(healthy.send).toHaveBeenCalledWith(KIPRIM_COMMANDS.setCurrent(0));
     });

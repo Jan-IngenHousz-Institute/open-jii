@@ -380,13 +380,19 @@ async function writeBlock(
     return { verified: false, error: `No writers for block "${block}"` };
   }
 
+  // Every writer is resolved before anything is sent: a block with one uncovered
+  // coefficient is refused whole, not left half on the device.
+  const resolved: { label: string; writer: CoefficientWriter; value: CoefficientValue }[] = [];
   for (const [name, value] of Object.entries(coefficients)) {
     const writer = writers.coefficients[name];
     const label = `${block}.${name}`;
     if (!writer) {
       return { verified: false, error: `No writer for coefficient "${label}"` };
     }
+    resolved.push({ label, writer, value });
+  }
 
+  for (const { label, writer, value } of resolved) {
     const failure = await writeCoefficient(driver, writer, label, value, pacer, sleep);
     if (failure) {
       return { verified: false, error: failure };

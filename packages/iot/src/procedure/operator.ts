@@ -32,6 +32,14 @@ export class ProcedureRigError extends Error {
   }
 }
 
+/** Raised when the caller's signal stops a run between two things it was about to do. */
+export class ProcedureStopped extends Error {
+  constructor() {
+    super("The run was stopped");
+    this.name = "ProcedureStopped";
+  }
+}
+
 export interface OperatorPort {
   /** When `confirm` is set the operator must type that exact token; returning false declines the step. */
   acknowledge(prompt: string, confirm?: string): Promise<boolean>;

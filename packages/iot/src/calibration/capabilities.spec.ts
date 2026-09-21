@@ -40,6 +40,13 @@ describe("familyCalibrationCapabilities", () => {
       { name: "channel_coefficients", isArray: true },
     ]);
     expect(minipar.writableCoefficients.par?.every((entry) => !entry.isArray)).toBe(true);
+
+    // A vector written in one command has exactly as many entries as the device holds;
+    // the placeholder length an author would otherwise be offered fails at the write.
+    const ambit = familyCalibrationCapabilities("ambit");
+    expect(ambit.writableCoefficients.baseline).toEqual([
+      { name: "channels", isArray: true, length: 6 },
+    ]);
   });
 
   // A read step names a console command, and a misremembered one only fails at the bench.

@@ -48,6 +48,12 @@ export interface WritableCoefficient {
   name: string;
   /** A per-channel coefficient: written entry by entry, and submitted as an array. */
   isArray: boolean;
+  /**
+   * How many entries the device holds, where the writer knows: a vector written in one
+   * command has exactly this many. Absent for an array written entry by entry, whose
+   * length is the sensor's channel count and the definition's to declare.
+   */
+  length?: number;
 }
 
 export interface FamilyCalibrationCapabilities {
@@ -83,6 +89,7 @@ export function familyCalibrationCapabilities(family: SensorFamily): FamilyCalib
       writableCoefficients[block] = Object.entries(writers.coefficients).map(([name, writer]) => ({
         name,
         isArray: writer?.kind !== "scalar",
+        ...(writer?.kind === "vector" ? { length: writer.entries.count } : {}),
       }));
     }
   }
