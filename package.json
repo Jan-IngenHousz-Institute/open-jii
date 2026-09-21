@@ -38,7 +38,8 @@
     "linear:check": "pnpm --filter @repo/devkit linear:check --",
     "linear:create": "pnpm --filter @repo/devkit linear:create --",
     "linear:query": "pnpm --filter @repo/devkit linear:query --",
-    "linear:taxonomy": "pnpm --filter @repo/devkit linear:taxonomy --"
+    "linear:taxonomy": "pnpm --filter @repo/devkit linear:taxonomy --",
+    "linear:upload": "pnpm --filter @repo/devkit linear:upload --"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",
