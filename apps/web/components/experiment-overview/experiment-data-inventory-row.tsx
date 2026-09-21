@@ -1,5 +1,6 @@
 "use client";
 
+import { formatLocaleNumber } from "@/util/format-locale-number";
 import { useLocale } from "~/hooks/useLocale";
 import { datasetLabel } from "~/util/dataset-label";
 
@@ -20,9 +21,7 @@ export function ExperimentDataInventoryRow({ table }: ExperimentDataInventoryRow
       <span className="truncate font-medium">{datasetLabel(table)}</span>
 
       <span className="text-muted-foreground shrink-0 text-xs">
-        <span className="tabular-nums">
-          {new Intl.NumberFormat(locale).format(table.totalRows)}
-        </span>{" "}
+        <span className="tabular-nums">{formatLocaleNumber(table.totalRows, locale)}</span>{" "}
         {t("dataInventory.rowUnit", { count: table.totalRows })}
       </span>
     </li>

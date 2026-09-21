@@ -2,6 +2,7 @@
 
 import { useLocale } from "@/hooks/useLocale";
 import { datasetLabel } from "@/util/dataset-label";
+import { formatLocaleNumber } from "@/util/format-locale-number";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
 
@@ -42,7 +43,6 @@ export function DatasetPicker({ tables, value, onChange }: DatasetPickerProps) {
   const locale = useLocale();
   const [open, setOpen] = useState(false);
 
-  const number = new Intl.NumberFormat(locale);
   const selected = tables.find((table) => table.identifier === value);
 
   const renderRow = (table: ExperimentTableMetadata) => (
@@ -59,7 +59,7 @@ export function DatasetPicker({ tables, value, onChange }: DatasetPickerProps) {
       />
       <span className="min-w-0 flex-1 truncate">{datasetLabel(table)}</span>
       <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-        {number.format(table.totalRows)}
+        {formatLocaleNumber(table.totalRows, locale)}
       </span>
     </CommandItem>
   );
@@ -92,7 +92,7 @@ export function DatasetPicker({ tables, value, onChange }: DatasetPickerProps) {
               <span className="text-muted-foreground text-xs tabular-nums">
                 {t("experimentData.datasetRows", {
                   count: selected.totalRows,
-                  rows: number.format(selected.totalRows),
+                  rows: formatLocaleNumber(selected.totalRows, locale),
                 })}
               </span>
             )}

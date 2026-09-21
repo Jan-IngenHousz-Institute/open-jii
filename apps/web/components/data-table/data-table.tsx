@@ -3,6 +3,7 @@
 import { isEditableTarget } from "@/components/shortcuts/is-editable-target";
 import { showShortcutHint } from "@/components/shortcuts/use-shortcut-hint";
 import { useLocale } from "@/hooks/useLocale";
+import { formatLocaleNumber } from "@/util/format-locale-number";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import type { OnChangeFn, PaginationState, RowSelectionState } from "@tanstack/react-table";
 import { useTable } from "@tanstack/react-table";
@@ -253,7 +254,7 @@ export function DataTable({
       {isPaged && (
         <div className="mt-4 flex w-full flex-col items-center justify-between gap-4 overflow-auto p-1 text-sm sm:flex-row sm:gap-8">
           <div className="flex-1 whitespace-nowrap">
-            {t("dataTable.totalRows")}: {totalRows.toLocaleString(locale)}
+            {t("dataTable.totalRows")}: {formatLocaleNumber(totalRows, locale)}
           </div>
           <div className="flex items-center space-x-2">
             <Label className="whitespace-nowrap">{t("dataTable.rowsPerPage")}:</Label>

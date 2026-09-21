@@ -13,6 +13,7 @@ import { useIotFleetMonitoring } from "@/hooks/iot/useIotFleetMonitoring/useIotF
 import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime } from "@/util/date";
 import { resolveDeviceLabel } from "@/util/device-presentation";
+import { formatLocaleNumber } from "@/util/format-locale-number";
 import { AlertTriangle } from "lucide-react";
 import { useState } from "react";
 
@@ -199,9 +200,13 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
           locale={locale}
           label={t("iot.devices.monitoring.measurements")}
           value={
-            total === undefined ? <Skeleton className="h-7 w-16" /> : total.toLocaleString(locale)
+            total === undefined ? (
+              <Skeleton className="h-7 w-16" />
+            ) : (
+              formatLocaleNumber(total, locale)
+            )
           }
-          title={total === undefined ? undefined : total.toLocaleString(locale)}
+          title={total === undefined ? undefined : formatLocaleNumber(total, locale)}
           seriesName={t("iot.devices.monitoring.measurements")}
           days={sparkSeries}
           peakDate={peakBucket}
@@ -226,7 +231,7 @@ export function FleetOverviewDashboard({ children }: { children?: React.ReactNod
             attention === undefined ? (
               <Skeleton className="h-7 w-16" />
             ) : (
-              attention.length.toLocaleString(locale)
+              formatLocaleNumber(attention.length, locale)
             )
           }
           note={
