@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { repositoryRoot, resolveLinearApiKey } from "../lib/config.js";
+import { pathFromRoot, repositoryRoot, requireLinearApiKey } from "../lib/config.js";
 import { createFileAudit, createLinearClient } from "../lib/linear.js";
 import type { LinearClient } from "../lib/linear.js";
 
@@ -176,13 +176,12 @@ export function parseArgs(args: string[]): { file: string; apply: boolean; batch
 
 async function run(args: string[]): Promise<number> {
   const { file, apply, batchSize } = parseArgs(args);
-  const rows = parseChangeFile(await readFile(file, "utf8"));
+  const rows = parseChangeFile(await readFile(pathFromRoot(file, repositoryRoot()), "utf8"));
   const write = (text: string): void => {
     process.stdout.write(text);
   };
   const root = repositoryRoot();
-  const apiKey = await resolveLinearApiKey(root, process.env);
-  if (!apiKey) throw new Error("No Linear key found; run pnpm linear:auth first");
+  const apiKey = await requireLinearApiKey(root, process.env);
 
   const client = createLinearClient({ apiKey, audit: createFileAudit(root) });
   await applyChanges(rows, apply, { client, write, batchSize });

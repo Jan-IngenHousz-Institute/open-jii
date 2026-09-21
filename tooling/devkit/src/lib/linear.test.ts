@@ -1,6 +1,15 @@
+import { mkdtemp, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
-import { createLinearClient, describeOperation, isDestructive, selectsSecret } from "./linear.js";
+import {
+  createFileAudit,
+  createLinearClient,
+  describeOperation,
+  isDestructive,
+  selectsSecret,
+} from "./linear.js";
 import type { AuditEntry } from "./linear.js";
 
 function okResponse(data: unknown): Response {
@@ -157,6 +166,34 @@ describe("createLinearClient", () => {
 
     await expect(client.query("{ viewer { name } }")).rejects.toThrow(
       "Linear query failed: bad; worse",
+    );
+  });
+});
+
+describe("createFileAudit", () => {
+  it("names the session and checkout on every line, and marks destructive mutations", async () => {
+    const root = await mkdtemp(join(tmpdir(), "devkit-audit-"));
+    const audit = createFileAudit(root, { CLAUDE_CODE_SESSION_ID: "sess-1" });
+
+    await audit({ at: "t1", ok: true, fields: ["issueCreate"], variables: "{}" });
+    await audit({ at: "t2", ok: false, fields: ["projectUpdateArchive"], variables: '{"id":"x"}' });
+
+    expect(await readFile(join(root, ".claude", "linear-writes.log"), "utf8")).toBe(
+      `t1 ok issueCreate session=sess-1 root=${root} {}\n` +
+        `t2 failed projectUpdateArchive session=sess-1 root=${root} destructive {"id":"x"}\n`,
+    );
+  });
+
+  it("records a plain shell when no agent session is set", async () => {
+    const root = await mkdtemp(join(tmpdir(), "devkit-audit-"));
+
+    await createFileAudit(
+      root,
+      {},
+    )({ at: "t", ok: true, fields: ["issueUpdate"], variables: "{}" });
+
+    expect(await readFile(join(root, ".claude", "linear-writes.log"), "utf8")).toContain(
+      "session=shell",
     );
   });
 });

@@ -35,6 +35,8 @@
     "local:login": "pnpm --filter @repo/devkit login --",
     "linear:apply": "pnpm --filter @repo/devkit linear:apply --",
     "linear:auth": "pnpm --filter @repo/devkit linear:auth --",
+    "linear:check": "pnpm --filter @repo/devkit linear:check --",
+    "linear:create": "pnpm --filter @repo/devkit linear:create --",
     "linear:query": "pnpm --filter @repo/devkit linear:query --",
     "linear:taxonomy": "pnpm --filter @repo/devkit linear:taxonomy --"
   },
