@@ -78,6 +78,15 @@ resource "databricks_pipeline" "this" {
     "pipeline.trigger.retry_on_failure" : "false",
   }, var.configuration)
 
+  dynamic "event_log" {
+    for_each = var.event_log != null ? [var.event_log] : []
+    content {
+      catalog = event_log.value.catalog
+      schema  = event_log.value.schema
+      name    = event_log.value.name
+    }
+  }
+
   # Development mode can be toggled
   development = var.development_mode
 

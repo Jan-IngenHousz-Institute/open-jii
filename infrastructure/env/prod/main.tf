@@ -714,6 +714,12 @@ module "centrum_pipeline" {
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
   }
 
+  event_log = {
+    catalog = module.databricks_catalog.catalog_name
+    schema  = "centrum"
+    name    = "centrum_pipeline_event_log"
+  }
+
   continuous_mode  = true
   development_mode = true
   serverless       = false

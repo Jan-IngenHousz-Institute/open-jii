@@ -137,3 +137,13 @@ variable "environment_dependencies" {
     error_message = "environment_dependencies applies to serverless pipelines only; non-serverless pipelines install libraries through their cluster policy."
   }
 }
+
+variable "event_log" {
+  description = "Unity Catalog table the pipeline publishes its event log to. Unpublished, the log belongs to the principal the pipeline runs as and event_log() returns PERMISSION_DENIED for everyone else, which hides the refresh technique each flow actually chose."
+  type = object({
+    catalog = string
+    schema  = string
+    name    = string
+  })
+  default = null
+}
