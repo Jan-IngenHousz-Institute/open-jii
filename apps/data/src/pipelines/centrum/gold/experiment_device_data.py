@@ -27,10 +27,9 @@ from openjii.centrum import (
     }
 )
 def experiment_device_data():
-    """Join only, so it refreshes row by row once its sources carry row tracking.
-
-    The aggregate it used to perform now lives in agg_experiment_device, which is
-    what lets that side refresh incrementally instead of rescanning silver.
+    """Join only. The aggregate it used to perform now lives in
+    agg_experiment_device, which is what lets that side convert to a streaming
+    table instead of rescanning silver on every trigger.
     """
     aggregated = dlt.read(AGG_EXPERIMENT_DEVICE_TABLE).withColumn(
         "id",

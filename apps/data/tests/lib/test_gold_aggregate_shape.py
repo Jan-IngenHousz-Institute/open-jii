@@ -1,5 +1,7 @@
-"""A materialized view whose aggregate is not the top node of its query cannot
-refresh incrementally, so it rescans its whole source every trigger.
+"""This pipeline is continuous and not serverless, so every materialized view in
+it is fully recomputed on every trigger. The only route off a full scan of silver
+is converting these tables to streaming tables, and a table whose aggregate is not
+the top node of its query cannot convert.
 
 Three gold tables used to sit in that shape: a registry or profile lookup above a
 distinct, and a join above a groupBy. Each is now split, with the aggregate alone
@@ -62,8 +64,8 @@ def test_the_aggregating_tables_call_no_enrichment_udf(filename: str) -> None:
     ],
 )
 def test_the_enriching_tables_read_the_split_table_not_silver(filename: str, reads: str) -> None:
-    """Reading silver here would put the full scan back, on the side that still
-    recomputes in full."""
+    """Reading silver here would put the full scan back, on the side that stays a
+    materialized view."""
     source = (_GOLD / filename).read_text()
 
     assert reads in source

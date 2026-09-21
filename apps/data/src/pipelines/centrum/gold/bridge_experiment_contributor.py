@@ -4,9 +4,11 @@
 # so a bridge rather than a dimension.
 #
 # Split out of experiment_contributors so the aggregate is the top node of its
-# own table. A materialized view whose aggregate is not the top node cannot
-# refresh incrementally, and the profile lookup above the distinct was enough to
-# force a full scan of silver on every trigger.
+# own table, which is the precondition for converting it to a streaming table.
+# This pipeline is continuous and not serverless, so a materialized view here is
+# always fully recomputed; the only way off a full scan of silver is to stop
+# being one. The profile lookup that used to sit above the distinct is now
+# downstream, in experiment_contributors.
 
 # COMMAND ----------
 import dlt

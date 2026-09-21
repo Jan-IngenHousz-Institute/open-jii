@@ -4,8 +4,8 @@
 # so a bridge rather than a dimension.
 #
 # Split out of experiment_devices for the same reason as the contributor bridge:
-# the registry lookup above the distinct made the aggregate a non-top node, and a
-# materialized view in that shape cannot refresh incrementally.
+# the registry lookup above the distinct made the aggregate a non-top node, which
+# a streaming-table conversion cannot carry.
 
 # COMMAND ----------
 import dlt

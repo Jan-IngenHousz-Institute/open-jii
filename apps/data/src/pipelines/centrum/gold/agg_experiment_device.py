@@ -7,6 +7,10 @@
 # Split out of experiment_device_data so the aggregate is the top node of its own
 # table. The registry join that used to sit above it forced a full scan of silver
 # on every trigger.
+#
+# This one does not convert to a streaming table as it stands: AUTO CDC upserts
+# by key but does not sum, and a running count over an unbounded stream is
+# stateful. OJD-1923 settles that before the conversion starts.
 
 # COMMAND ----------
 import dlt
