@@ -22,17 +22,8 @@ module "ecr" {
   tags = local.common_tags
 }
 
-module "flow_logs" {
-  source = "../vpc-flow-logs"
-
-  name_prefix       = "calibration-sandbox"
-  environment       = var.environment
-  subnet_ids        = var.isolated_subnet_ids
-  retention_in_days = var.flow_log_retention_days
-
-  tags = local.common_tags
-}
-
+# The isolated subnets are already flow-logged by the macro sandbox that shares them; a
+# second ALL log of the same subnets doubles the cost and says nothing new.
 module "lambda" {
   source = "../calibration-lambda"
 
@@ -46,7 +37,7 @@ module "lambda" {
   memory  = var.memory
   timeout = var.timeout
 
-  flow_log_group_name = module.flow_logs.log_group_name
+  flow_log_group_name = var.flow_log_group_name
   log_retention_days  = var.log_retention_days
 
   reserved_concurrent_executions = var.reserved_concurrent_executions

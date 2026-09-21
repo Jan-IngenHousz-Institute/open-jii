@@ -1100,7 +1100,7 @@ EOT
 # Calibration Sandbox Alerts
 # A bench session produces a handful of invocations a day, so the macro sandbox's
 # "more than 10 errors in 5 minutes" would never fire here. The thresholds below are
-# set for that volume: a couple of failures running together is the feature being down.
+# set for that volume: one failure or one throttle is the feature being down.
 resource "grafana_rule_group" "calibration_sandbox_health" {
   count = var.calibration_sandbox_function_name != "" ? 1 : 0
 
@@ -1160,7 +1160,7 @@ EOT
       datasource_uid = "__expr__"
 
       model = jsonencode({
-        expression = "$B > 2"
+        expression = "$B > 0"
         type       = "math"
         refId      = "C"
       })
@@ -1171,13 +1171,16 @@ EOT
       }
     }
 
+    # The handler answers every script fault itself, so a function error is the runtime
+    # failing, and one is worth a page. The hold is one evaluation: with a 5-minute window
+    # summed each minute, a 5-minute hold let a single error age out before it fired.
     no_data_state  = "OK"
     exec_err_state = "OK"
-    for            = "5m"
+    for            = "1m"
 
     annotations = {
-      description = "Calibration sandbox Lambda has more than 2 errors in the last 5 minutes"
-      summary     = "Calibration sandbox error rate high"
+      description = "Calibration sandbox Lambda has failed in the last 5 minutes"
+      summary     = "Calibration sandbox errors"
     }
     labels = {
       severity = "warning"
@@ -1248,7 +1251,7 @@ EOT
 
     no_data_state  = "OK"
     exec_err_state = "OK"
-    for            = "5m"
+    for            = "1m"
 
     annotations = {
       description = "Calibration sandbox Lambda is being throttled, so a bench session cannot compute its coefficients"

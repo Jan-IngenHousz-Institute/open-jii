@@ -290,14 +290,14 @@ module "calibration_sandbox" {
   ci_cd_role_arn      = module.iam_oidc.role_arn
   isolated_subnet_ids = module.vpc.isolated_subnets
   lambda_sg_id        = module.vpc.calibration_sandbox_lambda_security_group_id
+  flow_log_group_name = module.macro_sandbox.flow_log_group_name
 
   # The handler stops a fitting script at 30s and returns its own error, so the
   # function needs headroom above that for the graceful failure to win.
   memory  = 1024
   timeout = 45
 
-  log_retention_days      = 30
-  flow_log_retention_days = 30
+  log_retention_days = 30
 
   reserved_concurrent_executions = 10
 

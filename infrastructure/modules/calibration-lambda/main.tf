@@ -60,31 +60,9 @@ resource "aws_iam_role_policy" "lambda_vpc" {
   })
 }
 
-resource "aws_iam_role_policy" "lambda_ecr" {
-  name = "ecr-pull"
-  role = aws_iam_role.lambda.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "ecr:BatchCheckLayerAvailability",
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage"
-        ]
-        Resource = [var.ecr_repository_arn]
-      },
-      {
-        Effect   = "Allow"
-        Action   = "ecr:GetAuthorizationToken"
-        Resource = "*"
-      }
-    ]
-  })
-}
-
+# No ECR permissions on the execution role: the Lambda service pulls the image under the
+# repository policy, which grants its principal directly. On the role they would only
+# hand escaped code a registry credential.
 resource "aws_iam_role_policy" "lambda_deny" {
   name = "explicit-deny-dangerous-services"
   role = aws_iam_role.lambda.id
@@ -131,6 +109,24 @@ resource "aws_iam_role_policy" "lambda_deny" {
           "ec2:ModifyInstanceAttribute"
         ]
         Resource = "*"
+      },
+      {
+        # The role must manage network interfaces for the Lambda service to attach the
+        # function to the VPC, and function code inherits the same role. A call made from
+        # inside a running function carries lambda:SourceFunctionArn; the service's own
+        # calls do not, so this denies the code what the service keeps.
+        Sid    = "DenyEniManagementFromFunctionCode"
+        Effect = "Deny"
+        Action = [
+          "ec2:CreateNetworkInterface",
+          "ec2:DeleteNetworkInterface",
+          "ec2:AssignPrivateIpAddresses",
+          "ec2:UnassignPrivateIpAddresses"
+        ]
+        Resource = "*"
+        Condition = {
+          Null = { "lambda:SourceFunctionArn" = "false" }
+        }
       },
       {
         # Without scoping Resource to KMS, NotAction = ["kms:Decrypt"]
@@ -188,7 +184,6 @@ resource "aws_lambda_function" "this" {
   depends_on = [
     aws_iam_role_policy.lambda_logs,
     aws_iam_role_policy.lambda_vpc,
-    aws_iam_role_policy.lambda_ecr,
     aws_cloudwatch_log_group.lambda
   ]
 }

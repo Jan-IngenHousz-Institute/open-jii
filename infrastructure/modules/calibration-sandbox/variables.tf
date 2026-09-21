@@ -58,10 +58,9 @@ variable "log_retention_days" {
   default     = 7
 }
 
-variable "flow_log_retention_days" {
-  description = "CloudWatch log retention for VPC flow logs (days)"
-  type        = number
-  default     = 14
+variable "flow_log_group_name" {
+  description = "Flow log group of the isolated subnets, owned by the macro sandbox that shares them; the rejected-traffic metric reads it"
+  type        = string
 }
 
 variable "tags" {

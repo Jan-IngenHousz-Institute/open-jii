@@ -244,16 +244,18 @@ resource "aws_security_group" "macro_sandbox_lambda" {
 }
 
 # Egress: HTTPS to VPC CIDR (ECR API, ECR DKR, CloudWatch Logs VPC endpoints)
+# The destination is the endpoint security group, not the VPC CIDR: a function running
+# hostile code must reach the three interface endpoints and nothing else in the VPC.
 resource "aws_security_group_rule" "macro_sandbox_lambda_egress" {
   count = var.create_macro_sandbox_resources ? 1 : 0
 
-  type              = "egress"
-  from_port         = 443
-  to_port           = 443
-  protocol          = "tcp"
-  cidr_blocks       = [aws_vpc.this.cidr_block]
-  security_group_id = aws_security_group.macro_sandbox_lambda[0].id
-  description       = "HTTPS to VPC endpoints (ECR API, ECR DKR, CloudWatch Logs)"
+  type                     = "egress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.macro_sandbox_vpc_endpoints[0].id
+  security_group_id        = aws_security_group.macro_sandbox_lambda[0].id
+  description              = "HTTPS to the interface endpoints only (ECR API, ECR DKR, CloudWatch Logs)"
 }
 
 # -------------------------
@@ -341,16 +343,18 @@ resource "aws_security_group" "calibration_sandbox_lambda" {
   }
 }
 
+# The destination is the endpoint security group, not the VPC CIDR: a function running
+# hostile code must reach the three interface endpoints and nothing else in the VPC.
 resource "aws_security_group_rule" "calibration_sandbox_lambda_egress" {
-  count = var.create_calibration_sandbox_resources ? 1 : 0
+  count = (var.create_macro_sandbox_resources && var.create_calibration_sandbox_resources) ? 1 : 0
 
-  type              = "egress"
-  from_port         = 443
-  to_port           = 443
-  protocol          = "tcp"
-  cidr_blocks       = [aws_vpc.this.cidr_block]
-  security_group_id = aws_security_group.calibration_sandbox_lambda[0].id
-  description       = "HTTPS to VPC endpoints (ECR API, ECR DKR, CloudWatch Logs)"
+  type                     = "egress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.macro_sandbox_vpc_endpoints[0].id
+  security_group_id        = aws_security_group.calibration_sandbox_lambda[0].id
+  description              = "HTTPS to the interface endpoints only (ECR API, ECR DKR, CloudWatch Logs)"
 }
 
 resource "aws_security_group_rule" "vpc_endpoint_ingress_from_calibration_sandbox" {
