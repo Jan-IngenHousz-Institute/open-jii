@@ -883,7 +883,6 @@
         "step": "Step {{index}} of {{total}}: {{description}}",
         "stepCounter": "Step {{index}} of {{total}}",
         "setpoint": "Setpoint {{index}} of {{total}}, at {{value}}",
-        "series": "{{series}}: {{rows}} rows captured",
         "skipped": "{{series}} skipped: {{reason}}",
         "hint": "The bench walks the procedure and records each reading as it arrives. Answer what it asks along the way.",
         "submitting": "Computing coefficients…",
@@ -897,7 +896,9 @@
         "retrySubmit": "Record these readings again",
         "pointsOf": "{{taken}} of {{total}} points",
         "pointsTaken": "{{taken}} points",
-        "retaken": "{{series}} point {{point}} taken again (attempt {{attempt}})"
+        "retaken": "{{series}} point {{point}} taken again (attempt {{attempt}})",
+        "series_one": "{{series}}: {{count}} row captured",
+        "series_other": "{{series}}: {{count}} rows captured"
       },
       "review": {
         "hint": "Approving applies the computed blocks to this device's record. Nothing reaches the hardware until the next step.",

@@ -883,7 +883,6 @@
         "step": "Stap {{index}} van {{total}}: {{description}}",
         "stepCounter": "Stap {{index}} van {{total}}",
         "setpoint": "Instelpunt {{index}} van {{total}}, bij {{value}}",
-        "series": "{{series}}: {{rows}} rijen vastgelegd",
         "skipped": "{{series}} overgeslagen: {{reason}}",
         "hint": "De meetopstelling doorloopt de procedure en legt elke meting vast zodra die binnenkomt. Beantwoord onderweg wat er wordt gevraagd.",
         "submitting": "Coëfficiënten berekenen…",
@@ -897,7 +896,9 @@
         "retrySubmit": "Deze metingen opnieuw vastleggen",
         "pointsOf": "{{taken}} van {{total}} punten",
         "pointsTaken": "{{taken}} punten",
-        "retaken": "{{series}} punt {{point}} opnieuw genomen (poging {{attempt}})"
+        "retaken": "{{series}} punt {{point}} opnieuw genomen (poging {{attempt}})",
+        "series_one": "{{series}}: {{count}} rij vastgelegd",
+        "series_other": "{{series}}: {{count}} rijen vastgelegd"
       },
       "review": {
         "hint": "Goedkeuren past de berekende blokken toe op het record van dit apparaat. De hardware wordt pas in de volgende stap beschreven.",

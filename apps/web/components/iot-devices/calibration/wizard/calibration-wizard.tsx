@@ -144,6 +144,7 @@ export function CalibrationWizard({
   const [isReported, setIsReported] = useState(false);
   const [verification, setVerification] = useState<CalibrationRunPayload | null>(null);
   const [verifyOutcome, setVerifyOutcome] = useState<PhaseResult | null>(null);
+  const [hasChecked, setHasChecked] = useState(false);
 
   const definitions = useCalibrationDefinitions(family);
   const definition = useCalibrationDefinition(definitionId);
@@ -349,6 +350,10 @@ export function CalibrationWizard({
     const wroteSomething = Object.values(results).some((result) => result.verified);
     if (!hasCheck || !wroteSomething) return undefined;
 
+    // Both phases report through one event stream, so the check may only show it once the
+    // check is what is producing it. Without this the write step listed the capture's own
+    // series under "check with the new coefficients".
+    setHasChecked(true);
     const outcome = await capture.verify();
     const readings = readingsOf(outcome);
     setVerifyOutcome(outcome);
@@ -665,8 +670,8 @@ export function CalibrationWizard({
           error={writeError}
           reportError={reportError}
           isDisconnected={connection === undefined}
-          verifyEvents={capture.events}
-          isVerifying={capture.isRunning}
+          verifyEvents={hasChecked ? capture.events : []}
+          isVerifying={hasChecked && capture.isRunning}
           verification={verification}
           verificationError={isCheckFailure ? (describeFailure()?.headline ?? null) : null}
         />

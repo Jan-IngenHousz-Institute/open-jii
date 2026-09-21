@@ -43,7 +43,7 @@ export function CalibrationCaptureProgress({
       return (
         <li key={index} className="flex items-center gap-2">
           <CheckCircle2 className="text-status-active size-4 shrink-0" aria-hidden />
-          {t("iot.calibration.capture.series", { series: event.series, rows: event.rows })}
+          {t("iot.calibration.capture.series", { series: event.series, count: event.rows })}
         </li>
       );
     }
