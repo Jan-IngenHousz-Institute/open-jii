@@ -19,9 +19,12 @@
 //   Suggested implementation. ...
 //
 // `{{2}}` anywhere in a body or comment becomes the second ticket's identifier once it exists.
+// A title that starts with an identifier, `# OJD-1810 Home shows public research`, updates that
+// ticket's title, body and labels instead of creating one; its state is left alone.
 
 export interface DraftTicket {
   index: number;
+  identifier: string | null;
   title: string;
   labels: string[];
   blocks: number[];
@@ -64,7 +67,10 @@ function list(value: string): string[] {
 
 function parseTicket(index: number, chunk: string): DraftTicket {
   const lines = chunk.split("\n");
-  const title = lines[0].replace(/^# /, "").trim();
+  const heading = lines[0].replace(/^# /, "").trim();
+  const headed = /^([A-Z]+-\d+)\s+(.+)$/.exec(heading);
+  const identifier = headed?.[1] ?? null;
+  const title = (headed?.[2] ?? heading).trim();
   if (title.length === 0) throw new Error(`Ticket ${index}: empty title`);
 
   let labels: string[] = [];
@@ -101,7 +107,15 @@ function parseTicket(index: number, chunk: string): DraftTicket {
   const body = (marker < 0 ? rest : rest.slice(0, marker)).trim();
   const comment = marker < 0 ? null : rest.slice(marker + COMMENT_MARKER.length).trim();
 
-  return { index, title, labels, blocks, body, comment: comment === "" ? null : comment };
+  return {
+    index,
+    identifier,
+    title,
+    labels,
+    blocks,
+    body,
+    comment: comment === "" ? null : comment,
+  };
 }
 
 function referencesIn(text: string): number[] {

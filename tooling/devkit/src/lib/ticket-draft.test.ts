@@ -55,6 +55,21 @@ describe("parseDraft", () => {
     expect(parsed.tickets[1]).toMatchObject({ index: 2, blocks: [], comment: null });
   });
 
+  it("reads an identifier off the title, which marks the ticket as an update", () => {
+    const parsed = parseDraft("# OJD-1810 Home shows public research\n\n## User story\n\nx\n");
+
+    expect(parsed.tickets[0]).toMatchObject({
+      identifier: "OJD-1810",
+      title: "Home shows public research",
+    });
+    expect(
+      parseDraft("# Home shows public research\n\n## User story\n\nx\n").tickets[0],
+    ).toMatchObject({
+      identifier: null,
+      title: "Home shows public research",
+    });
+  });
+
   it("defaults the team and state when there is no front matter", () => {
     expect(parseDraft("# T\n\n## User story\n\nx\n")).toMatchObject({
       project: null,
