@@ -20,7 +20,7 @@ export function CalibrationSeriesSeam({ series }: CalibrationSeriesSeamProps) {
 
   if (series.length === 0) {
     return (
-      <p className="text-muted-foreground border-l py-2 pl-6 text-xs">
+      <p className="text-muted-foreground ml-3 border-l py-2 pl-5 text-xs">
         {t("iot.calibration.seam.recordsNothing")}
       </p>
     );
@@ -43,7 +43,7 @@ export function CalibrationSeriesSeam({ series }: CalibrationSeriesSeamProps) {
   }
 
   return (
-    <div className="border-l py-2 pl-6">
+    <div className="ml-3 border-l py-2 pl-5">
       <p className="text-muted-foreground mb-1 text-xs">{t("iot.calibration.seam.produces")}</p>
       <ul className="space-y-1">{series.map(renderSeries)}</ul>
     </div>

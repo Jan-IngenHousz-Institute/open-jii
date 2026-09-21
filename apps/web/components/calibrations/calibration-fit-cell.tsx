@@ -62,6 +62,8 @@ export function CalibrationFitCell({
       labelText={t("iot.calibration.detail.script")}
       accentColor="var(--node-analysis)"
       readOnly={!canEdit}
+      // Folded like the steps on a closed document; what it submits is on the seam below.
+      isCollapsed={!canEdit}
       className="border"
     >
       <div className="space-y-5 px-4 py-4">

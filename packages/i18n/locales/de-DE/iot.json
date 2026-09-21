@@ -1016,7 +1016,10 @@
         "roleInvalid": "Kleinbuchstaben, Ziffern und Unterstriche, beginnend mit einem Buchstaben.",
         "anyInstrument": "Beliebiges, das sich so meldet",
         "anyInstrumentHint": "Jedes Instrument, dessen Kennung diesen Text enthält. Erst die Angabe des Instruments lässt die Schritte seine Sollwerte und Messwerte anbieten.",
-        "noDeviceSetpoints": "Keine, die die Plattform setzen kann"
+        "drives": "steuert",
+        "answers": "antwortet",
+        "setpointRange": "{{name}} {{min}}…{{max}} {{unit}}",
+        "drivesNothing": "nichts, was die Plattform setzen kann"
       },
       "procedure": {
         "captureHint": "Was der Messplatz tut, in der Reihenfolge, in der er es tut. Jeder Name in einem Schritt stammt aus dem Aufbau darüber.",
@@ -1094,7 +1097,11 @@
         "removeRead": "{{column}} entfernen",
         "operatorReadPrompt": "Referenzwert eingeben",
         "nothingToDrive": "In diesem Aufbau hat nichts einen Sollwert zum Setzen",
-        "emptyPhase": "Keine Schritte."
+        "emptyPhase": "Keine Schritte.",
+        "sweepSpan_one": "{{count}} Punkt bei {{from}} {{unit}}",
+        "sweepSpan_other": "{{count}} Punkte von {{from}} bis {{to}} {{unit}}",
+        "sweepSpanPlain_one": "{{count}} Punkt bei {{from}}",
+        "sweepSpanPlain_other": "{{count}} Punkte von {{from}} bis {{to}}"
       },
       "trial": {
         "action": "Am Messplatz ausführen",
@@ -1165,6 +1172,13 @@
         "procedure": "Ablauf",
         "noProcedure": "Wählen Sie einen Ablauf, um den benötigten Messplatz und die Schritte zu sehen.",
         "deviceUnnamed": "Meldet keine Seriennummer"
+      },
+      "stage": {
+        "stepCount_one": "{{count}} Schritt",
+        "stepCount_other": "{{count}} Schritte",
+        "pointCount_one": "{{count}} Messung",
+        "pointCount_other": "{{count}} Messungen",
+        "waiting": "{{duration}} Wartezeit"
       }
     },
     "workbookBar": {

@@ -106,7 +106,8 @@ export function CalibrationStepCell({
   }
 
   function renderOptionalToggle() {
-    if (!isSkippable) {
+    // The header badge says the same thing to a reader, without a switch they cannot throw.
+    if (!isSkippable || !canEdit) {
       return null;
     }
 
@@ -171,6 +172,9 @@ export function CalibrationStepCell({
         ) : undefined
       }
       readOnly={!canEdit}
+      // A closed procedure is read, not filled in: it opens as the list of what it does,
+      // and a step is unfolded when someone wants that step's detail.
+      isCollapsed={!canEdit}
       className="border"
     >
       <div className="space-y-3 px-4 py-3">

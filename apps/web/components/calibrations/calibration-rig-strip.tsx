@@ -20,6 +20,7 @@ import {
 } from "@repo/ui/components/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 
+import { CalibrationRigChip } from "./calibration-rig-chip";
 import { CalibrationRigRow } from "./calibration-rig-row";
 import type { AuxiliaryInstrument } from "./procedure-edits";
 import {
@@ -31,6 +32,7 @@ import {
   replaceInstrument,
   uniqueRole,
 } from "./procedure-edits";
+import type { SetpointOption } from "./rig-sources";
 import { setpointTargets } from "./rig-sources";
 
 interface CalibrationRigStripProps {
@@ -61,9 +63,11 @@ export function CalibrationRigStrip({
   const takenRoles = procedure.instruments.map((instrument) => instrument.role);
   const usage = instrumentRoleUsage(procedure);
   const hasRoomForMore = procedure.instruments.length < MAX_RIG_INSTRUMENTS;
-  const deviceSetpoints = setpointTargets(procedure, family).find(
-    (target) => target.role === DUT_ROLE,
-  );
+  const targets = setpointTargets(procedure, family);
+
+  function setpointsFor(role: string): SetpointOption[] {
+    return targets.find((target) => target.role === role)?.setpoints ?? [];
+  }
 
   function handleAdd(instrument: BenchInstrumentSummary) {
     onChange(
@@ -76,41 +80,40 @@ export function CalibrationRigStrip({
   }
 
   function renderAddOption(instrument: BenchInstrumentSummary) {
+    const offers = [
+      ...instrument.setpoints.map((setpoint) => setpoint.name),
+      ...instrument.readings.map((reading) => reading.name),
+    ].join(" · ");
+
     return (
       <DropdownMenuItem
         key={instrument.model}
-        className="font-mono"
+        className="flex-col items-start gap-0.5"
         onSelect={() => handleAdd(instrument)}
       >
-        {instrument.model}
+        <span className="font-mono">{instrument.model}</span>
+        <span className="text-muted-foreground font-mono text-[11px]">{offers}</span>
       </DropdownMenuItem>
     );
   }
 
   function renderInstrument(instrument: AuxiliaryInstrument, index: number) {
     const model = instruments.find((candidate) => candidate.model === instrument.model);
-    const answers = [
-      ...(model?.setpoints
-        .map((setpoint) => setpoint.name)
-        .slice(0, 2)
-        .map((name) => `${name}→`) ?? []),
-      ...(model?.readings.map((reading) => reading.name).slice(0, 2) ?? []),
-    ].join(" ");
 
     return (
       <Popover key={index}>
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="bg-card hover:border-primary/40 flex items-center gap-2 rounded-lg border px-3 py-2 text-left"
+            className="bg-card hover:border-primary/40 flex items-start gap-2 rounded-lg border px-3 py-2 text-left"
           >
-            <Settings2 className="text-muted-foreground size-4 shrink-0" aria-hidden />
-            <span className="min-w-0">
-              <span className="block font-mono text-sm">{instrument.role}</span>
-              <span className="text-muted-foreground block font-mono text-[11px]">
-                {answers === "" ? (instrument.model ?? instrument.handshake) : answers}
-              </span>
-            </span>
+            <Settings2 className="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden />
+            <CalibrationRigChip
+              role={instrument.role}
+              model={instrument.model ?? instrument.handshake}
+              setpoints={setpointsFor(instrument.role)}
+              readings={(model?.readings ?? []).map((reading) => reading.name)}
+            />
           </button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-[32rem]">
@@ -131,18 +134,19 @@ export function CalibrationRigStrip({
     );
   }
 
+  // A grid, not a wrapping row: the roles are peers, and card widths should not follow
+  // whatever each instrument's setpoint names happen to be.
   return (
-    <div className="flex flex-wrap items-stretch gap-2">
-      <div className="bg-muted/40 flex items-center gap-2 rounded-lg border border-dashed px-3 py-2">
-        <Cpu className="text-muted-foreground size-4 shrink-0" aria-hidden />
-        <span className="min-w-0">
-          <span className="block font-mono text-sm">{DUT_ROLE}</span>
-          <span className="text-muted-foreground block font-mono text-[11px]">
-            {deviceSetpoints === undefined
-              ? t("iot.calibration.rig.noDeviceSetpoints")
-              : deviceSetpoints.setpoints.map((setpoint) => `${setpoint.name}→`).join(" ")}
-          </span>
-        </span>
+    <div className="grid gap-2 sm:grid-cols-2">
+      <div className="bg-muted/40 flex items-start gap-2 rounded-lg border border-dashed px-3 py-2">
+        <Cpu className="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden />
+        <CalibrationRigChip
+          role={DUT_ROLE}
+          model={t("iot.calibration.rig.dut")}
+          setpoints={setpointsFor(DUT_ROLE)}
+          readings={[]}
+          noSetpoints={t("iot.calibration.rig.drivesNothing")}
+        />
       </div>
 
       {auxiliary.map(renderInstrument)}

@@ -104,11 +104,14 @@ export function CellWrapper({
 }: CellWrapperProps) {
   const [localCollapsed, setLocalCollapsed] = useState(isCollapsed);
   // Non-creators cannot persist collapse state (the update is rejected by the
-  // backend), so the expand/collapse control is hidden and the cell stays open.
-  const collapsed = readOnly ? false : onToggleCollapse ? isCollapsed : localCollapsed;
+  // backend), so a cell whose host stores it stays open for them. One that keeps
+  // the state here folds for anyone, which is how a read-only document is read.
+  const isPersisted = onToggleCollapse !== undefined;
+  const canFold = !readOnly || !isPersisted;
+  const collapsed = !canFold ? false : isPersisted ? isCollapsed : localCollapsed;
 
   const handleToggle = () => {
-    if (readOnly) return;
+    if (!canFold) return;
     if (onToggleCollapse) {
       onToggleCollapse(!collapsed);
     } else {
@@ -136,7 +139,7 @@ export function CellWrapper({
             borderColor: "var(--border)",
           }}
         >
-          {!readOnly && (
+          {canFold && (
             <CollapsibleTrigger asChild>
               <Button
                 variant="ghost"

@@ -64,7 +64,7 @@ export function CalibrationBlocksSeam({ outputSchema, family }: CalibrationBlock
   }
 
   return (
-    <div className="border-l py-2 pl-6">
+    <div className="ml-3 border-l py-2 pl-5">
       <p className="text-muted-foreground mb-1 text-xs">{t("iot.calibration.seam.submits")}</p>
       <ul className="space-y-1">{blocks.map(renderBlock)}</ul>
     </div>

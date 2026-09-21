@@ -334,7 +334,8 @@ export function CalibrationReadRow({
         {renderSampling()}
 
         {canEdit && (
-          <div>
+          // Last on the row wherever the fields wrap to.
+          <div className="ml-auto">
             <Button
               type="button"
               variant="ghost"

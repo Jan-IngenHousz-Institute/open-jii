@@ -1016,7 +1016,10 @@
         "roleInvalid": "Lowercase letters, digits and underscores, starting with a letter.",
         "anyInstrument": "Any that answers the handshake",
         "anyInstrumentHint": "Any instrument whose identity reply carries this handshake. Naming the instrument is what lets the steps offer its setpoints and readings.",
-        "noDeviceSetpoints": "None the platform can drive"
+        "drives": "drives",
+        "answers": "answers",
+        "setpointRange": "{{name}} {{min}}…{{max}} {{unit}}",
+        "drivesNothing": "nothing the platform can set"
       },
       "procedure": {
         "captureHint": "What the bench does, in the order it does it. Every name a step can hold comes from the rig above.",
@@ -1094,7 +1097,11 @@
         "removeRead": "Remove {{column}}",
         "operatorReadPrompt": "Enter the reference reading",
         "nothingToDrive": "Nothing in this rig has a setpoint to drive",
-        "emptyPhase": "No steps."
+        "emptyPhase": "No steps.",
+        "sweepSpan_one": "{{count}} point at {{from}} {{unit}}",
+        "sweepSpan_other": "{{count}} points from {{from}} to {{to}} {{unit}}",
+        "sweepSpanPlain_one": "{{count}} point at {{from}}",
+        "sweepSpanPlain_other": "{{count}} points from {{from}} to {{to}}"
       },
       "trial": {
         "action": "Run at the bench",
@@ -1165,6 +1172,13 @@
         "procedure": "Procedure",
         "noProcedure": "Pick a procedure to see the bench it needs and the steps it runs.",
         "deviceUnnamed": "Reports no serial"
+      },
+      "stage": {
+        "stepCount_one": "{{count}} step",
+        "stepCount_other": "{{count}} steps",
+        "pointCount_one": "{{count}} reading",
+        "pointCount_other": "{{count}} readings",
+        "waiting": "{{duration}} of waiting"
       }
     },
     "workbookBar": {

@@ -73,11 +73,22 @@ describe("CellWrapper", () => {
       readOnly: true,
       onDelete: vi.fn(),
       onRun: vi.fn(),
+      onToggleCollapse: vi.fn(),
     });
 
     // Non-creators get no interactive controls: no delete, no run, and no
     // expand/collapse toggle (toggling it would fail to persist).
     expect(screen.queryAllByRole("button")).toHaveLength(0);
+  });
+
+  it("still folds a read-only cell that keeps its own collapse state", async () => {
+    const user = userEvent.setup();
+    // Nothing is persisted without a handler, so a reader folding a cell costs nothing.
+    renderWrapper({ readOnly: true, collapseLabel: "Collapse cell" });
+
+    await user.click(screen.getByRole("button", { name: "Collapse cell" }));
+
+    expect(screen.queryByTestId("cell-content")).not.toBeInTheDocument();
   });
 
   it("keeps the cell content visible in readOnly mode", () => {

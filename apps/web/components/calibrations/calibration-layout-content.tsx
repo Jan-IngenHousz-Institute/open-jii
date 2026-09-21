@@ -45,8 +45,8 @@ export function CalibrationLayoutContent({
 
   // A document nothing can save has no save state, and "All changes saved" above a
   // read-only page reports on something that is not happening.
-  const saveState = isUpdating ? "saving" : (autosave?.status ?? "idle");
-  const indicatorStatus = canEdit ? saveState : undefined;
+  const saveState = isUpdating ? "saving" : (autosave?.status ?? null);
+  const indicatorStatus = canEdit ? saveState : null;
 
   const handleTitleSave = async (name: string) => {
     await update(

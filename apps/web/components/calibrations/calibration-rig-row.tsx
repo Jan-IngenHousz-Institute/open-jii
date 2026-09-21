@@ -204,7 +204,7 @@ export function CalibrationRigRow({
         </div>
 
         {canEdit && (
-          <div>
+          <div className="ml-auto">
             <Button
               type="button"
               variant="ghost"

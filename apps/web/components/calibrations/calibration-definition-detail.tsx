@@ -5,6 +5,7 @@ import { InlineEditableDescription } from "@/components/shared/inline-editable-d
 import { useCalibrationDefinition } from "@/hooks/iot/useCalibrationDefinition/useCalibrationDefinition";
 import { useUpdateCalibrationDefinition } from "@/hooks/iot/useUpdateCalibrationDefinition/useUpdateCalibrationDefinition";
 import { useAutosave } from "@/hooks/useAutosave";
+import { Lock } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { parseApiError } from "~/util/apiError";
@@ -28,6 +29,7 @@ import { CalibrationRigStrip } from "./calibration-rig-strip";
 import { CalibrationSeriesSeam } from "./calibration-series-seam";
 import { CalibrationStage } from "./calibration-stage";
 import { CalibrationStepsEditor } from "./calibration-steps-editor";
+import { describePhase, phaseSummary } from "./procedure-summary";
 import { producedSeries } from "./produced-series";
 
 /** The parts an author edits in place; the rest of the definition saves on its own. */
@@ -117,10 +119,11 @@ export function CalibrationDefinitionDetail() {
     enabled: definition !== undefined && canEdit,
   });
 
-  // A blocked draft has no save state worth reporting: "all changes saved" would be a
-  // lie, and a spinner would promise a save that is not coming. The alert below says it.
+  // A blocked or frozen draft has no save state worth reporting: "all changes saved" would
+  // be a lie, and a spinner would promise a save that is not coming.
+  const isReportable = canEdit && blocker === null;
   useReportAutosaveStatus({
-    status: blocker === null ? autosave.status : null,
+    status: isReportable ? autosave.status : null,
     error: autosave.error,
   });
 
@@ -144,6 +147,8 @@ export function CalibrationDefinitionDetail() {
 
   const current = edited;
   const captured = producedSeries(current.captureProcedure, "steps");
+  const capture = phaseSummary(current.captureProcedure, "steps");
+  const verify = phaseSummary(current.captureProcedure, "verify");
 
   function editProcedure(captureProcedure: CaptureProcedure) {
     setDraft({ ...current, captureProcedure });
@@ -171,6 +176,7 @@ export function CalibrationDefinitionDetail() {
 
         {!canEdit && (
           <Alert>
+            <Lock className="size-4" aria-hidden />
             <AlertDescription>
               {isFrozen
                 ? t("iot.calibration.detail.frozen", { count: definition.runCount })
@@ -197,7 +203,11 @@ export function CalibrationDefinitionDetail() {
           />
         </CalibrationStage>
 
-        <CalibrationStage index={2} title={t("iot.calibration.detail.steps")}>
+        <CalibrationStage
+          index={2}
+          title={t("iot.calibration.detail.steps")}
+          summary={describePhase(capture, t)}
+        >
           <CalibrationStepsEditor
             procedure={current.captureProcedure}
             phase="steps"
@@ -227,6 +237,7 @@ export function CalibrationDefinitionDetail() {
           index={4}
           title={t("iot.calibration.detail.verify")}
           note={t("iot.calibration.detail.verifyOptional")}
+          summary={verify.steps === 0 ? undefined : describePhase(verify, t)}
         >
           <CalibrationStepsEditor
             procedure={current.captureProcedure}

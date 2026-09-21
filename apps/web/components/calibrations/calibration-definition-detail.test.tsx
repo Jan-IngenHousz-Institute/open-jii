@@ -129,4 +129,22 @@ describe("CalibrationDefinitionDetail", () => {
     await userEvent.click(screen.getByRole("button", { name: /lamp/ }));
     expect(await screen.findByDisplayValue("KIPRIM")).toBeDisabled();
   });
+
+  // Rendered open, a procedure nobody can edit is a page of greyed-out fields.
+  it("opens a closed procedure as a list of its steps", async () => {
+    server.mount(contract.iot.getCalibrationDefinition, {
+      body: { ...definition, runCount: 2 },
+    });
+
+    renderDetail();
+
+    expect(await screen.findByTestId("step-label")).toBeInTheDocument();
+    expect(screen.queryByLabelText("iot.calibration.procedure.instrument")).toBeNull();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "iot.calibration.procedure.expandStep" }),
+    );
+
+    expect(screen.getByLabelText("iot.calibration.procedure.instrument")).toBeDisabled();
+  });
 });

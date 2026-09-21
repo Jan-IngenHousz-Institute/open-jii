@@ -21,6 +21,7 @@ import { CalibrationNumberField } from "./calibration-number-field";
 import { CalibrationReadList } from "./calibration-read-list";
 import { CalibrationSeriesField } from "./calibration-series-field";
 import { CalibrationSetpointRamp } from "./calibration-setpoint-ramp";
+import { CalibrationSetpointShape } from "./calibration-setpoint-shape";
 import { CalibrationSetpointValues } from "./calibration-setpoint-values";
 import type { ReadSource, SetpointTarget } from "./rig-sources";
 
@@ -66,6 +67,10 @@ export function CalibrationSweepStep({
   const setpoint = isDrivenByInstrument
     ? target?.setpoints.find((candidate) => candidate.name === stimulus.set)
     : undefined;
+  // An operator sweep may step through labels or compound setpoints, which have no shape.
+  const numericValues = stimulus.values.flatMap((value) =>
+    typeof value === "number" ? [value] : [],
+  );
 
   function handleDrivenChange(value: string) {
     if (value === OPERATOR_STIMULUS) {
@@ -156,11 +161,20 @@ export function CalibrationSweepStep({
       );
     }
 
+    // The range rides with the label: a hint under one field of a row pushes its
+    // neighbours' labels out of line.
     return (
       <div className="min-w-40 flex-1 space-y-1">
-        <Label htmlFor={setpointId} className="text-xs">
-          {t("iot.calibration.procedure.setpoint")}
-        </Label>
+        <div className="flex items-baseline gap-2">
+          <Label htmlFor={setpointId} className="text-xs">
+            {t("iot.calibration.procedure.setpoint")}
+          </Label>
+          {setpoint !== undefined && (
+            <span className="text-muted-foreground font-mono text-[11px]">
+              {`${String(setpoint.min)}…${String(setpoint.max)} ${setpoint.unit}`}
+            </span>
+          )}
+        </div>
         <Select
           value={stimulus.set}
           onValueChange={handleSetpointChange}
@@ -173,18 +187,14 @@ export function CalibrationSweepStep({
             {(target?.setpoints ?? []).map((candidate) => renderSetpointOption(candidate.name))}
           </SelectContent>
         </Select>
-        {setpoint !== undefined && (
-          <p className="text-muted-foreground font-mono text-xs">
-            {`${String(setpoint.min)}…${String(setpoint.max)} ${setpoint.unit}`}
-          </p>
-        )}
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-3">
+      {/* Top aligned: every field here is labelled, and one carries a hint under it. */}
+      <div className="flex flex-wrap items-start gap-3">
         <CalibrationSeriesField
           series={step.series}
           taken={takenSeries}
@@ -228,15 +238,18 @@ export function CalibrationSweepStep({
         />
       </div>
 
-      <CalibrationSetpointValues
-        values={stimulus.values}
-        numbersOnly={isDrivenByInstrument}
-        canEdit={canEdit}
-        onChange={handleValuesChange}
-      />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <CalibrationSetpointValues
+          values={stimulus.values}
+          numbersOnly={isDrivenByInstrument}
+          canEdit={canEdit}
+          onChange={handleValuesChange}
+        />
+        <CalibrationSetpointShape values={numericValues} unit={setpoint?.unit} />
+      </div>
 
       {/* Only an instrument sweeps a range of numbers; what an operator sets up is named. */}
-      {isDrivenByInstrument && (
+      {isDrivenByInstrument && canEdit && (
         <CalibrationSetpointRamp
           setpoint={setpoint}
           canEdit={canEdit}

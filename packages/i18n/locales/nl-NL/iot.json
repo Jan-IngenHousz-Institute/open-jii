@@ -1016,7 +1016,10 @@
         "roleInvalid": "Kleine letters, cijfers en liggende streepjes, beginnend met een letter.",
         "anyInstrument": "Elk instrument dat zich zo meldt",
         "anyInstrumentHint": "Elk instrument waarvan de identificatie deze tekst bevat. Pas als het instrument benoemd is, kunnen de stappen zijn instelwaarden en meetwaarden aanbieden.",
-        "noDeviceSetpoints": "Geen die het platform kan zetten"
+        "drives": "stuurt aan",
+        "answers": "antwoordt",
+        "setpointRange": "{{name}} {{min}}…{{max}} {{unit}}",
+        "drivesNothing": "niets dat het platform kan instellen"
       },
       "procedure": {
         "captureHint": "Wat de meetbank doet, in de volgorde waarin hij het doet. Elke naam in een stap komt uit de opstelling hierboven.",
@@ -1094,7 +1097,11 @@
         "removeRead": "{{column}} verwijderen",
         "operatorReadPrompt": "Referentiewaarde invoeren",
         "nothingToDrive": "Niets in deze opstelling heeft een instelwaarde om te zetten",
-        "emptyPhase": "Geen stappen."
+        "emptyPhase": "Geen stappen.",
+        "sweepSpan_one": "{{count}} punt op {{from}} {{unit}}",
+        "sweepSpan_other": "{{count}} punten van {{from}} tot {{to}} {{unit}}",
+        "sweepSpanPlain_one": "{{count}} punt op {{from}}",
+        "sweepSpanPlain_other": "{{count}} punten van {{from}} tot {{to}}"
       },
       "trial": {
         "action": "Uitvoeren aan de meetbank",
@@ -1165,6 +1172,13 @@
         "procedure": "Procedure",
         "noProcedure": "Kies een procedure om de benodigde opstelling en de stappen te zien.",
         "deviceUnnamed": "Meldt geen serienummer"
+      },
+      "stage": {
+        "stepCount_one": "{{count}} stap",
+        "stepCount_other": "{{count}} stappen",
+        "pointCount_one": "{{count}} meting",
+        "pointCount_other": "{{count}} metingen",
+        "waiting": "{{duration}} wachten"
       }
     },
     "workbookBar": {
