@@ -23750,6 +23750,28 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 64
+                  },
+                  "skippedSeries": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "series": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500
+                        }
+                      },
+                      "required": [
+                        "series",
+                        "reason"
+                      ]
+                    },
+                    "maxItems": 64
                   }
                 },
                 "required": [
@@ -23868,6 +23890,35 @@
                         }
                       ]
                     },
+                    "skippedSeries": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "series": {
+                                "type": "string",
+                                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                              },
+                              "reason": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 500
+                              }
+                            },
+                            "required": [
+                              "series",
+                              "reason"
+                            ]
+                          },
+                          "maxItems": 64
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "preInfo": {
                       "anyOf": [
                         {
@@ -23961,6 +24012,7 @@
                     "inputSource",
                     "status",
                     "blocks",
+                    "skippedSeries",
                     "preInfo",
                     "postInfo",
                     "firmwareVersion",
@@ -24101,6 +24153,35 @@
                           }
                         ]
                       },
+                      "skippedSeries": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "series": {
+                                  "type": "string",
+                                  "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 500
+                                }
+                              },
+                              "required": [
+                                "series",
+                                "reason"
+                              ]
+                            },
+                            "maxItems": 64
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "preInfo": {
                         "anyOf": [
                           {
@@ -24194,6 +24275,7 @@
                       "inputSource",
                       "status",
                       "blocks",
+                      "skippedSeries",
                       "preInfo",
                       "postInfo",
                       "firmwareVersion",
@@ -24492,6 +24574,35 @@
                         }
                       ]
                     },
+                    "skippedSeries": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "series": {
+                                "type": "string",
+                                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                              },
+                              "reason": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 500
+                              }
+                            },
+                            "required": [
+                              "series",
+                              "reason"
+                            ]
+                          },
+                          "maxItems": 64
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "preInfo": {
                       "anyOf": [
                         {
@@ -24585,6 +24696,7 @@
                     "inputSource",
                     "status",
                     "blocks",
+                    "skippedSeries",
                     "preInfo",
                     "postInfo",
                     "firmwareVersion",
@@ -24718,6 +24830,35 @@
                               "status"
                             ]
                           }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "skippedSeries": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "series": {
+                                "type": "string",
+                                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                              },
+                              "reason": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 500
+                              }
+                            },
+                            "required": [
+                              "series",
+                              "reason"
+                            ]
+                          },
+                          "maxItems": 64
                         },
                         {
                           "type": "null"
@@ -24876,6 +25017,7 @@
                     "inputSource",
                     "status",
                     "blocks",
+                    "skippedSeries",
                     "preInfo",
                     "postInfo",
                     "firmwareVersion",
@@ -25241,6 +25383,35 @@
                         }
                       ]
                     },
+                    "skippedSeries": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "series": {
+                                "type": "string",
+                                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                              },
+                              "reason": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 500
+                              }
+                            },
+                            "required": [
+                              "series",
+                              "reason"
+                            ]
+                          },
+                          "maxItems": 64
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "preInfo": {
                       "anyOf": [
                         {
@@ -25334,6 +25505,7 @@
                     "inputSource",
                     "status",
                     "blocks",
+                    "skippedSeries",
                     "preInfo",
                     "postInfo",
                     "firmwareVersion",
