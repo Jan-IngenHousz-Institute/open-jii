@@ -81,8 +81,8 @@ function fixture(): { client: LinearClient; calls: Call[] } {
         answer = {
           projects: {
             nodes: [
-              { id: "proj-1", name: "Platform home" },
-              { id: "proj-2", name: "Platform home and more" },
+              { id: "proj-1", name: "Platform home", url: "https://linear.app/x/proj-1" },
+              { id: "proj-2", name: "Platform home and more", url: "https://linear.app/x/proj-2" },
             ],
           },
         };

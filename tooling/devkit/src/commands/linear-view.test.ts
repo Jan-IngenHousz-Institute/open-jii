@@ -18,12 +18,14 @@ function fixtureClient(
   };
 }
 
-function workspace(existingView: boolean) {
+function workspace(existingView: boolean, projectName = "Explore your data") {
   const calls: RecordedCall[] = [];
   const client = fixtureClient((document, variables) => {
     calls.push({ document, variables });
     if (document.includes("projects(")) {
-      return { projects: { nodes: [{ id: "p1", name: "Explore your data" }] } };
+      return {
+        projects: { nodes: [{ id: "p1", name: projectName, url: "https://l/project" }] },
+      };
     }
     if (document.includes("organization")) return { organization: { urlKey: "openjii" } };
     if (document.includes("customViews(")) {
@@ -46,10 +48,12 @@ describe("parseArgs and viewUrl", () => {
   it("takes the project name and the apply flag", () => {
     expect(parseArgs(["--project", "Explore your data", "--apply"])).toEqual({
       project: "Explore your data",
+      label: null,
       apply: true,
     });
+    expect(parseArgs(["--project", "A: long name", "--label", "A"]).label).toBe("A");
     expect(() => parseArgs([])).toThrow("Usage: linear-view");
-    expect(() => parseArgs(["--project", "--apply"])).toThrow("Usage: linear-view");
+    expect(() => parseArgs(["--project", "--apply"])).toThrow("--project requires a value");
   });
 
   it("builds the address the way Linear does, from the name and the slug id", () => {
@@ -65,7 +69,7 @@ describe("scaffoldView", () => {
     const lines: string[] = [];
 
     await scaffoldView(
-      { project: "Explore your data", apply: false },
+      { project: "Explore your data", label: null, apply: false },
       { client, write: (t) => lines.push(t) },
     );
 
@@ -82,7 +86,7 @@ describe("scaffoldView", () => {
     const lines: string[] = [];
 
     await scaffoldView(
-      { project: "Explore your data", apply: true },
+      { project: "Explore your data", label: null, apply: true },
       { client, write: (t) => lines.push(t) },
     );
 
@@ -106,11 +110,51 @@ describe("scaffoldView", () => {
     );
   });
 
-  it("reuses a view that already carries the project's name", async () => {
+  it("names the view and the document by the project's short label, not its full name", async () => {
+    const { client, calls } = workspace(
+      false,
+      "Explore your data: dashboard & visualization extensions",
+    );
+
+    await scaffoldView(
+      {
+        project: "Explore your data: dashboard & visualization extensions",
+        label: null,
+        apply: true,
+      },
+      { client, write: () => undefined },
+    );
+
+    const create = calls.find((c) => c.document.includes("customViewCreate"))?.variables;
+    expect(create).toMatchObject({ input: { name: "Explore your data" } });
+    const published = calls.find((c) => c.document.includes("documentCreate"))?.variables;
+    expect(published).toMatchObject({
+      input: { title: "Explore your data: live ticket view" },
+    });
+    expect(JSON.stringify(published)).toContain("https://l/project");
+  });
+
+  it("takes an explicit label over the derived one", async () => {
+    const { client, calls } = workspace(false, "Platform home and research discovery");
+
+    await scaffoldView(
+      { project: "Platform home and research discovery", label: "Platform home", apply: true },
+      { client, write: () => undefined },
+    );
+
+    expect(calls.find((c) => c.document.includes("customViewCreate"))?.variables).toMatchObject({
+      input: { name: "Platform home" },
+    });
+    expect(calls.find((c) => c.document.includes("documentCreate"))?.variables).toMatchObject({
+      input: { title: "Platform home: live ticket view" },
+    });
+  });
+
+  it("reuses a view that already carries the project's label", async () => {
     const { client, calls } = workspace(true);
 
     await scaffoldView(
-      { project: "Explore your data", apply: true },
+      { project: "Explore your data", label: null, apply: true },
       { client, write: () => undefined },
     );
 

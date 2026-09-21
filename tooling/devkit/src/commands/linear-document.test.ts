@@ -23,7 +23,9 @@ function projectClient(existingTitle: string | null) {
   const client = fixtureClient((document, variables) => {
     calls.push({ document, variables });
     if (document.includes("projects(")) {
-      return { projects: { nodes: [{ id: "p1", name: "Explore your data" }] } };
+      return {
+        projects: { nodes: [{ id: "p1", name: "Explore your data", url: "https://l/p1" }] },
+      };
     }
     if (document.includes("documents(")) {
       const nodes =

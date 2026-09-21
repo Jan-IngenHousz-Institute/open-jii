@@ -3,6 +3,7 @@ import type { LinearClient } from "./linear.js";
 export interface ProjectRef {
   id: string;
   name: string;
+  url: string;
 }
 
 export interface ProjectDocument {
@@ -20,11 +21,20 @@ interface DocumentsResult {
 }
 
 const projectsQuery = `query($name: String!) {
-  projects(first: 10, filter: { name: { containsIgnoreCase: $name } }) { nodes { id name } }
+  projects(first: 10, filter: { name: { containsIgnoreCase: $name } }) { nodes { id name url } }
 }`;
 const documentsQuery = `query($id: String!) {
   project(id: $id) { documents(first: 50) { nodes { id title url } } }
 }`;
+
+// A project's documents are titled `<label>: <thing>`, and its view carries the label alone. The
+// label is the project's short name: everything before the first colon, since a project called
+// "Explore your data: dashboard & visualization extensions" would otherwise stutter into
+// "Explore your data: dashboard & visualization extensions: live ticket view".
+export function projectLabel(name: string): string {
+  const head = name.split(":")[0].trim();
+  return head.length > 0 ? head : name.trim();
+}
 
 export function sameName(a: string, b: string): boolean {
   return a.trim().toLowerCase() === b.trim().toLowerCase();

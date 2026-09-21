@@ -1,11 +1,13 @@
 import { repositoryRoot, requireLinearApiKey } from "../lib/config.js";
 import { createFileAudit, createLinearClient } from "../lib/linear.js";
 import type { LinearClient } from "../lib/linear.js";
-import { findProject, sameName } from "../lib/projects.js";
+import { findProject, projectLabel, sameName } from "../lib/projects.js";
 import { publishDocument } from "./linear-document.js";
 
 export interface ViewArgs {
   project: string;
+  // The short name the view and the document title carry; the project's own by default.
+  label: string | null;
   apply: boolean;
 }
 
@@ -32,13 +34,20 @@ const customViewCreateMutation = `mutation($input: CustomViewCreateInput!) {
   customViewCreate(input: $input) { success customView { id slugId } }
 }`;
 
+function optionAfter(args: string[], flag: string): string | null {
+  const index = args.indexOf(flag);
+  if (index < 0) return null;
+  const value = args[index + 1];
+  if (!value || value.startsWith("--")) throw new Error(`${flag} requires a value`);
+  return value;
+}
+
 export function parseArgs(args: string[]): ViewArgs {
-  const index = args.indexOf("--project");
-  const project = index >= 0 ? args[index + 1] : undefined;
-  if (!project || project.startsWith("--")) {
-    throw new Error('Usage: linear-view --project "<name>" [--apply]');
+  const project = optionAfter(args, "--project");
+  if (project === null) {
+    throw new Error('Usage: linear-view --project "<name>" [--label "<short name>"] [--apply]');
   }
-  return { project, apply: args.includes("--apply") };
+  return { project, label: optionAfter(args, "--label"), apply: args.includes("--apply") };
 }
 
 // Linear builds a view's address from its name and slug id the same way it does for projects.
@@ -50,9 +59,9 @@ export function viewUrl(urlKey: string, name: string, slugId: string): string {
   return `https://linear.app/${urlKey}/view/${slug}-${slugId}`;
 }
 
-export function viewDocument(projectName: string, url: string, projectUrl: string): string {
+export function viewDocument(label: string, url: string, projectUrl: string): string {
   return [
-    `[Open the live ${projectName} ticket view](${url}).`,
+    `[Open the live ${label} ticket view](${url}).`,
     "",
     "This shared view includes every issue in the project. Status, assignee and ticket content come from the live issues.",
     "",
@@ -65,22 +74,23 @@ export function viewDocument(projectName: string, url: string, projectUrl: strin
 // after the project so the artifact index can link them without knowing their ids.
 export async function scaffoldView(args: ViewArgs, deps: ViewDependencies): Promise<void> {
   const project = await findProject(deps.client, args.project);
+  const label = args.label ?? projectLabel(project.name);
   const organization = await deps.client.query<OrganizationResult>(organizationQuery);
   const views = await deps.client.query<CustomViewsResult>(customViewsQuery);
-  const existing = views.customViews.nodes.find((view) => sameName(view.name, project.name));
+  const existing = views.customViews.nodes.find((view) => sameName(view.name, label));
   const urlKey = organization.organization.urlKey;
 
   deps.write(
     existing
-      ? `view "${project.name}" exists: ${viewUrl(urlKey, project.name, existing.slugId)}\n`
-      : `view "${project.name}": create, shared, filtered to the project\n`,
+      ? `view "${label}" exists: ${viewUrl(urlKey, label, existing.slugId)}\n`
+      : `view "${label}": create, shared, filtered to the project\n`,
   );
 
   let slugId = existing?.slugId ?? null;
   if (args.apply && slugId === null) {
     const result = await deps.client.query<CustomViewCreateResult>(customViewCreateMutation, {
       input: {
-        name: project.name,
+        name: label,
         description: `Every issue in the ${project.name} project, with status and assignee.`,
         projectId: project.id,
         shared: true,
@@ -89,18 +99,16 @@ export async function scaffoldView(args: ViewArgs, deps: ViewDependencies): Prom
     });
     if (!result.customViewCreate.success) throw new Error("Creating the view did not succeed");
     slugId = result.customViewCreate.customView.slugId;
-    deps.write(`created ${viewUrl(urlKey, project.name, slugId)}\n`);
+    deps.write(`created ${viewUrl(urlKey, label, slugId)}\n`);
   }
 
-  const url =
-    slugId === null ? "(the view's URL once created)" : viewUrl(urlKey, project.name, slugId);
-  const projectUrl = `https://linear.app/${urlKey}/project/${project.id}`;
+  const url = slugId === null ? "(the view's URL once created)" : viewUrl(urlKey, label, slugId);
   await publishDocument(
-    viewDocument(project.name, url, projectUrl),
+    viewDocument(label, url, project.url),
     {
       file: "(generated)",
       project: project.name,
-      title: `${project.name}: live ticket view`,
+      title: `${label}: live ticket view`,
       apply: args.apply,
     },
     deps,
