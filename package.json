@@ -40,7 +40,8 @@
     "linear:document": "pnpm --filter @repo/devkit linear:document --",
     "linear:query": "pnpm --filter @repo/devkit linear:query --",
     "linear:taxonomy": "pnpm --filter @repo/devkit linear:taxonomy --",
-    "linear:upload": "pnpm --filter @repo/devkit linear:upload --"
+    "linear:upload": "pnpm --filter @repo/devkit linear:upload --",
+    "linear:view": "pnpm --filter @repo/devkit linear:view --"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",

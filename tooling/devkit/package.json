@@ -21,6 +21,7 @@
     "linear:query": "tsx src/commands/linear-query.ts",
     "linear:taxonomy": "tsx src/commands/linear-taxonomy.ts",
     "linear:upload": "tsx src/commands/linear-upload.ts",
+    "linear:view": "tsx src/commands/linear-view.ts",
     "lint": "eslint",
     "login": "tsx src/commands/login.ts",
     "release:cms": "tsx src/commands/release-cms.ts",
