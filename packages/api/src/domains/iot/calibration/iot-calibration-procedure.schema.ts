@@ -434,6 +434,79 @@ export function acceptedVerificationSeriesNames(procedure: CaptureProcedure): st
   ]);
 }
 
+/**
+ * Why a payload does not match the procedure, or null when it does. Every required series
+ * has to be present and nothing may be carried that the procedure cannot produce; optional
+ * steps may be absent, because a bench missing a reference still produces a useful run.
+ */
+export function payloadSeriesIssue(
+  procedure: CaptureProcedure,
+  payload: Record<string, Record<string, unknown>[]>,
+): string | null {
+  const known = new Set(acceptedSeriesNames(procedure));
+  const provided = new Set(Object.keys(payload));
+
+  const missing = requiredProcedureSeriesNames(procedure).filter((name) => !provided.has(name));
+  if (missing.length > 0) {
+    return `Payload is missing required series: ${missing.join(", ")}`;
+  }
+  const unexpected = [...provided].filter((name) => !known.has(name));
+  if (unexpected.length > 0) {
+    return `Payload carries series the procedure does not produce: ${unexpected.join(", ")}`;
+  }
+  return payloadColumnIssue(procedure.steps, payload);
+}
+
+/** The verify phase's readings, checked the same way against the steps that produce them. */
+export function verificationSeriesIssue(
+  procedure: CaptureProcedure,
+  verification: Record<string, Record<string, unknown>[]>,
+): string | null {
+  const known = new Set(acceptedVerificationSeriesNames(procedure));
+  const unexpected = Object.keys(verification).filter((name) => !known.has(name));
+  if (unexpected.length > 0) {
+    return `Verification carries series the procedure's verify phase does not produce: ${unexpected.join(", ")}`;
+  }
+  return payloadColumnIssue(procedure.verify ?? [], verification);
+}
+
+/**
+ * A row may carry only the columns its step declared: the same names become the payload's
+ * keys, the script's dict keys and the DataFrame's columns, and that only holds if nothing
+ * else can arrive under a series. A retaken companion carries its series' columns.
+ */
+function payloadColumnIssue(
+  steps: ProcedureStep[],
+  payload: Record<string, Record<string, unknown>[]>,
+): string | null {
+  const declared = new Map<string, Set<string>>();
+  for (const step of steps) {
+    if (step.kind !== "read" && step.kind !== "sweep") {
+      continue;
+    }
+    const columns = new Set(step.read.map((read) => read.as));
+    if (step.kind === "sweep") {
+      columns.add(SWEEP_STIMULUS_COLUMN);
+    }
+    declared.set(step.series, columns);
+    declared.set(`${step.series}${RETAKEN_SERIES_SUFFIX}`, columns);
+  }
+
+  for (const [series, rows] of Object.entries(payload)) {
+    const columns = declared.get(series);
+    if (columns === undefined) {
+      continue;
+    }
+    for (const row of rows) {
+      const stray = Object.keys(row).filter((column) => !columns.has(column));
+      if (stray.length > 0) {
+        return `Series "${series}" carries columns its step does not record: ${stray.join(", ")}`;
+      }
+    }
+  }
+  return null;
+}
+
 export type RigInstrument = z.infer<typeof zRigInstrument>;
 export type MeasurementProtocol = z.infer<typeof zMeasurementProtocol>;
 export type Stimulus = z.infer<typeof zStimulus>;

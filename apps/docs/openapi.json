@@ -23575,6 +23575,73 @@
         }
       }
     },
+    "/api/v1/calibration-definitions/{definitionId}/visibility": {
+      "patch": {
+        "operationId": "iot.setCalibrationDefinitionVisibility",
+        "parameters": [
+          {
+            "name": "definitionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "visibility": {
+                    "enum": [
+                      "private",
+                      "public"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "visibility"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "visibility": {
+                      "enum": [
+                        "private",
+                        "public"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "visibility"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/devices/{deviceId}/calibration-runs": {
       "post": {
         "operationId": "iot.createCalibrationRun",
@@ -23683,6 +23750,28 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 64
+                  },
+                  "skippedSeries": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "series": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500
+                        }
+                      },
+                      "required": [
+                        "series",
+                        "reason"
+                      ]
+                    },
+                    "maxItems": 64
                   }
                 },
                 "required": [
@@ -23801,6 +23890,35 @@
                         }
                       ]
                     },
+                    "skippedSeries": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "series": {
+                                "type": "string",
+                                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                              },
+                              "reason": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 500
+                              }
+                            },
+                            "required": [
+                              "series",
+                              "reason"
+                            ]
+                          },
+                          "maxItems": 64
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "preInfo": {
                       "anyOf": [
                         {
@@ -23894,6 +24012,7 @@
                     "inputSource",
                     "status",
                     "blocks",
+                    "skippedSeries",
                     "preInfo",
                     "postInfo",
                     "firmwareVersion",
@@ -24034,6 +24153,35 @@
                           }
                         ]
                       },
+                      "skippedSeries": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "series": {
+                                  "type": "string",
+                                  "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 500
+                                }
+                              },
+                              "required": [
+                                "series",
+                                "reason"
+                              ]
+                            },
+                            "maxItems": 64
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "preInfo": {
                         "anyOf": [
                           {
@@ -24127,6 +24275,7 @@
                       "inputSource",
                       "status",
                       "blocks",
+                      "skippedSeries",
                       "preInfo",
                       "postInfo",
                       "firmwareVersion",
@@ -24425,6 +24574,35 @@
                         }
                       ]
                     },
+                    "skippedSeries": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "series": {
+                                "type": "string",
+                                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                              },
+                              "reason": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 500
+                              }
+                            },
+                            "required": [
+                              "series",
+                              "reason"
+                            ]
+                          },
+                          "maxItems": 64
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "preInfo": {
                       "anyOf": [
                         {
@@ -24518,6 +24696,7 @@
                     "inputSource",
                     "status",
                     "blocks",
+                    "skippedSeries",
                     "preInfo",
                     "postInfo",
                     "firmwareVersion",
@@ -24651,6 +24830,35 @@
                               "status"
                             ]
                           }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "skippedSeries": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "series": {
+                                "type": "string",
+                                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                              },
+                              "reason": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 500
+                              }
+                            },
+                            "required": [
+                              "series",
+                              "reason"
+                            ]
+                          },
+                          "maxItems": 64
                         },
                         {
                           "type": "null"
@@ -24809,6 +25017,7 @@
                     "inputSource",
                     "status",
                     "blocks",
+                    "skippedSeries",
                     "preInfo",
                     "postInfo",
                     "firmwareVersion",
@@ -25174,6 +25383,35 @@
                         }
                       ]
                     },
+                    "skippedSeries": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "series": {
+                                "type": "string",
+                                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                              },
+                              "reason": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 500
+                              }
+                            },
+                            "required": [
+                              "series",
+                              "reason"
+                            ]
+                          },
+                          "maxItems": 64
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "preInfo": {
                       "anyOf": [
                         {
@@ -25267,6 +25505,7 @@
                     "inputSource",
                     "status",
                     "blocks",
+                    "skippedSeries",
                     "preInfo",
                     "postInfo",
                     "firmwareVersion",
@@ -29123,6 +29362,66 @@
                               "type",
                               "memberCount"
                             ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "visibility": {
+                                "enum": [
+                                  "private",
+                                  "public"
+                                ],
+                                "type": "string"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "collaboratorCount": {
+                                "type": "integer"
+                              },
+                              "type": {
+                                "const": "calibration_definition"
+                              },
+                              "family": {
+                                "enum": [
+                                  "multispeq",
+                                  "ambyte",
+                                  "minipar",
+                                  "generic",
+                                  "ambit",
+                                  "mobile"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "description",
+                              "visibility",
+                              "updatedAt",
+                              "collaboratorCount",
+                              "type",
+                              "family"
+                            ]
                           }
                         ]
                       }
@@ -29147,6 +29446,9 @@
                         },
                         "device_group": {
                           "type": "integer"
+                        },
+                        "calibration_definition": {
+                          "type": "integer"
                         }
                       },
                       "required": [
@@ -29155,7 +29457,8 @@
                         "macro",
                         "workbook",
                         "device",
-                        "device_group"
+                        "device_group",
+                        "calibration_definition"
                       ]
                     }
                   },
@@ -29293,7 +29596,8 @@
                               "protocol",
                               "workbook",
                               "device",
-                              "device_group"
+                              "device_group",
+                              "calibration_definition"
                             ],
                             "type": "string"
                           },
@@ -29465,7 +29769,8 @@
                           "protocol",
                           "workbook",
                           "device",
-                          "device_group"
+                          "device_group",
+                          "calibration_definition"
                         ],
                         "type": "string"
                       },
@@ -29516,7 +29821,8 @@
                 "protocol",
                 "workbook",
                 "device",
-                "device_group"
+                "device_group",
+                "calibration_definition"
               ],
               "type": "string"
             }
@@ -32306,6 +32612,7 @@
                               "protocol",
                               "macro",
                               "workbook",
+                              "calibration_definition",
                               "organization"
                             ],
                             "type": "string"
@@ -32373,7 +32680,8 @@
                 "protocol",
                 "workbook",
                 "device",
-                "device_group"
+                "device_group",
+                "calibration_definition"
               ],
               "type": "string"
             }
@@ -32574,7 +32882,8 @@
                               "protocol",
                               "workbook",
                               "device",
-                              "device_group"
+                              "device_group",
+                              "calibration_definition"
                             ],
                             "type": "string"
                           },
@@ -32751,7 +33060,8 @@
                 "protocol",
                 "workbook",
                 "device",
-                "device_group"
+                "device_group",
+                "calibration_definition"
               ],
               "type": "string"
             }
@@ -32988,7 +33298,8 @@
                               "protocol",
                               "workbook",
                               "device",
-                              "device_group"
+                              "device_group",
+                              "calibration_definition"
                             ],
                             "type": "string"
                           },
@@ -33167,7 +33478,8 @@
                 "protocol",
                 "workbook",
                 "device",
-                "device_group"
+                "device_group",
+                "calibration_definition"
               ],
               "type": "string"
             }
@@ -33400,7 +33712,8 @@
                               "protocol",
                               "workbook",
                               "device",
-                              "device_group"
+                              "device_group",
+                              "calibration_definition"
                             ],
                             "type": "string"
                           },
@@ -33577,7 +33890,8 @@
                 "protocol",
                 "workbook",
                 "device",
-                "device_group"
+                "device_group",
+                "calibration_definition"
               ],
               "type": "string"
             }
@@ -33639,7 +33953,8 @@
                 "protocol",
                 "workbook",
                 "device",
-                "device_group"
+                "device_group",
+                "calibration_definition"
               ],
               "type": "string"
             }
@@ -33760,7 +34075,8 @@
                 "protocol",
                 "workbook",
                 "device",
-                "device_group"
+                "device_group",
+                "calibration_definition"
               ],
               "type": "string"
             }
@@ -33909,7 +34225,8 @@
                             "protocol",
                             "workbook",
                             "device",
-                            "device_group"
+                            "device_group",
+                            "calibration_definition"
                           ],
                           "type": "string",
                           "description": "Type of resource to transfer admin on"
@@ -33962,7 +34279,8 @@
                               "protocol",
                               "workbook",
                               "device",
-                              "device_group"
+                              "device_group",
+                              "calibration_definition"
                             ],
                             "type": "string"
                           },
@@ -34008,7 +34326,8 @@
                 "experiment",
                 "macro",
                 "protocol",
-                "workbook"
+                "workbook",
+                "calibration_definition"
               ],
               "type": "string"
             }
@@ -34057,7 +34376,8 @@
                         "experiment",
                         "macro",
                         "protocol",
-                        "workbook"
+                        "workbook",
+                        "calibration_definition"
                       ],
                       "type": "string"
                     },
@@ -34487,7 +34807,8 @@
                               "protocol",
                               "workbook",
                               "device",
-                              "device_group"
+                              "device_group",
+                              "calibration_definition"
                             ],
                             "type": "string"
                           },

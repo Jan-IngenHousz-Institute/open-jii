@@ -20,6 +20,10 @@ const RESOURCE_CACHE_FAMILIES: Record<SharingResourceType, () => QueryKey[]> = {
   workbook: () => [orpc.workbooks.getWorkbook.key(), ...listQueryKeys.workbooks()],
   device: () => [orpc.iot.getIotDevice.key(), orpc.iot.listIotDevices.key()],
   device_group: () => [orpc.iot.getIotDeviceGroup.key(), orpc.iot.listIotDeviceGroups.key()],
+  calibration_definition: () => [
+    orpc.iot.getCalibrationDefinition.key(),
+    orpc.iot.listCalibrationDefinitions.key(),
+  ],
 };
 
 export function allResourceCacheFamilies(): QueryKey[] {
@@ -65,6 +69,11 @@ export function resourceCacheKeys(
       return [
         orpc.iot.getIotDeviceGroup.queryKey({ input: { groupId: resourceId } }),
         orpc.iot.listIotDeviceGroups.key(),
+      ];
+    case "calibration_definition":
+      return [
+        orpc.iot.getCalibrationDefinition.queryKey({ input: { definitionId: resourceId } }),
+        orpc.iot.listCalibrationDefinitions.key(),
       ];
   }
 }

@@ -258,6 +258,17 @@ const zInfoRecord = z
     message: `Device info must serialise to at most ${INFO_RECORD_MAX_BYTES} bytes`,
   });
 
+/**
+ * An optional step the bench could not run, and why: a reference that was not plugged in,
+ * a gated step the operator declined. Without it the record shows a series missing and
+ * nothing about whether that was the plan.
+ */
+export const zSkippedSeries = z.object({
+  series: z.string().regex(COEFFICIENT_NAME_PATTERN),
+  reason: z.string().min(1).max(500),
+});
+export const zSkippedSeriesList = z.array(zSkippedSeries).max(MAX_PROCEDURE_STEPS);
+
 export const zCalibrationRun = z.object({
   id: z.string().uuid(),
   definitionId: z.string().uuid(),
@@ -267,6 +278,7 @@ export const zCalibrationRun = z.object({
   inputSource: zCalibrationInputSource,
   status: zCalibrationRunStatus,
   blocks: zCalibrationBlocks.nullable(),
+  skippedSeries: zSkippedSeriesList.nullable(),
   preInfo: zInfoRecord.nullable(),
   postInfo: zInfoRecord.nullable(),
   firmwareVersion: z.string().nullable(),
@@ -303,7 +315,19 @@ export const zCreateCalibrationRunBody = zIotDevicePathParam.extend({
   firmwareVersion: zReportedFirmwareVersion.optional(),
   // Absent for a family whose firmware names no unit, which the record then says.
   reportedSerial: zReportedSerial.optional(),
+  skippedSeries: zSkippedSeriesList.optional(),
 });
+
+/**
+ * Whether the identifier a unit announced is the platform device's serial number. A MAC is
+ * printed with or without separators and in either case, so both sides are reduced to
+ * their alphanumerics before comparing.
+ */
+export function serialsMatch(reported: string, registered: string): boolean {
+  const normalise = (serial: string) => serial.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const left = normalise(reported);
+  return left.length > 0 && left === normalise(registered);
+}
 
 // Blocks a bench tool computed itself: recorded without running the script; QC still applies at approval.
 export const zCreateExternalCalibrationRunBody = zIotDevicePathParam.extend({
@@ -423,6 +447,32 @@ function parseFirmwareVersion(value: string): [number, number, number] | null {
   }
   const [, major, minor, patch = "0"] = match;
   return [Number(major), Number(minor), Number(patch)];
+}
+
+/**
+ * Why a device's firmware does not meet a definition's floor, or null when it does. Older
+ * firmware answers unknown commands with numbers that look like data, so a run is refused
+ * rather than recorded against a device that cannot have produced it.
+ */
+export function firmwareFloorIssue(
+  required: string | null,
+  reported: string | undefined,
+): string | null {
+  if (!required) {
+    return null;
+  }
+  if (!reported) {
+    return `This calibration requires firmware ${required}; the device did not report a version`;
+  }
+
+  const comparison = compareFirmwareVersions(reported, required);
+  if (comparison === null) {
+    return `Could not compare the device firmware ${reported} against the required ${required}`;
+  }
+  if (comparison < 0) {
+    return `This calibration requires firmware ${required}; the device reports ${reported}`;
+  }
+  return null;
 }
 
 /**
@@ -552,6 +602,7 @@ export type CalibrationBlock = z.infer<typeof zCalibrationBlock>;
 export type CalibrationBlocks = z.infer<typeof zCalibrationBlocks>;
 export type AppliedCalibrationBlocks = z.infer<typeof zAppliedCalibrationBlocks>;
 export type CalibrationRunParams = z.infer<typeof zCalibrationRunParams>;
+export type SkippedSeriesList = z.infer<typeof zSkippedSeriesList>;
 export type CalibrationWriteResults = z.infer<typeof zCalibrationWriteResults>;
 export type CalibrationRunStatus = z.infer<typeof zCalibrationRunStatus>;
 export type CalibrationInputSource = z.infer<typeof zCalibrationInputSource>;

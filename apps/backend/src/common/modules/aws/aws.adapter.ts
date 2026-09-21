@@ -253,6 +253,10 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
     return this.awsLambdaService.invoke<TResponse>({ functionName, payload });
   }
 
+  getCalibrationSandboxFunctionName(): string {
+    return this.awsConfigService.lambdaConfig.calibrationSandboxFunctionName;
+  }
+
   /**
    * Resolve the Lambda function name for a given macro language
    */

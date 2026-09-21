@@ -47,6 +47,9 @@ export class AwsConfigService {
         macroSandboxRFunctionName: this.configService.getOrThrow<string>(
           "aws.lambda.macroSandboxRFunctionName",
         ),
+        calibrationSandboxFunctionName: this.configService.getOrThrow<string>(
+          "aws.lambda.calibrationSandboxFunctionName",
+        ),
       },
       s3: {
         iotArchiveBucketName: this.configService.getOrThrow<string>("aws.s3.iotArchiveBucketName"),

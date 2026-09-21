@@ -6,6 +6,7 @@ import type {
   CertificateStatus,
   ThingConnectivity,
 } from "../../../common/modules/aws/services/iot/iot.types";
+import type { InvokeLambdaResponse } from "../../../common/modules/aws/services/lambda/lambda.types";
 import type { IotUploadUrl } from "../../../common/modules/aws/services/s3/s3.types";
 import type { Result } from "../../../common/utils/fp-utils";
 
@@ -41,4 +42,10 @@ export interface AwsPort {
   getIotDataEndpoint(): Promise<Result<string>>;
   getCognitoIdentityId(userId: string): Promise<Result<string>>;
   searchThingsConnectivity(thingNames: string[]): Promise<Result<Map<string, ThingConnectivity>>>;
+
+  getCalibrationSandboxFunctionName(): string;
+  invokeLambda<TResponse = Record<string, unknown>>(
+    functionName: string,
+    payload: object,
+  ): Promise<Result<InvokeLambdaResponse<TResponse>>>;
 }

@@ -302,6 +302,17 @@ describe("AwsAdapter", () => {
     });
   });
 
+  describe("getCalibrationSandboxFunctionName", () => {
+    it("returns the configured function name", () => {
+      vi.spyOn(awsConfigService, "lambdaConfig", "get").mockReturnValue({
+        ...awsConfigService.lambdaConfig,
+        calibrationSandboxFunctionName: "calibration-sandbox",
+      });
+
+      expect(awsAdapter.getCalibrationSandboxFunctionName()).toBe("calibration-sandbox");
+    });
+  });
+
   describe("getIotUploadUrl", () => {
     it("delegates to AwsS3Service and returns the upload URL on success", async () => {
       const mockUploadUrl: IotUploadUrl = {
