@@ -41,8 +41,12 @@ export function CalibrationLayoutContent({
   // Capability, not ownership: a "Can edit" grantee renames and edits here too. A run
   // closes the definition regardless, because the run points at it rather than at a copy.
   const { canUpdate, canShare, canLeave } = definition.capabilities;
-  const canRename = canUpdate && definition.runCount === 0;
-  const indicatorStatus = isUpdating ? "saving" : (autosave?.status ?? "idle");
+  const canEdit = canUpdate && definition.runCount === 0;
+
+  // A document nothing can save has no save state, and "All changes saved" above a
+  // read-only page reports on something that is not happening.
+  const saveState = isUpdating ? "saving" : (autosave?.status ?? "idle");
+  const indicatorStatus = canEdit ? saveState : undefined;
 
   const handleTitleSave = async (name: string) => {
     await update(
@@ -60,7 +64,7 @@ export function CalibrationLayoutContent({
       <div className="flex flex-col gap-2">
         <InlineEditableTitle
           name={definition.name}
-          hasAccess={canRename}
+          hasAccess={canEdit}
           onSave={handleTitleSave}
           isPending={isUpdating}
           icon={<SlidersHorizontal className="h-6 w-6" />}

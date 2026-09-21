@@ -29,6 +29,7 @@ describe("CalibrationLayoutContent", () => {
     await userEvent.click(screen.getByText("PAR bench"));
 
     expect(screen.getByDisplayValue("PAR bench")).toBeInTheDocument();
+    expect(screen.getByText("autosave.saved")).toBeInTheDocument();
   });
 
   // The server refuses every edit once a run points at the definition, and the name is an
@@ -39,5 +40,7 @@ describe("CalibrationLayoutContent", () => {
     await userEvent.click(screen.getByText("PAR bench"));
 
     expect(screen.queryByDisplayValue("PAR bench")).toBeNull();
+    // Nothing on the page saves, so reporting that everything is saved says nothing true.
+    expect(screen.queryByText("autosave.saved")).toBeNull();
   });
 });
