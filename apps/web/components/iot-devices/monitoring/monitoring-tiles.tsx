@@ -3,6 +3,7 @@
 import { ConnectivityDot, useFormatLastSeen } from "@/components/iot-devices/device-connectivity";
 import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime } from "@/util/date";
+import { formatLocaleNumber } from "@/util/format-locale-number";
 import { AlertTriangle } from "lucide-react";
 
 import type {
@@ -119,9 +120,13 @@ export function MonitoringTiles({
         locale={locale}
         label={t("iot.devices.monitoring.measurements")}
         value={
-          total === undefined ? <Skeleton className="h-7 w-16" /> : total.toLocaleString(locale)
+          total === undefined ? (
+            <Skeleton className="h-7 w-16" />
+          ) : (
+            formatLocaleNumber(total, locale)
+          )
         }
-        title={total === undefined ? undefined : total.toLocaleString(locale)}
+        title={total === undefined ? undefined : formatLocaleNumber(total, locale)}
         seriesName={t("iot.devices.monitoring.measurements")}
         days={series}
         peakDate={peakBucketDate(series)}
@@ -150,7 +155,7 @@ export function MonitoringTiles({
           monitoring === undefined ? (
             <Skeleton className="h-7 w-16" />
           ) : isMobileFamily ? (
-            monitoring.sessions.length.toLocaleString(locale)
+            formatLocaleNumber(monitoring.sessions.length, locale)
           ) : monitoring.uptimePercent === null ? (
             t("iot.devices.monitoring.uptimeUnknown")
           ) : (

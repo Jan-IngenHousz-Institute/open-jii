@@ -264,7 +264,7 @@ function jsonQuerySchema<S extends z.ZodTypeAny>(inner: S) {
 
 export const zExperimentDataQuery = z.object({
   page: z.coerce.number().int().min(1).optional().describe("Page number for pagination"),
-  pageSize: z.coerce.number().int().min(1).max(100).optional().describe("Number of rows per page"),
+  pageSize: z.coerce.number().int().min(1).max(1000).optional().describe("Number of rows per page"),
   tableName: zExperimentTableNameInput.describe(
     "Table name: 'raw_data', 'device', macro UUID, or upload_table_id",
   ),

@@ -6,6 +6,7 @@ import { metricsBandGrid } from "@/components/metrics/metrics-band-grid";
 import { MetricsBandSkeleton } from "@/components/metrics/metrics-band-skeleton";
 import { useMyScopedMetrics } from "@/hooks/metrics/useMyScopedMetrics/useMyScopedMetrics";
 import { usePublicMetrics } from "@/hooks/metrics/usePublicMetrics/usePublicMetrics";
+import { formatLocaleNumber } from "@/util/format-locale-number";
 
 import { useTranslation } from "@repo/i18n";
 
@@ -30,7 +31,6 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
     return null;
   }
 
-  const number = new Intl.NumberFormat(locale);
   const compact = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 });
   // Warehouse days are UTC.
   const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
@@ -40,13 +40,14 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
   const community = platform?.community ?? null;
 
   const peak = scoped.peak;
+  const dailyAverage = Math.round(scoped.measurements30d / windowDays);
 
   const renderCommunity = (measurements30d: number) => (
     <MetricStatCard
       locale={locale}
       label={t("dashboard.activity.communityLabel")}
       value={compact.format(measurements30d)}
-      title={number.format(measurements30d)}
+      title={formatLocaleNumber(measurements30d, locale)}
       note={t("dashboard.activity.communityNote")}
       context={window}
     />
@@ -58,7 +59,7 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
         locale={locale}
         label={t("dashboard.activity.label")}
         value={compact.format(scoped.measurements30d)}
-        title={number.format(scoped.measurements30d)}
+        title={formatLocaleNumber(scoped.measurements30d, locale)}
         comparison={{ current: scoped.measurements30d, previous: scoped.previousMeasurements }}
         note={t("previousWindow", {
           value: compact.format(scoped.previousMeasurements),
@@ -76,7 +77,7 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
       <MetricStatCard
         locale={locale}
         label={t("dashboard.activity.experimentsLabel")}
-        value={number.format(scoped.activeExperiments30d)}
+        value={formatLocaleNumber(scoped.activeExperiments30d, locale)}
         note={t("dashboard.activity.contributors", { count: scoped.contributors30d })}
         context={
           scoped.devices30d === null
@@ -87,8 +88,8 @@ export function ResearchActivityPanel({ locale }: ResearchActivityPanelProps) {
       {community === null ? null : renderCommunity(community.measurements30d)}
       <MetricTrendCard
         label={t("dailyAverage")}
-        value={compact.format(Math.round(scoped.measurements30d / windowDays))}
-        title={number.format(Math.round(scoped.measurements30d / windowDays))}
+        value={compact.format(dailyAverage)}
+        title={formatLocaleNumber(dailyAverage, locale)}
         seriesName={t("dashboard.activity.trend")}
         days={scoped.activity}
         peakDate={peak?.date ?? null}

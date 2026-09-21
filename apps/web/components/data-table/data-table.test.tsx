@@ -90,6 +90,29 @@ describe("DataTable", () => {
     expect(onChange).toHaveBeenCalled();
   });
 
+  it.each([
+    { totalRows: 999, expected: "999" },
+    { totalRows: 1000, expected: "1,000" },
+    { totalRows: 12345, expected: "12,345" },
+    { totalRows: 1000000, expected: "1,000,000" },
+  ])("formats a total row count of $totalRows as $expected", ({ totalRows, expected }) => {
+    render(
+      <DataTable
+        columns={COLUMNS}
+        rows={ROWS}
+        pagination={{
+          mode: "server",
+          state: { pageIndex: 0, pageSize: 1000 },
+          onChange: vi.fn(),
+          totalRows,
+          totalPages: Math.ceil(totalRows / 1000),
+        }}
+      />,
+    );
+
+    expect(screen.getByText(new RegExp(`dataTable.totalRows.*${expected}`))).toBeInTheDocument();
+  });
+
   it("pages rows it already holds, at the size the caller asks for", async () => {
     const user = userEvent.setup();
     const many: DataRow[] = Array.from({ length: 7 }, (_, index) => ({

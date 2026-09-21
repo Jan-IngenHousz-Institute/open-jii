@@ -1,6 +1,7 @@
 "use client";
 
 import { formatRelativeTime } from "@/util/date";
+import { formatLocaleNumber } from "@/util/format-locale-number";
 import { AlertTriangle } from "lucide-react";
 
 import type {
@@ -112,9 +113,13 @@ export function GroupMonitoringTiles({
         locale={locale}
         label={t("iot.devices.monitoring.measurements")}
         value={
-          total === undefined ? <Skeleton className="h-7 w-16" /> : total.toLocaleString(locale)
+          total === undefined ? (
+            <Skeleton className="h-7 w-16" />
+          ) : (
+            formatLocaleNumber(total, locale)
+          )
         }
-        title={total === undefined ? undefined : total.toLocaleString(locale)}
+        title={total === undefined ? undefined : formatLocaleNumber(total, locale)}
         seriesName={t("iot.devices.monitoring.measurements")}
         days={series}
         peakDate={peakBucketDate(series)}
@@ -139,7 +144,7 @@ export function GroupMonitoringTiles({
           summary === undefined ? (
             <Skeleton className="h-7 w-16" />
           ) : (
-            summary.unknown.toLocaleString(locale)
+            formatLocaleNumber(summary.unknown, locale)
           )
         }
         className={tileClassName}
