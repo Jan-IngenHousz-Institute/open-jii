@@ -58,19 +58,28 @@ domain wholesale rather than inventing a new arrangement of use cases, ports and
 Fan out subagents here only when the question is genuinely parallel, for example reading four
 candidate siblings at once. Not for one file, and not for anything needing judgement per file.
 
+What you learn here becomes the project's implementation deep dive, one of the standard resources
+in `ticket-standard.md`. Write it against a named commit and say so in its first line, because a
+reader a month later needs to know what it was true of. Draw the mechanisms instead of describing
+them: a sequence diagram for a request path, a class diagram for what an entity holds, a state
+diagram for a lifecycle, a flowchart for the order of work. Mark where each ticket cuts in, so one
+document answers both how the area works and what the project changes.
+
 ## 3. Design
 
 Two tracks. Most user-facing work needs both.
 
-**Interface.** Build a design canvas: artboards on one pan-and-zoom surface, published as an
-Artifact, so the whole flow is visible and the user can move things instead of describing changes
-in prose. A canvas or design skill does that for you where one is available; this repo ships none,
-so do not wait for it. Cover the states that get forgotten: empty, loading, error,
-permission denied, narrow viewport. Keep the URL; it goes under the project's `## Design` and into
-every ticket that touches a screen.
+**Interface.** Sketch the screens that have no design yet, and draw them in the platform's own
+design scheme: take the tokens, the type and the component chrome from `apps/web`, so a reader
+sees the product and not a generic wireframe. One HTML file holding every screen is enough, and
+`pnpm linear:upload` puts it in Linear's asset store so it opens without an account; the
+`<Project>: screen sketches` document links it and lists which ticket each screen serves. Cover
+the states that get forgotten: empty, loading, error, permission denied, narrow viewport. A
+sketch fixes what is on a screen, not its spacing or its copy, so a ticket keeps `needs-design`
+until a real design is attached.
 
-For one component or a diagram, a plain Artifact is lighter than a canvas. Do not reach for a
-canvas when an annotated screenshot would do.
+For one component or a diagram, a plain diagram in the deep dive is lighter than a set of
+screens. Do not sketch a screen when an annotated screenshot would do.
 
 **System.** Contracts first. `packages/api` owns the API shapes and both sides import them, so the
 contract is the design artefact, not a description of one. Work outward: what the contract says,
@@ -104,8 +113,13 @@ label, area labels, this project, acceptance criteria, no blockers. Split along 
 outcomes, never along layers. "Backend endpoint", "frontend form" and "tests" are not independently
 valuable; "org admin can invite a member", "invited member can accept", "org admin can revoke" are.
 
-Every ticket links back: the canvas URL and the ADR path in the ticket, not only in the project,
-because the person picking it up reads the ticket and nothing else.
+Every ticket links back: the sketches, the deep dive and the ADR path in the ticket, not only in
+the project, because the person picking it up reads the ticket and nothing else.
+
+Publish the resources with the project: `pnpm linear:document` for the deep dive and the sketches,
+`pnpm linear:view` for the shared ticket view and its document, and one more `linear:document` for
+the artifact index that links them. `ticket-standard.md` names the set and the two rules a resource
+must meet, and the commands are in `tooling/devkit/README.md`.
 
 Milestones only where order inside the project genuinely matters. Blocking relations likewise. A
 false chain from each ticket to the next makes the board unworkable.

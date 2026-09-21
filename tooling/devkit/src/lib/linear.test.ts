@@ -156,6 +156,19 @@ describe("createLinearClient", () => {
     expect(entries[0].variables).toBe('{"id":"1"}');
   });
 
+  it("explains a 401 as a revoked key and says where to re-auth, without echoing the body", async () => {
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        new Response('{"errors":[{"message":"Authentication required"}]}', { status: 401 }),
+      );
+    const client = createLinearClient({ apiKey: "k", request });
+
+    await expect(client.query("{ viewer { name } }")).rejects.toThrow(
+      "Linear rejected the key (401). It was probably revoked or rotated; mint a new one and run pbpaste | pnpm linear:auth in the main checkout",
+    );
+  });
+
   it("surfaces GraphQL errors as one message", async () => {
     const request = vi
       .fn<typeof fetch>()

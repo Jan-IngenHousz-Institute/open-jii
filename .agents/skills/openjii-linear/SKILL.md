@@ -78,6 +78,11 @@ contents.
   names stay `<type>/<slug>` and carry no ticket ref.
 - Projects are the unit of design. Every ticket has one. Creating a ticket without a project is a
   gate failure, not a shortcut.
+- Projects carry resources, as Linear documents on the project. `ticket-standard.md` names the
+  standard set and the two rules they must meet. A ticket that touches a screen links the sketches
+  itself, because the person picking it up reads the ticket and nothing else.
+- Bookkeeping goes in a document or nowhere, never in a project update. Project updates are the
+  status post the team reads in its feed.
 - Closing as a duplicate is three writes: the relation, the state, a comment.
 - No cycles, no estimation. Do not set estimates or look for a sprint.
 
@@ -149,7 +154,24 @@ pnpm linear:query --query 'mutation($in:IssueCreateInput!){ issueCreate(input:$i
 ```
 
 Move state, assign, or relabel with `issueUpdate($id:String!, $input:IssueUpdateInput!)`. Use
-`addedLabelIds` and `removedLabelIds` rather than `labelIds`. The API takes ids, not names.
+`addedLabelIds` and `removedLabelIds` rather than `labelIds`. The API takes ids, not names. A
+draft ticket headed by an identifier, `# OJD-1810 Home shows public research`, updates that ticket
+through `linear:create` instead of creating one, which is the way to rewrite a body that already
+exists.
+
+A project's documents, uploads and shared view each have a command, so none of them needs a
+hand-written mutation:
+
+```bash
+pnpm linear:document <file.md> --project "<name>" --title "<Project>: implementation deep dive"
+pnpm linear:upload <file>
+pnpm linear:view --project "<name>"
+```
+
+Each is a dry run until `--apply`. `linear:document` updates the document that already carries the
+title, so republishing a corrected deep dive keeps its URL, and it refuses to write while a mermaid
+block does not parse. The project body itself is still a `projectUpdate` mutation through
+`linear:query`, which edits the body and is not the same thing as a project update post.
 
 ## Writing
 

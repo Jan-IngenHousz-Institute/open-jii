@@ -13,6 +13,9 @@ Run them from the repo root through the aliases in the root `package.json`.
 | `pnpm linear:query`                       | Runs one GraphQL document against Linear                |
 | `pnpm linear:check`                       | Checks a ticket draft against the ticket standard       |
 | `pnpm linear:create`                      | Creates the tickets in a draft, with comments and links |
+| `pnpm linear:document`                    | Publishes a project document from a Markdown file       |
+| `pnpm linear:upload`                      | Uploads a file to Linear and prints its asset URL       |
+| `pnpm linear:view`                        | Creates a project's shared ticket view and its document |
 | `pnpm linear:taxonomy`                    | Plans and applies the `OJD` label taxonomy              |
 | `pnpm linear:apply`                       | Applies a reviewed per-ticket change file in batches    |
 | `pnpm --filter @repo/devkit env:generate` | Regenerates the `.env.example` files from the manifest  |
@@ -123,6 +126,56 @@ replace the person who reads the body before it is written.
 name, and records every step in `<draft>.created.json` next to the draft. A run that stops halfway
 resumes from that file instead of creating anything twice. A relative path, here and on every other
 command, is taken from the repo root.
+
+## Project resources
+
+A project carries its design and its grounding as Linear documents on the project itself. Four of
+them are the standard set, and a project carries more when the work needs it:
+
+| Document                              | What it holds                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------- |
+| `<Project>: implementation deep dive` | How the area works today, written against a named commit, with mermaid diagrams |
+| `<Project>: screen sketches`          | The screens with no design yet, in the platform's own tokens, as one HTML file  |
+| `<Project>: live ticket view`         | A pointer to the project's shared ticket view                                   |
+| `<Project>: artifact index`           | The short front page that links the three above and the project                 |
+
+A resource complements the project and its tickets. A page that restates the deliverables or
+copies the ticket list is not a resource, because a reader already has both one click away. What
+belongs here is what Linear cannot hold: how a request flows through the code, what each contract
+change is, where each ticket cuts in, and what an undesigned screen should show.
+
+`pnpm linear:document` publishes one. It finds the project by name, updates the document that
+already carries the title or creates it, and refuses to write until the prose rules pass and every
+mermaid block parses. A diagram Linear cannot render is a red error box in place of the picture,
+so the check runs the real mermaid parser rather than a guess at its grammar:
+
+```bash
+pnpm linear:document .claude/drafts/deep-dive.md \
+  --project "Platform home and research discovery" \
+  --title "Platform home: implementation deep dive"          # dry run
+pnpm linear:document .claude/drafts/deep-dive.md --project "..." --title "..." --apply
+```
+
+`pnpm linear:upload` puts a file in Linear's own asset store and prints the URL a document links
+to, so a sketch or a bundle needs no account to open. The media type comes from the extension, or
+from `--type`:
+
+```bash
+pnpm linear:upload .claude/drafts/sketches.html
+pnpm linear:upload design/canvas.bin --type application/octet-stream
+```
+
+`pnpm linear:view` creates the project's shared ticket view, filtered to that project, and the
+document that points at it. It reuses a view that already carries the project's name:
+
+```bash
+pnpm linear:view --project "Platform home and research discovery"           # dry run
+pnpm linear:view --project "Platform home and research discovery" --apply
+```
+
+Bookkeeping belongs in one of these documents or nowhere. Linear's project updates are the
+status post the team reads in its feed, so an inventory or a migration note posted there reaches
+nine people as news. Put it in a document instead.
 
 ## A local session without a browser
 

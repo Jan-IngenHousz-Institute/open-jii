@@ -46,7 +46,9 @@ decorate it.
    with a timebox. If it needs more than one person or more than one change cycle, it is a project,
    and the real work is `openjii-work-design`.
 2. **Project.** Required. Find the existing project this belongs to. If none fits and the work is
-   solution-shaped, that is a missing project, not a reason to use the maintenance bucket.
+   solution-shaped, that is a missing project, not a reason to use the maintenance bucket. Read
+   that project's documents before writing: the deep dive says how the area works today, and the
+   sketches say what the screen should show. Link them from the ticket when it touches a screen.
 3. **WHO, WHAT, WHY.** A real persona: researcher, org admin, field operator, platform operator.
 4. **Acceptance criteria.** The primary flow, the alternative flows that matter, and the business
    rules that apply. Name what must be shown on screen. Observable behaviour only; implementation
