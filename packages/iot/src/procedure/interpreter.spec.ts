@@ -296,7 +296,7 @@ describe("runCaptureProcedure", () => {
       );
 
       const rows = events.filter((event) => event.kind === "row");
-      const parRows = rows.filter((event) => event.kind === "row" && event.series === "par_sweep");
+      const parRows = rows.filter((event) => event.series === "par_sweep");
       expect(parRows).toHaveLength(3);
       expect(parRows[0]).toMatchObject({ kind: "row", series: "par_sweep", index: 0 });
 
