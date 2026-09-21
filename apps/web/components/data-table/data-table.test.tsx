@@ -7,7 +7,7 @@ import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/exp
 import { DataTable } from "./data-table";
 import type { DataRow } from "./data-table-columns";
 
-vi.mock("@repo/ui/components/charts/line-chart", () => ({
+vi.mock("@/components/charts/line-chart", () => ({
   LineChart: vi.fn(() => <div data-testid="line-chart" />),
 }));
 

@@ -1,9 +1,9 @@
 "use client";
 
+import { RidgePlot } from "@/components/charts/ridge-plot";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { RidgePlot } from "@repo/ui/components/charts/ridge-plot";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";

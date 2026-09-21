@@ -10,7 +10,7 @@ import { CartesianRenderer } from "./cartesian-renderer";
 const { cartesianChart } = vi.hoisted(() => ({
   cartesianChart: vi.fn((_props: { config: PlotlyChartConfig }) => null),
 }));
-vi.mock("@repo/ui/components/charts/cartesian-chart", () => ({
+vi.mock("@/components/charts/cartesian-chart", () => ({
   CartesianChart: cartesianChart,
 }));
 

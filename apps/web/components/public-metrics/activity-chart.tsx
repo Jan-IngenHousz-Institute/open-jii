@@ -1,11 +1,11 @@
 "use client";
 
+import { AreaChart } from "@/components/charts/area-chart";
+import { BarChart } from "@/components/charts/bar-chart";
 import { useMemo, useState } from "react";
 
 import type { MetricsActivityDay } from "@repo/api/domains/metrics/metrics.schema";
 import { useTranslation } from "@repo/i18n";
-import { AreaChart } from "@repo/ui/components/charts/area-chart";
-import { BarChart } from "@repo/ui/components/charts/bar-chart";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 import { detectAxisType } from "@repo/ui/components/charts/utils";
 

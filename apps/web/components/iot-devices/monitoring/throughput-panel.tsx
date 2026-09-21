@@ -1,5 +1,6 @@
 "use client";
 
+import { BarChart } from "@/components/charts/bar-chart";
 import { useState } from "react";
 
 import type {
@@ -8,7 +9,6 @@ import type {
   DeviceThroughputBucket,
 } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
-import { BarChart } from "@repo/ui/components/charts/bar-chart";
 import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 import { EmptyState } from "@repo/ui/components/empty-state";
 
