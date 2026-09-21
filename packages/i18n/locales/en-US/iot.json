@@ -992,10 +992,11 @@
         "notWritable": "The platform has no console command for {{coefficients}}. A run producing these is recorded, but they never reach the device.",
         "describePlaceholder": "Say what this bench measures and against what.",
         "readOnly": "You can read this calibration but not change it.",
-        "frozen_one": "One run has recorded this calibration, so it can no longer be edited. Editing it would change what that run appears to have done.",
-        "frozen_other": "{{count}} runs have recorded this calibration, so it can no longer be edited. Editing it would change what those runs appear to have done.",
+        "frozen_one": "One run has recorded this calibration, so it can no longer be edited. Duplicate it to take the procedure into a new one.",
+        "frozen_other": "{{count}} runs have recorded this calibration, so it can no longer be edited. Duplicate it to take the procedure into a new one.",
         "notSaving": "Not saving while the definition is incomplete.",
-        "verifyOptional": "optional"
+        "verifyOptional": "optional",
+        "duplicate": "Duplicate"
       },
       "rig": {
         "hint": "Each instrument takes a serial port of its own at the bench. Renaming a role renames it in every step that uses it.",

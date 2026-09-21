@@ -38,8 +38,10 @@ export function CalibrationLayoutContent({
     useUpdateCalibrationDefinition(definitionId);
   const autosave = useAutosaveStatus();
 
-  // Capability, not ownership: a "Can edit" grantee renames and edits here too.
+  // Capability, not ownership: a "Can edit" grantee renames and edits here too. A run
+  // closes the definition regardless, because the run points at it rather than at a copy.
   const { canUpdate, canShare, canLeave } = definition.capabilities;
+  const canRename = canUpdate && definition.runCount === 0;
   const indicatorStatus = isUpdating ? "saving" : (autosave?.status ?? "idle");
 
   const handleTitleSave = async (name: string) => {
@@ -58,7 +60,7 @@ export function CalibrationLayoutContent({
       <div className="flex flex-col gap-2">
         <InlineEditableTitle
           name={definition.name}
-          hasAccess={canUpdate}
+          hasAccess={canRename}
           onSave={handleTitleSave}
           isPending={isUpdating}
           icon={<SlidersHorizontal className="h-6 w-6" />}

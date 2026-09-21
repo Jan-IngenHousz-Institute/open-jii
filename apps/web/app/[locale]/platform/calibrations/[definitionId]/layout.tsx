@@ -1,5 +1,6 @@
 "use client";
 
+import { CalibrationDuplicateAction } from "@/components/calibrations/calibration-duplicate-action";
 import { CalibrationLayoutContent } from "@/components/calibrations/calibration-layout-content";
 import { PlatformHeaderDetail } from "@/components/navigation/site-header/platform-header-context";
 import { PageContainer } from "@/components/page-container";
@@ -51,6 +52,18 @@ export default function CalibrationDefinitionLayout({
     </Button>
   );
 
+  // A definition a run has closed is read-only, so the next revision starts as a copy.
+  const canDuplicate = data !== undefined && data.runCount > 0 && !isBench;
+
+  const benchAction = support.serial ? (
+    benchButton
+  ) : (
+    <Tooltip>
+      <TooltipTrigger asChild>{benchButton}</TooltipTrigger>
+      <TooltipContent>{tIot("iot.calibration.connect.unsupportedBrowser")}</TooltipContent>
+    </Tooltip>
+  );
+
   const actions = isBench ? (
     <Button variant="outline" size="sm" asChild>
       <Link href={detailPath}>
@@ -58,13 +71,11 @@ export default function CalibrationDefinitionLayout({
         {t("common.back")}
       </Link>
     </Button>
-  ) : support.serial ? (
-    benchButton
   ) : (
-    <Tooltip>
-      <TooltipTrigger asChild>{benchButton}</TooltipTrigger>
-      <TooltipContent>{tIot("iot.calibration.connect.unsupportedBrowser")}</TooltipContent>
-    </Tooltip>
+    <>
+      {canDuplicate && <CalibrationDuplicateAction definition={data} />}
+      {benchAction}
+    </>
   );
 
   return (

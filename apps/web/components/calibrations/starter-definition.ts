@@ -82,7 +82,15 @@ ${skipped}
  * their unfinished ones this is.
  */
 export function untitledCalibrationName(taken: string[]): string {
-  const base = "Untitled calibration";
+  return freeName("Untitled calibration", taken);
+}
+
+/** The same, for a copy taken from a definition a run has closed to edits. */
+export function copyOfName(name: string, taken: string[]): string {
+  return freeName(`${name} (copy)`, taken);
+}
+
+function freeName(base: string, taken: string[]): string {
   if (!taken.includes(base)) {
     return base;
   }

@@ -992,10 +992,11 @@
         "notWritable": "Für {{coefficients}} gibt es keinen Konsolenbefehl. Ein Lauf wird protokolliert, die Werte erreichen das Gerät aber nie.",
         "describePlaceholder": "Beschreiben, was dieser Prüfstand misst und wogegen.",
         "readOnly": "Sie können diese Kalibrierung lesen, aber nicht ändern.",
-        "frozen_one": "Ein Lauf hat diese Kalibrierung protokolliert, daher kann sie nicht mehr geändert werden. Eine Änderung würde verfälschen, was dieser Lauf getan hat.",
-        "frozen_other": "{{count}} Läufe haben diese Kalibrierung protokolliert, daher kann sie nicht mehr geändert werden. Eine Änderung würde verfälschen, was diese Läufe getan haben.",
+        "frozen_one": "Ein Lauf hat diese Kalibrierung protokolliert, daher kann sie nicht mehr geändert werden. Erstellen Sie ein Duplikat, um die Prozedur in eine neue zu übernehmen.",
+        "frozen_other": "{{count}} Läufe haben diese Kalibrierung protokolliert, daher kann sie nicht mehr geändert werden. Erstellen Sie ein Duplikat, um die Prozedur in eine neue zu übernehmen.",
         "notSaving": "Wird nicht gespeichert, solange die Definition unvollständig ist.",
-        "verifyOptional": "optional"
+        "verifyOptional": "optional",
+        "duplicate": "Duplizieren"
       },
       "rig": {
         "hint": "Jedes Instrument belegt am Messplatz einen eigenen seriellen Anschluss. Eine Rolle umzubenennen benennt sie in jedem Schritt um, der sie verwendet.",

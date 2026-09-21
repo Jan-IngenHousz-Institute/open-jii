@@ -992,10 +992,11 @@
         "notWritable": "Het platform heeft geen console-opdracht voor {{coefficients}}. Een run wordt vastgelegd, maar deze waarden bereiken het apparaat nooit.",
         "describePlaceholder": "Beschrijf wat deze opstelling meet en waartegen.",
         "readOnly": "Je kunt deze kalibratie lezen maar niet wijzigen.",
-        "frozen_one": "Eén run heeft deze kalibratie vastgelegd, dus deze kan niet meer worden gewijzigd. Een wijziging zou veranderen wat die run heeft gedaan.",
-        "frozen_other": "{{count}} runs hebben deze kalibratie vastgelegd, dus deze kan niet meer worden gewijzigd. Een wijziging zou veranderen wat die runs hebben gedaan.",
+        "frozen_one": "Eén run heeft deze kalibratie vastgelegd, dus deze kan niet meer worden gewijzigd. Maak een duplicaat om de procedure mee te nemen naar een nieuwe.",
+        "frozen_other": "{{count}} runs hebben deze kalibratie vastgelegd, dus deze kan niet meer worden gewijzigd. Maak een duplicaat om de procedure mee te nemen naar een nieuwe.",
         "notSaving": "Wordt niet opgeslagen zolang de definitie onvolledig is.",
-        "verifyOptional": "optioneel"
+        "verifyOptional": "optioneel",
+        "duplicate": "Dupliceren"
       },
       "rig": {
         "hint": "Elk instrument krijgt aan de meetbank een eigen seriële poort. Een rol hernoemen hernoemt die in elke stap die hem gebruikt.",
