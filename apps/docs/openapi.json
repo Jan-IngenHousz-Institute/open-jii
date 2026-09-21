@@ -19564,6 +19564,7 @@
                   },
                   "minFirmwareVersion": {
                     "type": "string",
+                    "maxLength": 32,
                     "pattern": "^\\d+(\\.\\d+){1,2}$"
                   },
                   "organizationId": {
@@ -20501,6 +20502,7 @@
                       "anyOf": [
                         {
                           "type": "string",
+                          "maxLength": 32,
                           "pattern": "^\\d+(\\.\\d+){1,2}$"
                         },
                         {
@@ -21505,6 +21507,7 @@
                       "anyOf": [
                         {
                           "type": "string",
+                          "maxLength": 32,
                           "pattern": "^\\d+(\\.\\d+){1,2}$"
                         },
                         {
@@ -22535,6 +22538,7 @@
                     "anyOf": [
                       {
                         "type": "string",
+                        "maxLength": 32,
                         "pattern": "^\\d+(\\.\\d+){1,2}$"
                       },
                       {
@@ -23466,6 +23470,7 @@
                       "anyOf": [
                         {
                           "type": "string",
+                          "maxLength": 32,
                           "pattern": "^\\d+(\\.\\d+){1,2}$"
                         },
                         {
@@ -23611,7 +23616,7 @@
                                 },
                                 {
                                   "type": "string",
-                                  "maxLength": 4096
+                                  "maxLength": 65536
                                 },
                                 {
                                   "type": "boolean"
@@ -23671,7 +23676,13 @@
                   },
                   "firmwareVersion": {
                     "type": "string",
-                    "pattern": "^\\d+(\\.\\d+){1,2}$"
+                    "maxLength": 32,
+                    "pattern": "^\\d+(\\.\\d+){1,2}(?:[-+][0-9A-Za-z][0-9A-Za-z.-]*)?$"
+                  },
+                  "reportedSerial": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
                   }
                 },
                 "required": [
@@ -24230,7 +24241,7 @@
                                 },
                                 {
                                   "type": "string",
-                                  "maxLength": 4096
+                                  "maxLength": 65536
                                 },
                                 {
                                   "type": "boolean"
@@ -24294,7 +24305,8 @@
                   },
                   "firmwareVersion": {
                     "type": "string",
-                    "pattern": "^\\d+(\\.\\d+){1,2}$"
+                    "maxLength": 32,
+                    "pattern": "^\\d+(\\.\\d+){1,2}(?:[-+][0-9A-Za-z][0-9A-Za-z.-]*)?$"
                   }
                 },
                 "required": [
@@ -24745,7 +24757,7 @@
                                       },
                                       {
                                         "type": "string",
-                                        "maxLength": 4096
+                                        "maxLength": 65536
                                       },
                                       {
                                         "type": "boolean"
@@ -24968,7 +24980,7 @@
                                       },
                                       {
                                         "type": "string",
-                                        "maxLength": 4096
+                                        "maxLength": 65536
                                       },
                                       {
                                         "type": "boolean"
@@ -25567,7 +25579,7 @@
                                         },
                                         {
                                           "type": "string",
-                                          "maxLength": 4096
+                                          "maxLength": 65536
                                         },
                                         {
                                           "type": "boolean"
@@ -25702,7 +25714,7 @@
                                 },
                                 {
                                   "type": "string",
-                                  "maxLength": 4096
+                                  "maxLength": 65536
                                 },
                                 {
                                   "type": "boolean"
@@ -25738,6 +25750,11 @@
                       },
                       "maxItems": 5000
                     }
+                  },
+                  "reportedSerial": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
                   }
                 },
                 "required": [
@@ -25886,7 +25903,7 @@
                                       },
                                       {
                                         "type": "string",
-                                        "maxLength": 4096
+                                        "maxLength": 65536
                                       },
                                       {
                                         "type": "boolean"
