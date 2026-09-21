@@ -117,6 +117,8 @@ pnpm typecheck    # Type-check all packages
 pnpm test         # Run tests
 pnpm format       # Format with Prettier
 pnpm build        # Build all apps and packages
+
+pnpm clean:workspaces   # Wipe node_modules/.turbo across the workspace, then `pnpm install` (fixes broken/stale deps)
 ```
 
 API documentation is generated from the oRPC contract (`pnpm --filter @repo/api generate:openapi`) and rendered in the docs site's API reference.

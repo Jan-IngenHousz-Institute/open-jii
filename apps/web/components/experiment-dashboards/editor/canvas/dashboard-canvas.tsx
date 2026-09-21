@@ -11,9 +11,9 @@ import { cn } from "@repo/ui/lib/utils";
 
 import { DashboardFiltersProvider } from "../../dashboard-filters-context";
 import type { DashboardFormValues } from "../../dashboard-form-shell";
+import { DashboardSharedReadsProvider } from "../../dashboard-shared-reads-context";
 import { useDashboardEditor } from "../context/dashboard-editor-context";
 import { useDeselectOnOutsideClick } from "../hooks/use-deselect-on-outside-click";
-import { usePlotlyResizeOnLayout } from "../hooks/use-plotly-resize-on-layout";
 import { useWidgetPlacement } from "../hooks/use-widget-placement";
 import { DashboardCanvasEmptyState, PlacementGhost } from "./dashboard-canvas-overlays";
 import "./dashboard-canvas.css";
@@ -99,8 +99,6 @@ export function DashboardCanvas({ experimentId }: DashboardCanvasProps) {
     );
   }, [baseLayout, layout.columns, tool, snapTarget]);
 
-  usePlotlyResizeOnLayout(width);
-
   // DOM order = visual reading order so Tab walks the grid naturally.
   const renderOrder = useMemo(
     () =>
@@ -159,62 +157,57 @@ export function DashboardCanvas({ experimentId }: DashboardCanvasProps) {
 
   const placementActive = tool !== "cursor";
 
-  const handleDragStop = useCallback(
+  const handleLayoutStop = useCallback(
     (next: Layout) => {
       persistLayout(next);
-    },
-    [persistLayout],
-  );
-  const handleResizeStop = useCallback(
-    (next: Layout) => {
-      persistLayout(next);
-      requestAnimationFrame(() => window.dispatchEvent(new Event("resize")));
     },
     [persistLayout],
   );
 
   return (
     <DashboardFiltersProvider widgets={widgets}>
-      {/* Keep containerRef mounted so RGL's ResizeObserver attaches on first paint. */}
-      <div
-        ref={containerRef}
-        className={cn(
-          "dashboard-canvas-root relative w-full",
-          placementActive && "cursor-crosshair",
-          // Stretch past last widget in placement mode so empty space is clickable.
-          placementActive && "min-h-[60vh]",
-        )}
-      >
-        {widgets.length === 0 && !placementActive && <DashboardCanvasEmptyState />}
-        {mounted && (
-          <GridLayout
-            width={width}
-            layout={rglLayout}
-            gridConfig={gridConfig}
-            dragConfig={dragConfig}
-            resizeConfig={resizeConfig}
-            onDragStop={handleDragStop}
-            onResizeStop={handleResizeStop}
-          >
-            {renderOrder.map(({ widget, index }) => (
-              <div key={widget.id} data-dashboard-widget-id={widget.id}>
-                <WidgetSlot
-                  widgetId={widget.id}
-                  widgetIndex={index}
-                  experimentId={experimentId}
-                  isSelected={selectedWidgetId === widget.id}
-                  onSelect={selectWidget}
-                />
-              </div>
-            ))}
-            {placementActive && snapTarget && (
-              <div key={PLACEMENT_GHOST_ID} data-placement-ghost="">
-                <PlacementGhost />
-              </div>
-            )}
-          </GridLayout>
-        )}
-      </div>
+      <DashboardSharedReadsProvider experimentId={experimentId} widgets={widgets}>
+        {/* Keep containerRef mounted so RGL's ResizeObserver attaches on first paint. */}
+        <div
+          ref={containerRef}
+          className={cn(
+            "dashboard-canvas-root relative w-full",
+            placementActive && "cursor-crosshair",
+            // Stretch past last widget in placement mode so empty space is clickable.
+            placementActive && "min-h-[60vh]",
+          )}
+        >
+          {widgets.length === 0 && !placementActive && <DashboardCanvasEmptyState />}
+          {mounted && (
+            <GridLayout
+              width={width}
+              layout={rglLayout}
+              gridConfig={gridConfig}
+              dragConfig={dragConfig}
+              resizeConfig={resizeConfig}
+              onDragStop={handleLayoutStop}
+              onResizeStop={handleLayoutStop}
+            >
+              {renderOrder.map(({ widget, index }) => (
+                <div key={widget.id} data-dashboard-widget-id={widget.id}>
+                  <WidgetSlot
+                    widgetId={widget.id}
+                    widgetIndex={index}
+                    experimentId={experimentId}
+                    isSelected={selectedWidgetId === widget.id}
+                    onSelect={selectWidget}
+                  />
+                </div>
+              ))}
+              {placementActive && snapTarget && (
+                <div key={PLACEMENT_GHOST_ID} data-placement-ghost="">
+                  <PlacementGhost />
+                </div>
+              )}
+            </GridLayout>
+          )}
+        </div>
+      </DashboardSharedReadsProvider>
     </DashboardFiltersProvider>
   );
 }

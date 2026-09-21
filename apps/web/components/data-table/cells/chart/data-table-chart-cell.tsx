@@ -1,50 +1,24 @@
 "use client";
 
 import React, { useMemo } from "react";
-import type { OnChartClickHandler } from "~/components/data-table/data-table-columns";
+import type { OnToggleCellExpansionHandler } from "~/components/data-table/data-table-columns";
 
-interface ExperimentDataTableChartCellProps {
+import { parseNumericArray } from "./parse-numeric-array";
+
+interface DataTableChartCellProps {
   data: number[] | string;
   columnName: string;
   rowId: string;
-  onClick?: OnChartClickHandler;
+  onToggleExpansion?: OnToggleCellExpansionHandler;
 }
 
 export function DataTableChartCell({
   data,
   columnName,
   rowId,
-  onClick,
-}: ExperimentDataTableChartCellProps) {
-  // Parse the array data - it comes as a string like "[1.2,3.4,5.6]" or JSON array
-  const parseArrayData = (arrayString: string): number[] => {
-    try {
-      // First try to parse as JSON
-      const jsonParsed: unknown = JSON.parse(arrayString);
-      if (Array.isArray(jsonParsed)) {
-        return jsonParsed.map((num) => parseFloat(String(num))).filter((num) => !isNaN(num));
-      }
-    } catch {
-      // Fallback to manual parsing
-      try {
-        // Remove brackets and split by comma, then parse as numbers
-        const cleanString = arrayString.replace(/^\[|\]$/g, "");
-        if (!cleanString.trim()) return [];
-        return cleanString
-          .split(",")
-          .map((str) => parseFloat(str.trim()))
-          .filter((num) => !isNaN(num));
-      } catch (error) {
-        console.warn("Failed to parse array data:", { arrayString, error });
-        return [];
-      }
-    }
-    return [];
-  };
-
-  const parsedData = useMemo(() => {
-    return Array.isArray(data) ? data : parseArrayData(String(data));
-  }, [data]);
+  onToggleExpansion,
+}: DataTableChartCellProps) {
+  const parsedData = useMemo(() => parseNumericArray(data), [data]);
 
   // Create SVG path for the line chart
   const svgPath = useMemo(() => {
@@ -68,14 +42,7 @@ export function DataTableChartCell({
 
   const handleClick = () => {
     if (parsedData.length > 0) {
-      onClick?.(parsedData, columnName, rowId);
-      // Scroll to the chart after a short delay to ensure it's rendered
-      setTimeout(() => {
-        const chartElement = document.getElementById("experiment-data-chart");
-        if (chartElement) {
-          chartElement.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }, 100);
+      onToggleExpansion?.(rowId, columnName);
     }
   };
 

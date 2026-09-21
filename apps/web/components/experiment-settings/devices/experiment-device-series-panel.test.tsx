@@ -7,7 +7,7 @@ import { contract } from "@repo/api/contract";
 
 import { ExperimentDeviceSeriesPanel } from "./experiment-device-series-panel";
 
-vi.mock("@repo/ui/components/charts/bar-chart", () => ({
+vi.mock("@/components/charts/bar-chart", () => ({
   BarChart: vi.fn(({ data }: { data: { y: number[] }[] }) => (
     <div data-testid="bar-chart" data-counts={data[0].y.join(",")} />
   )),

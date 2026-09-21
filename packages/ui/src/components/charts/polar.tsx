@@ -1,11 +1,12 @@
 "use client";
 
 import type { PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
 import {
   createPlotlyConfig,
@@ -50,7 +51,7 @@ export interface PolarSeriesData extends BaseSeries {
     size?: number;
     color?: string;
   };
-  type?: "scatterpolar" | "scatterpolargl" | "barpolar";
+  type?: "scatterpolar" | "barpolar";
 }
 
 export interface PolarPlotProps extends BaseChartProps {
@@ -108,114 +109,161 @@ export function PolarPlot({
   bgcolor = "white",
 }: PolarPlotProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
 
-  const plotData: PlotData[] = data.map((series) => {
-    const baseType = series.type || "scatterpolar";
-    const plotType = getPlotType(baseType, renderer);
+  const plotData: PlotData[] = useMemo(
+    () =>
+      data.map((series) => {
+        const baseType = series.type || "scatterpolar";
+        const plotType = getPlotType(baseType, renderer);
 
-    return {
-      r: series.r,
-      theta: series.theta,
-      name: series.name,
-      type: plotType,
-      mode: series.mode || "markers",
+        return {
+          r: series.r,
+          theta: series.theta,
+          name: series.name,
+          type: plotType,
+          mode: series.mode || "markers",
 
-      marker: series.marker
-        ? {
-            color: series.marker.color || series.color,
-            size: series.marker.size || 8,
-            symbol: series.marker.symbol || "circle",
-            opacity: series.marker.opacity || series.opacity || 1,
-            line: series.marker.line
-              ? {
-                  color: series.marker.line.color,
-                  width: series.marker.line.width || 0,
-                }
-              : undefined,
-          }
-        : {
-            color: series.color,
-            size: 8,
-          },
+          marker: series.marker
+            ? {
+                color: series.marker.color || series.color,
+                size: series.marker.size || 8,
+                symbol: series.marker.symbol || "circle",
+                opacity: series.marker.opacity || series.opacity || 1,
+                line: series.marker.line
+                  ? {
+                      color: series.marker.line.color,
+                      width: series.marker.line.width || 0,
+                    }
+                  : undefined,
+              }
+            : {
+                color: series.color,
+                size: 8,
+              },
 
-      line: series.line
-        ? {
-            color: series.line.color || series.color,
-            width: series.line.width || 2,
-            dash: series.line.dash || "solid",
-            shape: series.line.shape || "linear",
-            smoothing: series.line.smoothing,
-          }
-        : undefined,
+          line: series.line
+            ? {
+                color: series.line.color || series.color,
+                width: series.line.width || 2,
+                dash: series.line.dash || "solid",
+                shape: series.line.shape || "linear",
+                smoothing: series.line.smoothing,
+              }
+            : undefined,
 
-      fill: series.fill || "none",
-      fillcolor: series.fillcolor || series.color,
+          fill: series.fill || "none",
+          fillcolor: series.fillcolor || series.color,
 
-      text: series.text,
-      textposition: series.textposition || "middle center",
-      textfont: series.textfont,
+          text: series.text,
+          textposition: series.textposition || "middle center",
+          textfont: series.textfont,
 
-      visible: series.visible,
-      showlegend: series.showlegend,
-      legendgroup: series.legendgroup,
-      hovertemplate: series.hovertemplate,
-      hoverinfo: series.hoverinfo,
-      customdata: series.customdata,
-    } as any as PlotData;
-  });
+          visible: series.visible,
+          showlegend: series.showlegend,
+          legendgroup: series.legendgroup,
+          hovertemplate: series.hovertemplate,
+          hoverinfo: series.hoverinfo,
+          customdata: series.customdata,
+        } as any as PlotData;
+      }),
+    [data, renderer],
+  );
 
   // Tier-aware chrome + the polar config createBaseLayout cannot provide.
-  const layout = {
-    ...responsiveChrome(config, sizing),
+  const layout = useMemo(
+    () =>
+      ({
+        ...responsiveChrome(config, sizing),
 
-    polar: {
-      radialaxis: {
-        title: { text: radialAxis.title || "R", font: { size: fontSizes.axisTitle } },
-        tickfont: { size: fontSizes.tick },
-        range: radialAxis.range,
-        tickmode: radialAxis.tickmode || "linear",
-        tick0: radialAxis.tick0 || 0,
-        dtick: radialAxis.dtick,
-        tickvals: radialAxis.tickvals,
-        ticktext: radialAxis.ticktext,
-        angle: radialAxis.angle || 90,
-        side: radialAxis.side || "clockwise",
-        gridcolor: radialAxis.gridcolor || chartGridColor(),
-        linecolor: radialAxis.linecolor || chartGridColor(),
-        showgrid: radialAxis.showgrid !== false,
-        showline: radialAxis.showline !== false,
-        showticklabels: radialAxis.showticklabels !== false,
-      },
-      angularaxis: {
-        title: { text: angularAxis.title || "θ", font: { size: fontSizes.axisTitle } },
-        tickfont: { size: fontSizes.tick },
-        tickmode: angularAxis.tickmode || "linear",
-        tick0: angularAxis.tick0 || 0,
-        dtick: angularAxis.dtick || 45,
-        tickvals: angularAxis.tickvals,
-        ticktext: angularAxis.ticktext,
-        direction: angularAxis.direction || "counterclockwise",
-        rotation: angularAxis.rotation || 0,
-        period: angularAxis.period || 360,
-        gridcolor: angularAxis.gridcolor || chartGridColor(),
-        linecolor: angularAxis.linecolor || chartGridColor(),
-        showgrid: angularAxis.showgrid !== false,
-        showline: angularAxis.showline !== false,
-        showticklabels: angularAxis.showticklabels !== false,
-      },
-      ...(sector
-        ? {
-            sector: [sector.start || 0, sector.end || 360],
-          }
-        : {}),
-      hole: hole,
-      bgcolor: bgcolor,
-    },
-  } as any;
+        polar: {
+          radialaxis: {
+            title: { text: radialAxis.title || "R", font: { size: fontSizes.axisTitle } },
+            tickfont: { size: fontSizes.tick },
+            range: radialAxis.range,
+            tickmode: radialAxis.tickmode || "linear",
+            tick0: radialAxis.tick0 || 0,
+            dtick: radialAxis.dtick,
+            tickvals: radialAxis.tickvals,
+            ticktext: radialAxis.ticktext,
+            angle: radialAxis.angle || 90,
+            side: radialAxis.side || "clockwise",
+            gridcolor: radialAxis.gridcolor || chartGridColor(),
+            linecolor: radialAxis.linecolor || chartGridColor(),
+            showgrid: radialAxis.showgrid !== false,
+            showline: radialAxis.showline !== false,
+            showticklabels: radialAxis.showticklabels !== false,
+          },
+          angularaxis: {
+            title: { text: angularAxis.title || "θ", font: { size: fontSizes.axisTitle } },
+            tickfont: { size: fontSizes.tick },
+            tickmode: angularAxis.tickmode || "linear",
+            tick0: angularAxis.tick0 || 0,
+            dtick: angularAxis.dtick || 45,
+            tickvals: angularAxis.tickvals,
+            ticktext: angularAxis.ticktext,
+            direction: angularAxis.direction || "counterclockwise",
+            rotation: angularAxis.rotation || 0,
+            period: angularAxis.period || 360,
+            gridcolor: angularAxis.gridcolor || chartGridColor(),
+            linecolor: angularAxis.linecolor || chartGridColor(),
+            showgrid: angularAxis.showgrid !== false,
+            showline: angularAxis.showline !== false,
+            showticklabels: angularAxis.showticklabels !== false,
+          },
+          ...(sector
+            ? {
+                sector: [sector.start || 0, sector.end || 360],
+              }
+            : {}),
+          hole: hole,
+          bgcolor: bgcolor,
+        },
+      }) as any,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+    [
+      angularAxis.direction,
+      angularAxis.dtick,
+      angularAxis.gridcolor,
+      angularAxis.linecolor,
+      angularAxis.period,
+      angularAxis.rotation,
+      angularAxis.showgrid,
+      angularAxis.showline,
+      angularAxis.showticklabels,
+      angularAxis.tick0,
+      angularAxis.tickmode,
+      angularAxis.ticktext,
+      angularAxis.tickvals,
+      angularAxis.title,
+      bgcolor,
+      config,
+      fontSizes.axisTitle,
+      fontSizes.tick,
+      hole,
+      radialAxis.angle,
+      radialAxis.dtick,
+      radialAxis.gridcolor,
+      radialAxis.linecolor,
+      radialAxis.range,
+      radialAxis.showgrid,
+      radialAxis.showline,
+      radialAxis.showticklabels,
+      radialAxis.side,
+      radialAxis.tick0,
+      radialAxis.tickmode,
+      radialAxis.ticktext,
+      radialAxis.tickvals,
+      radialAxis.title,
+      sector,
+      sizing,
+      themeVersion,
+    ],
+  );
 
-  const plotConfig = createPlotlyConfig(config, sizing);
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>

@@ -33,6 +33,8 @@ import { EntityLink } from "./monitoring/entity-link";
 import { resolveEntities } from "./monitoring/resolve-entity-label";
 import { OverviewCard } from "./overview-card";
 
+const EXPERIMENT_LIST_CLASS = "-mx-6 -mb-3 mt-4 max-h-54 divide-y overflow-y-auto border-t";
+
 interface DeviceOverviewCardsProps {
   device: IotDeviceDetail;
 }
@@ -164,7 +166,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
     return (
       <>
         {renderFigure(bound.length, t("iot.devices.detail.cards.onboarded"))}
-        <ul className="-mx-6 -mb-3 divide-y border-t">{bound.map(renderBoundExperiment)}</ul>
+        <ul className={EXPERIMENT_LIST_CLASS}>{bound.map(renderBoundExperiment)}</ul>
       </>
     );
   }
@@ -231,7 +233,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
       return <EmptyState size="inline" description={t("iot.devices.detail.cards.observedEmpty")} />;
     }
     return (
-      <div className="space-y-2">
+      <div>
         <div className="grid grid-cols-2 gap-4">
           {renderFigure(observed.length, t("iot.devices.detail.cards.observedShortCaption"))}
           {renderFigure(
@@ -239,7 +241,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
             t("iot.devices.detail.cards.activityFigureCaption"),
           )}
         </div>
-        <ul className="-mx-6 -mb-3 divide-y border-t">{observed.map(renderObservedRow)}</ul>
+        <ul className={EXPERIMENT_LIST_CLASS}>{observed.map(renderObservedRow)}</ul>
       </div>
     );
   }

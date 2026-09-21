@@ -1,6 +1,7 @@
 import { createExperimentDashboard, createRichTextWidget } from "@/test/factories";
+import { stubIntersectionObserver } from "@/test/intersection-observer";
 import { render, screen } from "@/test/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DashboardRenderer } from "./dashboard-renderer";
 
@@ -13,6 +14,20 @@ vi.mock("./widgets/widget-renderer", () => ({
 }));
 
 describe("DashboardRenderer", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("holds a widget's content back until its card is near the viewport", () => {
+    const { intersect } = stubIntersectionObserver();
+    const dashboard = createExperimentDashboard({ widgets: [createRichTextWidget({ id: "w-1" })] });
+    render(<DashboardRenderer dashboard={dashboard} experimentId="exp-1" />);
+
+    expect(screen.queryByTestId("widget")).toBeNull();
+    intersect(true);
+    expect(screen.getByTestId("widget")).toHaveAttribute("data-id", "w-1");
+  });
+
   it("renders the empty placeholder when the dashboard has no widgets", () => {
     const dashboard = createExperimentDashboard({ widgets: [] });
     render(<DashboardRenderer dashboard={dashboard} experimentId="exp-1" />);

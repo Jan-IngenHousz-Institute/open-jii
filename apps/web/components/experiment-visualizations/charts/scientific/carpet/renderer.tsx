@@ -1,9 +1,9 @@
 "use client";
 
+import { CarpetPlot } from "@/components/charts/carpet";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { CarpetPlot } from "@repo/ui/components/charts/carpet";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";

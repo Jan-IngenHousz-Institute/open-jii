@@ -16,8 +16,20 @@ vi.mock("./charts/basic/scatter/renderer", () => ({
   ),
 }));
 
+vi.mock("@/components/charts/plotly-preload", () => ({
+  PlotlyPreload: () => <div data-testid="plotly-preload" />,
+}));
+
 describe("ExperimentVisualizationRenderer", () => {
   const experimentId = "exp-123";
+
+  it("mounts the Plotly preloader before any data is in", () => {
+    const visualization = createVisualization({ chartType: "line" });
+    render(
+      <ExperimentVisualizationRenderer visualization={visualization} experimentId={experimentId} />,
+    );
+    expect(screen.getByTestId("plotly-preload")).toBeInTheDocument();
+  });
 
   it("dispatches to LineRenderer for chartType=line", () => {
     const visualization = createVisualization({ chartType: "line", name: "My Line" });

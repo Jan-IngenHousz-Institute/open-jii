@@ -26,7 +26,8 @@ verify them against the code.
 | `packages/i18n` · `packages/analytics` · `packages/transactional` | Translations · logging and product analytics · transactional email. |
 
 `tooling/*` holds shared eslint, tailwind, tsconfig and vitest config, plus release scripting and
-the devkit. `infrastructure/` is OpenTofu — change it only when that is explicitly the task.
+the devkit (`tooling/devkit/README.md`: the local commands that need a credential).
+`infrastructure/` is OpenTofu — change it only when that is explicitly the task.
 
 ## Running things locally
 
@@ -35,10 +36,15 @@ The platform UI is auth-gated, so a real check needs Postgres and the backend, n
 - After the user authorizes resetting local data, run `pnpm db:setup` to start Postgres,
   **reset** the local database, and apply migrations.
 - `pnpm --filter database db:seed` — seeds the local user and development data.
-- `pnpm local:login` — a session cookie with no browser and no email; reads the OTP from Postgres.
+- `pnpm local:login` — signs in the seed user with no browser and no email (it reads the OTP from
+  Postgres) and writes the session to `.claude/session.header` for
+  `curl -H @.claude/session.header`; the cookie never prints unless you pass `--print`.
 - `pnpm dev:fb` — runs backend and web together.
 - `pnpm e2e` — the browser end-to-end suite, against an already-running stack.
 - `pnpm lint`, `pnpm test`, `pnpm format:check` — validation.
+- `pnpm linear:auth` stores your Linear key in the owner-only `tooling/devkit/.env`;
+  `pnpm linear:query` and the other `linear:*` commands read it in process, so the key never enters
+  a shell. `tooling/devkit/README.md` has the one-time setup a person follows.
 
 Copy `apps/backend/.env.example` to `apps/backend/.env` before first boot. It is generated and
 boot-tested, and its comments mark the variables where a plausible dummy value is **worse** than
@@ -56,13 +62,19 @@ Claude Code auto-discovers them, but the files under `.agents/` are the source. 
 assumes the team's supported macOS/Linux development environments. The shared hooks require Bash,
 Git, and `jq`; a missing `jq` prints a warning and skips the hook.
 
-| Skill                    | Read it when                                                              |
-| ------------------------ | ------------------------------------------------------------------------- |
-| `openjii-local-stack`    | Preparing a local checkout, seeding, or getting a dev session cookie.     |
-| `openjii-mobile-device`  | Getting a dev build onto a real Android phone, over cable or Wi-Fi.       |
-| `openjii-mobile-control` | Driving a connected phone to verify or reproduce mobile behaviour.        |
-| `openjii-docs-update`    | A change alters what a user sees or does, so docs and screenshots follow. |
-| `unslop`                 | Writing or editing prose a human will read: docs, PR bodies, changelogs.  |
+| Skill                      | Read it when                                                                     |
+| -------------------------- | -------------------------------------------------------------------------------- |
+| `openjii-local-stack`      | Preparing a local checkout, seeding, or getting a dev session cookie.            |
+| `openjii-mobile-device`    | Getting a dev build onto a real Android phone, over cable or Wi-Fi.              |
+| `openjii-mobile-control`   | Driving a connected phone to verify or reproduce mobile behaviour.               |
+| `openjii-docs-update`      | A change alters what a user sees or does, so docs and screenshots follow.        |
+| `openjii-prepare-release`  | Preparing or rehearsing a release, CMS notes, a mobile gate, or a Linear update. |
+| `openjii-linear`           | Anything touching an `OJD-####` ticket, the backlog, or project status.          |
+| `openjii-work-design`      | An idea needs designing as a project and splitting into tickets.                 |
+| `openjii-ticket-refine`    | One ticket needs writing, or bringing up to the ticket gate.                     |
+| `openjii-testing-criteria` | A PR is ready for review and the ticket needs its handoff sections for QA.       |
+| `openjii-backlog-triage`   | Bulk label, project or gate hygiene across many tickets.                         |
+| `unslop`                   | Writing or editing prose a human will read: docs, PR bodies, changelogs.         |
 
 `unslop` comes from a third party rather than from this repo, so it does not open with
 `Read AGENTS.md first` like the `openjii-*` guides do. It carries no repo-specific paths and needs
@@ -108,8 +120,11 @@ live" and "what should I read before exploring", so those skills do not have to 
 
 ### Issue tracker
 
-Issues live in Linear (team `OJD`); GitHub Issues is a synced mirror. See
-`docs/agents/issue-tracker.md`.
+Issues live in Linear (team `OJD`); GitHub Issues is a synced mirror. Projects are the unit of
+design and tickets are granular work under a project. `Done` means live on production. See
+`docs/agents/issue-tracker.md` for access, `docs/agents/ticket-standard.md` for the project and
+ticket shapes, the gates and the prose bar, and `docs/agents/linear-taxonomy.md` for the labels. The
+team runs no cycles and no estimation.
 
 ### Triage labels
 
@@ -117,8 +132,9 @@ The five canonical role names, used verbatim as Linear labels. See `docs/agents/
 
 ### Domain docs
 
-Single-context: root `CONTEXT.md` plus `docs/adr/`. Neither exists yet, and `/domain-modeling`
-creates them when a term or decision actually needs recording. See `docs/agents/domain.md`.
+Single-context: root `CONTEXT.md`, which points at the public glossary, plus the ADRs under
+`apps/docs/content/developers/design-decisions/`. `/domain-modeling` extends them when a term or
+decision actually needs recording. See `docs/agents/domain.md`.
 
 ## Conventions
 

@@ -1,12 +1,31 @@
 import { Logger } from "@nestjs/common";
 import type { Cache } from "cache-manager";
 
+import type { CachePort as ExperimentCachePort } from "../../../experiments/core/ports/cache.port";
 import type { CachePort as MacroCachePort } from "../../../macros/core/ports/cache.port";
 import type { CachePort as MetricsCachePort } from "../../../metrics/core/ports/cache.port";
 
 export interface CacheNamespace {
   prefix: string;
+  /** How long a value is served without asking the source again. */
   ttlMs: number;
+  /**
+   * How long past `ttlMs` a value stays servable while a fresh load runs
+   * behind it. Unset means a value simply expires, as before.
+   */
+  staleMs?: number;
+  /**
+   * How long a caller with nothing to serve waits for a load before taking
+   * `null`. The load keeps running and lands in the cache for the next one.
+   * Unset means the caller waits for the load to finish.
+   */
+  waitMs?: number;
+}
+
+/** What a stale-capable namespace stores: the value and when it stops being fresh. */
+interface Envelope<T> {
+  value: T;
+  freshUntil: number;
 }
 
 /**
@@ -26,11 +45,17 @@ function sharedLoad<T>(running: Promise<unknown>): Promise<T | null> {
   return running as Promise<T | null>;
 }
 
-export class CacheAdapter implements MacroCachePort, MetricsCachePort {
+export class CacheAdapter implements MacroCachePort, MetricsCachePort, ExperimentCachePort {
   private readonly logger = new Logger(CacheAdapter.name);
 
   /** Loads already running, so a cold key costs one fetch rather than one per caller. */
   private readonly inFlight = new Map<string, Promise<unknown>>();
+
+  /**
+   * Bumped by `invalidate`, so a load that began before the invalidation can
+   * tell its result is no longer wanted and leave the key empty.
+   */
+  private readonly generations = new Map<string, number>();
 
   constructor(
     private readonly cache: Cache,
@@ -40,31 +65,83 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort {
   async tryCache<T>(key: string, fetchFn: () => Promise<T | null>): Promise<T | null> {
     const cacheKey = `${this.namespace.prefix}${key}`;
 
-    const cached = await this.read<T>(cacheKey);
-    if (cached !== null) {
-      return cached;
+    const entry = await this.read<T>(cacheKey);
+    if (entry !== null && entry.freshUntil > Date.now()) {
+      return entry.value;
     }
 
-    // A read behind a short TTL is otherwise repeated by every caller that
-    // arrives while the first one is still running.
+    const load = this.startLoad(cacheKey, fetchFn);
+
+    // A stale value is served at once; the load refreshes it behind the reply.
+    // Waiting here is what turned a slow source into an empty page.
+    if (entry !== null) {
+      return entry.value;
+    }
+
+    return this.awaitWithin(load, this.namespace.waitMs);
+  }
+
+  /**
+   * One load per key at a time, outliving the caller that started it. A read
+   * behind a short TTL is otherwise repeated by every caller that arrives
+   * while the first one runs, and abandoned when that caller stops waiting.
+   */
+  private startLoad<T>(cacheKey: string, fetchFn: () => Promise<T | null>): Promise<T | null> {
     const running = this.inFlight.get(cacheKey);
     if (running !== undefined) {
       return sharedLoad<T>(running);
     }
 
-    const load = this.fetchAndStore(cacheKey, fetchFn);
+    const generation = this.generations.get(cacheKey) ?? 0;
+    const load = this.fetchAndStore(cacheKey, fetchFn, generation).finally(() => {
+      // An invalidation may have replaced this entry with a newer load.
+      if (this.inFlight.get(cacheKey) === load) {
+        this.inFlight.delete(cacheKey);
+      }
+    });
     this.inFlight.set(cacheKey, load);
 
+    // A caller that stopped waiting leaves nobody to observe a rejection.
+    load.catch((error: unknown) => {
+      this.logger.warn({ msg: "Background cache load failed", cacheKey, error });
+    });
+
+    return load;
+  }
+
+  private async awaitWithin<T>(
+    load: Promise<T | null>,
+    waitMs: number | undefined,
+  ): Promise<T | null> {
+    if (waitMs === undefined) {
+      return load;
+    }
+
+    let timer: NodeJS.Timeout | undefined;
+    const gaveUp = new Promise<null>((resolve) => {
+      timer = setTimeout(() => resolve(null), waitMs);
+    });
+
     try {
-      return await load;
+      return await Promise.race([load, gaveUp]);
     } finally {
-      this.inFlight.delete(cacheKey);
+      clearTimeout(timer);
     }
   }
 
-  private async read<T>(cacheKey: string): Promise<T | null> {
+  /**
+   * A stale-capable namespace stores an envelope so freshness can outlive the
+   * store's own expiry; every other namespace stores the bare value, which is
+   * fresh for exactly as long as the store keeps it.
+   */
+  private async read<T>(cacheKey: string): Promise<Envelope<T> | null> {
     try {
-      return (await this.cache.get<T>(cacheKey)) ?? null;
+      if (this.namespace.staleMs === undefined) {
+        const value = (await this.cache.get<T>(cacheKey)) ?? null;
+        return value === null ? null : { value, freshUntil: Number.POSITIVE_INFINITY };
+      }
+
+      return (await this.cache.get<Envelope<T>>(cacheKey)) ?? null;
     } catch (error) {
       this.logger.warn({ msg: "Cache read failed, treating as miss", cacheKey, error });
       return null;
@@ -74,18 +151,35 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort {
   private async fetchAndStore<T>(
     cacheKey: string,
     fetchFn: () => Promise<T | null>,
+    generation: number,
   ): Promise<T | null> {
     const value = await fetchFn();
 
-    if (value !== null && value !== undefined) {
+    // Invalidated while loading: the caller still gets the source's answer,
+    // but the cache does not, or the invalidation would be undone.
+    const invalidated = (this.generations.get(cacheKey) ?? 0) !== generation;
+
+    if (value !== null && value !== undefined && !invalidated) {
       try {
-        await this.cache.set(cacheKey, value, this.namespace.ttlMs);
+        await this.store(cacheKey, value);
       } catch (error) {
         this.logger.warn({ msg: "Cache write failed", cacheKey, error });
       }
     }
 
     return value;
+  }
+
+  private async store<T>(cacheKey: string, value: T): Promise<void> {
+    const { ttlMs, staleMs } = this.namespace;
+
+    if (staleMs === undefined) {
+      await this.cache.set(cacheKey, value, ttlMs);
+      return;
+    }
+
+    const envelope: Envelope<T> = { value, freshUntil: Date.now() + ttlMs };
+    await this.cache.set(cacheKey, envelope, ttlMs + staleMs);
   }
 
   async tryCacheMany<T>(
@@ -125,8 +219,14 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort {
   }
 
   async invalidate(key: string): Promise<void> {
+    const cacheKey = `${this.namespace.prefix}${key}`;
+    this.generations.set(cacheKey, (this.generations.get(cacheKey) ?? 0) + 1);
+    // The next caller starts its own load rather than joining one whose
+    // result will not be kept.
+    this.inFlight.delete(cacheKey);
+
     try {
-      await this.cache.del(`${this.namespace.prefix}${key}`);
+      await this.cache.del(cacheKey);
     } catch (error) {
       this.logger.warn({ msg: "Cache invalidation failed", key, error });
     }

@@ -1,10 +1,11 @@
-/// <reference path="./plotly-dist.d.ts" />
 import type { Config, ModeBarButton, ModeBarButtonAny, PlotlyHTMLElement } from "plotly.js";
 
 import { toast } from "../../hooks/use-toast";
 
 const EXPORT_BUTTON = "downloadBrandedPng";
-const LOGO_URL = "/openJII_logo_RGB_horizontal_green_yellow_trimmed.svg";
+// The light mark is dark teal, which disappears on a dark export.
+const LOGO_LIGHT = "/openJII_logo_RGB_horizontal_green_yellow_trimmed.svg";
+const LOGO_DARK = "/openJII_logo_RGB_horizontal_yellow_transparentBG.png";
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -19,7 +20,8 @@ export async function downloadBrandedPng(
   graph: PlotlyHTMLElement,
   options: Config["toImageButtonOptions"] = {},
 ): Promise<void> {
-  const Plotly = await import("plotly.js/dist/plotly");
+  const { Plotly } = await import("./plotly-runtime");
+  const isDark = document.documentElement.classList.contains("dark");
   const [chart, logo] = await Promise.all([
     Plotly.toImage(graph, {
       format: "png",
@@ -27,7 +29,7 @@ export async function downloadBrandedPng(
       height: options.height ?? null,
       scale: options.scale ?? 1,
     }).then(loadImage),
-    loadImage(LOGO_URL),
+    loadImage(isDark ? LOGO_DARK : LOGO_LIGHT),
   ]);
 
   const canvas = document.createElement("canvas");
@@ -40,9 +42,11 @@ export async function downloadBrandedPng(
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Image export is unavailable in this browser.");
 
-  // A separate white footer gives the brand contrast without covering chart pixels.
+  // The footer carries the chart's own background, sampled from its corner, so
+  // it continues the export instead of banding it white on a dark theme.
   context.drawImage(chart, 0, 0);
-  context.fillStyle = "#ffffff";
+  const [r = 255, g = 255, b = 255, a = 255] = context.getImageData(0, 0, 1, 1).data;
+  context.fillStyle = `rgba(${r},${g},${b},${a / 255})`;
   context.fillRect(0, chart.naturalHeight, canvas.width, logoHeight + padding * 2);
   context.drawImage(
     logo,

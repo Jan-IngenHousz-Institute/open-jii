@@ -1,11 +1,12 @@
 "use client";
 
 import type { PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
 import { createBaseLayout, createPlotlyConfig, readThemeColor, truncateTickLabel } from "./utils";
 
@@ -55,43 +56,52 @@ export function RidgePlot({
   fillOpacity = 0.7,
 }: RidgePlotProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
 
-  const plotData: PlotData[] = data.map(
-    (series) =>
-      ({
-        // Closed path: curve points → bottom-right corner → bottom-left
-        // corner → (auto-closed back to start). Plotly's `fill: 'toself'`
-        // fills inside the polygon; without the corners the fill bleeds
-        // sideways from the curve's endpoints down to whatever the next
-        // trace starts at.
-        x: [...series.xs, series.xs[series.xs.length - 1], series.xs[0]],
-        y: [...series.ys, series.laneBaseY, series.laneBaseY],
-        name: series.name,
-        type: "scatter",
-        mode: "lines",
-        line: { color: series.color, width: lineWidth },
-        fill: fill ? "toself" : "none",
-        fillcolor: fill ? withAlpha(series.color, fillOpacity) : undefined,
-        hoverinfo: "name+x",
-      }) as unknown as PlotData,
+  const plotData: PlotData[] = useMemo(
+    () =>
+      data.map(
+        (series) =>
+          ({
+            // Closed path: curve points → bottom-right corner → bottom-left
+            // corner → (auto-closed back to start). Plotly's `fill: 'toself'`
+            // fills inside the polygon; without the corners the fill bleeds
+            // sideways from the curve's endpoints down to whatever the next
+            // trace starts at.
+            x: [...series.xs, series.xs[series.xs.length - 1], series.xs[0]],
+            y: [...series.ys, series.laneBaseY, series.laneBaseY],
+            name: series.name,
+            type: "scatter",
+            mode: "lines",
+            line: { color: series.color, width: lineWidth },
+            fill: fill ? "toself" : "none",
+            fillcolor: fill ? withAlpha(series.color, fillOpacity) : undefined,
+            hoverinfo: "name+x",
+          }) as unknown as PlotData,
+      ),
+    [data, fill, fillOpacity, lineWidth],
   );
 
-  const layout = createBaseLayout(config, sizing);
+  const layout = useMemo(() => {
+    const next = createBaseLayout(config, sizing);
 
-  // Custom Y axis: category labels at the lane bases. Hide grid and
-  // zeroline because they'd cut across every ridge as horizontal noise.
-  layout.yaxis = {
-    ...layout.yaxis,
-    tickmode: "array",
-    tickvals: categoryTicks.map((t) => t.value),
-    // Ellipsize lane labels per tier so they cannot grow the left margin.
-    ticktext: categoryTicks.map((t) => truncateTickLabel(t.label, sizing)),
-    showgrid: false,
-    zeroline: false,
-  };
+    // Custom Y axis: category labels at the lane bases. Hide grid and
+    // zeroline because they'd cut across every ridge as horizontal noise.
+    next.yaxis = {
+      ...next.yaxis,
+      tickmode: "array",
+      tickvals: categoryTicks.map((t) => t.value),
+      // Ellipsize lane labels per tier so they cannot grow the left margin.
+      ticktext: categoryTicks.map((t) => truncateTickLabel(t.label, sizing)),
+      showgrid: false,
+      zeroline: false,
+    };
 
-  const plotConfig = createPlotlyConfig(config, sizing);
+    return next;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+  }, [config, sizing, categoryTicks, themeVersion]);
 
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart

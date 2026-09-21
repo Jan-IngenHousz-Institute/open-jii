@@ -14,7 +14,6 @@ import z from "zod";
 import { AddAnnotationDialog } from "~/components/experiment-data/annotations/add-annotation-dialog";
 import { BulkActionsBar } from "~/components/experiment-data/annotations/bulk-actions-bar";
 import { DeleteAnnotationsDialog } from "~/components/experiment-data/annotations/delete-annotations-dialog";
-import { useChartDisplay } from "~/hooks/useChartDisplay";
 import { useUrlDataFilters } from "~/hooks/useUrlDataFilters";
 
 import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
@@ -24,7 +23,6 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { FilterChipBar } from "../data-filters/filter-chip-bar";
 import { DataExportModal } from "./data-export-modal/data-export-modal";
-import { ExperimentDataTableChart } from "./table-chart/experiment-data-table-chart";
 
 function getSortColumnName(columnName: string, columnType?: string): string {
   if (columnType === "USER") {
@@ -83,8 +81,6 @@ export function ExperimentDataTable({
     resolver: zodResolver(bulkSelectionFormSchema),
     defaultValues: { selectedRowIds: [] },
   });
-
-  const { chartDisplay, toggleChartPin, closePinnedChart } = useChartDisplay();
 
   const { t } = useTranslation();
 
@@ -229,7 +225,6 @@ export function ExperimentDataTable({
           sorting={{ column: sortColumn, direction: sortDirection, onSort: handleSort }}
           selection={{ state: rowSelection, onChange: setRowSelection }}
           cellHandlers={{
-            onChartClick: toggleChartPin,
             // Withheld without `can(contribute)`: the cells hide their
             // add/remove controls when the handler is absent.
             onAddAnnotation: canContribute ? openAddAnnotationDialog : undefined,
@@ -244,17 +239,6 @@ export function ExperimentDataTable({
           open={downloadModalOpen}
           onOpenChange={setDownloadModalOpen}
         />
-        {chartDisplay && (
-          <div id="experiment-data-chart" className="mt-6">
-            <ExperimentDataTableChart
-              data={chartDisplay.data}
-              columnName={chartDisplay.columnName}
-              visible={true}
-              isClicked={chartDisplay.isPinned}
-              onClose={closePinnedChart}
-            />
-          </div>
-        )}
       </form>
       <AddAnnotationDialog
         experimentId={experimentId}

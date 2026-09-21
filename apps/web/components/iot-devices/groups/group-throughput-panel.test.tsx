@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { MonitoringRange } from "../monitoring/monitoring-range";
 import { GroupThroughputPanel } from "./group-throughput-panel";
 
-vi.mock("@repo/ui/components/charts/bar-chart", () => ({
+vi.mock("@/components/charts/bar-chart", () => ({
   BarChart: vi.fn(({ data }: { data: { name: string }[] }) => (
     <div data-testid="bar-chart">{JSON.stringify(data.map((series) => series.name))}</div>
   )),

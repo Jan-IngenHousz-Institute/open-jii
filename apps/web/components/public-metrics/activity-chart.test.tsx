@@ -13,7 +13,7 @@ interface CapturedChart {
 
 const barProps: CapturedChart[] = [];
 
-vi.mock("@repo/ui/components/charts/bar-chart", () => ({
+vi.mock("@/components/charts/bar-chart", () => ({
   BarChart: (props: CapturedChart) => {
     barProps.push(props);
     return <div data-testid="bar-chart" />;

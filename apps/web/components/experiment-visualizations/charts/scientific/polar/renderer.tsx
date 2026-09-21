@@ -1,9 +1,9 @@
 "use client";
 
+import { PolarPlot } from "@/components/charts/polar";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { PolarPlot } from "@repo/ui/components/charts/polar";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";

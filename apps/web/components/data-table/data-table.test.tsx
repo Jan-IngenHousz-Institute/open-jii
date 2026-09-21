@@ -7,6 +7,10 @@ import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/exp
 import { DataTable } from "./data-table";
 import type { DataRow } from "./data-table-columns";
 
+vi.mock("@/components/charts/line-chart", () => ({
+  LineChart: vi.fn(() => <div data-testid="line-chart" />),
+}));
+
 const COLUMNS: ExperimentDataColumn[] = [
   { name: "measured_at", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
   { name: "phi2", type_name: "DOUBLE", type_text: "DOUBLE" },
@@ -84,6 +88,29 @@ describe("DataTable", () => {
     await user.click(screen.getByTitle("dataTable.next"));
 
     expect(onChange).toHaveBeenCalled();
+  });
+
+  it.each([
+    { totalRows: 999, expected: "999" },
+    { totalRows: 1000, expected: "1,000" },
+    { totalRows: 12345, expected: "12,345" },
+    { totalRows: 1000000, expected: "1,000,000" },
+  ])("formats a total row count of $totalRows as $expected", ({ totalRows, expected }) => {
+    render(
+      <DataTable
+        columns={COLUMNS}
+        rows={ROWS}
+        pagination={{
+          mode: "server",
+          state: { pageIndex: 0, pageSize: 1000 },
+          onChange: vi.fn(),
+          totalRows,
+          totalPages: Math.ceil(totalRows / 1000),
+        }}
+      />,
+    );
+
+    expect(screen.getByText(new RegExp(`dataTable.totalRows.*${expected}`))).toBeInTheDocument();
   });
 
   it("pages rows it already holds, at the size the caller asks for", async () => {
@@ -213,6 +240,48 @@ describe("DataTable", () => {
 
     await user.click(screen.getAllByRole("button")[0]);
     expect(bodyRows()).toBe(2);
+  });
+
+  it("expands a trace chart in the same slot as other expandable cells, and highlights the expanded row", async () => {
+    const user = userEvent.setup();
+    const columnsWithTrace: ExperimentDataColumn[] = [
+      ...COLUMNS,
+      { name: "trace", type_name: "ARRAY<DOUBLE>", type_text: "ARRAY<DOUBLE>" },
+    ];
+    const rowsWithTrace: DataRow[] = ROWS.map((row) => ({
+      ...row,
+      trace: JSON.stringify([1, 2, 3]),
+    }));
+
+    const { container } = render(<DataTable columns={columnsWithTrace} rows={rowsWithTrace} />);
+    const bodyRows = () => container.querySelectorAll("tbody tr").length;
+    const firstRow = () => container.querySelectorAll("tbody tr")[0] as HTMLElement;
+    const firstRowClassName = () => firstRow().className;
+    // The sparkline cell has no button role (it's a plain clickable div, kept
+    // visually identical to the always-visible sparkline preview).
+    const traceCellTrigger = () =>
+      firstRow().querySelector('svg[width="80"]')?.closest("div") as HTMLElement;
+
+    expect(bodyRows()).toBe(2);
+    expect(firstRowClassName()).not.toContain("border-l-status-active-foreground");
+
+    // Expand the first row's VARIANT cell (envelope).
+    await user.click(screen.getAllByRole("button")[0]);
+    expect(bodyRows()).toBe(3);
+
+    // Expanding the same row's trace chart switches the expanded content in
+    // place rather than opening a second expanded row.
+    await user.click(traceCellTrigger());
+    expect(bodyRows()).toBe(3);
+    expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+    expect(firstRowClassName()).toContain("border-l-status-active-foreground");
+
+    // Closing via the expanded content's own close button works too, without
+    // needing to find the original trigger cell again (e.g. after scrolling
+    // the table far horizontally, the trigger cell could be off-screen).
+    await user.click(screen.getByRole("button", { name: "common.close" }));
+    expect(bodyRows()).toBe(2);
+    expect(firstRowClassName()).not.toContain("border-l-status-active-foreground");
   });
 
   it("renders the toolbar the surface passes in", () => {

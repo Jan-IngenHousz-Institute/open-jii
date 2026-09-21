@@ -5,7 +5,7 @@ import type { DeviceExperiment, DeviceMonitoring } from "@repo/api/domains/iot/i
 
 import { DataByExperiment } from "./data-by-experiment";
 
-vi.mock("@repo/ui/components/charts/bar-chart", () => ({
+vi.mock("@/components/charts/bar-chart", () => ({
   HorizontalBarChart: vi.fn(() => <div data-testid="experiment-bars" />),
 }));
 

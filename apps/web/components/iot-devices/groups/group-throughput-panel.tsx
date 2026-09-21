@@ -1,11 +1,11 @@
 "use client";
 
+import { BarChart } from "@/components/charts/bar-chart";
 import { BarChart3 } from "lucide-react";
 import { useState } from "react";
 
 import type { IotDeviceGroupThroughputBucket } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
 import { useTranslation } from "@repo/i18n";
-import { BarChart } from "@repo/ui/components/charts/bar-chart";
 import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 
 import { ChartTableToggle } from "../monitoring/chart-table-toggle";

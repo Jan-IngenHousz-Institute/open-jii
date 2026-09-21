@@ -1,0 +1,102 @@
+import { readFile, writeFile } from "node:fs/promises";
+
+import { pathFromRoot, repositoryRoot, requireLinearApiKey } from "../lib/config.js";
+import { createFileAudit, createLinearClient } from "../lib/linear.js";
+import type { LinearClient } from "../lib/linear.js";
+
+export interface QueryArgs {
+  document: string | null;
+  file: string | null;
+  variables: Record<string, unknown>;
+  allowDestructive: boolean;
+  // pnpm prints its own lines around stdout, so a caller that wants clean JSON names a file.
+  output: string | null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function optionAfter(args: string[], flag: string): string | null {
+  const index = args.indexOf(flag);
+  if (index < 0) return null;
+  const value = args[index + 1];
+  if (!value || value.startsWith("--")) throw new Error(`${flag} requires a value`);
+  return value;
+}
+
+export function parseArgs(args: string[]): QueryArgs {
+  const document = optionAfter(args, "--query");
+  const file = optionAfter(args, "--file");
+  if ((document === null) === (file === null)) {
+    throw new Error("Pass exactly one of --query <document> or --file <path>");
+  }
+  if (file !== null && !/\.(graphql|gql)$/.test(file)) {
+    throw new Error("--file must point at a .graphql or .gql document");
+  }
+
+  const rawVariables = optionAfter(args, "--variables");
+  let variables: Record<string, unknown> = {};
+  if (rawVariables !== null) {
+    const parsed: unknown = JSON.parse(rawVariables);
+    if (!isRecord(parsed)) throw new Error("--variables must be a JSON object");
+    variables = parsed;
+  }
+
+  return {
+    document,
+    file,
+    variables,
+    allowDestructive: args.includes("--allow-destructive"),
+    output: optionAfter(args, "--output"),
+  };
+}
+
+export async function runQuery(
+  document: string,
+  variables: Record<string, unknown>,
+  client: LinearClient,
+  write: (text: string) => void,
+): Promise<void> {
+  const result = await client.query<unknown>(document, variables);
+  write(`${JSON.stringify(result, null, 2)}\n`);
+}
+
+async function run(args: string[]): Promise<number> {
+  const parsed = parseArgs(args);
+  let document: string;
+  if (parsed.document !== null) {
+    document = parsed.document;
+  } else if (parsed.file !== null) {
+    document = await readFile(pathFromRoot(parsed.file, repositoryRoot()), "utf8");
+  } else {
+    throw new Error("Pass exactly one of --query <document> or --file <path>");
+  }
+
+  const root = repositoryRoot();
+  const apiKey = await requireLinearApiKey(root, process.env);
+
+  const client = createLinearClient({
+    apiKey,
+    allowDestructive: parsed.allowDestructive,
+    audit: createFileAudit(root),
+  });
+  const output = parsed.output === null ? null : pathFromRoot(parsed.output, root);
+  if (output === null) {
+    await runQuery(document, parsed.variables, client, (text) => {
+      process.stdout.write(text);
+    });
+    return 0;
+  }
+  let json = "";
+  await runQuery(document, parsed.variables, client, (text) => {
+    json += text;
+  });
+  await writeFile(output, json);
+  process.stdout.write(`wrote ${output}\n`);
+  return 0;
+}
+
+if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+  process.exitCode = await run(process.argv.slice(2));
+}

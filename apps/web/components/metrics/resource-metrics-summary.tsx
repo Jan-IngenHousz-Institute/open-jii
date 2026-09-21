@@ -1,5 +1,6 @@
 "use client";
 
+import { formatLocaleNumber } from "@/util/format-locale-number";
 import { useResourceMetrics } from "~/hooks/metrics/useResourceMetrics/useResourceMetrics";
 import { useLocale } from "~/hooks/useLocale";
 
@@ -37,7 +38,6 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
     return null;
   }
 
-  const number = new Intl.NumberFormat(locale);
   const compact = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 });
   // Warehouse days are UTC.
   const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" });
@@ -47,6 +47,7 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
   const unit = t(`resourceMetrics.${kind}.unit`);
   const peak = data.peak;
   const busiest = data.busiest;
+  const dailyAverage = Math.round(data.totalMeasurements / data.windowDays);
 
   const renderBusiest = (id: string, name: string, measurements: number) => (
     <MetricStatCard
@@ -70,7 +71,7 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
         locale={locale}
         label={t(`resourceMetrics.${kind}.measurements`)}
         value={compact.format(data.totalMeasurements)}
-        title={number.format(data.totalMeasurements)}
+        title={formatLocaleNumber(data.totalMeasurements, locale)}
         comparison={{ current: data.totalMeasurements, previous: data.previousMeasurements }}
         note={t("previousWindow", {
           value: compact.format(data.previousMeasurements),
@@ -88,15 +89,15 @@ export function ResourceMetricsSummary({ kind }: ResourceMetricsSummaryProps) {
       <MetricStatCard
         locale={locale}
         label={t(`resourceMetrics.${kind}.active`)}
-        value={number.format(data.activeCount)}
+        value={formatLocaleNumber(data.activeCount, locale)}
         note={t("resourceMetrics.ofVisible", { count: data.visibleCount })}
         context={window}
       />
       {busiest === null ? null : renderBusiest(busiest.id, busiest.name, busiest.measurements)}
       <MetricTrendCard
         label={t("dailyAverage")}
-        value={compact.format(Math.round(data.totalMeasurements / data.windowDays))}
-        title={number.format(Math.round(data.totalMeasurements / data.windowDays))}
+        value={compact.format(dailyAverage)}
+        title={formatLocaleNumber(dailyAverage, locale)}
         seriesName={t("resourceMetrics.series", { unit })}
         days={data.days}
         peakDate={peak?.date ?? null}

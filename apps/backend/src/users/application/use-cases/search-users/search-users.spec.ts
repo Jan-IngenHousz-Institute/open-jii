@@ -1,3 +1,5 @@
+import { faker } from "@faker-js/faker";
+
 import { assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { SearchUsersUseCase } from "./search-users";
@@ -51,9 +53,12 @@ describe("SearchUsersUseCase", () => {
 
   it("should search users by name", async () => {
     // Arrange
+    // Search is trigram-fuzzy and the ambient test user gets a random real name, so a
+    // plain "Alice" also matches a generated "Alison". Keep the term unique.
+    const firstName = `Alice${faker.string.alphanumeric(10)}`;
     await testApp.createTestUser({
-      name: "Alice Smith",
-      email: "alice@example.com",
+      name: `${firstName} Smith`,
+      email: `${firstName.toLowerCase()}@example.com`,
     });
     await testApp.createTestUser({
       name: "Bob Johnson",
@@ -61,22 +66,23 @@ describe("SearchUsersUseCase", () => {
     });
 
     // Act
-    const result = await useCase.execute({ query: "Alice" });
+    const result = await useCase.execute({ query: firstName });
 
     // Assert
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     const foundUsers = result.value;
     expect(foundUsers.length).toBe(1);
-    expect(foundUsers[0].firstName).toBe("Alice");
+    expect(foundUsers[0].firstName).toBe(firstName);
     expect(foundUsers[0].lastName).toBe("Smith");
   });
 
   it("should search users by email", async () => {
     // Arrange
+    const email = `alice${faker.string.alphanumeric(10)}@example.com`;
     await testApp.createTestUser({
       name: "Alice Smith",
-      email: "alice@example.com",
+      email,
     });
     await testApp.createTestUser({
       name: "Bob Johnson",
@@ -84,36 +90,37 @@ describe("SearchUsersUseCase", () => {
     });
 
     // Act
-    const result = await useCase.execute({ query: "alice@example.com" });
+    const result = await useCase.execute({ query: email });
 
     // Assert
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     const foundUsers = result.value;
     expect(foundUsers.length).toBe(1);
-    expect(foundUsers[0].email).toBe("alice@example.com");
+    expect(foundUsers[0].email).toBe(email);
   });
 
   it("should search users with partial name match", async () => {
     // Arrange
+    const firstName = `Alice${faker.string.alphanumeric(10)}`;
     await testApp.createTestUser({
-      name: "Alice Smith",
-      email: "alice@example.com",
+      name: `${firstName} Smith`,
+      email: `${firstName.toLowerCase()}@example.com`,
     });
     await testApp.createTestUser({
-      name: "Alice Johnson",
-      email: "alice.johnson@example.com",
+      name: `${firstName} Johnson`,
+      email: `${firstName.toLowerCase()}.johnson@example.com`,
     });
 
     // Act
-    const result = await useCase.execute({ query: "Alice" });
+    const result = await useCase.execute({ query: firstName });
 
     // Assert
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     const foundUsers = result.value;
     expect(foundUsers.length).toBe(2);
-    expect(foundUsers.every((u) => u.firstName.includes("Alice"))).toBe(true);
+    expect(foundUsers.every((u) => u.firstName === firstName)).toBe(true);
   });
 
   it("should apply limit and offset for pagination", async () => {

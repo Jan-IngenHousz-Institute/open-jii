@@ -2,6 +2,8 @@
 
 import { isEditableTarget } from "@/components/shortcuts/is-editable-target";
 import { showShortcutHint } from "@/components/shortcuts/use-shortcut-hint";
+import { useLocale } from "@/hooks/useLocale";
+import { formatLocaleNumber } from "@/util/format-locale-number";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import type { OnChangeFn, PaginationState, RowSelectionState } from "@tanstack/react-table";
 import { useTable } from "@tanstack/react-table";
@@ -33,13 +35,12 @@ import type {
   DataRow,
   IsCellExpandedFn,
   OnAnnotationHandler,
-  OnChartClickHandler,
   OnToggleCellExpansionHandler,
 } from "./data-table-columns";
 import { dataTableFeatures } from "./data-table-features";
 import { DataTableHeader, DataTableRows, formatValue, LoadingRows } from "./data-table-utils";
 
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 1000];
 
 /**
  * Paging a caller drives itself, because the rows come a page at a time from
@@ -75,7 +76,6 @@ interface SelectionConfig {
 }
 
 interface CellHandlers {
-  onChartClick?: OnChartClickHandler;
   onAddAnnotation?: OnAnnotationHandler;
   onDeleteAnnotations?: OnAnnotationHandler;
 }
@@ -119,6 +119,7 @@ export function DataTable({
   className,
 }: DataTableProps) {
   const { t } = useTranslation();
+  const locale = useLocale();
   const [expandedCell, setExpandedCell] = useState<{ rowId: string; columnName: string } | null>(
     null,
   );
@@ -142,7 +143,6 @@ export function DataTable({
     const dataColumns = createTableColumns({
       columns,
       formatFunction: formatValue,
-      onChartClick: cellHandlers?.onChartClick,
       onAddAnnotation: cellHandlers?.onAddAnnotation,
       onDeleteAnnotations: cellHandlers?.onDeleteAnnotations,
       onToggleCellExpansion: toggleCellExpansion,
@@ -244,6 +244,7 @@ export function DataTable({
                 tableRows={rows}
                 columns={orderedColumns}
                 errorColumn={errorColumn}
+                onToggleCellExpansion={toggleCellExpansion}
               />
             )}
           </TableBody>
@@ -253,7 +254,7 @@ export function DataTable({
       {isPaged && (
         <div className="mt-4 flex w-full flex-col items-center justify-between gap-4 overflow-auto p-1 text-sm sm:flex-row sm:gap-8">
           <div className="flex-1 whitespace-nowrap">
-            {t("dataTable.totalRows")}: {totalRows}
+            {t("dataTable.totalRows")}: {formatLocaleNumber(totalRows, locale)}
           </div>
           <div className="flex items-center space-x-2">
             <Label className="whitespace-nowrap">{t("dataTable.rowsPerPage")}:</Label>
@@ -275,9 +276,9 @@ export function DataTable({
               </SelectContent>
             </Select>
           </div>
-          <Pagination className="max-w-72">
-            <PaginationContent className="w-full justify-between">
-              <PaginationItem>
+          <Pagination className="max-w-full sm:max-w-96">
+            <PaginationContent className="grid w-full grid-cols-[auto_1fr_auto] items-center">
+              <PaginationItem className="shrink-0">
                 <PaginationPrevious
                   className={cn(
                     "border",
@@ -291,13 +292,13 @@ export function DataTable({
                   title={t("dataTable.previous")}
                 />
               </PaginationItem>
-              <PaginationItem>
+              <PaginationItem className="text-center">
                 <span>
                   {t("dataTable.page")} {pageState.pageIndex + 1} {t("dataTable.pageOf")}{" "}
                   {totalPages}
                 </span>
               </PaginationItem>
-              <PaginationItem>
+              <PaginationItem className="shrink-0">
                 <PaginationNext
                   className={cn(
                     "border",

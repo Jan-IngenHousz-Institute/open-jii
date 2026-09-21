@@ -1,11 +1,12 @@
 "use client";
 
 import type { PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
 import {
   createBaseLayout,
@@ -93,73 +94,82 @@ export function ParallelCoordinates({
   error,
 }: ParallelCoordinatesProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("parcoords", renderer);
 
-  const plotData: PlotData[] = data.map(
-    (series) =>
-      ({
-        name: series.name,
-        type: plotType,
+  const plotData: PlotData[] = useMemo(
+    () =>
+      data.map(
+        (series) =>
+          ({
+            name: series.name,
+            type: plotType,
 
-        // Dimensions configuration
-        dimensions: series.dimensions.map((dim) => ({
-          label: dim.label,
-          values: dim.values,
-          range: dim.range,
-          tickvals: dim.tickvals,
-          ticktext: dim.ticktext,
-          constraintrange: dim.constraintrange,
-          multiselect: dim.multiselect !== false,
-          visible: dim.visible !== false,
-        })),
+            // Dimensions configuration
+            dimensions: series.dimensions.map((dim) => ({
+              label: dim.label,
+              values: dim.values,
+              range: dim.range,
+              tickvals: dim.tickvals,
+              ticktext: dim.ticktext,
+              constraintrange: dim.constraintrange,
+              multiselect: dim.multiselect !== false,
+              visible: dim.visible !== false,
+            })),
 
-        // Line configuration
-        line: series.line
-          ? {
-              color: series.line.color || series.color,
-              colorscale: series.line.colorscale || "Viridis",
-              reversescale: series.line.reversescale === true,
-              showscale: series.line.showscale !== false,
-              cmin: series.line.cmin,
-              cmax: series.line.cmax,
-              cmid: series.line.cmid,
-              colorbar: series.line.colorbar || {
-                title: { text: "Value", side: "right" },
-              },
-              width: series.line.width || 1,
-              opacity: series.line.opacity || series.opacity || 1,
-            }
-          : {
-              color: series.color || "blue",
-              width: 1,
+            // Line configuration
+            line: series.line
+              ? {
+                  color: series.line.color || series.color,
+                  colorscale: series.line.colorscale || "Viridis",
+                  reversescale: series.line.reversescale === true,
+                  showscale: series.line.showscale !== false,
+                  cmin: series.line.cmin,
+                  cmax: series.line.cmax,
+                  cmid: series.line.cmid,
+                  colorbar: series.line.colorbar || {
+                    title: { text: "Value", side: "right" },
+                  },
+                  width: series.line.width || 1,
+                  opacity: series.line.opacity || series.opacity || 1,
+                }
+              : {
+                  color: series.color || "blue",
+                  width: 1,
+                },
+
+            // Label configuration; defaults shrink with the container tier.
+            labelangle: series.labelangle || 0,
+            labelside: series.labelside || "top",
+            labelfont: { size: fontSizes.axisTitle },
+            rangefont: series.rangefont || {
+              size: Math.min(12, fontSizes.tick),
+              color: readThemeColor("--foreground") ?? "#444",
+            },
+            tickfont: series.tickfont || {
+              size: Math.min(10, fontSizes.tick),
+              color: readThemeColor("--foreground") ?? "#444",
             },
 
-        // Label configuration; defaults shrink with the container tier.
-        labelangle: series.labelangle || 0,
-        labelside: series.labelside || "top",
-        labelfont: { size: fontSizes.axisTitle },
-        rangefont: series.rangefont || {
-          size: Math.min(12, fontSizes.tick),
-          color: readThemeColor("--foreground") ?? "#444",
-        },
-        tickfont: series.tickfont || {
-          size: Math.min(10, fontSizes.tick),
-          color: readThemeColor("--foreground") ?? "#444",
-        },
-
-        visible: series.visible,
-        showlegend: series.showlegend,
-        legendgroup: series.legendgroup,
-        hovertemplate: series.hovertemplate,
-        hoverinfo: series.hoverinfo,
-        customdata: series.customdata,
-      }) as any as PlotData,
+            visible: series.visible,
+            showlegend: series.showlegend,
+            legendgroup: series.legendgroup,
+            hovertemplate: series.hovertemplate,
+            hoverinfo: series.hoverinfo,
+            customdata: series.customdata,
+          }) as any as PlotData,
+      ),
+    [data, fontSizes.axisTitle, fontSizes.tick, plotType],
   );
 
-  const layout = createBaseLayout(config, sizing);
-  const plotConfig = createPlotlyConfig(config, sizing);
+  const layout = useMemo(
+    () => createBaseLayout(config, sizing),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+    [config, sizing, themeVersion],
+  );
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
@@ -227,66 +237,75 @@ export function ParallelCategories({
   error,
 }: ParallelCategoriesProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("parcats", renderer);
 
-  const plotData: PlotData[] = data.map(
-    (series) =>
-      ({
-        name: series.name,
-        type: plotType,
+  const plotData: PlotData[] = useMemo(
+    () =>
+      data.map(
+        (series) =>
+          ({
+            name: series.name,
+            type: plotType,
 
-        // Dimensions configuration for categorical data
-        dimensions: series.dimensions.map((dim) => ({
-          label: dim.label,
-          values: dim.values,
-          categoryorder: dim.categoryorder || "trace",
-          categoryarray: dim.categoryarray,
-          ticktext: dim.ticktext,
-          visible: dim.visible !== false,
-        })),
+            // Dimensions configuration for categorical data
+            dimensions: series.dimensions.map((dim) => ({
+              label: dim.label,
+              values: dim.values,
+              categoryorder: dim.categoryorder || "trace",
+              categoryarray: dim.categoryarray,
+              ticktext: dim.ticktext,
+              visible: dim.visible !== false,
+            })),
 
-        // Line configuration for parallel categories
-        line: series.line
-          ? {
-              color: series.line.color,
-              colorscale: series.line.colorscale || "Viridis",
-              showscale: series.line.showscale !== false,
-              cmin: series.line.cmin,
-              cmax: series.line.cmax,
-              shape: series.line.shape || "linear",
-              colorbar: series.line.colorbar || {
-                title: "Count",
-                titleside: "right",
-              },
-            }
-          : undefined,
+            // Line configuration for parallel categories
+            line: series.line
+              ? {
+                  color: series.line.color,
+                  colorscale: series.line.colorscale || "Viridis",
+                  showscale: series.line.showscale !== false,
+                  cmin: series.line.cmin,
+                  cmax: series.line.cmax,
+                  shape: series.line.shape || "linear",
+                  colorbar: series.line.colorbar || {
+                    title: "Count",
+                    titleside: "right",
+                  },
+                }
+              : undefined,
 
-        // Additional categorical plot properties
-        counts: series.counts,
-        bundlecolors: series.bundlecolors !== false,
-        sortpaths: series.sortpaths || "forward",
-        labelfont: series.labelfont || {
-          size: fontSizes.axisTitle,
-          color: readThemeColor("--foreground") ?? "#444",
-        },
-        tickfont: series.tickfont || {
-          size: fontSizes.tick,
-          color: readThemeColor("--foreground") ?? "#444",
-        },
+            // Additional categorical plot properties
+            counts: series.counts,
+            bundlecolors: series.bundlecolors !== false,
+            sortpaths: series.sortpaths || "forward",
+            labelfont: series.labelfont || {
+              size: fontSizes.axisTitle,
+              color: readThemeColor("--foreground") ?? "#444",
+            },
+            tickfont: series.tickfont || {
+              size: fontSizes.tick,
+              color: readThemeColor("--foreground") ?? "#444",
+            },
 
-        visible: series.visible,
-        showlegend: series.showlegend,
-        legendgroup: series.legendgroup,
-        hovertemplate: series.hovertemplate,
-        hoverinfo: series.hoverinfo,
-        customdata: series.customdata,
-      }) as any as PlotData,
+            visible: series.visible,
+            showlegend: series.showlegend,
+            legendgroup: series.legendgroup,
+            hovertemplate: series.hovertemplate,
+            hoverinfo: series.hoverinfo,
+            customdata: series.customdata,
+          }) as any as PlotData,
+      ),
+    [data, fontSizes.axisTitle, fontSizes.tick, plotType],
   );
 
-  const layout = createBaseLayout(config, sizing);
-  const plotConfig = createPlotlyConfig(config, sizing);
+  const layout = useMemo(
+    () => createBaseLayout(config, sizing),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+    [config, sizing, themeVersion],
+  );
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
@@ -337,55 +356,64 @@ export interface AlluvialProps extends BaseChartProps {
 
 export function Alluvial({ data, config = {}, className, loading, error }: AlluvialProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("sankey", renderer);
 
-  const plotData: PlotData[] = data.map(
-    (series) =>
-      ({
-        name: series.name,
-        type: plotType,
+  const plotData: PlotData[] = useMemo(
+    () =>
+      data.map(
+        (series) =>
+          ({
+            name: series.name,
+            type: plotType,
 
-        node: {
-          label: series.nodes.label,
-          color: series.nodes.color || "lightblue",
-          pad: series.nodes.pad || 15,
-          thickness: series.nodes.thickness || 20,
-          line: series.nodes.line || {
-            color: "black",
-            width: 0.5,
-          },
-        },
+            node: {
+              label: series.nodes.label,
+              color: series.nodes.color || "lightblue",
+              pad: series.nodes.pad || 15,
+              thickness: series.nodes.thickness || 20,
+              line: series.nodes.line || {
+                color: "black",
+                width: 0.5,
+              },
+            },
 
-        link: {
-          source: series.links.source,
-          target: series.links.target,
-          value: series.links.value,
-          color: series.links.color || `${readThemeColor("--muted-foreground") ?? "#808080"}33`,
-          label: series.links.label,
-          hovertemplate: series.links.hovertemplate,
-          line: series.links.line || {
-            color: chartGridColor(),
-            width: 0,
-          },
-        },
+            link: {
+              source: series.links.source,
+              target: series.links.target,
+              value: series.links.value,
+              color: series.links.color || `${readThemeColor("--muted-foreground") ?? "#808080"}33`,
+              label: series.links.label,
+              hovertemplate: series.links.hovertemplate,
+              line: series.links.line || {
+                color: chartGridColor(),
+                width: 0,
+              },
+            },
 
-        orientation: series.orientation || "h",
-        valueformat: series.valueformat || ".0f",
-        valuesuffix: series.valuesuffix || "",
-        arrangement: series.arrangement || "snap",
+            orientation: series.orientation || "h",
+            valueformat: series.valueformat || ".0f",
+            valuesuffix: series.valuesuffix || "",
+            arrangement: series.arrangement || "snap",
 
-        visible: series.visible,
-        showlegend: series.showlegend,
-        legendgroup: series.legendgroup,
-        hovertemplate: series.hovertemplate,
-        hoverinfo: series.hoverinfo,
-        customdata: series.customdata,
-      }) as any as PlotData,
+            visible: series.visible,
+            showlegend: series.showlegend,
+            legendgroup: series.legendgroup,
+            hovertemplate: series.hovertemplate,
+            hoverinfo: series.hoverinfo,
+            customdata: series.customdata,
+          }) as any as PlotData,
+      ),
+    [data, plotType],
   );
 
-  const layout = createBaseLayout(config, sizing);
-  const plotConfig = createPlotlyConfig(config, sizing);
+  const layout = useMemo(
+    () => createBaseLayout(config, sizing),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+    [config, sizing, themeVersion],
+  );
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>

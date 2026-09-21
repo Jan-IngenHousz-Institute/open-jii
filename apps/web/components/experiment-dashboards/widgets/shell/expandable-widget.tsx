@@ -48,7 +48,7 @@ export function ExpandableWidget({ title, children }: ExpandableWidgetProps) {
       {!open && children}
       {tabSlotEl ? createPortal(tab, tabSlotEl) : null}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="flex h-[90vh] max-w-[90vw] flex-col">
+        <DialogContent className="flex h-[95vh] max-w-[95vw] flex-col sm:max-w-[95vw]">
           <DialogHeader>
             <DialogTitle>{title ?? t("widget.expandedPreview")}</DialogTitle>
             <DialogDescription className="sr-only">

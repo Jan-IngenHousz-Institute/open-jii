@@ -4,18 +4,37 @@ Issues and specs live in **Linear**, team `OJD`, so tickets are `OJD-####`. GitH
 synced mirror, not the source of truth: a ticket may exist in both places, and closing the GitHub
 side is close-only. Status, labels and relations belong in Linear.
 
-## Access routes
+## Access
 
-Pick by the shape of the work, not by convenience.
+The default route is a personal API key, scoped to Read plus Write on team `OJD`, held in the
+owner-only `tooling/devkit/.env` and read only inside `@repo/devkit`. Setup is
+`pbpaste | pnpm linear:auth`; `tooling/devkit/README.md` is the guide a person follows and the
+`openjii-linear` skill has the query recipes.
 
-**Single read or write.** Use the Linear MCP server. It needs interactive authorization, through
-the claude.ai connector settings or through `claude mcp` / `/mcp`. If it is unauthorized, say so
-rather than guessing at ticket contents.
+Agents call Linear through `pnpm linear:query` and the other `linear:*` commands, never with the key
+in a shell. The devkit refuses `*Delete` and `*Archive` mutations unless told otherwise and logs
+every mutation to `.claude/linear-writes.log`. Do not fan out subagents for bulk work; one process
+with `issueBatchUpdate` is faster and keeps one record. If no key is found, ask rather than
+inventing one.
 
-**Bulk operations**, meaning more than a handful of writes or any cross-ticket query. Call the
-GraphQL API at `https://api.linear.app/graphql` directly with `LINEAR_API_KEY`. Do not use the MCP
-server and do not fan out subagents: bulk through MCP is slow and loses atomicity. `LINEAR_API_KEY`
-is not set in every checkout, so ask rather than inventing one.
+Linear's MCP server is a second route, optional and configured per developer rather than shipped in
+this repo. It is convenient for a lookup or a single write in an interactive session and stores no
+key at all, but it carries neither the destructive-mutation refusal nor the write log. Bulk work,
+unattended work and anything that has to be auditable go through the devkit regardless of what a
+developer has connected.
+
+## Projects, tickets, and what they contain
+
+Everything lands on team `OJD`. A solution is designed as a **project**; the work is granularised
+into **tickets** under it. `ticket-standard.md` defines the project shape, the three ticket shapes
+(work item, bug, spike), the two gates and the prose bar. `linear-taxonomy.md` defines the labels.
+Read those before writing anything rather than inventing a format.
+
+The team's process (Definition of Ready, Definition of Done, how we work, the release flow) lives in
+the Linear document "Team Process". It is private. Read it through the API when a judgement call
+needs it; never port it into this repo.
+
+The team runs **no cycles and no estimation**. Do not set estimates or look for a sprint.
 
 ## Conventions
 
@@ -23,11 +42,12 @@ is not set in every checkout, so ask rather than inventing one.
   prose.
 - **Every PR needs a ticket ref.** `.github/workflows/linear-ref-check.yml` fails a PR with no
   `OJD-####` in its title, branch name, or body. It exempts bot authors, the `no-linear` and
-  `dependencies` labels, and `chore|build|fix(deps)` or `bump` titles. Prefer the branch name
-  (`ojd-1541-filters-shelf`) so the ref survives a retitle.
-- **`Done` means tested, not shipped.** After a PR merges, the default next status is `In Progress`,
-  not `Done`. Deployment is tracked separately, through mobile tags and the `releaseProd-*` GitHub
-  labels.
+  `dependencies` labels, and `chore|build|fix(deps)` or `bump` titles. Put the ref in the body's
+  Linear issues section (`Closes OJD-####`, `Contributes to OJD-####`); that is what the release
+  workflow reads. Branch names stay `<type>/<slug>` and carry no ticket ref.
+- **`Done` means live on production, and it is frozen.** A merged PR goes to `In Testing` (dev
+  deploys on merge); `Ready For Prod` means tested and signed off; the production release workflow's
+  `linear-release-action` moves shipped tickets to `Done`. Anything after that is a new ticket.
 - **Closing as a duplicate is three writes** in Linear: set the duplicate relation, move the status,
   then comment. Doing only the status move loses the link.
 

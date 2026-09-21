@@ -1,5 +1,7 @@
 "use client";
 
+import { PlotlyPreload } from "@/components/charts/plotly-preload";
+
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 import "../../styles/plotly-chart.css";
@@ -24,6 +26,7 @@ export default function ExperimentVisualizationRenderer({
 
   return (
     <div className="flex h-full w-full flex-col">
+      <PlotlyPreload />
       {(showTitle || showDescription) && (
         <div className="mb-6">
           {showTitle && <h2 className="text-2xl font-bold">{visualization.name}</h2>}
