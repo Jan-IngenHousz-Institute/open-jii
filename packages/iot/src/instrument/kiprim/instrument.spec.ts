@@ -50,6 +50,15 @@ describe("KiprimDcSource", () => {
     await expect(instrument.identify()).resolves.toContain("DC310S");
   });
 
+  // A stack that flushes a stray line break ahead of the reply must not have that break
+  // taken for the identity, with the real reply left for the next command to misread.
+  it("does not take a line break ahead of the reply for the reply", async () => {
+    const transport = replyTo("*IDN?\n", `\r\n${IDN_REPLY}`);
+    const instrument = await connected(transport);
+
+    await expect(instrument.identify()).resolves.toContain("KIPRIM");
+  });
+
   it("assembles a reply that arrives in pieces", async () => {
     const transport = createMockTransport();
     vi.mocked(transport.send).mockImplementation(() => {

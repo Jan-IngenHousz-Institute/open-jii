@@ -149,11 +149,13 @@ export class CalitoolSpectralBoard implements BenchInstrument {
 
     const transport = this.requireTransport();
     this.rxBuffer = "";
+    // The integration is what takes time, and it is what the caller's timeout is for; a
+    // long atime and astep run it past the default while the channel read stays instant.
     await transport.send(CALITOOL_COMMANDS.MEASURE);
-    await this.expectAck("measure");
+    await this.expectAck("measure", timeoutMs ?? this.replyTimeoutMs);
 
     await transport.send(CALITOOL_COMMANDS.getChannel(reading.channel));
-    const answer = await this.awaitLine(timeoutMs ?? this.replyTimeoutMs);
+    const answer = await this.awaitLine(this.replyTimeoutMs);
     return this.parseChannelValue(answer);
   }
 
@@ -226,8 +228,8 @@ export class CalitoolSpectralBoard implements BenchInstrument {
     return lines;
   }
 
-  private async expectAck(what: string): Promise<void> {
-    const line = await this.awaitLine(this.replyTimeoutMs);
+  private async expectAck(what: string, timeoutMs = this.replyTimeoutMs): Promise<void> {
+    const line = await this.awaitLine(timeoutMs);
 
     // Not a substring match: "LOOKUP" contains the acknowledgement and an error line must not pass.
     if (!line.toUpperCase().startsWith(CALITOOL_ACK)) {

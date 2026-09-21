@@ -5,7 +5,11 @@ import type { MockTransport } from "../../driver/testing/mock-transport";
 import { createMockTransport } from "../../driver/testing/mock-transport";
 import { MicroPythonParReference } from "./instrument";
 
-const RAW_BANNER = "raw REPL; CTRL-B to exit\r\n>";
+// As the REPL prints it: a line break ahead of the banner, then the raw prompt.
+const RAW_BANNER = "\r\nraw REPL; CTRL-B to exit\r\n>";
+
+// What a soft reboot prints, in the bursts a board sends it in.
+const REBOOT_BANNER = ["MPY: soft reboot\r\n", "MicroPython v1.24.0 on 2024-10-25\r\n", ">>> "];
 
 /** A REPL: echoes `getPAR()`, then prints the value, then a prompt. */
 function repl(parValue: string): MockTransport {
@@ -13,6 +17,10 @@ function repl(parValue: string): MockTransport {
   vi.mocked(transport.send).mockImplementation((sent: string) => {
     if (sent === "\x01") {
       setTimeout(() => transport.simulateData(RAW_BANNER), 0);
+    } else if (sent === "\x02\x04") {
+      REBOOT_BANNER.forEach((burst, index) => {
+        setTimeout(() => transport.simulateData(burst), 20 * (index + 1));
+      });
     } else if (sent === "getPAR()\r") {
       setTimeout(() => transport.simulateData(`getPAR()\r\n${parValue}\r\n>>> `), 0);
     }
@@ -54,6 +62,16 @@ describe("MicroPythonParReference", () => {
     const instrument = await connected(repl("0.6893559"));
 
     await expect(instrument.read("par")).resolves.toBeCloseTo(0.6893559, 6);
+  });
+
+  // The reboot prints its banner over the next few hundred milliseconds. Read straight
+  // after identifying, the first value line used to be "MicroPython v1.24.0".
+  it("waits out the reboot banner so the first read is not taken from it", async () => {
+    const instrument = await connected(repl("176.4"));
+
+    await instrument.identify();
+
+    await expect(instrument.read("par")).resolves.toBeCloseTo(176.4, 6);
   });
 
   it("declares its one reading for procedure authors", () => {

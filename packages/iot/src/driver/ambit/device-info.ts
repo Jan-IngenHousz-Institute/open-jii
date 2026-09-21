@@ -32,7 +32,12 @@ export interface AmbitDeviceInfo {
   mlxCalibration?: number[];
 }
 
-/** How many lines the firmware prints before the terminating `FW:` line. */
+/**
+ * How many lines the firmware's own dump runs to before the terminating `FW:` line.
+ * Counted from the first line the parser recognises, not from the first byte read: a
+ * reboot over a UART bridge starts with the chip's ROM and bootloader log, which is
+ * longer than the dump and would exhaust a budget counted from the top.
+ */
 export const AMBIT_BOOT_DUMP_MAX_LINES = 26;
 
 /**
@@ -197,12 +202,19 @@ function withLine(info: AmbitDeviceInfo, fields: AmbitDeviceInfo): AmbitDeviceIn
 export function parseAmbitBootDump(dump: string): AmbitDeviceInfo | null {
   let info: AmbitDeviceInfo = {};
   let recognized = false;
+  let budget = AMBIT_BOOT_DUMP_MAX_LINES;
 
-  for (const line of dump.split(/\r?\n/).slice(0, AMBIT_BOOT_DUMP_MAX_LINES)) {
+  for (const line of dump.split(/\r?\n/)) {
     const fields = parseAmbitBootLine(line);
     if (Object.keys(fields).length > 0) {
       info = withLine(info, fields);
       recognized = true;
+    }
+
+    // The bootloader's own lines cost nothing; the budget starts at the first one the
+    // firmware wrote, and ends the read of a device that never prints its FW: line.
+    if (recognized && --budget < 0) {
+      break;
     }
 
     const text = line.trim();

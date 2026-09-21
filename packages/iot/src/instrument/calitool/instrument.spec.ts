@@ -166,6 +166,29 @@ describe("CalitoolSpectralBoard", () => {
       await expect(instrument.read("channel_0")).rejects.toThrow(/to measure, not OK/);
     });
 
+    // The integration is the slow part, and the procedure's timeout is there to wait it
+    // out; it used to be spent on the channel read, which answers at once.
+    it("gives the caller's timeout to the measurement rather than to the channel read", async () => {
+      const slowBoard = () => {
+        const transport = createMockTransport();
+        vi.mocked(transport.send).mockImplementation((sent: string) => {
+          if (sent === "measure\r") {
+            setTimeout(() => transport.simulateData("OK\r\n"), 350);
+          } else if (sent.startsWith("get ")) {
+            setTimeout(() => transport.simulateData("ch5: 4211\r\n"), 0);
+          }
+          return Promise.resolve();
+        });
+        return transport;
+      };
+
+      const patient = await connected(slowBoard());
+      await expect(patient.read("channel_5", 1_000)).resolves.toBe(4211);
+
+      const impatient = await connected(slowBoard());
+      await expect(impatient.read("channel_5")).rejects.toThrow(/did not answer/);
+    });
+
     it("refuses an answer with no value after a colon", async () => {
       const transport = board({ channelValue: "4211\r\n" });
       const instrument = await connected(transport);

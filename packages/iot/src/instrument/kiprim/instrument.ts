@@ -98,9 +98,15 @@ export class KiprimDcSource implements BenchInstrument {
     return this.transport;
   }
 
-  /** Resolve on the first complete line; the supply answers `*IDN?` with one. */
+  /**
+   * Resolve on the first complete line; the supply answers `*IDN?` with one. A break
+   * arriving ahead of it is not an answer, so leading breaks are dropped first.
+   */
   private awaitLine(timeoutMs: number): Promise<string> {
-    const complete = () => this.rxBuffer.includes("\n");
+    const complete = () => {
+      this.rxBuffer = this.rxBuffer.replace(/^[\r\n]+/, "");
+      return this.rxBuffer.includes("\n");
+    };
     if (complete()) return Promise.resolve(this.takeLine());
 
     return new Promise<string>((resolve, reject) => {

@@ -166,10 +166,27 @@ describe("read loop", () => {
     expect(info.lightSlope).toBeCloseTo(1.1893, 4);
   });
 
-  it("stops after the firmware's line budget", () => {
-    const padding = Array.from({ length: AMBIT_BOOT_DUMP_MAX_LINES }, () => "noise").join("\n");
+  // Over a UART bridge a reboot begins with the chip's ROM and bootloader log, which is
+  // longer than the dump itself. A budget counted from the first byte ran out inside it,
+  // and the identity came back without a MAC.
+  it("reads a dump that follows the bootloader's own log", () => {
+    const bootloader = Array.from(
+      { length: 45 },
+      (_, index) => `I (${String(30 + index * 7)}) boot: bootloader line ${String(index)}`,
+    ).join("\n");
 
-    expect(parseAmbitBootDump(`${padding}\nFW: 1.1.3`)).toBeNull();
+    const info = parsed(`ESP-ROM:esp32c3-api1-20210207\nrst:0x1 (POWERON)\n${bootloader}\n${DUMP}`);
+
+    expect(info.mac).toBe("a0b1c2d3e4f5");
+    expect(info.firmwareVersion).toBe("1.1.3");
+  });
+
+  it("stops after the firmware's line budget, counted from its first line", () => {
+    const filler = Array.from({ length: AMBIT_BOOT_DUMP_MAX_LINES }, () => "noise").join("\n");
+
+    expect(parseAmbitBootDump(`ADPD Found, chip version: 192\n${filler}\nFW: 1.1.3`)).toEqual({
+      adpdChipVersion: 192,
+    });
   });
 
   it("tolerates carriage returns and blank lines", () => {
