@@ -13,6 +13,19 @@ const EVENTS: ProcedureProgress[] = [
 ];
 
 describe("CalibrationCaptureProgress", () => {
+  // A filter that slipped is why a point gets taken again, and the operator needs to see
+  // that it happened. These events were collected and then dropped from the view.
+  it("says when a point was taken again, and which attempt it is on", () => {
+    render(
+      <CalibrationCaptureProgress
+        events={[{ kind: "retake", series: "par_sweep", index: 1, attempt: 2 }]}
+        isRunning
+      />,
+    );
+
+    expect(screen.getByText("iot.calibration.capture.retaken")).toBeInTheDocument();
+  });
+
   it("shows the running step and setpoint above what has completed", () => {
     render(<CalibrationCaptureProgress events={EVENTS} isRunning />);
 

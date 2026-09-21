@@ -894,7 +894,10 @@
         "disconnected": "Das Gerät ist nicht mehr am Port. Verbinden Sie es erneut und starten Sie den Lauf noch einmal.",
         "restFailed": "Der Messplatz konnte nicht in den Ruhezustand zurückgesetzt werden.",
         "submitFailed": "Die Messwerte wurden erfasst, konnten aber nicht gespeichert werden.",
-        "retrySubmit": "Diese Messwerte erneut speichern"
+        "retrySubmit": "Diese Messwerte erneut speichern",
+        "pointsOf": "{{taken}} von {{total}} Punkten",
+        "pointsTaken": "{{taken}} Punkte",
+        "retaken": "{{series}} Punkt {{point}} erneut aufgenommen (Versuch {{attempt}})"
       },
       "review": {
         "hint": "Die Freigabe übernimmt die berechneten Blöcke in den Datensatz dieses Geräts. Die Hardware wird erst im nächsten Schritt beschrieben.",
@@ -943,6 +946,30 @@
         "unconfirmedHint": "Die Kalibrierung ist im Datensatz gültig. Einige Blöcke wurden auf dem Gerät nicht bestätigt; prüfen Sie die Schreibergebnisse.",
         "recordOnlyHint": "Die Kalibrierung ist im Datensatz gültig. Die Plattform kann für diese Gerätefamilie keine Koeffizienten schreiben.",
         "notRecordedHint": "Die Koeffizienten sind auf dem Gerät, aber die Plattform konnte den Schreibvorgang nicht aufzeichnen. Öffnen Sie diese Sitzung aus der Liste und zeichnen Sie ihn auf."
+      },
+      "phase": {
+        "setUp": "Aufbau",
+        "measure": "Messen",
+        "decide": "Entscheiden"
+      },
+      "rail": {
+        "title": "Diese Sitzung",
+        "device": "Gerät",
+        "deviceWaiting": "Noch nicht verbunden",
+        "deviceWrongUnit": "Meldet {{reported}}",
+        "bench": "Messplatz",
+        "optional": "optional",
+        "procedure": "Ablauf",
+        "noProcedure": "Wählen Sie einen Ablauf, um den benötigten Messplatz und die Schritte zu sehen."
+      },
+      "procedure": {
+        "label": {
+          "settle": "{{ms}} ms warten",
+          "set": "{{instrument}} {{setpoint}} auf {{value}}",
+          "read": "{{series}} aufzeichnen",
+          "sweepInstrument": "{{instrument}} {{setpoint}} durchfahren, {{points}} Punkte",
+          "sweepOperator": "Von Hand durchfahren, {{points}} Punkte"
+        }
       }
     },
     "workbookBar": {

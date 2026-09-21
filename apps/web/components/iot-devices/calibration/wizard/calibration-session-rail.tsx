@@ -1,0 +1,201 @@
+"use client";
+
+import { stepAppearance, stepLabel } from "@/components/calibrations/step-appearance";
+import type { UnitIdentity } from "@/hooks/iot/useCalibrationCapture/useCalibrationCapture";
+import type { RigRole } from "@/hooks/iot/useCalibrationRig/useCalibrationRig";
+import type { IotDeviceConnection } from "@/hooks/iot/useIotConnections/useIotConnections";
+import { getSensorFamilyLabel } from "@/util/sensor-family";
+import { Check, CircleDashed, Loader2, TriangleAlert } from "lucide-react";
+
+import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
+import type { CalibrationFamily } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
+import { useTranslation } from "@repo/i18n";
+import { cn } from "@repo/ui/lib/utils";
+
+import { CalibrationElapsed } from "./calibration-elapsed";
+
+interface CalibrationSessionRailProps {
+  family: CalibrationFamily;
+  /** Absent until a procedure is chosen; the rail then previews what that procedure needs. */
+  procedure: CaptureProcedure | undefined;
+  connection: IotDeviceConnection | undefined;
+  unit: UnitIdentity | undefined;
+  roles: RigRole[];
+  /** The step the interpreter is on, or null when nothing is running. */
+  activeStep: number | null;
+  isRunning: boolean;
+}
+
+const SECTION = "text-muted-foreground text-[11px] font-medium uppercase tracking-wide";
+
+/**
+ * The session as an instrument panel: what is on the ports, what the procedure will do, and
+ * where the run has got to.
+ *
+ * Before this existed the wizard answered those questions only by stepping backwards, and
+ * during a sweep it answered them not at all. It reads as a preview while a procedure is
+ * being chosen and as live status once the run starts, because it is the same three
+ * questions either way.
+ */
+export function CalibrationSessionRail({
+  family,
+  procedure,
+  connection,
+  unit,
+  roles,
+  activeStep,
+  isRunning,
+}: CalibrationSessionRailProps) {
+  const { t } = useTranslation("iot");
+
+  const steps = procedure?.steps ?? [];
+
+  function renderMark(state: "done" | "active" | "waiting" | "warn") {
+    if (state === "active") {
+      return <Loader2 className="text-primary size-3.5 shrink-0 animate-spin" aria-hidden />;
+    }
+    if (state === "done") {
+      return <Check className="text-status-active size-3.5 shrink-0" aria-hidden />;
+    }
+    if (state === "warn") {
+      return <TriangleAlert className="text-destructive size-3.5 shrink-0" aria-hidden />;
+    }
+    return <CircleDashed className="text-muted-foreground size-3.5 shrink-0" aria-hidden />;
+  }
+
+  /** What the device row says about the unit answering, in one line rather than an alert. */
+  function deviceNote() {
+    if (connection === undefined) {
+      return t("iot.calibration.rail.deviceWaiting");
+    }
+    if (unit?.kind === "mismatch") {
+      return t("iot.calibration.rail.deviceWrongUnit", { reported: unit.reported });
+    }
+    if (unit?.kind === "match") {
+      return unit.serial;
+    }
+    return connection.label;
+  }
+
+  function renderDevice() {
+    const isWrongUnit = unit?.kind === "mismatch" || connection?.family !== family;
+    const state = connection === undefined ? "waiting" : isWrongUnit ? "warn" : "done";
+
+    return (
+      <section className="space-y-1.5">
+        <p className={SECTION}>{t("iot.calibration.rail.device")}</p>
+        <div className="flex items-start gap-2">
+          {renderMark(state)}
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">{getSensorFamilyLabel(family)}</p>
+            <p className="text-muted-foreground truncate text-xs">{deviceNote()}</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  function renderRole(role: RigRole) {
+    const status = role.status;
+    const state =
+      status.kind === "connected"
+        ? "done"
+        : status.kind === "connecting"
+          ? "active"
+          : status.kind === "idle"
+            ? "waiting"
+            : "warn";
+    const detail = status.kind === "connected" ? status.model : role.handshake;
+
+    return (
+      <li key={role.role} className="flex items-start gap-2">
+        {renderMark(state)}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm">
+            {role.role}
+            {!role.required && (
+              <span className="text-muted-foreground ml-1.5 text-xs">
+                {t("iot.calibration.rail.optional")}
+              </span>
+            )}
+          </p>
+          <p className="text-muted-foreground truncate font-mono text-xs">{detail}</p>
+        </div>
+      </li>
+    );
+  }
+
+  function renderBench() {
+    if (roles.length === 0) {
+      return null;
+    }
+    return (
+      <section className="space-y-1.5">
+        <p className={SECTION}>{t("iot.calibration.rail.bench")}</p>
+        <ul className="space-y-2">{roles.map(renderRole)}</ul>
+      </section>
+    );
+  }
+
+  // The plan before the run and the position during it, in one list. A step's own words are
+  // what the authoring page shows, so the same procedure reads the same in both places.
+  function renderStep(step: (typeof steps)[number], index: number) {
+    const isActive = activeStep === index;
+    const isDone = activeStep !== null && index < activeStep;
+    const Glyph = stepAppearance(step.kind).icon;
+
+    return (
+      <li
+        key={index}
+        className={cn("flex items-start gap-2", isActive && "text-foreground font-medium")}
+        aria-current={isActive ? "step" : undefined}
+      >
+        <span className="text-muted-foreground w-4 shrink-0 text-right text-[11px] tabular-nums">
+          {index + 1}
+        </span>
+        {isDone ? (
+          <Check className="text-status-active mt-0.5 size-3.5 shrink-0" aria-hidden />
+        ) : (
+          <Glyph
+            className={cn(
+              "mt-0.5 size-3.5 shrink-0",
+              isActive ? "text-primary" : "text-muted-foreground",
+            )}
+            aria-hidden
+          />
+        )}
+        <span className={cn("min-w-0 flex-1 text-xs", !isActive && "text-muted-foreground")}>
+          {stepLabel(step, t)}
+        </span>
+      </li>
+    );
+  }
+
+  function renderSteps() {
+    if (steps.length === 0) {
+      return (
+        <p className="text-muted-foreground text-xs">{t("iot.calibration.rail.noProcedure")}</p>
+      );
+    }
+    return (
+      <section className="space-y-1.5">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className={SECTION}>{t("iot.calibration.rail.procedure")}</p>
+          {isRunning && <CalibrationElapsed />}
+        </div>
+        <ol className="space-y-1.5">{steps.map(renderStep)}</ol>
+      </section>
+    );
+  }
+
+  return (
+    <aside
+      aria-label={t("iot.calibration.rail.title")}
+      className="bg-card space-y-5 rounded-xl border p-4 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto"
+    >
+      {renderDevice()}
+      {renderBench()}
+      {renderSteps()}
+    </aside>
+  );
+}

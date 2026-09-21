@@ -35,24 +35,34 @@ import { cn } from "@repo/ui/lib/utils";
 import { CalibrationCaptureProgress } from "./calibration-capture-progress";
 import { CalibrationConnectStep } from "./calibration-connect-step";
 import { CalibrationDefinitionPicker } from "./calibration-definition-picker";
+import { CalibrationLiveSeries } from "./calibration-live-series";
 import { CalibrationOperatorPrompt } from "./calibration-operator-prompt";
 import { CalibrationReview } from "./calibration-review";
+import { CalibrationSessionRail } from "./calibration-session-rail";
 import { CalibrationWizardActions } from "./calibration-wizard-actions";
 import { CalibrationWriteStep } from "./calibration-write-step";
 
 type WizardStep = "choose" | "connect" | "capture" | "review" | "write" | "done";
 
-const STEP_ORDER: readonly WizardStep[] = [
-  "choose",
-  "connect",
-  "capture",
-  "review",
-  "write",
-  "done",
-];
+/**
+ * The three things a session actually consists of, which the six steps are phases of.
+ *
+ * Six equal circles said a session was six comparable tasks. Choosing a procedure takes a
+ * moment, a capture takes minutes at a bench, and approving is a decision; giving them the
+ * same rail slot misreports the work. The step still names itself, in the card's title.
+ */
+type WizardPhase = "setUp" | "measure" | "decide";
 
-/** Nothing is measured: an approved calibration is carried to the hardware it never reached. */
-const WRITE_ONLY_STEPS: readonly WizardStep[] = ["connect", "write", "done"];
+const PHASE_ORDER: readonly WizardPhase[] = ["setUp", "measure", "decide"];
+
+const PHASE_OF: Record<WizardStep, WizardPhase> = {
+  choose: "setUp",
+  connect: "setUp",
+  capture: "measure",
+  review: "decide",
+  write: "decide",
+  done: "decide",
+};
 
 /** An approved calibration that has still to reach the device, and the procedure that checks it. */
 export interface CalibrationWriteSession {
@@ -112,11 +122,6 @@ export function CalibrationWizard({
 
   const isWriteOnly = writeSession !== undefined;
   const isProcedureChosen = isWriteOnly || presetDefinitionId !== undefined;
-  const stepOrder = isWriteOnly
-    ? WRITE_ONLY_STEPS
-    : isProcedureChosen
-      ? STEP_ORDER.filter((name) => name !== "choose")
-      : STEP_ORDER;
 
   const [step, setStep] = useState<WizardStep>(isProcedureChosen ? "connect" : "choose");
   const [definitionId, setDefinitionId] = useState<string | null>(
@@ -153,8 +158,13 @@ export function CalibrationWizard({
   const hasDefinition = definition.data !== undefined;
   // The device package drives fewer families than the platform registers, so writing back is offered only where a driver exists.
   const writableFamily = isSensorFamily(family) ? family : null;
-  const stepIndex = stepOrder.indexOf(step);
-  const stepTitles = stepOrder.map((name) => t(`iot.calibration.steps.${name}`));
+  // A write-only session never measures anything, so its rail is the two phases it has.
+  const phases = isWriteOnly ? PHASE_ORDER.filter((name) => name !== "measure") : PHASE_ORDER;
+  const phaseIndex = phases.indexOf(PHASE_OF[step]);
+  const phaseTitles = phases.map((name) => t(`iot.calibration.phase.${name}`));
+  // The step the interpreter is on, which is also where the rail marks its place.
+  const runningStep = capture.events.findLast((event) => event.kind === "step");
+  const activeStep = capture.isRunning && runningStep?.kind === "step" ? runningStep.index : null;
   const isRunComputed = run?.status === "computed";
   const isDeciding = approveRun.isPending || rejectRun.isPending;
   const isWritten = writeResults !== null;
@@ -518,6 +528,12 @@ export function CalibrationWizard({
           isRunning={capture.isRunning}
           isWaitingOnOperator={request !== null}
         />
+        {capture.isRunning && (
+          <CalibrationLiveSeries
+            events={capture.events}
+            procedure={definition.data?.captureProcedure}
+          />
+        )}
         {request !== null && <CalibrationOperatorPrompt request={request} />}
         {isSubmitting && (
           <p className="text-muted-foreground flex items-center gap-2 text-sm">
@@ -818,16 +834,37 @@ export function CalibrationWizard({
     }
   }
 
-  // A bench session is a single column of instructions, readings and one decision, so it
-  // is held to a reading width like the other guided flows in this area. The step names are
-  // the card's title on a phone, where the rail has no room for them.
+  // A bench session is not a form to fill in, it is a workspace: the step's work on the left
+  // and the session itself on the right, where what is on the ports and how far the run has
+  // got stay readable without stepping backwards. The grid is the platform's own detail
+  // layout, the one every other device tab uses.
   return (
-    <div className="max-w-3xl space-y-6">
-      <WizardStepIndicator steps={stepTitles} currentIndex={stepIndex} showTitles={!isMobile} />
-      <PanelCard title={t(`iot.calibration.steps.${step}`)} description={stepDescription()}>
-        {renderStep()}
-      </PanelCard>
-      {renderActions()}
+    <div className="space-y-6">
+      <WizardStepIndicator
+        steps={phaseTitles}
+        currentIndex={phaseIndex}
+        detail={t(`iot.calibration.steps.${step}`)}
+        showTitles={!isMobile}
+      />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="min-w-0 space-y-6">
+          <PanelCard title={t(`iot.calibration.steps.${step}`)} description={stepDescription()}>
+            {renderStep()}
+          </PanelCard>
+          {renderActions()}
+        </div>
+        <div className="lg:sticky lg:top-20 lg:self-start">
+          <CalibrationSessionRail
+            family={family}
+            procedure={definition.data?.captureProcedure}
+            connection={connection}
+            unit={capture.unit}
+            roles={rig.roles}
+            activeStep={activeStep}
+            isRunning={capture.isRunning}
+          />
+        </div>
+      </div>
     </div>
   );
 }

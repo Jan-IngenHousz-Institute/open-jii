@@ -894,7 +894,10 @@
         "disconnected": "The device is no longer on its port. Reconnect it and run again.",
         "restFailed": "The bench could not be returned to rest.",
         "submitFailed": "The readings were captured but could not be recorded.",
-        "retrySubmit": "Record these readings again"
+        "retrySubmit": "Record these readings again",
+        "pointsOf": "{{taken}} of {{total}} points",
+        "pointsTaken": "{{taken}} points",
+        "retaken": "{{series}} point {{point}} taken again (attempt {{attempt}})"
       },
       "review": {
         "hint": "Approving applies the computed blocks to this device's record. Nothing reaches the hardware until the next step.",
@@ -943,6 +946,30 @@
         "unconfirmedHint": "The calibration is in force on record. Some blocks were not confirmed on the device; check the write results.",
         "recordOnlyHint": "The calibration is in force on record. The platform cannot write coefficients to this device family.",
         "notRecordedHint": "The coefficients are on the device, but the platform could not record the write. Open this session from the list and record it."
+      },
+      "phase": {
+        "setUp": "Set up",
+        "measure": "Measure",
+        "decide": "Decide"
+      },
+      "rail": {
+        "title": "This session",
+        "device": "Device",
+        "deviceWaiting": "Not connected yet",
+        "deviceWrongUnit": "Reports {{reported}}",
+        "bench": "Bench",
+        "optional": "optional",
+        "procedure": "Procedure",
+        "noProcedure": "Pick a procedure to see the bench it needs and the steps it runs."
+      },
+      "procedure": {
+        "label": {
+          "settle": "Wait {{ms}} ms",
+          "set": "{{instrument}} {{setpoint}} to {{value}}",
+          "read": "Record {{series}}",
+          "sweepInstrument": "Sweep {{instrument}} {{setpoint}}, {{points}} points",
+          "sweepOperator": "Sweep by hand, {{points}} points"
+        }
       }
     },
     "workbookBar": {

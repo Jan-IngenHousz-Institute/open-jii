@@ -894,7 +894,10 @@
         "disconnected": "Het apparaat zit niet meer op zijn poort. Verbind het opnieuw en start de run nogmaals.",
         "restFailed": "De meetopstelling kon niet in rust worden gezet.",
         "submitFailed": "De metingen zijn gedaan maar konden niet worden vastgelegd.",
-        "retrySubmit": "Deze metingen opnieuw vastleggen"
+        "retrySubmit": "Deze metingen opnieuw vastleggen",
+        "pointsOf": "{{taken}} van {{total}} punten",
+        "pointsTaken": "{{taken}} punten",
+        "retaken": "{{series}} punt {{point}} opnieuw genomen (poging {{attempt}})"
       },
       "review": {
         "hint": "Goedkeuren past de berekende blokken toe op het record van dit apparaat. De hardware wordt pas in de volgende stap beschreven.",
@@ -943,6 +946,30 @@
         "unconfirmedHint": "De kalibratie geldt in het record. Sommige blokken zijn niet op het apparaat bevestigd; controleer de schrijfresultaten.",
         "recordOnlyHint": "De kalibratie geldt in het record. Het platform kan voor deze apparaatfamilie geen coëfficiënten schrijven.",
         "notRecordedHint": "De coëfficiënten staan op het apparaat, maar het platform kon het schrijven niet vastleggen. Open deze sessie vanuit de lijst en leg het vast."
+      },
+      "phase": {
+        "setUp": "Opbouw",
+        "measure": "Meten",
+        "decide": "Beslissen"
+      },
+      "rail": {
+        "title": "Deze sessie",
+        "device": "Apparaat",
+        "deviceWaiting": "Nog niet verbonden",
+        "deviceWrongUnit": "Meldt {{reported}}",
+        "bench": "Meetopstelling",
+        "optional": "optioneel",
+        "procedure": "Procedure",
+        "noProcedure": "Kies een procedure om de benodigde opstelling en de stappen te zien."
+      },
+      "procedure": {
+        "label": {
+          "settle": "{{ms}} ms wachten",
+          "set": "{{instrument}} {{setpoint}} op {{value}}",
+          "read": "{{series}} vastleggen",
+          "sweepInstrument": "{{instrument}} {{setpoint}} doorlopen, {{points}} punten",
+          "sweepOperator": "Met de hand doorlopen, {{points}} punten"
+        }
       }
     },
     "workbookBar": {

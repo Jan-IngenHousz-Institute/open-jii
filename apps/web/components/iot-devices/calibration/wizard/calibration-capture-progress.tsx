@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, SkipForward } from "lucide-react";
+import { CheckCircle2, RotateCcw, SkipForward } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
 import type { ProcedureProgress } from "@repo/iot";
@@ -27,7 +27,11 @@ export function CalibrationCaptureProgress({
 
   const current = events.findLast((event) => event.kind === "step");
   const setpoint = events.findLast((event) => event.kind === "setpoint");
-  const completed = events.filter((event) => event.kind === "series" || event.kind === "skipped");
+  // A point taken again is part of the run's story, not noise: it is the operator correcting
+  // a filter that slipped, and it was collected and then dropped from view until now.
+  const completed = events.filter(
+    (event) => event.kind === "series" || event.kind === "skipped" || event.kind === "retake",
+  );
 
   const step = isRunning && current?.kind === "step" ? current : null;
   const hasSetpoint = isRunning && setpoint?.kind === "setpoint";
@@ -48,6 +52,18 @@ export function CalibrationCaptureProgress({
         <li key={index} className="text-muted-foreground flex items-center gap-2">
           <SkipForward className="size-4 shrink-0" aria-hidden />
           {t("iot.calibration.capture.skipped", { series: event.series, reason: event.reason })}
+        </li>
+      );
+    }
+    if (event.kind === "retake") {
+      return (
+        <li key={index} className="text-muted-foreground flex items-center gap-2">
+          <RotateCcw className="size-4 shrink-0" aria-hidden />
+          {t("iot.calibration.capture.retaken", {
+            series: event.series,
+            point: event.index + 1,
+            attempt: event.attempt,
+          })}
         </li>
       );
     }

@@ -50,6 +50,11 @@ export interface WizardStepIndicatorProps {
   /** Step titles in order; each circle shows its position, counted from 1. */
   steps: readonly string[];
   currentIndex: number;
+  /**
+   * Where inside the current step the flow has got to, shown under its title. A flow whose
+   * circles are phases rather than screens needs somewhere to name the screen.
+   */
+  detail?: string;
   showTitles?: boolean;
   className?: string;
 }
@@ -62,6 +67,7 @@ export interface WizardStepIndicatorProps {
 export function WizardStepIndicator({
   steps,
   currentIndex,
+  detail,
   showTitles = true,
   className,
 }: WizardStepIndicatorProps) {
@@ -80,6 +86,9 @@ export function WizardStepIndicator({
         >
           <div className={stepCircle({ state: stepState })}>{index + 1}</div>
           {showTitles && <div className={stepTitle({ state: stepState })}>{title}</div>}
+          {showTitles && isActive && detail !== undefined && (
+            <div className="text-muted-foreground mt-0.5 text-center text-[11px]">{detail}</div>
+          )}
         </div>
 
         {!isLast && (
