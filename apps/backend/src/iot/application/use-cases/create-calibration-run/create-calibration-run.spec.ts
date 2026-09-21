@@ -347,5 +347,13 @@ describe("CreateCalibrationRunUseCase", () => {
       const result = await run({ definitionId: gated, firmwareVersion: "1.2.0" });
       assertSuccess(result);
     });
+
+    // Firmware in the field carries release suffixes. Such a version used to be dropped
+    // before it was ever sent, and the gate then refused the run for reporting nothing.
+    it("admits a version that carries a release suffix", async () => {
+      const gated = await createDefinition({ minFirmwareVersion: "1.1.3" });
+      const result = await run({ definitionId: gated, firmwareVersion: "1.2.0-rc1" });
+      assertSuccess(result);
+    });
   });
 });
