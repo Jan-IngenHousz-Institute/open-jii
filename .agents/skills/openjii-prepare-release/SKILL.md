@@ -5,7 +5,8 @@ description: Prepare an openJII release, or rehearse one, by checking what has s
 
 # Prepare a release
 
-Read `AGENTS.md` first. Run commands from the repository root unless a command says otherwise.
+Read `AGENTS.md` first. Run commands from the repository root unless a command says otherwise. The
+branch, commit and pull request rules a release depends on are `docs/standards/git.md`.
 
 ## Choose the work once
 

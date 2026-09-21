@@ -50,7 +50,10 @@
     "grafana:auth": "pnpm --filter @repo/devkit grafana:auth --",
     "grafana:get": "pnpm --filter @repo/devkit grafana:get --",
     "round:read": "pnpm --filter @repo/devkit round:read --",
-    "status:fixtures": "pnpm --filter @repo/devkit status:fixtures --"
+    "status:fixtures": "pnpm --filter @repo/devkit status:fixtures --",
+    "analyst:prod-window": "pnpm --filter @repo/devkit analyst:prod-window --",
+    "roles:check": "pnpm --filter @repo/devkit roles:check",
+    "roles:generate": "pnpm --filter @repo/devkit roles:generate"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",
