@@ -1,5 +1,5 @@
 import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
-import { and, eq, resourceGrants } from "@repo/database";
+import { and, eq, resourceGrants, upsertGrant } from "@repo/database";
 
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
@@ -71,10 +71,19 @@ describe("DeleteCalibrationDefinitionUseCase", () => {
     expect(found.value).toBeNull();
   });
 
-  // A definition is staffed like every shared resource: creating one seeds the creator's
-  // grant, so deleting one has to take the grants with it or they outlive the row.
+  // A definition is shared like every staffed resource, and its grants have no cascade of
+  // their own: deleting the row without them leaves grants pointing at nothing.
   it("takes the definition's grants with it", async () => {
     const definitionId = await createDefinition();
+    const collaborator = await testApp.createTestUser({ name: "Casey Collaborator" });
+    await upsertGrant(testApp.database, {
+      resourceType: "calibration_definition",
+      resourceId: definitionId,
+      granteeType: "user",
+      granteeId: collaborator,
+      role: "viewer",
+      createdBy: userId,
+    });
     const grantsFor = () =>
       testApp.database
         .select({ id: resourceGrants.id })

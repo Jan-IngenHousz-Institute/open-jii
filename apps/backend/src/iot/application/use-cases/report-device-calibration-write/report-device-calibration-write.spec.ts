@@ -20,7 +20,10 @@ const PROCEDURE: CaptureProcedure = {
     {
       kind: "read",
       series: "par_check",
-      read: [{ instrument: "dut", command: "par", as: "par" }],
+      read: [
+        { instrument: "dut", command: "par", as: "par" },
+        { instrument: "dut", command: "par_ref", as: "par_ref" },
+      ],
     },
   ],
 };
