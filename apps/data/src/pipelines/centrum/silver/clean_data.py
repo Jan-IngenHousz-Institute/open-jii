@@ -31,7 +31,11 @@ dlt.create_streaming_table(
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
         "delta.autoOptimize.autoCompact": "true",
-        "delta.enableChangeDataFeed": "true"
+        "delta.enableChangeDataFeed": "true",
+        # Every gold table reading this one joins or filters it, and incremental
+        # refresh needs row ids on the source to do either. Ten other tables
+        # already set it; silver was the gap that kept them full-recomputing.
+        "delta.enableRowTracking": "true"
     },
     expect_all={"valid_device_id": "device_id IS NOT NULL"},
     expect_all_or_drop={"valid_timestamp": "timestamp IS NOT NULL"},

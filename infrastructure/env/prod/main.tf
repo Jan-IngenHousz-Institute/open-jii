@@ -687,6 +687,9 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_uploaded_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_table_metadata",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_contributors",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/bridge_experiment_contributor",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/bridge_experiment_device",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/agg_experiment_device",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/sources",
     # enriched
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/enriched/enriched_experiment_raw_data",
