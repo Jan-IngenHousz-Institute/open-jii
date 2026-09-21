@@ -216,15 +216,25 @@ metrics:
     slots: [weekly, dashboard]
 
   - num: 12
-    id: expectation-drops
-    name: Silver expectation drops
+    id: ingest-bad-payload-rate
+    name: Ingest bad-payload rate
     family: observability
     source: dbx
     phase: P2
+    # Inactive until the heartbeat export task that publishes this lands.
     active: false
     slots: [exception, dashboard]
+    signal:
+      namespace: OpenJII/Data
+      metric: IngestBadPayloadRate
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
     baseline: { method: same-weekday-4w, anomaly_pct: 100 }
-    notes: Bad-payload rate creeping up = device fleet problem (firmware, clocks, encoding).
+    notes: >
+      Percent of the last day's bronze rows that were unparseable, unroutable or had no
+      payload timestamp, read from bronze because a payload that fails to parse never
+      reaches silver to be counted there. Creeping up means a device fleet problem
+      (firmware, clocks, encoding) rather than a pipeline one.
 
   - num: 13
     id: stale-experiments
@@ -717,13 +727,25 @@ metrics:
 
   - num: 51
     id: silent-devices
-    name: Silent-device roster
+    name: Silent devices
     family: observability
     source: dbx
-    phase: P3
+    phase: P2
+    # Inactive until the heartbeat export task that publishes this lands.
     active: false
     slots: [exception, s3]
-    notes: Quiet >N x own cadence (per-device duty-cycle baseline).
+    signal:
+      namespace: OpenJII/Data
+      metric: SilentDevicesCount
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: same-weekday-4w, anomaly_pct: 100 }
+    notes: >
+      Devices quiet for longer than three times their own median publish interval,
+      with an hour floor, so a daily logger and a ten-second logger are each judged
+      against their own rhythm. The count is the metric; the roster, with how long
+      each has been quiet and whether the broker still shows it connected, is the
+      silent_devices detail line in the heartbeat file.
 
   - num: 52
     id: device-clock-drift
