@@ -874,10 +874,9 @@ module "metrics_pipeline_scheduler" {
   }
 
   # The heartbeat export runs as a second task so it observes the refresh it
-  # reports on. Gated off until the bundle has synced the notebook: the deploy
-  # applies terraform before the bundle, so an ungated task would point at a
-  # notebook that does not exist yet.
-  environments = var.enable_heartbeat_export ? [
+  # reports on. The deploy applies terraform just before syncing notebooks, so a
+  # merge that lands both can fail this task for one cycle.
+  environments = [
     {
       environment_key = "heartbeat"
       spec = {
@@ -887,39 +886,35 @@ module "metrics_pipeline_scheduler" {
         ]
       }
     }
-  ] : []
+  ]
 
-  tasks = concat(
-    [
-      {
-        key         = "trigger_metrics_pipeline"
-        task_type   = "pipeline"
-        pipeline_id = module.metrics_pipeline.pipeline_id
-      }
-    ],
-    var.enable_heartbeat_export ? [
-      {
-        key           = "export_platform_heartbeat"
-        task_type     = "notebook"
-        compute_type  = "serverless"
-        notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/metrics_heartbeat_task"
-        depends_on    = "trigger_metrics_pipeline"
-        # ALL_DONE so a failed refresh still produces a heartbeat file: the
-        # dead-man must mean "the collector is gone", not "the pipeline failed".
-        run_if = "ALL_DONE"
+  tasks = [
+    {
+      key         = "trigger_metrics_pipeline"
+      task_type   = "pipeline"
+      pipeline_id = module.metrics_pipeline.pipeline_id
+    },
+    {
+      key           = "export_platform_heartbeat"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/tasks/metrics_heartbeat_task"
+      depends_on    = "trigger_metrics_pipeline"
+      # ALL_DONE so a failed refresh still produces a heartbeat file: the
+      # dead-man must mean "the collector is gone", not "the pipeline failed".
+      run_if = "ALL_DONE"
 
-        parameters = {
-          "CATALOG_NAME"   = module.databricks_catalog.catalog_name
-          "CENTRAL_SCHEMA" = "centrum"
-          "METRICS_SCHEMA" = "metrics"
-          # Lowercase, unlike the other jobs: this value becomes the CloudWatch
-          # Environment dimension, which the catalog and composer query as-is.
-          "ENVIRONMENT"        = var.environment
-          "HEARTBEAT_LOCATION" = "s3://${module.heartbeat_metrics_s3.bucket_id}"
-        }
+      parameters = {
+        "CATALOG_NAME"   = module.databricks_catalog.catalog_name
+        "CENTRAL_SCHEMA" = "centrum"
+        "METRICS_SCHEMA" = "metrics"
+        # Lowercase, unlike the other jobs: this value becomes the CloudWatch
+        # Environment dimension, which the catalog and composer query as-is.
+        "ENVIRONMENT"        = var.environment
+        "HEARTBEAT_LOCATION" = "s3://${module.heartbeat_metrics_s3.bucket_id}"
       }
-    ] : []
-  )
+    }
+  ]
 
   # The metrics pipeline only ever runs through this job, so job-level failure
   # notifications cover every run; no in-pipeline event hook needed.

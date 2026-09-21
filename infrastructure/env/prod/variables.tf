@@ -46,12 +46,6 @@ variable "slack_webhook_url" {
   sensitive   = true
 }
 
-variable "enable_heartbeat_export" {
-  description = "Adds the heartbeat export task to the metrics scheduler. On by default; the deploy syncs notebooks just after applying, so the task can fail for one cycle on a merge that lands both. Turn off to keep the export out of an environment."
-  type        = bool
-  default     = true
-}
-
 variable "slack_heartbeat_webhook_url" {
   description = "Slack incoming webhook for the daily observability digest; empty logs instead of posting"
   type        = string
