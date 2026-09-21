@@ -45,7 +45,16 @@ export function CalibrationLiveSeries({ events, procedure }: CalibrationLiveSeri
               })}
         </p>
       </div>
-      <ScatterChart className="h-52" data={data} config={{ showLegend: live.traces.length > 1 }} />
+      {/* The legend is what names the reading, so it stays on even for a single trace. */}
+      <ScatterChart
+        className="h-52"
+        data={data}
+        config={{
+          xAxisTitle: live.xLabel ?? undefined,
+          showLegend: true,
+          displayModeBar: false,
+        }}
+      />
     </section>
   );
 }

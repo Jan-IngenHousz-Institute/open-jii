@@ -1,5 +1,6 @@
 import { createActiveDeviceCalibration, createCalibrationRun } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { CalibrationReview } from "./calibration-review";
@@ -33,8 +34,13 @@ function renderReview(overrides: Partial<Parameters<typeof CalibrationReview>[0]
 describe("CalibrationReview", () => {
   // Coefficients alone cannot show a reviewer a point that went wrong, and three of the
   // seeded procedures draw no chart at all, so the measured points are always on screen.
-  it("shows the points the fit was drawn from", () => {
+  // Every point is still the evidence behind a bad reading, but open it ran to several
+  // screens and pushed the decision itself below the fold.
+  it("keeps the points the fit was drawn from one click away", async () => {
     renderReview();
+
+    expect(screen.queryByRole("table")).toBeNull();
+    await userEvent.click(screen.getByText("iot.calibration.review.showReadings"));
 
     expect(screen.getByRole("table")).toBeInTheDocument();
     const rows = screen.getAllByRole("row");
@@ -208,7 +214,7 @@ describe("CalibrationReview", () => {
 
     expect(screen.getByText("iot.calibration.review.computeFailed")).toBeInTheDocument();
     expect(screen.getByText(/above the allowed maximum/)).toBeInTheDocument();
-    expect(screen.getByText("402.12")).toBeInTheDocument();
+    expect(screen.getByText("iot.calibration.review.showReadings")).toBeInTheDocument();
   });
 
   // When every block was rejected, the run fails as a whole but each block's

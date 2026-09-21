@@ -63,7 +63,11 @@ export function CalibrationSessionRail({
     return <CircleDashed className="text-muted-foreground size-3.5 shrink-0" aria-hidden />;
   }
 
-  /** What the device row says about the unit answering, in one line rather than an alert. */
+  /**
+   * What the device row says about the unit answering, in one line rather than an alert.
+   * A family that announces nothing says so: the connection's own label is a counter
+   * ("Device #1") and reads as an identity check that passed.
+   */
   function deviceNote() {
     if (connection === undefined) {
       return t("iot.calibration.rail.deviceWaiting");
@@ -74,7 +78,7 @@ export function CalibrationSessionRail({
     if (unit?.kind === "match") {
       return unit.serial;
     }
-    return connection.label;
+    return t("iot.calibration.rail.deviceUnnamed");
   }
 
   function renderDevice() {

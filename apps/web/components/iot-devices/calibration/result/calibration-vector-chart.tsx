@@ -17,7 +17,7 @@ export function CalibrationVectorChart({ name, values }: { name: string; values:
           y: values,
         },
       ]}
-      config={{ xAxisTitle: name, showLegend: false }}
+      config={{ xAxisTitle: name, showLegend: false, displayModeBar: false }}
     />
   );
 }

@@ -13,21 +13,34 @@ export interface LiveSeries {
   expected: number | null;
   taken: number;
   traces: LiveTrace[];
+  /** What the sweep is driving, so the axis says what it is rather than carrying bare numbers. */
+  xLabel: string | null;
 }
 
 /** The reserved column every sweep row carries; it is the axis, not a reading. */
 const STIMULUS = "stimulus";
 
-/** How many points the step that produces this series will take. */
-function expectedPoints(procedure: CaptureProcedure | undefined, series: string): number | null {
-  const step = procedure?.steps.find(
+/** The step that produces this series: how many points it takes and what it drives. */
+function producingStep(procedure: CaptureProcedure | undefined, series: string) {
+  return procedure?.steps.find(
     (candidate) =>
       (candidate.kind === "sweep" || candidate.kind === "read") && candidate.series === series,
   );
+}
+
+function expectedPoints(step: ReturnType<typeof producingStep>): number | null {
   if (step?.kind === "sweep") {
     return step.stimulus.values.length;
   }
   return step?.kind === "read" ? 1 : null;
+}
+
+/** A sweep's axis is the setpoint it drives; an operator-driven one has only its prompt. */
+function axisLabel(step: ReturnType<typeof producingStep>): string | null {
+  if (step?.kind !== "sweep") {
+    return null;
+  }
+  return "instrument" in step.stimulus ? step.stimulus.set : null;
 }
 
 /**
@@ -80,10 +93,13 @@ export function liveSeriesData(
     return { name: column, x, y };
   });
 
+  const step = producingStep(procedure, series);
+
   return {
     series,
-    expected: expectedPoints(procedure, series),
+    expected: expectedPoints(step),
     taken: rows.length,
     traces: traces.filter((trace) => trace.y.length > 0),
+    xLabel: axisLabel(step),
   };
 }

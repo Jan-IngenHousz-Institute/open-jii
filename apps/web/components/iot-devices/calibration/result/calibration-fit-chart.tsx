@@ -49,7 +49,7 @@ export function CalibrationFitChart({ points, line, xLabel, yLabel }: Calibratio
     <ScatterChart
       className="h-56"
       data={[captured, ...fitted]}
-      config={{ xAxisTitle: xLabel, yAxisTitle: yLabel, showLegend: true }}
+      config={{ xAxisTitle: xLabel, yAxisTitle: yLabel, showLegend: true, displayModeBar: false }}
     />
   );
 }

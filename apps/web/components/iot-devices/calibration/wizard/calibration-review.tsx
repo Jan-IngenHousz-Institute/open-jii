@@ -1,5 +1,7 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
+
 import type {
   CalibrationRun,
   ActiveDeviceCalibration,
@@ -8,6 +10,11 @@ import type {
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@repo/ui/components/collapsible";
 
 import { CalibrationBlockCard } from "../result/calibration-block-card";
 import { CalibrationSeriesTable } from "../result/calibration-series-table";
@@ -47,15 +54,30 @@ export function CalibrationReview({ run, payload, active, outputSchema }: Calibr
     );
   }
 
+  /**
+   * Every point the bench took, one table per series, folded away.
+   *
+   * They are the evidence behind a point that went wrong, so they have to be here; open,
+   * they ran to several screens and put the decision itself below the fold, which is the
+   * one thing the step exists for.
+   */
   function renderReadings() {
     if (series.length === 0) return null;
+    const points = series.reduce((total, [, rows]) => total + rows.length, 0);
+
     return (
-      <section className="space-y-3">
-        <h3 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-          {t("iot.calibration.run.readings")}
-        </h3>
-        {series.map(renderSeries)}
-      </section>
+      <Collapsible>
+        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground group flex items-center gap-1.5 text-sm">
+          <ChevronDown
+            className="size-4 transition-transform group-data-[state=open]:rotate-180"
+            aria-hidden
+          />
+          {t("iot.calibration.review.showReadings", { series: series.length, points })}
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-3 pt-3">
+          {series.map(renderSeries)}
+        </CollapsibleContent>
+      </Collapsible>
     );
   }
 

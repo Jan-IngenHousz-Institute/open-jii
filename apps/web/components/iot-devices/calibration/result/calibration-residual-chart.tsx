@@ -44,6 +44,7 @@ export function CalibrationResidualChart({ report }: { report: ResidualReport })
         xAxisTitle: report.xLabel ?? undefined,
         yAxisTitle: t("iot.calibration.review.residualAxis"),
         showLegend: report.tolerance !== null,
+        displayModeBar: false,
       }}
     />
   );

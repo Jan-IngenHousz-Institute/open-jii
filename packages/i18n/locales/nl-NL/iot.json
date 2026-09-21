@@ -924,7 +924,8 @@
         "residuals": "Residu",
         "residualAxis": "Afwijking, % van het bereik",
         "tolerance": "Toegestaan",
-        "residualsTruncated": "Het script rapporteerde alleen de eerste residuen."
+        "residualsTruncated": "Het script rapporteerde alleen de eerste residuen.",
+        "showReadings": "Toon wat de opstelling heeft gemeten, {{points}} metingen in {{series}} series"
       },
       "write": {
         "hint": "Schrijf de goedgekeurde coëfficiënten naar het apparaat. Elk blok wordt bevestigd door het terug te lezen.",
@@ -974,7 +975,8 @@
         "bench": "Meetopstelling",
         "optional": "optioneel",
         "procedure": "Procedure",
-        "noProcedure": "Kies een procedure om de benodigde opstelling en de stappen te zien."
+        "noProcedure": "Kies een procedure om de benodigde opstelling en de stappen te zien.",
+        "deviceUnnamed": "Meldt geen serienummer"
       },
       "procedure": {
         "label": {

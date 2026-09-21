@@ -924,7 +924,8 @@
         "residuals": "Residuum",
         "residualAxis": "Abweichung, % des Bereichs",
         "tolerance": "Zulässig",
-        "residualsTruncated": "Das Skript hat nur die ersten Residuen gemeldet."
+        "residualsTruncated": "Das Skript hat nur die ersten Residuen gemeldet.",
+        "showReadings": "Messwerte des Messplatzes anzeigen, {{points}} Werte in {{series}} Serien"
       },
       "write": {
         "hint": "Schreiben Sie die freigegebenen Koeffizienten auf das Gerät. Jeder Block wird durch Zurücklesen bestätigt.",
@@ -974,7 +975,8 @@
         "bench": "Messplatz",
         "optional": "optional",
         "procedure": "Ablauf",
-        "noProcedure": "Wählen Sie einen Ablauf, um den benötigten Messplatz und die Schritte zu sehen."
+        "noProcedure": "Wählen Sie einen Ablauf, um den benötigten Messplatz und die Schritte zu sehen.",
+        "deviceUnnamed": "Meldet keine Seriennummer"
       },
       "procedure": {
         "label": {
