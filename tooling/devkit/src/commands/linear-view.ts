@@ -29,7 +29,9 @@ interface CustomViewCreateResult {
 }
 
 const organizationQuery = `{ organization { urlKey } }`;
-const customViewsQuery = `{ customViews(first: 100) { nodes { id name slugId } } }`;
+const customViewsQuery = `query($name: String!) {
+  customViews(first: 10, filter: { name: { eqIgnoreCase: $name } }) { nodes { id name slugId } }
+}`;
 const customViewCreateMutation = `mutation($input: CustomViewCreateInput!) {
   customViewCreate(input: $input) { success customView { id slugId } }
 }`;
@@ -71,12 +73,16 @@ export function viewDocument(label: string, url: string, projectUrl: string): st
 }
 
 // One shared view filtered to the project, and the document that points at it. Both are named
-// after the project so the artifact index can link them without knowing their ids.
+// after the project's label so the artifact index can link them without knowing their ids.
+//
+// The view is a workspace view with a project filter, never a view created with `projectId`: a
+// project-scoped view is absent from `customViews` even when filtered by name and asked for
+// archived rows, so a second run would create a duplicate instead of finding it.
 export async function scaffoldView(args: ViewArgs, deps: ViewDependencies): Promise<void> {
   const project = await findProject(deps.client, args.project);
   const label = args.label ?? projectLabel(project.name);
   const organization = await deps.client.query<OrganizationResult>(organizationQuery);
-  const views = await deps.client.query<CustomViewsResult>(customViewsQuery);
+  const views = await deps.client.query<CustomViewsResult>(customViewsQuery, { name: label });
   const existing = views.customViews.nodes.find((view) => sameName(view.name, label));
   const urlKey = organization.organization.urlKey;
 
@@ -92,7 +98,6 @@ export async function scaffoldView(args: ViewArgs, deps: ViewDependencies): Prom
       input: {
         name: label,
         description: `Every issue in the ${project.name} project, with status and assignee.`,
-        projectId: project.id,
         shared: true,
         filterData: { project: { id: { eq: project.id } } },
       },

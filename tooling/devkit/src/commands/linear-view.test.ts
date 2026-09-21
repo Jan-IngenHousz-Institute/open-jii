@@ -29,7 +29,9 @@ function workspace(existingView: boolean, projectName = "Explore your data") {
     }
     if (document.includes("organization")) return { organization: { urlKey: "openjii" } };
     if (document.includes("customViews(")) {
-      const nodes = existingView ? [{ id: "v1", name: "explore your data", slugId: "abc123" }] : [];
+      const asked = String(variables.name);
+      const nodes =
+        existingView && asked.length > 0 ? [{ id: "v1", name: asked, slugId: "abc123" }] : [];
       return { customViews: { nodes } };
     }
     if (document.includes("customViewCreate")) {
@@ -95,7 +97,6 @@ describe("scaffoldView", () => {
       input: {
         name: "Explore your data",
         description: "Every issue in the Explore your data project, with status and assignee.",
-        projectId: "p1",
         shared: true,
         filterData: { project: { id: { eq: "p1" } } },
       },
@@ -148,6 +149,20 @@ describe("scaffoldView", () => {
     expect(calls.find((c) => c.document.includes("documentCreate"))?.variables).toMatchObject({
       input: { title: "Platform home: live ticket view" },
     });
+  });
+
+  it("looks the view up by name rather than listing the workspace, and never sets projectId", async () => {
+    const { client, calls } = workspace(false);
+
+    await scaffoldView(
+      { project: "Explore your data", label: null, apply: true },
+      { client, write: () => undefined },
+    );
+
+    const lookup = calls.find((c) => c.document.includes("customViews("));
+    expect(lookup?.variables).toEqual({ name: "Explore your data" });
+    const create = calls.find((c) => c.document.includes("customViewCreate"));
+    expect(JSON.stringify(create?.variables)).not.toContain("projectId");
   });
 
   it("reuses a view that already carries the project's label", async () => {
