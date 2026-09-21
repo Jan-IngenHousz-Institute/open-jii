@@ -6,6 +6,7 @@ import { CACHE_PORT as MACRO_CACHE_PORT } from "../../../macros/core/ports/cache
 import type { CachePort as MetricsCachePort } from "../../../metrics/core/ports/cache.port";
 import { CACHE_PORT as METRICS_CACHE_PORT } from "../../../metrics/core/ports/cache.port";
 import { TestHarness } from "../../../test/test-harness";
+import { CacheAdapter } from "./cache.adapter";
 
 describe("CacheAdapter", () => {
   const testApp = TestHarness.App;
@@ -260,18 +261,25 @@ describe("CacheAdapter", () => {
       metricsCache = testApp.module.get<MetricsCachePort>(METRICS_CACHE_PORT);
     });
 
-    it("stores results under the metrics prefix, separate from the macro namespace", async () => {
+    it("stores results under the metrics prefix, with the moment they stop being fresh", async () => {
       const fetchFn = vi.fn().mockResolvedValue({ registeredUsers: 5 });
 
       const result = await metricsCache.tryCache("miss-key", fetchFn);
 
       expect(result).toEqual({ registeredUsers: 5 });
-      expect(await cacheManager.get("metrics:miss-key")).toEqual({ registeredUsers: 5 });
+      const stored = await cacheManager.get<{ value: unknown; freshUntil: unknown }>(
+        "metrics:miss-key",
+      );
+      expect(stored?.value).toEqual({ registeredUsers: 5 });
+      expect(typeof stored?.freshUntil).toBe("number");
       expect(await cacheManager.get("macro:miss-key")).toBeUndefined();
     });
 
-    it("returns the cached value without calling fetchFn on a hit", async () => {
-      await cacheManager.set("metrics:hit-key", { registeredUsers: 7 });
+    it("returns a fresh value without calling fetchFn", async () => {
+      await cacheManager.set("metrics:hit-key", {
+        value: { registeredUsers: 7 },
+        freshUntil: Date.now() + 60_000,
+      });
       const fetchFn = vi.fn();
 
       const result = await metricsCache.tryCache("hit-key", fetchFn);
@@ -281,7 +289,10 @@ describe("CacheAdapter", () => {
     });
 
     it("invalidates so the next read fetches again", async () => {
-      await cacheManager.set("metrics:inv-key", { registeredUsers: 7 });
+      await cacheManager.set("metrics:inv-key", {
+        value: { registeredUsers: 7 },
+        freshUntil: Date.now() + 60_000,
+      });
 
       await metricsCache.invalidate("inv-key");
 
@@ -289,6 +300,88 @@ describe("CacheAdapter", () => {
       const result = await metricsCache.tryCache("inv-key", fetchFn);
       expect(result).toEqual({ registeredUsers: 9 });
       expect(fetchFn).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("stale while revalidate", () => {
+    // Fresh for one millisecond, servable for a minute, callers wait 50ms.
+    const namespace = { prefix: "swr:", ttlMs: 1, staleMs: 60_000, waitMs: 50 };
+    let adapter: CacheAdapter;
+
+    const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 5));
+
+    beforeEach(() => {
+      adapter = new CacheAdapter(cacheManager, namespace);
+    });
+
+    it("serves a stale value at once and refreshes it behind the reply", async () => {
+      await cacheManager.set("swr:stale", { value: "old", freshUntil: Date.now() - 1 }, 60_000);
+      const fetchFn = vi.fn().mockResolvedValue("new");
+
+      const served = await adapter.tryCache("stale", fetchFn);
+
+      // The caller got the old figure without waiting on the source.
+      expect(served).toBe("old");
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+
+      await settle();
+      expect(await cacheManager.get("swr:stale")).toMatchObject({ value: "new" });
+    });
+
+    it("keeps serving stale when the refresh fails, rather than nothing", async () => {
+      await cacheManager.set("swr:failing", { value: "old", freshUntil: Date.now() - 1 }, 60_000);
+      const fetchFn = vi.fn().mockRejectedValue(new Error("warehouse asleep"));
+
+      await expect(adapter.tryCache("failing", fetchFn)).resolves.toBe("old");
+
+      await settle();
+      expect(await cacheManager.get("swr:failing")).toMatchObject({ value: "old" });
+    });
+
+    it("gives a caller with nothing to serve null after the wait, and finishes the load anyway", async () => {
+      // Fresh long enough for the final read to find it fresh, not merely servable.
+      const adapter = new CacheAdapter(cacheManager, { ...namespace, ttlMs: 60_000 });
+      let release: (() => void) | undefined;
+      const fetchFn = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            release = () => resolve("late");
+          }),
+      );
+
+      const first = await adapter.tryCache("slow", fetchFn);
+      expect(first).toBeNull();
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+
+      // The source answers after the caller gave up; the answer is not thrown away.
+      release?.();
+      await settle();
+      expect(await cacheManager.get("swr:slow")).toMatchObject({ value: "late" });
+
+      // With a fresh value now stored, the next caller is served without a load.
+      expect(await adapter.tryCache("slow", fetchFn)).toBe("late");
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+    });
+
+    it("runs one load for a stale key however many callers arrive while it is stale", async () => {
+      await cacheManager.set("swr:shared", { value: "old", freshUntil: Date.now() - 1 }, 60_000);
+      let release: (() => void) | undefined;
+      const fetchFn = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            release = () => resolve("new");
+          }),
+      );
+
+      const served = await Promise.all([
+        adapter.tryCache("shared", fetchFn),
+        adapter.tryCache("shared", fetchFn),
+        adapter.tryCache("shared", fetchFn),
+      ]);
+
+      expect(served).toEqual(["old", "old", "old"]);
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+      release?.();
     });
   });
 });
