@@ -30,6 +30,16 @@ export class UpdateCalibrationDefinitionUseCase {
       userId,
     });
 
+    // The repository refuses the edit in the same statement that checks for runs, so a
+    // run recorded while this request is in flight still freezes the definition.
+    const updated = await this.definitionRepository.update(definitionId, body);
+    if (updated.isFailure()) {
+      return failure(updated.error);
+    }
+    if (updated.value) {
+      return success(updated.value);
+    }
+
     const existing = await this.definitionRepository.findById(definitionId);
     if (existing.isFailure()) {
       return failure(existing.error);
@@ -37,26 +47,10 @@ export class UpdateCalibrationDefinitionUseCase {
     if (!existing.value) {
       return failure(AppError.notFound("Calibration definition not found"));
     }
-
-    const runs = await this.definitionRepository.countRuns(definitionId);
-    if (runs.isFailure()) {
-      return failure(runs.error);
-    }
-    if (runs.value > 0) {
-      return failure(
-        AppError.badRequest(
-          "This definition has been run and cannot be edited; copy it into a new one instead",
-        ),
-      );
-    }
-
-    const updated = await this.definitionRepository.update(definitionId, body);
-    if (updated.isFailure()) {
-      return failure(updated.error);
-    }
-    if (!updated.value) {
-      return failure(AppError.notFound("Calibration definition not found"));
-    }
-    return success(updated.value);
+    return failure(
+      AppError.badRequest(
+        "This definition has been run and cannot be edited; copy it into a new one instead",
+      ),
+    );
   }
 }

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { acceptedVerificationSeriesNames } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
+import { verificationSeriesIssue } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
+import { serialsMatch } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import type { ReportDeviceCalibrationWriteBody } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
@@ -8,6 +9,7 @@ import { Result, failure, success, AppError } from "../../../../common/utils/fp-
 import type { DeviceCalibrationDto } from "../../../core/models/iot-calibration.model";
 import { IotCalibrationDefinitionRepository } from "../../../core/repositories/iot-calibration-definition.repository";
 import { IotCalibrationRunRepository } from "../../../core/repositories/iot-calibration-run.repository";
+import { IotDeviceRepository } from "../../../core/repositories/iot-device.repository";
 
 /** Addressed to the applied row so a concurrent approval cannot get another run's write recorded on it. */
 @Injectable()
@@ -17,6 +19,7 @@ export class ReportDeviceCalibrationWriteUseCase {
   constructor(
     private readonly runRepository: IotCalibrationRunRepository,
     private readonly definitionRepository: IotCalibrationDefinitionRepository,
+    private readonly deviceRepository: IotDeviceRepository,
     private readonly authz: AuthorizationService,
   ) {}
 
@@ -24,7 +27,7 @@ export class ReportDeviceCalibrationWriteUseCase {
     body: ReportDeviceCalibrationWriteBody,
     userId: string,
   ): Promise<Result<DeviceCalibrationDto>> {
-    const { calibrationId, writeResults, postInfo, verification } = body;
+    const { calibrationId, writeResults, postInfo, verification, reportedSerial } = body;
     const calibration = await this.runRepository.findCalibrationById(calibrationId);
     if (calibration.isFailure()) {
       return failure(calibration.error);
@@ -41,6 +44,15 @@ export class ReportDeviceCalibrationWriteUseCase {
     });
     if (!decision.allow) {
       return failure(AppError.forbidden("Reporting a write requires device manage rights"));
+    }
+
+    // The unit that took the write said who it is; a write onto another unit is not this
+    // device's calibration, however the session was addressed.
+    if (reportedSerial !== undefined) {
+      const mismatch = await this.serialMismatch(applied.deviceId, reportedSerial);
+      if (mismatch.isFailure()) {
+        return failure(mismatch.error);
+      }
     }
 
     this.logger.log({
@@ -102,12 +114,25 @@ export class ReportDeviceCalibrationWriteUseCase {
       return failure(AppError.notFound("Calibration definition not found"));
     }
 
-    const known = new Set(acceptedVerificationSeriesNames(definition.value.captureProcedure));
-    const unexpected = Object.keys(verification).filter((name) => !known.has(name));
-    if (unexpected.length > 0) {
+    const issue = verificationSeriesIssue(definition.value.captureProcedure, verification);
+    if (issue) {
+      return failure(AppError.badRequest(issue));
+    }
+    return success(undefined);
+  }
+
+  private async serialMismatch(deviceId: string, reportedSerial: string): Promise<Result<void>> {
+    const device = await this.deviceRepository.findById(deviceId);
+    if (device.isFailure()) {
+      return failure(device.error);
+    }
+    if (!device.value) {
+      return failure(AppError.notFound("Device not found"));
+    }
+    if (!serialsMatch(reportedSerial, device.value.serialNumber)) {
       return failure(
         AppError.badRequest(
-          `Verification carries series the procedure's verify phase does not produce: ${unexpected.join(", ")}`,
+          `The connected device reports serial "${reportedSerial}", not this device's "${device.value.serialNumber}"`,
         ),
       );
     }

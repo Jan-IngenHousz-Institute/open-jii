@@ -30,6 +30,7 @@ describe("ReportDeviceCalibrationWriteUseCase", () => {
   let useCase: ReportDeviceCalibrationWriteUseCase;
   let userId: string;
   let calibrationId: string;
+  let deviceSerial: string;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -40,7 +41,12 @@ describe("ReportDeviceCalibrationWriteUseCase", () => {
     userId = await testApp.createTestUser({ name: "Bench Operator" });
     useCase = testApp.module.get(ReportDeviceCalibrationWriteUseCase);
 
-    const device = await testApp.createIotDevice({ createdBy: userId, deviceType: "minipar" });
+    const device = await testApp.createIotDevice({
+      createdBy: userId,
+      deviceType: "minipar",
+      serialNumber: "A4:CF:12:AA:93:B0",
+    });
+    deviceSerial = device.serialNumber;
     const definition = await testApp.module.get(IotCalibrationDefinitionRepository).create(
       {
         family: "minipar",
@@ -94,6 +100,35 @@ describe("ReportDeviceCalibrationWriteUseCase", () => {
     assertSuccess(result);
     expect(result.value.writtenToDeviceAt).not.toBeNull();
     expect(result.value.writeResults).toEqual({ par: { verified: true } });
+  });
+
+  // Two units of one family on a bench: the write must land on the one this record names.
+  it("refuses a write the wrong unit took", async () => {
+    const result = await useCase.execute(
+      {
+        calibrationId,
+        writeResults: { par: { verified: true } },
+        reportedSerial: "a4cf12aa93b1",
+      },
+      userId,
+    );
+
+    assertFailure(result);
+    expect(result.error.message).toContain("reports serial");
+    expect(result.error.message).toContain(deviceSerial);
+  });
+
+  it("accepts the unit's own identifier however its separators were written", async () => {
+    const result = await useCase.execute(
+      {
+        calibrationId,
+        writeResults: { par: { verified: true } },
+        reportedSerial: "a4cf12aa93b0",
+      },
+      userId,
+    );
+
+    assertSuccess(result);
   });
 
   // A readback mismatch rolls the gain back at the bench; the record has to be

@@ -6,6 +6,7 @@ import {
   requiredProcedureSeriesNames,
   acceptedSeriesNames,
   acceptedVerificationSeriesNames,
+  verificationSeriesIssue,
   verificationSeriesNames,
   zCaptureProcedure,
 } from "./iot-calibration-procedure.schema";
@@ -264,21 +265,39 @@ describe("zCaptureProcedure", () => {
 
     describe("payloadSeriesIssue", () => {
       const parsed = zCaptureProcedure.parse(ambitFactoryProcedure);
-      const complete = { par_sweep: {}, led_sweep: {}, adpd_baseline: {} };
+      const complete = { par_sweep: [], led_sweep: [], adpd_baseline: [] };
 
       it("accepts a payload carrying exactly the series the procedure produces", () => {
         expect(payloadSeriesIssue(parsed, complete)).toBeNull();
       });
 
       it("names every required series the payload left out", () => {
-        expect(payloadSeriesIssue(parsed, { par_sweep: {} })).toBe(
+        expect(payloadSeriesIssue(parsed, { par_sweep: [] })).toBe(
           "Payload is missing required series: led_sweep, adpd_baseline",
         );
       });
 
       it("refuses series the procedure cannot have produced", () => {
-        expect(payloadSeriesIssue(parsed, { ...complete, par_check: {} })).toBe(
+        expect(payloadSeriesIssue(parsed, { ...complete, par_check: [] })).toBe(
           "Payload carries series the procedure does not produce: par_check",
+        );
+      });
+
+      // The same names become payload keys, dict keys and DataFrame columns; that holds
+      // only if a row cannot carry a column its step never declared.
+      it("accepts rows made of the columns the step declares, the drive included", () => {
+        const payload = {
+          ...complete,
+          par_sweep: [{ stimulus: 0.8, par_raw: 148.2, par_ref: 176.4 }],
+          par_sweep_retaken: [{ stimulus: 0.8, par_raw: 12.0, par_ref: 176.4 }],
+        };
+        expect(payloadSeriesIssue(parsed, payload)).toBeNull();
+      });
+
+      it("refuses a row carrying a column its step does not record", () => {
+        const payload = { ...complete, par_sweep: [{ stimulus: 0.8, par_raw: 148.2, temp: 21 }] };
+        expect(payloadSeriesIssue(parsed, payload)).toBe(
+          'Series "par_sweep" carries columns its step does not record: temp',
         );
       });
 
@@ -296,8 +315,30 @@ describe("zCaptureProcedure", () => {
             },
           ],
         });
-        expect(payloadSeriesIssue(withOptional, { par_sweep: {} })).toBeNull();
-        expect(payloadSeriesIssue(withOptional, { par_sweep: {}, stray_light: {} })).toBeNull();
+        expect(payloadSeriesIssue(withOptional, { par_sweep: [] })).toBeNull();
+        expect(payloadSeriesIssue(withOptional, { par_sweep: [], stray_light: [] })).toBeNull();
+      });
+    });
+
+    describe("verificationSeriesIssue", () => {
+      const parsed = zCaptureProcedure.parse(automatedMiniparProcedure);
+
+      it("accepts the verify phase's own series and their retaken companions", () => {
+        expect(
+          verificationSeriesIssue(parsed, { par_check: [{ par: 200 }], par_check_retaken: [] }),
+        ).toBeNull();
+      });
+
+      it("refuses a capture series posted as a check", () => {
+        expect(verificationSeriesIssue(parsed, { par_sweep: [] })).toBe(
+          "Verification carries series the procedure's verify phase does not produce: par_sweep",
+        );
+      });
+
+      it("holds the check's rows to the columns its step declares", () => {
+        expect(verificationSeriesIssue(parsed, { par_check: [{ par: 200, lux: 1 }] })).toBe(
+          'Series "par_check" carries columns its step does not record: lux',
+        );
       });
     });
 

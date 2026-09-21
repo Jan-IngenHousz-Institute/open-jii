@@ -11,6 +11,7 @@ import {
   zFirmwareVersion,
   zReportedFirmwareVersion,
   zReportDeviceCalibrationWriteBody,
+  serialsMatch,
 } from "./iot-calibration.schema";
 
 describe("zCalibrationRunPayload", () => {
@@ -299,6 +300,28 @@ describe("zCreateCalibrationRunBody", () => {
     if (result.success) {
       expect(result.data.reportedSerial).toBe("a4cf12aa93b0");
     }
+  });
+
+  // A missing series is mute; the step the bench could not run says why it is missing.
+  it("carries the optional steps the bench skipped, with their reasons", () => {
+    const result = zCreateCalibrationRunBody.safeParse({
+      ...body({}),
+      skippedSeries: [{ series: "led_sweep", reason: 'instrument "emit_ref" is not connected' }],
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("serialsMatch", () => {
+  // An Ambit prints its MAC as twelve hex digits; a registrar may have typed it with colons.
+  it("matches a serial however its separators and case were written", () => {
+    expect(serialsMatch("a4cf12aa93b0", "A4:CF:12:AA:93:B0")).toBe(true);
+    expect(serialsMatch("MSQ-0042", "msq0042")).toBe(true);
+  });
+
+  it("refuses a different unit, and an identifier that says nothing", () => {
+    expect(serialsMatch("a4cf12aa93b0", "a4cf12aa93b1")).toBe(false);
+    expect(serialsMatch("--", "a4cf12aa93b0")).toBe(false);
   });
 });
 

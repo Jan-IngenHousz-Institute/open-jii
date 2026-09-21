@@ -16,6 +16,12 @@ import { IotDeviceRepository } from "../../../core/repositories/iot-device.repos
 /**
  * A bench tool submits blocks it computed itself; they are re-validated against the
  * definition so an external run reaches review with the same guarantees as a computed one.
+ *
+ * The firmware floor is not applied here, on purpose. It guards the platform's own
+ * capture, where older firmware answers unknown commands with numbers that look like
+ * readings; a bench tool drove the device with its own drivers, and a historical run
+ * predates any floor. The input source records which path a run took, and approval is
+ * the gate on both.
  */
 @Injectable()
 export class CreateExternalCalibrationRunUseCase {

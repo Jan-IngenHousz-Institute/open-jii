@@ -1,19 +1,28 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 
-import { payloadSeriesIssue } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
+import {
+  RETAKEN_SERIES_SUFFIX,
+  payloadSeriesIssue,
+} from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 import {
   firmwareFloorIssue,
   hasComputedBlock,
+  serialsMatch,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
-import type { CreateCalibrationRunBody } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
+import type {
+  CalibrationRunPayload,
+  CreateCalibrationRunBody,
+} from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import type {
   CalibrationDefinitionDto,
   CalibrationRunWithVersionDto,
+  CalibrationSandboxResponse,
 } from "../../../core/models/iot-calibration.model";
 import { zCalibrationSandboxResponse } from "../../../core/models/iot-calibration.model";
+import type { IotDeviceDto } from "../../../core/models/iot-device.model";
 import { AWS_PORT } from "../../../core/ports/aws.port";
 import type { AwsPort } from "../../../core/ports/aws.port";
 import { IotCalibrationDefinitionRepository } from "../../../core/repositories/iot-calibration-definition.repository";
@@ -45,20 +54,31 @@ export class CreateCalibrationRunUseCase {
       userId,
     });
 
-    const definition = await this.resolveDefinition(body.deviceId, body.definitionId, userId);
-    if (definition.isFailure()) {
-      return failure(definition.error);
+    const context = await this.resolveContext(body.deviceId, body.definitionId, userId);
+    if (context.isFailure()) {
+      return failure(context.error);
     }
+    const { definition, device } = context.value;
 
-    const firmwareIssue = firmwareFloorIssue(
-      definition.value.minFirmwareVersion,
-      body.firmwareVersion,
-    );
+    const firmwareIssue = firmwareFloorIssue(definition.minFirmwareVersion, body.firmwareVersion);
     if (firmwareIssue) {
       return failure(AppError.badRequest(firmwareIssue));
     }
 
-    const seriesIssue = payloadSeriesIssue(definition.value.captureProcedure, body.payload);
+    // The unit on the port said who it is. A session on another unit is refused here rather
+    // than recorded, and later written, against this device.
+    if (
+      body.reportedSerial !== undefined &&
+      !serialsMatch(body.reportedSerial, device.serialNumber)
+    ) {
+      return failure(
+        AppError.badRequest(
+          `The connected device reports serial "${body.reportedSerial}", not this device's "${device.serialNumber}"`,
+        ),
+      );
+    }
+
+    const seriesIssue = payloadSeriesIssue(definition.captureProcedure, body.payload);
     if (seriesIssue) {
       return failure(AppError.badRequest(seriesIssue));
     }
@@ -71,6 +91,7 @@ export class CreateCalibrationRunUseCase {
       status: "running",
       payload: body.payload,
       params: body.params,
+      skippedSeries: body.skippedSeries,
       preInfo: body.preInfo,
       firmwareVersion: body.firmwareVersion,
     });
@@ -78,14 +99,14 @@ export class CreateCalibrationRunUseCase {
       return failure(run.error);
     }
 
-    return this.invokeAndSave(run.value.id, definition.value, body);
+    return this.invokeAndSave(run.value.id, definition, body);
   }
 
-  private async resolveDefinition(
+  private async resolveContext(
     deviceId: string,
     definitionId: string,
     userId: string,
-  ): Promise<Result<CalibrationDefinitionDto>> {
+  ): Promise<Result<{ definition: CalibrationDefinitionDto; device: IotDeviceDto }>> {
     const definition = await this.definitionRepository.findById(definitionId);
     if (definition.isFailure()) {
       return failure(definition.error);
@@ -120,7 +141,7 @@ export class CreateCalibrationRunUseCase {
       );
     }
 
-    return success(definition.value);
+    return success({ definition: definition.value, device: device.value });
   }
 
   private async invokeAndSave(
@@ -132,7 +153,7 @@ export class CreateCalibrationRunUseCase {
       this.awsPort.getCalibrationSandboxFunctionName(),
       {
         script: definition.script,
-        series: body.payload,
+        series: this.seriesForTheFit(body.payload),
         params: body.params ?? {},
         outputSchema: definition.outputSchema,
       },
@@ -180,13 +201,39 @@ export class CreateCalibrationRunUseCase {
       });
     }
 
-    const detail =
-      response.status === "compute_failed" && response.reasons
-        ? `${response.error}: ${response.reasons.join("; ")}`
-        : response.error;
     return this.runRepository.saveResult(runId, {
       status: response.status,
-      errorMessage: detail,
+      errorMessage: this.describeFailure(response),
     });
+  }
+
+  /** The fit never sees a reading the operator took again; those stay on the record only. */
+  private seriesForTheFit(payload: CalibrationRunPayload): CalibrationRunPayload {
+    const series: CalibrationRunPayload = {};
+    for (const [name, rows] of Object.entries(payload)) {
+      if (!name.endsWith(RETAKEN_SERIES_SUFFIX)) {
+        series[name] = rows;
+      }
+    }
+    return series;
+  }
+
+  /**
+   * What the script's author needs to see: the reasons a gate gave, and the lines the
+   * script failed on. A definition with runs cannot be edited, so this record is the
+   * only place the failing line ever appears.
+   */
+  private describeFailure(
+    response: Exclude<CalibrationSandboxResponse, { status: "computed" }>,
+  ): string {
+    if (response.status !== "compute_failed") {
+      return response.error;
+    }
+    const summary = response.reasons
+      ? `${response.error}: ${response.reasons.join("; ")}`
+      : response.error;
+    return response.traceback && response.traceback.length > 0
+      ? `${summary}\n${response.traceback.join("\n")}`
+      : summary;
   }
 }

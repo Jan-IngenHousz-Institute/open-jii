@@ -88,6 +88,18 @@ describe("ListDeviceCalibrationRunsUseCase", () => {
     expect(ids).not.toContain(other);
   });
 
+  // The readings can run to thousands of rows per series and the list is read on every
+  // device page; they travel with the single run instead.
+  it("leaves the readings out of the list", async () => {
+    await seedRun(deviceId);
+
+    const result = await useCase.execute(deviceId);
+
+    assertSuccess(result);
+    expect(result.value[0]).not.toHaveProperty("payload");
+    expect(result.value[0].definitionVersion).toBe(1);
+  });
+
   it("returns an empty list for a device that was never calibrated", async () => {
     const result = await useCase.execute(otherDeviceId);
     assertSuccess(result);

@@ -7,6 +7,7 @@ import {
   zCalibrationRunParams,
   zCalibrationRunPayload,
   zCalibrationWriteResults,
+  zSkippedSeriesList,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import type {
   AppliedCalibrationBlocks,
@@ -14,6 +15,7 @@ import type {
   CalibrationRunParams,
   CalibrationRunPayload,
   CalibrationWriteResults,
+  SkippedSeriesList,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import {
   and,
@@ -22,13 +24,16 @@ import {
   desc,
   deviceCalibrations,
   eq,
+  getTableColumns,
+  inArray,
   isNull,
   sql,
 } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
-import { Result, tryCatch } from "../../../common/utils/fp-utils";
+import { AppError, Result, tryCatch } from "../../../common/utils/fp-utils";
 import type {
+  CalibrationRunSummaryDto,
   CalibrationRunWithVersionDto,
   DeviceCalibrationDto,
 } from "../models/iot-calibration.model";
@@ -42,11 +47,17 @@ interface InsertRunDto {
   payload?: unknown;
   params?: CalibrationRunParams;
   blocks?: CalibrationBlocks;
+  skippedSeries?: SkippedSeriesList;
   preInfo?: Record<string, unknown>;
   postInfo?: Record<string, unknown>;
   firmwareVersion?: string;
   finishedAt?: Date;
 }
+
+/** Statuses a reviewer may close. A run still computing flips on its own when the sandbox answers. */
+export const REJECTABLE_STATUSES = ["computed", "compute_failed", "error"] as const;
+
+const { payload: _payload, ...runSummaryColumns } = getTableColumns(calibrationRuns);
 
 interface RunResultDto {
   status: "computed" | "compute_failed" | "error";
@@ -93,12 +104,23 @@ export class IotCalibrationRunRepository {
     });
   }
 
-  async listByDevice(deviceId: string): Promise<Result<CalibrationRunWithVersionDto[]>> {
+  /** The readings stay out of the list: they are read once per run, not once per device page. */
+  async listByDevice(deviceId: string): Promise<Result<CalibrationRunSummaryDto[]>> {
     return tryCatch(async () => {
-      const rows = await this.selectWithVersion()
+      const rows = await this.database
+        .select({ run: runSummaryColumns, definitionVersion: calibrationDefinitions.version })
+        .from(calibrationRuns)
+        .innerJoin(
+          calibrationDefinitions,
+          eq(calibrationRuns.definitionId, calibrationDefinitions.id),
+        )
         .where(eq(calibrationRuns.deviceId, deviceId))
         .orderBy(desc(calibrationRuns.createdAt));
-      return rows.map((row) => this.parseRun(row));
+      return rows.map((row) => ({
+        ...row.run,
+        definitionVersion: row.definitionVersion,
+        ...this.parseRunRecords(row.run),
+      }));
     });
   }
 
@@ -123,7 +145,7 @@ export class IotCalibrationRunRepository {
           .where(and(eq(calibrationRuns.id, runId), eq(calibrationRuns.status, "computed")))
           .returning({ id: calibrationRuns.id });
         if (claimed.length === 0) {
-          throw new Error("This run was already reviewed");
+          throw AppError.conflict("This run was already reviewed");
         }
 
         await tx
@@ -143,15 +165,21 @@ export class IotCalibrationRunRepository {
     });
   }
 
+  /** Closes a computed run, and a failed one, which otherwise has no terminal state to reach. */
   async reject(runId: string, reviewedBy: string): Promise<Result<CalibrationRunWithVersionDto>> {
     return tryCatch(async () => {
       const claimed = await this.database
         .update(calibrationRuns)
         .set({ status: "rejected", reviewedBy, reviewedAt: new Date() })
-        .where(and(eq(calibrationRuns.id, runId), eq(calibrationRuns.status, "computed")))
+        .where(
+          and(
+            eq(calibrationRuns.id, runId),
+            inArray(calibrationRuns.status, [...REJECTABLE_STATUSES]),
+          ),
+        )
         .returning({ id: calibrationRuns.id });
       if (claimed.length === 0) {
-        throw new Error("This run was already reviewed");
+        throw AppError.conflict("This run was already reviewed");
       }
       return this.withVersion(runId);
     });
@@ -249,10 +277,18 @@ export class IotCalibrationRunRepository {
       ...row.run,
       definitionVersion: row.definitionVersion,
       payload: row.run.payload == null ? null : zCalibrationRunPayload.parse(row.run.payload),
-      params: row.run.params == null ? null : zCalibrationRunParams.parse(row.run.params),
-      blocks: row.run.blocks == null ? null : zCalibrationBlocks.parse(row.run.blocks),
-      preInfo: this.asRecordOrNull(row.run.preInfo),
-      postInfo: this.asRecordOrNull(row.run.postInfo),
+      ...this.parseRunRecords(row.run),
+    };
+  }
+
+  /** The records every read of a run narrows, whether or not it carries the readings. */
+  private parseRunRecords(run: Omit<typeof calibrationRuns.$inferSelect, "payload">) {
+    return {
+      params: run.params == null ? null : zCalibrationRunParams.parse(run.params),
+      blocks: run.blocks == null ? null : zCalibrationBlocks.parse(run.blocks),
+      skippedSeries: run.skippedSeries == null ? null : zSkippedSeriesList.parse(run.skippedSeries),
+      preInfo: this.asRecordOrNull(run.preInfo),
+      postInfo: this.asRecordOrNull(run.postInfo),
     };
   }
 

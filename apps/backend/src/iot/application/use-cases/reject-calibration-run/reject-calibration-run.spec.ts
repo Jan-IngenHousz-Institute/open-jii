@@ -98,7 +98,32 @@ describe("RejectCalibrationRunUseCase", () => {
     expect(active.value).toBeNull();
   });
 
-  it("refuses a run that is not computed", async () => {
+  // A run the sandbox could not finish has no other way to a terminal state; left open it
+  // sits at the top of the device's history forever.
+  it("closes a run that failed to compute", async () => {
+    const created = await runRepository.create({
+      definitionId,
+      deviceId,
+      requestedBy: userId,
+      inputSource: "bench_wizard",
+      status: "running",
+    });
+    assertSuccess(created);
+    const failed = await runRepository.saveResult(created.value.id, {
+      status: "error",
+      errorMessage: "Calibration sandbox invoke failed",
+    });
+    assertSuccess(failed);
+
+    const result = await useCase.execute(created.value.id, userId);
+
+    assertSuccess(result);
+    expect(result.value.status).toBe("rejected");
+    expect(result.value.errorMessage).toBe("Calibration sandbox invoke failed");
+  });
+
+  // One still computing settles on its own when the sandbox answers.
+  it("refuses a run that is still running", async () => {
     const created = await runRepository.create({
       definitionId,
       deviceId,
@@ -110,7 +135,7 @@ describe("RejectCalibrationRunUseCase", () => {
 
     const result = await useCase.execute(created.value.id, userId);
     assertFailure(result);
-    expect(result.error.message).toContain("Only a computed run can be rejected");
+    expect(result.error.message).toContain("Only a computed or failed run can be rejected");
   });
 
   it("reports a missing run as not found", async () => {

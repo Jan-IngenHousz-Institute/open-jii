@@ -3,7 +3,12 @@ import { Injectable, Logger } from "@nestjs/common";
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { Result, failure, success, AppError } from "../../../../common/utils/fp-utils";
 import type { CalibrationRunWithVersionDto } from "../../../core/models/iot-calibration.model";
-import { IotCalibrationRunRepository } from "../../../core/repositories/iot-calibration-run.repository";
+import {
+  IotCalibrationRunRepository,
+  REJECTABLE_STATUSES,
+} from "../../../core/repositories/iot-calibration-run.repository";
+
+const rejectable: ReadonlySet<string> = new Set(REJECTABLE_STATUSES);
 
 @Injectable()
 export class RejectCalibrationRunUseCase {
@@ -32,8 +37,9 @@ export class RejectCalibrationRunUseCase {
       return failure(AppError.forbidden("Rejecting a calibration requires device manage rights"));
     }
 
-    if (run.value.status !== "computed") {
-      return failure(AppError.badRequest("Only a computed run can be rejected"));
+    // A failed run has no other way to a terminal state; one still computing settles on its own.
+    if (!rejectable.has(run.value.status)) {
+      return failure(AppError.badRequest("Only a computed or failed run can be rejected"));
     }
 
     this.logger.log({

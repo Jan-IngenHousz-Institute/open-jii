@@ -10,10 +10,12 @@ import {
   and,
   calibrationDefinitions,
   calibrationRuns,
+  deleteResourceGrants,
   desc,
   ensurePersonalOrganization,
   eq,
   getTableColumns,
+  notExists,
   or,
   sql,
 } from "@repo/database";
@@ -23,7 +25,7 @@ import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import { ftsMatch, ftsRank, searchScore } from "../../../common/utils/fts";
 import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
 import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
-import { seedCreatorControl } from "../../../sharing/core/resource-staffing";
+import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import type {
   CalibrationDefinitionDto,
   CreateCalibrationDefinitionDto,
@@ -164,6 +166,12 @@ export class IotCalibrationDefinitionRepository {
     });
   }
 
+  /**
+   * Edits the definition only while no run points at it. The guard is part of the
+   * statement rather than a check before it, so a run recorded between the two cannot
+   * slip an edit under what it appears to have done. Null means not found or frozen;
+   * the caller tells them apart.
+   */
   async update(
     definitionId: string,
     changes: UpdateCalibrationDefinitionBody,
@@ -172,7 +180,17 @@ export class IotCalibrationDefinitionRepository {
       const results = await this.database
         .update(calibrationDefinitions)
         .set({ ...changes, updatedAt: new Date() })
-        .where(eq(calibrationDefinitions.id, definitionId))
+        .where(
+          and(
+            eq(calibrationDefinitions.id, definitionId),
+            notExists(
+              this.database
+                .select({ id: calibrationRuns.id })
+                .from(calibrationRuns)
+                .where(eq(calibrationRuns.definitionId, definitionId)),
+            ),
+          ),
+        )
         .returning();
       return results.length > 0 ? this.parseRows(results)[0] : null;
     });
@@ -189,12 +207,19 @@ export class IotCalibrationDefinitionRepository {
     });
   }
 
+  /** Staffed like every shared resource: its grants go with it, under the lock a concurrent share takes. */
   async delete(definitionId: string): Promise<Result<CalibrationDefinitionDto[]>> {
     return tryCatch(async () => {
-      const results = await this.database
-        .delete(calibrationDefinitions)
-        .where(eq(calibrationDefinitions.id, definitionId))
-        .returning();
+      const results = await this.database.transaction(async (tx) => {
+        await lockStaffedResource(tx, "calibration_definition", definitionId, "update");
+
+        await deleteResourceGrants(tx, "calibration_definition", definitionId);
+
+        return tx
+          .delete(calibrationDefinitions)
+          .where(eq(calibrationDefinitions.id, definitionId))
+          .returning();
+      });
       return this.parseRows(results);
     });
   }

@@ -11,6 +11,7 @@ import {
   zCalibrationRunParams,
   zCalibrationRunPayload,
   zCalibrationWriteResults,
+  zSkippedSeriesList,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { calibrationDefinitions, calibrationRuns, deviceCalibrations } from "@repo/database";
 
@@ -43,6 +44,7 @@ export const selectCalibrationRunSchema = createSelectSchema(calibrationRuns).ex
   payload: zCalibrationRunPayload.nullable(),
   params: zCalibrationRunParams.nullable(),
   blocks: zCalibrationBlocks.nullable(),
+  skippedSeries: zSkippedSeriesList.nullable(),
   preInfo: z.record(z.unknown()).nullable(),
   postInfo: z.record(z.unknown()).nullable(),
 });
@@ -63,6 +65,9 @@ export type DeviceCalibrationDto = z.infer<typeof selectDeviceCalibrationSchema>
 
 /** Run row plus the version of the definition that produced it (join-derived). */
 export type CalibrationRunWithVersionDto = CalibrationRunDto & { definitionVersion: number };
+
+/** A run as a list shows it: the readings stay with the single run, which is the only place the wire carries them. */
+export type CalibrationRunSummaryDto = Omit<CalibrationRunWithVersionDto, "payload">;
 
 /** The rows carry Dates; the controller's `formatDates` is what makes the wire shape. */
 export type ActiveCalibrationBlockDto = Omit<

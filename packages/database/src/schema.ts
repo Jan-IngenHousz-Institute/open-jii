@@ -992,6 +992,8 @@ export const calibrationRuns = pgTable(
     payloadS3Key: varchar("payload_s3_key", { length: 512 }),
     params: jsonb("params"),
     blocks: jsonb("blocks"),
+    // Optional steps the bench could not run, and why; a missing series is otherwise mute.
+    skippedSeries: jsonb("skipped_series"),
     preInfo: jsonb("pre_info"),
     postInfo: jsonb("post_info"),
     firmwareVersion: varchar("firmware_version", { length: 64 }),

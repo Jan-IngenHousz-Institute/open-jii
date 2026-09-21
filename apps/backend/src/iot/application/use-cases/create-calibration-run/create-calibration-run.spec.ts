@@ -147,9 +147,89 @@ describe("CreateCalibrationRunUseCase", () => {
   // whole session over the one point the operator corrected.
   it("accepts the retaken companion of a series the procedure declares", async () => {
     const result = await run({
-      payload: { ...PAYLOAD, par_sweep_retaken: [{ stimulus: 0.8, par_raw: 1, par_ref: 2 }] },
+      payload: { ...PAYLOAD, par_sweep_retaken: [{ par_raw: 1 }] },
     });
     assertSuccess(result);
+  });
+
+  // The same names become payload keys, dict keys and DataFrame columns, which only holds
+  // if a row cannot arrive with a column its step never declared.
+  it("refuses a row carrying a column the step does not record", async () => {
+    const result = await run({ payload: { par_sweep: [{ par_raw: 148.2, temp: 21 }] } });
+    assertFailure(result);
+    expect(result.error.message).toContain("does not record: temp");
+  });
+
+  // The fit never sees a reading the operator took again; it stays on the record only.
+  it("keeps retaken readings out of what the sandbox is sent", async () => {
+    const payload = {
+      par_sweep: [{ par_raw: 148.2 }],
+      par_sweep_retaken: [{ par_raw: 12.0 }],
+    };
+
+    const result = await run({ payload });
+
+    assertSuccess(result);
+    expect(sentEvent?.series).toEqual({ par_sweep: [{ par_raw: 148.2 }] });
+    expect(result.value.payload).toEqual(payload);
+  });
+
+  it("records the optional steps the bench skipped", async () => {
+    const skippedSeries = [
+      { series: "led_sweep", reason: 'instrument "emit_ref" is not connected' },
+    ];
+
+    const result = await run({ skippedSeries });
+
+    assertSuccess(result);
+    expect(result.value.skippedSeries).toEqual(skippedSeries);
+  });
+
+  // A definition with runs cannot be edited, so this record is the only place the
+  // failing line ever appears to the script's author.
+  it("keeps the script's traceback with a failed run", async () => {
+    sandboxResult = success({
+      statusCode: 200,
+      payload: {
+        status: "compute_failed",
+        error: "KeyError: 'par_ref'",
+        traceback: ['  File "<calibration-script>", line 3, in <module>', "KeyError: 'par_ref'"],
+      },
+    });
+
+    const result = await run();
+
+    assertSuccess(result);
+    expect(result.value.status).toBe("compute_failed");
+    expect(result.value.errorMessage).toContain("line 3");
+  });
+
+  describe("device identity", () => {
+    let namedDeviceId: string;
+
+    beforeEach(async () => {
+      const device = await testApp.createIotDevice({
+        createdBy: userId,
+        deviceType: "minipar",
+        serialNumber: "A4:CF:12:AA:93:B0",
+      });
+      namedDeviceId = device.id;
+    });
+
+    // Two units of one family on a bench: a session on the other one is refused, not
+    // recorded against this device and later written to whichever is on the port.
+    it("refuses a session on a unit other than this device", async () => {
+      const result = await run({ deviceId: namedDeviceId, reportedSerial: "a4cf12aa93b1" });
+
+      assertFailure(result);
+      expect(result.error.message).toContain("reports serial");
+    });
+
+    it("accepts the unit's own identifier however its separators were written", async () => {
+      const result = await run({ deviceId: namedDeviceId, reportedSerial: "a4cf12aa93b0" });
+
+      assertSuccess(result);
+    });
   });
 
   // The route guard authorizes the device, not the definition named in the body,
