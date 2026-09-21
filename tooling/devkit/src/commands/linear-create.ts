@@ -46,6 +46,10 @@ interface ProjectsResult {
   projects: { nodes: { id: string; name: string }[] };
 }
 
+interface IssueResult {
+  issue: { id: string; identifier: string; url: string };
+}
+
 interface IssueCreateResult {
   issueCreate: { success: boolean; issue: { id: string; identifier: string; url: string } };
 }
@@ -55,6 +59,9 @@ const teamQuery = `query($key: String!) {
 }`;
 const projectsQuery = `query($name: String!) {
   projects(first: 10, filter: { name: { containsIgnoreCase: $name } }) { nodes { id name } }
+}`;
+const issueByIdentifierQuery = `query($id: String!) {
+  issue(id: $id) { id identifier url }
 }`;
 const issueCreateMutation = `mutation($input: IssueCreateInput!) {
   issueCreate(input: $input) { success issue { id identifier url } }
@@ -137,7 +144,8 @@ function describePlan(draft: Draft, state: CreateState, resolved: Resolved): str
   ];
   for (const ticket of draft.tickets) {
     const existing = state.tickets[String(ticket.index)];
-    const status = existing ? `exists as ${existing.identifier}` : "to create";
+    const intent = ticket.identifier === null ? "to create" : `update ${ticket.identifier}`;
+    const status = existing ? `exists as ${existing.identifier}` : intent;
     const blocks = ticket.blocks.length > 0 ? `; blocks ${ticket.blocks.join(", ")}` : "";
     const comment = ticket.comment === null ? "" : "; with comment";
     lines.push(
@@ -180,6 +188,28 @@ export async function createTickets(
   for (const ticket of draft.tickets) {
     const key = String(ticket.index);
     if (state.tickets[key]) continue;
+    if (ticket.identifier !== null) {
+      const found = await deps.client.query<IssueResult>(issueByIdentifierQuery, {
+        id: ticket.identifier,
+      });
+      await expectSuccess(
+        deps.client,
+        issueUpdateMutation,
+        {
+          id: found.issue.id,
+          input: {
+            title: ticket.title,
+            description: ticket.body,
+            addedLabelIds: labelIdsFor(ticket, resolved),
+          },
+        },
+        `Updating ${ticket.identifier}`,
+      );
+      state.tickets[key] = { ...found.issue, title: ticket.title };
+      await deps.saveState(state);
+      deps.write(`updated ${found.issue.identifier}  ${ticket.title}\n`);
+      continue;
+    }
     const result = await deps.client.query<IssueCreateResult>(issueCreateMutation, {
       input: {
         teamId: resolved.teamId,

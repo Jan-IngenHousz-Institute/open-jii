@@ -106,6 +106,11 @@ function fixture(): { client: LinearClient; calls: Call[] } {
             issue: { id: `id-${created}`, identifier, url: `https://linear.app/x/${identifier}` },
           },
         };
+      } else if (document.includes("issue(id")) {
+        const identifier = String(variables.id);
+        answer = {
+          issue: { id: `id-${identifier}`, identifier, url: `https://linear.app/x/${identifier}` },
+        };
       } else if (document.includes("issueUpdate(")) {
         answer = { issueUpdate: { success: true } };
       } else if (document.includes("commentCreate(")) {
@@ -239,6 +244,51 @@ describe("createTickets", () => {
     });
     expect(d.lines.join("")).toContain(
       "OJD-1001  Researcher can sort any resource list\nhttps://linear.app/x/OJD-1001\n",
+    );
+  });
+
+  it("updates a ticket headed by an identifier instead of creating it, and still relates it", async () => {
+    const { client, calls } = fixture();
+    const d = deps(client);
+    const text = draftText.replace(
+      "# Researcher can sort any resource list",
+      "# OJD-1810 Researcher can sort any resource list",
+    );
+
+    await createTickets(parseDraft(text), true, d.value);
+
+    expect(mutations(calls)).toEqual([
+      "issueUpdate",
+      "issueCreate",
+      "issueUpdate",
+      "commentCreate",
+      "issueRelationCreate",
+    ]);
+    const update = calls.find((c) => c.document.includes("issueUpdate("))?.variables;
+    expect(update).toEqual({
+      id: "id-OJD-1810",
+      input: {
+        title: "Researcher can sort any resource list",
+        description: expect.stringContaining("{{2}} adds filters") as unknown,
+        addedLabelIds: ["l-feature", "l-fullstack"],
+      },
+    });
+    const relation = calls.find((c) => c.document.includes("issueRelationCreate("))?.variables;
+    expect(relation).toEqual({
+      input: { issueId: "id-OJD-1810", relatedIssueId: "id-1", type: "blocks" },
+    });
+    expect(d.lines.join("")).toContain("updated OJD-1810  Researcher can sort any resource list");
+  });
+
+  it("plans an update for an identifier-headed ticket in the dry run", async () => {
+    const { client } = fixture();
+    const d = deps(client);
+    const text = draftText.replace("# Researcher can sort", "# OJD-1810 Researcher can sort");
+
+    await createTickets(parseDraft(text), false, d.value);
+
+    expect(d.lines.join("")).toContain(
+      "1. Researcher can sort any resource list  [Feature, Fullstack] update OJD-1810",
     );
   });
 
