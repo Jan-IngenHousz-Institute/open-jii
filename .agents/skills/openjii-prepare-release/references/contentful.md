@@ -1,6 +1,6 @@
 # Contentful release notes and mobile gate
 
-Use root `.env` with `CONTENTFUL_SPACE_ID`, `CONTENTFUL_SPACE_ENVIRONMENT`, and
+Use `tooling/devkit/.env` with `CONTENTFUL_SPACE_ID`, `CONTENTFUL_SPACE_ENVIRONMENT`, and
 `CONTENTFUL_MANAGEMENT_TOKEN` or the existing `CMA` alias. Delivery and preview tokens cannot write.
 The environment is mandatory. Verify it matches the app's configuration before any live write.
 The helper uses the standard Contentful region; EU-resident spaces need their regional CMA endpoint
