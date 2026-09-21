@@ -1,4 +1,4 @@
-import { repositoryRoot, resolveLinearApiKey } from "../lib/config.js";
+import { repositoryRoot, requireLinearApiKey } from "../lib/config.js";
 import { createFileAudit, createLinearClient } from "../lib/linear.js";
 import type { LinearClient } from "../lib/linear.js";
 import { labelPhases, taxonomy } from "../linear/taxonomy.js";
@@ -480,8 +480,7 @@ async function run(args: string[]): Promise<number> {
     process.stdout.write(text);
   };
   const root = repositoryRoot();
-  const apiKey = await resolveLinearApiKey(root, process.env);
-  if (!apiKey) throw new Error("No Linear key found; run pnpm linear:auth first");
+  const apiKey = await requireLinearApiKey(root, process.env);
 
   const client = createLinearClient({ apiKey, audit: createFileAudit(root) });
   printPlan(taxonomy, planTaxonomy(taxonomy, await fetchLabels(client, taxonomy.teamKey)), write);
