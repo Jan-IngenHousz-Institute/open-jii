@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { GroupDataByExperimentPanel } from "./group-data-by-experiment-panel";
 
-vi.mock("@repo/ui/components/charts/bar-chart", () => ({
+vi.mock("@/components/charts/bar-chart", () => ({
   HorizontalBarChart: vi.fn(() => <div data-testid="experiment-bars" />),
 }));
 

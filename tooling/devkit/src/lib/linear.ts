@@ -167,12 +167,22 @@ export function createLinearClient(options: LinearClientOptions): LinearClient {
   };
 }
 
-// Every mutation lands in .claude/linear-writes.log, which .gitignore already excludes.
-export function createFileAudit(root: string): (entry: AuditEntry) => Promise<void> {
+// Every mutation lands in .claude/linear-writes.log, which .gitignore already excludes. One key
+// serves several agent sessions and worktrees, so each line names the session and the checkout
+// that wrote it; Linear itself only ever sees the key's owner.
+export function createFileAudit(
+  root: string,
+  env: NodeJS.ProcessEnv = process.env,
+): (entry: AuditEntry) => Promise<void> {
   const path = `${root}/.claude/linear-writes.log`;
+  const session = env.CLAUDE_CODE_SESSION_ID ?? "shell";
   return async (entry) => {
     await mkdir(dirname(path), { recursive: true });
     const outcome = entry.ok ? "ok" : "failed";
-    await appendFile(path, `${entry.at} ${outcome} ${entry.fields.join(",")} ${entry.variables}\n`);
+    const destructive = entry.fields.some(isDestructive) ? " destructive" : "";
+    await appendFile(
+      path,
+      `${entry.at} ${outcome} ${entry.fields.join(",")} session=${session} root=${root}${destructive} ${entry.variables}\n`,
+    );
   };
 }

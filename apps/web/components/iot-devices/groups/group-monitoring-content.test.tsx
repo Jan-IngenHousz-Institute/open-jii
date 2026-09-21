@@ -10,7 +10,7 @@ import type { IotDeviceGroupMonitoring } from "@repo/api/domains/iot/device-grou
 
 import { GroupMonitoringContent } from "./group-monitoring-content";
 
-vi.mock("@repo/ui/components/charts/bar-chart", () => ({
+vi.mock("@/components/charts/bar-chart", () => ({
   BarChart: vi.fn(() => <div data-testid="bar-chart" />),
   HorizontalBarChart: vi.fn(() => <div data-testid="horizontal-bar-chart" />),
 }));

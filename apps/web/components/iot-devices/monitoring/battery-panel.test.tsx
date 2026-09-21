@@ -5,7 +5,7 @@ import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 
 import { BatteryPanel } from "./battery-panel";
 
-vi.mock("@repo/ui/components/charts/line-chart", () => ({
+vi.mock("@/components/charts/line-chart", () => ({
   LineChart: vi.fn(() => <div data-testid="line-chart" />),
 }));
 

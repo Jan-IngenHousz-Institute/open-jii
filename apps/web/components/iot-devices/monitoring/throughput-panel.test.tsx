@@ -5,7 +5,7 @@ import type { DeviceExperiment, DeviceMonitoring } from "@repo/api/domains/iot/i
 
 import { ThroughputPanel } from "./throughput-panel";
 
-vi.mock("@repo/ui/components/charts/bar-chart", () => ({
+vi.mock("@/components/charts/bar-chart", () => ({
   BarChart: vi.fn(({ data }: { data: { name: string }[] }) => (
     <div data-testid="bar-chart">{JSON.stringify(data.map((series) => series.name))}</div>
   )),

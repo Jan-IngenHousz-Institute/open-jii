@@ -1,9 +1,9 @@
 "use client";
 
+import { LineChart } from "@/components/charts/line-chart";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { LineChart } from "@repo/ui/components/charts/line-chart";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";

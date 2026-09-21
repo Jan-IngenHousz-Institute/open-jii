@@ -1,5 +1,6 @@
 "use client";
 
+import { BarChart } from "@/components/charts/bar-chart";
 import { bucketAxis } from "@/components/iot-devices/monitoring/monitoring-buckets";
 import { monitoringPrimaryColor } from "@/components/iot-devices/monitoring/monitoring-palette";
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
@@ -7,7 +8,6 @@ import { useExperimentDeviceSeries } from "@/hooks/experiment/useExperimentDevic
 import type { ReactNode } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { BarChart } from "@repo/ui/components/charts/bar-chart";
 import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";

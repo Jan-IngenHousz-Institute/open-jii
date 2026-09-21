@@ -1,12 +1,12 @@
 "use client";
 
+import { HorizontalBarChart } from "@/components/charts/bar-chart";
 import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime } from "@/util/date";
 import { AlertTriangle } from "lucide-react";
 
 import type { DeviceExperiment, DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
-import { HorizontalBarChart } from "@repo/ui/components/charts/bar-chart";
 import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
 import { EmptyState } from "@repo/ui/components/empty-state";
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { PlotlyPreload } from "@/components/charts/plotly-preload";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -167,6 +168,7 @@ export function VisualizationWorkspace({
 
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="flex min-w-0 flex-1 flex-col gap-4">
+            <PlotlyPreload />
             <WorkspaceCanvas
               control={form.control}
               experimentId={experimentId}
