@@ -264,7 +264,7 @@ export function DataTable({
                 table.setPageSize(Number(rowsPerPage));
               }}
             >
-              <SelectTrigger className="w-20">
+              <SelectTrigger className="w-24">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
