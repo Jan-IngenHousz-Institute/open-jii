@@ -14,11 +14,14 @@ export async function seedDevices(user: SeedUser, personalOrganizationId: string
     certificateArn: `arn:aws:iot:local:000000000000:cert/seed-cert-${slug}`,
   });
 
+  // A calibration session refuses to run on a unit whose reported identifier is not the
+  // device's registered serial, so a family that announces a MAC is seeded with one.
   const deviceSeeds: {
     slug: string;
     name: string;
     deviceType: "multispeq" | "ambyte" | "ambit" | "minipar" | "mobile";
     status: "registered" | "active" | "revoked" | "retired";
+    serialNumber?: string;
   }[] = [
     {
       slug: "ambyte-gw-01",
@@ -38,7 +41,13 @@ export async function seedDevices(user: SeedUser, personalOrganizationId: string
       deviceType: "multispeq",
       status: "active",
     },
-    { slug: "ambit-01", name: "[Seed] Ambit Logger 01", deviceType: "ambit", status: "active" },
+    {
+      slug: "ambit-01",
+      name: "[Seed] Ambit Logger 01",
+      deviceType: "ambit",
+      status: "active",
+      serialNumber: "A0:B1:C2:D3:E4:F5",
+    },
     {
       slug: "minipar-01",
       name: "[Seed] MiniPAR Sensor 01",
@@ -54,7 +63,7 @@ export async function seedDevices(user: SeedUser, personalOrganizationId: string
       deviceSeeds.map((d, index) => ({
         thingName: `seed-${d.slug}`,
         thingArn: `arn:aws:iot:local:000000000000:thing/seed-${d.slug}`,
-        serialNumber: `SEED-SN-${String(index + 1).padStart(4, "0")}`,
+        serialNumber: d.serialNumber ?? `SEED-SN-${String(index + 1).padStart(4, "0")}`,
         name: d.name,
         deviceType: d.deviceType,
         status: d.status,
