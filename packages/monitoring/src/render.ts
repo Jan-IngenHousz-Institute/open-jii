@@ -52,10 +52,10 @@ export function renderObservability(
   const lines: string[] = [];
 
   if (anomalies.length === 0) {
-    lines.push(`🟢 *No anomalies* · ${readings.length} signals checked (${environment})`);
+    lines.push(`*No anomalies* · ${readings.length} signals checked (${environment})`);
   } else {
     lines.push(
-      `🔴 *${anomalies.length} anomal${anomalies.length === 1 ? "y" : "ies"}* (${environment})`,
+      `*${anomalies.length} anomal${anomalies.length === 1 ? "y" : "ies"}* (${environment})`,
     );
     for (const entry of anomalies) {
       const context = JSON.stringify({
@@ -77,20 +77,20 @@ export function renderObservability(
 
   if (missing.length > 0) {
     lines.push(
-      `⚠️ Self-check: no datapoints for ${missing.map((entry) => entry.metric.id).join(", ")}` +
+      `*Self-check:* no datapoints for ${missing.map((entry) => entry.metric.id).join(", ")}` +
         ` (had data in prior weeks); excluded above.`,
     );
   }
 
   if (configErrors.length > 0) {
-    lines.push(`⚠️ Self-check: unresolved catalog placeholders for ${configErrors.join(", ")}.`);
+    lines.push(`*Self-check:* unresolved catalog placeholders for ${configErrors.join(", ")}.`);
   }
 
-  // Without this the digest would render a green line built from a partial query,
+  // Without this the digest would report no anomalies from a partial query,
   // which reads as "nothing is wrong" when the truth is "we could not look".
   if (failedRegions.length > 0) {
     lines.push(
-      `⚠️ Self-check: CloudWatch queries failed in ${failedRegions.join(", ")};` +
+      `*Self-check:* CloudWatch queries failed in ${failedRegions.join(", ")};` +
         ` metrics from there are missing above, not healthy.`,
     );
   }

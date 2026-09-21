@@ -31,7 +31,7 @@ export interface MetricBaseline {
 /**
  * A cross-cutting view over observability entries. A performance signal is a level most
  * days and an exception on regression, so it is both families at once; a lens keeps it out
- * of the green-line digest without re-partitioning what family means.
+ * of the exception digest without re-partitioning what family means.
  */
 export type MetricLens = "performance";
 
