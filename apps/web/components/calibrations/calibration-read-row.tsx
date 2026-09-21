@@ -17,7 +17,9 @@ import {
 } from "@repo/ui/components/select";
 
 import { CalibrationNumberField } from "./calibration-number-field";
+import { uniqueName } from "./output-schema-edits";
 import { ROLE_PATTERN } from "./procedure-edits";
+import { columnForRead, isDefaultColumn } from "./read-columns";
 import type { ReadSource } from "./rig-sources";
 
 /** Stands for the operator typing the value in, which no instrument can be asked for. */
@@ -83,18 +85,41 @@ export function CalibrationReadRow({
     }
   }
 
+  /**
+   * A column the author named is theirs to keep; one the reading gave itself follows the
+   * reading, so picking a different instrument does not leave `par_ref` on a lamp.
+   */
+  function columnFor(next: ProcedureRead): string {
+    if (!isDefaultColumn(read, sources)) {
+      return read.as;
+    }
+    const others = takenColumns.filter((column) => column !== read.as);
+    return uniqueName(columnForRead(next, sources), others);
+  }
+
   function handleSourceChange(value: string) {
     if (value === OPERATOR_SOURCE) {
-      onChange({
+      const next: ProcedureRead = {
         operator: t("iot.calibration.procedure.operatorReadPrompt"),
         as: read.as,
         type: "number",
-      });
+      };
+      onChange({ ...next, as: columnFor(next) });
       return;
     }
 
     const picked = sources.find((candidate) => candidate.role === value);
-    onChange({ instrument: value, command: picked?.offered[0] ?? "hello", as: read.as });
+    const next: ProcedureRead = {
+      instrument: value,
+      command: picked?.offered[0] ?? "hello",
+      as: read.as,
+    };
+    onChange({ ...next, as: columnFor(next) });
+  }
+
+  function handleCommandChange(command: string) {
+    const next = { ...read, command };
+    onChange({ ...next, as: columnFor(next) });
   }
 
   function renderSourceOption(candidate: ReadSource) {
@@ -141,7 +166,7 @@ export function CalibrationReadRow({
           </Label>
           <Select
             value={read.command ?? ""}
-            onValueChange={(command) => onChange({ ...read, command })}
+            onValueChange={handleCommandChange}
             disabled={!canEdit}
           >
             <SelectTrigger id={commandId} className="font-mono">
@@ -162,7 +187,7 @@ export function CalibrationReadRow({
           id={commandId}
           list={`${commandId}-offered`}
           value={read.command ?? ""}
-          onChange={(event) => onChange({ ...read, command: event.target.value })}
+          onChange={(event) => handleCommandChange(event.target.value)}
           disabled={!canEdit}
           aria-invalid={(read.command ?? "").trim() === ""}
           className="font-mono"

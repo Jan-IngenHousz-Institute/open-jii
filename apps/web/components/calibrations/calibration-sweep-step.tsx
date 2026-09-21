@@ -20,6 +20,7 @@ import {
 import { CalibrationNumberField } from "./calibration-number-field";
 import { CalibrationReadList } from "./calibration-read-list";
 import { CalibrationSeriesField } from "./calibration-series-field";
+import { CalibrationSetpointRamp } from "./calibration-setpoint-ramp";
 import { CalibrationSetpointValues } from "./calibration-setpoint-values";
 import type { ReadSource, SetpointTarget } from "./rig-sources";
 
@@ -233,6 +234,15 @@ export function CalibrationSweepStep({
         canEdit={canEdit}
         onChange={handleValuesChange}
       />
+
+      {/* Only an instrument sweeps a range of numbers; what an operator sets up is named. */}
+      {isDrivenByInstrument && (
+        <CalibrationSetpointRamp
+          setpoint={setpoint}
+          canEdit={canEdit}
+          onFill={handleValuesChange}
+        />
+      )}
 
       <CalibrationReadList step={step} sources={sources} canEdit={canEdit} onChange={onChange} />
     </div>

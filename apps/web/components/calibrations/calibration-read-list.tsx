@@ -13,10 +13,8 @@ import { Button } from "@repo/ui/components/button";
 import { CalibrationReadRow } from "./calibration-read-row";
 import { uniqueName } from "./output-schema-edits";
 import { addRead, removeRead, replaceRead, stepReads } from "./procedure-edits";
+import { columnForRead } from "./read-columns";
 import type { ReadSource } from "./rig-sources";
-
-/** What a column is called before the author names it. */
-const NEW_COLUMN = "value";
 
 /** Every family's driver answers this, and a rig always declares the device. */
 const FALLBACK_COMMAND = "hello";
@@ -40,12 +38,17 @@ export function CalibrationReadList({
   const reads = stepReads(step);
   const columns = reads.map((read) => read.as);
 
+  // Named after what it reads, because that is the name the script will index by.
   function handleAdd() {
     const first = sources.at(0);
-    const read: ProcedureRead = {
+    const taken: ProcedureRead = {
       instrument: first?.role ?? DUT_ROLE,
       command: first?.offered.at(0) ?? FALLBACK_COMMAND,
-      as: uniqueName(NEW_COLUMN, columns),
+      as: "",
+    };
+    const read: ProcedureRead = {
+      ...taken,
+      as: uniqueName(columnForRead(taken, sources), columns),
     };
 
     onChange(addRead(step, read));
