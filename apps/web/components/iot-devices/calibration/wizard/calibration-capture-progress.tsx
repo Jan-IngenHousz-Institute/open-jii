@@ -74,30 +74,34 @@ export function CalibrationCaptureProgress({
     if (step === null) {
       return null;
     }
+    // The label leads and the bar measures it. The other way round, an empty bar at the
+    // first step sat under the step's own description and read as a rule across the card.
     return (
       <div className="space-y-2">
-        <Progress value={percentDone} className="h-1.5" />
-        <p className="text-sm font-medium">
-          {isWaitingOnOperator
-            ? t("iot.calibration.capture.stepCounter", {
-                index: step.index + 1,
-                total: step.total,
-              })
-            : t("iot.calibration.capture.step", {
-                index: step.index + 1,
-                total: step.total,
-                description: step.description,
-              })}
-        </p>
-        {hasSetpoint && (
-          <p className="text-muted-foreground text-xs">
-            {t("iot.calibration.capture.setpoint", {
-              index: setpoint.index + 1,
-              total: setpoint.total,
-              value: formatSeriesValue(setpoint.value),
-            })}
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <p className="text-sm font-medium">
+            {isWaitingOnOperator
+              ? t("iot.calibration.capture.stepCounter", {
+                  index: step.index + 1,
+                  total: step.total,
+                })
+              : t("iot.calibration.capture.step", {
+                  index: step.index + 1,
+                  total: step.total,
+                  description: step.description,
+                })}
           </p>
-        )}
+          {hasSetpoint && (
+            <p className="text-muted-foreground shrink-0 text-xs tabular-nums">
+              {t("iot.calibration.capture.setpoint", {
+                index: setpoint.index + 1,
+                total: setpoint.total,
+                value: formatSeriesValue(setpoint.value),
+              })}
+            </p>
+          )}
+        </div>
+        <Progress value={percentDone} className="h-1.5" />
       </div>
     );
   }

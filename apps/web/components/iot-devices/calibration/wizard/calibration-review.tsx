@@ -67,9 +67,10 @@ export function CalibrationReview({ run, payload, active, outputSchema }: Calibr
 
     return (
       <Collapsible>
-        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground group flex items-center gap-1.5 text-sm">
+        {/* A button centres its own text, which a label that wraps on a phone makes obvious. */}
+        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground group flex items-start gap-1.5 text-left text-sm">
           <ChevronDown
-            className="size-4 transition-transform group-data-[state=open]:rotate-180"
+            className="mt-0.5 size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180"
             aria-hidden
           />
           {t("iot.calibration.review.showReadings", { series: series.length, points })}

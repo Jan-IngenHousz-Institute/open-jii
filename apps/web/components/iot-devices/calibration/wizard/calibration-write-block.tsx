@@ -59,13 +59,13 @@ export function CalibrationWriteBlock({ name, block, result }: CalibrationWriteB
     );
   }
 
+  // Stacked, like the review card that showed the same numbers a step earlier. Right-aligned
+  // across a narrow card, a six-element vector wrapped and left its closing bracket alone.
   function renderCoefficient([coefficient, value]: (typeof coefficients)[number]) {
     return (
-      <div key={coefficient} className="contents">
+      <div key={coefficient} className="space-y-0.5">
         <dt className="text-muted-foreground text-xs">{coefficient}</dt>
-        <dd className="wrap-break-word text-right font-mono text-xs">
-          {formatCoefficientValue(value)}
-        </dd>
+        <dd className="wrap-break-word font-mono text-sm">{formatCoefficientValue(value)}</dd>
       </div>
     );
   }
@@ -76,9 +76,7 @@ export function CalibrationWriteBlock({ name, block, result }: CalibrationWriteB
         <p className="text-sm font-medium">{name}</p>
         {renderOutcome()}
       </div>
-      <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1">
-        {coefficients.map(renderCoefficient)}
-      </dl>
+      <dl className="space-y-2">{coefficients.map(renderCoefficient)}</dl>
       {result?.error !== undefined && (
         <p className="text-destructive font-mono text-xs">{result.error}</p>
       )}

@@ -52,6 +52,7 @@ export function CalibrationLiveSeries({ events, procedure }: CalibrationLiveSeri
         config={{
           xAxisTitle: live.xLabel ?? undefined,
           showLegend: true,
+          legendPosition: "bottom",
           displayModeBar: false,
         }}
       />

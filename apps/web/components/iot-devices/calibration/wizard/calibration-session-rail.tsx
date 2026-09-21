@@ -1,6 +1,7 @@
 "use client";
 
 import { stepAppearance, stepLabel } from "@/components/calibrations/step-appearance";
+import { InsetPanel } from "@/components/shared/inset-panel";
 import type { UnitIdentity } from "@/hooks/iot/useCalibrationCapture/useCalibrationCapture";
 import type { RigRole } from "@/hooks/iot/useCalibrationRig/useCalibrationRig";
 import type { IotDeviceConnection } from "@/hooks/iot/useIotConnections/useIotConnections";
@@ -23,10 +24,13 @@ interface CalibrationSessionRailProps {
   roles: RigRole[];
   /** The step the interpreter is on, or null when nothing is running. */
   activeStep: number | null;
+  /** The capture is behind us, so every step reads as run rather than as still to do. */
+  isComplete: boolean;
   isRunning: boolean;
 }
 
-const SECTION = "text-muted-foreground text-[11px] font-medium uppercase tracking-wide";
+/** 12px, not 11: this is read at arm's length from a bench, not leaned into. */
+const SECTION = "text-muted-foreground text-xs font-medium uppercase tracking-wide";
 
 /**
  * The session as an instrument panel: what is on the ports, what the procedure will do, and
@@ -44,6 +48,7 @@ export function CalibrationSessionRail({
   unit,
   roles,
   activeStep,
+  isComplete,
   isRunning,
 }: CalibrationSessionRailProps) {
   const { t } = useTranslation("iot");
@@ -145,30 +150,42 @@ export function CalibrationSessionRail({
   // what the authoring page shows, so the same procedure reads the same in both places.
   function renderStep(step: (typeof steps)[number], index: number) {
     const isActive = activeStep === index;
-    const isDone = activeStep !== null && index < activeStep;
+    const isDone = isComplete || (activeStep !== null && index < activeStep);
     const Glyph = stepAppearance(step.kind).icon;
 
     return (
       <li
         key={index}
-        className={cn("flex items-start gap-2", isActive && "text-foreground font-medium")}
+        className="flex items-start gap-2"
         aria-current={isActive ? "step" : undefined}
       >
-        <span className="text-muted-foreground w-4 shrink-0 text-right text-[11px] tabular-nums">
+        <span
+          className={cn(
+            "w-4 shrink-0 text-right text-xs tabular-nums",
+            isActive ? "text-foreground font-medium" : "text-muted-foreground",
+          )}
+        >
           {index + 1}
         </span>
         {isDone ? (
-          <Check className="text-status-active mt-0.5 size-3.5 shrink-0" aria-hidden />
+          <Check className="text-status-active mt-px size-3.5 shrink-0" aria-hidden />
         ) : (
           <Glyph
             className={cn(
-              "mt-0.5 size-3.5 shrink-0",
+              "mt-px size-3.5 shrink-0",
               isActive ? "text-primary" : "text-muted-foreground",
             )}
             aria-hidden
           />
         )}
-        <span className={cn("min-w-0 flex-1 text-xs", !isActive && "text-muted-foreground")}>
+        {/* Clamped: an operator prompt is a sentence or two and it is already on screen in
+            full, in the main column, whenever it is the step being answered. */}
+        <span
+          className={cn(
+            "line-clamp-2 min-w-0 flex-1 text-xs",
+            isActive ? "text-foreground font-medium" : "text-muted-foreground",
+          )}
+        >
           {stepLabel(step, t)}
         </span>
       </li>
@@ -192,14 +209,15 @@ export function CalibrationSessionRail({
     );
   }
 
+  // A well, not a card: the step's own work is the page's subject and this is the context
+  // beside it. Two cards of equal weight side by side is what made the flow read flat.
   return (
-    <aside
-      aria-label={t("iot.calibration.rail.title")}
-      className="bg-card space-y-5 rounded-xl border p-4 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto"
-    >
-      {renderDevice()}
-      {renderBench()}
-      {renderSteps()}
-    </aside>
+    <InsetPanel padding="lg" className="lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
+      <aside aria-label={t("iot.calibration.rail.title")} className="space-y-5">
+        {renderDevice()}
+        {renderBench()}
+        {renderSteps()}
+      </aside>
+    </InsetPanel>
   );
 }

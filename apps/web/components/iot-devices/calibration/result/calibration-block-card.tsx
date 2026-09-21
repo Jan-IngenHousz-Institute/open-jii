@@ -124,11 +124,13 @@ export function CalibrationBlockCard({ name, block, previous, spec }: Calibratio
     if (!hasVerdict) {
       return null;
     }
+    // The verdict on its own line and the figures under it, rather than one wrapping row
+    // where R² rode up beside the verdict and NRMSE dropped below it.
     return (
-      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-        <span
+      <div className="space-y-1">
+        <p
           className={cn(
-            "inline-flex items-center gap-1 text-sm font-medium",
+            "flex items-center gap-1.5 text-sm font-medium",
             isPassed ? "text-status-active-foreground" : "text-destructive",
           )}
         >
@@ -138,18 +140,16 @@ export function CalibrationBlockCard({ name, block, previous, spec }: Calibratio
             <X className="size-4 shrink-0" aria-hidden />
           )}
           {isPassed ? t("iot.calibration.review.passed") : t("iot.calibration.review.failed")}
-        </span>
-        {r2 !== null && (
-          <span className="text-muted-foreground">
-            {t("iot.calibration.review.r2", { value: r2.toFixed(4) })}
-          </span>
+        </p>
+        {(r2 !== null || nrmse !== null) && (
+          <p className="text-muted-foreground pl-5.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs tabular-nums">
+            {r2 !== null && <span>{t("iot.calibration.review.r2", { value: r2.toFixed(4) })}</span>}
+            {nrmse !== null && (
+              <span>{t("iot.calibration.review.nrmse", { value: (nrmse * 100).toFixed(2) })}</span>
+            )}
+          </p>
         )}
-        {nrmse !== null && (
-          <span className="text-muted-foreground">
-            {t("iot.calibration.review.nrmse", { value: (nrmse * 100).toFixed(2) })}
-          </span>
-        )}
-      </p>
+      </div>
     );
   }
 
@@ -173,9 +173,9 @@ export function CalibrationBlockCard({ name, block, previous, spec }: Calibratio
     }
     return (
       <Collapsible>
-        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground group flex items-center gap-1 text-xs">
+        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground group flex items-center gap-1 text-left text-xs">
           <ChevronDown
-            className="size-3.5 transition-transform group-data-[state=open]:rotate-180"
+            className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-180"
             aria-hidden
           />
           {t("iot.calibration.review.diagnostics")}

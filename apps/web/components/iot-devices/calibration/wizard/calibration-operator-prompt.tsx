@@ -10,8 +10,10 @@ import { CalibrationReadingConfirm } from "./calibration-reading-confirm";
  * around it, because it is the only thing on the step that will not proceed by itself.
  */
 export function CalibrationOperatorPrompt({ request }: { request: OperatorRequest }) {
+  // Built like the session rail beside it, border and fill, but a stronger fill: both are
+  // panels, and this is the one the run is waiting on.
   return (
-    <div className="bg-muted/50 rounded-lg p-4">
+    <div className="bg-muted/60 rounded-md border p-4">
       {request.kind === "confirmReading" ? (
         <CalibrationReadingConfirm request={request} />
       ) : (

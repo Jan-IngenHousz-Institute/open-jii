@@ -9,7 +9,7 @@ import { BarChart } from "@/components/charts/bar-chart";
 export function CalibrationVectorChart({ name, values }: { name: string; values: number[] }) {
   return (
     <BarChart
-      className="h-48"
+      className="h-52"
       data={[
         {
           name,

@@ -567,7 +567,7 @@ export function CalibrationWizard({
     if (capture.isRunning) {
       return (
         <CalibrationWizardActions
-          secondary={
+          primary={
             <Button type="button" variant="outline" onClick={capture.stop}>
               {t("iot.calibration.capture.stop")}
             </Button>
@@ -695,7 +695,7 @@ export function CalibrationWizard({
     if (capture.isRunning) {
       return (
         <CalibrationWizardActions
-          secondary={
+          primary={
             <Button type="button" variant="outline" onClick={capture.stop}>
               {t("iot.calibration.capture.stop")}
             </Button>
@@ -860,21 +860,28 @@ export function CalibrationWizard({
   // got stay readable without stepping backwards. The grid is the platform's own detail
   // layout, the one every other device tab uses.
   return (
-    <div className="space-y-6">
-      <WizardStepIndicator
-        steps={phaseTitles}
-        currentIndex={phaseIndex}
-        detail={t(`iot.calibration.steps.${step}`)}
-        showTitles={!isMobile}
-      />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
-        <div className="min-w-0 space-y-6">
-          <PanelCard title={t(`iot.calibration.steps.${step}`)} description={stepDescription()}>
-            {renderStep()}
-          </PanelCard>
-          {renderActions()}
-        </div>
-        <div className="lg:sticky lg:top-20 lg:self-start">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="min-w-0 space-y-6">
+        {/* Over the work it describes rather than over the whole page: across the rail as
+            well, three circles sat at the ends of very long connectors. Three short phase
+            names also fit a phone where six step names did not, and three unlabelled
+            circles tell an operator nothing. */}
+        <WizardStepIndicator
+          steps={phaseTitles}
+          currentIndex={phaseIndex}
+          detail={isMobile ? undefined : t(`iot.calibration.steps.${step}`)}
+        />
+        <PanelCard title={t(`iot.calibration.steps.${step}`)} description={stepDescription()}>
+          {renderStep()}
+        </PanelCard>
+        {renderActions()}
+      </div>
+
+      {/* The rail is the session, and by Done the session is over: its ports are released,
+          so it would show a bench of idle circles beside a summary saying all went well.
+          The column stays so the card does not jump width at the last step. */}
+      <div className="lg:sticky lg:top-20 lg:self-start">
+        {step !== "done" && (
           <CalibrationSessionRail
             family={family}
             procedure={definition.data?.captureProcedure}
@@ -882,9 +889,10 @@ export function CalibrationWizard({
             unit={capture.unit}
             roles={rig.roles}
             activeStep={activeStep}
+            isComplete={payload !== null && !capture.isRunning}
             isRunning={capture.isRunning}
           />
-        </div>
+        )}
       </div>
     </div>
   );
