@@ -3,6 +3,8 @@ import { isRetryableMqttError } from "~/features/connection/services/mqtt/mqtt-e
 export type LargeUploadErrorKind =
   /** The stored topic carries no experiment id, so no upload URL can be minted. */
   | "NoExperiment"
+  /** The session is gone, so re-authenticating is the only way forward. */
+  | "Unauthenticated"
   /** The signed-in user may not contribute to this experiment. */
   | "Forbidden"
   /** The experiment behind the stored topic is gone. */

@@ -7,6 +7,7 @@ import {
 } from "~/features/recent-measurements/components/measurement-row-visuals";
 import { UploadFailureNote } from "~/features/recent-measurements/components/upload-failure-note";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { uploadFailureMessageKey } from "~/features/recent-measurements/utils/upload-failure-category";
 import { useTranslation } from "~/shared/i18n";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { formatTimeAgo } from "~/shared/time/format-time-ago";
@@ -73,6 +74,12 @@ export const MeasurementRunItem = memo(function MeasurementRunItem({
           : "recentMeasurements:accessibility.expandRun",
         { name: experimentName, count },
       )}
+      // The label above replaces the children, so the failure note below is
+      // never announced. A hint carries it without nesting one sentence in
+      // another.
+      accessibilityHint={
+        status === "failed" ? t(uploadFailureMessageKey(failureReason)) : undefined
+      }
     >
       <View className="w-7 items-center pt-0.5">
         <Chevron size={18} color={colors.inactive} />

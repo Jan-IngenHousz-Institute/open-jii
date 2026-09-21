@@ -18,6 +18,7 @@ const CATEGORY_BY_KIND: Readonly<Record<string, UploadFailureCategory>> = {
   CredentialError: "credentials",
   // Large-upload transport.
   Network: "connection",
+  Unauthenticated: "credentials",
   Forbidden: "permission",
   NotFound: "permission",
   NoExperiment: "rejected",
@@ -28,4 +29,18 @@ export function uploadFailureCategory(kind: string | null): UploadFailureCategor
   if (kind === null || kind === "") return "unknown";
 
   return CATEGORY_BY_KIND[kind] ?? "unknown";
+}
+
+// Namespace-qualified: react-i18next pins `t` to the FIRST namespace of an
+// array, so a bare `failureReason.x` from a multi-namespace screen renders raw.
+export const UPLOAD_FAILURE_MESSAGE_KEYS = {
+  connection: "recentMeasurements:failureReason.connection",
+  credentials: "recentMeasurements:failureReason.credentials",
+  permission: "recentMeasurements:failureReason.permission",
+  rejected: "recentMeasurements:failureReason.rejected",
+  unknown: "recentMeasurements:failureReason.unknown",
+} as const satisfies Record<UploadFailureCategory, string>;
+
+export function uploadFailureMessageKey(kind: string | null): string {
+  return UPLOAD_FAILURE_MESSAGE_KEYS[uploadFailureCategory(kind)];
 }

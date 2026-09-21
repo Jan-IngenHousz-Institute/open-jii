@@ -60,6 +60,26 @@ describe("SwipeableMeasurementRow", () => {
     expect(screen.getByText("Photosynthesis")).toBeTruthy();
   });
 
+  it("explains a failed row, using the reason it stored", () => {
+    render(
+      <SwipeableMeasurementRow {...defaultProps} status="failed" failureReason="CredentialError" />,
+    );
+
+    expect(screen.getByText("recentMeasurements:failureReason.credentials")).toBeTruthy();
+  });
+
+  it("leaves a pending row unexplained", () => {
+    render(<SwipeableMeasurementRow {...defaultProps} status="pending" />);
+
+    expect(screen.queryByText(/failureReason/)).toBeNull();
+  });
+
+  it("leaves a synced row unexplained", () => {
+    render(<SwipeableMeasurementRow {...defaultProps} status="successful" />);
+
+    expect(screen.queryByText(/failureReason/)).toBeNull();
+  });
+
   it("shows the Upload button for unsynced rows when onSync is provided", () => {
     render(<SwipeableMeasurementRow {...defaultProps} status="pending" onSync={vi.fn()} />);
     expect(screen.getByLabelText("Upload")).toBeTruthy();

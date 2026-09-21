@@ -90,6 +90,18 @@ class LargeUploadTransportImpl implements Transport {
       return await getApiClient().iot.getUploadUrl({ experimentId });
     } catch (err) {
       const status = statusOf(err);
+      if (status === 401) {
+        // orpcFetch already refreshed the session and signed the user out by
+        // the time a 401 surfaces here, so retrying inside this window cannot help.
+        throw new LargeUploadError("Unauthenticated", "session is no longer valid", false, {
+          cause: err,
+        });
+      }
+      if (status === 400) {
+        throw new LargeUploadError("Rejected", "upload url request was malformed", false, {
+          cause: err,
+        });
+      }
       if (status === 403) {
         throw new LargeUploadError("Forbidden", "not a contributor to this experiment", false, {
           cause: err,
@@ -124,10 +136,12 @@ class LargeUploadTransportImpl implements Transport {
     }
   }
 
-  // 5xx is the bucket having a bad moment; anything else is this request being
-  // wrong in a way a repeat will not mend.
+  // A throttle or a bad moment in the bucket is worth repeating; any other
+  // client error is this request being wrong in a way a repeat will not mend.
   private rejected(status: number): LargeUploadError {
-    return new LargeUploadError("Rejected", `S3 refused the upload (${status})`, status >= 500);
+    const worthRepeating = status === 429 || status >= 500;
+
+    return new LargeUploadError("Rejected", `S3 refused the upload (${status})`, worthRepeating);
   }
 }
 

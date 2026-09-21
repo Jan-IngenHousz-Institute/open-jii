@@ -20,7 +20,9 @@ const TOPIC = `experiment/data_ingest/v1/${EXPERIMENT_ID}/mobile/2.4.1/mobile_th
 const target = { uploadUrl: "https://bucket.example/put", key: "large-iot/e/1.json" };
 
 function response(status: number): Response {
-  return { ok: status >= 200 && status < 300, status } as Response;
+  // A real Response rather than a shaped literal, so `ok` is derived the way
+  // the transport will see it at runtime.
+  return new Response(null, { status });
 }
 
 // Seeded with a real implementation so the mock's type carries the Response
@@ -87,6 +89,37 @@ describe("largeUploadTransport", () => {
       .catch((err: unknown) => err);
 
     expect(error).toMatchObject({ kind: "NotFound", retryable: false });
+  });
+
+  it("treats a dead session as terminal, since a retry cannot re-authenticate", async () => {
+    mockGetUploadUrl.mockRejectedValue({ status: 401 });
+
+    const error = await createLargeUploadTransport()
+      .publish(TOPIC, { v: 1 })
+      .catch((err: unknown) => err);
+
+    expect(error).toMatchObject({ kind: "Unauthenticated", retryable: false });
+  });
+
+  it("treats a malformed upload-url request as terminal", async () => {
+    mockGetUploadUrl.mockRejectedValue({ status: 400 });
+
+    const error = await createLargeUploadTransport()
+      .publish(TOPIC, { v: 1 })
+      .catch((err: unknown) => err);
+
+    expect(error).toMatchObject({ kind: "Rejected", retryable: false });
+  });
+
+  it("treats an S3 throttle as retryable", async () => {
+    mockGetUploadUrl.mockResolvedValue(target);
+    fetchMock.mockResolvedValue(response(429));
+
+    const error = await createLargeUploadTransport()
+      .publish(TOPIC, { v: 1 })
+      .catch((err: unknown) => err);
+
+    expect(error).toMatchObject({ kind: "Rejected", retryable: true });
   });
 
   it("treats an unreachable backend as retryable", async () => {
