@@ -16,20 +16,19 @@ vi.mock("./charts/basic/scatter/renderer", () => ({
   ),
 }));
 
-const { preloadPlotly } = vi.hoisted(() => ({ preloadPlotly: vi.fn() }));
-
-vi.mock("@repo/ui/components/charts/plotly-chart", () => ({ preloadPlotly }));
+vi.mock("@/components/charts/plotly-preload", () => ({
+  PlotlyPreload: () => <div data-testid="plotly-preload" />,
+}));
 
 describe("ExperimentVisualizationRenderer", () => {
   const experimentId = "exp-123";
 
-  it("starts the Plotly download on mount, before any data is in", () => {
-    preloadPlotly.mockClear();
+  it("mounts the Plotly preloader before any data is in", () => {
     const visualization = createVisualization({ chartType: "line" });
     render(
       <ExperimentVisualizationRenderer visualization={visualization} experimentId={experimentId} />,
     );
-    expect(preloadPlotly).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("plotly-preload")).toBeInTheDocument();
   });
 
   it("dispatches to LineRenderer for chartType=line", () => {

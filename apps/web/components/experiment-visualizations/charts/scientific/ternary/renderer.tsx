@@ -1,9 +1,9 @@
 "use client";
 
+import { TernaryPlot } from "@/components/charts/ternary";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { TernaryPlot } from "@repo/ui/components/charts/ternary";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";

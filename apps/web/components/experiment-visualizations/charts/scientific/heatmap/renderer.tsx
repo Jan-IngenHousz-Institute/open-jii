@@ -1,9 +1,9 @@
 "use client";
 
+import { Heatmap } from "@/components/charts/heatmap";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { Heatmap } from "@repo/ui/components/charts/heatmap";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";

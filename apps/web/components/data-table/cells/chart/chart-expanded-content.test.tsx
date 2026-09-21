@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import { ChartExpandedContent } from "./chart-expanded-content";
 
-vi.mock("@repo/ui/components/charts/line-chart", () => ({
+vi.mock("@/components/charts/line-chart", () => ({
   LineChart: vi.fn(() => <div data-testid="line-chart" />),
 }));
 

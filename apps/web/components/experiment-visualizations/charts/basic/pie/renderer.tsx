@@ -1,9 +1,9 @@
 "use client";
 
+import { PieChart } from "@/components/charts/pie-chart";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { PieChart } from "@repo/ui/components/charts/pie-chart";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";

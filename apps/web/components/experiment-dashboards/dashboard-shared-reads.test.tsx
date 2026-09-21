@@ -19,11 +19,11 @@ import type {
 import { DashboardRenderer } from "./dashboard-renderer";
 
 // The chart itself is Plotly; this test is about what the widgets request.
-vi.mock("@repo/ui/components/charts/cartesian-chart", () => ({
+vi.mock("@/components/charts/cartesian-chart", () => ({
   CartesianChart: () => <div data-testid="chart" />,
 }));
-vi.mock("@repo/ui/components/charts/plotly-chart", () => ({
-  preloadPlotly: () => undefined,
+vi.mock("@/components/charts/plotly-preload", () => ({
+  PlotlyPreload: () => null,
 }));
 
 const EXPERIMENT_ID = "exp-1";
