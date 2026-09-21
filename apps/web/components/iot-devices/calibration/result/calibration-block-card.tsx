@@ -2,17 +2,25 @@
 
 import { StatusBadge } from "@/components/shared/status-badge";
 import type { StatusTone } from "@/components/shared/status-badge";
-import { Check, X } from "lucide-react";
+import { Check, ChevronDown, X } from "lucide-react";
 
 import type {
   CalibrationBlock,
   CalibrationBlockStatus,
+  CalibrationOutputSchema,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@repo/ui/components/collapsible";
 import { cn } from "@repo/ui/lib/utils";
 
 import { CalibrationBlockChart } from "./calibration-block-chart";
+import { CalibrationResidualChart } from "./calibration-residual-chart";
 import { formatCoefficientValue } from "./format-coefficient-value";
+import { residualReport } from "./residual-data";
 
 const BLOCK_STATUS_TONE: Record<CalibrationBlockStatus, StatusTone> = {
   computed: "published",
@@ -29,13 +37,24 @@ interface CalibrationBlockCardProps {
    * what the run replaced is no longer knowable.
    */
   previous: { coefficients: Record<string, number | number[]> | undefined } | null;
+  /** The bounds the definition declared, so a value can be read against what it is allowed. */
+  spec?: CalibrationOutputSchema["blocks"][string];
 }
 
-export function CalibrationBlockCard({ name, block, previous }: CalibrationBlockCardProps) {
+/**
+ * One block, ranked for the decision it is evidence for.
+ *
+ * The verdict comes first because it is what a reviewer is deciding about; then the numbers
+ * against the bounds they were judged by and what they replace; then the picture; then, for
+ * whoever wants it, the residuals the script computed and the thresholds it applied. Those
+ * last were fetched with every run and shown nowhere.
+ */
+export function CalibrationBlockCard({ name, block, previous, spec }: CalibrationBlockCardProps) {
   const { t } = useTranslation("iot");
 
   const quality = block.quality;
   const isPassed = quality?.passed === true;
+  const hasVerdict = typeof quality?.passed === "boolean";
   const reasons = Array.isArray(quality?.reasons) ? quality.reasons.map(String) : [];
   const r2 = typeof quality?.r2 === "number" ? quality.r2 : null;
   const nrmse = typeof quality?.nrmse === "number" ? quality.nrmse : null;
@@ -49,6 +68,23 @@ export function CalibrationBlockCard({ name, block, previous }: CalibrationBlock
     Number.isFinite(worstFraction) &&
     (typeof worstStimulus === "number" || typeof worstStimulus === "string");
   const hasComparison = previous !== null;
+  const residuals = residualReport(block);
+
+  /** What a coefficient is allowed to be, beside what it turned out to be. */
+  function renderBounds(coefficient: string) {
+    const bounds = spec?.[coefficient];
+    if (bounds?.min === undefined && bounds?.max === undefined) {
+      return null;
+    }
+    return (
+      <dd className="text-muted-foreground text-xs">
+        {t("iot.calibration.review.allowed", {
+          min: bounds.min ?? "-∞",
+          max: bounds.max ?? "∞",
+        })}
+      </dd>
+    );
+  }
 
   /**
    * The new value, then what it replaced. A recalibration that lands on the same number
@@ -64,6 +100,7 @@ export function CalibrationBlockCard({ name, block, previous }: CalibrationBlock
       <div key={coefficient} className="space-y-0.5">
         <dt className="text-muted-foreground text-xs">{coefficient}</dt>
         <dd className="break-words font-mono text-sm">{formatted}</dd>
+        {renderBounds(coefficient)}
         {hasComparison && (
           <dd className="text-muted-foreground text-xs">
             {formattedBefore === null ? (
@@ -82,51 +119,76 @@ export function CalibrationBlockCard({ name, block, previous }: CalibrationBlock
     );
   }
 
-  function renderQuality() {
-    if (!quality) return null;
+  // The verdict is the headline, not a footnote: it is the thing being decided about.
+  function renderVerdict() {
+    if (!hasVerdict) {
+      return null;
+    }
     return (
-      <div className="space-y-1 border-t pt-3 text-xs">
-        <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <span
-            className={cn(
-              "inline-flex items-center gap-1 font-medium",
-              isPassed ? "text-status-active-foreground" : "text-destructive",
-            )}
-          >
-            {isPassed ? (
-              <Check className="size-3.5 shrink-0" aria-hidden />
-            ) : (
-              <X className="size-3.5 shrink-0" aria-hidden />
-            )}
-            {isPassed ? t("iot.calibration.review.passed") : t("iot.calibration.review.failed")}
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 text-sm font-medium",
+            isPassed ? "text-status-active-foreground" : "text-destructive",
+          )}
+        >
+          {isPassed ? (
+            <Check className="size-4 shrink-0" aria-hidden />
+          ) : (
+            <X className="size-4 shrink-0" aria-hidden />
+          )}
+          {isPassed ? t("iot.calibration.review.passed") : t("iot.calibration.review.failed")}
+        </span>
+        {r2 !== null && (
+          <span className="text-muted-foreground">
+            {t("iot.calibration.review.r2", { value: r2.toFixed(4) })}
           </span>
-          {r2 !== null && (
-            <span className="text-muted-foreground">
-              {t("iot.calibration.review.r2", { value: r2.toFixed(4) })}
-            </span>
-          )}
-          {nrmse !== null && (
-            <span className="text-muted-foreground">
-              {t("iot.calibration.review.nrmse", { value: (nrmse * 100).toFixed(2) })}
-            </span>
-          )}
-        </p>
-        {hasWorstPoint && (
-          <p className="text-muted-foreground">
-            {t("iot.calibration.review.worstPoint", {
-              stimulus: String(worstStimulus),
-              percent: (worstFraction * 100).toFixed(2),
-            })}
-          </p>
         )}
-        {reasons.length > 0 && (
-          <ul className="text-destructive list-disc space-y-0.5 pl-4">
-            {reasons.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
+        {nrmse !== null && (
+          <span className="text-muted-foreground">
+            {t("iot.calibration.review.nrmse", { value: (nrmse * 100).toFixed(2) })}
+          </span>
         )}
-      </div>
+      </p>
+    );
+  }
+
+  function renderReasons() {
+    if (reasons.length === 0) {
+      return null;
+    }
+    return (
+      <ul className="text-destructive list-disc space-y-0.5 pl-4 text-xs">
+        {reasons.map((reason) => (
+          <li key={reason}>{reason}</li>
+        ))}
+      </ul>
+    );
+  }
+
+  // Everything the script computed and the record kept: worth one click, not the front page.
+  function renderDiagnostics() {
+    if (residuals === null) {
+      return null;
+    }
+    return (
+      <Collapsible>
+        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground group flex items-center gap-1 text-xs">
+          <ChevronDown
+            className="size-3.5 transition-transform group-data-[state=open]:rotate-180"
+            aria-hidden
+          />
+          {t("iot.calibration.review.diagnostics")}
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-2">
+          <CalibrationResidualChart report={residuals} />
+          {residuals.truncated && (
+            <p className="text-muted-foreground text-xs">
+              {t("iot.calibration.review.residualsTruncated")}
+            </p>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
     );
   }
 
@@ -138,16 +200,26 @@ export function CalibrationBlockCard({ name, block, previous }: CalibrationBlock
           {t(`iot.calibration.block.${block.status}`)}
         </StatusBadge>
       </div>
+      {renderVerdict()}
       {block.reason !== undefined && (
         <p className="text-muted-foreground text-sm">{block.reason}</p>
       )}
+      {renderReasons()}
       {block.coefficients !== undefined && (
         <dl className="space-y-3">{Object.entries(block.coefficients).map(renderCoefficient)}</dl>
       )}
       {/* The evidence beside the claim: a block's own points and line, not one chart for
           the whole run picked by convention. */}
       <CalibrationBlockChart block={block} />
-      {renderQuality()}
+      {hasWorstPoint && (
+        <p className="text-muted-foreground text-xs">
+          {t("iot.calibration.review.worstPoint", {
+            stimulus: String(worstStimulus),
+            percent: (worstFraction * 100).toFixed(2),
+          })}
+        </p>
+      )}
+      {renderDiagnostics()}
     </div>
   );
 }

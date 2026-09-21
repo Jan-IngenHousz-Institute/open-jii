@@ -918,7 +918,13 @@
         "fitLine": "Gefitte lijn",
         "xLabel": "Apparaatmeting",
         "yLabel": "Referentiemeting",
-        "seriesCaption": "{{series}}, {{points}} punten"
+        "seriesCaption": "{{series}}, {{points}} punten",
+        "allowed": "toegestaan {{min}} tot {{max}}",
+        "diagnostics": "Residuen en grenswaarden",
+        "residuals": "Residu",
+        "residualAxis": "Afwijking, % van het bereik",
+        "tolerance": "Toegestaan",
+        "residualsTruncated": "Het script rapporteerde alleen de eerste residuen."
       },
       "write": {
         "hint": "Schrijf de goedgekeurde coëfficiënten naar het apparaat. Elk blok wordt bevestigd door het terug te lezen.",
@@ -936,7 +942,8 @@
         "disconnected": "Het apparaat is losgekoppeld. Verbind het opnieuw en schrijf nogmaals.",
         "retryReport": "Het schrijven opnieuw vastleggen",
         "finishUnrecorded": "Afronden zonder vastleggen",
-        "reconnect": "Apparaat opnieuw verbinden"
+        "reconnect": "Apparaat opnieuw verbinden",
+        "pending": "nog niet geschreven"
       },
       "done": {
         "close": "Sluiten",
@@ -945,7 +952,14 @@
         "notWrittenHint": "De kalibratie geldt in het record. Er is niets naar het apparaat geschreven.",
         "unconfirmedHint": "De kalibratie geldt in het record. Sommige blokken zijn niet op het apparaat bevestigd; controleer de schrijfresultaten.",
         "recordOnlyHint": "De kalibratie geldt in het record. Het platform kan voor deze apparaatfamilie geen coëfficiënten schrijven.",
-        "notRecordedHint": "De coëfficiënten staan op het apparaat, maar het platform kon het schrijven niet vastleggen. Open deze sessie vanuit de lijst en leg het vast."
+        "notRecordedHint": "De coëfficiënten staan op het apparaat, maar het platform kon het schrijven niet vastleggen. Open deze sessie vanuit de lijst en leg het vast.",
+        "measured": "Gemeten",
+        "measuredValue": "{{points}} metingen in {{series}} series",
+        "applied": "Goedgekeurd",
+        "appliedValue": "{{blocks}} blokken in het record toegepast",
+        "onDevice": "Op het apparaat",
+        "onDeviceValue": "{{confirmed}} van {{blocks}} blokken bevestigd",
+        "onDeviceUnrecorded": "{{confirmed}} bevestigd, nog niet vastgelegd"
       },
       "phase": {
         "setUp": "Opbouw",

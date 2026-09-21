@@ -918,7 +918,13 @@
         "fitLine": "Angepasste Gerade",
         "xLabel": "Gerätemesswert",
         "yLabel": "Referenzmesswert",
-        "seriesCaption": "{{series}}, {{points}} Punkte"
+        "seriesCaption": "{{series}}, {{points}} Punkte",
+        "allowed": "zulässig {{min}} bis {{max}}",
+        "diagnostics": "Residuen und Grenzwerte",
+        "residuals": "Residuum",
+        "residualAxis": "Abweichung, % des Bereichs",
+        "tolerance": "Zulässig",
+        "residualsTruncated": "Das Skript hat nur die ersten Residuen gemeldet."
       },
       "write": {
         "hint": "Schreiben Sie die freigegebenen Koeffizienten auf das Gerät. Jeder Block wird durch Zurücklesen bestätigt.",
@@ -936,7 +942,8 @@
         "disconnected": "Das Gerät wurde getrennt. Erneut verbinden und noch einmal schreiben.",
         "retryReport": "Schreibvorgang erneut aufzeichnen",
         "finishUnrecorded": "Ohne Aufzeichnung beenden",
-        "reconnect": "Gerät erneut verbinden"
+        "reconnect": "Gerät erneut verbinden",
+        "pending": "noch nicht geschrieben"
       },
       "done": {
         "close": "Schließen",
@@ -945,7 +952,14 @@
         "notWrittenHint": "Die Kalibrierung ist im Datensatz gültig. Auf das Gerät wurde nichts geschrieben.",
         "unconfirmedHint": "Die Kalibrierung ist im Datensatz gültig. Einige Blöcke wurden auf dem Gerät nicht bestätigt; prüfen Sie die Schreibergebnisse.",
         "recordOnlyHint": "Die Kalibrierung ist im Datensatz gültig. Die Plattform kann für diese Gerätefamilie keine Koeffizienten schreiben.",
-        "notRecordedHint": "Die Koeffizienten sind auf dem Gerät, aber die Plattform konnte den Schreibvorgang nicht aufzeichnen. Öffnen Sie diese Sitzung aus der Liste und zeichnen Sie ihn auf."
+        "notRecordedHint": "Die Koeffizienten sind auf dem Gerät, aber die Plattform konnte den Schreibvorgang nicht aufzeichnen. Öffnen Sie diese Sitzung aus der Liste und zeichnen Sie ihn auf.",
+        "measured": "Gemessen",
+        "measuredValue": "{{points}} Messwerte in {{series}} Serien",
+        "applied": "Freigegeben",
+        "appliedValue": "{{blocks}} Blöcke im Datensatz übernommen",
+        "onDevice": "Auf dem Gerät",
+        "onDeviceValue": "{{confirmed}} von {{blocks}} Blöcken bestätigt",
+        "onDeviceUnrecorded": "{{confirmed}} bestätigt, noch nicht aufgezeichnet"
       },
       "phase": {
         "setUp": "Aufbau",

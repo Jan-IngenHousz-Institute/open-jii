@@ -35,6 +35,7 @@ import { cn } from "@repo/ui/lib/utils";
 import { CalibrationCaptureProgress } from "./calibration-capture-progress";
 import { CalibrationConnectStep } from "./calibration-connect-step";
 import { CalibrationDefinitionPicker } from "./calibration-definition-picker";
+import { CalibrationDoneSummary } from "./calibration-done-summary";
 import { CalibrationLiveSeries } from "./calibration-live-series";
 import { CalibrationOperatorPrompt } from "./calibration-operator-prompt";
 import { CalibrationReview } from "./calibration-review";
@@ -600,7 +601,14 @@ export function CalibrationWizard({
 
   function renderReview() {
     if (!run || !payload) return null;
-    return <CalibrationReview run={run} payload={payload} active={active.data ?? null} />;
+    return (
+      <CalibrationReview
+        run={run}
+        payload={payload}
+        active={active.data ?? null}
+        outputSchema={definition.data?.outputSchema}
+      />
+    );
   }
 
   function renderReviewActions() {
@@ -781,17 +789,25 @@ export function CalibrationWizard({
     const isAlarming = outcome === "unrecorded" || outcome === "unconfirmed";
 
     return (
-      <div className="flex items-start gap-3">
-        <Glyph
-          className={cn(
-            "mt-0.5 size-5 shrink-0",
-            outcome === "confirmed" && "text-status-active",
-            isAlarming && "text-destructive",
-            !isAlarming && outcome !== "confirmed" && "text-muted-foreground",
-          )}
-          aria-hidden
+      <div className="space-y-4">
+        <div className="flex items-start gap-3">
+          <Glyph
+            className={cn(
+              "mt-0.5 size-5 shrink-0",
+              outcome === "confirmed" && "text-status-active",
+              isAlarming && "text-destructive",
+              !isAlarming && outcome !== "confirmed" && "text-muted-foreground",
+            )}
+            aria-hidden
+          />
+          <p className="text-sm">{hint}</p>
+        </div>
+        <CalibrationDoneSummary
+          payload={payload}
+          applied={applied}
+          results={writeResults}
+          isReported={isReported}
         />
-        <p className="text-sm">{hint}</p>
       </div>
     );
   }

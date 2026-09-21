@@ -918,7 +918,13 @@
         "fitLine": "Fitted line",
         "xLabel": "Device reading",
         "yLabel": "Reference reading",
-        "seriesCaption": "{{series}}, {{points}} points"
+        "seriesCaption": "{{series}}, {{points}} points",
+        "allowed": "allowed {{min}} to {{max}}",
+        "diagnostics": "Residuals and thresholds",
+        "residuals": "Residual",
+        "residualAxis": "Off by, % of range",
+        "tolerance": "Allowed",
+        "residualsTruncated": "The script reported the first residuals only."
       },
       "write": {
         "hint": "Write the approved coefficients to the device. Each block is confirmed by reading it back.",
@@ -936,7 +942,8 @@
         "disconnected": "The device was disconnected. Reconnect it and write again.",
         "retryReport": "Record the write again",
         "finishUnrecorded": "Finish without recording",
-        "reconnect": "Reconnect the device"
+        "reconnect": "Reconnect the device",
+        "pending": "not written yet"
       },
       "done": {
         "close": "Close",
@@ -945,7 +952,14 @@
         "notWrittenHint": "The calibration is in force on record. Nothing was written to the device.",
         "unconfirmedHint": "The calibration is in force on record. Some blocks were not confirmed on the device; check the write results.",
         "recordOnlyHint": "The calibration is in force on record. The platform cannot write coefficients to this device family.",
-        "notRecordedHint": "The coefficients are on the device, but the platform could not record the write. Open this session from the list and record it."
+        "notRecordedHint": "The coefficients are on the device, but the platform could not record the write. Open this session from the list and record it.",
+        "measured": "Measured",
+        "measuredValue": "{{points}} readings across {{series}} series",
+        "applied": "Approved",
+        "appliedValue": "{{blocks}} blocks applied to the record",
+        "onDevice": "On the device",
+        "onDeviceValue": "{{confirmed}} of {{blocks}} blocks confirmed",
+        "onDeviceUnrecorded": "{{confirmed}} confirmed, not yet recorded"
       },
       "phase": {
         "setUp": "Set up",

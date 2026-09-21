@@ -1,7 +1,5 @@
 "use client";
 
-import { CheckCircle2, CircleDashed, XCircle } from "lucide-react";
-
 import type {
   CalibrationRunPayload,
   CalibrationWriteResults,
@@ -12,8 +10,8 @@ import type { ProcedureProgress } from "@repo/iot";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
 
 import { CalibrationSeriesTable } from "../result/calibration-series-table";
-import { formatCoefficientValue } from "../result/format-coefficient-value";
 import { CalibrationCaptureProgress } from "./calibration-capture-progress";
+import { CalibrationWriteBlock } from "./calibration-write-block";
 
 interface CalibrationWriteStepProps {
   applied: DeviceCalibration;
@@ -28,9 +26,6 @@ interface CalibrationWriteStepProps {
   verification: CalibrationRunPayload | null;
   verificationError: string | null;
 }
-
-type AppliedBlock = DeviceCalibration["blocks"][string];
-type WriteResult = CalibrationWriteResults[string];
 
 /** Approval alone changes nothing on the hardware; this step does. The write itself is the wizard's action. */
 export function CalibrationWriteStep({
@@ -55,45 +50,9 @@ export function CalibrationWriteStep({
   const showsCheck =
     isVerifying || verifyEvents.length > 0 || hasVerification || verificationError !== null;
 
-  function renderOutcomeIcon(result: WriteResult | undefined) {
-    if (result === undefined) {
-      return <CircleDashed className="text-muted-foreground size-4 shrink-0" aria-hidden />;
-    }
-    return result.verified ? (
-      <CheckCircle2 className="text-status-active size-4 shrink-0" aria-hidden />
-    ) : (
-      <XCircle className="text-destructive size-4 shrink-0" aria-hidden />
-    );
-  }
-
-  function formatCoefficients(block: AppliedBlock) {
-    return Object.entries(block.coefficients)
-      .map(([name, value]) => `${name} ${formatCoefficientValue(value)}`)
-      .join(", ");
-  }
-
   // Every block that is about to go to the device, then what became of each one.
   function renderBlock([name, block]: (typeof blocks)[number]) {
-    const result = results?.[name];
-    return (
-      <li key={name} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-sm">
-        {renderOutcomeIcon(result)}
-        <span className="font-medium">{name}</span>
-        {result !== undefined && (
-          <span className="text-muted-foreground">
-            {result.verified
-              ? t("iot.calibration.write.verified")
-              : t("iot.calibration.write.failed")}
-          </span>
-        )}
-        <span className="text-muted-foreground ml-auto font-mono text-xs">
-          {formatCoefficients(block)}
-        </span>
-        {result?.error !== undefined && (
-          <span className="text-destructive w-full font-mono text-xs">{result.error}</span>
-        )}
-      </li>
-    );
+    return <CalibrationWriteBlock key={name} name={name} block={block} result={results?.[name]} />;
   }
 
   function renderSeries([series, rows]: [string, CalibrationRunPayload[string]]) {
@@ -153,7 +112,7 @@ export function CalibrationWriteStep({
           </AlertDescription>
         </Alert>
       )}
-      <ul className="divide-y overflow-hidden rounded-lg border">{blocks.map(renderBlock)}</ul>
+      <div className="grid gap-3 md:grid-cols-2">{blocks.map(renderBlock)}</div>
       {hasUnconfirmedBlock && (
         <Alert variant="destructive">
           <AlertDescription>{t("iot.calibration.write.partial")}</AlertDescription>

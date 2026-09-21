@@ -23,12 +23,17 @@ function renderStep(overrides: Partial<Parameters<typeof CalibrationWriteStep>[0
 }
 
 describe("CalibrationWriteStep", () => {
-  // What is about to reach the hardware is on screen before the operator sends it.
+  // What is about to reach the hardware is on screen before the operator sends it, and each
+  // coefficient is readable on its own rather than run together into one line.
   it("lists each block and its coefficients before anything has been written", () => {
     renderStep();
 
     expect(screen.getByText("par")).toBeInTheDocument();
-    expect(screen.getByText("slope 0.96, intercept -1.08")).toBeInTheDocument();
+    expect(screen.getByText("slope")).toBeInTheDocument();
+    expect(screen.getByText("0.96")).toBeInTheDocument();
+    expect(screen.getByText("intercept")).toBeInTheDocument();
+    expect(screen.getByText("-1.08")).toBeInTheDocument();
+    expect(screen.getByText("iot.calibration.write.pending")).toBeInTheDocument();
     expect(screen.queryByText("iot.calibration.write.verified")).toBeNull();
   });
 
@@ -65,8 +70,11 @@ describe("CalibrationWriteStep", () => {
       results: { par: { verified: true } },
     });
 
-    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    expect(screen.getByText("par")).toBeInTheDocument();
+    expect(screen.getByText("led")).toBeInTheDocument();
     expect(screen.getAllByText("iot.calibration.write.verified")).toHaveLength(1);
+    // The block the write never reached is still listed, waiting rather than missing.
+    expect(screen.getByText("iot.calibration.write.pending")).toBeInTheDocument();
   });
 
   // A family the package cannot drive yet is approved on record only, and the

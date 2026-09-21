@@ -3,6 +3,7 @@
 import type {
   CalibrationRun,
   ActiveDeviceCalibration,
+  CalibrationOutputSchema,
   CalibrationRunPayload,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
@@ -15,13 +16,15 @@ interface CalibrationReviewProps {
   run: CalibrationRun;
   payload: CalibrationRunPayload;
   active: ActiveDeviceCalibration | null;
+  /** The bounds the definition declared, so each coefficient reads against what it may be. */
+  outputSchema?: CalibrationOutputSchema;
 }
 
 /**
  * The evidence a decision rests on: the fit, each block beside what is in force, and every
  * point the bench measured. The decision itself belongs to the wizard's action row.
  */
-export function CalibrationReview({ run, payload, active }: CalibrationReviewProps) {
+export function CalibrationReview({ run, payload, active, outputSchema }: CalibrationReviewProps) {
   const { t } = useTranslation("iot");
 
   const blocks = Object.entries(run.blocks ?? {});
@@ -39,6 +42,7 @@ export function CalibrationReview({ run, payload, active }: CalibrationReviewPro
         name={name}
         block={block}
         previous={{ coefficients: active?.blocks[name]?.coefficients }}
+        spec={outputSchema?.blocks[name]}
       />
     );
   }
