@@ -1,7 +1,8 @@
 "use client";
 
+import { ScatterChart } from "@/components/charts/scatter-chart";
+
 import { useTranslation } from "@repo/i18n";
-import { ScatterChart } from "@repo/ui/components/charts/scatter-chart";
 
 import type { FitLine } from "./block-chart";
 

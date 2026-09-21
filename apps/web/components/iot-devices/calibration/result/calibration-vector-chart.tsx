@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart } from "@repo/ui/components/charts/bar-chart";
+import { BarChart } from "@/components/charts/bar-chart";
 
 /**
  * A coefficient that is a vector: one bar per element. Six dark detector channels or ten

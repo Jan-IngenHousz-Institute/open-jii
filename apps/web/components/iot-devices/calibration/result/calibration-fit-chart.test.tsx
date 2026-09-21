@@ -13,7 +13,7 @@ const scatter = vi.hoisted(() => ({
   calls: [] as { data: PlottedSeries[]; config: Record<string, unknown> }[],
 }));
 
-vi.mock("@repo/ui/components/charts/scatter-chart", () => ({
+vi.mock("@/components/charts/scatter-chart", () => ({
   ScatterChart: (props: { data: PlottedSeries[]; config: Record<string, unknown> }) => {
     scatter.calls.push(props);
     return <div data-testid="scatter" />;
