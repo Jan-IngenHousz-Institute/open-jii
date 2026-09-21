@@ -35,6 +35,14 @@ export interface MetricBaseline {
  */
 export type MetricLens = "performance";
 
+/** One numbering pass over the catalog; together they account for every num ever issued. */
+export interface CatalogPass {
+  date: string;
+  range: [number, number];
+  gaps?: number[];
+  note: string;
+}
+
 export interface CatalogMetric {
   num: number;
   id: string;

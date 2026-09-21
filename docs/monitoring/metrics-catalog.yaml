@@ -1,6 +1,6 @@
 # Platform heartbeat metrics catalog.
 # Single source of truth for the digest composer, Grafana panel inventory,
-# runbooks, and the /triage skill. Frozen in the 2026-08-14 metric pass (items 1-63).
+# runbooks, and the openjii-triage skill. Numbering is append-only; see `passes` below.
 #
 # Field notes:
 # - family: observability (issues) | usage (levels)
@@ -21,6 +21,19 @@
 #   kept as intent for the per-environment Grafana rules (P2b).
 
 version: 1
+
+# A num in a runbook, a Slack line or an incident note has to mean one thing forever, so
+# numbers are never reused. A retired entry keeps its num and goes active: false; a merged
+# entry leaves a gap recorded here; a new entry takes the next num after the last pass.
+# The consistency tests hold the catalog to this block.
+passes:
+  - date: 2026-08-14
+    range: [1, 63]
+    gaps: [3]
+    note: initial metric-by-metric review; 3 merged into 2
+  - date: 2026-09-14
+    range: [64, 64]
+    note: gold materialization age split out of 10
 
 metrics:
   # Ingest path
@@ -175,7 +188,7 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    # Inactive with 10 and 13: same producer, same export task.
+    # Inactive until the heartbeat export task that publishes this lands.
     active: false
     slots: [exception, dashboard]
     signal:
@@ -219,7 +232,7 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    # Inactive with 10 and 64: same producer, same export task.
+    # Inactive until the heartbeat export task that publishes this lands.
     active: false
     slots: [exception]
     signal:
@@ -477,23 +490,43 @@ metrics:
 
   - num: 33
     id: measurements-per-day
-    name: Measurements/day + top-N experiments
+    name: Measurements ingested, 24h
     family: usage
     source: dbx
-    phase: P3
+    phase: P2
+    # Inactive until the heartbeat export task that publishes this lands.
     active: false
     slots: [pulse, weekly]
-    notes: Read from public `metrics` schema MVs; never recomputed. Top-N stays in S3 detail.
+    signal:
+      namespace: OpenJII/Usage
+      metric: Measurements24h
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: same-weekday-4w }
+    notes: >
+      A gauge read from the public metrics tables on every export, never recomputed, so
+      Maximum over the window is the day's reading and Sum would multiply it by the
+      number of runs. The top-N experiments roster stays in the S3 detail lines.
 
   - num: 34
-    id: devices-seen-24h
-    name: Devices seen 24h vs fleet
+    id: devices-active-30d
+    name: Devices active, 30d
     family: usage
     source: dbx
-    phase: P3
+    phase: P2
+    # Inactive until the heartbeat export task that publishes this lands.
     active: false
     slots: [pulse]
-    notes: Via gold device_last_activity.
+    signal:
+      namespace: OpenJII/Usage
+      metric: ActiveDevices30d
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: same-weekday-4w }
+    notes: >
+      A gauge from the public metrics tables' thirty-day device window, read on every
+      export. The window is the public page's, not a fleet-wide liveness check; that is
+      entry 1.
 
   - num: 35
     id: adoption-counts
@@ -565,15 +598,26 @@ metrics:
   # Public metrics pipeline (post-landing)
   - num: 41
     id: metrics-mv-freshness
-    name: Public metrics pipeline / MV freshness
+    name: Public metrics staleness
     family: observability
     source: dbx
-    phase: P3
+    phase: P2
+    # Inactive until the heartbeat export task that publishes this lands.
     active: false
     slots: [alert, dashboard]
     severity: critical
+    signal:
+      namespace: OpenJII/Data
+      metric: MetricsPipelineAgeMinutes
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: threshold, max: 60 }
     runbook: docs/runbooks/metrics-mv-freshness.md
-    notes: Critical once the public page ships; staleness there is publicly visible.
+    notes: >
+      Minutes since computed_at on the public metrics tables, read from the tables
+      themselves rather than from run state, so an update that succeeded and wrote nothing
+      still reads as stale. The scheduler runs every fifteen minutes, so an hour means
+      several consecutive updates did not land. Publicly visible, hence critical.
 
   # Client-side observability (PostHog)
   - num: 42

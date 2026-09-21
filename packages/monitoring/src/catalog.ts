@@ -1,6 +1,6 @@
 import yaml from "js-yaml";
 
-import type { CatalogMetric } from "./types.js";
+import type { CatalogMetric, CatalogPass } from "./types.js";
 
 /** Placeholders let one catalog serve every environment; values come from the Lambda env. */
 export function resolvePlaceholders(
@@ -16,9 +16,26 @@ export function resolvePlaceholders(
   });
 }
 
+interface CatalogDocument {
+  passes?: CatalogPass[];
+  metrics?: CatalogMetric[];
+}
+
+/**
+ * The catalog is an in-repo file whose shape the consistency tests enforce, which is why
+ * yaml's unknown is narrowed here by one assertion rather than by a runtime schema that
+ * would ship in every Lambda bundle.
+ */
+function loadDocument(source: string): CatalogDocument {
+  return (yaml.load(source) as CatalogDocument | undefined) ?? {};
+}
+
 export function parseCatalog(source: string): CatalogMetric[] {
-  const parsed = yaml.load(source) as { metrics?: CatalogMetric[] } | undefined;
-  return parsed?.metrics ?? [];
+  return loadDocument(source).metrics ?? [];
+}
+
+export function parsePasses(source: string): CatalogPass[] {
+  return loadDocument(source).passes ?? [];
 }
 
 /** Metrics the composer can actually query; everything else is documentation. */
