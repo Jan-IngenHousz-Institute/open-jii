@@ -231,37 +231,45 @@ workflow's `linear-release-action` moves shipped tickets to `Done`. The UX check
 The last step of every skill that writes to Linear. These rules come from the failure modes in this
 workspace's own agent-written tickets, not from a generic style guide.
 
-1. Headings are exactly the shape's. No extra sections, no date-stamped headings.
-2. Budgets, excluding the two dev-filled sections: work item under 1,200 characters, bug under
+The first rule outranks the rest. A ticket is read by a person who did not write it, and it is
+written in proper English: whole sentences with a subject and a verb, in every bullet, in the WHO,
+WHAT and WHY lines, and in every open question. A budget is met by cutting criteria, never by
+compressing grammar. "Facets: status, visibility; protocols family, visibility" is a list of words,
+and a list of words is not a ticket.
+
+1. Full sentences everywhere. A bullet reads as one sentence and ends with a full stop. No
+   telegraphic fragments, no noun lists, no semicolon chains standing in for sentences.
+2. Headings are exactly the shape's. No extra sections, no date-stamped headings.
+3. Budgets, excluding the two dev-filled sections: work item under 1,200 characters, bug under
    800, spike under 600, project body under 2,500. Over budget means a split, or the detail goes to
-   a comment, a linked document, or nowhere.
-3. One idea per bullet, under 25 words. A bullet that needs a second sentence is two bullets.
-4. Persona first, in WHO, and again in acceptance criteria where it matters: "an org admin can",
+   a comment, a linked document, or nowhere. It never means shorter grammar.
+4. One idea per bullet, under 25 words. A bullet that needs a second sentence is two bullets.
+5. Persona first, in WHO, and again in acceptance criteria where it matters: "an org admin can",
    "a plain member sees".
-5. Open questions are expected. "Open: does this apply to archived experiments? Ask the TPM." beats
+6. Open questions are expected. "Open: does this apply to archived experiments? Ask the TPM." beats
    resolving it by assertion.
-6. No investigation narrative. What was checked or corrected on a date is a comment. The body says
+7. No investigation narrative. What was checked or corrected on a date is a comment. The body says
    what is true now and what should be built.
-7. No orders about what not to build. Say what to build; name the precedent under Additional
+8. No orders about what not to build. Say what to build; name the precedent under Additional
    context or Design.
-8. Implementation detail is a suggestion and lives under Additional context or Design as
+9. Implementation detail is a suggestion and lives under Additional context or Design as
    "Suggested:". Never in acceptance criteria, which describe observable behaviour only.
-9. No bookkeeping in the body: no "canonical owner of", "absorbs", "initial issue inventory",
-   "project container (date)". Relations are set in Linear, with one line in a comment if needed.
-10. No authorship banner. If a person has not read and edited the text, it is not ready.
-11. At most one "X, not Y" sentence per body.
-12. Titles say what the user can do or what is broken, under 70 characters, no type prefix
+10. No bookkeeping in the body: no "canonical owner of", "absorbs", "initial issue inventory",
+    "project container (date)". Relations are set in Linear, with one line in a comment if needed.
+11. No authorship banner. If a person has not read and edited the text, it is not ready.
+12. At most one "X, not Y" sentence per body.
+13. Titles say what the user can do or what is broken, under 70 characters, no type prefix
     (`DISCOVERY:` is a label, not a title), no list of three. Project names are the outcome in
     three to six words.
-13. Full sentences. A bullet reads as a sentence with a verb, never as a list of nouns. Meet the
-    budget by cutting criteria, not grammar.
 14. Then the `unslop` skill.
 
-`pnpm linear:check <draft.md>` runs the mechanical half before a body is shown: heading set equals
-the shape, length within budget, longest bullet under 25 words, zero em dashes, no banner, at most
-one "X, not Y" sentence, title length and prefix, WHO, WHAT and WHY present, and the gate sections
-non-empty. The draft format is in `tooling/devkit/README.md`. A failed check stops the write; fix
-the body first. Then `unslop`. Then the person reads it. Nothing is written to Linear that a person
+`pnpm linear:check <draft.md>` runs the mechanical half before a body is shown: every bullet and
+every WHO, WHAT and WHY line ends as a sentence and no bullet is a semicolon chain; heading set
+equals the shape; length within budget; longest bullet under 25 words; zero em dashes; no banner;
+at most one "X, not Y" sentence; title length and prefix; the gate sections non-empty. It cannot
+judge grammar, so a fragment that happens to end in a full stop still needs a reader. The draft
+format is in `tooling/devkit/README.md`. A failed check stops the write; fix the body first. Then
+`unslop`. Then the person reads it. Nothing is written to Linear that a person
 has not read.
 
 ## Relation to the GitHub templates

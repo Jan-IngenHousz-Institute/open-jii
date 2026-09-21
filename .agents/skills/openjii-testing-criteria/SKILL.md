@@ -52,7 +52,10 @@ Rules:
 - Cover each acceptance criterion at least once, the alternative flows the ticket names, and the
   negative case for any permission or validation rule the diff touches.
 - Say what data the tester needs and how to get it. A step nobody can set up is not a step.
-- Under 1,200 characters. If the criteria run longer, the ticket was too big; say so.
+- Every step and every expected result is a whole sentence. A tester reads it cold; "Filters:
+  status, clear; page 2" tells them nothing.
+- Under 1,200 characters. If the criteria run longer, the ticket was too big; say so. Cut steps,
+  never the grammar.
 
 ## The one rule
 

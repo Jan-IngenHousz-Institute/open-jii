@@ -105,6 +105,12 @@ function wordCount(text: string): number {
   return text.split(/\s+/).filter((word) => word.length > 0).length;
 }
 
+// A full stop, question or exclamation mark, allowing a closing quote, backtick or bracket after
+// it. This catches the telegraphic fragment; it cannot catch a fragment that ends in a full stop.
+function endsAsSentence(text: string): boolean {
+  return /[.?!]["'`)\]]*$/.test(text.trim());
+}
+
 function headingFindings(actual: readonly string[], expected: readonly string[]): Finding[] {
   if (actual.length === expected.length && actual.every((h, i) => h === expected[i])) return [];
   const missing = expected.filter((h) => !actual.includes(h));
@@ -170,14 +176,26 @@ export function checkBody(body: string): Report {
   }
 
   let longestBullet = 0;
-  for (const bullet of bullets(countedText)) {
+  for (const bullet of bullets(body)) {
     const words = wordCount(bullet);
+    const opening = `"${bullet.split(/\s+/).slice(0, 8).join(" ")}..."`;
     longestBullet = Math.max(longestBullet, words);
     if (words >= MAX_BULLET_WORDS) {
-      findings.push({
-        rule: "bullet",
-        detail: `${words} words: "${bullet.split(/\s+/).slice(0, 8).join(" ")}..."`,
-      });
+      findings.push({ rule: "bullet", detail: `${words} words: ${opening}` });
+    }
+    if (!endsAsSentence(bullet)) {
+      findings.push({ rule: "sentence", detail: `does not end as a sentence: ${opening}` });
+    }
+    if ((bullet.match(/;/g) ?? []).length >= 2) {
+      findings.push({ rule: "sentence", detail: `semicolon chain, not a sentence: ${opening}` });
+    }
+  }
+  for (const line of (sections.find((s) => s.heading === "User story")?.content ?? "").split(
+    "\n",
+  )) {
+    const lead = /^\*\*(WHO|WHAT|WHY):\*\*\s*(.+)$/.exec(line);
+    if (lead && !endsAsSentence(lead[2])) {
+      findings.push({ rule: "sentence", detail: `${lead[1]} does not end as a sentence` });
     }
   }
 

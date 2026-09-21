@@ -123,3 +123,8 @@ list, and wait. Nothing is written to Linear that a person has not read. Once th
 
 Never invent acceptance criteria. Where a criterion is inferred from code or a sibling, say so in
 the ticket and mark it "confirm". An open question in the body beats a confident guess.
+
+Write every ticket and the project body in whole sentences. The budgets in the standard are met by
+cutting criteria or moving detail to a comment, never by compressing a bullet into a list of
+nouns. A person reads these, and a fragment they have to decode costs more than the characters it
+saved.

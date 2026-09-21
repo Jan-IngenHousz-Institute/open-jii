@@ -35,17 +35,14 @@ server has none of that, so a workspace where half the writes go through one kee
 record. **Anything touching more than one ticket, anything running unattended, and anything that has
 to be auditable goes through the devkit.**
 
-Mint a key at [Security and access](https://linear.app/settings/account/security) with the Read and
-Write scopes, restricted to team `OJD`. Personal keys can be permission-scoped and team-scoped, so
-do not issue a full-access one; but do not go narrower than Write without adding `comments:create`,
-or the first comment fails with `Invalid scope`. Then store it without pasting it anywhere visible:
+The key belongs to the person. They mint it and store it themselves, following
+`tooling/devkit/README.md`; an agent never mints, requests, reads or pastes one. Two situations
+come up, and both are a message to the person, not something to work around:
 
-```bash
-pbpaste | pnpm linear:auth   # tooling/devkit/.env, owner-only, gitignored
-```
-
-`linear:auth` verifies the key against Linear before storing it and prints who it belongs to. To
-rotate, regenerate the key in Linear and run it again.
+- No key is found. The refusal names every path the devkit looked at. Say so and ask them to run
+  `pbpaste | pnpm linear:auth` in the main checkout, which serves every worktree.
+- A write fails with `Invalid scope`. The key was minted narrower than Write, most often without
+  `comments:create`. Report which write failed and ask them to re-mint it with the Write scope.
 
 Every call goes through the devkit. It resolves the key in-process (shell env, then this checkout's
 env file, then the main worktree's, so one `linear:auth` serves every worktree), sends it bare in

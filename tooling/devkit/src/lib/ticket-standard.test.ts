@@ -121,6 +121,33 @@ describe("checkBody", () => {
     expect(rules(workItem.replace("None.", "Sort, not filter."))).toEqual([]);
   });
 
+  it("fails a bullet or a WHO line that does not end as a sentence, and a semicolon chain", () => {
+    const fragment = workItem.replace(
+      "- Every column Postgres already provides can be sorted.",
+      "- Sortable: name, status, updated. Confirm",
+    );
+    const chain = workItem.replace(
+      "- Every column Postgres already provides can be sorted.",
+      "- Facets: experiments status; protocols family; macros language.",
+    );
+    const why = workItem.replace("**WHY:** No list can be sorted today.", "**WHY:** no sorting");
+    const quoted = workItem.replace(
+      "- Every column Postgres already provides can be sorted.",
+      "- The precedent is `OverviewTable`.",
+    );
+
+    expect(checkBody(fragment).findings).toContainEqual({
+      rule: "sentence",
+      detail: 'does not end as a sentence: "Sortable: name, status, updated. Confirm..."',
+    });
+    expect(checkBody(chain).findings.map((f) => f.rule)).toContain("sentence");
+    expect(checkBody(why).findings).toContainEqual({
+      rule: "sentence",
+      detail: "WHY does not end as a sentence",
+    });
+    expect(rules(quoted)).toEqual([]);
+  });
+
   it("wants WHO, WHAT and WHY and non-empty acceptance criteria on a work item", () => {
     const noWhy = workItem.replace("**WHY:** No list can be sorted today.\n", "");
     const noCriteria = workItem.replace(
@@ -137,7 +164,7 @@ describe("checkBody", () => {
 
   it("recognises the other shapes by their first heading", () => {
     const bug =
-      "## Observed\n\nx\n\n## Expected\n\ny\n\n## Reproduction\n\n1. a\n\n## Environment\n\ndev\n\n## Evidence\n\nnone\n\n## How it was built\n\n## Testing criteria\n";
+      "## Observed\n\nx\n\n## Expected\n\ny\n\n## Reproduction\n\n1. Open the list.\n\n## Environment\n\ndev\n\n## Evidence\n\nnone\n\n## How it was built\n\n## Testing criteria\n";
     const spike =
       "## Question\n\nq\n\n## Why now\n\nw\n\n## Timebox\n\n2 days\n\n## Done when\n\nan ADR\n";
     const project =

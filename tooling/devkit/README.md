@@ -108,14 +108,21 @@ ticket exists, which is where implementation pointers go when the body has no ro
 anywhere in a body or comment becomes the second ticket's identifier.
 
 ```bash
-pnpm linear:check .claude/tickets/home.md            # shape, budget, bullets, dashes, title, gate
+pnpm linear:check .claude/tickets/home.md            # sentences, shape, budget, bullets, dashes, title, gate
 pnpm linear:create .claude/tickets/home.md           # dry run: resolves names, prints the plan
 pnpm linear:create .claude/tickets/home.md --apply   # creates, then references, comments, relations
 ```
 
+The check is the mechanical half of `docs/agents/ticket-standard.md`. Its first concern is that
+the ticket is written in sentences: every bullet and every WHO, WHAT and WHY line must end as one,
+and a bullet chained with semicolons fails. It cannot judge grammar, so a fragment that ends in a
+full stop still needs a reader; the check exists to stop the obvious telegraphic draft, not to
+replace the person who reads the body before it is written.
+
 `linear:create` refuses a draft that fails the check, resolves team, project, state and labels by
 name, and records every step in `<draft>.created.json` next to the draft. A run that stops halfway
-resumes from that file instead of creating anything twice. A relative path, here and on every other command, is taken from the repo root.
+resumes from that file instead of creating anything twice. A relative path, here and on every other
+command, is taken from the repo root.
 
 ## A local session without a browser
 

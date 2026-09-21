@@ -29,6 +29,14 @@ eight confident guesses.
 The same goes for the rest: do not guess the persona, do not assert a benefit nobody stated, do not
 pick a project because the name sounds close.
 
+## The other rule
+
+**Write in proper English.** Every bullet is a whole sentence with a subject and a verb, and so are
+the WHO, WHAT and WHY lines. "Sortable: name, status, updated. Confirm" is a list of words; "Name,
+status and updated date are sortable. Confirm this set." is a sentence. When the body runs over
+budget, remove a criterion. Never save characters by dropping the grammar; a person reads this,
+and a ticket that cannot be read is not shorter, it is unfinished.
+
 ## Working a new ticket
 
 Fill the gaps in this order. Stop and ask as soon as an answer would change the ticket rather than
