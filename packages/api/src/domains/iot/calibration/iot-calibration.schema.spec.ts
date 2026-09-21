@@ -9,6 +9,7 @@ import {
   zCalibrationRunPayload,
   zCreateCalibrationRunBody,
   zFirmwareVersion,
+  zReportedFirmwareVersion,
   zReportDeviceCalibrationWriteBody,
 } from "./iot-calibration.schema";
 
@@ -243,6 +244,28 @@ describe("zFirmwareVersion", () => {
   // The definition column is varchar(32); a version the contract accepted must store.
   it("rejects a version longer than the column that stores it", () => {
     expect(zFirmwareVersion.safeParse(`1.${"2".repeat(40)}`).success).toBe(false);
+  });
+});
+
+describe("zReportedFirmwareVersion", () => {
+  // A floor is declared clean; what a device answers is not, and the run is recorded
+  // against the version it gave rather than against nothing.
+  it("accepts the release suffix a device appends", () => {
+    expect(zReportedFirmwareVersion.safeParse("1.1.3-rc2").success).toBe(true);
+    expect(zReportedFirmwareVersion.safeParse("1.03+build7").success).toBe(true);
+    expect(zReportedFirmwareVersion.safeParse("1.1.3").success).toBe(true);
+  });
+
+  it("still refuses what is not a version at all", () => {
+    expect(zReportedFirmwareVersion.safeParse("v1.2.3").success).toBe(false);
+    expect(zReportedFirmwareVersion.safeParse("1").success).toBe(false);
+    expect(zReportedFirmwareVersion.safeParse("1.2.3-").success).toBe(false);
+    expect(zReportedFirmwareVersion.safeParse("").success).toBe(false);
+  });
+
+  // A suffix cannot buy a version more room than a declared floor gets.
+  it("rejects a version longer than the contract allows", () => {
+    expect(zReportedFirmwareVersion.safeParse(`1.2.3-${"a".repeat(40)}`).success).toBe(false);
   });
 });
 

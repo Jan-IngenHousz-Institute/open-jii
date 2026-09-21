@@ -76,6 +76,17 @@ export const zFirmwareVersion = z
   .max(32)
   .regex(/^\d+(\.\d+){1,2}$/);
 
+/**
+ * What a device answers, rather than what an author declares: firmware in the field carries
+ * release suffixes ("1.1.3-rc2"), and dropping such a version rather than recording it made
+ * a floored definition refuse the run for reporting nothing at all.
+ */
+export const zReportedFirmwareVersion = z
+  .string()
+  .trim()
+  .max(32)
+  .regex(/^\d+(\.\d+){1,2}(?:[-+][0-9A-Za-z][0-9A-Za-z.-]*)?$/);
+
 // Whether an array holds integers is the output schema's call, checked against its spec.
 export const zCoefficientValue = z.union([z.number().finite(), z.array(z.number().finite())]);
 
@@ -289,7 +300,7 @@ export const zCreateCalibrationRunBody = zIotDevicePathParam.extend({
   payload: zCalibrationRunPayload,
   params: zCalibrationRunParams.optional(),
   preInfo: zInfoRecord.optional(),
-  firmwareVersion: zFirmwareVersion.optional(),
+  firmwareVersion: zReportedFirmwareVersion.optional(),
   // Absent for a family whose firmware names no unit, which the record then says.
   reportedSerial: zReportedSerial.optional(),
 });
@@ -302,7 +313,7 @@ export const zCreateExternalCalibrationRunBody = zIotDevicePathParam.extend({
   params: zCalibrationRunParams.optional(),
   preInfo: zInfoRecord.optional(),
   postInfo: zInfoRecord.optional(),
-  firmwareVersion: zFirmwareVersion.optional(),
+  firmwareVersion: zReportedFirmwareVersion.optional(),
 });
 
 export const zCalibrationRunPathParam = z.object({
