@@ -15,6 +15,11 @@ const nextConfig = {
     "@repo/cms",
     "@repo/analytics",
   ],
+  turbopack: {
+    resolveAlias: {
+      glslify: "./lib/glslify-runtime.cjs",
+    },
+  },
 
   output: "standalone",
   outputFileTracingRoot: join(__dirname, "../../"),
