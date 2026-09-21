@@ -51,6 +51,12 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
   /** Loads already running, so a cold key costs one fetch rather than one per caller. */
   private readonly inFlight = new Map<string, Promise<unknown>>();
 
+  /**
+   * Bumped by `invalidate`, so a load that began before the invalidation can
+   * tell its result is no longer wanted and leave the key empty.
+   */
+  private readonly generations = new Map<string, number>();
+
   constructor(
     private readonly cache: Cache,
     private readonly namespace: CacheNamespace,
@@ -86,8 +92,12 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
       return sharedLoad<T>(running);
     }
 
-    const load = this.fetchAndStore(cacheKey, fetchFn).finally(() => {
-      this.inFlight.delete(cacheKey);
+    const generation = this.generations.get(cacheKey) ?? 0;
+    const load = this.fetchAndStore(cacheKey, fetchFn, generation).finally(() => {
+      // An invalidation may have replaced this entry with a newer load.
+      if (this.inFlight.get(cacheKey) === load) {
+        this.inFlight.delete(cacheKey);
+      }
     });
     this.inFlight.set(cacheKey, load);
 
@@ -141,10 +151,15 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
   private async fetchAndStore<T>(
     cacheKey: string,
     fetchFn: () => Promise<T | null>,
+    generation: number,
   ): Promise<T | null> {
     const value = await fetchFn();
 
-    if (value !== null && value !== undefined) {
+    // Invalidated while loading: the caller still gets the source's answer,
+    // but the cache does not, or the invalidation would be undone.
+    const invalidated = (this.generations.get(cacheKey) ?? 0) !== generation;
+
+    if (value !== null && value !== undefined && !invalidated) {
       try {
         await this.store(cacheKey, value);
       } catch (error) {
@@ -204,8 +219,14 @@ export class CacheAdapter implements MacroCachePort, MetricsCachePort, Experimen
   }
 
   async invalidate(key: string): Promise<void> {
+    const cacheKey = `${this.namespace.prefix}${key}`;
+    this.generations.set(cacheKey, (this.generations.get(cacheKey) ?? 0) + 1);
+    // The next caller starts its own load rather than joining one whose
+    // result will not be kept.
+    this.inFlight.delete(cacheKey);
+
     try {
-      await this.cache.del(`${this.namespace.prefix}${key}`);
+      await this.cache.del(cacheKey);
     } catch (error) {
       this.logger.warn({ msg: "Cache invalidation failed", key, error });
     }

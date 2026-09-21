@@ -363,6 +363,47 @@ describe("CacheAdapter", () => {
       expect(fetchFn).toHaveBeenCalledTimes(1);
     });
 
+    it("drops the result of a load that was invalidated while running", async () => {
+      let release: (() => void) | undefined;
+      const fetchFn = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            release = () => resolve("from before");
+          }),
+      );
+
+      const pending = adapter.tryCache("edited", fetchFn);
+      // Invalidate once the load is actually running, not before it starts.
+      await vi.waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(1));
+      await adapter.invalidate("edited");
+      release?.();
+
+      // The waiting caller still gets the source's answer.
+      expect(await pending).toBe("from before");
+      await settle();
+      // The cache does not, or the invalidation would be undone.
+      expect(await cacheManager.get("swr:edited")).toBeUndefined();
+    });
+
+    it("starts a fresh load for a caller arriving after an invalidation", async () => {
+      let release: (() => void) | undefined;
+      const fetchFn = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            release = () => resolve("value");
+          }),
+      );
+
+      const first = adapter.tryCache("reissued", fetchFn);
+      await vi.waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(1));
+      await adapter.invalidate("reissued");
+      const second = adapter.tryCache("reissued", fetchFn);
+
+      await vi.waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(2));
+      release?.();
+      await Promise.all([first, second]);
+    });
+
     it("runs one load for a stale key however many callers arrive while it is stale", async () => {
       await cacheManager.set("swr:shared", { value: "old", freshUntil: Date.now() - 1 }, 60_000);
       let release: (() => void) | undefined;
