@@ -48,6 +48,10 @@ variable "tasks" {
 
     # Dependencies
     depends_on = optional(string)
+
+    # Run condition relative to depends_on (ALL_SUCCESS, ALL_DONE, ...); omitted
+    # leaves the API default, which only runs after the dependency succeeded
+    run_if = optional(string)
   }))
   default = []
 }
