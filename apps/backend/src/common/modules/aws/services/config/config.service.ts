@@ -64,9 +64,10 @@ export class AwsConfigService {
         calibrationSandboxFunctionName: this.configService.getOrThrow<string>(
           "aws.lambda.calibrationSandboxFunctionName",
         ),
-        calibrationSandboxEndpoint: this.configService.getOrThrow<string>(
-          "aws.lambda.calibrationSandboxEndpoint",
-        ),
+        // Unset means the deployed function; a task definition never injects this, and
+        // a read that threw on its absence took every AWS backend down at boot.
+        calibrationSandboxEndpoint:
+          this.configService.get<string>("aws.lambda.calibrationSandboxEndpoint") ?? "",
       },
       s3: {
         iotArchiveBucketName: this.configService.getOrThrow<string>("aws.s3.iotArchiveBucketName"),
