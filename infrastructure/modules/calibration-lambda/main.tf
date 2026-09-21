@@ -1,12 +1,14 @@
 locals {
   default_tags = merge(var.tags, {
-    Service   = "macro-sandbox"
+    Service   = "calibration-sandbox"
     ManagedBy = "Terraform"
   })
+
+  function_name = "calibration-sandbox-${var.environment}"
 }
 
 resource "aws_iam_role" "lambda" {
-  name = "macro-sandbox-lambda-${var.environment}"
+  name = "calibration-sandbox-lambda-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -32,7 +34,7 @@ resource "aws_iam_role_policy" "lambda_logs" {
         "logs:CreateLogStream",
         "logs:PutLogEvents"
       ]
-      Resource = [for lg in aws_cloudwatch_log_group.lambda : "${lg.arn}:*"]
+      Resource = ["${aws_cloudwatch_log_group.lambda.arn}:*"]
     }]
   })
 }
@@ -128,7 +130,7 @@ resource "aws_iam_role_policy" "lambda_deny" {
       },
       {
         # Without scoping Resource to KMS, NotAction = ["kms:Decrypt"]
-        # denies every non-Decrypt action on every resource — including
+        # denies every non-Decrypt action on every resource, including
         # logs:PutLogEvents from the Lambda's own log forwarding, which
         # silently swallows function stdout/stderr.
         Sid       = "DenyAllKMSExceptDecrypt"
@@ -141,26 +143,20 @@ resource "aws_iam_role_policy" "lambda_deny" {
 }
 
 resource "aws_cloudwatch_log_group" "lambda" {
-  for_each = var.languages
-
-  name              = "/aws/lambda/macro-sandbox-${each.key}-${var.environment}"
+  name              = "/aws/lambda/${local.function_name}"
   retention_in_days = var.log_retention_days
 
-  tags = merge(local.default_tags, {
-    Language = each.key
-  })
+  tags = local.default_tags
 }
 
 resource "aws_lambda_function" "this" {
-  for_each = var.languages
-
-  function_name = "macro-sandbox-${each.key}-${var.environment}"
+  function_name = local.function_name
   role          = aws_iam_role.lambda.arn
   package_type  = "Image"
-  image_uri     = "${each.value.ecr_repository_url}:latest"
+  image_uri     = "${var.ecr_repository_url}:latest"
 
-  timeout     = each.value.timeout
-  memory_size = each.value.memory
+  timeout     = var.timeout
+  memory_size = var.memory
 
   reserved_concurrent_executions = var.reserved_concurrent_executions
 
@@ -176,12 +172,11 @@ resource "aws_lambda_function" "this" {
   }
 
   tags = merge(local.default_tags, {
-    Language = each.key
     Security = "isolated"
   })
 
   # image_uri is set to :latest for initial creation; CI/CD updates it
-  # via `aws lambda update-function-code` in deploy-macro-sandbox.yml
+  # via `aws lambda update-function-code` in deploy-calibration-sandbox.yml
   lifecycle {
     ignore_changes = [image_uri]
   }
@@ -193,24 +188,24 @@ resource "aws_lambda_function" "this" {
   ]
 }
 
+# A calibration run is requested by a person standing at the bench and is recorded
+# against one device, so a retried invoke would write a second run for one request.
 resource "aws_lambda_function_event_invoke_config" "this" {
-  for_each = aws_lambda_function.this
-
-  function_name                = each.value.function_name
+  function_name                = aws_lambda_function.this.function_name
   maximum_retry_attempts       = 0
   maximum_event_age_in_seconds = 60
 }
 
 resource "aws_iam_policy" "invoke" {
-  name        = "macro-sandbox-invoke-${var.environment}"
-  description = "Allow invoking macro-sandbox Lambda functions"
+  name        = "calibration-sandbox-invoke-${var.environment}"
+  description = "Allow invoking the calibration-sandbox Lambda function"
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
       Action   = "lambda:InvokeFunction"
-      Resource = [for fn in aws_lambda_function.this : fn.arn]
+      Resource = [aws_lambda_function.this.arn]
     }]
   })
 
@@ -218,13 +213,13 @@ resource "aws_iam_policy" "invoke" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "rejected_traffic" {
-  name           = "macro-sandbox-rejected-traffic-${var.environment}"
+  name           = "calibration-sandbox-rejected-traffic-${var.environment}"
   log_group_name = var.flow_log_group_name
   pattern        = "REJECT"
 
   metric_transformation {
-    name      = "MacroSandboxRejectedTraffic-${var.environment}"
-    namespace = "OpenJII/MacroSandbox"
+    name      = "CalibrationSandboxRejectedTraffic-${var.environment}"
+    namespace = "OpenJII/CalibrationSandbox"
     value     = "1"
   }
 }

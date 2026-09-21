@@ -1,7 +1,7 @@
-# Macro Sandbox Deployment Workflow
-# Builds 3 Docker images (Python, JS, R) and deploys to Lambda
+# Calibration Sandbox Deployment Workflow
+# Builds the Python image that computes calibration coefficients and deploys it to Lambda
 
-name: Macro Sandbox Deployment Workflow
+name: Calibration Sandbox Deployment Workflow
 
 on:
   workflow_dispatch:
@@ -15,11 +15,6 @@ on:
         required: false
         type: string
         default: ""
-      languages:
-        description: "JSON array of lambda languages to deploy. Defaults to all."
-        required: false
-        type: string
-        default: '["python","javascript","r"]'
   workflow_call:
     inputs:
       environment:
@@ -31,11 +26,6 @@ on:
         required: false
         type: string
         default: ""
-      languages:
-        description: 'JSON array of lambda languages to deploy (e.g. ''["python","r"]''). Defaults to all.'
-        required: false
-        type: string
-        default: '["python","javascript","r"]'
 
 env:
   ENV: ${{ inputs.environment }}
@@ -46,13 +36,9 @@ permissions:
 
 jobs:
   build-and-deploy:
-    name: Build and Deploy ${{ matrix.language }} Lambda
+    name: Build and Deploy Calibration Lambda
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    strategy:
-      fail-fast: false
-      matrix:
-        language: ${{ fromJSON(inputs.languages) }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -82,17 +68,10 @@ jobs:
 
       - name: Set environment variables
         run: |
-          # Map language name to the ECR/Lambda suffix used when resources were created
-          case "${{ matrix.language }}" in
-            javascript) SUFFIX="js" ;;
-            python)     SUFFIX="python" ;;
-            r)          SUFFIX="r" ;;
-            *) echo "Unsupported language: ${{ matrix.language }}"; exit 1 ;;
-          esac
           echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
           echo "IMAGE_TAG=${{ steps.get-sha.outputs.sha }}" >> $GITHUB_ENV
-          echo "ECR_REPO=macro-sandbox-${SUFFIX}-${{ env.ENV }}" >> $GITHUB_ENV
-          echo "FUNCTION_NAME=macro-sandbox-${SUFFIX}-${{ env.ENV }}" >> $GITHUB_ENV
+          echo "ECR_REPO=calibration-sandbox-${{ env.ENV }}" >> $GITHUB_ENV
+          echo "FUNCTION_NAME=calibration-sandbox-${{ env.ENV }}" >> $GITHUB_ENV
 
       # The repository refuses to overwrite a tag, so a rerun of the same commit must
       # deploy the image it already pushed rather than fail on the push.
@@ -113,13 +92,13 @@ jobs:
 
       - name: Build image
         if: steps.existing.outputs.exists != 'true'
-        working-directory: apps/macro-sandbox
+        working-directory: apps/calibration-sandbox
         run: |
           set -euo pipefail
 
-          echo "Building ${{ matrix.language }} macro-sandbox..."
+          echo "Building calibration-sandbox..."
           docker build \
-            -f functions/${{ matrix.language }}/Dockerfile \
+            -f functions/python/Dockerfile \
             -t "${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}" \
             --platform linux/amd64 \
             .
@@ -136,7 +115,7 @@ jobs:
           severity: CRITICAL,HIGH
           vuln-type: os,library
           ignore-unfixed: true
-          trivyignores: apps/macro-sandbox/functions/${{ matrix.language }}/.trivyignore.yaml
+          trivyignores: apps/calibration-sandbox/functions/python/.trivyignore.yaml
 
       # OpenTofu creates the function pointing at `:latest`, which nothing else pushes.
       # The first deploy into a repository therefore publishes it once; the tag is
@@ -212,21 +191,21 @@ jobs:
         uses: ./.github/actions/publish-dora-metrics
         with:
           deployment-outcome: ${{ steps.update-lambda.outcome == 'success' && 'success' || 'failure' }}
-          service: "macro-sandbox-${{ matrix.language }}"
+          service: "calibration-sandbox"
           environment: ${{ inputs.environment }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Deployment Summary
         if: always()
         run: |
-          echo "::group::=== ${{ matrix.language }} Deployment Summary ==="
+          echo "::group::=== Calibration Sandbox Deployment Summary ==="
           echo "Environment: ${{ env.ENV }}"
           echo "Function: ${FUNCTION_NAME}"
           echo "Image: ${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
 
           if [[ "${{ steps.update-lambda.outcome }}" == "success" ]]; then
-            echo "${{ matrix.language }} macro-sandbox deployed successfully"
+            echo "calibration-sandbox deployed successfully"
           else
-            echo "${{ matrix.language }} macro-sandbox deployment failed"
+            echo "calibration-sandbox deployment failed"
           fi
           echo "::endgroup::"

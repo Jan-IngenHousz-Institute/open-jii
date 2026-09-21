@@ -75,6 +75,12 @@ variable "macro_sandbox_function_names" {
   default     = {}
 }
 
+variable "calibration_sandbox_function_name" {
+  description = "Lambda function name for calibration-sandbox. Empty disables its panels and alerts."
+  type        = string
+  default     = ""
+}
+
 variable "enable_site_availability_alert" {
   description = "Whether to create the Route53 health-check-based site availability alert. Must be a static bool (not derived from health_check_id) since it gates a resource count. Defaults to false so environments without a Route53 health check configured don't get a permanently-alerting rule with an empty HealthCheckId."
   type        = bool
