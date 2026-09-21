@@ -156,6 +156,20 @@ describe("ExperimentDataTable", () => {
     );
   });
 
+  it("changes page size to 1000 via select and shows it selected", async () => {
+    setupHook();
+    render(<ExperimentDataTable {...defaultProps} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: "1000" }));
+
+    expect(mockUseExperimentData).toHaveBeenLastCalledWith(
+      expect.objectContaining({ pageSize: 1000, page: 1 }),
+    );
+    expect(screen.getByRole("combobox")).toHaveTextContent("1000");
+  });
+
   it("navigates pages via next/previous", async () => {
     setupHook();
     render(<ExperimentDataTable {...defaultProps} />);
