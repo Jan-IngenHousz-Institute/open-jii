@@ -39,15 +39,22 @@ Local development commands that need a credential (a dev session, Linear access)
 ## Making changes
 
 1. Create a branch from `main`.
-2. Make your changes, including tests for new functionality.
+2. Make your changes, including tests for new functionality. `docs/standards/` says what the code
+   in each part of the repo should look like, and
+   [docs/standards/README.md](docs/standards/README.md) is the index.
 3. Verify locally:
 
    ```bash
    pnpm lint
-   pnpm typecheck
+   pnpm turbo run check-types   # the apps
+   pnpm typecheck               # the packages
    pnpm test
    pnpm format
    ```
+
+   The two type-check commands cover different halves of the workspace today, because the apps and
+   the packages declare the script under different names. `docs/standards/tooling.md` has the
+   detail.
 
 4. Commit using **Conventional Commits** — releases are automated with semantic-release, so commit messages matter:
 

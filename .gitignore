@@ -2,14 +2,16 @@
 
 # AI artifacts
 # Tracked deliberately: AGENTS.md, CLAUDE.md, .claude/settings.json, .claude/hooks/,
-# and .claude/skills/ (symlinks into .agents/skills/). Everything else under .claude/
-# stays local and ignored.
+# .claude/rules/ (path-scoped pointers into docs/standards/), and .claude/skills/
+# (symlinks into .agents/skills/). Everything else under .claude/ stays local and ignored,
+# including the cloud command log and the production window marker.
 .wolf/
 **/ssr
 .claude/*
 !.claude/settings.json
 !.claude/skills/
 !.claude/hooks/
+!.claude/rules/
 
 # Dependencies
 node_modules
