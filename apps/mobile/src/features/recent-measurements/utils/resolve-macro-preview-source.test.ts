@@ -169,6 +169,23 @@ describe("resolveMacroPreviewSource", () => {
     expect(malformed.ok && malformed.source.ctx).toEqual({});
   });
 
+  it("puts the measurement back into ctx where the upload left a marker", () => {
+    const result = resolveMacroPreviewSource(
+      measurement({
+        ...fullPayload,
+        macro_context: JSON.stringify({
+          measurement_node: { $macroInput: true },
+          upstream: { phi2: 0.5 },
+        }),
+      }),
+    );
+
+    expect(result.ok && result.source.ctx).toEqual({
+      measurement_node: { phi2: 0.8 },
+      upstream: { phi2: 0.5 },
+    });
+  });
+
   it("restores the sample envelope so the macro receives what it did at capture time", () => {
     const compressed = {
       ...fullPayload,

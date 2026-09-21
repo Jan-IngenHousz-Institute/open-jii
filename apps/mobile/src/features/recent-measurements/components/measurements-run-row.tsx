@@ -39,6 +39,7 @@ export const MeasurementsRunRow = memo(function MeasurementsRunRow({
         experimentName={summary.experimentName}
         timestamp={summary.timestamp}
         status={summary.status}
+        failureReason={summary.failureReason}
         questions={summary.questions}
         hasComment={summary.hasComment}
         expanded={expanded}

@@ -5,6 +5,7 @@ import {
   answersTextStyle,
   STATUS_ICON,
 } from "~/features/recent-measurements/components/measurement-row-visuals";
+import { UploadFailureNote } from "~/features/recent-measurements/components/upload-failure-note";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
 import { useTranslation } from "~/shared/i18n";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
@@ -21,6 +22,8 @@ interface MeasurementRunItemProps {
   timestamp: string;
   /** Worst-of status across the run. */
   status: MeasurementStatus;
+  /** Reason from the run's first failed measurement. */
+  failureReason?: string | null;
   questions?: AnswerData[];
   hasComment?: boolean;
   expanded: boolean;
@@ -38,6 +41,7 @@ export const MeasurementRunItem = memo(function MeasurementRunItem({
   experimentName,
   timestamp,
   status,
+  failureReason = null,
   questions,
   hasComment = false,
   expanded,
@@ -109,6 +113,8 @@ export const MeasurementRunItem = memo(function MeasurementRunItem({
             {STATUS_ICON[status](colors)}
           </View>
         </View>
+
+        {status === "failed" && <UploadFailureNote reason={failureReason} />}
       </View>
     </Pressable>
   );

@@ -3,6 +3,8 @@ import type { StoredMeasurement } from "~/shared/db/measurements-storage";
 import { parseMeasurementTopic } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
 
+import { restoreMacroInputInContext } from "@repo/api/transforms/macro-context-ref";
+
 const log = createLogger("measurement-preview");
 
 /** Why a stored measurement can't be re-run through its macro. */
@@ -67,6 +69,8 @@ export function resolveMacroPreviewSource(
   const decoded = decodeStoredSample(payload);
   if (!decoded) return { ok: false, blocker: "decode-failed" };
 
+  const rawMeasurement = stripUploadEnvelope(decoded);
+
   return {
     ok: true,
     source: {
@@ -74,8 +78,8 @@ export function resolveMacroPreviewSource(
       workbookVersionId,
       macroId,
       ...(hasWorkbookId ? { workbookId } : {}),
-      rawMeasurement: stripUploadEnvelope(decoded),
-      ctx: parseMacroContext(payload.macro_context),
+      rawMeasurement,
+      ctx: restoreMacroInputInContext(parseMacroContext(payload.macro_context), rawMeasurement),
     },
   };
 }

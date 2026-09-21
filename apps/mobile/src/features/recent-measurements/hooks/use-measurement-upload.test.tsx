@@ -137,7 +137,9 @@ describe("useMeasurementUpload", () => {
     expect(runIds).toEqual(["run-attempt-1", "run-attempt-1", "run-attempt-1"]);
     expect(calls[0][0].measurementResult).toMatchObject({
       workbook_version_id: "version-1",
-      macro_context: JSON.stringify({ measurement: { a: 1 } }),
+      // ctx held this result's own measurement, so the upload marks it instead
+      // of repeating it.
+      macro_context: JSON.stringify({ measurement: { $macroInput: true } }),
     });
 
     expect(enqueueMany).toHaveBeenCalledWith(["saved-1", "saved-2", "saved-3"]);

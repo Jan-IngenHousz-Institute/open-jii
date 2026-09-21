@@ -59,6 +59,7 @@ function item(key: string, status: MeasurementItem["status"]): MeasurementItem {
     hasComment: false,
     dayKey: "2026-05-18",
     workbookRunId: "run-1",
+    failureReason: null,
   };
 }
 

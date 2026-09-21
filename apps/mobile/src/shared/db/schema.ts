@@ -38,6 +38,9 @@ export const measurements = sqliteTable(
     // entry. Nullable for legacy rows pending backfill; "" once backfilled and
     // the payload carried no run id.
     workbookRunId: text("workbook_run_id"),
+    // Error kind behind a `failed` status, so the row can say why rather than
+    // only that it did not sync. Null for pending, successful and legacy rows.
+    failureReason: text("failure_reason"),
   },
   (table) => [
     check("measurements_status_check", sql`${table.status} IN ('pending', 'failed', 'successful')`),
