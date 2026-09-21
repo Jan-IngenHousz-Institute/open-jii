@@ -9,9 +9,7 @@ import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
 
 import { CalibrationBlockCard } from "../result/calibration-block-card";
-import { CalibrationFitChart } from "../result/calibration-fit-chart";
 import { CalibrationSeriesTable } from "../result/calibration-series-table";
-import { fitLineFromBlocks, fitPointsFromPayload } from "../result/fit-points";
 
 interface CalibrationReviewProps {
   run: CalibrationRun;
@@ -29,13 +27,6 @@ export function CalibrationReview({ run, payload, active }: CalibrationReviewPro
   const blocks = Object.entries(run.blocks ?? {});
   const series = Object.entries(payload);
   const isComputed = run.status === "computed";
-  const points = fitPointsFromPayload(payload);
-
-  function renderChart() {
-    const line = fitLineFromBlocks(run.blocks);
-    if (line === null || points.length === 0) return null;
-    return <CalibrationFitChart points={points} slope={line.slope} intercept={line.intercept} />;
-  }
 
   function renderSeries([name, rows]: [string, CalibrationRunPayload[string]]) {
     return <CalibrationSeriesTable key={name} series={name} rows={rows} />;
@@ -86,7 +77,6 @@ export function CalibrationReview({ run, payload, active }: CalibrationReviewPro
 
   return (
     <div className="space-y-6">
-      {renderChart()}
       <div className="grid gap-4 md:grid-cols-2">{blocks.map(renderBlock)}</div>
       {renderReadings()}
     </div>

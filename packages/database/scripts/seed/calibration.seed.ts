@@ -33,6 +33,14 @@ ${orderedByStimulus ? '    points["stimulus"],\n' : ""}    slope_min=0.1,
     intercept_max=100.0,
 )
 
+# The pairs the line was drawn through, so the reviewer sees the fit rather than a
+# guess made from the column order.
+fit["chart"] = {
+    "x": "par_raw",
+    "y": "par_ref",
+    "points": [[x, y] for x, y in zip(points["par_raw"], points["par_ref"])],
+}
+
 # A failed gate rejects the block and keeps its record, as the bench tool keeps the
 # existing gain; the thresholds are the platform's until the scientist supplies real ones.
 fitted = math.isfinite(fit["slope"]) and math.isfinite(fit["intercept"])
@@ -150,13 +158,22 @@ def par_reading(reply):
 
 
 par_points = inputs["par_sweep"]
+par_readings = [par_reading(reply) for reply in par_points["par"]]
 par_fit = assess_origin_fit(
-    [par_reading(reply) for reply in par_points["par"]],
+    par_readings,
     par_points["par_ref"],
     par_points["stimulus"],
     coefficient_min=0.05,
     coefficient_max=100.0,
 )
+
+# The pairs each gain was drawn through. The sensor's own PAR arrives inside a structured
+# reply, so nothing downstream could recover them from the captured rows alone.
+par_fit["chart"] = {
+    "x": "par",
+    "y": "par_ref",
+    "points": [[x, y] for x, y in zip(par_readings, par_points["par_ref"])],
+}
 
 # The actinic curve is fitted the other way round: the reference reads the light the
 # LED made, and the coefficient turns that light back into the setting behind it.
@@ -168,6 +185,11 @@ led_fit = assess_origin_fit(
     coefficient_min=0.01,
     coefficient_max=1.0,
 )
+led_fit["chart"] = {
+    "x": "emit_ref",
+    "y": "stimulus",
+    "points": [[x, y] for x, y in zip(led_points["emit_ref"], led_points["stimulus"])],
+}
 
 # The device takes an actinic gain strictly above 0.01 where the fit's gate is inclusive,
 # so a coefficient on that edge is flagged: approved, it would be refused at the write.
@@ -257,6 +279,11 @@ for led in [${multispeqLedChannels.map(({ led }) => led).join(", ")}]:
         intercept_min=-100000.0,
         intercept_max=100000.0,
     )
+    fit["chart"] = {
+        "x": "stimulus",
+        "y": "counts",
+        "points": [[x, y] for x, y in zip(points["stimulus"], points["counts"])],
+    }
     fitted = math.isfinite(fit["slope"]) and math.isfinite(fit["intercept"])
     if fitted and fit["passed"]:
         blocks[f"led{led}"] = {

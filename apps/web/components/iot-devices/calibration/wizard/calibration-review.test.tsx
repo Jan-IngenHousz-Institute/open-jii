@@ -4,9 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CalibrationReview } from "./calibration-review";
 
-vi.mock("../result/calibration-fit-chart", () => ({
-  CalibrationFitChart: ({ slope, intercept }: { slope: number; intercept: number }) => (
-    <div data-testid="fit-chart">{`${slope}|${intercept}`}</div>
+// Plotly has no business in jsdom; the chart's own tests cover what it is given.
+vi.mock("../result/calibration-block-chart", () => ({
+  CalibrationBlockChart: ({ block }: { block: { coefficients?: Record<string, unknown> } }) => (
+    <div data-testid="block-chart">{JSON.stringify(block.coefficients)}</div>
   ),
 }));
 
@@ -101,10 +102,21 @@ describe("CalibrationReview", () => {
     expect(screen.getAllByText("iot.calibration.review.previousUnknown")).toHaveLength(2);
   });
 
-  it("plots the captured points against the fitted line", () => {
-    renderReview();
+  // The picture belongs beside the coefficients it justifies, one per block, rather than
+  // as a single chart for the run picked out by convention.
+  it("gives every block its own chart", () => {
+    renderReview({
+      run: createCalibrationRun({
+        blocks: {
+          par: { status: "computed", coefficients: { slope: 0.96 } },
+          baseline: { status: "computed", coefficients: { channels: [312, 198] } },
+        },
+      }),
+    });
 
-    expect(screen.getByTestId("fit-chart")).toHaveTextContent("0.96|-1.08");
+    const charts = screen.getAllByTestId("block-chart");
+    expect(charts).toHaveLength(2);
+    expect(charts[1]).toHaveTextContent('{"channels":[312,198]}');
   });
 
   // A ten-channel coefficient is one value, however many lines it wraps over.
@@ -225,6 +237,5 @@ describe("CalibrationReview", () => {
 
     expect(screen.getByText("R-squared below 0.99")).toBeInTheDocument();
     expect(screen.getByText("iot.calibration.block.rejected")).toBeInTheDocument();
-    expect(screen.queryByTestId("fit-chart")).toBeNull();
   });
 });

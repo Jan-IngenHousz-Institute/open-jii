@@ -13,9 +13,7 @@ import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { CalibrationBlockCard } from "../result/calibration-block-card";
-import { CalibrationFitChart } from "../result/calibration-fit-chart";
 import { CalibrationSeriesTable } from "../result/calibration-series-table";
-import { fitLineFromBlocks, fitPointsFromPayload } from "../result/fit-points";
 import { CalibrationRunStatusBadge } from "./calibration-run-status-badge";
 import { CalibrationWriteRecord } from "./calibration-write-record";
 
@@ -99,18 +97,6 @@ export function CalibrationRunDetail({ runId, deviceId, onBack }: CalibrationRun
     );
   }
 
-  function renderChart() {
-    if (run === undefined) {
-      return null;
-    }
-    const line = fitLineFromBlocks(run.blocks);
-    const points = fitPointsFromPayload(run.payload ?? {});
-    if (line === null || points.length === 0) {
-      return null;
-    }
-    return <CalibrationFitChart points={points} slope={line.slope} intercept={line.intercept} />;
-  }
-
   function factsOf(session: NonNullable<typeof run>): [string, string][] {
     const facts: [string, string][] = [
       [
@@ -169,8 +155,6 @@ export function CalibrationRunDetail({ runId, deviceId, onBack }: CalibrationRun
             <AlertDescription className="font-mono text-xs">{run.errorMessage}</AlertDescription>
           </Alert>
         )}
-
-        {renderChart()}
 
         {blocks.length > 0 && (
           <div className="grid gap-4 md:grid-cols-2">{blocks.map(renderBlock)}</div>

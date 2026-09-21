@@ -3,6 +3,8 @@
 import { useTranslation } from "@repo/i18n";
 import { ScatterChart } from "@repo/ui/components/charts/scatter-chart";
 
+import type { FitLine } from "./block-chart";
+
 export interface FitPoint {
   x: number;
   y: number;
@@ -10,40 +12,43 @@ export interface FitPoint {
 
 interface CalibrationFitChartProps {
   points: FitPoint[];
-  /** `y = slope * x + intercept`; a through-origin fit passes intercept 0. */
-  slope: number;
-  intercept: number;
+  /** `y = slope * x + intercept`; absent when the block's coefficients describe no line. */
+  line: FitLine | null;
+  /** The columns the script fitted, named as the captured series names them. */
+  xLabel: string;
+  yLabel: string;
 }
 
-export function CalibrationFitChart({ points, slope, intercept }: CalibrationFitChartProps) {
+export function CalibrationFitChart({ points, line, xLabel, yLabel }: CalibrationFitChartProps) {
   const { t } = useTranslation("iot");
 
   const xs = points.map((point) => point.x);
   const xMin = Math.min(0, ...xs);
   const xMax = Math.max(...xs);
 
+  const captured = {
+    name: t("iot.calibration.review.points"),
+    x: xs,
+    y: points.map((point) => point.y),
+    mode: "markers" as const,
+  };
+  const fitted =
+    line === null
+      ? []
+      : [
+          {
+            name: t("iot.calibration.review.fitLine"),
+            x: [xMin, xMax],
+            y: [line.slope * xMin + line.intercept, line.slope * xMax + line.intercept],
+            mode: "lines" as const,
+          },
+        ];
+
   return (
     <ScatterChart
-      className="h-64"
-      data={[
-        {
-          name: t("iot.calibration.review.points"),
-          x: xs,
-          y: points.map((point) => point.y),
-          mode: "markers",
-        },
-        {
-          name: t("iot.calibration.review.fitLine"),
-          x: [xMin, xMax],
-          y: [slope * xMin + intercept, slope * xMax + intercept],
-          mode: "lines",
-        },
-      ]}
-      config={{
-        xAxisTitle: t("iot.calibration.review.xLabel"),
-        yAxisTitle: t("iot.calibration.review.yLabel"),
-        showLegend: true,
-      }}
+      className="h-56"
+      data={[captured, ...fitted]}
+      config={{ xAxisTitle: xLabel, yAxisTitle: yLabel, showLegend: true }}
     />
   );
 }

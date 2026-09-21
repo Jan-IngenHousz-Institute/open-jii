@@ -28,9 +28,9 @@ vi.mock("@/hooks/iot/useIotCommunication/useIotCommunication", () => ({
   openSerialPort: () => mockOpenSerialPort(),
 }));
 
-// Plotly has no business in jsdom; the review test covers the chart's inputs.
-vi.mock("@/components/iot-devices/calibration/result/calibration-fit-chart", () => ({
-  CalibrationFitChart: () => <div data-testid="fit-chart" />,
+// Plotly has no business in jsdom; the chart's own tests cover what it is given.
+vi.mock("@/components/iot-devices/calibration/result/calibration-block-chart", () => ({
+  CalibrationBlockChart: () => <div data-testid="block-chart" />,
 }));
 
 const DEVICE_ID = "11111111-1111-4111-8111-111111111111";

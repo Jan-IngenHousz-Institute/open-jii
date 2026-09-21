@@ -11,6 +11,7 @@ import type {
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
+import { CalibrationBlockChart } from "./calibration-block-chart";
 import { formatCoefficientValue } from "./format-coefficient-value";
 
 const BLOCK_STATUS_TONE: Record<CalibrationBlockStatus, StatusTone> = {
@@ -143,6 +144,9 @@ export function CalibrationBlockCard({ name, block, previous }: CalibrationBlock
       {block.coefficients !== undefined && (
         <dl className="space-y-3">{Object.entries(block.coefficients).map(renderCoefficient)}</dl>
       )}
+      {/* The evidence beside the claim: a block's own points and line, not one chart for
+          the whole run picked by convention. */}
+      <CalibrationBlockChart block={block} />
       {renderQuality()}
     </div>
   );
