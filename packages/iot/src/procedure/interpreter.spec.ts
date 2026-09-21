@@ -282,6 +282,29 @@ describe("runCaptureProcedure", () => {
         reason: 'instrument "emit_ref" is not connected',
       });
     });
+
+    // A sweep's `series` event only arrives once the whole series is in, which is minutes
+    // after the first point. Reporting each point as it is kept is what lets the bench draw
+    // the curve while it is still set up to take another one.
+    it("reports each point as it is kept, before the series is finished", async () => {
+      const { rig } = fullRig();
+      const events: ProcedureProgress[] = [];
+
+      await runCaptureProcedure(
+        AMBIT_PROCEDURE,
+        context({ rig, onProgress: (event) => events.push(event) }),
+      );
+
+      const rows = events.filter((event) => event.kind === "row");
+      const parRows = rows.filter((event) => event.kind === "row" && event.series === "par_sweep");
+      expect(parRows).toHaveLength(3);
+      expect(parRows[0]).toMatchObject({ kind: "row", series: "par_sweep", index: 0 });
+
+      // Every point of a series is reported before that series is declared complete.
+      const firstRow = events.findIndex((event) => event.kind === "row");
+      const firstSeries = events.findIndex((event) => event.kind === "series");
+      expect(firstRow).toBeLessThan(firstSeries);
+    });
   });
 
   describe("retaking a reading", () => {

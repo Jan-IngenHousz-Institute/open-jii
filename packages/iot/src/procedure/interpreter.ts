@@ -226,6 +226,7 @@ class ProcedureRunner {
         }));
 
       if (isKept) {
+        this.report({ kind: "row", series: step.series, index: 0, row });
         this.commit(step.series, [row]);
         return;
       }
@@ -285,6 +286,7 @@ class ProcedureRunner {
 
           if (isKept) {
             rows.push(row);
+            this.report({ kind: "row", series: step.series, index, row });
             break;
           }
 

@@ -68,6 +68,12 @@ export interface OperatorReading {
 export type ProcedureProgress =
   | { kind: "step"; index: number; total: number; description: string }
   | { kind: "setpoint"; series: string; index: number; total: number; value: SetpointValue }
+  /**
+   * One point, the moment it is kept. `series` only reports a count once the whole series is
+   * in, which is too late to watch a sweep take shape; a caller drawing the curve as it is
+   * measured needs the reading itself.
+   */
+  | { kind: "row"; series: string; index: number; row: SeriesRow }
   | { kind: "series"; series: string; rows: number }
   | { kind: "skipped"; series: string; reason: string }
   | { kind: "retake"; series: string; index: number; attempt: number };
