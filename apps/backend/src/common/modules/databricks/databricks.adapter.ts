@@ -1338,36 +1338,6 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     });
   }
 
-  /**
-   * Every metrics figure is optional, and every caller renders without one. The
-   * warehouse alone allows 50s of wait plus polling, which would otherwise be
-   * spent inside a list page or the landing page render.
-   */
-  private static readonly METRICS_DEADLINE_MS = 4000;
-
-  private async withMetricsDeadline<T>(
-    tableName: string,
-    query: Promise<Result<T>>,
-  ): Promise<Result<T>> {
-    let timer: NodeJS.Timeout | undefined;
-    const deadline = new Promise<Result<T>>((resolve) => {
-      timer = setTimeout(() => {
-        this.logger.warn({
-          msg: "Metrics read passed its deadline",
-          operation: "readMetricsTable",
-          tableName,
-        });
-        resolve(failure(AppError.internal(`Metrics read of ${tableName} timed out`)));
-      }, DatabricksAdapter.METRICS_DEADLINE_MS);
-    });
-
-    try {
-      return await Promise.race([query, deadline]);
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
   private metricsTable(tableName: string): string {
     return `${this.CATALOG_NAME}.${this.METRICS_SCHEMA_NAME}.${tableName}`;
   }
@@ -1390,10 +1360,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       return queryResult;
     }
 
-    const result = await this.withMetricsDeadline(
-      tableName,
-      this.executeSqlQuery(this.METRICS_SCHEMA_NAME, queryResult.value),
-    );
+    const result = await this.executeSqlQuery(this.METRICS_SCHEMA_NAME, queryResult.value);
     if (result.isFailure()) {
       return result;
     }

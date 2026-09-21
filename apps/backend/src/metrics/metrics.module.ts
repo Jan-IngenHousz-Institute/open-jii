@@ -35,7 +35,16 @@ import { ScopedMetricsController } from "./presentation/scoped-metrics.controlle
       // TTL matches the pipeline cadence: a shorter one would re-query the
       // warehouse for data that cannot have changed yet.
       useFactory: (cache: Cache) =>
-        new CacheAdapter(cache, { prefix: "metrics:", ttlMs: 10 * 60 * 1000 }),
+        // A cold warehouse answers in tens of seconds and stops again between
+        // refreshes, so a figure stays servable for hours while the next load
+        // runs behind it, and a caller with nothing yet waits a few seconds
+        // rather than for the warehouse.
+        new CacheAdapter(cache, {
+          prefix: "metrics:",
+          ttlMs: 10 * 60 * 1000,
+          staleMs: 6 * 60 * 60 * 1000,
+          waitMs: 4000,
+        }),
       inject: [CACHE_MANAGER],
     },
   ],
