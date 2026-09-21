@@ -62,8 +62,9 @@ acceptance criteria disagree, stop and say so; that is a finding, not something 
 
 ## Writing it back
 
-1. Run the prose standard from `ticket-standard.md` on both sections. A failed check stops there.
-   Then the `unslop` skill.
+1. Put the whole updated ticket body in a draft file (format in `tooling/devkit/README.md`) and run
+   `pnpm linear:check` on it. It applies the prose standard and flags either developer section
+   over 1,200 characters. A failed check stops there. Then the `unslop` skill.
 2. Show both sections to the developer and wait for confirmation.
 3. Write them to the ticket, replacing the empty sections, never appending a second copy.
 4. Paste the same testing criteria into the PR's "Testing Instructions" section so the two never

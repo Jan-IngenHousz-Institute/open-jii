@@ -253,12 +253,16 @@ workspace's own agent-written tickets, not from a generic style guide.
 12. Titles say what the user can do or what is broken, under 70 characters, no type prefix
     (`DISCOVERY:` is a label, not a title), no list of three. Project names are the outcome in
     three to six words.
-13. Then the `unslop` skill.
+13. Full sentences. A bullet reads as a sentence with a verb, never as a list of nouns. Meet the
+    budget by cutting criteria, not grammar.
+14. Then the `unslop` skill.
 
-Mechanical check before showing the body: heading set equals the shape, length within budget,
-longest bullet under 25 words, zero em dashes, no banner, at most one "not" clarification. Then
-`unslop`. A failed check stops the write; fix the body first. Then the person reads it. Nothing is written
-to Linear that a person has not read.
+`pnpm linear:check <draft.md>` runs the mechanical half before a body is shown: heading set equals
+the shape, length within budget, longest bullet under 25 words, zero em dashes, no banner, at most
+one "X, not Y" sentence, title length and prefix, WHO, WHAT and WHY present, and the gate sections
+non-empty. The draft format is in `tooling/devkit/README.md`. A failed check stops the write; fix
+the body first. Then `unslop`. Then the person reads it. Nothing is written to Linear that a person
+has not read.
 
 ## Relation to the GitHub templates
 

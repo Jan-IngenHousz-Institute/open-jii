@@ -35,9 +35,10 @@ server has none of that, so a workspace where half the writes go through one kee
 record. **Anything touching more than one ticket, anything running unattended, and anything that has
 to be auditable goes through the devkit.**
 
-Mint a key at [Security and access](https://linear.app/settings/account/security), scoped to Read
-plus Write and restricted to team `OJD`. Personal keys can be permission-scoped and team-scoped, so
-do not issue a full-access one. Then store it without pasting it anywhere visible:
+Mint a key at [Security and access](https://linear.app/settings/account/security) with the Read and
+Write scopes, restricted to team `OJD`. Personal keys can be permission-scoped and team-scoped, so
+do not issue a full-access one; but do not go narrower than Write without adding `comments:create`,
+or the first comment fails with `Invalid scope`. Then store it without pasting it anywhere visible:
 
 ```bash
 pbpaste | pnpm linear:auth   # tooling/devkit/.env, owner-only, gitignored
@@ -46,15 +47,20 @@ pbpaste | pnpm linear:auth   # tooling/devkit/.env, owner-only, gitignored
 `linear:auth` verifies the key against Linear before storing it and prints who it belongs to. To
 rotate, regenerate the key in Linear and run it again.
 
-Every call goes through the devkit. It resolves the key in-process (shell env, then the env file),
-sends it bare in the `Authorization` header (no `Bearer` prefix),
-refuses any `*Delete` or `*Archive` mutation unless `--allow-destructive` is passed, and appends
-every mutation to `.claude/linear-writes.log`:
+Every call goes through the devkit. It resolves the key in-process (shell env, then this checkout's
+env file, then the main worktree's, so one `linear:auth` serves every worktree), sends it bare in
+the `Authorization` header (no `Bearer` prefix), refuses any `*Delete` or `*Archive` mutation
+unless `--allow-destructive` is passed, and appends every mutation to `.claude/linear-writes.log`
+with the session id and checkout that made it:
 
 ```bash
 pnpm linear:query --query '{ viewer { name } }'
 pnpm linear:query --file query.graphql --variables '{"id":"OJD-1755"}'
+pnpm linear:query --query '{ viewer { name } }' --output .claude/viewer.json
 ```
+
+Use `--output` whenever something parses the result: pnpm prints its own lines around stdout, so
+reading the file is the only way to get clean JSON.
 
 `--file` takes only a `.graphql` or `.gql` document, and the client refuses any selection of
 `secret` or `clientSecret`: a webhook's signing secret is readable with a personal key and never
@@ -129,7 +135,17 @@ pnpm linear:query --query '{ documents(first:50){ nodes{ title url content } } }
 "Team Process" holds the Definition of Ready and Done and how the team works; "Critical Flows" holds
 the smoke tests and tiers.
 
-Create an issue. Resolve `teamId` and `projectId` once; a ticket without a project fails the gate:
+The tickets in one project, and a team's states and labels with their ids, which every mutation
+needs:
+
+```bash
+pnpm linear:query --query 'query($p:String!){ issues(first:50, filter:{ project:{ name:{ eqIgnoreCase:$p } } }){ nodes{ identifier title state{name} labels{nodes{name}} } } }' --variables '{"p":"Platform home and research discovery"}'
+pnpm linear:query --query '{ teams(filter:{key:{eq:"OJD"}}){ nodes{ id states{ nodes{ id name } } } } issueLabels(first:100){ nodes{ id name } } }'
+```
+
+Create tickets with `pnpm linear:create <draft.md>`, which resolves team, project, state and
+label names itself, rewrites cross-references, posts comments and sets relations. The raw mutation
+is for a one-off; a ticket without a project fails the gate:
 
 ```bash
 pnpm linear:query --query 'mutation($in:IssueCreateInput!){ issueCreate(input:$in){ success issue{ identifier url } } }' --variables '{"in":{"teamId":"<id>","projectId":"<id>","title":"...","description":"...","labelIds":["<type>","<area>"]}}'
@@ -142,6 +158,7 @@ Move state, assign, or relabel with `issueUpdate($id:String!, $input:IssueUpdate
 
 Do not free-form a body. The project shape and the three ticket shapes in `ticket-standard.md` have
 headings that skills parse, and the prose standard there is the last step before anything is
-written. One ticket is `openjii-ticket-refine`; a project with its tickets is
-`openjii-work-design`; the developer handoff is `openjii-testing-criteria`; bulk changes are
-`openjii-backlog-triage`.
+written. Draft in the file format from `tooling/devkit/README.md`, check with `pnpm linear:check`,
+show the person the body, then create with `pnpm linear:create`. One ticket is
+`openjii-ticket-refine`; a project with its tickets is `openjii-work-design`; the developer handoff
+is `openjii-testing-criteria`; bulk changes are `openjii-backlog-triage`.

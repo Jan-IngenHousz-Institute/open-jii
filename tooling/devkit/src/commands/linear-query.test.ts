@@ -17,6 +17,7 @@ describe("parseArgs", () => {
       file: null,
       variables: { a: 1 },
       allowDestructive: false,
+      output: null,
     });
   });
 
@@ -26,6 +27,7 @@ describe("parseArgs", () => {
       file: "q.graphql",
       variables: {},
       allowDestructive: true,
+      output: null,
     });
   });
 
@@ -34,6 +36,11 @@ describe("parseArgs", () => {
     expect(() => parseArgs(["--query", "{ a }", "--file", "f"])).toThrow("exactly one of --query");
     expect(() => parseArgs(["--query", "{ a }", "--variables", "[1]"])).toThrow("JSON object");
     expect(() => parseArgs(["--query"])).toThrow("--query requires a value");
+  });
+
+  it("names a file for the JSON so pnpm's own stdout lines cannot corrupt it", () => {
+    expect(parseArgs(["--query", "{ a }", "--output", "out.json"]).output).toBe("out.json");
+    expect(() => parseArgs(["--query", "{ a }", "--output"])).toThrow("--output requires a value");
   });
 
   it("reads only GraphQL documents from disk, never an env or auth file", () => {

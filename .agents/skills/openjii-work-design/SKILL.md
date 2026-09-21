@@ -112,11 +112,14 @@ false chain from each ticket to the next makes the board unworkable.
 
 ## Before you write it back
 
-Run the prose standard from `ticket-standard.md` on the project body and every ticket: heading set
-equals the shape, length within budget, longest bullet under 25 words, zero em dashes, no
-authorship banner, at most one "not" clarification. A failed check stops there; fix the body first.
-Then the `unslop` skill. Then show the user the project body and the ticket list, and wait. Nothing
-is written to Linear that a person has not read.
+Write the tickets as one draft file in the format `tooling/devkit/README.md` describes, with the
+project named in its front matter and `blocks:` only where order genuinely matters. Run
+`pnpm linear:check` on it, and on a second draft holding the project body if you are writing or
+editing one; the check recognises the project shape by its headings. A failed check stops there;
+fix the body first. Then the `unslop` skill. Then show the user the project body and the ticket
+list, and wait. Nothing is written to Linear that a person has not read. Once they have read it,
+`pnpm linear:create <draft.md> --apply` creates the tickets; the project body itself is a
+`projectUpdate` through `linear:query`.
 
 Never invent acceptance criteria. Where a criterion is inferred from code or a sibling, say so in
 the ticket and mark it "confirm". An open question in the body beats a confident guess.
