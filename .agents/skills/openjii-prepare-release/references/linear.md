@@ -1,8 +1,8 @@
 # Linear release update
 
 Read `docs/agents/issue-tracker.md` and `CONTRIBUTING.md#pull-request-and-release-metadata`. Prefer
-the connected Linear MCP for a single update. For API fallback use `LINEAR_API_KEY` from root `.env`
-or the shell; a personal key goes in `Authorization` without `Bearer`. OAuth tokens use `Bearer`.
+the connected Linear MCP for a single update. Otherwise go through `pnpm linear:query`, which reads
+the key from `tooling/devkit/.env` in process, refuses destructive mutations and logs every write.
 
 Ask whether the destination is a **project update** or an **issue comment**, and resolve its name,
 URL and UUID before posting. Draft locally when the choice or access is missing. A PR's OJD relation

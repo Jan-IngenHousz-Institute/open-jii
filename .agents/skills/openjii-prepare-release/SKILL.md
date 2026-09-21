@@ -29,7 +29,8 @@ lists fixture-mutating capture shots unless the user separately authorizes those
 
 Create `.release-prep/<release-id>/packet.md`. Record choices, evidence, drafts, pending actions, and
 returned IDs there. Report missing credential names using [`.env.example`](.env.example) as the key
-list. The user can supply them through the shell or ignored root `.env`; leave existing secrets intact.
+list. The user can supply them through the shell or the gitignored `tooling/devkit/.env`; leave
+existing secrets intact.
 
 ## Establish what is being released
 
