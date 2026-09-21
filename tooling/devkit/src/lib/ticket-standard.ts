@@ -122,6 +122,17 @@ function headingFindings(actual: readonly string[], expected: readonly string[])
   return [{ rule: "headings", detail: parts.join("; ") }];
 }
 
+// The rules any prose a person reads must meet, whether a ticket body or a project document.
+export function proseFindings(text: string): Finding[] {
+  const findings: Finding[] = [];
+  const dashes = (text.match(/[–—]/g) ?? []).length;
+  if (dashes > 0) findings.push({ rule: "dash", detail: `${dashes} em or en dash(es)` });
+  if (/\b(generated|written) by (an? )?(AI|agent|LLM)\b|\bAI[- ]generated\b/i.test(text)) {
+    findings.push({ rule: "banner", detail: "carries an authorship banner" });
+  }
+  return findings;
+}
+
 export function checkTitle(title: string): Finding[] {
   const findings: Finding[] = [];
   if (title.length >= MAX_TITLE_LENGTH) {
@@ -199,12 +210,7 @@ export function checkBody(body: string): Report {
     }
   }
 
-  const dashes = (body.match(/[–—]/g) ?? []).length;
-  if (dashes > 0) findings.push({ rule: "dash", detail: `${dashes} em or en dash(es)` });
-
-  if (/\b(generated|written) by (an? )?(AI|agent|LLM)\b|\bAI[- ]generated\b/i.test(body)) {
-    findings.push({ rule: "banner", detail: "carries an authorship banner" });
-  }
+  findings.push(...proseFindings(body));
 
   const contrasts = (countedText.match(/,\s*not\s/g) ?? []).length;
   if (contrasts > 1) {

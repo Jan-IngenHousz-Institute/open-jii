@@ -17,6 +17,7 @@
     "linear:auth": "tsx src/commands/linear-auth.ts",
     "linear:check": "tsx src/commands/linear-check.ts",
     "linear:create": "tsx src/commands/linear-create.ts",
+    "linear:document": "tsx src/commands/linear-document.ts",
     "linear:query": "tsx src/commands/linear-query.ts",
     "linear:taxonomy": "tsx src/commands/linear-taxonomy.ts",
     "linear:upload": "tsx src/commands/linear-upload.ts",
@@ -28,12 +29,15 @@
   },
   "dependencies": {
     "dotenv": "^16.6.1",
+    "jsdom": "catalog:testing",
+    "mermaid": "^11.16.1",
     "postgres": "^3.4.8"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@repo/vitest-config": "workspace:*",
+    "@types/jsdom": "^21.1.7",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "tsx": "^4.21.0",
