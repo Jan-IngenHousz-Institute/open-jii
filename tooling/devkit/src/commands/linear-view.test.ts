@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { LinearClient } from "../lib/linear.js";
-import { parseArgs, scaffoldView, viewUrl } from "./linear-view.js";
+import { filtersProject, parseArgs, scaffoldView, viewUrl } from "./linear-view.js";
 
 interface RecordedCall {
   document: string;
@@ -18,22 +18,16 @@ function fixtureClient(
   };
 }
 
-function workspace(existingView: boolean, projectName = "Explore your data") {
+// `views` is what the workspace already holds, so each test decides whether one of them filters p1.
+function workspace(views: unknown[], projectName = "Explore your data") {
   const calls: RecordedCall[] = [];
   const client = fixtureClient((document, variables) => {
     calls.push({ document, variables });
     if (document.includes("projects(")) {
-      return {
-        projects: { nodes: [{ id: "p1", name: projectName, url: "https://l/project" }] },
-      };
+      return { projects: { nodes: [{ id: "p1", name: projectName, url: "https://l/project" }] } };
     }
     if (document.includes("organization")) return { organization: { urlKey: "openjii" } };
-    if (document.includes("customViews(")) {
-      const asked = String(variables.name);
-      const nodes =
-        existingView && asked.length > 0 ? [{ id: "v1", name: asked, slugId: "abc123" }] : [];
-      return { customViews: { nodes } };
-    }
+    if (document.includes("customViews(")) return { customViews: { nodes: views } };
     if (document.includes("customViewCreate")) {
       return { customViewCreate: { success: true, customView: { id: "v2", slugId: "def456" } } };
     }
@@ -46,8 +40,10 @@ function workspace(existingView: boolean, projectName = "Explore your data") {
   return { client, calls };
 }
 
-describe("parseArgs and viewUrl", () => {
-  it("takes the project name and the apply flag", () => {
+const unrelated = { id: "v9", name: "Standup view", slugId: "zzz999", filterData: { and: [] } };
+
+describe("parseArgs, viewUrl and filtersProject", () => {
+  it("takes the project name, an optional label and the apply flag", () => {
     expect(parseArgs(["--project", "Explore your data", "--apply"])).toEqual({
       project: "Explore your data",
       label: null,
@@ -63,11 +59,18 @@ describe("parseArgs and viewUrl", () => {
       "https://linear.app/openjii/view/explore-your-data-dashboard-vis-2ef36c3db348",
     );
   });
+
+  it("sees a project filter written as eq, as in, or nested, and no filter at all", () => {
+    expect(filtersProject({ project: { id: { eq: "p1" } } }, "p1")).toBe(true);
+    expect(filtersProject({ and: [{ project: { id: { in: ["p1"] } } }] }, "p1")).toBe(true);
+    expect(filtersProject({ and: [{ project: { id: { in: ["p2"] } } }] }, "p1")).toBe(false);
+    expect(filtersProject(null, "p1")).toBe(false);
+  });
 });
 
 describe("scaffoldView", () => {
   it("dry-runs: names the view to create and the document, and writes nothing", async () => {
-    const { client, calls } = workspace(false);
+    const { client, calls } = workspace([unrelated]);
     const lines: string[] = [];
 
     await scaffoldView(
@@ -83,8 +86,8 @@ describe("scaffoldView", () => {
     expect(calls.some((c) => c.document.includes("mutation"))).toBe(false);
   });
 
-  it("creates the view and its document on apply", async () => {
-    const { client, calls } = workspace(false);
+  it("creates a workspace view, never a project-scoped one, and links the project's own URL", async () => {
+    const { client, calls } = workspace([unrelated]);
     const lines: string[] = [];
 
     await scaffoldView(
@@ -101,19 +104,50 @@ describe("scaffoldView", () => {
         filterData: { project: { id: { eq: "p1" } } },
       },
     });
-    const document = calls.find((c) => c.document.includes("documentCreate"));
-    expect(String(document?.variables.input)).not.toBe("");
-    expect(JSON.stringify(document?.variables)).toContain(
-      "https://linear.app/openjii/view/explore-your-data-def456",
+    expect(JSON.stringify(create?.variables)).not.toContain("projectId");
+
+    const published = JSON.stringify(
+      calls.find((c) => c.document.includes("documentCreate"))?.variables,
     );
+    expect(published).toContain("https://linear.app/openjii/view/explore-your-data-def456");
+    expect(published).toContain("https://l/project");
     expect(lines.join("")).toContain(
       "created https://linear.app/openjii/view/explore-your-data-def456",
     );
   });
 
-  it("names the view and the document by the project's short label, not its full name", async () => {
+  it("reuses a view that filters the project, whatever the team called it", async () => {
+    const theirs = {
+      id: "v1",
+      name: "Platform home and research discovery",
+      slugId: "b69c592cb057",
+      filterData: { and: [{ project: { id: { in: ["p1"] } } }] },
+    };
     const { client, calls } = workspace(
-      false,
+      [unrelated, theirs],
+      "Platform home and research discovery",
+    );
+    const lines: string[] = [];
+
+    await scaffoldView(
+      { project: "Platform home and research discovery", label: "Platform home", apply: true },
+      { client, write: (t) => lines.push(t) },
+    );
+
+    expect(calls.some((c) => c.document.includes("customViewCreate"))).toBe(false);
+    expect(lines.join("")).toContain(
+      'view "Platform home and research discovery" already filters this project',
+    );
+    const published = calls.find((c) => c.document.includes("documentCreate"))?.variables;
+    expect(published).toMatchObject({ input: { title: "Platform home: live ticket view" } });
+    expect(JSON.stringify(published)).toContain(
+      "platform-home-and-research-discovery-b69c592cb057",
+    );
+  });
+
+  it("names a new view and its document by the project's short label", async () => {
+    const { client, calls } = workspace(
+      [],
       "Explore your data: dashboard & visualization extensions",
     );
 
@@ -126,56 +160,11 @@ describe("scaffoldView", () => {
       { client, write: () => undefined },
     );
 
-    const create = calls.find((c) => c.document.includes("customViewCreate"))?.variables;
-    expect(create).toMatchObject({ input: { name: "Explore your data" } });
-    const published = calls.find((c) => c.document.includes("documentCreate"))?.variables;
-    expect(published).toMatchObject({
-      input: { title: "Explore your data: live ticket view" },
-    });
-    expect(JSON.stringify(published)).toContain("https://l/project");
-  });
-
-  it("takes an explicit label over the derived one", async () => {
-    const { client, calls } = workspace(false, "Platform home and research discovery");
-
-    await scaffoldView(
-      { project: "Platform home and research discovery", label: "Platform home", apply: true },
-      { client, write: () => undefined },
-    );
-
     expect(calls.find((c) => c.document.includes("customViewCreate"))?.variables).toMatchObject({
-      input: { name: "Platform home" },
+      input: { name: "Explore your data" },
     });
     expect(calls.find((c) => c.document.includes("documentCreate"))?.variables).toMatchObject({
-      input: { title: "Platform home: live ticket view" },
+      input: { title: "Explore your data: live ticket view" },
     });
-  });
-
-  it("looks the view up by name rather than listing the workspace, and never sets projectId", async () => {
-    const { client, calls } = workspace(false);
-
-    await scaffoldView(
-      { project: "Explore your data", label: null, apply: true },
-      { client, write: () => undefined },
-    );
-
-    const lookup = calls.find((c) => c.document.includes("customViews("));
-    expect(lookup?.variables).toEqual({ name: "Explore your data" });
-    const create = calls.find((c) => c.document.includes("customViewCreate"));
-    expect(JSON.stringify(create?.variables)).not.toContain("projectId");
-  });
-
-  it("reuses a view that already carries the project's label", async () => {
-    const { client, calls } = workspace(true);
-
-    await scaffoldView(
-      { project: "Explore your data", label: null, apply: true },
-      { client, write: () => undefined },
-    );
-
-    expect(calls.some((c) => c.document.includes("customViewCreate"))).toBe(false);
-    expect(
-      JSON.stringify(calls.find((c) => c.document.includes("documentCreate"))?.variables),
-    ).toContain("explore-your-data-abc123");
   });
 });

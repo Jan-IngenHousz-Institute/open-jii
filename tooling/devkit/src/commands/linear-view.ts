@@ -1,12 +1,12 @@
 import { repositoryRoot, requireLinearApiKey } from "../lib/config.js";
 import { createFileAudit, createLinearClient } from "../lib/linear.js";
 import type { LinearClient } from "../lib/linear.js";
-import { findProject, projectLabel, sameName } from "../lib/projects.js";
+import { findProject, projectLabel } from "../lib/projects.js";
 import { publishDocument } from "./linear-document.js";
 
 export interface ViewArgs {
   project: string;
-  // The short name the view and the document title carry; the project's own by default.
+  // The short name a new view and the document title carry; the project's own by default.
   label: string | null;
   apply: boolean;
 }
@@ -20,8 +20,15 @@ interface OrganizationResult {
   organization: { urlKey: string };
 }
 
+interface ViewNode {
+  id: string;
+  name: string;
+  slugId: string;
+  filterData: unknown;
+}
+
 interface CustomViewsResult {
-  customViews: { nodes: { id: string; name: string; slugId: string }[] };
+  customViews: { nodes: ViewNode[] };
 }
 
 interface CustomViewCreateResult {
@@ -29,9 +36,7 @@ interface CustomViewCreateResult {
 }
 
 const organizationQuery = `{ organization { urlKey } }`;
-const customViewsQuery = `query($name: String!) {
-  customViews(first: 10, filter: { name: { eqIgnoreCase: $name } }) { nodes { id name slugId } }
-}`;
+const customViewsQuery = `{ customViews(first: 100) { nodes { id name slugId filterData } } }`;
 const customViewCreateMutation = `mutation($input: CustomViewCreateInput!) {
   customViewCreate(input: $input) { success customView { id slugId } }
 }`;
@@ -61,6 +66,13 @@ export function viewUrl(urlKey: string, name: string, slugId: string): string {
   return `https://linear.app/${urlKey}/view/${slug}-${slugId}`;
 }
 
+// A view belongs to a project when it filters on it, whatever it is called, because the team names
+// its own views freely. Linear writes that filter as `eq`, as `in`, or nested under `and` and
+// `or`, so the id is looked for in the serialised filter rather than at one fixed path.
+export function filtersProject(filterData: unknown, projectId: string): boolean {
+  return JSON.stringify(filterData ?? null).includes(projectId);
+}
+
 export function viewDocument(label: string, url: string, projectUrl: string): string {
   return [
     `[Open the live ${label} ticket view](${url}).`,
@@ -72,28 +84,29 @@ export function viewDocument(label: string, url: string, projectUrl: string): st
   ].join("\n");
 }
 
-// One shared view filtered to the project, and the document that points at it. Both are named
-// after the project's label so the artifact index can link them without knowing their ids.
+// One shared view filtered to the project, and the document that points at it.
 //
-// The view is a workspace view with a project filter, never a view created with `projectId`: a
+// The view is a workspace view carrying a project filter, never one created with `projectId`: a
 // project-scoped view is absent from `customViews` even when filtered by name and asked for
 // archived rows, so a second run would create a duplicate instead of finding it.
 export async function scaffoldView(args: ViewArgs, deps: ViewDependencies): Promise<void> {
   const project = await findProject(deps.client, args.project);
   const label = args.label ?? projectLabel(project.name);
   const organization = await deps.client.query<OrganizationResult>(organizationQuery);
-  const views = await deps.client.query<CustomViewsResult>(customViewsQuery, { name: label });
-  const existing = views.customViews.nodes.find((view) => sameName(view.name, label));
+  const views = await deps.client.query<CustomViewsResult>(customViewsQuery);
+  const existing = views.customViews.nodes.find((view) =>
+    filtersProject(view.filterData, project.id),
+  );
   const urlKey = organization.organization.urlKey;
 
   deps.write(
     existing
-      ? `view "${label}" exists: ${viewUrl(urlKey, label, existing.slugId)}\n`
+      ? `view "${existing.name}" already filters this project: ${viewUrl(urlKey, existing.name, existing.slugId)}\n`
       : `view "${label}": create, shared, filtered to the project\n`,
   );
 
-  let slugId = existing?.slugId ?? null;
-  if (args.apply && slugId === null) {
+  let url = existing === undefined ? null : viewUrl(urlKey, existing.name, existing.slugId);
+  if (args.apply && url === null) {
     const result = await deps.client.query<CustomViewCreateResult>(customViewCreateMutation, {
       input: {
         name: label,
@@ -103,13 +116,12 @@ export async function scaffoldView(args: ViewArgs, deps: ViewDependencies): Prom
       },
     });
     if (!result.customViewCreate.success) throw new Error("Creating the view did not succeed");
-    slugId = result.customViewCreate.customView.slugId;
-    deps.write(`created ${viewUrl(urlKey, label, slugId)}\n`);
+    url = viewUrl(urlKey, label, result.customViewCreate.customView.slugId);
+    deps.write(`created ${url}\n`);
   }
 
-  const url = slugId === null ? "(the view's URL once created)" : viewUrl(urlKey, label, slugId);
   await publishDocument(
-    viewDocument(label, url, project.url),
+    viewDocument(label, url ?? "(the view's URL once created)", project.url),
     {
       file: "(generated)",
       project: project.name,
