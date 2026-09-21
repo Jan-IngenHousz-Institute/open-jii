@@ -82,16 +82,19 @@ jobs:
         shell: bash
         run: pnpm format:check
 
-  # The monitoring lambda zips are committed so terraform can plan from a fresh
-  # checkout, but nothing else rebuilds them. Without this gate a catalog or
-  # @repo/monitoring edit ships a bundle that still carries the previous content,
-  # and the failure is silent: the lambda runs, it just runs the old rules.
+  # These lambda zips are committed so terraform can plan from a fresh checkout,
+  # which puts them outside the pnpm workspace and outside every other job: their
+  # build runs only on whoever last touched them. This job is that build. It also
+  # catches the silent half of the problem, a committed bundle still carrying the
+  # previous catalog or the previous @repo/monitoring, where the lambda keeps
+  # running and simply applies the old rules.
   lambda_bundle_check:
-    name: Monitoring Lambda Bundle Freshness
+    name: Monitoring Lambda Bundle Build
     runs-on: ubuntu-latest
     env:
       DO_NOT_TRACK: 1
       TURBO_TELEMETRY_DISABLED: 1
+      BUNDLE_DIRS: "infrastructure/modules/monitoring/digest-composer/lambda infrastructure/modules/monitoring/metrics-forwarder/lambda infrastructure/modules/grafana/metrics-publisher/lambda"
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
@@ -105,41 +108,60 @@ jobs:
         shell: bash
         run: pnpm turbo run build --filter=@repo/monitoring
 
-      # Compares content, not the zip bytes: zip output varies by tool and
-      # timestamp, so a byte comparison would fail on every rebuild.
-      - name: Compare each committed bundle against its sources
+      # Each bundle's own build script: npm ci against its lockfile, copy the
+      # catalog and the compiled package in, zip. A package.json edited without
+      # its lockfile fails here, which nothing else in CI would notice.
+      - name: Rebuild every bundle from source
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for dir in $BUNDLE_DIRS; do
+            cp "$dir/function.zip" "$RUNNER_TEMP/$(basename "$(dirname "$dir")").committed.zip"
+            ( cd "$dir" && npm run build )
+          done
+
+      # A bundle whose handler cannot be required is a MODULE_NOT_FOUND on first
+      # invoke, which for these functions means silence rather than a visible error.
+      - name: Load each rebuilt handler
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for dir in $BUNDLE_DIRS; do
+            loaded=$(mktemp -d)
+            unzip -q "$dir/function.zip" -d "$loaded"
+            ( cd "$loaded" && node -e 'if (typeof require("./index.js").handler !== "function") { throw new Error("no handler export"); }' )
+            echo "$dir loads"
+          done
+
+      # Content, not zip bytes: zip output varies by tool and timestamp, so a byte
+      # comparison would fail on every rebuild and teach everyone to ignore it.
+      - name: Compare each committed bundle against the rebuild
         shell: bash
         run: |
           set -euo pipefail
           status=0
 
-          for dir in infrastructure/modules/monitoring/*/lambda infrastructure/modules/grafana/metrics-publisher/lambda; do
-            zip="$dir/function.zip"
-            [ -f "$zip" ] || continue
+          for dir in $BUNDLE_DIRS; do
+            name=$(basename "$(dirname "$dir")")
+            committed=$(mktemp -d)
+            rebuilt=$(mktemp -d)
+            unzip -q "$RUNNER_TEMP/$name.committed.zip" -d "$committed"
+            unzip -q "$dir/function.zip" -d "$rebuilt"
 
-            extracted=$(mktemp -d)
-            unzip -q "$zip" -d "$extracted"
-
-            if ! diff -q "$extracted/index.js" "$dir/index.js" > /dev/null; then
-              echo "::error file=$zip::bundled index.js differs from $dir/index.js"
+            # File set first: a dependency added or a lib file dropped shows up here
+            # without diffing every byte of the AWS SDK.
+            if ! diff -q <(cd "$committed" && find . -type f | sort) \
+                         <(cd "$rebuilt" && find . -type f | sort) > /dev/null; then
+              echo "::error file=$dir/function.zip::committed bundle contains different files than a fresh build"
               status=1
             fi
 
-            if [ -f "$extracted/catalog.yaml" ] \
-              && ! diff -q "$extracted/catalog.yaml" docs/monitoring/metrics-catalog.yaml > /dev/null; then
-              echo "::error file=$zip::bundled catalog.yaml differs from docs/monitoring/metrics-catalog.yaml"
-              status=1
-            fi
-
-            for compiled in "$extracted"/lib/*.js; do
-              [ -e "$compiled" ] || break
-              fresh="packages/monitoring/dist/$(basename "$compiled")"
-
-              if [ ! -f "$fresh" ]; then
-                echo "::error file=$zip::bundle carries $(basename "$compiled") which @repo/monitoring no longer builds"
-                status=1
-              elif ! diff -q "$compiled" "$fresh" > /dev/null; then
-                echo "::error file=$zip::bundled $(basename "$compiled") differs from a fresh @repo/monitoring build"
+            for source in index.js catalog.yaml lib/*.js; do
+              [ -e "$rebuilt/$source" ] || continue
+              if ! diff -q "$committed/$source" "$rebuilt/$source" > /dev/null 2>&1; then
+                echo "::error file=$dir/function.zip::committed $source differs from a fresh build"
                 status=1
               fi
             done
@@ -150,7 +172,7 @@ jobs:
             exit 1
           fi
 
-          echo "All committed monitoring bundles match their sources"
+          echo "Every committed bundle matches a fresh build of its sources"
 
   workspace_lint:
     name: Workspace Dependency Lint
