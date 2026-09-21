@@ -368,9 +368,16 @@ describe("RegistrationForm", () => {
   });
 
   it("prevents multiple submissions when already pending", async () => {
-    createUserProfileMock.mockImplementation(() => {
-      return new Promise((resolve) => setTimeout(resolve, 100));
-    });
+    // A gate the test releases, not a fixed timer: a loaded runner can spend longer
+    // between the two clicks than any wall-clock window, and once the mutation
+    // settles the button re-enables and the second click is a real second submit.
+    let releaseProfile: () => void = () => undefined;
+    createUserProfileMock.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseProfile = () => resolve();
+        }),
+    );
 
     render(<RegistrationForm {...defaultProps} />);
 
@@ -392,6 +399,12 @@ describe("RegistrationForm", () => {
     await user.click(submitButton);
 
     expect(createUserProfileMock).toHaveBeenCalledTimes(1);
+
+    // Settle the submission so the form is not left mid-flight for the next test.
+    releaseProfile();
+    await waitFor(() => {
+      expect(submitButton).not.toBeDisabled();
+    });
   });
 
   it("shows validation error if firstName is too short", async () => {
