@@ -90,7 +90,12 @@ describe("DataTable", () => {
     expect(onChange).toHaveBeenCalled();
   });
 
-  it("comma-separates a total row count of a thousand or more", () => {
+  it.each([
+    { totalRows: 999, expected: "999" },
+    { totalRows: 1000, expected: "1,000" },
+    { totalRows: 12345, expected: "12,345" },
+    { totalRows: 1000000, expected: "1,000,000" },
+  ])("formats a total row count of $totalRows as $expected", ({ totalRows, expected }) => {
     render(
       <DataTable
         columns={COLUMNS}
@@ -99,13 +104,13 @@ describe("DataTable", () => {
           mode: "server",
           state: { pageIndex: 0, pageSize: 1000 },
           onChange: vi.fn(),
-          totalRows: 12345,
-          totalPages: 13,
+          totalRows,
+          totalPages: Math.ceil(totalRows / 1000),
         }}
       />,
     );
 
-    expect(screen.getByText(/dataTable.totalRows.*12,345/)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`dataTable.totalRows.*${expected}`))).toBeInTheDocument();
   });
 
   it("pages rows it already holds, at the size the caller asks for", async () => {
