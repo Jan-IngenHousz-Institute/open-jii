@@ -7,7 +7,9 @@ description: Take an idea from a sentence to a designed Project with its tickets
 
 Read `AGENTS.md` first. The project shape, the ticket shapes, both gates and the prose standard are
 in `docs/agents/ticket-standard.md`; read it before writing anything. Writing a single ticket is the
-`openjii-ticket-refine` skill. Access and query recipes are in `openjii-linear`.
+`openjii-ticket-refine` skill. Access and query recipes are in `openjii-linear`. When grounding a
+design in the codebase, `docs/standards/README.md` indexes what each part of it is supposed to look
+like.
 
 The unit of design is a Linear **project**. There are no epics. A project holds the design; its
 tickets hold the work.

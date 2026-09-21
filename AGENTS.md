@@ -74,11 +74,42 @@ Git, and `jq`; a missing `jq` prints a warning and skips the hook.
 | `openjii-ticket-refine`    | One ticket needs writing, or bringing up to the ticket gate.                     |
 | `openjii-testing-criteria` | A PR is ready for review and the ticket needs its handoff sections for QA.       |
 | `openjii-backlog-triage`   | Bulk label, project or gate hygiene across many tickets.                         |
+| `openjii-review`           | Reviewing a diff, whether someone else's or your own before you call it ready.   |
 | `unslop`                   | Writing or editing prose a human will read: docs, PR bodies, changelogs.         |
 
 `unslop` comes from a third party rather than from this repo, so it does not open with
 `Read AGENTS.md first` like the `openjii-*` guides do. It carries no repo-specific paths and needs
 none. See `.agents/skills/ATTRIBUTION.md` for its licence and upstream commit.
+
+## Roles
+
+Optional. A role is what a session works as, as opposed to a skill, which is how to do one job. A
+role says what the session is for, what it refuses, which standards and skills apply, which model
+tier suits it, and when it is finished. A session that takes no role works as it always did, and the
+standards apply either way.
+
+| Role              | Take it when                                                                              |
+| ----------------- | ----------------------------------------------------------------------------------------- |
+| `generalist`      | Nobody picked a role: a question, a first look around, a small change.                    |
+| `butler`          | One short factual lookup, with no edits.                                                  |
+| `triage`          | Someone pasted an error, a failing build or a failing test.                               |
+| `engineer`        | Building or changing something. Takes a scope: web, backend, mobile, data, infra or wide. |
+| `reviewer`        | A diff or a pull request needs reviewing properly.                                        |
+| `designer`        | How a surface should look and behave, and building the front end of it.                   |
+| `pm`              | What should be built: framing, solution design, a project and its tickets.                |
+| `analyst`         | Evidence from a running environment: AWS, Databricks, a deployed service, a phone.        |
+| `release-manager` | Cutting or rehearsing a release.                                                          |
+| `docs-writer`     | Documentation a user reads, and its screenshots.                                          |
+
+Invoke one as `/openjii-role-<name>`, with the engineer taking a scope as its first argument. With
+another tool, read `.agents/skills/openjii-role-<name>/SKILL.md` and follow it; the file is
+self-contained.
+
+A fresh session sees the list once and its first prompt may get one suggestion. Both are offers that
+do not repeat, and `touch .claude/roles-off` or `OPENJII_ROLES=off` silences them for good. The
+sources are `.agents/roles/`, one baseline plus one file per role, compiled into the skills by
+`pnpm roles:generate` and verified by `pnpm roles:check`. `docs/agents/roles.md` explains the
+design, the hooks, the opt-out and how to add a role.
 
 ## Working on mobile
 
@@ -95,6 +126,15 @@ screenshot showing the affected screen is re-captured rather than reused. The
 A `Stop` hook in `.claude/settings.json` gives Claude Code one reminder per session when `apps/web`
 or `apps/mobile` change without `apps/docs/content`. It is a nudge, not a gate, and it only reaches
 Claude Code. Per-machine overrides belong in `.claude/settings.local.json`, which stays untracked.
+
+## Cloud access is read-only from a session
+
+A session may read what is running in AWS, Databricks or a cluster, and may not change it. A
+`PreToolUse` hook refuses every mutating verb, refuses OpenTofu beyond `fmt` and `validate`
+(`plan` and `init` included), and refuses anything touching production until the developer opens a
+two-hour window with `pnpm analyst:prod-window`. Applies happen in CI or in your own terminal.
+`docs/agents/cloud-access.md` has the details and the developer procedure, and the `analyst` role
+carries the rules a hook cannot enforce.
 
 ## main is protected
 
@@ -136,6 +176,41 @@ Single-context: root `CONTEXT.md`, which points at the public glossary, plus the
 `apps/docs/content/developers/design-decisions/`. `/domain-modeling` extends them when a term or
 decision actually needs recording. See `docs/agents/domain.md`.
 
+## Standards
+
+`docs/standards/` says what the code here should look like, one document per part of the repo, with
+the rules, how each one is enforced, and an honest list of the code that breaks them. Read
+[docs/standards/README.md](docs/standards/README.md) first; it explains the sections and the
+enforcement tags.
+
+| Standard                                                                 | Read it when                                                          |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| [`docs/standards/code.md`](docs/standards/code.md)                       | Writing TypeScript anywhere in the repo.                              |
+| [`docs/standards/prose.md`](docs/standards/prose.md)                     | Writing a comment, a log line, user-facing copy, or a commit subject. |
+| [`docs/standards/backend.md`](docs/standards/backend.md)                 | Adding or changing a domain, use case, port or controller.            |
+| [`docs/standards/api.md`](docs/standards/api.md)                         | Changing an endpoint's shape, or adding one.                          |
+| [`docs/standards/database.md`](docs/standards/database.md)               | Touching the schema, a migration or a seed.                           |
+| [`docs/standards/web.md`](docs/standards/web.md)                         | Building a screen, a component or a hook in the platform UI.          |
+| [`docs/standards/ui.md`](docs/standards/ui.md)                           | Adding a shared component, a chart, or a colour.                      |
+| [`docs/standards/i18n.md`](docs/standards/i18n.md)                       | Adding or changing a translated string.                               |
+| [`docs/standards/testing.md`](docs/standards/testing.md)                 | Writing tests, or checking which suffix a workspace uses.             |
+| [`docs/standards/mobile.md`](docs/standards/mobile.md)                   | Working on the Android app.                                           |
+| [`docs/standards/data.md`](docs/standards/data.md)                       | Changing a pipeline or the shared Python libraries.                   |
+| [`docs/standards/shared-packages.md`](docs/standards/shared-packages.md) | Changing auth, iot, cms, analytics or transactional.                  |
+| [`docs/standards/macro-sandbox.md`](docs/standards/macro-sandbox.md)     | Touching the runtimes that execute user macros.                       |
+| [`docs/standards/docs-site.md`](docs/standards/docs-site.md)             | Writing documentation a user reads.                                   |
+| [`docs/standards/infrastructure.md`](docs/standards/infrastructure.md)   | Changing OpenTofu, when that is explicitly the task.                  |
+| [`docs/standards/tooling.md`](docs/standards/tooling.md)                 | Changing shared config, turbo tasks or the devkit.                    |
+| [`docs/standards/git.md`](docs/standards/git.md)                         | Branching, committing, or preparing a pull request.                   |
+
+Every component has one. Read the relevant document before you change code in that area, and add a
+line to its debt list when you find code that breaks a rule.
+
+`.claude/rules/` holds one small file per area whose only job is to point at the matching standard.
+Claude Code loads a rule when it reads a file the rule's `paths` match, so the right document
+arrives without anyone remembering to ask for it. The rules carry no content of their own; the
+documents under `docs/standards/` are the rules.
+
 ## Conventions
 
 - Define API changes contracts-first in `packages/api`, then implement both sides against them.
@@ -143,6 +218,7 @@ decision actually needs recording. See `docs/agents/domain.md`.
   after changing them. Analytics types point at `src/` while runtime code points at `dist/`, so the
   IDE can look current while the running code is stale. `@repo/ui` is consumed from source and needs
   no rebuild.
-- No barrel files. Import from the owning module's explicit path.
-- Conventional commit subjects; keep each commit focused.
-- Comments are rare here. Explain constraints the code cannot express, nothing else.
+- Keep each commit focused. `docs/standards/prose.md` has the form of a commit subject, and
+  `CONTRIBUTING.md` has the pull request contract that feeds the release.
+- Barrel files, type assertions and where behaviour is allowed to live are covered by
+  `docs/standards/code.md`. Comments and TSDoc are covered by `docs/standards/prose.md`.

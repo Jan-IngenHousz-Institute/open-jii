@@ -6,7 +6,9 @@ description: Write the two developer sections a ticket needs before review - How
 # Testing criteria for the handoff
 
 Read `AGENTS.md` first. The testing gate and the shape of the two sections are in
-`docs/agents/ticket-standard.md`. Access and query recipes are in `openjii-linear`.
+`docs/agents/ticket-standard.md`. Access and query recipes are in `openjii-linear`. What a test
+should look like, and which suffix and harness each workspace uses, is
+`docs/standards/testing.md`.
 
 A work item or bug may enter `In Testing` only with a non-empty `## How it was built` and
 `## Testing criteria`. Those sections are what the requester, the TPM or the intern execute on dev.

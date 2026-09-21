@@ -6,7 +6,8 @@ description: Update the openJII documentation site and its screenshots when a us
 # Docs and screenshots follow the feature
 
 Read `AGENTS.md` first. **If a change alters what a user sees or does, the docs change in the same
-PR.** Docs that describe a screen which no longer exists are worse than no docs.
+PR.** Docs that describe a screen which no longer exists are worse than no docs. How to write for
+this site is `docs/standards/docs-site.md`, and the prose bar is `docs/standards/prose.md`.
 
 ## Decide what actually needs touching
 
