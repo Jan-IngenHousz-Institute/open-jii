@@ -63,7 +63,7 @@ export function getExperimentColumns(
     },
     {
       header: t("columns.status"),
-      className: "hidden w-28 sm:table-cell",
+      className: "w-28",
       cell: (experiment) => (
         <ExperimentStatusIndicator
           status={experiment.status}
@@ -73,7 +73,7 @@ export function getExperimentColumns(
     },
     {
       header: t("columns.owner"),
-      className: "hidden w-48 lg:table-cell",
+      className: "experiment-table-owner-column w-48",
       cell: (experiment) => {
         const name = ownerName(experiment);
         return name ? (
@@ -97,7 +97,7 @@ export function getExperimentColumns(
     },
     {
       header: t("columns.organization"),
-      className: "hidden w-44 xl:table-cell",
+      className: "experiment-table-organization-column w-44",
       cell: (experiment) => (
         <span
           title={experiment.organizationName ?? undefined}
@@ -109,7 +109,7 @@ export function getExperimentColumns(
     },
     {
       header: t("columns.members"),
-      className: "hidden w-24 lg:table-cell",
+      className: "experiment-table-members-column w-24",
       cell: (experiment) =>
         experiment.membersCount != null && experiment.membersCount > 0 ? (
           <span
@@ -127,8 +127,7 @@ export function getExperimentColumns(
     },
     {
       header: t("columns.activity"),
-      // Gated like the other secondary columns: ungated, it left the name ~90px.
-      className: "hidden w-48 lg:table-cell",
+      className: "experiment-table-activity-column w-48",
       cell: (experiment) => (
         <ResourceMetricsCell
           activity={experiment.activity ?? null}
@@ -139,7 +138,7 @@ export function getExperimentColumns(
     },
     {
       header: t("columns.updated"),
-      className: "hidden w-32 lg:table-cell",
+      className: "experiment-table-updated-column w-32",
       cell: (experiment) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
           {formatShortDate(experiment.updatedAt, locale)}

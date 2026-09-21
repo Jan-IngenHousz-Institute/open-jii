@@ -1,0 +1,875 @@
+{
+  "version": 3,
+  "generated": "2026-09-21",
+  "license": "All works explicit article-level CC BY 4.0, verified in archived JATS permissions.",
+  "papers": [
+    {
+      "id": "PMC5099005",
+      "source": "europepmc",
+      "doi": "10.1098/rsos.160592",
+      "title": "MultispeQ Beta: a tool for large-scale plant phenotyping connected to the open PhotosynQ network",
+      "authors": [
+        "Sebastian Kuhlgert",
+        "Greg Austic",
+        "Robert Zegarac",
+        "Isaac Osei-Bonsu",
+        "Donghee Hoh",
+        "Martin I Chilvers",
+        "Mitchell G Roth",
+        "Kevin Bi",
+        "Dan TerAvest",
+        "Prabode Weebadde",
+        "David M Kramer"
+      ],
+      "year": 2016,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.1098/rsos.160592",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC5099005/fullTextXML",
+      "attribution": "Sebastian Kuhlgert; Greg Austic; Robert Zegarac; Isaac Osei-Bonsu; Donghee Hoh; Martin I Chilvers; Mitchell G Roth; Kevin Bi; Dan TerAvest; Prabode Weebadde; David M Kramer. MultispeQ Beta: a tool for large-scale plant phenotyping connected to the open PhotosynQ network (2016). https://doi.org/10.1098/rsos.160592. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["multispeq", "phenotyping"],
+      "coverageRole": "Instrument and network",
+      "equipmentOrContext": "MultispeQ platform",
+      "files": {
+        "source.xml": {
+          "sha256": "780fbea1bb2624421c095af15a839543e07da6a452ade978dd90f6a2f8200c90"
+        },
+        "rights-evidence.xml": {
+          "sha256": "246eeb250a507df003bdea8aa716c0f03beba41d0f283a6fc2404cfd608f5385"
+        },
+        "reading-copy.txt": {
+          "sha256": "f6a0c85ff4bbbb7dca62f69c646a604cb261e61bb469ba983cc719c09c4d8d64"
+        },
+        "reading-copy.pdf": {
+          "sha256": "8e4826442cd13e02f202707b336fd1151e35334b6a781d02469d209431e6d666"
+        }
+      }
+    },
+    {
+      "id": "PMC4210649",
+      "source": "europepmc",
+      "doi": "10.1007/s11120-014-0024-6",
+      "title": "Frequently asked questions about in vivo chlorophyll fluorescence: practical issues",
+      "authors": [
+        "Hazem M. Kalaji",
+        "Gert Schansker",
+        "Richard J. Ladle",
+        "Vasilij Goltsev",
+        "Karolina Bosa",
+        "Suleyman I. Allakhverdiev",
+        "Marian Brestic",
+        "Filippo Bussotti",
+        "Angeles Calatayud",
+        "Piotr Dąbrowski",
+        "Nabil I. Elsheery",
+        "Lorenzo Ferroni",
+        "Lucia Guidi",
+        "Sander W. Hogewoning",
+        "Anjana Jajoo",
+        "Amarendra N. Misra",
+        "Sergio G. Nebauer",
+        "Simonetta Pancaldi",
+        "Consuelo Penella",
+        "DorothyBelle Poli",
+        "Martina Pollastrini",
+        "Zdzislawa B. Romanowska-Duda",
+        "Beata Rutkowska",
+        "João Serôdio",
+        "Kancherla Suresh",
+        "Wiesław Szulc",
+        "Eduardo Tambussi",
+        "Marcos Yanniccari",
+        "Marek Zivcak"
+      ],
+      "year": 2014,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.1007/s11120-014-0024-6",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC4210649/fullTextXML",
+      "attribution": "Hazem M. Kalaji; Gert Schansker; Richard J. Ladle; Vasilij Goltsev; Karolina Bosa; Suleyman I. Allakhverdiev; Marian Brestic; Filippo Bussotti; Angeles Calatayud; Piotr Dąbrowski; Nabil I. Elsheery; Lorenzo Ferroni; Lucia Guidi; Sander W. Hogewoning; Anjana Jajoo; Amarendra N. Misra; Sergio G. Nebauer; Simonetta Pancaldi; Consuelo Penella; DorothyBelle Poli; Martina Pollastrini; Zdzislawa B. Romanowska-Duda; Beata Rutkowska; João Serôdio; Kancherla Suresh; Wiesław Szulc; Eduardo Tambussi; Marcos Yanniccari; Marek Zivcak. Frequently asked questions about in vivo chlorophyll fluorescence: practical issues (2014). https://doi.org/10.1007/s11120-014-0024-6. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["chlorophyll-fluorescence", "methods"],
+      "coverageRole": "Measurement practice",
+      "equipmentOrContext": "Fluorescence practical review",
+      "files": {
+        "source.xml": {
+          "sha256": "b33dd8da3f10dea9410c667dd02b2ab6c0f82b4d25245f8018ba9b27feda92e5"
+        },
+        "rights-evidence.xml": {
+          "sha256": "75901cd6b813ff52d8a9df171292645685a7ed21b6f82a16109be24ee1498db6"
+        },
+        "reading-copy.txt": {
+          "sha256": "0bcc7c7989b240d074465cafc6236a60f38f023fb58b1ac5a243d62c308d8d0a"
+        },
+        "reading-copy.pdf": {
+          "sha256": "b09117cffb7db9ae3d9eb1ddd6659c4e1d24ebd0b331cf2c6a5c76aa985be82d"
+        }
+      }
+    },
+    {
+      "id": "PMC5810273",
+      "source": "europepmc",
+      "doi": "10.3389/fpls.2018.00055",
+      "title": "Chlorophyll Fluorescence Video Imaging: A Versatile Tool for Identifying Factors Related to Photosynthesis",
+      "authors": ["Thilo Rühle", "Bennet Reiter", "Dario Leister"],
+      "year": 2018,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.3389/fpls.2018.00055",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC5810273/fullTextXML",
+      "attribution": "Thilo Rühle; Bennet Reiter; Dario Leister. Chlorophyll Fluorescence Video Imaging: A Versatile Tool for Identifying Factors Related to Photosynthesis (2018). https://doi.org/10.3389/fpls.2018.00055. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["chlorophyll-fluorescence", "imaging"],
+      "coverageRole": "Imaging methods",
+      "equipmentOrContext": "Fluorescence imaging",
+      "files": {
+        "source.xml": {
+          "sha256": "c0a8eeeac1cd7f114c4d1ac772882543f68c069feda3686bb9cc5c9f4c155ded"
+        },
+        "rights-evidence.xml": {
+          "sha256": "c0d221e926ff14cebbdd12903f71efe2aa8c05f7195f9190857d8c06f58aeb77"
+        },
+        "reading-copy.txt": {
+          "sha256": "4a1c425666a3708dc195f6bd141997833700e4c914bd7fc530c9a756783fda78"
+        },
+        "reading-copy.pdf": {
+          "sha256": "1fdce4c93c6b15c9c5bfc1ff2b4b9f9ccff3081ddf6d449d2cdf88e5238c9b92"
+        }
+      }
+    },
+    {
+      "id": "PMC6749646",
+      "source": "europepmc",
+      "doi": "10.1186/s13007-019-0485-x",
+      "title": "High throughput procedure utilising chlorophyll fluorescence imaging to phenotype dynamic photosynthesis and photoprotection in leaves under controlled gaseous conditions",
+      "authors": ["Lorna McAusland", "Jonathan A Atkinson", "Tracy Lawson", "Erik H Murchie"],
+      "year": 2019,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.1186/s13007-019-0485-x",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC6749646/fullTextXML",
+      "attribution": "Lorna McAusland; Jonathan A Atkinson; Tracy Lawson; Erik H Murchie. High throughput procedure utilising chlorophyll fluorescence imaging to phenotype dynamic photosynthesis and photoprotection in leaves under controlled gaseous conditions (2019). https://doi.org/10.1186/s13007-019-0485-x. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["dynamic-photosynthesis", "photoprotection"],
+      "coverageRole": "Controlled dynamics",
+      "equipmentOrContext": "Imaging with controlled gases",
+      "files": {
+        "source.xml": {
+          "sha256": "2c18fdcfeeb234096fe9a95e32b3c0ee13dbfe145a79c10b77d6f0197d11628f"
+        },
+        "rights-evidence.xml": {
+          "sha256": "e83bc12b854084dd3f0155dd55dfc42ed4a7365482783771f1c68353f3b361db"
+        },
+        "reading-copy.txt": {
+          "sha256": "304a944adbdedf217edc119981196778998d2674be4b456f0234365441e24de7"
+        },
+        "reading-copy.pdf": {
+          "sha256": "26b13cfad9834745214be18f265171797cae0cb9ac47e65fd31d8ccadd57d10d"
+        }
+      }
+    },
+    {
+      "id": "PMC12131965",
+      "source": "europepmc",
+      "doi": "10.1111/pce.15501",
+      "title": "PhotoGEA: An R Package for Closer Fitting of Photosynthetic Gas Exchange Data With Non‐Gaussian Confidence Interval Estimation",
+      "authors": ["Edward B. Lochocki", "Coralie E. Salesse‐Smith", "Justin M. McGrath"],
+      "year": 2025,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.1111/pce.15501",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC12131965/fullTextXML",
+      "attribution": "Edward B. Lochocki; Coralie E. Salesse‐Smith; Justin M. McGrath. PhotoGEA: An R Package for Closer Fitting of Photosynthetic Gas Exchange Data With Non‐Gaussian Confidence Interval Estimation (2025). https://doi.org/10.1111/pce.15501. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["licor", "gas-exchange", "curve-fitting"],
+      "coverageRole": "Analysis and uncertainty",
+      "equipmentOrContext": "LI-6800; C3/C4 response-curve fitting",
+      "files": {
+        "source.xml": {
+          "sha256": "c8eb6c79302cde376ce4660d4bd5fb8144bf68f2d8ba98fc6cbc7d4644f2aba2"
+        },
+        "rights-evidence.xml": {
+          "sha256": "b2730c8b91bd393d8839b6d5ac0c0944cabbe52fd7c3d6a7d8d642db96811dcb"
+        },
+        "reading-copy.txt": {
+          "sha256": "127af42b98baa507ecf88ee8ea8b36b422477c69f37af530aa64580453d4406e"
+        },
+        "reading-copy.pdf": {
+          "sha256": "0bac3039b0009f72175f62016e2b71ace4a5936606c1d8f69686fe5c773d2928"
+        }
+      }
+    },
+    {
+      "id": "PMC6018834",
+      "source": "europepmc",
+      "doi": "10.1093/jxb/ery044",
+      "title": "Direct measurement of intercellular CO2 concentration in a gas-exchange system resolves overestimation using the standard method",
+      "authors": ["Jun Tominaga", "Hiroshi Shimada", "Yoshinobu Kawamitsu"],
+      "year": 2018,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.1093/jxb/ery044",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC6018834/fullTextXML",
+      "attribution": "Jun Tominaga; Hiroshi Shimada; Yoshinobu Kawamitsu. Direct measurement of intercellular CO2 concentration in a gas-exchange system resolves overestimation using the standard method (2018). https://doi.org/10.1093/jxb/ery044. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["licor", "gas-exchange", "measurement-bias"],
+      "coverageRole": "Measurement bias",
+      "equipmentOrContext": "LI-6400XT; cuticular transport and Ci",
+      "files": {
+        "source.xml": {
+          "sha256": "1217e767004c66d5cd6471ea397b951c7dc0b06a2b2e73fb0496ed05fdeab1a0"
+        },
+        "rights-evidence.xml": {
+          "sha256": "3fa5feb8d8d445cbdaa53b10ed7f4823cfe0a422366e0121f030eb6bb8b584e6"
+        },
+        "reading-copy.txt": {
+          "sha256": "c031f4117165a2fb7ba1015d8406231fa26be75077b2a1ede93b7ac2f781c3b4"
+        },
+        "reading-copy.pdf": {
+          "sha256": "c9c8a7cbb2030a362ba2509f3e43d7b7c7f7cb2dd58062ce55ed660fa2f22a66"
+        }
+      }
+    },
+    {
+      "id": "PMC6472101",
+      "source": "europepmc",
+      "doi": "10.1186/s13007-019-0423-y",
+      "title": "Intact leaf gas exchange provides a robust method for measuring the kinetics of stomatal conductance responses to abscisic acid and other small molecules in Arabidopsis and grasses",
+      "authors": [
+        "Paulo H. O. Ceciliato",
+        "Jingbo Zhang",
+        "Qing Liu",
+        "Xin Shen",
+        "Honghong Hu",
+        "Chen Liu",
+        "Anton R. Schäffner",
+        "Julian I. Schroeder"
+      ],
+      "year": 2019,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.1186/s13007-019-0423-y",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC6472101/fullTextXML",
+      "attribution": "Paulo H. O. Ceciliato; Jingbo Zhang; Qing Liu; Xin Shen; Honghong Hu; Chen Liu; Anton R. Schäffner; Julian I. Schroeder. Intact leaf gas exchange provides a robust method for measuring the kinetics of stomatal conductance responses to abscisic acid and other small molecules in Arabidopsis and grasses (2019). https://doi.org/10.1186/s13007-019-0423-y. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["licor", "stomatal-conductance", "methods"],
+      "coverageRole": "Stomatal response",
+      "equipmentOrContext": "LI-6400 and LI-6800; ABA response",
+      "files": {
+        "source.xml": {
+          "sha256": "1d19f9c16d34a45badaf29a0c2ca2d3b84bf97b986806ec10eae431724a82fdf"
+        },
+        "rights-evidence.xml": {
+          "sha256": "954ccbe57871244cdfcc04dbb5c94ee0ec1fa73b0b6e50929b5a64d97f75cad9"
+        },
+        "reading-copy.txt": {
+          "sha256": "cf63b144993851284b332914226b81cd80877cffd82a7080197b665f9168b809"
+        },
+        "reading-copy.pdf": {
+          "sha256": "8cdd1a7ff2116e54642ef4ee4e2ca038dc0385335e3bf7ec6acf52b6b07e486b"
+        }
+      }
+    },
+    {
+      "id": "PMC7134947",
+      "source": "europepmc",
+      "doi": "10.1093/jxb/eraa068",
+      "title": "Plot-level rapid screening for photosynthetic parameters using proximal hyperspectral imaging",
+      "authors": [
+        "Katherine Meacham-Hensold",
+        "Peng Fu",
+        "Jin Wu",
+        "Shawn Serbin",
+        "Christopher M Montes",
+        "Elizabeth Ainsworth",
+        "Kaiyu Guan",
+        "Evan Dracup",
+        "Taylor Pederson",
+        "Steven Driever",
+        "Carl Bernacchi"
+      ],
+      "year": 2020,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.1093/jxb/eraa068",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7134947/fullTextXML",
+      "attribution": "Katherine Meacham-Hensold; Peng Fu; Jin Wu; Shawn Serbin; Christopher M Montes; Elizabeth Ainsworth; Kaiyu Guan; Evan Dracup; Taylor Pederson; Steven Driever; Carl Bernacchi. Plot-level rapid screening for photosynthetic parameters using proximal hyperspectral imaging (2020). https://doi.org/10.1093/jxb/eraa068. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["licor", "field-phenotyping", "hyperspectral"],
+      "coverageRole": "Field phenotyping",
+      "equipmentOrContext": "LI-6800; hyperspectral screening",
+      "files": {
+        "source.xml": {
+          "sha256": "4b057f006cada5726190e2040e7e49bf5e4791b669f96fd7ee15bbd5c945124b"
+        },
+        "rights-evidence.xml": {
+          "sha256": "6ce8f7890f24ff8d60e4479baaf967c8528c4436182b1b5d981c0a5aeaaafda7"
+        },
+        "reading-copy.txt": {
+          "sha256": "f56b9149f14632300b51510fdc7378980c54e8df5dcabc1af8397b5a0ee8aa70"
+        },
+        "reading-copy.pdf": {
+          "sha256": "2f466f71339409839b76c4b82664e7fd04bde5a32c988091d13b0d91e4aaa743"
+        }
+      }
+    },
+    {
+      "id": "PMC10901313",
+      "source": "europepmc",
+      "doi": "10.1371/journal.pone.0298908",
+      "title": "Photosynthetic gas exchange, plant water relations and osmotic adjustment of three tropical perennials during drought stress and re-watering",
+      "authors": [
+        "Jie He",
+        "Klaudia Ng",
+        "Lin Qin",
+        "Yuanjie Shen",
+        "Harianto Rahardjo",
+        "Chien Looi Wang",
+        "Huiling Kew",
+        "Yong Chuan Chua",
+        "Choon Hock Poh",
+        "Subhadip Ghosh",
+        "Mayank Gururani"
+      ],
+      "year": 2024,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.1371/journal.pone.0298908",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC10901313/fullTextXML",
+      "attribution": "Jie He; Klaudia Ng; Lin Qin; Yuanjie Shen; Harianto Rahardjo; Chien Looi Wang; Huiling Kew; Yong Chuan Chua; Choon Hock Poh; Subhadip Ghosh; Mayank Gururani. Photosynthetic gas exchange, plant water relations and osmotic adjustment of three tropical perennials during drought stress and re-watering (2024). https://doi.org/10.1371/journal.pone.0298908. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["licor", "drought", "tropical-plants"],
+      "coverageRole": "Drought and recovery",
+      "equipmentOrContext": "LI-6400; tropical perennial plants",
+      "files": {
+        "source.xml": {
+          "sha256": "f22d556b99f1924e325a75b87473420c7a3a2023c550b45fc414241842ab0f84"
+        },
+        "rights-evidence.xml": {
+          "sha256": "74de04f1ef3074e5c169c31a03523715d5ebb9fcc95314ee9a87e57c41bc5d48"
+        },
+        "reading-copy.txt": {
+          "sha256": "c259fc0dec3754cfac93028cc433e31af2e4b0ab0617c716c0b7567f48c6a3a5"
+        },
+        "reading-copy.pdf": {
+          "sha256": "7905b1be2f8efa5d26d848a5252efb9f783bd8c79490923462c3aa142addd6a8"
+        }
+      }
+    },
+    {
+      "id": "PMC6382737",
+      "source": "europepmc",
+      "doi": "10.3389/fpls.2019.00174",
+      "title": "Chlorophyll Fluorescence, Photoinhibition and Abiotic Stress: Does it Make Any Difference the Fact to Be a C3 or C4 Species?",
+      "authors": ["Lucia Guidi", "Ermes Lo Piccolo", "Marco Landi"],
+      "year": 2019,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.3389/fpls.2019.00174",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC6382737/fullTextXML",
+      "attribution": "Lucia Guidi; Ermes Lo Piccolo; Marco Landi. Chlorophyll Fluorescence, Photoinhibition and Abiotic Stress: Does it Make Any Difference the Fact to Be a C3 or C4 Species? (2019). https://doi.org/10.3389/fpls.2019.00174. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["c3-c4", "photoinhibition", "review"],
+      "coverageRole": "Comparative interpretation",
+      "equipmentOrContext": "C3 versus C4 photoinhibition review",
+      "files": {
+        "source.xml": {
+          "sha256": "2b42b38a6ab39f5768ae9ec8ea27fd9e2d04ec8ffe370c5587cf88d4151180b4"
+        },
+        "rights-evidence.xml": {
+          "sha256": "964f9c8061edf918688d04e2d7e2e173350ce22484d263a90a9633a852cc6707"
+        },
+        "reading-copy.txt": {
+          "sha256": "8e61ffe6bbe5c7df250b233c1572c2a2e3020e2aec055f444f7e047becf6b673"
+        },
+        "reading-copy.pdf": {
+          "sha256": "98a6fc79287a3f42beb48e90246bbc97fbb33867e03ff4c4ccd0ca02847bdf95"
+        }
+      }
+    },
+    {
+      "id": "PMC12426766",
+      "source": "europepmc",
+      "doi": "10.1002/pei3.70077",
+      "title": "Rapid Physiological Trait Measurements in Wine Grape ( Vitis vinifera ) Varieties Using the Dynamic Assimilation Technique",
+      "authors": [
+        "Leeladarshini Sujeeun",
+        "Marney E Isaac",
+        "Kimberley Cathline",
+        "Gavin Robertson",
+        "Adam R Martin"
+      ],
+      "year": 2025,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.1002/pei3.70077",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC12426766/fullTextXML",
+      "attribution": "Leeladarshini Sujeeun; Marney E Isaac; Kimberley Cathline; Gavin Robertson; Adam R Martin. Rapid Physiological Trait Measurements in Wine Grape ( Vitis vinifera ) Varieties Using the Dynamic Assimilation Technique (2025). https://doi.org/10.1002/pei3.70077. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["licor", "dynamic-assimilation", "field-validation"],
+      "coverageRole": "Field method validation",
+      "equipmentOrContext": "LI-6800; grape dynamic assimilation",
+      "files": {
+        "source.xml": {
+          "sha256": "ae183f795c0f08c8996e8ffeec6d220e2b6361a07e663d6f358f5f0b6aca3fe9"
+        },
+        "rights-evidence.xml": {
+          "sha256": "7854ef96ab8549fe1bb58d4e2787f0045f66984dce8dc9f59a58dceb0fb57e89"
+        },
+        "reading-copy.txt": {
+          "sha256": "f71a842153305d741e64099f3714efad3c9a8df673ae0ef79b0e2e6293c88c61"
+        },
+        "reading-copy.pdf": {
+          "sha256": "88a980d878066430c506cafb4de4f2c067ab4511106e80bee46fa0a2cfde193e"
+        }
+      }
+    },
+    {
+      "id": "PMC8672073",
+      "source": "europepmc",
+      "doi": "10.1098/rsos.211102",
+      "title": "Light potentials of photosynthetic energy storage in the field: what limits the ability to use or dissipate rapidly increased light energy?",
+      "authors": [
+        "Atsuko Kanazawa",
+        "Abhijnan Chattopadhyay",
+        "Sebastian Kuhlgert",
+        "Hainite Tuitupou",
+        "Tapabrata Maiti",
+        "David M. Kramer"
+      ],
+      "year": 2021,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.1098/rsos.211102",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC8672073/fullTextXML",
+      "attribution": "Atsuko Kanazawa; Abhijnan Chattopadhyay; Sebastian Kuhlgert; Hainite Tuitupou; Tapabrata Maiti; David M. Kramer. Light potentials of photosynthetic energy storage in the field: what limits the ability to use or dissipate rapidly increased light energy? (2021). https://doi.org/10.1098/rsos.211102. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["kramer", "field-photosynthesis", "light-dynamics"],
+      "coverageRole": "Field light dynamics",
+      "equipmentOrContext": "Kramer collection; rapid light changes",
+      "files": {
+        "source.xml": {
+          "sha256": "38673e620bd2fb4c5e90c13a136596f54c8d297d5d6da2d94af9cb865736d588"
+        },
+        "rights-evidence.xml": {
+          "sha256": "1e108ed31dbf4de8b9be344da11b70a97d0dd4b8eec2efdfd0f9b10c78d324e6"
+        },
+        "reading-copy.txt": {
+          "sha256": "7117262852ea8f4e81745caab054a08a52f5c40fd2784790175861cba68a8ef6"
+        },
+        "reading-copy.pdf": {
+          "sha256": "89fd9971750e4c81348c5a75d9e7994cce9aa3ff4022c4642a3bdefd729b646b"
+        }
+      }
+    },
+    {
+      "id": "PMC7154899",
+      "source": "europepmc",
+      "doi": "10.3390/plants9030301",
+      "title": "Flexibility in the Energy Balancing Network of Photosynthesis Enables Safe Operation under Changing Environmental Conditions",
+      "authors": ["Berkley J. Walker", "David M. Kramer", "Nicholas Fisher", "Xinyu Fu"],
+      "year": 2020,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.3390/plants9030301",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7154899/fullTextXML",
+      "attribution": "Berkley J. Walker; David M. Kramer; Nicholas Fisher; Xinyu Fu. Flexibility in the Energy Balancing Network of Photosynthesis Enables Safe Operation under Changing Environmental Conditions (2020). https://doi.org/10.3390/plants9030301. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["kramer", "energy-balancing", "review"],
+      "coverageRole": "Energy balance",
+      "equipmentOrContext": "Kramer collection; changing environments review",
+      "files": {
+        "source.xml": {
+          "sha256": "4f251a63ad8715bf49c0e94b3dd578dfbc5a8c5a48122bb3319a46984a661c5d"
+        },
+        "rights-evidence.xml": {
+          "sha256": "0eb01d910600af52f558f93df8c13362e6d023f99e6759e88c0442f8c7531181"
+        },
+        "reading-copy.txt": {
+          "sha256": "8c7a7c57ef5b2fabaee2c917af80f00eecbb228fd74ac3e19fe2394e0eb2f568"
+        },
+        "reading-copy.pdf": {
+          "sha256": "3112be9f5de05d09bcb2170c1354365804c78e44f5fc0107918011ffac0e68ad"
+        }
+      }
+    },
+    {
+      "id": "PMC5050024",
+      "source": "europepmc",
+      "doi": "10.7554/eLife.16921",
+      "title": "Limitations to photosynthesis by proton motive force-induced photosystem II photodamage",
+      "authors": [
+        "Geoffry A Davis",
+        "Atsuko Kanazawa",
+        "Mark Aurel Schöttler",
+        "Kaori Kohzuma",
+        "John E Froehlich",
+        "A William Rutherford",
+        "Mio Satoh-Cruz",
+        "Deepika Minhas",
+        "Stefanie Tietz",
+        "Amit Dhingra",
+        "David M Kramer"
+      ],
+      "year": 2016,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.7554/eLife.16921",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC5050024/fullTextXML",
+      "attribution": "Geoffry A Davis; Atsuko Kanazawa; Mark Aurel Schöttler; Kaori Kohzuma; John E Froehlich; A William Rutherford; Mio Satoh-Cruz; Deepika Minhas; Stefanie Tietz; Amit Dhingra; David M Kramer. Limitations to photosynthesis by proton motive force-induced photosystem II photodamage (2016). https://doi.org/10.7554/eLife.16921. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["kramer", "proton-motive-force", "photodamage"],
+      "coverageRole": "Photodamage mechanism",
+      "equipmentOrContext": "Kramer collection; proton motive force and PSII",
+      "files": {
+        "source.xml": {
+          "sha256": "3669b4d374ef6a9d29e19b68f1649f092dee99cb43c58da94094f697bf1ff244"
+        },
+        "rights-evidence.xml": {
+          "sha256": "722e4e44c82a96a9ccd767b3f113e067b6102e066b9b12f4bebbb4f5e2f25731"
+        },
+        "reading-copy.txt": {
+          "sha256": "a6fb36f90b756a00d6fbe39975a13bef12e596249206ae5fd1101bfd70bec3b5"
+        },
+        "reading-copy.pdf": {
+          "sha256": "395da53e7b7f426bbf8e5dcc85069d6ec0af31cf3adaed1b852a6b29622aa345"
+        }
+      }
+    },
+    {
+      "id": "PMC8694700",
+      "source": "europepmc",
+      "doi": "10.7554/eLife.67565",
+      "title": "The induction of pyrenoid synthesis by hyperoxia and its implications for the natural diversity of photosynthetic responses in Chlamydomonas",
+      "authors": [
+        "Peter Neofotis",
+        "Joshua Temple",
+        "Oliver L Tessmer",
+        "Jacob Bibik",
+        "Nicole Norris",
+        "Eric Pollner",
+        "Ben Lucker",
+        "Sarathi M Weraduwage",
+        "Alecia Withrow",
+        "Barbara Sears",
+        "Greg Mogos",
+        "Melinda Frame",
+        "David Hall",
+        "Joseph Weissman",
+        "David M Kramer"
+      ],
+      "year": 2021,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.7554/eLife.67565",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC8694700/fullTextXML",
+      "attribution": "Peter Neofotis; Joshua Temple; Oliver L Tessmer; Jacob Bibik; Nicole Norris; Eric Pollner; Ben Lucker; Sarathi M Weraduwage; Alecia Withrow; Barbara Sears; Greg Mogos; Melinda Frame; David Hall; Joseph Weissman; David M Kramer. The induction of pyrenoid synthesis by hyperoxia and its implications for the natural diversity of photosynthetic responses in Chlamydomonas (2021). https://doi.org/10.7554/eLife.67565. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["elife", "kramer", "pyrenoid", "hyperoxia"],
+      "coverageRole": "Algal carbon concentration",
+      "equipmentOrContext": "eLife; pyrenoid induction and hyperoxia; David Kramer coauthor",
+      "files": {
+        "source.xml": {
+          "sha256": "e82b10109b4a2bc54295dab063168fb881975625effbb6de9cd58ab3912358be"
+        },
+        "rights-evidence.xml": {
+          "sha256": "0b471429de08d91e2973767c128ca7a4639d992dd1994a740b1a1429245543bb"
+        },
+        "reading-copy.txt": {
+          "sha256": "f5f38f055bfe3e68e679fa4ab3046cbe1442bcc013e8fda202485a2ec46875e3"
+        },
+        "reading-copy.pdf": {
+          "sha256": "acb5d1bb11a41b0b1c4fd417d79b69313b92c7c92d10123127fe3c37dad26161"
+        }
+      }
+    },
+    {
+      "id": "PMC8887892",
+      "source": "europepmc",
+      "doi": "10.7554/eLife.75041",
+      "title": "A guanosine tetraphosphate (ppGpp) mediated brake on photosynthesis is required for acclimation to nitrogen limitation in Arabidopsis",
+      "authors": [
+        "Shanna Romand",
+        "Hela Abdelkefi",
+        "Cécile Lecampion",
+        "Mohamed Belaroussi",
+        "Melanie Dussenne",
+        "Brigitte Ksas",
+        "Sylvie Citerne",
+        "Jose Caius",
+        "Stefano D'Alessandro",
+        "Hatem Fakhfakh",
+        "Stefano Caffarri",
+        "Michel Havaux",
+        "Ben Field",
+        "Shinji Masuda",
+        "Jürgen Kleine-Vehn"
+      ],
+      "year": 2022,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.7554/eLife.75041",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC8887892/fullTextXML",
+      "attribution": "Shanna Romand; Hela Abdelkefi; Cécile Lecampion; Mohamed Belaroussi; Melanie Dussenne; Brigitte Ksas; Sylvie Citerne; Jose Caius; Stefano D'Alessandro; Hatem Fakhfakh; Stefano Caffarri; Michel Havaux; Ben Field; Shinji Masuda; Jürgen Kleine-Vehn. A guanosine tetraphosphate (ppGpp) mediated brake on photosynthesis is required for acclimation to nitrogen limitation in Arabidopsis (2022). https://doi.org/10.7554/eLife.75041. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["elife", "nitrogen-starvation", "stress-acclimation"],
+      "coverageRole": "Nutrient stress",
+      "equipmentOrContext": "eLife; nitrogen limitation and photosynthetic acclimation",
+      "files": {
+        "source.xml": {
+          "sha256": "679765b7fb909e0ba68da17c7257afa18bc79f560758860e7f640f7d905b0b4c"
+        },
+        "rights-evidence.xml": {
+          "sha256": "bb19a85c4972b6984726044d5284579a718b741a4912cea79b22a5cd43ed5835"
+        },
+        "reading-copy.txt": {
+          "sha256": "5a63cd47a2b319b9b398e8d1d0dcd2df532259596390a30e78cf89c396a0de63"
+        },
+        "reading-copy.pdf": {
+          "sha256": "09df31df5162169156e9ff6db8723e9f7e13cd8d800caad0d278f4ca9f37455e"
+        }
+      }
+    },
+    {
+      "id": "PMC7984839",
+      "source": "europepmc",
+      "doi": "10.7554/eLife.56088",
+      "title": "Regulation of photosynthetic electron flow on dark to light transition by ferredoxin:NADP(H) oxidoreductase interactions",
+      "authors": [
+        "Manuela Kramer",
+        "Melvin Rodriguez-Heredia",
+        "Francesco Saccon",
+        "Laura Mosebach",
+        "Manuel Twachtmann",
+        "Anja Krieger-Liszkay",
+        "Chris Duffy",
+        "Robert J Knell",
+        "Giovanni Finazzi",
+        "Guy Thomas Hanke"
+      ],
+      "year": 2021,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.7554/eLife.56088",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7984839/fullTextXML",
+      "attribution": "Manuela Kramer; Melvin Rodriguez-Heredia; Francesco Saccon; Laura Mosebach; Manuel Twachtmann; Anja Krieger-Liszkay; Chris Duffy; Robert J Knell; Giovanni Finazzi; Guy Thomas Hanke. Regulation of photosynthetic electron flow on dark to light transition by ferredoxin:NADP(H) oxidoreductase interactions (2021). https://doi.org/10.7554/eLife.56088. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["elife", "electron-transport", "dark-light-transition"],
+      "coverageRole": "Electron transport regulation",
+      "equipmentOrContext": "eLife; FNR and dark-to-light transitions; Manuela Kramer, not David Kramer",
+      "files": {
+        "source.xml": {
+          "sha256": "da477e0a38b51be4b1be793c3bf5352c35fe4472993c17e0e4c31d3e9eba466b"
+        },
+        "rights-evidence.xml": {
+          "sha256": "a58c121dd6032cdf3e266b21300522378a589c8ae70383423a01f001f1a2c3b5"
+        },
+        "reading-copy.txt": {
+          "sha256": "15354ab07dc3fc6afa44a719cb1671f5ca6d1a17d718490f4eb2a8cf707becd9"
+        },
+        "reading-copy.pdf": {
+          "sha256": "d753c6773eeffef400fc1fb6aceb12ea177525e3f5e4fd1afbd337e0aa0312f1"
+        }
+      }
+    },
+    {
+      "id": "PMC12146202",
+      "source": "europepmc",
+      "doi": "10.3389/fpls.2025.1595339",
+      "title": "Nighttime fluorescence phenotyping reduces environmental variability for photosynthetic traits and enables the identification of candidate loci in maize",
+      "authors": ["Fangyi Li", "Marcin Grzybowski", "Rebecca L. Roston", "James C. Schnable"],
+      "year": 2025,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.3389/fpls.2025.1595339",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC12146202/fullTextXML",
+      "attribution": "Fangyi Li; Marcin Grzybowski; Rebecca L. Roston; James C. Schnable. Nighttime fluorescence phenotyping reduces environmental variability for photosynthetic traits and enables the identification of candidate loci in maize (2025). https://doi.org/10.3389/fpls.2025.1595339. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["chlorophyll-fluorescence", "field-phenotyping", "maize"],
+      "coverageRole": "Field fluorescence phenotyping",
+      "equipmentOrContext": "Nighttime fluorescence; maize candidate loci",
+      "files": {
+        "source.xml": {
+          "sha256": "ecd06e533bcbf29d0a62bf7c15e7e600cd2ce41c84b79b8492970d695ef81101"
+        },
+        "rights-evidence.xml": {
+          "sha256": "f5e293443956a24277b08af791743ee3e0c921b3ccf6e17e37790ac65649e5a8"
+        },
+        "reading-copy.txt": {
+          "sha256": "3014df314e0084a1c85584bddbee387e3d587384fe19f9e6d626f96ea6211ced"
+        },
+        "reading-copy.pdf": {
+          "sha256": "2cd9403b249c2c49d5a5302f4b506272b206e56c75586b90b93d622241447edf"
+        }
+      }
+    },
+    {
+      "id": "PMC10837016",
+      "source": "europepmc",
+      "doi": "10.1093/jxb/erad416",
+      "title": "Linking photosynthesis and yield reveals a strategy to improve light use efficiency in a climbing bean breeding population",
+      "authors": [
+        "Beat Keller",
+        "Jonatan Soto",
+        "Angelina Steier",
+        "Ana Elisabeth Portilla-Benavides",
+        "Bodo Raatz",
+        "Bruno Studer",
+        "Achim Walter",
+        "Onno Muller",
+        "Milan O Urban",
+        "Johannes Kromdijk"
+      ],
+      "year": 2023,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.1093/jxb/erad416",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC10837016/fullTextXML",
+      "attribution": "Beat Keller; Jonatan Soto; Angelina Steier; Ana Elisabeth Portilla-Benavides; Bodo Raatz; Bruno Studer; Achim Walter; Onno Muller; Milan O Urban; Johannes Kromdijk. Linking photosynthesis and yield reveals a strategy to improve light use efficiency in a climbing bean breeding population (2023). https://doi.org/10.1093/jxb/erad416. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["photosynthesis", "yield", "breeding"],
+      "coverageRole": "Photosynthesis-yield link",
+      "equipmentOrContext": "Climbing bean light use efficiency breeding",
+      "files": {
+        "source.xml": {
+          "sha256": "15db9436d5a7b102a1dffdbf531e42852980d9932b773168714475343b7a66c6"
+        },
+        "rights-evidence.xml": {
+          "sha256": "f1df8c0c92e1b3d302abdfc66ea83ed8177ee414a1fb4a3d4f4027ab4b1ed32e"
+        },
+        "reading-copy.txt": {
+          "sha256": "8f2f4f90873b34fc11d951adab602dbbebae2e40c48b47746327f522166a2cb0"
+        },
+        "reading-copy.pdf": {
+          "sha256": "911682ebc02afc38733813f941ae6b8234b90ac36c3ef1ab44a80b39ee4e6c43"
+        }
+      }
+    },
+    {
+      "id": "PMC7745124",
+      "source": "europepmc",
+      "doi": "10.1126/science.aat9077",
+      "title": "Synthetic glycolate metabolism pathways stimulate crop growth and productivity in the field",
+      "authors": ["Paul F. South", "Amanda P. Cavanagh", "Helen W. Liu", "Donald R. Ort"],
+      "year": 2019,
+      "version": "version-of-record",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.1126/science.aat9077",
+      "downloadUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC7745124/fullTextXML",
+      "attribution": "Paul F. South; Amanda P. Cavanagh; Helen W. Liu; Donald R. Ort. Synthetic glycolate metabolism pathways stimulate crop growth and productivity in the field (2019). https://doi.org/10.1126/science.aat9077. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "Text-only reading copy reflowed from Europe PMC JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult original for figures, tables, equations and complete references.",
+      "topicTags": ["photorespiration", "field-trial", "engineering"],
+      "coverageRole": "Photorespiration engineering",
+      "equipmentOrContext": "Science field trial; synthetic glycolate pathways",
+      "files": {
+        "source.xml": {
+          "sha256": "b35573290a6e471a788f09403b8f2ba4b6facfbce50c0e565d2f619e5e1926a7"
+        },
+        "rights-evidence.xml": {
+          "sha256": "36721695c3161f5396feb6a41574c0e41711332b98d648aedcc673b94c93285a"
+        },
+        "reading-copy.txt": {
+          "sha256": "53ce583589e4e638f6cdb57fe3f82459b38c4afbd32d1df38908ca1331bfd57f"
+        },
+        "reading-copy.pdf": {
+          "sha256": "f8b06164660579e4aa1ed94d6a95d78c01608a94ab53c3c084ab63eb58154fd8"
+        }
+      }
+    },
+    {
+      "id": "BIORXIV-740625",
+      "source": "biorxiv",
+      "doi": "10.64898/2026.07.24.740625",
+      "title": "From Field Photosynthesis to Genetic Architecture: Insights from the First Dedicated Photosynthesis Hackathon [PREPRINT v1]",
+      "authors": [
+        "Anna Matuszyńska",
+        "Olakunle Sansa",
+        "Femi James Adekoya",
+        "Olusegun Olaitan Akinyemi",
+        "Esther Anokye",
+        "Olukunle Babatunde Bashir",
+        "Zsa Zsa Friederique Boyny",
+        "Mkpuma Kenneth Chukwuka",
+        "Elouen Corvest",
+        "Adenike Oluwaseun Dada",
+        "Matteo Dell’Acqua",
+        "Georgina Lala Ehemba",
+        "Andris Justin Finkbeiner",
+        "Swivia Hamabwe",
+        "Djidjoho A.T. Hodehou",
+        "Olivia Kacheyo",
+        "Kelvin Kamfwa",
+        "Kanthu Joseph Mhango",
+        "Wajiha Mu’az Abdullahi",
+        "Gideon Munduwe",
+        "Solomon Ntukidem",
+        "Olalekan Kazeem Obisesan",
+        "Ifeoluwa Simeon Odesina",
+        "Nwogu-Uchenna Ogechi",
+        "Omotola Dorcas Olaoye",
+        "Mary Morenike Olayinka",
+        "Isaac Osei-Bonsu",
+        "Kolawale Olalekan Rilwan",
+        "Leandro Stival",
+        "Zeynu Tehar",
+        "Regina Mumbua Tende",
+        "Jacky To",
+        "Uchendu Kelechi Ugochukwu",
+        "Anika Unger",
+        "Marvin van Aalst",
+        "Dominik Vrbic",
+        "Chao Zhang",
+        "Tom P.J.M. Theeuwen",
+        "David M. Kramer",
+        "Johannes Kromdijk"
+      ],
+      "year": 2026,
+      "version": "v1-preprint",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://doi.org/10.64898/2026.07.24.740625",
+      "downloadUrl": "https://www.biorxiv.org/content/biorxiv/early/2026/07/28/2026.07.24.740625.source.xml",
+      "attribution": "Anna Matuszyńska; Olakunle Sansa; Femi James Adekoya; Olusegun Olaitan Akinyemi; Esther Anokye; Olukunle Babatunde Bashir; Zsa Zsa Friederique Boyny; Mkpuma Kenneth Chukwuka; Elouen Corvest; Adenike Oluwaseun Dada; Matteo Dell’Acqua; Georgina Lala Ehemba; Andris Justin Finkbeiner; Swivia Hamabwe; Djidjoho A.T. Hodehou; Olivia Kacheyo; Kelvin Kamfwa; Kanthu Joseph Mhango; Wajiha Mu’az Abdullahi; Gideon Munduwe; Solomon Ntukidem; Olalekan Kazeem Obisesan; Ifeoluwa Simeon Odesina; Nwogu-Uchenna Ogechi; Omotola Dorcas Olaoye; Mary Morenike Olayinka; Isaac Osei-Bonsu; Kolawale Olalekan Rilwan; Leandro Stival; Zeynu Tehar; Regina Mumbua Tende; Jacky To; Uchendu Kelechi Ugochukwu; Anika Unger; Marvin van Aalst; Dominik Vrbic; Chao Zhang; Tom P.J.M. Theeuwen; David M. Kramer; Johannes Kromdijk. From Field Photosynthesis to Genetic Architecture: Insights from the First Dedicated Photosynthesis Hackathon [PREPRINT v1] (2026). bioRxiv preprint, version 1. https://doi.org/10.64898/2026.07.24.740625. CC BY 4.0 https://creativecommons.org/licenses/by/4.0/.",
+      "modifications": "PREPRINT (version 1), not peer reviewed. Text-only reading copy reflowed from the official bioRxiv JATS XML. Generated page numbers are not publisher pagination. Images, tables, supplementary files and bibliography omitted. Consult the original for figures, tables, equations and complete references.",
+      "topicTags": ["field-photosynthesis", "phenotyping", "machine-learning", "preprint"],
+      "coverageRole": "Field data mining",
+      "equipmentOrContext": "PREPRINT v1; photosynthesis hackathon; JII-funded",
+      "files": {
+        "source.xml": {
+          "sha256": "096674f112b35968bdeeef5874cd409661dab5d457b6f8253a8132c7de020845"
+        },
+        "rights-evidence.xml": {
+          "sha256": "4586e5a7c4ba17c0939a05dd2955706b3855f0c090a639efb4a85c75dd675b12"
+        },
+        "reading-copy.txt": {
+          "sha256": "87de3e2b9b23b96558342985e98227d0ea57ad9c2fe9a32acf69e66b1e0b7093"
+        },
+        "reading-copy.pdf": {
+          "sha256": "e2f516ba4985f69ed844c2aa0c9f952aba134a1d77301192f72ed59a46557e92"
+        }
+      },
+      "funding": "Jan IngenHousz Institute; Mastercard Foundation; University of Cambridge Climate Resilience and Sustainability Research Fund (from the article acknowledgements)."
+    }
+  ]
+}

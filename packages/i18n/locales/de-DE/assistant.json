@@ -1,0 +1,319 @@
+{
+  "title": "Assistent",
+  "description": "Fragen Sie openJII zu dieser Seite, Ihrer Arbeit oder der Forschungsbibliothek.",
+  "open": "Assistent öffnen",
+  "close": "Assistent schließen",
+  "newThread": "Neue Unterhaltung beginnen",
+  "entity": {
+    "experiment": "Experiment",
+    "protocol": "Protokoll",
+    "workbook": "Arbeitsmappe",
+    "macro": "Makro",
+    "dashboard": "Dashboard",
+    "visualization": "Visualisierung"
+  },
+  "context": {
+    "answeringAbout": "Bezug",
+    "page": "diese Seite",
+    "experiment": "dieses Experiment",
+    "protocol": "dieses Protokoll",
+    "workbook": "diese Arbeitsmappe",
+    "macro": "dieses Makro",
+    "dashboard": "dieses Dashboard"
+  },
+  "history": {
+    "title": "Unterhaltungen",
+    "description": "Eine frühere Unterhaltung fortsetzen.",
+    "open": "Unterhaltungsverlauf öffnen",
+    "back": "Zurück zur Unterhaltung",
+    "loading": "Unterhaltungen werden geladen...",
+    "empty": "Ihre Unterhaltungen erscheinen hier."
+  },
+  "thread": {
+    "loading": "Unterhaltung wird geladen...",
+    "messagesLabel": "Assistentennachrichten",
+    "jumpToLatest": "Zum neuesten Beitrag"
+  },
+  "empty": {
+    "title": "Woran arbeiten Sie?",
+    "description": "Fragen Sie zur aktuellen Seite, Ihren Daten, öffentlichen Arbeiten, der Dokumentation oder dem freigegebenen Literaturkorpus.",
+    "prompts": {
+      "capabilities": "Was können Sie hier tun?",
+      "findProtocol": "Ein Protokoll für PAR-Messungen finden",
+      "startExperiment": "Ein Experiment aus einer Vorlage beginnen"
+    }
+  },
+  "pending": {
+    "toolLoop": "Quellen werden geprüft",
+    "running": "läuft",
+    "description": "Das Modell wählt die erlaubten Quellen und Werkzeuge aus."
+  },
+  "tool": { "completed": "fertig", "failed": "fehlgeschlagen" },
+  "rating": {
+    "helpful": "Antwort als hilfreich markieren",
+    "notHelpful": "Antwort als nicht hilfreich markieren"
+  },
+  "sources": { "count_one": "{{count}} Quelle", "count_other": "{{count}} Quellen" },
+  "composer": {
+    "label": "Nachricht an den Assistenten",
+    "placeholder": "Fragen Sie zu dieser Seite, Ihren Daten oder der Dokumentation...",
+    "send": "Nachricht senden",
+    "confirmationHint": "Schreibvorgänge warten auf Ihre Bestätigung"
+  },
+  "quota": {
+    "title": "Tägliches Assistentenbudget",
+    "remaining": "Heute noch {{count}} Token",
+    "resets": "Zurücksetzung {{date}}",
+    "exhaustedTitle": "Tagesbudget erreicht",
+    "exhaustedDescription": "Der Assistent antwortet nach der nächsten Zurücksetzung wieder. Suche und Dokumentation funktionieren weiterhin."
+  },
+  "errors": {
+    "dismiss": "Schließen",
+    "ASSISTANT_DISABLED": {
+      "title": "Assistent nicht verfügbar",
+      "description": "Ihr Konto gehört nicht zur Assistenten-Kohorte."
+    },
+    "ASSISTANT_QUOTA_EXCEEDED": {
+      "title": "Tagesbudget erreicht",
+      "description": "Versuchen Sie es nach der nächsten Zurücksetzung erneut."
+    },
+    "PROVIDER_MODEL_UNAVAILABLE": {
+      "title": "Ausgewähltes Modell nicht verfügbar",
+      "description": "Das ausgewählte Modell ist für diesen Workspace nicht verfügbar. Deine Frage bleibt im Eingabefeld. Die Administration muss den Modellzugriff einrichten, bevor du es erneut versuchen kannst."
+    },
+    "PROVIDER_UNAVAILABLE": {
+      "title": "Modell nicht verfügbar",
+      "description": "Der Modellanbieter ist nicht erreichbar. Ihre Frage bleibt im Eingabefeld."
+    },
+    "TOOL_LOOP_LIMIT": {
+      "title": "Zu viele Werkzeugschritte",
+      "description": "Der Assistent hat abgebrochen. Grenzen Sie die Frage ein."
+    },
+    "UNKNOWN": {
+      "title": "Keine Antwort möglich",
+      "description": "Prüfen Sie die Verbindung und versuchen Sie es erneut. Es wurde nichts gespeichert."
+    }
+  },
+  "draft": {
+    "title": "Entwurf: {{type}}",
+    "description": {
+      "pending": "Noch nicht gespeichert.",
+      "confirming": "Wird nach Ihrer Bestätigung erstellt...",
+      "confirmed": "Nach Ihrer Bestätigung erstellt.",
+      "discarded": "Verworfen. Nichts wurde gespeichert."
+    },
+    "basedOn": "Basierend auf",
+    "edit": "Felder bearbeiten",
+    "discard": "Verwerfen",
+    "confirm": "{{type}} erstellen",
+    "retryConfirmation": "Bestätigung erneut versuchen",
+    "retryConfirmationHelp": "Die Erstellung wurde unterbrochen. Versuchen Sie es erneut, um die Einrichtung ohne weitere Kopie abzuschließen.",
+    "cancelEdit": "Abbrechen",
+    "saveChanges": "Änderungen speichern",
+    "invalidJson": "Geben Sie vor dem Speichern gültiges JSON ein.",
+    "openCreated": "{{name}} öffnen",
+    "actionError": "Der Entwurf konnte nicht geändert werden. Möglicherweise ist er nicht mehr ausstehend oder Ihre Berechtigung hat sich geändert.",
+    "status": {
+      "pending": "Bestätigung nötig",
+      "confirming": "Wird erstellt",
+      "confirmed": "Erstellt",
+      "discarded": "Verworfen"
+    },
+    "visualization": {
+      "destination": "Zielexperiment",
+      "fields": {
+        "name": "Name",
+        "description": "Beschreibung",
+        "chartFamily": "Diagrammfamilie",
+        "chartType": "Diagrammtyp",
+        "config": "Diagrammkonfiguration",
+        "dataConfig": "Datenkonfiguration"
+      }
+    }
+  },
+  "workspace": {
+    "open": "Assistenten-Arbeitsbereich öffnen",
+    "eyebrow": "Forschungsassistent",
+    "title": "Assistenten-Arbeitsbereich",
+    "description": "Wiederverwendbare Arbeiten durchsuchen, zitierbare Quellen verwalten und Nutzung ohne Prompttexte einsehen.",
+    "loading": "Wird geladen...",
+    "tabs": { "starters": "Vorlagen", "knowledge": "Wissen", "usage": "Nutzung" },
+    "error": {
+      "title": "Bereich konnte nicht geladen werden",
+      "description": "Der Server hat einen Fehler gemeldet. Prüfen Sie den Funktionsstatus und versuchen Sie es erneut."
+    }
+  },
+  "starters": {
+    "search": "Vorlagen und öffentliche Arbeiten durchsuchen...",
+    "typeFilter": "Nach Typ filtern",
+    "sortLabel": "Vorlagen sortieren",
+    "types": { "all": "Alle Typen" },
+    "sort": { "reuse": "Am häufigsten wiederverwendet", "updated": "Zuletzt aktualisiert" },
+    "curated": "Kuratiert",
+    "curatedTitle": "Von JII kuratiert",
+    "curatedDescription": "Geprüfte Ausgangspunkte des Jan IngenHousz Institute.",
+    "publicTitle": "Öffentliche Arbeiten",
+    "publicDescription": "Öffentliche Experimente, Protokolle, Arbeitsmappen und Makros, die in Ihre Organisation kopiert werden können.",
+    "noDescription": "Keine Beschreibung vorhanden.",
+    "community": "openJII-Community",
+    "reused_one": "{{count}}-mal wiederverwendet",
+    "reused_other": "{{count}}-mal wiederverwendet",
+    "start": "Damit beginnen",
+    "empty": "Keine öffentlichen Arbeiten entsprechen diesen Filtern.",
+    "copy": {
+      "title": "Ziel der Kopie wählen",
+      "description": "{{name}} wird privat kopiert und mit der Quelle verknüpft.",
+      "organization": "Besitzende Organisation",
+      "selectOrganization": "Organisation auswählen",
+      "privateHint": "Die Kopie ist zunächst privat.",
+      "action": "Private Kopie erstellen",
+      "created": "Kopie erstellt",
+      "open": "Kopie öffnen",
+      "error": "Die Kopie konnte nicht erstellt werden. Prüfen Sie Ihre Berechtigung."
+    }
+  },
+  "knowledge": {
+    "organization": "Organisation",
+    "selectOrganization": "Organisation auswählen",
+    "capabilities": { "title": "Einige Wissensanbieter sind nicht verfügbar" },
+    "provider": {
+      "docs": "Dokumentationssuche",
+      "documentIntelligence": "Dokumentanalyse",
+      "genie": "Fragen zu öffentlichen Datensätzen"
+    },
+    "errorCode": {
+      "DATABRICKS_NOT_CONFIGURED": "Databricks ist nicht konfiguriert.",
+      "DATABRICKS_AUTH_FAILED": "Databricks-Anmeldung fehlgeschlagen.",
+      "DOCUMENT_INTELLIGENCE_UNAVAILABLE": "Document Intelligence ist in diesem Arbeitsbereich oder dieser Region nicht verfügbar.",
+      "DOCUMENT_TYPE_UNSUPPORTED": "Dieser Dateityp wird nicht unterstützt.",
+      "DOCUMENT_TOO_LARGE": "Die Datei überschreitet 100 MB oder 500 Seiten.",
+      "DOCUMENT_NOT_UPLOADED": "Keine hochgeladene Datei vorhanden.",
+      "DOCUMENT_PARSE_FAILED": "Die Datei konnte nicht gelesen werden.",
+      "GENIE_NOT_CONFIGURED": "Genie ist nicht konfiguriert.",
+      "GENIE_DATASET_NOT_PUBLIC": "Der konfigurierte Genie-Datensatz ist nicht öffentlich.",
+      "DOCS_ROOT_UNAVAILABLE": "Die Dokumentationsquelle ist nicht verfügbar."
+    },
+    "corpus": {
+      "title": "Literaturkorpus",
+      "description": "Forschende können Liste und Rechte einsehen. Nur Kuratoren ändern die Aufnahme.",
+      "empty": "Für diese Organisation wurde noch keine Literatur hinzugefügt.",
+      "add": "Literatur hinzufügen",
+      "file": "Quelldokument",
+      "upload": "Quelle hochladen",
+      "uploadError": "Das Quelldokument konnte nicht hochgeladen werden.",
+      "parse": "Dokument analysieren",
+      "review": "Analyse und Rechte prüfen",
+      "admit": "Für Assistenten freigeben",
+      "remove": "Entfernen",
+      "createTitle": "Literatur hinzufügen",
+      "createDescription": "Eine Arbeit bleibt gesperrt, bis Analyse und Nutzungsrechte bestätigt sind.",
+      "create": "Gesperrte Arbeit hinzufügen",
+      "createError": "Die Arbeit konnte nicht hinzugefügt werden.",
+      "fields": {
+        "title": "Titel",
+        "authors": "Autoren, durch Komma getrennt",
+        "year": "Jahr",
+        "tags": "Themen, durch Komma getrennt",
+        "sourceUrl": "Offene Quell-URL"
+      },
+      "status": {
+        "held": "Gesperrt",
+        "uploaded": "Hochgeladen",
+        "parsing": "Wird analysiert",
+        "review": "Prüfung nötig",
+        "active": "Aktiv",
+        "rejected": "Abgelehnt",
+        "removed": "Entfernt",
+        "failed": "Fehlgeschlagen"
+      }
+    },
+    "rights": {
+      "pending": "Rechte offen",
+      "approved": "Rechte bestätigt",
+      "rejected": "Rechte abgelehnt"
+    },
+    "basis": {
+      "open-access": "Open Access",
+      "author-owned": "Im Besitz des Autors",
+      "licensed": "Lizenziert",
+      "public-domain": "Gemeinfrei",
+      "authored-fixture": "Erstellte Entwicklungsquelle"
+    },
+    "parse": {
+      "status": "Analysestatus",
+      "pages": "Seiten",
+      "confidence": "Mittlere Sicherheit",
+      "preview": "Vorschau des erkannten Inhalts",
+      "elementPage": "Seite {{page}}",
+      "kind": {
+        "text": "Text",
+        "table": "Tabelle",
+        "figure": "Abbildung",
+        "heading": "Überschrift",
+        "other": "Sonstiges"
+      },
+      "notAvailable": "Nicht verfügbar",
+      "pageCount_one": "{{count}} Seite",
+      "pageCount_other": "{{count}} Seiten",
+      "state": {
+        "not-started": "Nicht begonnen",
+        "parsing": "Wird analysiert",
+        "review": "Prüfung nötig",
+        "accepted": "Akzeptiert",
+        "rejected": "Abgelehnt",
+        "failed": "Fehlgeschlagen"
+      }
+    },
+    "documents": {
+      "title": "Private Dokumente",
+      "description": "Laden Sie ein Protokollblatt oder Paper für Ihre eigene Organisation hoch. Private Dokumente gelangen nie in den gemeinsamen Korpus oder öffentliche Werkzeuge.",
+      "file": "PDF-, Bild-, Word- oder PowerPoint-Datei",
+      "privateHint": "Nur für Sie in der ausgewählten Organisation sichtbar.",
+      "upload": "Dokument hochladen",
+      "uploadError": "Das Dokument konnte nicht hochgeladen werden.",
+      "removeSelected": "Ausgewählte Datei entfernen",
+      "parse": "Analysieren",
+      "delete": "Privates Dokument löschen",
+      "unavailableTitle": "Dokumentupload nicht verfügbar",
+      "unavailableDescription": "Der Server hat private Dokumentuploads deaktiviert. Prüfen Sie die Angaben oben."
+    },
+    "review": {
+      "title": "Analyse und Nutzungsrechte prüfen",
+      "rightsTitle": "Rechte müssen ausdrücklich erfasst sein",
+      "rightsDescription": "Die Freigabe speichert vorhandene Lizenz, Namensnennung und Rechtsgrundlage. Sie leitet keine Rechte aus einer URL oder Freitextnotiz ab.",
+      "parseDecision": "Entscheidung zur Analyse",
+      "rightsDecision": "Rechte im Plattformkorpus",
+      "externalDecision": "Rechte für den öffentlichen Endpunkt",
+      "basis": "Rechtsgrundlage",
+      "licenceId": "Lizenzkennung",
+      "licenceUrl": "Lizenz-URL",
+      "attribution": "Erforderliche Namensnennung",
+      "note": "Prüfnotiz",
+      "accept": "Analyse und Rechte akzeptieren"
+    }
+  },
+  "usage": {
+    "yours": {
+      "title": "Ihre Nutzung",
+      "description": "Prompts sind in diesen Summen nicht enthalten."
+    },
+    "turns": "Assistentenanfragen",
+    "tokensUsed": "Heute genutzte Token",
+    "toolCalls": "Werkzeugaufrufe",
+    "starterCopies": "Vorlagenkopien",
+    "approvals": "Bestätigte Entwürfe"
+  },
+  "operator": {
+    "title": "Operatorsteuerung",
+    "description": "Kohortenweite Summen und Einstellungen. Analysen enthalten Organisation und Entitätstyp, nie Prompttexte.",
+    "error": "Operatormetriken konnten nicht geladen werden.",
+    "budget": { "title": "Standard-Tagesbudget", "save": "Budget speichern" },
+    "collections": {
+      "title": "Vorlagensammlungen",
+      "name": "Name der Sammlung",
+      "description": "Beschreibung",
+      "create": "Sammlung erstellen",
+      "save": "Einträge speichern"
+    }
+  }
+}

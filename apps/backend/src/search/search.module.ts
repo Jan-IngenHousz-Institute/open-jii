@@ -13,5 +13,6 @@ import { SearchController } from "./presentation/search.controller";
   imports: [ExperimentModule, ProtocolModule, MacroModule, WorkbookModule, OrganizationModule],
   controllers: [SearchController],
   providers: [GlobalSearchUseCase],
+  exports: [GlobalSearchUseCase],
 })
 export class SearchModule {}

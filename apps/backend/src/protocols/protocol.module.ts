@@ -48,6 +48,6 @@ import { ProtocolController } from "./presentation/protocol.controller";
     AddCompatibleMacrosUseCase,
     RemoveCompatibleMacroUseCase,
   ],
-  exports: [ProtocolRepository],
+  exports: [ProtocolRepository, CreateProtocolUseCase, GetProtocolUseCase],
 })
 export class ProtocolModule {}

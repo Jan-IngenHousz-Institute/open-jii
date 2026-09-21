@@ -10,19 +10,22 @@ const generator = new OpenAPIGenerator({
 });
 
 async function generate() {
-  const openApiDocument = await generator.generate(contract, {
-    info: {
-      title: "openJII API",
-      version: "1.0.0",
-      description: "REST API documentation for the openJII platform",
-    },
-    servers: [
-      {
-        url: "http://localhost:3020",
-        description: "Local development",
+  const openApiDocument = await generator.generate(
+    { ...contract },
+    {
+      info: {
+        title: "openJII API",
+        version: "1.0.0",
+        description: "REST API documentation for the openJII platform",
       },
-    ],
-  });
+      servers: [
+        {
+          url: "http://localhost:3020",
+          description: "Local development",
+        },
+      ],
+    },
+  );
 
   const outputDir = path.resolve(__dirname, "../dist");
   if (!fs.existsSync(outputDir)) {

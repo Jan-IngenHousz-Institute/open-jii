@@ -1,0 +1,20 @@
+[project]
+name = "openjii-assistant-agent"
+version = "0.1.0"
+description = "Databricks Custom Agent for the openJII research assistant"
+requires-python = ">=3.11"
+dependencies = [
+  "cryptography>=44,<47",
+  "databricks-sdk>=0.60,<1",
+  "fastapi>=0.115,<1",
+  "httpx>=0.28,<1",
+  "jsonschema>=4.23,<5",
+  "mlflow[databricks]>=3.1,<4",
+  "uvicorn>=0.34,<1",
+]
+
+[dependency-groups]
+dev = ["pytest>=8,<9"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

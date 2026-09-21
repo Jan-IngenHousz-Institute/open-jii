@@ -98,7 +98,7 @@ export class DatabricksFilesService {
           msg: "Failed to upload file to Databricks",
           errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
           operation: "uploadFile",
-          error,
+          reason: getAxiosErrorMessage(error),
         });
         return apiErrorMapper(
           `Failed to upload file to Databricks: ${getAxiosErrorMessage(error)}`,
@@ -156,7 +156,7 @@ export class DatabricksFilesService {
           errorCode: ErrorCodes.DATABRICKS_FILE_FAILED,
           operation: "downloadFile",
           filePath,
-          error,
+          reason: getAxiosErrorMessage(error),
         });
         return apiErrorMapper(
           `Failed to download file from Databricks: ${getAxiosErrorMessage(error)}`,

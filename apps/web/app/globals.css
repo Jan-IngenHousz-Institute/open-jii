@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @config "../tailwind.config.ts";
+@source "../node_modules/streamdown/dist/*.js";
+@source "../node_modules/@streamdown/code/dist/*.js";
 
 /* Every colour, font and radius in apps/web is declared here and surfaced as a
  * Tailwind utility by `@theme inline` below. Nothing else defines one.
@@ -356,5 +358,87 @@
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
+  }
+}
+
+@layer components {
+  .platform-content-container {
+    container-name: platform-content;
+    container-type: inline-size;
+  }
+
+  .platform-page-scroll {
+    padding: 1rem;
+  }
+
+  .platform-header-primary-action-label,
+  .platform-header-secondary-action-label,
+  .platform-header-wide-action,
+  .experiment-table-owner-column,
+  .experiment-table-organization-column,
+  .experiment-table-members-column,
+  .experiment-table-activity-column,
+  .experiment-table-updated-column {
+    display: none;
+  }
+
+  @container platform-content (min-width: 34rem) {
+    .platform-header-primary-action-label {
+      display: inline;
+    }
+  }
+
+  @container platform-content (min-width: 48rem) {
+    .platform-page-scroll {
+      padding: 1.5rem;
+    }
+  }
+
+  @container platform-content (min-width: 52rem) {
+    .experiment-table-owner-column {
+      display: table-cell;
+    }
+  }
+
+  @container platform-content (min-width: 62rem) {
+    .experiment-table-members-column,
+    .experiment-table-updated-column {
+      display: table-cell;
+    }
+  }
+
+  @container platform-content (min-width: 64rem) {
+    .platform-header-wide-action {
+      display: inline-flex;
+    }
+  }
+
+  @container platform-content (min-width: 72rem) {
+    .platform-header-secondary-action-label,
+    .experiment-table-organization-column {
+      display: table-cell;
+    }
+
+    .platform-header-secondary-action-label {
+      display: inline;
+    }
+  }
+
+  @container platform-content (min-width: 74rem) {
+    .experiment-table-activity-column {
+      display: table-cell;
+    }
+  }
+
+  @container platform-content (min-width: 76rem) {
+    .platform-page-scroll {
+      padding-inline: 2.5rem;
+    }
+  }
+
+  @container platform-content (min-width: 96rem) {
+    .platform-page-scroll {
+      padding-inline: 3.5rem;
+    }
   }
 }

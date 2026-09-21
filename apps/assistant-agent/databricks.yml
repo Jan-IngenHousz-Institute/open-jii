@@ -1,0 +1,64 @@
+bundle:
+  name: openjii-assistant-agent
+
+variables:
+  model_endpoint:
+    default: databricks-gpt-5-6-luna
+  gateway_secret_scope:
+    default: openjii-assistant-poc
+  gateway_secret_key:
+    default: gateway-token
+
+sync:
+  exclude:
+    - .env
+    - .venv/**
+    - .pytest_cache/**
+    - __pycache__/**
+    - tests/**
+
+resources:
+  experiments:
+    assistant_traces:
+      name: /Shared/openjii-assistant-poc
+  apps:
+    assistant_agent:
+      name: agent-openjii-poc
+      description: Development Custom Agent for the openJII research assistant
+      source_code_path: .
+      config:
+        command: [uvicorn, "app:app", --host, "0.0.0.0", --port, "8000"]
+        env:
+          - name: ASSISTANT_DATABRICKS_HOST
+            value: https://dbc-6efd58ae-21b6.cloud.databricks.com
+          - name: ASSISTANT_ALLOWED_MODELS
+            value_from: assistant-model
+          - name: ASSISTANT_GATEWAY_TOKEN
+            value_from: assistant-gateway-token
+          - name: ASSISTANT_TRACING_ENABLED
+            value: "true"
+          - name: MLFLOW_TRACKING_URI
+            value: databricks
+          - name: MLFLOW_EXPERIMENT_ID
+            value_from: assistant-traces
+      resources:
+        - name: assistant-traces
+          experiment:
+            experiment_id: ${resources.experiments.assistant_traces.id}
+            permission: CAN_EDIT
+        - name: assistant-model
+          serving_endpoint:
+            name: ${var.model_endpoint}
+            permission: CAN_QUERY
+        - name: assistant-gateway-token
+          secret:
+            scope: ${var.gateway_secret_scope}
+            key: ${var.gateway_secret_key}
+            permission: READ
+
+targets:
+  dev:
+    default: true
+    mode: development
+    workspace:
+      host: https://dbc-6efd58ae-21b6.cloud.databricks.com

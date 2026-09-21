@@ -1,6 +1,7 @@
 "use client";
 
 import { NOTIFICATION_BELL_OPEN_EVENT } from "@/components/activity/activity-popover";
+import { useAssistant } from "@/components/assistant/assistant-context";
 import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
 import { modifierLabel } from "@/lib/platform";
 import { useHotkey, useHotkeySequence } from "@tanstack/react-hotkeys";
@@ -83,6 +84,7 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const { toggleSidebar } = useSidebar();
+  const assistant = useAssistant();
 
   const goToShortcuts = React.useMemo<GoToShortcut[]>(
     () => [
@@ -135,6 +137,16 @@ export function ShortcutsRoot({ locale }: { locale: string }) {
       showShortcutHint({ keys: [modifierLabel(), "B"], label: "Toggle sidebar" });
     },
     { preventDefault: true },
+  );
+
+  useHotkey(
+    "Mod+J",
+    () => {
+      if (!assistant.enabled) return;
+      assistant.setOpen(!assistant.open);
+      showShortcutHint({ keys: [modifierLabel(), "J"], label: "Assistant" });
+    },
+    { preventDefault: assistant.enabled },
   );
 
   // `G` arms the go-to sequences; surface the hint so the user knows to follow up.

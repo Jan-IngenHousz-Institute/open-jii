@@ -11,8 +11,11 @@ import { LoggerModule } from "nestjs-pino";
 import { pinoConfig } from "@repo/analytics";
 import { auth } from "@repo/auth/server";
 
+import { AssistantKnowledgeModule } from "./assistant-knowledge/assistant-knowledge.module";
+import { AssistantModule } from "./assistant/assistant.module";
 import { AuthorizationModule } from "./authorization/authorization.module";
 import analyticsConfig from "./common/config/analytics.config";
+import assistantConfig from "./common/config/assistant.config";
 import awsConfig from "./common/config/aws.config";
 import databaseConfig from "./common/config/database.config";
 import databricksConfig from "./common/config/databricks.config";
@@ -50,6 +53,7 @@ const orpcLogger = new Logger("ORPC");
         emailConfig,
         mailchimpConfig,
         analyticsConfig,
+        assistantConfig,
         githubConfig,
       ],
     }),
@@ -67,6 +71,8 @@ const orpcLogger = new Logger("ORPC");
       plugins: [new RethrowHandlerPlugin({ filter: (error) => !(error instanceof ORPCError) })],
     }),
     AnalyticsModule,
+    AssistantKnowledgeModule,
+    AssistantModule,
     AuthorizationModule,
     VisibilityModule,
     DatabaseModule,
