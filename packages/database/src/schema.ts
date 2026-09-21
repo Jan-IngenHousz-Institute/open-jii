@@ -937,7 +937,7 @@ export const calibrationRunStatusEnum = pgEnum("calibration_run_status", [
   "rejected", // reviewed and declined; terminal, diagnostics kept
 ]);
 
-// Versioned recipe: a new version is a new row.
+// A name is a label like a protocol's, not a key. `version` is inert at 1 until versioning is designed.
 export const calibrationDefinitions = pgTable(
   "calibration_definitions",
   {

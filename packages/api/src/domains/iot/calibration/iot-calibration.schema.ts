@@ -4,7 +4,7 @@ import { zResourceCapabilities } from "../../authorization/capabilities.schema";
 import { zSensorFamily } from "../../protocol/protocol.schema";
 import { zVisibility } from "../../visibility/visibility.schema";
 import { zIotDevicePathParam } from "../iot.schema";
-import { zCaptureProcedure } from "./iot-calibration-procedure.schema";
+import { MAX_PROCEDURE_STEPS, zCaptureProcedure } from "./iot-calibration-procedure.schema";
 
 // Phones self-register and have no calibration surface.
 export const zCalibrationFamily = zSensorFamily.exclude(["mobile"]);
@@ -42,24 +42,39 @@ const zNumberArrayCoefficientSpec = z
   })
   .strict();
 
-export const zCoefficientSpec = z.discriminatedUnion("type", [
-  zNumberCoefficientSpec,
-  zIntegerArrayCoefficientSpec,
-  zNumberArrayCoefficientSpec,
-]);
+// Bounds the wrong way round would refuse every value a fit could produce.
+export const zCoefficientSpec = z
+  .discriminatedUnion("type", [
+    zNumberCoefficientSpec,
+    zIntegerArrayCoefficientSpec,
+    zNumberArrayCoefficientSpec,
+  ])
+  .refine((spec) => spec.min === undefined || spec.max === undefined || spec.min <= spec.max, {
+    message: "A coefficient's min must not exceed its max",
+  });
 
+// A block with no coefficient would compute nothing, pass review, and apply an empty write.
 export const zCalibrationOutputSchema = z
   .object({
     blocks: z
       .record(zCoefficientName, z.record(zCoefficientName, zCoefficientSpec))
       .refine((blocks) => Object.keys(blocks).length > 0, {
         message: "At least one block is required",
+      })
+      .refine((blocks) => Object.values(blocks).every((block) => Object.keys(block).length > 0), {
+        message: "Every block needs at least one coefficient",
       }),
   })
   .strict();
 
-/** Families disagree on shape: Ambit "1.1.3", MiniPAR "1.03"; a missing patch compares as zero. */
-export const zFirmwareVersion = z.string().regex(/^\d+(\.\d+){1,2}$/);
+/**
+ * Families disagree on shape: Ambit "1.1.3", MiniPAR "1.03"; a missing patch compares as
+ * zero. The length is the definition column's, so nothing the contract accepts fails to store.
+ */
+export const zFirmwareVersion = z
+  .string()
+  .max(32)
+  .regex(/^\d+(\.\d+){1,2}$/);
 
 // Whether an array holds integers is the output schema's call, checked against its spec.
 export const zCoefficientValue = z.union([z.number().finite(), z.array(z.number().finite())]);
@@ -190,10 +205,21 @@ export const zListCalibrationDefinitionsQuery = z.object({
   family: zCalibrationFamily.optional(),
 });
 
+/**
+ * A structured device reply is kept whole as text, so the script can pick the field it
+ * needs; a multi-pulse protocol envelope runs to tens of kilobytes. The interpreter in
+ * `packages/iot` refuses a longer reply at the bench, where a retake is cheap, and cannot
+ * import this constant, so the two agree by value.
+ */
+export const MAX_SERIES_CELL_TEXT = 65_536;
+
+/** Every step may produce a series and a retaken companion; a procedure that parses must submit. */
+export const MAX_PAYLOAD_SERIES = MAX_PROCEDURE_STEPS * 2;
+
 // Cells hold what instruments and operators produced: numbers, text, arrays, or a compound setpoint.
 const zSeriesCell = z.union([
   z.number(),
-  z.string().max(4096),
+  z.string().max(MAX_SERIES_CELL_TEXT),
   z.boolean(),
   z.array(z.number()).max(10_000),
   z.record(z.string(), z.union([z.number(), z.string().max(64)])),
@@ -202,9 +228,16 @@ const zSeriesRow = z.record(z.string(), zSeriesCell.nullable());
 
 export const zCalibrationRunPayload = z
   .record(z.string(), z.array(zSeriesRow).max(5000))
-  .refine((series) => Object.keys(series).length <= 20, {
-    message: "At most 20 series per run",
+  .refine((series) => Object.keys(series).length <= MAX_PAYLOAD_SERIES, {
+    message: `At most ${MAX_PAYLOAD_SERIES} series per run`,
   });
+
+/**
+ * The identifier the connected unit announced for itself: an Ambit's MAC, a MultispeQ's
+ * device id. Compared with the platform device's serial number, so a session on the
+ * wrong unit is refused rather than recorded against the right one.
+ */
+const zReportedSerial = z.string().trim().min(1).max(64);
 
 /** Kept whole for the record; the cap stops a client posting megabytes into a row read on every listing. */
 const INFO_RECORD_MAX_BYTES = 16_384;
@@ -257,6 +290,8 @@ export const zCreateCalibrationRunBody = zIotDevicePathParam.extend({
   params: zCalibrationRunParams.optional(),
   preInfo: zInfoRecord.optional(),
   firmwareVersion: zFirmwareVersion.optional(),
+  // Absent for a family whose firmware names no unit, which the record then says.
+  reportedSerial: zReportedSerial.optional(),
 });
 
 // Blocks a bench tool computed itself: recorded without running the script; QC still applies at approval.
@@ -336,10 +371,14 @@ export const zDeviceCalibrationPathParam = z.object({
 // Addresses the applied row rather than the device's active calibration, so a concurrent
 // approval cannot get this write recorded on it.
 export const zReportDeviceCalibrationWriteBody = zDeviceCalibrationPathParam.extend({
-  writeResults: zCalibrationWriteResults,
+  // A report confirming no block at all would still stamp the calibration as written.
+  writeResults: zCalibrationWriteResults.refine((results) => Object.keys(results).length > 0, {
+    message: "A write report names at least one block",
+  }),
   // Device state after the write; the counterpart of preInfo.
   postInfo: zInfoRecord.optional(),
   verification: zCalibrationRunPayload.optional(),
+  reportedSerial: zReportedSerial.optional(),
 });
 
 /**

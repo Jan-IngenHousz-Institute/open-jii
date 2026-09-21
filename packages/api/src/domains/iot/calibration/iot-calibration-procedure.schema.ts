@@ -163,6 +163,14 @@ function isInstrumentStimulus(stimulus: Stimulus): stimulus is z.infer<typeof zI
   return "instrument" in stimulus;
 }
 
+/**
+ * Every step may produce one series, and a series the operator retook carries a companion,
+ * so a payload holds at most twice this many series. The payload bound is derived from
+ * these rather than chosen apart from them: a procedure that parses must also submit.
+ */
+export const MAX_PROCEDURE_STEPS = 64;
+export const MAX_VERIFY_STEPS = 16;
+
 /** A bench with more ports than this is a rig the browser cannot ask an operator to open. */
 export const MAX_RIG_INSTRUMENTS = 8;
 
@@ -178,9 +186,9 @@ export const zCaptureProcedure = z
         message: `Protocols must serialise to at most ${PROTOCOLS_MAX_BYTES} bytes`,
       })
       .optional(),
-    steps: z.array(zProcedureStep).min(1).max(64),
+    steps: z.array(zProcedureStep).min(1).max(MAX_PROCEDURE_STEPS),
     // Runs after the approved coefficients are written; what it reads is kept with the calibration.
-    verify: z.array(zProcedureStep).min(1).max(16).optional(),
+    verify: z.array(zProcedureStep).min(1).max(MAX_VERIFY_STEPS).optional(),
   })
   .strict()
   .superRefine((procedure, ctx) => {

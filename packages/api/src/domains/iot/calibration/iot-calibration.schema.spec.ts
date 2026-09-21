@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 
+import { MAX_PROCEDURE_STEPS } from "./iot-calibration-procedure.schema";
 import {
+  MAX_PAYLOAD_SERIES,
+  MAX_SERIES_CELL_TEXT,
   zCalibrationBlocks,
   zCalibrationOutputSchema,
   zCalibrationRunPayload,
   zCreateCalibrationRunBody,
   zFirmwareVersion,
+  zReportDeviceCalibrationWriteBody,
 } from "./iot-calibration.schema";
 
 describe("zCalibrationRunPayload", () => {
@@ -30,11 +34,30 @@ describe("zCalibrationRunPayload", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects more than 20 series", () => {
+  // The bound follows the procedure's: every step may record a series and its retaken
+  // companion, so a procedure the contract accepted must never be refused at submit.
+  it("holds a series and a retaken companion for every step a procedure may declare", () => {
+    const series: Record<string, { value: number }[]> = {};
+    for (let index = 0; index < MAX_PROCEDURE_STEPS; index++) {
+      series[`series_${index}`] = [{ value: index }];
+      series[`series_${index}_retaken`] = [{ value: index }];
+    }
+    expect(Object.keys(series)).toHaveLength(MAX_PAYLOAD_SERIES);
+    expect(zCalibrationRunPayload.safeParse(series).success).toBe(true);
+  });
+
+  it("rejects one series beyond that", () => {
     const series = Object.fromEntries(
-      Array.from({ length: 21 }, (_, i) => [`series_${i}`, [{ value: i }]]),
+      Array.from({ length: MAX_PAYLOAD_SERIES + 1 }, (_, i) => [`series_${i}`, [{ value: i }]]),
     );
     expect(zCalibrationRunPayload.safeParse(series).success).toBe(false);
+  });
+
+  // A structured device reply travels as text; a protocol envelope is tens of kilobytes.
+  it("holds a structured reply as text up to the cell cap, and no further", () => {
+    const cell = (length: number) => ({ reading: [{ reply: "x".repeat(length) }] });
+    expect(zCalibrationRunPayload.safeParse(cell(MAX_SERIES_CELL_TEXT)).success).toBe(true);
+    expect(zCalibrationRunPayload.safeParse(cell(MAX_SERIES_CELL_TEXT + 1)).success).toBe(false);
   });
 
   it("rejects nested-object cells outside the compound-setpoint shape", () => {
@@ -59,6 +82,27 @@ describe("zCalibrationOutputSchema", () => {
 
   it("rejects an empty blocks object", () => {
     expect(zCalibrationOutputSchema.safeParse({ blocks: {} }).success).toBe(false);
+  });
+
+  // A block with nothing in it computes nothing, passes review, and applies an empty write.
+  it("rejects a block that declares no coefficient", () => {
+    expect(zCalibrationOutputSchema.safeParse({ blocks: { par: {} } }).success).toBe(false);
+  });
+
+  // Bounds the wrong way round would refuse every value a fit could produce.
+  it("rejects a coefficient whose min exceeds its max", () => {
+    const schema = (spec: Record<string, unknown>) => ({ blocks: { par: { slope: spec } } });
+    expect(
+      zCalibrationOutputSchema.safeParse(schema({ type: "number", min: 2, max: 1 })).success,
+    ).toBe(false);
+    expect(
+      zCalibrationOutputSchema.safeParse(
+        schema({ type: "integer_array", length: 6, min: 10, max: 0 }),
+      ).success,
+    ).toBe(false);
+    expect(
+      zCalibrationOutputSchema.safeParse(schema({ type: "number", min: 1, max: 1 })).success,
+    ).toBe(true);
   });
 
   // A spectral sensor holds one coefficient per channel, fractional and signed.
@@ -195,6 +239,11 @@ describe("zFirmwareVersion", () => {
     expect(zFirmwareVersion.safeParse("v1.2.3").success).toBe(false);
     expect(zFirmwareVersion.safeParse("1.1.3-rc1").success).toBe(false);
   });
+
+  // The definition column is varchar(32); a version the contract accepted must store.
+  it("rejects a version longer than the column that stores it", () => {
+    expect(zFirmwareVersion.safeParse(`1.${"2".repeat(40)}`).success).toBe(false);
+  });
 });
 
 describe("zCreateCalibrationRunBody", () => {
@@ -215,6 +264,39 @@ describe("zCreateCalibrationRunBody", () => {
   // The record is read on every run listing; it is a note, not a dump store.
   it("refuses device info beyond the size cap", () => {
     const result = zCreateCalibrationRunBody.safeParse(body({ dump: "x".repeat(20_000) }));
+    expect(result.success).toBe(false);
+  });
+
+  it("carries the identifier the unit announced, when its firmware names one", () => {
+    const result = zCreateCalibrationRunBody.safeParse({
+      ...body({}),
+      reportedSerial: " a4cf12aa93b0 ",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.reportedSerial).toBe("a4cf12aa93b0");
+    }
+  });
+});
+
+describe("zReportDeviceCalibrationWriteBody", () => {
+  const calibrationId = "33333333-3333-4333-8333-333333333333";
+
+  it("records what each block's write came to", () => {
+    const result = zReportDeviceCalibrationWriteBody.safeParse({
+      calibrationId,
+      writeResults: { par: { verified: true } },
+      reportedSerial: "a4cf12aa93b0",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  // An empty report would still stamp the calibration as written to the device.
+  it("refuses a report that confirms no block at all", () => {
+    const result = zReportDeviceCalibrationWriteBody.safeParse({
+      calibrationId,
+      writeResults: {},
+    });
     expect(result.success).toBe(false);
   });
 });

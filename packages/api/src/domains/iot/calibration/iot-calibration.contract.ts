@@ -23,7 +23,8 @@ import {
 } from "./iot-calibration.schema";
 
 export const iotCalibrationContract = {
-  // A new version of an existing (family, name) pair goes through the same create endpoint.
+  // A name is a label, as it is for a protocol or a workbook, not a key: two definitions
+  // may share one. Versioning is not designed yet, so `version` stays at 1.
   listCalibrationDefinitions: oc
     .route({ method: "GET", path: "/api/v1/calibration-definitions", successStatus: 200 })
     .input(zListCalibrationDefinitionsQuery)
