@@ -643,7 +643,7 @@ metrics:
     slots: [alert]
     severity: warning
     runbook: docs/runbooks/client-error-spike.md
-    notes: PostHog insight alert -> #platform-alerts; not routed through CloudWatch.
+    notes: PostHog insight alert, delivered by PostHog rather than through CloudWatch.
 
   - num: 43
     id: pageview-collapse

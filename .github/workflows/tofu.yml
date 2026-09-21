@@ -87,7 +87,7 @@ jobs:
       TF_VAR_slack_usage_webhook_url: ${{ secrets.SLACK_USAGE_WEBHOOK_URL }}
       # A bool variable rejects an empty string, so an unset repository variable
       # has to fall back rather than be passed through.
-      TF_VAR_enable_heartbeat_export: ${{ vars.ENABLE_HEARTBEAT_EXPORT || 'false' }}
+      TF_VAR_enable_heartbeat_export: ${{ vars.ENABLE_HEARTBEAT_EXPORT || 'true' }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
@@ -175,7 +175,7 @@ jobs:
       TF_VAR_slack_usage_webhook_url: ${{ secrets.SLACK_USAGE_WEBHOOK_URL }}
       # A bool variable rejects an empty string, so an unset repository variable
       # has to fall back rather than be passed through.
-      TF_VAR_enable_heartbeat_export: ${{ vars.ENABLE_HEARTBEAT_EXPORT || 'false' }}
+      TF_VAR_enable_heartbeat_export: ${{ vars.ENABLE_HEARTBEAT_EXPORT || 'true' }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6

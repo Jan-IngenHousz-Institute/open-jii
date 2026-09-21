@@ -39,14 +39,14 @@ variable "db_cluster_identifier" {
 }
 
 variable "heartbeat_webhook_url" {
-  description = "Slack incoming webhook for #platform-heartbeat; empty logs the digest instead of posting"
+  description = "Slack incoming webhook the observability digest posts to; empty logs the digest instead"
   type        = string
   sensitive   = true
   default     = ""
 }
 
 variable "usage_webhook_url" {
-  description = "Slack incoming webhook for #platform-usage; empty logs the digest instead of posting"
+  description = "Slack incoming webhook the usage digests post to; empty logs the digest instead"
   type        = string
   sensitive   = true
   default     = ""
