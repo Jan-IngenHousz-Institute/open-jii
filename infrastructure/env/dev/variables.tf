@@ -40,6 +40,12 @@ variable "slack_webhook_url" {
   sensitive   = true
 }
 
+variable "enable_heartbeat_export" {
+  description = "Adds the heartbeat export task to the metrics scheduler; flip on only after the bundle has synced the notebook"
+  type        = bool
+  default     = false
+}
+
 variable "slack_heartbeat_webhook_url" {
   description = "Slack incoming webhook for the daily observability digest; empty logs instead of posting"
   type        = string
