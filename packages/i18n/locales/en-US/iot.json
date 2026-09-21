@@ -992,6 +992,8 @@
         "notWritable": "The platform has no console command for {{coefficients}}. A run producing these is recorded, but they never reach the device.",
         "describePlaceholder": "Say what this bench measures and against what.",
         "readOnly": "You can read this calibration but not change it.",
+        "frozen_one": "One run has recorded this calibration, so it can no longer be edited. Editing it would change what that run appears to have done.",
+        "frozen_other": "{{count}} runs have recorded this calibration, so it can no longer be edited. Editing it would change what those runs appear to have done.",
         "notSaving": "Not saving while the definition is incomplete.",
         "verifyOptional": "optional"
       },
@@ -1121,7 +1123,12 @@
       },
       "fit": {
         "label": "Fit, submitting {{coefficients}} coefficients in {{blocks}} blocks",
-        "submits": "What it submits"
+        "submits": "What it submits",
+        "draft": "Draft the fit",
+        "draftTitle": "Replace the script with a drafted fit?",
+        "draftConfirm": "The draft is written from the series recorded above and the blocks below, fitting them in the order they are declared. Whatever is in the script now is lost.",
+        "draftCancel": "Keep what I wrote",
+        "draftReplace": "Replace it"
       },
       "sidebar": {
         "id": "Calibration ID",

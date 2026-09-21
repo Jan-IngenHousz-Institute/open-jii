@@ -1157,6 +1157,7 @@ export function createCalibrationDefinitionDetail(
   return {
     ...createCalibrationDefinition(overrides),
     capabilities: createCapabilities(),
+    runCount: 0,
     ...overrides,
   };
 }

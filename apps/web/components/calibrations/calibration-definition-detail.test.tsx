@@ -113,4 +113,20 @@ describe("CalibrationDefinitionDetail", () => {
     await userEvent.click(screen.getByRole("button", { name: /lamp/ }));
     expect(await screen.findByDisplayValue("KIPRIM")).toBeDisabled();
   });
+
+  // The server refuses the save outright. Offering every field and then failing once, at
+  // the save, is how an author loses an afternoon's edits.
+  it("closes a definition a run already points at", async () => {
+    server.mount(contract.iot.getCalibrationDefinition, {
+      body: { ...definition, runCount: 2 },
+    });
+
+    renderDetail();
+
+    expect(await screen.findByText("iot.calibration.detail.frozen")).toBeInTheDocument();
+    expect(screen.queryByText("iot.calibration.detail.readOnly")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: /lamp/ }));
+    expect(await screen.findByDisplayValue("KIPRIM")).toBeDisabled();
+  });
 });

@@ -72,11 +72,30 @@ export function CalibrationStepsEditor({
     };
     const step = newStep(kind, series, read);
     const target = targets.at(0);
+    if (target === undefined) {
+      return step;
+    }
 
-    // A set step opens on a role that has setpoints, rather than one that has none.
-    return step.kind === "set" && target !== undefined
-      ? { ...step, instrument: target.role, set: target.setpoints.at(0)?.name ?? step.set }
-      : step;
+    // A step that drives something opens on a role that has setpoints, rather than on one
+    // that has none. For a sweep that is also what puts its range and its ramp on screen.
+    const setpoint = target.setpoints.at(0);
+    if (step.kind === "set") {
+      return { ...step, instrument: target.role, set: setpoint?.name ?? step.set };
+    }
+    if (step.kind === "sweep") {
+      return {
+        ...step,
+        stimulus: {
+          instrument: target.role,
+          set: setpoint?.name ?? "",
+          values: step.stimulus.values.flatMap((point) =>
+            typeof point === "number" ? [point] : [],
+          ),
+        },
+      };
+    }
+
+    return step;
   }
 
   function renderCell(step: ProcedureStep, index: number) {

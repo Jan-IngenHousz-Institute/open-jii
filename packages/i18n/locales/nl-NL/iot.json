@@ -992,6 +992,8 @@
         "notWritable": "Het platform heeft geen console-opdracht voor {{coefficients}}. Een run wordt vastgelegd, maar deze waarden bereiken het apparaat nooit.",
         "describePlaceholder": "Beschrijf wat deze opstelling meet en waartegen.",
         "readOnly": "Je kunt deze kalibratie lezen maar niet wijzigen.",
+        "frozen_one": "Eén run heeft deze kalibratie vastgelegd, dus deze kan niet meer worden gewijzigd. Een wijziging zou veranderen wat die run heeft gedaan.",
+        "frozen_other": "{{count}} runs hebben deze kalibratie vastgelegd, dus deze kan niet meer worden gewijzigd. Een wijziging zou veranderen wat die runs hebben gedaan.",
         "notSaving": "Wordt niet opgeslagen zolang de definitie onvolledig is.",
         "verifyOptional": "optioneel"
       },
@@ -1121,7 +1123,12 @@
       },
       "fit": {
         "label": "Fit, levert {{coefficients}} coëfficiënten in {{blocks}} blokken",
-        "submits": "Wat het oplevert"
+        "submits": "Wat het oplevert",
+        "draft": "Fit opstellen",
+        "draftTitle": "Het script vervangen door een opgestelde fit?",
+        "draftConfirm": "Het concept komt uit de hierboven vastgelegde series en de blokken eronder, in de volgorde waarin ze zijn opgegeven. Wat er nu in het script staat, gaat verloren.",
+        "draftCancel": "Houd wat ik schreef",
+        "draftReplace": "Vervangen"
       },
       "sidebar": {
         "id": "Kalibratie-ID",

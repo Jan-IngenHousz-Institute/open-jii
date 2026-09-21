@@ -143,6 +143,29 @@ describe("CalibrationStepsEditor", () => {
     expect(insertButtons("sweep")[0]).toBeEnabled();
   });
 
+  // Opening by hand costs the author two choices before the range and the ramp appear,
+  // on a rig that already declared what it can drive.
+  it("opens a new sweep on a setpoint the rig can drive", async () => {
+    const { onChange, user } = renderEditor();
+
+    await user.click(insertButtons("sweep")[0]);
+
+    expect(onChange.mock.calls[0][0].steps[0]).toMatchObject({
+      kind: "sweep",
+      stimulus: { instrument: "lamp", set: "current_a" },
+    });
+  });
+
+  it("leaves a sweep to the operator when the rig drives nothing", async () => {
+    const { onChange, user } = renderEditor({ ...bench, instruments: [{ role: "dut" }] });
+
+    await user.click(insertButtons("sweep")[0]);
+
+    const added = onChange.mock.calls[0][0].steps[0];
+    expect(added).toMatchObject({ kind: "sweep" });
+    expect(added).not.toHaveProperty("stimulus.instrument");
+  });
+
   it("moves a step, because order is the procedure", async () => {
     const { onChange, user } = renderEditor();
 

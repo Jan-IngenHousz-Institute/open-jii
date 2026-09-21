@@ -992,6 +992,8 @@
         "notWritable": "Für {{coefficients}} gibt es keinen Konsolenbefehl. Ein Lauf wird protokolliert, die Werte erreichen das Gerät aber nie.",
         "describePlaceholder": "Beschreiben, was dieser Prüfstand misst und wogegen.",
         "readOnly": "Sie können diese Kalibrierung lesen, aber nicht ändern.",
+        "frozen_one": "Ein Lauf hat diese Kalibrierung protokolliert, daher kann sie nicht mehr geändert werden. Eine Änderung würde verfälschen, was dieser Lauf getan hat.",
+        "frozen_other": "{{count}} Läufe haben diese Kalibrierung protokolliert, daher kann sie nicht mehr geändert werden. Eine Änderung würde verfälschen, was diese Läufe getan haben.",
         "notSaving": "Wird nicht gespeichert, solange die Definition unvollständig ist.",
         "verifyOptional": "optional"
       },
@@ -1121,7 +1123,12 @@
       },
       "fit": {
         "label": "Anpassung, liefert {{coefficients}} Koeffizienten in {{blocks}} Blöcken",
-        "submits": "Was sie liefert"
+        "submits": "Was sie liefert",
+        "draft": "Anpassung entwerfen",
+        "draftTitle": "Skript durch eine entworfene Anpassung ersetzen?",
+        "draftConfirm": "Der Entwurf entsteht aus den oben aufgezeichneten Serien und den Blöcken darunter, in der Reihenfolge ihrer Deklaration. Was jetzt im Skript steht, geht verloren.",
+        "draftCancel": "Meines behalten",
+        "draftReplace": "Ersetzen"
       },
       "sidebar": {
         "id": "Kalibrierungs-ID",

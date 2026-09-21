@@ -84,7 +84,10 @@ export function CalibrationDefinitionDetail() {
 
   const [draft, setDraft] = useState<DefinitionDraft>();
   const edited = definition === undefined ? undefined : (draft ?? toDraft(definition));
-  const canEdit = definition?.capabilities.canUpdate ?? false;
+  // A run records which definition it ran rather than a copy, so the server refuses the
+  // edit. The page has to refuse it too, or every field invites a change that never lands.
+  const isFrozen = (definition?.runCount ?? 0) > 0;
+  const canEdit = (definition?.capabilities.canUpdate ?? false) && !isFrozen;
 
   const save = useCallback(
     async (value: DefinitionDraft | undefined) => {
@@ -140,6 +143,7 @@ export function CalibrationDefinitionDetail() {
   }
 
   const current = edited;
+  const captured = producedSeries(current.captureProcedure, "steps");
 
   function editProcedure(captureProcedure: CaptureProcedure) {
     setDraft({ ...current, captureProcedure });
@@ -167,7 +171,11 @@ export function CalibrationDefinitionDetail() {
 
         {!canEdit && (
           <Alert>
-            <AlertDescription>{t("iot.calibration.detail.readOnly")}</AlertDescription>
+            <AlertDescription>
+              {isFrozen
+                ? t("iot.calibration.detail.frozen", { count: definition.runCount })
+                : t("iot.calibration.detail.readOnly")}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -199,12 +207,13 @@ export function CalibrationDefinitionDetail() {
           />
         </CalibrationStage>
 
-        <CalibrationSeriesSeam series={producedSeries(current.captureProcedure, "steps")} />
+        <CalibrationSeriesSeam series={captured} />
 
         <CalibrationStage index={3} title={t("iot.calibration.detail.script")}>
           <CalibrationFitCell
             script={current.script}
             outputSchema={current.outputSchema}
+            series={captured}
             family={definition.family}
             canEdit={canEdit}
             onScriptChange={editScript}
