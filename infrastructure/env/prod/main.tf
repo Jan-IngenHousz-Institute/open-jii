@@ -445,6 +445,7 @@ module "storage_credential" {
   additional_policy_arns = [
     module.iot_core.databricks_large_iot_read_policy_arn,
     module.iot_core.databricks_device_lifecycle_read_policy_arn,
+    module.metrics_forwarder.databricks_write_policy_arn,
   ]
 
   providers = {
@@ -2546,6 +2547,69 @@ module "grafana_metrics_publisher" {
 
   private_subnets                = module.vpc.private_subnets
   metrics_publisher_lambda_sg_id = module.vpc.metrics_publisher_lambda_sg_id
+}
+
+module "heartbeat_metrics_s3" {
+  source      = "../../modules/s3"
+  bucket_name = "open-jii-heartbeat-${var.environment}"
+
+  enable_versioning = false
+
+  lifecycle_rules = [
+    {
+      id              = "expire-heartbeat-files"
+      status          = "Enabled"
+      transitions     = []
+      expiration_days = 90
+    }
+  ]
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "monitoring"
+  }
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
+module "metrics_forwarder" {
+  source = "../../modules/monitoring/metrics-forwarder"
+
+  aws_region  = var.aws_region
+  environment = var.environment
+
+  heartbeat_bucket_id  = module.heartbeat_metrics_s3.bucket_id
+  heartbeat_bucket_arn = module.heartbeat_metrics_s3.bucket_arn
+}
+
+module "heartbeat_external_location" {
+  source = "../../modules/databricks/external-location"
+
+  external_location_name  = "heartbeat-${var.environment}"
+  bucket_name             = module.heartbeat_metrics_s3.bucket_id
+  external_location_path  = ""
+  storage_credential_name = module.storage_credential.storage_credential_name
+  environment             = var.environment
+  comment                 = "External location for platform heartbeat metric files"
+  isolation_mode          = "ISOLATION_MODE_ISOLATED"
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["READ_FILES", "WRITE_FILES"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.storage_credential]
 }
 
 module "digest_composer" {
