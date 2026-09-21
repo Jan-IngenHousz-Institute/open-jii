@@ -806,6 +806,9 @@ module "metrics_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/experiment_contributors_window",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/experiment_devices_window",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/daily_activity_by_resource",
+    # ops: read by the heartbeat export, never by the public endpoint
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/ops_device_silence",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/ops_ingest_quality",
   ]
 
   environment_dependencies = [

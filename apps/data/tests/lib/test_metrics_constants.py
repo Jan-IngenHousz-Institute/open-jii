@@ -26,9 +26,39 @@ def test_table_constants_exported() -> None:
         "PARAMETER_CATEGORY_DERIVED",
         "PARAMETER_CATEGORY_SENSOR",
         "ACTIVITY_WINDOW_DAYS",
+        "OPS_DEVICE_SILENCE_TABLE",
+        "OPS_INGEST_QUALITY_TABLE",
+        "DEVICE_SILENCE_CADENCE_MULTIPLIER",
+        "DEVICE_SILENCE_FLOOR_MINUTES",
+        "INGEST_QUALITY_WINDOW_HOURS",
         "within_plausible_range",
     ):
         assert name in metrics.__all__
+
+
+def test_ops_tables_share_a_prefix_no_public_table_uses() -> None:
+    # The prefix is what keeps device-grain rows out of the public endpoint;
+    # a public table named ops_* would defeat an allowlist keyed on it.
+    ops_tables = (metrics.OPS_DEVICE_SILENCE_TABLE, metrics.OPS_INGEST_QUALITY_TABLE)
+    public_tables = (
+        metrics.PLATFORM_TOTALS_TABLE,
+        metrics.DAILY_ACTIVITY_TABLE,
+        metrics.FAMILY_TOTALS_TABLE,
+        metrics.HOURLY_ACTIVITY_TABLE,
+        metrics.ACTIVITY_WINDOWS_TABLE,
+        metrics.PARAMETER_STATS_TABLE,
+        metrics.POOL_FACTS_TABLE,
+    )
+    assert all(name.startswith("ops_") for name in ops_tables)
+    assert not any(name.startswith("ops_") for name in public_tables)
+
+
+def test_silence_rule_cannot_flag_a_single_dropped_packet() -> None:
+    # The multiplier makes the rule relative to each device's own cadence; the
+    # floor keeps a fast publisher from being flagged by one missed interval.
+    assert metrics.DEVICE_SILENCE_CADENCE_MULTIPLIER > 1
+    assert metrics.DEVICE_SILENCE_FLOOR_MINUTES >= 15
+    assert metrics.INGEST_QUALITY_WINDOW_HOURS == 24
 
 
 def test_parameter_allowlists_are_variant_path_safe() -> None:
