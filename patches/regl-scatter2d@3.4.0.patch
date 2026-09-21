@@ -1,0 +1,20 @@
+diff --git a/bundle.js b/bundle.js
+index d2b89f84144e59689ea894786756a09cdd1a9266..8d13a628211dfa1dc228705b45e0d98b66cc7d3f 100644
+--- a/bundle.js
++++ b/bundle.js
+@@ -4,7 +4,14 @@ const rgba = require('color-normalize');
+ const getBounds = require('array-bounds');
+ const colorId = require('color-id');
+ const cluster = require('@plotly/point-cluster');
+-const glslify = require('glslify');
++// glslify's browser passthrough, inlined: the shader transform already ran when
++// this bundle was built, and the Node entry is that transform, which bundlers
++// cannot statically resolve.
++const glslify = function (strings) {
++  const parts = typeof strings === 'string' ? [strings] : strings;
++  const values = [].slice.call(arguments, 1);
++  return parts.map(function (part, index) { return index < values.length ? part + values[index] : part; }).join('');
++};
+ const pick = require('pick-by-alias');
+ const updateDiff = require('update-diff');
+ const flatten = require('flatten-vertex-data');
