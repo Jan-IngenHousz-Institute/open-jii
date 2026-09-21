@@ -74,17 +74,38 @@ export async function clearSeedData() {
     await db.delete(experiments).where(inArray(experiments.id, seedExpIds));
   }
 
-  // Calibration runs RESTRICT their definition, so runs go first; a run's
-  // device_calibrations rows cascade with it.
+  // Not only the definitions the seed wrote: one authored in the seed user's personal
+  // organization RESTRICTs that organization at the end of this clear, and a session the
+  // bench wizard recorded against it RESTRICTs the definition. Both are what a second
+  // `db:seed` after using the platform runs into.
   const seedDefinitions = await db
     .select({ id: calibrationDefinitions.id })
     .from(calibrationDefinitions)
-    .where(like(calibrationDefinitions.name, SEED_PREFIX));
+    .where(
+      or(
+        like(calibrationDefinitions.name, SEED_PREFIX),
+        inArray(calibrationDefinitions.createdBy, seedUserIds),
+        ...(seedOrganizationIds.length > 0
+          ? [inArray(calibrationDefinitions.organizationId, seedOrganizationIds)]
+          : []),
+      ),
+    );
   const seedDefinitionIds = seedDefinitions.map((definition) => definition.id);
   if (seedDefinitionIds.length > 0) {
+    // Calibration runs RESTRICT their definition, so runs go first; a run's
+    // device_calibrations rows cascade with it.
     await db
       .delete(calibrationRuns)
       .where(inArray(calibrationRuns.definitionId, seedDefinitionIds));
+    // Shares of a definition are polymorphic, so nothing cascades them.
+    await db
+      .delete(resourceGrants)
+      .where(
+        and(
+          eq(resourceGrants.resourceType, "calibration_definition"),
+          inArray(resourceGrants.resourceId, seedDefinitionIds),
+        ),
+      );
     await db
       .delete(calibrationDefinitions)
       .where(inArray(calibrationDefinitions.id, seedDefinitionIds));

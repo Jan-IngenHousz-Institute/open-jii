@@ -1,3 +1,4 @@
+import type { UnitIdentity } from "@/hooks/iot/useCalibrationCapture/useCalibrationCapture";
 import type { RigRole } from "@/hooks/iot/useCalibrationRig/useCalibrationRig";
 import { render, screen, within } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
@@ -39,6 +40,7 @@ function renderStep(rig: CalibrationRig) {
     <CalibrationConnectStep
       family="minipar"
       connection={undefined}
+      unit={undefined}
       isConnecting={false}
       error={null}
       rig={rig}
@@ -47,6 +49,29 @@ function renderStep(rig: CalibrationRig) {
     />,
   );
   return rig;
+}
+
+const CONNECTION = {
+  id: "conn-1",
+  label: "MiniPAR",
+  family: "minipar",
+  identity: { family: "minipar", firmwareVersion: "1.03", raw: {} },
+  driver: new MiniParDriver({ timeoutMs: 500, protocolTimeoutMs: 500 }),
+} as const;
+
+function renderConnected(unit: UnitIdentity) {
+  render(
+    <CalibrationConnectStep
+      family="minipar"
+      connection={{ ...CONNECTION }}
+      unit={unit}
+      isConnecting={false}
+      error={null}
+      rig={stubRig([role()])}
+      onConnect={vi.fn()}
+      onDisconnect={vi.fn()}
+    />,
+  );
 }
 
 function benchRows() {
@@ -211,23 +236,7 @@ describe("CalibrationConnectStep", () => {
 
   // The device is one more port on the rig, so it gets the same card as every instrument.
   it("shows the device as a card of its own, with what answered on its port", () => {
-    render(
-      <CalibrationConnectStep
-        family="minipar"
-        connection={{
-          id: "conn-1",
-          label: "MiniPAR",
-          family: "minipar",
-          identity: { family: "minipar", firmwareVersion: "1.03", raw: {} },
-          driver: new MiniParDriver({ timeoutMs: 500, protocolTimeoutMs: 500 }),
-        }}
-        isConnecting={false}
-        error={null}
-        rig={stubRig([role()])}
-        onConnect={vi.fn()}
-        onDisconnect={vi.fn()}
-      />,
-    );
+    renderConnected({ kind: "unnamed" });
 
     expect(screen.getByText("iot.calibration.connect.deviceTitle")).toBeInTheDocument();
     expect(screen.getByText("iot.calibration.connect.connected")).toBeInTheDocument();
@@ -236,5 +245,36 @@ describe("CalibrationConnectStep", () => {
     expect(
       screen.getAllByRole("button", { name: "iot.calibration.connect.disconnect" }),
     ).toHaveLength(1);
+  });
+
+  // Coefficients go to whatever answers the port, so the unit has to be the one the
+  // session is for. Two units of a family on one bench is the ordinary case.
+  describe("the unit that answered", () => {
+    it("confirms the serial when it is this device's", () => {
+      renderConnected({ kind: "match", serial: "A4:CF:12:AA:93:B0" });
+
+      expect(screen.getByText("iot.calibration.connect.unitConfirmed")).toBeInTheDocument();
+      expect(screen.queryByText("iot.calibration.connect.wrongUnit")).toBeNull();
+    });
+
+    it("refuses a unit registered as another device, naming both serials", () => {
+      renderConnected({
+        kind: "mismatch",
+        reported: "A4:CF:12:AA:93:B0",
+        expected: "A4:CF:12:AA:93:B1",
+      });
+
+      expect(screen.getByText("iot.calibration.connect.wrongUnit")).toBeInTheDocument();
+      expect(screen.queryByText("iot.calibration.connect.unitConfirmed")).toBeNull();
+    });
+
+    // MiniPAR firmware names no unit, so nothing can be compared and the row says so
+    // rather than letting silence read as a match.
+    it("says when the family reports no serial at all", () => {
+      renderConnected({ kind: "unnamed" });
+
+      expect(screen.getByText("iot.calibration.connect.unnamedUnit")).toBeInTheDocument();
+      expect(screen.queryByText("iot.calibration.connect.unitConfirmed")).toBeNull();
+    });
   });
 });

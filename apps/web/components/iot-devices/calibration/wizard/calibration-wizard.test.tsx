@@ -35,6 +35,7 @@ vi.mock("@/components/iot-devices/calibration/result/calibration-block-chart", (
 
 const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
 const DEFINITION_ID = "22222222-2222-4222-8222-222222222222";
+const SERIAL = "A4:CF:12:AA:93:B0";
 
 /**
  * A MiniPAR console: `par_raw` answers a reading, calibration writers echo
@@ -155,7 +156,8 @@ function mountConnections(overrides: Partial<Connections> = {}): Connections {
   return connections;
 }
 
-function attachMiniPar(readings: number[]) {
+/** MiniPAR firmware names no unit, so `deviceId` is only set where identity is the subject. */
+function attachMiniPar(readings: number[], deviceId?: string) {
   const console = miniparConsole(readings);
   const driver = new MiniParDriver({ timeoutMs: 500, protocolTimeoutMs: 500 });
   driver.initialize(console.transport);
@@ -165,7 +167,7 @@ function attachMiniPar(readings: number[]) {
         id: "conn-1",
         label: "MiniPAR",
         family: "minipar",
-        identity: { family: "minipar", raw: {} },
+        identity: { family: "minipar", deviceId, raw: {} },
         driver,
       },
     ],
@@ -174,7 +176,14 @@ function attachMiniPar(readings: number[]) {
 }
 
 function renderWizard(onClose = vi.fn()) {
-  render(<CalibrationWizard deviceId={DEVICE_ID} family="minipar" onClose={onClose} />);
+  render(
+    <CalibrationWizard
+      deviceId={DEVICE_ID}
+      family="minipar"
+      serialNumber={SERIAL}
+      onClose={onClose}
+    />,
+  );
   return onClose;
 }
 
@@ -242,7 +251,14 @@ describe("CalibrationWizard", () => {
     });
 
     const onClose = vi.fn();
-    render(<CalibrationWizard deviceId={DEVICE_ID} family="minipar" onClose={onClose} />);
+    render(
+      <CalibrationWizard
+        deviceId={DEVICE_ID}
+        family="minipar"
+        serialNumber={SERIAL}
+        onClose={onClose}
+      />,
+    );
 
     // Choose the procedure.
     await userEvent.click(await screen.findByRole("radio"));
@@ -354,7 +370,14 @@ describe("CalibrationWizard", () => {
       body: createCalibrationRun(),
     });
 
-    render(<CalibrationWizard deviceId={DEVICE_ID} family="minipar" onClose={vi.fn()} />);
+    render(
+      <CalibrationWizard
+        deviceId={DEVICE_ID}
+        family="minipar"
+        serialNumber={SERIAL}
+        onClose={vi.fn()}
+      />,
+    );
 
     await userEvent.click(await screen.findByRole("radio"));
     await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
@@ -790,6 +813,184 @@ describe("CalibrationWizard", () => {
     await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.cancel" }));
     await waitFor(() => {
       expect(onClose).toHaveBeenCalled();
+    });
+  });
+
+  // Before this there was no way out of a running bench but to leave the page, which is
+  // what left a lamp driving current with nothing able to turn it off.
+  describe("stopping a run that is under way", () => {
+    it("stops on the operator's word, reads nothing further and keeps the session open", async () => {
+      const device = attachMiniPar([420, 150, 8.33]);
+      const createSpy = server.mount(contract.iot.createCalibrationRun, {
+        status: 201,
+        body: createCalibrationRun(),
+      });
+      renderWizard();
+
+      await userEvent.click(await screen.findByRole("radio"));
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+      await screen.findByText("iot.calibration.connect.connected");
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+
+      // The first point is set up and waiting on the operator, who walks away from it.
+      await screen.findByRole("button", { name: "iot.calibration.prompt.continue" });
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.capture.stop" }));
+
+      expect(await screen.findByText("iot.calibration.capture.stopped")).toBeInTheDocument();
+      expect(createSpy.called).toBe(false);
+      // Stopping is not declining a step: the device was never read, and the prompt is gone.
+      expect(device.sent).toEqual([]);
+      expect(screen.queryByRole("button", { name: "iot.calibration.prompt.continue" })).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "iot.calibration.capture.retry" }),
+      ).toBeInTheDocument();
+    });
+  });
+
+  // The bench had already been walked end to end; re-running the whole sweep to fix a
+  // failed POST is the one thing an operator must never be asked to do.
+  it("retries only the submission when recording a finished capture fails", async () => {
+    const device = attachMiniPar([420, 150, 8.33]);
+    server.mount(contract.iot.createCalibrationRun, { status: 500 });
+    renderWizard();
+
+    await captureThreePoints();
+
+    expect(await screen.findByText("iot.calibration.capture.submitFailed")).toBeInTheDocument();
+    expect(device.sent).toEqual(["par_raw", "par_raw", "par_raw"]);
+
+    const createSpy = server.mount(contract.iot.createCalibrationRun, {
+      status: 201,
+      body: createCalibrationRun({ deviceId: DEVICE_ID, definitionId: DEFINITION_ID }),
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: "iot.calibration.capture.retrySubmit" }),
+    );
+
+    await screen.findByRole("button", { name: "iot.calibration.review.approve" });
+    // The same three readings, off the same three reads: the bench was not run again.
+    expect(device.sent).toEqual(["par_raw", "par_raw", "par_raw"]);
+    expect(createSpy.body).toMatchObject({
+      payload: { par_sweep: [{ par_raw: 420 }, { par_raw: 150 }, { par_raw: 8.33 }] },
+    });
+  });
+
+  // Coefficients go to whatever is on the port. Two units of a family on one bench is
+  // ordinary, and approving for one while writing to the other is silent and permanent.
+  describe("the unit on the port against the device on the page", () => {
+    it("will not start a run on a unit registered as another device", async () => {
+      attachMiniPar([420], "A4:CF:12:AA:93:B1");
+      renderWizard();
+
+      await userEvent.click(await screen.findByRole("radio"));
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+
+      expect(await screen.findByText("iot.calibration.connect.wrongUnit")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "iot.calibration.cta.next" })).toBeDisabled();
+    });
+
+    // A MAC is printed with separators or without, in either case; the record and the
+    // firmware need not agree on that to be the same unit.
+    it("records the serial the unit announced when it is this device", async () => {
+      attachMiniPar([420, 150, 8.33], "a4cf12aa93b0");
+      const createSpy = server.mount(contract.iot.createCalibrationRun, {
+        status: 201,
+        body: createCalibrationRun({ deviceId: DEVICE_ID, definitionId: DEFINITION_ID }),
+      });
+      renderWizard();
+
+      await captureThreePoints();
+      await screen.findByRole("button", { name: "iot.calibration.review.approve" });
+
+      expect(createSpy.body).toMatchObject({ reportedSerial: "a4cf12aa93b0" });
+    });
+
+    it("leaves the serial out for a family whose firmware names no unit", async () => {
+      attachMiniPar([420, 150, 8.33]);
+      const createSpy = server.mount(contract.iot.createCalibrationRun, {
+        status: 201,
+        body: createCalibrationRun({ deviceId: DEVICE_ID, definitionId: DEFINITION_ID }),
+      });
+      renderWizard();
+
+      await captureThreePoints();
+      await screen.findByRole("button", { name: "iot.calibration.review.approve" });
+
+      expect(createSpy.body).not.toHaveProperty("reportedSerial");
+    });
+  });
+
+  // The coefficients are on the hardware by the time the report can fail. Writing again to
+  // fix a failure that never involved the device would put them there twice.
+  it("records a write again without writing to the device again", async () => {
+    const device = attachMiniPar([420, 150, 8.33]);
+    server.mount(contract.iot.createCalibrationRun, {
+      status: 201,
+      body: createCalibrationRun({ deviceId: DEVICE_ID, definitionId: DEFINITION_ID }),
+    });
+    const applied = createDeviceCalibration({ deviceId: DEVICE_ID });
+    server.mount(contract.iot.approveCalibrationRun, { status: 201, body: applied });
+    server.mount(contract.iot.reportDeviceCalibrationWrite, { status: 500 });
+    renderWizard();
+
+    await captureThreePoints();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.review.approve" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "iot.calibration.write.action" }),
+    );
+
+    expect(await screen.findByText("iot.calibration.write.reportFailed")).toBeInTheDocument();
+    const afterWrite = [...device.sent];
+
+    const reportSpy = server.mount(contract.iot.reportDeviceCalibrationWrite, {
+      body: { ...applied, writtenToDeviceAt: "2026-09-01T10:06:00.000Z" },
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: "iot.calibration.write.retryReport" }),
+    );
+
+    await waitFor(() => {
+      expect(reportSpy.called).toBe(true);
+    });
+    expect(device.sent).toEqual(afterWrite);
+    expect(reportSpy.params.calibrationId).toBe(applied.id);
+  });
+
+  // A run left approved when the tab closed had no later path to the hardware at all.
+  describe("a session that only writes", () => {
+    it("connects, writes the approved calibration and records it", async () => {
+      const device = attachMiniPar([]);
+      const applied = createDeviceCalibration({ deviceId: DEVICE_ID, writtenToDeviceAt: null });
+      const reportSpy = server.mount(contract.iot.reportDeviceCalibrationWrite, {
+        body: { ...applied, writtenToDeviceAt: "2026-09-02T09:00:00.000Z" },
+      });
+      render(
+        <CalibrationWizard
+          deviceId={DEVICE_ID}
+          family="minipar"
+          serialNumber={SERIAL}
+          writeSession={{ calibration: applied, definitionId: DEFINITION_ID }}
+          onClose={vi.fn()}
+        />,
+      );
+
+      // No procedure to choose and nothing to measure: connect, then write.
+      expect(await screen.findByText("iot.calibration.connect.connected")).toBeInTheDocument();
+      expect(screen.queryByRole("radio")).toBeNull();
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "iot.calibration.write.action" }),
+      );
+
+      expect(await screen.findByText("iot.calibration.write.verified")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(reportSpy.called).toBe(true);
+      });
+      expect(reportSpy.params.calibrationId).toBe(applied.id);
+      expect(device.sent).toContain("get_cal_par");
     });
   });
 });

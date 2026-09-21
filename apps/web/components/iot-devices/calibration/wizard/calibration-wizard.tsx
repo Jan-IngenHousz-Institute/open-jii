@@ -3,36 +3,28 @@
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
 import { useActiveDeviceCalibration } from "@/hooks/iot/useActiveDeviceCalibration/useActiveDeviceCalibration";
 import { useApproveCalibrationRun } from "@/hooks/iot/useApproveCalibrationRun/useApproveCalibrationRun";
-import {
-  toRunPayload,
-  useCalibrationCapture,
-} from "@/hooks/iot/useCalibrationCapture/useCalibrationCapture";
+import type { PhaseResult } from "@/hooks/iot/useCalibrationCapture/useCalibrationCapture";
+import { useCalibrationCapture } from "@/hooks/iot/useCalibrationCapture/useCalibrationCapture";
 import { useCalibrationDefinition } from "@/hooks/iot/useCalibrationDefinition/useCalibrationDefinition";
 import { useCalibrationDefinitions } from "@/hooks/iot/useCalibrationDefinitions/useCalibrationDefinitions";
 import { useCreateCalibrationRun } from "@/hooks/iot/useCreateCalibrationRun/useCreateCalibrationRun";
 import { useRejectCalibrationRun } from "@/hooks/iot/useRejectCalibrationRun/useRejectCalibrationRun";
 import { useReportDeviceCalibrationWrite } from "@/hooks/iot/useReportDeviceCalibrationWrite/useReportDeviceCalibrationWrite";
 import { CheckCircle2, CircleDashed, Loader2, TriangleAlert } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type {
-  CalibrationDefinition,
   CalibrationFamily,
   CalibrationRun,
   CalibrationRunPayload,
   CalibrationWriteResults,
   DeviceCalibration,
+  SkippedSeriesList,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
-import { zFirmwareVersion } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
+import { zReportedFirmwareVersion } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
-import type { IDeviceDriver, ProcedureProgress } from "@repo/iot";
-import {
-  ProcedureAborted,
-  canWriteCalibration,
-  isSensorFamily,
-  runVerificationProcedure,
-  writeCalibrationBlocks,
-} from "@repo/iot";
+import type { IDeviceDriver } from "@repo/iot";
+import { canWriteCalibration, isSensorFamily, writeCalibrationBlocks } from "@repo/iot";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
 import { Button } from "@repo/ui/components/button";
 import { WizardStepIndicator } from "@repo/ui/components/wizard-step-indicator";
@@ -59,14 +51,27 @@ const STEP_ORDER: readonly WizardStep[] = [
   "done",
 ];
 
+/** Nothing is measured: an approved calibration is carried to the hardware it never reached. */
+const WRITE_ONLY_STEPS: readonly WizardStep[] = ["connect", "write", "done"];
+
+/** An approved calibration that has still to reach the device, and the procedure that checks it. */
+export interface CalibrationWriteSession {
+  calibration: DeviceCalibration;
+  definitionId: string;
+}
+
 interface CalibrationWizardProps {
   deviceId: string;
   family: CalibrationFamily;
+  /** What the platform has this device registered as; the unit that answers has to be it. */
+  serialNumber: string;
   /**
    * Entered from a definition rather than from a device: that procedure is fixed, and the
    * wizard opens on Connect.
    */
   presetDefinitionId?: string;
+  /** Entered to finish a write, rather than to measure anything. */
+  writeSession?: CalibrationWriteSession;
   onClose: () => void;
 }
 
@@ -83,36 +88,61 @@ async function readPostWriteInfo(
   }
 }
 
+/** Whatever the phase read, whether it finished or was cut short. */
+function readingsOf(result: PhaseResult): CalibrationRunPayload {
+  if (result.kind === "captured") return result.payload;
+  return "partial" in result ? result.partial : {};
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 /** Bench to coefficient in one sitting; the interpreter asks the operator for what it cannot do itself. */
 export function CalibrationWizard({
   deviceId,
   family,
+  serialNumber,
   presetDefinitionId,
+  writeSession,
   onClose,
 }: CalibrationWizardProps) {
   const { t } = useTranslation("iot");
   const isMobile = useIsMobile();
 
-  const isProcedureChosen = presetDefinitionId !== undefined;
-  const stepOrder = isProcedureChosen ? STEP_ORDER.filter((name) => name !== "choose") : STEP_ORDER;
+  const isWriteOnly = writeSession !== undefined;
+  const isProcedureChosen = isWriteOnly || presetDefinitionId !== undefined;
+  const stepOrder = isWriteOnly
+    ? WRITE_ONLY_STEPS
+    : isProcedureChosen
+      ? STEP_ORDER.filter((name) => name !== "choose")
+      : STEP_ORDER;
 
   const [step, setStep] = useState<WizardStep>(isProcedureChosen ? "connect" : "choose");
-  const [definitionId, setDefinitionId] = useState<string | null>(presetDefinitionId ?? null);
+  const [definitionId, setDefinitionId] = useState<string | null>(
+    writeSession?.definitionId ?? presetDefinitionId ?? null,
+  );
   const [payload, setPayload] = useState<CalibrationRunPayload | null>(null);
+  const [skipped, setSkipped] = useState<SkippedSeriesList>([]);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [run, setRun] = useState<CalibrationRun | null>(null);
-  const [applied, setApplied] = useState<DeviceCalibration | null>(null);
+  const [applied, setApplied] = useState<DeviceCalibration | null>(
+    writeSession?.calibration ?? null,
+  );
   const [writeResults, setWriteResults] = useState<CalibrationWriteResults | null>(null);
+  const [postInfo, setPostInfo] = useState<Record<string, unknown> | undefined>(undefined);
   const [writeError, setWriteError] = useState<string | null>(null);
   const [isWriting, setIsWriting] = useState(false);
-  const [verifyEvents, setVerifyEvents] = useState<ProcedureProgress[]>([]);
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [isReported, setIsReported] = useState(false);
   const [verification, setVerification] = useState<CalibrationRunPayload | null>(null);
-  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [verifyOutcome, setVerifyOutcome] = useState<PhaseResult | null>(null);
 
   const definitions = useCalibrationDefinitions(family);
   const definition = useCalibrationDefinition(definitionId);
   const active = useActiveDeviceCalibration(deviceId);
-  const capture = useCalibrationCapture(definition.data?.captureProcedure, family);
+  const capture = useCalibrationCapture(definition.data?.captureProcedure, family, serialNumber);
   const { operator, rig } = capture;
   const createRun = useCreateCalibrationRun();
   const approveRun = useApproveCalibrationRun();
@@ -132,58 +162,86 @@ export function CalibrationWizard({
     applied !== null &&
     writableFamily !== null &&
     canWriteCalibration(writableFamily, applied.blocks);
+  // Only the unit that answered its own name is named in the record; a family that reports
+  // none leaves the field out rather than claiming the platform's serial as the device's.
+  const reportedSerial = capture.unit?.kind === "match" ? capture.unit.serial : undefined;
 
-  // The rig object is new on every render; the dependency lists below hold the ref instead.
-  const rigRef = useRef(rig);
-  rigRef.current = rig;
+  async function submitRun(readings: CalibrationRunPayload, notRun: SkippedSeriesList) {
+    if (!definition.data || !connection) return;
 
-  useEffect(() => {
-    if (step === "done") {
-      void rigRef.current.shutdownAll();
-    }
-  }, [step]);
-
-  const runCapture = capture.capture;
-  const setCaptureError = capture.setError;
-
-  const startCapture = useCallback(async () => {
-    const runPayload = await runCapture();
-    if (!runPayload || !definition.data || !connection) return;
-    setPayload(runPayload);
-
+    setIsSubmitting(true);
+    setSubmitError(null);
     try {
       // A version the contract would refuse is left out rather than failing the submission.
       const reported = connection.identity.firmwareVersion;
-      const firmwareVersion = zFirmwareVersion.safeParse(reported).success ? reported : undefined;
+      const version =
+        reported === undefined ? undefined : zReportedFirmwareVersion.safeParse(reported);
 
       const created = await createRun.mutateAsync({
         deviceId,
         definitionId: definition.data.id,
-        payload: runPayload,
-        firmwareVersion,
+        payload: readings,
+        skippedSeries: notRun.length > 0 ? notRun : undefined,
+        firmwareVersion: version?.success === true ? version.data : undefined,
+        reportedSerial,
         preInfo: { ...connection.identity.raw },
       });
       setRun(created);
       setStep("review");
     } catch (error) {
-      setCaptureError(error instanceof Error ? error.message : String(error));
+      setSubmitError(messageOf(error));
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [connection, createRun, definition.data, deviceId, runCapture, setCaptureError]);
+  }
+
+  // The readings are kept whichever way the submission went: a session that reached the
+  // end of the bench must never be asked to run the whole sweep again over a failed POST.
+  async function startCapture() {
+    const result = await capture.capture();
+    if (result.kind !== "captured") return;
+
+    setPayload(result.payload);
+    setSkipped(result.skipped);
+    await submitRun(result.payload, result.skipped);
+  }
+
+  const startCaptureRef = useRef(startCapture);
+  startCaptureRef.current = startCapture;
+
+  // The rig object is new on every render; the effect below holds the ref instead.
+  const rigRef = useRef(rig);
+  rigRef.current = rig;
+
+  // The bench has nothing left to do once the session is on record, so its ports go back
+  // without waiting for the operator to close the page.
+  useEffect(() => {
+    if (step !== "done") return;
+    void rigRef.current.shutdownAll().catch((error: unknown) => {
+      console.error("The bench could not be returned to rest:", error);
+    });
+  }, [step]);
 
   // A retry stays on the step, so it starts the procedure itself; the effect would not re-fire for an unchanged step.
   const captureStartedRef = useRef(false);
   useEffect(() => {
     if (step !== "capture" || captureStartedRef.current) return;
     captureStartedRef.current = true;
-    void startCapture();
-  }, [step, startCapture]);
+    void startCaptureRef.current();
+  }, [step]);
 
   function retryCapture() {
     void startCapture();
   }
 
+  function retrySubmit() {
+    if (!payload) return;
+    void submitRun(payload, skipped);
+  }
+
   // A run that computed nothing leaves the bench as it stands, so another pass starts at once.
   function runAgain() {
+    setPayload(null);
     setStep("capture");
     void startCapture();
   }
@@ -209,14 +267,43 @@ export function CalibrationWizard({
     }
   }
 
+  /**
+   * On record separately from the write itself: the coefficients are on the hardware by the
+   * time this can fail, and the operator has to be able to record that without writing again.
+   */
+  async function recordWrite(
+    results: CalibrationWriteResults,
+    state: Record<string, unknown> | undefined,
+    checked?: CalibrationRunPayload,
+  ): Promise<boolean> {
+    if (!applied) return false;
+
+    setReportError(null);
+    try {
+      await reportWrite.mutateAsync({
+        calibrationId: applied.id,
+        writeResults: results,
+        postInfo: state,
+        verification: checked,
+        reportedSerial,
+      });
+      setIsReported(true);
+      return true;
+    } catch (error) {
+      setReportError(messageOf(error));
+      return false;
+    }
+  }
+
   async function write() {
-    if (!applied || writableFamily === null || !definition.data) return;
+    if (!applied || writableFamily === null) return;
     // The port can be pulled between approving and writing. Returning quietly here left an
     // enabled button that did nothing at all.
     if (!connection) {
       setWriteError(t("iot.calibration.write.disconnected"));
       return;
     }
+
     setIsWriting(true);
     setWriteError(null);
     try {
@@ -226,18 +313,18 @@ export function CalibrationWizard({
         applied.blocks,
       );
       setWriteResults(results);
-      // On record before the check starts: a check is operator-paced and the tab may not outlive it.
-      const postInfo = await readPostWriteInfo(connection.driver);
-      const report = { calibrationId: applied.id, writeResults: results, postInfo };
-      await reportWrite.mutateAsync(report);
-      const checked = await verifyOnDevice(definition.data.captureProcedure, results);
-      if (checked) {
-        await reportWrite.mutateAsync({ ...report, verification: checked });
+
+      // Read before the check starts: a check is operator-paced and the tab may not outlive it.
+      const state = await readPostWriteInfo(connection.driver);
+      setPostInfo(state);
+      const recorded = await recordWrite(results, state);
+
+      const checked = await verifyOnDevice(results);
+      if (checked && recorded) {
+        await recordWrite(results, state, checked);
       }
     } catch (error) {
-      setWriteError(
-        error instanceof Error ? error.message : t("iot.calibration.write.reportFailed"),
-      );
+      setWriteError(messageOf(error));
     } finally {
       setIsWriting(false);
     }
@@ -245,41 +332,52 @@ export function CalibrationWizard({
 
   /** The procedure's check once something reached the device; a stop keeps what it read, and the write stands. */
   async function verifyOnDevice(
-    procedure: CalibrationDefinition["captureProcedure"],
     results: CalibrationWriteResults,
   ): Promise<CalibrationRunPayload | undefined> {
-    const hasCheck = (procedure.verify?.length ?? 0) > 0;
+    const hasCheck = (definition.data?.captureProcedure.verify?.length ?? 0) > 0;
     const wroteSomething = Object.values(results).some((result) => result.verified);
     if (!hasCheck || !wroteSomething) return undefined;
 
-    setIsVerifying(true);
-    setVerifyEvents([]);
-    setVerificationError(null);
-    try {
-      const result = await runVerificationProcedure(procedure, {
-        rig: rigRef.current.bindings,
-        operator: operator.port,
-        onProgress: (event) => setVerifyEvents((previous) => [...previous, event]),
-      });
-      const readings = toRunPayload(result.payload);
-      setVerification(readings);
-      return readings;
-    } catch (error) {
-      const partial = error instanceof ProcedureAborted ? toRunPayload(error.partial.payload) : {};
-      setVerificationError(error instanceof Error ? error.message : String(error));
-      setVerification(partial);
-      return Object.keys(partial).length > 0 ? partial : undefined;
-    } finally {
-      await rig.rest();
-      setIsVerifying(false);
-    }
+    const outcome = await capture.verify();
+    const readings = readingsOf(outcome);
+    setVerifyOutcome(outcome);
+    setVerification(readings);
+
+    return Object.keys(readings).length > 0 ? readings : undefined;
   }
 
-  // Awaited: the unmount that follows destroys the device's driver, and a rest racing
-  // that loses its port mid-write.
+  function retryReport() {
+    if (!writeResults) return;
+    void recordWrite(writeResults, postInfo, verification ?? undefined);
+  }
+
+  // Awaited: the teardown behind it rests the bench through the device's own driver, and a
+  // close that did not wait would pull the port out from under that.
   async function closeWizard() {
-    await rig.shutdownAll();
+    const notAtRest = await capture.leave();
+    if (notAtRest !== null) {
+      toast({
+        title: t("iot.calibration.capture.restFailed"),
+        description: notAtRest,
+        variant: "destructive",
+      });
+    }
     onClose();
+  }
+
+  function describeFailure(): { headline: string; detail?: string } | null {
+    const failure = capture.failure;
+    if (failure === null) return null;
+    switch (failure.kind) {
+      case "stopped":
+        return { headline: t("iot.calibration.capture.stopped") };
+      case "disconnected":
+        return { headline: t("iot.calibration.capture.disconnected") };
+      case "noProcedure":
+        return { headline: t("iot.calibration.loadError") };
+      case "failed":
+        return { headline: t("iot.calibration.capture.aborted"), detail: failure.message };
+    }
   }
 
   function stepDescription(): string | undefined {
@@ -349,6 +447,7 @@ export function CalibrationWizard({
       <CalibrationConnectStep
         family={family}
         connection={connection}
+        unit={capture.unit}
         isConnecting={capture.isConnecting}
         error={capture.connectError}
         rig={rig}
@@ -371,11 +470,42 @@ export function CalibrationWizard({
       <CalibrationWizardActions
         secondary={secondary}
         primary={
-          <Button type="button" onClick={() => setStep("capture")} disabled={!capture.canStart}>
+          <Button
+            type="button"
+            onClick={() => setStep(isWriteOnly ? "write" : "capture")}
+            disabled={isWriteOnly ? connection === undefined : !capture.canStart}
+          >
             {t("iot.calibration.cta.next")}
           </Button>
         }
       />
+    );
+  }
+
+  function renderCaptureFailure() {
+    const failure = describeFailure();
+    if (failure === null) return null;
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>
+          {failure.headline}
+          {failure.detail !== undefined && (
+            <span className="mt-1 block font-mono text-xs">{failure.detail}</span>
+          )}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  function renderRestFailure() {
+    if (capture.restFailure === null) return null;
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>
+          {t("iot.calibration.capture.restFailed")}
+          <span className="mt-1 block font-mono text-xs">{capture.restFailure}</span>
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -385,21 +515,23 @@ export function CalibrationWizard({
       <div className="space-y-6">
         <CalibrationCaptureProgress
           events={capture.events}
-          isRunning={capture.isCapturing}
+          isRunning={capture.isRunning}
           isWaitingOnOperator={request !== null}
         />
         {request !== null && <CalibrationOperatorPrompt request={request} />}
-        {capture.isCapturing && request === null && createRun.isPending && (
+        {isSubmitting && (
           <p className="text-muted-foreground flex items-center gap-2 text-sm">
             <Loader2 className="size-4 animate-spin" aria-hidden />
             {t("iot.calibration.capture.submitting")}
           </p>
         )}
-        {capture.error !== null && (
+        {renderCaptureFailure()}
+        {renderRestFailure()}
+        {submitError !== null && (
           <Alert variant="destructive">
             <AlertDescription>
-              {t("iot.calibration.capture.aborted")}
-              <span className="mt-1 block font-mono text-xs">{capture.error}</span>
+              {t("iot.calibration.capture.submitFailed")}
+              <span className="mt-1 block font-mono text-xs">{submitError}</span>
             </AlertDescription>
           </Alert>
         )}
@@ -408,7 +540,36 @@ export function CalibrationWizard({
   }
 
   function renderCaptureActions() {
-    if (capture.error === null) return null;
+    // Stopping is the only control while the bench is running, and it has to be there
+    // throughout: a sweep with a fault in it is otherwise only escapable by leaving.
+    if (capture.isRunning) {
+      return (
+        <CalibrationWizardActions
+          secondary={
+            <Button type="button" variant="outline" onClick={capture.stop}>
+              {t("iot.calibration.capture.stop")}
+            </Button>
+          }
+        />
+      );
+    }
+    if (isSubmitting) return null;
+
+    // The readings survived; only recording them failed, so that is all a retry repeats.
+    if (submitError !== null) {
+      return (
+        <CalibrationWizardActions
+          secondary={renderCancel()}
+          primary={
+            <Button type="button" onClick={retrySubmit}>
+              {t("iot.calibration.capture.retrySubmit")}
+            </Button>
+          }
+        />
+      );
+    }
+    if (capture.failure === null) return null;
+
     return (
       <CalibrationWizardActions
         secondary={renderCancel()}
@@ -469,6 +630,7 @@ export function CalibrationWizard({
 
   function renderWrite() {
     if (!applied) return null;
+    const isCheckFailure = verifyOutcome !== null && verifyOutcome.kind !== "captured";
     return (
       <div className="space-y-6">
         {operator.pending !== null && <CalibrationOperatorPrompt request={operator.pending} />}
@@ -477,11 +639,14 @@ export function CalibrationWizard({
           canWrite={canWrite}
           results={writeResults}
           error={writeError}
-          verifyEvents={verifyEvents}
-          isVerifying={isVerifying}
+          reportError={reportError}
+          isDisconnected={connection === undefined}
+          verifyEvents={capture.events}
+          isVerifying={capture.isRunning}
           verification={verification}
-          verificationError={verificationError}
+          verificationError={isCheckFailure ? (describeFailure()?.headline ?? null) : null}
         />
+        {renderRestFailure()}
       </div>
     );
   }
@@ -498,7 +663,56 @@ export function CalibrationWizard({
         />
       );
     }
+    if (capture.isRunning) {
+      return (
+        <CalibrationWizardActions
+          secondary={
+            <Button type="button" variant="outline" onClick={capture.stop}>
+              {t("iot.calibration.capture.stop")}
+            </Button>
+          }
+        />
+      );
+    }
+    // The coefficients are on the hardware and only the record is missing; writing again
+    // would put them there twice to fix a failure that never involved the device.
+    if (isWritten && reportError !== null) {
+      return (
+        <CalibrationWizardActions
+          secondary={
+            <Button type="button" variant="outline" onClick={() => setStep("done")}>
+              {t("iot.calibration.write.finishUnrecorded")}
+            </Button>
+          }
+          primary={
+            <Button type="button" onClick={retryReport} disabled={reportWrite.isPending}>
+              {reportWrite.isPending && (
+                <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
+              )}
+              {t("iot.calibration.write.retryReport")}
+            </Button>
+          }
+        />
+      );
+    }
     if (!isWritten) {
+      // A pulled cable between approving and writing is recoverable here rather than by
+      // starting the session again.
+      if (connection === undefined) {
+        return (
+          <CalibrationWizardActions
+            secondary={renderCancel()}
+            primary={
+              <Button type="button" onClick={capture.connect} disabled={capture.isConnecting}>
+                {capture.isConnecting && (
+                  <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
+                )}
+                {t("iot.calibration.write.reconnect")}
+              </Button>
+            }
+          />
+        );
+      }
       return (
         <CalibrationWizardActions
           primary={
@@ -521,19 +735,34 @@ export function CalibrationWizard({
     );
   }
 
+  /** What the session actually left behind, which is not always what it set out to do. */
+  function outcomeOfSession() {
+    if (applied === null) return "rejected";
+    if (!isWritten) return canWrite ? "notWritten" : "recordOnly";
+    if (!isReported) return "unrecorded";
+    const isConfirmed = Object.values(writeResults).every((result) => result.verified);
+    return isConfirmed ? "confirmed" : "unconfirmed";
+  }
+
   function renderDone() {
-    const isApproved = applied !== null;
-    const isConfirmed =
-      writeResults !== null && Object.values(writeResults).every((result) => result.verified);
-    const outcome = !isApproved ? "rejected" : isConfirmed ? "confirmed" : "unconfirmed";
+    const outcome = outcomeOfSession();
     const hint = {
       rejected: t("iot.calibration.done.rejectedHint"),
+      recordOnly: t("iot.calibration.done.recordOnlyHint"),
+      notWritten: t("iot.calibration.done.notWrittenHint"),
+      unrecorded: t("iot.calibration.done.notRecordedHint"),
       confirmed: t("iot.calibration.done.writtenHint"),
-      unconfirmed: t("iot.calibration.done.notWrittenHint"),
+      unconfirmed: t("iot.calibration.done.unconfirmedHint"),
     }[outcome];
-    const Glyph = { rejected: CircleDashed, confirmed: CheckCircle2, unconfirmed: TriangleAlert }[
-      outcome
-    ];
+    const Glyph = {
+      rejected: CircleDashed,
+      recordOnly: CircleDashed,
+      notWritten: CircleDashed,
+      unrecorded: TriangleAlert,
+      confirmed: CheckCircle2,
+      unconfirmed: TriangleAlert,
+    }[outcome];
+    const isAlarming = outcome === "unrecorded" || outcome === "unconfirmed";
 
     return (
       <div className="flex items-start gap-3">
@@ -541,8 +770,8 @@ export function CalibrationWizard({
           className={cn(
             "mt-0.5 size-5 shrink-0",
             outcome === "confirmed" && "text-status-active",
-            outcome === "unconfirmed" && "text-destructive",
-            outcome === "rejected" && "text-muted-foreground",
+            isAlarming && "text-destructive",
+            !isAlarming && outcome !== "confirmed" && "text-muted-foreground",
           )}
           aria-hidden
         />

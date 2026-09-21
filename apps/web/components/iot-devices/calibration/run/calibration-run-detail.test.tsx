@@ -16,8 +16,23 @@ const RUN_ID = "22222222-2222-4222-8222-222222222222";
 const DEVICE_ID = "11111111-1111-4111-8111-111111111111";
 
 function renderDetail(onBack = vi.fn()) {
-  render(<CalibrationRunDetail runId={RUN_ID} deviceId={DEVICE_ID} onBack={onBack} />);
+  render(
+    <CalibrationRunDetail runId={RUN_ID} deviceId={DEVICE_ID} canManage={false} onBack={onBack} />,
+  );
   return onBack;
+}
+
+function renderManaged(onWriteToDevice = vi.fn()) {
+  render(
+    <CalibrationRunDetail
+      runId={RUN_ID}
+      deviceId={DEVICE_ID}
+      canManage
+      onBack={vi.fn()}
+      onWriteToDevice={onWriteToDevice}
+    />,
+  );
+  return onWriteToDevice;
 }
 
 describe("CalibrationRunDetail", () => {
@@ -129,5 +144,129 @@ describe("CalibrationRunDetail", () => {
     renderDetail();
 
     expect(await screen.findByText("iot.calibration.loadError")).toBeInTheDocument();
+  });
+
+  // An optional step the bench could not run leaves a series missing from the readings,
+  // which on its own says nothing about whether that was the plan.
+  it("names the steps the bench skipped and why", async () => {
+    server.mount(contract.iot.getCalibrationRun, {
+      body: createCalibrationRunDetail({
+        id: RUN_ID,
+        deviceId: DEVICE_ID,
+        skippedSeries: [
+          { series: "stray_light", reason: 'instrument "stray_ref" is not connected' },
+        ],
+      }),
+    });
+
+    renderDetail();
+
+    expect(await screen.findByText("iot.calibration.run.skippedTitle")).toBeInTheDocument();
+    expect(screen.getByText("iot.calibration.capture.skipped")).toBeInTheDocument();
+  });
+
+  it("says nothing about skipped steps when the bench ran every one", async () => {
+    renderDetail();
+
+    expect(await screen.findByText("MiniPAR bench v1")).toBeInTheDocument();
+    expect(screen.queryByText("iot.calibration.run.skippedTitle")).toBeNull();
+  });
+
+  // The decision used to live only inside the live wizard, so a run left computed when the
+  // tab closed could never be approved or rejected again.
+  describe("deciding a run that is still computed", () => {
+    it("approves it from the record", async () => {
+      const approveSpy = server.mount(contract.iot.approveCalibrationRun, {
+        status: 201,
+        body: createDeviceCalibration({ runId: RUN_ID }),
+      });
+      renderManaged();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "iot.calibration.review.approve" }),
+      );
+
+      await vi.waitFor(() => {
+        expect(approveSpy.called).toBe(true);
+      });
+      expect(approveSpy.params.runId).toBe(RUN_ID);
+    });
+
+    it("rejects it from the record", async () => {
+      const rejectSpy = server.mount(contract.iot.rejectCalibrationRun, {
+        body: createCalibrationRunDetail({ id: RUN_ID, status: "rejected" }),
+      });
+      renderManaged();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "iot.calibration.review.reject" }),
+      );
+
+      await vi.waitFor(() => {
+        expect(rejectSpy.called).toBe(true);
+      });
+    });
+
+    it("offers no decision without device manage rights", async () => {
+      renderDetail();
+
+      expect(await screen.findByText("MiniPAR bench v1")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "iot.calibration.review.approve" })).toBeNull();
+    });
+
+    it("offers no decision once the run has been decided", async () => {
+      server.mount(contract.iot.getCalibrationRun, {
+        body: createCalibrationRunDetail({ id: RUN_ID, deviceId: DEVICE_ID, status: "approved" }),
+      });
+      renderManaged();
+
+      expect(await screen.findByText("MiniPAR bench v1")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "iot.calibration.review.approve" })).toBeNull();
+    });
+  });
+
+  // Approval and the write are separate events, and the write had no later path at all:
+  // a session whose coefficients never reached the device was finished for good.
+  describe("finishing a write that never happened", () => {
+    const APPROVED = createCalibrationRunDetail({
+      id: RUN_ID,
+      deviceId: DEVICE_ID,
+      status: "approved",
+    });
+
+    it("carries the approved calibration and its procedure to the write", async () => {
+      const applied = createDeviceCalibration({ runId: RUN_ID, writtenToDeviceAt: null });
+      server.mount(contract.iot.getCalibrationRun, { body: APPROVED });
+      server.mount(contract.iot.listDeviceCalibrations, { body: [applied] });
+      const onWriteToDevice = renderManaged();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "iot.calibration.run.writeToDevice" }),
+      );
+
+      expect(onWriteToDevice).toHaveBeenCalledWith({
+        calibration: applied,
+        definitionId: APPROVED.definitionId,
+      });
+    });
+
+    it("offers nothing to write once the coefficients are on the device", async () => {
+      server.mount(contract.iot.getCalibrationRun, { body: APPROVED });
+      server.mount(contract.iot.listDeviceCalibrations, {
+        body: [
+          createDeviceCalibration({
+            runId: RUN_ID,
+            writtenToDeviceAt: "2026-09-01T10:06:00.000Z",
+            writeResults: { par: { verified: true } },
+          }),
+        ],
+      });
+      renderManaged();
+
+      expect(await screen.findByText("iot.calibration.write.verified")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "iot.calibration.run.writeToDevice" }),
+      ).toBeNull();
+    });
   });
 });

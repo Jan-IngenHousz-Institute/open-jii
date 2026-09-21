@@ -55,13 +55,26 @@ async function releasePort(transport: ITransportAdapter | undefined): Promise<vo
   await transport?.disconnect().catch(() => undefined);
 }
 
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 /**
  * The bench around the device under test: a lamp supply and a reference sensor, each on a
  * serial port of its own, bound to the role its procedure declared by identity handshake.
  */
+export interface CalibrationRigOptions {
+  /**
+   * Off for a caller that has to stop a running procedure before the bench may be rested;
+   * that caller calls shutdownAll itself, once the interpreter has let go.
+   */
+  shutdownOnUnmount?: boolean;
+}
+
 export function useCalibrationRig(
   procedure: CaptureProcedure | undefined,
   dut: IDeviceDriver | undefined,
+  options?: CalibrationRigOptions,
 ): {
   roles: RigRole[];
   /** The rig as the interpreter takes it: the device under test plus every connected role. */
@@ -75,6 +88,9 @@ export function useCalibrationRig(
   /** rest(), then close every port and forget them. */
   shutdownAll(): Promise<void>;
 } {
+  const shutdownOnUnmountRef = useRef(true);
+  shutdownOnUnmountRef.current = options?.shutdownOnUnmount ?? true;
+
   const [statuses, setStatuses] = useState<ReadonlyMap<string, RigRoleStatus>>(new Map());
   const [connected, setConnected] = useState<ReadonlyMap<string, ConnectedInstrument>>(new Map());
   const connectedRef = useRef(connected);
@@ -237,50 +253,73 @@ export function useCalibrationRig(
         report({ kind: "connected", model: instrument.model, reply });
       } catch (error) {
         await releasePort(transport);
-        report({
-          kind: "failed",
-          message: error instanceof Error ? error.message : String(error),
-        });
+        report({ kind: "failed", message: messageOf(error) });
       }
     },
     [declaredRoles, disconnectRole],
   );
 
-  const rest = useCallback(async () => {
-    const entries = [...connectedRef.current.values()];
+  // Every instrument is attempted and every failure named: a lamp that would not go to
+  // zero is exactly what the operator has to hear about.
+  const restAll = useCallback(async (instruments: BenchInstrument[]) => {
+    const failures: string[] = [];
 
-    // The device first: its port belongs to the connection hook, which closes it on the
-    // same unmount, so its rest must not queue behind the bench's serial writes. The bench
-    // ports are this hook's own and outlive that race.
+    // The device first: its port belongs to the connection hook, which releases it only
+    // once this hook is done, so its rest must not queue behind the bench's serial writes.
     await dutSetpointRef.current?.rest().catch((error: unknown) => {
-      console.error("Device could not be returned to rest:", error);
+      failures.push(`device: ${messageOf(error)}`);
     });
-    await shutdownRig(entries.map((entry) => entry.instrument));
+    await shutdownRig(instruments).catch((error: unknown) => {
+      failures.push(messageOf(error));
+    });
+
+    if (failures.length > 0) {
+      throw new Error(failures.join("; "));
+    }
   }, []);
 
-  const restRef = useRef(rest);
-  restRef.current = rest;
+  const rest = useCallback(
+    () => restAll([...connectedRef.current.values()].map((entry) => entry.instrument)),
+    [restAll],
+  );
 
-  const shutdownAll = useCallback(async () => {
+  // One teardown at a time: the wizard's close, the unmount behind it and a change of
+  // procedure can each ask for it, and the ports are rested and released exactly once.
+  const shutdownRef = useRef<Promise<void> | null>(null);
+
+  const shutdownAll = useCallback((): Promise<void> => {
+    if (shutdownRef.current) {
+      return shutdownRef.current;
+    }
+
     const entries = [...connectedRef.current.entries()];
+    connectedRef.current = new Map();
     generationRef.current += 1;
 
     setConnected(new Map());
     setStatuses(new Map());
 
-    await restRef.current();
+    const shutdown = (async () => {
+      try {
+        await restAll(entries.map(([, entry]) => entry.instrument));
+      } finally {
+        // Closing a port reports the close through the same callback a pulled cable uses,
+        // which asks for the role to be released again. The instruments are rested by now,
+        // so that second release could only write to a port that is already gone.
+        for (const [role] of entries) {
+          releasingRef.current.add(role);
+        }
+        await Promise.all(entries.map(([, entry]) => releasePort(entry.transport)));
+        for (const [role] of entries) {
+          releasingRef.current.delete(role);
+        }
+        shutdownRef.current = null;
+      }
+    })();
 
-    // Closing a port reports the close through the same callback a pulled cable uses, which
-    // asks for the role to be released again. The instruments are rested by now, so that
-    // second release could only write to a port that is already gone.
-    for (const [role] of entries) {
-      releasingRef.current.add(role);
-    }
-    await Promise.all(entries.map(([, entry]) => releasePort(entry.transport)));
-    for (const [role] of entries) {
-      releasingRef.current.delete(role);
-    }
-  }, []);
+    shutdownRef.current = shutdown;
+    return shutdown;
+  }, [restAll]);
 
   const shutdownAllRef = useRef(shutdownAll);
   shutdownAllRef.current = shutdownAll;
@@ -291,12 +330,29 @@ export function useCalibrationRig(
     .map((entry) => `${entry.role}:${entry.handshake}:${entry.model ?? ""}`)
     .join("|");
 
+  const previousSignatureRef = useRef(rigSignature);
+
+  useEffect(() => {
+    if (previousSignatureRef.current === rigSignature) {
+      return;
+    }
+    previousSignatureRef.current = rigSignature;
+    void shutdownAllRef.current().catch((error: unknown) => {
+      console.error("The bench could not be returned to rest:", error);
+    });
+  }, [rigSignature]);
+
   // Walking away from the wizard must not leave the lamp driving current.
   useEffect(() => {
     return () => {
-      void shutdownAllRef.current();
+      if (!shutdownOnUnmountRef.current) {
+        return;
+      }
+      void shutdownAllRef.current().catch((error: unknown) => {
+        console.error("The bench could not be returned to rest:", error);
+      });
     };
-  }, [rigSignature]);
+  }, []);
 
   return {
     roles,

@@ -1179,6 +1179,7 @@ export function createCalibrationRun(overrides: Partial<CalibrationRun> = {}): C
         quality: { passed: true, r2: 0.9998, nrmse: 0.004 },
       },
     },
+    skippedSeries: null,
     preInfo: null,
     postInfo: null,
     firmwareVersion: "1.03",

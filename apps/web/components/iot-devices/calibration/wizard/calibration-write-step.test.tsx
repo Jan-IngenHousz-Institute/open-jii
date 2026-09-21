@@ -5,11 +5,13 @@ import { describe, expect, it } from "vitest";
 import { CalibrationWriteStep } from "./calibration-write-step";
 
 function renderStep(overrides: Partial<Parameters<typeof CalibrationWriteStep>[0]> = {}) {
-  const props = {
+  const props: Parameters<typeof CalibrationWriteStep>[0] = {
     applied: createDeviceCalibration(),
     canWrite: true,
     results: null,
     error: null,
+    reportError: null,
+    isDisconnected: false,
     verifyEvents: [],
     isVerifying: false,
     verification: null,
@@ -120,7 +122,20 @@ describe("CalibrationWriteStep", () => {
     });
   });
 
-  it("surfaces a reporting failure without losing the write results", () => {
+  // The coefficients are on the hardware by the time recording them can fail; the two
+  // outcomes are separate, and the step says which one went wrong.
+  it("reports a failed recording apart from the write it is reporting", () => {
+    renderStep({
+      results: { par: { verified: true } },
+      reportError: "Request failed with status 500",
+    });
+
+    expect(screen.getByText("iot.calibration.write.reportFailed")).toBeInTheDocument();
+    expect(screen.getByText("Request failed with status 500")).toBeInTheDocument();
+    expect(screen.getByText("iot.calibration.write.verified")).toBeInTheDocument();
+  });
+
+  it("surfaces a failed write without losing what it says", () => {
     renderStep({
       results: { par: { verified: true } },
       error: "The device was written but the result could not be recorded.",
@@ -128,5 +143,19 @@ describe("CalibrationWriteStep", () => {
 
     expect(screen.getByText(/could not be recorded/)).toBeInTheDocument();
     expect(screen.getByText("iot.calibration.write.verified")).toBeInTheDocument();
+  });
+
+  // A port pulled between approving and writing leaves an enabled button that cannot work,
+  // so the step names the reason before the operator presses it.
+  it("says the device is gone while nothing has been written yet", () => {
+    renderStep({ isDisconnected: true });
+
+    expect(screen.getByText("iot.calibration.write.disconnected")).toBeInTheDocument();
+  });
+
+  it("stops saying so once the write has happened", () => {
+    renderStep({ isDisconnected: true, results: { par: { verified: true } } });
+
+    expect(screen.queryByText("iot.calibration.write.disconnected")).toBeNull();
   });
 });

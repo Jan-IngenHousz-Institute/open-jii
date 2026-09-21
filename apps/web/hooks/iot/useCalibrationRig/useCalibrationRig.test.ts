@@ -292,14 +292,19 @@ describe("useCalibrationRig", () => {
   // The device under test is one role of the rig, and it latches what a sweep wrote to
   // it exactly as the lamp does, so the rig is what returns it to rest.
   describe("the device under test", () => {
-    function fakeAmbit() {
+    /** `refuseAfter` writes succeed, everything past that answers as a closed port would. */
+    function fakeAmbit(refuseAfter = Number.POSITIVE_INFINITY) {
       const sent: string[] = [];
       const driver: IDeviceDriver = {
         family: "ambit",
         initialize: () => undefined,
         execute: (command: string | object) => {
           sent.push(typeof command === "string" ? command : JSON.stringify(command));
-          return Promise.resolve({ success: true });
+          return Promise.resolve(
+            sent.length > refuseAfter
+              ? { success: false, error: new Error("port closed") }
+              : { success: true },
+          );
         },
         destroy: () => Promise.resolve(),
       };
@@ -397,6 +402,19 @@ describe("useCalibrationRig", () => {
 
       expect(sent).toEqual(["arrun1,1,1,2,0,0,1,0,1,0,1,\n,"]);
     });
+
+    // A device that would not go dark was reported to nobody: the failure was logged and
+    // the rig said it had rested. The operator is the only one who can act on it.
+    it("says which console refused to go back to rest rather than swallowing it", async () => {
+      const { driver } = fakeAmbit(1);
+      const { result } = renderHook(() => useCalibrationRig(PROCEDURE, driver));
+
+      await act(async () => {
+        await result.current.bindings.dut?.setpoint?.applySetpoint("led_setting", 250);
+      });
+
+      await expect(result.current.rest()).rejects.toThrow(/device: port closed/);
+    });
   });
 
   describe("leaving the bench", () => {
@@ -417,6 +435,29 @@ describe("useCalibrationRig", () => {
 
       expect(supply.sent).toEqual([KIPRIM_COMMANDS.setCurrent(0)]);
       expect(supply.transport.isConnected()).toBe(false);
+    });
+
+    // A caller that has a procedure to stop first has to rest the bench after it, not
+    // while a sweep is still driving setpoints into the same ports.
+    it("leaves the teardown to a caller that asked to own it", async () => {
+      const supply = supplyPort();
+      mockOpenSerialPort.mockResolvedValueOnce(supply.transport);
+      const { result, unmount } = renderHook(() =>
+        useCalibrationRig(PROCEDURE, undefined, { shutdownOnUnmount: false }),
+      );
+
+      await act(async () => {
+        await result.current.connectRole("lamp");
+      });
+      supply.sent.length = 0;
+
+      unmount();
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(supply.sent).toEqual([]);
+      expect(supply.transport.isConnected()).toBe(true);
     });
 
     // A role of the same name in the next definition may want another instrument, so a

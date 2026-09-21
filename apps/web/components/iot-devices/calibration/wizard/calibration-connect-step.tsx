@@ -1,5 +1,6 @@
 "use client";
 
+import type { UnitIdentity } from "@/hooks/iot/useCalibrationCapture/useCalibrationCapture";
 import type { RigRole, useCalibrationRig } from "@/hooks/iot/useCalibrationRig/useCalibrationRig";
 import { useIotBrowserSupport } from "@/hooks/iot/useIotBrowserSupport";
 import type { IotDeviceConnection } from "@/hooks/iot/useIotConnections/useIotConnections";
@@ -20,6 +21,8 @@ export type CalibrationRig = ReturnType<typeof useCalibrationRig>;
 interface CalibrationConnectStepProps {
   family: SensorFamily;
   connection: IotDeviceConnection | undefined;
+  /** Whether the unit that answered is the device this session is for. */
+  unit: UnitIdentity | undefined;
   isConnecting: boolean;
   error: string | null;
   rig: CalibrationRig;
@@ -42,6 +45,7 @@ const ROLE_STATE: Record<RigRole["status"]["kind"], PortState> = {
 export function CalibrationConnectStep({
   family,
   connection,
+  unit,
   isConnecting,
   error,
   rig,
@@ -111,6 +115,35 @@ export function CalibrationConnectStep({
     );
   }
 
+  // Coefficients are written to whatever is on the port, so what answered has to be the
+  // device the session is for. A family that announces no identifier cannot be checked,
+  // and the row says that rather than implying it passed.
+  function renderIdentity() {
+    if (unit === undefined) {
+      return null;
+    }
+    if (unit.kind === "mismatch") {
+      return (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {t("iot.calibration.connect.wrongUnit", {
+              reported: unit.reported,
+              expected: unit.expected,
+            })}
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    if (unit.kind === "unnamed") {
+      return (
+        <Alert>
+          <AlertDescription>{t("iot.calibration.connect.unnamedUnit")}</AlertDescription>
+        </Alert>
+      );
+    }
+    return null;
+  }
+
   function renderDevice() {
     // Nothing to say about a port that has not been opened; the family is the row's title.
     const detail =
@@ -128,6 +161,11 @@ export function CalibrationConnectStep({
           state={isConnected ? "connected" : isConnecting ? "connecting" : "idle"}
           title={getSensorFamilyLabel(family)}
           detail={detail}
+          note={
+            unit?.kind === "match"
+              ? t("iot.calibration.connect.unitConfirmed", { serial: unit.serial })
+              : undefined
+          }
           action={
             isConnected
               ? renderReleaseButton(onDisconnect)
@@ -145,6 +183,7 @@ export function CalibrationConnectStep({
               <AlertDescription>{wrongFamilyMessage}</AlertDescription>
             </Alert>
           )}
+          {isConnected && wrongFamilyMessage === null && renderIdentity()}
           {!isConnected && unsupportedReason !== null && (
             <Alert>
               <AlertDescription>{unsupportedReason}</AlertDescription>

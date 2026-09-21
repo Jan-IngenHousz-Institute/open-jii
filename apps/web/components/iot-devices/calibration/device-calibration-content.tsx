@@ -17,6 +17,7 @@ import { Button } from "@repo/ui/components/button";
 import { ActiveCalibrationCard } from "./active-calibration-card";
 import { CalibrationRunDetail } from "./run/calibration-run-detail";
 import { CalibrationRunsList } from "./run/calibration-runs-list";
+import type { CalibrationWriteSession } from "./wizard/calibration-wizard";
 import { CalibrationWizard } from "./wizard/calibration-wizard";
 
 export default function DeviceCalibrationContent() {
@@ -28,6 +29,9 @@ export default function DeviceCalibrationContent() {
 
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  // A calibration approved on record that never reached the hardware; the session it opens
+  // measures nothing.
+  const [writeSession, setWriteSession] = useState<CalibrationWriteSession | null>(null);
 
   const { data: device } = useIotDevice(deviceId);
   const family = zCalibrationFamily.safeParse(device?.deviceType);
@@ -57,13 +61,26 @@ export default function DeviceCalibrationContent() {
   }
 
   const canManage = device.capabilities.canManage;
+  const serialNumber = device.serialNumber;
+
+  function closeWizard() {
+    setIsWizardOpen(false);
+    setWriteSession(null);
+  }
+
+  function startWriteSession(session: CalibrationWriteSession) {
+    setWriteSession(session);
+    setIsWizardOpen(true);
+  }
 
   function renderWizard(family: NonNullable<typeof calibrationFamily>) {
     return (
       <CalibrationWizard
         deviceId={deviceId}
         family={family}
-        onClose={() => setIsWizardOpen(false)}
+        serialNumber={serialNumber}
+        writeSession={writeSession ?? undefined}
+        onClose={closeWizard}
       />
     );
   }
@@ -73,7 +90,9 @@ export default function DeviceCalibrationContent() {
       <CalibrationRunDetail
         runId={runId}
         deviceId={deviceId}
+        canManage={canManage}
         onBack={() => setSelectedRunId(null)}
+        onWriteToDevice={canManage ? startWriteSession : undefined}
       />
     );
   }

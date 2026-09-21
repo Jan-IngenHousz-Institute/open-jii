@@ -819,7 +819,9 @@
         "writeTitle": "Naar het apparaat geschreven",
         "writeNever": "Deze coëfficiënten zijn alleen vastgelegd en nooit naar het apparaat geschreven.",
         "writtenAt": "Geschreven op {{date}}",
-        "verificationTitle": "Controle met de nieuwe coëfficiënten"
+        "verificationTitle": "Controle met de nieuwe coëfficiënten",
+        "writeToDevice": "Naar het apparaat schrijven",
+        "skippedTitle": "Stappen die de opstelling heeft overgeslagen"
       },
       "cta": {
         "calibrate": "Kalibreren",
@@ -860,7 +862,10 @@
         "roleMismatch": "Deze poort meldde zich als {{model}}, wat deze rol niet verwacht, dus is hij weer gesloten.",
         "roleUnrecognised": "Op deze poort heeft zich geen bekend instrument gemeld.",
         "roleFailed": "Deze poort kon niet worden geopend.",
-        "roleMissing": "Verbind de instrumenten die de meting nodig heeft voordat u verdergaat."
+        "roleMissing": "Verbind de instrumenten die de meting nodig heeft voordat u verdergaat.",
+        "unitConfirmed": "Serienummer {{serial}} komt overeen met het record van dit apparaat.",
+        "wrongUnit": "Dit exemplaar meldt serienummer {{reported}}, maar dit apparaat staat geregistreerd als {{expected}}. De coëfficiënten zouden naar het verkeerde exemplaar gaan, dus de run kan niet starten.",
+        "unnamedUnit": "Deze apparaatfamilie meldt geen serienummer, dus het exemplaar op de poort kan niet tegen het record worden gecontroleerd. Zorg dat het juiste is aangesloten."
       },
       "prompt": {
         "confirmLabel": "Typ {{token}} om door te gaan",
@@ -883,7 +888,13 @@
         "hint": "De meetopstelling doorloopt de procedure en legt elke meting vast zodra die binnenkomt. Beantwoord onderweg wat er wordt gevraagd.",
         "submitting": "Coëfficiënten berekenen…",
         "aborted": "De procedure is gestopt voordat ze klaar was.",
-        "retry": "Opnieuw uitvoeren"
+        "retry": "Opnieuw uitvoeren",
+        "stop": "Stoppen",
+        "stopped": "De run is gestopt. Er is niets vastgelegd.",
+        "disconnected": "Het apparaat zit niet meer op zijn poort. Verbind het opnieuw en start de run nogmaals.",
+        "restFailed": "De meetopstelling kon niet in rust worden gezet.",
+        "submitFailed": "De metingen zijn gedaan maar konden niet worden vastgelegd.",
+        "retrySubmit": "Deze metingen opnieuw vastleggen"
       },
       "review": {
         "hint": "Goedkeuren past de berekende blokken toe op het record van dit apparaat. De hardware wordt pas in de volgende stap beschreven.",
@@ -919,13 +930,19 @@
         "verifyHeading": "Controle met de nieuwe coëfficiënten",
         "verifying": "Het apparaat wordt uitgelezen met de nieuwe coëfficiënten…",
         "verificationStopped": "De controle is voortijdig gestopt: {{reason}}. De hierboven geschreven coëfficiënten blijven staan.",
-        "disconnected": "Het apparaat is losgekoppeld. Verbind het opnieuw en schrijf nogmaals."
+        "disconnected": "Het apparaat is losgekoppeld. Verbind het opnieuw en schrijf nogmaals.",
+        "retryReport": "Het schrijven opnieuw vastleggen",
+        "finishUnrecorded": "Afronden zonder vastleggen",
+        "reconnect": "Apparaat opnieuw verbinden"
       },
       "done": {
         "close": "Sluiten",
         "rejectedHint": "De run is afgewezen. De diagnose blijft bewaard; er is niets toegepast.",
         "writtenHint": "De kalibratie geldt en is op het apparaat bevestigd.",
-        "notWrittenHint": "De kalibratie geldt in het record. Sommige blokken zijn niet op het apparaat bevestigd; controleer de schrijfresultaten."
+        "notWrittenHint": "De kalibratie geldt in het record. Er is niets naar het apparaat geschreven.",
+        "unconfirmedHint": "De kalibratie geldt in het record. Sommige blokken zijn niet op het apparaat bevestigd; controleer de schrijfresultaten.",
+        "recordOnlyHint": "De kalibratie geldt in het record. Het platform kan voor deze apparaatfamilie geen coëfficiënten schrijven.",
+        "notRecordedHint": "De coëfficiënten staan op het apparaat, maar het platform kon het schrijven niet vastleggen. Open deze sessie vanuit de lijst en leg het vast."
       }
     },
     "workbookBar": {

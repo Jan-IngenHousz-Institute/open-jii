@@ -819,7 +819,9 @@
         "writeTitle": "Written to the device",
         "writeNever": "These coefficients were approved on record and never written to the device.",
         "writtenAt": "Written {{date}}",
-        "verificationTitle": "Check with the new coefficients"
+        "verificationTitle": "Check with the new coefficients",
+        "writeToDevice": "Write to device",
+        "skippedTitle": "Steps the bench skipped"
       },
       "cta": {
         "calibrate": "Calibrate",
@@ -860,7 +862,10 @@
         "roleMismatch": "This port answered as {{model}}, which is not what this role expects, so it was closed again.",
         "roleUnrecognised": "Nothing on this port identified itself as an instrument the bench knows.",
         "roleFailed": "This port could not be opened.",
-        "roleMissing": "Connect the instruments the run needs before continuing."
+        "roleMissing": "Connect the instruments the run needs before continuing.",
+        "unitConfirmed": "Serial {{serial}} matches this device's record.",
+        "wrongUnit": "This unit reports serial {{reported}}, but this device is registered as {{expected}}. Coefficients would go to the wrong unit, so the run cannot start.",
+        "unnamedUnit": "This device family does not report a serial number, so the unit on the port cannot be checked against the record. Make sure the right one is connected."
       },
       "prompt": {
         "confirmLabel": "Type {{token}} to continue",
@@ -883,7 +888,13 @@
         "hint": "The bench walks the procedure and records each reading as it arrives. Answer what it asks along the way.",
         "submitting": "Computing coefficients…",
         "aborted": "The procedure stopped before completing.",
-        "retry": "Run again"
+        "retry": "Run again",
+        "stop": "Stop",
+        "stopped": "The run was stopped. Nothing was recorded.",
+        "disconnected": "The device is no longer on its port. Reconnect it and run again.",
+        "restFailed": "The bench could not be returned to rest.",
+        "submitFailed": "The readings were captured but could not be recorded.",
+        "retrySubmit": "Record these readings again"
       },
       "review": {
         "hint": "Approving applies the computed blocks to this device's record. Nothing reaches the hardware until the next step.",
@@ -919,13 +930,19 @@
         "verifyHeading": "Check with the new coefficients",
         "verifying": "Reading the device with the new coefficients…",
         "verificationStopped": "The check stopped early: {{reason}}. The coefficients written above stand.",
-        "disconnected": "The device was disconnected. Reconnect it and write again."
+        "disconnected": "The device was disconnected. Reconnect it and write again.",
+        "retryReport": "Record the write again",
+        "finishUnrecorded": "Finish without recording",
+        "reconnect": "Reconnect the device"
       },
       "done": {
         "close": "Close",
         "rejectedHint": "The run was rejected. Its diagnostics stay on record; nothing was applied.",
         "writtenHint": "The calibration is in force and confirmed on the device.",
-        "notWrittenHint": "The calibration is in force on record. Some blocks were not confirmed on the device; check the write results."
+        "notWrittenHint": "The calibration is in force on record. Nothing was written to the device.",
+        "unconfirmedHint": "The calibration is in force on record. Some blocks were not confirmed on the device; check the write results.",
+        "recordOnlyHint": "The calibration is in force on record. The platform cannot write coefficients to this device family.",
+        "notRecordedHint": "The coefficients are on the device, but the platform could not record the write. Open this session from the list and record it."
       }
     },
     "workbookBar": {

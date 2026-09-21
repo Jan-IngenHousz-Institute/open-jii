@@ -20,6 +20,9 @@ interface CalibrationWriteStepProps {
   canWrite: boolean;
   results: CalibrationWriteResults | null;
   error: string | null;
+  /** The write reached the device; recording it did not. The two are separate failures. */
+  reportError: string | null;
+  isDisconnected: boolean;
   verifyEvents: ProcedureProgress[];
   isVerifying: boolean;
   verification: CalibrationRunPayload | null;
@@ -35,6 +38,8 @@ export function CalibrationWriteStep({
   canWrite,
   results,
   error,
+  reportError,
+  isDisconnected,
   verifyEvents,
   isVerifying,
   verification,
@@ -133,6 +138,19 @@ export function CalibrationWriteStep({
       {error !== null && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      {isDisconnected && results === null && (
+        <Alert variant="destructive">
+          <AlertDescription>{t("iot.calibration.write.disconnected")}</AlertDescription>
+        </Alert>
+      )}
+      {reportError !== null && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {t("iot.calibration.write.reportFailed")}
+            <span className="mt-1 block font-mono text-xs">{reportError}</span>
+          </AlertDescription>
         </Alert>
       )}
       <ul className="divide-y overflow-hidden rounded-lg border">{blocks.map(renderBlock)}</ul>

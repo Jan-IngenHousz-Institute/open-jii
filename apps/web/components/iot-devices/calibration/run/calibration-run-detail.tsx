@@ -1,26 +1,36 @@
 "use client";
 
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
+import { useApproveCalibrationRun } from "@/hooks/iot/useApproveCalibrationRun/useApproveCalibrationRun";
 import { useCalibrationDefinition } from "@/hooks/iot/useCalibrationDefinition/useCalibrationDefinition";
 import { useCalibrationRun } from "@/hooks/iot/useCalibrationRun/useCalibrationRun";
 import { useDeviceCalibrations } from "@/hooks/iot/useDeviceCalibrations/useDeviceCalibrations";
+import { useRejectCalibrationRun } from "@/hooks/iot/useRejectCalibrationRun/useRejectCalibrationRun";
 import { useLocale } from "@/hooks/useLocale";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Loader2, SkipForward } from "lucide-react";
 
+import type { SkippedSeriesList } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
+import { Button } from "@repo/ui/components/button";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
+import { toast } from "@repo/ui/hooks/use-toast";
 
 import { CalibrationBlockCard } from "../result/calibration-block-card";
 import { CalibrationSeriesTable } from "../result/calibration-series-table";
+import type { CalibrationWriteSession } from "../wizard/calibration-wizard";
 import { CalibrationRunStatusBadge } from "./calibration-run-status-badge";
 import { CalibrationWriteRecord } from "./calibration-write-record";
 
 interface CalibrationRunDetailProps {
   runId: string;
   deviceId: string;
+  /** Deciding a run and writing it to hardware both need device manage rights. */
+  canManage: boolean;
   onBack: () => void;
+  /** Absent where the family has no writer, which the wizard says for itself. */
+  onWriteToDevice?: (session: CalibrationWriteSession) => void;
 }
 
 /** A device info record holds whatever the family reported about itself. */
@@ -40,15 +50,24 @@ function formatInfoValue(value: unknown): string {
 /**
  * One finished bench session, read back from the record. A calibration is only
  * defensible if the readings, the fit and the write outcome survive the session that
- * produced them, so everything stored about a run is on this page.
+ * produced them, so everything stored about a run is on this page. The decision is here
+ * too: a run left computed when the tab closed is otherwise stuck for good.
  */
-export function CalibrationRunDetail({ runId, deviceId, onBack }: CalibrationRunDetailProps) {
+export function CalibrationRunDetail({
+  runId,
+  deviceId,
+  canManage,
+  onBack,
+  onWriteToDevice,
+}: CalibrationRunDetailProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
 
   const { data: run, isLoading, isError } = useCalibrationRun(runId);
   const definition = useCalibrationDefinition(run?.definitionId ?? null);
   const calibrations = useDeviceCalibrations(deviceId);
+  const approveRun = useApproveCalibrationRun();
+  const rejectRun = useRejectCalibrationRun();
 
   const applied = calibrations.data?.find((calibration) => calibration.runId === runId);
   const blocks = Object.entries(run?.blocks ?? {});
@@ -56,6 +75,31 @@ export function CalibrationRunDetail({ runId, deviceId, onBack }: CalibrationRun
   const preInfo = Object.entries(run?.preInfo ?? {});
   const postInfo = Object.entries(run?.postInfo ?? {});
   const hasInfo = preInfo.length > 0 || postInfo.length > 0;
+  const skipped: SkippedSeriesList = run?.skippedSeries ?? [];
+  const isDeciding = approveRun.isPending || rejectRun.isPending;
+  const isUndecided = run?.status === "computed";
+  const isUnwritten = applied?.writtenToDeviceAt === null;
+
+  async function approve() {
+    try {
+      await approveRun.mutateAsync({ runId });
+    } catch {
+      toast({ title: t("iot.calibration.review.approveFailed"), variant: "destructive" });
+    }
+  }
+
+  async function reject() {
+    try {
+      await rejectRun.mutateAsync({ runId });
+    } catch {
+      toast({ title: t("iot.calibration.review.rejectFailed"), variant: "destructive" });
+    }
+  }
+
+  function writeToDevice() {
+    if (applied === undefined || run === undefined) return;
+    onWriteToDevice?.({ calibration: applied, definitionId: run.definitionId });
+  }
 
   function renderFact([label, value]: [string, string]) {
     return (
@@ -72,6 +116,17 @@ export function CalibrationRunDetail({ runId, deviceId, onBack }: CalibrationRun
 
   function renderSeries([series, rows]: (typeof payload)[number]) {
     return <CalibrationSeriesTable key={series} series={series} rows={rows} />;
+  }
+
+  function renderSkipped(entry: SkippedSeriesList[number]) {
+    return (
+      <li key={entry.series} className="text-muted-foreground flex items-start gap-2 text-sm">
+        <SkipForward className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <span>
+          {t("iot.calibration.capture.skipped", { series: entry.series, reason: entry.reason })}
+        </span>
+      </li>
+    );
   }
 
   function renderInfoEntry([key, value]: (typeof preInfo)[number]) {
@@ -95,6 +150,42 @@ export function CalibrationRunDetail({ runId, deviceId, onBack }: CalibrationRun
         </dl>
       </div>
     );
+  }
+
+  // A run carries at most one invitation: decide it, or carry what was decided to the
+  // hardware it never reached.
+  function renderRecordAction() {
+    if (!canManage) {
+      return undefined;
+    }
+    if (isUndecided) {
+      return (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void reject()}
+            disabled={isDeciding}
+          >
+            {rejectRun.isPending && <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />}
+            {t("iot.calibration.review.reject")}
+          </Button>
+          <Button type="button" size="sm" onClick={() => void approve()} disabled={isDeciding}>
+            {approveRun.isPending && <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />}
+            {t("iot.calibration.review.approve")}
+          </Button>
+        </div>
+      );
+    }
+    if (isUnwritten && onWriteToDevice !== undefined) {
+      return (
+        <Button type="button" size="sm" onClick={writeToDevice}>
+          {t("iot.calibration.run.writeToDevice")}
+        </Button>
+      );
+    }
+    return undefined;
   }
 
   function factsOf(session: NonNullable<typeof run>): [string, string][] {
@@ -141,7 +232,7 @@ export function CalibrationRunDetail({ runId, deviceId, onBack }: CalibrationRun
 
     return (
       <div className="space-y-6">
-        <PanelCard title={t("iot.calibration.run.title")}>
+        <PanelCard title={t("iot.calibration.run.title")} action={renderRecordAction()}>
           <div className="space-y-4">
             <CalibrationRunStatusBadge status={run.status} />
             <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
@@ -161,6 +252,13 @@ export function CalibrationRunDetail({ runId, deviceId, onBack }: CalibrationRun
         )}
 
         {applied !== undefined && <CalibrationWriteRecord applied={applied} />}
+
+        {/* A series missing from the readings says nothing about whether that was the plan. */}
+        {skipped.length > 0 && (
+          <PanelCard title={t("iot.calibration.run.skippedTitle")}>
+            <ul className="space-y-1.5">{skipped.map(renderSkipped)}</ul>
+          </PanelCard>
+        )}
 
         {hasInfo && (
           <PanelCard title={t("iot.calibration.run.deviceState")}>
