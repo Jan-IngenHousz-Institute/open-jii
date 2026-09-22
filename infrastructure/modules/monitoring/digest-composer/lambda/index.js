@@ -227,7 +227,11 @@ async function deliver(channel, digest) {
   if (botToken && channelId) {
     const auth = { Authorization: `Bearer ${botToken}` };
     const parent = JSON.parse(
-      await post("https://slack.com/api/chat.postMessage", { channel: channelId, ...digest.parent }, auth),
+      await post(
+        "https://slack.com/api/chat.postMessage",
+        { channel: channelId, ...digest.parent },
+        auth,
+      ),
     );
 
     if (!parent.ok) {
