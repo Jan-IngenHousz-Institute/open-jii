@@ -20,6 +20,7 @@ resource "databricks_pipeline" "this" {
   provider = databricks.workspace
 
   catalog = var.catalog_name
+  edition = var.edition
 
   # Support for notebook libraries
   dynamic "library" {

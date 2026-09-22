@@ -25,6 +25,19 @@ variable "configuration" {
   default     = {}
 }
 
+# AUTO CDC needs PRO or ADVANCED, so the gold bridges stop working if a pipeline
+# is ever created as CORE. Declared rather than inherited from a provider default.
+variable "edition" {
+  description = "Pipeline product edition: CORE, PRO or ADVANCED"
+  type        = string
+  default     = "ADVANCED"
+
+  validation {
+    condition     = contains(["CORE", "PRO", "ADVANCED"], var.edition)
+    error_message = "edition must be one of CORE, PRO or ADVANCED."
+  }
+}
+
 variable "development_mode" {
   description = "Whether to run the pipeline in development mode"
   type        = bool

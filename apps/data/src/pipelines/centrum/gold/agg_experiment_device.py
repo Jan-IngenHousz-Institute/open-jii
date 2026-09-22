@@ -8,9 +8,15 @@
 # table. The registry join that used to sit above it forced a full scan of silver
 # on every trigger.
 #
-# This one does not convert to a streaming table as it stands: AUTO CDC upserts
-# by key but does not sum, and a running count over an unbounded stream is
-# stateful. OJD-1923 settles that before the conversion starts.
+# The one gold aggregate that stays a materialized view. AUTO CDC upserts by key
+# but does not sum, and a running count over an unbounded stream is stateful, so
+# neither of the constructs the bridges converted to can carry total_measurements.
+#
+# It gets its own trigger interval instead. The only consumer is the measurement
+# count shown against a device in an experiment's device list, and the pipeline's
+# own end-to-end lag runs from six to eighty-six minutes, so refreshing this every
+# ten minutes leaves the number fresher than the data it describes while cutting
+# its full scans of silver from 720 a day to 144.
 
 # COMMAND ----------
 import dlt
@@ -21,9 +27,12 @@ from openjii.centrum.runtime import SILVER_TABLE
 
 # COMMAND ----------
 
+AGG_EXPERIMENT_DEVICE_INTERVAL = "10 minutes"
+
 @dlt.table(
     name=AGG_EXPERIMENT_DEVICE_TABLE,
     comment="Gold layer: measurement counts and latest attributes per (experiment_id, device_id, device_firmware).",
+    spark_conf={"pipelines.trigger.interval": AGG_EXPERIMENT_DEVICE_INTERVAL},
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
@@ -36,9 +45,10 @@ from openjii.centrum.runtime import SILVER_TABLE
 def agg_experiment_device():
     """Device stats per experiment, nothing above the aggregate.
 
-    Every function here is additive or idempotent, which is what lets the refresh
-    be incremental. Note max(client_id) is arbitrary for a device that changed
-    client_id; that was true before this split and is unchanged by it.
+    Every function here is additive or idempotent, so partial results over
+    disjoint inputs would combine, which is what would make this convertible if
+    the pipeline ever gains a construct that accumulates. Note max(client_id) is
+    arbitrary for a device that changed client_id; that predates this split.
     """
     return (
         dlt.read(SILVER_TABLE)

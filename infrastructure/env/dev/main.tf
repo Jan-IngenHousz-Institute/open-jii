@@ -746,6 +746,9 @@ module "centrum_pipeline" {
     name    = "centrum_pipeline_event_log"
   }
 
+  # AUTO CDC on the gold bridges needs PRO or ADVANCED.
+  edition = "ADVANCED"
+
   continuous_mode  = false
   development_mode = true
   serverless       = false
