@@ -128,6 +128,32 @@ resource "grafana_contact_point" "slack" {
   }
 }
 
+# Severity decides the destination, not just how often a firing alert repeats. Both
+# coalesce to the original webhook, so until a variable is set these deliver exactly
+# where "slack" already delivered and the split is a no-op.
+#
+# Deliberately no ignore_changes here, unlike grafana_contact_point.slack above. Grafana
+# returns the url redacted, so each plan shows a diff on these two; that permadiff is the
+# price of being able to repoint them later, which is the whole point of splitting them.
+# Adding ignore_changes would freeze both urls at whatever they were on first apply.
+resource "grafana_contact_point" "slack_critical" {
+  provider = grafana.amg
+  name     = "slack-critical"
+
+  slack {
+    url = var.slack_critical_webhook_url != "" ? var.slack_critical_webhook_url : var.slack_webhook_url
+  }
+}
+
+resource "grafana_contact_point" "slack_warning" {
+  provider = grafana.amg
+  name     = "slack-warning"
+
+  slack {
+    url = var.slack_warning_webhook_url != "" ? var.slack_warning_webhook_url : var.slack_webhook_url
+  }
+}
+
 
 
 # ============================================================================
@@ -1353,8 +1379,22 @@ resource "grafana_notification_policy" "policy" {
       value = "critical"
     }
     group_by        = ["alertname"]
-    contact_point   = grafana_contact_point.slack.name
+    contact_point   = grafana_contact_point.slack_critical.name
     repeat_interval = "30m"
+  }
+
+  # Warnings had no branch at all, so they fell through to the default and repeated every
+  # 12h beside everything else. Giving them their own destination is what lets the pager
+  # question be answered by swapping one contact point, with no rule or route touched.
+  policy {
+    matcher {
+      label = "severity"
+      match = "="
+      value = "warning"
+    }
+    group_by        = ["alertname"]
+    contact_point   = grafana_contact_point.slack_warning.name
+    repeat_interval = "12h"
   }
 
   policy {

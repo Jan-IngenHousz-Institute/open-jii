@@ -48,6 +48,20 @@ variable "slack_webhook_url" {
   type        = string
 }
 
+variable "slack_critical_webhook_url" {
+  description = "Where critical alerts go; empty sends them to slack_webhook_url as before"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "slack_warning_webhook_url" {
+  description = "Where warning alerts go; empty sends them to slack_webhook_url as before"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "db_cluster_identifier" {
   description = "The identifier of the Aurora DB cluster to monitor"
   type        = string

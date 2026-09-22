@@ -60,6 +60,20 @@ variable "slack_usage_webhook_url" {
   default     = ""
 }
 
+variable "slack_critical_webhook_url" {
+  description = "Slack incoming webhook for critical alerts; empty keeps them on slack_webhook_url"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "slack_warning_webhook_url" {
+  description = "Slack incoming webhook for warning alerts; empty keeps them on slack_webhook_url"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "slack_channel" {
   description = "Slack channel for monitoring notifications"
   type        = string

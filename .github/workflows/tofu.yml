@@ -85,6 +85,9 @@ jobs:
       # monitoring stack applies cleanly before the Slack channels exist.
       TF_VAR_slack_heartbeat_webhook_url: ${{ secrets.SLACK_HEARTBEAT_WEBHOOK_URL }}
       TF_VAR_slack_usage_webhook_url: ${{ secrets.SLACK_USAGE_WEBHOOK_URL }}
+      # Empty routes that severity to the existing channel, so the split lands inert.
+      TF_VAR_slack_critical_webhook_url: ${{ secrets.SLACK_CRITICAL_WEBHOOK_URL }}
+      TF_VAR_slack_warning_webhook_url: ${{ secrets.SLACK_WARNING_WEBHOOK_URL }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
@@ -170,6 +173,9 @@ jobs:
       # monitoring stack applies cleanly before the Slack channels exist.
       TF_VAR_slack_heartbeat_webhook_url: ${{ secrets.SLACK_HEARTBEAT_WEBHOOK_URL }}
       TF_VAR_slack_usage_webhook_url: ${{ secrets.SLACK_USAGE_WEBHOOK_URL }}
+      # Empty routes that severity to the existing channel, so the split lands inert.
+      TF_VAR_slack_critical_webhook_url: ${{ secrets.SLACK_CRITICAL_WEBHOOK_URL }}
+      TF_VAR_slack_warning_webhook_url: ${{ secrets.SLACK_WARNING_WEBHOOK_URL }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
