@@ -107,3 +107,8 @@ variable "route53_health_check_id" {
   default     = ""
 }
 
+variable "ingest_lag_threshold_ms" {
+  description = "Iterator age that counts as a stall. Dev's consumer is scheduled rather than continuous, so its normal lag is hours and its tolerance is raised in the env."
+  type        = number
+  default     = 600000
+}

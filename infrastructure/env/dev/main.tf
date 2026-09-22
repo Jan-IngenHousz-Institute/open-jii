@@ -2825,6 +2825,11 @@ module "grafana_dashboard" {
   slack_warning_webhook_url  = var.slack_warning_webhook_url
   db_cluster_identifier      = "open-jii-${var.environment}-db-cluster"
 
+  # Measured over 14 days on this stream: the median iterator age is 2.8M ms and the
+  # catalog's 600000 would have fired in 315 of 316 hours, because dev's consumer runs
+  # on a schedule rather than continuously. Two hours fired in 3 of those 316.
+  ingest_lag_threshold_ms = 7200000
+
   # IoT and Kinesis monitoring
   kinesis_stream_name = module.kinesis.kinesis_stream_name
   ecs_log_group_name  = module.backend_ecs.cloudwatch_log_group_name

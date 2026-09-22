@@ -1363,6 +1363,280 @@ EOT
   }
 }
 
+# Ingest Path Alerts
+#
+# The loop Critical Flows calls the one that must always work had no Grafana rule at all:
+# every existing group watches ECS, ALB, CloudFront, Route53, Lambda or RDS. These three
+# cover the catalog's ingest entries 2, 8 and 9.
+#
+# Thresholds here are deliberately not the catalog's. The catalog answers "was yesterday
+# unusual" over 24h for the digest; these answer "is it broken right now" over minutes.
+# The drift test pairs the two on identity and severity, never on numbers.
+resource "grafana_rule_group" "ingest_path" {
+  provider         = grafana.amg
+  name             = "Ingest Path"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  # Catalog entry 2. A message the broker accepted and then failed to deliver is the one
+  # ingest failure that loses data rather than delaying it.
+  #
+  # The catalog alarms on any nonzero, which is right for a morning report. Compiled here
+  # verbatim it would page on a single retryable failure, because a trailing sum stays
+  # above zero for every evaluation the failure remains in window. So this fires on
+  # sustained loss and the digest still names every single failure the next morning.
+  rule {
+    name      = "Ingest Forwarding Failures"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      # Published per rule and action, so matchExact false with no dimensions is what
+      # covers every rule without naming them, and each series alerts on its own.
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/IoT"
+        metricName = "Failure"
+        statistic  = "Sum"
+        dimensions = {}
+        matchExact = false
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 5"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    # No failures published is the healthy case for a counter, not an unknown one.
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description = "IoT rule actions are failing to forward accepted messages; this loses data rather than delaying it. Runbook: docs/runbooks/ingest-forwarding-failures.md"
+      summary     = "Ingest forwarding failures on the IoT rule engine"
+    }
+    labels = {
+      severity  = "critical"
+      service   = "ingest"
+      metric_id = "ingest-forwarding-failures"
+    }
+  }
+
+  # Catalog entry 8. Nothing is lost while the age stays under the stream's 24h
+  # retention, but everything downstream is behind by the age shown.
+  rule {
+    name      = "Ingest Lag"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/Kinesis"
+        metricName = "GetRecords.IteratorAgeMilliseconds"
+        statistic  = "Maximum"
+        dimensions = {
+          StreamName = var.kinesis_stream_name
+        }
+      })
+
+      # An hour, because the series only exists while a consumer is polling. A five
+      # minute window would evaluate NoData most of the time and never hold a state
+      # long enough for `for` to elapse.
+      relative_time_range {
+        from = 3600
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > ${var.ingest_lag_threshold_ms}"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    # A consumer that dies completely stops publishing this metric, so absence is the
+    # one case this rule cannot see. OK rather than Alerting because the alternative
+    # fires through every idle night on a scheduled pipeline. The gap is recorded in
+    # the runbook; the ingest-collapse signal is what closes it.
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "15m"
+
+    annotations = {
+      description = "Kinesis iterator age is above the environment's tolerance: the consumer is not keeping up or is not running. Runbook: docs/runbooks/ingest-lag.md"
+      summary     = "Ingest lag climbing on the data ingest stream"
+    }
+    labels = {
+      severity  = "critical"
+      service   = "ingest"
+      metric_id = "ingest-lag"
+    }
+  }
+
+  # Catalog entry 9. A throttled write is a dropped record once the rule stops retrying.
+  rule {
+    name      = "Kinesis Write Throttling"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/Kinesis"
+        metricName = "WriteProvisionedThroughputExceeded"
+        statistic  = "Sum"
+        dimensions = {
+          StreamName = var.kinesis_stream_name
+        }
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "10m"
+
+    annotations = {
+      description = "Writes into the ingest stream are being rejected for exceeding provisioned throughput; what the rule cannot place is dropped. Runbook: docs/runbooks/kinesis-write-throttling.md"
+      summary     = "Kinesis write throttling on the data ingest stream"
+    }
+    labels = {
+      severity  = "warning"
+      service   = "ingest"
+      metric_id = "kinesis-write-throttling"
+    }
+  }
+}
+
 resource "grafana_notification_policy" "policy" {
   provider = grafana.amg
 
