@@ -14,6 +14,7 @@
 # COMMAND ----------
 
 # DBTITLE 1,Imports and configuration
+import json
 from collections.abc import Callable
 from datetime import datetime, timezone
 
@@ -213,4 +214,4 @@ target = f"{HEARTBEAT_LOCATION.rstrip('/')}/{heartbeat_key(now)}"
 dbutils.fs.put(target, to_ndjson(records), overwrite=True)
 
 log(f"wrote {len(records)} records to {target}")
-dbutils.notebook.exit({"status": "ok", "records": len(records), "path": target})
+dbutils.notebook.exit(json.dumps({"status": "ok", "records": len(records), "path": target}))
