@@ -9,8 +9,9 @@ import {
   experiments,
   isNull,
   resourceGrants,
+  sql,
 } from "@repo/database";
-import type { DatabaseInstance } from "@repo/database";
+import type { DatabaseInstance, Transaction } from "@repo/database";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
@@ -109,6 +110,119 @@ describe("join code concurrency", () => {
       .from(experimentJoinCodes)
       .where(eq(experimentJoinCodes.id, id));
     return row;
+  }
+
+  /**
+   * Block until `pid` is actually waiting on a lock, rather than sleeping and hoping.
+   *
+   * Watched through a third connection: the redemption is holding the harness's only
+   * connection while it waits, and the blocker is holding the secondary's, so neither
+   * can answer a question about itself. Keyed on the one backend rather than "any
+   * waiter", so a spec file running alongside cannot satisfy the poll.
+   */
+  async function waitUntilBlocked(observer: DatabaseInstance, pid: number) {
+    const deadline = Date.now() + 5000;
+    while (Date.now() < deadline) {
+      const rows = await observer.execute<{ waitEventType: string | null }>(
+        sql`SELECT wait_event_type AS "waitEventType" FROM pg_stat_activity WHERE pid = ${pid}`,
+      );
+      if (rows.length > 0 && rows[0].waitEventType === "Lock") {
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    throw new Error(`Backend ${pid} never blocked on a lock`);
+  }
+
+  /**
+   * Drive the one interleaving that matters: the redemption reads the code, then
+   * blocks on the experiment row while the other connection changes the world
+   * underneath it and commits. The redemption resumes and must refuse.
+   *
+   * `Promise.all` cannot express this. It leaves the ordering to the scheduler and
+   * records nothing about who acquired the decisive lock, so its success branch
+   * cannot tell "redeemed before the revocation" from "redeemed after it, off a
+   * stale pre-lock read" — both leave one grant and a revoked code behind.
+   */
+  async function redeemWhileBlocked(
+    target: { experimentId: string; code: string },
+    mutate: (tx: Transaction) => Promise<void>,
+  ) {
+    const observer = createSecondaryDatabase();
+    try {
+      // The connection the redemption will run on. Read before it starts, because
+      // afterwards this connection is occupied by the blocked redemption itself.
+      const [{ pid }] = await testApp.database.execute<{ pid: number }>(
+        sql`SELECT pg_backend_pid() AS pid`,
+      );
+
+      let lockTaken!: () => void;
+      const blockerHoldsLock = new Promise<void>((resolve) => {
+        lockTaken = resolve;
+      });
+      let release!: () => void;
+      const mayCommit = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+
+      const blocker = secondary.database.transaction(async (tx) => {
+        // Revoke and create take this row `FOR UPDATE` first, so holding it here is
+        // exactly what a real organizer action would hold.
+        await tx
+          .select({ id: experiments.id })
+          .from(experiments)
+          .where(eq(experiments.id, target.experimentId))
+          .limit(1)
+          .for("update");
+        lockTaken();
+        await mayCommit;
+        await mutate(tx);
+      });
+
+      await blockerHoldsLock;
+      // Deliberately not awaited: it has to be in flight and stuck for the mutation
+      // below to land underneath it.
+      const redeeming = redeemUseCase.execute(target.code, studentId);
+
+      let waitError: Error | undefined;
+      try {
+        await waitUntilBlocked(observer.database, pid);
+      } catch (error) {
+        waitError = error instanceof Error ? error : new Error(String(error));
+      }
+
+      // Released even when the poll failed, so a bad wait cannot strand the
+      // transaction and hang the suite.
+      release();
+      await blocker;
+      const redeemed = await redeeming;
+      if (waitError) {
+        throw waitError;
+      }
+      return redeemed;
+    } finally {
+      await observer.close();
+    }
+  }
+
+  /**
+   * What a redemption actually did, as one comparable shape: a success reports the
+   * outcome it returned rather than collapsing to `false`, so a redemption that
+   * slipped past the refusal says so instead of failing on an opaque boolean.
+   */
+  async function outcomeOf(
+    redeemed: Awaited<ReturnType<RedeemJoinCodeUseCase["execute"]>>,
+    experimentId: string,
+    codeId: string,
+    field: "code" | "message" = "code",
+  ) {
+    return {
+      refusal: redeemed.isFailure()
+        ? redeemed.error[field]
+        : `no refusal, redemption returned "${redeemed.value.outcome}"`,
+      grants: (await grantsFor(experimentId, studentId)).length,
+      counted: (await codeRow(codeId)).redemptionCount,
+    };
   }
 
   it("admits one grant and counts once when the same code is redeemed twice at once", async () => {
@@ -226,6 +340,76 @@ describe("join code concurrency", () => {
       expect(redeemed.error.message).toBe("This experiment is archived");
       expect(grants).toHaveLength(0);
     }
+  });
+
+  it("refuses a code revoked while the redemption waited for the experiment lock", async () => {
+    const { experiment, code } = await seedCode();
+
+    const redeemed = await redeemWhileBlocked(
+      { experimentId: experiment.id, code: code.code },
+      (tx) =>
+        tx
+          .update(experimentJoinCodes)
+          .set({ revokedAt: new Date() })
+          .where(
+            and(
+              eq(experimentJoinCodes.experimentId, experiment.id),
+              isNull(experimentJoinCodes.revokedAt),
+            ),
+          )
+          .then(() => undefined),
+    );
+
+    // The revocation committed while this redemption was queued, so the re-read it
+    // does after taking its locks is the only thing that can catch it. Asserted as
+    // one shape so a redemption that slipped through reports what it actually did.
+    expect(await outcomeOf(redeemed, experiment.id, code.id)).toEqual({
+      refusal: ErrorCodes.JOIN_CODE_EXPIRED,
+      grants: 0,
+      counted: 0,
+    });
+  });
+
+  it("refuses a code that expired while the redemption waited for the experiment lock", async () => {
+    const { experiment, code } = await seedCode();
+
+    const redeemed = await redeemWhileBlocked(
+      { experimentId: experiment.id, code: code.code },
+      (tx) =>
+        tx
+          .update(experimentJoinCodes)
+          .set({ expiresAt: new Date(Date.now() - 1000) })
+          .where(eq(experimentJoinCodes.id, code.id))
+          .then(() => undefined),
+    );
+
+    expect(await outcomeOf(redeemed, experiment.id, code.id)).toEqual({
+      refusal: ErrorCodes.JOIN_CODE_EXPIRED,
+      grants: 0,
+      counted: 0,
+    });
+  });
+
+  it("refuses an experiment archived while the redemption waited for the experiment lock", async () => {
+    const { experiment, code } = await seedCode();
+
+    const redeemed = await redeemWhileBlocked(
+      { experimentId: experiment.id, code: code.code },
+      (tx) =>
+        tx
+          .update(experiments)
+          .set({ status: "archived" })
+          .where(eq(experiments.id, experiment.id))
+          .then(() => undefined),
+    );
+
+    // Guards the other half of the ordering: the experiment row is read after the
+    // lock, so an archive that commits while the redemption queues is still seen.
+    expect(await outcomeOf(redeemed, experiment.id, code.id, "message")).toEqual({
+      refusal: "This experiment is archived",
+      grants: 0,
+      counted: 0,
+    });
   });
 
   it("leaves one active code when two organizers create at the same moment", async () => {

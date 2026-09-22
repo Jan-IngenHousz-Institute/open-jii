@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { queryDefaultOptions } from "~/shared/ui/query-defaults";
 
 import { useResolveJoinCode } from "./use-resolve-join-code";
 
@@ -105,10 +106,77 @@ describe("useResolveJoinCode", () => {
     expect(capturedOptions[0]?.meta).toEqual({ suppressToast: true });
   });
 
+  it("opts into both refetches, which the app defaults turn off", () => {
+    renderHook(() => useResolveJoinCode("KP7Q4WMX"), { wrapper });
+
+    // The remount tests below exercise refetchOnMount; foreground refetch has
+    // no jsdom equivalent, so it is pinned here.
+    expect(capturedOptions[0]?.refetchOnMount).toBe(true);
+    expect(capturedOptions[0]?.refetchOnWindowFocus).toBe(true);
+  });
+
   it("reports isPaused so the screen can tell offline from loading", async () => {
     const { result } = renderHook(() => useResolveJoinCode("KP7Q4WMX"), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.isPaused).toBe(false);
+  });
+});
+
+// The app's own defaults are what make a second look at a code stale: they turn
+// both refetches off and keep the preview forever. A bare QueryClient cannot
+// see that, so these run on the real thing.
+describe("useResolveJoinCode under the app's query defaults", () => {
+  let appClient: QueryClient;
+
+  function appWrapper({ children }: { children: React.ReactNode }) {
+    return React.createElement(QueryClientProvider, { client: appClient }, children);
+  }
+
+  async function previewOnceAsMember() {
+    mockResolveJoinCode.mockResolvedValue({ ...PREVIEW, membershipStatus: "member" });
+    const first = renderHook(() => useResolveJoinCode("KP7Q4WMX"), { wrapper: appWrapper });
+    await waitFor(() => expect(first.result.current.preview).toBeDefined());
+    expect(first.result.current.preview?.membershipStatus).toBe("member");
+    first.unmount();
+  }
+
+  beforeEach(() => {
+    appClient = new QueryClient({ defaultOptions: queryDefaultOptions });
+  });
+
+  afterEach(() => {
+    appClient.clear();
+  });
+
+  it("resolves again on a return visit, so a lost grant is not still 'already in'", async () => {
+    await previewOnceAsMember();
+
+    mockResolveJoinCode.mockResolvedValue({ ...PREVIEW, membershipStatus: "none" });
+    const second = renderHook(() => useResolveJoinCode("KP7Q4WMX"), { wrapper: appWrapper });
+
+    await waitFor(() => expect(second.result.current.preview?.membershipStatus).toBe("none"));
+    expect(mockResolveJoinCode).toHaveBeenCalledTimes(2);
+  });
+
+  it("surfaces a code revoked between visits instead of the cached preview", async () => {
+    await previewOnceAsMember();
+
+    mockResolveJoinCode.mockRejectedValue(apiError(404));
+    const second = renderHook(() => useResolveJoinCode("KP7Q4WMX"), { wrapper: appWrapper });
+
+    // The screen checks `isApiStatus(error, 404)` before it looks at `preview`,
+    // so an error reaching the hook at all is what decides the screen.
+    await waitFor(() => expect(second.result.current.error).toBeTruthy());
+    expect(mockResolveJoinCode).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the no-retry rule under the app defaults, which allow one retry", async () => {
+    mockResolveJoinCode.mockRejectedValue(apiError(429));
+
+    const { result } = renderHook(() => useResolveJoinCode("KP7Q4WMX"), { wrapper: appWrapper });
+
+    await waitFor(() => expect(result.current.error).toBeTruthy());
+    expect(mockResolveJoinCode).toHaveBeenCalledTimes(1);
   });
 });
