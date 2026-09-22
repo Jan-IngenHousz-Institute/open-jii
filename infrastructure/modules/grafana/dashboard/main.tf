@@ -1963,9 +1963,10 @@ resource "grafana_rule_group" "collector_liveness" {
         }
       })
 
-      # Thirty minutes covers two scheduler cycles, so one missed run is not enough.
+      # Seventy-five minutes covers two export cycles plus margin, so a single
+      # missed run is not enough to fire.
       relative_time_range {
-        from = 1800
+        from = 4500
         to   = 0
       }
     }
@@ -2021,6 +2022,99 @@ resource "grafana_rule_group" "collector_liveness" {
       metric_id = "dlt-heartbeat"
       severity  = "critical"
       service   = "monitoring"
+    }
+  }
+}
+
+# Lakehouse Freshness
+#
+# The public metrics tables are rewritten on every scheduler cycle, so their age is how
+# stale the numbers on the public page are. Value-based rather than absence-based, so it
+# needs no gate: dlt-heartbeat is what notices the producer stopping altogether.
+resource "grafana_rule_group" "lakehouse_freshness" {
+  provider         = grafana.amg
+  name             = "Lakehouse Freshness"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  # Catalog entry 41. Measured at 12 minutes against a 60 minute threshold, so the
+  # headroom is four scheduler cycles.
+  rule {
+    name      = "Metrics Tables Stale"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Data"
+        metricName = "MetricsPipelineAgeMinutes"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+      })
+
+      relative_time_range {
+        from = 3600
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 60"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "15m"
+
+    annotations = {
+      description = "The public metrics tables have not been recomputed for over an hour, so every number on the public page is at least that stale. Runbook: docs/runbooks/metrics-mv-freshness.md"
+      summary     = "Metrics tables are stale"
+    }
+    labels = {
+      metric_id = "metrics-mv-freshness"
+      severity  = "critical"
+      service   = "lakehouse"
     }
   }
 }

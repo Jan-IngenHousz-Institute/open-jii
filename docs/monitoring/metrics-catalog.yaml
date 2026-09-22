@@ -140,6 +140,7 @@ metrics:
       namespace: AWS/Kinesis
       metric: GetRecords.IteratorAgeMilliseconds
       stat: Maximum
+      unit: milliseconds
       dimensions: { StreamName: "${KINESIS_STREAM_NAME}" }
     # Prod's consumer runs continuously, so ten minutes of lag is a fault there. Dev's
     # runs on a schedule and sits near 2.8M ms, where 600000 was under the reading in
@@ -176,10 +177,7 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    # Stays inactive until the export task that publishes CollectorHeartbeat lands.
-    # An absence rule against a producer that does not exist yet alarms on its first
-    # run and never stops, which is the failure this metric exists to detect.
-    active: false
+    active: true
     slots: [alert, dashboard]
     severity: critical
     signal:
@@ -201,12 +199,13 @@ metrics:
     source: dbx
     phase: P2
     # Inactive until the heartbeat export task that publishes this lands.
-    active: false
+    active: true
     slots: [exception, dashboard]
     signal:
       namespace: OpenJII/Data
       metric: GoldMaterializationAgeMinutes
       stat: Maximum
+      unit: minutes
       dimensions: { Environment: "${ENVIRONMENT}" }
     baseline: { method: same-weekday-4w, anomaly_pct: 100 }
     runbook: docs/runbooks/gold-materialization-age.md
@@ -234,12 +233,13 @@ metrics:
     source: dbx
     phase: P2
     # Inactive until the heartbeat export task that publishes this lands.
-    active: false
+    active: true
     slots: [exception, dashboard]
     signal:
       namespace: OpenJII/Data
       metric: IngestBadPayloadRate
       stat: Maximum
+      unit: percent
       dimensions: { Environment: "${ENVIRONMENT}" }
     baseline: { method: same-weekday-4w, anomaly_pct: 100 }
     notes: >
@@ -255,7 +255,7 @@ metrics:
     source: dbx
     phase: P2
     # Inactive until the heartbeat export task that publishes this lands.
-    active: false
+    active: true
     slots: [exception]
     signal:
       namespace: OpenJII/Data
@@ -319,6 +319,7 @@ metrics:
       namespace: AWS/ApplicationELB
       metric: TargetResponseTime
       stat: p95
+      unit: seconds
       dimensions: { LoadBalancer: "${ALB_ARN_SUFFIX}" }
     baseline: { method: same-weekday-4w, anomaly_pct: 100 }
 
@@ -403,6 +404,7 @@ metrics:
       namespace: AWS/CloudFront
       metric: 5xxErrorRate
       stat: Average
+      unit: percent
       dimensions: { DistributionId: "${CLOUDFRONT_DISTRIBUTION_ID}", Region: Global }
     baseline: { method: threshold, max: 5 }
     runbook: docs/runbooks/cloudfront-errors.md
@@ -465,6 +467,7 @@ metrics:
       namespace: AWS/RDS
       metric: VolumeBytesUsed
       stat: Maximum
+      unit: bytes
       dimensions: { DBClusterIdentifier: "${DB_CLUSTER_IDENTIFIER}" }
     baseline: { method: wow, anomaly_pct: 25 }
 
@@ -518,7 +521,7 @@ metrics:
     source: dbx
     phase: P2
     # Inactive until the heartbeat export task that publishes this lands.
-    active: false
+    active: true
     # Pulse only: Maximum over a seven-day window would report the peak day as if it
     # were the week, so the weekly note has no honest way to render a 24h gauge.
     slots: [pulse]
@@ -540,7 +543,7 @@ metrics:
     source: dbx
     phase: P2
     # Inactive until the heartbeat export task that publishes this lands.
-    active: false
+    active: true
     slots: [pulse]
     signal:
       namespace: OpenJII/Usage
@@ -628,13 +631,14 @@ metrics:
     source: dbx
     phase: P2
     # Inactive until the heartbeat export task that publishes this lands.
-    active: false
+    active: true
     slots: [alert, dashboard]
     severity: critical
     signal:
       namespace: OpenJII/Data
       metric: MetricsPipelineAgeMinutes
       stat: Maximum
+      unit: minutes
       dimensions: { Environment: "${ENVIRONMENT}" }
     baseline: { method: threshold, max: 60 }
     runbook: docs/runbooks/metrics-mv-freshness.md
@@ -747,7 +751,7 @@ metrics:
     source: dbx
     phase: P2
     # Inactive until the heartbeat export task that publishes this lands.
-    active: false
+    active: true
     slots: [exception, s3]
     signal:
       namespace: OpenJII/Data
