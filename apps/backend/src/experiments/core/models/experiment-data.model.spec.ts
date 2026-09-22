@@ -4,8 +4,8 @@ import {
   MACRO_TABLE_CONFIG,
   STATIC_TABLE_CONFIG,
   UPLOAD_TABLE_CONFIG,
-  type TableConfig,
 } from "./experiment-data.model";
+import type { TableConfig } from "./experiment-data.model";
 
 /**
  * The enriched layer used to hide these by projecting a narrower column list.

@@ -100,6 +100,50 @@ describe("DuckDbQueryBuilder", () => {
 
     const MACRO_SCHEMA = "OBJECT<SPAD: DOUBLE, `Leaf Temp`: DOUBLE, meta: OBJECT<unit: STRING>>";
 
+    it("carries an enrichment join through the variant path", async () => {
+      // This builder reimplements build() rather than extending the Spark twin,
+      // so a join added to the base class reaches it only if it is wired here
+      // too. It was not, and nothing failed: the column simply vanished.
+      await connection.run(`
+        CREATE OR REPLACE TABLE devices AS
+        SELECT * FROM (VALUES ('exp-1', 'm-1', {'name': 'Sensor A'}))
+        AS t(experiment_id, macro_id, device)
+      `);
+
+      const sql = service.buildQuery({
+        table: "macro_data",
+        variants: [{ columnName: "macro_output", schema: MACRO_SCHEMA }],
+        whereConditions: [["experiment_id", "exp-1"]],
+        exceptColumns: ["experiment_id"],
+        joins: [
+          {
+            table: "devices",
+            alias: "d",
+            on: [
+              { served: "experiment_id", joined: "experiment_id" },
+              { served: "macro_id", joined: "macro_id" },
+            ],
+            select: [{ expression: "d.device", alias: "device" }],
+          },
+        ],
+      });
+
+      expect(sql.isSuccess()).toBe(true);
+      if (!sql.isSuccess()) {
+        return;
+      }
+
+      const rows = await run(sql.value);
+
+      expect(rows).toHaveLength(3);
+      for (const row of rows) {
+        expect(row).toHaveProperty("device");
+        expect(JSON.stringify(row.device)).toContain("Sensor A");
+      }
+      // The joined relation's own keys must not reach the result.
+      expect(Object.keys(rows[0])).not.toContain("experiment_id");
+    });
+
     const buildQuery = (
       overrides: Partial<Parameters<DuckDbQueryBuilderService["buildQuery"]>[0]> = {},
     ): string => {

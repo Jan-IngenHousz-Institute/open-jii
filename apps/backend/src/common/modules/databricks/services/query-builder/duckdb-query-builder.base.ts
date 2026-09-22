@@ -182,14 +182,19 @@ export class DuckDbVariantQueryBuilder extends VariantQueryBuilder {
       )
       .join(",\n        ");
 
+    const joinProjection = this.buildJoinProjection();
+    const source =
+      this.joins.length > 0
+        ? this.buildFromClause(`(SELECT * FROM ${this.fromClause} ${where})`)
+        : `${this.fromClause}\n        ${where}`;
+
     const flattenedView = `
       SELECT
         ${this.starExceptClause(allExceptColumns)},
         ${extractions}
       FROM (
-        SELECT *
-        FROM ${this.fromClause}
-        ${where}
+        SELECT ${this.buildBaseStar()}${joinProjection ? `, ${joinProjection}` : ""}
+        FROM ${source}
       )
     `.trim();
     const filteredFlattened =
