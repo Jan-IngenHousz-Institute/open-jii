@@ -89,7 +89,7 @@ describe("DuckDbAdapter (localMode end-to-end)", () => {
       tableName: "macro-1",
       tableType: "macro",
       experimentId: "exp-1",
-      enrichmentJoins: [
+      enrichmentJoins: () => [
         {
           relation: "experiment_devices",
           alias: "enr_device",

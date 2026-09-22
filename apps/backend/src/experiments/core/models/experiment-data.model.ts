@@ -10,6 +10,21 @@ export type ExperimentTableType = "static" | "macro" | "upload";
  * unqualified; the adapter qualifies it with the catalog and schema it already
  * resolves for the served table.
  */
+/**
+ * The list and struct expressions the enrichment joins need. Each read engine
+ * spells these differently, so the domain states what is required and the
+ * query-builder module supplies the SQL. The join's shape and keys stay here
+ * and are shared, because those diverging would be a correctness bug rather
+ * than a syntax one.
+ */
+export interface EnrichmentSql {
+  emptyArray: string;
+  concatArrays(left: string, right: string): string;
+  struct(fields: [string, string][]): string;
+  sortedCollect(inner: string): string;
+  castToString(expression: string): string;
+}
+
 export interface EnrichmentJoin {
   relation: string;
   alias: string;
@@ -34,7 +49,7 @@ export interface TableConfig {
   errorColumn?: string;
   exceptColumns: string[];
   variantColumns: VariantColumn[];
-  enrichmentJoins: EnrichmentJoin[];
+  enrichmentJoins: (sql: EnrichmentSql) => EnrichmentJoin[];
 }
 
 /** Resolves the pseudonymised contributor struct from the raw user id. */
@@ -68,35 +83,55 @@ const DEVICE_JOIN: EnrichmentJoin = {
  * `hasUpstreamAnnotations` covers the tables whose payload already carries
  * annotations of its own, which are concatenated ahead of the stored ones.
  */
-const annotationJoin = (hasUpstreamAnnotations: boolean): EnrichmentJoin => ({
-  relation: "experiment_annotations_source",
-  alias: "enr_annotation",
-  derive: `(SELECT experiment_id, row_id, sort_array(collect_list(named_struct(
-      'id', id,
-      'rowId', row_id,
-      'type', type,
-      'content', named_struct('text', content_text, 'flagType', flag_type),
-      'createdBy', user_id,
-      'createdByName', user_name,
-      'createdAt', created_at,
-      'updatedAt', updated_at
-    ))) AS db_annotations FROM {relation} GROUP BY experiment_id, row_id)`,
-  on: [
-    { served: "experiment_id", joined: "experiment_id" },
-    // row_id is a string and id is a bigint. Casting the string side instead
-    // would turn a non-numeric row_id into a null that silently matches
-    // nothing, so the comparison stays on the string.
-    { served: "cast(base.id AS string)", joined: "row_id", servedIsExpression: true },
-  ],
-  select: [
-    {
-      expression: hasUpstreamAnnotations
-        ? "concat(coalesce(base.annotations, array()), coalesce(enr_annotation.db_annotations, array()))"
-        : "coalesce(enr_annotation.db_annotations, array())",
-      alias: "annotations",
-    },
-  ],
-});
+const annotationJoin =
+  (hasUpstreamAnnotations: boolean) =>
+  (sql: EnrichmentSql): EnrichmentJoin => {
+    const annotation = sql.struct([
+      ["id", "id"],
+      ["rowId", "row_id"],
+      ["type", "type"],
+      [
+        "content",
+        sql.struct([
+          ["text", "content_text"],
+          ["flagType", "flag_type"],
+        ]),
+      ],
+      ["createdBy", "user_id"],
+      ["createdByName", "user_name"],
+      ["createdAt", "created_at"],
+      ["updatedAt", "updated_at"],
+    ]);
+
+    const stored = `coalesce(enr_annotation.db_annotations, ${sql.emptyArray})`;
+
+    return {
+      relation: "experiment_annotations_source",
+      alias: "enr_annotation",
+      derive:
+        `(SELECT experiment_id, row_id, ${sql.sortedCollect(annotation)} AS db_annotations ` +
+        `FROM {relation} GROUP BY experiment_id, row_id)`,
+      on: [
+        { served: "experiment_id", joined: "experiment_id" },
+        // row_id is a string and id is a bigint. Casting the string side
+        // instead would turn a non-numeric row_id into a null that silently
+        // matches nothing, so the comparison stays on the string.
+        {
+          served: sql.castToString("base.id"),
+          joined: "row_id",
+          servedIsExpression: true,
+        },
+      ],
+      select: [
+        {
+          expression: hasUpstreamAnnotations
+            ? sql.concatArrays(`coalesce(base.annotations, ${sql.emptyArray})`, stored)
+            : stored,
+          alias: "annotations",
+        },
+      ],
+    };
+  };
 
 /** Full configuration for known static tables (display + query). */
 export const STATIC_TABLE_CONFIG: Partial<Record<string, TableConfig>> = {
@@ -117,14 +152,14 @@ export const STATIC_TABLE_CONFIG: Partial<Record<string, TableConfig>> = {
       "annotations",
     ],
     variantColumns: ["questions_data", "custom_metadata"],
-    enrichmentJoins: [contributorJoin("user_id"), DEVICE_JOIN, annotationJoin(true)],
+    enrichmentJoins: (sql) => [contributorJoin("user_id"), DEVICE_JOIN, annotationJoin(true)(sql)],
   },
   [ExperimentTableName.DEVICE]: {
     displayName: "Device Metadata",
     defaultSortColumn: "processed_timestamp",
     exceptColumns: ["experiment_id"],
     variantColumns: [],
-    enrichmentJoins: [],
+    enrichmentJoins: () => [],
   },
 };
 
@@ -146,7 +181,7 @@ export const MACRO_TABLE_CONFIG: TableConfig = {
     "annotations",
   ],
   variantColumns: ["macro_output", "questions_data", "custom_metadata"],
-  enrichmentJoins: [contributorJoin("user_id"), DEVICE_JOIN, annotationJoin(true)],
+  enrichmentJoins: (sql) => [contributorJoin("user_id"), DEVICE_JOIN, annotationJoin(true)(sql)],
 };
 
 /** Full configuration for user-uploaded tables (display + query). */
@@ -162,7 +197,7 @@ export const UPLOAD_TABLE_CONFIG: TableConfig = {
     "created_by",
   ],
   variantColumns: ["uploaded_data", "custom_metadata"],
-  enrichmentJoins: [contributorJoin("created_by"), annotationJoin(false)],
+  enrichmentJoins: (sql) => [contributorJoin("created_by"), annotationJoin(false)(sql)],
 };
 
 /**

@@ -4,7 +4,11 @@ import type {
 } from "../../../common/modules/databricks/services/query-builder/query-builder.types";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { Result } from "../../../common/utils/fp-utils";
-import type { EnrichmentJoin, ExperimentTableMetadata } from "../models/experiment-data.model";
+import type {
+  EnrichmentJoin,
+  EnrichmentSql,
+  ExperimentTableMetadata,
+} from "../models/experiment-data.model";
 
 export const EXPERIMENT_DATA_READ_PORT = Symbol("EXPERIMENT_DATA_READ_PORT");
 
@@ -38,7 +42,7 @@ export interface ExperimentDataReadPort {
     tableType: "static" | "macro" | "upload";
     experimentId: string;
     columns?: string[];
-    enrichmentJoins?: EnrichmentJoin[];
+    enrichmentJoins?: (sql: EnrichmentSql) => EnrichmentJoin[];
     variants?: { columnName: string; schema: string }[];
     exceptColumns?: string[];
     filters?: FilterCondition[];

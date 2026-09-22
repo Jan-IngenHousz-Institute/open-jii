@@ -4,11 +4,13 @@ import { ExperimentTableName } from "@repo/api/domains/experiment/data/experimen
 
 import type {
   EnrichmentJoin,
+  EnrichmentSql,
   ExperimentTableMetadata,
 } from "../../../experiments/core/models/experiment-data.model";
 import type { ExperimentDataReadPort } from "../../../experiments/core/ports/experiment-data-read.port";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DuckDbQueryBuilderService } from "../databricks/services/query-builder/duckdb-query-builder.service";
+import { DUCKDB_ENRICHMENT_SQL } from "../databricks/services/query-builder/enrichment-sql";
 import type {
   AggregationSpec,
   FilterCondition,
@@ -133,7 +135,7 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
     tableType: "static" | "macro" | "upload";
     experimentId: string;
     columns?: string[];
-    enrichmentJoins?: EnrichmentJoin[];
+    enrichmentJoins?: (sql: EnrichmentSql) => EnrichmentJoin[];
     variants?: { columnName: string; schema: string }[];
     exceptColumns?: string[];
     filters?: FilterCondition[];
@@ -160,7 +162,7 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
       return success(EMPTY_RESULT_QUERY);
     }
 
-    const joinsResult = await this.resolveJoins(enrichmentJoins ?? []);
+    const joinsResult = await this.resolveJoins(enrichmentJoins?.(DUCKDB_ENRICHMENT_SQL) ?? []);
     if (joinsResult.isFailure()) {
       return joinsResult;
     }
@@ -202,10 +204,13 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
         );
       }
 
-      const { relation: _relation, derive, ...spec } = join;
       resolved.push({
-        ...spec,
-        table: derive ? derive.replace("{relation}", sourceResult.value) : sourceResult.value,
+        table: join.derive
+          ? join.derive.replace("{relation}", sourceResult.value)
+          : sourceResult.value,
+        alias: join.alias,
+        on: join.on,
+        select: join.select,
       });
     }
 

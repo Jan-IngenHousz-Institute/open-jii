@@ -11,7 +11,11 @@ import type {
 } from "../../../experiments/core/models/experiment-data-exports.model";
 import type { UploadMetadata } from "../../../experiments/core/models/experiment-data-uploads.model";
 import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
-import type { EnrichmentJoin } from "../../../experiments/core/models/experiment-data.model";
+import type {
+  EnrichmentJoin,
+  EnrichmentSql,
+} from "../../../experiments/core/models/experiment-data.model";
+import { SPARK_ENRICHMENT_SQL } from "./services/query-builder/enrichment-sql";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { DataUploadJobInput } from "../../../experiments/core/ports/databricks.port";
 import type { DeviceLifecycleEventRow } from "../../../iot/core/models/device-lifecycle-event.model";
@@ -1230,7 +1234,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     tableType: "static" | "macro" | "upload";
     experimentId: string;
     columns?: string[];
-    enrichmentJoins?: EnrichmentJoin[];
+    enrichmentJoins?: (sql: EnrichmentSql) => EnrichmentJoin[];
     variants?: { columnName: string; schema: string }[];
     exceptColumns?: string[];
     filters?: FilterCondition[];
@@ -1263,7 +1267,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
     // The config names dimensions unqualified, because it has no catalog. A
     // dimension that aggregates before joining supplies the query around it.
-    const joins = (enrichmentJoins ?? []).map((join) => {
+    const joins = (enrichmentJoins?.(SPARK_ENRICHMENT_SQL) ?? []).map((join) => {
       const qualified = `${catalog}.${schema}.${join.relation}`;
 
       return {

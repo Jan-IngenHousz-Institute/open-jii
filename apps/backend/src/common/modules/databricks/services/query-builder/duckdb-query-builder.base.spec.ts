@@ -1,8 +1,10 @@
 import type { DuckDBConnection } from "@duckdb/node-api";
 import { DuckDBInstance } from "@duckdb/node-api";
 
+import { MACRO_TABLE_CONFIG } from "../../../../../experiments/core/models/experiment-data.model";
 import { DuckDbSqlQueryBuilder } from "./duckdb-query-builder.base";
 import { DuckDbQueryBuilderService } from "./duckdb-query-builder.service";
+import { DUCKDB_ENRICHMENT_SQL } from "./enrichment-sql";
 
 describe("DuckDbQueryBuilder", () => {
   describe("SQL generation", () => {
@@ -99,6 +101,71 @@ describe("DuckDbQueryBuilder", () => {
     });
 
     const MACRO_SCHEMA = "OBJECT<SPAD: DOUBLE, `Leaf Temp`: DOUBLE, meta: OBJECT<unit: STRING>>";
+
+    it("runs the real enrichment config end to end", async () => {
+      // The config emitted Spark SQL until the dialect seam landed, so DuckDB
+      // rejected it outright. This runs the actual served configuration rather
+      // than a hand-written approximation of it.
+      await connection.run(`
+        CREATE OR REPLACE TABLE raw_rows AS
+        SELECT * FROM (VALUES
+          ('exp-1', CAST(1 AS BIGINT), 'client-1', 'user-1',
+           [struct_pack(id := 'up-1', rowId := '1', type := 'comment',
+                        content := struct_pack("text" := 'from payload', flagType := NULL),
+                        createdBy := 'user-1', createdByName := 'Ada',
+                        createdAt := TIMESTAMP '2026-01-01',
+                        updatedAt := TIMESTAMP '2026-01-01')])
+        ) AS t(experiment_id, id, client_id, user_id, annotations)
+      `);
+      await connection.run(`
+        CREATE OR REPLACE TABLE contributors AS
+        SELECT * FROM (VALUES ('exp-1', 'user-1', {'id': 'user-1', 'name': 'Ada'}))
+        AS t(experiment_id, user_id, "user")
+      `);
+      await connection.run(`
+        CREATE OR REPLACE TABLE annotations_source AS
+        SELECT * FROM (VALUES
+          ('exp-1', '1', 'ann-1', 'comment', 'stored', NULL, 'user-1', 'Ada',
+           TIMESTAMP '2026-01-02', TIMESTAMP '2026-01-02')
+        ) AS t(experiment_id, row_id, id, type, content_text, flag_type,
+               user_id, user_name, created_at, updated_at)
+      `);
+
+      const [contributorJoin, , annotationJoin] =
+        MACRO_TABLE_CONFIG.enrichmentJoins(DUCKDB_ENRICHMENT_SQL);
+      const sources: Record<string, string> = {
+        experiment_contributors: "contributors",
+        experiment_annotations_source: "annotations_source",
+      };
+
+      // annotations is excluded from the base star because the join re-projects
+      // it under the same name; leaving both in place shadows the merged one.
+      const builder = new DuckDbSqlQueryBuilder()
+        .from("raw_rows")
+        .except(["experiment_id", "annotations"]);
+      for (const join of [contributorJoin, annotationJoin]) {
+        const source = sources[join.relation];
+        builder.join({
+          ...join,
+          table: join.derive ? join.derive.replace("{relation}", source) : source,
+        });
+      }
+
+      const rows = await run(builder.build());
+
+      // DuckDB returns BIGINT as a bigint, which JSON.stringify refuses.
+      const show = (value: unknown): string =>
+        JSON.stringify(value, (_key: string, inner: unknown) =>
+          typeof inner === "bigint" ? String(inner) : inner,
+        );
+
+      expect(rows).toHaveLength(1);
+      expect(show(rows[0].contributor)).toContain("Ada");
+      // Payload annotations first, then the stored ones, as the pipeline concatenates them.
+      const annotations = show(rows[0].annotations);
+      expect(annotations.indexOf("up-1")).toBeGreaterThanOrEqual(0);
+      expect(annotations.indexOf("ann-1")).toBeGreaterThan(annotations.indexOf("up-1"));
+    });
 
     it("carries an enrichment join through the variant path", async () => {
       // This builder reimplements build() rather than extending the Spark twin,
