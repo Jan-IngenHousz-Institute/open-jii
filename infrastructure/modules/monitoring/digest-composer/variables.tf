@@ -63,3 +63,9 @@ variable "log_retention_days" {
   type        = number
   default     = 7
 }
+
+variable "grafana_endpoint" {
+  description = "Grafana workspace URL, so a digest can link the report for its run; empty omits the link"
+  type        = string
+  default     = ""
+}

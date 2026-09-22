@@ -167,6 +167,32 @@ async function collectWeekly(metrics, now, failedRegions) {
   }));
 }
 
+// Which dashboard each digest reports into. Terraform builds the uid from the same two
+// parts, and catalog-consistency.test.ts fails if the panels and the digest drift apart.
+const REPORT_DASHBOARDS = {
+  observability: "overnight-health",
+  pulse: "daily-pulse",
+  weekly: "week-in-numbers",
+};
+
+/**
+ * A link to this run's report, opened at the window the digest read.
+ *
+ * The link needs a Grafana login. A snapshot would not, but it would also bake the
+ * rendered datapoints and series names into a permanent public URL, which is the wrong
+ * trade for a platform that keeps device and experiment identifiers out of CloudWatch.
+ */
+function reportUrlFor(digest, timeWindow, environment) {
+  const endpoint = process.env.GRAFANA_ENDPOINT;
+  if (!endpoint) {
+    return undefined;
+  }
+
+  const uid = `${environment}-heartbeat-${REPORT_DASHBOARDS[digest]}`;
+  const window = `from=${timeWindow.start.getTime()}&to=${timeWindow.end.getTime()}`;
+  return `${endpoint.replace(/\/$/, "")}/d/${uid}?${window}`;
+}
+
 function post(url, body, headers = {}) {
   const payload = JSON.stringify(body);
 
@@ -295,7 +321,12 @@ exports.handler = async (event) => {
       evaluation: evaluate(reading),
     }));
 
-    await deliver("heartbeat", renderObservability(readings, selfChecks(), options));
+    const reportUrl = reportUrlFor(digest, dailyWindows(now).current, options.environment);
+
+    await deliver(
+      "heartbeat",
+      renderObservability(readings, selfChecks(), { ...options, reportUrl }),
+    );
     return;
   }
 
@@ -305,7 +336,12 @@ exports.handler = async (event) => {
     );
     const readings = await collectDaily(metrics, now, failedRegions);
 
-    await deliver("usage", renderLevels(readings, selfChecks(), "Daily pulse", "4w", options));
+    const reportUrl = reportUrlFor(digest, dailyWindows(now).current, options.environment);
+
+    await deliver(
+      "usage",
+      renderLevels(readings, selfChecks(), "Daily pulse", "4w", { ...options, reportUrl }),
+    );
     return;
   }
 
@@ -313,9 +349,14 @@ exports.handler = async (event) => {
     const metrics = usable.filter((metric) => metric.slots.includes("weekly"));
     const readings = await collectWeekly(metrics, now, failedRegions);
 
+    const reportUrl = reportUrlFor(digest, weeklyWindows(now).current, options.environment);
+
     await deliver(
       "usage",
-      renderLevels(readings, selfChecks(), "Week in numbers", "last week", options),
+      renderLevels(readings, selfChecks(), "Week in numbers", "last week", {
+        ...options,
+        reportUrl,
+      }),
     );
     return;
   }

@@ -3002,6 +3002,10 @@ module "digest_composer" {
   )
   db_cluster_identifier = "open-jii-${var.environment}-db-cluster"
 
+  # Each digest links its own report, which is a dashboard generated from the same
+  # catalog entries the digest read.
+  grafana_endpoint = module.managed_grafana_workspace.amg_url
+
   # Empty webhooks make the Lambda log the rendered digest instead of posting, so this
   # applies cleanly before the Slack channels exist.
   heartbeat_webhook_url = var.slack_heartbeat_webhook_url

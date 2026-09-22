@@ -28,6 +28,15 @@ const heartbeatConstants = readFileSync(
 const grafanaRulesPath = "infrastructure/modules/grafana/dashboard/main.tf";
 const grafanaRules = readFileSync(join(repoRoot, grafanaRulesPath), "utf8");
 
+// The digests and the dashboards they link are written in two languages against one
+// catalog, so the drift between them is only visible from here.
+const heartbeatDashboardsPath = "infrastructure/modules/grafana/dashboard/heartbeat.tf";
+const heartbeatDashboards = readFileSync(join(repoRoot, heartbeatDashboardsPath), "utf8");
+const composerHandler = readFileSync(
+  join(repoRoot, "infrastructure/modules/monitoring/digest-composer/lambda/index.js"),
+  "utf8",
+);
+
 const metrics = parseCatalog(catalogSource);
 const passes = parsePasses(catalogSource);
 
@@ -434,5 +443,127 @@ describe("catalog and grafana rules cannot drift", () => {
   it("finds a non-trivial number of rules, so a broken parse cannot pass silently", () => {
     // Every assertion above is vacuously true if the regex stops matching.
     expect(alertRules().length).toBeGreaterThan(5);
+  });
+});
+
+describe("the digests and their reports cannot drift", () => {
+  // Every digest links one Grafana dashboard, and the link is worth nothing if the panels
+  // are not the entries the digest just read. Both sides filter the same catalog, but one
+  // filters in JavaScript and the other in HCL, so only a test compares them.
+
+  interface Membership {
+    family: string | null;
+    slots: string[];
+  }
+
+  function membershipOf(expression: string): Membership {
+    const family = /(?:metric|m)\.family\s*===?\s*"([a-z]+)"/.exec(expression);
+    const slots = [
+      ...expression.matchAll(/(?:\.slots\.includes|contains\(m\.slots,)\s*\(?\s*"([a-z]+)"/g),
+    ];
+
+    return { family: family?.[1] ?? null, slots: slots.map((match) => match[1]).sort() };
+  }
+
+  function digestMemberships(): Record<string, Membership> {
+    const blocks = [
+      ...composerHandler.matchAll(
+        /if \(digest === "(\w+)"\) \{\s*const metrics = ([\s\S]*?)\);\s*\n\s*const readings/g,
+      ),
+    ];
+
+    return Object.fromEntries(blocks.map((block) => [block[1], membershipOf(block[2])]));
+  }
+
+  function reportMemberships(): Record<string, Membership> {
+    const blocks = [...heartbeatDashboards.matchAll(/"([a-z-]+)" = \{([\s\S]*?)\n {4}\}/g)];
+
+    return Object.fromEntries(blocks.map((block) => [block[1], membershipOf(block[2])]));
+  }
+
+  function dashboardsByDigest(): Record<string, string> {
+    const block = /const REPORT_DASHBOARDS = \{([\s\S]*?)\};/.exec(composerHandler)?.[1] ?? "";
+    const pairs = [...block.matchAll(/(\w+):\s*"([a-z-]+)"/g)];
+
+    return Object.fromEntries(pairs.map((pair) => [pair[1], pair[2]]));
+  }
+
+  it("gives every digest a report, and every report a digest", () => {
+    const linked = dashboardsByDigest();
+
+    expect(Object.keys(linked).sort()).toEqual(Object.keys(digestMemberships()).sort());
+    expect(Object.values(linked).sort()).toEqual(Object.keys(reportMemberships()).sort());
+  });
+
+  it("puts the entries the digest read on the report it links", () => {
+    const reports = reportMemberships();
+    const linked = dashboardsByDigest();
+
+    const disagreements = Object.entries(digestMemberships())
+      .map(([digest, digestFilter]) => ({
+        digest,
+        digestFilter,
+        report: linked[digest],
+        reportFilter: reports[linked[digest] ?? ""],
+      }))
+      .filter((pair) => JSON.stringify(pair.digestFilter) !== JSON.stringify(pair.reportFilter));
+
+    expect(
+      disagreements,
+      `digests and ${heartbeatDashboardsPath} select different catalog entries`,
+    ).toEqual([]);
+  });
+
+  it("resolves a placeholder on the report wherever the digest resolves one", () => {
+    // The panels substitute through one map. A name the composer carries and that map
+    // omits fails the plan, but a name only the report carries is a silent extra, and
+    // the pair drifting is how a panel ends up querying a literal ${SOMETHING} forever.
+    const block =
+      /heartbeat_placeholders = \{([\s\S]*?)\n {2}\}/.exec(heartbeatDashboards)?.[1] ?? "";
+    const onReports = new Set([...block.matchAll(/^\s*([A-Z0-9_]+)\s*=/gm)].map((line) => line[1]));
+
+    const used = new Set(metrics.flatMap((m) => placeholdersIn(m.signal)));
+    const missing = [...used].filter((name) => !onReports.has(name));
+    const unused = [...onReports].filter((name) => !composerEnvironmentKeys().has(name));
+
+    expect(
+      missing.sort(),
+      `placeholders the catalog uses and ${heartbeatDashboardsPath} omits`,
+    ).toEqual([]);
+    expect(
+      unused.sort(),
+      `placeholders in ${heartbeatDashboardsPath} the composer never sets`,
+    ).toEqual([]);
+  });
+
+  it("builds the same dashboard uid on both sides, since a wrong one is a dead link", () => {
+    const fromTerraform = /uid\s*=\s*"([^"]+)"/
+      .exec(heartbeatDashboards)?.[1]
+      ?.replace("${var.environment}", "ENV")
+      .replace("${each.key}", "REPORT");
+    const fromHandler = /const uid = `([^`]+)`/
+      .exec(composerHandler)?.[1]
+      ?.replace("${environment}", "ENV")
+      .replace("${REPORT_DASHBOARDS[digest]}", "REPORT");
+
+    expect(fromTerraform).toBe("ENV-heartbeat-REPORT");
+    expect(fromHandler).toBe(fromTerraform);
+  });
+
+  it("selects a non-trivial set on each report, so a broken parse cannot pass silently", () => {
+    const reports = reportMemberships();
+    expect(Object.keys(reports)).toHaveLength(3);
+
+    const live = metrics.filter((m) => m.active && m.signal);
+    const empty = Object.entries(reports).filter(
+      ([, filter]) =>
+        live.filter(
+          (m) =>
+            (filter.family === null || m.family === filter.family) &&
+            m.slots.some((slot) => filter.slots.includes(slot)),
+        ).length === 0,
+    );
+
+    expect(empty.map(([report]) => report)).toEqual([]);
   });
 });
