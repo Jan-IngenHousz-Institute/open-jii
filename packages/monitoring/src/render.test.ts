@@ -34,6 +34,7 @@ const options = {
   environment: "dev",
   runbookBaseUrl: "https://example.test",
   catalogUrl: "https://example.test/catalog",
+  consoleUrl: "https://console.aws.amazon.com/cloudwatch/home#metricsV2:",
 };
 const clean = { configErrors: [], failedRegions: [] };
 
@@ -56,24 +57,23 @@ describe("deltaGlyph", () => {
 
 describe("renderObservability", () => {
   it("is one context block and one line when nothing is wrong", () => {
-    const message = renderObservability(
+    const digest = renderObservability(
       [{ ...reading("a", "A", 1), evaluation: { state: "ok" } }],
       clean,
       options,
     );
 
-    expect(message.blocks).toHaveLength(1);
-    expect(message.blocks[0].type).toBe("context");
-    expect(message.text).toBe("Heartbeat · dev · nothing to act on · 1 signals checked");
+    expect(digest.parent.blocks).toHaveLength(1);
+    expect(digest.parent.blocks[0].type).toBe("context");
+    expect(digest.parent.text).toBe("Heartbeat · dev · nothing to act on · 1 signals checked");
   });
 
-  it("leads with the reading, then the id, then the name", () => {
-    // Grafana's own template puts the value first. The id is what makes a line citable
-    // in a thread or a ticket.
-    const message = renderObservability(
+  it("leads a row with the citable number, then the name, then the reading", () => {
+    const digest = renderObservability(
       [
         {
           ...reading("ingest-lag", "Pipeline lag", 8_797_000, null, "docs/runbooks/ingest-lag.md", {
+            num: 8,
             signal: { unit: "milliseconds" },
             severity: "critical",
           }),
@@ -83,15 +83,19 @@ describe("renderObservability", () => {
       clean,
       options,
     );
-    const body = json(message, "section");
+    const body = json(digest.parent, "section");
 
-    expect(body.indexOf("2h 27m")).toBeLessThan(body.indexOf("ingest-lag"));
-    expect(body.indexOf("ingest-lag")).toBeLessThan(body.indexOf("Pipeline lag"));
+    expect(body.indexOf("8")).toBeLessThan(body.indexOf("Pipeline lag"));
+    expect(body.indexOf("Pipeline lag")).toBeLessThan(body.indexOf("2h 27m"));
     expect(body).toContain("above 2h");
+    // The id is what you paste into triage, so it belongs on the reply, not in a column.
+    expect(digest.replies[0].blocks.some((b) => JSON.stringify(b).includes("ingest-lag"))).toBe(
+      true,
+    );
   });
 
-  it("offers the runbook and the catalog entry as separate actions", () => {
-    const message = renderObservability(
+  it("carries one catalog link on the summary, with per-metric links in the replies", () => {
+    const digest = renderObservability(
       [
         {
           ...reading("ingest-lag", "Pipeline lag", 9, null, "docs/runbooks/ingest-lag.md"),
@@ -102,27 +106,8 @@ describe("renderObservability", () => {
       options,
     );
 
-    expect(json(message, "actions")).toContain("Runbook");
-    expect(json(message, "actions")).toContain("https://example.test/docs/runbooks/ingest-lag.md");
-    expect(json(message, "actions")).toContain("Catalog entry");
-    expect(json(message, "context")).toContain("claude /openjii-triage ingest-lag");
-  });
-
-  it("places a chart only when the composer produced one", () => {
-    const base = {
-      ...reading("ingest-lag", "Pipeline lag", 9),
-      evaluation: { state: "anomaly" as const, reason: "above 2h" },
-    };
-
-    const without = renderObservability([base], clean, options);
-    const withChart = renderObservability(
-      [{ ...base, chartUrl: "https://example.test/chart.png" }],
-      clean,
-      options,
-    );
-
-    expect(without.blocks.some((block) => block.type === "image")).toBe(false);
-    expect(withChart.blocks.some((block) => block.type === "image")).toBe(true);
+    expect(json(digest.parent, "actions")).toContain("Catalog");
+    expect(json(digest.parent, "actions")).not.toContain("docs/runbooks/ingest-lag.md");
   });
 
   it("puts critical anomalies above everything else", () => {
@@ -137,13 +122,13 @@ describe("renderObservability", () => {
       evaluation: { state: "anomaly" as const, reason: "nonzero" },
     };
 
-    const body = json(renderObservability([warning, critical], clean, options), "section");
+    const body = json(renderObservability([warning, critical], clean, options).parent, "section");
 
     expect(body.indexOf("Forwarding failures")).toBeLessThan(body.indexOf("Throttling"));
   });
 
   it("renders a nodata anomaly as absent rather than as zero", () => {
-    const message = renderObservability(
+    const digest = renderObservability(
       [
         {
           ...reading("dlt-heartbeat", "Collector", null),
@@ -154,35 +139,35 @@ describe("renderObservability", () => {
       options,
     );
 
-    expect(message.text).toContain("no data");
+    expect(digest.parent.text).toContain("no data");
   });
 
   it("says a failed region is missing rather than healthy", () => {
-    const message = renderObservability(
+    const digest = renderObservability(
       [],
       { configErrors: [], failedRegions: ["us-east-1"] },
       options,
     );
 
-    expect(message.text).toContain("us-east-1");
-    expect(message.text).toContain("missing above, not healthy");
+    expect(digest.parent.text).toContain("us-east-1");
+    expect(digest.parent.text).toContain("missing above, not healthy");
   });
 
   it("names a signal that used to report and has gone quiet", () => {
-    const message = renderObservability(
+    const digest = renderObservability(
       [{ ...reading("gone", "Gone", null), evaluation: { state: "missing" } }],
       { configErrors: ["broken"], failedRegions: [] },
       options,
     );
 
-    expect(message.text).toContain("No datapoints for gone");
-    expect(message.text).toContain("Unresolved catalog placeholders for broken");
+    expect(digest.parent.text).toContain("No datapoints for gone");
+    expect(digest.parent.text).toContain("Unresolved catalog placeholders for broken");
   });
 });
 
 describe("renderLevels", () => {
   it("renders a preformatted table so the columns line up", () => {
-    const message = renderLevels(
+    const digest = renderLevels(
       [reading("m", "Measurements", 48_200, 40_000)],
       clean,
       "Daily pulse",
@@ -190,29 +175,29 @@ describe("renderLevels", () => {
       options,
     );
 
-    expect(message.blocks[0].type).toBe("header");
-    expect(json(message, "section")).toContain("```");
-    expect(message.text).toContain("Measurements: 48.2k ▲ +21%");
+    expect(digest.parent.blocks[0].type).toBe("header");
+    expect(json(digest.parent, "section")).toContain("```");
+    expect(digest.parent.text).toContain("Measurements: 48.2k ▲ +21%");
   });
 
   it("puts the biggest mover first and keeps the flat ones", () => {
     // A level nobody has to act on still answers "how are we doing"; it just should not
     // lead the message.
-    const message = renderLevels(
+    const digest = renderLevels(
       [reading("flat", "Flat", 100, 100), reading("moved", "Moved", 200, 100)],
       clean,
       "Daily pulse",
       "4w",
       options,
     );
-    const body = json(message, "section");
+    const body = json(digest.parent, "section");
 
     expect(body.indexOf("Moved")).toBeLessThan(body.indexOf("Flat"));
     expect(body).toContain("Flat");
   });
 
   it("skips metrics with no data rather than printing blanks", () => {
-    const message = renderLevels(
+    const digest = renderLevels(
       [reading("m", "Measurements", null)],
       clean,
       "Daily pulse",
@@ -220,11 +205,11 @@ describe("renderLevels", () => {
       options,
     );
 
-    expect(message.text).toContain("No signals reporting yet.");
+    expect(digest.parent.text).toContain("No signals reporting yet.");
   });
 
   it("says the list is incomplete when a region or a placeholder dropped a metric", () => {
-    const message = renderLevels(
+    const digest = renderLevels(
       [reading("m", "Measurements", 12)],
       { configErrors: ["kinesis-incoming"], failedRegions: ["eu-central-1"] },
       "Daily pulse",
@@ -232,7 +217,76 @@ describe("renderLevels", () => {
       options,
     );
 
-    expect(json(message, "context")).toContain("The list above is incomplete");
-    expect(message.text).toContain("eu-central-1");
+    expect(json(digest.parent, "context")).toContain("The list above is incomplete");
+    expect(digest.parent.text).toContain("eu-central-1");
+  });
+});
+
+describe("threaded replies", () => {
+  const anomaly = (id: string, name: string, num: number, severity?: "critical" | "warning") => ({
+    ...reading(id, name, 20, 0, `docs/runbooks/${id}.md`, {
+      num,
+      severity,
+      signal: { namespace: "AWS/IoT" },
+    }),
+    evaluation: { state: "anomaly" as const, reason: "expected 0" },
+  });
+
+  it("gives every anomaly its own reply, so the channel stays one table", () => {
+    const digest = renderObservability(
+      [anomaly("a", "A", 2, "critical"), anomaly("b", "B", 8, "warning")],
+      clean,
+      options,
+    );
+
+    expect(digest.replies).toHaveLength(2);
+    // Same order as the table: critical leads.
+    expect(digest.replies[0].text).toContain("A");
+    expect(digest.replies[1].text).toContain("B");
+  });
+
+  it("puts each anomaly's own runbook on its own reply", () => {
+    // The summary carries one catalog link; a per-metric runbook belongs with the
+    // metric, which is what collapsing everything into the parent had lost.
+    const digest = renderObservability(
+      [anomaly("ingest-lag", "Lag", 8, "critical")],
+      clean,
+      options,
+    );
+    const buttons = json(digest.replies[0], "actions");
+
+    expect(buttons).toContain("https://example.test/docs/runbooks/ingest-lag.md");
+    expect(buttons).toContain("Query in CloudWatch");
+    expect(json(digest.replies[0], "context")).toContain("claude /openjii-triage ingest-lag");
+  });
+
+  it("has no replies when nothing is wrong", () => {
+    const digest = renderObservability([], clean, options);
+
+    expect(digest.replies).toEqual([]);
+    expect(digest.parent.blocks).toHaveLength(1);
+  });
+
+  it("keeps levels a single message, since a level has no detail to open", () => {
+    const digest = renderLevels(
+      [reading("m", "Measurements", 10)],
+      clean,
+      "Daily pulse",
+      "4w",
+      options,
+    );
+
+    expect(digest.replies).toEqual([]);
+  });
+
+  it("charts on the reply, never on the summary", () => {
+    const withChart = {
+      ...anomaly("ingest-lag", "Lag", 8, "critical"),
+      chartUrl: "https://example.test/c.png",
+    };
+    const digest = renderObservability([withChart], clean, options);
+
+    expect(digest.parent.blocks.some((block) => block.type === "image")).toBe(false);
+    expect(digest.replies[0].blocks.some((block) => block.type === "image")).toBe(true);
   });
 });

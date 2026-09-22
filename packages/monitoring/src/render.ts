@@ -1,13 +1,28 @@
 import { deviationPercent } from "./baseline.js";
 import { formatValue } from "./format.js";
 import type { LinkButton, SlackBlock, SlackMessage } from "./slack.js";
-import { actions, context, divider, header, image, section, table } from "./slack.js";
+import { actions, context, header, image, section, table } from "./slack.js";
 import type { CatalogMetric, Evaluation, MetricReading } from "./types.js";
 
 export interface EvaluatedReading extends MetricReading {
   evaluation: Evaluation;
   /** A CloudWatch-rendered chart of this metric, when the composer produced one. */
   chartUrl?: string;
+}
+
+/**
+ * A parent message and one reply per anomaly.
+ *
+ * The parent is the whole morning at a glance. Each reply carries the detail and the
+ * links for one anomaly, so the channel stays one table however bad the day is and
+ * nobody scrolls past nine buttons to reach the second problem.
+ *
+ * With no bot token the composer posts the parent alone, so the replies are additive
+ * rather than a prerequisite.
+ */
+export interface Digest {
+  parent: SlackMessage;
+  replies: SlackMessage[];
 }
 
 export interface RenderOptions {
@@ -65,6 +80,17 @@ export function deltaGlyph(value: number, baseline: number | null, window: strin
  * has. The catalog entry stands in for the silence, because it is where a threshold
  * actually gets changed and the composer keeps no state between runs.
  */
+function sharedLinks(options: RenderOptions): LinkButton[] {
+  const buttons: LinkButton[] = [];
+
+  if (options.catalogUrl) {
+    buttons.push({ label: "Catalog", url: options.catalogUrl });
+  }
+
+  return buttons;
+}
+
+/** The links for one anomaly, each answering a different question about it. */
 function linksFor(metric: CatalogMetric, options: RenderOptions): LinkButton[] {
   const buttons: LinkButton[] = [];
 
@@ -72,10 +98,10 @@ function linksFor(metric: CatalogMetric, options: RenderOptions): LinkButton[] {
     buttons.push({ label: "Runbook", url: `${options.runbookBaseUrl}/${metric.runbook}` });
   }
   if (options.consoleUrl && metric.signal?.namespace) {
-    buttons.push({ label: "CloudWatch", url: options.consoleUrl });
-  }
-  if (options.catalogUrl) {
-    buttons.push({ label: "Catalog entry", url: options.catalogUrl });
+    buttons.push({
+      label: "Query in CloudWatch",
+      url: `${options.consoleUrl}graph~()*7e'${encodeURIComponent(metric.signal.namespace)}`,
+    });
   }
 
   return buttons;
@@ -102,11 +128,36 @@ function selfCheckLines({ configErrors, failedRegions }: SelfChecks): string[] {
   return lines;
 }
 
+/** One reply: what this anomaly is, and everything needed to act on it. */
+function replyFor(entry: EvaluatedReading, options: RenderOptions): SlackMessage {
+  const { metric } = entry;
+  const heading = `*${metric.num} · ${metric.name}*`;
+  const body = [
+    heading,
+    `${readingOf(entry)} · ${entry.evaluation.reason ?? ""}`,
+    metric.severity ? `\`${metric.id}\` · ${metric.severity}` : `\`${metric.id}\``,
+  ].join("\n");
+
+  const blocks: SlackBlock[] = [section(body)];
+
+  if (entry.chartUrl) {
+    blocks.push(image(entry.chartUrl, `${metric.name} over the anomaly window`));
+  }
+
+  const buttons = linksFor(metric, options);
+  if (buttons.length > 0) {
+    blocks.push(actions(buttons));
+  }
+  blocks.push(context(`\`claude /openjii-triage ${metric.id}\``));
+
+  return { text: `${metric.num} ${metric.name}: ${readingOf(entry)}`, blocks };
+}
+
 export function renderObservability(
   readings: EvaluatedReading[],
   checks: SelfChecks,
   options: RenderOptions,
-): SlackMessage {
+): Digest {
   const { environment } = options;
   const anomalies = readings.filter((entry) => entry.evaluation.state === "anomaly");
   const missing = readings.filter((entry) => entry.evaluation.state === "missing");
@@ -114,64 +165,62 @@ export function renderObservability(
   const blocks: SlackBlock[] = [];
   const lines: string[] = [];
 
-  if (anomalies.length === 0) {
-    const quiet = `Heartbeat · ${environment} · nothing to act on · ${readings.length} signals checked`;
-    blocks.push(context(quiet));
-    lines.push(quiet);
-  } else {
-    const critical = anomalies.filter((entry) => entry.metric.severity === "critical").length;
-    const noun = anomalies.length === 1 ? "anomaly" : "anomalies";
-    const title = `Heartbeat · ${environment} · ${anomalies.length} ${noun}`;
-
-    blocks.push(header(title));
-    blocks.push(
-      context(
-        `${readings.length} signals checked · ${critical} critical · ${anomalies.length - critical} other`,
-      ),
-    );
-    lines.push(title);
-
-    for (const entry of [...anomalies].sort(bySeverity)) {
-      const { metric } = entry;
-      // Value first, the way Grafana's own template leads with it, then the identity
-      // that makes it citable in a thread or a ticket, then what it means.
-      const identity = `\`${metric.id}\` · ${metric.name}${metric.severity ? ` · ${metric.severity}` : ""}`;
-      const body = [`*${readingOf(entry)}* · ${entry.evaluation.reason}`, identity, metric.notes]
-        .filter((line): line is string => typeof line === "string" && line !== "")
-        .join("\n");
-
-      blocks.push(divider());
-      blocks.push(section(body));
-
-      if (entry.chartUrl) {
-        blocks.push(image(entry.chartUrl, `${metric.name} over the anomaly window`));
-      }
-
-      const buttons = linksFor(metric, options);
-      if (buttons.length > 0) {
-        blocks.push(actions(buttons));
-      }
-      blocks.push(context(`\`claude /openjii-triage ${metric.id}\``));
-
-      lines.push(`${readingOf(entry)} · ${entry.evaluation.reason} · ${metric.id}`);
-    }
-  }
-
   if (missing.length > 0) {
     notes.push(
       `No datapoints for ${missing.map((entry) => entry.metric.id).join(", ")}, which reported in prior weeks.`,
     );
   }
 
-  if (notes.length > 0) {
-    blocks.push(divider());
-    for (const note of notes) {
-      blocks.push(context(note));
-    }
-    lines.push(...notes);
+  if (anomalies.length === 0) {
+    const quiet = `Heartbeat · ${environment} · nothing to act on · ${readings.length} signals checked`;
+    const text = [quiet, ...notes].join("\n");
+    return { parent: { text, blocks: [context(text)] }, replies: [] };
   }
 
-  return { text: lines.join("\n"), blocks };
+  const ordered = [...anomalies].sort(bySeverity);
+  const noun = anomalies.length === 1 ? "anomaly" : "anomalies";
+  const title = `Heartbeat · ${environment} · ${anomalies.length} ${noun}`;
+  blocks.push(header(title));
+  lines.push(title);
+
+  // One table, grouped by severity. Detail and links live in the replies.
+  const rows: string[][] = [];
+  let group: string | undefined;
+
+  for (const entry of ordered) {
+    const severity = (entry.metric.severity ?? "other").toUpperCase();
+    if (severity !== group) {
+      if (group !== undefined) {
+        rows.push([""]);
+      }
+      rows.push([severity]);
+      group = severity;
+    }
+
+    rows.push([
+      `  ${entry.metric.num}`,
+      entry.metric.name,
+      readingOf(entry),
+      entry.evaluation.reason ?? "",
+    ]);
+    lines.push(`${entry.metric.num} ${entry.metric.name}: ${readingOf(entry)}`);
+  }
+
+  blocks.push(section(table(rows)));
+
+  const footer = [`${readings.length} signals read`, ...notes];
+  blocks.push(context(footer.join(" · ")));
+
+  const buttons = sharedLinks(options);
+  if (buttons.length > 0) {
+    blocks.push(actions(buttons));
+  }
+  lines.push(...notes);
+
+  return {
+    parent: { text: lines.join("\n"), blocks },
+    replies: ordered.map((entry) => replyFor(entry, options)),
+  };
 }
 
 export function renderLevels(
@@ -180,7 +229,7 @@ export function renderLevels(
   title: string,
   window: string,
   options: RenderOptions,
-): SlackMessage {
+): Digest {
   const reporting = readings.filter((entry) => entry.value !== null);
   const heading = `${title} · ${options.environment}`;
   const blocks: SlackBlock[] = [header(heading)];
@@ -212,5 +261,5 @@ export function renderLevels(
     lines.push(...notes);
   }
 
-  return { text: lines.join("\n"), blocks };
+  return { parent: { text: lines.join("\n"), blocks }, replies: [] };
 }

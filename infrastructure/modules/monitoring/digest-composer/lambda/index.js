@@ -167,47 +167,97 @@ async function collectWeekly(metrics, now, failedRegions) {
   }));
 }
 
-function postToSlack(webhookUrl, message) {
-  // Both, always: blocks for the message, text for the notification preview and any
-  // client that cannot render them.
-  const payload = JSON.stringify({ text: message.text, blocks: message.blocks });
+function post(url, body, headers = {}) {
+  const payload = JSON.stringify(body);
 
   return new Promise((resolve, reject) => {
-    const request = https.request(webhookUrl, {
+    const request = https.request(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) },
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(payload),
+        ...headers,
+      },
     });
+
     request.on("response", (response) => {
-      response.resume();
-      if (response.statusCode && response.statusCode < 300) {
-        resolve();
-      } else {
-        reject(new Error(`Slack webhook returned ${response.statusCode}`));
-      }
+      let raw = "";
+      response.setEncoding("utf8");
+      response.on("data", (chunk) => {
+        raw += chunk;
+      });
+      response.on("end", () => {
+        if (response.statusCode && response.statusCode < 300) {
+          resolve(raw);
+        } else {
+          reject(new Error(`Slack returned ${response.statusCode}`));
+        }
+      });
     });
-    // Node sets no socket timeout, so a hung webhook would otherwise burn the whole
+
+    // Node sets no socket timeout, so a hung Slack would otherwise burn the whole
     // Lambda timeout and lose the log line that says what went wrong.
     request.setTimeout(10_000, () => {
-      request.destroy(new Error("Slack webhook timed out after 10s"));
+      request.destroy(new Error("Slack timed out after 10s"));
     });
     request.on("error", reject);
     request.end(payload);
   });
 }
 
-async function deliver(channel, message) {
+/**
+ * A bot token buys threads; a webhook does not.
+ *
+ * An incoming webhook answers with the literal string "ok" and no message timestamp, so
+ * there is nothing to reply to. chat.postMessage returns the ts, which is what lets the
+ * detail for each anomaly hang under one summary instead of filling the channel.
+ * Without a token the parent still posts, so the replies are additive.
+ */
+async function deliver(channel, digest) {
   const webhookUrl = {
     heartbeat: process.env.HEARTBEAT_WEBHOOK_URL,
     usage: process.env.USAGE_WEBHOOK_URL,
   }[channel];
+  const botToken = process.env.SLACK_BOT_TOKEN;
+  const channelId = {
+    heartbeat: process.env.HEARTBEAT_CHANNEL_ID,
+    usage: process.env.USAGE_CHANNEL_ID,
+  }[channel];
 
-  if (!webhookUrl) {
-    console.log(JSON.stringify({ channel, delivered: false, text: message.text }));
+  if (botToken && channelId) {
+    const auth = { Authorization: `Bearer ${botToken}` };
+    const parent = JSON.parse(
+      await post("https://slack.com/api/chat.postMessage", { channel: channelId, ...digest.parent }, auth),
+    );
+
+    if (!parent.ok) {
+      throw new Error(`chat.postMessage failed: ${parent.error}`);
+    }
+
+    for (const reply of digest.replies) {
+      // One failed reply must not lose the summary that already landed.
+      try {
+        await post(
+          "https://slack.com/api/chat.postMessage",
+          { channel: channelId, thread_ts: parent.ts, ...reply },
+          auth,
+        );
+      } catch (error) {
+        console.error(JSON.stringify({ channel, reply: reply.text, message: error.message }));
+      }
+    }
+
+    console.log(JSON.stringify({ channel, delivered: "thread", replies: digest.replies.length }));
     return;
   }
 
-  await postToSlack(webhookUrl, message);
-  console.log(JSON.stringify({ channel, delivered: true, blocks: message.blocks.length }));
+  if (!webhookUrl) {
+    console.log(JSON.stringify({ channel, delivered: false, text: digest.parent.text }));
+    return;
+  }
+
+  await post(webhookUrl, digest.parent);
+  console.log(JSON.stringify({ channel, delivered: "webhook", replies: 0 }));
 }
 
 exports.handler = async (event) => {

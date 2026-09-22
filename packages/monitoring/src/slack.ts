@@ -66,9 +66,12 @@ export function table(rows: string[][]): string {
     return "";
   }
 
-  const columns = Math.max(...rows.map((row) => row.length));
+  // A row of one cell is a heading. It spans the table, so letting it set a column
+  // width would push every figure sideways to clear a word above them.
+  const data = rows.filter((row) => row.length > 1);
+  const columns = Math.max(1, ...data.map((row) => row.length));
   const widths = Array.from({ length: columns }, (_, column) =>
-    Math.max(...rows.map((row) => (row[column] ?? "").length)),
+    Math.max(0, ...data.map((row) => (row[column] ?? "").length)),
   );
 
   const body = rows
