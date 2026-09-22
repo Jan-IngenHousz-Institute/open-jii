@@ -1,12 +1,15 @@
 ---
-name: openjii-morning
-description: Run the morning round over the platform heartbeat. Use at the start of a working day, or after time away, to find out whether the platform needs a person before anybody reports a problem. Reads the digests and the alert state, says what changed, and hands off to openjii-triage for anything that needs digging.
+name: openjii-daily
+description: Run the daily round over the platform heartbeat. Use once a day, or after time away, to find out whether the platform needs a person before anybody reports a problem. Reads the digests and the alert state, says what changed since the last round, and hands off to openjii-triage for anything that needs digging.
 ---
 
-# The morning round
+# The daily round
 
-Read `AGENTS.md` first. This is the daily counterpart to `openjii-triage`: the round tells you
+Read `AGENTS.md` first. This is the standing counterpart to `openjii-triage`: the round tells you
 whether anything needs attention, triage works out why. Same vocabulary, same catalog, same runbooks.
+
+Run it once a day, whenever suits. The digests land at fixed times but the round does not have to,
+and after a few days away you run it once over the whole gap rather than once per day missed.
 
 Your output is a verdict a person can act on in under a minute on a quiet day. Lead with whether
 anything needs a human. Everything else is supporting detail.
@@ -21,6 +24,8 @@ without leaving the terminal, and it carries the same text:
 aws logs tail /aws/lambda/<env>-digest-composer --since 30h --format short
 ```
 
+Widen `--since` to cover the whole gap when you have been away.
+
 Each delivery logs one JSON object. `text` is the rendered digest. A line with
 `"delivered": false` means no webhook is configured for that channel and the digest was only
 logged, which is normal in an environment that has not been wired to Slack.
@@ -31,7 +36,7 @@ infer a metric's meaning from its name in the digest; look the id up.
 ## 1. Did the round even happen
 
 Before reading any numbers, confirm the reporter ran. A digest that was never composed looks exactly
-like a morning with nothing wrong.
+like a day with nothing wrong.
 
 Expect the observability digest and the pulse daily, and the weekly note on Monday. If the composer
 did not run, that is the finding, and `docs/runbooks/digest-composer-liveness.md` is the procedure.
@@ -51,14 +56,14 @@ A digest with self-check lines is a partial digest. Report it as partial.
 
 ## 3. Name what changed, not what is
 
-The point of a round is the delta. Compare today's digest against yesterday's from the same log
-window, and say which of these it is:
+The point of a round is the delta. Compare the latest digest against the one from the previous
+round, and say which of these each anomaly is:
 
-- **New**: an anomaly that was not there yesterday. This is what deserves attention first.
-- **Continuing**: the same anomaly as yesterday. Say how many mornings it has now run, because a
+- **New**: an anomaly that was not there at the last round. This is what deserves attention first.
+- **Continuing**: the same anomaly as last time. Say how many days it has now run, because a
   continuing anomaly nobody has acted on is a decision, not a finding.
-- **Cleared**: yesterday's anomaly is gone. Worth one line, because it tells you whether something
-  was transient or whether someone fixed it.
+- **Cleared**: an anomaly from the last round is gone. Worth one line, because it tells you whether
+  something was transient or whether someone fixed it.
 
 A level that moved inside its normal band is not a change. The pulse prints a delta against the
 four-week same-weekday baseline precisely so you do not have to judge that by eye.
