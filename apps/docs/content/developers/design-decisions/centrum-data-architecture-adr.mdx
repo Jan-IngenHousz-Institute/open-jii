@@ -3,7 +3,7 @@ title: "ADR: Consolidate experiment data in centrum"
 description: "Why openJII replaced per-experiment schemas and pipelines with one central, experiment-keyed lakehouse model."
 ---
 
-{/* verified: code@12a361a74966 2026-07-20 */}
+{/* verified: code@dd3160056 2026-09-22 */}
 
 # ADR: Consolidate experiment data in `centrum`
 
@@ -35,9 +35,12 @@ The durable boundaries are:
    normalized once in Silver, and are projected into shared Gold tables and
    enriched views. The pipeline is split into modules under
    `apps/data/src/pipelines/centrum/`, but those modules form one logical
-   pipeline rather than one deployment per experiment.
+   pipeline rather than one deployment per experiment. Where a workload has to
+   be isolated for operational reasons it gets its own deployment writing into
+   the same schema, never its own schema and never one per experiment. Macro
+   execution is the one such split today.
 2. **Experiment-oriented Gold data.** `experiment_raw_data`,
-   `experiment_device_data`, `experiment_macro_data`, and
+   `experiment_device_data`, `fact_macro_result`, and
    `experiment_uploaded_data` keep stable experiment and entity identifiers.
    Application reads select the shared physical table and filter it by the
    authorized experiment.
