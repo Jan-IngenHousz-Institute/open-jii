@@ -376,7 +376,7 @@
     "codeLabel": "Your join code",
     "openApp": "Open in the openJII app",
     "getApp": "Get the openJII app on Google Play",
-    "haveApp": "Already have the app? Open it, go to Profile → Find experiments, and enter this code."
+    "haveApp": "Already have the app? Open it, go to Profile → Find experiments and organizations, then tap “Have a join code?” and enter this code."
   },
   "experimentVisibility": {
     "visibilityCardTitle": "Actions",

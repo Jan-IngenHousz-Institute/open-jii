@@ -47,7 +47,10 @@ import { toast } from "@repo/ui/hooks/use-toast";
  */
 const LANDING_LOCALE = "en-US";
 
-/** `setTimeout` truncates to a signed 32-bit delay; anything longer fires at once. */
+/**
+ * `setTimeout` truncates to a signed 32-bit delay and fires at once past it, so a
+ * deadline further out than this has to be reached in more than one hop.
+ */
 const MAX_TIMEOUT_MS = 2_147_483_647;
 
 type PendingConfirmation = "regenerate" | "revoke";
@@ -67,17 +70,31 @@ export function ExperimentJoinCodeCard({ experimentId }: ExperimentJoinCodeCardP
   const [expiresIn, setExpiresIn] = useState<JoinCodeExpiry>("7d");
   const [confirming, setConfirming] = useState<PendingConfirmation | null>(null);
   const [origin, setOrigin] = useState("");
-  const [now, setNow] = useState(() => Date.now());
+  const [tick, setTick] = useState(() => Date.now());
 
   useEffect(() => setOrigin(window.location.origin), []);
 
   const expiresAt = query.data?.joinCode?.expiresAt ?? null;
 
+  // Every poll re-dates the clock, so a deadline that passes while a timer is
+  // throttled or a response that arrives already expired both still read as expired.
+  const clock = Math.max(tick, query.dataUpdatedAt);
+
   useEffect(() => {
     if (expiresAt === null) return;
-    const delay = new Date(expiresAt).getTime() - Date.now();
-    if (delay <= 0 || delay > MAX_TIMEOUT_MS) return;
-    const timer = setTimeout(() => setNow(Date.now()), delay);
+    const deadline = new Date(expiresAt).getTime();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const arm = () => {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        setTick(Date.now());
+        return;
+      }
+      timer = setTimeout(arm, Math.min(remaining, MAX_TIMEOUT_MS));
+    };
+
+    arm();
     return () => clearTimeout(timer);
   }, [expiresAt]);
 
@@ -172,7 +189,7 @@ export function ExperimentJoinCodeCard({ experimentId }: ExperimentJoinCodeCardP
   const qrLabel = t("joinCode.qrLabel");
   const expiresAtValue = joinCode.expiresAt;
 
-  if (expiresAtValue !== null && new Date(expiresAtValue).getTime() <= now) {
+  if (expiresAtValue !== null && new Date(expiresAtValue).getTime() <= clock) {
     return shell(
       <div className="space-y-4">
         <p className="bg-status-stale text-status-stale-foreground rounded-md px-3 py-2 text-sm">

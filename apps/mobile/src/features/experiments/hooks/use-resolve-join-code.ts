@@ -12,6 +12,11 @@ export function useResolveJoinCode(code: string | null | undefined) {
       retry: (failureCount, err) => !isApiStatus(err, 404, 403, 429) && failureCount < 3,
       meta: { suppressToast: true },
       networkMode: "offlineFirst",
+      // Both default to false app-wide, and the preview is cached forever. A
+      // membership or the code itself can change between visits, so without
+      // these a second look at the same code answers from the first one.
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
     }),
   );
 

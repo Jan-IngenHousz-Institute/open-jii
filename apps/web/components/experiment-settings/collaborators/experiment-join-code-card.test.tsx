@@ -240,6 +240,72 @@ describe("ExperimentJoinCodeCard", () => {
     expect(screen.getByRole("button", { name: "joinCode.createAgain" })).toBeInTheDocument();
   });
 
+  it("flips a 30-day code, whose delay overflows a 32-bit timer, on its own timer", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-09-18T00:00:00.000Z"));
+    // 30 days is ~2.59e9 ms, past setTimeout's signed 32-bit ceiling of ~24.8 days,
+    // so no single timer spans it and the card has to re-arm to reach the deadline.
+    server.mount(contract.experiments.getJoinCode, {
+      body: { joinCode: { ...ACTIVE_CODE, expiresAt: "2026-10-18T00:00:00.000Z" } },
+    });
+
+    renderCard();
+    expect(await screen.findByText("KP7Q-4WMX")).toBeInTheDocument();
+
+    // Background the tab so the 10 s poll stops issuing requests: 30 days of them
+    // is ~268k round trips, and this case is about the timer, not the poll.
+    focusManager.setFocused(false);
+    // Advanced synchronously: the async variant flushes microtasks per timer, and
+    // 30 days of the 10 s poll is ~268k of them, which is slow enough to time out
+    // under a loaded full-suite run.
+    act(() => {
+      vi.advanceTimersByTime(31 * 24 * 60 * 60 * 1000);
+    });
+
+    expect(screen.getByText("joinCode.expiredBanner")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "joinCode.copyCode" })).not.toBeInTheDocument();
+  });
+
+  it("flips a long-lived code from the poll clock even if its timer never fires", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-09-18T00:00:00.000Z"));
+    server.mount(contract.experiments.getJoinCode, {
+      body: { joinCode: { ...ACTIVE_CODE, expiresAt: "2026-10-18T00:00:00.000Z" } },
+    });
+
+    renderCard();
+    expect(await screen.findByText("KP7Q-4WMX")).toBeInTheDocument();
+
+    // Jump the wall clock past the deadline without running the 30 days of timers
+    // in between, which is what a throttled or suspended tab does to a pending one.
+    vi.setSystemTime(new Date("2026-10-18T00:00:01.000Z"));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_500);
+    });
+
+    expect(screen.getByText("joinCode.expiredBanner")).toBeInTheDocument();
+  });
+
+  it("renders expired immediately when the response arrives after the deadline", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-09-18T00:00:00.000Z"));
+    // Mounted before expiry, answered after it: there is no future deadline left
+    // to schedule, so the clock the card renders against has to be the current one.
+    server.mount(contract.experiments.getJoinCode, {
+      body: { joinCode: { ...ACTIVE_CODE, expiresAt: "2026-09-18T00:00:10.000Z" } },
+      delay: 20_000,
+    });
+
+    renderCard();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(21_000);
+    });
+
+    expect(await screen.findByText("joinCode.expiredBanner")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "joinCode.copyCode" })).not.toBeInTheDocument();
+  });
+
   it("updates the joined count from a poll, with no mutation in between", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     let redemptionCount = 0;

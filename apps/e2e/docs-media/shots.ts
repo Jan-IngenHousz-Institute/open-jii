@@ -190,12 +190,21 @@ export const SHOTS: readonly Shot[] = [
         "[Seed] Field Trial 2025 — Corn Photosynthesis",
       )}/collaborators`,
     async prepare(page) {
-      const create = page.getByRole("button", { name: /^Create (a new )?join code$/ });
+      const code = page.getByText(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+      // "Create join code" on a card with no code yet, "Create a new code" once the
+      // seeded one has expired. The expired card renders its code inside a sentence,
+      // so only these two labels distinguish "needs creating" from "already active".
+      const create = page.getByRole("button", { name: /^Create (join code|a new code)$/ });
+
+      // The card fetches before it can show any of its states, so deciding
+      // immediately races the request and reads an empty card as an active one.
+      await code.or(create).first().waitFor({ state: "visible", timeout: 15_000 });
+
       if (await create.isVisible().catch(() => false)) {
         await create.click();
         await settle(page, 2500);
       }
-      await page.getByText(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/).waitFor({ timeout: 15_000 });
+      await code.waitFor({ timeout: 15_000 });
       await dismissToasts(page);
       await settle(page, 1200);
     },
