@@ -93,7 +93,20 @@ export const mainNavigation = {
     namespace: "iot",
     url: (locale: string) => `/${locale}/platform/devices`,
     icon: "RadioReceiver",
-    items: [] as NavLink[],
+    items: [
+      {
+        titleKey: "sidebar.overview",
+        namespace: "navigation",
+        url: (locale: string) => `/${locale}/platform/devices`,
+      },
+      // Calibration is something done to a device at a bench, not a document kept in the
+      // library beside protocols and macros.
+      {
+        titleKey: "sidebar.calibrations",
+        namespace: "navigation",
+        url: (locale: string) => `/${locale}/platform/calibrations`,
+      },
+    ] as NavLink[],
   },
   workbooks: {
     titleKey: "sidebar.workbooks",
@@ -143,19 +156,6 @@ export const mainNavigation = {
             titleKey: "sidebar.overview",
             namespace: "navigation",
             url: (locale: string) => `/${locale}/platform/protocols`,
-          },
-        ] as NavLink[],
-      },
-      {
-        titleKey: "sidebar.calibrations",
-        namespace: "navigation",
-        url: (locale: string) => `/${locale}/platform/calibrations`,
-        icon: "SlidersHorizontal",
-        items: [
-          {
-            titleKey: "sidebar.overview",
-            namespace: "navigation",
-            url: (locale: string) => `/${locale}/platform/calibrations`,
           },
         ] as NavLink[],
       },

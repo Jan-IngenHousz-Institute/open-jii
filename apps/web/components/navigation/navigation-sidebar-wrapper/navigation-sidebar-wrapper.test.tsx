@@ -178,7 +178,7 @@ describe("NavigationSidebarWrapper", () => {
       }[];
     };
 
-    const macros = navigationData.navLibrary[0].children[2];
+    const macros = navigationData.navLibrary[0].children[1];
     expect(macros).toMatchObject({
       title: "sidebar.macros",
       url: "/en/platform/macros",
@@ -190,11 +190,9 @@ describe("NavigationSidebarWrapper", () => {
       url: "/en/platform/macros/new",
     });
 
-    const calibrations = navigationData.navLibrary[0].children[1];
-    expect(calibrations).toMatchObject({
-      title: "sidebar.calibrations",
-      url: "/en/platform/calibrations",
-    });
+    // Calibration moved out of the library: it is done to a device, not filed beside one.
+    const libraryUrls = navigationData.navLibrary[0].children.map((child) => child.url);
+    expect(libraryUrls).not.toContain("/en/platform/calibrations");
   });
 
   it("prepares translations object correctly", async () => {

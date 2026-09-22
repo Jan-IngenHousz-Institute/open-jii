@@ -41,14 +41,24 @@ describe("navigation-config", () => {
     it("library is not navigable and has children", () => {
       expect(mainNavigation.library.navigable).toBe(false);
       expect(mainNavigation.library.children).toBeDefined();
-      expect(mainNavigation.library.children.length).toBe(3);
+      expect(mainNavigation.library.children.length).toBe(2);
     });
 
     it("library children generate correct URLs", () => {
-      const [protocols, calibrations, macros] = mainNavigation.library.children;
+      const [protocols, macros] = mainNavigation.library.children;
       expect(protocols.url(locale)).toBe(`/${locale}/platform/protocols`);
-      expect(calibrations.url(locale)).toBe(`/${locale}/platform/calibrations`);
       expect(macros.url(locale)).toBe(`/${locale}/platform/macros`);
+    });
+
+    // Calibration is something done to a device, not a document filed beside protocols.
+    it("keeps calibration under devices rather than in the library", () => {
+      const urls = mainNavigation.devices.items.map((item) => item.url(locale));
+      expect(urls).toEqual([`/${locale}/platform/devices`, `/${locale}/platform/calibrations`]);
+      expect(
+        mainNavigation.library.children.some((child) =>
+          child.url(locale).includes("/platform/calibrations"),
+        ),
+      ).toBe(false);
     });
 
     it("generates sub-item URLs containing parent path", () => {
