@@ -44,6 +44,13 @@ module "databricks_metastore" {
   # Workspace IDs derived from workspaces map
   workspace_ids = [for ws in var.workspaces : ws.workspace_id]
 
+  # Delta Sharing is off until these are given values. Turning it on is an
+  # account-wide change: this metastore backs every workspace, so it cannot be
+  # trialled in dev alone, and delta_sharing_organization_name is write-once.
+  delta_sharing_scope                               = var.delta_sharing_scope
+  delta_sharing_recipient_token_lifetime_in_seconds = var.delta_sharing_recipient_token_lifetime_in_seconds
+  delta_sharing_organization_name                   = var.delta_sharing_organization_name
+
   providers = {
     databricks.mws = databricks.mws
   }

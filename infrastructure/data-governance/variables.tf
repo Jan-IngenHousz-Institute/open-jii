@@ -40,3 +40,21 @@ variable "accounts" {
   }))
   default = {}
 }
+
+variable "delta_sharing_scope" {
+  description = "Set to INTERNAL_AND_EXTERNAL to enable token-based Delta Sharing on the shared metastore. Null keeps sharing disabled."
+  type        = string
+  default     = null
+}
+
+variable "delta_sharing_recipient_token_lifetime_in_seconds" {
+  description = "Recipient token expiry in seconds; required whenever delta_sharing_scope is set."
+  type        = number
+  default     = null
+}
+
+variable "delta_sharing_organization_name" {
+  description = "Organization name for Databricks-to-Databricks sharing. Write-once: it cannot be unset without recreating the metastore."
+  type        = string
+  default     = null
+}
