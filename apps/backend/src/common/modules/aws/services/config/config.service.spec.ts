@@ -1,6 +1,8 @@
 import { ConfigService } from "@nestjs/config";
+import type { ConfigType } from "@nestjs/config";
 
 import { TestHarness } from "../../../../../test/test-harness";
+import type awsConfig from "../../../../config/aws.config";
 import { AwsConfigService } from "./config.service";
 
 describe("AwsConfigService", () => {
@@ -62,9 +64,45 @@ describe("AwsConfigService", () => {
     it("should return the correct deviceThingGroupName", () => {
       expect(service.deviceThingGroupName).toBe(process.env.AWS_IOT_DEVICE_THING_GROUP_NAME);
     });
+
+    it("reads the calibration sandbox function name and leaves the endpoint empty when unset", () => {
+      expect(service.lambdaConfig.calibrationSandboxFunctionName).toBe(
+        process.env.AWS_LAMBDA_CALIBRATION_SANDBOX_FUNCTION_NAME,
+      );
+      expect(service.lambdaConfig.calibrationSandboxEndpoint).toBe("");
+    });
   });
 
   describe("config validation", () => {
+    it("rejects a calibration sandbox endpoint that is not a URL", () => {
+      const aws = testApp.module.get(ConfigService).get<ConfigType<typeof awsConfig>>("aws");
+      if (!aws) {
+        throw new Error("The aws configuration namespace is not loaded");
+      }
+      const withBadEndpoint = new ConfigService({
+        aws: { ...aws, lambda: { ...aws.lambda, calibrationSandboxEndpoint: "not-a-url" } },
+      });
+
+      expect(() => new AwsConfigService(withBadEndpoint)).toThrow(
+        "AWS configuration validation failed",
+      );
+    });
+
+    // The deployed task definitions never set the endpoint, and .env.test sets it to an
+    // empty string, which is why nothing else notices a read that throws on absence.
+    it("boots with the calibration sandbox endpoint absent, not merely empty", () => {
+      const aws = testApp.module.get(ConfigService).get<ConfigType<typeof awsConfig>>("aws");
+      if (!aws) {
+        throw new Error("The aws configuration namespace is not loaded");
+      }
+      const { calibrationSandboxEndpoint: _endpoint, ...lambda } = aws.lambda;
+      const withoutEndpoint = new ConfigService({ aws: { ...aws, lambda } });
+
+      const service = new AwsConfigService(withoutEndpoint);
+
+      expect(service.lambdaConfig.calibrationSandboxEndpoint).toBe("");
+    });
+
     it("should throw error for invalid config during construction", () => {
       // Create a mock ConfigService that returns invalid data
       const configService = testApp.module.get(ConfigService);

@@ -30,18 +30,29 @@ export interface IotDeviceConnection {
   driver: IDeviceDriver;
 }
 
+export interface IotConnectionsOptions {
+  /**
+   * Off for a caller that has to rest other hardware through these drivers before they
+   * go; that caller calls disconnectAll itself, in its own order. Cleanup runs in hook
+   * order, so this hook's own would otherwise destroy the drivers first.
+   */
+  destroyOnUnmount?: boolean;
+}
+
 /**
  * Device registry for the workbook host: N devices connected at once (a USB
  * hub of devices), each identified by a post-connect handshake and driving
  * its own connector. Connect order is insertion order; the first entry is
  * the primary device. Mirrors the mobile scanner registry semantics.
  */
-export function useIotConnections(sensorFamily: SensorFamily) {
+export function useIotConnections(sensorFamily: SensorFamily, options?: IotConnectionsOptions) {
   const [connections, setConnections] = useState<IotDeviceConnection[]>([]);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const connectionsRef = useRef(connections);
   connectionsRef.current = connections;
+  const destroyOnUnmountRef = useRef(true);
+  destroyOnUnmountRef.current = options?.destroyOnUnmount ?? true;
   // Total devices ever connected; numbers labels so they never repeat.
   const connectCounterRef = useRef(0);
   // Bumped by disconnectAll so an in-flight connect() started before the
@@ -51,6 +62,9 @@ export function useIotConnections(sensorFamily: SensorFamily) {
   // Disconnect every driver on unmount.
   useEffect(() => {
     return () => {
+      if (!destroyOnUnmountRef.current) {
+        return;
+      }
       for (const c of connectionsRef.current) {
         c.driver.destroy().catch((err: unknown) => console.error("Cleanup disconnect error:", err));
       }

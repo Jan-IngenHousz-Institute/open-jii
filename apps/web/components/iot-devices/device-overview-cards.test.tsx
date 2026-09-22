@@ -1,4 +1,8 @@
-import { createExperiment, createIotDeviceDetail } from "@/test/factories";
+import {
+  createActiveDeviceCalibration,
+  createExperiment,
+  createIotDeviceDetail,
+} from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen } from "@/test/test-utils";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -43,6 +47,7 @@ describe("DeviceOverviewCards", () => {
     server.mount(contract.iot.listDeviceObservedExperiments, { body: { experiments: [] } });
     server.mount(contract.experiments.listExperiments, { body: [] });
     server.mount(contract.iot.listIotFirmwareReleases, { body: { releases: [] } });
+    server.mount(contract.iot.getActiveDeviceCalibration, { body: null });
   });
 
   it("allows overview cards to shrink inside the phone grid", () => {
@@ -248,5 +253,57 @@ describe("DeviceOverviewCards", () => {
     expect(
       screen.getByRole("link", { name: "iot.devices.detail.cards.firmwareLink" }),
     ).toHaveAttribute("href", `/en-US/platform/devices/${DEVICE_ID}/firmware`);
+  });
+
+  it("says so when the device has never been calibrated, linking its tab", async () => {
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+
+    render(<DeviceOverviewCards device={makeDevice()} />);
+
+    expect(await screen.findByText("iot.devices.detail.cards.calibrationNone")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "iot.devices.detail.cards.calibrationLink" }),
+    ).toHaveAttribute("href", `/en-US/platform/devices/${DEVICE_ID}/calibration`);
+  });
+
+  // The date alone would flatter a device whose coefficients never made it onto the hardware.
+  it("dates the calibration in force and flags a block the device never confirmed", async () => {
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    server.mount(contract.iot.getActiveDeviceCalibration, {
+      body: createActiveDeviceCalibration({
+        blocks: {
+          par: {
+            coefficients: { slope: 0.96 },
+            calibrationId: "55555555-5555-4555-8555-555555555555",
+            runId: "66666666-6666-4666-8666-666666666666",
+            validFrom: "2026-09-01T10:05:00.000Z",
+            writtenToDeviceAt: "2026-09-01T10:06:00.000Z",
+            writeResult: { verified: true },
+          },
+          led: {
+            coefficients: { act: 0.24 },
+            calibrationId: "77777777-7777-4777-8777-777777777777",
+            runId: "88888888-8888-4888-8888-888888888888",
+            validFrom: "2026-09-02T10:05:00.000Z",
+            writtenToDeviceAt: "2026-09-02T10:06:00.000Z",
+            writeResult: { verified: false, error: "readback disagreed" },
+          },
+        },
+      }),
+    });
+
+    render(<DeviceOverviewCards device={makeDevice()} />);
+
+    expect(await screen.findByText("iot.calibration.active.unconfirmed")).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.detail.cards.calibrationCaption")).toBeInTheDocument();
+  });
+
+  it("gives a phone no calibration card", async () => {
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+
+    render(<DeviceOverviewCards device={makeDevice({ deviceType: "mobile" })} />);
+
+    expect(await screen.findByText("iot.devices.detail.cards.observedEmpty")).toBeInTheDocument();
+    expect(screen.queryByText("iot.devices.detail.cards.calibrationTitle")).toBeNull();
   });
 });

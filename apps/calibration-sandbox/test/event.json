@@ -1,0 +1,50 @@
+{
+  "script": "import math\n\nfrom qc import assess_linear_fit\n\n# Map the sensor's uncalibrated PAR onto the reference, y = slope * x + intercept,\n# the straight line the bench procedure fits with numpy.polyfit(x, y, 1).\npoints = inputs[\"par_sweep\"]\nfit = assess_linear_fit(\n    points[\"par_raw\"],\n    points[\"par_ref\"],\n    points[\"stimulus\"],\n    slope_min=0.1,\n    slope_max=10.0,\n    intercept_min=-100.0,\n    intercept_max=100.0,\n)\n\n# The thresholds are the platform's until the scientist supplies real ones: a\n# failed gate travels with the block as advice and the reviewer decides.\nfitted = math.isfinite(fit[\"slope\"]) and math.isfinite(fit[\"intercept\"])\nif fitted:\n    block = {\n        \"status\": \"computed\",\n        \"coefficients\": {\"slope\": fit[\"slope\"], \"intercept\": fit[\"intercept\"]},\n        \"quality\": fit,\n    }\nelse:\n    block = {\"status\": \"rejected\", \"reason\": \"; \".join(fit[\"reasons\"]), \"quality\": fit}\nsubmit({\"par\": block})\n",
+  "series": {
+    "par_sweep": [
+      {
+        "stimulus": 0.2,
+        "par_raw": 76.0,
+        "par_ref": 71.88
+      },
+      {
+        "stimulus": 0.4,
+        "par_raw": 152.0,
+        "par_ref": 144.84
+      },
+      {
+        "stimulus": 0.8,
+        "par_raw": 304.0,
+        "par_ref": 290.76
+      },
+      {
+        "stimulus": 1.0,
+        "par_raw": 380.0,
+        "par_ref": 363.72
+      },
+      {
+        "stimulus": 1.6,
+        "par_raw": 608.0,
+        "par_ref": 582.6
+      },
+      {
+        "stimulus": 0,
+        "par_raw": 8.33,
+        "par_ref": 6.9168
+      }
+    ]
+  },
+  "params": {},
+  "outputSchema": {
+    "blocks": {
+      "par": {
+        "slope": {
+          "type": "number"
+        },
+        "intercept": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

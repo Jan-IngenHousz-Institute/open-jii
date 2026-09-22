@@ -7,10 +7,10 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 
 import { cn } from "../lib/utils";
-import { cva } from "../lib/utils";
 import { Button } from "./button";
 import type { ButtonProps } from "./button";
 import { Form } from "./form";
+import { WizardStepIndicator } from "./wizard-step-indicator";
 
 // Types for the wizard form
 export interface WizardStepProps<T extends FieldValues = FieldValues> {
@@ -191,48 +191,6 @@ export function WizardForm<T extends FieldValues>({
   formProps = {},
   initialStep = 0,
 }: WizardFormProps<T>) {
-  // CVA variants for the step indicator circle and title
-  const stepCircle = cva(
-    "flex h-8 w-8 items-center justify-center rounded-full border text-sm font-medium transition-all duration-300 ease-in-out",
-    {
-      variants: {
-        state: {
-          default: "bg-background text-muted-foreground border-input",
-          completed: "bg-primary/80 text-primary-foreground",
-          active: "bg-primary text-primary-foreground scale-110 shadow-md",
-        },
-      },
-      defaultVariants: { state: "default" },
-    },
-  );
-
-  const stepTitle = cva(
-    "mt-2 text-center text-xs font-medium transition-all duration-300 ease-in-out",
-    {
-      variants: {
-        state: {
-          default: "text-muted-foreground opacity-70",
-          completed: "text-primary/80 opacity-80",
-          active: "text-primary translate-y-0 opacity-100",
-        },
-      },
-      defaultVariants: { state: "default" },
-    },
-  );
-
-  const connectorLine = cva(
-    "bg-primary/80 absolute left-0 top-0 h-full transition-all duration-500 ease-in-out",
-    {
-      variants: {
-        state: {
-          incomplete: "w-0",
-          complete: "w-full",
-        },
-      },
-      defaultVariants: { state: "incomplete" },
-    },
-  );
-
   // Current step index
   const [currentStepIndex, setCurrentStepIndex] = React.useState(initialStep);
 
@@ -322,38 +280,11 @@ export function WizardForm<T extends FieldValues>({
       {/* Step indicators */}
       {showStepIndicator && (
         <div className={cn("mb-6", stepIndicatorClassName)}>
-          <div className="flex items-start gap-1">
-            {activeSteps.map((_step, index) => {
-              const isActive = index === currentStepIndex;
-              const isCompleted = index < currentStepIndex;
-              const stepState = isActive ? "active" : isCompleted ? "completed" : "default";
-              const connectorState = isCompleted ? "complete" : "incomplete";
-
-              return (
-                <React.Fragment key={index}>
-                  {/* Step circle + label */}
-                  <div className="flex w-[50px] flex-col items-center transition-all duration-300 md:w-[80px]">
-                    <div className={stepCircle({ state: stepState })}>{index + 1}</div>
-
-                    {showStepTitles && (
-                      <div className={stepTitle({ state: stepState })}>
-                        {activeSteps[index]?.title}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Connector line */}
-                  {index < activeSteps.length - 1 && (
-                    <div className="flex flex-1 items-start pt-4">
-                      <div className="bg-border relative h-[2px] w-full overflow-hidden rounded-full">
-                        <div className={connectorLine({ state: connectorState })} />
-                      </div>
-                    </div>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
+          <WizardStepIndicator
+            steps={activeSteps.map((step) => step.title)}
+            currentIndex={currentStepIndex}
+            showTitles={showStepTitles}
+          />
         </div>
       )}
       {currentStep && (

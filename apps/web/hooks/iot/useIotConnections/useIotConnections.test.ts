@@ -185,6 +185,21 @@ describe("useIotConnections", () => {
     expect(result.current.connections.map((c) => c.label)).toEqual(["Device #2"]);
   });
 
+  // A caller that rests other hardware through these drivers has to release them last;
+  // cleanup runs in hook order, so this hook's own would otherwise get there first.
+  it("leaves the drivers to a caller that asked to release them itself", async () => {
+    const connector = identifyAs("multispeq");
+
+    const { result, unmount } = renderHook(() =>
+      useIotConnections("multispeq", { destroyOnUnmount: false }),
+    );
+    await act(() => result.current.connect("mock"));
+
+    unmount();
+
+    expect(connector.destroy).not.toHaveBeenCalled();
+  });
+
   it("keeps numbering unique after disconnects", async () => {
     identifyAs("multispeq");
     identifyAs("multispeq");

@@ -1,7 +1,14 @@
 import { Inject, Injectable } from "@nestjs/common";
 
 import type { PublishableResourceType } from "@repo/api/domains/visibility/visibility.schema";
-import { eq, experiments, macros, protocols, workbooks } from "@repo/database";
+import {
+  calibrationDefinitions,
+  eq,
+  experiments,
+  macros,
+  protocols,
+  workbooks,
+} from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -56,6 +63,15 @@ export class VisibilityRepository {
             .set({ visibility })
             .where(eq(workbooks.id, resourceId))
             .returning({ id: workbooks.id, visibility: workbooks.visibility });
+        case "calibration_definition":
+          return this.db
+            .update(calibrationDefinitions)
+            .set({ visibility })
+            .where(eq(calibrationDefinitions.id, resourceId))
+            .returning({
+              id: calibrationDefinitions.id,
+              visibility: calibrationDefinitions.visibility,
+            });
       }
     });
   }

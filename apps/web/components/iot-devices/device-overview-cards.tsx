@@ -2,6 +2,7 @@
 
 import { resolveMonitoringPreset } from "@/components/iot-devices/monitoring/monitoring-range";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { useActiveDeviceCalibration } from "@/hooks/iot/useActiveDeviceCalibration/useActiveDeviceCalibration";
 import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
 import { useDeviceFirmwareHistory } from "@/hooks/iot/useDeviceFirmwareHistory/useDeviceFirmwareHistory";
 import { useDeviceObservedExperiments } from "@/hooks/iot/useDeviceObservedExperiments/useDeviceObservedExperiments";
@@ -16,10 +17,11 @@ import {
   latestReportedVersion,
 } from "@/util/firmware-family";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Cpu, FlaskConical } from "lucide-react";
+import { Activity, Cpu, FlaskConical, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 
+import { zCalibrationFamily } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import type { IotDeviceDetail, ObservedExperiment } from "@repo/api/domains/iot/iot.schema";
 import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
@@ -51,6 +53,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
 
   const isMobileFamily = device.deviceType === "mobile";
   const isManagedFirmware = hasManagedFirmware(device.deviceType);
+  const isCalibrationFamily = zCalibrationFamily.safeParse(device.deviceType).success;
 
   const {
     data: boundData,
@@ -84,6 +87,11 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
     refetch: refetchObserved,
   } = useDeviceObservedExperiments(device.id, lookback, { enabled: isMobileFamily });
   const observed = observedData?.experiments ?? [];
+
+  const { data: activeCalibration, isLoading: isLoadingCalibration } = useActiveDeviceCalibration(
+    device.id,
+    { enabled: isCalibrationFamily },
+  );
 
   // Names for the viewer's own experiments; anything else stays opaque.
   const { data: visibleExperiments } = useQuery(
@@ -302,6 +310,39 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
     );
   }
 
+  // How current the calibration is, with the worst block's write state beside it: a
+  // coefficient the device never confirmed is the one fact that makes the date misleading.
+  function renderCalibrationBody() {
+    if (isLoadingCalibration) {
+      return <Skeleton className="h-5 w-40" />;
+    }
+    const blocks = Object.values(activeCalibration?.blocks ?? {});
+    if (blocks.length === 0) {
+      return <CardDescription>{t("iot.devices.detail.cards.calibrationNone")}</CardDescription>;
+    }
+    // ISO timestamps order as text, so the newest block is the greatest string.
+    const latestValidFrom = blocks.reduce(
+      (latest, block) => (block.validFrom > latest ? block.validFrom : latest),
+      "",
+    );
+    const isUnconfirmed = blocks.some((block) => block.writeResult?.verified === false);
+    const isUnwritten = blocks.some((block) => block.writtenToDeviceAt === null);
+
+    return renderFigure(
+      <span className="inline-flex flex-wrap items-center gap-2">
+        <span>{formatRelativeTime(latestValidFrom, locale)}</span>
+        {isUnconfirmed ? (
+          <StatusBadge tone="destructive">{t("iot.calibration.active.unconfirmed")}</StatusBadge>
+        ) : isUnwritten ? (
+          <StatusBadge tone="stale">{t("iot.calibration.active.notWritten")}</StatusBadge>
+        ) : (
+          <StatusBadge tone="active">{t("iot.calibration.active.written")}</StatusBadge>
+        )}
+      </span>,
+      t("iot.devices.detail.cards.calibrationCaption"),
+    );
+  }
+
   const rail = [
     !isMobileFamily && (
       <OverviewCard
@@ -326,6 +367,20 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
         link={{ href: `${basePath}/firmware`, label: t("iot.devices.detail.cards.firmwareLink") }}
       >
         {renderFirmwareBody()}
+      </OverviewCard>
+    ),
+    isCalibrationFamily && (
+      <OverviewCard
+        key="calibration"
+        icon={<SlidersHorizontal aria-hidden />}
+        wellClassName="bg-chart-3/10 text-chart-3"
+        title={t("iot.devices.detail.cards.calibrationTitle")}
+        link={{
+          href: `${basePath}/calibration`,
+          label: t("iot.devices.detail.cards.calibrationLink"),
+        }}
+      >
+        {renderCalibrationBody()}
       </OverviewCard>
     ),
   ].filter(Boolean);

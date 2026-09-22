@@ -4,6 +4,7 @@ import type {
 } from "@repo/api/domains/sharing/sharing.schema";
 import {
   and,
+  calibrationDefinitions,
   ensureDirectAdminGrant,
   eq,
   experiments,
@@ -40,7 +41,8 @@ type StaffedResourceTable =
   | typeof protocols
   | typeof workbooks
   | typeof iotDevices
-  | typeof deviceGroups;
+  | typeof deviceGroups
+  | typeof calibrationDefinitions;
 
 /**
  * Where each staffed type keeps its id and owning organization — the single
@@ -58,6 +60,7 @@ const STAFFED_RESOURCE_TABLES: Record<SharingResourceType, StaffedResourceTable>
   workbook: workbooks,
   device: iotDevices,
   device_group: deviceGroups,
+  calibration_definition: calibrationDefinitions,
 };
 
 /**

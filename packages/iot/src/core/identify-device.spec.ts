@@ -161,6 +161,7 @@ describe("identifyDevice", () => {
     expect(identified.connector).toBeInstanceOf(AmbitDriver);
     expect(identified.info.family).toBe("ambit");
     expect(identified.info.name).toBeUndefined();
+    expect(identified.info.firmwareVersion).toBeUndefined();
     expect(identified.info.raw.helloReply).toBe("NEW Name Here Ready");
   });
 
@@ -180,6 +181,8 @@ describe("identifyDevice", () => {
     expect(identified.info.family).toBe("ambit");
     // The name is firmware placeholder text, never a device name.
     expect(identified.info.name).toBeUndefined();
+    // The numeric core of the build is the version; the dirty suffix stays in the raw line.
+    expect(identified.info.firmwareVersion).toBe("1.1.4");
     expect(identified.info.raw.helloReply).toBe("NEW AmbitV003 Ready FW:1.1.4-3-g2a76435-dirty");
   });
 

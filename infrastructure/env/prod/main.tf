@@ -282,6 +282,32 @@ module "macro_sandbox" {
   }
 }
 
+module "calibration_sandbox" {
+  source = "../../modules/calibration-sandbox"
+
+  aws_region          = var.aws_region
+  environment         = var.environment
+  ci_cd_role_arn      = module.iam_oidc.role_arn
+  isolated_subnet_ids = module.vpc.isolated_subnets
+  lambda_sg_id        = module.vpc.calibration_sandbox_lambda_security_group_id
+  flow_log_group_name = module.macro_sandbox.flow_log_group_name
+
+  # The handler stops a fitting script at 30s and returns its own error, so the
+  # function needs headroom above that for the graceful failure to win.
+  memory  = 1024
+  timeout = 45
+
+  log_retention_days = 30
+
+  reserved_concurrent_executions = 10
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+  }
+}
+
 module "databricks_workspace_s3_policy" {
   source      = "../../modules/databricks/workspace-s3-policy"
   bucket_name = "open-jii-databricks-root-bucket-${var.environment}"
@@ -2212,6 +2238,10 @@ module "backend_ecs" {
       value = module.macro_sandbox.function_names["r"]
     },
     {
+      name  = "AWS_LAMBDA_CALIBRATION_SANDBOX_FUNCTION_NAME"
+      value = module.calibration_sandbox.function_name
+    },
+    {
       name  = "AWS_IOT_ARCHIVE_BUCKET_NAME"
       value = module.iot_raw_archive_s3.bucket_id
     },
@@ -2225,6 +2255,7 @@ module "backend_ecs" {
   additional_task_role_policy_arns = [
     module.location_service.iam_policy_arn,
     module.macro_sandbox.invoke_policy_arn,
+    module.calibration_sandbox.invoke_policy_arn,
     module.iot_core.backend_s3_presign_policy_arn,
   ]
 
@@ -2564,7 +2595,8 @@ module "grafana_dashboard" {
   ecs_log_group_name  = module.backend_ecs.cloudwatch_log_group_name
   iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
 
-  macro_sandbox_function_names = module.macro_sandbox.function_names
+  macro_sandbox_function_names      = module.macro_sandbox.function_names
+  calibration_sandbox_function_name = module.calibration_sandbox.function_name
 
   enable_site_availability_alert = true
   route53_health_check_id        = module.route53.health_check_id
