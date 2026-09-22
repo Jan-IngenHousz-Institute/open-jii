@@ -17,7 +17,8 @@ import { useAutosaveStatus } from "./autosave-status-context";
 type AutosaveIndicatorVariant = "full" | "compact";
 
 interface AutosaveIndicatorProps {
-  status?: AutosaveStatus;
+  /** `null` reports nothing at all, for a host that knows no save is coming. */
+  status?: AutosaveStatus | null;
   /** `compact` swaps the label for a tooltip — sized for editor toolbars. */
   variant?: AutosaveIndicatorVariant;
   className?: string;
@@ -29,7 +30,7 @@ export function AutosaveIndicator({
   className,
 }: AutosaveIndicatorProps) {
   const fromContext = useAutosaveStatus();
-  const status = statusProp ?? fromContext?.status ?? undefined;
+  const status = statusProp === undefined ? fromContext?.status : statusProp;
   const { t } = useTranslation("common");
 
   if (!status) return null;

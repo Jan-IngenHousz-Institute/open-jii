@@ -21626,6 +21626,10 @@
                         "canLeave",
                         "canTransfer"
                       ]
+                    },
+                    "runCount": {
+                      "type": "integer",
+                      "minimum": 0
                     }
                   },
                   "required": [
@@ -21643,7 +21647,8 @@
                     "createdBy",
                     "createdAt",
                     "updatedAt",
-                    "capabilities"
+                    "capabilities",
+                    "runCount"
                   ]
                 }
               }

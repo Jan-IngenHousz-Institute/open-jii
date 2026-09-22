@@ -36,19 +36,22 @@ export type PhaseFailure =
   | { kind: "noProcedure" }
   | { kind: "failed"; message: string; partial: CalibrationRunPayload };
 
-/**
- * The unit on the port, held against the device this session is for. A family whose
- * firmware announces no identifier of its own leaves the question open, and the record
- * says as much rather than implying the two were compared.
- */
+/** A family whose firmware announces no identifier leaves the question open, rather than implying a match. */
 export type UnitIdentity =
   | { kind: "unnamed" }
+  /** It said who it is, and there was no expectation to hold it against. */
+  | { kind: "reported"; serial: string }
   | { kind: "match"; serial: string }
   | { kind: "mismatch"; reported: string; expected: string };
 
-function identifyUnit(reported: string | undefined, expected: string): UnitIdentity {
+function identifyUnit(reported: string | undefined, expected: string | null): UnitIdentity {
   if (reported === undefined || reported.trim() === "") {
     return { kind: "unnamed" };
+  }
+  // A bench takes whatever is put on it and works out afterwards which device that is, so
+  // there is nothing for the unit to contradict.
+  if (expected === null) {
+    return { kind: "reported", serial: reported };
   }
   return serialsMatch(reported, expected)
     ? { kind: "match", serial: reported }
@@ -59,18 +62,12 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/**
- * Connecting a rig and running a procedure's phases against it.
- *
- * Owned here rather than in the wizard because it is the half a definition's author needs
- * too: trying a procedure at the bench while writing it is the only way to find out that
- * a handshake, a command or a setpoint was wrong. What differs between the two callers is
- * only what they do with the readings afterwards.
- */
+/** Owned here because a definition's author needs the same half when trying a procedure at the bench. */
 export function useCalibrationCapture(
   procedure: CaptureProcedure | undefined,
   family: CalibrationFamily,
-  serialNumber: string,
+  /** The device this session is for, or null at a bench that identifies units as they come. */
+  serialNumber: string | null,
 ) {
   const [events, setEvents] = useState<ProcedureProgress[]>([]);
   const [failure, setFailure] = useState<PhaseFailure | null>(null);
@@ -187,6 +184,24 @@ export function useCalibrationCapture(
 
   const disconnectAll = connections.disconnectAll;
 
+  /** A batch is one setup and many units, so the instruments stay bound between them. */
+  const releaseUnit = useCallback(async (): Promise<string | null> => {
+    stop();
+    await inFlightRef.current;
+
+    // Rested, not shut down: a lamp must not be left driving current while someone has
+    // their hands on the bench swapping hardware.
+    let notAtRest: string | null = null;
+    try {
+      await rigRef.current.rest();
+    } catch (error) {
+      notAtRest = messageOf(error);
+    }
+    await disconnectAll();
+
+    return notAtRest;
+  }, [disconnectAll, stop]);
+
   /** Stop, wait for the interpreter to let go, rest and close the bench, then release the device. */
   const leave = useCallback(async (): Promise<string | null> => {
     stop();
@@ -223,10 +238,7 @@ export function useCalibrationCapture(
     disconnect: () => void connections.disconnectAll(),
     rig,
     operator,
-    /**
-     * The procedure is loaded, the unit answering is the device this session is for, and
-     * every role the run requires is bound.
-     */
+    /** Procedure loaded, unit identified, every required role bound. */
     canStart:
       procedure !== undefined &&
       connection?.family === family &&
@@ -240,6 +252,7 @@ export function useCalibrationCapture(
     capture,
     verify,
     stop,
+    releaseUnit,
     leave,
   };
 }
