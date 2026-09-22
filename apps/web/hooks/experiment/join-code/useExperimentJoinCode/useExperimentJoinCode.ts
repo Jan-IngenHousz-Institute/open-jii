@@ -9,14 +9,19 @@ const JOIN_CODE_POLL_INTERVAL_MS = 10_000;
  *
  * Redemptions happen on phones, so nothing in this browser can invalidate the
  * query; without the poll the redemption counter would stay at its first value
- * for the whole workshop.
+ * for the whole workshop. `poll` is off by default because the button that only
+ * shows a count has no reason to keep asking — it belongs to the surface that is
+ * actually displaying the code.
  */
-export const useExperimentJoinCode = (experimentId: string, options?: { enabled?: boolean }) => {
+export const useExperimentJoinCode = (
+  experimentId: string,
+  options?: { enabled?: boolean; poll?: boolean },
+) => {
   return useQuery(
     orpc.experiments.getJoinCode.queryOptions({
       input: { id: experimentId },
       enabled: !!experimentId && (options?.enabled ?? true),
-      refetchInterval: JOIN_CODE_POLL_INTERVAL_MS,
+      refetchInterval: options?.poll ? JOIN_CODE_POLL_INTERVAL_MS : false,
       refetchIntervalInBackground: false,
     }),
   );

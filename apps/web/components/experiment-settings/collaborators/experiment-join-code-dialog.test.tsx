@@ -1,12 +1,12 @@
 import { server } from "@/test/msw/server";
-import { act, render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import { act, fireEvent, render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { focusManager } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import { QrCode } from "@repo/ui/components/qr-code";
 
-import { ExperimentJoinCodeCard } from "./experiment-join-code-card";
+import { ExperimentJoinCodeButton } from "./experiment-join-code-dialog";
 
 const EXPERIMENT_ID = "22222222-2222-2222-2222-222222222222";
 
@@ -24,8 +24,20 @@ const ACTIVE_CODE = {
   createdBy: null,
 };
 
+/**
+ * Mounts the button and opens the dialog, which is the only way its states render.
+ * `userEvent` is not used for the open click: several cases run on fake timers,
+ * where its internal delays never resolve.
+ */
 function renderCard() {
-  return render(<ExperimentJoinCodeCard experimentId={EXPERIMENT_ID} />);
+  const result = render(<ExperimentJoinCodeButton experimentId={EXPERIMENT_ID} />);
+  fireEvent.click(screen.getByRole("button", { name: /joinCode\.title/ }));
+  return result;
+}
+
+/** Mounts the button alone, for the cases that are about the trigger itself. */
+function renderButton() {
+  return render(<ExperimentJoinCodeButton experimentId={EXPERIMENT_ID} />);
 }
 
 /**
@@ -38,7 +50,7 @@ function modulesOf(root: Element | null): string | null {
   return paths[1]?.getAttribute("d") ?? null;
 }
 
-describe("ExperimentJoinCodeCard", () => {
+describe("ExperimentJoinCodeDialog", () => {
   beforeEach(() => {
     localeRef.current = "en-US";
   });
@@ -115,13 +127,15 @@ describe("ExperimentJoinCodeCard", () => {
   it("renders the code, QR, expiry, counter and actions for an active code", async () => {
     server.mount(contract.experiments.getJoinCode, { body: { joinCode: ACTIVE_CODE } });
 
-    const { container } = renderCard();
+    renderCard();
 
     expect(await screen.findByText("KP7Q-4WMX")).toBeInTheDocument();
     expect(screen.getByText("joinCode.introActive joinCode.workbookHint")).toBeInTheDocument();
     expect(screen.getByText(/joinCode\.expiresOn/)).toBeInTheDocument();
     expect(screen.getByText(/joinCode\.redeemed:0/)).toBeInTheDocument();
-    expect(container.querySelector('[aria-label="joinCode.qrLabel"] svg')).not.toBeNull();
+    expect(
+      screen.getByRole("dialog").querySelector('[aria-label="joinCode.qrLabel"] svg'),
+    ).not.toBeNull();
     for (const name of ["joinCode.copyCode", "joinCode.copyLink", "joinCode.regenerate"]) {
       expect(screen.getByRole("button", { name })).toBeInTheDocument();
     }
@@ -163,10 +177,12 @@ describe("ExperimentJoinCodeCard", () => {
     localeRef.current = "nl-NL";
     server.mount(contract.experiments.getJoinCode, { body: { joinCode: ACTIVE_CODE } });
 
-    const { container } = renderCard();
+    renderCard();
     await screen.findByText("KP7Q-4WMX");
 
-    const rendered = modulesOf(container.querySelector('[aria-label="joinCode.qrLabel"]'));
+    const rendered = modulesOf(
+      screen.getByRole("dialog").querySelector('[aria-label="joinCode.qrLabel"]'),
+    );
     const expected = modulesOf(
       render(<QrCode value={`${window.location.origin}/en-US/join/KP7Q-4WMX`} />).container,
     );
@@ -358,5 +374,95 @@ describe("QrCode", () => {
     expect(firstPath).toBeTruthy();
     expect(secondPath).toBeTruthy();
     expect(firstPath).not.toBe(secondPath);
+  });
+});
+
+describe("ExperimentJoinCodeButton", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    focusManager.setFocused(undefined);
+  });
+
+  it("carries the redemption count while a code is live", async () => {
+    server.mount(contract.experiments.getJoinCode, {
+      body: { joinCode: { ...ACTIVE_CODE, redemptionCount: 27 } },
+    });
+
+    renderButton();
+
+    const button = await screen.findByRole("button", { name: /joinCode\.title/ });
+    await waitFor(() => expect(within(button).getByText("27")).toBeInTheDocument());
+    // Labelled rather than a bare number, so the trigger still announces what it counts.
+    expect(within(button).getByLabelText("joinCode.redeemed:27")).toBeInTheDocument();
+  });
+
+  it("shows no count when there is no code", async () => {
+    server.mount(contract.experiments.getJoinCode, { body: { joinCode: null } });
+
+    renderButton();
+
+    const button = await screen.findByRole("button", { name: /joinCode\.title/ });
+    await waitFor(() => expect(button).toHaveAccessibleName("joinCode.title"));
+    expect(within(button).queryByText(/^\d+$/)).not.toBeInTheDocument();
+  });
+
+  it("shows no count for an expired code", async () => {
+    server.mount(contract.experiments.getJoinCode, {
+      body: {
+        joinCode: { ...ACTIVE_CODE, redemptionCount: 27, expiresAt: "2020-01-01T00:00:00.000Z" },
+      },
+    });
+
+    renderButton();
+
+    const button = await screen.findByRole("button", { name: /joinCode\.title/ });
+    await waitFor(() => expect(button).toHaveAccessibleName("joinCode.title"));
+    expect(within(button).queryByText("27")).not.toBeInTheDocument();
+  });
+
+  it("drops the count on the fetch that reports the code revoked", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let revoked = false;
+    server.mount(contract.experiments.getJoinCode, {
+      body: () => ({ joinCode: revoked ? null : { ...ACTIVE_CODE, redemptionCount: 27 } }),
+    });
+
+    renderButton();
+    const button = await screen.findByRole("button", { name: /joinCode\.title/ });
+    await waitFor(() => expect(within(button).getByText("27")).toBeInTheDocument());
+
+    // Opened so the poll is running, which is the only thing that re-reads here.
+    fireEvent.click(button);
+    revoked = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_500);
+    });
+
+    await waitFor(() => expect(within(button).queryByText("27")).not.toBeInTheDocument());
+  });
+
+  it("does not poll while the dialog is closed, and does while it is open", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const get = server.mount(contract.experiments.getJoinCode, {
+      body: { joinCode: ACTIVE_CODE },
+    });
+
+    renderButton();
+    await screen.findByRole("button", { name: /joinCode\.title/ });
+    await waitFor(() => expect(get.callCount).toBe(1));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(35_000);
+    });
+    expect(get.callCount).toBe(1);
+
+    fireEvent.click(screen.getByRole("button", { name: /joinCode\.title/ }));
+    await screen.findByRole("dialog");
+    const afterOpen = get.callCount;
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(35_000);
+    });
+    expect(get.callCount).toBeGreaterThan(afterOpen);
   });
 });
