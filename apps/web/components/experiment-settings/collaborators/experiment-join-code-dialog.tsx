@@ -6,7 +6,7 @@ import { useRevokeExperimentJoinCode } from "@/hooks/experiment/join-code/useRev
 import { useLocale } from "@/hooks/useLocale";
 import { formatShortDate } from "@/util/date";
 import { KeyRound } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { JoinCodeExpiry } from "@repo/api/domains/experiment/join-codes/experiment-join-codes.schema";
 import { formatJoinCode } from "@repo/api/domains/experiment/join-codes/experiment-join-codes.schema";
@@ -149,11 +149,28 @@ function JoinCodeDialogBody({ experimentId }: { experimentId: string }) {
   const [expiresIn, setExpiresIn] = useState<JoinCodeExpiry>("7d");
   const [confirming, setConfirming] = useState<PendingConfirmation | null>(null);
   const [origin, setOrigin] = useState("");
+  const [shouldFocusCode, setShouldFocusCode] = useState(false);
+  const codeRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => setOrigin(window.location.origin), []);
 
   const joinCode = query.data?.joinCode ?? null;
   const isExpired = useJoinCodeExpired(joinCode?.expiresAt ?? null, query.dataUpdatedAt);
+
+  // Creating from the empty or expired state unmounts the whole form, and the
+  // button that was focused goes with it; Radix then parks focus on the dialog
+  // container, which is not a thing anyone can act on. Regenerate is deliberately
+  // excluded: its confirm returns focus to the button that opened it.
+  useEffect(() => {
+    if (!shouldFocusCode || codeRef.current === null) return;
+    codeRef.current.focus();
+    setShouldFocusCode(false);
+  }, [shouldFocusCode, joinCode?.code]);
+
+  const createAndFocusCode = () => {
+    setShouldFocusCode(true);
+    createJoinCode({ id: experimentId, expiresIn });
+  };
 
   const isMutating = isCreating || isRevoking;
 
@@ -236,10 +253,7 @@ function JoinCodeDialogBody({ experimentId }: { experimentId: string }) {
         {header(`${t("joinCode.introEmpty")}${introSuffix}`)}
         <div className="space-y-4">
           {expirySelect}
-          <Button
-            onClick={() => createJoinCode({ id: experimentId, expiresIn })}
-            isLoading={isCreating}
-          >
+          <Button onClick={createAndFocusCode} isLoading={isCreating}>
             {t("joinCode.create")}
           </Button>
         </div>
@@ -263,10 +277,7 @@ function JoinCodeDialogBody({ experimentId }: { experimentId: string }) {
             })}
           </p>
           {expirySelect}
-          <Button
-            onClick={() => createJoinCode({ id: experimentId, expiresIn })}
-            isLoading={isCreating}
-          >
+          <Button onClick={createAndFocusCode} isLoading={isCreating}>
             {t("joinCode.createAgain")}
           </Button>
         </div>
@@ -287,7 +298,9 @@ function JoinCodeDialogBody({ experimentId }: { experimentId: string }) {
           <QrCode value={landingUrl} size={DIALOG_QR_SIZE} />
         </div>
         <div className="min-w-56 flex-1 space-y-2">
-          <p className="font-mono text-4xl font-bold tracking-widest">{formattedCode}</p>
+          <p ref={codeRef} tabIndex={-1} className="font-mono text-4xl font-bold tracking-widest">
+            {formattedCode}
+          </p>
           <p className="text-muted-foreground text-sm">
             {expiresAtValue === null
               ? t("joinCode.neverExpires")

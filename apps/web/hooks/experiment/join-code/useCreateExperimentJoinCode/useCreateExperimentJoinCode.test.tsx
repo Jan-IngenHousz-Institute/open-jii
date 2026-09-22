@@ -49,7 +49,9 @@ describe("useCreateExperimentJoinCode", () => {
         queryKey: orpc.experiments.getJoinCode.key({ input: { id: EXPERIMENT_ID } }),
       }),
     );
-    expect(toast).toHaveBeenCalledWith({ description: "joinCode.created" });
+    // No success toast: a toast mounts a Radix dismissable layer, which takes the
+    // next Escape away from the dialog this mutation runs inside.
+    expect(toast).not.toHaveBeenCalled();
   });
 
   it("surfaces the server message on failure", async () => {

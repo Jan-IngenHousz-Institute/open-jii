@@ -191,6 +191,56 @@ describe("ExperimentJoinCodeDialog", () => {
     expect(rendered).toBe(expected);
   });
 
+  it("moves focus to the code after creating, not onto the dialog container", async () => {
+    // `pointerEventsCheck: 0`: Radix sets `pointer-events: none` on the body for a
+    // modal, which userEvent otherwise refuses to click through.
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    let created = false;
+    server.mount(contract.experiments.getJoinCode, {
+      body: () => ({ joinCode: created ? ACTIVE_CODE : null }),
+    });
+    // Flipped inside the POST handler, so the refetch that follows cannot race it.
+    server.mount(contract.experiments.createJoinCode, {
+      body: () => {
+        created = true;
+        return ACTIVE_CODE;
+      },
+    });
+
+    renderCard();
+
+    await user.click(await screen.findByRole("button", { name: "joinCode.create" }));
+
+    const code = await screen.findByText("KP7Q-4WMX");
+    // The create form and its Select unmount together, taking the focused button
+    // with them. Without a deliberate handoff focus lands on the dialog container.
+    await waitFor(() => expect(code).toHaveFocus(), { timeout: 2000 });
+    expect(screen.getByRole("dialog")).not.toHaveFocus();
+  });
+
+  it("closes on a single Escape once a code has been created", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    let created = false;
+    server.mount(contract.experiments.getJoinCode, {
+      body: () => ({ joinCode: created ? ACTIVE_CODE : null }),
+    });
+    server.mount(contract.experiments.createJoinCode, {
+      body: () => {
+        created = true;
+        return ACTIVE_CODE;
+      },
+    });
+
+    renderCard();
+
+    await user.click(await screen.findByRole("button", { name: "joinCode.create" }));
+    await screen.findByText("KP7Q-4WMX");
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
   it("confirms before regenerating and keeps the selected expiry", async () => {
     const user = userEvent.setup();
     server.mount(contract.experiments.getJoinCode, { body: { joinCode: ACTIVE_CODE } });
