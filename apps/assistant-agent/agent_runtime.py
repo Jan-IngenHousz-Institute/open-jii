@@ -35,6 +35,14 @@ def bounded_integer(value: Any, maximum: int) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= maximum
 
 
+def token_enforcement_mode() -> str:
+    if os.environ.get("ASSISTANT_POC_UNLIMITED_TOKENS", "").lower() != "true":
+        return "enforced"
+    if os.environ.get("ASSISTANT_RUNTIME_MODE") != "local" or "DATABRICKS_APP_NAME" in os.environ:
+        fail("INVALID_RUNTIME_CONFIGURATION", "Unlimited PoC tokens require an explicitly local runtime.", 503)
+    return "local_poc_unlimited"
+
+
 def start_state(body: Any, validate_payload: Callable) -> dict[str, Any]:
     if not isinstance(body, dict) or body.get("protocolVersion") != 1:
         fail("INVALID_REQUEST", "Agent protocol version 1 is required.")
@@ -75,6 +83,7 @@ def start_state(body: Any, validate_payload: Callable) -> dict[str, Any]:
             messages.insert(0, {"role": "system", "content": library.prompt()})
     return {"version": 1, "turnId": str(uuid.uuid4()), "model": model, "messages": messages, "tools": tools,
             "skillLibraryHash": library.hash, "skillReads": [], "skillReadBytes": 0,
+            "tokenEnforcement": token_enforcement_mode(),
             "limits": limits, "round": 0, "expiresAt": int(time.time()) + TURN_TTL,
             "usage": {"inputTokens": 0, "outputTokens": 0}, "usageComplete": True, "usedCallIds": []}
 
@@ -158,9 +167,34 @@ async def _advance(state: dict[str, Any], complete: Completion, library: SkillLi
             return result
 
 
+def prompt_prefix_hash(state: dict[str, Any], message_count: int) -> str:
+    value = {"model": state["model"], "profile": state.get("modelProfile"),
+             "messages": state["messages"][:message_count], "tools": state["tools"]}
+    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+
+
+def estimate_prompt_tokens(state: dict[str, Any]) -> int:
+    measured = state.get("promptAccounting")
+    if isinstance(measured, dict):
+        count, tokens = measured.get("messageCount"), measured.get("inputTokens")
+        if (type(count) is int and 0 <= count <= len(state["messages"])
+                and type(tokens) is int and tokens >= 0
+                and measured.get("prefixHash") == prompt_prefix_hash(state, count)):
+            additions = state["messages"][count:]
+            # The provider measured the unchanged prefix. Reserve bytes only for new text;
+            # framing/retokenization still needs headroom and is not a billing guarantee.
+            return tokens + len(json.dumps(additions, ensure_ascii=False).encode()) + 1024 + 64 * len(additions)
+    prompt_bytes = len(json.dumps({"messages": state["messages"], "tools": state["tools"]},
+                                 ensure_ascii=False).encode())
+    return prompt_bytes + 1024 + 64 * len(state["messages"]) + 256 * len(state["tools"])
+
+
 async def _advance_step(state: dict[str, Any], complete: Completion, library: SkillLibrary) -> dict[str, Any] | None:
     from model_profiles import profile_metadata
 
+    mode = token_enforcement_mode()
+    if state.get("tokenEnforcement") != mode:
+        fail("INVALID_CONTINUATION", "The token enforcement mode changed. Start a new turn.", 409)
     if state["expiresAt"] <= time.time():
         fail("TOOL_LOOP_LIMIT", "This turn expired before another model step.")
     if "modelProfile" in state and state["modelProfile"] != profile_metadata(state["model"]):
@@ -169,14 +203,14 @@ async def _advance_step(state: dict[str, Any], complete: Completion, library: Sk
         fail("TOOL_LOOP_LIMIT", "This turn exceeds the context size limit.")
     if not state.get("usageComplete", False):
         fail("TOOL_LOOP_LIMIT", "Cannot continue without complete token accounting.")
-    remaining = state["limits"]["maxTotalTokens"] - sum(state["usage"].values())
-    # Provider framing/tokenization is unavailable locally; reserve a conservative estimate.
-    prompt_estimate = len(json.dumps({"messages": state["messages"], "tools": state["tools"]},
-                                     ensure_ascii=False).encode())
-    prompt_estimate += 1024 + 64 * len(state["messages"]) + 256 * len(state["tools"])
-    output_allowance = min(state["limits"]["maxOutputTokens"], remaining - prompt_estimate)
-    if output_allowance < 1:
-        fail("TOOL_LOOP_LIMIT", "This turn has insufficient budget for another model step.")
+    output_allowance = state["limits"]["maxOutputTokens"]
+    if mode == "enforced":
+        remaining = state["limits"]["maxTotalTokens"] - sum(state["usage"].values())
+        output_allowance = min(output_allowance, remaining - estimate_prompt_tokens(state))
+        if output_allowance < 1:
+            fail("TOKEN_BUDGET_EXCEEDED", "This turn has insufficient budget for another model step.")
+    prompt_message_count = len(state["messages"])
+    prefix_hash = prompt_prefix_hash(state, prompt_message_count)
     previous_usage_complete = state.get("usageComplete", False)
     state["usageComplete"] = False
     try:
@@ -195,10 +229,12 @@ async def _advance_step(state: dict[str, Any], complete: Completion, library: Sk
             state["usage"]["inputTokens"] += values[0]
             state["usage"]["outputTokens"] += values[1]
             state["usageComplete"] = previous_usage_complete
+            state["promptAccounting"] = {"messageCount": prompt_message_count, "inputTokens": values[0],
+                                         "prefixHash": prefix_hash}
         else:
             fail("PROVIDER_INVALID_RESPONSE", "The model returned invalid token accounting.", 502)
-    if sum(state["usage"].values()) > state["limits"]["maxTotalTokens"]:
-        fail("TOOL_LOOP_LIMIT", "The provider reported usage above this turn's budget.")
+    if mode == "enforced" and sum(state["usage"].values()) > state["limits"]["maxTotalTokens"]:
+        fail("TOKEN_BUDGET_EXCEEDED", "The provider reported usage above this turn's budget.")
     try:
         message = response["choices"][0]["message"]
         if not isinstance(message, dict) or message.get("role") != "assistant":

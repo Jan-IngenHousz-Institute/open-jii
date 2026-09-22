@@ -82,6 +82,10 @@
       "title": "Model unavailable",
       "description": "The model provider could not be reached. Your question is still in the composer so you can retry."
     },
+    "TOKEN_BUDGET_EXCEEDED": {
+      "title": "Turn budget reached",
+      "description": "The assistant could not fit another model request within this turn’s token allowance. Any prepared drafts remain subject to your confirmation. Check Usage before retrying."
+    },
     "TOOL_LOOP_LIMIT": {
       "title": "Too many tool steps",
       "description": "The assistant stopped before it could finish. Narrow the question and try again."

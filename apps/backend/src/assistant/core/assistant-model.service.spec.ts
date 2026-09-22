@@ -171,15 +171,18 @@ describe("AssistantModelService", () => {
     expect(body.messages[99]?.content).toBe("message-119");
   });
 
-  it("preserves lower-bound usage from an agent failure", async () => {
+  it.each([
+    ["PROVIDER_UNAVAILABLE", false],
+    ["TOKEN_BUDGET_EXCEEDED", true],
+  ])("preserves %s and its usage completeness", async (code, usageComplete) => {
     const post = vi.fn().mockRejectedValue({
       response: {
         data: {
           detail: {
-            code: "PROVIDER_UNAVAILABLE",
+            code,
             message: "Provider transport failed",
             usage: { inputTokens: 23, outputTokens: 7 },
-            usageComplete: false,
+            usageComplete,
           },
         },
       },
@@ -188,10 +191,10 @@ describe("AssistantModelService", () => {
     await expect(
       createService(post).run([{ role: "user", content: "Hello" }], vi.fn()),
     ).rejects.toMatchObject({
-      code: "PROVIDER_UNAVAILABLE",
+      code,
       details: {
         usage: { inputTokens: 23, outputTokens: 7 },
-        usageComplete: false,
+        usageComplete,
       },
     });
   });

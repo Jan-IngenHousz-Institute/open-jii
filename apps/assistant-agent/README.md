@@ -52,7 +52,7 @@ The custom continuation API preserves openJII authorization while the backend ru
 
 ## Turn budget
 
-Protocol v1 requires `limits.maxTotalTokens`, a positive integer no greater than 100,000. The backend supplies its reserved allowance. Before every model step, Python subtracts cumulative measured usage, estimates the next input from UTF-8 message/tool bytes plus framing allowances, and reduces `max_tokens` to fit. If no output allowance remains, it stops before requesting inference. It also stops when reported usage exceeds the reservation, or before a continuation whose previous usage was incomplete.
+Protocol v1 requires `limits.maxTotalTokens`, a positive integer no greater than 100,000. The backend supplies its reserved allowance. Before every model step, Python subtracts cumulative measured usage and reduces `max_tokens` to fit the next input estimate. The first step reserves UTF-8 message/tool bytes plus framing allowances. Later steps reuse the provider-reported prompt count only when the exact prior messages, tools, model and profile match a stored hash; new messages receive the conservative byte/framing allowance. A mismatch restores the full-byte fallback. If no output allowance remains, it stops before requesting inference. It also stops when reported usage exceeds the reservation, or before a continuation whose previous usage was incomplete.
 
 This is conservative preflight estimation plus measured postflight enforcement. It cannot guarantee exact provider billing without the provider's tokenizer or a count-tokens API. A provider overrun is reported with actual cumulative usage so accounting does not hide it. Incomplete usage remains a lower bound and retains the backend reservation.
 
@@ -102,3 +102,17 @@ review a representative protocol request. Schema acceptance is not proof of firm
 scientific validity or safe hardware operation. Provider-free tests can establish loading,
 continuation integrity and tool routing; they cannot establish that a live model follows the
 skill correctly. Deploying the package to a Databricks App remains a separate operation.
+
+## Temporary local PoC token bypass
+
+For explicitly authorized local testing, set both `ASSISTANT_RUNTIME_MODE=local` and
+`ASSISTANT_POC_UNLIMITED_TOKENS=true` in the agent's untracked `.env`, then restart it.
+This disables per-turn token preflight and cumulative-token rejection. It does not change
+usage accounting, per-call output limits, tool-loop bounds, authentication or confirmation.
+Hosted Databricks Apps reject this mode. Changing enforcement mode invalidates an existing
+continuation; start a new turn. Defaults enforce the budget.
+
+The backend daily allowance is separate. This local PoC was temporarily set to 10,000,000
+tokens at the user's request; that is a generous daily ceiling, not unlimited billing. Restore
+it to 100,000 and set `ASSISTANT_POC_UNLIMITED_TOKENS=false` before normal budget testing.
+No deployed workspace setting was changed.

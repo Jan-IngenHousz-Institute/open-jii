@@ -30,6 +30,7 @@ def answer():
 
 @pytest.fixture
 def client(monkeypatch, tmp_path):
+    monkeypatch.delenv("ASSISTANT_POC_UNLIMITED_TOKENS", raising=False)
     monkeypatch.setenv("ASSISTANT_GATEWAY_TOKEN", "test-server-secret")
     monkeypatch.setenv("ASSISTANT_ALLOWED_MODELS", "test-model")
     monkeypatch.setattr("skill_library.SKILLS_ROOT", tmp_path)
@@ -161,7 +162,7 @@ def test_local_rounds_do_not_bypass_limits(client, monkeypatch, limit):
         monkeypatch.setattr("agent_runtime.MAX_TURN_READ_BYTES", 1)
     result = client.post("/v1/agent/turns", json=body, headers=HEADERS)
     assert result.status_code in {409, 422}, result.text
-    assert result.json()["detail"]["code"] == ("INVALID_CONTINUATION" if limit == "profile" else "TOOL_LOOP_LIMIT")
+    assert result.json()["detail"]["code"] == ("INVALID_CONTINUATION" if limit == "profile" else "TOKEN_BUDGET_EXCEEDED" if limit == "budget" else "TOOL_LOOP_LIMIT")
     assert count == (2 if limit == "round" else 1)
     assert result.json()["detail"]["usageComplete"] is (limit != "usage")
 
@@ -325,3 +326,90 @@ def test_interleaved_results_follow_assistant_order_even_if_platform_returns_rev
     assert done.status_code == 200, done.text
     metadata = done.json()["skillLibrary"]
     assert load_skill_library().validate_provenance(metadata) == metadata
+
+
+def test_packaged_authoring_finishes_fourth_inference_with_58516_tokens_remaining(client, monkeypatch):
+    from evaluation.contract import SYSTEM_PROMPT, TOOLS
+    monkeypatch.setattr("skill_library.SKILLS_ROOT", Path(server.__file__).parent / "skills")
+    library = load_skill_library()
+    skill_id = "multispeq-protocol-writing"
+    code = [{"label": "environment", "environmental": [["light_intensity", 0], ["temperature_humidity", 0]]}]
+    draft = {"name": "Sun and shade environmental comparison", "visibility": "private", "family": "multispeq",
+             "description": "Record incident light, temperature and humidity in sun and shade. Use matched plants, "
+             "record leaf age and time, alternate measurement order and keep device orientation consistent. "
+             "Use this exploratory environmental recipe only after hardware validation; it does not measure photosynthesis.",
+             "code": code}
+    seen = []
+    async def complete(model, payload):
+        seen.append(copy.deepcopy(payload))
+        step = len(seen)
+        if step == 1:
+            value = response(call("entry", skillId=skill_id, resource="SKILL.md"))
+        elif step == 2:
+            value = response(call("commands", skillId=skill_id, resource="references/command-semantics.md"),
+                             call("analysis", skillId=skill_id, resource="references/analysis-and-integration.md"))
+        elif step == 3:
+            value = response(call("draft", "draft_entity", kind="protocol", value=draft))
+        else:
+            assert step == 4
+            assert payload["max_tokens"] == 2000
+            tool_messages = [json.loads(message["content"]) for message in payload["messages"] if message["role"] == "tool"]
+            assert [message["content"] for message in tool_messages[:3]] == [
+                library.read({"skillId": skill_id, "resource": resource})["content"]
+                for resource in ["SKILL.md", "references/command-semantics.md", "references/analysis-and-integration.md"]]
+            assert tool_messages[-1]["payload"] == draft
+            value = answer()
+            value["usage"] = {"prompt_tokens": 12000, "completion_tokens": 100}
+            return value
+        value["usage"] = {"prompt_tokens": [3500, 7720, 11164][step - 1], "completion_tokens": 196}
+        return value
+    monkeypatch.setattr(server, "complete_model", complete)
+    body = request_body(rounds=4)
+    body["messages"] = [{"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": "Help design a sun/shade bean comparison with MultispeQ."},
+                        {"role": "assistant", "content": (
+                            "Compare matched bean plants in sun and shade using environmental measurements. "
+                            "Record plant identifier, treatment, leaf position, date, time, operator and device identifier. "
+                            "Use biological replicates and keep repeated readings separate from independent plants. "
+                            "Alternate measurement order between groups, hold device orientation consistent and record "
+                            "recent watering and visible stress. Check temperature and humidity units against a real device "
+                            "sample before analysis. Include incident light as context, not as a substitute for a fluorescence "
+                            "measurement or a direct photosynthesis rate. The protocol draft will contain only supported "
+                            "environmental commands; it must be reviewed and validated on hardware before collection. "
+                            "A matching macro can compare descriptive statistics once representative raw input is available. "
+                            "Do not silently discard missing readings or interpret a zero as missing. Mark exclusions with "
+                            "a reason and retain the original data for review. Start with a short exploratory run, review "
+                            "the payload shape and units, and then finalize the workbook questions and sampling plan. "
+                            "No protocol, experiment or workbook has been created or executed yet. Confirmation is required. "
+                            "Keep the first draft private and check any experiment embargo before assuming indefinite privacy. "
+                            "The eventual report should state sample size, missing values, observation times and hardware "
+                            "validation status. A sun/shade difference alone cannot establish a causal treatment effect "
+                            "without randomization, comparable plants and control of other environmental differences. "
+                            "For each collection session, document the growth conditions and how long plants have been "
+                            "in the measurement area. Record whether the leaf was wet, visibly damaged or shaded by "
+                            "the operator. Note weather changes during sampling, since a passing cloud can change "
+                            "incident light between paired measurements. Keep the same measurement interval and "
+                            "device positioning across treatments. Save an example raw measurement with the device "
+                            "firmware version so that later analysis can be checked against the actual field names."
+                        )},
+                        {"role": "user", "content": "Draft a private MultispeQ protocol comparing sun and shade environments."}]
+    body["tools"] = TOOLS
+    body["limits"].update(maxTotalTokens=81488, maxOutputTokens=2000, maxToolCallsPerRound=8)
+    first = client.post("/v1/agent/turns", json=body, headers=HEADERS)
+    assert first.status_code == 200, first.text
+    assert first.json()["usage"] == {"inputTokens": 22384, "outputTokens": 588}
+    result = {"status": "pending_confirmation", "kind": "protocol", "payload": draft,
+              "persistedFields": list(draft), "message": "A preview was prepared. Nothing has been created or executed."}
+    continuation = {"protocolVersion": 1, "continuationToken": first.json()["continuationToken"],
+                    "results": [{"id": "draft", "name": "draft_entity", "status": "completed", "result": result}]}
+    from agent_runtime import estimate_prompt_tokens, resume_state
+    continued_state = resume_state(continuation)
+    assert continued_state["promptAccounting"]["inputTokens"] == 11164
+    estimate = estimate_prompt_tokens(continued_state)
+    assert 11164 < estimate < 16000
+    del continued_state["promptAccounting"]
+    assert estimate_prompt_tokens(continued_state) > 58516
+    done = client.post("/v1/agent/turns/continue", headers=HEADERS, json=continuation)
+    assert done.status_code == 200, done.text
+    assert len(seen) == 4
+    assert done.json()["usage"] == {"inputTokens": 34384, "outputTokens": 688}

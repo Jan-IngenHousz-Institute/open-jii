@@ -159,3 +159,12 @@ source URLs. The authenticated corpus detail page is not a public redistribution
 
 If `DOCS_URL` is unset, the backend uses `http://localhost:3010` when `NODE_ENV=development` and
 `https://docs.openjii.org` otherwise. Set it explicitly for a non-production deployment.
+
+## If a turn reaches its budget
+
+“Turn budget reached” means another model request would exceed the allowance reserved for that
+turn. It is different from “Too many tool steps.” Skill references and retrieved material count
+toward model input. The assistant uses the provider's measured token count for an unchanged
+prompt prefix, then reserves conservatively for new material. It still stops if the next request
+cannot fit or the provider reports usage above the allowance. Check Usage before retrying;
+prepared drafts still require confirmation.

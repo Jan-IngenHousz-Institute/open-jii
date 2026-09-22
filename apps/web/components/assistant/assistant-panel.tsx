@@ -340,10 +340,10 @@ export function AssistantPanel({ locale }: { locale: string }) {
           queryKey: orpc.assistant.getThread.queryKey({ input: { threadId: data.thread.id } }),
         }),
         queryClient.invalidateQueries({ queryKey: orpc.assistant.listThreads.key() }),
-        queryClient.invalidateQueries({ queryKey: orpc.assistant.getUsage.key() }),
       ]);
       setStreaming(null);
     },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: orpc.assistant.getUsage.key() }),
   });
 
   if (!enabled) return null;

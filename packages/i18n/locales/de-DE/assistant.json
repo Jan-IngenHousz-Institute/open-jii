@@ -85,6 +85,10 @@
       "title": "Modell nicht verfügbar",
       "description": "Der Modellanbieter ist nicht erreichbar. Ihre Frage bleibt im Eingabefeld."
     },
+    "TOKEN_BUDGET_EXCEEDED": {
+      "title": "Tokenbudget für diese Anfrage erreicht",
+      "description": "Eine weitere Modellanfrage würde das Tokenbudget dieser Anfrage überschreiten. Vorbereitete Entwürfe benötigen weiterhin Ihre Bestätigung. Prüfen Sie die Nutzung, bevor Sie es erneut versuchen."
+    },
     "TOOL_LOOP_LIMIT": {
       "title": "Zu viele Werkzeugschritte",
       "description": "Der Assistent hat abgebrochen. Grenzen Sie die Frage ein."
