@@ -438,6 +438,12 @@ def process_ambyte_upload() -> dict:
 # COMMAND ----------
 
 # DBTITLE 1,Upload Metadata Record
+def _quote_spark_sql_string(value: str | None) -> str:
+    if value is None:
+        return "NULL"
+    return "'" + value.replace("\\", "\\\\").replace("'", "\\'") + "'"
+
+
 def write_upload_metadata(status: str, result: dict | None, error_message: str | None) -> None:
     """Append a completion record into experiment_upload_metadata.
 
@@ -447,14 +453,6 @@ def write_upload_metadata(status: str, result: dict | None, error_message: str |
     """
     if not UPLOAD_ID:
         return
-
-    # Belt-and-suspenders SQL-literal quoting: the backend zod schema already
-    # restricts upload_table_name to [A-Za-z0-9_] and UUIDs are fixed-shape,
-    # but widgets can be set out-of-band (Databricks UI / manual run-now).
-    def quote(value: str | None) -> str:
-        if value is None:
-            return "NULL"
-        return "'" + value.replace("'", "''") + "'"
 
     try:
         completed_at = datetime.now(timezone.utc)
@@ -467,11 +465,13 @@ def write_upload_metadata(status: str, result: dict | None, error_message: str |
               (upload_id, experiment_id, upload_table_id, upload_table_name, source_kind, status,
                file_count, row_count, created_by, created_at, completed_at, error_message)
             VALUES (
-              {quote(UPLOAD_ID)}, {quote(EXPERIMENT_ID)},
-              {quote(UPLOAD_TABLE_ID or "")}, {quote(UPLOAD_TABLE_NAME or "")},
-              {quote(SOURCE_KIND)}, {quote(status)},
-              {file_count}, {row_count}, {quote(USER_ID or "")},
-              {quote(completed_at.isoformat())}, {quote(completed_at.isoformat())}, {quote(error_message)}
+              {_quote_spark_sql_string(UPLOAD_ID)}, {_quote_spark_sql_string(EXPERIMENT_ID)},
+              {_quote_spark_sql_string(UPLOAD_TABLE_ID or "")}, {_quote_spark_sql_string(UPLOAD_TABLE_NAME or "")},
+              {_quote_spark_sql_string(SOURCE_KIND)}, {_quote_spark_sql_string(status)},
+              {file_count}, {row_count}, {_quote_spark_sql_string(USER_ID or "")},
+              {_quote_spark_sql_string(completed_at.isoformat())},
+              {_quote_spark_sql_string(completed_at.isoformat())},
+              {_quote_spark_sql_string(error_message)}
             )
             """
         )
