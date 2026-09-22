@@ -21,7 +21,7 @@ import pandas as pd
 from pyspark.sql import functions as F
 from pyspark.sql.types import StringType, StructField, StructType
 
-from .backend_client import BackendClient, BackendIntegrationError
+from .backend_client import DEFAULT_MACRO_BATCH_SIZE, BackendClient, BackendIntegrationError
 
 # VariantVal is only available on Databricks Runtime (DBR 15+) and PySpark 4+.
 # Import lazily inside the UDF so the module loads under vanilla PySpark 3.5
@@ -85,7 +85,7 @@ def make_execute_macro_udf(
     environment: str,
     dbutils,
     timeout: int = 30,
-    max_batch_size: int = 25,
+    max_batch_size: int = DEFAULT_MACRO_BATCH_SIZE,
     scope_override: str | None = None,
 ):
     """
