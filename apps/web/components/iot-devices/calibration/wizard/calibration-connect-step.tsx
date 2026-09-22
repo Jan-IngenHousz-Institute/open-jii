@@ -164,7 +164,9 @@ export function CalibrationConnectStep({
           note={
             unit?.kind === "match"
               ? t("iot.calibration.connect.unitConfirmed", { serial: unit.serial })
-              : undefined
+              : unit?.kind === "reported"
+                ? t("iot.calibration.connect.unitNamed", { serial: unit.serial })
+                : undefined
           }
           action={
             isConnected

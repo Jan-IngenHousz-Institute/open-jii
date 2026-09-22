@@ -108,6 +108,15 @@ describe("SiteHeader", () => {
     expect(register.querySelector("svg")).toBeInTheDocument();
   });
 
+  // A calibration is created in place rather than on a form page, so the header's action
+  // is an event the library listens for, as the workbooks list does.
+  it("gives the calibration library a create action with a plus icon", () => {
+    renderHeader("/en/platform/calibrations");
+
+    const create = screen.getByRole("button", { name: "iot.calibration.library.create" });
+    expect(create.querySelector("svg")).toBeInTheDocument();
+  });
+
   it("labels the account section", () => {
     renderHeader("/en/platform/account");
 

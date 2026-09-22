@@ -11,6 +11,7 @@ import { IotCalibrationDefinitionRepository } from "../../../core/repositories/i
 /** Row plus what the caller may do with it; the controller formats its dates. */
 type CalibrationDefinitionWithCapabilities = CalibrationDefinitionDto & {
   capabilities: ResourceCapabilities;
+  runCount: number;
 };
 
 @Injectable()
@@ -39,6 +40,14 @@ export class GetCalibrationDefinitionUseCase {
       "calibration_definition",
       definitionId,
     );
-    return success({ ...result.value, capabilities });
+
+    // The same guard the update use case applies, sent ahead of the attempt: otherwise the
+    // page offers every field and the edits are refused once, at the save.
+    const runs = await this.definitionRepository.countRuns(definitionId);
+    if (runs.isFailure()) {
+      return failure(runs.error);
+    }
+
+    return success({ ...result.value, capabilities, runCount: runs.value });
   }
 }

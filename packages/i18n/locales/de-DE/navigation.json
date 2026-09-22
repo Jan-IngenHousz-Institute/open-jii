@@ -42,7 +42,8 @@
     "macros": "Makros",
     "workbooks": "Arbeitsmappen",
     "organizations": "Organisationen",
-    "newOrganization": "Neue Organisation"
+    "newOrganization": "Neue Organisation",
+    "calibrations": "Kalibrierungen"
   },
   "breadcrumbs": {
     "home": "Startseite",

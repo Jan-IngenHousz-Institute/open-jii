@@ -59,10 +59,12 @@ export async function NavigationSidebarWrapper({
         url: mainNavigation.devices.url(locale),
         icon: mainNavigation.devices.icon,
         isActive: true,
-        items: mainNavigation.devices.items.map((item) => ({
-          title: tIot(item.titleKey, { ns: item.namespace }),
-          url: item.url(locale),
+        navigable: false,
+        children: mainNavigation.devices.children.map((child) => ({
+          title: tNavigation(child.titleKey, { ns: child.namespace }),
+          url: child.url(locale),
         })),
+        items: [],
       },
     ],
     navWorkbooks: [

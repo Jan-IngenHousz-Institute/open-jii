@@ -189,6 +189,10 @@ describe("NavigationSidebarWrapper", () => {
       title: "sidebar.newMacro",
       url: "/en/platform/macros/new",
     });
+
+    // Calibration moved out of the library: it is done to a device, not filed beside one.
+    const libraryUrls = navigationData.navLibrary[0].children.map((child) => child.url);
+    expect(libraryUrls).not.toContain("/en/platform/calibrations");
   });
 
   it("prepares translations object correctly", async () => {

@@ -14,6 +14,8 @@ import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
 import { CalibrationElapsed } from "./calibration-elapsed";
+import { CalibrationSessionTally } from "./calibration-session-tally";
+import type { SessionUnit } from "./session-unit";
 
 interface CalibrationSessionRailProps {
   family: CalibrationFamily;
@@ -27,18 +29,14 @@ interface CalibrationSessionRailProps {
   /** The capture is behind us, so every step reads as run rather than as still to do. */
   isComplete: boolean;
   isRunning: boolean;
+  /** What this sitting has already put through the rig; empty on a single-device session. */
+  units: SessionUnit[];
 }
 
 /** 12px, not 11: this is read at arm's length from a bench, not leaned into. */
 const SECTION = "text-muted-foreground text-xs font-medium uppercase tracking-wide";
 
-/**
- * The session as an instrument panel: what is on the ports, what the procedure will do, and
- * where the run has got to.
- *
- * It reads as a preview while a procedure is being chosen and as live status once the run
- * starts, because it is the same three questions either way.
- */
+/** Reads as a preview while a procedure is chosen, and as live status once the run starts. */
 export function CalibrationSessionRail({
   family,
   procedure,
@@ -48,6 +46,7 @@ export function CalibrationSessionRail({
   activeStep,
   isComplete,
   isRunning,
+  units,
 }: CalibrationSessionRailProps) {
   const { t } = useTranslation("iot");
 
@@ -66,17 +65,16 @@ export function CalibrationSessionRail({
     return <CircleDashed className="text-muted-foreground size-3.5 shrink-0" aria-hidden />;
   }
 
-  /**
-   * What the device row says about the unit answering, in one line rather than an alert.
-   * A family that announces nothing says so: the connection's own label is a counter
-   * ("Device #1") and reads as an identity check that passed.
-   */
+  /** A family that announces no identifier says so; the counter label would read as a passed check. */
   function deviceNote() {
     if (connection === undefined) {
       return t("iot.calibration.rail.deviceWaiting");
     }
     if (unit?.kind === "mismatch") {
       return t("iot.calibration.rail.deviceWrongUnit", { reported: unit.reported });
+    }
+    if (unit?.kind === "reported") {
+      return unit.serial;
     }
     if (unit?.kind === "match") {
       return unit.serial;
@@ -215,6 +213,7 @@ export function CalibrationSessionRail({
         {renderDevice()}
         {renderBench()}
         {renderSteps()}
+        {units.length > 0 && <CalibrationSessionTally units={units} />}
       </aside>
     </InsetPanel>
   );

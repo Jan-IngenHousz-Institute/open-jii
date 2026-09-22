@@ -13,6 +13,7 @@ import {
   LogOut,
   RadioReceiver,
   Settings,
+  SlidersHorizontal,
   Users,
   User,
   Webcam,
@@ -50,6 +51,7 @@ export const iconMap = {
   BookOpen,
   Library,
   RadioReceiver,
+  SlidersHorizontal,
   Users,
   Webcam,
   LifeBuoy,
@@ -86,11 +88,27 @@ export const mainNavigation = {
       },
     ] as NavLink[],
   },
+  // A group rather than a link, because calibration is something done to a device and
+  // belongs beside the fleet rather than in the library with protocols and macros. Only
+  // `children` renders as sub-navigation; `items` is drawn by nothing.
   devices: {
     titleKey: "iot.devices.tabLabel",
     namespace: "iot",
     url: (locale: string) => `/${locale}/platform/devices`,
     icon: "RadioReceiver",
+    navigable: false,
+    children: [
+      {
+        titleKey: "sidebar.overview",
+        namespace: "navigation",
+        url: (locale: string) => `/${locale}/platform/devices`,
+      },
+      {
+        titleKey: "sidebar.calibrations",
+        namespace: "navigation",
+        url: (locale: string) => `/${locale}/platform/calibrations`,
+      },
+    ] as NavLink[],
     items: [] as NavLink[],
   },
   workbooks: {

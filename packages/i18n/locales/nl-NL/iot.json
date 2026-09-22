@@ -865,7 +865,8 @@
         "roleMissing": "Verbind de instrumenten die de meting nodig heeft voordat u verdergaat.",
         "unitConfirmed": "Serienummer {{serial}} komt overeen met het record van dit apparaat.",
         "wrongUnit": "Dit exemplaar meldt serienummer {{reported}}, maar dit apparaat staat geregistreerd als {{expected}}. De coëfficiënten zouden naar het verkeerde exemplaar gaan, dus de run kan niet starten.",
-        "unnamedUnit": "Het exemplaar op deze poort meldde geen serienummer, dus het kan niet tegen het record van dit apparaat worden gecontroleerd. Zorg dat het juiste is aangesloten."
+        "unnamedUnit": "Het exemplaar op deze poort meldde geen serienummer, dus het kan niet tegen het record van dit apparaat worden gecontroleerd. Zorg dat het juiste is aangesloten.",
+        "unitNamed": "Meldt {{serial}}"
       },
       "prompt": {
         "confirmLabel": "Typ {{token}} om door te gaan",
@@ -898,7 +899,8 @@
         "pointsTaken": "{{taken}} punten",
         "retaken": "{{series}} punt {{point}} opnieuw genomen (poging {{attempt}})",
         "series_one": "{{series}}: {{count}} rij vastgelegd",
-        "series_other": "{{series}}: {{count}} rijen vastgelegd"
+        "series_other": "{{series}}: {{count}} rijen vastgelegd",
+        "start": "Meting starten"
       },
       "review": {
         "hint": "Goedkeuren past de berekende blokken toe op het record van dit apparaat. De hardware wordt pas in de volgende stap beschreven.",
@@ -963,6 +965,194 @@
         "onDeviceValue": "{{confirmed}} van {{blocks}} blokken bevestigd",
         "onDeviceUnrecorded": "{{confirmed}} bevestigd, nog niet vastgelegd"
       },
+      "library": {
+        "title": "Kalibraties",
+        "create": "Nieuwe kalibratie",
+        "allFamilies": "Alle apparaatfamilies",
+        "searchPlaceholder": "Kalibraties zoeken...",
+        "clearSearch": "Zoekopdracht wissen",
+        "noMatches": "Geen kalibratie komt overeen met deze zoekopdracht.",
+        "empty": "Er is nog geen kalibratieprocedure geschreven.",
+        "columns": {
+          "name": "Procedure",
+          "family": "Familie",
+          "visibility": "Zichtbaarheid",
+          "updated": "Bijgewerkt"
+        },
+        "retry": "Opnieuw proberen"
+      },
+      "detail": {
+        "rig": "Benodigde opstelling",
+        "procedure": "Wat het doet op de opstelling",
+        "produces": "Wat het oplevert",
+        "script": "Hoe het fit",
+        "steps": "Opname",
+        "verify": "Controle na het schrijven",
+        "created": "Aangemaakt",
+        "notWritable": "Het platform heeft geen console-opdracht voor {{coefficients}}. Een run wordt vastgelegd, maar deze waarden bereiken het apparaat nooit.",
+        "describePlaceholder": "Beschrijf wat deze opstelling meet en waartegen.",
+        "readOnly": "Je kunt deze kalibratie lezen maar niet wijzigen.",
+        "frozen_one": "Eén run heeft deze kalibratie vastgelegd, dus deze kan niet meer worden gewijzigd. Maak een duplicaat om de procedure mee te nemen naar een nieuwe.",
+        "frozen_other": "{{count}} runs hebben deze kalibratie vastgelegd, dus deze kan niet meer worden gewijzigd. Maak een duplicaat om de procedure mee te nemen naar een nieuwe.",
+        "notSaving": "Wordt niet opgeslagen zolang de definitie onvolledig is.",
+        "verifyOptional": "optioneel",
+        "duplicate": "Dupliceren"
+      },
+      "rig": {
+        "hint": "Elk instrument krijgt aan de meetbank een eigen seriële poort. Een rol hernoemen hernoemt die in elke stap die hem gebruikt.",
+        "dut": "Het apparaat dat gekalibreerd wordt",
+        "role": "Rol",
+        "instrument": "Instrument",
+        "handshake": "Meldt zich als",
+        "handshakeRequired": "Een instrument moet aangeven waarop het reageert, anders kan aan deze rol niets gekoppeld worden.",
+        "add": "Instrument toevoegen",
+        "remove": "{{role}} verwijderen",
+        "usedBy_one": "Gebruikt door 1 stap en daarom niet te verwijderen.",
+        "usedBy_other": "Gebruikt door {{count}} stappen en daarom niet te verwijderen.",
+        "setpoints": "Instelwaarden",
+        "readings": "Meetwaarden",
+        "none": "Geen",
+        "roleTaken": "Een ander instrument in deze opstelling heeft deze naam al.",
+        "roleInvalid": "Kleine letters, cijfers en liggende streepjes, beginnend met een letter.",
+        "anyInstrument": "Elk instrument dat zich zo meldt",
+        "anyInstrumentHint": "Elk instrument waarvan de identificatie deze tekst bevat. Pas als het instrument benoemd is, kunnen de stappen zijn instelwaarden en meetwaarden aanbieden.",
+        "drives": "stuurt aan",
+        "answers": "antwoordt",
+        "setpointRange": "{{name}} {{min}}…{{max}} {{unit}}",
+        "drivesNothing": "niets dat het platform kan instellen"
+      },
+      "procedure": {
+        "addStep": "Stap toevoegen",
+        "kind": {
+          "operator": "De persoon aan de meetbank iets laten doen",
+          "settle": "Wachten tot de meetwaarden stabiel zijn",
+          "set": "Eén instelwaarde zetten en zo laten",
+          "read": "Meetwaarden op één punt vastleggen",
+          "sweep": "Een bereik doorlopen en op elk punt vastleggen"
+        },
+        "kindName": {
+          "operator": "Vragen",
+          "settle": "Wachten",
+          "set": "Zetten",
+          "read": "Vastleggen",
+          "sweep": "Doorlopen"
+        },
+        "label": {
+          "settle": "{{ms}} ms wachten",
+          "set": "{{instrument}} {{setpoint}} op {{value}}",
+          "read": "{{series}} vastleggen",
+          "sweepInstrument": "{{instrument}} {{setpoint}} doorlopen, {{points}} punten",
+          "sweepOperator": "Met de hand doorlopen, {{points}} punten"
+        },
+        "moveUp": "Stap {{position}} omhoog",
+        "moveDown": "Stap {{position}} omlaag",
+        "removeStep": "Stap {{position}} verwijderen",
+        "collapseStep": "Stap {{position}} inklappen",
+        "expandStep": "Stap {{position}} uitklappen",
+        "optional": "Optioneel",
+        "optionalHint": "Sla deze stap over als het benodigde instrument ontbreekt",
+        "waitFor": "Wachten (ms)",
+        "prompt": "Wat er moet gebeuren",
+        "promptPlaceholder": "Alles wat vóór deze meting moet gebeuren",
+        "confirm": "Typen om door te gaan",
+        "confirmPlaceholder": "DARK",
+        "confirmHint": "Leeg laten om met een klik verder te kunnen.",
+        "instrument": "Instrument",
+        "setpoint": "Instelwaarde",
+        "value": "Waarde",
+        "series": "Serie",
+        "seriesTaken": "Een andere stap in deze fase levert deze serie al.",
+        "seriesReserved": "Een serie mag niet op _retaken eindigen: zo heten opnieuw genomen metingen.",
+        "nameInvalid": "Kleine letters, cijfers en liggende streepjes, beginnend met een letter.",
+        "driven": "Aangedreven door",
+        "operatorSource": "De bediener",
+        "operatorPrompt": "Vraag om",
+        "operatorStimulusPrompt": "Zet {value} op en wacht tot de meting stabiel is.",
+        "placeholderHint": "{value} wordt vervangen door het punt dat wordt opgezet.",
+        "settleAfter": "Stabiliseren (ms)",
+        "values": "Punten",
+        "valuesHint": "Eén per regel: een getal, een label, of een JSON-object voor een samengestelde opstelling.",
+        "valuesNumericHint": "Eén per regel, in de eenheden van het instrument.",
+        "rampFrom": "Van",
+        "rampTo": "Tot",
+        "rampPoints": "Punten",
+        "rampFill": "Sweep vullen",
+        "rampRange": "Het instrument neemt {{min}} tot {{max}} {{unit}}.",
+        "records": "Legt vast",
+        "addRead": "Meting toevoegen",
+        "source": "Van",
+        "command": "Commando",
+        "reading": "Meetwaarde",
+        "column": "Kolom",
+        "columnTaken": "Deze stap legt al een kolom met deze naam vast.",
+        "typed": "Ingevoerd als",
+        "typeNumber": "Getal",
+        "typeText": "Tekst",
+        "repeat": "Metingen",
+        "sampling": "Bemonstering…",
+        "interval": "Elke (ms)",
+        "timeout": "Tijdslimiet (ms)",
+        "removeRead": "{{column}} verwijderen",
+        "operatorReadPrompt": "Referentiewaarde invoeren",
+        "nothingToDrive": "Niets in deze opstelling heeft een instelwaarde om te zetten",
+        "emptyPhase": "Geen stappen.",
+        "sweepSpan_one": "{{count}} punt op {{from}} {{unit}}",
+        "sweepSpan_other": "{{count}} punten van {{from}} tot {{to}} {{unit}}",
+        "sweepSpanPlain_one": "{{count}} punt op {{from}}",
+        "sweepSpanPlain_other": "{{count}} punten van {{from}} tot {{to}}"
+      },
+      "trial": {
+        "action": "Uitvoeren aan de meetbank",
+        "title": "Kalibratie uitvoeren",
+        "noDevices": "Er is geen apparaat van deze familie op uw naam geregistreerd. Registreer er een om deze procedure aan de meetbank te proberen."
+      },
+      "produces": {
+        "hint": "Een blok wordt als geheel naar een apparaat geschreven en als geheel beoordeeld. De namen die het platform kan schrijven worden hier aangeboden; min en max zijn waartegen een fit bij de beoordeling wordt afgezet.",
+        "block": "Blok",
+        "coefficient": "Coëfficiënt",
+        "type": "Type",
+        "length": "Waarden",
+        "min": "Min",
+        "max": "Max",
+        "addBlock": "Blok toevoegen",
+        "addPlainBlock": "Eigen blok",
+        "addCoefficient": "Coëfficiënt toevoegen",
+        "addPlain": "Eigen coëfficiënt",
+        "removeBlock": "Blok {{block}} verwijderen",
+        "removeCoefficient": "{{name}} verwijderen",
+        "blockTaken": "Een ander blok heeft deze naam al.",
+        "nameTaken": "Dit blok heeft al een coëfficiënt met deze naam.",
+        "nameInvalid": "Kleine letters, cijfers en liggende streepjes, beginnend met een letter.",
+        "recordedOnly": "Wordt met de meting vastgelegd. Het platform heeft geen commando om deze te schrijven."
+      },
+      "fit": {
+        "label": "Fit, levert {{coefficients}} coëfficiënten in {{blocks}} blokken",
+        "submits": "Wat het oplevert",
+        "draft": "Fit opstellen",
+        "draftTitle": "Het script vervangen door een opgestelde fit?",
+        "draftConfirm": "Het concept komt uit de hierboven vastgelegde series en de blokken eronder, in de volgorde waarin ze zijn opgegeven. Wat er nu in het script staat, gaat verloren.",
+        "draftCancel": "Houd wat ik schreef",
+        "draftReplace": "Vervangen"
+      },
+      "sidebar": {
+        "id": "Kalibratie-ID",
+        "title": "Details",
+        "family": "Apparaatfamilie",
+        "familyHint": "Tegen welk apparaat dit draait, en daarmee de instrumenten en coëfficiënten waartegen de rest gecontroleerd wordt.",
+        "firmware": "Minimale firmware",
+        "firmwarePlaceholder": "Elke",
+        "firmwareHint": "Daaronder wordt een meting geweigerd. Oudere firmware beantwoordt onbekende commando's met getallen die op meetwaarden lijken.",
+        "firmwareInvalid": "Alleen versienummers, zoals 1.03 of 1.1.3.",
+        "saved": "Kalibratie bijgewerkt"
+      },
+      "seam": {
+        "produces": "De opname legt vast",
+        "submits": "De fit levert",
+        "optional": "kan ontbreken",
+        "reachesDevice": "bereikt het apparaat",
+        "recordedOnly": "alleen vastgelegd",
+        "recordsNothing": "Nog geen stap legt een meting vast, dus de fit krijgt niets."
+      },
       "phase": {
         "setUp": "Opbouw",
         "measure": "Meten",
@@ -979,14 +1169,25 @@
         "noProcedure": "Kies een procedure om de benodigde opstelling en de stappen te zien.",
         "deviceUnnamed": "Meldt geen serienummer"
       },
-      "procedure": {
-        "label": {
-          "settle": "{{ms}} ms wachten",
-          "set": "{{instrument}} {{setpoint}} op {{value}}",
-          "read": "{{series}} vastleggen",
-          "sweepInstrument": "{{instrument}} {{setpoint}} doorlopen, {{points}} punten",
-          "sweepOperator": "Met de hand doorlopen, {{points}} punten"
-        }
+      "stage": {
+        "stepCount_one": "{{count}} stap",
+        "stepCount_other": "{{count}} stappen",
+        "pointCount_one": "{{count}} meting",
+        "pointCount_other": "{{count}} metingen",
+        "waiting": "{{duration}} wachten"
+      },
+      "sitting": {
+        "recorded": "{{unit}} is vastgelegd.",
+        "recordedHint": "Er is nog niets besloten. Werk eerst de units af en beoordeel daarna samen wat je hebt gemeten.",
+        "rigStaysBound": "De lamp en de referenties blijven verbonden. Alleen de poort van de unit wordt vrijgegeven.",
+        "nextUnit": "Volgende unit",
+        "review_one": "1 meting beoordelen",
+        "review_other": "{{count}} metingen beoordelen",
+        "thisSitting": "Deze sessie",
+        "recordedOf": "{{recorded}} van {{total}} vastgelegd",
+        "alreadyDone": "{{serial}} is in deze sessie al aan de beurt geweest.",
+        "whichDevice": "Welk apparaat is dit?",
+        "whichDeviceHint": "De firmware van deze unit meldt geen identificatie via de console, dus de meting moet worden vastgelegd op een apparaat dat jij aanwijst."
       }
     },
     "workbookBar": {
