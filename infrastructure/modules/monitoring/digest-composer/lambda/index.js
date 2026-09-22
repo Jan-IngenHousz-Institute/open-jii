@@ -167,8 +167,10 @@ async function collectWeekly(metrics, now, failedRegions) {
   }));
 }
 
-function postToSlack(webhookUrl, text) {
-  const payload = JSON.stringify({ text });
+function postToSlack(webhookUrl, message) {
+  // Both, always: blocks for the message, text for the notification preview and any
+  // client that cannot render them.
+  const payload = JSON.stringify({ text: message.text, blocks: message.blocks });
 
   return new Promise((resolve, reject) => {
     const request = https.request(webhookUrl, {
@@ -193,26 +195,29 @@ function postToSlack(webhookUrl, text) {
   });
 }
 
-async function deliver(channel, text) {
+async function deliver(channel, message) {
   const webhookUrl = {
     heartbeat: process.env.HEARTBEAT_WEBHOOK_URL,
     usage: process.env.USAGE_WEBHOOK_URL,
   }[channel];
 
   if (!webhookUrl) {
-    console.log(JSON.stringify({ channel, delivered: false, text }));
+    console.log(JSON.stringify({ channel, delivered: false, text: message.text }));
     return;
   }
 
-  await postToSlack(webhookUrl, text);
-  console.log(JSON.stringify({ channel, delivered: true }));
+  await postToSlack(webhookUrl, message);
+  console.log(JSON.stringify({ channel, delivered: true, blocks: message.blocks.length }));
 }
 
 exports.handler = async (event) => {
   const digest = event?.digest;
+  const region = process.env.AWS_REGION ?? "eu-central-1";
   const options = {
     environment: process.env.ENVIRONMENT ?? "unknown",
     runbookBaseUrl: process.env.RUNBOOK_BASE_URL,
+    catalogUrl: process.env.CATALOG_URL,
+    consoleUrl: `https://${region}.console.aws.amazon.com/cloudwatch/home?region=${region}#metricsV2:`,
   };
   const now = Date.now();
 

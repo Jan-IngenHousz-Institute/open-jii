@@ -91,6 +91,7 @@ resource "aws_lambda_function" "digest_composer" {
       HEARTBEAT_WEBHOOK_URL      = var.heartbeat_webhook_url
       USAGE_WEBHOOK_URL          = var.usage_webhook_url
       RUNBOOK_BASE_URL           = var.runbook_base_url
+      CATALOG_URL                = "${var.runbook_base_url}/docs/monitoring/metrics-catalog.yaml"
     }
   }
 

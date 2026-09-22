@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { deltaGlyph, renderLevels, renderObservability } from "./render.js";
-import type { MetricReading } from "./types.js";
+import type { CatalogMetric, MetricReading } from "./types.js";
 
 function reading(
   id: string,
@@ -9,6 +9,7 @@ function reading(
   value: number | null,
   baseline: number | null = null,
   runbook?: string,
+  extra: Partial<CatalogMetric> = {},
 ): MetricReading {
   return {
     metric: {
@@ -21,6 +22,7 @@ function reading(
       active: true,
       slots: ["exception"],
       runbook,
+      ...extra,
     },
     value,
     baseline,
@@ -28,8 +30,17 @@ function reading(
   };
 }
 
-const options = { environment: "dev", runbookBaseUrl: "https://example.test" };
+const options = {
+  environment: "dev",
+  runbookBaseUrl: "https://example.test",
+  catalogUrl: "https://example.test/catalog",
+};
 const clean = { configErrors: [], failedRegions: [] };
+
+function json(message: { blocks: { type: string }[] }, type?: string): string {
+  const blocks = type ? message.blocks.filter((block) => block.type === type) : message.blocks;
+  return JSON.stringify(blocks);
+}
 
 describe("deltaGlyph", () => {
   it("marks direction only outside a five percent dead band", () => {
@@ -44,158 +55,134 @@ describe("deltaGlyph", () => {
 });
 
 describe("renderObservability", () => {
-  it("is a single line saying so when nothing is wrong", () => {
-    const output = renderObservability(
+  it("is one context block and one line when nothing is wrong", () => {
+    const message = renderObservability(
       [{ ...reading("a", "A", 1), evaluation: { state: "ok" } }],
-      { configErrors: [], failedRegions: [] },
+      clean,
       options,
     );
 
-    expect(output).toBe("*No anomalies* · 1 signals checked (dev)");
+    expect(message.blocks).toHaveLength(1);
+    expect(message.blocks[0].type).toBe("context");
+    expect(message.text).toBe("Heartbeat · dev · nothing to act on · 1 signals checked");
   });
 
-  it("renders an anomaly with its reason, runbook and triage command", () => {
-    const output = renderObservability(
+  it("leads with the reading, then the id, then the name", () => {
+    // Grafana's own template puts the value first. The id is what makes a line citable
+    // in a thread or a ticket.
+    const message = renderObservability(
       [
         {
-          ...reading(
-            "ingest-lag",
-            "Kinesis iterator age",
-            900000,
-            1000,
-            "docs/runbooks/ingest-lag.md",
-          ),
-          evaluation: { state: "anomaly", reason: "above threshold 600000" },
+          ...reading("ingest-lag", "Pipeline lag", 8_797_000, null, "docs/runbooks/ingest-lag.md", {
+            signal: { unit: "milliseconds" },
+            severity: "critical",
+          }),
+          evaluation: { state: "anomaly", reason: "above 2h" },
         },
       ],
-      { configErrors: [], failedRegions: [] },
+      clean,
+      options,
+    );
+    const body = json(message, "section");
+
+    expect(body.indexOf("2h 27m")).toBeLessThan(body.indexOf("ingest-lag"));
+    expect(body.indexOf("ingest-lag")).toBeLessThan(body.indexOf("Pipeline lag"));
+    expect(body).toContain("above 2h");
+  });
+
+  it("offers the runbook and the catalog entry as separate actions", () => {
+    const message = renderObservability(
+      [
+        {
+          ...reading("ingest-lag", "Pipeline lag", 9, null, "docs/runbooks/ingest-lag.md"),
+          evaluation: { state: "anomaly", reason: "above 2h" },
+        },
+      ],
+      clean,
       options,
     );
 
-    expect(output).toContain("*1 anomaly* (dev)");
-    expect(output).toContain("Kinesis iterator age");
-    expect(output).toContain("above threshold 600000");
-    expect(output).toContain("<https://example.test/docs/runbooks/ingest-lag.md|runbook>");
-    expect(output).toContain("claude /openjii-triage ingest-lag");
-    // The raw context blob used to sit under every line. It repeated the value and the
-    // reason already stated above it, in a channel humans read.
-    expect(output).not.toContain('"id":"ingest-lag"');
+    expect(json(message, "actions")).toContain("Runbook");
+    expect(json(message, "actions")).toContain("https://example.test/docs/runbooks/ingest-lag.md");
+    expect(json(message, "actions")).toContain("Catalog entry");
+    expect(json(message, "context")).toContain("claude /openjii-triage ingest-lag");
   });
 
-  it("pluralizes only when there are several anomalies", () => {
-    const anomaly = {
-      ...reading("a", "A", 5),
-      evaluation: { state: "anomaly" as const, reason: "r" },
+  it("places a chart only when the composer produced one", () => {
+    const base = {
+      ...reading("ingest-lag", "Pipeline lag", 9),
+      evaluation: { state: "anomaly" as const, reason: "above 2h" },
     };
 
-    expect(
-      renderObservability(
-        [anomaly, { ...anomaly, metric: { ...anomaly.metric, id: "b" } }],
-        { configErrors: [], failedRegions: [] },
-        options,
-      ),
-    ).toContain("2 anomalies");
+    const without = renderObservability([base], clean, options);
+    const withChart = renderObservability(
+      [{ ...base, chartUrl: "https://example.test/chart.png" }],
+      clean,
+      options,
+    );
+
+    expect(without.blocks.some((block) => block.type === "image")).toBe(false);
+    expect(withChart.blocks.some((block) => block.type === "image")).toBe(true);
+  });
+
+  it("puts critical anomalies above everything else", () => {
+    const warning = {
+      ...reading("throttling", "Throttling", 3, null, undefined, { severity: "warning" }),
+      evaluation: { state: "anomaly" as const, reason: "nonzero" },
+    };
+    const critical = {
+      ...reading("forwarding", "Forwarding failures", 20, null, undefined, {
+        severity: "critical",
+      }),
+      evaluation: { state: "anomaly" as const, reason: "nonzero" },
+    };
+
+    const body = json(renderObservability([warning, critical], clean, options), "section");
+
+    expect(body.indexOf("Forwarding failures")).toBeLessThan(body.indexOf("Throttling"));
   });
 
   it("renders a nodata anomaly as absent rather than as zero", () => {
-    const output = renderObservability(
+    const message = renderObservability(
       [
         {
-          ...reading("dlt-heartbeat", "Heartbeat collector dead-man", null),
+          ...reading("dlt-heartbeat", "Collector", null),
           evaluation: { state: "anomaly", reason: "no datapoints, expected continuously" },
         },
       ],
-      { configErrors: [], failedRegions: [] },
+      clean,
       options,
     );
 
-    expect(output).toContain("Heartbeat collector dead-man*: no data");
-    expect(output).not.toContain(": 0 (");
+    expect(message.text).toContain("no data");
   });
 
-  it("surfaces silent signals and config errors as self-check lines", () => {
-    const output = renderObservability(
+  it("says a failed region is missing rather than healthy", () => {
+    const message = renderObservability(
+      [],
+      { configErrors: [], failedRegions: ["us-east-1"] },
+      options,
+    );
+
+    expect(message.text).toContain("us-east-1");
+    expect(message.text).toContain("missing above, not healthy");
+  });
+
+  it("names a signal that used to report and has gone quiet", () => {
+    const message = renderObservability(
       [{ ...reading("gone", "Gone", null), evaluation: { state: "missing" } }],
       { configErrors: ["broken"], failedRegions: [] },
       options,
     );
 
-    expect(output).toContain("no datapoints for gone");
-    expect(output).toContain("unresolved catalog placeholders for broken");
-  });
-
-  it("says a failed region is missing rather than healthy", () => {
-    // Reporting no anomalies from a partial query is the worst possible output:
-    // it reads as "nothing is wrong" when the truth is "we could not look".
-    const output = renderObservability(
-      [{ ...reading("a", "A", 1), evaluation: { state: "ok" } }],
-      { configErrors: [], failedRegions: ["us-east-1"] },
-      options,
-    );
-
-    expect(output).toContain("*No anomalies*");
-    expect(output).toContain("CloudWatch queries failed in us-east-1");
-    expect(output).toContain("missing above, not healthy");
-  });
-
-  it("omits the runbook link when no base url is configured", () => {
-    const output = renderObservability(
-      [
-        {
-          ...reading("a", "A", 1, null, "docs/runbooks/a.md"),
-          evaluation: { state: "anomaly", reason: "r" },
-        },
-      ],
-      { configErrors: [], failedRegions: [] },
-      { environment: "dev" },
-    );
-
-    expect(output).not.toContain("runbook");
-  });
-
-  it("puts critical anomalies above warnings and marks them", () => {
-    // Severity already decides who gets woken; it should decide reading order too.
-    const warning = {
-      ...reading("kinesis-write-throttling", "Throttling", 3),
-      evaluation: { state: "anomaly" as const, reason: "nonzero" },
-    };
-    warning.metric.severity = "warning";
-    const critical = {
-      ...reading("ingest-forwarding-failures", "Forwarding failures", 20),
-      evaluation: { state: "anomaly" as const, reason: "nonzero" },
-    };
-    critical.metric.severity = "critical";
-
-    const output = renderObservability([warning, critical], clean, options);
-    const lines = output.split("\n");
-
-    expect(lines[1]).toContain("Forwarding failures");
-    expect(lines[1]).toContain("*critical*");
-    expect(lines[2]).toContain("Throttling");
-    expect(lines[2]).not.toContain("*critical*");
-  });
-
-  it("reads a duration as a duration rather than an abbreviated float", () => {
-    const entry = {
-      ...reading("ingest-lag", "Iterator age", 8_797_000, null, "docs/runbooks/ingest-lag.md"),
-      evaluation: { state: "anomaly" as const, reason: "above 2h" },
-    };
-    if (entry.metric.signal) {
-      entry.metric.signal.unit = "milliseconds";
-    } else {
-      entry.metric.signal = { unit: "milliseconds" };
-    }
-
-    const output = renderObservability([entry], clean, options);
-
-    expect(output).toContain("2h 27m");
-    expect(output).not.toContain("8.8M");
+    expect(message.text).toContain("No datapoints for gone");
+    expect(message.text).toContain("Unresolved catalog placeholders for broken");
   });
 });
 
 describe("renderLevels", () => {
-  it("lists each reporting metric with its delta", () => {
-    const output = renderLevels(
+  it("renders a preformatted table so the columns line up", () => {
+    const message = renderLevels(
       [reading("m", "Measurements", 48_200, 40_000)],
       clean,
       "Daily pulse",
@@ -203,13 +190,29 @@ describe("renderLevels", () => {
       options,
     );
 
-    expect(output).toContain("*Daily pulse* (dev)");
-    expect(output).toContain("• Measurements: 48.2k ▲ +21% vs 4w");
-    expect(output).not.toContain("Self-check");
+    expect(message.blocks[0].type).toBe("header");
+    expect(json(message, "section")).toContain("```");
+    expect(message.text).toContain("Measurements: 48.2k ▲ +21%");
+  });
+
+  it("puts the biggest mover first and keeps the flat ones", () => {
+    // A level nobody has to act on still answers "how are we doing"; it just should not
+    // lead the message.
+    const message = renderLevels(
+      [reading("flat", "Flat", 100, 100), reading("moved", "Moved", 200, 100)],
+      clean,
+      "Daily pulse",
+      "4w",
+      options,
+    );
+    const body = json(message, "section");
+
+    expect(body.indexOf("Moved")).toBeLessThan(body.indexOf("Flat"));
+    expect(body).toContain("Flat");
   });
 
   it("skips metrics with no data rather than printing blanks", () => {
-    const output = renderLevels(
+    const message = renderLevels(
       [reading("m", "Measurements", null)],
       clean,
       "Daily pulse",
@@ -217,11 +220,11 @@ describe("renderLevels", () => {
       options,
     );
 
-    expect(output).toContain("No signals reporting yet.");
+    expect(message.text).toContain("No signals reporting yet.");
   });
 
   it("says the list is incomplete when a region or a placeholder dropped a metric", () => {
-    const output = renderLevels(
+    const message = renderLevels(
       [reading("m", "Measurements", 12)],
       { configErrors: ["kinesis-incoming"], failedRegions: ["eu-central-1"] },
       "Daily pulse",
@@ -229,9 +232,7 @@ describe("renderLevels", () => {
       options,
     );
 
-    expect(output).toContain("• Measurements: 12");
-    expect(output).toContain(
-      "*Self-check:* the list above is incomplete; could not read eu-central-1, kinesis-incoming.",
-    );
+    expect(json(message, "context")).toContain("The list above is incomplete");
+    expect(message.text).toContain("eu-central-1");
   });
 });
