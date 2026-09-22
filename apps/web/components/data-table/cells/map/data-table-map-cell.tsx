@@ -2,6 +2,7 @@
 
 import { ChevronDown, ChevronRight } from "lucide-react";
 import React, { useRef } from "react";
+import type { OnToggleCellExpansionHandler } from "~/components/data-table/data-table-columns";
 
 import { Button } from "@repo/ui/components/button";
 import { Collapsible, CollapsibleTrigger } from "@repo/ui/components/collapsible";
@@ -11,7 +12,7 @@ interface ExperimentDataTableMapCellProps {
   columnName: string;
   rowId: string;
   isExpanded: boolean;
-  onToggleExpansion?: (rowId: string, columnName: string) => void;
+  onToggleExpansion?: OnToggleCellExpansionHandler;
 }
 
 type ParsedMapData = Record<string, unknown>;
@@ -134,12 +135,12 @@ export function MapExpandedContent({ data }: MapExpandedContentProps) {
 
   return (
     <div className="w-full p-4">
-      <div className="w-full rounded border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
+      <div className="border-border bg-card w-full rounded border p-3">
         <div className="space-y-1">
           {entries.map(([key, value]) => (
             <div key={key} className="flex gap-2 text-sm">
-              <span className="font-medium text-gray-700 dark:text-gray-300">{key}:</span>
-              <span className="text-gray-600 dark:text-gray-400">{formatValue(value)}</span>
+              <span className="text-foreground font-medium">{key}:</span>
+              <span className="text-muted-foreground">{formatValue(value)}</span>
             </div>
           ))}
         </div>

@@ -1,6 +1,7 @@
 import { Injectable, Inject } from "@nestjs/common";
 
 import { ProtocolFilter } from "@repo/api/domains/protocol/protocol.schema";
+import type { ResourceScope } from "@repo/api/shared/listing";
 import {
   and,
   asc,
@@ -10,6 +11,7 @@ import {
   ilike,
   isNull,
   inArray,
+  or,
   protocols,
   users,
   sql,
@@ -20,18 +22,44 @@ import { profiles } from "@repo/database";
 import type { DatabaseInstance, SQL } from "@repo/database";
 
 import { Result, success, tryCatch } from "../../../common/utils/fp-utils";
-import { escapeLike, ftsMatch, ftsRank } from "../../../common/utils/fts";
+import {
+  crossTableBonus,
+  escapeLike,
+  ftsMatch,
+  ftsRank,
+  searchScore,
+} from "../../../common/utils/fts";
 import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
 import {
   getAnonymizedFirstName,
   getAnonymizedLastName,
 } from "../../../common/utils/profile-anonymization";
-import { accessibleResourceCondition } from "../../../common/utils/resource-access-scope";
+import {
+  accessibleResourceCondition,
+  relatedResourceCondition,
+  resourceTierExpression,
+} from "../../../common/utils/resource-access-scope";
 import { lockStaffedResource, seedCreatorControl } from "../../../sharing/core/resource-staffing";
 import { CreateProtocolDto, UpdateProtocolDto, ProtocolDto } from "../models/protocol.model";
 
 // All protocol columns except the internal full-text `search_vector` (never returned to clients).
 const { searchVector: _protocolSearchVector, ...protocolColumns } = getTableColumns(protocols);
+
+/** A listing row plus its relevance score, which global search merges on across types. */
+export type ProtocolSearchRow = ProtocolDto & { score: number };
+
+function toProtocolRow(result: {
+  protocols: unknown;
+  firstName: string | null;
+  lastName: string | null;
+  score: number;
+}): ProtocolSearchRow {
+  const augmentedResult = result.protocols as ProtocolSearchRow;
+  const { firstName, lastName } = result;
+  augmentedResult.createdByName = firstName && lastName ? `${firstName} ${lastName}` : undefined;
+  augmentedResult.score = result.score;
+  return augmentedResult;
+}
 
 @Injectable()
 export class ProtocolRepository {
@@ -66,24 +94,17 @@ export class ProtocolRepository {
     });
   }
 
-  async findAll(
+  /**
+   * Shared shape behind the array and paginated listings, so both apply identical
+   * scoping, ranking and ordering and the count matches the rows exactly.
+   */
+  private buildListing(
     search?: ProtocolFilter,
-    filter?: "my",
+    scope?: ResourceScope,
     userId?: string,
-    limit?: number,
     organizationId?: string,
-  ): Promise<Result<ProtocolDto[]>> {
-    return tryCatch(async () => {
-      let query = this.database
-        .select({
-          protocols: protocolColumns,
-          firstName: getAnonymizedFirstName(),
-          lastName: getAnonymizedLastName(),
-        })
-        .from(protocols)
-        .innerJoin(profiles, eq(protocols.createdBy, profiles.userId))
-        .$dynamic();
-
+  ) {
+    {
       const conditions: (SQL | undefined)[] = [];
 
       // Creator name + family enum matched at query time (alongside the name/description vector).
@@ -99,7 +120,7 @@ export class ProtocolRepository {
         );
       }
 
-      const scope = accessibleResourceCondition({
+      const accessScope = accessibleResourceCondition({
         database: this.database,
         resourceType: "protocol",
         resourceIdColumn: protocols.id,
@@ -107,8 +128,8 @@ export class ProtocolRepository {
         visibilityColumn: protocols.visibility,
         userId: userId,
       });
-      if (scope) {
-        conditions.push(scope);
+      if (accessScope) {
+        conditions.push(accessScope);
       }
 
       // Narrow to one owning organization (the org profile's resources showcase).
@@ -117,35 +138,118 @@ export class ProtocolRepository {
         conditions.push(eq(protocols.organizationId, organizationId));
       }
 
-      if (filter === "my" && userId) {
-        // "My protocols" narrows that down to what the caller authored.
-        conditions.push(eq(protocols.createdBy, userId));
+      if (scope === "related") {
+        // "Mine": authorship plus every path tying the caller to the row personally.
+        // Without a caller nothing resolves, so the scope admits nothing.
+        const related = relatedResourceCondition({
+          database: this.database,
+          resourceType: "protocol",
+          resourceIdColumn: protocols.id,
+          organizationIdColumn: protocols.organizationId,
+          userId,
+        });
+        conditions.push(userId ? or(related, eq(protocols.createdBy, userId)) : sql`false`);
       }
 
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions));
-      }
+      const tier = resourceTierExpression({
+        database: this.database,
+        resourceType: "protocol",
+        resourceIdColumn: protocols.id,
+        organizationIdColumn: protocols.organizationId,
+        createdByColumn: protocols.createdBy,
+        userId,
+      });
+      // Browsing has no term to rank against, so it skips the scoring probes entirely.
+      const score = search
+        ? searchScore(
+            sql<number>`(${ftsRank(protocols.searchVector, protocols.name, search)} + ${crossTableBonus(
+              sql`(${creatorMatch(search)} OR ${ilike(familyText, `%${escapeLike(search)}%`)})`,
+            )})`,
+            tier,
+          )
+        : sql<number>`0::int`;
 
-      if (search) {
-        const rank = sql<number>`(${ftsRank(protocols.searchVector, protocols.name, search)} + 0.05 * (CASE WHEN (${creatorMatch(search)} OR ${ilike(familyText, `%${escapeLike(search)}%`)}) THEN 1 ELSE 0 END))`;
-        query = query.orderBy(desc(rank), asc(protocols.name));
-      } else {
-        query = query.orderBy(asc(protocols.sortOrder), asc(protocols.name));
-      }
+      // Browse keeps tiers strict, with the curated `sortOrder` surviving as a
+      // within-tier tiebreak. Both orderings end on `id` so paging is stable.
+      const orderBy = search
+        ? [desc(score), asc(protocols.id)]
+        : [desc(tier), asc(protocols.sortOrder), asc(protocols.name), asc(protocols.id)];
 
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+      return { where, orderBy, score };
+    }
+  }
+
+  private baseQuery(score: SQL<number>) {
+    return this.database
+      .select({
+        protocols: protocolColumns,
+        firstName: getAnonymizedFirstName(),
+        lastName: getAnonymizedLastName(),
+        score,
+      })
+      .from(protocols)
+      .innerJoin(profiles, eq(protocols.createdBy, profiles.userId))
+      .$dynamic();
+  }
+
+  async findAll(
+    search?: ProtocolFilter,
+    scope?: ResourceScope,
+    userId?: string,
+    limit?: number,
+    organizationId?: string,
+  ): Promise<Result<ProtocolSearchRow[]>> {
+    return tryCatch(async () => {
+      const { where, orderBy, score } = this.buildListing(search, scope, userId, organizationId);
+
+      let query = this.baseQuery(score);
+      if (where) {
+        query = query.where(where);
+      }
+      query = query.orderBy(...orderBy);
       if (limit !== undefined) {
         query = query.limit(limit);
       }
 
-      const results = await query;
-      return results.map((result) => {
-        const augmentedResult = result.protocols as ProtocolDto;
-        const firstName = result.firstName;
-        const lastName = result.lastName;
-        augmentedResult.createdByName =
-          firstName && lastName ? `${firstName} ${lastName}` : undefined;
-        return augmentedResult;
-      });
+      return (await query).map(toProtocolRow);
+    });
+  }
+
+  /** One page plus the total, counted separately so an out-of-range page still reports it. */
+  async findPage(
+    page: number,
+    pageSize: number,
+    search?: ProtocolFilter,
+    scope?: ResourceScope,
+    userId?: string,
+    organizationId?: string,
+  ): Promise<Result<{ items: ProtocolSearchRow[]; totalCount: number }>> {
+    return tryCatch(async () => {
+      const { where, orderBy, score } = this.buildListing(search, scope, userId, organizationId);
+
+      let rows = this.baseQuery(score);
+      let total = this.database
+        .select({ count: sql<number>`count(*)::int` })
+        .from(protocols)
+        .innerJoin(profiles, eq(protocols.createdBy, profiles.userId))
+        .$dynamic();
+
+      if (where) {
+        rows = rows.where(where);
+        total = total.where(where);
+      }
+
+      const [items, [{ count }]] = await Promise.all([
+        rows
+          .orderBy(...orderBy)
+          .limit(pageSize)
+          .offset((page - 1) * pageSize),
+        total,
+      ]);
+
+      return { items: items.map(toProtocolRow), totalCount: count };
     });
   }
 

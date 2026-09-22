@@ -222,7 +222,7 @@ describe("<OrganizationResourceRows />", () => {
         }),
       );
 
-      // Six types and no seventh, in GROUP_ORDER — a hand-written list could drift.
+      // Seven types and no eighth, in GROUP_ORDER; a hand-written list could drift.
       expect((await screen.findAllByRole("option")).map((o) => o.textContent)).toEqual([
         "organizations.resources.allTypes",
         "organizations.resources.types.experiment",
@@ -231,6 +231,7 @@ describe("<OrganizationResourceRows />", () => {
         "organizations.resources.types.workbook",
         "organizations.resources.types.device",
         "organizations.resources.types.device_group",
+        "organizations.resources.types.calibration_definition",
       ]);
     });
   });
@@ -254,12 +255,12 @@ describe("<OrganizationResourceRows />", () => {
       const { container } = render(<OrganizationResourceRows resources={mixedEstate()} />);
 
       expect(within(container).getByText("organizations.resources.status.stale")).toHaveClass(
-        "bg-badge-stale",
+        "bg-status-stale",
       );
       // A language and a sensor family are product names, so neither is translated.
-      expect(within(container).getByText("R")).toHaveClass("bg-badge-stale");
+      expect(within(container).getByText("R")).toHaveClass("bg-status-stale");
       // A device wears the badge a protocol wears for the same value.
-      expect(within(container).getByText("Ambyte")).toHaveClass("bg-badge-active");
+      expect(within(container).getByText("Ambyte")).toHaveClass("bg-status-active");
     });
 
     it("renders no meta badge for a workbook and no description for a device", () => {
@@ -272,7 +273,7 @@ describe("<OrganizationResourceRows />", () => {
       };
 
       // A workbook has no second fact worth a badge — and no empty badge either.
-      expect(rowFor("Canopy synthesis").querySelector(".bg-badge-stale")).toBeNull();
+      expect(rowFor("Canopy synthesis").querySelector(".bg-status-stale")).toBeNull();
       // A device has no `description` column, so there must be no paragraph at all
       // rather than an empty one reserving a line on every device row.
       expect(rowFor("Ambyte 04").querySelector("p")).toBeNull();
@@ -298,7 +299,7 @@ describe("<OrganizationResourceRows />", () => {
       expect(roster).toBeVisible();
       // Sits with the type dot, not in the badge slot: `Badge` is the only thing on a
       // row that renders as a `bg-*` pill, so no element here may be one.
-      expect(row.querySelector('[class*="bg-badge-"]')).toBeNull();
+      expect(row.querySelector('[class*="bg-status-"]')).toBeNull();
       expect(roster.tagName).toBe("SPAN");
       // Not vacuous: the same footer renders the type label right beside it.
       expect(within(row).getByText("organizations.resources.types.device_group")).toBeVisible();
@@ -401,6 +402,7 @@ describe("<OrganizationResourceRows />", () => {
         "macro",
         "protocol",
         "workbook",
+        "calibration_definition",
       ]);
     });
 

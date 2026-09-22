@@ -24,7 +24,7 @@ describe("ExperimentOverviewCards", () => {
     );
   });
 
-  it("renders experiment cards with name and description (no status pill)", () => {
+  it("renders experiment cards with name and description", () => {
     const exp = createExperiment({
       name: "Photosynthesis Study",
       description: "Measuring chlorophyll",
@@ -33,7 +33,7 @@ describe("ExperimentOverviewCards", () => {
     render(<ExperimentOverviewCards experiments={[exp]} />);
     expect(screen.getByText("Photosynthesis Study")).toBeInTheDocument();
     expect(screen.getByText("Measuring chlorophyll")).toBeInTheDocument();
-    // Status pill/label was removed from the overview cards (name/description/last-updated only).
+    // Status is not a fact about an experiment a reader acts on here.
     expect(screen.queryByText("status.active")).not.toBeInTheDocument();
   });
 
@@ -51,7 +51,7 @@ describe("ExperimentOverviewCards", () => {
 
   it("links to the correct experiment page", () => {
     render(<ExperimentOverviewCards experiments={[createExperiment({ id: "abc-123" })]} />);
-    expect(screen.getByRole("link")).toHaveAttribute("href", "/platform/experiments/abc-123");
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/en-US/platform/experiments/abc-123");
   });
 
   it("links to archive path when archived", () => {
@@ -60,7 +60,7 @@ describe("ExperimentOverviewCards", () => {
     );
     expect(screen.getByRole("link")).toHaveAttribute(
       "href",
-      "/platform/experiments-archive/abc-123",
+      "/en-US/platform/experiments-archive/abc-123",
     );
   });
 
@@ -74,13 +74,24 @@ describe("ExperimentOverviewCards", () => {
     expect(screen.getAllByRole("link")).toHaveLength(3);
   });
 
-  it("shows last-updated date", () => {
+  it("shows the always-present metadata: owner, members and last update", () => {
     render(
       <ExperimentOverviewCards
-        experiments={[createExperiment({ updatedAt: "2025-06-15T00:00:00.000Z" })]}
+        experiments={[
+          createExperiment({
+            updatedAt: "2025-06-15T00:00:00.000Z",
+            ownerFirstName: "Ada",
+            ownerLastName: "Lovelace",
+            membersCount: 4,
+          }),
+        ]}
       />,
     );
-    expect(screen.getByText(/lastUpdate/)).toBeInTheDocument();
+
+    // None of these come from the warehouse, so the card is never bare.
+    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument();
+    expect(screen.getByText("Jun 15, 2025")).toBeInTheDocument();
   });
 
   it("handles null description gracefully", () => {

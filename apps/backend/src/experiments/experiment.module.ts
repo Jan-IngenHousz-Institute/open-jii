@@ -1,11 +1,15 @@
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import type { Cache } from "cache-manager";
 
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
 import { AnalyticsModule } from "../common/modules/analytics/analytics.module";
 // Adapters & External Modules
 import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
+import { CacheAdapter } from "../common/modules/cache/cache.adapter";
+import { CacheModule } from "../common/modules/cache/cache.module";
 import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
 import { DuckDbAdapter } from "../common/modules/duckdb/duckdb.adapter";
@@ -14,6 +18,7 @@ import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { EmailModule } from "../common/modules/email/services/email.module";
 import { CreateMacroUseCase } from "../macros/application/use-cases/create-macro/create-macro";
 import { MacroModule } from "../macros/macro.module";
+import { MetricsModule } from "../metrics/metrics.module";
 import { CreateProtocolUseCase } from "../protocols/application/use-cases/create-protocol/create-protocol";
 import { ProtocolRepository } from "../protocols/core/repositories/protocol.repository";
 import { SharingModule } from "../sharing/sharing.module";
@@ -80,6 +85,7 @@ import { UpgradeWorkbookVersionUseCase } from "./application/use-cases/upgrade-w
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 // Ports
 import { AWS_PORT } from "./core/ports/aws.port";
+import { CACHE_PORT } from "./core/ports/cache.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { EMAIL_PORT } from "./core/ports/email.port";
 import { EXPERIMENT_DATA_READ_PORT } from "./core/ports/experiment-data-read.port";
@@ -117,6 +123,8 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
 
 @Module({
   imports: [
+    MetricsModule,
+    CacheModule,
     DatabricksModule,
     DuckDbModule,
     AwsModule,
@@ -173,6 +181,15 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     {
       provide: ANALYTICS_PORT,
       useExisting: AnalyticsAdapter,
+    },
+    {
+      provide: CACHE_PORT,
+      // Table metadata is read before every warehouse statement. A minute
+      // spares that round trip yet keeps the row counts behind pagination
+      // totals close to the pipeline's cadence.
+      useFactory: (cache: Cache) =>
+        new CacheAdapter(cache, { prefix: "experiment:", ttlMs: 60 * 1000 }),
+      inject: [CACHE_MANAGER],
     },
 
     // Repositories

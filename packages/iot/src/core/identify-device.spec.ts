@@ -161,7 +161,29 @@ describe("identifyDevice", () => {
     expect(identified.connector).toBeInstanceOf(AmbitDriver);
     expect(identified.info.family).toBe("ambit");
     expect(identified.info.name).toBeUndefined();
+    expect(identified.info.firmwareVersion).toBeUndefined();
     expect(identified.info.raw.helloReply).toBe("NEW Name Here Ready");
+  });
+
+  it("classifies shipping Ambit firmware that appends its build after the Ready sentinel", async () => {
+    // Verbatim hello from an Ambit on 1.1.4-3-g2a76435-dirty. The sentinel used
+    // to be anchored to end-of-line, so this real reply fell through to the raw
+    // fallback and the device reported as generic rather than ambit.
+    const realHello = "NEW AmbitV003 Ready FW:1.1.4-3-g2a76435-dirty\n";
+    const transport = createMockTransport((payload, reply) => {
+      if (payload === HELLO || payload === "hello\n") reply(realHello);
+    });
+
+    const identified = await identifyDevice(transport, { probeTimeoutMs: 50 });
+
+    expect(identified.family).toBe("ambit");
+    expect(identified.connector).toBeInstanceOf(AmbitDriver);
+    expect(identified.info.family).toBe("ambit");
+    // The name is firmware placeholder text, never a device name.
+    expect(identified.info.name).toBeUndefined();
+    // The numeric core of the build is the version; the dirty suffix stays in the raw line.
+    expect(identified.info.firmwareVersion).toBe("1.1.4");
+    expect(identified.info.raw.helloReply).toBe("NEW AmbitV003 Ready FW:1.1.4-3-g2a76435-dirty");
   });
 
   it("classifies a JSON hello by its device key case-insensitively, capturing name and version", async () => {

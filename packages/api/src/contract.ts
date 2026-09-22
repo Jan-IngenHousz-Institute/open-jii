@@ -15,9 +15,12 @@ import { experimentUploadsContract } from "./domains/experiment/uploads/experime
 import { experimentVisualizationsContract } from "./domains/experiment/visualizations/experiment-visualizations.contract";
 import { experimentWorkbooksContract } from "./domains/experiment/workbooks/experiment-workbooks.contract";
 import { healthContract } from "./domains/health/health.contract";
+import { iotCalibrationContract } from "./domains/iot/calibration/iot-calibration.contract";
 import { iotDeviceGroupContract } from "./domains/iot/device-group/iot-device-group.contract";
+import { iotFirmwareContract } from "./domains/iot/firmware/iot-firmware.contract";
 import { iotContract } from "./domains/iot/iot.contract";
 import { macroContract } from "./domains/macro/macro.contract";
+import { metricsContract } from "./domains/metrics/metrics.contract";
 import { newsletterContract } from "./domains/newsletter/newsletter.contract";
 import { organizationJoinRequestsContract } from "./domains/organization/join-requests/organization-join-requests.contract";
 import { organizationContract } from "./domains/organization/organization.contract";
@@ -53,8 +56,14 @@ export const contract = {
     ...experimentProjectTransferWebhookContract,
   },
   health: healthContract,
-  iot: { ...iotContract, ...iotDeviceGroupContract },
+  iot: {
+    ...iotContract,
+    ...iotDeviceGroupContract,
+    ...iotFirmwareContract,
+    ...iotCalibrationContract,
+  },
   macros: macroContract,
+  metrics: metricsContract,
   newsletter: newsletterContract,
   organizations: { ...organizationContract, ...organizationJoinRequestsContract },
   protocols: protocolContract,

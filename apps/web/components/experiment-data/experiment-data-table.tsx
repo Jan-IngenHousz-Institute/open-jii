@@ -1,10 +1,13 @@
 "use client";
 
 import { DataTable } from "@/components/data-table/data-table";
-import type { TableMetadata } from "@/components/data-table/data-table-columns";
+import type {
+  OnAnnotationHandler,
+  TableMetadata,
+} from "@/components/data-table/data-table-columns";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { PaginationState } from "@tanstack/react-table";
+import type { PaginationState, RowSelectionState } from "@tanstack/react-table";
 import React, { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
@@ -20,7 +23,6 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { FilterChipBar } from "../data-filters/filter-chip-bar";
 import { DataExportModal } from "./data-export-modal/data-export-modal";
-import { ExperimentDataTableChart } from "./table-chart/experiment-data-table-chart";
 
 function getSortColumnName(columnName: string, columnType?: string): string {
   if (columnType === "USER") {
@@ -73,45 +75,23 @@ export function ExperimentDataTable({
   const [deleteAnnotationType, setDeleteAnnotationType] =
     useState<ExperimentAnnotationType>("comment");
 
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
   const selectionForm = useForm<BulkSelectionFormType>({
     resolver: zodResolver(bulkSelectionFormSchema),
     defaultValues: { selectedRowIds: [] },
   });
 
-  const [chartDisplay, setChartDisplay] = useState<{
-    data: number[];
-    columnName: string;
-    isPinned: boolean;
-  } | null>(null);
-
   const { t } = useTranslation();
 
-  const toggleChartPin = useCallback((data: number[], columnName: string) => {
-    setChartDisplay((prev) => {
-      if (prev?.isPinned && prev.columnName === columnName) {
-        return null;
-      }
-      return { data, columnName, isPinned: true };
-    });
+  const openAddAnnotationDialog = useCallback<OnAnnotationHandler>((rowIds, type = "comment") => {
+    setAddAnnotationRowIds(rowIds);
+    setAddAnnotationType(type);
+    setAddAnnotationDialogOpen(true);
   }, []);
 
-  const closePinnedChart = useCallback(() => {
-    setChartDisplay(null);
-  }, []);
-
-  const openAddAnnotationDialog = useCallback(
-    (rowIds: string[], type: ExperimentAnnotationType = "comment") => {
-      setAddAnnotationRowIds(rowIds);
-      setAddAnnotationType(type);
-      setAddAnnotationDialogOpen(true);
-    },
-    [],
-  );
-
-  const openDeleteAnnotationsDialog = useCallback(
-    (rowIds: string[], type: ExperimentAnnotationType = "comment") => {
+  const openDeleteAnnotationsDialog = useCallback<OnAnnotationHandler>(
+    (rowIds, type = "comment") => {
       setDeleteAnnotationRowIds(rowIds);
       setDeleteAnnotationType(type);
       setDeleteAnnotationsDialogOpen(true);
@@ -245,7 +225,6 @@ export function ExperimentDataTable({
           sorting={{ column: sortColumn, direction: sortDirection, onSort: handleSort }}
           selection={{ state: rowSelection, onChange: setRowSelection }}
           cellHandlers={{
-            onChartClick: toggleChartPin,
             // Withheld without `can(contribute)`: the cells hide their
             // add/remove controls when the handler is absent.
             onAddAnnotation: canContribute ? openAddAnnotationDialog : undefined,
@@ -260,17 +239,6 @@ export function ExperimentDataTable({
           open={downloadModalOpen}
           onOpenChange={setDownloadModalOpen}
         />
-        {chartDisplay && (
-          <div id="experiment-data-chart" className="mt-6">
-            <ExperimentDataTableChart
-              data={chartDisplay.data}
-              columnName={chartDisplay.columnName}
-              visible={true}
-              isClicked={chartDisplay.isPinned}
-              onClose={closePinnedChart}
-            />
-          </div>
-        )}
       </form>
       <AddAnnotationDialog
         experimentId={experimentId}

@@ -82,7 +82,8 @@ describe("RegistrationFields", () => {
 
     const trigger = screen.getByText("auth.terms");
     expect(trigger).toBeInTheDocument();
-    expect(trigger.closest("button")).toHaveClass("cursor-pointer", "underline");
+    // The link treatment comes from the button primitive's `link` variant.
+    expect(trigger.closest("button")).toHaveClass("text-primary", "underline-offset-4");
   });
 
   it("allows opting in by clicking the newsletter consent wording", async () => {

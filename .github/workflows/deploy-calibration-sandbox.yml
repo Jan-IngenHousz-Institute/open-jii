@@ -1,0 +1,211 @@
+# Calibration Sandbox Deployment Workflow
+# Builds the Python image that computes calibration coefficients and deploys it to Lambda
+
+name: Calibration Sandbox Deployment Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "The deployment environment (dev, staging, prod)"
+        required: true
+        type: string
+      ref:
+        description: "Git ref (commit SHA, branch, or tag) to deploy - leave empty to deploy current branch latest commit"
+        required: false
+        type: string
+        default: ""
+  workflow_call:
+    inputs:
+      environment:
+        description: "The deployment environment (dev, staging, prod)"
+        required: true
+        type: string
+      ref:
+        description: "Git ref (commit SHA, branch, or tag) to deploy - leave empty to deploy current branch latest commit"
+        required: false
+        type: string
+        default: ""
+
+env:
+  ENV: ${{ inputs.environment }}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy Calibration Lambda
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Get Checked Out SHA
+        id: get-sha
+        run: |
+          ACTUAL_SHA=$(git rev-parse HEAD)
+          echo "sha=$ACTUAL_SHA" >> $GITHUB_OUTPUT
+          echo "Checked out SHA: $ACTUAL_SHA"
+
+      - name: Capture Deployment Start Time
+        uses: ./.github/actions/capture-dora-start
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set environment variables
+        run: |
+          echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
+          echo "IMAGE_TAG=${{ steps.get-sha.outputs.sha }}" >> $GITHUB_ENV
+          echo "ECR_REPO=calibration-sandbox-${{ env.ENV }}" >> $GITHUB_ENV
+          echo "FUNCTION_NAME=calibration-sandbox-${{ env.ENV }}" >> $GITHUB_ENV
+
+      # The repository refuses to overwrite a tag, so a rerun of the same commit must
+      # deploy the image it already pushed rather than fail on the push.
+      - name: Check whether this commit's image is already in ECR
+        id: existing
+        run: |
+          set -euo pipefail
+
+          if aws ecr describe-images \
+            --repository-name "${ECR_REPO}" \
+            --image-ids "imageTag=${IMAGE_TAG}" \
+            --output json > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Image ${ECR_REPO}:${IMAGE_TAG} already exists; reusing it"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build image
+        if: steps.existing.outputs.exists != 'true'
+        working-directory: apps/calibration-sandbox
+        run: |
+          set -euo pipefail
+
+          echo "Building calibration-sandbox..."
+          docker build \
+            -f functions/python/Dockerfile \
+            -t "${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}" \
+            --platform linux/amd64 \
+            .
+
+      # The pull-request check scans what a PR builds; a release from any ref, or a base
+      # image that moved underneath the pins, ships only what this scan passed.
+      - name: Scan image with Trivy
+        if: steps.existing.outputs.exists != 'true'
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        with:
+          image-ref: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPO }}:${{ env.IMAGE_TAG }}
+          format: table
+          exit-code: 1
+          severity: CRITICAL,HIGH
+          vuln-type: os,library
+          ignore-unfixed: true
+          trivyignores: apps/calibration-sandbox/functions/python/.trivyignore.yaml
+
+      # OpenTofu creates the function pointing at `:latest`, which nothing else pushes.
+      # The first deploy into a repository therefore publishes it once; the tag is
+      # immutable after that and every later deploy is a `:<sha>` the function is
+      # updated to.
+      - name: Push image, and the bootstrap tag if the repository has none
+        id: build-image
+        if: steps.existing.outputs.exists != 'true'
+        run: |
+          set -euo pipefail
+
+          FULL_IMAGE="${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
+          echo "Pushing ${FULL_IMAGE}..."
+          docker push "${FULL_IMAGE}"
+
+          if ! aws ecr describe-images \
+            --repository-name "${ECR_REPO}" \
+            --image-ids "imageTag=latest" \
+            --output json > /dev/null 2>&1; then
+            echo "No :latest in ${ECR_REPO} yet; publishing this image as the bootstrap tag"
+            docker tag "${FULL_IMAGE}" "${ECR_REGISTRY}/${ECR_REPO}:latest"
+            docker push "${ECR_REGISTRY}/${ECR_REPO}:latest"
+          fi
+
+          echo "image=${FULL_IMAGE}" >> $GITHUB_OUTPUT
+          echo "Image pushed: ${FULL_IMAGE}"
+
+      - name: Update Lambda function code
+        id: update-lambda
+        run: |
+          set -euo pipefail
+
+          IMAGE_URI="${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
+
+          # On the first deploy into an environment the repository exists and the function
+          # does not: the infrastructure apply that creates it needs the bootstrap tag this
+          # run just pushed, so it comes after. The next run updates the function.
+          if ! aws lambda get-function --function-name "${FUNCTION_NAME}" --output json > /dev/null 2>&1; then
+            echo "Function ${FUNCTION_NAME} does not exist yet; it is created by the next infrastructure apply from the :latest tag"
+            echo "updated=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Updating Lambda function: ${FUNCTION_NAME}"
+          aws lambda update-function-code \
+            --function-name "${FUNCTION_NAME}" \
+            --image-uri "${IMAGE_URI}" \
+            --output json > /dev/null
+
+          echo "Waiting for function update to complete..."
+          aws lambda wait function-updated-v2 \
+            --function-name "${FUNCTION_NAME}"
+
+          echo "updated=true" >> $GITHUB_OUTPUT
+          echo "Lambda function updated: ${FUNCTION_NAME}"
+
+      - name: Verify deployment
+        if: steps.update-lambda.outputs.updated == 'true'
+        run: |
+          set -euo pipefail
+
+          CODE_SHA=$(aws lambda get-function-configuration \
+            --function-name "${FUNCTION_NAME}" \
+            --query "CodeSha256" \
+            --output text)
+
+          echo "Function: ${FUNCTION_NAME}"
+          echo "  Code SHA: ${CODE_SHA}"
+          echo "  Image: ${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
+
+      - name: Publish DORA Metrics
+        if: always()
+        uses: ./.github/actions/publish-dora-metrics
+        with:
+          deployment-outcome: ${{ steps.update-lambda.outcome == 'success' && 'success' || 'failure' }}
+          service: "calibration-sandbox"
+          environment: ${{ inputs.environment }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo "::group::=== Calibration Sandbox Deployment Summary ==="
+          echo "Environment: ${{ env.ENV }}"
+          echo "Function: ${FUNCTION_NAME}"
+          echo "Image: ${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
+
+          if [[ "${{ steps.update-lambda.outcome }}" == "success" ]]; then
+            echo "calibration-sandbox deployed successfully"
+          else
+            echo "calibration-sandbox deployment failed"
+          fi
+          echo "::endgroup::"

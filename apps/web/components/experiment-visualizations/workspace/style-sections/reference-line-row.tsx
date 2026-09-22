@@ -6,6 +6,7 @@ import type { UseFormReturn } from "react-hook-form";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
+import { referenceLineColor } from "@repo/ui/components/charts/utils";
 import { FormControl, FormField, FormItem, FormLabel } from "@repo/ui/components/form";
 import { FormColorInput } from "@repo/ui/components/form-color-input";
 import { Input } from "@repo/ui/components/input";
@@ -18,8 +19,6 @@ import {
 } from "@repo/ui/components/select";
 
 import type { ChartFormValues } from "../../charts/chart-config";
-
-const DEFAULT_COLOR = "#9ca3af";
 
 export interface ReferenceLineRowProps {
   form: UseFormReturn<ChartFormValues>;
@@ -109,7 +108,7 @@ export function ReferenceLineRow({ form, index, onRemove }: ReferenceLineRowProp
               <FormControl>
                 <FormColorInput
                   value={typeof field.value === "string" ? field.value : undefined}
-                  fallback={DEFAULT_COLOR}
+                  fallback={referenceLineColor()}
                   onCommit={field.onChange}
                   showHex={false}
                 />

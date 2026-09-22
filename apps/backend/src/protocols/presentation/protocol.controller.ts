@@ -8,6 +8,7 @@ import { validateProtocolJson } from "@repo/api/domains/protocol/protocol-valida
 import { protocolContract } from "@repo/api/domains/protocol/protocol.contract";
 import { zJsonValue } from "@repo/api/domains/protocol/protocol.schema";
 import type { JsonValue } from "@repo/api/domains/protocol/protocol.schema";
+import { DEFAULT_PAGE_SIZE, resolveListScope } from "@repo/api/shared/listing";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { CanAccess } from "../../authorization/can-access.decorator";
@@ -17,6 +18,7 @@ import { formatDates, formatDatesList } from "../../common/utils/date-formatter"
 import { ErrorCodes } from "../../common/utils/error-codes";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
 import { throwOrpcError, throwOrpcFailure } from "../../common/utils/orpc-fp";
+import { toPage } from "../../common/utils/pagination";
 import { SetVisibilityUseCase } from "../../visibility/application/use-cases/set-visibility/set-visibility";
 import { AddCompatibleMacrosUseCase } from "../application/use-cases/add-compatible-macros/add-compatible-macros";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
@@ -119,14 +121,29 @@ export class ProtocolController {
     private readonly authz: AuthorizationService,
   ) {}
 
+  // One listing, two shapes: `page` presence is the only thing that switches it from a
+  // bare array to the paged envelope, so a caller that sends no page is untouched.
   @Implement(protocolContract.listProtocols)
   listProtocols(@Session() session: UserSession) {
     return implement(protocolContract.listProtocols).handler(async ({ input }) => {
-      const result = await this.listProtocolsUseCase.execute(
-        input.search,
-        input.filter,
-        session.user.id,
-      );
+      const scope = resolveListScope(input);
+
+      if (input.page !== undefined) {
+        const pageSize = input.pageSize ?? DEFAULT_PAGE_SIZE;
+        const paged = await this.listProtocolsUseCase.executePaginated(
+          input.page,
+          pageSize,
+          input.search,
+          scope,
+          session.user.id,
+        );
+        if (paged.isSuccess()) {
+          return toPage(paged.value, input.page, pageSize, formatDatesList);
+        }
+        return throwOrpcFailure(paged, this.logger);
+      }
+
+      const result = await this.listProtocolsUseCase.execute(input.search, scope, session.user.id);
 
       if (result.isSuccess()) {
         // The list contract deliberately treats code as unknown so large protocol

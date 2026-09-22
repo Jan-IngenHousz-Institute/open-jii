@@ -293,9 +293,11 @@ function VerdictBlock({
     <div
       className={cn(
         "rounded-md border p-2.5",
-        tone === "ok" && "border-emerald-200 bg-emerald-50 text-emerald-800",
-        tone === "warning" && "border-amber-200 bg-amber-50 text-amber-800",
-        tone === "error" && "border-red-200 bg-red-50 text-red-800",
+        tone === "ok" &&
+          "border-status-active-foreground/30 bg-status-active text-status-active-foreground",
+        tone === "warning" &&
+          "border-status-stale-foreground/30 bg-status-stale text-status-stale-foreground",
+        tone === "error" && "border-destructive/30 bg-destructive/10 text-destructive",
       )}
     >
       <div className="flex items-center gap-2 text-sm font-medium">

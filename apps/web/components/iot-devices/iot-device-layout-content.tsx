@@ -2,6 +2,7 @@
 
 import { useLocale } from "@/hooks/useLocale";
 import { presentDevice, resolveDevicePrimaryLabel } from "@/util/device-presentation";
+import { hasManagedFirmware } from "@/util/firmware-family";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -9,6 +10,7 @@ import type { IotDeviceDetail } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 
 import { ConnectivityDot } from "./device-connectivity";
+import { DeviceHeaderActions } from "./device-header-actions";
 import { IotDeviceDetailTabs } from "./iot-device-detail-tabs";
 import { IotDeviceStatusBadge } from "./iot-device-status-badge";
 
@@ -34,8 +36,8 @@ export function IotDeviceLayoutContent({
   );
 
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="flex w-full flex-col gap-6">
+    <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex w-full min-w-0 flex-col gap-6">
         <Link
           href={`/${locale}/platform/devices`}
           className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-sm"
@@ -44,10 +46,23 @@ export function IotDeviceLayoutContent({
           {t("iot.devices.detail.back")}
         </Link>
 
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold text-[#011111]">{displayName}</h1>
-          <IotDeviceStatusBadge status={device.status} />
-          <ConnectivityDot connectivity={device.connectivity} />
+        <div className="flex min-w-0 flex-wrap items-start gap-3 lg:flex-nowrap lg:items-center">
+          <div className="flex min-w-0 flex-1 basis-full flex-col gap-2 xl:flex-row xl:items-center">
+            <h1 className="text-foreground min-w-0 break-words text-2xl font-semibold">
+              {displayName}
+            </h1>
+            <div
+              data-slot="device-status-summary"
+              className="flex w-full shrink-0 flex-wrap items-center gap-3 xl:w-auto"
+            >
+              <IotDeviceStatusBadge
+                status={device.status}
+                deviceType={device.deviceType}
+                boundExperimentCount={device.boundExperimentCount}
+              />
+              <ConnectivityDot connectivity={device.connectivity} deviceType={device.deviceType} />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -57,6 +72,8 @@ export function IotDeviceLayoutContent({
         canLeave={device.capabilities.canLeave}
         canManage={device.capabilities.canManage}
         isMobileFamily={device.deviceType === "mobile"}
+        hasManagedFirmware={hasManagedFirmware(device.deviceType)}
+        actions={<DeviceHeaderActions device={device} />}
       >
         {children}
       </IotDeviceDetailTabs>

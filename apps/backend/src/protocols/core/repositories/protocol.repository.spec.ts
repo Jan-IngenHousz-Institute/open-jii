@@ -927,7 +927,7 @@ describe("ProtocolRepository — list access scoping", () => {
     expect(ids).not.toContain(privateId);
   });
 
-  it('keeps the "my" filter as an ownership view, unaffected by visibility', async () => {
+  it("keeps scope=related as a relationship view, unaffected by visibility", async () => {
     const other = await testApp.createTestUser({ name: "Other Author" });
     const othersProtocol = await testApp.createProtocol({
       name: "Someone else's protocol",
@@ -935,7 +935,7 @@ describe("ProtocolRepository — list access scoping", () => {
       visibility: "public",
     });
 
-    const result = await repository.findAll(undefined, "my", owner);
+    const result = await repository.findAll(undefined, "related", owner);
     assertSuccess(result);
     const ids = result.value.map((p) => p.id);
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsDarkTheme } from "@/hooks/useIsDarkTheme";
 import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime } from "@/util/date";
 import type { Edge, Node, NodeTypes } from "@xyflow/react";
@@ -21,13 +22,13 @@ const COUNTED_STATES: readonly LineageEdgeModel["state"][] = [
 ];
 
 const EDGE_STYLE: Record<LineageEdgeModel["state"], React.CSSProperties> = {
-  identity: { stroke: "#CDD5DB", strokeWidth: 1.5 },
-  input: { stroke: "#CDD5DB", strokeWidth: 1.5 },
-  processing: { stroke: "#6F8596", strokeWidth: 1.5, strokeDasharray: "2 4" },
-  active: { stroke: "#005e5e", strokeWidth: 2 },
-  silent: { stroke: "#CDD5DB", strokeWidth: 1.5, strokeDasharray: "6 4" },
-  unbound: { stroke: "#D97706", strokeWidth: 1.5, strokeDasharray: "6 4" },
-  unattributed: { stroke: "#94A3B8", strokeWidth: 1.5, strokeDasharray: "6 4" },
+  identity: { stroke: "var(--border)", strokeWidth: 1.5 },
+  input: { stroke: "var(--border)", strokeWidth: 1.5 },
+  processing: { stroke: "var(--node-instruction)", strokeWidth: 1.5, strokeDasharray: "2 4" },
+  active: { stroke: "var(--primary)", strokeWidth: 2 },
+  silent: { stroke: "var(--border)", strokeWidth: 1.5, strokeDasharray: "6 4" },
+  unbound: { stroke: "var(--status-stale-foreground)", strokeWidth: 1.5, strokeDasharray: "6 4" },
+  unattributed: { stroke: "var(--muted-foreground)", strokeWidth: 1.5, strokeDasharray: "6 4" },
 };
 
 interface DeviceLineageFlowProps {
@@ -41,6 +42,7 @@ interface DeviceLineageFlowProps {
 /** Read-only lineage canvas: layout and selection only, no editing surface. */
 export function DeviceLineageFlow({ model, selectedNodeId, onSelect }: DeviceLineageFlowProps) {
   const locale = useLocale();
+  const isDark = useIsDarkTheme();
 
   // Layout is selection-independent, so clicking a node never re-lays out.
   const { layoutNodes, edges } = useMemo(() => {
@@ -58,8 +60,8 @@ export function DeviceLineageFlow({ model, selectedNodeId, onSelect }: DeviceLin
       style: EDGE_STYLE[edge.state],
       animated: edge.state === "active",
       label: edgeLabel(edge, locale),
-      labelStyle: { fontSize: 11, fill: "#68737B" },
-      labelBgStyle: { fill: "#FFFFFF", fillOpacity: 0.85 },
+      labelStyle: { fontSize: 11, fill: "var(--muted-foreground)" },
+      labelBgStyle: { fill: "var(--card)", fillOpacity: 0.85 },
     }));
 
     return { layoutNodes: layoutLineage(flowNodes), edges: flowEdges };
@@ -79,8 +81,12 @@ export function DeviceLineageFlow({ model, selectedNodeId, onSelect }: DeviceLin
   };
 
   return (
-    <div className="h-135 w-full rounded-lg border" data-testid="lineage-flow">
+    <div
+      className="h-135 w-full min-w-0 overflow-hidden rounded-lg border"
+      data-testid="lineage-flow"
+    >
       <ReactFlow
+        colorMode={isDark ? "dark" : "light"}
         nodes={nodes}
         edges={edges}
         nodeTypes={NODE_TYPES}
@@ -93,7 +99,7 @@ export function DeviceLineageFlow({ model, selectedNodeId, onSelect }: DeviceLin
         fitViewOptions={{ padding: 0.2, minZoom: 0.4, maxZoom: 1.1 }}
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#E2E8F0" />
+        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="var(--border)" />
         <Controls position="bottom-right" showInteractive={false} />
       </ReactFlow>
     </div>

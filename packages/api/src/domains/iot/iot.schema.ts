@@ -23,7 +23,20 @@ export const zIotUploadUrl = z.object({
 });
 
 // --- IoT IotDevices ---
-export const zIotDeviceStatus = z.enum(["pending", "active", "rotating", "revoked"]);
+/**
+ * Stored setup state. "active" is never rendered as a word: with a binding count
+ * it reads as Provisioned or Onboarded, which is what `zIotDeviceRung` names.
+ */
+export const zIotDeviceStatus = z.enum(["registered", "active", "revoked", "retired"]);
+
+/** What the status badge shows: the stored status resolved against the binding count. */
+export const zIotDeviceRung = z.enum([
+  "registered",
+  "provisioned",
+  "onboarded",
+  "revoked",
+  "retired",
+]);
 
 // A device's class shares the canonical sensor-family taxonomy and maps to the ingest topic sensorType.
 export const zDeviceType = zSensorFamily;
@@ -65,6 +78,8 @@ export const zDeviceConnectivity = z.object({
 // plain shape so their handlers never depend on the fleet index.
 export const zIotDeviceWithConnectivity = zIotDevice.extend({
   connectivity: zDeviceConnectivity.nullable(),
+  /** Experiments the device is bound to; with `status` it decides Provisioned versus Onboarded. */
+  boundExperimentCount: z.number().int().nonnegative(),
 });
 
 export const zIotDeviceList = z.array(zIotDeviceWithConnectivity);
@@ -82,17 +97,24 @@ export const zIotDeviceDetail = zIotDeviceWithConnectivity.extend({
   capabilities: zResourceCapabilities,
 });
 
+/**
+ * A physical device identifier: a MAC, an eFuse id, an Android SSAID. Stored in
+ * a text column, so the only real constraints are length and the AWS IoT
+ * thing-attribute charset. Shared so the mobile and generic register paths
+ * cannot drift apart on what a serial may look like.
+ */
+export const zDeviceSerialNumber = z
+  .string()
+  .min(1)
+  .max(255)
+  // AWS IoT thing-attribute values only allow this charset; anything else
+  // would fail at CreateThing with an opaque 500.
+  .regex(/^[a-zA-Z0-9_.,@/:#=[\]-]+$/, {
+    message: "Only letters, numbers, and _ . , @ / : # = [ ] - are allowed",
+  });
+
 export const zRegisterIotDeviceBody = z.object({
-  serialNumber: z
-    .string()
-    .min(1)
-    .max(255)
-    // AWS IoT thing-attribute values only allow this charset; anything else
-    // would fail at CreateThing with an opaque 500.
-    .regex(/^[a-zA-Z0-9_.,@/:#=[\]-]+$/, {
-      message: "Only letters, numbers, and _ . , @ / : # = [ ] - are allowed",
-    })
-    .describe("Physical device identifier, e.g. MAC address"),
+  serialNumber: zDeviceSerialNumber.describe("Physical device identifier, e.g. MAC address"),
   name: z.string().min(1).max(255).optional(),
   deviceType: zRegisterableDeviceType.describe(
     "IotDevice class, maps to the ingest topic sensorType",
@@ -141,7 +163,12 @@ export const zBulkRegisterIotDevicesResult = z.object({
 // Silent per-phone self-registration: the app calls this on login with its
 // persisted install UUID; the route is an idempotent ensure, not a create.
 export const zEnsureMobileDeviceBody = z.object({
-  installId: z.string().uuid().describe("Persisted per-install identifier; doubles as the serial"),
+  // Not a uuid: this IS the serial, and phones report a hardware id (Android
+  // SSAID) rather than a minted one. The uuid rule was an artefact of the app
+  // generating uuidv4 install ids.
+  installId: zDeviceSerialNumber.describe(
+    "Stable per-device identifier reported by the phone; doubles as the serial",
+  ),
   name: z.string().min(1).max(255).optional().describe("Device model, e.g. iPhone 15"),
 });
 
@@ -331,6 +358,18 @@ export const zDeviceBatteryPoint = z.object({
   averageBattery: z.number().nullable(),
 });
 
+// A device reports the workbook VERSION it ran, not a workbook id, so the
+// owning workbook is resolved server-side; both fields are null when the
+// registry does not know the version.
+export const zWorkbookMixEntry = z.object({
+  workbookVersionId: z.string().nullable(),
+  workbookId: z.string().nullable(),
+  workbookVersion: z.number().int().nullable(),
+  count: z.number().int(),
+});
+
+export type WorkbookMixEntry = z.infer<typeof zWorkbookMixEntry>;
+
 // Payload profile of a range. Protocol attribution only exists on legacy-topic rows.
 export const zDevicePayloadStats = z.object({
   totalMeasurements: z.number().int(),
@@ -339,9 +378,7 @@ export const zDevicePayloadStats = z.object({
   workbookRuns: z.number().int(),
   firmwareMix: z.array(z.object({ version: z.string().nullable(), count: z.number().int() })),
   protocolMix: z.array(z.object({ protocolId: z.string().nullable(), count: z.number().int() })),
-  workbookMix: z.array(
-    z.object({ workbookVersionId: z.string().nullable(), count: z.number().int() }),
-  ),
+  workbookMix: z.array(zWorkbookMixEntry),
   // Per macro run: a measurement can run several, so counts exceed totals.
   macroMix: z.array(z.object({ macroId: z.string().nullable(), count: z.number().int() })),
 });
@@ -368,6 +405,11 @@ export const zDeviceMeasurement = z.object({
   sample: z.string().nullable(),
 });
 
+// Firmware versions reported across the range, one row per distinct version.
+export const zDeviceFirmwareHistory = z.object({
+  versions: z.array(zDeviceFirmwareVersion),
+});
+
 // The monitoring dashboard's one-range response; queries run in parallel server-side.
 export const zDeviceMonitoring = z.object({
   bucket: zMonitoringBucket,
@@ -384,6 +426,86 @@ export const zDeviceMonitoring = z.object({
   recentMeasurements: z.array(zDeviceMeasurement),
 });
 
+/** One experiment the device's stored rows claim, day-resolution recency. */
+export const zObservedExperiment = z.object({
+  experimentId: z.string().uuid().nullable(),
+  count: z.number().int(),
+  lastAt: z.string().datetime().nullable(),
+});
+
+// What the warehouse says a device fed, regardless of bindings. Phones never
+// bind, so this is the only experiment record they have; for bound devices it
+// is observation, not authorization.
+export const zDeviceObservedExperiments = z.object({
+  experiments: z.array(zObservedExperiment),
+});
+
+export const zObservedExperimentsQuery = z
+  .object({
+    deviceId: z.string().uuid(),
+    from: z.string().datetime(),
+    to: z.string().datetime(),
+  })
+  .refine((range) => new Date(range.from).getTime() < new Date(range.to).getTime(), {
+    message: "from must be before to",
+    path: ["from"],
+  })
+  .refine(
+    (range) => new Date(range.to).getTime() - new Date(range.from).getTime() <= 31 * 86_400_000,
+    { message: "range must not exceed 31 days", path: ["to"] },
+  );
+
+// The fleet overview's window input: the device dashboard's range contract
+// without a device address, since the scope is everything the caller can read.
+export const zIotFleetMonitoringQuery = z
+  .object({
+    from: z.string().datetime(),
+    to: z.string().datetime(),
+    bucket: zMonitoringBucket,
+  })
+  .refine((range) => new Date(range.from).getTime() < new Date(range.to).getTime(), {
+    message: "from must be before to",
+    path: ["from"],
+  })
+  // The UI presets top out at 30 days; an unbounded span would let one request
+  // scan and return an arbitrarily large slice of the warehouse.
+  .refine(
+    (range) => new Date(range.to).getTime() - new Date(range.from).getTime() <= 31 * 86_400_000,
+    { message: "range must not exceed 31 days", path: ["to"] },
+  );
+
+/** A device's all-time last data arrival, fleet-addressed. */
+export const zIotFleetDeviceActivity = z.object({
+  deviceId: z.string().uuid(),
+  lastDataAt: z.string().datetime().nullable(),
+});
+
+/** One (bucket, device) measurement count aggregated across the fleet. */
+export const zIotFleetThroughputBucket = z.object({
+  bucketStart: z.string().datetime().nullable(),
+  deviceId: z.string().uuid().nullable(),
+  count: z.number().int(),
+});
+
+/** A fleet device's broker lifecycle event inside the window. */
+export const zIotFleetLifecycleEvent = z.object({
+  deviceId: z.string().uuid().nullable(),
+  eventType: z.string().nullable(),
+  eventTimestamp: z.string().datetime().nullable(),
+  disconnectReason: z.string().nullable(),
+});
+
+// The devices overview's one orchestrated read. Identity and live connectivity
+// stay on the list endpoint the page already holds; this carries only the
+// warehouse facts, joined client-side by deviceId.
+export const zIotFleetMonitoring = z.object({
+  devices: z.array(zIotFleetDeviceActivity),
+  throughput: z.array(zIotFleetThroughputBucket),
+  events: z.array(zIotFleetLifecycleEvent),
+  // Warehouse lookups failed: facts degrade to unknown, never to "silent".
+  pipelineUnavailable: z.boolean(),
+});
+
 // --- Inferred types ---
 export type OnboardDeviceBody = z.infer<typeof zOnboardDeviceBody>;
 export type DeviceProcedure = z.infer<typeof zDeviceProcedure>;
@@ -396,6 +518,7 @@ export type IotCredentials = z.infer<typeof zIotCredentials>;
 export type IotUploadUrlRequest = z.infer<typeof zIotUploadUrlRequest>;
 export type IotUploadUrl = z.infer<typeof zIotUploadUrl>;
 export type IotDeviceStatus = z.infer<typeof zIotDeviceStatus>;
+export type IotDeviceRung = z.infer<typeof zIotDeviceRung>;
 export type IotDevice = z.infer<typeof zIotDevice>;
 export type DeviceConnectivity = z.infer<typeof zDeviceConnectivity>;
 export type MonitoringBucket = z.infer<typeof zMonitoringBucket>;
@@ -405,8 +528,16 @@ export type DeviceThroughputBucket = z.infer<typeof zDeviceThroughputBucket>;
 export type DeviceBatteryPoint = z.infer<typeof zDeviceBatteryPoint>;
 export type DevicePayloadStats = z.infer<typeof zDevicePayloadStats>;
 export type DeviceFirmwareVersion = z.infer<typeof zDeviceFirmwareVersion>;
+export type DeviceFirmwareHistory = z.infer<typeof zDeviceFirmwareHistory>;
 export type DeviceMeasurement = z.infer<typeof zDeviceMeasurement>;
 export type DeviceMonitoring = z.infer<typeof zDeviceMonitoring>;
+export type IotFleetMonitoringQuery = z.infer<typeof zIotFleetMonitoringQuery>;
+export type IotFleetDeviceActivity = z.infer<typeof zIotFleetDeviceActivity>;
+export type IotFleetThroughputBucket = z.infer<typeof zIotFleetThroughputBucket>;
+export type IotFleetLifecycleEvent = z.infer<typeof zIotFleetLifecycleEvent>;
+export type IotFleetMonitoring = z.infer<typeof zIotFleetMonitoring>;
+export type ObservedExperiment = z.infer<typeof zObservedExperiment>;
+export type DeviceObservedExperiments = z.infer<typeof zDeviceObservedExperiments>;
 export type IotDeviceWithConnectivity = z.infer<typeof zIotDeviceWithConnectivity>;
 export type IotDeviceActivity = z.infer<typeof zIotDeviceActivity>;
 export type IotDeviceDetail = z.infer<typeof zIotDeviceDetail>;

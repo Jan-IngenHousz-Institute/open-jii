@@ -59,7 +59,7 @@ describe("<TransferRequestPage />", () => {
     it("renders important notes in a highlighted box", async () => {
       await renderTransferRequestPage();
 
-      const noteBox = document.querySelector('[class*="bg-surface-light"]');
+      const noteBox = document.querySelector('[class*="bg-muted"]');
       expect(noteBox).toBeInTheDocument();
     });
 

@@ -14,6 +14,7 @@ export default registerAs("aws", () => ({
   },
   iot: {
     policyNames: process.env.AWS_IOT_POLICY_NAMES,
+    jobsPolicyName: process.env.AWS_IOT_JOBS_POLICY_NAME,
     deviceThingTypeName: process.env.AWS_IOT_DEVICE_THING_TYPE_NAME,
     deviceThingGroupName: process.env.AWS_IOT_DEVICE_THING_GROUP_NAME,
   },
@@ -22,6 +23,8 @@ export default registerAs("aws", () => ({
     macroSandboxJavascriptFunctionName:
       process.env.AWS_LAMBDA_MACRO_SANDBOX_JAVASCRIPT_FUNCTION_NAME,
     macroSandboxRFunctionName: process.env.AWS_LAMBDA_MACRO_SANDBOX_R_FUNCTION_NAME,
+    calibrationSandboxFunctionName: process.env.AWS_LAMBDA_CALIBRATION_SANDBOX_FUNCTION_NAME,
+    calibrationSandboxEndpoint: process.env.AWS_LAMBDA_CALIBRATION_SANDBOX_ENDPOINT,
   },
   s3: {
     iotArchiveBucketName: process.env.AWS_IOT_ARCHIVE_BUCKET_NAME,

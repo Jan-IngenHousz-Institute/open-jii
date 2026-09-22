@@ -4,8 +4,8 @@
  * Text console (string commands): the firmware has NO reply framing
  * (free-text lines, silent writers, no terminator), so replies are collected
  * until an RX quiet window elapses. The device light-sleeps after console
- * idle and prints a wake byte >127; `initialize()`/`ensureAwake()` run the
- * Calibratron-style hello poll until the `NEW ... Ready` sentinel answers.
+ * idle and prints a wake byte >127; `initialize()`/`ensureAwake()` poll hello
+ * until the `NEW ... Ready` sentinel answers, as the factory bench does.
  *
  * JSON envelope (object/array commands): the firmware's openJII protocol
  * module runs measurements (`arrun`) sent as protocol JSON and replies one
@@ -32,6 +32,8 @@ import {
 } from "./commands";
 import { AMBIT_FRAMING } from "./config";
 import type { AmbitDriverConfig } from "./config";
+import { parseAmbitBootDump } from "./device-info";
+import type { AmbitDeviceInfo } from "./device-info";
 import type { AmbitStreamEvents } from "./interface";
 import { AMBIT_REPLY_PARSERS } from "./response-parsers";
 
@@ -49,6 +51,8 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
   private rxBuffer = "";
   private onChunk: (() => void) | undefined;
   private lastTrafficAt = 0;
+  /** eFuse MAC from the last trace, remembered for identity reporting. */
+  private sensorId: string | undefined;
 
   constructor(config?: AmbitDriverConfig, logger?: Logger) {
     super(logger);
@@ -104,14 +108,16 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
   };
 
   /**
-   * Send one payload and collect the unframed reply: resolves once data has
-   * arrived and `quietWindowMs` passes without more, rejects on `timeoutMs`
-   * with nothing received.
+   * Send one payload and collect the unframed reply. A reply that frames itself
+   * ends on `isComplete` alone: no quiet window, because the device pauses
+   * mid-reply, and no partial on the deadline, because half a trace read as a
+   * whole one is worse than a failure. Everything else ends on the quiet window.
    */
   private async sendAndCollect(
     payload: string,
     quietWindowMs: number,
     timeoutMs: number,
+    isComplete?: (buffer: string) => boolean,
   ): Promise<string> {
     if (!this.transport) {
       throw new Error("Transport not initialized");
@@ -120,16 +126,18 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
     this.lastTrafficAt = Date.now();
     await this.transport.send(payload);
 
+    const framesItself = isComplete !== undefined;
     const reply = await collectReply(this.rxHooks, {
-      isComplete: () => false,
-      quietMs: quietWindowMs,
+      isComplete: isComplete ?? (() => false),
+      quietMs: framesItself ? undefined : quietWindowMs,
+      strictTimeout: framesItself,
       timeoutMs,
     });
     void this.emitter.emit("receivedReply", reply);
     return reply;
   }
 
-  /** Poll hello until the ready sentinel answers (Calibratron's wake loop). */
+  /** Poll hello until the ready sentinel answers, the factory bench's wake loop. */
   private async wake(): Promise<void> {
     for (let attempt = 0; attempt < AMBIT_FRAMING.WAKE_RETRIES; attempt++) {
       try {
@@ -180,6 +188,7 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
 
         const envelope = parseOpenJiiEnvelope(reply);
         if (envelope) {
+          this.adoptSensorId(envelope);
           void this.emitter.emit("receivedEnvelope", envelope);
           return {
             success: true,
@@ -227,6 +236,17 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
           this.lastTrafficAt = Date.now();
           await this.transport.send(payload);
           await delay(AMBIT_FRAMING.SETTLE_MS);
+
+          // Success is silence. Anything printed in the settle is the firmware refusing
+          // the value, in its own words, which beat a readback disagreement later.
+          const refusal = this.rxBuffer
+            .split("\n")
+            .map((line) => line.trim())
+            .find((line) => line.length > 0);
+          if (refusal !== undefined) {
+            throw new Error(`Ambit refused ${token}: ${refusal}`);
+          }
+
           const verify = await this.sendAndCollect(
             `${AMBIT_COMMANDS.HELLO}${AMBIT_FRAMING.LINE_ENDING}`,
             this.quietWindowMs,
@@ -243,6 +263,7 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
           payload,
           override.quietWindowMs ?? this.quietWindowMs,
           options?.timeoutMs ?? override.timeoutMs ?? this.defaultTimeoutMs,
+          override.isComplete,
         );
         const text = reply.trim();
 
@@ -261,13 +282,66 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
     });
   }
 
-  /** Identity from the hello sentinel line; the printed name is hardcoded upstream. */
+  /**
+   * Promote the trace's `sensor_id` to the envelope's `device_id`.
+   *
+   * `sensor_id` is the ESP32 eFuse MAC, formatted uppercase colon-separated by
+   * the firmware (`format_sensor_id`, trace_v3.h) precisely so it is the one
+   * stable hardware identity for a unit. It only ever appears nested in the
+   * trace, while the platform reads `device_id` off the envelope, so lift it.
+   * A firmware-supplied `device_id` is left alone, and the value is remembered
+   * so `getDeviceIdentity()` can report it once a measurement has been seen.
+   */
+  private adoptSensorId(envelope: Record<string, unknown>): void {
+    const sensorId = findSensorId(envelope);
+    if (!sensorId) return;
+    this.sensorId = sensorId;
+    envelope.device_id ??= sensorId;
+  }
+
+  /**
+   * Identity from the hello sentinel line; the printed name is hardcoded
+   * upstream. The hardware MAC is not reachable over the text console (the
+   * firmware's cmd 33 writes a raw binary struct), so `deviceId` is only
+   * populated once a measurement has carried the trace's `sensor_id`.
+   */
   async getDeviceIdentity(): Promise<DeviceIdentity> {
     const result = await this.execute<unknown>(AMBIT_COMMANDS.HELLO);
     const text = typeof result.data === "string" ? result.data : "";
     return {
       family: this.family,
-      raw: { helloReply: text },
+      ...(this.sensorId ? { deviceId: this.sensorId } : {}),
+      raw: { helloReply: text, ...(this.sensorId ? { sensor_id: this.sensorId } : {}) },
+    };
+  }
+
+  /**
+   * Reboot the device and parse its configuration dump; the MAC, build and stored
+   * coefficients are reported nowhere else.
+   */
+  async readDeviceInfo(): Promise<AmbitDeviceInfo | null> {
+    const result = await this.execute<unknown>(AMBIT_COMMANDS.REBOOT);
+    // A failed command and a truncated dump need different handling at the bench, so the transport failure is thrown.
+    if (!result.success) {
+      throw result.error ?? new Error("Ambit did not answer the reboot");
+    }
+    const dump = typeof result.data === "string" ? result.data : "";
+    return parseAmbitBootDump(dump);
+  }
+
+  /**
+   * Identity with the MAC, which `getDeviceIdentity()` only has after a measurement.
+   * Reboots the device, so this is the bench path rather than the connect path.
+   */
+  async getDeviceIdentityFromBootDump(): Promise<DeviceIdentity> {
+    const info = await this.readDeviceInfo();
+    if (info?.mac) {
+      this.sensorId = info.mac;
+    }
+    return {
+      family: this.family,
+      ...(info?.mac ? { deviceId: info.mac } : {}),
+      raw: { ...info },
     };
   }
 
@@ -276,4 +350,29 @@ export class AmbitDriver extends DeviceDriver<AmbitStreamEvents> {
     this.onChunk = undefined;
     await super.destroy();
   }
+}
+
+/**
+ * First `sensor_id` string in a measurement envelope. The firmware nests it in
+ * `sample[].set[]` alongside the trace schema, so walk the envelope rather than
+ * hardcoding a path that a future trace revision could move.
+ */
+function findSensorId(value: unknown, depth = 0): string | undefined {
+  if (depth > 6 || value === null || typeof value !== "object") return undefined;
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const found = findSensorId(entry, depth + 1);
+      if (found) return found;
+    }
+    return undefined;
+  }
+  const record = value as Record<string, unknown>;
+  if (typeof record.sensor_id === "string" && record.sensor_id.trim() !== "") {
+    return record.sensor_id;
+  }
+  for (const entry of Object.values(record)) {
+    const found = findSensorId(entry, depth + 1);
+    if (found) return found;
+  }
+  return undefined;
 }

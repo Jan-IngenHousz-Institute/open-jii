@@ -6,8 +6,8 @@ import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboard
 import { useTranslation } from "@repo/i18n";
 
 import { DashboardFiltersProvider } from "./dashboard-filters-context";
-import { WidgetCard } from "./widgets/shell/widget-card";
-import { WidgetRenderer } from "./widgets/widget-renderer";
+import { DashboardGridCell } from "./dashboard-grid-cell";
+import { DashboardSharedReadsProvider } from "./dashboard-shared-reads-context";
 
 interface DashboardRendererProps {
   dashboard: ExperimentDashboard;
@@ -30,29 +30,28 @@ export function DashboardRenderer({ dashboard, experimentId, scale = 1 }: Dashbo
 
   return (
     <DashboardFiltersProvider widgets={dashboard.widgets}>
-      <div
-        className="w-full"
-        style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-          gridAutoRows: `${rowHeight * scale}px`,
-          gap: `${gap * scale}px`,
-        }}
-      >
-        {dashboard.widgets.map((widget) => (
-          <div
-            key={widget.id}
-            style={{
-              gridColumn: `${widget.layout.col + 1} / span ${widget.layout.colSpan}`,
-              gridRow: `${widget.layout.row + 1} / span ${widget.layout.rowSpan}`,
-            }}
-          >
-            <WidgetCard>
-              <WidgetRenderer widget={widget} experimentId={experimentId} />
-            </WidgetCard>
-          </div>
-        ))}
-      </div>
+      <DashboardSharedReadsProvider experimentId={experimentId} widgets={dashboard.widgets}>
+        <div
+          className="w-full"
+          style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+            gridAutoRows: `${rowHeight * scale}px`,
+            gap: `${gap * scale}px`,
+          }}
+        >
+          {dashboard.widgets.map((widget) => (
+            <DashboardGridCell
+              key={widget.id}
+              widget={widget}
+              experimentId={experimentId}
+              rowHeight={rowHeight}
+              gap={gap}
+              scale={scale}
+            />
+          ))}
+        </div>
+      </DashboardSharedReadsProvider>
     </DashboardFiltersProvider>
   );
 }

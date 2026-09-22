@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DEFAULT_MAX_BUFFER_SIZE } from "../driver-base";
 import type { MockTransport } from "../testing/mock-transport";
 import { createMockTransport } from "../testing/mock-transport";
+import { AMBIT_BASELINE_SAVED } from "./commands";
 import { AmbitDriver } from "./driver";
 
 const HELLO_REPLY = "NEW Name Here Ready\n";
@@ -17,6 +18,27 @@ function tableTransport(table: Partial<Record<string, string | string[]>>): Mock
       setTimeout(() => {
         for (const chunk of chunks) transport.simulateData(chunk);
       }, 0);
+    }
+    return Promise.resolve();
+  });
+  return transport;
+}
+
+/**
+ * Delivers a reply in pieces a gap apart, as a device that pauses mid-reply does.
+ * The gap is longer than the quiet window, so anything that leans on the window
+ * instead of the reply's own terminator comes back holding only the first piece.
+ */
+const PACED_GAP_MS = 60;
+
+function pacedTransport(table: Partial<Record<string, string[]>>): MockTransport {
+  const transport = createMockTransport();
+  vi.mocked(transport.send).mockImplementation((payload: string) => {
+    const chunks = table[payload];
+    if (chunks !== undefined) {
+      chunks.forEach((chunk, index) => {
+        setTimeout(() => transport.simulateData(chunk), index * PACED_GAP_MS);
+      });
     }
     return Promise.resolve();
   });
@@ -171,6 +193,140 @@ describe("AmbitDriver", () => {
     expect(result.data).toEqual({ objectC: 23.1, ambientC: 22.4, objectRawC: 23.0 });
   });
 
+  // The device samples for as long as it needs before answering, so the preamble
+  // arrives well ahead of the vector. Nothing but the vector may end the wait.
+  it("waits past the preamble for the six-channel dark vector", async () => {
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      "baseline,0\n": ["Measuring ADPD baseline\n", "1021,987,1103,954,1200,1015\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<number[]>("baseline,0");
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual([1021, 987, 1103, 954, 1200, 1015]);
+  });
+
+  // Six comma-separated digits are a vector only once the line has ended.
+  it("does not read a half-written count as the last channel", async () => {
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      "baseline,0\n": ["1021,987,1103,954,1200,10", "15\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<number[]>("baseline,0");
+
+    expect(result.data).toEqual([1021, 987, 1103, 954, 1200, 1015]);
+  });
+
+  // Half a measurement read as a whole one is worse than no measurement.
+  it("fails a baseline whose reply never carries six integers", async () => {
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      "baseline,0\n": ["Measuring ADPD baseline\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<number[]>("baseline,0", { timeoutMs: 120 });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.message).toContain("timeout");
+  });
+
+  it("collects an arrun2 trace to its terminator and parses each channel buffer", async () => {
+    // The second line the bench sends carries a trailing space; execute trims the
+    // command, so this driver puts a bare comma on the wire. Flagged for the desk run.
+    const wire = "arrun2,1,0,2,0,0,5,0,10,150,1,\n,\n";
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      [wire]: [
+        "Data:env,Length:3\t23,24,25\n",
+        "Data:s_630,Length:4\t159,164,170,171\n",
+        "Data sent\n",
+      ],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<Record<string, number[]>>(
+      "arrun2,1,0,2,0,0,5,0,10,150,1,\n,",
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.data).toEqual({ env: [23, 24, 25], s_630: [159, 164, 170, 171] });
+    expect(transport.send).toHaveBeenCalledWith(wire);
+  });
+
+  // A buffer shorter than the line says it is would otherwise pass as a good one.
+  it("keeps a channel buffer as text when it holds fewer counts than declared", async () => {
+    const wire = "arrun2,1,0,2,0,0,5,0,10,150,1,\n,\n";
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      [wire]: ["Data:s_730,Length:5\t159,164\n", "Data sent\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<Record<string, number[] | string>>(
+      "arrun2,1,0,2,0,0,5,0,10,150,1,\n,",
+    );
+
+    expect(result.data).toEqual({ s_730: "159,164" });
+  });
+
+  it("finishes set_currents on its acknowledgement line", async () => {
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      "set_currents,0,0,0,\n": ["Currents ", "set\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<string>("set_currents,0,0,0,");
+
+    expect(result.success).toBe(true);
+    expect(result.data).toBe("Currents set");
+  });
+
+  it("returns the acknowledgement of a baseline write", async () => {
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      "set_baseline,1021,987,1103,954,1200,1015\n": [
+        AMBIT_BASELINE_SAVED.slice(0, 8),
+        `${AMBIT_BASELINE_SAVED.slice(8)}\n`,
+      ],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<string>("set_baseline,1021,987,1103,954,1200,1015");
+
+    expect(result.success).toBe(true);
+    expect(result.data).toBe(AMBIT_BASELINE_SAVED);
+  });
+
+  // The one writer that answers, so a refusal has to come back as itself rather
+  // than as a timeout the caller is left to interpret. The wording is the device's;
+  // only "not the acknowledgement" is established.
+  it("returns the refusing line when a baseline write is not acknowledged", async () => {
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      "set_baseline,0,0,0,0,0,0\n": ["Baseline verify failed\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<string>("set_baseline,0,0,0,0,0,0");
+
+    expect(result.success).toBe(true);
+    expect(result.data).toBe("Baseline verify failed");
+  });
+
   it("treats a silent set_spec as fire + settle + hello re-verify, in one write", async () => {
     const transport = tableTransport({ "hello\n": HELLO_REPLY });
     const driver = fastDriver();
@@ -181,6 +337,45 @@ describe("AmbitDriver", () => {
     expect(result.data).toEqual({ acknowledged: "set_spec" });
     // Multi-arg command went out as ONE write (firmware arg timeouts are 10ms).
     expect(transport.send).toHaveBeenCalledWith("set_spec,1.2340\n");
+  });
+
+  // valid_actinic_coefficient() answers a value it will not store with one line and keeps
+  // the old value; the hello that follows still says ready, so only that line tells.
+  it("surfaces the firmware's own line when a silent writer is refused", async () => {
+    const transport = tableTransport({
+      "set_act,0.0100\n": "Actinic coefficient rejected\n",
+      "hello\n": HELLO_REPLY,
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute("set_act,0.0100");
+
+    expect(result.success).toBe(false);
+    expect(result.error?.message).toBe("Ambit refused set_act: Actinic coefficient rejected");
+  });
+
+  // The LED latch prints nothing the host is documented to read, so waiting for a
+  // reply would stall every point of a sweep and then fail it.
+  // The firmware puts the console in plotting mode, runs the array, and only then prints
+  // one line. The run streams while it works and pauses between points, so a quiet window
+  // would hand back whatever had arrived so far; nothing but that last line ends the wait.
+  // Its argument reader takes ten comma-terminated values, all on the first line, so the
+  // second line completes nothing and its exact form never reaches the reader.
+  it("waits for the actinic LED run to report that it finished", async () => {
+    const wire = "arrun1,1,1,2,0,0,1,0,1,150,1,\n,\n";
+    const transport = pacedTransport({
+      "hello\n": [HELLO_REPLY],
+      [wire]: ["4605,4604\n", "4611,4609\n", "Done\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute("arrun1,1,1,2,0,0,1,0,1,150,1,\n,");
+
+    expect(result.success).toBe(true);
+    expect(String(result.data)).toContain("Done");
+    expect(transport.send).toHaveBeenCalledWith(wire);
   });
 
   it("fails a silent writer when the hello re-verify stays silent", async () => {
@@ -300,5 +495,124 @@ describe("AmbitDriver", () => {
     const result = await driver.execute("temp");
     expect(result.success).toBe(false);
     expect(result.error?.message).toBe("Response timeout");
+  });
+});
+
+describe("AmbitDriver sensor_id", () => {
+  // The firmware nests its eFuse MAC as sample[].set[].sensor_id and never
+  // emits a top-level device_id, so the platform saw only the transient
+  // USB id until the driver lifted it.
+  const TRACE =
+    '{"device_name":"Ambit","device_firmware":"1.1.4","sample":[{"protocol_id":"NaN","set":[' +
+    '{"par_raw":11.35},{"schema":"ambit.trace/3","sensor_id":"10:91:A8:4F:53:48"}]}]}';
+
+  it("lifts the trace sensor_id into device_id and reports it as the identity", async () => {
+    const protocol = [{ label: "arrun,1,0,2,0,0,9,0,1,0,1" }];
+    const transport = tableTransport({
+      "hello\n": HELLO_REPLY,
+      [`${JSON.stringify(protocol)}\n`]: [TRACE, "7A1E3AA1\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<{ device_id?: string }>(protocol);
+
+    expect(result.success).toBe(true);
+    expect(result.data?.device_id).toBe("10:91:A8:4F:53:48");
+  });
+
+  describe("boot dump", () => {
+    const BOOT_DUMP = [
+      "rst:0x1 boot:0x13",
+      "ADPD Found, chip version: 192",
+      "Calibration: ADPD: 1021\t987\t1103\t954\t1200\t1015",
+      "Calibration: Name:AmbitV004 Actinic:0.2412 Spec:1.1893 Emit:0.9910",
+      "FW: MAC:A0:B1:C2:D3:E4:F5\tSize:1245184\tDate:Mar  5 2026",
+      "FW: 1.1.3",
+      "",
+    ].join("\n");
+
+    it("reads identity and stored coefficients from the reboot dump", async () => {
+      const transport = tableTransport({ "hello\n": HELLO_REPLY, "reboot\n": BOOT_DUMP });
+      const driver = fastDriver();
+      await driver.initialize(transport);
+
+      const info = await driver.readDeviceInfo();
+
+      expect(info?.mac).toBe("A0:B1:C2:D3:E4:F5");
+      expect(info?.firmwareVersion).toBe("1.1.3");
+      expect(info?.lightSlope).toBeCloseTo(1.1893, 4);
+      expect(info?.adpdCalibration).toEqual([1021, 987, 1103, 954, 1200, 1015]);
+    });
+
+    // getDeviceIdentity() can only report a MAC once a measurement has carried
+    // the trace's sensor_id; the dump is how a bench session gets it up front.
+    it("resolves a hardware identity the hello reply cannot supply", async () => {
+      const transport = tableTransport({ "hello\n": HELLO_REPLY, "reboot\n": BOOT_DUMP });
+      const driver = fastDriver();
+      await driver.initialize(transport);
+
+      const beforeDump = await driver.getDeviceIdentity();
+      expect(beforeDump.deviceId).toBeUndefined();
+
+      const identity = await driver.getDeviceIdentityFromBootDump();
+
+      expect(identity.family).toBe("ambit");
+      expect(identity.deviceId).toBe("A0:B1:C2:D3:E4:F5");
+      expect((await driver.getDeviceIdentity()).deviceId).toBe("A0:B1:C2:D3:E4:F5");
+    });
+
+    it("leaves the device id unset when the dump carries no MAC line", async () => {
+      const transport = tableTransport({
+        "hello\n": HELLO_REPLY,
+        "reboot\n": "Calibration: Name:AmbitV004 Spec:1.1893\nFW: 1.1.3\n",
+      });
+      const driver = fastDriver();
+      await driver.initialize(transport);
+
+      const identity = await driver.getDeviceIdentityFromBootDump();
+
+      expect(identity.deviceId).toBeUndefined();
+      expect(identity.raw.firmwareVersion).toBe("1.1.3");
+    });
+
+    // "The port died" and "the dump was truncated" need different handling at
+    // the bench, so a failed command must not read as an empty device.
+    it("throws when the reboot command itself fails", async () => {
+      const transport = tableTransport({ "hello\n": HELLO_REPLY });
+      const driver = fastDriver();
+      await driver.initialize(transport);
+      vi.mocked(transport.send).mockRejectedValue(new Error("port closed"));
+
+      await expect(driver.readDeviceInfo()).rejects.toThrow(/port closed/);
+    });
+
+    it("reports an invalid dump rather than inventing coefficients", async () => {
+      const transport = tableTransport({
+        "hello\n": HELLO_REPLY,
+        "reboot\n": "rst:0x1 boot:0x13\n",
+      });
+      const driver = fastDriver();
+      await driver.initialize(transport);
+
+      const info = await driver.readDeviceInfo();
+
+      expect(info).toBeNull();
+    });
+  });
+
+  it("leaves a firmware-supplied device_id alone", async () => {
+    const protocol = [{ label: "arrun,1,0,2,0,0,9,0,1,0,1" }];
+    const withDeviceId = TRACE.replace('"device_name"', '"device_id":"FW-SET","device_name"');
+    const transport = tableTransport({
+      "hello\n": HELLO_REPLY,
+      [`${JSON.stringify(protocol)}\n`]: [withDeviceId, "7A1E3AA1\n"],
+    });
+    const driver = fastDriver();
+    await driver.initialize(transport);
+
+    const result = await driver.execute<{ device_id?: string }>(protocol);
+
+    expect(result.data?.device_id).toBe("FW-SET");
   });
 });

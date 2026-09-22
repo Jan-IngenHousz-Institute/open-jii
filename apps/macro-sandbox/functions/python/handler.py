@@ -2,6 +2,7 @@ import json
 import base64
 import gzip
 import subprocess
+import threading
 import os
 import shutil
 import tempfile
@@ -21,6 +22,49 @@ def _compress_response(envelope):
 # Limits
 MAX_SCRIPT_SIZE = 1 * 1024 * 1024  # 1MB
 MAX_OUTPUT_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_STDERR_SIZE = 64 * 1024
+
+
+class _Drain(threading.Thread):
+    """Reads a pipe to its end as it fills, keeping the first `cap` bytes.
+
+    Collecting a pipe after the process exits means holding everything it wrote, so a
+    macro that returns megabytes per item takes the function down instead of failing
+    its batch. Once the cap is passed the process is killed and the rest is read and
+    dropped.
+    """
+
+    def __init__(self, stream, cap, process):
+        super().__init__(daemon=True)
+        self.stream = stream
+        self.cap = cap
+        self.process = process
+        self.kept = bytearray()
+        self.total = 0
+        self.start()
+
+    def run(self):
+        while True:
+            chunk = self.stream.read(65536)
+            if not chunk:
+                return
+            room = self.cap - len(self.kept)
+            if room > 0:
+                self.kept.extend(chunk[:room])
+            self.total += len(chunk)
+            if self.total > self.cap:
+                self.process.kill()
+
+    def text(self):
+        return bytes(self.kept).decode("utf-8", errors="replace")
+
+
+def _close_pipes(process, out, err):
+    """Wait for both drains, then release the pipes the process left behind."""
+    out.join()
+    err.join()
+    process.stdout.close()
+    process.stderr.close()
 MAX_ITEM_COUNT = 1000
 MAX_TIMEOUT = 60
 DEFAULT_TIMEOUT = 10
@@ -95,12 +139,12 @@ def _execute(event):
         ) as f:
             json.dump(items, f)
 
-        # Run wrapper in a subprocess with a stripped environment.
-        result = subprocess.run(
+        # Run wrapper in a subprocess with a stripped environment. Its pipes are drained
+        # as they fill, so output is bounded before it is held rather than after.
+        process = subprocess.Popen(
             ["python3", WRAPPER_PATH, script_path, input_path],
-            capture_output=True,
-            text=True,
-            timeout=timeout + 5,  # Buffer for wrapper overhead
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             env={
                 "PATH": "/var/lang/bin:/usr/local/bin:/usr/bin:/bin",
                 "HOME": "/tmp",
@@ -108,14 +152,24 @@ def _execute(event):
                 "PYTHONDONTWRITEBYTECODE": "1",
             },
         )
+        out = _Drain(process.stdout, MAX_OUTPUT_SIZE, process)
+        err = _Drain(process.stderr, MAX_STDERR_SIZE, process)
+        try:
+            process.wait(timeout=timeout + 5)  # Buffer for wrapper overhead
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+            _close_pipes(process, out, err)
+            return {"status": "error", "results": [], "errors": ["Execution timed out"]}
+        _close_pipes(process, out, err)
 
-        stdout = result.stdout.strip()
-        if len(stdout) > MAX_OUTPUT_SIZE:
+        if out.total > MAX_OUTPUT_SIZE:
             return {
                 "status": "error",
                 "results": [],
                 "errors": ["Wrapper output exceeds 10MB limit"],
             }
+        stdout = out.text().strip()
         if stdout:
             try:
                 parsed = json.loads(stdout)
@@ -133,7 +187,5 @@ def _execute(event):
                 "errors": ["Wrapper returned no output"],
             }
 
-    except subprocess.TimeoutExpired:
-        return {"status": "error", "results": [], "errors": ["Execution timed out"]}
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)

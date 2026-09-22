@@ -1,7 +1,9 @@
 import { z } from "zod";
 
+import { zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
 import { sanitizeQuestionLabel } from "../../transforms/label-sanitization";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
+import { zResourceSeries } from "../metrics/metrics.schema";
 import { zExperimentData } from "./data/experiment-data.schema";
 import {
   zExperimentLocationInput,
@@ -24,22 +26,25 @@ export const zExperiment = z.object({
   workbookId: z.string().uuid().nullable(),
   workbookVersionId: z.string().uuid().nullable(),
   organizationId: z.string().uuid().nullable(),
-  /**
-   * Display name of the owning organization, `null` for a personal workspace.
-   * Populated by the detail read only — the lists have no room for it — which is
-   * why it is optional rather than required.
-   */
+  /** Display name of the owning organization, `null` for a personal workspace. */
   organizationName: z.string().nullish(),
   createdBy: z.string().uuid(),
   ownerFirstName: z.string().nullable().optional(),
   ownerLastName: z.string().nullable().optional(),
+  /** Direct collaborator grants; org/team reach is unbounded and deliberately not counted. */
+  membersCount: z.number().int().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   data: zExperimentData.optional(),
   locations: zExperimentLocationList.optional(),
 });
 
-export const zExperimentList = z.array(zExperiment);
+const zExperimentListEntry = zExperiment.extend({
+  /** Present on the paginated list, which reads it for the rows it returns. */
+  activity: zResourceSeries.nullable().optional(),
+});
+
+export const zExperimentList = z.array(zExperimentListEntry);
 
 export const zExperimentAccess = z.object({
   experiment: zExperiment,
@@ -273,6 +278,7 @@ export const zExperimentFlowGraph = z
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
 export type Experiment = z.infer<typeof zExperiment>;
+export type ExperimentListItem = z.infer<typeof zExperimentListEntry>;
 export type ExperimentList = z.infer<typeof zExperimentList>;
 export type ExperimentFlowNodeType = z.infer<typeof zExperimentFlowNodeType>;
 export type ExperimentFlowGraph = z.infer<typeof zExperimentFlowGraph>;
@@ -423,11 +429,20 @@ export const embargoSchema = zUpdateExperimentBody
     validateEmbargoDate(val.embargoUntil, ctx, ["embargoUntil"]);
   });
 
-export const zExperimentFilterQuery = z.object({
-  filter: z.enum(["member"]).optional().describe("Filter experiments by relationship to the user"),
-  status: zExperimentStatus.optional().describe("Filter experiments by their status"),
-  search: z.string().optional().describe("Search term for experiment name"),
-});
+export const zExperimentFilterQuery = z
+  .object({
+    /** @deprecated Alias for `scope: "related"`, removed once web and mobile have migrated. */
+    filter: z.enum(["member"]).optional().describe("Deprecated alias for scope=related"),
+    scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
+    status: zExperimentStatus.optional().describe("Filter experiments by their status"),
+    search: z.string().optional().describe("Search term for experiment name"),
+  })
+  .merge(zPaginationQuery);
+
+export const zExperimentPaginatedList = zPaginated(zExperimentListEntry);
+
+/** Array when the caller sent no `page`, envelope when they did. */
+export const zExperimentListResponse = z.union([zExperimentList, zExperimentPaginatedList]);
 
 export const zExperimentIdPathParam = z.object({
   id: z.string().uuid().describe("ID of the experiment"),
@@ -440,6 +455,8 @@ export type CreateExperimentBody = z.infer<typeof zCreateExperimentBody>;
 export type UpdateExperimentBody = z.infer<typeof zUpdateExperimentBody>;
 export type ExperimentFilterQuery = z.infer<typeof zExperimentFilterQuery>;
 export type ExperimentFilter = ExperimentFilterQuery["filter"];
+export type ExperimentPaginatedList = z.infer<typeof zExperimentPaginatedList>;
+export type ExperimentListResponse = z.infer<typeof zExperimentListResponse>;
 export type ExperimentAccess = z.infer<typeof zExperimentAccess>;
 export type CreateExperimentResponse = z.infer<typeof zCreateExperimentResponse>;
 export type ExperimentIdPathParam = z.infer<typeof zExperimentIdPathParam>;

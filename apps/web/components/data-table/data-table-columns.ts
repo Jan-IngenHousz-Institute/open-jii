@@ -17,17 +17,22 @@ import {
   isStructType,
 } from "@repo/api/transforms/column-type-utils";
 
+import type { DataTableFeatures } from "./data-table-features";
+
 export type DataRow = Record<string, unknown>;
+export type OnAnnotationHandler = (rowIds: string[], type: ExperimentAnnotationType) => void;
+export type OnToggleCellExpansionHandler = (rowId: string, columnName: string) => void;
+export type IsCellExpandedFn = (rowId: string, columnName: string) => boolean;
+
 export type DataRenderFunction = (
   value: unknown,
   type: string,
   rowId: string,
   columnName?: string,
-  onChartClick?: (data: number[], columnName: string) => void,
-  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void,
-  onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void,
-  onToggleCellExpansion?: (rowId: string, columnName: string) => void,
-  isCellExpanded?: (rowId: string, columnName: string) => boolean,
+  onAddAnnotation?: OnAnnotationHandler,
+  onDeleteAnnotations?: OnAnnotationHandler,
+  onToggleCellExpansion?: OnToggleCellExpansionHandler,
+  isCellExpanded?: IsCellExpandedFn,
   errorColumn?: string,
 ) => string | React.JSX.Element;
 
@@ -121,12 +126,13 @@ export function getColumnWidth(typeText: string, columnName?: string): number | 
 interface CreateTableColumnsParams {
   columns: ExperimentDataColumn[] | undefined;
   formatFunction?: DataRenderFunction;
-  onChartClick?: (data: number[], columnName: string) => void;
-  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
-  onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
-  onToggleCellExpansion?: (rowId: string, columnName: string) => void;
-  isCellExpanded?: (rowId: string, columnName: string) => boolean;
+  onAddAnnotation?: OnAnnotationHandler;
+  onDeleteAnnotations?: OnAnnotationHandler;
+  onToggleCellExpansion?: OnToggleCellExpansionHandler;
+  isCellExpanded?: IsCellExpandedFn;
   errorColumn?: string;
+  /** Keep the given order, for callers whose order already carries meaning. */
+  preserveOrder?: boolean;
 }
 
 /**
@@ -137,27 +143,27 @@ interface CreateTableColumnsParams {
 export function createTableColumns({
   columns: dataColumns,
   formatFunction,
-  onChartClick,
   onAddAnnotation,
   onDeleteAnnotations,
   onToggleCellExpansion,
   isCellExpanded,
   errorColumn,
+  preserveOrder = false,
 }: CreateTableColumnsParams) {
-  const columnHelper = createColumnHelper<DataRow>();
+  const columnHelper = createColumnHelper<DataTableFeatures, DataRow>();
 
-  const columns: AccessorKeyColumnDef<DataRow, unknown>[] = [];
+  const columns: AccessorKeyColumnDef<DataTableFeatures, DataRow, unknown>[] = [];
   if (!dataColumns) {
     return columns;
   }
 
-  const sortedColumns = sortColumnsForDisplay(dataColumns);
+  const sortedColumns = preserveOrder ? dataColumns : sortColumnsForDisplay(dataColumns);
 
   function getHeader(columnName: string) {
     return columnName;
   }
 
-  function getRow(columnName: string, typeName: string, row: Row<DataRow>) {
+  function getRow(columnName: string, typeName: string, row: Row<DataTableFeatures, DataRow>) {
     const value = row.getValue(columnName);
     const rowId = row.original.id as string | undefined;
 
@@ -168,7 +174,6 @@ export function createTableColumns({
         typeName,
         rowId ?? "",
         columnName,
-        onChartClick,
         onAddAnnotation,
         onDeleteAnnotations,
         onToggleCellExpansion,
@@ -197,7 +202,7 @@ export function createTableColumns({
 }
 
 export interface TableMetadata {
-  columns: AccessorKeyColumnDef<DataRow, unknown>[];
+  columns: AccessorKeyColumnDef<DataTableFeatures, DataRow, unknown>[];
   totalRows: number;
   totalPages: number;
   rawColumns?: ExperimentDataColumn[];

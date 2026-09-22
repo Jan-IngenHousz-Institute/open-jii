@@ -1,12 +1,13 @@
 "use client";
 
 import type { PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import type { FacetGridConfig } from "./cartesian-chart";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, LineConfig, MarkerConfig, ErrorBarConfig } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { facetTierStyles, useChartSizing } from "./use-is-compact";
 import {
   applyReferenceLines,
@@ -15,7 +16,8 @@ import {
   extendLayoutForFacets,
   getPlotType,
   getRenderer,
-  refineAxisType,
+  applyAxisType,
+  detectAxisType,
 } from "./utils";
 
 export interface LineSeriesData extends BaseSeries {
@@ -68,101 +70,115 @@ export function LineChart({
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>(
     subplots ? { grid: { rows: subplots.rows, columns: subplots.columns } } : {},
   );
+  const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatter", renderer);
 
-  const plotData: PlotData[] = data.map((series, index) => {
-    const mappedSeries = {
-      x: series.x,
-      y: series.y,
-      xaxis: series.xaxisId,
-      yaxis: series.yaxisId,
-      name: series.name,
-      type: plotType,
-      mode: series.mode || "lines",
+  const plotData: PlotData[] = useMemo(
+    () =>
+      data.map((series, index) => {
+        const mappedSeries = {
+          x: series.x,
+          y: series.y,
+          xaxis: series.xaxisId,
+          yaxis: series.yaxisId,
+          name: series.name,
+          type: plotType,
+          mode: series.mode || "lines",
 
-      line: {
-        color: series.line?.color || series.color || "#1f77b4",
-        width: series.line?.width || 2,
-        dash: series.line?.dash || "solid",
-        shape: series.line?.shape || "linear",
-        smoothing: series.line?.smoothing,
-      },
+          line: {
+            color: series.line?.color || series.color || undefined,
+            width: series.line?.width || 2,
+            dash: series.line?.dash || "solid",
+            shape: series.line?.shape || "linear",
+            smoothing: series.line?.smoothing,
+          },
 
-      marker:
-        series.marker || series.mode?.includes("markers")
-          ? {
-              color: series.marker?.color || series.color,
-              size: series.marker?.size || 6,
-              symbol: series.marker?.symbol || "circle",
-              opacity: series.marker?.opacity || series.opacity || 1,
-              colorscale: series.marker?.colorscale,
-              showscale: series.marker?.showscale || false,
-              colorbar: series.marker?.colorbar,
-              line: series.marker?.line,
-            }
-          : undefined,
+          marker:
+            series.marker || series.mode?.includes("markers")
+              ? {
+                  color: series.marker?.color || series.color,
+                  size: series.marker?.size || 6,
+                  symbol: series.marker?.symbol || "circle",
+                  opacity: series.marker?.opacity || series.opacity || 1,
+                  colorscale: series.marker?.colorscale,
+                  showscale: series.marker?.showscale || false,
+                  colorbar: series.marker?.colorbar,
+                  line: series.marker?.line,
+                }
+              : undefined,
 
-      fill: series.fill || "none",
-      fillcolor: series.fillcolor,
-      connectgaps: series.connectgaps !== false,
+          fill: series.fill || "none",
+          fillcolor: series.fillcolor,
+          connectgaps: series.connectgaps !== false,
 
-      text: series.text,
-      textposition: series.textposition,
-      textfont: series.textfont,
+          text: series.text,
+          textposition: series.textposition,
+          textfont: series.textfont,
 
-      error_x: series.error_x,
-      error_y: series.error_y,
+          error_x: series.error_x,
+          error_y: series.error_y,
 
-      opacity: series.opacity || 1,
-      visible: series.visible,
-      showlegend: series.showlegend,
-      legendgroup: series.legendgroup,
-      hovertemplate: series.hovertemplate,
-      hoverinfo: series.hoverinfo,
-      customdata: series.customdata,
-    } as PlotData;
+          opacity: series.opacity || 1,
+          visible: series.visible,
+          showlegend: series.showlegend,
+          legendgroup: series.legendgroup,
+          hovertemplate: series.hovertemplate,
+          hoverinfo: series.hoverinfo,
+          customdata: series.customdata,
+        } as PlotData;
 
-    return mappedSeries;
-  });
-
-  const layout = createBaseLayout(config, sizing);
-  const plotConfig = createPlotlyConfig(config, sizing);
-
-  layout.xaxis = refineAxisType(
-    layout.xaxis,
-    data.flatMap((s) => s.x ?? []),
-  );
-  layout.yaxis = refineAxisType(
-    layout.yaxis,
-    data.flatMap((s) => s.y ?? []),
+        return mappedSeries;
+      }),
+    [data, plotType],
   );
 
-  // Faceted layout: convert single-axis xaxis/yaxis (now refined to the
-  // right type) into a grid of numbered axes + per-cell title
-  // annotations. Refining first lets the per-cell axis configs inherit
-  // the auto-detected type.
-  if (subplots) {
-    const { cellTitleFontSize } = facetTierStyles(sizing);
-    const forceSharedTitles = sizing.cellVeryCompact;
-    const effectiveSharedXTitle = forceSharedTitles || subplots.sharedXTitle === true;
-    const effectiveSharedYTitle = forceSharedTitles || subplots.sharedYTitle === true;
-    const faceted = extendLayoutForFacets(layout, subplots.cells, {
-      rows: subplots.rows,
-      columns: subplots.columns,
-      sharedX: subplots.sharedX,
-      sharedY: subplots.sharedY,
-      sharedXTitle: effectiveSharedXTitle,
-      sharedYTitle: effectiveSharedYTitle,
-      roworder: subplots.roworder,
-      titleFontSize: cellTitleFontSize,
-      ultraCompactCells: sizing.cellUltraCompact,
-    });
-    Object.assign(layout, faceted);
-  }
+  // Keyed on the data alone: the layout below also rebuilds on a tier flip and
+  // a theme change, neither of which can alter an axis kind.
+  const axisTypes = useMemo(
+    () => ({
+      x: detectAxisType(data.flatMap((s) => s.x ?? [])),
+      y: detectAxisType(data.flatMap((s) => s.y ?? [])),
+    }),
+    [data],
+  );
 
-  applyReferenceLines(layout, config.referenceLines, { cells: subplots?.cells });
+  const layout = useMemo(() => {
+    const next = createBaseLayout(config, sizing);
 
+    next.xaxis = applyAxisType(next.xaxis, axisTypes.x);
+    next.yaxis = applyAxisType(next.yaxis, axisTypes.y);
+
+    // Faceted layout: convert single-axis xaxis/yaxis (now refined to the
+    // right type) into a grid of numbered axes + per-cell title
+    // annotations. Refining first lets the per-cell axis configs inherit
+    // the auto-detected type.
+    if (subplots) {
+      const { cellTitleFontSize } = facetTierStyles(sizing);
+      const forceSharedTitles = sizing.cellVeryCompact;
+      const effectiveSharedXTitle = forceSharedTitles || subplots.sharedXTitle === true;
+      const effectiveSharedYTitle = forceSharedTitles || subplots.sharedYTitle === true;
+      const faceted = extendLayoutForFacets(next, subplots.cells, {
+        rows: subplots.rows,
+        columns: subplots.columns,
+        sharedX: subplots.sharedX,
+        sharedY: subplots.sharedY,
+        sharedXTitle: effectiveSharedXTitle,
+        sharedYTitle: effectiveSharedYTitle,
+        roworder: subplots.roworder,
+        titleFontSize: cellTitleFontSize,
+        ultraCompactCells: sizing.cellUltraCompact,
+      });
+      Object.assign(next, faceted);
+    }
+
+    applyReferenceLines(next, config.referenceLines, { cells: subplots?.cells });
+
+    return next;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+  }, [config, sizing, data, axisTypes, subplots, themeVersion]);
+
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart

@@ -1,9 +1,26 @@
 import { createVisualization } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 
 import { lineDefaultConfig } from "../basic/line/defaults";
 import { CartesianRenderer } from "./cartesian-renderer";
+
+const { cartesianChart } = vi.hoisted(() => ({
+  cartesianChart: vi.fn((_props: { config: PlotlyChartConfig }) => null),
+}));
+vi.mock("@/components/charts/cartesian-chart", () => ({
+  CartesianChart: cartesianChart,
+}));
+
+function renderedConfig(): PlotlyChartConfig {
+  const call = cartesianChart.mock.calls.at(-1);
+  if (!call) {
+    throw new Error("CartesianChart was never rendered");
+  }
+  return call[0].config;
+}
 
 function buildViz(overrides: Parameters<typeof createVisualization>[0] = {}) {
   return createVisualization({
@@ -22,6 +39,54 @@ function buildViz(overrides: Parameters<typeof createVisualization>[0] = {}) {
 }
 
 describe("CartesianRenderer", () => {
+  beforeEach(() => {
+    cartesianChart.mockClear();
+  });
+
+  // The stored config carries `useWebGL: false` from the chart-type defaults,
+  // and no UI can change it, so the point count is what has to decide.
+  describe("WebGL escalation", () => {
+    const rowsOf = (count: number) =>
+      Array.from({ length: count }, (_, i) => ({ time: i, load: i % 97 }));
+
+    it("escalates a chart past the point threshold to WebGL", () => {
+      render(
+        <CartesianRenderer
+          visualization={buildViz()}
+          experimentId="exp-1"
+          data={rowsOf(5001)}
+          defaultTraceType="line"
+        />,
+      );
+      expect(renderedConfig().useWebGL).toBe(true);
+    });
+
+    it("leaves a small chart on SVG", () => {
+      render(
+        <CartesianRenderer
+          visualization={buildViz()}
+          experimentId="exp-1"
+          data={rowsOf(200)}
+          defaultTraceType="line"
+        />,
+      );
+      expect(renderedConfig().useWebGL).toBe(false);
+    });
+
+    it("honours a config that explicitly opts in", () => {
+      const viz = buildViz({ config: { ...lineDefaultConfig(), useWebGL: true } });
+      render(
+        <CartesianRenderer
+          visualization={viz}
+          experimentId="exp-1"
+          data={rowsOf(10)}
+          defaultTraceType="line"
+        />,
+      );
+      expect(renderedConfig().useWebGL).toBe(true);
+    });
+  });
+
   it("shows the empty-state when there are no rows", () => {
     render(
       <CartesianRenderer

@@ -1,6 +1,7 @@
 "use client";
 
 import { PublishConfirmDialog } from "@/components/visibility/publish-confirm-dialog";
+import { useSetCalibrationDefinitionVisibility } from "@/hooks/iot/useSetCalibrationDefinitionVisibility/useSetCalibrationDefinitionVisibility";
 import { useSetMacroVisibility } from "@/hooks/macro/useSetMacroVisibility/useSetMacroVisibility";
 import { useSetProtocolVisibility } from "@/hooks/protocol/useSetProtocolVisibility/useSetProtocolVisibility";
 import { useSetWorkbookVisibility } from "@/hooks/workbook/useSetWorkbookVisibility/useSetWorkbookVisibility";
@@ -13,6 +14,7 @@ import type {
   Visibility,
 } from "@repo/api/domains/visibility/visibility.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import {
   Select,
   SelectContent,
@@ -29,8 +31,8 @@ import {
 import { toast } from "@repo/ui/hooks/use-toast";
 
 /**
- * Experiments use their own settings card, so exclude them from this route
- * dispatch. Deriving the type keeps a newly publishable resource a compile error.
+ * Experiments have their own settings card; deriving the type from the publishable set
+ * keeps a new publishable resource a compile error here.
  */
 type PublishSelectResourceType = Exclude<PublishableResourceType, "experiment">;
 
@@ -64,13 +66,23 @@ export function ResourcePublishControl({
   const setMacroVisibility = useSetMacroVisibility();
   const setProtocolVisibility = useSetProtocolVisibility();
   const setWorkbookVisibility = useSetWorkbookVisibility();
+  const setCalibrationDefinitionVisibility = useSetCalibrationDefinitionVisibility();
 
-  // The exhaustive lookup makes a newly publishable type a compile error.
-  const mutation: typeof setMacroVisibility = {
-    macro: setMacroVisibility,
-    protocol: setProtocolVisibility,
-    workbook: setWorkbookVisibility,
-  }[resourceType];
+  const isPending =
+    setMacroVisibility.isPending ||
+    setProtocolVisibility.isPending ||
+    setWorkbookVisibility.isPending ||
+    setCalibrationDefinitionVisibility.isPending;
+
+  // Publishing, per type: the routes agree on everything but what they call the id, and
+  // the exhaustive record makes a newly publishable type a compile error here.
+  const publish: Record<PublishSelectResourceType, (id: string) => Promise<unknown>> = {
+    macro: (id) => setMacroVisibility.mutateAsync({ id, visibility: "public" }),
+    protocol: (id) => setProtocolVisibility.mutateAsync({ id, visibility: "public" }),
+    workbook: (id) => setWorkbookVisibility.mutateAsync({ id, visibility: "public" }),
+    calibration_definition: (id) =>
+      setCalibrationDefinitionVisibility.mutateAsync({ definitionId: id, visibility: "public" }),
+  };
 
   // Visibility is monotonic, so optimistic local publication cannot go stale.
   const [publishedLocally, setPublishedLocally] = useState(false);
@@ -82,7 +94,7 @@ export function ResourcePublishControl({
 
   const confirmPublish = async () => {
     try {
-      await mutation.mutateAsync({ id: resourceId, visibility: "public" });
+      await publish[resourceType](resourceId);
       setPublishedLocally(true);
       setShowConfirm(false);
       toast({ description: t("resourceVisibility.publishedToast") });
@@ -103,9 +115,15 @@ export function ResourcePublishControl({
             <Tooltip>
               <TooltipTrigger asChild>
                 {/* Keep the help copy available without hover. */}
-                <button type="button" className="text-muted-foreground" aria-label={helpText}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="text-muted-foreground"
+                  aria-label={helpText}
+                >
                   <Info className="h-3.5 w-3.5" />
-                </button>
+                </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-xs leading-snug">
                 {helpText}
@@ -133,7 +151,7 @@ export function ResourcePublishControl({
       </Select>
 
       {infoPlacement === "block" && (
-        <div className="bg-surface-light text-muted-foreground mt-2 flex items-center gap-2 rounded-md p-2 text-xs">
+        <div className="bg-muted text-muted-foreground mt-2 flex items-center gap-2 rounded-md p-2 text-xs">
           <Info className="text-primary h-4 w-4 shrink-0" />
           <div className="leading-tight">{helpText}</div>
         </div>
@@ -143,7 +161,7 @@ export function ResourcePublishControl({
         open={showConfirm}
         onOpenChange={setShowConfirm}
         onConfirm={() => void confirmPublish()}
-        isPending={mutation.isPending}
+        isPending={isPending}
       />
     </div>
   );

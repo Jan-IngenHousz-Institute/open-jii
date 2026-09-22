@@ -16,4 +16,10 @@ COPY lib/helpers/helpers.py ${LAMBDA_TASK_ROOT}/src/helpers/helpers.py
 # Lambda handler
 COPY functions/python/handler.py ${LAMBDA_TASK_ROOT}/handler.py
 
+# The runtime, and with it every macro, runs unprivileged: the files above stay
+# read-only to it, so a macro cannot rewrite the helpers for the next batch.
+RUN echo "sandbox:x:1001:1001:macro sandbox:/tmp:/sbin/nologin" >> /etc/passwd \
+ && echo "sandbox:x:1001:" >> /etc/group
+USER 1001
+
 CMD ["handler.handler"]

@@ -44,7 +44,7 @@ describe("CommandCellComponent", () => {
         onDelete={vi.fn()}
       />,
     );
-    expect(screen.getByText(/.+/, { selector: "p.text-red-500" })).toBeInTheDocument();
+    expect(screen.getByText(/.+/, { selector: "p.text-destructive" })).toBeInTheDocument();
   });
 
   it("toggles collapse through the cell wrapper", async () => {

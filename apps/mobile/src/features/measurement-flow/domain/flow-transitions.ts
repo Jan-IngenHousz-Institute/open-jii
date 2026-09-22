@@ -9,7 +9,18 @@ export type ScanResult = Record<string, unknown>;
 
 /** One device's scan output; device is absent for legacy single-device results. */
 export interface ScanResultEntry {
-  device?: { id: string; name: string };
+  device?: {
+    id: string;
+    name: string;
+    family?: string;
+    firmwareVersion?: string;
+    /**
+     * The sensor's hardware address as seen by this phone, set only when the
+     * transport gives a real one (Bluetooth MAC). USB device ids are transient
+     * across replugs, so they are not an identity and are left out.
+     */
+    address?: string;
+  };
   result: ScanResult;
   /** Dispatch rounds: the protocol this device actually ran (per-device upload). */
   protocolId?: string;
@@ -43,6 +54,10 @@ export interface FlowState {
   // Immutable workbook version whose protocol/macro snapshots this run uses.
   // Uploaded with measurements so cloud macro execution resolves the same code.
   workbookVersionId?: string;
+  // The workbook that version belongs to. Uploaded alongside so a stored
+  // measurement can re-run its macro against the producing workbook even if
+  // the experiment is later detached or re-attached elsewhere.
+  workbookId?: string;
   // One stable UUID for the complete workbook attempt. Every measurement in
   // the attempt carries it, including sequential single-device nodes.
   workbookRunId?: string;
@@ -82,6 +97,7 @@ export const initialFlowState: FlowState = {
   experimentId: undefined,
   experimentLabel: undefined,
   workbookVersionId: undefined,
+  workbookId: undefined,
   workbookRunId: undefined,
   currentStep: 0,
   flowNodes: [],
@@ -193,6 +209,7 @@ export function previousStepState(state: FlowState): Partial<FlowState> {
       experimentId: undefined,
       experimentLabel: undefined,
       workbookVersionId: undefined,
+      workbookId: undefined,
       workbookRunId: undefined,
       currentStep: 0,
       flowNodes: [],

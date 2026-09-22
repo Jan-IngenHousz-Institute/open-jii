@@ -6,10 +6,7 @@ import { useTranslation } from "~/shared/i18n";
 import { getMeasurementLocation } from "~/shared/location/measurement-location";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { buildAnnotations } from "~/shared/measurements/measurement-annotations";
-import {
-  getMeasurementMqttTopic,
-  QUESTIONS_PROTOCOL_ID,
-} from "~/shared/measurements/measurement-topic";
+import { getMeasurementMqttTopic } from "~/shared/measurements/measurement-topic";
 import { createLogger } from "~/shared/observability/logger";
 import { whenDeviceIdentityLoaded } from "~/shared/stores/device-identity-store";
 
@@ -44,7 +41,7 @@ export function useQuestionsUpload() {
       commentText?: string;
       flagType?: ExperimentAnnotationFlagType | null;
       workbookRunId: string;
-      workbookVersionId?: string;
+      workbookVersionId: string;
     }) => {
       await whenDeviceIdentityLoaded();
       const topic = getMeasurementMqttTopic({ experimentId });
@@ -53,14 +50,11 @@ export function useQuestionsUpload() {
 
       const payload = {
         questions,
-        macros: null,
-        device_id: null,
         timestamp,
         timezone,
         user_id: userId,
-        protocol_id: QUESTIONS_PROTOCOL_ID,
         workbook_run_id: workbookRunId,
-        ...(workbookVersionId ? { workbook_version_id: workbookVersionId } : {}),
+        workbook_version_id: workbookVersionId,
         annotations: buildAnnotations(commentText, flagType),
         ...(location ? { latitude: location.latitude, longitude: location.longitude } : {}),
       };

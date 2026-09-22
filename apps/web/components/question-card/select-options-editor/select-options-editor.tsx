@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
+import { Input } from "@repo/ui/components/input";
 
 import { BulkAddOptionsDialog } from "../bulk-add-options-dialog/bulk-add-options-dialog";
 import { DeleteAllOptionsDialog } from "../delete-all-options-dialog/delete-all-options-dialog";
@@ -49,65 +51,71 @@ export function SelectOptionsEditor({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-1 w-1 rounded-full bg-gray-400"></div>
-            <span className="text-sm font-medium text-gray-600">
+            <div className="bg-muted-foreground h-1 w-1 rounded-full"></div>
+            <span className="text-muted-foreground text-sm font-medium">
               {t("questionCard.answerOptionsLabel")}
             </span>
           </div>
 
           {options.length > 0 && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="xs"
               onClick={() => setShowDeleteAllDialog(true)}
               disabled={disabled}
-              className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             >
               {t("questionCard.deleteAllOptions")}
-            </button>
+            </Button>
           )}
         </div>
 
-        <p className="text-xs text-gray-400">
+        <p className="text-muted-foreground text-xs">
           {t("questionCard.optionCharLimitHint", { max: OPTION_MAX_LENGTH })}
         </p>
 
         {options.length > 0 ? (
           options.length > LARGE_OPTION_COUNT ? (
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+            <div className="border-border bg-muted flex items-center justify-between gap-3 rounded-lg border px-4 py-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-700">
+                <p className="text-foreground text-sm font-medium">
                   {t("questionCard.optionCount", { count: options.length })}
                 </p>
-                <p className="truncate text-xs text-gray-500">{options.slice(0, 4).join(", ")}…</p>
+                <p className="text-muted-foreground truncate text-xs">
+                  {options.slice(0, 4).join(", ")}…
+                </p>
               </div>
             </div>
           ) : (
             <div className="space-y-3">
               {options.map((option, optionIndex) => (
                 <div key={optionIndex} className="group/option flex items-center gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-50 text-xs font-medium text-gray-600">
+                  <div className="bg-muted text-muted-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium">
                     {optionIndex + 1}
                   </div>
-                  <input
+                  <Input
                     type="text"
                     value={option}
                     onChange={(e) => onUpdateOption?.(optionIndex, e.target.value)}
                     placeholder={t("questionCard.answerOptionPlaceholder")}
                     disabled={disabled}
                     maxLength={OPTION_MAX_LENGTH}
-                    className="focus:border-jii-dark-green focus:ring-jii-dark-green/20 focus:outline-hidden flex-1 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder-gray-500 transition-colors focus:bg-white focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100"
+                    className="flex-1"
                   />
                   <span
-                    className="w-12 shrink-0 text-right text-xs tabular-nums text-gray-400"
+                    className="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums"
                     title={t("questionCard.optionCharLimitHint", { max: OPTION_MAX_LENGTH })}
                   >
                     {option.length}/{OPTION_MAX_LENGTH}
                   </span>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => onDeleteOption?.(optionIndex)}
                     disabled={disabled}
-                    className="rounded-lg p-2 text-gray-400 opacity-100 transition-all hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50 md:opacity-0 md:group-hover/option:opacity-100"
+                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive opacity-100 md:opacity-0 md:group-hover/option:opacity-100"
                     title={t("questionCard.removeOption")}
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,16 +126,16 @@ export function SelectOptionsEditor({
                         d="M6 18L18 6M6 6l12 12"
                       />
                     </svg>
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
           )
         ) : (
-          <div className="rounded-lg border-2 border-dashed border-gray-200 p-8 text-center">
-            <div className="mx-auto mb-3 w-fit rounded-full bg-gray-100 p-3">
+          <div className="border-border rounded-lg border-2 border-dashed p-8 text-center">
+            <div className="bg-muted mx-auto mb-3 w-fit rounded-full p-3">
               <svg
-                className="h-5 w-5 text-gray-400"
+                className="text-muted-foreground h-5 w-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -140,16 +148,17 @@ export function SelectOptionsEditor({
                 />
               </svg>
             </div>
-            <p className="text-sm text-gray-500">{t("questionCard.noAnswerOptions")}</p>
+            <p className="text-muted-foreground text-sm">{t("questionCard.noAnswerOptions")}</p>
           </div>
         )}
 
         <div className="flex gap-2">
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={onAddOption}
             disabled={disabled}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+            className="flex-1"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -160,13 +169,13 @@ export function SelectOptionsEditor({
               />
             </svg>
             {t("questionCard.addOption")}
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="button"
             onClick={() => setShowBulkAddDialog(true)}
             disabled={disabled}
-            className="bg-jii-dark-green hover:bg-jii-dark-green/90 flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex-1"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -177,7 +186,7 @@ export function SelectOptionsEditor({
               />
             </svg>
             {t("questionCard.bulkAddOptions")}
-          </button>
+          </Button>
         </div>
       </div>
 

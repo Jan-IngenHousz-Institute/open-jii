@@ -78,7 +78,7 @@ export const ReleaseHero: React.FC<ReleaseHeroProps> = ({
   return (
     <article
       className={cn(
-        "border-border grid overflow-hidden rounded-2xl border bg-white shadow-sm",
+        "border-border bg-card grid overflow-hidden rounded-2xl border shadow-sm",
         hasMedia && "lg:grid-cols-2",
       )}
     >
@@ -165,7 +165,7 @@ export const ReleaseHero: React.FC<ReleaseHeroProps> = ({
                 href={href}
                 target={linkTarget}
                 rel={linkRel}
-                className="bg-primary text-primary-foreground hover:bg-primary-light inline-flex w-fit items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex w-fit items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
               >
                 {t("whatsNew.readMore")}
                 <ArrowRight className="size-3.5" />

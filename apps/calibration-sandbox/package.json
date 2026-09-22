@@ -1,0 +1,17 @@
+{
+  "name": "calibration-sandbox",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "docker build -f functions/python/Dockerfile -t calibration-sandbox .",
+    "dev": "docker compose up --build",
+    "invoke": "curl -sS -XPOST http://localhost:9004/2015-03-31/functions/function/invocations -d @test/event.json | jq .",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "test": "sh -c 'if ! docker info >/dev/null 2>&1; then echo \"Skipping calibration-sandbox tests (Docker unavailable)\"; else pnpm test:run; fi'",
+    "test:run": "docker build -f functions/python/Dockerfile -t calibration-sandbox-test . && docker run --rm -v \"$PWD/tests:/var/task/tests:ro\" -e PYTHONPATH=/var/task:/var/task/src/helpers --entrypoint python calibration-sandbox-test -m unittest discover -s /var/task/tests -v",
+    "clean": "git clean -xdf .cache .turbo dist node_modules"
+  },
+  "devDependencies": {
+    "prettier": "catalog:"
+  }
+}

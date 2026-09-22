@@ -4,18 +4,18 @@ import type { SearchResult, SearchResultType } from "@repo/api/domains/search/se
 
 import { Result, isFailure, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
+import { IotCalibrationDefinitionRepository } from "../../../../iot/core/repositories/iot-calibration-definition.repository";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
+import { OrganizationRepository } from "../../../../organizations/core/repositories/organization.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
-
-/** Max results taken per entity type before cross-type merging. */
-const PER_TYPE_LIMIT = 8;
 
 /** Minimal shape every entity DTO shares; all global search needs to render a result row. */
 interface SearchableEntity {
   id: string;
   name: string;
   description: string | null;
+  score: number;
 }
 
 @Injectable()
@@ -27,6 +27,8 @@ export class GlobalSearchUseCase {
     private readonly protocolRepository: ProtocolRepository,
     private readonly macroRepository: MacroRepository,
     private readonly workbookRepository: WorkbookRepository,
+    private readonly calibrationDefinitionRepository: IotCalibrationDefinitionRepository,
+    private readonly organizationRepository: OrganizationRepository,
   ) {}
 
   async execute(
@@ -37,35 +39,44 @@ export class GlobalSearchUseCase {
     this.logger.log({ msg: "Global search", operation: "globalSearch" });
 
     // Delegate to the per-entity focused search (`findAll`) so global search matches and ranks
-    // by exactly the same rules — there is one search definition per entity, and global search
-    // is purely a consumer of it. Each `findAll` already returns rows in descending relevance.
-    const perType = Math.min(PER_TYPE_LIMIT, limit);
-    const [experiments, protocols, macros, workbooks] = await Promise.all([
-      this.experimentRepository.findAll(userId, undefined, undefined, query, perType),
-      // Pass the caller so each findAll applies the same access scoping it uses
-      // for listing — global search must not surface private resources the caller
-      // cannot access.
-      this.protocolRepository.findAll(query, undefined, userId, perType),
-      this.macroRepository.findAll({ search: query, userId }, perType),
-      this.workbookRepository.findAll({ search: query, userId }, perType),
-    ]);
+    // by exactly the same rules: there is one search definition per entity, and global search
+    // is purely a consumer of it. Overfetching `limit` per type removes any per-type recall
+    // ceiling, so the 9th-best experiment can still outrank every macro.
+    const [experiments, protocols, macros, workbooks, calibrations, organizations] =
+      await Promise.all([
+        this.experimentRepository.findAll(userId, undefined, undefined, query, limit),
+        // Pass the caller so each findAll applies the same access scoping it uses
+        // for listing: global search must not surface private resources the caller
+        // cannot access.
+        this.protocolRepository.findAll(query, undefined, userId, limit),
+        this.macroRepository.findAll({ search: query, userId }, limit),
+        this.workbookRepository.findAll({ search: query, userId }, limit),
+        this.calibrationDefinitionRepository.search(query, userId, limit),
+        // Organizations are a grantee, never a grantable resource, so their boundary is
+        // the directory's own — public or the caller's, personal workspaces never —
+        // rather than the shared resource access scope.
+        this.organizationRepository.searchDirectory(userId, query, limit),
+      ]);
 
     if (isFailure(experiments)) return experiments;
     if (isFailure(protocols)) return protocols;
     if (isFailure(macros)) return macros;
     if (isFailure(workbooks)) return workbooks;
+    if (isFailure(calibrations)) return calibrations;
+    if (isFailure(organizations)) return organizations;
 
-    // Each `findAll` ranks within its own type, but those scores aren't exposed (or comparable)
-    // across types, so we merge by rank position: the top hit of every type scores ~1, and items
-    // interleave by their standing within their type. `score` is an internal sort key only — a
-    // positional rank, not a true cross-type relevance — so it is stripped before returning.
+    // The repositories compute one comparable score per row (same lexical base, same capped
+    // cross-table bonus, same tier weight), so merging is a plain sort. `id` breaks ties, making
+    // the order stable across identical queries. The key is internal and stripped before returning.
     const ranked = [
       ...toResults(experiments.value, "experiment", () => null),
       ...toResults(protocols.value, "protocol", (p) => p.family),
       ...toResults(macros.value, "macro", (m) => m.language),
       ...toResults(workbooks.value, "workbook", () => null),
+      ...toResults(calibrations.value, "calibration_definition", (c) => c.family),
+      ...toResults(organizations.value, "organization", (o) => o.type),
     ]
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
       .slice(0, limit);
 
     const results: SearchResult[] = ranked.map(({ score: _score, ...result }) => result);
@@ -74,24 +85,21 @@ export class GlobalSearchUseCase {
   }
 }
 
-/** A `SearchResult` plus the internal positional sort key used to merge across entity types. */
+/** A `SearchResult` plus the cross-type sort key carried out of the repositories. */
 type RankedResult = SearchResult & { score: number };
 
-/**
- * Score already-relevance-ordered rows by rank position (the repo caps the count via `limit`).
- * `meta` extracts the optional type-specific label shown beside the title (language / family).
- */
+/** `meta` extracts the optional type-specific label shown beside the title (language / family). */
 function toResults<T extends SearchableEntity>(
   rows: T[],
   type: SearchResultType,
   meta: (row: T) => string | null,
 ): RankedResult[] {
-  return rows.map((row, index) => ({
+  return rows.map((row) => ({
     type,
     id: row.id,
     title: row.name,
     subtitle: row.description,
     meta: meta(row),
-    score: (rows.length - index) / rows.length,
+    score: row.score,
   }));
 }

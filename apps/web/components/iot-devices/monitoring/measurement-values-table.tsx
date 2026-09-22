@@ -4,6 +4,7 @@ import { DataTable } from "@/components/data-table/data-table";
 
 import type { DeviceMeasurement } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
+import { EmptyState } from "@repo/ui/components/empty-state";
 
 import { buildMeasurementValueTable } from "./measurement-values";
 
@@ -23,11 +24,14 @@ export function MeasurementValuesTable({ measurements }: MeasurementValuesTableP
 
   if (rows.length === 0) {
     return (
-      <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-        {measurements.length === 0
-          ? t("iot.devices.monitoring.noMeasurements")
-          : t("iot.devices.monitoring.noReadableSamples")}
-      </p>
+      <EmptyState
+        size="inline"
+        description={
+          measurements.length === 0
+            ? t("iot.devices.monitoring.noMeasurements")
+            : t("iot.devices.monitoring.noReadableSamples")
+        }
+      />
     );
   }
 

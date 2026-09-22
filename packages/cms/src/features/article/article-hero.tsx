@@ -41,7 +41,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
   return (
     <div
       className={cn(
-        `flex flex-col overflow-hidden rounded-2xl border bg-white shadow-lg`,
+        `bg-card flex flex-col overflow-hidden rounded-2xl border shadow-lg`,
         isReversedLayout ? "lg:flex-row-reverse" : "lg:flex-row",
       )}
     >
@@ -65,7 +65,10 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
           </div>
         )}
 
-        <div className={cn("text-gray-500")} {...inspectorProps({ fieldId: "publishedDate" })}>
+        <div
+          className={cn("text-muted-foreground")}
+          {...inspectorProps({ fieldId: "publishedDate" })}
+        >
           <FormatDate date={safePublishedDate} />
         </div>
         <h1

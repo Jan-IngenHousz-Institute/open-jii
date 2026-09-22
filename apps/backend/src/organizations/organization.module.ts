@@ -72,5 +72,8 @@ import { OrganizationController } from "./presentation/organization.controller";
     DecideOrganizationJoinRequestUseCase,
     OrganizationAuthHook,
   ],
+  // Global search composes the directory read, on the same visibility boundary the
+  // listing uses.
+  exports: [OrganizationRepository],
 })
 export class OrganizationModule {}

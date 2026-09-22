@@ -1,3 +1,4 @@
+import { listQueryKeys } from "@/hooks/list-query-keys";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -18,7 +19,9 @@ export const useWorkbookUpdate = (workbookId: string, props: WorkbookUpdateProps
       mutationKey: ["workbook", workbookId, "update"],
       onMutate: async (variables) => {
         await queryClient.cancelQueries({ queryKey: workbookKey });
-        await queryClient.cancelQueries({ queryKey: orpc.workbooks.listWorkbooks.key() });
+        for (const queryKey of listQueryKeys.workbooks()) {
+          await queryClient.cancelQueries({ queryKey });
+        }
 
         const previousWorkbook = queryClient.getQueryData(workbookKey);
 
@@ -41,7 +44,9 @@ export const useWorkbookUpdate = (workbookId: string, props: WorkbookUpdateProps
       },
       onSettled: async () => {
         await queryClient.invalidateQueries({ queryKey: workbookKey });
-        await queryClient.invalidateQueries({ queryKey: orpc.workbooks.listWorkbooks.key() });
+        for (const queryKey of listQueryKeys.workbooks()) {
+          await queryClient.invalidateQueries({ queryKey });
+        }
       },
       onSuccess: (data) => {
         props.onSuccess?.(data);

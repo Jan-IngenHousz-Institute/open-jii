@@ -1,8 +1,9 @@
 import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
 import { NewsletterSubscribeForm } from "@/components/newsletter/newsletter-subscribe-form";
+import { PublicMetricsPanel } from "@/components/public-metrics/public-metrics-panel";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
-import { cache } from "react";
+import { Suspense, cache } from "react";
 import { auth } from "~/app/actions/auth";
 import { getContentfulClients } from "~/lib/contentful";
 import { safeMetadata } from "~/lib/safe-metadata";
@@ -70,7 +71,7 @@ export default async function Home({ params }: HomePageProps) {
   return (
     <>
       <UnifiedNavbar locale={locale} session={session} isHomePage={true} />
-      <main className="flex min-h-screen flex-col items-center bg-gradient-to-br">
+      <main className="flex min-h-screen flex-col items-center">
         {/* Hero Section */}
         <HomeHeroComponent heroData={hero} preview={preview} locale={locale} />
 
@@ -82,6 +83,11 @@ export default async function Home({ params }: HomePageProps) {
 
         {/* Features Section */}
         <HomeKeyFeatures featuresData={features} preview={preview} locale={locale} />
+
+        {/* Platform Metrics Section: streamed, so the warehouse never holds up the page. */}
+        <Suspense fallback={null}>
+          <PublicMetricsPanel locale={locale} />
+        </Suspense>
 
         {/* Footer */}
         <HomeFooter

@@ -109,12 +109,14 @@ describe("RegistrationForm", () => {
     });
   });
 
-  it("renders the submit button with correct styling", () => {
+  it("renders a full-width submit button on the stock button shape", () => {
     render(<RegistrationForm {...defaultProps} />);
 
     const button = screen.getByRole("button", { name: "registration.register" });
     expect(button).toBeInTheDocument();
-    expect(button).toHaveClass("h-12", "w-full", "rounded-xl");
+    // Width is the form's layout decision; height and radius are the button's
+    // own and come from the primitive.
+    expect(button).toHaveClass("w-full", "h-9", "rounded-md");
     expect(button).toHaveAttribute("type", "submit");
   });
 
@@ -298,8 +300,9 @@ describe("RegistrationForm", () => {
     const termsTrigger = screen.getByText("auth.terms");
     const closestAnchorOrButton = termsTrigger.closest("a,button");
     expect(closestAnchorOrButton).toBeTruthy();
-    // It should have the cursor-pointer and underline classes regardless of tag
-    expect(closestAnchorOrButton).toHaveClass("cursor-pointer", "underline");
+    // The link treatment comes from the button primitive's `link` variant, so
+    // assert that recipe rather than the classes the call site used to carry.
+    expect(closestAnchorOrButton).toHaveClass("text-primary", "underline-offset-4");
   });
 
   it("renders custom terms data when provided", async () => {
@@ -365,9 +368,16 @@ describe("RegistrationForm", () => {
   });
 
   it("prevents multiple submissions when already pending", async () => {
-    createUserProfileMock.mockImplementation(() => {
-      return new Promise((resolve) => setTimeout(resolve, 100));
-    });
+    // A gate the test releases, not a fixed timer: a loaded runner can spend longer
+    // between the two clicks than any wall-clock window, and once the mutation
+    // settles the button re-enables and the second click is a real second submit.
+    let releaseProfile: () => void = () => undefined;
+    createUserProfileMock.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseProfile = () => resolve();
+        }),
+    );
 
     render(<RegistrationForm {...defaultProps} />);
 
@@ -389,6 +399,12 @@ describe("RegistrationForm", () => {
     await user.click(submitButton);
 
     expect(createUserProfileMock).toHaveBeenCalledTimes(1);
+
+    // Settle the submission so the form is not left mid-flight for the next test.
+    releaseProfile();
+    await waitFor(() => {
+      expect(submitButton).not.toBeDisabled();
+    });
   });
 
   it("shows validation error if firstName is too short", async () => {

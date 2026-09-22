@@ -1,5 +1,6 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useNewsletterStatus } from "@/hooks/newsletter/useNewsletterStatus/useNewsletterStatus";
 import { useSubscribeNewsletter } from "@/hooks/newsletter/useSubscribeNewsletter/useSubscribeNewsletter";
 import { useUnsubscribeNewsletter } from "@/hooks/newsletter/useUnsubscribeNewsletter/useUnsubscribeNewsletter";
@@ -8,13 +9,6 @@ import { AlertCircle, Loader2, Mail } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/components/card";
 import { Switch } from "@repo/ui/components/switch";
 
 export function NewsletterSubscriptionCard() {
@@ -124,15 +118,12 @@ export function NewsletterSubscriptionCard() {
   };
 
   return (
-    <Card className="rounded-md shadow-sm">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <Mail className="text-primary h-5 w-5" aria-hidden />
-          <CardTitle>{t("settings.NewsletterSubscriptionCard.title")}</CardTitle>
-        </div>
-        <CardDescription>{t("settings.NewsletterSubscriptionCard.description")}</CardDescription>
-      </CardHeader>
-      <CardContent>{renderContent()}</CardContent>
-    </Card>
+    <SettingsCard
+      icon={Mail}
+      title={t("settings.NewsletterSubscriptionCard.title")}
+      description={t("settings.NewsletterSubscriptionCard.description")}
+    >
+      {renderContent()}
+    </SettingsCard>
   );
 }

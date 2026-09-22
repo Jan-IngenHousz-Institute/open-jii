@@ -1,5 +1,4 @@
 import type { ChartFormConfig, ChartFormDataConfig } from "../../chart-config";
-import { DEFAULT_PRIMARY_COLOR } from "../../colors/palettes";
 import { makeDataSource } from "../../data/data-sources";
 
 export function spcDefaultConfig(): ChartFormConfig {
@@ -12,7 +11,6 @@ export function spcDefaultConfig(): ChartFormConfig {
     showLegend: true,
     showGrid: true,
     useWebGL: false,
-    color: [DEFAULT_PRIMARY_COLOR],
     // 3-sigma is the industry-standard control band (Shewhart's original
     // recommendation). 2-sigma flags more points but more false positives.
     spcSigmaMultiplier: 3,

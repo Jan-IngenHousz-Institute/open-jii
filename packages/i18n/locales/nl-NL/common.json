@@ -13,6 +13,11 @@
     "languageDrawer": "Taallade schakelen",
     "regionalSettings": "Regionale instellingen",
     "loading": "Laden...",
+    "loadingChart": "Grafiek wordt geladen...",
+    "clear": "Wissen",
+    "toggleTheme": "Thema wisselen",
+    "switchToLightMode": "Naar lichte modus wisselen",
+    "switchToDarkMode": "Naar donkere modus wisselen",
     "error": "Fout",
     "success": "Succes",
     "save": "Opslaan",
@@ -29,6 +34,8 @@
     "confirm": "Bevestigen",
     "confirmDelete": null,
     "close": "Sluiten",
+    "expandDetails": "Details uitklappen",
+    "collapseDetails": "Details inklappen",
     "copy": "Kopiëren",
     "copied": "Gekopieerd",
     "yes": "Ja",
@@ -82,14 +89,11 @@
     "home": "Home",
     "openJII": "openJII",
     "support": null,
+    "documentation": null,
+    "breadcrumbs": null,
     "faq": null
   },
   "experiments": {
-    "filterMy": null,
-    "filterMember": null,
-    "filterRelated": null,
-    "filterAll": null,
-    "filterStatusAll": null,
     "clearSearch": null,
     "title": "Experimenten",
     "archiveTitle": null,
@@ -105,14 +109,13 @@
     "updatedAt": "Bijgewerkt op",
     "loadingExperiments": null,
     "noExperiments": "Geen experimenten gevonden",
+    "noMatches": "Geen experimenten komen overeen met uw zoekopdracht",
     "noExperimentsDescription": null,
     "viewDetails": null,
     "experimentCreated": "Experiment succesvol aangemaakt",
     "experimentUpdated": "Experiment succesvol bijgewerkt",
     "experimentUpdateFailed": "Bijwerken van experiment mislukt",
     "experimentDeleted": "Experiment succesvol verwijderd",
-    "listDescription": "Deze pagina toont een lijst van bestaande experimenten.",
-    "archiveDescription": null,
     "experiment": "Experiment",
     "settings": "Experiment instellingen",
     "settingsDescription": "Beheer instellingen en leden voor dit experiment.",
@@ -457,11 +460,6 @@
     "searchPlaceholder": "Organisaties zoeken…",
     "searchLabel": "Organisaties doorzoeken",
     "noMatches": "Geen organisatie past bij je zoekopdracht",
-    "filter": {
-      "label": "Organisaties filteren",
-      "my": "Mijn organisaties",
-      "all": "Alle organisaties"
-    },
     "tabs": {
       "members": "Leden",
       "teams": "Teams",
@@ -548,15 +546,9 @@
         "failed": "De organisatie is aangemaakt, maar {{names}} kon niet worden uitgenodigd. Probeer het opnieuw via het tabblad Leden."
       }
     },
-    "mine": {
-      "emptyTitle": "Je zit nog in geen enkele organisatie",
-      "emptyHint": "Maak er een aan om experimenten, protocollen, macro's en werkmappen met een groep te delen, of zoek er een in het overzicht.",
-      "loadFailed": "Je organisaties konden niet worden geladen."
-    },
     "directory": {
-      "emptyTitle": "Nog geen openbare organisaties",
-      "emptyHint": "Hier staan alleen organisaties die zichzelf openbaar hebben gemaakt.",
-      "loadFailed": "Het overzicht kon niet worden geladen."
+      "emptyTitle": "Nog geen organisaties",
+      "loadFailed": "Organisaties konden niet worden geladen."
     },
     "join": {
       "requestAction": "Lidmaatschap aanvragen",
@@ -590,7 +582,9 @@
         "device_one": "Apparaat",
         "device_other": "Apparaten",
         "device_group_one": "Apparaatgroep",
-        "device_group_other": "Apparaatgroepen"
+        "device_group_other": "Apparaatgroepen",
+        "calibration_definition_one": "Kalibratiedefinitie",
+        "calibration_definition_other": "Kalibratiedefinities"
       },
       "groupMemberCount_one": "{{count}} apparaat",
       "groupMemberCount_other": "{{count}} apparaten",
@@ -776,7 +770,9 @@
         "device_one": "apparaat",
         "device_other": "apparaten",
         "device_group_one": "apparaatgroep",
-        "device_group_other": "apparaatgroepen"
+        "device_group_other": "apparaatgroepen",
+        "calibration_definition_one": "kalibratiedefinitie",
+        "calibration_definition_other": "kalibratiedefinities"
       },
       "confirmTitle": "Organisatie verwijderen?",
       "confirmDescription": "{{name}} wordt verwijderd, samen met haar leden, uitnodigingen en teams.",
@@ -1178,13 +1174,13 @@
     "updatedAt": "Bijgewerkt op",
     "loadingProtocols": null,
     "noProtocols": "Geen protocollen gevonden",
+    "noMatches": "Geen protocollen komen overeen met uw zoekopdracht",
     "viewDetails": null,
     "protocolCreated": "Protocol succesvol aangemaakt",
     "protocolUpdated": "Protocol succesvol bijgewerkt",
     "protocolDeleted": "Protocol succesvol verwijderd",
     "nameAlreadyExists": "Er bestaat al een protocol met deze naam. Kies een andere naam.",
     "createError": "Aanmaken van protocol mislukt. Probeer het opnieuw.",
-    "listDescription": "Deze pagina toont een lijst van bestaande protocollen.",
     "protocol": "Protocol",
     "settings": "Protocol instellingen",
     "settingsDescription": "Beheer instellingen voor dit protocol.",
@@ -1197,15 +1193,18 @@
     "notFoundDescription": "Het gevraagde protocol kon niet worden gevonden",
     "family": "Sensorfamilie",
     "onlyCreatorCanEdit": "Alleen de protocolmaker kan de instellingen benaderen",
-    "filterMy": "Mijn protocollen",
-    "filterAll": "Alle protocollen",
-    "filterProtocols": "Protocollen filteren",
     "clearSearch": "Zoekopdracht wissen",
     "searchProtocols": "Protocollen zoeken...",
     "descriptionPlaceholder": "Beschrijving toevoegen...",
     "detailsTitle": "Details",
     "codePlaceholder": "Voer protocol code in als JSON",
-    "lastUpdate": "Laatste update"
+    "columns": {
+      "name": "Naam",
+      "family": "Familie",
+      "macros": "Macro's",
+      "updated": "Bijgewerkt",
+      "activity": "Activiteit"
+    }
   },
   "newProtocol": {
     "description": "Stel een nieuw protocol in.",
@@ -1275,6 +1274,8 @@
     "compatibleMacrosDescription": "Macro's waarvan bekend is dat ze werken met dit protocol. Deze worden aanbevolen in de flow builder.",
     "noCompatibleMacros": "Nog geen compatibele macro's gekoppeld.",
     "addCompatibleMacro": "Zoek en voeg een compatibele macro toe...",
+    "openCompatibleMacro": "{{name}} openen in een nieuw tabblad",
+    "removeCompatibleMacro": "{{name}} verwijderen",
     "detailsTitle": "Protocoldetails",
     "testerTitle": "Verbinden & Testen"
   },
@@ -1401,5 +1402,10 @@
     "pageOf": "van",
     "previous": "Vorige",
     "next": "Volgende"
+  },
+  "pagination": {
+    "previous": "Vorige",
+    "next": "Volgende",
+    "pageOf": "Pagina {{page}} van {{totalPages}}"
   }
 }

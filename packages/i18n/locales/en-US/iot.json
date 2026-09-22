@@ -34,7 +34,8 @@
       "testProtocol": "Test Protocol",
       "connectToDeviceDescription": "Connect to a device and test your protocol before saving",
       "browserNotSupported": "Your browser doesn't support Web Bluetooth or Web Serial APIs.",
-      "tryDifferentBrowser": "Try using Chrome, Edge, or Opera on desktop."
+      "tryDifferentBrowser": "Try using Chrome, Edge, or Opera on desktop.",
+      "registerDevice": "Register this device"
     },
     "deviceIdentity": {
       "unknown": "Unknown device",
@@ -59,20 +60,17 @@
         "created": "Registered"
       },
       "status": {
-        "pending": "Pending",
-        "active": "Active",
-        "rotating": "Rotating",
-        "revoked": "Revoked"
+        "registered": "Registered",
+        "provisioned": "Provisioned",
+        "onboarded": "Onboarded",
+        "revoked": "Revoked",
+        "retired": "Retired"
       },
       "tabs": {
         "all": "All"
       },
       "sections": {
-        "overview": "Overview",
-        "devices": "Devices",
-        "groups": "Groups",
-        "onboarding": "Onboarding",
-        "monitoring": "Monitoring"
+        "groups": "Groups"
       },
       "detailTabs": {
         "overview": "Overview",
@@ -80,23 +78,18 @@
         "onboarding": "Onboarding",
         "collaborators": "Collaborators",
         "lineage": "Lineage",
-        "monitoring": "Monitoring"
-      },
-      "overview": {
-        "total": "Total devices"
-      },
-      "comingSoon": {
-        "title": "Coming soon",
-        "monitoring": "Track device connectivity, last seen, and fleet health at a glance.",
-        "onboarding": "Onboard each device from its detail page (Onboarding tab). Bulk onboarding from this view is coming soon."
+        "monitoring": "Monitoring",
+        "firmware": "Firmware",
+        "calibration": "Calibration"
       },
       "connectivity": {
-        "connected": "Connected",
+        "connected": "Online",
         "connectedNow": "Currently connected",
         "onlineSince": "Online since {{time}}",
-        "disconnected": "Disconnected",
+        "disconnected": "Offline",
         "unknown": "Unknown",
-        "never": "Never connected"
+        "never": "Never connected",
+        "idle": "Idle"
       },
       "lineage": {
         "title": "Lineage",
@@ -244,13 +237,17 @@
         "unknownWorkbookId": "Unknown workbook",
         "macros": "Macros",
         "unknownMacroId": "Unknown macro",
-        "macroRunHint": "Counted per macro run"
+        "macroRunHint": "Counted per macro run",
+        "workbookVersionShort": "v{{version}}"
       },
       "pageOf": "Page {{page}} of {{total}}",
       "actions": {
         "more": "Device actions",
         "view": "View details",
-        "delete": "Delete"
+        "delete": "Delete",
+        "title": "Actions",
+        "retire": "Retire",
+        "reinstate": "Reinstate"
       },
       "empty": {
         "title": "No devices yet",
@@ -318,8 +315,8 @@
         "namePlaceholder": "Greenhouse sensor 1",
         "submit": "Register",
         "createSuccess": "Device registered",
-        "createSuccessDetail": "A certificate will be issued to activate it.",
-        "createError": "Failed to register device"
+        "createError": "Failed to register device",
+        "createSuccessNext": "Next: activate it with a certificate."
       },
       "remove": {
         "title": "Delete device",
@@ -337,19 +334,51 @@
           "registered": "Registered",
           "thingName": "Device identifier",
           "connectivity": "Connectivity",
-          "lastSeen": "Last seen"
+          "lastSeen": "Last seen",
+          "visibility": "Visibility"
         },
         "credentials": {
           "title": "Credentials"
         },
-        "dangerZone": {
-          "title": "Danger zone",
-          "deleteLabel": "Delete this device",
-          "deleteDescription": "Permanently removes the device and its cloud record. This cannot be undone."
+        "cards": {
+          "experimentsTitle": "Experiments",
+          "onboardLink": "Onboard",
+          "experimentsEmpty": "Not streaming into any experiment yet. Onboard it to start.",
+          "experimentsError": "Could not load this device's experiments.",
+          "credentialHint": {
+            "active": "Certificate active. The device can connect and stream."
+          },
+          "activityTitle": "Activity",
+          "monitoringLink": "Open monitoring",
+          "activityLoading": "Checking the last data arrival...",
+          "activityNoData": "No data has arrived from this device yet.",
+          "activityLastData": "Last data arrived {{time}}.",
+          "firmwareTitle": "Firmware",
+          "firmwareLink": "Open firmware",
+          "calibrationTitle": "Calibration",
+          "calibrationLink": "Open calibration",
+          "calibrationNone": "Not calibrated yet.",
+          "calibrationCaption": "Last calibrated",
+          "firmwareUnknown": "No firmware version reported in the last 30 days.",
+          "observedEmpty": "No uploads in the last 30 days.",
+          "observedUnattributed": "Unattributed uploads",
+          "firmwareReportedCaption": "Reported by the device in the last 30 days.",
+          "onboarded": "Onboarded",
+          "activityFigureCaption": "Last data arrival",
+          "observedShortCaption": "Uploaded to, last 30 days",
+          "measurementCount_one": "{{count}} measurement",
+          "measurementCount_other": "{{count}} measurements"
+        },
+        "overview": {
+          "title": "Overview",
+          "description": "What this device is, and where its setup stands."
+        },
+        "about": {
+          "title": "About"
         }
       },
       "credentials": {
-        "pendingDescription": "This device has no certificate yet. Issue one to activate it and let it connect to AWS IoT.",
+        "registeredDescription": "This device has no certificate yet. Issue one to provision it and let it connect to AWS IoT.",
         "issue": "Issue certificate",
         "reissue": "Re-issue certificate",
         "issueError": "Failed to issue certificate",
@@ -358,7 +387,6 @@
         "rotateTitle": "Rotate certificate",
         "rotateConfirm": "The device gets a new certificate and the current one stops working immediately. It keeps publishing only after the new credentials are installed.",
         "disconnectWarning": "This device is currently connected and will be disconnected.",
-        "rotatingDescription": "A certificate rotation is in progress.",
         "revokedDescription": "The certificate was revoked, so this device can no longer authenticate to AWS IoT. Issue a new certificate to restore credential access.",
         "revoke": "Revoke certificate",
         "revokeTitle": "Revoke certificate",
@@ -383,24 +411,98 @@
         "rootCa3Sub": "ECC 256 bit key",
         "copy": "Copy",
         "download": "Download",
-        "downloadAll": "Download all"
+        "downloadAll": "Download all",
+        "continueToOnboarding": "Continue to onboarding",
+        "closeUnsavedTitle": "Close without downloading?",
+        "closeUnsavedDescription": "The private key is shown once and is not stored. Closing now means issuing a new certificate to get one.",
+        "closeUnsavedBack": "Go back",
+        "closeUnsavedConfirm": "Close anyway",
+        "refreshStatus": "Refresh status",
+        "tabTitle": "Credentials",
+        "tabDescription": "The certificate this device authenticates with, and its lifecycle.",
+        "guide": {
+          "title": "How credentials work",
+          "step1": "Issue a certificate here. The private key is shown exactly once and the platform never stores it.",
+          "step2": "Download the bundle and store all three files on the device; the key never leaves it.",
+          "step3": "Rotate to hand the device a fresh certificate, or when it changes hands. Revoke to cut access immediately.",
+          "step4": "A revoked device cannot reconnect until a new certificate is issued."
+        },
+        "certificateIdLabel": "Certificate ID",
+        "retiredDescription": "This device is retired. Reinstate it from the actions menu before issuing a certificate."
+      },
+      "nextAction": {
+        "issueCredentials": "Issue certificate",
+        "onboard": "Onboard to an experiment"
+      },
+      "firmware": {
+        "title": "Firmware",
+        "description": "What this device runs, what JII has published, and how updates reach it.",
+        "currentTitle": "On this device",
+        "unknownVersion": "This device has not reported a firmware version recently.",
+        "releasesTitle": "Releases",
+        "releasesHint": "Published by JII; the newest stable release is what a rollout installs by default.",
+        "latest": "Latest",
+        "prerelease": "Pre-release",
+        "installed": "On this device",
+        "noNotes": "No release notes.",
+        "showAllNotes": "Show all notes",
+        "viewOnGitHub": "View on GitHub",
+        "noReleases": "No releases have been published for this family yet.",
+        "loadError": "Releases could not be loaded.",
+        "versionUnavailable": "The reported firmware version could not be read.",
+        "noFirmwareLine": "JII does not publish firmware for this device family yet.",
+        "guide": {
+          "title": "How updates reach this device",
+          "intro": "JII starts rollouts from a reviewed workflow; devices are never updated from this page.",
+          "step1": "A release is published in the firmware repository.",
+          "step2": "An operator starts a rollout, which stages it across devices and stops automatically if too many fail.",
+          "step3": "The device receives an update job, downloads the image over a short-lived link, and verifies its checksum.",
+          "step4": "The device applies the update, reboots, and reports the outcome; a failed update rolls back."
+        },
+        "showLessNotes": "Show fewer notes",
+        "upToDateShort": "Up to date",
+        "updateAvailableShort": "Update available",
+        "reportedCaption": "Reported by the device in the last 30 days.",
+        "toolingReleases": "Tooling and other releases ({{count}})"
+      },
+      "fleet": {
+        "title": "Fleet pulse",
+        "description": "How your devices are doing right now, and what flowed in the selected window.",
+        "onlineLabel": "Online now",
+        "attentionLabel": "Need attention",
+        "throughputTitle": "Data flow",
+        "attentionTitle": "Needs attention",
+        "attentionHint": "Devices whose setup or delivery is stuck, most actionable first.",
+        "attentionEmpty": "Every device is set up and reporting.",
+        "attentionMore_one": "and {{count}} more device",
+        "attentionMore_other": "and {{count}} more devices",
+        "eventsTitle": "Recent broker events",
+        "loadError": "Fleet activity could not be loaded.",
+        "reasonCredentials": "Needs a certificate",
+        "reasonNeverConnected": "Never connected",
+        "reasonSilent": "Connected, no data",
+        "fromDevice": "Most recent from {{device}}",
+        "offlineCount_one": "{{count}} offline",
+        "offlineCount_other": "{{count}} offline"
+      },
+      "retire": {
+        "title": "Retire device",
+        "confirm": "{{name}} will be taken out of service. Its certificate is revoked and it leaves every attention list and picker. Its record and history stay.",
+        "success": "Device retired",
+        "error": "Could not retire the device"
+      },
+      "reinstate": {
+        "title": "Reinstate device",
+        "confirm": "{{name}} returns to the registry as a registered device. Issue a new certificate to bring it back into service.",
+        "success": "Device reinstated",
+        "error": "Could not reinstate the device"
       }
     },
     "onboarding": {
-      "currentTitle": "Experiments",
-      "currentDescription": "The experiments this device currently streams into.",
-      "currentEmpty": "This device is not onboarded to any experiment yet.",
-      "addTitle": "Onboard to experiments",
-      "addDescription": "Pick the experiments this device should stream into. Onboarding issues the configuration to hand to the device.",
-      "addEmpty": "No further experiments available. You can re-issue the current configuration below.",
       "onboard": "Onboard",
       "reissue": "Re-issue configuration",
       "onboardSuccess": "Device onboarded. Configuration ready below.",
       "onboardError": "Could not onboard the device",
-      "deliveryTitle": "Device configuration",
-      "deliveryDescription": "Hand this configuration to the device: download it, or push it over a direct connection.",
-      "endpointLabel": "Broker endpoint",
-      "topicsLabel": "Publish topics",
       "download": "Download JSON",
       "connect": "Connect device",
       "disconnect": "Disconnect",
@@ -419,27 +521,108 @@
       "answerYes": "Yes",
       "answerNo": "No",
       "answerRequiredHint": "Answer all required questions before delivering the configuration.",
-      "guide": {
-        "title": "How to connect your device",
-        "step1": "Get the device certificate bundle and the Amazon root CA from the Credentials tab.",
-        "step2": "Connect to the broker endpoint below via MQTT over TLS, with the thing name as client id.",
-        "step3": "Load this configuration onto the device: download the JSON or push it over a direct connection.",
-        "step4": "Run the procedures of each experiment in order.",
-        "step5": "Publish each measurement to the experiment's topic prefix plus /{{sensorVersion}}/{{sensorId}}.",
-        "step6": "Attach the prefilled answers to every published measurement.",
-        "docsLink": "Read the full device integration guide"
-      }
+      "experimentsTitle": "Experiments",
+      "experimentsDescription": "Experiments this device streams into, and experiments you can onboard it to.",
+      "selectedCount": "{{count}} experiment selected",
+      "selectedCount_other": "{{count}} experiments selected",
+      "onboardCount_one": "Onboard to {{count}} experiment",
+      "onboardCount_other": "Onboard to {{count}} experiments",
+      "selectAtLeastOne": "Select at least one experiment.",
+      "noMemberships": "You are not a member of any experiment yet. Create or join one to onboard this device.",
+      "allOnboarded": "All your experiments are onboarded. Re-issue the configuration from the panel on the right.",
+      "retry": "Try again",
+      "inactiveDeviceAction": "Issue credentials",
+      "rail": {
+        "title": "Configuration",
+        "preview": "Preview",
+        "issuedAt": "Issued {{time}}",
+        "updating": "Updating…",
+        "stale": "Stale",
+        "thingName": "Thing name",
+        "endpoint": "Broker endpoint",
+        "resolvedWhenIssued": "Resolved when issued",
+        "copy": "Copy",
+        "copied": "Copied",
+        "new": "New",
+        "topicsWhenIssued": "Topics and procedures resolved when issued.",
+        "noExperiments": "Select an experiment to see what this device would receive.",
+        "procedureCounts": "{{protocols}} protocols · {{commands}} commands · {{questions}} questions",
+        "workbookVersion": "wb v{{version}}",
+        "workbookExcluded": "Workbook procedures excluded.",
+        "topicRule": "Devices publish to {prefix}/{sensorVersion}/{sensorId}.",
+        "answeredCount": "{{answered}} of {{required}} required answered",
+        "missing": "Missing: {{fields}}",
+        "memoryOnly": "Issued configurations exist in this browser session only. Re-issue any time; the file is always regenerated from current state.",
+        "integrationGuide": "Integration guide",
+        "viewJson": "View JSON"
+      },
+      "boundRowActions": "Experiment actions",
+      "removeMenuItem": "Remove from experiment",
+      "removeTitle": "Remove {{name}}?",
+      "removeBody": "The device stops streaming into it, and its procedures leave the next issued configuration.",
+      "removeSuccess": "Removed from the experiment",
+      "removeError": "Could not remove the device from the experiment",
+      "title": "Onboarding",
+      "description": "Choose the experiments this device streams into, then hand it the issued configuration.",
+      "filterExperiments": "Filter experiments",
+      "filterNoMatches": "No experiments match that filter.",
+      "answeredOfRequired": "{{answered}} of {{required}} required",
+      "reissueHint": "Re-issuing regenerates the file for everything currently bound; it adds nothing new.",
+      "retiredDevice": "This device is retired and cannot be onboarded."
     },
     "experimentDevices": {
       "tabLabel": "Devices",
       "title": "Devices",
-      "description": "Devices onboarded to this experiment. An onboarded device can stream its measurements into it.",
+      "description": "Devices onboarded to this experiment and devices that sent data into it in the last 30 days.",
       "loading": "Loading devices...",
-      "empty": "No devices are onboarded to this experiment yet.",
+      "empty": "Devices are onboarded from their own Onboarding tab, where credentials and configuration live.",
       "detach": "Detach",
       "detachSuccess": "Device detached from the experiment",
       "detachError": "Could not detach the device",
-      "loadError": "Could not load the devices. Try again."
+      "loadError": "Could not load the devices. Try again.",
+      "emptyTitle": "No devices stream into this experiment yet",
+      "openRegistry": "Open device registry",
+      "detachTitle": "Remove {{name}}?",
+      "detachConfirmBody": "It stops streaming into this experiment, and its procedures leave the next issued configuration.",
+      "stats": {
+        "onboarded": "Onboarded",
+        "sending": "Sending data (30d)",
+        "silent": "Onboarded, no recent data",
+        "unbound": "Sending without onboarding",
+        "ofTotal_one": "of {{count}} device",
+        "ofTotal_other": "of {{count}} devices",
+        "window": "Last 30 days",
+        "ofOnboarded": "of {{count}} onboarded",
+        "ofSending": "of {{count}} sending"
+      },
+      "columns": {
+        "onboarded": "Onboarded",
+        "battery": "Battery"
+      },
+      "notOnboarded": "Not onboarded",
+      "unregistered": "Unregistered publisher",
+      "noAccess": "No access to this device",
+      "measurements_one": "{{count}} measurement",
+      "measurements_other": "{{count}} measurements",
+      "noRecentData": "No data in the last 30 days",
+      "lastDataUnavailable": "Unavailable",
+      "pipelineUnavailable": "Measurement data could not be loaded, so devices that only sent data may be missing.",
+      "unknownFirmware": "Firmware unknown",
+      "searchPlaceholder": "Search devices",
+      "searchNoMatches": "No devices match that search.",
+      "openMonitoring": "Open full monitoring",
+      "chartTitle": "Measurements in this experiment",
+      "chartDescription": "What this device sent into this experiment over the last 30 days.",
+      "chartEmpty": "No measurements in this window.",
+      "chartUnavailable": "Measurement history could not be loaded.",
+      "measurementsSeries": "Measurements",
+      "facts": {
+        "firmware": "Firmware",
+        "inWindow": "In this experiment (30d)",
+        "allTime": "In this experiment (all time)",
+        "lastDataAnywhere": "Last data, any experiment"
+      },
+      "noAccessShort": "No access"
     },
     "groups": {
       "addDevices": "Add devices",
@@ -451,11 +634,6 @@
       "create": "Create group",
       "createDescription": "Groups organize your devices; membership changes nothing on the devices themselves.",
       "createTitle": "Create a device group",
-      "dangerZone": {
-        "title": "Danger zone",
-        "deleteLabel": "Delete this group",
-        "deleteDescription": "Permanently removes the group. The devices themselves are not affected. This cannot be undone."
-      },
       "delete": "Delete group",
       "deleteHint": "\"{{name}}\" will be deleted. The devices themselves are not affected.",
       "deleteTitle": "Delete this group?",
@@ -528,7 +706,9 @@
         "resultsTitle": "Results and configs",
         "downloadOne": "Download the config for {{device}}",
         "downloadAll_one": "Download {{count}} config (zip)",
-        "downloadAll_other": "Download {{count}} configs (zip)"
+        "downloadAll_other": "Download {{count}} configs (zip)",
+        "experimentsTitle": "Experiments",
+        "experimentsDescription": "Every selected device is onboarded to every selected experiment."
       },
       "pageTitle": "Device group",
       "credentials": {
@@ -537,7 +717,7 @@
         "actionIssue": "Issue",
         "actionRotate": "Rotate",
         "actionRevoke": "Revoke",
-        "issueHint": "Issues a certificate to devices that have none yet (pending or revoked).",
+        "issueHint": "Issues a certificate to devices that have none yet (registered or revoked).",
         "rotateHint": "Replaces the active certificate on each selected device. The old certificate stops working immediately.",
         "revokeHint": "Revokes each selected device's certificate. Revoked devices cannot authenticate until new credentials are issued.",
         "devicesTitle": "Devices",
@@ -546,7 +726,6 @@
         "mobileIneligible": "Not applicable to phones",
         "hasCredentialsIneligible": "Already has credentials",
         "noCertificateIneligible": "No certificate",
-        "rotatingIneligible": "Rotation in progress",
         "submitIssue_one": "Issue {{count}} certificate",
         "submitIssue_other": "Issue {{count}} certificates",
         "submitRotate_one": "Rotate {{count}} certificate",
@@ -568,8 +747,267 @@
         "resultsTitle": "Results",
         "downloadOne": "Download credentials for {{device}}",
         "downloadAll_one": "Download {{count}} bundle (zip)",
-        "downloadAll_other": "Download {{count}} bundles (zip)"
+        "downloadAll_other": "Download {{count}} bundles (zip)",
+        "actionTitle": "Action",
+        "actionDescription": "Eligibility differs per action; the device list below follows the choice.",
+        "railEmpty": "Run an action to see per-device results and downloads here.",
+        "retiredIneligible": "Retired"
+      },
+      "overview": {
+        "title": "Overview",
+        "description": "What this group contains, and how its devices are doing.",
+        "healthTitle": "Health",
+        "monitoringLink": "Open monitoring",
+        "healthUnknown_one": "Connectivity is unknown for {{count}} device.",
+        "healthUnknown_other": "Connectivity is unknown for {{count}} devices."
+      },
+      "nextAction": {
+        "credentials": "{{count}} device needs a certificate",
+        "credentials_other": "{{count}} devices need a certificate"
+      },
+      "showAll": "Show {{count}} more groups",
+      "showFewer": "Show fewer groups",
+      "searchPlaceholder": "Search groups",
+      "searchNoMatches": "No groups match that search."
+    },
+    "calibration": {
+      "title": "Calibration",
+      "description": "What this device measures against a reference, the coefficients in force, and every bench session on record.",
+      "loadError": "Could not load calibration data.",
+      "status": {
+        "running": "Running",
+        "computed": "Computed",
+        "compute_failed": "Compute failed",
+        "error": "Error",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "block": {
+        "computed": "Computed",
+        "rejected": "Rejected",
+        "skipped": "Skipped"
+      },
+      "active": {
+        "title": "In force",
+        "none": "This device has never been calibrated.",
+        "written": "Written to device",
+        "notWritten": "Not yet written to device",
+        "validFrom": "Since {{date}}",
+        "unconfirmed": "Written but not confirmed"
+      },
+      "runs": {
+        "title": "Bench sessions",
+        "empty": "No calibration has been run on this device yet.",
+        "definition": "v{{version}}"
+      },
+      "run": {
+        "back": "All sessions",
+        "title": "Session record",
+        "definition": "Procedure",
+        "definitionUnknown": "Unknown procedure",
+        "started": "Started",
+        "finished": "Finished",
+        "reviewed": "Reviewed",
+        "firmware": "Firmware",
+        "source": "Recorded by",
+        "sourceWizard": "Bench wizard",
+        "sourceExternal": "External bench",
+        "readings": "What the bench measured",
+        "deviceState": "Device state",
+        "infoBefore": "Before the session",
+        "infoAfter": "After the write",
+        "writeTitle": "Written to the device",
+        "writeNever": "These coefficients were approved on record and never written to the device.",
+        "writtenAt": "Written {{date}}",
+        "verificationTitle": "Check with the new coefficients",
+        "writeToDevice": "Write to device",
+        "skippedTitle": "Steps the bench skipped"
+      },
+      "cta": {
+        "calibrate": "Calibrate",
+        "next": "Continue",
+        "back": "Back",
+        "cancel": "Cancel"
+      },
+      "steps": {
+        "choose": "Procedure",
+        "connect": "Connect",
+        "capture": "Capture",
+        "review": "Review",
+        "write": "Write",
+        "done": "Done"
+      },
+      "choose": {
+        "hint": "Pick the procedure for this device. Each one names the steps the bench will walk and what it computes.",
+        "empty": "No calibration procedure is published for this device family yet."
+      },
+      "connect": {
+        "hint": "Plug the device in over USB and open its port. The platform never reaches hardware itself; this browser is the bridge.",
+        "action": "Connect device",
+        "connecting": "Connecting…",
+        "connected": "Connected to {{name}}",
+        "disconnect": "Disconnect",
+        "deviceTitle": "Device under test",
+        "unsupportedBrowser": "This browser has no Web Serial. Use a Chromium-based browser on a desktop.",
+        "unsupportedDevice": "This device family has no serial transport.",
+        "wrongFamily": "Expected a {{expected}} device but a {{actual}} answered. Connect the right device.",
+        "roleHeading": "Bench instruments",
+        "roleHint": "Each instrument takes a port of its own, so the browser asks for one port per connection.",
+        "roleHandshake": "Identifies itself as",
+        "roleRequired": "The run needs this instrument.",
+        "roleOptional": "Optional. Steps that read it are skipped when it is missing.",
+        "roleAction": "Connect",
+        "roleConnecting": "Connecting…",
+        "roleConnected": "Connected",
+        "roleMismatch": "This port answered as {{model}}, which is not what this role expects, so it was closed again.",
+        "roleUnrecognised": "Nothing on this port identified itself as an instrument the bench knows.",
+        "roleFailed": "This port could not be opened.",
+        "roleMissing": "Connect the instruments the run needs before continuing.",
+        "unitConfirmed": "Serial {{serial}} matches this device's record.",
+        "wrongUnit": "This unit reports serial {{reported}}, but this device is registered as {{expected}}. Coefficients would go to the wrong unit, so the run cannot start.",
+        "unnamedUnit": "The unit on this port did not report a serial number, so it cannot be checked against this device's record. Make sure the right one is connected."
+      },
+      "prompt": {
+        "confirmLabel": "Type {{token}} to continue",
+        "valueLabel": "Value",
+        "invalidNumber": "Enter a number.",
+        "continue": "Continue",
+        "submit": "Record",
+        "decline": "I can't do this step",
+        "confirmReading": "Keep this reading?",
+        "confirmReadingAt": "Keep this reading at {{stimulus}}?",
+        "keepReading": "Keep",
+        "retakeReading": "Take it again"
+      },
+      "capture": {
+        "step": "Step {{index}} of {{total}}: {{description}}",
+        "stepCounter": "Step {{index}} of {{total}}",
+        "setpoint": "Setpoint {{index}} of {{total}}, at {{value}}",
+        "skipped": "{{series}} skipped: {{reason}}",
+        "hint": "The bench walks the procedure and records each reading as it arrives. Answer what it asks along the way.",
+        "submitting": "Computing coefficients…",
+        "aborted": "The procedure stopped before completing.",
+        "retry": "Run again",
+        "stop": "Stop",
+        "stopped": "The run was stopped. Nothing was recorded.",
+        "disconnected": "The device is no longer on its port. Reconnect it and run again.",
+        "restFailed": "The bench could not be returned to rest.",
+        "submitFailed": "The readings were captured but could not be recorded.",
+        "retrySubmit": "Record these readings again",
+        "pointsOf": "{{taken}} of {{total}} points",
+        "pointsTaken": "{{taken}} points",
+        "retaken": "{{series}} point {{point}} taken again (attempt {{attempt}})",
+        "series_one": "{{series}}: {{count}} row captured",
+        "series_other": "{{series}}: {{count}} rows captured"
+      },
+      "review": {
+        "hint": "Approving applies the computed blocks to this device's record. Nothing reaches the hardware until the next step.",
+        "computeFailed": "The script did not produce coefficients.",
+        "approve": "Approve",
+        "reject": "Reject",
+        "approveFailed": "Could not approve this run.",
+        "rejectFailed": "Could not reject this run.",
+        "previousUnknown": "nothing in force before",
+        "previousLabel": "was",
+        "unchanged": "unchanged",
+        "passed": "Quality gates passed",
+        "failed": "Quality gates failed",
+        "r2": "R² {{value}}",
+        "nrmse": "NRMSE {{value}}%",
+        "worstPoint": "Furthest reading at {{stimulus}}, off by {{percent}}% of range",
+        "points": "Captured points",
+        "fitLine": "Fitted line",
+        "xLabel": "Device reading",
+        "yLabel": "Reference reading",
+        "seriesCaption": "{{series}}, {{points}} points",
+        "allowed": "allowed {{min}} to {{max}}",
+        "diagnostics": "Residuals and thresholds",
+        "residuals": "Residual",
+        "residualAxis": "Off by, % of range",
+        "tolerance": "Allowed",
+        "residualsTruncated": "The script reported the first residuals only.",
+        "showReadings": "Show what the bench measured, {{points}} readings across {{series}} series"
+      },
+      "write": {
+        "hint": "Write the approved coefficients to the device. Each block is confirmed by reading it back.",
+        "action": "Write to device",
+        "writing": "Writing…",
+        "verified": "written and confirmed",
+        "failed": "not confirmed",
+        "partial": "A block that was not confirmed may have reached the device in part. Run this calibration again before trusting the device.",
+        "unsupported": "The platform cannot write coefficients to this device family yet. The calibration is approved on record only.",
+        "skip": "Finish without writing",
+        "reportFailed": "The device was written but the result could not be recorded.",
+        "verifyHeading": "Check with the new coefficients",
+        "verifying": "Reading the device with the new coefficients…",
+        "verificationStopped": "The check stopped early: {{reason}}. The coefficients written above stand.",
+        "disconnected": "The device was disconnected. Reconnect it and write again.",
+        "retryReport": "Record the write again",
+        "finishUnrecorded": "Finish without recording",
+        "reconnect": "Reconnect the device",
+        "pending": "not written yet"
+      },
+      "done": {
+        "close": "Close",
+        "rejectedHint": "The run was rejected. Its diagnostics stay on record; nothing was applied.",
+        "writtenHint": "The calibration is in force and confirmed on the device.",
+        "notWrittenHint": "The calibration is in force on record. Nothing was written to the device.",
+        "unconfirmedHint": "The calibration is in force on record. Some blocks were not confirmed on the device; check the write results.",
+        "recordOnlyHint": "The calibration is in force on record. The platform cannot write coefficients to this device family.",
+        "notRecordedHint": "The coefficients are on the device, but the platform could not record the write. Open this session from the list and record it.",
+        "measured": "Measured",
+        "measuredValue": "{{points}} readings across {{series}} series",
+        "applied": "Approved",
+        "appliedValue": "{{blocks}} blocks applied to the record",
+        "onDevice": "On the device",
+        "onDeviceValue": "{{confirmed}} of {{blocks}} blocks confirmed",
+        "onDeviceUnrecorded": "{{confirmed}} confirmed, not yet recorded"
+      },
+      "phase": {
+        "setUp": "Set up",
+        "measure": "Measure",
+        "decide": "Decide"
+      },
+      "rail": {
+        "title": "This session",
+        "device": "Device",
+        "deviceWaiting": "Not connected yet",
+        "deviceWrongUnit": "Reports {{reported}}",
+        "bench": "Bench",
+        "optional": "optional",
+        "procedure": "Procedure",
+        "noProcedure": "Pick a procedure to see the bench it needs and the steps it runs.",
+        "deviceUnnamed": "Reports no serial"
+      },
+      "procedure": {
+        "label": {
+          "settle": "Wait {{ms}} ms",
+          "set": "{{instrument}} {{setpoint}} to {{value}}",
+          "read": "Record {{series}}",
+          "sweepInstrument": "Sweep {{instrument}} {{setpoint}}, {{points}} points",
+          "sweepOperator": "Sweep by hand, {{points}} points"
+        }
       }
+    },
+    "workbookBar": {
+      "mock": "Mock",
+      "addDevice": "Add device",
+      "connect": "Connect",
+      "disconnected": "Disconnected",
+      "deviceCount": "{{count}} device",
+      "deviceCount_other": "{{count}} devices",
+      "disconnectDevice": "Disconnect {{name}}",
+      "disconnectAll": "Disconnect all",
+      "flow": "Flow",
+      "deviceOrdinal": "Device #{{ordinal}}",
+      "export": "Export",
+      "exportJson": "Export as JSON",
+      "exportProtocol": "Export Protocol Only",
+      "exportMacro": "Export Macro Only",
+      "downloadWorkbook": "Download Workbook (.jii)",
+      "clearAll": "Clear all",
+      "stop": "Stop",
+      "runAll": "Run all"
     }
   }
 }

@@ -2,6 +2,8 @@ import type { QueryClient } from "@tanstack/react-query";
 import { orpc } from "~/shared/api/orpc";
 import { createLogger } from "~/shared/observability/logger";
 
+import { listItems } from "@repo/api/shared/listing";
+
 const log = createLogger("prefetch");
 
 let inFlight: Promise<void> | null = null;
@@ -62,21 +64,14 @@ async function _prefetchOfflineData(
 
   const experimentsResponse = await queryClient.fetchQuery(
     orpc.experiments.listExperiments.queryOptions({
-      input: { filter: "member" },
+      input: { scope: "related" },
       staleTime: 0,
       // Reachable from a background reconnect/foreground refetch; stay silent.
       meta: { suppressToast: true },
     }),
   );
 
-  // The response shape can vary (paginated envelope or a bare array); only an
-  // actual array is iterable, so guard before `.map` to avoid
-  // "experiments.map is not a function" crashes seen in production.
-  const experiments = (Array.isArray(experimentsResponse) ? experimentsResponse : []) as {
-    id: string;
-    workbookId: string | null;
-    workbookVersionId: string | null;
-  }[];
+  const experiments = listItems(experimentsResponse);
 
   // Cache each workbook version (cells + pinned snapshots); no per-asset fetches.
   const versionResults = await Promise.allSettled(

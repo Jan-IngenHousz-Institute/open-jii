@@ -1,9 +1,9 @@
 "use client";
 
+import { RadarPlot } from "@/components/charts/radar";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { RadarPlot } from "@repo/ui/components/charts/radar";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";

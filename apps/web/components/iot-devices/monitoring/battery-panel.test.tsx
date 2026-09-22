@@ -5,7 +5,7 @@ import type { DeviceMonitoring } from "@repo/api/domains/iot/iot.schema";
 
 import { BatteryPanel } from "./battery-panel";
 
-vi.mock("@repo/ui/components/charts/line-chart", () => ({
+vi.mock("@/components/charts/line-chart", () => ({
   LineChart: vi.fn(() => <div data-testid="line-chart" />),
 }));
 
@@ -54,7 +54,7 @@ describe("BatteryPanel", () => {
 
   it("charts the series with a table view behind the toggle", async () => {
     const user = userEvent.setup();
-    render(
+    const { container } = render(
       <BatteryPanel
         monitoring={monitoringWith([
           { bucketStart: "2026-08-13T01:00:00.000Z", averageBattery: 87.5 },
@@ -66,6 +66,10 @@ describe("BatteryPanel", () => {
     expect(screen.getByTestId("line-chart")).toBeInTheDocument();
     // The latest reading also shows as a summary figure above the chart.
     expect(screen.getByText("iot.devices.monitoring.batteryLatest")).toBeInTheDocument();
+    expect(container.firstElementChild).toHaveClass("min-w-0");
+    expect(
+      screen.getByText("iot.devices.monitoring.batteryLatest").parentElement?.parentElement,
+    ).toHaveClass("flex-wrap");
 
     await user.click(screen.getByRole("radio", { name: "iot.devices.monitoring.viewTable" }));
 

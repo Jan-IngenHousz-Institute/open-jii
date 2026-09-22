@@ -1,3 +1,4 @@
+import { orpc } from "@/lib/orpc";
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act } from "@/test/test-utils";
@@ -156,6 +157,31 @@ describe("useProtocolCreate", () => {
 
     await waitFor(() => {
       expect(onSettled).toHaveBeenCalled();
+    });
+  });
+
+  it("invalidates both the unpaginated and paginated list caches on settled", async () => {
+    server.mount(contract.protocols.createProtocol, {
+      body: createProtocol({ id: "proto-1" }),
+    });
+
+    const queryClient = new QueryClient();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useProtocolCreate(), { queryClient });
+
+    act(() => {
+      result.current.mutate({
+        name: "T",
+        code: [{}],
+        family: "multispeq",
+      });
+    });
+
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: orpc.protocols.listProtocols.key(),
+      });
     });
   });
 

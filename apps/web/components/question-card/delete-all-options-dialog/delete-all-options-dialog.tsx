@@ -40,7 +40,7 @@ export function DeleteAllOptionsDialog({
           <AlertDialogCancel>{t("questionCard.deleteAll.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            className="bg-destructive hover:bg-destructive focus:ring-destructive"
           >
             {t("questionCard.deleteAll.confirm")}
           </AlertDialogAction>

@@ -1,3 +1,4 @@
+import { listQueryKeys } from "@/hooks/list-query-keys";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -16,7 +17,9 @@ export const useSetWorkbookVisibility = () => {
           queryKey: orpc.workbooks.getWorkbook.queryKey({ input: { id: variables.id } }),
           exact: true,
         });
-        await queryClient.invalidateQueries({ queryKey: orpc.workbooks.listWorkbooks.key() });
+        for (const queryKey of listQueryKeys.workbooks()) {
+          await queryClient.invalidateQueries({ queryKey });
+        }
         await queryClient.invalidateQueries({ queryKey: orpc.search.globalSearch.key() });
       },
     }),

@@ -124,21 +124,23 @@ interface FamilyTabProps {
 
 function FamilyTab({ family, label, isActive, onSelect }: FamilyTabProps) {
   return (
-    <button
+    <Button
       role="tab"
       type="button"
+      variant="ghost"
+      size="sm"
       aria-selected={isActive}
       aria-controls={`chart-type-panel-${family}`}
       onClick={() => onSelect(family)}
       className={cn(
-        "flex-1 px-3 py-2 text-xs font-medium transition-colors",
+        "flex-1",
         isActive
-          ? "border-primary text-foreground -mb-px border-b-2"
+          ? "border-primary text-foreground -mb-px rounded-none border-b-2"
           : "text-muted-foreground hover:text-foreground",
       )}
     >
       {label}
-    </button>
+    </Button>
   );
 }
 
@@ -152,12 +154,13 @@ interface ChartTypeTileProps {
 function ChartTypeTile({ def, isActive, label, onPick }: ChartTypeTileProps) {
   const TileIcon = def.icon;
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={() => onPick(def.type)}
       aria-pressed={isActive}
       className={cn(
-        "flex flex-col items-center gap-1.5 rounded-md border p-3 text-xs transition-colors",
+        "h-auto flex-col gap-1.5 border p-3 text-xs",
         isActive
           ? "border-primary bg-primary/5 text-foreground"
           : "text-muted-foreground hover:bg-muted hover:text-foreground border-transparent",
@@ -165,6 +168,6 @@ function ChartTypeTile({ def, isActive, label, onPick }: ChartTypeTileProps) {
     >
       <TileIcon className="size-5" />
       <span className="text-center leading-tight">{label}</span>
-    </button>
+    </Button>
   );
 }

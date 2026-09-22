@@ -1,5 +1,4 @@
 import type { ChartFormConfig, ChartFormDataConfig } from "../../chart-config";
-import { DEFAULT_PRIMARY_COLOR } from "../../colors/palettes";
 import { makeDataSource } from "../../data/data-sources";
 
 export function lineDefaultConfig(): ChartFormConfig {
@@ -13,7 +12,6 @@ export function lineDefaultConfig(): ChartFormConfig {
     showGrid: true,
     useWebGL: false,
     mode: "lines",
-    color: [DEFAULT_PRIMARY_COLOR],
     line: { width: 2, smoothing: 0 },
     connectgaps: true,
   };

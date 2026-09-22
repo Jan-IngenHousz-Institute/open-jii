@@ -1,15 +1,17 @@
 "use client";
 
 import type { PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
 import {
   createBaseLayout,
   createPlotlyConfig,
+  detectAxisType,
   getRenderer,
   getPlotType,
   truncateCategoryTicks,
@@ -61,6 +63,11 @@ export interface HeatmapSeriesData extends BaseSeries {
     color?: string;
   };
   hoverongaps?: boolean;
+  /**
+   * Off by default: a missing cell stays blank instead of taking a value
+   * interpolated from its neighbours, which for a presence matrix would
+   * invent readings that never happened.
+   */
   connectgaps?: boolean;
   xgap?: number;
   ygap?: number;
@@ -81,97 +88,88 @@ export function Heatmap({
   aspectRatio = "auto",
 }: HeatmapProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("heatmap", renderer);
 
-  const plotData: PlotData[] = data.map((series) => {
-    return {
-      x: series.x,
-      y: series.y,
-      z: series.z,
-      name: series.name,
-      type: plotType,
+  const plotData: PlotData[] = useMemo(
+    () =>
+      data.map((series) => {
+        return {
+          x: series.x,
+          y: series.y,
+          z: series.z,
+          name: series.name,
+          type: plotType,
 
-      // Color scale configuration - only set if provided
-      colorscale: series.colorscale,
-      reversescale: series.reversescale === true,
-      showscale: series.showscale,
-      zmid: series.zmid,
-      zmin: series.zmin,
-      zmax: series.zmax,
-      zauto: series.zauto !== false,
-      zsmooth: series.zsmooth ?? false,
+          // Color scale configuration - only set if provided
+          colorscale: series.colorscale,
+          reversescale: series.reversescale === true,
+          showscale: series.showscale,
+          zmid: series.zmid,
+          zmin: series.zmin,
+          zmax: series.zmax,
+          zauto: series.zauto !== false,
+          zsmooth: series.zsmooth ?? false,
 
-      // Color bar uses Plotly 3.x nested form.
-      colorbar: series.colorbar || {
-        title: { text: "Value", side: "right" },
-      },
+          // Color bar uses Plotly 3.x nested form.
+          colorbar: series.colorbar || {
+            title: { text: "Value", side: "right" },
+          },
 
-      // Text annotations
-      text: series.text,
-      texttemplate: series.texttemplate,
-      textfont: series.textfont,
+          // Text annotations
+          text: series.text,
+          texttemplate: series.texttemplate,
+          textfont: series.textfont,
 
-      // Gaps and layout
-      hoverongaps: series.hoverongaps !== false,
-      connectgaps: series.connectgaps !== false,
-      xgap: series.xgap || 1,
-      ygap: series.ygap || 1,
-      transpose: series.transpose || false,
+          // Gaps and layout
+          hoverongaps: series.hoverongaps !== false,
+          connectgaps: series.connectgaps === true,
+          xgap: series.xgap || 1,
+          ygap: series.ygap || 1,
+          transpose: series.transpose || false,
 
-      visible: series.visible,
-      showlegend: series.showlegend,
-      legendgroup: series.legendgroup,
-      hovertemplate: series.hovertemplate,
-      hoverinfo: series.hoverinfo,
-      customdata: series.customdata,
-    } as any as PlotData;
-  });
-
-  const layout = createBaseLayout(config, sizing);
-
-  // Determine axis types based on data
-  const firstSeries = data[0];
-
-  // Check X-axis data type
-  const xAxisType =
-    firstSeries?.x && firstSeries.x.length > 0
-      ? typeof firstSeries.x[0] === "string" || firstSeries.x[0] instanceof Date
-        ? "category"
-        : "linear"
-      : "linear";
-
-  // Check Y-axis data type
-  const yAxisType =
-    firstSeries?.y && firstSeries.y.length > 0
-      ? typeof firstSeries.y[0] === "string" || firstSeries.y[0] instanceof Date
-        ? "category"
-        : "linear"
-      : "linear";
-
-  // Bound long category labels so automargin can't eat the plot area.
-  layout.xaxis = truncateCategoryTicks(
-    { ...layout.xaxis, type: xAxisType },
-    firstSeries?.x ?? [],
-    sizing,
+          visible: series.visible,
+          showlegend: series.showlegend,
+          legendgroup: series.legendgroup,
+          hovertemplate: series.hovertemplate,
+          hoverinfo: series.hoverinfo,
+          customdata: series.customdata,
+        } as any as PlotData;
+      }),
+    [data, plotType],
   );
 
-  layout.yaxis = truncateCategoryTicks(
-    { ...layout.yaxis, type: yAxisType },
-    firstSeries?.y ?? [],
-    sizing,
-  );
+  const layout = useMemo(() => {
+    const next = createBaseLayout(config, sizing);
 
-  // Set aspect ratio if specified
-  if (aspectRatio === "equal") {
-    (layout as any).yaxis = {
-      ...(layout as any).yaxis,
-      scaleanchor: "x",
-      scaleratio: 1,
-    };
-  }
+    const firstSeries = data[0];
+    const xValues = firstSeries?.x ?? [];
+    const yValues = firstSeries?.y ?? [];
 
-  const plotConfig = createPlotlyConfig(config, sizing);
+    // ISO timestamps get a date axis so Plotly ticks at sensible intervals
+    // instead of one rotated label per bucket.
+    const xAxisType = detectAxisType(xValues);
+    const yAxisType = detectAxisType(yValues);
+
+    // Bound long category labels so automargin can't eat the plot area.
+    next.xaxis = truncateCategoryTicks({ ...next.xaxis, type: xAxisType }, xValues, sizing);
+    next.yaxis = truncateCategoryTicks({ ...next.yaxis, type: yAxisType }, yValues, sizing);
+
+    // Set aspect ratio if specified
+    if (aspectRatio === "equal") {
+      (next as any).yaxis = {
+        ...(next as any).yaxis,
+        scaleanchor: "x",
+        scaleratio: 1,
+      };
+    }
+
+    return next;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+  }, [config, sizing, data, aspectRatio, themeVersion]);
+
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>

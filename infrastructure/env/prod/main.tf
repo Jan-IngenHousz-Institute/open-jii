@@ -73,6 +73,8 @@ module "kinesis" {
   source      = "../../modules/kinesis"
   stream_name = "open-jii-${var.environment}-data-ingest-stream"
 
+  retention_period_hours = 72
+
   workspace_kinesis_credential_id = var.kinesis_credential_id
 }
 
@@ -159,6 +161,27 @@ module "iot_firehose" {
   }
 }
 
+module "firmware_s3" {
+  source      = "../../modules/s3"
+  bucket_name = "open-jii-firmware-${var.environment}"
+
+  # Versioned: a released artifact is immutable evidence of what a device was
+  # told to install, and AWS IoT presigns a specific object at delivery.
+  enable_versioning = true
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "iot-firmware"
+  }
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
 module "iot_core" {
   source      = "../../modules/iot-core"
   environment = var.environment
@@ -183,6 +206,19 @@ module "iot_core" {
 
   enable_fleet_indexing            = true
   enable_databricks_lifecycle_read = true
+
+  firmware_bucket_arn  = module.firmware_s3.bucket_arn
+  enable_firmware_jobs = true
+}
+
+module "firmware_rollout_role" {
+  source = "../../modules/iam-firmware-rollout"
+
+  aws_region          = var.aws_region
+  environment         = var.environment
+  oidc_provider_arn   = module.iam_oidc.oidc_provider_arn
+  firmware_bucket_arn = module.firmware_s3.bucket_arn
+  presign_role_arn    = module.iot_core.jobs_presign_role_arn
 }
 
 module "cognito" {
@@ -238,6 +274,32 @@ module "macro_sandbox" {
   flow_log_retention_days = 30
 
   reserved_concurrent_executions = 20
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+  }
+}
+
+module "calibration_sandbox" {
+  source = "../../modules/calibration-sandbox"
+
+  aws_region          = var.aws_region
+  environment         = var.environment
+  ci_cd_role_arn      = module.iam_oidc.role_arn
+  isolated_subnet_ids = module.vpc.isolated_subnets
+  lambda_sg_id        = module.vpc.calibration_sandbox_lambda_security_group_id
+  flow_log_group_name = module.macro_sandbox.flow_log_group_name
+
+  # The handler stops a fitting script at 30s and returns its own error, so the
+  # function needs headroom above that for the graceful failure to win.
+  memory  = 1024
+  timeout = 45
+
+  log_retention_days = 30
+
+  reserved_concurrent_executions = 10
 
   tags = {
     Environment = var.environment
@@ -332,8 +394,9 @@ module "node_cluster_policy" {
       value = "r5d.large"
     }
     num_workers = {
-      type  = "fixed"
-      value = 1
+      type     = "range"
+      minValue = 1
+      maxValue = 4
     }
   })
 
@@ -411,6 +474,7 @@ module "storage_credential" {
   additional_policy_arns = [
     module.iot_core.databricks_large_iot_read_policy_arn,
     module.iot_core.databricks_device_lifecycle_read_policy_arn,
+    module.metrics_forwarder.databricks_write_policy_arn,
   ]
 
   providers = {
@@ -540,6 +604,30 @@ module "databricks_catalog" {
         "CREATE_TABLE",
         "CREATE_VOLUME",
         "READ_VOLUME",
+        "SELECT",
+        "USE_CATALOG",
+        "USE_SCHEMA"
+      ]
+    }
+
+    # Read-only access for the jii-data-platform deploy SP, which runs the
+    # analyst gold pipelines in the sandbox workspace. Those pipelines read
+    # centrum.enriched_experiment_raw_data cross-catalog.
+    #
+    # Declared at CATALOG level on purpose. `databricks_grants.centrum_schema`
+    # below is authoritative over the schema, so a schema-scoped grant to any
+    # principal it does not list is deleted on the next apply. That is exactly
+    # what happened on 2026-08-20: the SP had been granted USE_SCHEMA on centrum
+    # by hand, an apply reclaimed it, and maize-ambit-2026-gold and
+    # barley-nergena-2026-gold then failed every 15 minutes for eight days.
+    #
+    # The catalog module uses `databricks_grant` (singular, additive), so a grant
+    # here is not subject to that, and USE_SCHEMA cascades down to centrum. This
+    # mirrors how dev has always worked — which is why dev never broke.
+    data_platform_deploy_sp = {
+      principal = var.data_platform_sp_application_id
+      privileges = [
+        "BROWSE",
         "SELECT",
         "USE_CATALOG",
         "USE_SCHEMA"
@@ -709,7 +797,7 @@ module "centrum_pipeline" {
   serverless       = false
 
   node_type_id = "r5d.large"
-  num_workers  = 1
+  num_workers  = 4
   policy_id    = module.node_cluster_policy.policy_id
 
   run_as = {
@@ -732,6 +820,157 @@ module "centrum_pipeline" {
   }
 
   depends_on = [module.node_cluster_policy, databricks_grants.centrum_schema]
+}
+
+module "metrics_pipeline" {
+  source = "../../modules/databricks/pipeline"
+
+  name         = "Metrics-DLT-Pipeline-PROD"
+  schema_name  = "metrics"
+  catalog_name = module.databricks_catalog.catalog_name
+
+  notebook_paths = [
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/platform_totals",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/daily_activity",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/family_totals",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/hourly_activity",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/activity_windows",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/parameter_stats",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/pool_facts",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/daily_activity_by_experiment",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/experiment_contributors_window",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/experiment_devices_window",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/daily_activity_by_resource",
+    # ops: read by the heartbeat export, never by the public endpoint
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/ops_device_silence",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/metrics/ops_ingest_quality",
+  ]
+
+  environment_dependencies = [
+    "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl",
+  ]
+
+  configuration = {
+    "CATALOG_NAME"        = module.databricks_catalog.catalog_name
+    "CENTRUM_SCHEMA_NAME" = "centrum"
+    "SILVER_TABLE"        = "clean_data"
+    "BRONZE_TABLE"        = "raw_data"
+  }
+
+  continuous_mode  = false
+  development_mode = false
+  serverless       = true
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_RUN"
+    },
+    {
+      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [databricks_grants.centrum_schema]
+}
+
+module "metrics_pipeline_scheduler" {
+  source = "../../modules/databricks/job"
+
+  name        = "Metrics-Pipeline-Scheduler-PROD"
+  description = "Triggers the public metrics pipeline refresh"
+
+  # Schedule: every 15 minutes
+  # Format: "seconds minutes hours day-of-month month day-of-week"
+  schedule = "0 0/15 * * * ?"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  # The heartbeat export runs as a second task so it observes the refresh it
+  # reports on. The deploy applies terraform just before syncing notebooks, so a
+  # merge that lands both can fail this task for one cycle.
+  environments = [
+    {
+      environment_key = "heartbeat"
+      spec = {
+        environment_version = "4"
+        dependencies = [
+          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
+        ]
+      }
+    }
+  ]
+
+  tasks = [
+    {
+      key         = "trigger_metrics_pipeline"
+      task_type   = "pipeline"
+      pipeline_id = module.metrics_pipeline.pipeline_id
+    },
+    {
+      key           = "export_platform_heartbeat"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/metrics_heartbeat_task"
+      depends_on    = "trigger_metrics_pipeline"
+      # ALL_DONE so a failed refresh still produces a heartbeat file: the
+      # dead-man must mean "the collector is gone", not "the pipeline failed".
+      run_if = "ALL_DONE"
+
+      parameters = {
+        "CATALOG_NAME"   = module.databricks_catalog.catalog_name
+        "CENTRAL_SCHEMA" = "centrum"
+        "METRICS_SCHEMA" = "metrics"
+        # Lowercase, unlike the other jobs: this value becomes the CloudWatch
+        # Environment dimension, which the catalog and composer query as-is.
+        "ENVIRONMENT"        = var.environment
+        "HEARTBEAT_LOCATION" = "s3://${module.heartbeat_metrics_s3.bucket_id}"
+      }
+    }
+  ]
+
+  # The metrics pipeline only ever runs through this job, so job-level failure
+  # notifications cover every run; no in-pipeline event hook needed.
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.metrics_pipeline, module.heartbeat_external_location]
 }
 
 module "centrum_backup_job" {
@@ -1950,6 +2189,10 @@ module "backend_ecs" {
       value = "centrum"
     },
     {
+      name  = "DATABRICKS_METRICS_SCHEMA_NAME"
+      value = "metrics"
+    },
+    {
       name  = "DATABRICKS_RAW_DATA_TABLE_NAME"
       value = "enriched_experiment_raw_data"
     },
@@ -2050,6 +2293,29 @@ module "backend_ecs" {
       value = join(",", module.iot_core.iot_policy_names)
     },
     {
+      name  = "AWS_IOT_JOBS_POLICY_NAME"
+      value = module.iot_core.jobs_policy_name
+    },
+    {
+      # A family left unset renders the Firmware tab as "JII does not publish
+      # firmware for this device family yet" rather than an error.
+      #
+      # GITHUB_TOKEN is deliberately NOT set: these repositories are public, so
+      # reads work anonymously, but that shares a 60-requests-per-hour budget
+      # across this account's egress IP. Add the token to the app secret and
+      # wire it here if the Firmware tab ever gets heavy use.
+      name  = "FIRMWARE_REPO_AMBYTE"
+      value = "Jan-IngenHousz-Institute/ambyte-iot"
+    },
+    {
+      name  = "FIRMWARE_REPO_AMBIT"
+      value = "Jan-IngenHousz-Institute/ambit"
+    },
+    {
+      name  = "FIRMWARE_REPO_MINIPAR"
+      value = ""
+    },
+    {
       name  = "AWS_IOT_DEVICE_THING_TYPE_NAME"
       value = module.iot_core.device_thing_type_name
     },
@@ -2086,6 +2352,10 @@ module "backend_ecs" {
       value = module.macro_sandbox.function_names["r"]
     },
     {
+      name  = "AWS_LAMBDA_CALIBRATION_SANDBOX_FUNCTION_NAME"
+      value = module.calibration_sandbox.function_name
+    },
+    {
       name  = "AWS_IOT_ARCHIVE_BUCKET_NAME"
       value = module.iot_raw_archive_s3.bucket_id
     },
@@ -2099,6 +2369,7 @@ module "backend_ecs" {
   additional_task_role_policy_arns = [
     module.location_service.iam_policy_arn,
     module.macro_sandbox.invoke_policy_arn,
+    module.calibration_sandbox.invoke_policy_arn,
     module.iot_core.backend_s3_presign_policy_arn,
   ]
 
@@ -2438,7 +2709,8 @@ module "grafana_dashboard" {
   ecs_log_group_name  = module.backend_ecs.cloudwatch_log_group_name
   iot_log_group_name  = "AWSIotLogsV2" # Default IoT Core log group name
 
-  macro_sandbox_function_names = module.macro_sandbox.function_names
+  macro_sandbox_function_names      = module.macro_sandbox.function_names
+  calibration_sandbox_function_name = module.calibration_sandbox.function_name
 
   enable_site_availability_alert = true
   route53_health_check_id        = module.route53.health_check_id
@@ -2463,6 +2735,88 @@ module "grafana_metrics_publisher" {
 
   private_subnets                = module.vpc.private_subnets
   metrics_publisher_lambda_sg_id = module.vpc.metrics_publisher_lambda_sg_id
+}
+
+module "heartbeat_metrics_s3" {
+  source      = "../../modules/s3"
+  bucket_name = "open-jii-heartbeat-${var.environment}"
+
+  enable_versioning = false
+
+  lifecycle_rules = [
+    {
+      id              = "expire-heartbeat-files"
+      status          = "Enabled"
+      transitions     = []
+      expiration_days = 90
+    }
+  ]
+
+  tags = {
+    Environment = var.environment
+    Project     = "open-jii"
+    ManagedBy   = "terraform"
+    Component   = "monitoring"
+  }
+
+  providers = {
+    aws    = aws
+    aws.dr = aws.dr
+  }
+}
+
+module "metrics_forwarder" {
+  source = "../../modules/monitoring/metrics-forwarder"
+
+  aws_region  = var.aws_region
+  environment = var.environment
+
+  heartbeat_bucket_id  = module.heartbeat_metrics_s3.bucket_id
+  heartbeat_bucket_arn = module.heartbeat_metrics_s3.bucket_arn
+}
+
+module "heartbeat_external_location" {
+  source = "../../modules/databricks/external-location"
+
+  external_location_name  = "heartbeat-${var.environment}"
+  bucket_name             = module.heartbeat_metrics_s3.bucket_id
+  external_location_path  = ""
+  storage_credential_name = module.storage_credential.storage_credential_name
+  environment             = var.environment
+  comment                 = "External location for platform heartbeat metric files"
+  isolation_mode          = "ISOLATION_MODE_ISOLATED"
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["READ_FILES", "WRITE_FILES"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.storage_credential]
+}
+
+module "digest_composer" {
+  source = "../../modules/monitoring/digest-composer"
+
+  aws_region  = var.aws_region
+  environment = var.environment
+
+  kinesis_stream_name        = module.kinesis.kinesis_stream_name
+  alb_arn                    = module.backend_alb.alb_arn
+  cloudfront_distribution_id = module.opennext.cloudfront_distribution_id
+  server_function_name       = module.opennext.server_function_name
+  macro_function_names       = values(module.macro_sandbox.function_names)
+  db_cluster_identifier      = "open-jii-${var.environment}-db-cluster"
+
+  # Empty webhooks make the Lambda log the rendered digest instead of posting, so this
+  # applies cleanly before the Slack channels exist.
+  heartbeat_webhook_url = var.slack_heartbeat_webhook_url
+  usage_webhook_url     = var.slack_usage_webhook_url
 }
 
 module "aws_inspector" {

@@ -6,6 +6,8 @@ import { SidebarProvider } from "@repo/ui/components/sidebar";
 
 import { NavigationSidebarWrapper } from "./navigation-sidebar-wrapper";
 
+const testUser = { id: "user-1", email: "test@example.com" };
+
 vi.mock("~/lib/posthog-server", () => ({
   isFeatureFlagEnabled: vi.fn().mockResolvedValue(true),
 }));
@@ -31,21 +33,21 @@ vi.mock("../navigation-sidebar/navigation-sidebar", () => ({
 
 describe("NavigationSidebarWrapper", () => {
   it("renders AppSidebar with correct locale", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en" });
+    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
     render(Component);
 
     expect(screen.getByTestId("sidebar-locale")).toHaveTextContent("en");
   });
 
   it("renders AppSidebar with correct locale for German", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "de" });
+    const Component = await NavigationSidebarWrapper({ locale: "de", user: testUser });
     render(Component);
 
     expect(screen.getByTestId("sidebar-locale")).toHaveTextContent("de");
   });
 
   it("prepares navigation data with translations", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en" });
+    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
@@ -107,23 +109,21 @@ describe("NavigationSidebarWrapper", () => {
     });
   });
 
-  it("omits devices navigation when the iot-devices flag is disabled", async () => {
-    const { isFeatureFlagEnabled } = await import("~/lib/posthog-server");
-    vi.mocked(isFeatureFlagEnabled).mockResolvedValueOnce(false);
-
-    const Component = await NavigationSidebarWrapper({ locale: "en" });
+  it("always offers the devices navigation", async () => {
+    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
     const navigationData = JSON.parse(navigationDataElement.textContent) as {
-      navDevices: unknown[];
+      navDevices: { url: string }[];
     };
 
-    expect(navigationData.navDevices).toHaveLength(0);
+    expect(navigationData.navDevices).toHaveLength(1);
+    expect(navigationData.navDevices[0].url).toBe("/en/platform/devices");
   });
 
   it("prepares library navigation with protocols child", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en" });
+    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
@@ -163,7 +163,7 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("prepares library navigation with macros child", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en" });
+    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
@@ -192,7 +192,7 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("prepares translations object correctly", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en" });
+    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
     render(Component);
 
     const translationsElement = screen.getByTestId("sidebar-translations");
@@ -209,7 +209,7 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("uses correct locale in URLs for German", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "de" });
+    const Component = await NavigationSidebarWrapper({ locale: "de", user: testUser });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
@@ -226,6 +226,7 @@ describe("NavigationSidebarWrapper", () => {
   it("passes additional props to AppSidebar", async () => {
     const Component = await NavigationSidebarWrapper({
       locale: "en",
+      user: testUser,
       className: "test-class",
     });
     render(Component);
@@ -234,7 +235,7 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("handles dashboard items correctly", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en" });
+    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
@@ -250,7 +251,7 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("maps dashboard items with correct namespace and titleKey", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en" });
+    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
@@ -269,7 +270,7 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("maps experiments items with titleKey and namespace", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en" });
+    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
@@ -287,7 +288,7 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("maps library children items correctly", async () => {
-    const Wrapper = await NavigationSidebarWrapper({ locale: "en" });
+    const Wrapper = await NavigationSidebarWrapper({ locale: "en", user: testUser });
     render(<SidebarProvider>{Wrapper}</SidebarProvider>);
 
     const component = Wrapper as React.ReactElement<{
@@ -313,7 +314,7 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("prepares workbooks navigation", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en" });
+    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");

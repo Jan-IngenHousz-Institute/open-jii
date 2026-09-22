@@ -28,7 +28,7 @@ export async function BlogPostsSection({ locale }: BlogPostsSectionProps) {
     if (!posts || posts.length === 0) {
       return (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <div className="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-gray-500">
+          <div className="border-border text-muted-foreground flex h-32 items-center justify-center rounded-lg border-2 border-dashed">
             {t("dashboard.noBlogPosts")}
           </div>
         </div>
@@ -41,7 +41,7 @@ export async function BlogPostsSection({ locale }: BlogPostsSectionProps) {
   } catch {
     return (
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <div className="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-gray-500">
+        <div className="border-border text-muted-foreground flex h-32 items-center justify-center rounded-lg border-2 border-dashed">
           {t("dashboard.errorLoadingBlogPosts")}
         </div>
       </div>

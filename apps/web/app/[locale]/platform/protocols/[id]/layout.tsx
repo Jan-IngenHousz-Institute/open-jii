@@ -1,5 +1,6 @@
 "use client";
 
+import { PlatformHeaderDetail } from "@/components/navigation/site-header/platform-header-context";
 import { ProtocolLayoutContent } from "@/components/protocol-overview/protocol-layout-content";
 import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
@@ -70,9 +71,12 @@ export default function ProtocolLayout({ children }: ProtocolLayoutProps) {
       errorDescription={t("protocols.notFoundDescription")}
     >
       {data && (
-        <ProtocolLayoutContent id={id} protocol={data} actions={actions} showTabs={!isRun}>
-          {children}
-        </ProtocolLayoutContent>
+        <>
+          <PlatformHeaderDetail href={`/${locale}/platform/protocols/${id}`} label={data.name} />
+          <ProtocolLayoutContent id={id} protocol={data} actions={actions} showTabs={!isRun}>
+            {children}
+          </ProtocolLayoutContent>
+        </>
       )}
     </EntityLayoutShell>
   );

@@ -7,6 +7,7 @@ import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/exp
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
 import { parentColumnName } from "../filter-column-path";
@@ -50,11 +51,12 @@ export const FilterChipFace = forwardRef<HTMLDivElement, FilterChipFaceProps>(
           className,
         )}
       >
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={onClick}
           className={cn(
-            "hover:bg-muted/50 inline-flex h-full cursor-pointer items-center gap-1.5 rounded-l-md px-2",
+            "hover:bg-muted/50 h-full gap-1.5 rounded-r-none px-2 font-normal",
             fullWidth ? "min-w-0 flex-1 justify-start" : "min-w-0",
           )}
         >
@@ -68,15 +70,17 @@ export const FilterChipFace = forwardRef<HTMLDivElement, FilterChipFaceProps>(
             experimentId={experimentId}
             tableName={tableName}
           />
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           onClick={handleRemove}
-          className="text-muted-foreground hover:bg-muted/50 hover:text-destructive inline-flex h-full w-6 shrink-0 cursor-pointer items-center justify-center rounded-r-md border-l"
+          className="text-muted-foreground hover:bg-muted/50 hover:text-destructive h-full w-6 shrink-0 rounded-l-none border-l"
           aria-label={t("dataFilters.removeFilterOn", { name: displayColumn })}
         >
           <X className="h-3 w-3" />
-        </button>
+        </Button>
       </div>
     );
   },

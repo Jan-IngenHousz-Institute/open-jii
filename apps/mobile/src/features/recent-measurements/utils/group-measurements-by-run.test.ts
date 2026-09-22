@@ -22,6 +22,7 @@ function item(
     hasComment: false,
     dayKey: "2026-05-18",
     workbookRunId,
+    failureReason: null,
     ...overrides,
   };
 }

@@ -24,10 +24,17 @@ export interface NodeTypeConfig {
   defaultTargetPosition?: Position;
 }
 
-// Accents kept in sync with workbook cell accent colors (Protocol, Macro, Question, Markdown).
+// Identity accents, one per node type. These are `var()` references rather
+// than concrete values: every consumer feeds them to a CSS property (an inline
+// `style`, or React Flow's edge/minimap `stroke`/`fill`, which are also CSS
+// properties), so the browser resolves them and a theme swap moves them live.
+// Values live in the --node-* block of app/globals.css.
+//
+// Kept in sync with the workbook cell accent colors (Protocol, Macro, Question,
+// Markdown), which read the same tokens.
 export const nodeTypeColorMap: Record<NodeType, NodeTypeConfig> = {
   INSTRUCTION: {
-    accent: "#6F8596",
+    accent: "var(--node-instruction)",
     icon: React.createElement(BookText, { size: 16, strokeWidth: 2 }),
     hasInput: true,
     hasOutput: true,
@@ -35,7 +42,7 @@ export const nodeTypeColorMap: Record<NodeType, NodeTypeConfig> = {
     defaultTargetPosition: Position.Left,
   },
   QUESTION: {
-    accent: "#C58AAE",
+    accent: "var(--node-question)",
     icon: React.createElement(HelpCircle, { size: 16, strokeWidth: 2 }),
     hasInput: true,
     hasOutput: true,
@@ -43,7 +50,7 @@ export const nodeTypeColorMap: Record<NodeType, NodeTypeConfig> = {
     defaultTargetPosition: Position.Left,
   },
   MEASUREMENT: {
-    accent: "#2D3142",
+    accent: "var(--node-measurement)",
     icon: React.createElement(Cpu, { size: 16, strokeWidth: 2 }),
     hasInput: true,
     hasOutput: true,
@@ -53,7 +60,7 @@ export const nodeTypeColorMap: Record<NodeType, NodeTypeConfig> = {
   // An inline device command; rides the API "measurement" node type so old
   // clients degrade gracefully (see zMeasurementCommandContent).
   COMMAND: {
-    accent: "#119DA4",
+    accent: "var(--node-command)",
     icon: React.createElement(Terminal, { size: 16, strokeWidth: 2 }),
     hasInput: true,
     hasOutput: true,
@@ -61,7 +68,7 @@ export const nodeTypeColorMap: Record<NodeType, NodeTypeConfig> = {
     defaultTargetPosition: Position.Left,
   },
   ANALYSIS: {
-    accent: "#6C5CE7",
+    accent: "var(--node-analysis)",
     icon: React.createElement(ChartColumn, { size: 16, strokeWidth: 2 }),
     hasInput: true,
     hasOutput: true,
@@ -69,7 +76,7 @@ export const nodeTypeColorMap: Record<NodeType, NodeTypeConfig> = {
     defaultTargetPosition: Position.Left,
   },
   BRANCH: {
-    accent: "#D08A3C",
+    accent: "var(--node-branch)",
     icon: React.createElement(GitBranch, { size: 16, strokeWidth: 2 }),
     hasInput: true,
     hasOutput: true,
@@ -82,7 +89,7 @@ export const nodeTypeColorMap: Record<NodeType, NodeTypeConfig> = {
 export function getStyledEdges(edges: Edge[], selectedEdgeId: string | null): Edge[] {
   return edges.map((edge) =>
     edge.id === selectedEdgeId
-      ? { ...edge, style: { ...(edge.style ?? {}), stroke: "#005e5e", strokeWidth: 2 } }
-      : { ...edge, style: { ...(edge.style ?? {}), stroke: "#CDD5DB", strokeWidth: 1.5 } },
+      ? { ...edge, style: { ...(edge.style ?? {}), stroke: "var(--primary)", strokeWidth: 2 } }
+      : { ...edge, style: { ...(edge.style ?? {}), stroke: "var(--border)", strokeWidth: 1.5 } },
   );
 }

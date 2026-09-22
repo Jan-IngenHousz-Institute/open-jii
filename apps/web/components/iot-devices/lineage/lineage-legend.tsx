@@ -3,12 +3,12 @@
 import { useTranslation } from "@repo/i18n";
 
 const SWATCH: Record<string, React.CSSProperties> = {
-  input: { borderTop: "2px solid #CDD5DB" },
-  active: { borderTop: "2px solid #005e5e" },
-  silent: { borderTop: "2px dashed #CDD5DB" },
-  unbound: { borderTop: "2px dashed #D97706" },
-  unattributed: { borderTop: "2px dashed #94A3B8" },
-  processing: { borderTop: "2px dotted #6F8596" },
+  input: { borderTop: "2px solid var(--border)" },
+  active: { borderTop: "2px solid var(--primary)" },
+  silent: { borderTop: "2px dashed var(--border)" },
+  unbound: { borderTop: "2px dashed var(--status-stale-foreground)" },
+  unattributed: { borderTop: "2px dashed var(--muted-foreground)" },
+  processing: { borderTop: "2px dotted var(--node-instruction)" },
 };
 
 /** Edge-state key for the lineage canvas. */

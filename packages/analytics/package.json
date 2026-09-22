@@ -25,8 +25,8 @@
     "zod": "catalog:"
   },
   "peerDependencies": {
-    "posthog-js": "^1.279.0",
-    "posthog-node": "^5.10.0"
+    "posthog-js": "^1.422.5",
+    "posthog-node": "^5.51.4"
   },
   "peerDependenciesMeta": {
     "posthog-js": {

@@ -56,7 +56,7 @@ export default function ExperimentDashboardsDisplay({
         <CardTitle>{t("overview.title")}</CardTitle>
         {hasDashboards && (
           <Link href={dashboardsHref} className="shrink-0">
-            <Button variant="buttonLink" className="h-auto p-0">
+            <Button variant="link" className="h-auto p-0">
               {t("overview.viewAll")}
             </Button>
           </Link>

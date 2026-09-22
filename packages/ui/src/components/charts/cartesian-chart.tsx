@@ -1,7 +1,7 @@
 "use client";
 
 import type { Layout, PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
@@ -13,11 +13,14 @@ import type {
   MarkerConfig,
   PlotlyChartConfig,
 } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { facetTierStyles, useChartSizing } from "./use-is-compact";
 import {
+  applyAxisType,
   applyReferenceLines,
   createBaseLayout,
   createPlotlyConfig,
+  detectAxisType,
   extendLayoutForFacets,
   getPlotType,
   getRenderer,
@@ -179,110 +182,124 @@ export function CartesianChart({
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>(
     subplots ? { grid: { rows: subplots.rows, columns: subplots.columns } } : {},
   );
+  const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const scatterPlotType = getPlotType("scatter", renderer);
 
-  const plotData: PlotData[] = data.map((series) => buildTrace(series, scatterPlotType));
+  const plotData: PlotData[] = useMemo(
+    () => data.map((series) => buildTrace(series, scatterPlotType)),
+    [data, scatterPlotType],
+  );
 
-  const layout = createBaseLayout(config, sizing);
+  // Keyed on the data alone: the layout below also rebuilds on a tier flip and
+  // a theme change, neither of which can alter an axis kind. Horizontal bars
+  // swap x/y in `buildTrace`, so their X values come from `series.y`.
+  const axisScan = useMemo(() => {
+    const x = data.flatMap((s) => (s.orientation === "h" ? (s.y ?? []) : (s.x ?? [])));
+    const y = data
+      .filter((s) => s.axis !== "secondary")
+      .flatMap((s) => (s.orientation === "h" ? (s.x ?? []) : (s.y ?? [])));
+    return { x, y, xType: detectAxisType(x), yType: detectAxisType(y) };
+  }, [data]);
 
-  // For axis-type detection use the values Plotly actually puts on each
-  // axis. Horizontal bars swap x/y in `buildTrace`, so their X-axis
-  // values come from `series.y`.
-  const xAxisValues = data.flatMap((s) => (s.orientation === "h" ? (s.y ?? []) : (s.x ?? [])));
-  const primaryYValues = data
-    .filter((s) => s.axis !== "secondary")
-    .flatMap((s) => (s.orientation === "h" ? (s.x ?? []) : (s.y ?? [])));
+  const layout = useMemo(() => {
+    const next = createBaseLayout(config, sizing);
 
-  layout.xaxis = refineAxisType(layout.xaxis, xAxisValues);
-  layout.yaxis = refineAxisType(layout.yaxis, primaryYValues);
+    const xAxisValues = axisScan.x;
+    const primaryYValues = axisScan.y;
 
-  // Bar-layout fields live on the layout, not on individual traces. Plotly
-  // ignores them when no bar trace is present, so always passing them
-  // through is harmless for line/scatter/area-only charts.
-  if (config.barmode !== undefined) (layout as Record<string, unknown>).barmode = config.barmode;
-  if (config.barnorm !== undefined) (layout as Record<string, unknown>).barnorm = config.barnorm;
-  if (config.bargap !== undefined) (layout as Record<string, unknown>).bargap = config.bargap;
-  if (config.bargroupgap !== undefined)
-    (layout as Record<string, unknown>).bargroupgap = config.bargroupgap;
+    next.xaxis = applyAxisType(next.xaxis, axisScan.xType);
+    next.yaxis = applyAxisType(next.yaxis, axisScan.yType);
 
-  // Defensive: when any bar series is horizontal Plotly's auto-detection
-  // sometimes leaves the category axis on `linear`, which renders the
-  // category strings as if they were numbers. Force `category` to match
-  // what `BarChart` did before the migration.
-  const hasHorizontalBars = data.some((s) => s.traceType === "bar" && s.orientation === "h");
-  if (hasHorizontalBars) {
-    layout.yaxis = { ...layout.yaxis, type: "category" };
-  }
+    // Bar-layout fields live on the layout, not on individual traces. Plotly
+    // ignores them when no bar trace is present, so always passing them
+    // through is harmless for line/scatter/area-only charts.
+    if (config.barmode !== undefined) (next as Record<string, unknown>).barmode = config.barmode;
+    if (config.barnorm !== undefined) (next as Record<string, unknown>).barnorm = config.barnorm;
+    if (config.bargap !== undefined) (next as Record<string, unknown>).bargap = config.bargap;
+    if (config.bargroupgap !== undefined)
+      (next as Record<string, unknown>).bargroupgap = config.bargroupgap;
 
-  // Truncate long category ticks before facets so cells inherit them.
-  layout.xaxis = truncateCategoryTicks(layout.xaxis ?? {}, xAxisValues, sizing);
-  layout.yaxis = truncateCategoryTicks(layout.yaxis ?? {}, primaryYValues, sizing);
+    // Defensive: when any bar series is horizontal Plotly's auto-detection
+    // sometimes leaves the category axis on `linear`, which renders the
+    // category strings as if they were numbers. Force `category` to match
+    // what `BarChart` did before the migration.
+    const hasHorizontalBars = data.some((s) => s.traceType === "bar" && s.orientation === "h");
+    if (hasHorizontalBars) {
+      next.yaxis = { ...next.yaxis, type: "category" };
+    }
 
-  // Faceted layout: convert the single-canvas xaxis/yaxis into a grid of
-  // numbered axes + per-cell title annotations. Runs before the secondary-Y
-  // step so the overlay axes can borrow each cell's primary styling.
-  if (subplots) {
-    const { cellTitleFontSize } = facetTierStyles(sizing);
-    // At very/ultra-compact cell tiers force shared axis titles
-    // regardless of the user's toggle.
-    const forceSharedTitles = sizing.cellVeryCompact;
-    const effectiveSharedXTitle = forceSharedTitles || subplots.sharedXTitle === true;
-    const effectiveSharedYTitle = forceSharedTitles || subplots.sharedYTitle === true;
-    const faceted = extendLayoutForFacets(layout, subplots.cells, {
-      rows: subplots.rows,
-      columns: subplots.columns,
-      sharedX: subplots.sharedX,
-      sharedY: subplots.sharedY,
-      sharedXTitle: effectiveSharedXTitle,
-      sharedYTitle: effectiveSharedYTitle,
-      roworder: subplots.roworder,
-      titleFontSize: cellTitleFontSize,
-      ultraCompactCells: sizing.cellUltraCompact,
-    });
-    Object.assign(layout, faceted);
-  }
+    // Truncate long category ticks before facets so cells inherit them.
+    next.xaxis = truncateCategoryTicks(next.xaxis ?? {}, xAxisValues, sizing);
+    next.yaxis = truncateCategoryTicks(next.yaxis ?? {}, primaryYValues, sizing);
 
-  const hasSecondary = data.some((s) => s.axis === "secondary");
-  if (hasSecondary && subplots) {
-    // Faceted dual-Y: one overlay axis per cell, built after the grid so it
-    // can borrow each cell's primary styling and overlay its y-domain.
-    applyFacetSecondaryAxes(layout, data, subplots, config);
-  } else if (hasSecondary) {
-    const secondaryYValues = data.filter((s) => s.axis === "secondary").flatMap((s) => s.y ?? []);
-    // Mirror tick/line styling from primary so the two axes look like a
-    // matched pair rather than two unrelated widgets. The primary slice
-    // was built by `createBaseLayout` above.
-    const primary = (layout.yaxis ?? {}) as Record<string, unknown>;
-    const titleFont = (primary.title as { font?: unknown } | undefined)?.font;
+    // Faceted layout: convert the single-canvas xaxis/yaxis into a grid of
+    // numbered axes + per-cell title annotations. Runs before the secondary-Y
+    // step so the overlay axes can borrow each cell's primary styling.
+    if (subplots) {
+      const { cellTitleFontSize } = facetTierStyles(sizing);
+      // At very/ultra-compact cell tiers force shared axis titles
+      // regardless of the user's toggle.
+      const forceSharedTitles = sizing.cellVeryCompact;
+      const effectiveSharedXTitle = forceSharedTitles || subplots.sharedXTitle === true;
+      const effectiveSharedYTitle = forceSharedTitles || subplots.sharedYTitle === true;
+      const faceted = extendLayoutForFacets(next, subplots.cells, {
+        rows: subplots.rows,
+        columns: subplots.columns,
+        sharedX: subplots.sharedX,
+        sharedY: subplots.sharedY,
+        sharedXTitle: effectiveSharedXTitle,
+        sharedYTitle: effectiveSharedYTitle,
+        roworder: subplots.roworder,
+        titleFontSize: cellTitleFontSize,
+        ultraCompactCells: sizing.cellUltraCompact,
+      });
+      Object.assign(next, faceted);
+    }
 
-    const baseY2: Record<string, unknown> = {
-      title: config.y2AxisTitle ? { text: config.y2AxisTitle, font: titleFont } : undefined,
-      overlaying: "y",
-      side: "right",
-      type: config.y2AxisType ?? "linear",
-      // Hide secondary grid; doubling makes the plot area look striped.
-      showgrid: false,
-      automargin: true,
-      tickfont: primary.tickfont,
-      color: primary.color,
-      linecolor: primary.linecolor,
-      tickcolor: primary.tickcolor,
-      showline: true,
-    };
-    // Auto-detect type only when the user didn't pin one. `Layout` has
-    // no `yaxis2` field; Plotly accepts arbitrary `yaxisN` keys.
-    const refined = config.y2AxisType ? baseY2 : refineAxisType(baseY2, secondaryYValues);
-    (layout as unknown as Record<string, unknown>).yaxis2 = refined;
-  }
+    const hasSecondary = data.some((s) => s.axis === "secondary");
+    if (hasSecondary && subplots) {
+      // Faceted dual-Y: one overlay axis per cell, built after the grid so it
+      // can borrow each cell's primary styling and overlay its y-domain.
+      applyFacetSecondaryAxes(next, data, subplots, config);
+    } else if (hasSecondary) {
+      const secondaryYValues = data.filter((s) => s.axis === "secondary").flatMap((s) => s.y ?? []);
+      // Mirror tick/line styling from primary so the two axes look like a
+      // matched pair rather than two unrelated widgets. The primary slice
+      // was built by `createBaseLayout` above.
+      const primary = (next.yaxis ?? {}) as Record<string, unknown>;
+      const titleFont = (primary.title as { font?: unknown } | undefined)?.font;
 
-  // Reference-line overlays sit on top of everything else in the layout;
-  // applied last so prior steps (facets, secondary axis) can populate
-  // `layout.shapes` / `layout.annotations` without conflict.
-  applyReferenceLines(layout, config.referenceLines, { cells: subplots?.cells });
+      const baseY2: Record<string, unknown> = {
+        title: config.y2AxisTitle ? { text: config.y2AxisTitle, font: titleFont } : undefined,
+        overlaying: "y",
+        side: "right",
+        type: config.y2AxisType ?? "linear",
+        // Hide secondary grid; doubling makes the plot area look striped.
+        showgrid: false,
+        automargin: true,
+        tickfont: primary.tickfont,
+        color: primary.color,
+        linecolor: primary.linecolor,
+        tickcolor: primary.tickcolor,
+        showline: true,
+      };
+      // Auto-detect type only when the user didn't pin one. `Layout` has
+      // no `yaxis2` field; Plotly accepts arbitrary `yaxisN` keys.
+      const refined = config.y2AxisType ? baseY2 : refineAxisType(baseY2, secondaryYValues);
+      (next as unknown as Record<string, unknown>).yaxis2 = refined;
+    }
 
-  const plotConfig = createPlotlyConfig(config, sizing);
+    // Reference-line overlays sit on top of everything else in the layout;
+    // applied last so prior steps (facets, secondary axis) can populate
+    // `layout.shapes` / `layout.annotations` without conflict.
+    applyReferenceLines(next, config.referenceLines, { cells: subplots?.cells });
 
+    return next;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+  }, [config, sizing, data, axisScan, subplots, themeVersion]);
+
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
@@ -410,7 +427,7 @@ function buildTrace(series: CartesianSeries, scatterPlotType: string): PlotData 
       type: scatterPlotType,
       mode: series.mode ?? "markers",
       marker: {
-        color: series.marker?.color ?? series.color ?? "#1f77b4",
+        color: series.marker?.color ?? series.color,
         size: series.marker?.size ?? 6,
         symbol: series.marker?.symbol ?? "circle",
         opacity: series.marker?.opacity ?? series.opacity ?? 1,
@@ -445,7 +462,7 @@ function buildTrace(series: CartesianSeries, scatterPlotType: string): PlotData 
     type: scatterPlotType,
     mode: series.mode ?? "lines",
     line: {
-      color: series.line?.color ?? series.color ?? "#1f77b4",
+      color: series.line?.color ?? series.color,
       width: series.line?.width ?? 2,
       dash: series.line?.dash ?? "solid",
       shape: series.line?.shape ?? "linear",

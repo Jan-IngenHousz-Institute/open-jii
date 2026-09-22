@@ -7,6 +7,9 @@ import { PayloadProfile } from "./payload-profile";
 
 const PROTOCOL_ID = "55555555-5555-4555-8555-555555555555";
 const WORKBOOK_ID = "66666666-6666-4666-8666-666666666666";
+// Deliberately different from WORKBOOK_ID: conflating the two is the bug these
+// tests exist to catch.
+const WORKBOOK_VERSION_ID = "77777777-7777-4777-8777-777777777777";
 const MACRO_ID = "77777777-7777-4777-8777-777777777777";
 
 function payload(overrides: Partial<DevicePayloadStats> = {}): DevicePayloadStats {
@@ -80,17 +83,54 @@ describe("PayloadProfile", () => {
   });
 
   it("calls out measurements sent outside any workbook", () => {
-    renderProfile(payload({ workbookMix: [{ workbookVersionId: null, count: 200 }] }));
+    renderProfile(
+      payload({
+        workbookMix: [
+          { workbookVersionId: null, workbookId: null, workbookVersion: null, count: 200 },
+        ],
+      }),
+    );
 
     expect(screen.getByText("iot.devices.monitoring.noWorkbook")).toBeInTheDocument();
   });
 
-  it("names and links a workbook the viewer can open", () => {
-    renderProfile(payload({ workbookMix: [{ workbookVersionId: WORKBOOK_ID, count: 200 }] }), {
-      workbooks: [{ id: WORKBOOK_ID, name: "Field routine" }],
-    });
+  it("names and links the workbook that owns the reported version", () => {
+    renderProfile(
+      payload({
+        workbookMix: [
+          {
+            workbookVersionId: WORKBOOK_VERSION_ID,
+            workbookId: WORKBOOK_ID,
+            workbookVersion: 3,
+            count: 200,
+          },
+        ],
+      }),
+      { workbooks: [{ id: WORKBOOK_ID, name: "Field routine" }] },
+    );
 
+    // Attribution runs through the owning workbook: the version id the device
+    // reported matches nothing the viewer can list.
     expect(screen.getByRole("link", { name: /Field routine/ })).toBeInTheDocument();
+    expect(screen.getByText("iot.devices.monitoring.workbookVersionShort")).toBeInTheDocument();
+  });
+
+  it("marks a reported version the registry does not know", () => {
+    renderProfile(
+      payload({
+        workbookMix: [
+          {
+            workbookVersionId: WORKBOOK_VERSION_ID,
+            workbookId: null,
+            workbookVersion: null,
+            count: 200,
+          },
+        ],
+      }),
+      { workbooks: [{ id: WORKBOOK_ID, name: "Field routine" }] },
+    );
+
+    expect(screen.getByText("iot.devices.monitoring.unknownWorkbookId")).toBeInTheDocument();
   });
 
   it("names and links a macro the viewer can open", () => {

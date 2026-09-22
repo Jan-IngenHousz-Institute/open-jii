@@ -244,6 +244,14 @@ export const organizations = pgTable("organizations", {
   // once somebody deliberately publishes it; personal organizations stay private.
   visibility: visibilityEnum("visibility").default("private").notNull(),
   ...timestamps,
+  // Weighted full-text search vector: name (A) + description (B) + location (C), so "Amsterdam"
+  // finds the organizations based there while still ranking below a name or description hit. The
+  // `type` enum is matched at query time (enum->text casts are not immutable, so they can't live
+  // in a generated column).
+  searchVector: tsvector("search_vector").generatedAlwaysAs(
+    (): SQL =>
+      sql`setweight(to_tsvector('english', coalesce(${organizations.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${organizations.description}, '')), 'B') || setweight(to_tsvector('english', coalesce(${organizations.location}, '')), 'C')`,
+  ),
 });
 
 // Organization Members (Better Auth organization plugin, model "member").
@@ -748,6 +756,7 @@ export const resourceTypeEnum = pgEnum("resource_type", [
   "workbook",
   "device",
   "device_group",
+  "calibration_definition",
 ]);
 export const granteeTypeEnum = pgEnum("grantee_type", ["user", "organization", "team"]);
 
@@ -804,11 +813,13 @@ export const experimentDashboards = pgTable(
   (t) => [index("experiment_dashboards_experiment_id_idx").on(t.experimentId)],
 );
 
+// Setup progress, not connectivity. "active" is never shown as a word: the
+// badge reads it with the device's binding count as Provisioned or Onboarded.
 export const deviceStatusEnum = pgEnum("device_status", [
-  "pending",
+  "registered",
   "active",
-  "rotating",
   "revoked",
+  "retired",
 ]);
 
 export const iotDevices = pgTable(
@@ -820,7 +831,7 @@ export const iotDevices = pgTable(
     serialNumber: text("serial_number").notNull().unique(),
     name: varchar("name", { length: 255 }),
     deviceType: sensorFamilyEnum("device_type").notNull(),
-    status: deviceStatusEnum("status").default("pending").notNull(),
+    status: deviceStatusEnum("status").default("registered").notNull(),
     certificateId: text("certificate_id"),
     certificateArn: text("certificate_arn"),
     // Org-scoped access control. RESTRICT (not cascade, unlike other resources):
@@ -909,5 +920,129 @@ export const deviceGroupMembers = pgTable(
   (t) => [
     primaryKey({ columns: [t.groupId, t.deviceId] }),
     index("device_group_members_device_idx").on(t.deviceId),
+  ],
+);
+
+export const calibrationInputSourceEnum = pgEnum("calibration_input_source", [
+  "bench_wizard", // captured by the platform wizard, script executed by the platform
+  "external_bench", // blocks computed by a bench tool and submitted
+]);
+
+// "computed", not "fit_ok": some calibrations pass blocks through with no fitting.
+export const calibrationRunStatusEnum = pgEnum("calibration_run_status", [
+  "running", // script invoke in flight
+  "computed", // blocks produced and schema-validated, awaiting review
+  "compute_failed", // script or validation failure; traceback and QC reasons kept
+  "error", // infrastructure failure (invoke failed, function timed out)
+  "approved", // reviewed; the applied row exists in device_calibrations
+  "rejected", // reviewed and declined; terminal, diagnostics kept
+]);
+
+// A name is a label like a protocol's, not a key. `version` is inert at 1 until versioning is designed.
+export const calibrationDefinitions = pgTable(
+  "calibration_definitions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    family: sensorFamilyEnum("family").notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    version: integer("version").notNull().default(1),
+    captureProcedure: jsonb("capture_procedure").notNull(),
+    script: text("script").notNull(),
+    outputSchema: jsonb("output_schema").notNull(),
+    // Runs on older firmware are refused.
+    minFirmwareVersion: varchar("min_firmware_version", { length: 32 }),
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "restrict",
+    }),
+    visibility: visibilityEnum("visibility").default("public").notNull(),
+    createdBy: uuid("created_by")
+      .references(() => users.id)
+      .notNull(),
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      (): SQL =>
+        sql`setweight(to_tsvector('english', coalesce(${calibrationDefinitions.name}, '')), 'A') || setweight(to_tsvector('english', coalesce(${calibrationDefinitions.description}, '')), 'B')`,
+    ),
+    ...timestamps,
+  },
+  (t) => [
+    index("calibration_definitions_family_idx").on(t.family),
+    index("calibration_definitions_organization_id_idx").on(t.organizationId),
+    index("calibration_definitions_created_by_idx").on(t.createdBy),
+  ],
+);
+
+// RESTRICT on the definition: runs are the audit trail of what produced a coefficient.
+export const calibrationRuns = pgTable(
+  "calibration_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    definitionId: uuid("definition_id")
+      .references(() => calibrationDefinitions.id, { onDelete: "restrict" })
+      .notNull(),
+    deviceId: uuid("device_id")
+      .references(() => iotDevices.id, { onDelete: "cascade" })
+      .notNull(),
+    requestedBy: uuid("requested_by")
+      .references(() => users.id)
+      .notNull(),
+    inputSource: calibrationInputSourceEnum("input_source").notNull(),
+    status: calibrationRunStatusEnum("status").default("running").notNull(),
+    payload: jsonb("payload"),
+    payloadS3Key: varchar("payload_s3_key", { length: 512 }),
+    params: jsonb("params"),
+    blocks: jsonb("blocks"),
+    // Optional steps the bench could not run, and why; a missing series is otherwise mute.
+    skippedSeries: jsonb("skipped_series"),
+    preInfo: jsonb("pre_info"),
+    postInfo: jsonb("post_info"),
+    firmwareVersion: varchar("firmware_version", { length: 64 }),
+    errorMessage: text("error_message"),
+    reviewedBy: uuid("reviewed_by").references(() => users.id),
+    reviewedAt: timestamp("reviewed_at"),
+    finishedAt: timestamp("finished_at"),
+    ...timestamps,
+  },
+  (t) => [
+    index("calibration_runs_device_id_idx").on(t.deviceId),
+    index("calibration_runs_definition_id_idx").on(t.definitionId),
+    index("calibration_runs_status_idx").on(t.status),
+  ],
+);
+
+// Approving supersedes the previous active row rather than mutating it; readings join to the row active at measurement time.
+export const deviceCalibrations = pgTable(
+  "device_calibrations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    deviceId: uuid("device_id")
+      .references(() => iotDevices.id, { onDelete: "cascade" })
+      .notNull(),
+    runId: uuid("run_id")
+      .references(() => calibrationRuns.id, { onDelete: "cascade" })
+      .notNull(),
+    // Only the run's computed blocks; rejected and skipped ones stay on the run.
+    blocks: jsonb("blocks").notNull(),
+    approvedBy: uuid("approved_by")
+      .references(() => users.id)
+      .notNull(),
+    validFrom: timestamp("valid_from")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
+    supersededAt: timestamp("superseded_at"),
+    writtenToDeviceAt: timestamp("written_to_device_at"),
+    // One verdict per block: a session can confirm one gain and fail another,
+    // and a block that failed part way through stays partly written.
+    writeResults: jsonb("write_results"),
+    // What the procedure's verify phase read after the write, in the run payload's shape.
+    verification: jsonb("verification"),
+    ...timestamps,
+  },
+  (t) => [
+    // One active calibration per device, enforced where it cannot race.
+    uniqueIndex("device_calibrations_active_uniq")
+      .on(t.deviceId)
+      .where(sql`${t.supersededAt} IS NULL`),
+    index("device_calibrations_run_id_idx").on(t.runId),
   ],
 );

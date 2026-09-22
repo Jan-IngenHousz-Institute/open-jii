@@ -9,8 +9,8 @@ import {
   zProtocolDetail,
   zProtocolFilterQuery,
   zProtocolIdPathParam,
-  zProtocolList,
   zProtocolMacroList,
+  zProtocolListResponse,
   zProtocolMacroPathParams,
   zUpdateProtocolRequestBody,
 } from "./protocol.schema";
@@ -19,7 +19,7 @@ export const protocolContract = {
   listProtocols: oc
     .route({ method: "GET", path: "/api/v1/protocols", successStatus: 200 })
     .input(zProtocolFilterQuery)
-    .output(zProtocolList),
+    .output(zProtocolListResponse),
   getProtocol: oc
     .route({ method: "GET", path: "/api/v1/protocols/{id}", successStatus: 200 })
     .input(zProtocolIdPathParam)

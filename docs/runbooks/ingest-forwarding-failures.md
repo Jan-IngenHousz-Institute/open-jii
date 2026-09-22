@@ -1,0 +1,58 @@
+# ingest-forwarding-failures
+
+**IoT Core accepted a device's message and then failed to deliver it.** The broker returned success
+to the device, so the device believes the measurement was taken. Rule actions are retried a limited
+number of times and then dropped, which makes this the one ingest metric where data is genuinely
+lost rather than delayed.
+
+Any nonzero value alarms. There is no healthy rate of forwarding failure.
+
+## What is failing
+
+Each ingest channel in `asyncapi.yaml` generates one topic rule with two independent actions:
+Kinesis for the pipeline, and Firehose for the raw archive, which buffers messages into large S3
+objects rather than writing one per message. Either can fail alone, so establish which:
+
+```bash
+aws logs filter-log-events --log-group-name AWSIotLogsV2 \
+  --start-time $(( ($(date +%s) - 3600) * 1000 )) \
+  --filter-pattern '{ $.eventType = "RuleExecution" && $.status = "Failure" }'
+```
+
+The `ruleName` and `reason` fields in the matched events answer both "which channel" and "which
+action". If nothing matches, IoT logging may be off for the account, in which case read the
+`AWS/IoT` `Failure` metric instead. It is keyed on `RuleName` **and** `ActionType`, so one series
+per action already answers "which action", and a query naming only `RuleName` matches nothing:
+
+```bash
+aws cloudwatch list-metrics --namespace AWS/IoT --metric-name Failure \
+  --query 'Metrics[].Dimensions[].Value' --output text
+```
+
+## Likely causes, most common first
+
+- **The action's IAM role was changed or removed.** The rules assume `iot_kinesis_role` and
+  `iot_firehose_role` from `infrastructure/modules/iot-core`. A tofu apply that reshaped those
+  roles is the usual trigger; the timing usually matches a recent deploy.
+- **Kinesis is throttling.** Check `kinesis-write-throttling`. If that is also firing, this is a
+  symptom of capacity, not of permissions, and the fix is shards.
+- **The Firehose delivery stream is unhealthy**, so the Kinesis half succeeds and the archive half
+  does not. Its own delivery errors are on the `open-jii-<env>-iot-raw-archive` stream in the
+  Firehose console, not in the IoT logs.
+- **Rule SQL is invalid after an `asyncapi.yaml` edit.** The rules are generated from that file at
+  plan time, so a malformed channel definition produces a rule that fails at execution rather than
+  at apply.
+
+## Recovering the lost window
+
+Messages dropped by a failed rule action are not replayable from IoT Core. What survives is whatever
+the other action captured: if Firehose kept archiving while Kinesis failed, the raw objects for the
+window are in `open-jii-<env>-iot-raw-archive`. No pipeline reads that archive, so replay is a
+manual job of re-publishing those objects into the stream, not a switch to flip. Establish which
+action failed before telling anyone the data is gone, because half the time it is not.
+
+## Closing
+
+Do not close on "the metric returned to zero". Confirm the rule is executing successfully for the
+affected channel, then note here which action failed and what changed, because the IAM-shaped causes
+recur on the next infrastructure change to that module.

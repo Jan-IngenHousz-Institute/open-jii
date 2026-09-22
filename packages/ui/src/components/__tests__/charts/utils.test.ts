@@ -1,23 +1,30 @@
 import type { Layout } from "plotly.js";
-import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import type { PlotlyChartConfig } from "../../charts/types";
 import {
-  detectWebGLSupport,
-  getRenderer,
-  validateDimensions,
-  getPlotType,
-  createBaseLayout,
-  createSubplotLayout,
-  create3DLayout,
-  createPlotlyConfig,
-  detectAxisType,
-  refineAxisType,
-  extendLayoutForFacets,
-  defaultFacetColumns,
   applyReferenceLines,
+  create3DLayout,
+  createBaseLayout,
+  createPlotlyConfig,
+  createSubplotLayout,
+  defaultFacetColumns,
+  detectAxisType,
+  detectWebGLSupport,
+  extendLayoutForFacets,
+  getPlotType,
+  getRenderer,
+  invalidateThemeTokenCache,
+  refineAxisType,
+  validateDimensions,
 } from "../../charts/utils";
 import type { ReferenceLineSpec } from "../../charts/utils";
+
+/** Tokens this suite stubs, and the sRGB the repo's converter produces for them. */
+const FOREGROUND_TOKEN = "oklch(0.245 0.03 195)";
+const FOREGROUND_HEX = "#0d2525";
+const POPOVER_TOKEN = "oklch(0.99 0.002 195)";
+const POPOVER_HEX = "#fafcfc";
 
 // Mock DOM APIs
 Object.defineProperty(window, "WebGLRenderingContext", {
@@ -43,6 +50,8 @@ Object.defineProperty(document, "createElement", {
 describe("utils", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // These set theme tokens on the root; nothing observes that without a chart.
+    invalidateThemeTokenCache();
   });
 
   afterEach(() => {
@@ -169,19 +178,19 @@ describe("utils", () => {
     it("converts to WebGL types when using webgl renderer", () => {
       expect(getPlotType("scatter", "webgl")).toBe("scattergl");
       expect(getPlotType("line", "webgl")).toBe("scattergl");
-      expect(getPlotType("heatmap", "webgl")).toBe("heatmapgl");
     });
 
     it("keeps non-WebGL types unchanged even with webgl renderer", () => {
       expect(getPlotType("bar", "webgl")).toBe("bar");
       expect(getPlotType("histogram", "webgl")).toBe("histogram");
       expect(getPlotType("contour", "webgl")).toBe("contour");
+      expect(getPlotType("heatmap", "webgl")).toBe("heatmap");
     });
 
-    it("preserves 3D plot types", () => {
-      expect(getPlotType("scatter3d", "webgl")).toBe("scatter3d");
-      expect(getPlotType("surface", "webgl")).toBe("surface");
-      expect(getPlotType("mesh3d", "webgl")).toBe("mesh3d");
+    it("passes types without a WebGL twin in the bundle through unchanged", () => {
+      expect(getPlotType("scatterpolar", "webgl")).toBe("scatterpolar");
+      expect(getPlotType("box", "webgl")).toBe("box");
+      expect(getPlotType("pie", "webgl")).toBe("pie");
     });
 
     it("returns original type for unknown types", () => {
@@ -204,7 +213,7 @@ describe("utils", () => {
         plot_bgcolor: "rgba(0,0,0,0)",
         paper_bgcolor: "#ffffff",
         font: {
-          family: "var(--font-inter), Inter, sans-serif",
+          family: "var(--font-sans)",
           color: "#000000",
           size: 12,
         },
@@ -225,6 +234,26 @@ describe("utils", () => {
       expect(layout.yaxis?.gridcolor).toBe("rgba(255,255,255,0.1)");
     });
 
+    it("hides both axes and drops the margins for a sparkline", () => {
+      const layout = createBaseLayout({ ...baseConfig, sparkline: true });
+
+      expect(layout.xaxis?.visible).toBe(false);
+      expect(layout.yaxis?.visible).toBe(false);
+      expect(layout.margin).toMatchObject({ l: 0, r: 0, t: 2, b: 2 });
+    });
+
+    it("takes an explicit x tick format so date ticks cannot wrap onto a second line", () => {
+      const layout = createBaseLayout({ ...baseConfig, xAxisTickFormat: "%b %-d" });
+
+      expect(layout.xaxis?.tickformat).toBe("%b %-d");
+    });
+
+    it("leaves the tick format to plotly when none is given", () => {
+      const layout = createBaseLayout(baseConfig);
+
+      expect(layout.xaxis?.tickformat).toBeUndefined();
+    });
+
     it("sets title when provided", () => {
       const config: PlotlyChartConfig = {
         ...baseConfig,
@@ -237,7 +266,7 @@ describe("utils", () => {
         text: "Test Chart",
         font: {
           size: 14,
-          family: "var(--font-inter), Inter, sans-serif",
+          family: "var(--font-sans)",
           color: "#000000",
         },
       });
@@ -257,7 +286,7 @@ describe("utils", () => {
         font: {
           size: 14,
           color: "#000000",
-          family: "var(--font-inter), Inter, sans-serif",
+          family: "var(--font-sans)",
         },
       });
 
@@ -266,7 +295,7 @@ describe("utils", () => {
         font: {
           size: 14,
           color: "#000000",
-          family: "var(--font-inter), Inter, sans-serif",
+          family: "var(--font-sans)",
         },
       });
     });
@@ -361,6 +390,16 @@ describe("utils", () => {
     });
 
     it("includes annotations with proper styling", () => {
+      // jsdom applies no stylesheet, so `readThemeColor` finds nothing and the
+      // call sites fall through to their `?? "#literal"` — asserting those would
+      // pass even with the token plumbing broken. Stub so the real chain runs.
+      const root = document.documentElement;
+      root.style.setProperty("--foreground", FOREGROUND_TOKEN);
+      root.style.setProperty("--popover", POPOVER_TOKEN);
+      onTestFinished(() => {
+        root.style.removeProperty("--foreground");
+        root.style.removeProperty("--popover");
+      });
       const config: PlotlyChartConfig = {
         ...baseConfig,
         annotations: [
@@ -380,11 +419,11 @@ describe("utils", () => {
         x: 1,
         y: 1,
         font: {
-          color: "#000000",
+          color: FOREGROUND_HEX,
           size: 12,
-          family: "var(--font-inter), Inter, sans-serif",
+          family: "var(--font-sans)",
         },
-        bgcolor: "rgba(255,255,255,0.8)",
+        bgcolor: `${POPOVER_HEX}cc`,
       });
     });
 
@@ -466,6 +505,15 @@ describe("utils", () => {
       expect((layout.title as { font: { size: number } }).font.size).toBe(11);
       expect(layout.legend?.font?.size).toBe(9);
       expect(layout.hoverlabel?.font?.size).toBe(10);
+    });
+
+    it("keeps Plotly's trace-name chip by default and drops it on request", () => {
+      expect(createBaseLayout(baseConfig).hoverlabel?.namelength).toBeUndefined();
+      // 0 empties the name, and Plotly removes the chip rather than drawing an
+      // empty one. It is the only hover surface `hoverlabel` cannot colour.
+      expect(createBaseLayout({ ...baseConfig, showHoverName: false }).hoverlabel?.namelength).toBe(
+        0,
+      );
     });
 
     it("shrinks cell-axis fonts and adds nticks cap under cellCompact", () => {
@@ -626,7 +674,9 @@ describe("utils", () => {
 
       expect(config).toMatchObject({
         displayModeBar: true,
-        responsive: true,
+        // PlotlyChart observes each container itself; Plotly's own window
+        // listener would double every replot.
+        responsive: false,
         plotGlPixelRatio: 1,
         staticPlot: false,
         doubleClick: "reset",

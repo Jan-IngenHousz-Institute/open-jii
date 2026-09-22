@@ -226,6 +226,16 @@ export const Map = ({
   fitBoundsOnMapLoad = true,
 }: MapProps) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(sidebarCollapsed);
+  const hasChosenSidebarState = useRef(false);
+  // useIsMobile is false on the first render, so a viewport-derived prop has
+  // nothing to seed with. Follow it until the reader states a preference, then
+  // stop: it also flips on every resize across the breakpoint.
+  useEffect(() => {
+    if (hasChosenSidebarState.current) {
+      return;
+    }
+    setIsSidebarCollapsed(sidebarCollapsed);
+  }, [sidebarCollapsed]);
   const [selectedLocation, setSelectedLocation] = useState<LocationPoint | undefined>();
   const [mapCenter, setMapCenter] = useState<[number, number]>(center);
   const [mapZoom, setMapZoom] = useState(zoom);
@@ -233,7 +243,7 @@ export const Map = ({
 
   // Create a custom marker icon
   const createCustomMarker = useCallback(
-    (color: string = "#ef4444", isSelected: boolean = false) => {
+    (color: string = "var(--primary)", isSelected: boolean = false) => {
       const svgIcon = `
       <svg width="24" height="24" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="${isSelected ? 3 : 2}" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
         <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
@@ -404,12 +414,16 @@ export const Map = ({
         <div
           className={cn(
             "absolute bottom-2 left-2 z-[900] flex flex-col transition-all duration-300 ease-in-out",
-            isSidebarCollapsed ? "w-auto min-w-32" : "max-h-96 w-80",
+            // Expanded, the 320x384 panel is wider than the 310px map it floats
+            // over on a phone and covers almost all of its height.
+            isSidebarCollapsed
+              ? "w-auto min-w-32"
+              : "max-h-48 w-[calc(100%-1rem)] sm:max-h-96 sm:w-80",
           )}
         >
           <div
             className={cn(
-              "flex flex-col rounded-lg border bg-white shadow-lg",
+              "bg-card flex flex-col rounded-lg border shadow-lg",
               isSidebarCollapsed ? "h-auto" : "max-h-96",
             )}
           >
@@ -420,8 +434,11 @@ export const Map = ({
               </h3>
               <button
                 type="button"
-                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                className="ml-2 shrink-0 rounded p-1 transition-colors hover:bg-gray-100"
+                onClick={() => {
+                  hasChosenSidebarState.current = true;
+                  setIsSidebarCollapsed(!isSidebarCollapsed);
+                }}
+                className="hover:bg-accent ml-2 shrink-0 rounded p-1 transition-colors"
                 title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {isSidebarCollapsed ? (
@@ -492,7 +509,7 @@ export const Map = ({
               iconCreateFunction={(cluster: any) => {
                 const count = cluster.getChildCount();
                 return L.divIcon({
-                  html: `<div style="background: var(--primary); color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">${count}</div>`,
+                  html: `<div style="background: var(--primary); color: var(--primary-foreground); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">${count}</div>`,
                   className: "custom-cluster-icon",
                   iconSize: [40, 40],
                 });
@@ -505,7 +522,7 @@ export const Map = ({
                     key={location.id || index}
                     position={[location.latitude, location.longitude]}
                     icon={createCustomMarker(
-                      isSelected ? "var(--tertiary)" : "var(--primary)",
+                      isSelected ? "var(--chart-4)" : "var(--primary)",
                       isSelected,
                     )}
                     draggable={selectionMode && !disabled}
@@ -517,14 +534,14 @@ export const Map = ({
                       <div className="min-w-0 space-y-2">
                         <div className="font-semibold">{location.name}</div>
                         {location.address && (
-                          <div className="text-sm text-gray-600">{location.address}</div>
+                          <div className="text-muted-foreground text-sm">{location.address}</div>
                         )}
-                        <div className="text-xs text-gray-500">
+                        <div className="text-muted-foreground text-xs">
                           {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
                         </div>
                         {[location.municipality, location.region, location.country].filter(Boolean)
                           .length > 0 && (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-muted-foreground text-xs">
                             {[location.municipality, location.region, location.country]
                               .filter(Boolean)
                               .join(", ")}
@@ -544,7 +561,7 @@ export const Map = ({
                   key={location.id || index}
                   position={[location.latitude, location.longitude]}
                   icon={createCustomMarker(
-                    isSelected ? "var(--tertiary)" : "var(--primary)",
+                    isSelected ? "var(--chart-4)" : "var(--primary)",
                     isSelected,
                   )}
                   draggable={selectionMode && !disabled}
@@ -556,14 +573,14 @@ export const Map = ({
                     <div className="min-w-0 space-y-2">
                       <div className="font-semibold">{location.name}</div>
                       {location.address && (
-                        <div className="text-sm text-gray-600">{location.address}</div>
+                        <div className="text-muted-foreground text-sm">{location.address}</div>
                       )}
-                      <div className="text-xs text-gray-500">
+                      <div className="text-muted-foreground text-xs">
                         {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
                       </div>
                       {[location.municipality, location.region, location.country].filter(Boolean)
                         .length > 0 && (
-                        <div className="text-xs text-gray-500">
+                        <div className="text-muted-foreground text-xs">
                           {[location.municipality, location.region, location.country]
                             .filter(Boolean)
                             .join(", ")}

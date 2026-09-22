@@ -1,0 +1,1 @@
+ALTER TABLE `measurements` ADD `failure_reason` text;

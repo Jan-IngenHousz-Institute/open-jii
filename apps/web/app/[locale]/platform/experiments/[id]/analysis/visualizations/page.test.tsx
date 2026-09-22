@@ -62,9 +62,11 @@ describe("VisualizationsPage", () => {
         expect(screen.getByText("Experiment: exp-123")).toBeInTheDocument();
         expect(screen.getByTestId("viz-viz-1")).toBeInTheDocument();
       });
-      expect(screen.getByText("Temperature Over Time")).toBeInTheDocument();
+      // Each name appears twice now: once in its preview card above the table
+      // and once in the table row, as on the dashboards page.
+      expect(screen.getAllByText("Temperature Over Time")).toHaveLength(2);
       expect(screen.getByTestId("viz-viz-2")).toBeInTheDocument();
-      expect(screen.getByText("Humidity Analysis")).toBeInTheDocument();
+      expect(screen.getAllByText("Humidity Analysis")).toHaveLength(2);
     });
 
     it("should render create button", async () => {
@@ -84,7 +86,7 @@ describe("VisualizationsPage", () => {
 
       await waitFor(() => {
         const button = screen.getByRole("button", { name: /ui.actions.create/ });
-        expect(button.querySelector("svg")).toBeInTheDocument();
+        expect(button.querySelector(".lucide-plus")).toBeInTheDocument();
       });
     });
   });
@@ -165,10 +167,13 @@ describe("VisualizationsPage", () => {
         expect(screen.getByTestId("viz-viz-0")).toBeInTheDocument();
       });
 
+      // The three most recent are also previewed above the table, so their
+      // names appear twice; the rest appear once.
       for (const viz of mockVisualizations) {
         expect(screen.getByTestId(`viz-${viz.id}`)).toBeInTheDocument();
-        expect(screen.getByText(viz.name)).toBeInTheDocument();
+        expect(screen.getAllByText(viz.name).length).toBeGreaterThanOrEqual(1);
       }
+      expect(screen.getAllByRole("link", { name: /Visualization/ })).toHaveLength(3);
     });
   });
 

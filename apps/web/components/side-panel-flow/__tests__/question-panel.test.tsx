@@ -79,9 +79,9 @@ describe("<QuestionPanel />", () => {
         disabled={false}
       />,
     );
-    // The toggle is a checkbox, not a button with a name
-    const checkbox = screen.getByRole("checkbox");
-    await userEvent.click(checkbox);
+    // The toggle is a switch, not a button with a name
+    const toggle = screen.getByRole("switch");
+    await userEvent.click(toggle);
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ required: true }));
   });
 
@@ -145,8 +145,8 @@ describe("<QuestionPanel />", () => {
     const radios = screen.getAllByRole("radio");
     await user.click(radios[0]); // Try to switch answer type
 
-    const checkbox = screen.getByRole("checkbox");
-    await user.click(checkbox); // Try to toggle required
+    const toggle = screen.getByRole("switch");
+    await user.click(toggle); // Try to toggle required
 
     const addButton = screen.getByRole("button", { name: "questionCard.addOption" });
     await user.click(addButton); // Try to add option

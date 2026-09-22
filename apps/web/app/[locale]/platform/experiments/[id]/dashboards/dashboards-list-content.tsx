@@ -4,7 +4,7 @@ import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useE
 import { useExperimentDashboardCreate } from "@/hooks/experiment/useExperimentDashboardCreate/useExperimentDashboardCreate";
 import { useExperimentDashboards } from "@/hooks/experiment/useExperimentDashboards/useExperimentDashboards";
 import { useLocale } from "@/hooks/useLocale";
-import { Loader2, PlusCircle } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { notFound, useParams, useRouter } from "next/navigation";
 
 import { useTranslation } from "@repo/i18n";
@@ -58,7 +58,7 @@ export default function ExperimentDashboardsPage() {
           {isCreating ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
-            <PlusCircle className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 h-4 w-4" aria-hidden />
           )}
           {t("ui.actions.create")}
         </Button>

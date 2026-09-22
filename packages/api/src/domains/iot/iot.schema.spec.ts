@@ -13,6 +13,7 @@ import {
   zDeviceOnboardingConfig,
   zDeviceExperiment,
   zMonitoringRangeQuery,
+  zEnsureMobileDeviceBody,
 } from "./iot.schema";
 
 describe("Iot Schema", () => {
@@ -185,7 +186,7 @@ describe("Iot Schema", () => {
       serialNumber: "SN-1",
       name: "Device 1",
       deviceType: "ambyte",
-      status: "pending",
+      status: "registered",
       certificateId: null,
       certificateArn: null,
       createdBy: "22222222-2222-4222-8222-222222222222",
@@ -213,8 +214,12 @@ describe("Iot Schema", () => {
       expect(zIotDevice.safeParse(active).success).toBe(true);
     });
 
-    it("accepts the rotating status", () => {
-      expect(zIotDevice.safeParse({ ...validDevice, status: "rotating" }).success).toBe(true);
+    it("accepts the retired status", () => {
+      expect(zIotDevice.safeParse({ ...validDevice, status: "retired" }).success).toBe(true);
+    });
+
+    it("rejects the retired transient of the old vocabulary", () => {
+      expect(zIotDevice.safeParse({ ...validDevice, status: "rotating" }).success).toBe(false);
     });
 
     it("rejects an unknown status", () => {
@@ -234,7 +239,8 @@ describe("Iot Schema", () => {
       serialNumber: "SN-1",
       name: "Device 1",
       deviceType: "ambyte" as const,
-      status: "pending" as const,
+      status: "registered" as const,
+      boundExperimentCount: 0,
       certificateId: null,
       certificateArn: null,
       createdBy: "22222222-2222-4222-8222-222222222222",
@@ -516,6 +522,34 @@ describe("Iot Schema", () => {
           from: "2026-08-15T00:00:00.000Z",
         }).success,
       ).toBe(false);
+    });
+  });
+
+  describe("zEnsureMobileDeviceBody", () => {
+    // The phone reports Settings.Secure.ANDROID_ID verbatim. It is a serial,
+    // not a minted uuid, and the column behind it is text.
+    it("accepts a raw Android SSAID", () => {
+      const parsed = zEnsureMobileDeviceBody.safeParse({ installId: "9774d56d682e549c" });
+
+      expect(parsed.success).toBe(true);
+    });
+
+    it("still accepts a uuid, which older installs and iOS keep using", () => {
+      const parsed = zEnsureMobileDeviceBody.safeParse({
+        installId: "59fcd852-7dfe-44a5-9bfe-5179d2d5f7cf",
+      });
+
+      expect(parsed.success).toBe(true);
+    });
+
+    it("rejects characters AWS CreateThing would refuse", () => {
+      const parsed = zEnsureMobileDeviceBody.safeParse({ installId: "not a serial!" });
+
+      expect(parsed.success).toBe(false);
+    });
+
+    it("rejects an empty install id", () => {
+      expect(zEnsureMobileDeviceBody.safeParse({ installId: "" }).success).toBe(false);
     });
   });
 });

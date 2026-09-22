@@ -20,8 +20,21 @@ import type {
   TableDataDto,
 } from "../models/experiment-data.model";
 import { ExperimentDto } from "../models/experiment.model";
+import { CACHE_PORT } from "../ports/cache.port";
+import type { CachePort } from "../ports/cache.port";
 import { EXPERIMENT_DATA_READ_PORT } from "../ports/experiment-data-read.port";
 import type { ExperimentDataReadPort } from "../ports/experiment-data-read.port";
+
+type ReadMode = "aggregation" | "filtered-page" | "filtered-all" | "page";
+
+interface ReadTrace {
+  experimentId: string;
+  tableName: string;
+  mode: ReadMode;
+  startedAt: number;
+  metadataMs: number;
+  countMs?: number;
+}
 
 @Injectable()
 export class ExperimentDataRepository {
@@ -29,6 +42,7 @@ export class ExperimentDataRepository {
 
   constructor(
     @Inject(EXPERIMENT_DATA_READ_PORT) private readonly readPort: ExperimentDataReadPort,
+    @Inject(CACHE_PORT) private readonly cachePort: CachePort,
     private readonly contributorAnonymizer: ContributorAnonymizerService,
   ) {}
 
@@ -69,10 +83,18 @@ export class ExperimentDataRepository {
       limit,
     } = params;
 
-    const metadataResult = await this.readPort.getExperimentTableMetadata(experimentId, {
-      identifier: tableName,
-      includeSchemas: true,
-    });
+    const read: ReadTrace = {
+      experimentId,
+      tableName,
+      mode: "page",
+      startedAt: performance.now(),
+      metadataMs: 0,
+    };
+
+    const [metadataResult, metadataMs] = await this.measure(() =>
+      this.tableMetadata(experimentId, tableName),
+    );
+    read.metadataMs = metadataMs;
 
     if (metadataResult.isFailure()) {
       return metadataResult;
@@ -95,6 +117,7 @@ export class ExperimentDataRepository {
 
     // Aggregation summary: page/pageSize ignored, `limit` caps the result.
     if (hasAggregation) {
+      read.mode = "aggregation";
       const queryResult = await this.buildQuery(experimentId, metadata, {
         filters: effectiveFilters,
         aggregation,
@@ -105,12 +128,13 @@ export class ExperimentDataRepository {
       if (queryResult.isFailure()) {
         return queryResult;
       }
-      return this.getFullTableData({ tableName, experiment, query: queryResult.value });
+      return this.getFullTableData({ tableName, experiment, query: queryResult.value, read });
     }
 
     // Filters or column projection requested.
     if (hasFilters || hasColumns) {
       if (hasPaging) {
+        read.mode = "filtered-page";
         const offset = (page - 1) * pageSize;
 
         // COUNT(*) over the unpaged filter query.
@@ -122,11 +146,6 @@ export class ExperimentDataRepository {
           return countSubqueryResult;
         }
         const countSql = `SELECT COUNT(*) AS total FROM (${countSubqueryResult.value}) AS sub`;
-        const countResult = await this.executeQuery(countSql);
-        if (countResult.isFailure()) {
-          return countResult;
-        }
-        const totalRows = Number(countResult.value.rows[0]?.[0] ?? 0);
 
         const dataQueryResult = await this.buildQuery(experimentId, metadata, {
           columns,
@@ -140,17 +159,34 @@ export class ExperimentDataRepository {
           return dataQueryResult;
         }
 
-        return this.getTableDataPage({
-          tableName,
-          experiment,
-          page,
-          pageSize,
-          rowCount: totalRows,
-          query: dataQueryResult.value,
-        });
+        const [[countResult, countMs], [dataResult, dataMs]] = await Promise.all([
+          this.measure(() => this.executeQuery(countSql)),
+          this.measure(() => this.executeQuery(dataQueryResult.value)),
+        ]);
+        read.countMs = countMs;
+        if (countResult.isFailure()) {
+          return countResult;
+        }
+        if (dataResult.isFailure()) {
+          return dataResult;
+        }
+        this.logRead(read, dataMs, dataResult.value);
+
+        const totalRows = Number(countResult.value.rows[0]?.[0] ?? 0);
+        return success([
+          this.tablePage({
+            tableName,
+            experiment,
+            page,
+            pageSize,
+            rowCount: totalRows,
+            data: dataResult.value,
+          }),
+        ]);
       }
 
       // Chart-style: all matching rows in one page, capped by `limit`.
+      read.mode = "filtered-all";
       const queryResult = await this.buildQuery(experimentId, metadata, {
         columns,
         filters: effectiveFilters,
@@ -161,7 +197,7 @@ export class ExperimentDataRepository {
       if (queryResult.isFailure()) {
         return queryResult;
       }
-      return this.getFullTableData({ tableName, experiment, query: queryResult.value });
+      return this.getFullTableData({ tableName, experiment, query: queryResult.value, read });
     }
 
     // Plain paginated read (no filters, no aggregation, no projection).
@@ -185,6 +221,7 @@ export class ExperimentDataRepository {
       pageSize: usedPageSize,
       rowCount: metadata.rowCount,
       query: queryResult.value,
+      read,
     });
   }
 
@@ -201,11 +238,7 @@ export class ExperimentDataRepository {
   }): Promise<Result<{ values: (string | number)[]; truncated: boolean }>> {
     const { experimentId, experiment, tableName, column, limit } = params;
 
-    // Need schemas so buildQuery can extract columns living inside a VARIANT.
-    const metadataResult = await this.readPort.getExperimentTableMetadata(experimentId, {
-      identifier: tableName,
-      includeSchemas: true,
-    });
+    const metadataResult = await this.tableMetadata(experimentId, tableName);
     if (metadataResult.isFailure()) {
       return metadataResult;
     }
@@ -262,6 +295,43 @@ export class ExperimentDataRepository {
     );
 
     return success({ values, truncated });
+  }
+
+  /**
+   * Schemas and row count for one table, held for a minute: every read needs
+   * them to build its SQL, and they only move when the pipeline runs. A failed
+   * lookup is thrown through the cache so it is never stored, and callers
+   * sharing the in-flight load all see the failure.
+   */
+  private tableMetadataCacheKey(experimentId: string, tableName: string): string {
+    return `table-metadata:${experimentId}:${tableName}`;
+  }
+
+  private async tableMetadata(
+    experimentId: string,
+    tableName: string,
+  ): Promise<Result<ExperimentTableMetadata[]>> {
+    try {
+      const rows = await this.cachePort.tryCache(
+        this.tableMetadataCacheKey(experimentId, tableName),
+        async () => {
+          const result = await this.readPort.getExperimentTableMetadata(experimentId, {
+            identifier: tableName,
+            includeSchemas: true,
+          });
+          if (result.isFailure()) {
+            throw result.error;
+          }
+          return result.value;
+        },
+      );
+      return success(rows ?? []);
+    } catch (error) {
+      if (error instanceof AppError) {
+        return failure(error);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -403,13 +473,15 @@ export class ExperimentDataRepository {
     tableName: string;
     experiment: ExperimentDto;
     query: string;
+    read: ReadTrace;
   }): Promise<Result<TableDataDto[]>> {
-    const { tableName, experiment, query } = params;
+    const { tableName, experiment, query, read } = params;
 
-    const dataResult = await this.executeQuery(query);
+    const [dataResult, dataMs] = await this.measure(() => this.executeQuery(query));
     if (dataResult.isFailure()) {
       return dataResult;
     }
+    this.logRead(read, dataMs, dataResult.value);
 
     const totalRows = dataResult.value.totalRows;
 
@@ -434,28 +506,64 @@ export class ExperimentDataRepository {
     pageSize: number;
     rowCount: number;
     query: string;
+    read: ReadTrace;
   }): Promise<Result<TableDataDto[]>> {
-    const { tableName, experiment, page, pageSize, rowCount, query } = params;
+    const { tableName, experiment, page, pageSize, rowCount, query, read } = params;
 
-    const totalPages = Math.ceil(rowCount / pageSize);
-
-    const dataResult = await this.executeQuery(query);
+    const [dataResult, dataMs] = await this.measure(() => this.executeQuery(query));
     if (dataResult.isFailure()) {
       return dataResult;
     }
+    this.logRead(read, dataMs, dataResult.value);
 
     return success([
-      {
-        name: tableName,
-        catalog_name: experiment.name,
-        schema_name: this.readPort.CENTRUM_SCHEMA_NAME,
-        data: this.transformSchemaData(dataResult.value, experiment),
-        page,
-        pageSize,
-        totalRows: rowCount,
-        totalPages,
-      },
+      this.tablePage({ tableName, experiment, page, pageSize, rowCount, data: dataResult.value }),
     ]);
+  }
+
+  private tablePage(params: {
+    tableName: string;
+    experiment: ExperimentDto;
+    page: number;
+    pageSize: number;
+    rowCount: number;
+    data: SchemaData;
+  }): TableDataDto {
+    const { tableName, experiment, page, pageSize, rowCount, data } = params;
+    return {
+      name: tableName,
+      catalog_name: experiment.name,
+      schema_name: this.readPort.CENTRUM_SCHEMA_NAME,
+      data: this.transformSchemaData(data, experiment),
+      page,
+      pageSize,
+      totalRows: rowCount,
+      totalPages: Math.ceil(rowCount / pageSize),
+    };
+  }
+
+  private async measure<T>(run: () => Promise<T>): Promise<[T, number]> {
+    const startedAt = performance.now();
+    const value = await run();
+    return [value, Math.round(performance.now() - startedAt)];
+  }
+
+  /** One line per read with the warehouse phases split out, so a slow chart names its phase. */
+  private logRead(read: ReadTrace, dataMs: number, data: SchemaData): void {
+    this.logger.log({
+      msg: "Experiment data read",
+      operation: "getTableData",
+      experimentId: read.experimentId,
+      tableName: read.tableName,
+      mode: read.mode,
+      metadataMs: read.metadataMs,
+      countMs: read.countMs,
+      dataMs,
+      totalMs: Math.round(performance.now() - read.startedAt),
+      rows: data.rows.length,
+      totalRows: data.totalRows,
+      truncated: data.truncated,
+    });
   }
 
   /**

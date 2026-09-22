@@ -21,6 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
@@ -112,10 +113,10 @@ export default function DeviceLineagePage() {
       monitoring,
       lastDataAt: activity?.lastDataAt ?? null,
       boundExperiments: boundExperiments ?? [],
-      visibleExperiments: visibleExperiments ?? [],
-      visibleProtocols: visibleProtocols ?? [],
-      visibleWorkbooks: visibleWorkbooks ?? [],
-      visibleMacros: visibleMacros ?? [],
+      visibleExperiments: listItems(visibleExperiments),
+      visibleProtocols: listItems(visibleProtocols),
+      visibleWorkbooks: listItems(visibleWorkbooks),
+      visibleMacros: listItems(visibleMacros),
       locale,
       labels: {
         privateExperiment: (index) => t("iot.devices.monitoring.privateExperiment", { index }),
@@ -144,7 +145,7 @@ export default function DeviceLineagePage() {
   const selected = model?.nodes.find((node) => node.id === selectedId) ?? null;
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-medium">{t("iot.devices.lineage.title")}</h2>
@@ -159,7 +160,7 @@ export default function DeviceLineagePage() {
       </div>
 
       {hasError ? (
-        <Card className="shadow-none">
+        <Card padding="none" className="shadow-none">
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <p className="text-muted-foreground text-sm">{t("iot.devices.monitoring.loadError")}</p>
             <Button variant="outline" size="sm" onClick={handleRetry}>
@@ -172,7 +173,7 @@ export default function DeviceLineagePage() {
           <Skeleton className="h-135 w-full rounded-xl" />
         </div>
       ) : (
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="min-w-0 space-y-3">
             <DeviceLineageFlow
               model={model}

@@ -2,6 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import { CircleAlert, Fingerprint, Laptop, Loader2, Monitor, Smartphone, Usb } from "lucide-react";
+import { SettingsCard } from "~/components/shared/settings-card";
 import { usePasskeys } from "~/hooks/auth/usePasskeys/usePasskeys";
 import { useWebAuthnSupport } from "~/hooks/auth/useWebAuthnSupport/useWebAuthnSupport";
 import { useLocale } from "~/hooks/useLocale";
@@ -11,13 +12,6 @@ import { formatShortDate } from "~/util/date";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { CreatePasskeyButton } from "./create-passkey-button";
@@ -40,15 +34,12 @@ export function PasskeysCard() {
   const webAuthnSupported = useWebAuthnSupport();
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-        <div className="space-y-1.5">
-          <CardTitle>{t("passkeys.title")}</CardTitle>
-          <CardDescription>{t("passkeys.description")}</CardDescription>
-        </div>
-        {webAuthnSupported && <CreatePasskeyButton />}
-      </CardHeader>
-      <CardContent>
+    <SettingsCard
+      title={t("passkeys.title")}
+      description={t("passkeys.description")}
+      action={webAuthnSupported ? <CreatePasskeyButton /> : undefined}
+    >
+      <>
         {isLoading ? (
           <div className="space-y-2" data-testid="passkeys-loading">
             <Skeleton className="h-14 w-full" />
@@ -107,7 +98,7 @@ export function PasskeysCard() {
             })}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </>
+    </SettingsCard>
   );
 }

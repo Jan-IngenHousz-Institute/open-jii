@@ -12,7 +12,7 @@ import type {
 } from "../../../common/modules/databricks/services/query-builder/query-builder.types";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import type { Result } from "../../../common/utils/fp-utils";
-import type { ExportMetadata } from "../models/experiment-data-exports.model";
+import type { ExportFormat, ExportMetadata } from "../models/experiment-data-exports.model";
 import type { UploadMetadata } from "../models/experiment-data-uploads.model";
 import type { ExperimentTableMetadata } from "../models/experiment-data.model";
 
@@ -119,6 +119,7 @@ export interface DatabricksPort {
       stream: Readable;
       filePath: string;
       tableName: string;
+      format: ExportFormat;
       completedAt: string | null;
     }>
   >;

@@ -55,20 +55,20 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
   };
 
   const stats = getCodeStats();
-  const errorClass = error ? " border-red-500" : "";
+  const errorClass = error ? " border-destructive" : "";
 
   return (
     <div className="grid w-full gap-1.5">
       {label && <Label>{label}</Label>}
       <div
-        className={`shadow-xs overflow-hidden rounded-md border border-slate-200 transition-shadow duration-200 hover:shadow-md${errorClass}`}
+        className={`shadow-xs border-border overflow-hidden rounded-md border transition-shadow duration-200 hover:shadow-md${errorClass}`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-100 px-4 py-2">
+        <div className="border-border bg-muted flex items-center justify-between border-b px-4 py-2">
           <div className="flex items-center gap-2">
-            {title && <span className="text-sm font-medium text-slate-700">{title}</span>}
-            {title && <span className="text-slate-300">|</span>}
-            <div className="text-xs text-slate-500">
+            {title && <span className="text-foreground text-sm font-medium">{title}</span>}
+            {title && <span className="text-muted-foreground/50">|</span>}
+            <div className="text-muted-foreground text-xs">
               {stats.lines} lines - {stats.size}
             </div>
           </div>
@@ -82,7 +82,7 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={handleCopy}
-                    className="h-8 px-2 text-slate-600 hover:text-slate-800"
+                    className="text-muted-foreground hover:text-foreground h-8 px-2"
                   >
                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </Button>
@@ -105,7 +105,7 @@ const MacroCodeEditor: FC<MacroCodeEditorProps> = ({
           />
         </div>
       </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-destructive text-sm">{error}</p>}
     </div>
   );
 };

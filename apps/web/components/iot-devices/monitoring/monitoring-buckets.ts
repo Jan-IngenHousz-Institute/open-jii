@@ -1,4 +1,5 @@
 import type { MonitoringBucket } from "@repo/api/domains/iot/iot.schema";
+import type { MetricsWindowDay } from "@repo/api/domains/metrics/metrics.schema";
 
 const BUCKET_MS: Record<MonitoringBucket, number> = {
   hour: 3_600_000,
@@ -42,4 +43,32 @@ export function formatBucketLabel(
   }
 
   return at.toLocaleDateString(locale, { day: "numeric", month: "short", timeZone: "UTC" });
+}
+
+/**
+ * Throughput folded onto a bucket axis, zero-filling gaps, in the shape the
+ * trend card plots. A null `bucketStart` is dropped, not counted somewhere.
+ */
+export function foldBucketSeries(
+  buckets: { bucketStart: string | null; count: number }[],
+  axis: string[],
+): MetricsWindowDay[] {
+  const byBucket = new Map<string, number>();
+  for (const bucket of buckets) {
+    if (bucket.bucketStart === null) {
+      continue;
+    }
+    byBucket.set(bucket.bucketStart, (byBucket.get(bucket.bucketStart) ?? 0) + bucket.count);
+  }
+  return axis.map((bucketStart) => ({
+    date: bucketStart,
+    measurements: byBucket.get(bucketStart) ?? 0,
+  }));
+}
+
+export function peakBucketDate(series: MetricsWindowDay[]): string | null {
+  if (series.length === 0) {
+    return null;
+  }
+  return series.reduce((peak, day) => (day.measurements > peak.measurements ? day : peak)).date;
 }

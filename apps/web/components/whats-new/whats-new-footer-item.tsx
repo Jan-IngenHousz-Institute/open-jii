@@ -1,5 +1,6 @@
 "use client";
 
+import { sidebarUtilityRow } from "@/components/navigation/navigation-sidebar/sidebar-utility-row";
 import { useWhatsNewLastSeen } from "@/hooks/whats-new/useWhatsNewLastSeen/useWhatsNewLastSeen";
 import { Sparkles } from "lucide-react";
 
@@ -9,9 +10,9 @@ import { useTranslation } from "@repo/i18n";
 import { WHATS_NEW_OPEN_EVENT, countUnread } from "./whats-new-shared";
 
 /**
- * Standalone sidebar-footer row that opens the What's new sheet. Shows a brand-green
- * unread dot when there are new entries. Styled for the dark sidebar (white text), matching the
- * search button above it.
+ * Row that opens the What's new sheet from the sidebar's secondary navigation
+ * group. It shares the same navigation-row treatment as Activity and
+ * Documentation, and shows an accent dot when there are new entries.
  */
 export function WhatsNewFooterItem({
   entries,
@@ -38,15 +39,12 @@ export function WhatsNewFooterItem({
       aria-label={
         hasUnread ? `${label} (${t("whatsNew.unreadBadge", { count: unreadCount })})` : label
       }
-      className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+      className={sidebarUtilityRow()}
     >
       <Sparkles className="size-4 shrink-0" />
-      <span className="flex-1 truncate">{label}</span>
+      <span className="flex-1 truncate text-left">{label}</span>
       {hasUnread && (
-        <span
-          className="bg-jii-bright-green ml-auto size-2 shrink-0 rounded-full"
-          aria-hidden="true"
-        />
+        <span className="bg-primary ml-auto size-2 shrink-0 rounded-full" aria-hidden="true" />
       )}
     </button>
   );

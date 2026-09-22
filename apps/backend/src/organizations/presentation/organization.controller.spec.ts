@@ -17,6 +17,7 @@ import { zSharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 import { AuthorizationService } from "../../authorization/authorization.service";
 import { assertSuccess } from "../../common/utils/fp-utils";
 import { CreateIotDeviceGroupUseCase } from "../../iot/application/use-cases/create-iot-device-group/create-iot-device-group";
+import { IotCalibrationDefinitionRepository } from "../../iot/core/repositories/iot-calibration-definition.repository";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { OrganizationRepository } from "../core/repositories/organization.repository";
@@ -87,6 +88,27 @@ describe("OrganizationController", () => {
       });
     });
 
+    it("ranks owned and joined organizations ahead of the public directory", async () => {
+      const owned = await testApp.createOrganization("Zulu Owned Lab", { visibility: "public" });
+      await testApp.addOrganizationMember(owned, ownerId, "owner");
+      const joined = await testApp.createOrganization("Yankee Joined Lab", {
+        visibility: "public",
+      });
+      await testApp.addOrganizationMember(joined, ownerId, "member");
+      await testApp.createOrganization("Alpha Public Lab", { visibility: "public" });
+
+      const response: SuperTestResponse<OrganizationDirectory> = await testApp
+        .get(path())
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.organizations.map((organization) => organization.name)).toEqual([
+        "Zulu Owned Lab",
+        "Yankee Joined Lab",
+        "Alpha Public Lab",
+      ]);
+    });
+
     it("reports a pending request so the CTA can render 'Requested'", async () => {
       const publicOrg = await seedPublicOrg();
       await testApp.addOrganizationJoinRequest(publicOrg, outsiderId);
@@ -140,6 +162,49 @@ describe("OrganizationController", () => {
       const response: SuperTestResponse<OrganizationDirectory> = await testApp
         .get(path())
         .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.organizations).toHaveLength(0);
+    });
+
+    it("scope=related narrows to the caller's memberships without changing what matches", async () => {
+      // "My organizations" is this same query plus one condition, so a term that finds a
+      // row in the directory finds it under `related` too whenever the caller belongs to
+      // it. The old listing filtered memberships client-side on name/description only,
+      // which is exactly the disagreement this asserts is gone.
+      const mine = await testApp.createOrganization("Delta Phenotyping Centre", {
+        visibility: "public",
+        location: "Wageningen, Netherlands",
+      });
+      await testApp.addOrganizationMember(mine, ownerId, "owner");
+      await testApp.createOrganization("Someone Else Lab", {
+        visibility: "public",
+        location: "Wageningen, Netherlands",
+      });
+
+      const all: SuperTestResponse<OrganizationDirectory> = await testApp
+        .get(`${path()}?search=wageningen`)
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+      expect(all.body.organizations.map((o) => o.name).sort()).toEqual([
+        "Delta Phenotyping Centre",
+        "Someone Else Lab",
+      ]);
+
+      const related: SuperTestResponse<OrganizationDirectory> = await testApp
+        .get(`${path()}?search=wageningen&scope=related`)
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+      expect(related.body.organizations.map((o) => o.name)).toEqual(["Delta Phenotyping Centre"]);
+    });
+
+    it("scope=related never widens past the visibility boundary", async () => {
+      // The narrowing rides on top of the boundary, never instead of it.
+      await seedPrivateOrg();
+
+      const response: SuperTestResponse<OrganizationDirectory> = await testApp
+        .get(`${path()}?scope=related`)
+        .withAuth(outsiderId)
         .expect(StatusCodes.OK);
 
       expect(response.body.organizations).toHaveLength(0);
@@ -497,6 +562,28 @@ describe("OrganizationController", () => {
         .get(CreateIotDeviceGroupUseCase)
         .execute({ name: "Rooftop array", organizationId }, ownerId);
       assertSuccess(group);
+      const definition = await testApp.module.get(IotCalibrationDefinitionRepository).create(
+        {
+          family: "minipar",
+          name: "PAR bench calibration",
+          description: null,
+          captureProcedure: {
+            instruments: [{ role: "dut" }],
+            steps: [
+              {
+                kind: "read",
+                series: "par_sweep",
+                read: [{ instrument: "dut", command: "get_par", as: "par_raw" }],
+              },
+            ],
+          },
+          script: "submit({})",
+          outputSchema: { blocks: { par: { spec: { type: "number" } } } },
+        },
+        ownerId,
+        organizationId,
+      );
+      assertSuccess(definition);
 
       return { live, archived };
     }
@@ -539,6 +626,7 @@ describe("OrganizationController", () => {
         workbook: 1,
         device: 1,
         device_group: 1,
+        calibration_definition: 1,
       });
       // The archived row carries its status, which is the only surface that shows it.
       expect(response.body.resources.find((row) => row.id === archived.id)).toMatchObject({
@@ -626,6 +714,7 @@ describe("OrganizationController", () => {
         workbook: 0,
         device: 0,
         device_group: 0,
+        calibration_definition: 0,
       });
       // Scoped exactly like the rows: the private experiment is behind neither.
       expect(asOutsider.body.totals.experiment).toBe(1);

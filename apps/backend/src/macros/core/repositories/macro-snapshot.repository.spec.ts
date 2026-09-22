@@ -65,6 +65,40 @@ describe("MacroSnapshotRepository", () => {
     });
   });
 
+  it("prefers the snapshot language over a stale cell payload language", async () => {
+    const macroId = faker.string.uuid();
+    const workbook = await testApp.createWorkbook({
+      name: "Stale cell workbook",
+      createdBy: userId,
+    });
+    const versionResult = await workbookVersionRepository.create({
+      workbookId: workbook.id,
+      version: 1,
+      cells: [
+        {
+          id: "macro-cell",
+          type: "macro",
+          isCollapsed: false,
+          payload: { macroId, language: "javascript", name: "Analysis" },
+        },
+      ],
+      metadata: {},
+      entitySnapshots: {
+        protocols: {},
+        macros: { [macroId]: { code: "cGlubmVkLWNvZGU=", language: "python" } },
+      },
+      createdBy: userId,
+    });
+    assertSuccess(versionResult);
+
+    const result = await repository.findScriptsByVersionIds([versionResult.value.id]);
+
+    assertSuccess(result);
+    expect(result.value.get(macroSnapshotKey(versionResult.value.id, macroId))?.language).toBe(
+      "python",
+    );
+  });
+
   it("does not invent a script when a referenced snapshot is missing", async () => {
     const macroId = faker.string.uuid();
     const workbook = await testApp.createWorkbook({ name: "Old workbook", createdBy: userId });

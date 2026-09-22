@@ -300,6 +300,51 @@ describe("AwsAdapter", () => {
 
       expect(result.isFailure()).toBe(true);
     });
+
+    it("forwards a local endpoint so the invoke reaches the container instead of AWS", async () => {
+      const invoke = vi
+        .spyOn(awsLambdaService, "invoke")
+        .mockResolvedValue(success({ statusCode: 200, payload: {} }));
+
+      await awsAdapter.invokeLambda("function", { script: "submit({})" }, "http://localhost:9004");
+
+      expect(invoke).toHaveBeenCalledWith({
+        functionName: "function",
+        payload: { script: "submit({})" },
+        endpoint: "http://localhost:9004",
+      });
+    });
+  });
+
+  describe("getCalibrationSandboxEndpoint", () => {
+    it("returns the local container endpoint when one is configured", () => {
+      vi.spyOn(awsConfigService, "lambdaConfig", "get").mockReturnValue({
+        ...awsConfigService.lambdaConfig,
+        calibrationSandboxEndpoint: "http://localhost:9004",
+      });
+
+      expect(awsAdapter.getCalibrationSandboxEndpoint()).toBe("http://localhost:9004");
+    });
+
+    it("returns undefined when unset, so the invoke goes to AWS", () => {
+      vi.spyOn(awsConfigService, "lambdaConfig", "get").mockReturnValue({
+        ...awsConfigService.lambdaConfig,
+        calibrationSandboxEndpoint: "",
+      });
+
+      expect(awsAdapter.getCalibrationSandboxEndpoint()).toBeUndefined();
+    });
+  });
+
+  describe("getCalibrationSandboxFunctionName", () => {
+    it("returns the configured function name", () => {
+      vi.spyOn(awsConfigService, "lambdaConfig", "get").mockReturnValue({
+        ...awsConfigService.lambdaConfig,
+        calibrationSandboxFunctionName: "calibration-sandbox",
+      });
+
+      expect(awsAdapter.getCalibrationSandboxFunctionName()).toBe("calibration-sandbox");
+    });
   });
 
   describe("getIotUploadUrl", () => {
@@ -456,10 +501,34 @@ describe("AwsAdapter", () => {
       const result = await awsAdapter.attachDevicePolicies("arn:cert");
 
       assertSuccess(result);
-      expect(attachSpy).toHaveBeenCalledTimes(awsConfigService.iotPolicyNames.length);
       for (const policyName of awsConfigService.iotPolicyNames) {
         expect(attachSpy).toHaveBeenCalledWith(policyName, "arn:cert");
       }
+    });
+
+    it("also attaches the Jobs policy, which Cognito identities never receive", async () => {
+      const attachSpy = vi
+        .spyOn(awsIotService, "attachPolicy")
+        .mockResolvedValue(success(undefined));
+      vi.spyOn(awsConfigService, "iotJobsPolicyName", "get").mockReturnValue("jobs-policy");
+
+      const result = await awsAdapter.attachDevicePolicies("arn:cert");
+
+      assertSuccess(result);
+      expect(attachSpy).toHaveBeenCalledWith("jobs-policy", "arn:cert");
+      expect(attachSpy).toHaveBeenCalledTimes(awsConfigService.iotPolicyNames.length + 1);
+    });
+
+    it("skips the Jobs policy until an environment configures one", async () => {
+      const attachSpy = vi
+        .spyOn(awsIotService, "attachPolicy")
+        .mockResolvedValue(success(undefined));
+      vi.spyOn(awsConfigService, "iotJobsPolicyName", "get").mockReturnValue("");
+
+      const result = await awsAdapter.attachDevicePolicies("arn:cert");
+
+      assertSuccess(result);
+      expect(attachSpy).toHaveBeenCalledTimes(awsConfigService.iotPolicyNames.length);
     });
 
     it("stops and propagates the first policy attachment failure", async () => {

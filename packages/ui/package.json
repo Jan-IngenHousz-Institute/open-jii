@@ -8,17 +8,20 @@
     "./components/charts/*": "./src/components/charts/*.tsx",
     "./components/charts/types": "./src/components/charts/types.ts",
     "./components/charts/utils": "./src/components/charts/utils.ts",
+    "./components/charts/use-chart-theme-refresh": "./src/components/charts/use-chart-theme-refresh.ts",
     "./hooks/use-toast": "./src/hooks/use-toast.ts",
     "./hooks/use-mobile": "./src/hooks/use-mobile.tsx",
     "./hooks/use-in-view": "./src/hooks/use-in-view.ts",
     "./hooks/use-click-outside": "./src/hooks/use-click-outside.ts",
     "./hooks/use-element-size": "./src/hooks/use-element-size.ts",
-    "./lib/utils": "./src/lib/utils.ts"
+    "./lib/utils": "./src/lib/utils.ts",
+    "./components/charts/colorway": "./src/components/charts/colorway.ts"
   },
   "license": "MIT",
   "scripts": {
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "format": "prettier --check . --ignore-path ../../.gitignore",
+    "lint": "eslint --config eslint.theme.config.js src",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false",
     "ui-add": "pnpm dlx shadcn@latest add && prettier src --write --list-different",
     "test": "vitest",

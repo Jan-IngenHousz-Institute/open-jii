@@ -14,6 +14,7 @@ import { useTranslation } from "@repo/i18n";
 import type { ChartFormValues } from "../../../../experiment-visualizations/charts/chart-config";
 import { chartFormResolver } from "../../../../experiment-visualizations/charts/chart-config";
 import { getChartTypeDef } from "../../../../experiment-visualizations/charts/chart-registry";
+import { withResolvedColorMode } from "../../../../experiment-visualizations/charts/colors/color-mode";
 import { DataSourcesFieldArrayProvider } from "../../../../experiment-visualizations/workspace/context/data-sources-field-array-context";
 import { useVisualizationAutosave } from "../../../../experiment-visualizations/workspace/hooks/use-visualization-autosave";
 import { useLiveVizPreview } from "../../hooks/use-live-viz-preview";
@@ -188,7 +189,10 @@ function buildDefaults(visualization: ExperimentVisualization): ChartFormValues 
     description: visualization.description ?? "",
     chartFamily: visualization.chartFamily,
     chartType: visualization.chartType,
-    config: { ...def.defaultConfig(), ...(visualization.config ?? {}) },
+    config: withResolvedColorMode(
+      { ...def.defaultConfig(), ...(visualization.config ?? {}) },
+      visualization.dataConfig,
+    ),
     dataConfig: visualization.dataConfig,
   };
 }

@@ -1,7 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
-import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
 import type {
   BulkRegisterIotDevicesResult,
@@ -11,13 +10,13 @@ import type {
 } from "@repo/api/domains/iot/iot.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
-import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
 import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
-import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
+import { GetDeviceObservedExperimentsUseCase } from "../application/use-cases/get-device-observed-experiments/get-device-observed-experiments";
+import { GetIotDeviceFirmwareHistoryUseCase } from "../application/use-cases/get-iot-device-firmware-history/get-iot-device-firmware-history";
 import { ListIotDevicesUseCase } from "../application/use-cases/list-iot-devices/list-iot-devices";
 
 const RETURNED_THING = {
@@ -30,7 +29,6 @@ describe("IotDeviceController", () => {
   let userId: string;
   let awsAdapter: AwsAdapter;
   let databricksAdapter: DatabricksAdapter;
-  let analyticsAdapter: MockAnalyticsAdapter;
 
   const registerBody = { serialNumber: "AA:BB:CC:DD:EE:FF", name: "Sensor", deviceType: "ambyte" };
 
@@ -43,8 +41,6 @@ describe("IotDeviceController", () => {
     userId = await testApp.createTestUser({ name: "Owner" });
     awsAdapter = testApp.module.get(AwsAdapter);
     databricksAdapter = testApp.module.get(DatabricksAdapter);
-    analyticsAdapter = testApp.module.get(AnalyticsAdapter);
-    analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, true);
     vi.spyOn(awsAdapter, "createThing").mockResolvedValue(success(RETURNED_THING));
     vi.spyOn(awsAdapter, "deleteThing").mockResolvedValue(success(undefined));
     vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(success([]));
@@ -64,50 +60,6 @@ describe("IotDeviceController", () => {
     await testApp.teardown();
   });
 
-  describe("iot-devices feature flag", () => {
-    it("returns 403 on every device endpoint when the flag is disabled", async () => {
-      const device = await testApp.createIotDevice({ createdBy: userId });
-      analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, false);
-
-      await testApp
-        .get(testApp.resolveOrpcPath(contract.iot.listIotDevices))
-        .withAuth(userId)
-        .expect(StatusCodes.FORBIDDEN);
-      await testApp
-        .post(testApp.resolveOrpcPath(contract.iot.registerIotDevice))
-        .withAuth(userId)
-        .send(registerBody)
-        .expect(StatusCodes.FORBIDDEN);
-      await testApp
-        .post(testApp.resolveOrpcPath(contract.iot.bulkRegisterIotDevices))
-        .withAuth(userId)
-        .send({ devices: [{ serialNumber: "S-1" }], deviceType: "ambyte" })
-        .expect(StatusCodes.FORBIDDEN);
-      await testApp
-        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
-        .withAuth(userId)
-        .send({ installId: "9f2c1a2e-1111-4111-8111-111111111111" })
-        .expect(StatusCodes.FORBIDDEN);
-
-      const getPath = testApp.resolveOrpcPath(contract.iot.getIotDevice, {
-        deviceId: device.id,
-      });
-      await testApp.get(getPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
-      await testApp.delete(getPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
-
-      const credentialsPath = testApp.resolveOrpcPath(contract.iot.issueIotCredentials, {
-        deviceId: device.id,
-      });
-      await testApp.post(credentialsPath).withAuth(userId).send({}).expect(StatusCodes.FORBIDDEN);
-      await testApp.delete(credentialsPath).withAuth(userId).expect(StatusCodes.FORBIDDEN);
-
-      const rotatePath = testApp.resolveOrpcPath(contract.iot.rotateIotCredentials, {
-        deviceId: device.id,
-      });
-      await testApp.post(rotatePath).withAuth(userId).send({}).expect(StatusCodes.FORBIDDEN);
-    });
-  });
-
   describe("registerIotDevice", () => {
     it("registers a device (201)", async () => {
       const response: SuperTestResponse<IotDevice> = await testApp
@@ -117,7 +69,7 @@ describe("IotDeviceController", () => {
         .expect(StatusCodes.CREATED);
 
       expect(response.body.thingName).toBe(RETURNED_THING.thingName);
-      expect(response.body.status).toBe("pending");
+      expect(response.body.status).toBe("registered");
     });
 
     it("returns 401 when unauthenticated", async () => {
@@ -300,11 +252,32 @@ describe("IotDeviceController", () => {
       expect(second.body.id).toBe(first.body.id);
     });
 
-    it("rejects a non-uuid install id (400)", async () => {
+    // installId is the device's serial, not a minted uuid: a phone reports a
+    // hardware id. It is bounded by length and the AWS IoT thing-attribute
+    // charset, which is what CreateThing would otherwise 500 on.
+    it("accepts a hardware-shaped install id (200)", async () => {
+      const response: SuperTestResponse<IotDevice> = await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send({ installId: "9774d56d682e549c" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body.serialNumber).toBe("9774d56d682e549c");
+    });
+
+    it("rejects an install id outside the thing-attribute charset (400)", async () => {
       await testApp
         .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
         .withAuth(userId)
-        .send({ installId: "not-a-uuid" })
+        .send({ installId: "not a serial!" })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("rejects an empty install id (400)", async () => {
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.ensureMobileDevice))
+        .withAuth(userId)
+        .send({ installId: "" })
         .expect(StatusCodes.BAD_REQUEST);
     });
 
@@ -367,7 +340,7 @@ describe("IotDeviceController", () => {
 
       expect(response.body.id).toBe(device.id);
       // The owner of the device's org holds every action through that role, and no
-      // grant of their own — so there is nothing for them to leave. `canTransfer`
+      // grant of their own, so there is nothing for them to leave. `canTransfer`
       // is false even for them: a device's AWS Thing and certificate are
       // provisioned against its organization, so there is no transfer route.
       expect(response.body.capabilities).toEqual({
@@ -498,6 +471,162 @@ describe("IotDeviceController", () => {
       });
 
       await testApp.get(path).withAuth(userId).expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
+  describe("listDeviceObservedExperiments", () => {
+    const RANGE = { from: "2026-07-15T00:00:00.000Z", to: "2026-08-14T00:00:00.000Z" };
+
+    it("returns the experiments the warehouse saw the device feed (200)", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const useCase = testApp.module.get(GetDeviceObservedExperimentsUseCase);
+      vi.spyOn(useCase, "execute").mockResolvedValue(
+        success([
+          {
+            experimentId: "11111111-1111-4111-8111-111111111111",
+            count: 12,
+            lastAt: "2026-08-14T00:00:00.000Z",
+          },
+        ]),
+      );
+
+      const response: SuperTestResponse<{ experiments: { experimentId: string | null }[] }> =
+        await testApp
+          .get(
+            testApp.resolveOrpcPath(contract.iot.listDeviceObservedExperiments, {
+              deviceId: device.id,
+            }),
+          )
+          .withAuth(userId)
+          .query(RANGE)
+          .expect(StatusCodes.OK);
+
+      expect(response.body.experiments[0].experimentId).toBe(
+        "11111111-1111-4111-8111-111111111111",
+      );
+    });
+
+    it("returns 403 for a viewer without device access", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const stranger = await testApp.createTestUser({ name: "Stranger" });
+
+      await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.iot.listDeviceObservedExperiments, {
+            deviceId: device.id,
+          }),
+        )
+        .withAuth(stranger)
+        .query(RANGE)
+        .expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
+  describe("getDeviceFirmwareHistory", () => {
+    const RANGE = {
+      from: "2026-07-15T00:00:00.000Z",
+      to: "2026-08-14T00:00:00.000Z",
+      bucket: "day",
+    };
+
+    it("returns the reported versions (200)", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const useCase = testApp.module.get(GetIotDeviceFirmwareHistoryUseCase);
+      vi.spyOn(useCase, "execute").mockResolvedValue(
+        success([
+          {
+            version: "1.3.0",
+            firstSeen: "2026-08-01T00:00:00.000Z",
+            lastSeen: "2026-08-14T00:00:00.000Z",
+            count: 5,
+          },
+        ]),
+      );
+
+      const response: SuperTestResponse<{ versions: { version: string | null }[] }> = await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.iot.getDeviceFirmwareHistory, { deviceId: device.id }),
+        )
+        .withAuth(userId)
+        .query(RANGE)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.versions[0].version).toBe("1.3.0");
+    });
+
+    it("returns 403 for a viewer without device access", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const stranger = await testApp.createTestUser({ name: "Stranger" });
+
+      await testApp
+        .get(
+          testApp.resolveOrpcPath(contract.iot.getDeviceFirmwareHistory, { deviceId: device.id }),
+        )
+        .withAuth(stranger)
+        .query(RANGE)
+        .expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
+  describe("getIotFleetMonitoring", () => {
+    const RANGE = {
+      from: "2026-08-13T00:00:00.000Z",
+      to: "2026-08-13T12:00:00.000Z",
+      bucket: "hour",
+    };
+
+    const mockFleetWarehouse = () => {
+      vi.spyOn(databricksAdapter, "getDevicesLastActivity").mockResolvedValue(success(new Map()));
+      vi.spyOn(databricksAdapter, "getDevicesThroughput").mockResolvedValue(success([]));
+      vi.spyOn(databricksAdapter, "getDevicesLifecycleEvents").mockResolvedValue(success([]));
+    };
+
+    it("returns the fleet facts for the caller's devices (200)", async () => {
+      mockFleetWarehouse();
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const path = testApp.resolveOrpcPath(contract.iot.getIotFleetMonitoring, {});
+
+      const response: SuperTestResponse<{
+        devices: { deviceId: string; lastDataAt: string | null }[];
+        pipelineUnavailable: boolean;
+      }> = await testApp.get(path).withAuth(userId).query(RANGE).expect(StatusCodes.OK);
+
+      expect(response.body.devices).toEqual([{ deviceId: device.id, lastDataAt: null }]);
+      expect(response.body.pipelineUnavailable).toBe(false);
+    });
+
+    it("keeps the static path out of the {deviceId} route: both resolve side by side", async () => {
+      mockFleetWarehouse();
+      const device = await testApp.createIotDevice({ createdBy: userId });
+
+      // The literal segment "monitoring" must reach the fleet handler, never
+      // be parsed as a device id by GET /devices/{deviceId}.
+      await testApp
+        .get("/api/v1/devices/monitoring")
+        .withAuth(userId)
+        .query(RANGE)
+        .expect(StatusCodes.OK);
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.iot.getIotDevice, { deviceId: device.id }))
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+    });
+
+    it("rejects a reversed range at the contract (400)", async () => {
+      mockFleetWarehouse();
+      const path = testApp.resolveOrpcPath(contract.iot.getIotFleetMonitoring, {});
+
+      await testApp
+        .get(path)
+        .withAuth(userId)
+        .query({ ...RANGE, from: RANGE.to, to: RANGE.from })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("returns 401 when unauthenticated", async () => {
+      const path = testApp.resolveOrpcPath(contract.iot.getIotFleetMonitoring, {});
+
+      await testApp.get(path).query(RANGE).expect(StatusCodes.UNAUTHORIZED);
     });
   });
 
@@ -652,6 +781,73 @@ describe("IotDeviceController", () => {
       expect(response.body.status).toBe("revoked");
     });
 
+    it("retires an active device, revoking and detaching its certificate on the way (200)", async () => {
+      const certificateArn = "arn:aws:iot:eu-central-1:000000000000:cert/cert-retire";
+      vi.spyOn(awsAdapter, "setCertificateStatus").mockResolvedValue(success(undefined));
+      vi.spyOn(awsAdapter, "listThingPrincipals").mockResolvedValue(success([certificateArn]));
+      const detachThingPrincipal = vi
+        .spyOn(awsAdapter, "detachThingPrincipal")
+        .mockResolvedValue(success(undefined));
+      const device = await testApp.createIotDevice({
+        createdBy: userId,
+        status: "active",
+        certificateId: "cert-retire",
+        certificateArn,
+      });
+      const path = testApp.resolveOrpcPath(contract.iot.retireIotDevice, { deviceId: device.id });
+
+      const response: SuperTestResponse<IotDevice> = await testApp
+        .post(path)
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.status).toBe("retired");
+      expect(response.body.certificateId).toBeNull();
+      expect(detachThingPrincipal).toHaveBeenCalledWith(device.thingName, certificateArn);
+    });
+
+    it("reinstates a retired device as registered (200)", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId, status: "retired" });
+      const path = testApp.resolveOrpcPath(contract.iot.reinstateIotDevice, {
+        deviceId: device.id,
+      });
+
+      const response: SuperTestResponse<IotDevice> = await testApp
+        .post(path)
+        .withAuth(userId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.status).toBe("registered");
+    });
+
+    it("maps a refused retire and a refused reinstate through the error contract (400)", async () => {
+      const retired = await testApp.createIotDevice({ createdBy: userId, status: "retired" });
+      const active = await testApp.createIotDevice({ createdBy: userId, status: "active" });
+
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.retireIotDevice, { deviceId: retired.id }))
+        .withAuth(userId)
+        .expect(StatusCodes.BAD_REQUEST);
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.reinstateIotDevice, { deviceId: active.id }))
+        .withAuth(userId)
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("refuses to retire or reinstate below manage (403)", async () => {
+      const device = await testApp.createIotDevice({ createdBy: userId });
+      const stranger = await testApp.createTestUser({ name: "Stranger" });
+
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.retireIotDevice, { deviceId: device.id }))
+        .withAuth(stranger)
+        .expect(StatusCodes.FORBIDDEN);
+      await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.reinstateIotDevice, { deviceId: device.id }))
+        .withAuth(stranger)
+        .expect(StatusCodes.FORBIDDEN);
+    });
+
     it("returns 401 when unauthenticated", async () => {
       const device = await testApp.createIotDevice({ createdBy: userId });
       const path = testApp.resolveOrpcPath(contract.iot.issueIotCredentials, {
@@ -722,10 +918,9 @@ describe("IotDeviceController", () => {
 
   describe("authorization", () => {
     // Each guarded route must delegate to AuthorizationService.can() with the
-    // resource/action declared by its @CanAccess decorator (device id in the
-    // `deviceId` param), and turn a denial into a 403. Mocking can() to deny
-    // pins the {resource, action} wiring, so a missing or wrong-action decorator
-    // fails here.
+    // resource/action from its @CanAccess decorator and turn a denial into 403.
+    // Mocking can() to deny pins that wiring, so a missing or wrong-action
+    // decorator fails here.
     it.each([
       {
         name: "get device",

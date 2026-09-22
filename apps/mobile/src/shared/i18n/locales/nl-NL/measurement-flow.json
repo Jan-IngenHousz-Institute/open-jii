@@ -251,7 +251,12 @@
     },
     "empty": "Geen stappen beschikbaar.",
     "error": "Kon experiment niet laden. Probeer het opnieuw.",
-    "loading": "Experiment laden..."
+    "loading": "Experiment laden...",
+    "resumeUnavailable": {
+      "title": "Deze meting kan niet worden hervat",
+      "body": "De protocollen en macro's van deze meting staan niet meer op het toestel. Sluit de meting af en start een nieuwe.",
+      "exit": "Meting afsluiten"
+    }
   },
   "result": {
     "comment": "Opmerking",
@@ -259,6 +264,11 @@
     "tabRaw": "Ruwe gegevens",
     "processingError": "Verwerkingsfout: {{message}}",
     "noDataAvailable": "Geen gegevens beschikbaar",
+    "allFieldsEmpty": "De macro is uitgevoerd, maar heeft voor deze meting geen waarden gemeten.",
+    "emptyFields_one": "{{count}} veld zonder waarde",
+    "emptyFields_other": "{{count}} velden zonder waarde",
+    "structuredFields_one": "{{count}} gestructureerd veld",
+    "structuredFields_other": "{{count}} gestructureerde velden",
     "messages": {
       "criticalIssues": "Kritieke problemen",
       "warnings": "Waarschuwingen",

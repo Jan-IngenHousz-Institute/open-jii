@@ -1,3 +1,5 @@
+import type { ScanResultEntry } from "~/features/measurement-flow/domain/flow-transitions";
+
 import type { OutputCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
 export interface HydrationContext {
@@ -5,7 +7,7 @@ export interface HydrationContext {
   getAnswer: (cycle: number, cellId: string) => string | undefined;
   scanResult?: unknown;
   /** Per-device form of the live result, used to scope ctx/branches by connection id. */
-  scanResults?: { device?: { id: string; name: string }; result: unknown }[];
+  scanResults?: ScanResultEntry[];
   /** Cell id of the producer (protocol or command) whose output `scanResult` holds. */
   producerCellId?: string;
   /** Macro/analysis outputs keyed by cell id (store.cellOutputs). */

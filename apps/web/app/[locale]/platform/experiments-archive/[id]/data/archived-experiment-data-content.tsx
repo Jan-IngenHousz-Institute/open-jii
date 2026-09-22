@@ -8,6 +8,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
+import { DatasetPicker } from "~/components/experiment-data/dataset-picker";
 import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
 import { UploadDataModal } from "~/components/experiment-data/upload-data-modal/upload-data-modal";
 import { env } from "~/env";
@@ -15,7 +16,7 @@ import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useE
 
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
-import { NavTabs, NavTabsContent, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
 interface ExperimentDataPageProps {
@@ -28,6 +29,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
   const { tables, isLoading: isLoadingTables, error: tablesError } = useExperimentTables(id);
   const { t } = useTranslation("experiments");
   const [uploadModalOpen, setUploadModalOpen] = React.useState(false);
+  const [activeIdentifier, setActiveIdentifier] = React.useState<string | undefined>(undefined);
 
   if (isLoading || isLoadingTables) {
     return (
@@ -90,21 +92,20 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           </Button>
         </div>
 
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="bg-muted mb-4 flex h-24 w-24 items-center justify-center rounded-full">
-            <BarChart3 className="text-muted-foreground h-12 w-12" />
-          </div>
-          <p className="text-muted-foreground mb-4 text-center text-sm">
-            {t("experimentData.noData")}
-          </p>
-          <Link
-            href={`${env.NEXT_PUBLIC_DOCS_URL}/guide/measuring/taking-measurements`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button variant="muted">{t("experimentData.readMore")}</Button>
-          </Link>
-        </div>
+        <EmptyState
+          size="page"
+          icon={<BarChart3 />}
+          description={t("experimentData.noData")}
+          action={
+            <Link
+              href={`${env.NEXT_PUBLIC_DOCS_URL}/guide/measuring/taking-measurements`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="secondary">{t("experimentData.readMore")}</Button>
+            </Link>
+          }
+        />
 
         <UploadDataModal
           experimentId={id}
@@ -115,6 +116,8 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
       </PageContainer>
     );
   }
+
+  const activeTable = tables.find((table) => table.identifier === activeIdentifier) ?? tables[0];
 
   return (
     <PageContainer width="fluid" className="space-y-8">
@@ -129,28 +132,21 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         </Button>
       </div>
 
-      <NavTabs defaultValue={tables[0].identifier} className="w-full">
-        <NavTabsList>
-          {tables.map((table) => (
-            <NavTabsTrigger key={table.identifier} value={table.identifier}>
-              <span className="truncate">
-                {table.displayName} ({table.totalRows})
-              </span>
-            </NavTabsTrigger>
-          ))}
-        </NavTabsList>
-        {tables.map((table) => (
-          <NavTabsContent key={table.identifier} value={table.identifier} className="mt-6">
-            <ExperimentDataTable
-              experimentId={id}
-              tableName={table.identifier}
-              displayName={table.displayName}
-              pageSize={10}
-              defaultSortColumn={table.defaultSortColumn}
-            />
-          </NavTabsContent>
-        ))}
-      </NavTabs>
+      <div className="space-y-6">
+        <DatasetPicker
+          tables={tables}
+          value={activeTable.identifier}
+          onChange={setActiveIdentifier}
+        />
+        <ExperimentDataTable
+          key={activeTable.identifier}
+          experimentId={id}
+          tableName={activeTable.identifier}
+          displayName={activeTable.displayName}
+          pageSize={10}
+          defaultSortColumn={activeTable.defaultSortColumn}
+        />
+      </div>
 
       <UploadDataModal
         experimentId={id}

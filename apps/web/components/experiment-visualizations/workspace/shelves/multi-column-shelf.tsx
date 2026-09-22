@@ -1,5 +1,6 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { Plus, Trash2 } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
@@ -22,7 +23,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
 
 import type { ChartFormValues } from "../../charts/chart-config";
-import { getDefaultSeriesColor } from "../../charts/colors/palettes";
+import { getDefaultSeriesColor, getSuggestedSeriesColor } from "../../charts/colors/palettes";
 import { dataSourcesByRole, makeDataSource } from "../../charts/data/data-sources";
 import { useDataSourcesFieldArray } from "../context/data-sources-field-array-context";
 
@@ -104,10 +105,7 @@ export function MultiColumnShelf({
           const dsIndex = entry.index;
           const canRemove = entries.length > minSeries;
           return (
-            <div
-              key={entry.source.role + dsIndex}
-              className="bg-muted/30 space-y-3 rounded-md border p-3"
-            >
+            <InsetPanel key={entry.source.role + dsIndex} className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-xs font-medium">
                   {t("workspace.shelves.series", { index: seriesIndex + 1 })}
@@ -147,8 +145,8 @@ export function MultiColumnShelf({
                       <SelectContent>
                         {columns.map((column) => (
                           <SelectItem key={column.name} value={column.name}>
-                            <div className="flex items-center gap-2">
-                              <span>{column.name}</span>
+                            <div className="flex min-w-0 items-center gap-2">
+                              <span className="truncate">{column.name}</span>
                               <Badge
                                 variant="outline"
                                 className="text-muted-foreground h-4 px-1.5 py-0 font-mono text-[10px] font-normal leading-none"
@@ -206,7 +204,7 @@ export function MultiColumnShelf({
                               <TooltipTrigger asChild>
                                 <FormColorInput
                                   value={typeof field.value === "string" ? field.value : undefined}
-                                  fallback="#3b82f6"
+                                  fallback={getSuggestedSeriesColor()}
                                   onCommit={field.onChange}
                                   disabled={isColorMapped}
                                 />
@@ -225,7 +223,7 @@ export function MultiColumnShelf({
                   )}
                 </div>
               )}
-            </div>
+            </InsetPanel>
           );
         })}
       </div>

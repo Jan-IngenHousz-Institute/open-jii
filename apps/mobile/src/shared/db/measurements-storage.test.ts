@@ -14,6 +14,7 @@ const migrationFiles = [
   "0003_drop_uploading_status.sql",
   "0004_add_day_key.sql",
   "0005_add_workbook_run_id.sql",
+  "0006_add_failure_reason.sql",
 ];
 const migrationSqls = migrationFiles.map((f) =>
   readFileSync(resolve(__dirname, "../../../drizzle", f), "utf-8"),
@@ -1071,7 +1072,7 @@ describe("measurements-storage", () => {
       expect(row.status).toBe("failed");
     });
 
-    it("is a no-op on a row that is already failed", async () => {
+    it("leaves an already-failed row failed", async () => {
       insertRow("m1", "failed");
 
       const mod = await import("~/shared/db/measurements-storage");
@@ -1079,6 +1080,39 @@ describe("measurements-storage", () => {
 
       const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
       expect(row.status).toBe("failed");
+    });
+
+    it("stores the reason it was given", async () => {
+      insertRow("m1", "pending");
+
+      const mod = await import("~/shared/db/measurements-storage");
+      await mod.markAsFailed("m1", "CredentialError");
+
+      const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
+      expect(row.failure_reason).toBe("CredentialError");
+    });
+
+    it("replaces the reason when a failed row fails again for a new cause", async () => {
+      insertRow("m1", "pending");
+
+      const mod = await import("~/shared/db/measurements-storage");
+      await mod.markAsFailed("m1", "Timeout");
+      await mod.markAsFailed("m1", "CredentialError");
+
+      const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
+      expect(row.failure_reason).toBe("CredentialError");
+    });
+
+    it("clears the reason when the row finally uploads", async () => {
+      insertRow("m1", "pending");
+
+      const mod = await import("~/shared/db/measurements-storage");
+      await mod.markAsFailed("m1", "Timeout");
+      await mod.markAsSuccessful("m1");
+
+      const row = sqlite.prepare("SELECT * FROM measurements WHERE id = 'm1'").get() as any;
+      expect(row.status).toBe("successful");
+      expect(row.failure_reason).toBeNull();
     });
 
     it("is a no-op on a successful row", async () => {

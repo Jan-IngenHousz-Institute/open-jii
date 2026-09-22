@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import {
   zDeviceExperimentList,
+  zDeviceFirmwareHistory,
   zDeviceMonitoring,
   zDeviceOnboardingConfig,
   zDeviceRegistryWebhookPayload,
@@ -14,6 +15,10 @@ import {
   zMonitoringRangeQuery,
   zIotDeviceList,
   zIotDevicePathParam,
+  zIotFleetMonitoring,
+  zIotFleetMonitoringQuery,
+  zDeviceObservedExperiments,
+  zObservedExperimentsQuery,
   zIotUploadUrl,
   zEnsureMobileDeviceBody,
   zIotUploadUrlRequest,
@@ -51,6 +56,13 @@ export const iotContract = {
   listIotDevices: oc
     .route({ method: "GET", path: "/api/v1/devices", successStatus: 200 })
     .output(zIotDeviceList),
+  // Fleet-scoped warehouse facts for the devices overview. The static path
+  // segment must be registered before GET /devices/{deviceId} so it can never
+  // be read as a device id.
+  getIotFleetMonitoring: oc
+    .route({ method: "GET", path: "/api/v1/devices/monitoring", successStatus: 200 })
+    .input(zIotFleetMonitoringQuery)
+    .output(zIotFleetMonitoring),
   registerIotDevice: oc
     .route({ method: "POST", path: "/api/v1/devices", successStatus: 201 })
     .input(zRegisterIotDeviceBody)
@@ -69,6 +81,17 @@ export const iotContract = {
     .route({ method: "GET", path: "/api/v1/devices/{deviceId}/activity", successStatus: 200 })
     .input(zIotDevicePathParam)
     .output(zIotDeviceActivity),
+  // One warehouse scan for the reported version, split out of the monitoring
+  // fan-out so a caller that only needs firmware does not pay for sessions,
+  // throughput, battery and measurements too.
+  getDeviceFirmwareHistory: oc
+    .route({
+      method: "GET",
+      path: "/api/v1/devices/{deviceId}/firmware-history",
+      successStatus: 200,
+    })
+    .input(zMonitoringRangeQuery)
+    .output(zDeviceFirmwareHistory),
   // Monitoring dashboard data (warehouse-backed, range-scoped): one call per
   // range change. Unlike the tile endpoints this fails loudly; the dashboard
   // owns the error state.
@@ -101,6 +124,19 @@ export const iotContract = {
     .input(zIotDevicePathParam)
     .output(zIotDevice),
 
+  // Retiring keeps the record and its history but takes the device out of
+  // service: its broker access is cut and it leaves every attention list and
+  // picker. Reinstating returns an instrument as registered, since its
+  // certificate is gone, and a phone straight to active.
+  retireIotDevice: oc
+    .route({ method: "POST", path: "/api/v1/devices/{deviceId}/retire", successStatus: 200 })
+    .input(zIotDevicePathParam)
+    .output(zIotDevice),
+  reinstateIotDevice: oc
+    .route({ method: "POST", path: "/api/v1/devices/{deviceId}/reinstate", successStatus: 200 })
+    .input(zIotDevicePathParam)
+    .output(zIotDevice),
+
   // Onboarding: bind the device to experiments and return the config to hand
   // to the hardware. An empty body re-issues the config without new bindings.
   onboardDevice: oc
@@ -111,4 +147,15 @@ export const iotContract = {
     .route({ method: "GET", path: "/api/v1/devices/{deviceId}/experiments", successStatus: 200 })
     .input(zIotDevicePathParam)
     .output(zDeviceExperimentList),
+  // The same resource through the warehouse's eyes: what the device's stored
+  // rows claim it fed, windowed. Separate from the binding list above so a
+  // cheap relationship read never waits on a warehouse scan.
+  listDeviceObservedExperiments: oc
+    .route({
+      method: "GET",
+      path: "/api/v1/devices/{deviceId}/experiments/observed",
+      successStatus: 200,
+    })
+    .input(zObservedExperimentsQuery)
+    .output(zDeviceObservedExperiments),
 };

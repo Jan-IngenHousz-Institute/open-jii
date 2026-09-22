@@ -4,7 +4,7 @@ import { zSensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 
 import {
   SENSOR_FAMILY_OPTIONS,
-  getSensorFamilyBadgeColor,
+  getSensorFamilyBadgeTone,
   getSensorFamilyLabel,
 } from "./sensor-family";
 import type { SensorFamilyOption } from "./sensor-family";
@@ -88,18 +88,18 @@ describe("getSensorFamilyLabel", () => {
   });
 });
 
-describe("getSensorFamilyBadgeColor", () => {
+describe("getSensorFamilyBadgeTone", () => {
   it("should return the published badge for multispeq", () => {
-    expect(getSensorFamilyBadgeColor("multispeq")).toBe("bg-badge-published");
+    expect(getSensorFamilyBadgeTone("multispeq")).toBe("published");
   });
 
   it("should return the active badge for ambyte", () => {
-    expect(getSensorFamilyBadgeColor("ambyte")).toBe("bg-badge-active");
+    expect(getSensorFamilyBadgeTone("ambyte")).toBe("active");
   });
 
   it("gives minipar and ambit their own badges, archived for the rest", () => {
-    expect(getSensorFamilyBadgeColor("generic")).toBe("bg-badge-archived");
-    expect(getSensorFamilyBadgeColor("minipar")).toBe("bg-badge-stale");
-    expect(getSensorFamilyBadgeColor("ambit")).toBe("bg-badge-active");
+    expect(getSensorFamilyBadgeTone("generic")).toBe("archived");
+    expect(getSensorFamilyBadgeTone("minipar")).toBe("stale");
+    expect(getSensorFamilyBadgeTone("ambit")).toBe("active");
   });
 });

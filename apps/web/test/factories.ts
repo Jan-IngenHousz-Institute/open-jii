@@ -28,6 +28,7 @@ import type {
   ExperimentAccess,
   ExperimentExportRecord,
   ExperimentFlowGraph,
+  ExperimentListItem,
   ExperimentUploadMetadata,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
@@ -37,6 +38,14 @@ import type {
 } from "@repo/api/domains/experiment/locations/experiment-locations.schema";
 import type { ExperimentTransferRequest } from "@repo/api/domains/experiment/transfer-requests/experiment-transfer-requests.schema";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import type {
+  ActiveDeviceCalibration,
+  CalibrationDefinition,
+  CalibrationDefinitionSummary,
+  CalibrationRun,
+  CalibrationRunDetail,
+  DeviceCalibration,
+} from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import type {
   IotDeviceGroupDetail,
   IotDeviceGroupListItem,
@@ -79,7 +88,7 @@ import type { Session } from "@repo/auth/types";
 
 let experimentSeq = 0;
 
-export function createExperiment(overrides: Partial<Experiment> = {}): Experiment {
+export function createExperiment(overrides: Partial<ExperimentListItem> = {}): ExperimentListItem {
   experimentSeq++;
   return {
     id: `exp-${experimentSeq}-${crypto.randomUUID().slice(0, 8)}`,
@@ -1062,7 +1071,7 @@ export function createIotDevice(
     serialNumber: `SN-${iotDeviceSeq}`,
     name: `Device ${iotDeviceSeq}`,
     deviceType: "ambyte",
-    status: "pending",
+    status: "registered",
     certificateId: null,
     certificateArn: null,
     createdBy: crypto.randomUUID(),
@@ -1072,6 +1081,7 @@ export function createIotDevice(
     updatedAt: "2025-01-10T00:00:00.000Z",
     // Unknown by default: the fleet index is an enrichment, not a given.
     connectivity: null,
+    boundExperimentCount: 0,
     ...overrides,
   };
 }
@@ -1085,6 +1095,154 @@ export function createIotDeviceDetail(overrides: Partial<IotDeviceDetail> = {}):
   return {
     ...createIotDevice(overrides),
     capabilities: createCapabilities({ canContribute: false, canLeave: false }),
+    ...overrides,
+  };
+}
+
+// ── Calibration ─────────────────────────────────────────────────
+
+let calibrationSeq = 0;
+
+/** The simplest procedure: read the device raw, type in a handheld reference, three times. */
+export function createCalibrationDefinition(
+  overrides: Partial<CalibrationDefinition> = {},
+): CalibrationDefinition {
+  calibrationSeq++;
+  return {
+    id: crypto.randomUUID(),
+    family: "minipar",
+    name: `PAR calibration ${calibrationSeq}`,
+    description: "Three light levels against a handheld reference meter.",
+    version: 1,
+    captureProcedure: {
+      instruments: [{ role: "dut" }],
+      steps: [
+        {
+          kind: "sweep",
+          series: "par_sweep",
+          stimulus: {
+            operator: "Expose the sensor to {value} light and wait for it to settle",
+            values: ["bright", "medium", "dim"],
+          },
+          read: [
+            { instrument: "dut", command: "par_raw", as: "par_raw" },
+            { operator: "Enter the reference meter reading", as: "par_ref", type: "number" },
+          ],
+        },
+      ],
+    },
+    script: "submit({})",
+    outputSchema: {
+      blocks: {
+        par: {
+          slope: { type: "number", min: 0.1, max: 10 },
+          intercept: { type: "number", min: -100, max: 100 },
+        },
+      },
+    },
+    minFirmwareVersion: null,
+    organizationId: null,
+    visibility: "public",
+    createdBy: crypto.randomUUID(),
+    createdAt: "2026-09-01T00:00:00.000Z",
+    updatedAt: "2026-09-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function createCalibrationDefinitionSummary(
+  overrides: Partial<CalibrationDefinitionSummary> = {},
+): CalibrationDefinitionSummary {
+  const {
+    captureProcedure: _procedure,
+    script: _script,
+    outputSchema: _schema,
+    minFirmwareVersion: _minimum,
+    ...summary
+  } = createCalibrationDefinition();
+  return { ...summary, ...overrides };
+}
+
+export function createCalibrationRun(overrides: Partial<CalibrationRun> = {}): CalibrationRun {
+  return {
+    id: crypto.randomUUID(),
+    definitionId: crypto.randomUUID(),
+    definitionVersion: 1,
+    deviceId: crypto.randomUUID(),
+    requestedBy: crypto.randomUUID(),
+    inputSource: "bench_wizard",
+    status: "computed",
+    blocks: {
+      par: {
+        status: "computed",
+        coefficients: { slope: 0.96, intercept: -1.08 },
+        quality: { passed: true, r2: 0.9998, nrmse: 0.004 },
+      },
+    },
+    skippedSeries: null,
+    preInfo: null,
+    postInfo: null,
+    firmwareVersion: "1.03",
+    errorMessage: null,
+    reviewedBy: null,
+    reviewedAt: null,
+    finishedAt: "2026-09-01T10:00:05.000Z",
+    createdAt: "2026-09-01T10:00:00.000Z",
+    updatedAt: "2026-09-01T10:00:05.000Z",
+    ...overrides,
+  };
+}
+
+export function createCalibrationRunDetail(
+  overrides: Partial<CalibrationRunDetail> = {},
+): CalibrationRunDetail {
+  return {
+    ...createCalibrationRun(),
+    payload: {
+      par_sweep: [
+        { stimulus: 0.8, par_raw: 209.5, par_ref: 200 },
+        { stimulus: 2.4, par_raw: 626.2, par_ref: 600 },
+      ],
+    },
+    ...overrides,
+  };
+}
+
+export function createActiveDeviceCalibration(
+  overrides: Partial<ActiveDeviceCalibration> = {},
+): ActiveDeviceCalibration {
+  return {
+    deviceId: crypto.randomUUID(),
+    blocks: {
+      par: {
+        coefficients: { slope: 0.96, intercept: -1.08 },
+        calibrationId: crypto.randomUUID(),
+        runId: crypto.randomUUID(),
+        validFrom: "2026-09-01T10:05:00.000Z",
+        writtenToDeviceAt: null,
+        writeResult: null,
+      },
+    },
+    ...overrides,
+  };
+}
+
+export function createDeviceCalibration(
+  overrides: Partial<DeviceCalibration> = {},
+): DeviceCalibration {
+  return {
+    id: crypto.randomUUID(),
+    deviceId: crypto.randomUUID(),
+    runId: crypto.randomUUID(),
+    blocks: { par: { coefficients: { slope: 0.96, intercept: -1.08 } } },
+    approvedBy: crypto.randomUUID(),
+    validFrom: "2026-09-01T10:05:00.000Z",
+    supersededAt: null,
+    writtenToDeviceAt: null,
+    writeResults: null,
+    verification: null,
+    createdAt: "2026-09-01T10:05:00.000Z",
+    updatedAt: "2026-09-01T10:05:00.000Z",
     ...overrides,
   };
 }
@@ -1170,7 +1328,9 @@ export function createDeviceGroupMember(
     serialNumber: "AA:BB:CC:DD",
     deviceType: "ambyte",
     status: "active",
+    boundExperimentCount: 0,
     connected: null,
+    lastSeenAt: null,
     addedAt: new Date().toISOString(),
     ...overrides,
   };

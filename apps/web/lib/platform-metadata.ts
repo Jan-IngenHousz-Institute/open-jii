@@ -381,15 +381,19 @@ type DeviceSummary = NonNullable<Awaited<ReturnType<typeof fetchDeviceSummary>>>
 /** Localized device tab labels, mapped to `t()` keys (the strip's own copy). */
 type DeviceSection =
   | "overview"
+  | "calibration"
   | "collaborators"
   | "credentials"
+  | "firmware"
   | "lineage"
   | "monitoring"
   | "onboarding";
 
 const DEVICE_SECTION_KEY: Record<Exclude<DeviceSection, "overview">, string> = {
+  calibration: "iot:iot.devices.detailTabs.calibration",
   collaborators: "iot:iot.devices.detailTabs.collaborators",
   credentials: "iot:iot.devices.detailTabs.credentials",
+  firmware: "iot:iot.devices.detailTabs.firmware",
   lineage: "iot:iot.devices.detailTabs.lineage",
   monitoring: "iot:iot.devices.detailTabs.monitoring",
   onboarding: "iot:iot.devices.detailTabs.onboarding",

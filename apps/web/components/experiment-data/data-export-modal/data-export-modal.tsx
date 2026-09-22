@@ -1,5 +1,6 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { Download } from "lucide-react";
 import * as React from "react";
 import { DocsHelpLink } from "~/components/docs-help-link";
@@ -113,7 +114,7 @@ export function DataExportModal({
           <DocsHelpLink path="/guide/data-analysis/exporting-data" className="mt-1" />
         </DialogHeader>
 
-        <div className="bg-muted/30 -mb-2 flex items-center gap-2 rounded-md border p-3">
+        <InsetPanel className="-mb-2 flex items-center gap-2">
           <Checkbox
             id="export-anonymize-contributors"
             checked={Boolean(effectiveAnonymize)}
@@ -133,7 +134,7 @@ export function DataExportModal({
                 </span>
               )}
           </Label>
-        </div>
+        </InsetPanel>
 
         <ExportListStep
           experimentId={experimentId}

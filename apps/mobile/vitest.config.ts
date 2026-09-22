@@ -12,7 +12,7 @@ const srcAlias = {
 };
 
 export default defineConfig({
-  // Two projects, both vitest — one `pnpm test` runs everything:
+  // Two projects, both vitest; one `pnpm test` runs everything:
   //   - node  : logic tests + RNTL component tests (via @repo/vitest-config/mobile)
   //   - jsdom : hook tests that rely on @testing-library/react + DOM
   test: {
@@ -48,6 +48,9 @@ export default defineConfig({
         "src/shared/api/**": { lines: 70, statements: 70, branches: 60, functions: 70 },
       },
     },
+    // CI runners OOM-kill vitest workers under full-monorepo parallel load
+    // ("Worker exited unexpectedly", three occurrences across PRs 1967/1968).
+    ...(process.env.CI ? { maxWorkers: 2, minWorkers: 1 } : {}),
     projects: [
       {
         plugins: [react(), reactNative()],

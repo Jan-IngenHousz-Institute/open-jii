@@ -13,9 +13,9 @@ import {
   zMacroExecutionResponse,
   zMacroFilterQuery,
   zMacroIdPathParam,
-  zMacroList,
   zMacroProtocolList,
   zMacroProtocolPathParams,
+  zMacroListResponse,
   zUpdateMacroRequestBody,
 } from "./macro.schema";
 
@@ -23,7 +23,7 @@ export const macroContract = {
   listMacros: oc
     .route({ method: "GET", path: "/api/v1/macros", successStatus: 200 })
     .input(zMacroFilterQuery)
-    .output(zMacroList),
+    .output(zMacroListResponse),
   getMacro: oc
     .route({ method: "GET", path: "/api/v1/macros/{id}", successStatus: 200 })
     .input(zMacroIdPathParam)

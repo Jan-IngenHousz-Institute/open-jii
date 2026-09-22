@@ -78,7 +78,7 @@ export function ExperimentRequestToJoin({ experimentId }: ExperimentRequestToJoi
         <span>{t("experimentSettings.requestPendingDescription")}</span>{" "}
         <span>{t("experimentSettings.cancelRequestPrompt")}</span>{" "}
         <Button
-          variant="buttonLink"
+          variant="link"
           className="h-auto p-0 align-baseline text-sm font-medium"
           onClick={handleCancel}
           isLoading={isCancelling}
@@ -94,7 +94,7 @@ export function ExperimentRequestToJoin({ experimentId }: ExperimentRequestToJoi
       <div className="text-muted-foreground text-sm leading-relaxed">
         <span>{t("experimentSettings.requestToJoinPrompt")}</span>{" "}
         <DialogTrigger asChild>
-          <Button variant="buttonLink" className="h-auto p-0 align-baseline text-sm font-medium">
+          <Button variant="link" className="h-auto p-0 align-baseline text-sm font-medium">
             {t("experimentSettings.requestToJoin")}
           </Button>
         </DialogTrigger>{" "}

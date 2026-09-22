@@ -61,8 +61,13 @@ export function transformCartesianData(
     return { chartSeries: [], subplots: undefined, useIndexForX };
   }
 
-  const isCategoricalColor = Boolean(colorColumn) && chartConfig.colorMode === "categorical";
-  const isContinuousColor = supportsContinuousColor && Boolean(colorColumn) && !isCategoricalColor;
+  // Continuous colour is the opt-in; every other type renders its shelf
+  // `categoricalOnly` and never writes `colorMode`, so a colour column implies
+  // categorical. Requiring `colorMode === "categorical"` here left the category
+  // list empty while the dispatch still chose the categorical builder.
+  const isContinuousColor =
+    supportsContinuousColor && Boolean(colorColumn) && chartConfig.colorMode !== "categorical";
+  const isCategoricalColor = Boolean(colorColumn) && !isContinuousColor;
 
   // Each data source's row-key for reading values: when the source has
   // its own `aggregate`, the SQL projects it under a unique alias
@@ -557,7 +562,7 @@ function buildUnionXGrid(
 
 /** Map a category's rows onto the shared x grid, filling missing slots with
  *  `0` so stacked area traces line up. Treats absence as zero contribution
- *  to the stack — the typical stacked-area expectation. */
+ *  to the stack, the typical stacked-area expectation. */
 function alignYToSharedX(
   rows: Record<string, unknown>[],
   xColumn: string | undefined,

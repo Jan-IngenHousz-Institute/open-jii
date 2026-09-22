@@ -1,4 +1,4 @@
-// Characterization tests for buildUploadPayload — pins the payload
+// Characterization tests for buildUploadPayload: pins the payload
 // construction (including quirks) so refactors can prove equivalence.
 // Pure since Stage 1: input mutation assertions flipped deliberately.
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -22,6 +22,7 @@ const baseArgs = {
   timezone: "Europe/Amsterdam",
   questions: QUESTIONS,
   workbookRunId: "run-1",
+  workbookVersionId: "version-1",
   commentText: undefined as string | undefined,
 };
 
@@ -50,6 +51,7 @@ describe("buildUploadPayload payload construction", () => {
       user_id: "user-1",
       protocol_id: "protocol-9",
       workbook_run_id: "run-1",
+      workbook_version_id: "version-1",
       device_id: "d-1",
       sample: 'compressed:[{"v":1,"macros":["macro_one.js"]},{"v":2,"macros":["macro_one.js"]}]',
       _sample_encoding: "gzip+base64",
@@ -103,18 +105,46 @@ describe("buildUploadPayload payload construction", () => {
   });
 
   it("serializes workbook version and device-scoped macro context", () => {
-    const macroContext = { measurement: { phi2: 0.8 }, $device: { id: "device-1" } };
+    const macroContext = { baseline: { phi2: 0.4 }, $device: { id: "device-1" } };
     const payload = buildUploadPayload({
       ...baseArgs,
       rawMeasurement: { sample: [{ phi2: 0.8 }] },
       workbookVersionId: "version-1",
+      workbookId: "workbook-1",
       macroContext,
     });
 
     expect(payload).toMatchObject({
       workbook_version_id: "version-1",
+      workbook_id: "workbook-1",
       macro_context: JSON.stringify(macroContext),
     });
+  });
+
+  it("replaces the macro context entry that repeats the measurement", () => {
+    const scan = { phi2: 0.8 };
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { sample: [scan] },
+      macroContext: { measurement: scan, $device: { id: "device-1" } },
+    });
+
+    expect(payload).toMatchObject({
+      macro_context: JSON.stringify({
+        measurement: { $macroInput: true },
+        $device: { id: "device-1" },
+      }),
+    });
+  });
+
+  it("omits workbook_id when the producing workbook is unknown", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { sample: [{ phi2: 0.8 }] },
+      workbookVersionId: "version-1",
+    });
+
+    expect("workbook_id" in payload).toBe(false);
   });
 
   it("null sample survives untouched: no injection, no compression, no marker", () => {
@@ -272,6 +302,40 @@ describe("workbook run correlation", () => {
     });
     expect(withNeither).not.toHaveProperty("device_id");
   });
+
+  it("reports captured sensor identity without overriding device-native provenance", () => {
+    const withCapturedFamily = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: {},
+      fallbackDeviceFamily: "multispeq",
+    });
+    expect(withCapturedFamily.device_family).toBe("multispeq");
+
+    const withNativeFamily = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_family: "ambit" },
+      fallbackDeviceFamily: "multispeq",
+    });
+    expect(withNativeFamily.device_family).toBe("ambit");
+
+    const withCapturedVersion = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: {},
+      fallbackDeviceFirmware: "2.311",
+    });
+    expect(withCapturedVersion.device_firmware).toBe("2.311");
+
+    const withNativeVersion = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_firmware: "1.04" },
+      fallbackDeviceFirmware: "2.311",
+    });
+    expect(withNativeVersion.device_firmware).toBe("1.04");
+
+    const withNeither = buildUploadPayload({ ...baseArgs, rawMeasurement: {} });
+    expect(withNeither).not.toHaveProperty("device_family");
+    expect(withNeither).not.toHaveProperty("device_firmware");
+  });
 });
 
 describe("measurement location", () => {
@@ -312,5 +376,80 @@ describe("measurement location", () => {
 
     expect(payload.latitude).toBe(52.0907);
     expect(payload.longitude).toBe(5.1214);
+  });
+});
+
+describe("client metadata", () => {
+  it("carries the phone and OS alongside the sensor's own device fields", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_name: "Ambit", device_firmware: "1.1.4" },
+      client: {
+        client_model: "NX789J",
+        client_manufacturer: "nubia",
+        client_os: "Android",
+        client_os_version: "16",
+        client_app_version: "1.1.0",
+      },
+    });
+
+    expect(payload).toMatchObject({
+      client_model: "NX789J",
+      client_os: "Android",
+      client_os_version: "16",
+      client_app_version: "1.1.0",
+      // The sensor's own fields are a separate namespace and must survive.
+      device_name: "Ambit",
+      device_firmware: "1.1.4",
+    });
+  });
+
+  it("omits the block entirely when the platform reports nothing", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: {},
+      client: {},
+    }) as Record<string, unknown>;
+
+    expect(Object.keys(payload).some((key) => key.startsWith("client_"))).toBe(false);
+  });
+});
+
+describe("device_address", () => {
+  // MultispeQ firmware answers device_info with 4 of the 6 MAC octets, and that
+  // native value wins device_id. The complete address only exists at the
+  // transport, so it rides alongside rather than replacing it.
+  it("carries the full transport address next to a truncated native device_id", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "04:09:03:81" },
+      fallbackDeviceId: "20:24:04:09:03:81",
+      fallbackDeviceAddress: "20:24:04:09:03:81",
+    });
+
+    expect(payload).toMatchObject({
+      device_id: "04:09:03:81",
+      device_address: "20:24:04:09:03:81",
+    });
+  });
+
+  it("omits device_address when the transport has no stable address", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_id: "10:91:A8:4F:53:48" },
+      fallbackDeviceId: "1002",
+    }) as Record<string, unknown>;
+
+    expect("device_address" in payload).toBe(false);
+  });
+
+  it("never overwrites a device-native address", () => {
+    const payload = buildUploadPayload({
+      ...baseArgs,
+      rawMeasurement: { device_address: "AA:BB:CC:DD:EE:FF" },
+      fallbackDeviceAddress: "20:24:04:09:03:81",
+    });
+
+    expect(payload.device_address).toBe("AA:BB:CC:DD:EE:FF");
   });
 });

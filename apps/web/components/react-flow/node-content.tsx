@@ -73,7 +73,7 @@ export function NodeContent({
             {isStartNode && (
               <span
                 className="h-1.5 w-1.5 shrink-0 rounded-full"
-                style={{ backgroundColor: "#22C55E" }}
+                style={{ backgroundColor: "var(--status-active-foreground)" }}
                 title={t("start")}
               />
             )}
@@ -85,11 +85,13 @@ export function NodeContent({
             </span>
           </div>
           <span
-            className="line-clamp-2 break-words text-[13px] font-semibold leading-tight text-slate-900"
+            className="text-foreground line-clamp-2 break-words text-[13px] font-semibold leading-tight"
             title={title}
           >
             {title || (
-              <span className="font-normal italic text-slate-400">{t("flow.untitledNode")}</span>
+              <span className="text-muted-foreground font-normal italic">
+                {t("flow.untitledNode")}
+              </span>
             )}
           </span>
         </div>

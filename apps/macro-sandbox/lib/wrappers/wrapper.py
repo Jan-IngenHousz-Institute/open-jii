@@ -270,6 +270,93 @@ def _freeze(value):
     return value
 
 
+# Where a macro may read from: the interpreter, whose lazily imported modules open files
+# under it, and the helpers. Nothing else on the host, and nowhere at all to write.
+READABLE_ROOTS = tuple(
+    os.path.realpath(root) for root in (sys.prefix, sys.base_prefix, helpers_path)
+)
+WRITE_MODE_CHARS = set("wax+")
+WRITE_FLAGS = os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND
+
+# Audit events a macro never raises and an escape always does: sockets and the clients
+# built on them, other processes, and anything that changes the filesystem.
+DENIED_EVENT_PREFIXES = (
+    "socket.",
+    "urllib.",
+    "http.client.",
+    "ftplib.",
+    "smtplib.",
+    "poplib.",
+    "imaplib.",
+    "nntplib.",
+    "telnetlib.",
+    "subprocess.",
+    "os.system",
+    "os.exec",
+    "os.posix_spawn",
+    "os.spawn",
+    "os.fork",
+    "os.kill",
+    "os.remove",
+    "os.rename",
+    "os.rmdir",
+    "os.mkdir",
+    "os.chmod",
+    "os.chown",
+    "os.link",
+    "os.symlink",
+    "os.truncate",
+    "os.unlink",
+    "os.utime",
+    "shutil.",
+    "tempfile.",
+    "pty.",
+    "ctypes.",
+    "webbrowser.",
+    "sqlite3.",
+)
+
+
+def _open_is_allowed(args):
+    path, mode, flags = args[0], args[1], args[2]
+    # A descriptor already open came from a read this hook allowed.
+    if isinstance(path, int):
+        return True
+    if not isinstance(path, (str, bytes, os.PathLike)):
+        return False
+
+    wants_write = (
+        bool(set(mode) & WRITE_MODE_CHARS)
+        if isinstance(mode, str)
+        else bool((flags or 0) & WRITE_FLAGS)
+    )
+    if wants_write:
+        return False
+
+    real = os.path.realpath(os.fsdecode(path))
+    return any(real == root or real.startswith(root + os.sep) for root in READABLE_ROOTS)
+
+
+def _deny_escapes(event, args):
+    """Refuse, at the interpreter, what the injected libraries could otherwise reach.
+
+    pandas reads any path and any URL, numpy saves to any path, and a subprocess with a
+    stripped environment still shares the function's user with the runtime that holds its
+    credentials. Process isolation is not a boundary against that; this is the layer that
+    turns each of those into an error at the call.
+    """
+    if event == "open":
+        if _open_is_allowed(args):
+            return
+        raise PermissionError(f"a macro may not open {args[0]!r}")
+    if event.startswith(DENIED_EVENT_PREFIXES):
+        raise PermissionError(f"a macro may not use {event}")
+
+
+# Installed once the script and its input are read and never removed: from here on this
+# process may only compute and print its one line.
+sys.addaudithook(_deny_escapes)
+
 results = []
 
 # 4. EXECUTION LOOP

@@ -34,7 +34,7 @@ describe("Button", () => {
     const button = screen.getByRole("button");
     expect(button.className).toContain("h-8");
     expect(button.className).toContain("px-3");
-    expect(button.className).toContain("text-xs");
+    expect(button.className).toContain("gap-1.5");
   });
 
   it("applies custom className", () => {
@@ -64,7 +64,7 @@ describe("Button", () => {
     render(<Button variant="ghost">Ghost Button</Button>);
 
     const button = screen.getByRole("button");
-    expect(button.className).toContain("hover:bg-surface");
+    expect(button.className).toContain("hover:bg-accent");
     expect(button.className).toContain("hover:text-accent-foreground");
   });
 
@@ -73,15 +73,14 @@ describe("Button", () => {
 
     const button = screen.getByRole("button");
     expect(button.className).toContain("h-10");
-    expect(button.className).toContain("px-8");
+    expect(button.className).toContain("px-6");
   });
 
   it("applies icon size classes", () => {
     render(<Button size="icon">🔥</Button>);
 
     const button = screen.getByRole("button");
-    expect(button.className).toContain("h-9");
-    expect(button.className).toContain("w-9");
+    expect(button.className).toContain("size-9");
   });
 
   it("shows loading spinner when isLoading is true", () => {

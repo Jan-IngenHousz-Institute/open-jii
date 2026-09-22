@@ -2,6 +2,7 @@ import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 
 import type { ProtocolList } from "@repo/api/domains/protocol/protocol.schema";
+import { listItems } from "@repo/api/shared/listing";
 
 /**
  * Hook to fetch a list of protocols with optional search functionality
@@ -22,8 +23,12 @@ export const useProtocolSearch = (search = ""): useProtocolSearchResult => {
     }),
   );
 
+  // Narrowed to the array shape: no `page` is sent here, so the response is always
+  // the bare list. Deletable once this caller migrates to the envelope.
+  const protocols = data ? listItems(data) : undefined;
+
   return {
-    protocols: data,
+    protocols,
     isLoading: isLoading,
     error,
   };

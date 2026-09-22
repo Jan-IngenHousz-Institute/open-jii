@@ -1,4 +1,6 @@
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Module } from "@nestjs/common";
+import type { Cache } from "cache-manager";
 
 // Adapters
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
@@ -7,6 +9,7 @@ import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
 import { CacheAdapter } from "../common/modules/cache/cache.adapter";
 import { CacheModule } from "../common/modules/cache/cache.module";
+import { MetricsModule } from "../metrics/metrics.module";
 // Use Cases
 import { AddCompatibleProtocolsUseCase } from "./application/use-cases/add-compatible-protocols/add-compatible-protocols";
 import { CreateMacroUseCase } from "./application/use-cases/create-macro/create-macro";
@@ -31,7 +34,7 @@ import { MacroWebhookController } from "./presentation/macro-webhook.controller"
 import { MacroController } from "./presentation/macro.controller";
 
 @Module({
-  imports: [AnalyticsModule, AwsModule, CacheModule],
+  imports: [MetricsModule, AnalyticsModule, AwsModule, CacheModule],
   controllers: [MacroController, MacroWebhookController],
   providers: [
     // Ports and Adapters
@@ -45,7 +48,9 @@ import { MacroController } from "./presentation/macro.controller";
     },
     {
       provide: CACHE_PORT,
-      useExisting: CacheAdapter,
+      useFactory: (cache: Cache) =>
+        new CacheAdapter(cache, { prefix: "macro:", ttlMs: 5 * 60 * 1000 }),
+      inject: [CACHE_MANAGER],
     },
 
     // Repositories

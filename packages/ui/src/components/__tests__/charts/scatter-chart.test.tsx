@@ -26,6 +26,8 @@ vi.mock("../../charts/plotly-chart", () => ({
 }));
 
 vi.mock("../../charts/utils", () => ({
+  chartGridColor: vi.fn(() => "#E6E6E6"),
+  readThemeColor: vi.fn(() => undefined),
   createBaseLayout: vi.fn((config) => ({
     title: config.title,
     showlegend: config.showLegend !== false,
@@ -41,6 +43,7 @@ vi.mock("../../charts/utils", () => ({
   // inference (covered separately in utils.test.ts).
   detectAxisType: vi.fn(() => "linear"),
   refineAxisType: vi.fn((axis) => axis ?? {}),
+  applyAxisType: vi.fn((axis) => axis ?? {}),
 }));
 
 describe("ScatterChart", () => {

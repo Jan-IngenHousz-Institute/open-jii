@@ -4,19 +4,16 @@
     "workbook": "Arbeitsmappe",
     "create": "Arbeitsmappe erstellen",
     "noWorkbooks": "Keine Arbeitsmappen gefunden",
+    "noMatches": "Keine Arbeitsmappen entsprechen Ihrer Suche",
     "workbookCreated": "Arbeitsmappe erfolgreich erstellt",
     "workbookUpdated": "Arbeitsmappe erfolgreich aktualisiert",
     "createError": "Fehler beim Erstellen der Arbeitsmappe. Bitte versuchen Sie es erneut.",
-    "listDescription": "Ihre Mess-Notebooks anzeigen und verwalten.",
     "descriptionTitle": "Beschreibung",
     "descriptionPlaceholder": "Beschreibung hinzufügen...",
     "noDescription": "Keine Beschreibung vorhanden",
     "notFound": "Arbeitsmappe nicht gefunden",
     "searchPlaceholder": "Arbeitsmappen durchsuchen...",
     "errorLoading": "Fehler beim Laden der Arbeitsmappen",
-    "filterMy": "Meine Arbeitsmappen",
-    "filterAll": "Alle Arbeitsmappen",
-    "filterWorkbooks": "Arbeitsmappen filtern",
     "clearSearch": "Suche loschen",
     "lastUpdate": "Letzte Aktualisierung",
     "version": "Version",
@@ -41,7 +38,8 @@
       "name": "Name",
       "usedBy": "Verwendet von",
       "user": "Benutzer",
-      "updated": "Aktualisiert"
+      "updated": "Aktualisiert",
+      "activity": "Aktivität"
     },
     "actions": {
       "open": "Öffnen",
@@ -102,6 +100,7 @@
     "renameSave": "Namen speichern",
     "renameCancel": "Abbrechen",
     "renameConflict": "Dieser Name ist bereits vergeben",
-    "renameFailed": "Umbenennen fehlgeschlagen"
+    "renameFailed": "Umbenennen fehlgeschlagen",
+    "languageSaveFailed": "Die Makrosprache konnte nicht gespeichert werden"
   }
 }

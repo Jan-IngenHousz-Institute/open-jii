@@ -41,7 +41,7 @@ export function NodeHandles({
   nodeType,
 }: NodeHandlesProps) {
   const isActive = selected ?? dragging;
-  const accent = nodeType ? nodeTypeColorMap[nodeType].accent : "#94a3b8";
+  const accent = nodeType ? nodeTypeColorMap[nodeType].accent : "var(--muted-foreground)";
 
   return (
     <>
@@ -53,8 +53,8 @@ export function NodeHandles({
             id="in"
             className={cn("!h-2 !w-2 !rounded-full !border transition-colors duration-150")}
             style={{
-              backgroundColor: isActive ? "#FFFFFF" : "#FFFFFF",
-              borderColor: isActive ? "#005e5e" : accent,
+              backgroundColor: "var(--card)",
+              borderColor: isActive ? "var(--primary)" : accent,
               borderWidth: isActive ? 2 : 1.5,
             }}
           />
@@ -68,8 +68,8 @@ export function NodeHandles({
             id="out"
             className={cn("!h-2 !w-2 !rounded-full !border transition-colors duration-150")}
             style={{
-              backgroundColor: isActive ? "#FFFFFF" : "#FFFFFF",
-              borderColor: isActive ? "#005e5e" : accent,
+              backgroundColor: "var(--card)",
+              borderColor: isActive ? "var(--primary)" : accent,
               borderWidth: isActive ? 2 : 1.5,
             }}
           />

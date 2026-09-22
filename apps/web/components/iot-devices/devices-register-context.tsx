@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 import { RegisterIotDeviceDialog } from "./register-iot-device-dialog";
 
@@ -20,9 +20,11 @@ export const useDevicesRegister = () => useContext(DevicesRegisterContext);
  */
 export function DevicesRegisterProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const openRegister = useCallback(() => setOpen(true), []);
+  const value = useMemo(() => ({ openRegister }), [openRegister]);
 
   return (
-    <DevicesRegisterContext.Provider value={{ openRegister: () => setOpen(true) }}>
+    <DevicesRegisterContext.Provider value={value}>
       {children}
       <RegisterIotDeviceDialog open={open} onOpenChange={setOpen} />
     </DevicesRegisterContext.Provider>

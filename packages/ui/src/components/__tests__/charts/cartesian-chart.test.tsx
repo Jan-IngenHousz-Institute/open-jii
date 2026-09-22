@@ -20,6 +20,8 @@ vi.mock("../../charts/plotly-chart", () => ({
 }));
 
 vi.mock("../../charts/utils", () => ({
+  chartGridColor: vi.fn(() => "#E6E6E6"),
+  readThemeColor: vi.fn(() => undefined),
   createBaseLayout: vi.fn((config) => ({
     title: config.title,
     xaxis: { title: config.xAxisTitle, type: config.xAxisType ?? "linear" },
@@ -39,6 +41,8 @@ vi.mock("../../charts/utils", () => ({
   // Pass-through axis refinement so tests assert on trace plumbing rather
   // than on the inference rules (those have their own tests in utils.test.ts).
   refineAxisType: vi.fn((axis) => axis ?? {}),
+  applyAxisType: vi.fn((axis) => axis ?? {}),
+  detectAxisType: vi.fn(() => "linear"),
   extendLayoutForFacets: vi.fn((layout) => layout),
   applyReferenceLines: vi.fn(),
   truncateCategoryTicks: vi.fn((axis) => axis),
@@ -140,12 +144,12 @@ describe("CartesianChart", () => {
     expect((readLayout().yaxis2 as { type: string }).type).toBe("linear");
   });
 
-  it("falls back to default colour and mode when the series omits them", () => {
+  it("leaves the colour to the layout colorway and defaults the mode when the series omits them", () => {
     const data: CartesianSeries[] = [{ traceType: "line", x: [0], y: [1], name: "L" }];
     render(<CartesianChart data={data} />);
-    const trace = readData()[0] as { mode: string; line: { color: string; width: number } };
+    const trace = readData()[0] as { mode: string; line: { color?: string; width: number } };
     expect(trace.mode).toBe("lines");
-    expect(trace.line.color).toBe("#1f77b4");
+    expect(trace.line.color).toBeUndefined();
     expect(trace.line.width).toBe(2);
   });
 

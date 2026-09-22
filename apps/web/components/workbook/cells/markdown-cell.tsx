@@ -56,7 +56,7 @@ export function MarkdownCellComponent({
     <CellWrapper
       icon={<FileText className="h-3.5 w-3.5" />}
       label="Markdown"
-      accentColor="#6F8596"
+      accentColor="var(--node-instruction)"
       isCollapsed={cell.isCollapsed}
       onToggleCollapse={(collapsed) => onUpdate({ ...cell, isCollapsed: collapsed })}
       onDelete={onDelete}
@@ -68,7 +68,7 @@ export function MarkdownCellComponent({
           <Button
             variant="ghost"
             size="sm"
-            className="text-muted-foreground h-7 gap-1 px-2 text-xs hover:text-[#005E5E]"
+            className="text-muted-foreground hover:text-primary h-7 gap-1 px-2 text-xs"
             onClick={toggleMode}
           >
             {isEditing ? (
@@ -110,7 +110,10 @@ export function MarkdownCellComponent({
         </div>
       ) : (
         <p
-          className={cn("px-1 py-3 text-sm italic text-[#68737B]", !readOnly && "cursor-text")}
+          className={cn(
+            "text-muted-foreground px-1 py-3 text-sm italic",
+            !readOnly && "cursor-text",
+          )}
           onClick={enterEditMode}
         >
           {readOnly ? "No content" : "Click to add content..."}

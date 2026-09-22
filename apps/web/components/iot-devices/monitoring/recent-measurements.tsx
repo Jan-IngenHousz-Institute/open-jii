@@ -4,6 +4,7 @@ import { formatTimestamp } from "@/util/date";
 
 import type { DeviceMeasurement } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import {
   Table,
   TableBody,
@@ -37,11 +38,7 @@ export function RecentMeasurements({
   const { t } = useTranslation("iot");
 
   if (measurements.length === 0) {
-    return (
-      <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-        {t("iot.devices.monitoring.noMeasurements")}
-      </p>
-    );
+    return <EmptyState size="inline" description={t("iot.devices.monitoring.noMeasurements")} />;
   }
 
   const experiments = resolveEntities(

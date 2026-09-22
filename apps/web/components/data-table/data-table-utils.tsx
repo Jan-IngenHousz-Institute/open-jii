@@ -1,12 +1,17 @@
-import { flexRender } from "@tanstack/react-table";
+import { FlexRender } from "@tanstack/react-table";
 import type { Row, HeaderGroup } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import React from "react";
 import { DataTableAnnotationsCell } from "~/components/data-table/cells/annotations/data-table-annotations-cell";
-import type { DataRow, TableMetadata } from "~/components/data-table/data-table-columns";
+import type {
+  DataRow,
+  IsCellExpandedFn,
+  OnAnnotationHandler,
+  OnToggleCellExpansionHandler,
+  TableMetadata,
+} from "~/components/data-table/data-table-columns";
 import { deviceDisplayName } from "~/components/experiment-visualizations/charts/data/device-cells";
 
-import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import {
   WellKnownColumnTypes,
   ExperimentColumnPrimitiveType,
@@ -36,6 +41,7 @@ import { DataTableTextCell } from "./cells/text/data-table-text-cell";
 import { DataTableUserCell } from "./cells/user/data-table-user-cell";
 import { DataTableVariantCell } from "./cells/variant/data-table-variant-cell";
 import { DataTableCellCollapsible } from "./data-table-cell-collapsible";
+import type { DataTableFeatures } from "./data-table-features";
 
 function getTableHeadClassName(isNumericColumn: boolean, isSortable: boolean): string {
   return cn(
@@ -62,9 +68,9 @@ function getSortIcon(
 
   if (isCurrentlySorted) {
     return sortDirection === "ASC" ? (
-      <ArrowUp className="ml-2 inline h-4 w-4 text-green-700 dark:text-green-600" />
+      <ArrowUp className="text-status-active-foreground ml-2 inline h-4 w-4" />
     ) : (
-      <ArrowDown className="ml-2 inline h-4 w-4 text-green-700 dark:text-green-600" />
+      <ArrowDown className="text-status-active-foreground ml-2 inline h-4 w-4" />
     );
   }
 
@@ -76,11 +82,10 @@ export function formatValue(
   type: string,
   rowId: string,
   columnName?: string,
-  onChartClick?: (data: number[], columnName: string) => void,
-  onAddAnnotation?: (rowIds: string[], annotationType: ExperimentAnnotationType) => void,
-  onDeleteAnnotations?: (rowIds: string[], annotationType: ExperimentAnnotationType) => void,
-  onToggleCellExpansion?: (rowId: string, columnName: string) => void,
-  isCellExpanded?: (rowId: string, columnName: string) => boolean,
+  onAddAnnotation?: OnAnnotationHandler,
+  onDeleteAnnotations?: OnAnnotationHandler,
+  onToggleCellExpansion?: OnToggleCellExpansionHandler,
+  isCellExpanded?: IsCellExpandedFn,
   errorColumn?: string,
 ): string | React.JSX.Element {
   // Check if this is the error column
@@ -119,7 +124,9 @@ export function formatValue(
     ),
   };
 
-  if (!value) {
+  // Only an absent reading is blank. A zero is a measurement, and on a dark baseline it is
+  // the measurement the row exists for.
+  if (value === null || value === undefined) {
     return "";
   }
 
@@ -134,7 +141,8 @@ export function formatValue(
       <DataTableChartCell
         data={value as string}
         columnName={columnName ?? "Chart"}
-        onClick={onChartClick}
+        rowId={rowId}
+        onToggleExpansion={onToggleCellExpansion}
       />
     );
   }
@@ -196,7 +204,7 @@ export function DataTableHeader({
   sortDirection,
   onSort,
 }: {
-  headerGroups: HeaderGroup<DataRow>[];
+  headerGroups: HeaderGroup<DataTableFeatures, DataRow>[];
   sortColumn?: string;
   sortDirection?: "ASC" | "DESC";
   onSort?: (columnName: string, columnType?: string) => void;
@@ -232,8 +240,17 @@ export function DataTableHeader({
               onClick={() => isSortable && onSort(actualSortColumn, columnType)}
             >
               {header.isPlaceholder ? null : (
-                <div className="flex items-center justify-between">
-                  <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                // A numeric column is read up its right edge, so its name belongs over the
+                // digits rather than at the far side of the cell.
+                <div
+                  className={cn(
+                    "flex items-center",
+                    isNumericColumn ? "justify-end gap-1" : "justify-between",
+                  )}
+                >
+                  <span>
+                    <FlexRender header={header} />
+                  </span>
                   {getSortIcon(isSortable, isCurrentlySorted, sortDirection)}
                 </div>
               )}
@@ -252,13 +269,15 @@ export function DataTableRows({
   tableRows,
   columns = [],
   errorColumn,
+  onToggleCellExpansion,
 }: {
-  rows: Row<DataRow>[];
+  rows: Row<DataTableFeatures, DataRow>[];
   columnCount: number;
   expandedCell?: { rowId: string; columnName: string } | null;
   tableRows?: DataRow[];
   columns?: TableMetadata["rawColumns"];
   errorColumn?: string;
+  onToggleCellExpansion?: OnToggleCellExpansionHandler;
 }) {
   const { t } = useTranslation();
 
@@ -283,12 +302,17 @@ export function DataTableRows({
       expandedCell?.rowId === rowId
         ? columns.find((col) => col.name === expandedCell.columnName)
         : undefined;
+    const isExpandedRow = !!expandedColumn;
 
     return (
       <React.Fragment key={row.id}>
         <TableRow
           data-state={row.getIsSelected() && "selected"}
-          className={cn("", hasError && "border-l-destructive bg-destructive/5 border-l-2")}
+          className={cn(
+            "",
+            hasError && "border-l-destructive bg-destructive/5 border-l-2",
+            isExpandedRow && "border-l-status-active-foreground bg-status-active/20 border-l-2",
+          )}
         >
           {row.getVisibleCells().map((cell, cellIndex) => (
             <TableCell
@@ -298,7 +322,7 @@ export function DataTableRows({
                 whiteSpace: "nowrap",
               }}
             >
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              <FlexRender cell={cell} />
             </TableCell>
           ))}
         </TableRow>
@@ -311,6 +335,7 @@ export function DataTableRows({
             columnName={expandedColumn.name}
             columnType={expandedColumn.type_text}
             cellData={row.original[expandedColumn.name]}
+            onClose={() => onToggleCellExpansion?.(rowId, expandedColumn.name)}
           />
         )}
       </React.Fragment>

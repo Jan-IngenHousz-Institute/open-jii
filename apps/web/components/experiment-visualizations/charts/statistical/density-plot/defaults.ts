@@ -1,5 +1,4 @@
 import type { ChartFormConfig, ChartFormDataConfig } from "../../chart-config";
-import { DEFAULT_PRIMARY_COLOR } from "../../colors/palettes";
 import { makeDataSource } from "../../data/data-sources";
 
 export function densityPlotDefaultConfig(): ChartFormConfig {
@@ -10,7 +9,6 @@ export function densityPlotDefaultConfig(): ChartFormConfig {
     showLegend: true,
     showGrid: true,
     useWebGL: false,
-    color: [DEFAULT_PRIMARY_COLOR],
     densityOrientation: "v",
     // Line-only by default: overlapping filled curves stack visual weight
     // quickly across categories. Users opt into fills for one or two curves.

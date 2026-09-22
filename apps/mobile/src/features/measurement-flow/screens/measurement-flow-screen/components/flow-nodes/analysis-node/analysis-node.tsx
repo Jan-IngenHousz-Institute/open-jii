@@ -59,6 +59,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     producerCellId,
     cellOutputs,
     workbookVersionId,
+    workbookId,
     workbookRunId,
     setCellOutput,
   } = useMeasurementFlowStore();
@@ -214,6 +215,10 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
       throw new Error("Missing workbook run id");
     }
 
+    if (!workbookVersionId) {
+      throw new Error("Missing workbook version id");
+    }
+
     if (!session?.data?.user?.id) {
       throw new Error("Missing user id");
     }
@@ -251,6 +256,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
         filename: macro.filename,
       },
       workbookVersionId,
+      workbookId,
       workbookRunId,
       questions,
       commentText: measurementComment.trim() || undefined,

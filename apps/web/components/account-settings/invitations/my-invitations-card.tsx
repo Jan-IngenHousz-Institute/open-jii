@@ -1,5 +1,6 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useMyOrganizationInvitations } from "@/hooks/organization/useMyOrganizationInvitations/useMyOrganizationInvitations";
 import { useRespondToOrganizationInvitation } from "@/hooks/organization/useRespondToOrganizationInvitation/useRespondToOrganizationInvitation";
 import { useLocale } from "@/hooks/useLocale";
@@ -20,13 +21,6 @@ import { authErrorMessage } from "~/hooks/organization/auth-organization-result"
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/components/card";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -94,108 +88,104 @@ export function MyInvitationsCard() {
   };
 
   return (
-    <Card data-testid="my-invitations-card">
-      <CardHeader>
-        <CardTitle>{t("organizations.myInvitations.title")}</CardTitle>
-        <CardDescription>{t("organizations.myInvitations.description")}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isPending ? (
-          <div className="space-y-2" aria-busy="true" data-testid="my-invitations-loading">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
-          </div>
-        ) : isError ? (
-          <div
-            className="text-muted-foreground flex flex-col items-center gap-3 py-8 text-sm"
-            data-testid="my-invitations-error"
+    <SettingsCard
+      title={t("organizations.myInvitations.title")}
+      description={t("organizations.myInvitations.description")}
+      data-testid="my-invitations-card"
+    >
+      {isPending ? (
+        <div className="space-y-2" aria-busy="true" data-testid="my-invitations-loading">
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </div>
+      ) : isError ? (
+        <div
+          className="text-muted-foreground flex flex-col items-center gap-3 py-8 text-sm"
+          data-testid="my-invitations-error"
+        >
+          <CircleAlert className="text-destructive h-8 w-8" aria-hidden />
+          <p>{t("organizations.myInvitations.loadError")}</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isFetching}
+            onClick={() => void refetch()}
           >
-            <CircleAlert className="text-destructive h-8 w-8" aria-hidden />
-            <p>{t("organizations.myInvitations.loadError")}</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={isFetching}
-              onClick={() => void refetch()}
-            >
-              {isFetching && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />}
-              {t("organizations.myInvitations.retry")}
-            </Button>
-          </div>
-        ) : invitations.length === 0 ? (
-          <div className="text-muted-foreground flex flex-col items-center gap-2 py-8 text-center text-sm">
-            <MailOpen className="h-8 w-8 opacity-50" aria-hidden />
-            <p className="text-foreground font-semibold">
-              {t("organizations.myInvitations.empty")}
-            </p>
-            {/* The address is the whole of the matching rule, and getting it wrong is
+            {isFetching && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />}
+            {t("organizations.myInvitations.retry")}
+          </Button>
+        </div>
+      ) : invitations.length === 0 ? (
+        <div className="text-muted-foreground flex flex-col items-center gap-2 py-8 text-center text-sm">
+          <MailOpen className="h-8 w-8 opacity-50" aria-hidden />
+          <p className="text-foreground font-semibold">{t("organizations.myInvitations.empty")}</p>
+          {/* The address is the whole of the matching rule, and getting it wrong is
                 the usual reason an expected invitation is not here — so the empty
                 state says so rather than leaving a dead end. */}
-            <p className="max-w-[380px] text-xs leading-relaxed">
-              {t("organizations.myInvitations.emptyHint")}
-            </p>
-          </div>
-        ) : (
-          <ul className="divide-y rounded-lg border">
-            {invitations.map((invitation) => {
-              const name = invitation.organizationName;
-              const role = t(organizationRoleLabelKey(asOrganizationRole(invitation.role)));
+          <p className="max-w-[380px] text-xs leading-relaxed">
+            {t("organizations.myInvitations.emptyHint")}
+          </p>
+        </div>
+      ) : (
+        <ul className="divide-y rounded-lg border">
+          {invitations.map((invitation) => {
+            const name = invitation.organizationName;
+            const role = t(organizationRoleLabelKey(asOrganizationRole(invitation.role)));
 
-              return (
-                <li
-                  key={invitation.id}
-                  data-testid="my-invitation-row"
-                  className="flex flex-wrap items-center gap-4 px-4 py-3.5"
-                >
-                  <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
-                    <Building2 className="h-5 w-5" aria-hidden />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{name}</p>
-                    <p className="text-muted-foreground mt-0.5 text-xs">
-                      {t("organizations.invite.expiresOn", {
-                        date: formatDate(invitation.expiresAt.toString()),
-                      })}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span className="text-muted-foreground text-xs">
-                      {t("organizations.acceptInvitation.roleLabel")}
-                    </span>
-                    <Badge variant="outline" className="text-xs font-normal">
-                      {role}
-                    </Badge>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      aria-label={t("organizations.myInvitations.acceptNamed", { name })}
-                      disabled={busyId === invitation.id}
-                      onClick={() => void submit(invitation, "accept")}
-                    >
-                      {busyId === invitation.id
-                        ? t("organizations.acceptInvitation.working")
-                        : t("organizations.acceptInvitation.acceptAction")}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      aria-label={t("organizations.myInvitations.declineNamed", { name })}
-                      disabled={busyId === invitation.id}
-                      onClick={() => void submit(invitation, "reject")}
-                    >
-                      {t("organizations.acceptInvitation.declineAction")}
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+            return (
+              <li
+                key={invitation.id}
+                data-testid="my-invitation-row"
+                className="flex flex-wrap items-center gap-4 px-4 py-3.5"
+              >
+                <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+                  <Building2 className="h-5 w-5" aria-hidden />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{name}</p>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    {t("organizations.invite.expiresOn", {
+                      date: formatDate(invitation.expiresAt.toString()),
+                    })}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="text-muted-foreground text-xs">
+                    {t("organizations.acceptInvitation.roleLabel")}
+                  </span>
+                  <Badge variant="outline" className="text-xs font-normal">
+                    {role}
+                  </Badge>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    aria-label={t("organizations.myInvitations.acceptNamed", { name })}
+                    disabled={busyId === invitation.id}
+                    onClick={() => void submit(invitation, "accept")}
+                  >
+                    {busyId === invitation.id
+                      ? t("organizations.acceptInvitation.working")
+                      : t("organizations.acceptInvitation.acceptAction")}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    aria-label={t("organizations.myInvitations.declineNamed", { name })}
+                    disabled={busyId === invitation.id}
+                    onClick={() => void submit(invitation, "reject")}
+                  >
+                    {t("organizations.acceptInvitation.declineAction")}
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </SettingsCard>
   );
 }

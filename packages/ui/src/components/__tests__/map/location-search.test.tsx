@@ -146,18 +146,18 @@ describe("LocationSearch", () => {
 
     // First item should be highlighted
     const firstResult = screen.getByText("Berlin, Germany").closest("button");
-    expect(firstResult).toHaveClass("bg-surface");
+    expect(firstResult).toHaveClass("bg-accent");
 
     // Arrow down to select second item
     fireEvent.keyDown(input, { key: "ArrowDown" });
 
     // Second item should be highlighted
     const secondResult = screen.getByText("Berlin, NH, USA").closest("button");
-    expect(secondResult).toHaveClass("bg-surface");
+    expect(secondResult).toHaveClass("bg-accent");
 
     // Arrow up to go back to first item
     fireEvent.keyDown(input, { key: "ArrowUp" });
-    expect(firstResult).toHaveClass("bg-surface");
+    expect(firstResult).toHaveClass("bg-accent");
   });
 
   it("selects highlighted item with Enter key", async () => {
@@ -225,7 +225,7 @@ describe("LocationSearch", () => {
 
     const input = screen.getByPlaceholderText("Search for locations...");
     expect(input).toBeDisabled();
-    expect(input).toHaveClass("disabled:bg-gray-50", "disabled:text-gray-500");
+    expect(input).toHaveClass("disabled:bg-muted", "disabled:text-muted-foreground");
   });
 
   it("applies custom className", () => {
@@ -276,7 +276,7 @@ describe("LocationSearch", () => {
     const firstResult = screen.getByText("Berlin, Germany").closest("button");
     if (firstResult) {
       fireEvent.mouseEnter(firstResult);
-      expect(firstResult).toHaveClass("bg-surface");
+      expect(firstResult).toHaveClass("bg-accent");
     }
   });
 

@@ -1,4 +1,7 @@
 import { faker } from "@faker-js/faker";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Logger } from "@nestjs/common";
+import type { Cache } from "cache-manager";
 import { expect } from "vitest";
 
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -45,6 +48,8 @@ describe("ExperimentDataRepository", () => {
     await testApp.beforeEach();
     repository = testApp.module.get(ExperimentDataRepository);
     databricksPort = testApp.module.get(DATABRICKS_PORT);
+    // Table metadata is cached per experiment and table; the fixtures reuse both.
+    await testApp.module.get<Cache>(CACHE_MANAGER).clear();
   });
 
   afterEach(() => {
@@ -135,6 +140,199 @@ describe("ExperimentDataRepository", () => {
         limit: 5,
         offset: 0,
       });
+    });
+
+    it("logs one read summary with the warehouse phases split out", async () => {
+      const mockMetadata: ExperimentTableMetadata[] = [
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          displayName: null,
+          rowCount: 100,
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+        },
+      ];
+      const countData = {
+        columns: [{ name: "total", type_name: "long", type_text: "BIGINT", position: 0 }],
+        rows: [["7"]],
+        totalRows: 1,
+        truncated: false,
+      };
+      const pageData = {
+        columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
+        rows: [["1"], ["2"]],
+        totalRows: 2,
+        truncated: false,
+      };
+
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(mockMetadata),
+      );
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(
+        success("SELECT id FROM raw_data"),
+      );
+      vi.spyOn(databricksPort, "executeSqlQuery").mockImplementation((_schema, sql) =>
+        Promise.resolve(success(sql.startsWith("SELECT COUNT") ? countData : pageData)),
+      );
+      const logSpy = vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
+
+      const result = await repository.getTableData({
+        ...baseParams,
+        columns: ["id"],
+        filters: [{ column: "id", operator: "equals", value: "1" }],
+        page: 2,
+        pageSize: 2,
+      });
+
+      assertSuccess(result);
+      expect(result.value[0]).toMatchObject({ page: 2, pageSize: 2, totalRows: 7, totalPages: 4 });
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: "Experiment data read",
+          experimentId,
+          tableName: "raw_data",
+          mode: "filtered-page",
+          metadataMs: expect.any(Number) as number,
+          countMs: expect.any(Number) as number,
+          dataMs: expect.any(Number) as number,
+          totalMs: expect.any(Number) as number,
+          rows: 2,
+          totalRows: 2,
+          truncated: false,
+        }),
+      );
+      logSpy.mockRestore();
+    });
+
+    it("issues the filtered COUNT and the page as concurrent statements", async () => {
+      const mockMetadata: ExperimentTableMetadata[] = [
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          displayName: null,
+          rowCount: 100,
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+        },
+      ];
+      const countData = {
+        columns: [{ name: "total", type_name: "long", type_text: "BIGINT", position: 0 }],
+        rows: [["12"]],
+        totalRows: 1,
+        truncated: false,
+      };
+      const pageData = {
+        columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
+        rows: [["1"], ["2"], ["3"]],
+        totalRows: 3,
+        truncated: false,
+      };
+      const settle: (() => void)[] = [];
+
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(mockMetadata),
+      );
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(
+        success("SELECT id FROM raw_data"),
+      );
+      const executeSpy = vi.spyOn(databricksPort, "executeSqlQuery").mockImplementation(
+        (_schema, sql) =>
+          new Promise((resolve) => {
+            settle.push(() =>
+              resolve(success(sql.startsWith("SELECT COUNT") ? countData : pageData)),
+            );
+          }),
+      );
+      executeSpy.mockClear();
+
+      const pending = repository.getTableData({
+        ...baseParams,
+        columns: ["id"],
+        filters: [{ column: "id", operator: "equals", value: "1" }],
+        page: 3,
+        pageSize: 3,
+      });
+
+      // Both statements are in flight before either one has answered.
+      await vi.waitFor(() => expect(executeSpy).toHaveBeenCalledTimes(2));
+      settle.forEach((resolve) => resolve());
+
+      const result = await pending;
+      assertSuccess(result);
+      expect(result.value[0]).toMatchObject({ page: 3, pageSize: 3, totalRows: 12, totalPages: 4 });
+      expect(result.value[0].data?.rows).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
+    });
+
+    it("serves the table metadata from the cache on the next read", async () => {
+      const mockMetadata: ExperimentTableMetadata[] = [
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          displayName: null,
+          rowCount: 100,
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+        },
+      ];
+      const pageData = {
+        columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
+        rows: [["1"]],
+        totalRows: 1,
+        truncated: false,
+      };
+      const metadataSpy = vi
+        .spyOn(databricksPort, "getExperimentTableMetadata")
+        .mockResolvedValue(success(mockMetadata));
+      metadataSpy.mockClear();
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(pageData));
+
+      const first = await repository.getTableData({ ...baseParams, page: 1, pageSize: 5 });
+      const second = await repository.getTableData({ ...baseParams, page: 2, pageSize: 5 });
+
+      assertSuccess(first);
+      assertSuccess(second);
+      expect(second.value[0]).toMatchObject({ page: 2, totalRows: 100 });
+      expect(metadataSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not cache a failed metadata lookup", async () => {
+      const mockMetadata: ExperimentTableMetadata[] = [
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          displayName: null,
+          rowCount: 100,
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+        },
+      ];
+      const pageData = {
+        columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
+        rows: [["1"]],
+        totalRows: 1,
+        truncated: false,
+      };
+      const metadataSpy = vi
+        .spyOn(databricksPort, "getExperimentTableMetadata")
+        .mockResolvedValueOnce(failure(AppError.internal("warehouse unavailable")))
+        .mockResolvedValueOnce(success(mockMetadata));
+      metadataSpy.mockClear();
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(pageData));
+
+      const first = await repository.getTableData({ ...baseParams, page: 1, pageSize: 5 });
+      const second = await repository.getTableData({ ...baseParams, page: 1, pageSize: 5 });
+
+      assertFailure(first);
+      expect(first.error.message).toContain("warehouse unavailable");
+      assertSuccess(second);
+      expect(metadataSpy).toHaveBeenCalledTimes(2);
     });
 
     it("tags contributor id filters with the pseudonym salt when anonymizing", async () => {

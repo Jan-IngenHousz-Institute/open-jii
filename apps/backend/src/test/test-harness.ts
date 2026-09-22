@@ -15,6 +15,8 @@ import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.sche
 import { auth } from "@repo/auth/server";
 import type { DatabaseInstance } from "@repo/database";
 import {
+  calibrationDefinitions,
+  calibrationRuns,
   experimentMembers,
   experimentLocations,
   experiments,
@@ -219,7 +221,10 @@ export class TestHarness {
     await this.database.delete(profiles).execute();
     // Every org-owned resource reaches organizations through a RESTRICT FK — nothing an
     // organization owns is destroyed with it — so all of them go first. Workbooks and
-    // experiments are already gone above; devices and device groups are not.
+    // experiments are already gone above; devices, device groups, and calibration
+    // definitions are not. Runs RESTRICT on definitions, applied rows cascade off runs.
+    await this.database.delete(calibrationRuns).execute();
+    await this.database.delete(calibrationDefinitions).execute();
     await this.database.delete(iotDevices).execute();
     await this.database.delete(deviceGroups).execute();
     await this.database.delete(organizations).execute();
@@ -462,6 +467,7 @@ export class TestHarness {
       slug?: string;
       visibility?: "private" | "public";
       description?: string | null;
+      location?: string | null;
       type?:
         | "research_institute"
         | "non_profit"
@@ -477,6 +483,7 @@ export class TestHarness {
         slug: options.slug ?? `org-${faker.string.uuid()}`,
         ...(options.visibility ? { visibility: options.visibility } : {}),
         ...(options.description === undefined ? {} : { description: options.description }),
+        ...(options.location === undefined ? {} : { location: options.location }),
         ...(options.type ? { type: options.type } : {}),
       })
       .returning();
@@ -640,8 +647,8 @@ export class TestHarness {
     thingName?: string;
     /** Explicit `null` seeds a nameless device — the column is nullable in reality. */
     name?: string | null;
-    deviceType?: "multispeq" | "ambyte" | "minipar" | "generic";
-    status?: "pending" | "active" | "rotating" | "revoked";
+    deviceType?: "multispeq" | "ambyte" | "minipar" | "generic" | "ambit" | "mobile";
+    status?: "registered" | "active" | "revoked" | "retired";
     certificateId?: string;
     certificateArn?: string;
     visibility?: "private" | "public";
@@ -662,7 +669,7 @@ export class TestHarness {
         serialNumber,
         name: data.name === undefined ? "Test device" : data.name,
         deviceType: data.deviceType ?? "generic",
-        status: data.status ?? "pending",
+        status: data.status ?? "registered",
         certificateId: data.certificateId ?? null,
         certificateArn: data.certificateArn ?? null,
         createdBy: data.createdBy,
@@ -704,6 +711,41 @@ export class TestHarness {
       })
       .returning();
     return macro;
+  }
+
+  public async createCalibrationDefinition(data: {
+    name: string;
+    createdBy: string;
+    family?: "minipar" | "ambit" | "multispeq" | "generic" | "ambyte";
+    visibility?: "private" | "public";
+    organizationId?: string;
+  }) {
+    const organizationId =
+      data.organizationId ??
+      (await ensurePersonalOrganization(this.database, { id: data.createdBy }));
+    const [definition] = await this.database
+      .insert(calibrationDefinitions)
+      .values({
+        name: data.name,
+        family: data.family ?? "minipar",
+        captureProcedure: {
+          instruments: [{ role: "dut" }],
+          steps: [
+            {
+              kind: "read",
+              series: "reading",
+              read: [{ instrument: "dut", command: "hello", as: "reply" }],
+            },
+          ],
+        },
+        script: "submit({})",
+        outputSchema: { blocks: { par: { slope: { type: "number" } } } },
+        createdBy: data.createdBy,
+        organizationId,
+        ...(data.visibility ? { visibility: data.visibility } : {}),
+      })
+      .returning();
+    return definition;
   }
 
   public async createWorkbook(data: {

@@ -92,7 +92,8 @@ jobs:
       contains(fromJSON(needs.detect.outputs.affected_apps), '@repo/database') ||
       contains(fromJSON(needs.detect.outputs.affected_apps), 'docs') ||
       contains(fromJSON(needs.detect.outputs.affected_apps), 'data') ||
-      contains(fromJSON(needs.detect.outputs.affected_apps), 'macro-sandbox')
+      contains(fromJSON(needs.detect.outputs.affected_apps), 'macro-sandbox') ||
+      contains(fromJSON(needs.detect.outputs.affected_apps), 'calibration-sandbox')
     runs-on: ubuntu-latest
     environment: approval-gate
     permissions:
@@ -104,7 +105,9 @@ jobs:
   deploy-infrastructure:
     name: Deploy Infrastructure
     needs: [detect, approval-gate]
-    if: inputs.deploy_infrastructure || needs.detect.outputs.infra_changed == 'true'
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.deploy_infrastructure) ||
+      (github.event_name != 'workflow_dispatch' && needs.detect.outputs.infra_changed == 'true')
     permissions:
       id-token: write
       contents: read
@@ -240,4 +243,35 @@ jobs:
       environment: ${{ inputs.environment }}
       ref: ${{ inputs.ref || github.sha }}
       languages: ${{ (inputs.deploy_all || contains(inputs.deploy_app, 'macro-sandbox')) && '["python","javascript","r"]' || needs.detect.outputs.macro_sandbox_languages }}
+    secrets: inherit
+
+  deploy-calibration-sandbox:
+    name: Deploy Calibration Sandbox
+    # The backend has to be carrying the function name before the function can
+    # answer anything, so it deploys after the same set the macro sandbox waits on.
+    needs:
+      [
+        deploy-infrastructure,
+        deploy-backend,
+        deploy-frontend,
+        deploy-databricks,
+        detect,
+        approval-gate,
+      ]
+    if: >-
+      always() &&
+      needs.detect.result == 'success' &&
+      needs.approval-gate.result == 'success' &&
+      contains('success,skipped', needs.deploy-infrastructure.result) &&
+      contains('success,skipped', needs.deploy-backend.result) &&
+      contains('success,skipped', needs.deploy-frontend.result) &&
+      contains('success,skipped', needs.deploy-databricks.result) &&
+      (inputs.deploy_all || contains(inputs.deploy_app, 'calibration-sandbox') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), 'calibration-sandbox')))
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/deploy-calibration-sandbox.yml
+    with:
+      environment: ${{ inputs.environment }}
+      ref: ${{ inputs.ref || github.sha }}
     secrets: inherit

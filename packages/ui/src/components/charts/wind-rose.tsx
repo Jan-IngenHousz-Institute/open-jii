@@ -1,13 +1,14 @@
 "use client";
 
 import type { PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
-import { createPlotlyConfig, responsiveChrome, tierAxisFontSizes } from "./utils";
+import { createPlotlyConfig, responsiveChrome, tierAxisFontSizes, chartGridColor } from "./utils";
 
 /**
  * Wind-rose series. Each series represents one **value band** (e.g.
@@ -69,36 +70,41 @@ export function WindRose({
   radialAxisTitle = "Frequency",
 }: WindRoseProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
-  const plotData: PlotData[] = data.map(
-    (series) =>
-      ({
-        type: "barpolar",
-        r: series.r,
-        theta: series.theta,
-        width: series.width,
-        name: series.name,
+  const plotData: PlotData[] = useMemo(
+    () =>
+      data.map(
+        (series) =>
+          ({
+            type: "barpolar",
+            r: series.r,
+            theta: series.theta,
+            width: series.width,
+            name: series.name,
 
-        marker: {
-          color:
-            (series.marker?.color as string | undefined) ??
-            (typeof series.color === "string" ? series.color : undefined),
-          line: series.marker?.line
-            ? {
-                color: series.marker.line.color,
-                width: series.marker.line.width ?? 0,
-              }
-            : undefined,
-        },
+            marker: {
+              color:
+                (series.marker?.color as string | undefined) ??
+                (typeof series.color === "string" ? series.color : undefined),
+              line: series.marker?.line
+                ? {
+                    color: series.marker.line.color,
+                    width: series.marker.line.width ?? 0,
+                  }
+                : undefined,
+            },
 
-        opacity: series.opacity,
-        visible: series.visible,
-        showlegend: series.showlegend,
-        legendgroup: series.legendgroup,
-        hovertemplate: series.hovertemplate,
-        hoverinfo: series.hoverinfo,
-        customdata: series.customdata,
-      }) as unknown as PlotData,
+            opacity: series.opacity,
+            visible: series.visible,
+            showlegend: series.showlegend,
+            legendgroup: series.legendgroup,
+            hovertemplate: series.hovertemplate,
+            hoverinfo: series.hoverinfo,
+            customdata: series.customdata,
+          }) as unknown as PlotData,
+      ),
+    [data],
   );
 
   // Always tick at the same positions; just swap label text. Falling
@@ -109,42 +115,56 @@ export function WindRose({
     directionLabels.length > 0 ? directionLabels : directionTicks.map((deg) => `${deg}°`);
 
   // Tier-aware chrome + the polar config createBaseLayout cannot provide.
-  const layout = {
-    ...responsiveChrome(config, sizing),
-    // Stack value-band segments within each direction slice (the
-    // canonical wind-rose rendering). `barmode: "stack"` is read by
-    // both cartesian bar traces and barpolar.
-    barmode: "stack",
-    polar: {
-      bgcolor: "white",
-      radialaxis: {
-        title: { text: radialAxisTitle, font: { size: fontSizes.axisTitle } },
-        tickfont: { size: fontSizes.tick },
-        // East-pointing radial axis: avoids the north overlap with bars.
-        angle: 0,
-        tickangle: 0,
-        // Cap ticks so labels don't collide on small charts.
-        nticks: 5,
-        gridcolor: "#E6E6E6",
-        showgrid: config.showGrid !== false,
-      },
-      angularaxis: {
-        // Compass convention: 0° at top, sweep clockwise. Hard-coded
-        // because that's the chart's defining layout.
-        direction: "clockwise",
-        rotation: 90,
-        period: 360,
-        tickmode: "array",
-        tickvals: directionTicks,
-        ticktext: tickText,
-        tickfont: { size: fontSizes.tick },
-        gridcolor: "#E6E6E6",
-        showgrid: config.showGrid !== false,
-      },
-    },
-  } as unknown as Partial<import("plotly.js").Layout>;
+  const layout = useMemo(
+    () =>
+      ({
+        ...responsiveChrome(config, sizing),
+        // Stack value-band segments within each direction slice (the
+        // canonical wind-rose rendering). `barmode: "stack"` is read by
+        // both cartesian bar traces and barpolar.
+        barmode: "stack",
+        polar: {
+          bgcolor: "white",
+          radialaxis: {
+            title: { text: radialAxisTitle, font: { size: fontSizes.axisTitle } },
+            tickfont: { size: fontSizes.tick },
+            // East-pointing radial axis: avoids the north overlap with bars.
+            angle: 0,
+            tickangle: 0,
+            // Cap ticks so labels don't collide on small charts.
+            nticks: 5,
+            gridcolor: chartGridColor(),
+            showgrid: config.showGrid !== false,
+          },
+          angularaxis: {
+            // Compass convention: 0° at top, sweep clockwise. Hard-coded
+            // because that's the chart's defining layout.
+            direction: "clockwise",
+            rotation: 90,
+            period: 360,
+            tickmode: "array",
+            tickvals: directionTicks,
+            ticktext: tickText,
+            tickfont: { size: fontSizes.tick },
+            gridcolor: chartGridColor(),
+            showgrid: config.showGrid !== false,
+          },
+        },
+      }) as unknown as Partial<import("plotly.js").Layout>,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+    [
+      config,
+      directionTicks,
+      fontSizes.axisTitle,
+      fontSizes.tick,
+      radialAxisTitle,
+      sizing,
+      tickText,
+      themeVersion,
+    ],
+  );
 
-  const plotConfig = createPlotlyConfig(config, sizing);
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>

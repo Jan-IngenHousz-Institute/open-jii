@@ -1,5 +1,7 @@
 import { DashboardBanner } from "@/components/dashboard/dashboard-banner";
 import { DashboardSection } from "@/components/dashboard/dashboard-section";
+import { MilestoneBanner } from "@/components/dashboard/milestone-banner";
+import { ResearchActivityPanel } from "@/components/dashboard/research-activity-panel";
 import { UserExperimentsSection } from "@/components/dashboard/user-experiments-section";
 import { PageContainer } from "@/components/page-container";
 import type { Metadata } from "next";
@@ -29,30 +31,31 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
   return (
     <PageContainer width="fluid" className="space-y-6">
       {/* Dashboard Banner */}
-      <div className="-mt-6">
-        <DashboardBanner
-          title={t("dashboard.transferBannerTitle")}
-          description={t("dashboard.transferBannerDescription")}
-          descriptionItalic={t("dashboard.transferBannerDescriptionItalic")}
-          descriptionItalicHref={
-            "https://github.com/Jan-IngenHousz-Institute/open-jii/discussions/new?category=ideas"
-          }
-          secondaryButtonLabel={t("dashboard.reportBugButton")}
-          secondaryButtonHref={`${env.NEXT_PUBLIC_DOCS_URL}/guide/reference/getting-help`}
-          buttonLabel={t("dashboard.transferBannerButton")}
-          buttonHref={`/${locale}/platform/transfer-request`}
-          locale={locale}
-        />
-      </div>
+      <DashboardBanner
+        title={t("dashboard.transferBannerTitle")}
+        description={t("dashboard.transferBannerDescription")}
+        descriptionItalic={t("dashboard.transferBannerDescriptionItalic")}
+        descriptionItalicHref={
+          "https://github.com/Jan-IngenHousz-Institute/open-jii/discussions/new?category=ideas"
+        }
+        secondaryButtonLabel={t("dashboard.reportBugButton")}
+        secondaryButtonHref={`${env.NEXT_PUBLIC_DOCS_URL}/guide/reference/getting-help`}
+        buttonLabel={t("dashboard.transferBannerButton")}
+        buttonHref={`/${locale}/platform/transfer-request`}
+        locale={locale}
+      />
 
-      {/* Dashboard Header */}
-      <h1 className="text-4xl font-bold text-gray-900">{t("dashboard.title")}</h1>
+      {/* Milestone Moment */}
+      <MilestoneBanner locale={locale} />
+
+      {/* Platform Pulse */}
+      <ResearchActivityPanel locale={locale} />
 
       {/* First Row - User's Experiments */}
       <DashboardSection
         title={t("dashboard.yourExperiments")}
         seeAllLabel={t("dashboard.seeAll")}
-        seeAllHref="/platform/experiments?filter=all"
+        seeAllHref="/platform/experiments"
         locale={locale}
       >
         <UserExperimentsSection />

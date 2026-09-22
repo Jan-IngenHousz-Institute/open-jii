@@ -39,6 +39,16 @@ export type GranteeTeamDto = GranteeTeam;
 export type OrganizationDeletionBlockersDto = OrganizationDeletionBlockers;
 export type MembershipStatus = OrganizationMembershipStatus;
 
+/**
+ * What global search merges on, plus the score it merges by. Picked rather than the whole
+ * entry: the listing's counts are correlated subqueries the palette neither shows nor
+ * should pay for on every keystroke.
+ */
+export type OrganizationSearchRow = Pick<
+  OrganizationDirectoryEntryDto,
+  "id" | "name" | "description" | "type"
+> & { score: number };
+
 /** Everything the read use-cases need to decide what a caller may see. */
 export interface OrganizationAccessRow {
   id: string;

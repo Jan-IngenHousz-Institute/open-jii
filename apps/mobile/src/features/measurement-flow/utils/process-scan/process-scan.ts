@@ -1,5 +1,6 @@
 import { Asset } from "expo-asset";
 import { File } from "expo-file-system";
+import type { MacroOutput } from "~/shared/measurements/macro-output";
 import { createLogger } from "~/shared/observability/logger";
 
 import { normalizeMacroInput } from "@repo/api/transforms/normalize-macro-input";
@@ -9,15 +10,8 @@ import { getPythonMacroRunner } from "./python-macro-runner";
 
 const log = createLogger("macro");
 
-interface MacroOutputMessages {
-  messages?: {
-    info?: string[];
-    warning?: string[];
-    danger?: string[];
-  };
-}
-
-export type MacroOutput = MacroOutputMessages & Record<string, any>;
+// Re-exported so existing call sites keep importing it from here.
+export type { MacroOutput } from "~/shared/measurements/macro-output";
 
 async function loadMathLib() {
   const asset = Asset.fromModule(mathLibResource);
@@ -63,6 +57,13 @@ export interface MacroInput {
   language?: string;
 }
 
+export class UnsupportedMacroLanguageError extends Error {
+  constructor(public readonly language: string) {
+    super(`Macro language "${language}" cannot run on this device (supported: javascript, python)`);
+    this.name = "UnsupportedMacroLanguageError";
+  }
+}
+
 export class MacroInputNormalizationError extends Error {
   constructor(
     public readonly code: "empty-envelope",
@@ -100,9 +101,18 @@ export async function applyMacro(
   const macroInput: MacroInput =
     typeof macro === "string" ? { code: macro, language: "javascript" } : macro;
   const code = atob(macroInput.code);
-  const language = (macroInput.language ?? "javascript").toLowerCase();
+  // Bare code strings are the legacy JavaScript API above. Structured inputs
+  // must identify their runtime; an empty value must not guess JavaScript.
+  const language = macroInput.language?.toLowerCase() ?? "";
 
   log.debug("apply", { language, source: normalized.source, code_bytes: code.length });
+
+  // Never fall through to the JS engine for a language it cannot run: Python
+  // or R source parsed as JS fails on the first `#` with a cryptic Hermes error.
+  if (language !== "javascript" && language !== "python") {
+    log.error("unsupported macro language", { language });
+    throw new UnsupportedMacroLanguageError(language);
+  }
 
   if (language === "python") {
     const runPython = getPythonMacroRunner();
@@ -110,7 +120,10 @@ export async function applyMacro(
       throw new Error("Python macro runner not ready. Ensure PythonMacroProvider is mounted.");
     }
     try {
-      const out = await runPython(code, structuredClone(normalized.value), ctx);
+      // Clone (not freeze) like the JS path: a frozen object may not survive
+      // the Python bridge, but the clone keeps the macro from mutating
+      // upstream cell outputs shared through `ctx`.
+      const out = await runPython(code, structuredClone(normalized.value), structuredClone(ctx));
       log.debug("(Python) measurement ok");
       return [out];
     } catch (err) {

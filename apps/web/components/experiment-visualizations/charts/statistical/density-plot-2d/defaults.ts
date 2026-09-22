@@ -1,5 +1,4 @@
 import type { ChartFormConfig, ChartFormDataConfig } from "../../chart-config";
-import { DEFAULT_PRIMARY_COLOR } from "../../colors/palettes";
 import { makeDataSource } from "../../data/data-sources";
 
 export function densityPlot2DDefaultConfig(): ChartFormConfig {
@@ -10,7 +9,6 @@ export function densityPlot2DDefaultConfig(): ChartFormConfig {
     showLegend: false,
     showGrid: true,
     useWebGL: false,
-    color: [DEFAULT_PRIMARY_COLOR],
     // Smaller and more translucent than scatter defaults: points sit
     // under the contour layer and should stay unobtrusive.
     density2dShowMarkers: true,

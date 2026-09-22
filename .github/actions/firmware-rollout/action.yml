@@ -1,0 +1,434 @@
+name: Firmware rollout
+description: Resolve a firmware release, mirror it to S3, and roll it out as an AWS IoT Job
+
+inputs:
+  family:
+    description: Device family being updated
+    required: true
+  release-tag:
+    description: Release tag, or "latest" for the newest stable release
+    required: true
+  things:
+    description: Comma-separated thing names, each of which must be a registered device of this family; empty targets every registered device of the family
+    required: false
+    default: ""
+  max-per-minute:
+    description: Cap on job executions started per minute
+    required: false
+    default: "5"
+  abort-threshold-percent:
+    description: Percentage of failed executions that cancels the rollout
+    required: false
+    default: "25"
+  timeout-minutes:
+    description: Minutes before an execution stuck IN_PROGRESS is timed out
+    required: false
+    default: "60"
+  dry-run:
+    description: Resolve and print the plan without creating a job
+    required: false
+    default: "true"
+  environment:
+    description: Target environment name (dev/prod)
+    required: true
+  github-token:
+    description: Token used to read the firmware repository's releases
+    required: true
+  aws-role-arn:
+    description: Role assumed to create the job
+    required: true
+  aws-region:
+    description: AWS region
+    required: true
+
+outputs:
+  job-id:
+    description: The created job id (empty on a dry run)
+    value: ${{ steps.create.outputs.job-id }}
+  release-tag:
+    description: The resolved release tag
+    value: ${{ steps.release.outputs.tag }}
+
+runs:
+  using: composite
+  steps:
+    # Genuinely first: every later step can fail, and the upload is
+    # `if: always()`, so the artifact has to exist before anything can crash.
+    - name: Initialize result artifact
+      shell: bash
+      env:
+        FAMILY: ${{ inputs.family }}
+        ENVIRONMENT: ${{ inputs.environment }}
+      run: |
+        jq -n --arg family "$FAMILY" --arg env "$ENVIRONMENT" \
+          '{family: $family, environment: $env, error: "rollout did not start"}' > results.json
+
+    - name: Validate inputs
+      shell: bash
+      env:
+        MAX_PER_MINUTE: ${{ inputs.max-per-minute }}
+        ABORT_THRESHOLD: ${{ inputs.abort-threshold-percent }}
+        TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
+      run: |
+        set -euo pipefail
+        fail() { echo "::error::$1"; exit 1; }
+        printf '%s' "$MAX_PER_MINUTE" | grep -qE '^[1-9][0-9]*$' || fail "max_per_minute must be a positive integer"
+        printf '%s' "$ABORT_THRESHOLD" | grep -qE '^[1-9][0-9]?$|^100$' || fail "abort_threshold_percent must be 1-100"
+        printf '%s' "$TIMEOUT_MINUTES" | grep -qE '^[1-9][0-9]*$' || fail "timeout_minutes must be a positive integer"
+
+    # Deliberately before AWS credentials are configured: release validation
+    # must not need, and cannot misuse, fleet access.
+    - name: Resolve release
+      id: release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        FAMILY: ${{ inputs.family }}
+        RELEASE_TAG: ${{ inputs.release-tag }}
+      run: |
+        set -euo pipefail
+        REPO="$(jq -r --arg f "$FAMILY" '.[$f].repository // "null"' .github/firmware/families.json)"
+        ASSET="$(jq -r --arg f "$FAMILY" '.[$f].asset // "null"' .github/firmware/families.json)"
+        # Adding a family to the workflow's choices without adding it here would
+        # otherwise surface as `gh --repo null`, which says nothing useful.
+        [ "$REPO" != "null" ] && [ "$ASSET" != "null" ] || {
+          echo "::error::$FAMILY has no repository/asset in .github/firmware/families.json"; exit 1; }
+
+        if [ "$RELEASE_TAG" = "latest" ]; then
+          TAG="$(gh release list --repo "$REPO" --limit 100 --json tagName,isDraft,isPrerelease \
+            | jq -r '[.[] | select(.isDraft == false and .isPrerelease == false)][0].tagName')"
+          [ -n "$TAG" ] && [ "$TAG" != "null" ] || { echo "::error::no stable release found in $REPO"; exit 1; }
+        else
+          TAG="$RELEASE_TAG"
+        fi
+
+        RELEASE="$(gh api "/repos/$REPO/releases/tags/$TAG")"
+        [ "$(jq -r '.draft' <<<"$RELEASE")" = "false" ] || { echo "::error::$TAG is a draft"; exit 1; }
+        [ "$(jq -r '.published_at' <<<"$RELEASE")" != "null" ] || { echo "::error::$TAG is unpublished"; exit 1; }
+        jq -e --arg a "$ASSET" '.assets[] | select(.name == $a)' <<<"$RELEASE" > /dev/null \
+          || { echo "::error::$TAG has no asset named $a"; exit 1; }
+
+        echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+        echo "repo=$REPO" >> "$GITHUB_OUTPUT"
+        echo "asset=$ASSET" >> "$GITHUB_OUTPUT"
+        echo "### Firmware rollout: \`$FAMILY\` \`$TAG\`" >> "$GITHUB_STEP_SUMMARY"
+        echo "Source: \`$REPO\`" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Download release asset
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        TAG: ${{ steps.release.outputs.tag }}
+        REPO: ${{ steps.release.outputs.repo }}
+        ASSET: ${{ steps.release.outputs.asset }}
+      run: |
+        set -euo pipefail
+        gh release download "$TAG" --repo "$REPO" \
+          --pattern "$ASSET" --dir artifact --clobber
+        sha256sum "artifact/$ASSET" | cut -d' ' -f1 > artifact/sha256
+        echo "SHA-256: \`$(cat artifact/sha256)\`" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v6
+      with:
+        role-to-assume: ${{ inputs.aws-role-arn }}
+        aws-region: ${{ inputs.aws-region }}
+        mask-aws-account-id: true
+        role-duration-seconds: 7200 # rollout polling can exceed the 1h default
+
+    - name: Resolve target
+      id: target
+      shell: bash
+      env:
+        REGION: ${{ inputs.aws-region }}
+        THINGS: ${{ inputs.things }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        FAMILY: ${{ inputs.family }}
+      run: |
+        set -euo pipefail
+        ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
+        GROUP="open_jii_${ENVIRONMENT}_managed_devices"
+
+        # Paged by hand with --no-paginate rather than trusting the CLI to
+        # aggregate: auto-pagination applies --query per page, so a listing past
+        # one page would answer once per page instead of once in total.
+        collect() {
+          local filter="$1" next="" page; shift
+          while :; do
+            if [ -n "$next" ]; then
+              page="$("$@" --next-token "$next" --no-paginate --output json)"
+            else
+              page="$("$@" --no-paginate --output json)"
+            fi
+            jq -r "$filter" <<<"$page"
+            next="$(jq -r '.nextToken // empty' <<<"$page")"
+            [ -n "$next" ] || break
+          done
+        }
+
+        collect '.things[]?' \
+          aws iot list-things-in-thing-group --thing-group-name "$GROUP" | sort -u > managed.txt
+
+        # The managed-devices group holds EVERY registered thing, phones
+        # included, so it can never be the target on its own: an unfiltered
+        # rollout would queue an ambyte image for hardware that cannot run it,
+        # and nothing downstream would reject it (the digest matches, and the
+        # device contract has no family check). Narrow by the deviceType
+        # attribute the registry already carries.
+        collect '.things[]?.thingName' \
+          aws iot list-things --attribute-name deviceType --attribute-value "$FAMILY" \
+          | sort -u > family.txt
+
+        comm -12 managed.txt family.txt > eligible.txt
+
+        if [ -n "$THINGS" ]; then
+          printf '%s' "$THINGS" | tr ',' '\n' \
+            | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | sed '/^$/d' | sort -u > requested.txt
+
+          UNKNOWN="$(comm -23 requested.txt eligible.txt | tr '\n' ' ')"
+          [ -z "${UNKNOWN// /}" ] || {
+            echo "::error::not registered $FAMILY devices in $GROUP: $UNKNOWN"; exit 1; }
+          cp requested.txt selected.txt
+        else
+          cp eligible.txt selected.txt
+        fi
+
+        COUNT="$(wc -l < selected.txt | tr -d ' ')"
+        [ "$COUNT" -gt 0 ] || { echo "::error::no $FAMILY devices are registered in $GROUP"; exit 1; }
+        # CreateJob takes a bounded target list. Past this the scaling path is a
+        # family-scoped dynamic thing group, not a longer list.
+        [ "$COUNT" -le 100 ] || {
+          echo "::error::$COUNT $FAMILY devices exceeds the 100-target bound; narrow with the things input"
+          exit 1; }
+
+        TARGETS="$(while read -r THING; do
+          echo "arn:aws:iot:$REGION:$ACCOUNT:thing/$THING"
+        done < selected.txt | jq -R . | jq -sc .)"
+
+        {
+          echo "targets<<EOF"; echo "$TARGETS"; echo "EOF"
+          echo "count=$COUNT"
+          echo "account=$ACCOUNT"
+        } >> "$GITHUB_OUTPUT"
+        {
+          echo "Targets: **$COUNT** \`$FAMILY\` device(s)"
+          echo "<details><summary>Target things</summary>"
+          echo; sed 's/^/- /' selected.txt; echo "</details>"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Render job document
+      id: document
+      shell: bash
+      env:
+        FAMILY: ${{ inputs.family }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        REGION: ${{ inputs.aws-region }}
+        TAG: ${{ steps.release.outputs.tag }}
+        ASSET: ${{ steps.release.outputs.asset }}
+      run: |
+        set -euo pipefail
+        SHA256="$(cat artifact/sha256)"
+        BUCKET="open-jii-firmware-${ENVIRONMENT}"
+        # The digest is part of the key so an artifact is immutable by address:
+        # a tag that gets deleted and re-cut with different bytes lands on a new
+        # key, and a job still QUEUED for an offline device keeps resolving the
+        # exact object whose sha256 its document recorded.
+        KEY="$FAMILY/$TAG/$SHA256/$ASSET"
+        # AWS substitutes this placeholder with a short-lived presigned URL when
+        # it hands the document to each device.
+        # https://docs.aws.amazon.com/iot/latest/developerguide/manage-job-cli.html
+        URL="\${aws:iot:s3-presigned-url:https://s3.${REGION}.amazonaws.com/$BUCKET/$KEY}"
+
+        jq -n \
+          --arg family "$FAMILY" \
+          --arg version "$TAG" \
+          --arg sha256 "$SHA256" \
+          --arg url "$URL" \
+          '{operation: "firmware-update", family: $family, version: $version, sha256: $sha256, url: $url}' \
+          > job-document.json
+
+        echo "bucket=$BUCKET" >> "$GITHUB_OUTPUT"
+        echo "key=$KEY" >> "$GITHUB_OUTPUT"
+        {
+          echo "<details><summary>Job document</summary>"
+          echo; echo '```json'; cat job-document.json; echo '```'; echo "</details>"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Stop here on a dry run
+      if: inputs.dry-run == 'true'
+      shell: bash
+      env:
+        TAG: ${{ steps.release.outputs.tag }}
+        COUNT: ${{ steps.target.outputs.count }}
+      run: |
+        jq -n --arg tag "$TAG" --arg count "$COUNT" \
+          '{dryRun: true, tag: $tag, targetCount: ($count | tonumber), error: null}' > results.json
+        echo "> Dry run: no artifact uploaded and no job created." >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Mirror artifact to S3
+      if: inputs.dry-run != 'true'
+      shell: bash
+      env:
+        BUCKET: ${{ steps.document.outputs.bucket }}
+        KEY: ${{ steps.document.outputs.key }}
+        ASSET: ${{ steps.release.outputs.asset }}
+      run: |
+        set -euo pipefail
+        aws s3api put-object \
+          --bucket "$BUCKET" \
+          --key "$KEY" \
+          --body "artifact/$ASSET" \
+          --checksum-algorithm SHA256 > /dev/null
+        echo "Mirrored to \`s3://$BUCKET/$KEY\`" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Create job
+      id: create
+      if: inputs.dry-run != 'true'
+      shell: bash
+      env:
+        FAMILY: ${{ inputs.family }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        RUN_ID: ${{ github.run_id }}
+        TARGETS: ${{ steps.target.outputs.targets }}
+        ACCOUNT: ${{ steps.target.outputs.account }}
+        MAX_PER_MINUTE: ${{ inputs.max-per-minute }}
+        ABORT_THRESHOLD: ${{ inputs.abort-threshold-percent }}
+        TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
+      run: |
+        set -euo pipefail
+        # jobId accepts [a-zA-Z0-9_-] only (max 64), so the tag's dots must go:
+        # https://docs.aws.amazon.com/iot/latest/apireference/API_CreateJob.html
+        SAFE_TAG="$(printf '%s' "$RELEASE_TAG" | tr -c 'a-zA-Z0-9_-' '-')"
+        # Trim the tag to fit, never the run id: the run id is what makes the
+        # id unique, and a second rollout landing on a taken jobId just fails.
+        PREFIX="fw-$FAMILY-"
+        SUFFIX="-$RUN_ID"
+        JOB_ID="$PREFIX${SAFE_TAG:0:$(( 64 - ${#PREFIX} - ${#SUFFIX} ))}$SUFFIX"
+        # Mirrors aws_iam_role.jobs_presign in infrastructure/modules/iot-core;
+        # renaming it there without changing this line breaks create-job.
+        PRESIGN_ROLE="arn:aws:iam::${ACCOUNT}:role/open_jii_${ENVIRONMENT}_iot_jobs_presign"
+
+        # Rollout, abort and timeout configuration replace what a bespoke runner
+        # would otherwise implement by hand. The abort criteria only arm once 5
+        # devices have executed, so a rollout to fewer than that has no automatic
+        # stop and should be watched.
+        # https://docs.aws.amazon.com/iot/latest/developerguide/jobs-configurations-details.html
+        aws iot create-job \
+          --job-id "$JOB_ID" \
+          --targets "$TARGETS" \
+          --document file://job-document.json \
+          --description "openJII firmware rollout $FAMILY $RELEASE_TAG" \
+          --target-selection SNAPSHOT \
+          --presigned-url-config "$(jq -nc --arg role "$PRESIGN_ROLE" '{roleArn: $role, expiresInSec: 3600}')" \
+          --job-executions-rollout-config "$(jq -nc --argjson max "$MAX_PER_MINUTE" '{maximumPerMinute: $max}')" \
+          --abort-config "$(jq -nc --argjson pct "$ABORT_THRESHOLD" \
+            '{criteriaList: [{failureType: "FAILED", action: "CANCEL", thresholdPercentage: $pct, minNumberOfExecutedThings: 5}]}')" \
+          --timeout-config "$(jq -nc --argjson mins "$TIMEOUT_MINUTES" '{inProgressTimeoutInMinutes: $mins}')" > /dev/null
+
+        echo "job-id=$JOB_ID" >> "$GITHUB_OUTPUT"
+        echo "Created job \`$JOB_ID\`" >> "$GITHUB_STEP_SUMMARY"
+
+        # Claim the artifact the moment the job is live: if tracking dies, the
+        # evidence must not still read "rollout did not start" for a real job.
+        jq -n --arg jobId "$JOB_ID" \
+          '{jobId: $jobId, status: "IN_PROGRESS", executions: [], error: "tracking did not finish"}' \
+          > results.json
+
+    - name: Track executions
+      if: inputs.dry-run != 'true'
+      shell: bash
+      env:
+        JOB_ID: ${{ steps.create.outputs.job-id }}
+        TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
+        MAX_PER_MINUTE: ${{ inputs.max-per-minute }}
+        COUNT: ${{ steps.target.outputs.count }}
+      run: |
+        set -euo pipefail
+        # Executions start at MAX_PER_MINUTE, so the fleet needs time to even
+        # begin before any one device's timeout can apply. Watching only for
+        # TIMEOUT_MINUTES would abandon every rollout wider than one minute's
+        # worth of starts.
+        START_MINUTES=$(( (COUNT + MAX_PER_MINUTE - 1) / MAX_PER_MINUTE ))
+        DEADLINE=$(( $(date +%s) + (START_MINUTES + TIMEOUT_MINUTES) * 60 ))
+        GAVE_UP=""
+
+        while :; do
+          JOB="$(aws iot describe-job --job-id "$JOB_ID" --output json)"
+          STATUS="$(jq -r '.job.status' <<<"$JOB")"
+          echo "job status: $STATUS"
+          case "$STATUS" in
+            COMPLETED|CANCELED|DELETION_IN_PROGRESS) break ;;
+          esac
+          if [ "$(date +%s)" -ge "$DEADLINE" ]; then
+            echo "::warning::stopped watching after ${START_MINUTES}+${TIMEOUT_MINUTES}m; the job is still $STATUS and continues in AWS"
+            GAVE_UP=1
+            break
+          fi
+          sleep 30
+        done
+
+        # A job is CANCELED whether the abort criteria fired or a human stopped
+        # it in the console, so report AWS's own reason instead of guessing.
+        REASON="$(jq -r '[.job.reasonCode, .job.comment] | map(select(. != null and . != "")) | join(": ")' <<<"$JOB")"
+
+        : > executions.ndjson
+        NEXT=""
+        while :; do
+          if [ -n "$NEXT" ]; then
+            PAGE="$(aws iot list-job-executions-for-job --job-id "$JOB_ID" \
+              --next-token "$NEXT" --no-paginate --output json)"
+          else
+            PAGE="$(aws iot list-job-executions-for-job --job-id "$JOB_ID" \
+              --no-paginate --output json)"
+          fi
+          jq -c '.executionSummaries[]?' <<<"$PAGE" >> executions.ndjson
+          NEXT="$(jq -r '.nextToken // empty' <<<"$PAGE")"
+          [ -n "$NEXT" ] || break
+        done
+        jq -sc . executions.ndjson > executions.json
+
+        BAD="$(jq '[.[] | select(.jobExecutionSummary.status
+          | IN("FAILED","TIMED_OUT","REJECTED","CANCELED","REMOVED"))] | length' executions.json)"
+
+        # A cancellation is the loudest signal this workflow has, however it was
+        # triggered. The verdict is decided before the artifact is written, so
+        # the 90-day audit record carries it too rather than reading
+        # `error: null` for a rollout that was stopped.
+        if [ "$STATUS" = "CANCELED" ]; then
+          OUTCOME="rollout CANCELED${REASON:+ ($REASON)}"
+        elif [ "$BAD" -gt 0 ]; then
+          OUTCOME="$BAD execution(s) did not succeed"
+        elif [ -n "$GAVE_UP" ]; then
+          OUTCOME="unfinished at hand-off; the job continues in AWS"
+        else
+          OUTCOME=""
+        fi
+
+        jq -n --arg jobId "$JOB_ID" --arg status "$STATUS" --arg outcome "$OUTCOME" \
+          --slurpfile execs executions.json \
+          '{jobId: $jobId, status: $status, executions: $execs[0],
+            error: (if $outcome == "" then null else $outcome end)}' > results.json
+
+        {
+          echo "### Result: \`$STATUS\`"
+          echo "| Device | State |"
+          echo "|---|---|"
+          jq -r '.[] | "| \(.thingArn | split("/") | last) | \(.jobExecutionSummary.status) |"' executions.json
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        if [ "$STATUS" = "CANCELED" ] || [ "$BAD" -gt 0 ]; then
+          echo "::error::$OUTCOME"
+          exit 1
+        fi
+        [ -z "$GAVE_UP" ] || echo "::warning::$OUTCOME"
+
+    - name: Upload results
+      if: always()
+      uses: actions/upload-artifact@v6
+      with:
+        name: firmware-rollout-${{ inputs.family }}-${{ github.run_id }}
+        path: |
+          results.json
+          job-document.json
+        retention-days: 90

@@ -22,7 +22,7 @@ There is no `uploading` status — in-flight state lives in the Outbox's in-memo
 
 ### Topic
 
-The MQTT destination string that routes a Measurement to the correct AWS IoT rule. Built by `getMeasurementMqttTopic({ experimentId })` on the lean 7-segment ingest shape: the shared `@repo/api` prefix transform plus `mobile/{appVersion}/{thingName}`, where the thing name is this phone's registered device identity (also the MQTT client id). Protocol attribution rides in the payload as `protocol_id`; the value `"questions"` is a sentinel for question-only uploads (no device sample). Topics are frozen per row at save time, so rows queued by older builds keep their legacy 8-segment topics and drain through the transitional channel.
+The MQTT destination string that routes a Measurement to the correct AWS IoT rule. Built by `getMeasurementMqttTopic({ experimentId })` on the lean 7-segment ingest shape: the shared `@repo/api` prefix transform plus `mobile/{appVersion}/{thingName}`, where the thing name is this phone's registered device identity (also the MQTT client id). Protocol attribution rides in the payload as `protocol_id`, which is optional — question-only uploads (no device sample) omit it entirely. Topics are frozen per row at save time, so rows queued by older builds keep their legacy 8-segment topics and drain through the transitional channel.
 
 ### Workbook run
 
@@ -114,6 +114,22 @@ Constructor takes a `transportFactory` so tests inject a fake instead of mocking
 
 ---
 
+## Organizations
+
+### Organization directory
+
+The server-ordered list from `GET /organizations` with `scope: "all"`: every public organization plus the private ones the caller belongs to; personal workspaces never appear. Unpaged. Searched server-side, not filtered locally.
+
+### Membership status
+
+`none | pending_request | member`, carried on every organization read. The only source of the caller's join state; there is no local pending flag and no "my requests" list.
+
+### Join request
+
+The requester's ask to enter a public organization, with an optional message. Created and cancelled by organization id. Decided on web by owners and admins; approval admits as `member`.
+
+---
+
 ## Architecture conventions
 
 ### Boundaries
@@ -126,7 +142,7 @@ Pure rules live in `features/<f>/domain/` as per-transition functions returning 
 
 ### Flow session persistence
 
-The two flow stores (`measurement-flow-storage`, `flow-answers-storage`) are pinned at persist `version: 0`; their `partialize` output is the wire format, locked by `flow-store-persistence.test.ts`. Renaming/removing a persisted field without a version bump + real `migrate` silently wipes a paused field flow. Cross-store consistency after hydration is enforced by `stores/flow-rehydration-guard.ts`, mounted at boot.
+The two flow stores are persisted at `measurement-flow-storage` (persist `version: 3`) and `flow-answers-storage` (`version: 1`); their `partialize` output is the wire format, locked by `flow-store-persistence.test.ts`. Renaming/removing a persisted field without a version bump + real `migrate` silently wipes a paused field flow. Persisted `flowNodes` omit protocol/macro snapshot code; it is written once per flow to `measurement-flow-snapshots-storage` (`version: 1`), and `useResumeSnapshotHydration` re-attaches it on cold-start resume before the flow is interactive. Flows persisted at v2 or earlier are dropped on upgrade (v2 carried the code inside `flowNodes` with no snapshots store behind it). Cross-store consistency after hydration is enforced by `stores/flow-rehydration-guard.ts`, mounted at boot.
 
 ### Device ops
 
@@ -172,3 +188,4 @@ Provides the AsyncQueuer (concurrency + reactive state) and AsyncRetryer (per-it
 - "Concurrency" refers to Outbox pipeline depth, not "how many MQTT connections" (there is only ever one).
 - A "burst upload" = many Measurements enqueued at once after offline → online transition.
 - Don't say "settle bridge useEffect on the Recent screen" — the **Outbox bridge** is mounted once at the app root.
+- Say "Request to join", not "apply" or "subscribe". The pending tag reads "Requested".

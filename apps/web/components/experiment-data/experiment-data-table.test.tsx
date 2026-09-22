@@ -1,3 +1,4 @@
+import type { DataTableFeatures } from "@/components/data-table/data-table-features";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import type { ColumnDef } from "@tanstack/react-table";
 import { describe, it, expect, vi } from "vitest";
@@ -10,19 +11,48 @@ vi.mock("@/hooks/experiment/useExperimentData/useExperimentData", () => ({
 }));
 
 vi.mock("~/components/experiment-data/annotations/bulk-actions-bar", () => ({
-  BulkActionsBar: () => <div>BulkActionsBar</div>,
+  BulkActionsBar: ({
+    onAddAnnotation,
+    onDeleteAnnotations,
+  }: {
+    onAddAnnotation: (rowIds: string[], type?: string) => void;
+    onDeleteAnnotations: (rowIds: string[], type?: string) => void;
+  }) => (
+    <div>
+      BulkActionsBar
+      <button type="button" onClick={() => onAddAnnotation(["1"])}>
+        Add Annotation
+      </button>
+      <button type="button" onClick={() => onDeleteAnnotations(["1"], "flag")}>
+        Delete Annotation
+      </button>
+    </div>
+  ),
 }));
 vi.mock("~/components/experiment-data/annotations/add-annotation-dialog", () => ({
-  AddAnnotationDialog: () => null,
+  AddAnnotationDialog: ({
+    open,
+    rowIds,
+    type,
+  }: {
+    open: boolean;
+    rowIds: string[];
+    type: string;
+  }) => (open ? <div>{`AddAnnotationDialog for ${rowIds.join(",")} (${type})`}</div> : null),
 }));
 vi.mock("~/components/experiment-data/annotations/delete-annotations-dialog", () => ({
-  DeleteAnnotationsDialog: () => null,
+  DeleteAnnotationsDialog: ({
+    open,
+    rowIds,
+    type,
+  }: {
+    open: boolean;
+    rowIds: string[];
+    type: string;
+  }) => (open ? <div>{`DeleteAnnotationsDialog for ${rowIds.join(",")} (${type})`}</div> : null),
 }));
 vi.mock("./data-export-modal/data-export-modal", () => ({
   DataExportModal: () => null,
-}));
-vi.mock("./table-chart/experiment-data-table-chart", () => ({
-  ExperimentDataTableChart: () => <div>Chart</div>,
 }));
 
 vi.mock("~/components/data-table/data-table-utils", () => ({
@@ -46,7 +76,7 @@ vi.mock("~/components/data-table/data-table-utils", () => ({
   formatValue: (v: unknown) => v,
 }));
 
-const mockColumns: ColumnDef<Record<string, unknown>>[] = [
+const mockColumns: ColumnDef<DataTableFeatures, Record<string, unknown>>[] = [
   { id: "name", accessorKey: "name", header: "Name" },
   { id: "value", accessorKey: "value", header: "Value" },
 ];
@@ -126,6 +156,20 @@ describe("ExperimentDataTable", () => {
     );
   });
 
+  it("changes page size to 1000 via select and shows it selected", async () => {
+    setupHook();
+    render(<ExperimentDataTable {...defaultProps} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: "1000" }));
+
+    expect(mockUseExperimentData).toHaveBeenLastCalledWith(
+      expect.objectContaining({ pageSize: 1000, page: 1 }),
+    );
+    expect(screen.getByRole("combobox")).toHaveTextContent("1000");
+  });
+
   it("navigates pages via next/previous", async () => {
     setupHook();
     render(<ExperimentDataTable {...defaultProps} />);
@@ -172,5 +216,25 @@ describe("ExperimentDataTable", () => {
     setupHook();
     render(<ExperimentDataTable {...defaultProps} />);
     expect(screen.getByText(/dataTable.page.*1.*dataTable.pageOf.*5/)).toBeInTheDocument();
+  });
+
+  it("opens the add-annotation dialog with the clicked rows and default type", async () => {
+    setupHook();
+    render(<ExperimentDataTable {...defaultProps} canContribute />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText("Add Annotation"));
+
+    expect(screen.getByText("AddAnnotationDialog for 1 (comment)")).toBeInTheDocument();
+  });
+
+  it("opens the delete-annotations dialog with the clicked rows and type", async () => {
+    setupHook();
+    render(<ExperimentDataTable {...defaultProps} canContribute />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText("Delete Annotation"));
+
+    expect(screen.getByText("DeleteAnnotationsDialog for 1 (flag)")).toBeInTheDocument();
   });
 });

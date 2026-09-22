@@ -204,6 +204,7 @@ const MIGRATION_SQLS = [
   "0003_drop_uploading_status.sql",
   "0004_add_day_key.sql",
   "0005_add_workbook_run_id.sql",
+  "0006_add_failure_reason.sql",
 ].map((f) => readFileSync(resolve(__dirname, "../../../drizzle", f), "utf-8"));
 
 function createDb() {
@@ -231,6 +232,15 @@ function dropIndexes(db: ReturnType<typeof Database>) {
     DROP INDEX IF EXISTS idx_measurements_status_ts;
     DROP INDEX IF EXISTS idx_measurements_created_at;
   `);
+}
+
+/** The planner's strategy for a query, flattened so a caller can assert on it. */
+function queryPlan(db: ReturnType<typeof Database>, sql: string): string {
+  return db
+    .prepare<[], { detail: string }>(`EXPLAIN QUERY PLAN ${sql}`)
+    .all()
+    .map((row) => row.detail)
+    .join(" ");
 }
 
 // Migration 0002 ships the `questions_text` column by default. Scenarios
@@ -379,6 +389,19 @@ async function timeAsync<T>(fn: () => Promise<T>): Promise<{ result: T; ms: numb
   const t0 = performance.now();
   const result = await fn();
   return { result, ms: performance.now() - t0 };
+}
+
+/**
+ * Lowest of `runs` timings. Contention only ever adds time, so the minimum is the
+ * closest estimate of the real cost, which keeps the reported numbers comparable
+ * between runs on a machine that is doing other work.
+ */
+function bestOf(runs: number, fn: () => unknown): number {
+  let best = Infinity;
+  for (let i = 0; i < runs; i++) {
+    best = Math.min(best, time(fn).ms);
+  }
+  return best;
 }
 
 function report(rows: { scenario: string; ms: number; note: string }[]) {
@@ -873,11 +896,12 @@ describe("Scenario H — SCALE: full pipeline @ multiple row counts", () => {
 // ===========================================================================
 
 // Scenario I constants live at module scope so SUMMARY can reference them.
-// Each query at COUNTS_N rows runs in well under a millisecond — way below
-// CI's scheduler noise floor. Running ITERATIONS in a tight loop makes the
-// measured total gap clear the floor so Gate 3's ratio is stable.
+// The numbers here are diagnostic: iterating and taking the best of several trials
+// keeps them readable, but nothing asserts on them (see the plan check below).
 const COUNTS_N = 500;
 const COUNTS_ITERATIONS = 200;
+const COUNTS_TRIALS = 5;
+const COUNTS_QUERY = "SELECT status, COUNT(*) AS total FROM measurements GROUP BY status";
 
 describe("Scenario I — countMeasurementsByStatus", () => {
   let dbNoIdx: ReturnType<typeof Database>;
@@ -893,21 +917,28 @@ describe("Scenario I — countMeasurementsByStatus", () => {
   }, HOOK_TIMEOUT);
 
   it("GROUP BY status with vs without index", () => {
-    const stmtNoIdx = dbNoIdx.prepare(
-      "SELECT status, COUNT(*) AS total FROM measurements GROUP BY status",
-    );
-    const stmtIdx = dbIdx.prepare(
-      "SELECT status, COUNT(*) AS total FROM measurements GROUP BY status",
-    );
+    const stmtNoIdx = dbNoIdx.prepare(COUNTS_QUERY);
+    const stmtIdx = dbIdx.prepare(COUNTS_QUERY);
     // Warm up — first call pays statement-prepare + page-cache costs we don't
     // want polluting the measurement.
     stmtNoIdx.all();
     stmtIdx.all();
 
-    const { ms: msNoIdx } = time(() => {
+    // The regression worth gating is the index going missing, and that is a property
+    // of the query plan rather than of the clock. The timing ratio below is ~5x here
+    // and holds from 500 to 50_000 rows, but a shared CI runner compresses it to
+    // ~1.8x, where both sides converge and any threshold misfires. Assert the plan;
+    // keep the timings as diagnostics.
+    expect(queryPlan(dbIdx, COUNTS_QUERY)).toContain(
+      "USING COVERING INDEX idx_measurements_status",
+    );
+    // Paired so the assertion above cannot pass vacuously.
+    expect(queryPlan(dbNoIdx, COUNTS_QUERY)).not.toContain("USING COVERING INDEX");
+
+    const msNoIdx = bestOf(COUNTS_TRIALS, () => {
       for (let i = 0; i < COUNTS_ITERATIONS; i++) stmtNoIdx.all();
     });
-    const { ms: msIdx } = time(() => {
+    const msIdx = bestOf(COUNTS_TRIALS, () => {
       for (let i = 0; i < COUNTS_ITERATIONS; i++) stmtIdx.all();
     });
 
@@ -1342,8 +1373,6 @@ describe("SUMMARY — production vs hand-rolled baseline", () => {
     const G_proposed = getSummary("G.pipeline.proposed.50") ?? 1;
     const O_fromBlob = getSummary("O.qtext.fromBlob") ?? 0;
     const O_fromCol = getSummary("O.qtext.fromColumn") ?? 1;
-    const I_no = getSummary("I.counts.no") ?? 0;
-    const I_with = getSummary("I.counts.with") ?? 1;
 
     // Gate 1: lean SELECT + LIMIT crushes full + decompress.
     expect(G_proposed * 5).toBeLessThan(G_current);
@@ -1351,10 +1380,8 @@ describe("SUMMARY — production vs hand-rolled baseline", () => {
     // Gate 2: plain-text questions_text crushes decompress + parseQuestions.
     expect(O_fromCol * 5).toBeLessThan(O_fromBlob);
 
-    // Gate 3: index helps counts query — only assert when timings are large
-    // enough to be meaningful (in-memory SQLite on fast CI runners rounds to 0ms).
-    if (I_no > 1) {
-      expect(I_with * 2).toBeLessThan(I_no);
-    }
+    // The counts index is gated in Scenario I on the query plan instead of a timing
+    // ratio: the ratio is ~5x locally but ~1.8x on a shared runner, so no threshold
+    // holds across both.
   });
 });

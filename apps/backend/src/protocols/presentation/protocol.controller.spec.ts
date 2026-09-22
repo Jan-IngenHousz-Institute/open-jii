@@ -10,6 +10,7 @@ import { AppError, failure } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { CreateProtocolUseCase } from "../application/use-cases/create-protocol/create-protocol";
+import { ListProtocolsUseCase } from "../application/use-cases/list-protocols/list-protocols";
 import { ProtocolMacroRepository } from "../core/repositories/protocol-macro.repository";
 
 describe("ProtocolController - createProtocol", () => {
@@ -141,6 +142,36 @@ describe("ProtocolController - read and update endpoints", () => {
       .expect(StatusCodes.OK);
 
     expect(response.body.some((p) => p.id === protocol.id)).toBe(true);
+  });
+
+  it("listProtocols returns the page envelope when a page is requested", async () => {
+    const protocol = await testApp.createProtocol({
+      name: "Paged Protocol",
+      createdBy: testUserId,
+    });
+
+    const path = testApp.resolveOrpcPath(contract.protocols.listProtocols);
+    const response: SuperTestResponse<{ items: { id: string }[]; totalCount: number }> =
+      await testApp
+        .get(path)
+        .query({ page: 1, pageSize: 10 })
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+    expect(response.body.items.some((p) => p.id === protocol.id)).toBe(true);
+    expect(response.body.totalCount).toBeGreaterThan(0);
+  });
+
+  it("listProtocols paginated returns 500 when the paginated use case fails", async () => {
+    vi.spyOn(testApp.module.get(ListProtocolsUseCase), "executePaginated").mockResolvedValue(
+      failure(AppError.internal("Database error")),
+    );
+
+    await testApp
+      .get(testApp.resolveOrpcPath(contract.protocols.listProtocols))
+      .query({ page: 1 })
+      .withAuth(testUserId)
+      .expect(StatusCodes.INTERNAL_SERVER_ERROR);
   });
 
   it("updateProtocol returns 403 when a non-creator tries to update", async () => {

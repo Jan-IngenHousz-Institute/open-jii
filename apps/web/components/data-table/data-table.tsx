@@ -2,12 +2,13 @@
 
 import { isEditableTarget } from "@/components/shortcuts/is-editable-target";
 import { showShortcutHint } from "@/components/shortcuts/use-shortcut-hint";
+import { useLocale } from "@/hooks/useLocale";
+import { formatLocaleNumber } from "@/util/format-locale-number";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import type { OnChangeFn, PaginationState, RowSelectionState } from "@tanstack/react-table";
-import { getCoreRowModel, getPaginationRowModel, useReactTable } from "@tanstack/react-table";
+import { useTable } from "@tanstack/react-table";
 import React, { useCallback, useMemo, useState } from "react";
 
-import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { Checkbox } from "@repo/ui/components/checkbox";
@@ -30,10 +31,16 @@ import { Table, TableBody } from "@repo/ui/components/table";
 import { cn } from "@repo/ui/lib/utils";
 
 import { createTableColumns, sortColumnsForDisplay } from "./data-table-columns";
-import type { DataRow } from "./data-table-columns";
+import type {
+  DataRow,
+  IsCellExpandedFn,
+  OnAnnotationHandler,
+  OnToggleCellExpansionHandler,
+} from "./data-table-columns";
+import { dataTableFeatures } from "./data-table-features";
 import { DataTableHeader, DataTableRows, formatValue, LoadingRows } from "./data-table-utils";
 
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 1000];
 
 /**
  * Paging a caller drives itself, because the rows come a page at a time from
@@ -69,9 +76,8 @@ interface SelectionConfig {
 }
 
 interface CellHandlers {
-  onChartClick?: (data: number[], columnName: string) => void;
-  onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
-  onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
+  onAddAnnotation?: OnAnnotationHandler;
+  onDeleteAnnotations?: OnAnnotationHandler;
 }
 
 export interface DataTableProps {
@@ -89,6 +95,11 @@ export interface DataTableProps {
   errorColumn?: string;
   /** Rows rendered as skeletons while a page is in flight. */
   loadingRowCount?: number;
+  /**
+   * Render the columns in the order given rather than by type. For callers whose order is
+   * itself information, such as a sweep whose setpoint leads the readings it produced.
+   */
+  preserveColumnOrder?: boolean;
   className?: string;
 }
 
@@ -110,14 +121,16 @@ export function DataTable({
   cellHandlers,
   errorColumn,
   loadingRowCount = 10,
+  preserveColumnOrder = false,
   className,
 }: DataTableProps) {
   const { t } = useTranslation();
+  const locale = useLocale();
   const [expandedCell, setExpandedCell] = useState<{ rowId: string; columnName: string } | null>(
     null,
   );
 
-  const toggleCellExpansion = useCallback((rowId: string, columnName: string) => {
+  const toggleCellExpansion: OnToggleCellExpansionHandler = useCallback((rowId, columnName) => {
     setExpandedCell((previous) =>
       previous?.rowId === rowId && previous.columnName === columnName
         ? null
@@ -125,28 +138,38 @@ export function DataTable({
     );
   }, []);
 
-  const isCellExpanded = useCallback(
-    (rowId: string, columnName: string) =>
-      expandedCell?.rowId === rowId && expandedCell.columnName === columnName,
+  const isCellExpanded: IsCellExpandedFn = useCallback(
+    (rowId, columnName) => expandedCell?.rowId === rowId && expandedCell.columnName === columnName,
     [expandedCell],
   );
 
-  const orderedColumns = useMemo(() => sortColumnsForDisplay(columns), [columns]);
+  const orderedColumns = useMemo(
+    () => (preserveColumnOrder ? columns : sortColumnsForDisplay(columns)),
+    [columns, preserveColumnOrder],
+  );
 
   const tableColumns = useMemo(() => {
     const dataColumns = createTableColumns({
       columns,
       formatFunction: formatValue,
-      onChartClick: cellHandlers?.onChartClick,
       onAddAnnotation: cellHandlers?.onAddAnnotation,
       onDeleteAnnotations: cellHandlers?.onDeleteAnnotations,
       onToggleCellExpansion: toggleCellExpansion,
       isCellExpanded,
       errorColumn,
+      preserveOrder: preserveColumnOrder,
     });
 
     return selection === undefined ? dataColumns : [selectionColumn(), ...dataColumns];
-  }, [columns, cellHandlers, toggleCellExpansion, isCellExpanded, errorColumn, selection]);
+  }, [
+    columns,
+    cellHandlers,
+    toggleCellExpansion,
+    isCellExpanded,
+    errorColumn,
+    selection,
+    preserveColumnOrder,
+  ]);
 
   const isPaged = pagination !== undefined;
   const isServerPaged = pagination?.mode === "server";
@@ -164,14 +187,13 @@ export function DataTable({
       : Math.max(1, Math.ceil(rows.length / pageState.pageSize));
   const pageSizeOptions = pagination?.pageSizeOptions ?? PAGE_SIZE_OPTIONS;
 
-  const table = useReactTable<DataRow>({
+  const table = useTable({
+    features: dataTableFeatures,
     data: rows,
     columns: tableColumns,
-    getCoreRowModel: getCoreRowModel(),
-    // Without a paging model every row renders. Supplying one unpaged would
-    // silently cut the table at tanstack's default page size.
-    ...(isPaged ? { getPaginationRowModel: getPaginationRowModel() } : {}),
-    manualPagination: isServerPaged,
+    // The static feature set includes pagination for paged consumers. Manual
+    // mode bypasses that model for server-driven and deliberately unpaged data.
+    manualPagination: !isPaged || isServerPaged,
     enableRowSelection: selection !== undefined,
     getRowId: (row) => String(row.id),
     onRowSelectionChange: selection?.onChange,
@@ -216,7 +238,7 @@ export function DataTable({
 
       <div
         className={cn(
-          "text-muted-foreground relative overflow-x-auto border",
+          "text-muted-foreground @container relative overflow-x-auto border",
           // The overlap and the squared top edge exist to meet a toolbar's
           // bottom border; standalone, the table draws its own.
           toolbar === undefined ? "rounded-lg" : "-mt-px rounded-b-lg",
@@ -240,6 +262,7 @@ export function DataTable({
                 tableRows={rows}
                 columns={orderedColumns}
                 errorColumn={errorColumn}
+                onToggleCellExpansion={toggleCellExpansion}
               />
             )}
           </TableBody>
@@ -249,7 +272,7 @@ export function DataTable({
       {isPaged && (
         <div className="mt-4 flex w-full flex-col items-center justify-between gap-4 overflow-auto p-1 text-sm sm:flex-row sm:gap-8">
           <div className="flex-1 whitespace-nowrap">
-            {t("dataTable.totalRows")}: {totalRows}
+            {t("dataTable.totalRows")}: {formatLocaleNumber(totalRows, locale)}
           </div>
           <div className="flex items-center space-x-2">
             <Label className="whitespace-nowrap">{t("dataTable.rowsPerPage")}:</Label>
@@ -259,7 +282,7 @@ export function DataTable({
                 table.setPageSize(Number(rowsPerPage));
               }}
             >
-              <SelectTrigger className="w-[65px]">
+              <SelectTrigger className="w-21">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -271,9 +294,9 @@ export function DataTable({
               </SelectContent>
             </Select>
           </div>
-          <Pagination className="max-w-72">
-            <PaginationContent className="w-full justify-between">
-              <PaginationItem>
+          <Pagination className="max-w-full sm:max-w-96">
+            <PaginationContent className="grid w-full grid-cols-[auto_1fr_auto] items-center">
+              <PaginationItem className="shrink-0">
                 <PaginationPrevious
                   className={cn(
                     "border",
@@ -287,13 +310,13 @@ export function DataTable({
                   title={t("dataTable.previous")}
                 />
               </PaginationItem>
-              <PaginationItem>
+              <PaginationItem className="text-center">
                 <span>
                   {t("dataTable.page")} {pageState.pageIndex + 1} {t("dataTable.pageOf")}{" "}
                   {totalPages}
                 </span>
               </PaginationItem>
-              <PaginationItem>
+              <PaginationItem className="shrink-0">
                 <PaginationNext
                   className={cn(
                     "border",

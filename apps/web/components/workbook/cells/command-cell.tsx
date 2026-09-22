@@ -99,7 +99,7 @@ export function CommandCellComponent({
     <CellWrapper
       icon={<Terminal className="h-3.5 w-3.5" />}
       label={displayName}
-      accentColor="#119DA4"
+      accentColor="var(--node-command)"
       isCollapsed={cell.isCollapsed}
       onToggleCollapse={(collapsed) => onUpdate({ ...cell, isCollapsed: collapsed })}
       onDelete={onDelete}
@@ -128,7 +128,7 @@ export function CommandCellComponent({
               </SelectContent>
             </Select>
           ) : (
-            <span className="text-xs uppercase text-[#68737B]">{FORMAT_LABELS[format]}</span>
+            <span className="text-muted-foreground text-xs uppercase">{FORMAT_LABELS[format]}</span>
           )}
           <Button
             variant="ghost"
@@ -136,7 +136,11 @@ export function CommandCellComponent({
             className="text-muted-foreground h-7 w-7 p-0"
             onClick={() => void copy(content)}
           >
-            {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+            {copied ? (
+              <Check className="text-status-active-foreground h-3 w-3" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
           </Button>
         </div>
       }
@@ -152,7 +156,7 @@ export function CommandCellComponent({
           extraExtensions={commandExtensions}
           basicSetup={commandBasicSetup}
         />
-        {!validation.ok ? <p className="text-xs text-red-500">{validation.error}</p> : null}
+        {!validation.ok ? <p className="text-destructive text-xs">{validation.error}</p> : null}
       </div>
     </CellWrapper>
   );

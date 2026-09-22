@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import {
   Table,
   TableBody,
@@ -23,8 +24,7 @@ const PAGE_SIZE = 25;
 
 // Status tints, not the primary badge: black on the primary teal is unreadable.
 const KIND_CLASS: Record<ActivityKind, string> = {
-  connected:
-    "border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
+  connected: "border-transparent bg-status-active text-status-active-foreground",
   disconnected: "border-transparent bg-secondary text-secondary-foreground",
   firmwareChanged: "",
   registered: "",
@@ -32,23 +32,21 @@ const KIND_CLASS: Record<ActivityKind, string> = {
 
 interface EventLogProps {
   entries: ActivityEntry[];
+  /** Shorter window where the log shares a row with a chart card it would otherwise stretch. */
+  compact?: boolean;
 }
 
 /**
  * The device's activity record: broker connections, firmware transitions seen
  * in the data, and registration. The evidence behind everything above it.
  */
-export function EventLog({ entries }: EventLogProps) {
+export function EventLog({ entries, compact = false }: EventLogProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
   const [page, setPage] = useState(1);
 
   if (entries.length === 0) {
-    return (
-      <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-        {t("iot.devices.monitoring.noEvents")}
-      </p>
-    );
+    return <EmptyState size="inline" description={t("iot.devices.monitoring.noEvents")} />;
   }
 
   const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE));
@@ -57,8 +55,13 @@ export function EventLog({ entries }: EventLogProps) {
   const pageEntries = entries.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
-    <div className="space-y-3">
-      <div className="max-h-96 overflow-auto rounded-lg border">
+    <div className="min-w-0 space-y-3">
+      <div
+        className={cn(
+          "max-w-full overflow-auto rounded-lg border",
+          compact ? "max-h-64" : "max-h-96",
+        )}
+      >
         <Table>
           <TableHeader className="bg-background sticky top-0">
             <TableRow>

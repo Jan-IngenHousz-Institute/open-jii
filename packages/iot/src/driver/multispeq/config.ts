@@ -37,6 +37,16 @@ export const MULTISPEQ_FRAMING = {
   CHECKSUM_LENGTH: 8,
 
   DEFAULT_TIMEOUT: 60_000,
+
+  /**
+   * What one identity question may take during connect. The console default is sized for
+   * a measurement; the firmware answers `device_info` without a line ending, so that
+   * question always runs to its deadline and the fallback must not run to the default's.
+   */
+  IDENTITY_TIMEOUT: 5_000,
+
+  /** Settle after a write the firmware does not answer, so the next one is not sent on top of it. */
+  SILENT_WRITE_SETTLE_MS: 50,
 } as const;
 
 /** Supported MultispeQ transport types */

@@ -38,6 +38,7 @@ export class OrganizationController {
     return implement(organizationContract.listOrganizations).handler(async ({ input }) => {
       const result = await this.listOrganizationsUseCase.execute(session.user.id, {
         search: input.search,
+        scope: input.scope,
       });
 
       if (result.isSuccess()) {

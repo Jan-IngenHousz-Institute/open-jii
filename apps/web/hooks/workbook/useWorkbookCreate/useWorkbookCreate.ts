@@ -1,3 +1,4 @@
+import { listQueryKeys } from "@/hooks/list-query-keys";
 import { getOrpcError, orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -16,7 +17,9 @@ export function useWorkbookCreate(options: UseWorkbookCreateOptions = {}) {
   return useMutation(
     orpc.workbooks.createWorkbook.mutationOptions({
       onSuccess: (...args) => {
-        void queryClient.invalidateQueries({ queryKey: orpc.workbooks.listWorkbooks.key() });
+        for (const queryKey of listQueryKeys.workbooks()) {
+          void queryClient.invalidateQueries({ queryKey });
+        }
         // No success toast: creation navigates straight to the new workbook page,
         // so a toast would be redundant noise.
         options.onSuccess?.(...args);

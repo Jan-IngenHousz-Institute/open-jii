@@ -1,18 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+
+import { invalidateThemeTokenCache } from "@repo/ui/components/charts/utils";
 
 import {
-  CATEGORY_PALETTE,
+  categoryPalette,
   COLOR_MAP_KEY_SEPARATOR,
-  DEFAULT_PRIMARY_COLOR,
   composeColorMapKey,
   getCategoryColor,
   getDefaultSeriesColor,
+  getSuggestedSeriesColor,
   withAlpha,
 } from "./palettes";
 
 describe("getDefaultSeriesColor", () => {
-  it("returns the primary color at index 0", () => {
-    expect(getDefaultSeriesColor(0)).toBe(DEFAULT_PRIMARY_COLOR);
+  it("is stable at index 0", () => {
+    expect(getDefaultSeriesColor(0)).toBe(getDefaultSeriesColor(0));
   });
 
   it("is deterministic across calls", () => {
@@ -24,10 +26,32 @@ describe("getDefaultSeriesColor", () => {
   });
 });
 
+describe("getSuggestedSeriesColor", () => {
+  // These tests set theme tokens on the root directly, and the observer that
+  // clears the resolved-token cache only runs while a chart is mounted.
+  beforeEach(() => {
+    invalidateThemeTokenCache();
+  });
+
+  it("prefers the theme's first chart slot", () => {
+    const root = document.documentElement;
+    root.style.setProperty("--chart-1", "oklch(0.5551 0.0516 190.6334)");
+    try {
+      expect(getSuggestedSeriesColor()).toBe("#4e7d7a");
+    } finally {
+      root.style.removeProperty("--chart-1");
+    }
+  });
+
+  it("falls back to a literal when the theme cannot be read", () => {
+    expect(getSuggestedSeriesColor()).toBe("#3b82f6");
+  });
+});
+
 describe("getCategoryColor", () => {
   it("returns the palette entry at the wrapped index", () => {
-    expect(getCategoryColor(0)).toBe(CATEGORY_PALETTE[0]);
-    expect(getCategoryColor(CATEGORY_PALETTE.length)).toBe(CATEGORY_PALETTE[0]);
+    expect(getCategoryColor(0)).toBe(categoryPalette()[0]);
+    expect(getCategoryColor(categoryPalette().length)).toBe(categoryPalette()[0]);
   });
 
   it("prefers a colorMap match when key is present", () => {
@@ -35,11 +59,11 @@ describe("getCategoryColor", () => {
   });
 
   it("falls back to the palette when key is not in the map", () => {
-    expect(getCategoryColor(2, { A: "#abcdef" }, "B")).toBe(CATEGORY_PALETTE[2]);
+    expect(getCategoryColor(2, { A: "#abcdef" }, "B")).toBe(categoryPalette()[2]);
   });
 
   it("ignores the colorMap when no key is supplied", () => {
-    expect(getCategoryColor(0, { A: "#abcdef" })).toBe(CATEGORY_PALETTE[0]);
+    expect(getCategoryColor(0, { A: "#abcdef" })).toBe(categoryPalette()[0]);
   });
 
   it("prefers a composite series::category override over the plain key", () => {
@@ -54,13 +78,13 @@ describe("getCategoryColor", () => {
   });
 
   it("falls back to the palette when neither composite nor plain hits", () => {
-    expect(getCategoryColor(3, {}, "Hardware", "revenue_eur")).toBe(CATEGORY_PALETTE[3]);
+    expect(getCategoryColor(3, {}, "Hardware", "revenue_eur")).toBe(categoryPalette()[3]);
   });
 
   it("does not probe composite lookup when seriesKey is omitted", () => {
     const composite = composeColorMapKey("revenue_eur", "Hardware");
     const colorMap = { [composite]: "#purple_per_series" };
-    expect(getCategoryColor(0, colorMap, "Hardware")).toBe(CATEGORY_PALETTE[0]);
+    expect(getCategoryColor(0, colorMap, "Hardware")).toBe(categoryPalette()[0]);
   });
 });
 

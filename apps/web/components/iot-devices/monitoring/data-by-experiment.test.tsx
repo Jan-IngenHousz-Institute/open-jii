@@ -5,7 +5,7 @@ import type { DeviceExperiment, DeviceMonitoring } from "@repo/api/domains/iot/i
 
 import { DataByExperiment } from "./data-by-experiment";
 
-vi.mock("@repo/ui/components/charts/bar-chart", () => ({
+vi.mock("@/components/charts/bar-chart", () => ({
   HorizontalBarChart: vi.fn(() => <div data-testid="experiment-bars" />),
 }));
 
@@ -110,5 +110,22 @@ describe("DataByExperiment", () => {
     );
 
     expect(screen.getByText("iot.devices.monitoring.noExperiments")).toBeInTheDocument();
+  });
+
+  it("stacks row metadata below the experiment name on phones", () => {
+    const { container } = render(
+      <DataByExperiment
+        monitoring={monitoringWith([])}
+        boundExperiments={BOUND}
+        visibleExperiments={[]}
+        locale="en-US"
+      />,
+    );
+
+    expect(container.querySelector("li")).toHaveClass("flex-col", "sm:flex-row");
+    expect(container.querySelector('[data-slot="experiment-row-metadata"]')).toHaveClass(
+      "w-full",
+      "sm:contents",
+    );
   });
 });

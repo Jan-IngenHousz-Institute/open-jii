@@ -1,12 +1,13 @@
 "use client";
 
 import type { PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import type { FacetGridConfig } from "./cartesian-chart";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { facetTierStyles, useChartSizing } from "./use-is-compact";
 import {
   applyReferenceLines,
@@ -15,6 +16,7 @@ import {
   extendLayoutForFacets,
   getRenderer,
   getPlotType,
+  readThemeColor,
   truncateCategoryTicks,
 } from "./utils";
 
@@ -79,126 +81,135 @@ export function BoxPlot({
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>(
     subplots ? { grid: { rows: subplots.rows, columns: subplots.columns } } : {},
   );
+  const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("box", renderer);
 
-  const plotData: PlotData[] = data.map(
-    (series) =>
-      ({
-        y: (series.orientation || orientation) === "v" ? series.y : series.x,
-        x: (series.orientation || orientation) === "v" ? series.x : series.y,
-        xaxis: series.xaxisId,
-        yaxis: series.yaxisId,
-        name: series.name,
-        type: plotType,
+  const plotData: PlotData[] = useMemo(
+    () =>
+      data.map(
+        (series) =>
+          ({
+            y: (series.orientation || orientation) === "v" ? series.y : series.x,
+            x: (series.orientation || orientation) === "v" ? series.x : series.y,
+            xaxis: series.xaxisId,
+            yaxis: series.yaxisId,
+            name: series.name,
+            type: plotType,
 
-        // Box statistics
-        q1: series.q1,
-        median: series.median,
-        q3: series.q3,
-        lowerfence: series.lowerfence,
-        upperfence: series.upperfence,
-        mean: series.mean,
-        sd: series.sd,
+            // Box statistics
+            q1: series.q1,
+            median: series.median,
+            q3: series.q3,
+            lowerfence: series.lowerfence,
+            upperfence: series.upperfence,
+            mean: series.mean,
+            sd: series.sd,
 
-        // Outliers and points
-        boxpoints:
-          series.boxpoints !== undefined && series.boxpoints !== "false"
-            ? series.boxpoints
-            : "outliers",
-        jitter: series.jitter || 0.3,
-        pointpos: series.pointpos || -1.8,
+            // Outliers and points
+            boxpoints:
+              series.boxpoints !== undefined && series.boxpoints !== "false"
+                ? series.boxpoints
+                : "outliers",
+            jitter: series.jitter || 0.3,
+            pointpos: series.pointpos || -1.8,
 
-        // Dark default for line so box border, mean line, and notch outline
-        // stay visible against the trace-color fill.
-        fillcolor: series.fillcolor || series.color,
-        line: {
-          color: series.line?.color || "#444",
-          width: series.line?.width || 1.5,
-        },
-        marker: {
-          color: series.marker?.color || series.color,
-          size: series.marker?.size || 6,
-          opacity: series.marker?.opacity || series.opacity || 1,
-          outliercolor: series.marker?.outliercolor,
-          line: series.marker?.line
-            ? {
-                color: series.marker.line.color,
-                width: series.marker.line.width || 1,
-                outliercolor: series.marker.line.outliercolor,
-                outlierwidth: series.marker.line.outlierwidth || 1,
-              }
-            : undefined,
-        },
+            // Dark default for line so box border, mean line, and notch outline
+            // stay visible against the trace-color fill.
+            fillcolor: series.fillcolor || series.color,
+            line: {
+              color: series.line?.color || readThemeColor("--foreground") || "#444",
+              width: series.line?.width || 1.5,
+            },
+            marker: {
+              color: series.marker?.color || series.color,
+              size: series.marker?.size || 6,
+              opacity: series.marker?.opacity || series.opacity || 1,
+              outliercolor: series.marker?.outliercolor,
+              line: series.marker?.line
+                ? {
+                    color: series.marker.line.color,
+                    width: series.marker.line.width || 1,
+                    outliercolor: series.marker.line.outliercolor,
+                    outlierwidth: series.marker.line.outlierwidth || 1,
+                  }
+                : undefined,
+            },
 
-        // Box style
-        notched: series.notched || false,
-        notchwidth: series.notchwidth || 0.25,
-        boxmean: series.boxmean || false,
+            // Box style
+            notched: series.notched || false,
+            notchwidth: series.notchwidth || 0.25,
+            boxmean: series.boxmean || false,
 
-        orientation: (series.orientation || orientation) === "h" ? "h" : "v",
+            orientation: (series.orientation || orientation) === "h" ? "h" : "v",
 
-        visible: series.visible,
-        showlegend: series.showlegend,
-        legendgroup: series.legendgroup,
-        hovertemplate: series.hovertemplate,
-        hoverinfo: series.hoverinfo,
-        customdata: series.customdata,
-      }) as any as PlotData,
+            visible: series.visible,
+            showlegend: series.showlegend,
+            legendgroup: series.legendgroup,
+            hovertemplate: series.hovertemplate,
+            hoverinfo: series.hoverinfo,
+            customdata: series.customdata,
+          }) as any as PlotData,
+      ),
+    [data, orientation, plotType],
   );
 
-  const layout = createBaseLayout(config, sizing);
-  layout.boxmode = boxmode;
+  const layout = useMemo(() => {
+    const next = createBaseLayout(config, sizing);
+    next.boxmode = boxmode;
 
-  // Truncate category ticks before faceting so extendLayoutForFacets copies
-  // the truncated template into every cell (xaxisN/yaxisN).
-  const hasStringX = data.some(
-    (series) => series.x && series.x.some((val) => typeof val === "string"),
-  );
-  const hasStringY = data.some(
-    (series) => series.y && series.y.some((val) => typeof val === "string"),
-  );
-
-  if (hasStringX && orientation === "v") {
-    layout.xaxis = truncateCategoryTicks(
-      { ...layout.xaxis, type: "category" },
-      data.flatMap((series) => series.x ?? []),
-      sizing,
+    // Truncate category ticks before faceting so extendLayoutForFacets copies
+    // the truncated template into every cell (xaxisN/yaxisN).
+    const hasStringX = data.some(
+      (series) => series.x && series.x.some((val) => typeof val === "string"),
     );
-  }
-
-  if (hasStringY && orientation === "h") {
-    layout.yaxis = truncateCategoryTicks(
-      { ...layout.yaxis, type: "category" },
-      data.flatMap((series) => series.y ?? []),
-      sizing,
+    const hasStringY = data.some(
+      (series) => series.y && series.y.some((val) => typeof val === "string"),
     );
-  }
 
-  // Faceted layout: same shape used by cartesian / histogram.
-  if (subplots) {
-    const { cellTitleFontSize } = facetTierStyles(sizing);
-    const forceSharedTitles = sizing.cellVeryCompact;
-    const effectiveSharedXTitle = forceSharedTitles || subplots.sharedXTitle === true;
-    const effectiveSharedYTitle = forceSharedTitles || subplots.sharedYTitle === true;
-    const faceted = extendLayoutForFacets(layout, subplots.cells, {
-      rows: subplots.rows,
-      columns: subplots.columns,
-      sharedX: subplots.sharedX,
-      sharedY: subplots.sharedY,
-      sharedXTitle: effectiveSharedXTitle,
-      sharedYTitle: effectiveSharedYTitle,
-      roworder: subplots.roworder,
-      titleFontSize: cellTitleFontSize,
-      ultraCompactCells: sizing.cellUltraCompact,
-    });
-    Object.assign(layout, faceted);
-  }
+    if (hasStringX && orientation === "v") {
+      next.xaxis = truncateCategoryTicks(
+        { ...next.xaxis, type: "category" },
+        data.flatMap((series) => series.x ?? []),
+        sizing,
+      );
+    }
 
-  applyReferenceLines(layout, config.referenceLines, { cells: subplots?.cells });
+    if (hasStringY && orientation === "h") {
+      next.yaxis = truncateCategoryTicks(
+        { ...next.yaxis, type: "category" },
+        data.flatMap((series) => series.y ?? []),
+        sizing,
+      );
+    }
 
-  const plotConfig = createPlotlyConfig(config, sizing);
+    // Faceted layout: same shape used by cartesian / histogram.
+    if (subplots) {
+      const { cellTitleFontSize } = facetTierStyles(sizing);
+      const forceSharedTitles = sizing.cellVeryCompact;
+      const effectiveSharedXTitle = forceSharedTitles || subplots.sharedXTitle === true;
+      const effectiveSharedYTitle = forceSharedTitles || subplots.sharedYTitle === true;
+      const faceted = extendLayoutForFacets(next, subplots.cells, {
+        rows: subplots.rows,
+        columns: subplots.columns,
+        sharedX: subplots.sharedX,
+        sharedY: subplots.sharedY,
+        sharedXTitle: effectiveSharedXTitle,
+        sharedYTitle: effectiveSharedYTitle,
+        roworder: subplots.roworder,
+        titleFontSize: cellTitleFontSize,
+        ultraCompactCells: sizing.cellUltraCompact,
+      });
+      Object.assign(next, faceted);
+    }
 
+    applyReferenceLines(next, config.referenceLines, { cells: subplots?.cells });
+
+    return next;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+  }, [config, sizing, data, subplots, boxmode, orientation, themeVersion]);
+
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart

@@ -89,10 +89,10 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
   };
 
   return (
-    <div className="flex flex-col gap-6 md:flex-row">
+    <div className="flex flex-col gap-6 lg:flex-row">
       <MacroDetailsSidebar macroId={id} macro={macro} />
 
-      <div className="min-w-0 flex-1 space-y-10 md:order-1">
+      <div className="min-w-0 flex-1 space-y-10 lg:order-1">
         <InlineEditableDescription
           description={macro.description ?? ""}
           hasAccess={canUpdate}
@@ -124,7 +124,7 @@ export default function MacroOverviewPage({ params }: MacroOverviewPageProps) {
             onEditStart={canUpdate ? () => startEditing(decodeBase64(macro.code)) : undefined}
           />
         ) : (
-          <div className="py-8 text-center text-gray-500">
+          <div className="text-muted-foreground py-8 text-center">
             <CodeIcon className="mx-auto mb-4 h-12 w-12" />
             <p>{t("macros.codeNotAvailable")}</p>
           </div>

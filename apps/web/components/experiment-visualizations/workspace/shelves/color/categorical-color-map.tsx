@@ -1,5 +1,6 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { RotateCcw } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useMemo } from "react";
@@ -15,7 +16,7 @@ import { FormColorInput } from "@repo/ui/components/form-color-input";
 import { useExperimentDistinctValues } from "../../../../../hooks/experiment/useExperimentDistinctValues/useExperimentDistinctValues";
 import type { ChartFormValues } from "../../../charts/chart-config";
 import {
-  CATEGORY_PALETTE,
+  categoryPalette,
   composeColorMapKey,
   getCategoryColor,
 } from "../../../charts/colors/palettes";
@@ -233,7 +234,7 @@ function CategorySwatchList({
   return (
     <div className="space-y-1.5">
       {heading && <div className="text-foreground text-xs font-semibold">{heading}</div>}
-      <div className="bg-muted/30 max-h-[220px] overflow-y-auto rounded-md border p-2">
+      <InsetPanel padding="sm" className="max-h-[220px] overflow-y-auto">
         <ul className="space-y-1">
           {categories.map((c, i) => {
             const mapKey = keyFor(c);
@@ -282,7 +283,7 @@ function CategorySwatchList({
             );
           })}
         </ul>
-      </div>
+      </InsetPanel>
     </div>
   );
 }
@@ -295,13 +296,15 @@ function PalettePreview() {
         {t("workspace.shelves.preview")}
       </div>
       <div className="flex flex-wrap gap-1.5">
-        {CATEGORY_PALETTE.slice(0, 12).map((color) => (
-          <div
-            key={color}
-            className="h-4 w-4 rounded-sm border border-black/10"
-            style={{ background: color }}
-          />
-        ))}
+        {categoryPalette()
+          .slice(0, 12)
+          .map((color) => (
+            <div
+              key={color}
+              className="border-border h-4 w-4 rounded-sm border"
+              style={{ background: color }}
+            />
+          ))}
       </div>
       <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
         {t("workspace.shelves.colorModeCategoricalHelp")}

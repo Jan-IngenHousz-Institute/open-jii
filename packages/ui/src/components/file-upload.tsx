@@ -182,7 +182,7 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
       <div className={cn("space-y-4", className)} ref={ref} {...props}>
         <div
           className={cn(
-            "hover:border-primary/50 rounded-lg border-2 border-dashed border-gray-300 p-6 text-center transition-colors",
+            "border-input hover:border-primary/50 rounded-lg border-2 border-dashed p-6 text-center transition-colors",
             isUploading ? "cursor-wait" : "cursor-pointer",
             isDragging && "border-primary bg-muted/50",
           )}
@@ -211,15 +211,15 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
                   <Loader2 className="text-primary h-8 w-8 animate-spin" />
                   <div>
                     <p className="text-sm font-medium">{uploadingText}</p>
-                    <p className="text-xs text-gray-500">{uploadingDescription}</p>
+                    <p className="text-muted-foreground text-xs">{uploadingDescription}</p>
                   </div>
                 </>
               ) : (
                 <>
-                  {icon || <Upload className="h-8 w-8 text-gray-400" />}
+                  {icon || <Upload className="text-muted-foreground h-8 w-8" />}
                   <div>
                     <p className="text-sm font-medium">{hasFiles ? selectedText : placeholder}</p>
-                    <p className="text-xs text-gray-500">{browseInstruction}</p>
+                    <p className="text-muted-foreground text-xs">{browseInstruction}</p>
                   </div>
                 </>
               )}
@@ -228,11 +228,11 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
         </div>
 
         {showFileList && hasFiles && (
-          <div className="rounded-lg bg-gray-50 p-3">
+          <div className="bg-muted rounded-lg p-3">
             <p className="mb-2 text-sm font-medium">{selectedFilesText}</p>
             <div className="max-h-32 overflow-y-auto">
               {filesArray.map((file, index) => (
-                <p key={index} className="truncate text-xs text-gray-600">
+                <p key={index} className="text-muted-foreground truncate text-xs">
                   {file.webkitRelativePath || file.name}
                 </p>
               ))}
@@ -241,9 +241,9 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
         )}
 
         {validationErrors.length > 0 && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-            <h4 className="mb-1 text-sm font-medium text-red-800">{validationTitle}</h4>
-            <ul className="space-y-1 text-sm text-red-700">
+          <div className="border-destructive/40 bg-destructive/10 rounded-lg border p-3">
+            <h4 className="text-destructive mb-1 text-sm font-medium">{validationTitle}</h4>
+            <ul className="text-destructive space-y-1 text-sm">
               {validationErrors.map((error, index) => (
                 <li key={index}>• {error}</li>
               ))}
@@ -252,11 +252,11 @@ export const FileUpload = React.forwardRef<HTMLDivElement, FileUploadProps>(
         )}
 
         {uploadError && uploadError.message.length > 0 && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-            <h4 className="mb-1 text-sm font-medium text-red-800">{uploadError.title}</h4>
-            <p className="text-sm text-red-700">{uploadError.message}</p>
+          <div className="border-destructive/40 bg-destructive/10 rounded-lg border p-3">
+            <h4 className="text-destructive mb-1 text-sm font-medium">{uploadError.title}</h4>
+            <p className="text-destructive text-sm">{uploadError.message}</p>
             {uploadError.retryMessage && (
-              <p className="mt-2 text-sm text-red-600">{uploadError.retryMessage}</p>
+              <p className="text-destructive/90 mt-2 text-sm">{uploadError.retryMessage}</p>
             )}
           </div>
         )}

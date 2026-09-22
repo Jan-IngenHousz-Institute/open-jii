@@ -1,104 +1,111 @@
 import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { renderHook, waitFor } from "@/test/test-utils";
+import { renderHook, act, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
 import { useProtocols } from "./useProtocols";
 
+const envelope = (items: unknown[], page = 1, totalPages = 1) => ({
+  items,
+  page,
+  pageSize: 20,
+  totalPages,
+  totalCount: items.length,
+});
+
 describe("useProtocols", () => {
   it("returns protocols list", async () => {
     server.mount(contract.protocols.listProtocols, {
-      body: [createProtocol({ id: "p-1", name: "P1" }), createProtocol({ id: "p-2", name: "P2" })],
+      body: envelope([
+        createProtocol({ id: "p-1", name: "P1" }),
+        createProtocol({ id: "p-2", name: "P2" }),
+      ]),
     });
 
     const { result } = renderHook(() => useProtocols());
 
     await waitFor(() => {
-      expect(result.current.protocols).toHaveLength(2);
+      expect(result.current.data?.items).toHaveLength(2);
     });
 
-    expect(result.current.protocols?.[0]?.name).toBe("P1");
-    expect(result.current.protocols?.[1]?.name).toBe("P2");
+    expect(result.current.data?.items[0]?.name).toBe("P1");
+    expect(result.current.data?.items[1]?.name).toBe("P2");
   });
 
-  it("passes filter and search as query parameters", async () => {
+  it("passes search as a query parameter", async () => {
     const spy = server.mount(contract.protocols.listProtocols, {
-      body: [createProtocol({ id: "p-1" })],
+      body: envelope([createProtocol({ id: "p-1" })]),
     });
 
-    const { result } = renderHook(() =>
-      useProtocols({ initialSearch: "test", initialFilter: "my" }),
-    );
+    const { result } = renderHook(() => useProtocols({ initialSearch: "test" }));
 
     await waitFor(() => {
-      expect(result.current.protocols).toHaveLength(1);
+      expect(result.current.data).toBeDefined();
     });
 
     expect(spy.calls[spy.calls.length - 1]?.query?.search).toBe("test");
-    expect(spy.calls[spy.calls.length - 1]?.query?.filter).toBe("my");
   });
 
-  it("omits filter when set to all", async () => {
-    const spy = server.mount(contract.protocols.listProtocols, { body: [] });
-
-    const { result } = renderHook(() => useProtocols({ initialFilter: "all" }));
-
-    await waitFor(() => {
-      expect(result.current.protocols).toBeDefined();
+  it("sends the current page as a query parameter", async () => {
+    const spy = server.mount(contract.protocols.listProtocols, {
+      body: envelope([], 1, 3),
     });
 
-    expect(spy.calls[spy.calls.length - 1]?.query?.filter).toBeUndefined();
-  });
-
-  it("auto-switches to all when user has no protocols", async () => {
-    server.mount(contract.protocols.listProtocols, { body: [] });
-
-    const { result } = renderHook(() => useProtocols({ initialFilter: "my" }));
+    const { result } = renderHook(() => useProtocols());
 
     await waitFor(() => {
-      expect(result.current.filter).toBe("all");
+      expect(result.current.data).toBeDefined();
+    });
+    expect(spy.calls[spy.calls.length - 1]?.query?.page).toBe("1");
+
+    act(() => result.current.setPage(2));
+
+    await waitFor(() => {
+      expect(spy.calls[spy.calls.length - 1]?.query?.page).toBe("2");
     });
   });
 
-  it("keeps my filter when user has protocols", async () => {
-    server.mount(contract.protocols.listProtocols, {
-      body: [createProtocol({ id: "p-1" })],
-    });
+  it("resets to page 1 when search changes", () => {
+    server.mount(contract.protocols.listProtocols, { body: envelope([], 1, 3) });
 
-    const { result } = renderHook(() => useProtocols({ initialFilter: "my" }));
+    const { result } = renderHook(() => useProtocols());
 
-    await waitFor(() => {
-      expect(result.current.protocols).toHaveLength(1);
-    });
+    act(() => result.current.setPage(3));
+    expect(result.current.page).toBe(3);
 
-    expect(result.current.filter).toBe("my");
+    act(() => result.current.setSearch("test"));
+    expect(result.current.page).toBe(1);
   });
 
-  it("does not auto-switch when there is a search term", async () => {
-    server.mount(contract.protocols.listProtocols, { body: [] });
-
-    const { result } = renderHook(() =>
-      useProtocols({ initialFilter: "my", initialSearch: "test" }),
-    );
-
-    await waitFor(() => {
-      expect(result.current.protocols).toBeDefined();
+  it("clamps the page when the result set shrinks below it", async () => {
+    const spy = server.mount(contract.protocols.listProtocols, {
+      body: envelope([], 1, 2),
     });
 
-    expect(result.current.filter).toBe("my");
+    const { result } = renderHook(() => useProtocols());
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    act(() => result.current.setPage(3));
+
+    await waitFor(() => {
+      expect(result.current.page).toBe(2);
+    });
+    expect(spy.calls[spy.calls.length - 1]?.query?.page).toBe("2");
   });
 
   it("does not pass empty search to query", async () => {
     const spy = server.mount(contract.protocols.listProtocols, {
-      body: [createProtocol({ id: "p-1" })],
+      body: envelope([createProtocol({ id: "p-1" })]),
     });
 
     const { result } = renderHook(() => useProtocols({ initialSearch: "" }));
 
     await waitFor(() => {
-      expect(result.current.protocols).toBeDefined();
+      expect(result.current.data).toBeDefined();
     });
 
     expect(spy.calls[spy.calls.length - 1]?.query?.search).toBeUndefined();
@@ -106,13 +113,13 @@ describe("useProtocols", () => {
 
   it("does not pass whitespace-only search to query", async () => {
     const spy = server.mount(contract.protocols.listProtocols, {
-      body: [createProtocol({ id: "p-1" })],
+      body: envelope([createProtocol({ id: "p-1" })]),
     });
 
     const { result } = renderHook(() => useProtocols({ initialSearch: "   " }));
 
     await waitFor(() => {
-      expect(result.current.protocols).toBeDefined();
+      expect(result.current.data).toBeDefined();
     });
 
     expect(spy.calls[spy.calls.length - 1]?.query?.search).toBeUndefined();

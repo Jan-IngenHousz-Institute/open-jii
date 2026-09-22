@@ -159,8 +159,8 @@ describe("BaseNode", () => {
 
     const wrapper = screen.getByTestId("node-card");
     expect(wrapper).toHaveClass("ring-2");
-    expect(wrapper).toHaveClass("ring-jii-dark-green");
-    expect(wrapper).toHaveStyle({ borderColor: "#005e5e" });
+    expect(wrapper).toHaveClass("ring-primary");
+    expect(wrapper).toHaveClass("border-primary");
   });
 
   it("applies styles when dragging", () => {
@@ -176,7 +176,7 @@ describe("BaseNode", () => {
 
     const wrapper = screen.getByTestId("node-card");
     expect(wrapper).toHaveClass("ring-2");
-    expect(wrapper).toHaveClass("ring-jii-dark-green");
-    expect(wrapper).toHaveStyle({ borderColor: "#005e5e" });
+    expect(wrapper).toHaveClass("ring-primary");
+    expect(wrapper).toHaveClass("border-primary");
   });
 });

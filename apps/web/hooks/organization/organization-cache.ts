@@ -69,6 +69,7 @@ export function organizationProfileFamilies(): QueryKey[] {
     orpc.organizations.listMyOrganizations.key(),
     orpc.organizations.listOrganizations.key(),
     orpc.organizations.getOrganization.key(),
+    orpc.search.globalSearch.key(),
   ];
 }
 
@@ -100,7 +101,11 @@ export function organizationTeamGranteeFamilies(): QueryKey[] {
 }
 
 export function organizationTeamFamilies(): QueryKey[] {
-  return [orpc.organizations.listOrganizationTeams.key(), ...organizationTeamGranteeFamilies()];
+  return [
+    orpc.organizations.listOrganizationTeams.key(),
+    orpc.search.globalSearch.key(),
+    ...organizationTeamGranteeFamilies(),
+  ];
 }
 
 /**

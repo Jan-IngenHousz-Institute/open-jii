@@ -1,0 +1,1 @@
+ALTER TABLE "calibration_runs" ADD COLUMN "skipped_series" jsonb;

@@ -5,7 +5,9 @@ import {
   answersTextStyle,
   STATUS_ICON,
 } from "~/features/recent-measurements/components/measurement-row-visuals";
+import { UploadFailureNote } from "~/features/recent-measurements/components/upload-failure-note";
 import type { MeasurementStatus } from "~/features/recent-measurements/hooks/use-all-measurements";
+import { uploadFailureMessageKey } from "~/features/recent-measurements/utils/upload-failure-category";
 import { useTranslation } from "~/shared/i18n";
 import { AnswerData } from "~/shared/measurements/convert-cycle-answers-to-array";
 import { formatTimeAgo } from "~/shared/time/format-time-ago";
@@ -21,6 +23,8 @@ interface MeasurementRunItemProps {
   timestamp: string;
   /** Worst-of status across the run. */
   status: MeasurementStatus;
+  /** Reason from the run's first failed measurement. */
+  failureReason?: string | null;
   questions?: AnswerData[];
   hasComment?: boolean;
   expanded: boolean;
@@ -38,6 +42,7 @@ export const MeasurementRunItem = memo(function MeasurementRunItem({
   experimentName,
   timestamp,
   status,
+  failureReason = null,
   questions,
   hasComment = false,
   expanded,
@@ -69,6 +74,12 @@ export const MeasurementRunItem = memo(function MeasurementRunItem({
           : "recentMeasurements:accessibility.expandRun",
         { name: experimentName, count },
       )}
+      // The label above replaces the children, so the failure note below is
+      // never announced. A hint carries it without nesting one sentence in
+      // another.
+      accessibilityHint={
+        status === "failed" ? t(uploadFailureMessageKey(failureReason)) : undefined
+      }
     >
       <View className="w-7 items-center pt-0.5">
         <Chevron size={18} color={colors.inactive} />
@@ -109,6 +120,8 @@ export const MeasurementRunItem = memo(function MeasurementRunItem({
             {STATUS_ICON[status](colors)}
           </View>
         </View>
+
+        {status === "failed" && <UploadFailureNote reason={failureReason} />}
       </View>
     </Pressable>
   );

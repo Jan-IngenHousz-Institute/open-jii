@@ -90,11 +90,14 @@ describe("DeviceConfigDelivery", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders the endpoint and per-experiment topics", () => {
+  it("carries only the delivery actions; the manifest belongs to the rail", () => {
     render(<DeviceConfigDelivery device={genericDevice} config={config} />);
 
-    expect(screen.getByText(config.endpoint)).toBeInTheDocument();
-    expect(screen.getByText(config.experiments[0].topicPrefix)).toBeInTheDocument();
+    // Endpoint and topics moved into the Configuration rail, which owns the
+    // manifest in every state, not just after a mutation succeeds.
+    expect(screen.queryByText(config.endpoint)).not.toBeInTheDocument();
+    expect(screen.queryByText(config.experiments[0].topicPrefix)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /iot.onboarding.download/ })).toBeInTheDocument();
   });
 
   it("downloads the config as a JSON named after the device", async () => {

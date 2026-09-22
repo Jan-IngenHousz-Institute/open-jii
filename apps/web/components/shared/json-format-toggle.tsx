@@ -47,7 +47,7 @@ export const JsonFormatToggle: FC<JsonFormatToggleProps> = ({
                 e.stopPropagation();
                 onToggle();
               }}
-              className="h-7 w-7 p-0 hover:bg-slate-200"
+              className="h-7 w-7 p-0"
             >
               {isCompact ? (
                 <UnfoldVertical className="h-3 w-3" />

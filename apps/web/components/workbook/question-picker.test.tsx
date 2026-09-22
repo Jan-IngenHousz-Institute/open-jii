@@ -28,7 +28,9 @@ describe("QuestionPicker", () => {
     await user.click(screen.getByRole("button", { name: /add question/i }));
 
     expect(screen.getByRole("textbox", { name: /question name/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^create$/i })).toBeDisabled();
+    const createButton = screen.getByRole("button", { name: /^create$/i });
+    expect(createButton).toBeDisabled();
+    expect(createButton.querySelector(".lucide-plus")).toBeInTheDocument();
   });
 
   it("shows the canonical column key as the user types", async () => {

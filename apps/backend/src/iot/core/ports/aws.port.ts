@@ -6,6 +6,7 @@ import type {
   CertificateStatus,
   ThingConnectivity,
 } from "../../../common/modules/aws/services/iot/iot.types";
+import type { InvokeLambdaResponse } from "../../../common/modules/aws/services/lambda/lambda.types";
 import type { IotUploadUrl } from "../../../common/modules/aws/services/s3/s3.types";
 import type { Result } from "../../../common/utils/fp-utils";
 
@@ -41,4 +42,13 @@ export interface AwsPort {
   getIotDataEndpoint(): Promise<Result<string>>;
   getCognitoIdentityId(userId: string): Promise<Result<string>>;
   searchThingsConnectivity(thingNames: string[]): Promise<Result<Map<string, ThingConnectivity>>>;
+
+  getCalibrationSandboxFunctionName(): string;
+  /** Undefined unless a local container is configured, which sends the invoke there instead of to AWS. */
+  getCalibrationSandboxEndpoint(): string | undefined;
+  invokeLambda<TResponse = Record<string, unknown>>(
+    functionName: string,
+    payload: object,
+    endpoint?: string,
+  ): Promise<Result<InvokeLambdaResponse<TResponse>>>;
 }

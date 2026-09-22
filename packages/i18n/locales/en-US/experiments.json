@@ -23,6 +23,15 @@
     "published": "Published"
   },
   "lastUpdate": "Last update",
+  "columns": {
+    "name": "Name",
+    "updated": "Updated",
+    "status": "Status",
+    "owner": "Owner",
+    "organization": "Organization",
+    "members": "Members",
+    "activity": "Activity"
+  },
   "visibility": {
     "private": "Private",
     "public": "Public"
@@ -41,12 +50,7 @@
     "title": "Measurements",
     "addMeasurement": "Add Measurement",
     "viewResults": "View Results",
-    "downloadData": "Download Data",
-    "noMeasurements": "No measurements recorded yet",
-    "latestMeasurements": "Latest Measurements",
-    "deviceId": "Device ID",
-    "lastProcessed": "Last Processed",
-    "seeAll": "See all"
+    "downloadData": "Download Data"
   },
   "dashboards": {
     "tabLabel": "Dashboards"
@@ -140,14 +144,22 @@
       "viewDiff": "View diff",
       "macroCaveat": "Structural checks only. Macro logic is not verified, so test the flow after upgrading.",
       "lastChanged": "updated {{when}}",
-      "kind": { "protocol": "Protocol", "macro": "Macro" },
+      "kind": {
+        "protocol": "Protocol",
+        "macro": "Macro"
+      },
       "status": {
         "added": "Added",
         "changed": "Changed",
         "unchanged": "Unchanged",
         "removed": "Removed"
       },
-      "change": { "added": "Added", "removed": "Removed", "changed": "Edited", "moved": "Moved" },
+      "change": {
+        "added": "Added",
+        "removed": "Removed",
+        "changed": "Edited",
+        "moved": "Moved"
+      },
       "verdict": {
         "ok": "No structural issues found",
         "warnings": "Upgrade is possible, with warnings",
@@ -179,7 +191,15 @@
     "readMore": "Read more",
     "uploadMetadata": "Upload Metadata",
     "editMetadata": "Edit Metadata",
-    "uploadSensorData": "Upload Sensor Data"
+    "uploadSensorData": "Upload Sensor Data",
+    "datasetLabel": "Dataset",
+    "datasetPlaceholder": "Search datasets...",
+    "datasetEmpty": "No dataset matches that.",
+    "datasetRows_one": "{{rows}} row",
+    "datasetRows_other": "{{rows}} rows",
+    "datasetGroupStatic": "Source",
+    "datasetGroupMacro": "Processed",
+    "datasetGroupUpload": "Uploaded"
   },
   "experiment": "Experiment",
   "detailsTitle": "Details",
@@ -421,5 +441,14 @@
       "note": "Note:",
       "warningMessage": "The following file(s) will be automatically excluded from the upload:"
     }
+  },
+  "dataInventory": {
+    "title": "Data",
+    "seeAll": "See all",
+    "emptyTitle": "No data yet",
+    "empty": "Tables appear here once a device publishes into this experiment, a macro runs, or you upload a file.",
+    "loadError": "This experiment's data could not be loaded.",
+    "rowUnit_one": "row",
+    "rowUnit_other": "rows"
   }
 }

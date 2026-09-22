@@ -1,12 +1,13 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { and, desc, eq, workbookVersions } from "@repo/database";
+import { and, desc, eq, inArray, workbookVersions } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import type {
   CreateWorkbookVersionDto,
   WorkbookVersionDto,
+  WorkbookVersionRef,
 } from "../models/workbook-version.model";
 
 @Injectable()
@@ -44,6 +45,24 @@ export class WorkbookVersionRepository {
         .limit(1);
       if (result.length === 0) return null;
       return result[0] as WorkbookVersionDto;
+    });
+  }
+
+  /** Identity only: nothing authorizes the workbook here, so no cells or snapshots. */
+  async findWorkbookRefsByIds(ids: string[]): Promise<Result<WorkbookVersionRef[]>> {
+    return tryCatch(async () => {
+      if (ids.length === 0) {
+        return [];
+      }
+
+      return await this.database
+        .select({
+          id: workbookVersions.id,
+          workbookId: workbookVersions.workbookId,
+          version: workbookVersions.version,
+        })
+        .from(workbookVersions)
+        .where(inArray(workbookVersions.id, ids));
     });
   }
 

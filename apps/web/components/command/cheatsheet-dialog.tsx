@@ -28,6 +28,7 @@ function buildSections(mod: string): Section[] {
         { keys: ["G", "W"], label: "Workbooks" },
         { keys: ["G", "P"], label: "Protocols" },
         { keys: ["G", "M"], label: "Macros" },
+        { keys: ["G", "O"], label: "Organizations" },
         { keys: ["G", "T"], label: "Transfer requests" },
         { keys: ["G", "S"], label: "Settings" },
         { keys: ["G", "A"], label: "Account" },

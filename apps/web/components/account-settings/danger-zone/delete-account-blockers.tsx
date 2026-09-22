@@ -1,5 +1,8 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { getExperimentStatusBadgeTone } from "@/util/experiment-status";
 import { AlertTriangle, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTransferResourceAdmin } from "~/hooks/sharing/useTransferResourceAdmin/useTransferResourceAdmin";
@@ -207,7 +210,7 @@ export function DeleteAccountBlockers({
       </div>
 
       {blockers.length > 1 && (
-        <div className="border-border/70 bg-background/70 space-y-2 rounded-md border p-2.5">
+        <InsetPanel padding="sm" className="space-y-2">
           <p className="text-muted-foreground text-xs font-medium">
             {t("dangerZone.delete.blockers.applyToAllLabel")}
           </p>
@@ -219,7 +222,7 @@ export function DeleteAccountBlockers({
             excludeUserId={currentUserId}
             disabled={isPending}
           />
-        </div>
+        </InsetPanel>
       )}
 
       <ul
@@ -237,21 +240,19 @@ export function DeleteAccountBlockers({
               key={key}
               className={cn(
                 "border-border bg-background space-y-2 rounded-md border p-3 shadow-sm transition-colors",
-                selectedUser && "border-primary/30 bg-quaternary/40",
+                selectedUser && "border-primary/30 bg-secondary/40",
               )}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   {/* Only experiments have a lifecycle status. */}
                   {blocker.status ? (
-                    <Badge
-                      className={cn(
-                        `bg-badge-${blocker.status}`,
-                        "shrink-0 px-1.5 py-0.5 text-[11px] font-medium",
-                      )}
+                    <StatusBadge
+                      tone={getExperimentStatusBadgeTone(blocker.status)}
+                      className="shrink-0 px-1.5 py-0.5 text-[11px]"
                     >
                       {t(`experiments:status.${blocker.status}`)}
-                    </Badge>
+                    </StatusBadge>
                   ) : (
                     <Badge
                       variant="outline"
@@ -266,7 +267,7 @@ export function DeleteAccountBlockers({
                   href={resourceCollaboratorsPath(locale, blocker.resourceType, blocker.id)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-muted-foreground hover:bg-surface hover:text-foreground inline-flex h-7 min-w-0 max-w-[46%] shrink-0 items-center gap-1 rounded-md px-2 text-xs transition-colors sm:max-w-none"
+                  className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex h-7 min-w-0 max-w-[46%] shrink-0 items-center gap-1 rounded-md px-2 text-xs transition-colors sm:max-w-none"
                 >
                   <span className="truncate">{t("dangerZone.delete.blockers.manageLink")}</span>
                   <ExternalLink className="h-3 w-3" />
@@ -378,7 +379,7 @@ function TransferUserPicker({
               variant="outline"
               disabled={disabled}
               onClick={() => onSelect(candidateToUserProfile(candidate))}
-              className="hover:border-primary/30 hover:bg-quaternary/60 h-auto max-w-full gap-1.5 rounded-full py-1 pl-1 pr-2.5 text-xs font-normal shadow-none"
+              className="hover:border-primary/30 hover:bg-secondary/60 h-auto max-w-full gap-1.5 rounded-full py-1 pl-1 pr-2.5 text-xs font-normal shadow-none"
             >
               <UserAvatar
                 avatarUrl={candidate.avatarUrl}

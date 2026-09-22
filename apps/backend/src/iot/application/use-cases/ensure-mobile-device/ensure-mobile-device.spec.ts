@@ -80,6 +80,22 @@ describe("EnsureMobileDeviceUseCase", () => {
     expect(attach).toHaveBeenCalledTimes(2);
   });
 
+  it("returns a retired phone as retired without healing it back onto the broker", async () => {
+    const attach = vi.spyOn(awsAdapter, "attachThingPrincipal");
+    const first = await useCase.execute(body, userId);
+    assertSuccess(first);
+    const repo = testApp.module.get(IotDeviceRepository);
+    assertSuccess(await repo.update(first.value.id, { status: "retired" }));
+    attach.mockClear();
+
+    const second = await useCase.execute(body, userId);
+
+    assertSuccess(second);
+    expect(second.value.id).toBe(first.value.id);
+    expect(second.value.status).toBe("retired");
+    expect(attach).not.toHaveBeenCalled();
+  });
+
   it("fills a missing name on a later ensure, but never overwrites one", async () => {
     const first = await useCase.execute({ installId: body.installId }, userId);
     assertSuccess(first);

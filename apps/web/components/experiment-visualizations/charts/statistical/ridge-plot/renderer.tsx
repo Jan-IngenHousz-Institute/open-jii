@@ -1,9 +1,9 @@
 "use client";
 
+import { RidgePlot } from "@/components/charts/ridge-plot";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { RidgePlot } from "@repo/ui/components/charts/ridge-plot";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";
@@ -45,18 +45,21 @@ export function RidgePlotRenderer({
     chartConfig.colorMap,
   ]);
 
+  // No axis-title shelf on this chart; default to the picked column names.
+  const ridgeConfig = useMemo(
+    () => ({
+      ...chartConfig,
+      xAxisTitle: chartConfig.xAxisTitle?.length ? chartConfig.xAxisTitle : (yColumn ?? ""),
+      yAxisTitle: chartConfig.yAxisTitle?.length ? chartConfig.yAxisTitle : (colorColumn ?? ""),
+    }),
+    [chartConfig, yColumn, colorColumn],
+  );
+
   if (visualization.chartType !== "ridge-plot") {
     return <ChartConfigError message={t("errors.invalidConfiguration")} />;
   }
 
   const hasRows = rows.length > 0 && Boolean(yColumn) && Boolean(colorColumn);
-
-  // No axis-title shelf on this chart; default to the picked column names.
-  const ridgeConfig = {
-    ...chartConfig,
-    xAxisTitle: chartConfig.xAxisTitle?.length ? chartConfig.xAxisTitle : (yColumn ?? ""),
-    yAxisTitle: chartConfig.yAxisTitle?.length ? chartConfig.yAxisTitle : (colorColumn ?? ""),
-  };
 
   return (
     <ChartFrame

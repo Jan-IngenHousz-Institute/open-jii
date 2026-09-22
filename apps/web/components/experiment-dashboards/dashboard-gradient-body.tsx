@@ -1,8 +1,11 @@
 "use client";
 
+import { workspaceBleed } from "@/components/workspace-band";
 import dynamic from "next/dynamic";
 import { useRef } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
+
+import { cn } from "@repo/ui/lib/utils";
 
 import type { DashboardFormValues } from "./dashboard-form-shell";
 import { GridBackdrop } from "./editor/canvas/grid-backdrop";
@@ -50,8 +53,10 @@ export function DashboardGradientBody({
     <LiveVizProvider>
       <div
         ref={gradientRef}
-        className="3xl:-mx-10 3xl:px-10 4xl:-mx-14 4xl:px-14 relative -mx-4 -mb-6 flex-1 overflow-x-clip border-t border-[#EDF2F6] px-4 pb-6 md:-mx-6 md:px-6"
-        style={{ background: "linear-gradient(270.03deg, #F5FFF8 0%, #F4F9FF 100%)" }}
+        className={cn(
+          "border-border bg-canvas relative flex-1 overflow-x-clip border-t",
+          workspaceBleed,
+        )}
       >
         {isEditing && bounds && <GridBackdrop bounds={bounds} layout={layout} />}
         <div className="relative w-full pt-6">

@@ -5,9 +5,10 @@ import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useE
 import { useExperimentVisualizationCreate } from "@/hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate";
 import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
 import { useLocale } from "@/hooks/useLocale";
-import { Loader2, PlusCircle } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { notFound, useParams, useRouter } from "next/navigation";
 import ExperimentVisualizationsList from "~/components/experiment-visualizations/list/experiment-visualizations-list";
+import ExperimentVisualizationsHighlights from "~/components/experiment-visualizations/list/highlights/experiment-visualizations-highlights";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -66,11 +67,17 @@ export default function ExperimentVisualizationsPage() {
           {isCreating ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
-            <PlusCircle className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 h-4 w-4" aria-hidden />
           )}
           {t("ui.actions.create")}
         </Button>
       </div>
+
+      <ExperimentVisualizationsHighlights
+        visualizations={visualizationsData ?? []}
+        experimentId={experimentId}
+        isLoading={isLoading}
+      />
 
       <ExperimentVisualizationsList
         visualizations={visualizationsData ?? []}

@@ -20,7 +20,7 @@ describe("EventLog", () => {
   });
 
   it("labels each kind of activity, not only disconnects", () => {
-    render(
+    const { container } = render(
       <EventLog
         entries={[
           { timestamp: "2026-08-13T03:00:00.000Z", kind: "firmwareChanged", detail: "1.0 → 1.1" },
@@ -38,6 +38,8 @@ describe("EventLog", () => {
     expect(screen.getByText("iot.devices.monitoring.activity.registered")).toBeInTheDocument();
     expect(screen.getByText("1.0 → 1.1")).toBeInTheDocument();
     expect(screen.getByText("CONNECTION_LOST")).toBeInTheDocument();
+    expect(container.firstElementChild).toHaveClass("min-w-0");
+    expect(screen.getByRole("table").parentElement?.parentElement).toHaveClass("max-w-full");
   });
 
   it("shows a dash where an entry carries no detail", () => {

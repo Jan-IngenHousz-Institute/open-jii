@@ -59,13 +59,16 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
             {/* Text content */}
             <div>
               <h3
-                className="text-lg font-semibold text-white"
+                className="text-brand-chrome-foreground text-lg font-semibold"
                 {...featureInspectorProps({ fieldId: "title" })}
               >
                 {feature.title}
               </h3>
 
-              <p className="mt-1 text-gray-300" {...featureInspectorProps({ fieldId: "subtitle" })}>
+              <p
+                className="text-brand-chrome-foreground/80 mt-1"
+                {...featureInspectorProps({ fieldId: "subtitle" })}
+              >
                 {feature.subtitle}
               </p>
             </div>
@@ -74,16 +77,19 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
       });
 
   return (
-    <div className="bg-white py-24">
+    <div className="py-24">
       <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-        <div className="bg-primary relative isolate overflow-hidden px-6 py-20 sm:rounded-3xl sm:px-10 sm:py-24 lg:py-24 xl:px-24">
+        {/* A brand surface, like the navbar and footer: --primary inverts to a
+            light cyan in dark mode, which turned this panel into a bright slab
+            against the teal/gold palette. --brand-chrome-* does not invert. */}
+        <div className="bg-brand-chrome relative isolate overflow-hidden px-6 py-20 sm:rounded-3xl sm:px-10 sm:py-24 lg:py-24 xl:px-24">
           {/* GRID: text left / image right */}
           <div className="mx-auto grid max-w-2xl grid-cols-1 gap-x-8 gap-y-16 sm:gap-y-20 lg:mx-0 lg:max-w-none lg:grid-cols-2 lg:items-center lg:gap-y-0">
             {/* LEFT COLUMN */}
             <div className="lg:row-start-2 lg:max-w-md">
               {/* Title */}
               <h2
-                className="text-balance text-3xl font-semibold tracking-tight text-white sm:text-4xl"
+                className="text-brand-chrome-foreground text-balance text-3xl font-semibold tracking-tight sm:text-4xl"
                 {...inspectorProps({ fieldId: "title" })}
               >
                 {currentFeatures.title}
@@ -92,7 +98,7 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
               {/* Subtitle */}
               {currentFeatures.subtitle && (
                 <p
-                  className="mt-6 text-lg text-gray-300"
+                  className="text-brand-chrome-foreground/80 mt-6 text-lg"
                   {...inspectorProps({ fieldId: "subtitle" })}
                 >
                   {currentFeatures.subtitle}
@@ -106,7 +112,7 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
                 {...currentFeatures.image}
                 nextImageProps={{
                   className:
-                    "relative -z-20 min-w-full max-w-xl rounded-xl shadow-xl ring-1 ring-white/10 lg:row-span-4 lg:max-w-none",
+                    "relative -z-20 min-w-full max-w-xl rounded-xl shadow-xl ring-brand-chrome-foreground/15 lg:row-span-4 ring-1 lg:max-w-none",
                   ...inspectorProps({ fieldId: "image" }),
                 }}
               />
@@ -114,10 +120,10 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
 
             {/* FEATURES LIST */}
             <div
-              className="max-w-xl lg:row-start-3 lg:mt-10 lg:max-w-md lg:border-t lg:border-white/10 lg:pt-10"
+              className="lg:border-brand-accent max-w-xl lg:row-start-3 lg:mt-10 lg:max-w-md lg:border-t lg:pt-10"
               {...inspectorProps({ fieldId: "features" })}
             >
-              <dl className="max-w-xl space-y-8 text-base text-gray-300 lg:max-w-none">
+              <dl className="text-brand-chrome-foreground/80 max-w-xl space-y-8 text-base lg:max-w-none">
                 {renderFeatures()}
               </dl>
             </div>
@@ -129,7 +135,7 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
             className="pointer-events-none absolute left-12 top-1/2 -z-10 -translate-y-1/2 transform-gpu blur-3xl lg:-bottom-48 lg:top-auto lg:translate-y-0"
           >
             <div
-              className="from-secondary to-tertiary aspect-[1155/678] w-[72rem] bg-gradient-to-tr opacity-25"
+              className="from-brand-chrome-accent to-brand-chrome aspect-[1155/678] w-[72rem] bg-gradient-to-tr opacity-60"
               style={{
                 clipPath:
                   "polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)",

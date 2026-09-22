@@ -36,6 +36,18 @@ export function statusesForFilter(filter: MeasurementFilter): MeasurementStatus[
   return ["pending", "failed", "successful"];
 }
 
+/** What a settle changes on a cached row. */
+interface SettlePatch {
+  status: MeasurementStatus;
+  failureReason: string | null;
+}
+
+// A row that fails twice keeps its status and changes only its reason, so the
+// status alone is not enough to decide whether the cache needs rewriting.
+function changes(row: MeasurementItem, patch: SettlePatch): boolean {
+  return row.status !== patch.status || row.failureReason !== patch.failureReason;
+}
+
 // Apply a burst of Outbox settles to every measurement-list cache entry
 // in one shot. notifyManager.batch collapses all setQueryData mutations
 // below into a single subscriber notification so N settles cost ~1
@@ -45,8 +57,10 @@ export function applySettledPatchBatch(
   items: readonly SettledItem[],
 ): void {
   if (items.length === 0) return;
-  const updates = new Map<string, MeasurementStatus>();
-  for (const item of items) updates.set(item.id, item.status);
+  const updates = new Map<string, SettlePatch>();
+  for (const item of items) {
+    updates.set(item.id, { status: item.status, failureReason: item.reason ?? null });
+  }
 
   notifyManager.batch(() => {
     for (const query of queryClient.getQueryCache().findAll({ queryKey: queryKeys.listAll })) {
@@ -74,7 +88,7 @@ export function applySettledPatchBatch(
       let pending = old.pending;
       let failed = old.failed;
       let successful = old.successful;
-      for (const status of Array.from(updates.values())) {
+      for (const { status } of Array.from(updates.values())) {
         if (status === "successful") {
           if (pending > 0) {
             pending--;
@@ -104,16 +118,16 @@ export function applySettledPatchBatch(
 // reference when nothing changed so subscribers don't re-render needlessly.
 function patchFlatBulk(
   old: MeasurementItem[] | undefined,
-  updates: Map<string, MeasurementStatus>,
+  updates: Map<string, SettlePatch>,
 ): MeasurementItem[] | undefined {
   if (!old) return old;
   let next: MeasurementItem[] | null = null;
   for (let i = 0; i < old.length; i++) {
     const row = old[i];
-    const status = updates.get(row.key);
-    if (status === undefined || row.status === status) continue;
+    const patch = updates.get(row.key);
+    if (patch === undefined || !changes(row, patch)) continue;
     next = next ?? old.slice();
-    next[i] = { ...next[i], status };
+    next[i] = { ...next[i], ...patch };
   }
   return next ?? old;
 }
@@ -121,7 +135,7 @@ function patchFlatBulk(
 function patchPagesBulk(
   old: InfiniteData<MeasurementItem[]> | undefined,
   queryKey: readonly unknown[],
-  updates: Map<string, MeasurementStatus>,
+  updates: Map<string, SettlePatch>,
 ): InfiniteData<MeasurementItem[]> | undefined {
   if (!old) return old;
   const filter = (queryKey[2] as MeasurementFilter) ?? "all";
@@ -130,16 +144,16 @@ function patchPagesBulk(
   const pages = old.pages.map((page) => {
     let next: MeasurementItem[] | null = null;
     for (const row of page) {
-      const status = updates.get(row.key);
-      if (status === undefined) continue;
-      if (!allowed.includes(status)) {
+      const patch = updates.get(row.key);
+      if (patch === undefined) continue;
+      if (!allowed.includes(patch.status)) {
         next = next ?? page.slice();
         const idx = next.findIndex((r) => r.key === row.key);
         if (idx >= 0) next.splice(idx, 1);
-      } else if (row.status !== status) {
+      } else if (changes(row, patch)) {
         next = next ?? page.slice();
         const idx = next.findIndex((r) => r.key === row.key);
-        if (idx >= 0) next[idx] = { ...next[idx], status };
+        if (idx >= 0) next[idx] = { ...next[idx], ...patch };
       }
     }
     if (next === null) return page;

@@ -82,6 +82,101 @@ jobs:
         shell: bash
         run: pnpm format:check
 
+  # These lambda zips are committed so terraform can plan from a fresh checkout,
+  # which puts them outside the pnpm workspace and outside every other job: their
+  # build runs only on whoever last touched them. This job is that build. It also
+  # catches the silent half of the problem, a committed bundle still carrying the
+  # previous catalog or the previous @repo/monitoring, where the lambda keeps
+  # running and simply applies the old rules.
+  lambda_bundle_check:
+    name: Monitoring Lambda Bundle Build
+    runs-on: ubuntu-latest
+    env:
+      DO_NOT_TRACK: 1
+      TURBO_TELEMETRY_DISABLED: 1
+      BUNDLE_DIRS: "infrastructure/modules/monitoring/digest-composer/lambda infrastructure/modules/monitoring/metrics-forwarder/lambda infrastructure/modules/grafana/metrics-publisher/lambda"
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-nodejs-pnpm
+        with:
+          node-version: "24"
+
+      - name: Build @repo/monitoring
+        shell: bash
+        run: pnpm turbo run build --filter=@repo/monitoring
+
+      # Each bundle's own build script: npm ci against its lockfile, copy the
+      # catalog and the compiled package in, zip. A package.json edited without
+      # its lockfile fails here, which nothing else in CI would notice.
+      - name: Rebuild every bundle from source
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for dir in $BUNDLE_DIRS; do
+            cp "$dir/function.zip" "$RUNNER_TEMP/$(basename "$(dirname "$dir")").committed.zip"
+            ( cd "$dir" && npm run build )
+          done
+
+      # A bundle whose handler cannot be required is a MODULE_NOT_FOUND on first
+      # invoke, which for these functions means silence rather than a visible error.
+      - name: Load each rebuilt handler
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for dir in $BUNDLE_DIRS; do
+            loaded=$(mktemp -d)
+            unzip -q "$dir/function.zip" -d "$loaded"
+            ( cd "$loaded" && node -e 'if (typeof require("./index.js").handler !== "function") { throw new Error("no handler export"); }' )
+            echo "$dir loads"
+          done
+
+      # Content, not zip bytes: zip output varies by tool and timestamp, so a byte
+      # comparison would fail on every rebuild and teach everyone to ignore it.
+      - name: Compare each committed bundle against the rebuild
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=0
+
+          for dir in $BUNDLE_DIRS; do
+            name=$(basename "$(dirname "$dir")")
+            committed=$(mktemp -d)
+            rebuilt=$(mktemp -d)
+            unzip -q "$RUNNER_TEMP/$name.committed.zip" -d "$committed"
+            unzip -q "$dir/function.zip" -d "$rebuilt"
+
+            # File set first: a dependency added or a lib file dropped shows up here
+            # without diffing every byte of the AWS SDK.
+            if ! diff -q <(cd "$committed" && find . -type f | sort) \
+                         <(cd "$rebuilt" && find . -type f | sort) > /dev/null; then
+              echo "::error file=$dir/function.zip::committed bundle contains different files than a fresh build"
+              status=1
+            fi
+
+            # Globbed from inside $rebuilt, because a bare lib/*.js expands against the
+            # working directory, stays literal when it matches nothing, and silently
+            # skips every compiled file it was meant to compare.
+            for source in index.js catalog.yaml $(cd "$rebuilt" && ls lib/*.js 2>/dev/null); do
+              [ -e "$rebuilt/$source" ] || continue
+              if ! diff -q "$committed/$source" "$rebuilt/$source" > /dev/null 2>&1; then
+                echo "::error file=$dir/function.zip::committed $source differs from a fresh build"
+                status=1
+              fi
+            done
+          done
+
+          if [ "$status" -ne 0 ]; then
+            echo "Rebuild with: pnpm turbo run build --filter=@repo/monitoring, then npm run build in each lambda dir"
+            exit 1
+          fi
+
+          echo "Every committed bundle matches a fresh build of its sources"
+
   workspace_lint:
     name: Workspace Dependency Lint
     runs-on: ubuntu-latest
@@ -159,8 +254,35 @@ jobs:
             echo "No API/spec changes detected"
           fi
 
+      # asyncapi.yaml is hand-written, so the MQTT contract needs its own
+      # trigger: a pipeline-only PR that adds an ingest field must still be
+      # held to documenting it.
+      - name: Detect MQTT ingest contract changes
+        id: contract
+        shell: bash
+        run: |
+          BASE_SHA=${{ github.event.pull_request.base.sha || github.event.before || 'HEAD~1' }}
+          # Fail closed: an unresolvable base would otherwise land in the "no
+          # changes" branch and silently skip the gate below.
+          if ! CONTRACT_CHANGES=$(git diff --name-only "$BASE_SHA" HEAD -- \
+              asyncapi.yaml \
+              apps/data/src/lib/openjii/openjii/centrum/schemas.py \
+              apps/data/src/pipelines/centrum/bronze/raw_data.py \
+              apps/docs/package.json \
+              apps/docs/scripts/check-mqtt-contract.mjs); then
+            echo "::error::Could not diff against base $BASE_SHA; refusing to skip the MQTT ingest contract check."
+            exit 1
+          fi
+          if [ -n "$CONTRACT_CHANGES" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "✅ MQTT ingest contract changes detected"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No MQTT ingest contract changes detected"
+          fi
+
       - name: Setup Node.js and pnpm
-        if: steps.changed.outputs.changed == 'true'
+        if: steps.changed.outputs.changed == 'true' || steps.contract.outputs.changed == 'true'
         uses: ./.github/actions/setup-nodejs-pnpm
         with:
           node-version: "24"
@@ -176,6 +298,15 @@ jobs:
             exit 1
           fi
           echo "ok — API spec copies are up to date"
+
+      - name: Check MQTT ingest contract
+        if: steps.contract.outputs.changed == 'true'
+        shell: bash
+        run: |
+          if ! pnpm --filter docs check-mqtt-contract; then
+            echo "::error::asyncapi.yaml is out of sync with the centrum ingest schemas. See the assertion above for the fields to add or remove."
+            exit 1
+          fi
 
   build_lint_test:
     name: Build, Lint, & Test

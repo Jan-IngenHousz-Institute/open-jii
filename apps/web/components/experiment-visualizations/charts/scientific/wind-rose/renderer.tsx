@@ -1,9 +1,9 @@
 "use client";
 
+import { WindRose } from "@/components/charts/wind-rose";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { WindRose } from "@repo/ui/components/charts/wind-rose";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";

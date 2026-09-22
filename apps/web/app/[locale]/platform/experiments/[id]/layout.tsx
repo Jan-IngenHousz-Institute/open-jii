@@ -1,14 +1,13 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { PlatformHeaderDetail } from "@/components/navigation/site-header/platform-header-context";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
 import { notFound, usePathname, useParams } from "next/navigation";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { ExperimentTitle } from "~/components/experiment-overview/experiment-title";
 
-import { FEATURE_FLAGS } from "@repo/analytics";
 import { useTranslation } from "@repo/i18n";
 import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
 
@@ -24,7 +23,6 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
   const { t: tSettings } = useTranslation();
   const { t: tIot } = useTranslation("iot");
   const locale = useLocale();
-  const devicesEnabled = useFeatureFlagEnabled(FEATURE_FLAGS.IOT_DEVICES);
 
   // Access check
   const { data: accessData, error, isLoading } = useExperimentAccess(id);
@@ -106,6 +104,10 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
     // `page-fluid` marker on the layout so all tabs (overview, data, analysis, flow)
     // render at the same fluid width — switching tabs no longer reflows the page.
     <div className="page-fluid flex flex-1 flex-col gap-6">
+      <PlatformHeaderDetail
+        href={`/${locale}/platform/experiments/${id}`}
+        label={experiment.name}
+      />
       <ExperimentTitle
         experimentId={id}
         name={experiment.name}
@@ -140,13 +142,11 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
               {tSettings("experimentSettings.collaborators")}
             </Link>
           </NavTabsTrigger>
-          {devicesEnabled && (
-            <NavTabsTrigger value="devices" asChild>
-              <Link href={`/${locale}/platform/experiments/${id}/devices`}>
-                {tIot("iot.experimentDevices.tabLabel")}
-              </Link>
-            </NavTabsTrigger>
-          )}
+          <NavTabsTrigger value="devices" asChild>
+            <Link href={`/${locale}/platform/experiments/${id}/devices`}>
+              {tIot("iot.experimentDevices.tabLabel")}
+            </Link>
+          </NavTabsTrigger>
         </NavTabsList>
 
         <div className="mt-6 flex flex-1 flex-col">{children}</div>

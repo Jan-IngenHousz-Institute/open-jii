@@ -56,7 +56,7 @@ export function DeviceStatusCard({
           <div
             className={cn(
               "mt-0.5 shrink-0",
-              isConnected ? "text-green-600" : "text-muted-foreground",
+              isConnected ? "text-status-active-foreground" : "text-muted-foreground",
             )}
           >
             {isConnected ? <CheckCircle2 className="h-4 w-4" /> : <Zap className="h-4 w-4" />}

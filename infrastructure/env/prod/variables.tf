@@ -46,6 +46,20 @@ variable "slack_webhook_url" {
   sensitive   = true
 }
 
+variable "slack_heartbeat_webhook_url" {
+  description = "Slack incoming webhook for the daily observability digest; empty logs instead of posting"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "slack_usage_webhook_url" {
+  description = "Slack incoming webhook for the usage pulse and weekly note; empty logs instead of posting"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "slack_channel" {
   description = "Slack channel for monitoring notifications"
   type        = string
@@ -227,4 +241,10 @@ variable "grafana_auth_service_token" {
   description = "Grafana AMG service account token for API access"
   type        = string
   sensitive   = true
+}
+
+variable "data_platform_sp_application_id" {
+  description = "Application ID of the jii-data-platform deploy service principal (github-actions-jii-data-platform-sandbox-deploy). It runs the analyst gold pipelines in the sandbox workspace, which read this environment's centrum tables cross-catalog. Read-only; granted at catalog level in main.tf."
+  type        = string
+  default     = "122ea6e5-a082-45b5-9df6-ef5482868fdc"
 }

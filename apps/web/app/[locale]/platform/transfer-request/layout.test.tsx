@@ -26,10 +26,10 @@ describe("<TransferRequestLayout />", () => {
   });
 
   describe("Content Rendering", () => {
-    it("renders title and description texts", () => {
+    it("leaves the title to the platform shell and renders the description texts", () => {
       renderTransferRequestLayout();
 
-      expect(screen.getByText("transferRequest.title")).toBeInTheDocument();
+      expect(screen.queryByText("transferRequest.title")).not.toBeInTheDocument();
       expect(screen.getByText("transferRequest.introText")).toBeInTheDocument();
       expect(screen.getByText("transferRequest.processText")).toBeInTheDocument();
     });
@@ -129,11 +129,9 @@ describe("<TransferRequestLayout />", () => {
     it("maintains proper content hierarchy", () => {
       renderTransferRequestLayout();
 
-      const title = screen.getByText("transferRequest.title");
       const tabs = screen.getByText("transferRequest.formTab");
       const content = screen.getByTestId("child-content");
 
-      expect(title).toBeInTheDocument();
       expect(tabs).toBeInTheDocument();
       expect(content).toBeInTheDocument();
     });

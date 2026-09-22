@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
+import { Separator } from "@repo/ui/components/separator";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { useMacroCompatibleProtocols } from "../../hooks/macro/useMacroCompatibleProtocols/useMacroCompatibleProtocols";
@@ -140,7 +141,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
           <h4 className="text-sm font-medium">{tCommon("common.forkedFrom")}</h4>
           <Link
             href={`/${locale}/platform/macros/${macro.forkedFrom}`}
-            className="text-sm text-[#005E5E] underline underline-offset-2 hover:text-[#004848]"
+            className="text-primary hover:text-primary/80 text-sm underline underline-offset-2"
           >
             {tCommon("common.viewOriginal")}
           </Link>
@@ -156,11 +157,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
       />
 
       {/* Compatible Protocols Section */}
-      <div
-        role="separator"
-        aria-orientation="horizontal"
-        className="text-muted-foreground border-t"
-      />
+      <Separator decorative={false} />
 
       {canUpdate ? (
         <MacroCompatibleProtocolsCard macroId={macroId} embedded />
@@ -178,11 +175,7 @@ export function MacroDetailsSidebar({ macroId, macro }: MacroDetailsSidebarProps
       {/* Danger Zone */}
       {canManage && isDeletionEnabled && (
         <>
-          <div
-            role="separator"
-            aria-orientation="horizontal"
-            className="text-muted-foreground border-t"
-          />
+          <Separator decorative={false} />
           <div>
             <h5 className="text-destructive mb-2 text-base font-medium">
               {t("macroSettings.dangerZone")}

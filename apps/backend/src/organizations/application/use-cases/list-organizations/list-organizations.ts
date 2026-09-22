@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import type { OrganizationDirectory } from "@repo/api/domains/organization/organization.schema";
+import type { ResourceScope } from "@repo/api/shared/listing";
 
 import { Result } from "../../../../common/utils/fp-utils";
 import { OrganizationRepository } from "../../../core/repositories/organization.repository";
@@ -16,6 +17,9 @@ import { OrganizationRepository } from "../../../core/repositories/organization.
  * Unpaged, and deliberately so: this is the only listing of organizations there is, so
  * "all organizations" has to mean all of them. The payload is unbounded in the number
  * of organizations — an accepted trade, the same one the resources showcase makes.
+ *
+ * "My organizations" is `scope: "related"` on this same read, not a separate one — so
+ * both slices of the listing match, rank and order identically.
  */
 @Injectable()
 export class ListOrganizationsUseCase {
@@ -25,13 +29,14 @@ export class ListOrganizationsUseCase {
 
   async execute(
     userId: string,
-    params: { search?: string },
+    params: { search?: string; scope?: ResourceScope },
   ): Promise<Result<OrganizationDirectory>> {
     this.logger.log({
       msg: "Listing the organization directory",
       operation: "list-organizations",
       userId,
       hasSearch: Boolean(params.search),
+      scope: params.scope ?? "all",
     });
 
     return this.organizationRepository.listDirectory(userId, params);

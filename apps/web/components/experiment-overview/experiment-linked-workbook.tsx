@@ -63,14 +63,14 @@ export function ExperimentLinkedWorkbook({
       <div className="flex items-center justify-between">
         <CardTitle>{t("workbooks.workbook")}</CardTitle>
         <Link href={`/${locale}/platform/workbooks/${workbook.id}`} className="shrink-0">
-          <Button variant="buttonLink" className="h-auto p-0">
+          <Button variant="link" className="h-auto p-0">
             {t("workbooks.viewWorkbook")}
           </Button>
         </Link>
       </div>
 
       <Card className="shadow-none">
-        <CardContent className="pt-6">
+        <CardContent>
           <div className="flex items-center gap-3">
             <div className="bg-muted flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
               <BookOpen className="text-muted-foreground h-5 w-5" />

@@ -81,6 +81,8 @@ export interface RunSummary {
   questions: AnswerData[];
   hasComment: boolean;
   hasUnsynced: boolean;
+  /** Reason from the first failed member, so a collapsed run can explain itself. */
+  failureReason: string | null;
 }
 
 /** Row-level aggregate for a collapsed run. Assumes a non-empty `items`. */
@@ -90,9 +92,11 @@ export function summarizeRun(items: MeasurementItem[]): RunSummary {
   let questions: AnswerData[] = [];
   let hasComment = false;
   let hasUnsynced = false;
+  let failureReason: string | null = null;
 
   for (const item of items) {
     if (item.status === "failed") status = "failed";
+    if (item.status === "failed" && failureReason === null) failureReason = item.failureReason;
     else if (item.status === "pending" && status !== "failed") status = "pending";
     // Timestamps are UTC ISO strings, so a lexicographic compare orders them.
     if (item.timestamp > timestamp) timestamp = item.timestamp;
@@ -109,5 +113,6 @@ export function summarizeRun(items: MeasurementItem[]): RunSummary {
     questions,
     hasComment,
     hasUnsynced,
+    failureReason,
   };
 }

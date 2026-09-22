@@ -5,7 +5,13 @@ import { z } from "zod";
  * provisioned against its organization, so moving the row would leave the cloud
  * side behind. They are removed and re-created instead.
  */
-export const zTransferableResourceType = z.enum(["experiment", "macro", "protocol", "workbook"]);
+export const zTransferableResourceType = z.enum([
+  "experiment",
+  "macro",
+  "protocol",
+  "workbook",
+  "calibration_definition",
+]);
 
 export const zTransferResourcePathParams = z.object({
   resourceType: zTransferableResourceType,

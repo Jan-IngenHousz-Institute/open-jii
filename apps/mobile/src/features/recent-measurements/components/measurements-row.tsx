@@ -30,6 +30,7 @@ export const MeasurementsRow = memo(function MeasurementsRow({
       timestamp={item.timestamp}
       experimentName={item.experimentName}
       status={item.status}
+      failureReason={item.failureReason}
       questions={item.questions}
       onPress={onPress}
       onComment={canFlag ? onComment : undefined}

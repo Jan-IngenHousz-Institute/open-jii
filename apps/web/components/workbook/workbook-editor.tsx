@@ -25,6 +25,7 @@ import type { WorkbookConnectionType } from "~/hooks/iot/useIotConnections/useIo
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
 import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { EntitySnapshots } from "@repo/api/domains/workbook/workbook-version.schema";
+import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
 import { AddCellButton } from "./add-cell-button";
@@ -262,16 +263,18 @@ function SortableCellGroup({
           <div className="w-10 shrink-0">
             <div className="flex flex-col items-center gap-1 pt-2">
               {draggable && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-xs"
                   ref={setActivatorNodeRef}
                   {...attributes}
                   {...listeners}
                   aria-label="Drag to reorder"
                   className="cursor-grab opacity-0 transition-opacity active:cursor-grabbing group-hover/row:opacity-100"
                 >
-                  <GripVertical className="h-4 w-4" style={{ color: "#005E5E" }} />
-                </button>
+                  <GripVertical className="text-primary h-4 w-4" />
+                </Button>
               )}
               {cellNumber !== undefined && (
                 <span className="text-muted-foreground font-mono text-[10px] leading-none">
@@ -325,6 +328,20 @@ function SortableCellGroup({
       )}
     </div>
   );
+}
+
+/**
+ * Resolved against `el`, not the root: `--sidebar-inset-offset` is declared on
+ * `SidebarInset` and only inherits down. Authored in rem.
+ */
+function readPixels(el: Element, name: string): number {
+  const raw = getComputedStyle(el).getPropertyValue(name).trim();
+  const parsed = Number.parseFloat(raw);
+  if (!Number.isFinite(parsed)) return 0;
+  if (!raw.endsWith("rem")) return parsed;
+
+  const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+  return parsed * (Number.isFinite(rootFontSize) ? rootFontSize : 16);
 }
 
 export function WorkbookEditor({
@@ -497,9 +514,11 @@ export function WorkbookEditor({
     const handleScroll = () => {
       const el = headerRef.current;
       if (!el) return;
-      // 64px matches top-16 on the sticky header.
+      // Matches the sticky offset in workbook-header.tsx.
       const rect = el.getBoundingClientRect();
-      setIsSticky(rect.top <= 64);
+      const stickyTop =
+        48 + readPixels(el, "--banner-offset") + readPixels(el, "--sidebar-inset-offset");
+      setIsSticky(rect.top <= stickyTop);
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();

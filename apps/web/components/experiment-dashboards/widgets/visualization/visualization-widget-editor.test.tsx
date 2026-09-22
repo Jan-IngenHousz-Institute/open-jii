@@ -25,7 +25,7 @@ describe("VisualizationWidgetEditor", () => {
 
   it("delegates to the view component once a visualization is picked", async () => {
     const viz = createVisualization({ name: "Picked" });
-    server.mount(contract.experiments.getExperimentVisualization, { body: viz });
+    server.mount(contract.experiments.listExperimentVisualizations, { body: [viz] });
     const widget = createVisualizationWidget({
       config: { visualizationId: viz.id, showTitle: true, showDescription: false },
     });

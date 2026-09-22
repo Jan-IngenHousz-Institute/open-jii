@@ -35,7 +35,9 @@ describe("PasskeyCreatePrompt", () => {
     expect(await screen.findByText("passkeys.promptTitle")).toBeInTheDocument();
     expect(localStorage.getItem(shownKey)).toBe("true");
 
-    await user.click(screen.getByRole("button", { name: "passkeys.promptAction" }));
+    const createButton = screen.getByRole("button", { name: "passkeys.promptAction" });
+    expect(createButton.querySelector(".lucide-plus")).toBeInTheDocument();
+    await user.click(createButton);
 
     await waitFor(() => expect(authClient.passkey.addPasskey).toHaveBeenCalledWith({}));
     expect(await screen.findByText("passkeys.promptSuccessTitle")).toBeInTheDocument();

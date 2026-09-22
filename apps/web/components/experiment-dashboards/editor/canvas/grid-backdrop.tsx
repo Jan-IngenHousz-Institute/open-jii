@@ -18,7 +18,9 @@ export interface GridBackdropProps {
   layout: DashboardFormValues["layout"];
 }
 
-const BACKDROP_LINE_COLOR = "rgb(15 23 42 / 0.05)";
+// Follows --border so it survives a theme swap, and so it stays visible on a
+// dark canvas — a fixed near-black line disappeared there.
+const BACKDROP_LINE_COLOR = "color-mix(in oklch, var(--border) 40%, transparent)";
 
 interface VerticalLinePair {
   col: number;

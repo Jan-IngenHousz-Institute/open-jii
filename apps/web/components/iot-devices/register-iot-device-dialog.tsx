@@ -1,9 +1,11 @@
 "use client";
 
 import { useRegisterIotDevice } from "@/hooks/iot/useRegisterIotDevice/useRegisterIotDevice";
+import { useLocale } from "@/hooks/useLocale";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -53,25 +55,42 @@ type RegisterIotDeviceFormValues = z.infer<typeof registerIotDeviceFormSchema>;
 interface RegisterIotDeviceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Prefill for the register stitch: hardware just seen over a local connection. */
+  defaultSerialNumber?: string;
+  defaultDeviceType?: RegisterIotDeviceFormValues["deviceType"];
 }
 
-export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDeviceDialogProps) {
+export function RegisterIotDeviceDialog({
+  open,
+  onOpenChange,
+  defaultSerialNumber,
+  defaultDeviceType,
+}: RegisterIotDeviceDialogProps) {
   const { t } = useTranslation("iot");
   const { t: tCommon } = useTranslation("common");
+  const locale = useLocale();
+  const router = useRouter();
 
   const form = useForm<RegisterIotDeviceFormValues>({
     resolver: zodResolver(registerIotDeviceFormSchema),
-    defaultValues: { serialNumber: "", deviceType: undefined, name: "" },
+    defaultValues: {
+      serialNumber: defaultSerialNumber ?? "",
+      deviceType: defaultDeviceType,
+      name: "",
+    },
   });
 
   const { mutate: registerIotDevice, isPending } = useRegisterIotDevice({
-    onSuccess: () => {
+    // Success routes onward: the fresh detail page is where the next step
+    // (issuing a certificate) lives, and the toast names it.
+    onSuccess: (created) => {
       toast({
         title: t("iot.devices.dialog.createSuccess"),
-        description: t("iot.devices.dialog.createSuccessDetail"),
+        description: t("iot.devices.dialog.createSuccessNext"),
       });
       form.reset();
       onOpenChange(false);
+      router.push(`/${locale}/platform/devices/${created.id}`);
     },
   });
 
@@ -193,7 +212,11 @@ export function RegisterIotDeviceDialog({ open, onOpenChange }: RegisterIotDevic
                 {tCommon("common.cancel")}
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="mr-2 h-4 w-4" aria-hidden />
+                )}
                 {t("iot.devices.dialog.submit")}
               </Button>
             </DialogFooter>

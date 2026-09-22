@@ -120,7 +120,11 @@ export function ConfiguredQueryClientProvider({ children }) {
         // Bump when a query's stored shape changes (e.g. useQuery to
         // useInfiniteQuery). On mismatch the persisted cache is dropped, so
         // hydrating code doesn't see an old shape and crash.
-        buster: "v3-workbook-version-cache",
+        // v4: the persist filter learned the oRPC key shape ([path, {...}]);
+        // previous builds silently persisted none of the oRPC queries.
+        // v5: listExperiments moved from the deprecated filter=member input
+        // to scope=related, changing its persisted oRPC query key.
+        buster: "v5-experiments-related-scope",
         dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
       }}
     >

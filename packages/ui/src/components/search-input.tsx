@@ -1,11 +1,12 @@
 "use client";
 
-import { Search, Loader2, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "../lib/utils";
-import { Button } from "./button";
-import { Input, type InputProps } from "./input";
+import type { InputProps } from "./input";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "./input-group";
+import { Spinner } from "./spinner";
 
 export interface SearchInputProps extends Omit<InputProps, "onChange" | "onSubmit"> {
   value: string;
@@ -16,6 +17,8 @@ export interface SearchInputProps extends Omit<InputProps, "onChange" | "onSubmi
   className?: string;
   inputClassName?: string;
   placeholder?: string;
+  clearLabel?: string;
+  loadingLabel?: string;
 }
 
 export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
@@ -29,6 +32,8 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
       className,
       inputClassName,
       placeholder = "Search...",
+      clearLabel = "Clear",
+      loadingLabel = "Loading",
       ...props
     },
     ref,
@@ -41,33 +46,39 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
     };
 
     return (
-      <form onSubmit={handleSubmit} className={cn("relative w-full", className)}>
-        <Search className="text-muted-foreground absolute left-2 top-2.5 h-4 w-4" />
-        <Input
-          ref={ref}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={cn("pl-8 pr-8", inputClassName)}
-          placeholder={placeholder}
-          {...props}
-        />
-        {isLoading ? (
-          <Loader2 className="text-muted-foreground absolute right-2 top-2.5 h-4 w-4 animate-spin" />
-        ) : (
-          clearable &&
-          value.length > 0 && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground hover:text-foreground absolute right-0 top-0 h-full rounded-l-none p-1"
-              onClick={() => onChange("")}
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Clear</span>
-            </Button>
-          )
-        )}
+      <form onSubmit={handleSubmit} className={cn("w-full", className)}>
+        <InputGroup data-disabled={props.disabled || undefined} aria-busy={isLoading || undefined}>
+          <InputGroupInput
+            {...props}
+            ref={ref}
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            className={inputClassName}
+            placeholder={placeholder}
+            aria-busy={isLoading ? true : props["aria-busy"]}
+          />
+          <InputGroupAddon align="inline-start">
+            <Search aria-hidden="true" />
+          </InputGroupAddon>
+          <InputGroupAddon align="inline-end" className="w-8 p-0 has-[>button]:mr-0">
+            {isLoading ? (
+              <Spinner className="text-muted-foreground" aria-label={loadingLabel} />
+            ) : (
+              clearable &&
+              value.length > 0 && (
+                <InputGroupButton
+                  type="button"
+                  size="icon-xs"
+                  aria-label={clearLabel}
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => onChange("")}
+                >
+                  <X />
+                </InputGroupButton>
+              )
+            )}
+          </InputGroupAddon>
+        </InputGroup>
       </form>
     );
   },

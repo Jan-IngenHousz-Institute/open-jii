@@ -23,11 +23,11 @@ export function WorkbookVersionBadge({
 
   return (
     <span className="inline-flex items-center gap-1.5">
-      <Badge className="h-6 rounded border-0 bg-[#E7EDF2] px-2 py-1 text-xs font-medium text-[#011111] shadow-none hover:bg-[#E7EDF2]">
+      <Badge className="bg-accent text-foreground hover:bg-accent h-6 rounded border-0 px-2 py-1 text-xs font-medium shadow-none">
         v{currentVersion}
       </Badge>
       {showUpgrade && hasUpgrade && (
-        <Badge className="h-6 gap-1 rounded border-0 bg-[#CCFCD8] px-2 py-1 text-xs font-medium text-[#011111] shadow-none hover:bg-[#CCFCD8]">
+        <Badge className="bg-status-active text-foreground hover:bg-status-active h-6 gap-1 rounded border-0 px-2 py-1 text-xs font-medium shadow-none">
           <ArrowUpCircle className="h-3 w-3" />v{latestVersion} available
         </Badge>
       )}

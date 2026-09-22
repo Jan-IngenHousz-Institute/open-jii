@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
+
+const OFFSCREEN_MARGIN = "200px";
+
 // Four stacked breakpoints (`snug` includes `compact` includes
 // `veryCompact` includes `ultraCompact`); consumers check most-aggressive
 // first.
@@ -111,10 +115,17 @@ interface UseChartSizingOptions {
  * Watch a DOM element and emit responsive tier flags. When `options.grid`
  * is set, the comparison runs against per-cell size so faceted cells each
  * shrink to fit. State only updates on tier flips.
+ *
+ * Also subscribes to theme flips: the layout helpers resolve chart colours
+ * from CSS custom properties at render time, and this hook is the one place
+ * every chart component passes through, so the subscription here is what
+ * re-colours an already-rendered chart on a theme toggle.
  */
 export function useChartSizing<T extends HTMLElement>(
   options: UseChartSizingOptions = {},
 ): readonly [React.RefObject<T | null>, ChartSizing] {
+  useChartThemeRefresh();
+
   const ref = useRef<T>(null);
   const [sizing, setSizing] = useState<ChartSizing>({
     snug: false,
@@ -177,12 +188,43 @@ export function useChartSizing<T extends HTMLElement>(
     const rect = el.getBoundingClientRect();
     update(rect.width, rect.height);
 
+    // A tier flip restyles the chart, and Plotly restyles by redrawing every
+    // trace, so an unseen chart holds the last size it saw until it returns.
+    let isOnScreen = true;
+    let pending: { width: number; height: number } | null = null;
+
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
-      if (entry) update(entry.contentRect.width, entry.contentRect.height);
+      if (!entry) {
+        return;
+      }
+      const { width, height } = entry.contentRect;
+      if (!isOnScreen) {
+        pending = { width, height };
+        return;
+      }
+      update(width, height);
     });
     observer.observe(el);
-    return () => observer.disconnect();
+
+    const screenObserver =
+      typeof IntersectionObserver === "undefined"
+        ? null
+        : new IntersectionObserver(
+            (entries) => {
+              isOnScreen = entries.some((entry) => entry.isIntersecting);
+              if (isOnScreen && pending) {
+                update(pending.width, pending.height);
+                pending = null;
+              }
+            },
+            { rootMargin: OFFSCREEN_MARGIN },
+          );
+    screenObserver?.observe(el);
+    return () => {
+      observer.disconnect();
+      screenObserver?.disconnect();
+    };
   }, [gridRows, gridCols]);
 
   return [ref, sizing] as const;

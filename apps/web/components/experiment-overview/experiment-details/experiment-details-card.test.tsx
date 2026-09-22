@@ -184,6 +184,34 @@ describe("ExperimentDetailsCard", () => {
     expect(screen.getByText("loading")).toBeInTheDocument();
   });
 
+  // The panel is a fixed 24rem inside an `overflow-hidden` wrapper. At md, beside
+  // an open sidebar, the flex row overflowed and the panel clipped its own content
+  // (the experiment ID was sliced mid-glyph) without the page ever scrolling.
+  it("stacks the panel until lg so a fixed 24rem never clips its content", () => {
+    const { container } = renderComponent();
+
+    const wrapper = container.firstElementChild;
+    expect(wrapper).toHaveClass("overflow-hidden", "lg:w-96", "lg:order-2");
+    expect(wrapper?.className).not.toMatch(/\bmd:/);
+
+    const content = wrapper?.querySelector(":scope > div");
+    expect(content).toHaveClass("w-full", "lg:w-96");
+    expect(content?.className).not.toMatch(/\bmd:/);
+  });
+
+  it("gates both collapse toggles on the same lg breakpoint", () => {
+    renderComponent();
+
+    const desktopToggle = screen.getByRole("button", { name: "closeDetailsPanel" });
+    const mobileToggle = screen.getByRole("button", { name: "expandDetails" });
+
+    expect(desktopToggle).toHaveClass("hidden", "lg:flex");
+    expect(mobileToggle).toHaveClass("lg:hidden");
+    for (const toggle of [desktopToggle, mobileToggle]) {
+      expect(toggle.className).not.toMatch(/\bmd:/);
+    }
+  });
+
   it("passes correct href to the members trail", () => {
     renderComponent({ experimentId: "exp-789" });
     const trail = screen.getByTestId("experiment-members-trail");

@@ -1,5 +1,6 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { useMacroDelete } from "@/hooks/macro/useMacroDelete/useMacroDelete";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
@@ -12,13 +13,6 @@ import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@repo/ui/components/card";
 import {
   Dialog,
   DialogTrigger,
@@ -51,60 +45,58 @@ export function MacroInfoCard({ macroId, macro }: MacroInfoCardProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("macroSettings.macroInfo")}</CardTitle>
-        <CardDescription>{t("macroSettings.macroInfoDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-2 text-sm">
-          <div>
-            <span className="font-medium">{t("macroSettings.created")}:</span>{" "}
-            {formatDate(macro.createdAt)}
-          </div>
-          <div>
-            <span className="font-medium">{t("macroSettings.updated")}:</span>{" "}
-            {formatDate(macro.updatedAt)}
-          </div>
-          <div>
-            <span className="font-medium">{t("macros.macroId")}:</span>{" "}
-            <span className="font-mono text-xs">{macro.id}</span>
-          </div>
+    <SettingsCard
+      title={t("macroSettings.macroInfo")}
+      description={t("macroSettings.macroInfoDescription")}
+      contentClassName="space-y-6"
+    >
+      <div className="space-y-2 text-sm">
+        <div>
+          <span className="font-medium">{t("macroSettings.created")}:</span>{" "}
+          {formatDate(macro.createdAt)}
         </div>
+        <div>
+          <span className="font-medium">{t("macroSettings.updated")}:</span>{" "}
+          {formatDate(macro.updatedAt)}
+        </div>
+        <div>
+          <span className="font-medium">{t("macros.macroId")}:</span>{" "}
+          <span className="font-mono text-xs">{macro.id}</span>
+        </div>
+      </div>
 
-        {isDeletionEnabled && (
-          <div className="border-t pt-4">
-            <h5 className="text-destructive mb-2 text-base font-medium">
-              {t("macroSettings.dangerZone")}
-            </h5>
-            <p className="text-muted-foreground mb-4 text-sm">{t("macroSettings.deleteWarning")}</p>
+      {isDeletionEnabled && (
+        <div className="border-t pt-4">
+          <h5 className="text-destructive mb-2 text-base font-medium">
+            {t("macroSettings.dangerZone")}
+          </h5>
+          <p className="text-muted-foreground mb-4 text-sm">{t("macroSettings.deleteWarning")}</p>
 
-            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="destructive">{t("macroSettings.deleteMacro")}</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle className="text-destructive">
-                    {t("macroSettings.deleteMacro")}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {t("common.confirmDelete", { name: macro.name })}
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter className="mt-4">
-                  <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-                    {t("macroSettings.cancel")}
-                  </Button>
-                  <Button variant="destructive" onClick={handleDeleteMacro} disabled={isPending}>
-                    {isPending ? t("macroSettings.deleting") : t("macroSettings.delete")}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="destructive">{t("macroSettings.deleteMacro")}</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="text-destructive">
+                  {t("macroSettings.deleteMacro")}
+                </DialogTitle>
+                <DialogDescription>
+                  {t("common.confirmDelete", { name: macro.name })}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="mt-4">
+                <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                  {t("macroSettings.cancel")}
+                </Button>
+                <Button variant="destructive" onClick={handleDeleteMacro} disabled={isPending}>
+                  {isPending ? t("macroSettings.deleting") : t("macroSettings.delete")}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
+    </SettingsCard>
   );
 }

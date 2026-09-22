@@ -210,7 +210,7 @@ export function RichTextarea({
             border: none;
           }
           .ql-toolbar {
-            border-bottom: 1px solid #ccc;
+            border-bottom: 1px solid var(--border);
             border-top: none;
             border-left: none;
             border-right: none;
@@ -225,23 +225,100 @@ export function RichTextarea({
             border: none;
           }
           .ql-editor blockquote {
-            border-left: 4px solid #ccc;
+            border-left: 4px solid var(--border);
             margin-bottom: 5px;
             margin-top: 5px;
             padding-left: 16px;
             font-style: italic;
           }
           .ql-editor code {
-            background-color: #f4f4f4;
+            background-color: var(--muted);
             padding: 2px 4px;
             border-radius: 3px;
             font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
           }
           .ql-editor pre {
-            background-color: #f4f4f4;
+            background-color: var(--muted);
             padding: 10px;
             border-radius: 5px;
             overflow-x: auto;
+          }
+
+          /* Quill's snow theme hardcodes its whole palette — a dark placeholder,
+             #444 toolbar glyphs, #06c accents, white dropdown and tooltip
+             surfaces. All of it is invisible or wrong on a dark card, so the
+             theme's colours are restated here against the contract. Only
+             colour is overridden; the snow theme still owns layout. */
+          .ql-editor.ql-blank::before {
+            color: var(--muted-foreground);
+            font-style: normal;
+          }
+          .ql-editor .ql-code-block-container {
+            background-color: var(--muted);
+            color: var(--foreground);
+          }
+          .ql-snow a,
+          .ql-editor a {
+            color: var(--primary);
+          }
+          .ql-snow .ql-picker {
+            color: var(--foreground);
+          }
+          .ql-snow .ql-stroke,
+          .ql-snow .ql-stroke-miter {
+            stroke: var(--muted-foreground);
+          }
+          .ql-snow .ql-fill,
+          .ql-snow .ql-stroke.ql-fill {
+            fill: var(--muted-foreground);
+          }
+          .ql-snow.ql-toolbar button:hover,
+          .ql-snow .ql-toolbar button:hover,
+          .ql-snow.ql-toolbar button:focus,
+          .ql-snow .ql-toolbar button:focus,
+          .ql-snow.ql-toolbar button.ql-active,
+          .ql-snow .ql-toolbar button.ql-active,
+          .ql-snow.ql-toolbar .ql-picker-label:hover,
+          .ql-snow.ql-toolbar .ql-picker-label.ql-active,
+          .ql-snow.ql-toolbar .ql-picker-item:hover,
+          .ql-snow.ql-toolbar .ql-picker-item.ql-selected {
+            color: var(--primary);
+          }
+          .ql-snow.ql-toolbar button:hover .ql-stroke,
+          .ql-snow.ql-toolbar button:focus .ql-stroke,
+          .ql-snow.ql-toolbar button.ql-active .ql-stroke,
+          .ql-snow.ql-toolbar .ql-picker-label:hover .ql-stroke,
+          .ql-snow.ql-toolbar .ql-picker-label.ql-active .ql-stroke,
+          .ql-snow.ql-toolbar button:hover .ql-stroke-miter,
+          .ql-snow.ql-toolbar button.ql-active .ql-stroke-miter {
+            stroke: var(--primary);
+          }
+          .ql-snow.ql-toolbar button:hover .ql-fill,
+          .ql-snow.ql-toolbar button:focus .ql-fill,
+          .ql-snow.ql-toolbar button.ql-active .ql-fill,
+          .ql-snow.ql-toolbar .ql-picker-label:hover .ql-fill,
+          .ql-snow.ql-toolbar .ql-picker-item.ql-selected .ql-fill {
+            fill: var(--primary);
+          }
+          .ql-snow .ql-picker-options {
+            background-color: var(--popover);
+            color: var(--popover-foreground);
+            border-color: var(--border);
+          }
+          .ql-toolbar.ql-snow .ql-picker.ql-expanded .ql-picker-label,
+          .ql-toolbar.ql-snow .ql-picker.ql-expanded .ql-picker-options {
+            border-color: var(--border);
+          }
+          .ql-snow .ql-tooltip {
+            background-color: var(--popover);
+            color: var(--popover-foreground);
+            border-color: var(--border);
+            box-shadow: var(--shadow-md);
+          }
+          .ql-snow .ql-tooltip input[type="text"] {
+            background-color: transparent;
+            color: var(--foreground);
+            border-color: var(--input);
           }
 
           /* Compact mode: smaller buttons + a single-row, horizontally-
@@ -261,7 +338,7 @@ export function RichTextarea({
             height: 4px;
           }
           [data-rta-compact] .ql-toolbar::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.15);
+            background: var(--border);
             border-radius: 2px;
           }
           [data-rta-compact] .ql-toolbar .ql-formats {

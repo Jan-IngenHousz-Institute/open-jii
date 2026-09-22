@@ -1,11 +1,17 @@
 import { RegisterIotDeviceDialog } from "@/components/iot-devices/register-iot-device-dialog";
 import { ListWorkbooks } from "@/components/list-workbooks";
+import { OPEN_WORKBOOK_CREATE_EVENT } from "@/components/navigation/site-header/platform-header-events";
 import { NewExperimentForm } from "@/components/new-experiment/new-experiment";
 import { NewMacroForm } from "@/components/new-macro/new-macro";
 import { NewProtocolForm } from "@/components/new-protocol/new-protocol";
-import { createMyOrganization, createProtocol, createWorkbook } from "@/test/factories";
+import {
+  createMyOrganization,
+  createProtocol,
+  createUserProfile,
+  createWorkbook,
+} from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { fireEvent, render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import { act, fireEvent, render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -58,6 +64,14 @@ describe("the owning organization a create form submits", () => {
       isPending: false,
     } as ReturnType<typeof useSession>);
     server.mount(contract.organizations.listMyOrganizations, { body: [PERSONAL, LAB] });
+    // The forms seed their code editor from the user profile once it loads; without a
+    // handler the query burns through its retries and submit validation loses the race.
+    server.mount(contract.users.getUserProfile, {
+      body: createUserProfile({ firstName: "Ada", lastName: "Lovelace" }),
+    });
+    // The experiment wizard's linked-workbook step queries workbooks; keep it off the
+    // unhandled-request path so a slow bypass can never bleed into the submit.
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
   });
 
   describe("experiment", () => {
@@ -217,7 +231,9 @@ describe("the owning organization a create form submits", () => {
 
       render(<ListWorkbooks />);
 
-      await user.click(screen.getByRole("button", { name: /workbooks\.create/i }));
+      act(() => {
+        window.dispatchEvent(new Event(OPEN_WORKBOOK_CREATE_EVENT));
+      });
       const dialog = within(await screen.findByRole("dialog"));
       fireEvent.change(dialog.getByPlaceholderText("workbooks.namePlaceholder"), {
         target: { value: "Field notes" },
@@ -271,6 +287,8 @@ describe("the owning organization a wizard review step shows", () => {
       isPending: false,
     } as ReturnType<typeof useSession>);
     server.mount(contract.organizations.listMyOrganizations, { body: [PERSONAL, LAB] });
+    // The review step renders the linked-workbook section, which queries workbooks.
+    server.mount(contract.workbooks.listWorkbooks, { body: [] });
   });
 
   it("names the chosen organization on the experiment review", async () => {

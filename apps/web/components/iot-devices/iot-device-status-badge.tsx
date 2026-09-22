@@ -1,44 +1,51 @@
 "use client";
 
-import { CheckCircle2, Clock, RefreshCw, XCircle } from "lucide-react";
+import { StatusBadge } from "@/components/shared/status-badge";
+import type { StatusTone } from "@/components/shared/status-badge";
+import { Archive, CheckCircle2, Clock, KeyRound, XCircle } from "lucide-react";
 
-import type { IotDeviceStatus } from "@repo/api/domains/iot/iot.schema";
+import type { IotDevice, IotDeviceRung } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
 
-const STATUS_CONFIG: Record<IotDeviceStatus, { icon: typeof Clock; className: string }> = {
-  pending: {
-    icon: Clock,
-    className:
-      "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-800",
-  },
-  active: {
-    icon: CheckCircle2,
-    className:
-      "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800",
-  },
-  rotating: {
-    icon: RefreshCw,
-    className:
-      "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800",
-  },
-  revoked: {
-    icon: XCircle,
-    className:
-      "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800",
-  },
+import { deviceRung } from "./device-rung";
+
+const RUNG_CONFIG: Record<IotDeviceRung, { icon: typeof Clock; tone: StatusTone }> = {
+  registered: { icon: Clock, tone: "stale" },
+  provisioned: { icon: KeyRound, tone: "published" },
+  onboarded: { icon: CheckCircle2, tone: "active" },
+  revoked: { icon: XCircle, tone: "destructive" },
+  retired: { icon: Archive, tone: "stale" },
 };
 
-export function IotDeviceStatusBadge({ status }: { status: IotDeviceStatus }) {
+interface IotDeviceStatusBadgeProps {
+  status: IotDevice["status"];
+  deviceType: IotDevice["deviceType"];
+  boundExperimentCount: number;
+}
+
+/**
+ * A phone has no certificate and picks its experiment in the app, so it has no
+ * ladder to climb: it shows nothing here unless it was retired.
+ */
+export function IotDeviceStatusBadge({
+  status,
+  deviceType,
+  boundExperimentCount,
+}: IotDeviceStatusBadgeProps) {
   const { t } = useTranslation("iot");
-  const config = STATUS_CONFIG[status];
+
+  if (deviceType === "mobile" && status !== "retired") {
+    return null;
+  }
+
+  const rung = deviceRung(status, boundExperimentCount);
+  const config = RUNG_CONFIG[rung];
   const Icon = config.icon;
 
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${config.className}`}
-    >
+    <StatusBadge tone={config.tone}>
       <Icon className="h-3 w-3" />
-      {t(`iot.devices.status.${status}`)}
-    </span>
+      {t(`iot.devices.status.${rung}`)}
+    </StatusBadge>
   );
 }

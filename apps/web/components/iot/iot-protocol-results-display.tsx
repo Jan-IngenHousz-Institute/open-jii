@@ -1,6 +1,8 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { JsonFormatToggle } from "@/components/shared/json-format-toggle";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { useJsonFormatStyle } from "@/hooks/useJsonFormatStyle";
 import { formatJson } from "@/lib/json-format";
@@ -9,9 +11,7 @@ import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
 import { Alert, AlertDescription } from "@repo/ui/components/alert";
-import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
-import { cn } from "@repo/ui/lib/utils";
 
 interface TestResult {
   success: boolean;
@@ -51,9 +51,9 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               {testResult.success ? (
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                <CheckCircle2 className="text-status-active-foreground h-4 w-4 shrink-0" />
               ) : (
-                <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                <AlertCircle className="text-destructive h-4 w-4 shrink-0" />
               )}
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium">
@@ -66,15 +66,9 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
                 </div>
               </div>
             </div>
-            <Badge
-              variant={testResult.success ? "default" : "destructive"}
-              className={cn(
-                "shrink-0",
-                testResult.success ? "bg-green-600 hover:bg-green-700" : "",
-              )}
-            >
+            <StatusBadge tone={testResult.success ? "active" : "destructive"} className="shrink-0">
               {testResult.success ? t("iot.protocolRunner.passed") : t("iot.protocolRunner.error")}
-            </Badge>
+            </StatusBadge>
           </div>
 
           {testResult.success ? (
@@ -94,7 +88,7 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
                     title={copied ? tCommon("common.copied") : tCommon("common.copy")}
                   >
                     {copied ? (
-                      <Check className="h-3.5 w-3.5 text-green-600" />
+                      <Check className="text-status-active-foreground h-3.5 w-3.5" />
                     ) : (
                       <Copy className="h-3.5 w-3.5" />
                     )}
@@ -115,7 +109,11 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
           )}
         </div>
       ) : (
-        <div className="bg-muted/20 flex min-h-24 flex-1 items-center justify-center rounded-lg border border-dashed">
+        <InsetPanel
+          dashed
+          padding="none"
+          className="flex min-h-24 flex-1 items-center justify-center"
+        >
           <div className="text-center">
             <Play className="text-muted-foreground/20 mx-auto mb-1.5 h-6 w-6" />
             <div className="text-muted-foreground text-xs">
@@ -125,7 +123,7 @@ export function ProtocolResultsDisplay({ testResult }: ProtocolResultsDisplayPro
               {t("iot.protocolRunner.runProtocolToSeeResults")}
             </div>
           </div>
-        </div>
+        </InsetPanel>
       )}
     </div>
   );

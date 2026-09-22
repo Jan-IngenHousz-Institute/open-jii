@@ -20,6 +20,7 @@ import type {
   ReferenceLinesOptions,
   SecondaryAxisOptions,
 } from "./chart-options";
+import { CATEGORY_PALETTE } from "./colors/palettes";
 import type { AlluvialChartOptions } from "./scientific/alluvial/options";
 import type { CarpetChartOptions } from "./scientific/carpet/options";
 import type { ContourChartOptions } from "./scientific/contour/options";
@@ -87,10 +88,35 @@ export type RenderedChartConfig = ChartFormConfig & PlotlyChartConfig;
  * The cast is colocated here so renderers don't each carry one.
  * `config` is optional on the schema; missing collapses to an empty config.
  */
+const EMPTY_CONFIG: RenderedChartConfig = { colorway: CATEGORY_PALETTE };
+
+/**
+ * Cached per stored config, because the result is a prop: a fresh object each
+ * render makes react-plotly call `Plotly.react` on every render, since it
+ * compares config by reference.
+ */
+const configWithPalette = new WeakMap<object, RenderedChartConfig>();
+
 export function narrowChartConfig(visualization: {
   config?: Record<string, unknown>;
 }): RenderedChartConfig {
-  return visualization.config ?? {};
+  const stored = visualization.config;
+  if (stored === undefined) {
+    return EMPTY_CONFIG;
+  }
+
+  const cached = configWithPalette.get(stored);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  // The frozen palette first, so a stored config can still pin its own.
+  // Theming stops at the platform's own charts: `colorway` is editType 'calc',
+  // so following the theme here recalculates every chart on a dashboard when
+  // the reader toggles light/dark.
+  const merged: RenderedChartConfig = { colorway: CATEGORY_PALETTE, ...stored };
+  configWithPalette.set(stored, merged);
+  return merged;
 }
 
 /**

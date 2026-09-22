@@ -1,13 +1,20 @@
 "use client";
 
 import type { PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
-import { createBaseLayout, createPlotlyConfig, getRenderer, getPlotType } from "./utils";
+import {
+  createBaseLayout,
+  createPlotlyConfig,
+  getRenderer,
+  getPlotType,
+  readThemeColor,
+} from "./utils";
 
 export interface DensityPlotProps extends BaseChartProps {
   x: number[];
@@ -41,7 +48,7 @@ export function DensityPlot({
   x,
   y,
   name = "data",
-  color = "rgb(102,0,0)",
+  color = readThemeColor("--chart-1") ?? "rgb(102,0,0)",
   showScatter = false,
   showContours = true,
   showMarginalHistograms = false,
@@ -61,159 +68,187 @@ export function DensityPlot({
   error,
 }: DensityPlotProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
-  const plotData: PlotData[] = [];
+  const themeVersion = useChartThemeRefresh();
+  const plotData: PlotData[] = useMemo(() => {
+    const traces: PlotData[] = [];
 
-  if (showMarginalHistograms) {
-    // Use the working marginal histogram approach
-    // Main scatter points
-    if (showScatter) {
-      plotData.push({
+    if (showMarginalHistograms) {
+      // Use the working marginal histogram approach
+      // Main scatter points
+      if (showScatter) {
+        traces.push({
+          x: x,
+          y: y,
+          mode: scatterMode,
+          name: "points",
+          marker: {
+            color: color,
+            size: scatterSize,
+            opacity: scatterOpacity,
+          },
+          type: "scatter",
+        } as any as PlotData);
+      }
+
+      // 2D density contour
+      if (showContours) {
+        traces.push({
+          x: x,
+          y: y,
+          name: "density",
+          ncontours: ncontours,
+          colorscale: colorscale,
+          reversescale: reversescale,
+          showscale: false,
+          type: "histogram2dcontour",
+        } as any as PlotData);
+      }
+
+      // X-axis marginal histogram
+      traces.push({
         x: x,
+        name: "x density",
+        marker: { color: marginalColor || color },
+        yaxis: "y2",
+        type: "histogram",
+      } as any as PlotData);
+
+      // Y-axis marginal histogram
+      traces.push({
         y: y,
-        mode: scatterMode,
-        name: "points",
-        marker: {
-          color: color,
-          size: scatterSize,
-          opacity: scatterOpacity,
+        name: "y density",
+        marker: { color: marginalColor || color },
+        xaxis: "x2",
+        type: "histogram",
+      } as any as PlotData);
+    } else {
+      // Simple case without marginals
+      if (showScatter) {
+        traces.push({
+          x: x,
+          y: y,
+          mode: scatterMode,
+          name: "points",
+          marker: {
+            color: color,
+            size: scatterSize,
+            opacity: scatterOpacity,
+          },
+          type: "scatter",
+        } as any as PlotData);
+      }
+
+      if (showContours) {
+        traces.push({
+          x: x,
+          y: y,
+          name: "density",
+          ncontours: ncontours,
+          colorscale: colorscale,
+          reversescale: reversescale,
+          showscale: showscale,
+          nbinsx: nbinsx,
+          nbinsy: nbinsy,
+          type: "histogram2dcontour",
+        } as any as PlotData);
+      }
+    }
+
+    // Tier margins replace the previous fixed 50/60 block.
+
+    return traces;
+  }, [
+    color,
+    colorscale,
+    marginalColor,
+    nbinsx,
+    nbinsy,
+    ncontours,
+    reversescale,
+    scatterMode,
+    scatterOpacity,
+    scatterSize,
+    showContours,
+    showMarginalHistograms,
+    showScatter,
+    showscale,
+    x,
+    y,
+  ]);
+
+  const layout = useMemo(() => {
+    const base = createBaseLayout(config, sizing);
+
+    // Create layout based on whether marginal histograms are shown
+    let layout;
+    if (showMarginalHistograms) {
+      // Layout with marginal subplots (like Plotly documentation)
+      layout = {
+        ...base,
+        showlegend: false,
+        autosize: true,
+        hovermode: "closest",
+        bargap: 0,
+        // Main plot axes
+        xaxis: {
+          ...base.xaxis,
+          domain: [0, 0.85],
+          showgrid: false,
+          zeroline: false,
+          title: config.xAxisTitle ? { text: config.xAxisTitle } : undefined,
         },
-        type: "scatter",
-      } as any as PlotData);
-    }
-
-    // 2D density contour
-    if (showContours) {
-      plotData.push({
-        x: x,
-        y: y,
-        name: "density",
-        ncontours: ncontours,
-        colorscale: colorscale,
-        reversescale: reversescale,
-        showscale: false,
-        type: "histogram2dcontour",
-      } as any as PlotData);
-    }
-
-    // X-axis marginal histogram
-    plotData.push({
-      x: x,
-      name: "x density",
-      marker: { color: marginalColor || color },
-      yaxis: "y2",
-      type: "histogram",
-    } as any as PlotData);
-
-    // Y-axis marginal histogram
-    plotData.push({
-      y: y,
-      name: "y density",
-      marker: { color: marginalColor || color },
-      xaxis: "x2",
-      type: "histogram",
-    } as any as PlotData);
-  } else {
-    // Simple case without marginals
-    if (showScatter) {
-      plotData.push({
-        x: x,
-        y: y,
-        mode: scatterMode,
-        name: "points",
-        marker: {
-          color: color,
-          size: scatterSize,
-          opacity: scatterOpacity,
+        yaxis: {
+          ...base.yaxis,
+          domain: [0, 0.85],
+          showgrid: false,
+          zeroline: false,
+          title: config.yAxisTitle ? { text: config.yAxisTitle } : undefined,
         },
-        type: "scatter",
-      } as any as PlotData);
+        // Marginal histogram axes. Inherit the base tick font so their labels
+        // shrink with the tier like the main axes.
+        xaxis2: {
+          tickfont: base.xaxis?.tickfont,
+          domain: [0.85, 1],
+          showgrid: false,
+          zeroline: false,
+          showticklabels: true,
+        },
+        yaxis2: {
+          tickfont: base.yaxis?.tickfont,
+          domain: [0.85, 1],
+          showgrid: false,
+          zeroline: false,
+          showticklabels: true,
+        },
+      } as any; // Layout type allows flexible property assignment
+    } else {
+      // Use similar layout structure but without marginal axes
+      layout = {
+        ...base,
+        showlegend: false,
+        autosize: true,
+        hovermode: "closest",
+        bargap: 0,
+        xaxis: {
+          ...base.xaxis,
+          showgrid: false,
+          zeroline: false,
+          title: config.xAxisTitle ? { text: config.xAxisTitle } : undefined,
+        },
+        yaxis: {
+          ...base.yaxis,
+          showgrid: false,
+          zeroline: false,
+          title: config.yAxisTitle ? { text: config.yAxisTitle } : undefined,
+        },
+      } as any; // Layout type allows flexible property assignment
     }
 
-    if (showContours) {
-      plotData.push({
-        x: x,
-        y: y,
-        name: "density",
-        ncontours: ncontours,
-        colorscale: colorscale,
-        reversescale: reversescale,
-        showscale: showscale,
-        nbinsx: nbinsx,
-        nbinsy: nbinsy,
-        type: "histogram2dcontour",
-      } as any as PlotData);
-    }
-  }
+    return layout;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+  }, [config, sizing, showMarginalHistograms, themeVersion]);
 
-  // Tier margins replace the previous fixed 50/60 block.
-  const base = createBaseLayout(config, sizing);
-
-  // Create layout based on whether marginal histograms are shown
-  let layout;
-  if (showMarginalHistograms) {
-    // Layout with marginal subplots (like Plotly documentation)
-    layout = {
-      ...base,
-      showlegend: false,
-      autosize: true,
-      hovermode: "closest",
-      bargap: 0,
-      // Main plot axes
-      xaxis: {
-        ...base.xaxis,
-        domain: [0, 0.85],
-        showgrid: false,
-        zeroline: false,
-        title: config.xAxisTitle ? { text: config.xAxisTitle } : undefined,
-      },
-      yaxis: {
-        ...base.yaxis,
-        domain: [0, 0.85],
-        showgrid: false,
-        zeroline: false,
-        title: config.yAxisTitle ? { text: config.yAxisTitle } : undefined,
-      },
-      // Marginal histogram axes. Inherit the base tick font so their labels
-      // shrink with the tier like the main axes.
-      xaxis2: {
-        tickfont: base.xaxis?.tickfont,
-        domain: [0.85, 1],
-        showgrid: false,
-        zeroline: false,
-        showticklabels: true,
-      },
-      yaxis2: {
-        tickfont: base.yaxis?.tickfont,
-        domain: [0.85, 1],
-        showgrid: false,
-        zeroline: false,
-        showticklabels: true,
-      },
-    } as any; // Layout type allows flexible property assignment
-  } else {
-    // Use similar layout structure but without marginal axes
-    layout = {
-      ...base,
-      showlegend: false,
-      autosize: true,
-      hovermode: "closest",
-      bargap: 0,
-      xaxis: {
-        ...base.xaxis,
-        showgrid: false,
-        zeroline: false,
-        title: config.xAxisTitle ? { text: config.xAxisTitle } : undefined,
-      },
-      yaxis: {
-        ...base.yaxis,
-        showgrid: false,
-        zeroline: false,
-        title: config.yAxisTitle ? { text: config.yAxisTitle } : undefined,
-      },
-    } as any; // Layout type allows flexible property assignment
-  }
-
-  const plotConfig = createPlotlyConfig(config, sizing);
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
@@ -256,6 +291,7 @@ export function RidgePlot({
   colorMode = "solid",
 }: RidgePlotProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatter", renderer);
 
@@ -318,136 +354,162 @@ export function RidgePlot({
   };
 
   // Calculate density curves for each series
-  const plotData: PlotData[] = [];
+  const plotData: PlotData[] = useMemo(() => {
+    const traces: PlotData[] = [];
 
-  // Process data in reverse order so higher Y-axis items (top mountains) render last and appear in front
-  [...data].reverse().forEach((series, reverseIndex) => {
-    const index = data.length - 1 - reverseIndex; // Original index for positioning
-    // Use the provided density data directly
-    const xPoints = series.x;
-    const densityPoints = series.y;
+    // Process data in reverse order so higher Y-axis items (top mountains) render last and appear in front
+    [...data].reverse().forEach((series, reverseIndex) => {
+      const index = data.length - 1 - reverseIndex; // Original index for positioning
+      // Use the provided density data directly
+      const xPoints = series.x;
+      const densityPoints = series.y;
 
-    // Normalize density and offset for stacking
-    const maxDensity = Math.max(...densityPoints);
-    const mountainHeight = 0.6; // Height of each mountain (independent of spacing)
-    const normalizedDensity = densityPoints.map((d) => (d / maxDensity) * mountainHeight);
-    const yOffset = index * spacing;
+      // Normalize density and offset for stacking
+      const maxDensity = Math.max(...densityPoints);
+      const mountainHeight = 0.6; // Height of each mountain (independent of spacing)
+      const normalizedDensity = densityPoints.map((d) => (d / maxDensity) * mountainHeight);
+      const yOffset = index * spacing;
 
-    // Use heatmap coloring based on X-axis values (temperature range)
-    const xMin = Math.min(...xPoints);
-    const xMax = Math.max(...xPoints);
-    const xMean = (xMin + xMax) / 2; // Use mean temperature for this mountain
+      // Use heatmap coloring based on X-axis values (temperature range)
+      const xMin = Math.min(...xPoints);
+      const xMax = Math.max(...xPoints);
+      const xMean = (xMin + xMax) / 2; // Use mean temperature for this mountain
 
-    // Find global X range across all mountains for proper scaling
-    const allXValues = data.flatMap((s) => s.x);
-    const globalXMin = Math.min(...allXValues);
-    const globalXMax = Math.max(...allXValues);
+      // Find global X range across all mountains for proper scaling
+      const allXValues = data.flatMap((s) => s.x);
+      const globalXMin = Math.min(...allXValues);
+      const globalXMax = Math.max(...allXValues);
 
-    // Generate colors based on colorMode
-    let fillColor: string | null;
-    let lineColor: string;
+      // Generate colors based on colorMode
+      let fillColor: string | null;
+      let lineColor: string;
 
-    if (colorMode === "gradient") {
-      // For Plotly gradient, we need to use marker.color with colorscale
-      // We'll create a custom approach using multiple traces or segments
-      fillColor = null; // Will handle gradient differently
-      const xMean = (Math.min(...xPoints) + Math.max(...xPoints)) / 2;
-      const xRatio = (xMean - globalXMin) / (globalXMax - globalXMin);
-      lineColor = getHeatmapColor(xRatio, colorScale);
-    } else {
-      // Solid color based on mean X position (original behavior)
-      const xMean = (Math.min(...xPoints) + Math.max(...xPoints)) / 2;
-      const xRatio = (xMean - globalXMin) / (globalXMax - globalXMin);
-      const heatmapColor = getHeatmapColor(xRatio, colorScale);
-      fillColor = `${heatmapColor}80`; // Add transparency for solid
-      lineColor = heatmapColor;
-    }
-
-    if (fill) {
       if (colorMode === "gradient") {
-        // Create gradient effect by dividing the mountain into segments
-        const numSegments = Math.min(20, xPoints.length - 1);
+        // For Plotly gradient, we need to use marker.color with colorscale
+        // We'll create a custom approach using multiple traces or segments
+        fillColor = null; // Will handle gradient differently
+        const xMean = (Math.min(...xPoints) + Math.max(...xPoints)) / 2;
+        const xRatio = (xMean - globalXMin) / (globalXMax - globalXMin);
+        lineColor = getHeatmapColor(xRatio, colorScale);
+      } else {
+        // Solid color based on mean X position (original behavior)
+        const xMean = (Math.min(...xPoints) + Math.max(...xPoints)) / 2;
+        const xRatio = (xMean - globalXMin) / (globalXMax - globalXMin);
+        const heatmapColor = getHeatmapColor(xRatio, colorScale);
+        fillColor = `${heatmapColor}80`; // Add transparency for solid
+        lineColor = heatmapColor;
+      }
 
-        for (let seg = 0; seg < numSegments; seg++) {
-          const startIdx = Math.floor((seg / numSegments) * (xPoints.length - 1));
-          const endIdx = Math.floor(((seg + 1) / numSegments) * (xPoints.length - 1));
+      if (fill) {
+        if (colorMode === "gradient") {
+          // Create gradient effect by dividing the mountain into segments
+          const numSegments = Math.min(20, xPoints.length - 1);
 
-          if (startIdx < endIdx) {
-            const segXPoints = xPoints.slice(startIdx, endIdx + 1);
-            const segDensity = normalizedDensity.slice(startIdx, endIdx + 1);
+          for (let seg = 0; seg < numSegments; seg++) {
+            const startIdx = Math.floor((seg / numSegments) * (xPoints.length - 1));
+            const endIdx = Math.floor(((seg + 1) / numSegments) * (xPoints.length - 1));
 
-            // Calculate color for this segment based on X position
-            const firstX = segXPoints[0];
-            const lastX = segXPoints[segXPoints.length - 1];
-            if (firstX !== undefined && lastX !== undefined) {
-              const segMeanX = (firstX + lastX) / 2;
-              const segRatio = (segMeanX - globalXMin) / (globalXMax - globalXMin);
-              const segColor = getHeatmapColor(segRatio, colorScale);
+            if (startIdx < endIdx) {
+              const segXPoints = xPoints.slice(startIdx, endIdx + 1);
+              const segDensity = normalizedDensity.slice(startIdx, endIdx + 1);
 
-              // Create closed polygon for this segment
-              const xClosed = [firstX, ...segXPoints, lastX];
-              const yClosed = [yOffset, ...segDensity.map((d) => yOffset + d), yOffset];
+              // Calculate color for this segment based on X position
+              const firstX = segXPoints[0];
+              const lastX = segXPoints[segXPoints.length - 1];
+              if (firstX !== undefined && lastX !== undefined) {
+                const segMeanX = (firstX + lastX) / 2;
+                const segRatio = (segMeanX - globalXMin) / (globalXMax - globalXMin);
+                const segColor = getHeatmapColor(segRatio, colorScale);
 
-              plotData.push({
-                x: xClosed,
-                y: yClosed,
-                name: seg === 0 ? series.category : undefined, // Only show legend for first segment
-                type: plotType,
-                mode: "lines",
-                fill: "toself",
-                fillcolor: `${segColor}60`, // Semi-transparent
-                line: {
-                  color: segColor,
-                  width: seg === 0 ? 2 : 0, // Only outline on first segment
-                },
-                visible: series.visible,
-                showlegend: seg === 0 ? series.showlegend !== false : false,
-                legendgroup: series.legendgroup,
-                hovertemplate:
-                  series.hovertemplate ||
-                  `<b>${series.category}</b><br>Value: %{x:.1f}<br>Density: %{y:.3f}<extra></extra>`,
-                hoverinfo: series.hoverinfo,
-                customdata: series.customdata,
-              } as any as PlotData);
+                // Create closed polygon for this segment
+                const xClosed = [firstX, ...segXPoints, lastX];
+                const yClosed = [yOffset, ...segDensity.map((d) => yOffset + d), yOffset];
+
+                traces.push({
+                  x: xClosed,
+                  y: yClosed,
+                  name: seg === 0 ? series.category : undefined, // Only show legend for first segment
+                  type: plotType,
+                  mode: "lines",
+                  fill: "toself",
+                  fillcolor: `${segColor}60`, // Semi-transparent
+                  line: {
+                    color: segColor,
+                    width: seg === 0 ? 2 : 0, // Only outline on first segment
+                  },
+                  visible: series.visible,
+                  showlegend: seg === 0 ? series.showlegend !== false : false,
+                  legendgroup: series.legendgroup,
+                  hovertemplate:
+                    series.hovertemplate ||
+                    `<b>${series.category}</b><br>Value: %{x:.1f}<br>Density: %{y:.3f}<extra></extra>`,
+                  hoverinfo: series.hoverinfo,
+                  customdata: series.customdata,
+                } as any as PlotData);
+              }
             }
           }
+
+          // Add a light border outline for the entire mountain in gradient mode
+          const xClosed = [xPoints[0], ...xPoints, xPoints[xPoints.length - 1]];
+          const yClosed = [yOffset, ...normalizedDensity.map((d) => yOffset + d), yOffset];
+
+          traces.push({
+            x: xClosed,
+            y: yClosed,
+            name: undefined, // No legend for border
+            type: plotType,
+            mode: "lines",
+            fill: "none",
+            line: {
+              // The paper colour, so stacked ridges are carved apart in both modes.
+              color: readThemeColor("--card") ?? "rgba(255, 255, 255, 0.3)",
+              width: 1,
+            },
+            visible: series.visible,
+            showlegend: false,
+            hoverinfo: "skip", // Skip hover for border
+          } as any as PlotData);
+        } else {
+          // Solid color mode (original behavior)
+          const xClosed = [xPoints[0], ...xPoints, xPoints[xPoints.length - 1]];
+          const yClosed = [yOffset, ...normalizedDensity.map((d) => yOffset + d), yOffset];
+
+          traces.push({
+            x: xClosed,
+            y: yClosed,
+            name: series.category,
+            type: plotType,
+            mode: "lines",
+            fill: "toself",
+            fillcolor: fillColor,
+            line: {
+              color: readThemeColor("--card") ?? "rgba(255, 255, 255, 0.4)",
+              width: 1,
+            },
+            visible: series.visible,
+            showlegend: series.showlegend !== false,
+            legendgroup: series.legendgroup,
+            hovertemplate:
+              series.hovertemplate ||
+              `<b>${series.category}</b><br>Value: %{x:.1f}<br>Density: %{y:.3f}<extra></extra>`,
+            hoverinfo: series.hoverinfo,
+            customdata: series.customdata,
+          } as any as PlotData);
         }
-
-        // Add a light border outline for the entire mountain in gradient mode
-        const xClosed = [xPoints[0], ...xPoints, xPoints[xPoints.length - 1]];
-        const yClosed = [yOffset, ...normalizedDensity.map((d) => yOffset + d), yOffset];
-
-        plotData.push({
-          x: xClosed,
-          y: yClosed,
-          name: undefined, // No legend for border
-          type: plotType,
-          mode: "lines",
-          fill: "none",
-          line: {
-            color: "rgba(255, 255, 255, 0.3)", // Light white border
-            width: 1,
-          },
-          visible: series.visible,
-          showlegend: false,
-          hoverinfo: "skip", // Skip hover for border
-        } as any as PlotData);
       } else {
-        // Solid color mode (original behavior)
-        const xClosed = [xPoints[0], ...xPoints, xPoints[xPoints.length - 1]];
-        const yClosed = [yOffset, ...normalizedDensity.map((d) => yOffset + d), yOffset];
+        // Just the outline without fill
+        const yPoints = normalizedDensity.map((d) => yOffset + d);
 
-        plotData.push({
-          x: xClosed,
-          y: yClosed,
+        traces.push({
+          x: xPoints,
+          y: yPoints,
           name: series.category,
           type: plotType,
           mode: "lines",
-          fill: "toself",
-          fillcolor: fillColor,
           line: {
-            color: "rgba(255, 255, 255, 0.4)", // Light white border
-            width: 1,
+            color: lineColor,
+            width: 2,
           },
           visible: series.visible,
           showlegend: series.showlegend !== false,
@@ -459,52 +521,34 @@ export function RidgePlot({
           customdata: series.customdata,
         } as any as PlotData);
       }
-    } else {
-      // Just the outline without fill
-      const yPoints = normalizedDensity.map((d) => yOffset + d);
+    });
 
-      plotData.push({
-        x: xPoints,
-        y: yPoints,
-        name: series.category,
-        type: plotType,
-        mode: "lines",
-        line: {
-          color: lineColor,
-          width: 2,
-        },
-        visible: series.visible,
-        showlegend: series.showlegend !== false,
-        legendgroup: series.legendgroup,
-        hovertemplate:
-          series.hovertemplate ||
-          `<b>${series.category}</b><br>Value: %{x:.1f}<br>Density: %{y:.3f}<extra></extra>`,
-        hoverinfo: series.hoverinfo,
-        customdata: series.customdata,
-      } as any as PlotData);
-    }
-  });
+    return traces;
+  }, [colorMode, colorScale, data, fill, plotType, spacing]);
 
-  const plotConfig = createPlotlyConfig(config, sizing);
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   // Create custom layout for ridge plots
-  const base = createBaseLayout(config, sizing);
-  const layout = {
-    ...base,
-    xaxis: {
-      ...base.xaxis,
-      autorange: true,
-      type: "linear" as const,
-      title: config.xAxisTitle ? { text: config.xAxisTitle } : undefined,
-    },
-    yaxis: {
-      ...base.yaxis,
-      tickvals: data.map((_, index) => index * spacing),
-      ticktext: data.map((series) => series.category),
-      range: [-0.5, (data.length - 1) * spacing + 1],
-      title: config.yAxisTitle ? { text: config.yAxisTitle } : undefined,
-    },
-  };
+  const layout = useMemo(() => {
+    const base = createBaseLayout(config, sizing);
+    return {
+      ...base,
+      xaxis: {
+        ...base.xaxis,
+        autorange: true,
+        type: "linear" as const,
+        title: config.xAxisTitle ? { text: config.xAxisTitle } : undefined,
+      },
+      yaxis: {
+        ...base.yaxis,
+        tickvals: data.map((_, index) => index * spacing),
+        ticktext: data.map((series) => series.category),
+        range: [-0.5, (data.length - 1) * spacing + 1],
+        title: config.yAxisTitle ? { text: config.yAxisTitle } : undefined,
+      },
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+  }, [config, sizing, data, spacing, themeVersion]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>

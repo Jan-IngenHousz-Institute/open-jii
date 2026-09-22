@@ -1,13 +1,20 @@
 "use client";
 
 import type { PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
-import { createPlotlyConfig, getRenderer, getPlotType, createBaseLayout } from "./utils";
+import {
+  createPlotlyConfig,
+  getRenderer,
+  getPlotType,
+  createBaseLayout,
+  readThemeColor,
+} from "./utils";
 
 export interface SPCSeriesData extends BaseSeries {
   x: any[]; // Mixed types for time series, categories, or numeric data
@@ -51,14 +58,15 @@ export function SPCControlCharts({
   lowerControlLimit,
   upperSpecLimit,
   lowerSpecLimit,
-  controlLimitColor = "#ff6b6b",
-  specLimitColor = "#ffa726",
-  centerLineColor = "#4dabf7",
+  controlLimitColor = readThemeColor("--destructive") ?? "#ff6b6b",
+  specLimitColor = readThemeColor("--chart-4") ?? "#ffa726",
+  centerLineColor = readThemeColor("--chart-1") ?? "#4dabf7",
   showControlLimits = true,
   showSpecLimits = true,
   showCenterLine = true,
 }: SPCControlChartsProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatter", renderer);
 
@@ -79,151 +87,171 @@ export function SPCControlCharts({
   const xMin = Math.min(...numericXValues);
   const xMax = Math.max(...numericXValues);
 
-  const plotData: PlotData[] = [
-    // Main data series
-    ...data.map(
-      (series) =>
-        ({
-          x: series.x,
-          y: series.y,
-          name: series.name,
-          type: plotType,
-          mode: series.mode || "lines+markers",
+  const plotData: PlotData[] = useMemo(
+    () => [
+      // Main data series
+      ...data.map(
+        (series) =>
+          ({
+            x: series.x,
+            y: series.y,
+            name: series.name,
+            type: plotType,
+            mode: series.mode || "lines+markers",
 
-          marker: series.marker
-            ? {
-                color: series.marker.color || series.color,
-                size: series.marker.size || 6,
-                symbol: series.marker.symbol || "circle",
-              }
-            : {
-                color: series.color,
-                size: 6,
-              },
+            marker: series.marker
+              ? {
+                  color: series.marker.color || series.color,
+                  size: series.marker.size || 6,
+                  symbol: series.marker.symbol || "circle",
+                }
+              : {
+                  color: series.color,
+                  size: 6,
+                },
 
-          line: series.line
-            ? {
-                color: series.line.color || series.color,
-                width: series.line.width || 2,
-                dash: series.line.dash || "solid",
-              }
-            : {
-                color: series.color,
+            line: series.line
+              ? {
+                  color: series.line.color || series.color,
+                  width: series.line.width || 2,
+                  dash: series.line.dash || "solid",
+                }
+              : {
+                  color: series.color,
+                  width: 2,
+                },
+
+            visible: series.visible,
+            showlegend: series.showlegend,
+            legendgroup: series.legendgroup,
+            hovertemplate: series.hovertemplate,
+            hoverinfo: series.hoverinfo,
+            customdata: series.customdata,
+          }) as any as PlotData,
+      ),
+
+      // Center line
+      ...(showCenterLine
+        ? [
+            {
+              x: [xMin, xMax],
+              y: [calculatedCenterLine, calculatedCenterLine],
+              type: plotType,
+              mode: "lines",
+              name: "Center Line",
+              line: {
+                color: centerLineColor,
                 width: 2,
+                dash: "solid",
               },
+              showlegend: false,
+              hoverinfo: "skip",
+            } as any as PlotData,
+          ]
+        : []),
 
-          visible: series.visible,
-          showlegend: series.showlegend,
-          legendgroup: series.legendgroup,
-          hovertemplate: series.hovertemplate,
-          hoverinfo: series.hoverinfo,
-          customdata: series.customdata,
-        }) as any as PlotData,
-    ),
+      // Upper Control Limit
+      ...(showControlLimits
+        ? [
+            {
+              x: [xMin, xMax],
+              y: [calculatedUCL, calculatedUCL],
+              type: plotType,
+              mode: "lines",
+              name: "UCL",
+              line: {
+                color: controlLimitColor,
+                width: 2,
+                dash: "dash",
+              },
+              showlegend: false,
+              hoverinfo: "skip",
+            } as any as PlotData,
+          ]
+        : []),
 
-    // Center line
-    ...(showCenterLine
-      ? [
-          {
-            x: [xMin, xMax],
-            y: [calculatedCenterLine, calculatedCenterLine],
-            type: plotType,
-            mode: "lines",
-            name: "Center Line",
-            line: {
-              color: centerLineColor,
-              width: 2,
-              dash: "solid",
-            },
-            showlegend: false,
-            hoverinfo: "skip",
-          } as any as PlotData,
-        ]
-      : []),
+      // Lower Control Limit
+      ...(showControlLimits
+        ? [
+            {
+              x: [xMin, xMax],
+              y: [calculatedLCL, calculatedLCL],
+              type: plotType,
+              mode: "lines",
+              name: "LCL",
+              line: {
+                color: controlLimitColor,
+                width: 2,
+                dash: "dash",
+              },
+              showlegend: false,
+              hoverinfo: "skip",
+            } as any as PlotData,
+          ]
+        : []),
 
-    // Upper Control Limit
-    ...(showControlLimits
-      ? [
-          {
-            x: [xMin, xMax],
-            y: [calculatedUCL, calculatedUCL],
-            type: plotType,
-            mode: "lines",
-            name: "UCL",
-            line: {
-              color: controlLimitColor,
-              width: 2,
-              dash: "dash",
-            },
-            showlegend: false,
-            hoverinfo: "skip",
-          } as any as PlotData,
-        ]
-      : []),
+      // Upper Specification Limit
+      ...(showSpecLimits && upperSpecLimit !== undefined
+        ? [
+            {
+              x: [xMin, xMax],
+              y: [upperSpecLimit, upperSpecLimit],
+              type: plotType,
+              mode: "lines",
+              name: "USL",
+              line: {
+                color: specLimitColor,
+                width: 2,
+                dash: "dot",
+              },
+              showlegend: false,
+              hoverinfo: "skip",
+            } as any as PlotData,
+          ]
+        : []),
 
-    // Lower Control Limit
-    ...(showControlLimits
-      ? [
-          {
-            x: [xMin, xMax],
-            y: [calculatedLCL, calculatedLCL],
-            type: plotType,
-            mode: "lines",
-            name: "LCL",
-            line: {
-              color: controlLimitColor,
-              width: 2,
-              dash: "dash",
-            },
-            showlegend: false,
-            hoverinfo: "skip",
-          } as any as PlotData,
-        ]
-      : []),
+      // Lower Specification Limit
+      ...(showSpecLimits && lowerSpecLimit !== undefined
+        ? [
+            {
+              x: [xMin, xMax],
+              y: [lowerSpecLimit, lowerSpecLimit],
+              type: plotType,
+              mode: "lines",
+              name: "LSL",
+              line: {
+                color: specLimitColor,
+                width: 2,
+                dash: "dot",
+              },
+              showlegend: false,
+              hoverinfo: "skip",
+            } as any as PlotData,
+          ]
+        : []),
+    ],
+    [
+      calculatedCenterLine,
+      calculatedLCL,
+      calculatedUCL,
+      centerLineColor,
+      controlLimitColor,
+      data,
+      lowerSpecLimit,
+      plotType,
+      showCenterLine,
+      showControlLimits,
+      showSpecLimits,
+      specLimitColor,
+      upperSpecLimit,
+      xMax,
+      xMin,
+    ],
+  );
 
-    // Upper Specification Limit
-    ...(showSpecLimits && upperSpecLimit !== undefined
-      ? [
-          {
-            x: [xMin, xMax],
-            y: [upperSpecLimit, upperSpecLimit],
-            type: plotType,
-            mode: "lines",
-            name: "USL",
-            line: {
-              color: specLimitColor,
-              width: 2,
-              dash: "dot",
-            },
-            showlegend: false,
-            hoverinfo: "skip",
-          } as any as PlotData,
-        ]
-      : []),
-
-    // Lower Specification Limit
-    ...(showSpecLimits && lowerSpecLimit !== undefined
-      ? [
-          {
-            x: [xMin, xMax],
-            y: [lowerSpecLimit, lowerSpecLimit],
-            type: plotType,
-            mode: "lines",
-            name: "LSL",
-            line: {
-              color: specLimitColor,
-              width: 2,
-              dash: "dot",
-            },
-            showlegend: false,
-            hoverinfo: "skip",
-          } as any as PlotData,
-        ]
-      : []),
-  ];
-
-  const layout = createBaseLayout(config, sizing);
-  const plotConfig = createPlotlyConfig(config, sizing);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+  const layout = useMemo(() => createBaseLayout(config, sizing), [config, sizing, themeVersion]);
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>

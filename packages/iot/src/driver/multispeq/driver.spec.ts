@@ -62,6 +62,52 @@ describe("MultispeqDriver", () => {
       );
     });
 
+    // A console write the firmware never answers. Waiting it out would time out on
+    // healthy hardware and put the cancel switch on the wire behind the command.
+    it("resolves a write the caller says carries no reply, and sends no cancel", async () => {
+      driver.initialize(transport);
+
+      const result = await driver.execute("ledDac+3+800+", { expectReply: false });
+
+      expect(result.success).toBe(true);
+      expect(vi.mocked(transport.send).mock.calls.map(([payload]) => payload)).toEqual([
+        `ledDac+3+800+${MULTISPEQ_FRAMING.LINE_ENDING}`,
+      ]);
+    });
+
+    // send() resolves when the writer accepts the bytes, which can be later than the
+    // board's answer. A reply emitted before anything is listening is gone for good, and
+    // the command would then time out and cancel a write that had already worked.
+    it("keeps the reply of a device that answers inside the write", async () => {
+      driver.initialize(transport);
+      vi.mocked(transport.send).mockImplementation((payload: string) => {
+        if (payload.startsWith("hello")) {
+          transport.simulateData('{"device_name":"MultispeQ"}ABCD1234\n');
+        }
+        return Promise.resolve();
+      });
+
+      const result = await driver.execute("hello");
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual({ device_name: "MultispeQ" });
+      expect(vi.mocked(transport.send).mock.calls.map(([payload]) => payload)).not.toContain(
+        CANCEL_FRAME,
+      );
+    });
+
+    it("still waits for a reply when the caller says nothing", async () => {
+      driver.initialize(transport);
+      vi.mocked(transport.send).mockImplementation(() => {
+        setTimeout(() => transport.simulateData('{"result":"ok"}ABCD1234\n'), 0);
+        return Promise.resolve();
+      });
+
+      const result = await driver.execute("hello");
+
+      expect(result.data).toEqual({ result: "ok" });
+    });
+
     it("should send command with line ending", async () => {
       driver.initialize(transport);
 
@@ -242,6 +288,23 @@ describe("MultispeqDriver", () => {
       const info = await driver.getDeviceInfo();
 
       expect(info).toEqual({});
+    });
+
+    // Identity runs during connect. A board that answers neither question must cost two
+    // identity deadlines, not two of the console default sized for a measurement.
+    it("bounds each fallback question to the identity timeout on a silent board", async () => {
+      vi.useFakeTimers();
+      try {
+        driver.initialize(transport);
+        vi.mocked(transport.send).mockResolvedValue(undefined);
+
+        const pending = driver.getDeviceInfo();
+        await vi.advanceTimersByTimeAsync(2 * MULTISPEQ_FRAMING.IDENTITY_TIMEOUT + 2);
+
+        await expect(pending).resolves.toEqual({});
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 

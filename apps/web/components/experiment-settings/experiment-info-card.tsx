@@ -5,6 +5,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react";
 import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
+import { Separator } from "@repo/ui/components/separator";
 
 import { ExperimentArchive } from "./experiment-archive";
 import { ExperimentDelete } from "./experiment-delete";
@@ -34,12 +35,8 @@ export function ExperimentInfoCard({
 
   return (
     <>
-      <div
-        role="separator"
-        aria-orientation="horizontal"
-        className="text-muted-foreground mx-4 border-t"
-      />
-      <div className="px-6 py-4">
+      <Separator decorative={false} className="mx-4 my-4 w-auto" />
+      <div className="px-6 pb-4">
         <p className="text-muted-foreground mb-2 text-sm">
           {t(
             isDeletionEnabled

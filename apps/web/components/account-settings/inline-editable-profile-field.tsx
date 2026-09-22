@@ -5,6 +5,7 @@ import type { FocusEvent } from "react";
 import { useState } from "react";
 
 import { Button } from "@repo/ui/components/button";
+import { Card } from "@repo/ui/components/card";
 import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
 
@@ -62,10 +63,7 @@ export function InlineEditableProfileField({
     const inputId = `${label.replace(/\W+/g, "-").toLowerCase()}-field`;
 
     return (
-      <div
-        className="border-primary/20 bg-card rounded-md border p-3 shadow-sm"
-        onBlur={handleBlur}
-      >
+      <Card className="gap-0 p-3" onBlur={handleBlur}>
         <label htmlFor={inputId} className="text-muted-foreground text-xs font-medium uppercase">
           {label}
         </label>
@@ -124,7 +122,7 @@ export function InlineEditableProfileField({
             </Button>
           </div>
         </div>
-      </div>
+      </Card>
     );
   }
 
@@ -132,7 +130,9 @@ export function InlineEditableProfileField({
     <Button
       type="button"
       variant="ghost"
-      className="hover:border-primary/10 hover:bg-muted group flex h-auto w-full items-start justify-between gap-4 rounded-md border border-transparent px-3 py-3 text-left font-normal"
+      // whitespace-normal: buttonVariants' base whitespace-nowrap left the
+      // break-words below unable to act, so a long URL ran past the card edge.
+      className="hover:border-primary/10 hover:bg-muted group flex h-auto w-full items-start justify-between gap-4 whitespace-normal rounded-md border border-transparent px-3 py-3 text-left font-normal"
       onClick={startEditing}
     >
       <span className="min-w-0 flex-1 space-y-1">

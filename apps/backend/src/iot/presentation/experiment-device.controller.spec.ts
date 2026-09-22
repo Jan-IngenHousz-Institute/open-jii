@@ -1,18 +1,19 @@
 import { StatusCodes } from "http-status-codes";
 
-import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
-import type { ExperimentDeviceList } from "@repo/api/domains/experiment/devices/experiment-devices.schema";
+import type {
+  ExperimentDeviceSeries,
+  ExperimentDevicesOverview,
+} from "@repo/api/domains/experiment/devices/experiment-devices.schema";
 import type {
   DeviceExperimentList,
   DeviceOnboardingConfig,
 } from "@repo/api/domains/iot/iot.schema";
 import { eq, experiments } from "@repo/database";
 
-import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
+import { DatabricksAdapter } from "../../common/modules/databricks/databricks.adapter";
 import { success } from "../../common/utils/fp-utils";
-import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
 
@@ -21,7 +22,7 @@ const ENDPOINT = "abc123-ats.iot.eu-central-1.amazonaws.com";
 describe("ExperimentDeviceController", () => {
   const testApp = TestHarness.App;
   let userId: string;
-  let analyticsAdapter: MockAnalyticsAdapter;
+  let databricksAdapter: DatabricksAdapter;
 
   beforeAll(async () => {
     await testApp.setup({ mock: { AnalyticsAdapter: true } });
@@ -30,10 +31,14 @@ describe("ExperimentDeviceController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     userId = await testApp.createTestUser({ name: "Owner" });
-    analyticsAdapter = testApp.module.get(AnalyticsAdapter);
-    analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, true);
     const awsAdapter = testApp.module.get(AwsAdapter);
     vi.spyOn(awsAdapter, "getIotDataEndpoint").mockResolvedValue(success(ENDPOINT));
+    // The list is an orchestrated read; keep its enrichments quiet and offline here.
+    vi.spyOn(awsAdapter, "searchThingsConnectivity").mockResolvedValue(success(new Map()));
+    databricksAdapter = testApp.module.get(DatabricksAdapter);
+    vi.spyOn(databricksAdapter, "getExperimentPublishers").mockResolvedValue(success([]));
+    vi.spyOn(databricksAdapter, "getDevicesLastActivity").mockResolvedValue(success(new Map()));
+    vi.spyOn(databricksAdapter, "getExperimentDeviceStats").mockResolvedValue(success([]));
   });
 
   afterEach(() => {
@@ -119,12 +124,14 @@ describe("ExperimentDeviceController", () => {
     const listPath = testApp.resolveOrpcPath(contract.experiments.listExperimentDevices, {
       id: experiment.id,
     });
-    const listed: SuperTestResponse<ExperimentDeviceList> = await testApp
+    const listed: SuperTestResponse<ExperimentDevicesOverview> = await testApp
       .get(listPath)
       .withAuth(userId)
       .expect(StatusCodes.OK);
-    expect(listed.body).toHaveLength(1);
-    expect(listed.body[0].device.id).toBe(device.id);
+    expect(listed.body.devices).toHaveLength(1);
+    expect(listed.body.devices[0].device?.id).toBe(device.id);
+    // A bound row is onboarded by definition, so the count the badge reads is at least one.
+    expect(listed.body.devices[0].device?.boundExperimentCount).toBeGreaterThanOrEqual(1);
 
     const removePath = testApp.resolveOrpcPath(contract.experiments.removeExperimentDevice, {
       id: experiment.id,
@@ -132,11 +139,11 @@ describe("ExperimentDeviceController", () => {
     });
     await testApp.delete(removePath).withAuth(userId).expect(StatusCodes.NO_CONTENT);
 
-    const after: SuperTestResponse<ExperimentDeviceList> = await testApp
+    const after: SuperTestResponse<ExperimentDevicesOverview> = await testApp
       .get(listPath)
       .withAuth(userId)
       .expect(StatusCodes.OK);
-    expect(after.body).toEqual([]);
+    expect(after.body.devices).toEqual([]);
   });
 
   it("detaches a device from a since-archived experiment (204)", async () => {
@@ -161,7 +168,7 @@ describe("ExperimentDeviceController", () => {
   });
 
   it("returns 400 when onboarding a device without active credentials", async () => {
-    const device = await testApp.createIotDevice({ createdBy: userId, status: "pending" });
+    const device = await testApp.createIotDevice({ createdBy: userId, status: "registered" });
     const { experiment } = await testApp.createExperiment({ name: "E", userId });
 
     await testApp
@@ -295,11 +302,11 @@ describe("ExperimentDeviceController", () => {
     const listPath = testApp.resolveOrpcPath(contract.experiments.listExperimentDevices, {
       id: experiment.id,
     });
-    const listed: SuperTestResponse<ExperimentDeviceList> = await testApp
+    const listed: SuperTestResponse<ExperimentDevicesOverview> = await testApp
       .get(listPath)
       .withAuth(orgAdmin)
       .expect(StatusCodes.OK);
-    expect(listed.body).toHaveLength(1);
+    expect(listed.body.devices).toHaveLength(1);
 
     const removePath = testApp.resolveOrpcPath(contract.experiments.removeExperimentDevice, {
       id: experiment.id,
@@ -308,34 +315,45 @@ describe("ExperimentDeviceController", () => {
     await testApp.delete(removePath).withAuth(orgAdmin).expect(StatusCodes.NO_CONTENT);
   });
 
-  it("returns 403 on every endpoint when the iot-devices flag is disabled", async () => {
+  it("serves a device series to an experiment reader, keyed by client id", async () => {
     const device = await testApp.createIotDevice({ createdBy: userId, status: "active" });
     const { experiment } = await testApp.createExperiment({ name: "E", userId });
-    analyticsAdapter.setFlag(FEATURE_FLAGS.IOT_DEVICES, false);
+    vi.spyOn(databricksAdapter, "getExperimentDeviceSeries").mockResolvedValue(
+      success([{ bucketStart: "2026-09-01T00:00:00.000Z", count: 7 }]),
+    );
 
-    await testApp
-      .post(onboardPath(device.id))
+    const path = testApp.resolveOrpcPath(contract.experiments.getExperimentDeviceSeries, {
+      id: experiment.id,
+    });
+    const response: SuperTestResponse<ExperimentDeviceSeries> = await testApp
+      .get(path)
+      .query({
+        clientId: device.thingName,
+        from: "2026-08-04T12:00:00.000Z",
+        to: "2026-09-03T12:00:00.000Z",
+        bucket: "day",
+      })
       .withAuth(userId)
-      .send({})
-      .expect(StatusCodes.FORBIDDEN);
+      .expect(StatusCodes.OK);
+
+    expect(response.body.buckets).toEqual([{ bucketStart: "2026-09-01T00:00:00.000Z", count: 7 }]);
+  });
+
+  it("rejects a series range longer than the contract allows (400)", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "E", userId });
+
+    const path = testApp.resolveOrpcPath(contract.experiments.getExperimentDeviceSeries, {
+      id: experiment.id,
+    });
     await testApp
-      .get(testApp.resolveOrpcPath(contract.iot.listDeviceExperiments, { deviceId: device.id }))
+      .get(path)
+      .query({
+        clientId: "AMBYTE_A",
+        from: "2026-01-01T00:00:00.000Z",
+        to: "2026-09-03T12:00:00.000Z",
+        bucket: "day",
+      })
       .withAuth(userId)
-      .expect(StatusCodes.FORBIDDEN);
-    await testApp
-      .get(
-        testApp.resolveOrpcPath(contract.experiments.listExperimentDevices, { id: experiment.id }),
-      )
-      .withAuth(userId)
-      .expect(StatusCodes.FORBIDDEN);
-    await testApp
-      .delete(
-        testApp.resolveOrpcPath(contract.experiments.removeExperimentDevice, {
-          id: experiment.id,
-          deviceId: device.id,
-        }),
-      )
-      .withAuth(userId)
-      .expect(StatusCodes.FORBIDDEN);
+      .expect(StatusCodes.BAD_REQUEST);
   });
 });

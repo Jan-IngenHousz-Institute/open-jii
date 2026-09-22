@@ -40,12 +40,12 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
   const images = currentMission.imagesCollection?.items?.filter((img) => !!img?.url) ?? [];
 
   return (
-    <div className="bg-white py-16">
+    <div className="py-16">
       <div className="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8">
         {/* --- TOP TITLE SECTION --- */}
         <div className="max-w-4xl">
           <h1
-            className="mt-2 text-pretty text-4xl font-semibold tracking-tight text-gray-900 sm:text-5xl"
+            className="text-foreground mt-2 text-pretty text-4xl font-semibold tracking-tight sm:text-5xl"
             {...inspectorProps({ fieldId: "subtitle" })}
           >
             {currentMission.subtitle}
@@ -53,7 +53,7 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
 
           {currentMission.mission?.json && (
             <div
-              className="mt-6 text-xl leading-8 text-gray-700"
+              className="text-foreground mt-6 text-xl leading-8"
               {...inspectorProps({ fieldId: "mission" })}
             >
               <CtfRichText
@@ -73,7 +73,7 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
           {/* --- LEFT COLUMN: SUBTITLE + MISSION --- */}
           <div className="lg:pr-8">
             <h2
-              className="text-pretty text-3xl font-semibold tracking-tight text-gray-900"
+              className="text-foreground text-pretty text-3xl font-semibold tracking-tight"
               {...inspectorProps({ fieldId: "title" })}
             >
               {currentMission.title}
@@ -81,7 +81,7 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
 
             {currentMission.about?.json && (
               <div
-                className="mt-6 text-lg leading-7 text-gray-600"
+                className="text-muted-foreground mt-6 text-lg leading-7"
                 {...inspectorProps({ fieldId: "about" })}
               >
                 <CtfRichText
@@ -108,7 +108,7 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
               {images.map((img, index) => (
                 <div
                   key={img?.sys.id}
-                  className={`aspect-square overflow-hidden rounded-xl shadow-xl outline outline-1 -outline-offset-1 outline-black/10 ${index % 2 === 1 ? "-mt-8 lg:-mt-40" : ""} `}
+                  className={`outline-border aspect-square overflow-hidden rounded-xl shadow-xl outline outline-1 -outline-offset-1 ${index % 2 === 1 ? "-mt-8 lg:-mt-40" : ""} `}
                 >
                   {img && (
                     <CtfImage

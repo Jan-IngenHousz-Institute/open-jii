@@ -24,6 +24,11 @@ export interface ExecuteOptions {
    * estimated runtime).
    */
   timeoutMs?: number;
+  /**
+   * False where the console answers nothing, so waiting for a reply would time out
+   * on a healthy device. Only a driver that waits for a framed reply reads it.
+   */
+  expectReply?: boolean;
 }
 
 /** Abstract device driver interface */
@@ -60,6 +65,13 @@ export interface IDeviceDriver {
     metadata?: Record<string, unknown>;
   }): Promise<void>;
 
+  /**
+   * Preemptively abort the in-flight command. Present only on drivers whose
+   * firmware has a device-side abort (MultispeQ's `-1+`); callers must treat a
+   * missing implementation as "nothing to abort" rather than an error.
+   */
+  cancel?(): Promise<void>;
+
   /** Cleanup and destroy driver */
   destroy(): Promise<void>;
 }
@@ -91,10 +103,10 @@ export abstract class DeviceDriver<
   /** Override to change the maximum receive buffer size per driver */
   protected maxBufferSize = DEFAULT_MAX_BUFFER_SIZE;
 
-  /** Logger instance — injected via constructor, defaults to console */
+  /** Logger instance, injected via constructor, defaults to console */
   protected readonly log: Logger;
 
-  /** Typed event emitter — subclasses emit/listen on their own event map */
+  /** Typed event emitter; subclasses emit/listen on their own event map */
   protected readonly emitter: Emitter<EventMap>;
 
   /** Serializes execute() calls so only one command is in-flight at a time */

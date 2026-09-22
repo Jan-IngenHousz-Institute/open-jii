@@ -1,12 +1,12 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "~/hooks/useLocale";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 
 import { useExperimentVisualization } from "../../hooks/experiment/useExperimentVisualization/useExperimentVisualization";
 import ExperimentVisualizationRenderer from "./experiment-visualization-renderer";
@@ -54,22 +54,14 @@ export default function ExperimentVisualizationReadOnly({ experimentId, visualiz
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">{visualization.name}</CardTitle>
-          {visualization.description && (
-            <p className="text-muted-foreground mt-2">{visualization.description}</p>
-          )}
-        </CardHeader>
-        <CardContent>
-          <ExperimentVisualizationRenderer
-            experimentId={experimentId}
-            visualization={visualization}
-            showTitle={false}
-            showDescription={false}
-          />
-        </CardContent>
-      </Card>
+      <SettingsCard title={visualization.name} description={visualization.description}>
+        <ExperimentVisualizationRenderer
+          experimentId={experimentId}
+          visualization={visualization}
+          showTitle={false}
+          showDescription={false}
+        />
+      </SettingsCard>
     </div>
   );
 }

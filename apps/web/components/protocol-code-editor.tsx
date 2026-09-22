@@ -251,23 +251,26 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
           "overflow-hidden",
           borderless
             ? "flex h-full flex-col"
-            : "shadow-xs rounded-md border border-slate-200 transition-shadow duration-200 hover:shadow-md",
+            : "shadow-xs border-border rounded-md border transition-shadow duration-200 hover:shadow-md",
           error && !borderless && "border-destructive",
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-100 px-4 py-2">
+        <div className="border-border bg-muted flex items-center justify-between border-b px-4 py-2">
           <div className="flex items-center gap-3">
-            {title && <span className="text-sm font-medium text-slate-700">{title}</span>}
-            {title && <span className="text-slate-300">|</span>}
-            <span className="text-xs font-medium text-slate-600">JSON</span>
-            <span className="text-xs text-slate-500">
+            {title && <span className="text-foreground text-sm font-medium">{title}</span>}
+            {title && <span className="text-muted-foreground/50">|</span>}
+            <span className="text-muted-foreground text-xs font-medium">JSON</span>
+            <span className="text-muted-foreground text-xs">
               {stats.lines} lines - {stats.size}
             </span>
-            {!isValidJson && <span className="text-xs text-red-600">Invalid JSON</span>}
+            {!isValidJson && <span className="text-destructive text-xs">Invalid JSON</span>}
             {validationWarnings.length > 0 && isValidJson && (
               <span
-                className={cn("text-xs", validationAsWarning ? "text-yellow-600" : "text-red-600")}
+                className={cn(
+                  "text-xs",
+                  validationAsWarning ? "text-status-stale-foreground" : "text-destructive",
+                )}
               >
                 {validationWarnings[0]}
                 {validationWarnings.length > 1 && ` (+${validationWarnings.length - 1} more)`}
@@ -289,10 +292,10 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={handleCopy}
-                    className="h-7 w-7 p-0 hover:bg-slate-200"
+                    className="hover:bg-muted h-7 w-7 p-0"
                   >
                     {copied ? (
-                      <Check className="h-3 w-3 text-green-600" />
+                      <Check className="text-status-active-foreground h-3 w-3" />
                     ) : (
                       <Copy className="h-3 w-3" />
                     )}
@@ -308,7 +311,7 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
         <div className={cn("relative", borderless && "flex-1")}>
           {/* Placeholder overlay */}
           {!editorValue && placeholder && (
-            <div className="pointer-events-none absolute left-12 top-4 z-10 text-sm text-slate-400">
+            <div className="text-muted-foreground pointer-events-none absolute left-12 top-4 z-10 text-sm">
               {placeholder}
             </div>
           )}

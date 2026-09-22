@@ -1,6 +1,7 @@
 import { createPahoSessionFactory } from "~/features/connection/services/mqtt/mqtt-paho-session";
 import { createTransport } from "~/features/connection/services/mqtt/mqtt-transport";
 import type { Transport } from "~/features/connection/services/mqtt/mqtt-transport";
+import { createLargeUploadTransport } from "~/features/recent-measurements/services/large-upload-transport";
 import { createOutbox } from "~/features/recent-measurements/services/outbox";
 import type { Outbox } from "~/features/recent-measurements/services/outbox";
 
@@ -30,6 +31,7 @@ import type { Outbox } from "~/features/recent-measurements/services/outbox";
 
 interface UploadGraph {
   transport: Transport | null;
+  largeTransport: Transport | null;
   outbox: Outbox | null;
 }
 
@@ -39,7 +41,7 @@ type GlobalWithGraph = typeof globalThis & { [GRAPH_KEY]?: UploadGraph };
 
 function graph(): UploadGraph {
   const g = globalThis as GlobalWithGraph;
-  return (g[GRAPH_KEY] ??= { transport: null, outbox: null });
+  return (g[GRAPH_KEY] ??= { transport: null, largeTransport: null, outbox: null });
 }
 
 export function getTransport(): Transport {
@@ -48,9 +50,18 @@ export function getTransport(): Transport {
   return g.transport;
 }
 
+export function getLargeUploadTransport(): Transport {
+  const g = graph();
+  g.largeTransport ??= createLargeUploadTransport();
+  return g.largeTransport;
+}
+
 export function getOutbox(): Outbox {
   const g = graph();
-  g.outbox ??= createOutbox({ transport: getTransport() });
+  g.outbox ??= createOutbox({
+    transport: getTransport(),
+    largeTransport: getLargeUploadTransport(),
+  });
   return g.outbox;
 }
 
@@ -68,7 +79,9 @@ if (typeof module !== "undefined") {
     const g = graph();
     g.outbox?.destroy();
     g.transport?.destroy();
+    g.largeTransport?.destroy();
     g.outbox = null;
     g.transport = null;
+    g.largeTransport = null;
   });
 }

@@ -266,7 +266,7 @@ function OwnerSettingsForm({ organization }: { organization: OrganizationProfile
         </form>
       </Card>
 
-      <Card className="p-5">
+      <Card padding="none" className="p-5">
         <div className="space-y-0.5">
           <h3 className="text-sm font-semibold">{t("organizations.visibility.title")}</h3>
           <p className="text-muted-foreground text-xs leading-relaxed">
@@ -354,14 +354,15 @@ function VisibilityCard({
   onSelect: () => void;
 }) {
   return (
-    <button
+    <Button
       type="button"
       role="radio"
+      variant="outline"
       aria-checked={isSelected}
       disabled={disabled}
       onClick={onSelect}
       className={cn(
-        "rounded-md border p-3.5 text-left transition-colors disabled:opacity-60",
+        "h-auto min-w-0 flex-col items-stretch whitespace-normal p-3.5 text-left font-normal",
         isSelected ? "border-primary bg-primary/5" : "hover:border-primary/60",
       )}
     >
@@ -381,7 +382,7 @@ function VisibilityCard({
       <span className="text-muted-foreground mt-1.5 block text-xs leading-relaxed">
         {description}
       </span>
-    </button>
+    </Button>
   );
 }
 

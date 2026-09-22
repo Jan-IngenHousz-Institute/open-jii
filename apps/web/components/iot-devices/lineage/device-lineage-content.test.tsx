@@ -94,7 +94,7 @@ describe("DeviceLineageContent", () => {
   it("renders the identity chain through to the experiments", async () => {
     mountAll();
 
-    render(<DeviceLineageContent />);
+    const { container } = render(<DeviceLineageContent />);
 
     expect(await screen.findByText("iot.devices.lineage.brokerTitle")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.lineage.warehouseTitle")).toBeInTheDocument();
@@ -102,6 +102,19 @@ describe("DeviceLineageContent", () => {
     expect(screen.getByText("Gateway")).toBeInTheDocument();
     expect(screen.getByText("Soil Health")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.lineage.legend.unbound")).toBeInTheDocument();
+
+    expect(container.firstElementChild).toHaveClass("min-w-0");
+    expect(screen.getByTestId("lineage-flow")).toHaveClass("min-w-0", "overflow-hidden");
+  });
+
+  it("keeps long selected device facts from resizing the graph", async () => {
+    mountAll();
+
+    render(<DeviceLineageContent />);
+    fireEvent.click(await screen.findByText("Gateway"));
+
+    const serial = await screen.findByText("SN-77");
+    expect(serial.closest(".rounded-xl")).toHaveClass("min-w-0");
   });
 
   it("flags an arrival without a binding and keeps its experiment opaque", async () => {
@@ -154,7 +167,14 @@ describe("DeviceLineageContent", () => {
           protocolId: `4444444${String(index)}-4444-4444-8444-444444444444`,
           count: 10 - index,
         })),
-        workbookMix: [{ workbookVersionId: "55555555-5555-4555-8555-555555555555", count: 2 }],
+        workbookMix: [
+          {
+            workbookVersionId: "99999999-9999-4999-8999-999999999999",
+            workbookId: "55555555-5555-4555-8555-555555555555",
+            workbookVersion: 1,
+            count: 2,
+          },
+        ],
         macroMix: [{ macroId: "66666666-6666-4666-8666-666666666666", count: 1 }],
       },
     });

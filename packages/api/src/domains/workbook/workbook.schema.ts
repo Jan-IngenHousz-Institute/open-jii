@@ -1,6 +1,8 @@
 import { z } from "zod";
 
+import { zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
+import { zResourceSeries } from "../metrics/metrics.schema";
 import { zVisibility } from "../visibility/visibility.schema";
 import { zWorkbookCellArray, zWorkbookCellArrayInput } from "./workbook-cells.schema";
 
@@ -35,7 +37,12 @@ export const zWorkbookListItem = zWorkbook.omit({ cells: true }).extend({
   cellTypeCounts: z.record(z.string(), z.number().int().nonnegative()).optional(),
 });
 
-export const zWorkbookList = z.array(zWorkbookListItem);
+const zWorkbookListEntry = zWorkbookListItem.extend({
+  /** Present on the paginated list, which reads it for the rows it returns. */
+  activity: zResourceSeries.nullable().optional(),
+});
+
+export const zWorkbookList = z.array(zWorkbookListEntry);
 
 /**
  * A single workbook plus the caller's effective capabilities on it. Detail route
@@ -45,10 +52,19 @@ export const zWorkbookDetail = zWorkbook.extend({
   capabilities: zResourceCapabilities,
 });
 
-export const zWorkbookFilterQuery = z.object({
-  search: z.string().optional(),
-  filter: z.enum(["my"]).optional(),
-});
+export const zWorkbookFilterQuery = z
+  .object({
+    search: z.string().optional(),
+    /** @deprecated Alias for `scope: "related"`, removed once web and mobile have migrated. */
+    filter: z.enum(["my"]).optional().describe("Deprecated alias for scope=related"),
+    scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
+  })
+  .merge(zPaginationQuery);
+
+export const zWorkbookPaginatedList = zPaginated(zWorkbookListEntry);
+
+/** Array when the caller sent no `page`, envelope when they did. */
+export const zWorkbookListResponse = z.union([zWorkbookList, zWorkbookPaginatedList]);
 
 export const zWorkbookIdPathParam = z.object({
   id: z.string().uuid(),
@@ -93,9 +109,12 @@ export const zWorkbookErrorResponse = z.object({
 
 export type Workbook = z.infer<typeof zWorkbook>;
 export type WorkbookDetail = z.infer<typeof zWorkbookDetail>;
+export type WorkbookListEntry = z.infer<typeof zWorkbookListEntry>;
 export type WorkbookListItem = z.infer<typeof zWorkbookListItem>;
 export type WorkbookList = z.infer<typeof zWorkbookList>;
 export type WorkbookFilterQuery = z.infer<typeof zWorkbookFilterQuery>;
+export type WorkbookPaginatedList = z.infer<typeof zWorkbookPaginatedList>;
+export type WorkbookListResponse = z.infer<typeof zWorkbookListResponse>;
 export type WorkbookIdPathParam = z.infer<typeof zWorkbookIdPathParam>;
 export type CreateWorkbookRequestBody = z.infer<typeof zCreateWorkbookRequestBody>;
 export type UpdateWorkbookRequestBody = z.infer<typeof zUpdateWorkbookRequestBody>;

@@ -467,7 +467,7 @@ describe("WorkbookRepository — list access scoping", () => {
     expect(ids).not.toContain(privateId);
   });
 
-  it('keeps the "my" filter as an ownership view, unaffected by visibility', async () => {
+  it("keeps scope=related as a relationship view, unaffected by visibility", async () => {
     const other = await testApp.createTestUser({ name: "Other Author" });
     const othersWorkbook = await testApp.createWorkbook({
       name: "Someone else's workbook",
@@ -475,7 +475,7 @@ describe("WorkbookRepository — list access scoping", () => {
       visibility: "public",
     });
 
-    const result = await repository.findAll({ filter: "my", userId: owner });
+    const result = await repository.findAll({ scope: "related", userId: owner });
     assertSuccess(result);
     const ids = result.value.map((w) => w.id);
 

@@ -264,6 +264,8 @@ export interface MeasurementListRow {
   dayKey: string;
   /** Workbook attempt this row belongs to; "" when it has none. */
   workbookRunId: string;
+  /** Error kind behind a `failed` status; null for every other status. */
+  failureReason: string | null;
 }
 
 /**
@@ -290,6 +292,7 @@ export async function getMeasurementsList(
         hasComment: measurements.hasComment,
         dayKey: measurements.dayKey,
         workbookRunId: measurements.workbookRunId,
+        failureReason: measurements.failureReason,
       })
       .from(measurements)
       .where(inArray(measurements.status, status))
@@ -314,6 +317,7 @@ export async function getMeasurementsList(
       // NULL means "legacy row, not backfilled yet"; both it and "" mean the
       // row groups on its own.
       workbookRunId: r.workbookRunId ?? "",
+      failureReason: r.failureReason,
     }));
   } catch (error) {
     log.error("Failed to fetch measurements list", { err: (error as Error)?.message });
@@ -456,12 +460,14 @@ export async function updateMeasurement(key: string, data: Measurement): Promise
   }
 }
 
-export async function markAsFailed(key: string): Promise<void> {
+export async function markAsFailed(key: string, reason?: string): Promise<void> {
   await ensureMigrated();
   try {
     db.update(measurements)
-      .set({ status: "failed" })
-      .where(and(eq(measurements.id, key), eq(measurements.status, "pending")))
+      .set({ status: "failed", failureReason: reason ?? null })
+      // An already-failed row is retried on every foreground, so it must be
+      // able to replace its reason with why it failed this time.
+      .where(and(eq(measurements.id, key), inArray(measurements.status, ["pending", "failed"])))
       .run();
   } catch (error) {
     log.error("Failed to mark measurement as failed", { key, err: (error as Error)?.message });
@@ -475,7 +481,9 @@ export async function markAsSuccessful(key: string): Promise<void> {
     // Accept transitions from any pre-success state. A retry of a previously
     // "failed" row that finally goes through still ends at "successful".
     db.update(measurements)
-      .set({ status: "successful" })
+      // Clear the reason: a row that finally goes through must not keep
+      // explaining a failure it recovered from.
+      .set({ status: "successful", failureReason: null })
       .where(and(eq(measurements.id, key), inArray(measurements.status, ["pending", "failed"])))
       .run();
   } catch (error) {

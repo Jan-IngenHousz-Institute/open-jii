@@ -14,14 +14,14 @@ import {
   zWorkbookDetail,
   zWorkbookFilterQuery,
   zWorkbookIdPathParam,
-  zWorkbookList,
+  zWorkbookListResponse,
 } from "./workbook.schema";
 
 export const workbookContract = {
   listWorkbooks: oc
     .route({ method: "GET", path: "/api/v1/workbooks", successStatus: 200 })
     .input(zWorkbookFilterQuery)
-    .output(zWorkbookList),
+    .output(zWorkbookListResponse),
   getWorkbook: oc
     .route({ method: "GET", path: "/api/v1/workbooks/{id}", successStatus: 200 })
     .input(zWorkbookIdPathParam)

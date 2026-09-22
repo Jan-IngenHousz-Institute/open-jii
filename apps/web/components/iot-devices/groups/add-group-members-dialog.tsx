@@ -2,7 +2,7 @@
 
 import { useAddIotDeviceGroupMembers } from "@/hooks/iot/useAddIotDeviceGroupMembers/useAddIotDeviceGroupMembers";
 import { useIotDevices } from "@/hooks/iot/useIotDevices/useIotDevices";
-import { presentDevice, resolveDevicePrimaryLabel } from "@/util/device-presentation";
+import { resolveDeviceLabel } from "@/util/device-presentation";
 import { useMemo, useState } from "react";
 
 import { useSession } from "@repo/auth/client";
@@ -96,16 +96,7 @@ export function AddGroupMembersDialog({
                       toggle(device.id);
                     }}
                   />
-                  <span className="text-sm">
-                    {resolveDevicePrimaryLabel(
-                      presentDevice({
-                        name: device.name,
-                        family: device.deviceType,
-                        id: device.serialNumber,
-                      }),
-                      t,
-                    )}
-                  </span>
+                  <span className="text-sm">{resolveDeviceLabel(device, t)}</span>
                   <span className="text-muted-foreground ml-auto font-mono text-xs">
                     {device.deviceType}
                   </span>

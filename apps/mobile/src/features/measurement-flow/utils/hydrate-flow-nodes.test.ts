@@ -81,6 +81,28 @@ describe("hydrateFlowNodes", () => {
     });
   });
 
+  it("prefers the snapshot language over a stale cell payload language", () => {
+    const staleCells: WorkbookCell[] = [
+      {
+        id: "c2",
+        type: "macro",
+        isCollapsed: false,
+        payload: { macroId: "m1", language: "javascript", name: "My Macro" },
+      },
+    ];
+    const withLanguage: EntitySnapshots = {
+      protocols: {},
+      macros: { m1: { code: "print(1)", language: "python" } },
+    };
+    const macroNode = hydrateFlowNodes([nodes[1]], staleCells, withLanguage)[0];
+    expect(macroNode.content.macro?.language).toBe("python");
+  });
+
+  it("falls back to the cell payload language for versions published without one", () => {
+    const macroNode = hydrateFlowNodes([nodes[1]], cells, snapshots)[0];
+    expect(macroNode.content.macro?.language).toBe("python");
+  });
+
   it("hydrates repeated protocol references from their exact workbook cells", () => {
     const repeatedCells: WorkbookCell[] = [
       {
@@ -164,6 +186,32 @@ describe("hydrateFlowNodes", () => {
       { name: "Ground analysis", language: "python" },
       { name: "Ambit 2 analysis", language: "javascript" },
     ]);
+  });
+
+  it("re-attaches code to nodes stripped for persistence, keeping their other fields", () => {
+    const stripped: FlowNode[] = [
+      {
+        ...nodes[0],
+        content: { params: { averages: 3 }, protocolId: "p1", protocol: { name: "My Protocol" } },
+      },
+      {
+        ...nodes[1],
+        content: {
+          params: { threshold: 40 },
+          macroId: "m1",
+          macro: { id: "m1", name: "My Macro", filename: "m1.py", language: "python" },
+        },
+      },
+    ];
+
+    const [measurement, analysis] = hydrateFlowNodes(stripped, cells, snapshots);
+
+    expect(measurement.content.protocol.code).toEqual([{ x: 1 }]);
+    expect(measurement.content.protocolId).toBe("p1");
+    expect(measurement.content.params).toEqual({ averages: 3 });
+    expect(analysis.content.macro.code).toBe("print(1)");
+    expect(analysis.content.macroId).toBe("m1");
+    expect(analysis.content.params).toEqual({ threshold: 40 });
   });
 
   it("leaves non-measurement/analysis nodes untouched", () => {

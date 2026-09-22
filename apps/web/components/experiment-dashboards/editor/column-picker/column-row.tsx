@@ -6,6 +6,7 @@ import { GripVertical, X } from "lucide-react";
 
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 
 export interface ColumnRowProps {
@@ -36,29 +37,33 @@ export function ColumnRow({ name, column, onRemove }: ColumnRowProps) {
         isDragging && "opacity-40",
       )}
     >
-      <button
+      <Button
         type="button"
-        className="text-muted-foreground hover:text-foreground focus-visible:ring-primary/40 focus-visible:outline-hidden inline-flex h-full cursor-grab items-center px-1 focus-visible:ring-1 active:cursor-grabbing"
+        variant="ghost"
+        size="icon-xs"
+        className="text-muted-foreground hover:text-foreground h-full cursor-grab px-1 active:cursor-grabbing"
         aria-label={t("columnPicker.dragHandle", { name })}
         {...attributes}
         {...listeners}
       >
         <GripVertical className="h-3.5 w-3.5" />
-      </button>
+      </Button>
       <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
       {column && (
         <span className="text-muted-foreground/70 shrink-0 font-mono text-[10px] uppercase">
           {column.type_name}
         </span>
       )}
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-xs"
         onClick={handleRemove}
-        className="text-muted-foreground hover:text-destructive shrink-0 rounded p-0.5"
+        className="text-muted-foreground hover:text-destructive shrink-0"
         aria-label={t("columnPicker.remove", { name })}
       >
         <X className="h-3.5 w-3.5" />
-      </button>
+      </Button>
     </div>
   );
 }

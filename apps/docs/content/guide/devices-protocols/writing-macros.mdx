@@ -9,7 +9,8 @@ A macro is a **data-processing script**: it turns a measurement or earlier
 workbook values into a JSON object of named results. openJII stores Python,
 JavaScript, and R macros. On the web, the backend runs each language in its own
 isolated Lambda sandbox. The mobile field flow runs JavaScript locally and
-Python in Pyodide; it does not currently dispatch R macros.
+Python in Pyodide; an R macro fails on the phone with a "cannot run on this
+device" message instead of running.
 
 Open **Macros** and select **New macro** to choose a language, write the code,
 and optionally associate compatible protocols. You can also create or select a
@@ -167,6 +168,13 @@ return(list(change_from_baseline = current - baseline))
 
 Use the web workbook runner to test R macros because the mobile runner currently
 selects only JavaScript or Python.
+
+When you select a language in a workbook macro cell, the selection takes effect
+after saving succeeds. If saving fails, the cell keeps its previous language.
+
+The language is pinned into each published workbook version together with the
+macro code. If you change a macro's language after an experiment was published,
+publish the workbook again so the field app runs it with the new language.
 
 ## Runtimes and available libraries
 

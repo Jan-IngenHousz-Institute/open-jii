@@ -540,6 +540,7 @@ describe("ExperimentDataExportsRepository", () => {
           stream: mockStream,
           filePath: mockFilePath,
           tableName: "raw_data",
+          format: "csv",
           completedAt: "2026-01-02T03:04:05Z",
         }),
       );
@@ -550,6 +551,7 @@ describe("ExperimentDataExportsRepository", () => {
       assertSuccess(result);
       expect(result.value.filePath).toBe(mockFilePath);
       expect(result.value.tableName).toBe("raw_data");
+      expect(result.value.format).toBe("csv");
       expect(result.value.completedAt).toBe("2026-01-02T03:04:05Z");
       expect(result.value.stream).toBe(mockStream);
 

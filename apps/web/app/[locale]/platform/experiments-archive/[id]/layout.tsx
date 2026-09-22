@@ -1,6 +1,7 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { PlatformHeaderDetail } from "@/components/navigation/site-header/platform-header-context";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
@@ -98,6 +99,10 @@ export default function ExperimentLayout({ children }: ExperimentLayoutProps) {
 
   return (
     <div className="page-fluid flex flex-1 flex-col space-y-6">
+      <PlatformHeaderDetail
+        href={`/${locale}/platform/experiments-archive/${id}`}
+        label={experiment.name}
+      />
       <ExperimentTitle
         experimentId={id}
         name={experiment.name}

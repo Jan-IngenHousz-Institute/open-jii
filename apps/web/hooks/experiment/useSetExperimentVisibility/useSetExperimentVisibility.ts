@@ -1,7 +1,8 @@
+import { listQueryKeys } from "@/hooks/list-query-keys";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-/** Publishes an experiment and invalidates its detail, access, and list caches. */
+/** Publishes an experiment and refreshes its detail, access, list, and search caches. */
 export const useSetExperimentVisibility = () => {
   const queryClient = useQueryClient();
 
@@ -15,9 +16,10 @@ export const useSetExperimentVisibility = () => {
         await queryClient.invalidateQueries({
           queryKey: orpc.experiments.getExperimentAccess.queryKey({ input: { id: variables.id } }),
         });
-        await queryClient.invalidateQueries({
-          queryKey: orpc.experiments.listExperiments.key(),
-        });
+        for (const queryKey of listQueryKeys.experiments()) {
+          await queryClient.invalidateQueries({ queryKey });
+        }
+        await queryClient.invalidateQueries({ queryKey: orpc.search.globalSearch.key() });
       },
     }),
   );

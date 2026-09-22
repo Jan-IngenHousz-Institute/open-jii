@@ -1,3 +1,5 @@
+import type { StatusTone } from "@/components/shared/status-badge";
+
 /**
  * Display spelling for a macro language. These are product names, not translated
  * words: `r` is "R", not "R" by capitalization, and "JavaScript" carries its own
@@ -18,22 +20,23 @@ export function getMacroLanguageLabel(language: string): string {
 }
 
 /**
- * Badge color class for a macro language. Unknown values fall back to the neutral
- * badge, so this accepts the raw `language` string carried on a macro.
+ * Badge tone for a macro language. Unknown values fall back to the neutral tone,
+ * so this accepts the raw `language` string carried on a macro.
  *
- * Mirrors `sensor-family.ts`: the pale `badge-*` fills are designed to sit under the
- * Badge component's default `text-black`, so consumers pass this as the only class
- * and leave the variant alone.
+ * Mirrors `sensor-family.ts`: the tone carries its own foreground, so consumers
+ * hand it to `StatusBadge` rather than passing a colour class to `Badge`.
+ * JavaScript previously reached for a bare fill with no light/dark pair; it is
+ * given `featured`, the one remaining tone not already spoken for here.
  */
-export function getMacroLanguageBadgeColor(language: string): string {
+export function getMacroLanguageBadgeTone(language: string): StatusTone {
   switch (language) {
     case "python":
-      return "bg-badge-published";
+      return "published";
     case "r":
-      return "bg-badge-stale";
+      return "stale";
     case "javascript":
-      return "bg-badge";
+      return "featured";
     default:
-      return "bg-badge-archived";
+      return "archived";
   }
 }

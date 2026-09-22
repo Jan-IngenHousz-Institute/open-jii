@@ -8,6 +8,8 @@ import type {
   TernaryContourSeriesData,
   TernaryBoundary,
 } from "../../charts/ternary";
+// Mocked above; asserting against it keeps the expectation and the mock in step.
+import { chartGridColor } from "../../charts/utils";
 
 // Mock utils
 vi.mock("../../charts/plotly-chart", () => ({
@@ -23,6 +25,8 @@ vi.mock("../../charts/plotly-chart", () => ({
 }));
 
 vi.mock("../../charts/utils", () => ({
+  chartGridColor: vi.fn(() => "#E6E6E6"),
+  readThemeColor: vi.fn(() => undefined),
   getRenderer: vi.fn(() => "svg"),
   getPlotType: vi.fn((type: string, renderer: string) =>
     renderer === "webgl" ? `${type}gl` : type,
@@ -455,7 +459,7 @@ describe("TernaryPlot", () => {
     const plotData = JSON.parse(screen.getByTestId("plot-data").textContent || "[]");
     const boundaryTrace = plotData[0];
     expect(boundaryTrace?.line).toMatchObject({
-      color: "#333",
+      color: chartGridColor(),
       width: 2,
       dash: "solid",
     });

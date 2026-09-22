@@ -1,11 +1,13 @@
 "use client";
 
-import type { DevicePayloadStats } from "@repo/api/domains/iot/iot.schema";
+import type { DevicePayloadStats, WorkbookMixEntry } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
+import { useChartThemeRefresh } from "@repo/ui/components/charts/use-chart-theme-refresh";
+import { EmptyState } from "@repo/ui/components/empty-state";
 import { Progress } from "@repo/ui/components/progress";
 
 import { EntityLink } from "./entity-link";
-import { MONITORING_SERIES_COLORS } from "./monitoring-palette";
+import { monitoringSeriesColors } from "./monitoring-palette";
 import type { EntityAccess, ResolvedEntity } from "./resolve-entity-label";
 import { resolveEntities } from "./resolve-entity-label";
 
@@ -30,11 +32,7 @@ export function PayloadProfile({
   const total = payload.totalMeasurements;
 
   if (total === 0) {
-    return (
-      <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
-        {t("iot.devices.monitoring.noMeasurements")}
-      </p>
-    );
+    return <EmptyState size="inline" description={t("iot.devices.monitoring.noMeasurements")} />;
   }
 
   // An id the platform cannot resolve belongs to nothing it knows: unknown,
@@ -45,10 +43,10 @@ export function PayloadProfile({
     (id) => `/${locale}/platform/protocols/${id}`,
     () => t("iot.devices.monitoring.unknownProtocolId"),
   );
+  // Keyed by the OWNING workbook: a device reports the version it ran, and a
+  // version id matches nothing in the viewer's workbook list.
   const workbookEntities = resolveEntities(
-    payload.workbookMix.flatMap((entry) =>
-      entry.workbookVersionId === null ? [] : [entry.workbookVersionId],
-    ),
+    payload.workbookMix.flatMap((entry) => (entry.workbookId === null ? [] : [entry.workbookId])),
     visibleWorkbooks,
     (id) => `/${locale}/platform/workbooks/${id}`,
     () => t("iot.devices.monitoring.unknownWorkbookId"),
@@ -60,6 +58,39 @@ export function PayloadProfile({
     (id) => `/${locale}/platform/macros/${id}`,
     () => t("iot.devices.monitoring.unknownMacroId"),
   );
+
+  /** The version is part of the identity: one workbook can appear twice here. */
+  function renderWorkbookLabel(entry: WorkbookMixEntry) {
+    if (entry.workbookVersionId === null) {
+      return (
+        <span className="text-muted-foreground italic">
+          {t("iot.devices.monitoring.noWorkbook")}
+        </span>
+      );
+    }
+    if (entry.workbookId === null) {
+      return (
+        <span className="text-muted-foreground italic">
+          {t("iot.devices.monitoring.unknownWorkbookId")}
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-baseline gap-1.5">
+        <UnresolvedAware
+          id={entry.workbookId}
+          resolved={workbookEntities}
+          fallback={t("iot.devices.monitoring.unknownWorkbookId")}
+        />
+        {entry.workbookVersion !== null && (
+          <span className="text-muted-foreground text-xs">
+            {t("iot.devices.monitoring.workbookVersionShort", { version: entry.workbookVersion })}
+          </span>
+        )}
+      </span>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -120,18 +151,7 @@ export function PayloadProfile({
           rows={payload.workbookMix.map((entry) => ({
             key: entry.workbookVersionId ?? "none",
             count: entry.count,
-            node:
-              entry.workbookVersionId === null ? (
-                <span className="text-muted-foreground italic">
-                  {t("iot.devices.monitoring.noWorkbook")}
-                </span>
-              ) : (
-                <UnresolvedAware
-                  id={entry.workbookVersionId}
-                  resolved={workbookEntities}
-                  fallback={t("iot.devices.monitoring.unknownWorkbookId")}
-                />
-              ),
+            node: renderWorkbookLabel(entry),
           }))}
         />
 
@@ -197,6 +217,9 @@ function Breakdown({
   total: number;
 }) {
   const { t } = useTranslation("iot");
+  // Resolved in JS, so this has to learn about a theme swap itself.
+  useChartThemeRefresh();
+  const seriesColors = monitoringSeriesColors();
 
   return (
     <div className="space-y-3">
@@ -221,8 +244,7 @@ function Breakdown({
                   className="h-full rounded-full"
                   style={{
                     width: `${String((row.count / total) * 100)}%`,
-                    backgroundColor:
-                      MONITORING_SERIES_COLORS[index % MONITORING_SERIES_COLORS.length],
+                    backgroundColor: seriesColors[index % seriesColors.length],
                   }}
                 />
               </div>

@@ -12,6 +12,20 @@ export class AwsConfigService {
   constructor(private readonly configService: ConfigService) {
     this.config = this.loadConfig();
     this.validateConfig();
+    this.warnWhenLocalEndpointSet();
+  }
+
+  // A local endpoint in a deployed environment would send every calibration to
+  // the wrong place, so its presence is loud from the first log line.
+  private warnWhenLocalEndpointSet(): void {
+    const endpoint = this.config.lambda.calibrationSandboxEndpoint;
+    if (endpoint) {
+      this.logger.warn({
+        msg: "Calibration sandbox invokes go to a local endpoint",
+        operation: "loadConfig",
+        endpoint,
+      });
+    }
   }
 
   /**
@@ -34,6 +48,7 @@ export class AwsConfigService {
         .split(",")
         .map((name) => name.trim())
         .filter(Boolean),
+      iotJobsPolicyName: (this.configService.get<string>("aws.iot.jobsPolicyName") ?? "").trim(),
       deviceThingTypeName: this.configService.getOrThrow<string>("aws.iot.deviceThingTypeName"),
       deviceThingGroupName: this.configService.getOrThrow<string>("aws.iot.deviceThingGroupName"),
       lambda: {
@@ -46,6 +61,13 @@ export class AwsConfigService {
         macroSandboxRFunctionName: this.configService.getOrThrow<string>(
           "aws.lambda.macroSandboxRFunctionName",
         ),
+        calibrationSandboxFunctionName: this.configService.getOrThrow<string>(
+          "aws.lambda.calibrationSandboxFunctionName",
+        ),
+        // Unset means the deployed function; a task definition never injects this, and
+        // a read that threw on its absence took every AWS backend down at boot.
+        calibrationSandboxEndpoint:
+          this.configService.get<string>("aws.lambda.calibrationSandboxEndpoint") ?? "",
       },
       s3: {
         iotArchiveBucketName: this.configService.getOrThrow<string>("aws.s3.iotArchiveBucketName"),
@@ -108,6 +130,15 @@ export class AwsConfigService {
 
   get iotPolicyNames(): string[] {
     return this.config.iotPolicyNames;
+  }
+
+  /**
+   * Policy granting a device its own AWS IoT Jobs topics. Attached to device
+   * certificates only, never to the Cognito identities that share
+   * {@link iotPolicyNames}: phones and browsers run no firmware jobs.
+   */
+  get iotJobsPolicyName(): string {
+    return this.config.iotJobsPolicyName;
   }
 
   get deviceThingTypeName(): string {

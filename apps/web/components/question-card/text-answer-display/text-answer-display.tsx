@@ -6,14 +6,9 @@ export function TextAnswerDisplay() {
   const { t } = useTranslation(["experiments"]);
 
   return (
-    <div className="from-jii-medium-green/10 to-jii-dark-green/10 rounded-lg bg-gradient-to-r p-6 text-center">
-      <div className="shadow-xs mx-auto mb-3 w-fit rounded-full bg-white p-3">
-        <svg
-          className="text-jii-dark-green h-5 w-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
+    <div className="bg-accent rounded-lg p-6 text-center">
+      <div className="shadow-xs bg-card mx-auto mb-3 w-fit rounded-full p-3">
+        <svg className="text-primary h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -22,8 +17,8 @@ export function TextAnswerDisplay() {
           />
         </svg>
       </div>
-      <p className="mb-1 font-medium text-gray-900">{t("questionCard.textResponseLabel")}</p>
-      <p className="text-sm text-gray-600">{t("questionCard.textResponseDescription")}</p>
+      <p className="text-foreground mb-1 font-medium">{t("questionCard.textResponseLabel")}</p>
+      <p className="text-muted-foreground text-sm">{t("questionCard.textResponseDescription")}</p>
     </div>
   );
 }

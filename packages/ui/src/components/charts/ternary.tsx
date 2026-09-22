@@ -1,11 +1,12 @@
 "use client";
 
 import type { PlotData } from "plotly.js";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
 import { PlotlyChart } from "./plotly-chart";
 import type { BaseChartProps, BaseSeries, MarkerConfig, SafeFont } from "./types";
+import { useChartThemeRefresh } from "./use-chart-theme-refresh";
 import { useChartSizing } from "./use-is-compact";
 import {
   createPlotlyConfig,
@@ -13,6 +14,7 @@ import {
   getPlotType,
   responsiveChrome,
   tierAxisFontSizes,
+  chartGridColor,
 } from "./utils";
 
 // Normalise string-or-object axis titles; a caller-provided font wins over the tier font.
@@ -118,157 +120,215 @@ export interface TernaryPlotProps extends BaseChartProps {
   bgcolor?: string;
 }
 
+// Default parameter values are re-created on every render, which would defeat
+// the memos below. Shared empties keep the identity stable.
+const NO_BOUNDARIES: TernaryBoundary[] = [];
+const NO_AXIS: NonNullable<TernaryPlotProps["aaxis"]> = {};
+
 export function TernaryPlot({
   data,
   config = {},
   className,
   loading,
   error,
-  boundaries = [],
-  aaxis = {},
-  baxis = {},
-  caxis = {},
+  boundaries = NO_BOUNDARIES,
+  aaxis = NO_AXIS,
+  baxis = NO_AXIS,
+  caxis = NO_AXIS,
   sum = 1,
   bgcolor = "white",
 }: TernaryPlotProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("scatterternary", renderer);
 
   // Process main data series
-  const plotData: PlotData[] = data.map(
-    (series) =>
-      ({
-        a: series.a,
-        b: series.b,
-        c: series.c,
-        name: series.name,
-        type: plotType,
-        mode: series.mode || "markers",
+  const plotData: PlotData[] = useMemo(
+    () =>
+      data.map(
+        (series) =>
+          ({
+            a: series.a,
+            b: series.b,
+            c: series.c,
+            name: series.name,
+            type: plotType,
+            mode: series.mode || "markers",
 
-        marker: series.marker
-          ? {
-              color: series.marker.color || series.color,
-              size: series.marker.size || 8,
-              symbol: series.marker.symbol || "circle",
-              opacity: series.marker.opacity || series.opacity || 1,
-              line: series.marker.line
-                ? {
-                    color: series.marker.line.color,
-                    width: series.marker.line.width || 0,
-                  }
-                : undefined,
-            }
-          : {
-              color: series.color,
-              size: 8,
-            },
+            marker: series.marker
+              ? {
+                  color: series.marker.color || series.color,
+                  size: series.marker.size || 8,
+                  symbol: series.marker.symbol || "circle",
+                  opacity: series.marker.opacity || series.opacity || 1,
+                  line: series.marker.line
+                    ? {
+                        color: series.marker.line.color,
+                        width: series.marker.line.width || 0,
+                      }
+                    : undefined,
+                }
+              : {
+                  color: series.color,
+                  size: 8,
+                },
 
-        line: series.line
-          ? {
-              color: series.line.color || series.color,
-              width: series.line.width || 2,
-              dash: series.line.dash || "solid",
-              shape: series.line.shape || "linear",
-              smoothing: series.line.smoothing,
-            }
-          : undefined,
+            line: series.line
+              ? {
+                  color: series.line.color || series.color,
+                  width: series.line.width || 2,
+                  dash: series.line.dash || "solid",
+                  shape: series.line.shape || "linear",
+                  smoothing: series.line.smoothing,
+                }
+              : undefined,
 
-        text: series.text,
-        textposition: series.textposition || "middle center",
-        textfont: series.textfont,
+            text: series.text,
+            textposition: series.textposition || "middle center",
+            textfont: series.textfont,
 
-        sum: series.sum || sum,
+            sum: series.sum || sum,
 
-        visible: series.visible,
-        showlegend: series.showlegend,
-        legendgroup: series.legendgroup,
-        hovertemplate: series.hovertemplate,
-        hoverinfo: series.hoverinfo,
-        customdata: series.customdata,
-      }) as any as PlotData,
+            visible: series.visible,
+            showlegend: series.showlegend,
+            legendgroup: series.legendgroup,
+            hovertemplate: series.hovertemplate,
+            hoverinfo: series.hoverinfo,
+            customdata: series.customdata,
+          }) as any as PlotData,
+      ),
+    [data, plotType, sum],
   );
 
   // Add boundary lines as additional traces
-  const boundaryTraces: PlotData[] = boundaries.map(
-    (boundary) =>
-      ({
-        a: boundary.a,
-        b: boundary.b,
-        c: boundary.c,
-        name: boundary.name,
-        type: plotType,
-        mode: "lines",
-        line: {
-          color: boundary.line?.color || "#333",
-          width: boundary.line?.width || 2,
-          dash: boundary.line?.dash || "solid",
-        },
-        fill: "toself", // Fill the polygon to itself
-        fillcolor: boundary.fillcolor,
-        opacity: boundary.opacity || 1,
-        showlegend: true, // Show region names in legend
-        legendgroup: "regions", // Group regions together
-        hoverinfo: "name", // Show region name on hover
-        sum: sum,
-      }) as any as PlotData,
+  const boundaryTraces: PlotData[] = useMemo(
+    () =>
+      boundaries.map(
+        (boundary) =>
+          ({
+            a: boundary.a,
+            b: boundary.b,
+            c: boundary.c,
+            name: boundary.name,
+            type: plotType,
+            mode: "lines",
+            line: {
+              color: boundary.line?.color || chartGridColor(),
+              width: boundary.line?.width || 2,
+              dash: boundary.line?.dash || "solid",
+            },
+            fill: "toself", // Fill the polygon to itself
+            fillcolor: boundary.fillcolor,
+            opacity: boundary.opacity || 1,
+            showlegend: true, // Show region names in legend
+            legendgroup: "regions", // Group regions together
+            hoverinfo: "name", // Show region name on hover
+            sum: sum,
+          }) as any as PlotData,
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+    [boundaries, plotType, sum, themeVersion],
   );
 
   // Combine all traces - boundaries first (background), then scatter points (foreground) for proper layering
-  const allTraces = [...boundaryTraces, ...plotData];
+  const allTraces = useMemo(() => [...boundaryTraces, ...plotData], [boundaryTraces, plotData]);
 
   // Tier-aware chrome + the ternary config createBaseLayout cannot provide.
-  const baseLayout = {
-    ...responsiveChrome(config, sizing),
-    plot_bgcolor: bgcolor,
+  const baseLayout = useMemo(
+    () =>
+      ({
+        ...responsiveChrome(config, sizing),
+        plot_bgcolor: bgcolor,
 
-    ternary: {
-      sum: sum,
-      aaxis: {
-        title: ternaryAxisTitle(aaxis.title, "A", fontSizes.axisTitle),
-        tickfont: { size: fontSizes.tick },
-        min: aaxis.min || 0,
-        max: aaxis.max || sum,
-        tick0: aaxis.tick0 || 0,
-        dtick: aaxis.dtick || sum / 10,
-        gridcolor: aaxis.gridcolor || "#E6E6E6",
-        linecolor: aaxis.linecolor || "#444",
-        showgrid: aaxis.showgrid !== false,
-        showline: aaxis.showline !== false,
-        showticklabels: aaxis.showticklabels !== false,
-      },
-      baxis: {
-        title: ternaryAxisTitle(baxis.title, "B", fontSizes.axisTitle),
-        tickfont: { size: fontSizes.tick },
-        min: baxis.min || 0,
-        max: baxis.max || sum,
-        tick0: baxis.tick0 || 0,
-        dtick: baxis.dtick || sum / 10,
-        gridcolor: baxis.gridcolor || "#E6E6E6",
-        linecolor: baxis.linecolor || "#444",
-        showgrid: baxis.showgrid !== false,
-        showline: baxis.showline !== false,
-        showticklabels: baxis.showticklabels !== false,
-      },
-      caxis: {
-        title: ternaryAxisTitle(caxis.title, "C", fontSizes.axisTitle),
-        tickfont: { size: fontSizes.tick },
-        min: caxis.min || 0,
-        max: caxis.max || sum,
-        tick0: caxis.tick0 || 0,
-        dtick: caxis.dtick || sum / 10,
-        gridcolor: caxis.gridcolor || "#E6E6E6",
-        linecolor: caxis.linecolor || "#444",
-        showgrid: caxis.showgrid !== false,
-        showline: caxis.showline !== false,
-        showticklabels: caxis.showticklabels !== false,
-      },
-      bgcolor: bgcolor,
-    },
-  } as any; // Layout type allows flexible property assignment
+        ternary: {
+          sum: sum,
+          aaxis: {
+            title: ternaryAxisTitle(aaxis.title, "A", fontSizes.axisTitle),
+            tickfont: { size: fontSizes.tick },
+            min: aaxis.min || 0,
+            max: aaxis.max || sum,
+            tick0: aaxis.tick0 || 0,
+            dtick: aaxis.dtick || sum / 10,
+            gridcolor: aaxis.gridcolor || chartGridColor(),
+            linecolor: aaxis.linecolor || chartGridColor(),
+            showgrid: aaxis.showgrid !== false,
+            showline: aaxis.showline !== false,
+            showticklabels: aaxis.showticklabels !== false,
+          },
+          baxis: {
+            title: ternaryAxisTitle(baxis.title, "B", fontSizes.axisTitle),
+            tickfont: { size: fontSizes.tick },
+            min: baxis.min || 0,
+            max: baxis.max || sum,
+            tick0: baxis.tick0 || 0,
+            dtick: baxis.dtick || sum / 10,
+            gridcolor: baxis.gridcolor || chartGridColor(),
+            linecolor: baxis.linecolor || chartGridColor(),
+            showgrid: baxis.showgrid !== false,
+            showline: baxis.showline !== false,
+            showticklabels: baxis.showticklabels !== false,
+          },
+          caxis: {
+            title: ternaryAxisTitle(caxis.title, "C", fontSizes.axisTitle),
+            tickfont: { size: fontSizes.tick },
+            min: caxis.min || 0,
+            max: caxis.max || sum,
+            tick0: caxis.tick0 || 0,
+            dtick: caxis.dtick || sum / 10,
+            gridcolor: caxis.gridcolor || chartGridColor(),
+            linecolor: caxis.linecolor || chartGridColor(),
+            showgrid: caxis.showgrid !== false,
+            showline: caxis.showline !== false,
+            showticklabels: caxis.showticklabels !== false,
+          },
+          bgcolor: bgcolor,
+        },
+      }) as any,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+    [
+      aaxis.dtick,
+      aaxis.gridcolor,
+      aaxis.linecolor,
+      aaxis.max,
+      aaxis.min,
+      aaxis.showgrid,
+      aaxis.showline,
+      aaxis.showticklabels,
+      aaxis.tick0,
+      aaxis.title,
+      baxis.dtick,
+      baxis.gridcolor,
+      baxis.linecolor,
+      baxis.max,
+      baxis.min,
+      baxis.showgrid,
+      baxis.showline,
+      baxis.showticklabels,
+      baxis.tick0,
+      baxis.title,
+      bgcolor,
+      caxis.dtick,
+      caxis.gridcolor,
+      caxis.linecolor,
+      caxis.max,
+      caxis.min,
+      caxis.showgrid,
+      caxis.showline,
+      caxis.showticklabels,
+      caxis.tick0,
+      caxis.title,
+      config,
+      fontSizes.axisTitle,
+      fontSizes.tick,
+      sizing,
+      sum,
+      themeVersion,
+    ],
+  ); // Layout type allows flexible property assignment
 
-  const plotConfig = createPlotlyConfig(config, sizing);
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
@@ -324,107 +384,151 @@ export function TernaryContour({
   className,
   loading,
   error,
-  aaxis = {},
-  baxis = {},
-  caxis = {},
+  aaxis = NO_AXIS,
+  baxis = NO_AXIS,
+  caxis = NO_AXIS,
   sum = 1,
 }: TernaryContourProps) {
   const [containerRef, sizing] = useChartSizing<HTMLDivElement>();
+  const themeVersion = useChartThemeRefresh();
   const fontSizes = tierAxisFontSizes(sizing);
   const renderer = getRenderer(config.useWebGL);
   const plotType = getPlotType("contourternary", renderer);
 
-  const plotData: PlotData[] = data.map(
-    (series) =>
-      ({
-        a: series.a,
-        b: series.b,
-        c: series.c,
-        z: series.z,
-        name: series.name,
-        type: plotType,
+  const plotData: PlotData[] = useMemo(
+    () =>
+      data.map(
+        (series) =>
+          ({
+            a: series.a,
+            b: series.b,
+            c: series.c,
+            z: series.z,
+            name: series.name,
+            type: plotType,
 
-        // Color scale
-        colorscale: series.colorscale || "Viridis",
-        showscale: series.showscale !== false,
-        colorbar: series.colorbar || {
-          title: "Value",
-          titleside: "right",
-        },
-
-        // Contour configuration
-        ncontours: series.ncontours || 15,
-        contours: series.contours
-          ? {
-              start: series.contours.start,
-              end: series.contours.end,
-              size: series.contours.size,
-              showlines: series.contours.showlines !== false,
-              showlabels: series.contours.showlabels || false,
-              coloring: series.contours.coloring || "fill",
-            }
-          : {
-              showlines: true,
-              coloring: "fill",
+            // Color scale
+            colorscale: series.colorscale || "Viridis",
+            showscale: series.showscale !== false,
+            colorbar: series.colorbar || {
+              title: "Value",
+              titleside: "right",
             },
 
-        sum: sum,
+            // Contour configuration
+            ncontours: series.ncontours || 15,
+            contours: series.contours
+              ? {
+                  start: series.contours.start,
+                  end: series.contours.end,
+                  size: series.contours.size,
+                  showlines: series.contours.showlines !== false,
+                  showlabels: series.contours.showlabels || false,
+                  coloring: series.contours.coloring || "fill",
+                }
+              : {
+                  showlines: true,
+                  coloring: "fill",
+                },
 
-        visible: series.visible,
-        showlegend: series.showlegend,
-        legendgroup: series.legendgroup,
-        hovertemplate: series.hovertemplate,
-        hoverinfo: series.hoverinfo,
-        customdata: series.customdata,
-      }) as any as PlotData,
+            sum: sum,
+
+            visible: series.visible,
+            showlegend: series.showlegend,
+            legendgroup: series.legendgroup,
+            hovertemplate: series.hovertemplate,
+            hoverinfo: series.hoverinfo,
+            customdata: series.customdata,
+          }) as any as PlotData,
+      ),
+    [data, plotType, sum],
   );
 
   // Tier-aware chrome + the ternary config createBaseLayout cannot provide.
-  const layout = {
-    ...responsiveChrome(config, sizing),
+  const layout = useMemo(
+    () =>
+      ({
+        ...responsiveChrome(config, sizing),
 
-    ternary: {
-      sum: sum,
-      aaxis: {
-        title: ternaryAxisTitle(aaxis.title, "A", fontSizes.axisTitle),
-        tickfont: { size: fontSizes.tick },
-        min: aaxis.min || 0,
-        max: aaxis.max || sum,
-        tick0: aaxis.tick0 || 0,
-        dtick: aaxis.dtick || sum / 10,
-        gridcolor: aaxis.gridcolor || "#E6E6E6",
-        linecolor: aaxis.linecolor || "#444",
-        showgrid: aaxis.showgrid !== false,
-        showline: aaxis.showline !== false,
-      },
-      baxis: {
-        title: ternaryAxisTitle(baxis.title, "B", fontSizes.axisTitle),
-        tickfont: { size: fontSizes.tick },
-        min: baxis.min || 0,
-        max: baxis.max || sum,
-        tick0: baxis.tick0 || 0,
-        dtick: baxis.dtick || sum / 10,
-        gridcolor: baxis.gridcolor || "#E6E6E6",
-        linecolor: baxis.linecolor || "#444",
-        showgrid: baxis.showgrid !== false,
-        showline: baxis.showline !== false,
-      },
-      caxis: {
-        title: ternaryAxisTitle(caxis.title, "C", fontSizes.axisTitle),
-        tickfont: { size: fontSizes.tick },
-        min: caxis.min || 0,
-        max: caxis.max || sum,
-        tick0: caxis.tick0 || 0,
-        dtick: caxis.dtick || sum / 10,
-        gridcolor: caxis.gridcolor || "#E6E6E6",
-        linecolor: caxis.linecolor || "#444",
-        showgrid: caxis.showgrid !== false,
-        showline: caxis.showline !== false,
-      },
-    },
-  } as any; // Layout type allows flexible property assignment
+        ternary: {
+          sum: sum,
+          aaxis: {
+            title: ternaryAxisTitle(aaxis.title, "A", fontSizes.axisTitle),
+            tickfont: { size: fontSizes.tick },
+            min: aaxis.min || 0,
+            max: aaxis.max || sum,
+            tick0: aaxis.tick0 || 0,
+            dtick: aaxis.dtick || sum / 10,
+            gridcolor: aaxis.gridcolor || chartGridColor(),
+            linecolor: aaxis.linecolor || chartGridColor(),
+            showgrid: aaxis.showgrid !== false,
+            showline: aaxis.showline !== false,
+          },
+          baxis: {
+            title: ternaryAxisTitle(baxis.title, "B", fontSizes.axisTitle),
+            tickfont: { size: fontSizes.tick },
+            min: baxis.min || 0,
+            max: baxis.max || sum,
+            tick0: baxis.tick0 || 0,
+            dtick: baxis.dtick || sum / 10,
+            gridcolor: baxis.gridcolor || chartGridColor(),
+            linecolor: baxis.linecolor || chartGridColor(),
+            showgrid: baxis.showgrid !== false,
+            showline: baxis.showline !== false,
+          },
+          caxis: {
+            title: ternaryAxisTitle(caxis.title, "C", fontSizes.axisTitle),
+            tickfont: { size: fontSizes.tick },
+            min: caxis.min || 0,
+            max: caxis.max || sum,
+            tick0: caxis.tick0 || 0,
+            dtick: caxis.dtick || sum / 10,
+            gridcolor: caxis.gridcolor || chartGridColor(),
+            linecolor: caxis.linecolor || chartGridColor(),
+            showgrid: caxis.showgrid !== false,
+            showline: caxis.showline !== false,
+          },
+        },
+      }) as any,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
+    [
+      aaxis.dtick,
+      aaxis.gridcolor,
+      aaxis.linecolor,
+      aaxis.max,
+      aaxis.min,
+      aaxis.showgrid,
+      aaxis.showline,
+      aaxis.tick0,
+      aaxis.title,
+      baxis.dtick,
+      baxis.gridcolor,
+      baxis.linecolor,
+      baxis.max,
+      baxis.min,
+      baxis.showgrid,
+      baxis.showline,
+      baxis.tick0,
+      baxis.title,
+      caxis.dtick,
+      caxis.gridcolor,
+      caxis.linecolor,
+      caxis.max,
+      caxis.min,
+      caxis.showgrid,
+      caxis.showline,
+      caxis.tick0,
+      caxis.title,
+      config,
+      fontSizes.axisTitle,
+      fontSizes.tick,
+      sizing,
+      sum,
+      themeVersion,
+    ],
+  ); // Layout type allows flexible property assignment
 
-  const plotConfig = createPlotlyConfig(config, sizing);
+  const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
 
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>

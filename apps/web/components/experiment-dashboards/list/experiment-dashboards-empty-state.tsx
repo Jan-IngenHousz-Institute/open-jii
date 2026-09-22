@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, LayoutGrid } from "lucide-react";
+import { BarChart3, LayoutGrid, Plus } from "lucide-react";
 import Link from "next/link";
 
 import { useTranslation } from "@repo/i18n";
@@ -20,7 +20,7 @@ export function ExperimentDashboardsEmptyState({
 }: ExperimentDashboardsEmptyStateProps) {
   const { t } = useTranslation("experimentDashboards");
   return (
-    <Card className="shadow-none">
+    <Card padding="none" className="shadow-none">
       <CardContent className="flex flex-col items-center justify-center py-12">
         <div className="bg-muted mb-4 flex h-24 w-24 items-center justify-center rounded-full">
           <LayoutGrid className="text-muted-foreground h-12 w-12" />
@@ -33,7 +33,7 @@ export function ExperimentDashboardsEmptyState({
           {hasAccess && (
             <Button asChild>
               <Link href={dashboardsHref}>
-                <LayoutGrid className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 h-4 w-4" aria-hidden />
                 {t("overview.createDashboard")}
               </Link>
             </Button>

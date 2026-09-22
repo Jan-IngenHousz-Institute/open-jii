@@ -1,9 +1,9 @@
 "use client";
 
+import { Histogram } from "@/components/charts/histogram";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
-import { Histogram } from "@repo/ui/components/charts/histogram";
 
 import { narrowChartConfig } from "../../chart-config";
 import { ChartConfigError, ChartFrame } from "../../chart-frame";

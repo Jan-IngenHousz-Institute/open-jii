@@ -1,6 +1,5 @@
 import { AsyncQueuer } from "@tanstack/pacer/async-queuer";
 import { onlineManager } from "@tanstack/react-query";
-import { isRetryableMqttError } from "~/features/connection/services/mqtt/mqtt-errors";
 import type { Transport } from "~/features/connection/services/mqtt/mqtt-transport";
 import {
   getMeasurementById,
@@ -13,7 +12,12 @@ import { onAppForeground } from "~/shared/device/app-lifecycle";
 import { createLogger } from "~/shared/observability/logger";
 import { getTrace, startTrace } from "~/shared/observability/trace";
 
-import { UPLOAD_CONCURRENCY, UPLOAD_RETRY_BACKOFF_MS } from "./upload-constants";
+import { isRetryableUploadError } from "./large-upload-errors";
+import {
+  MQTT_PAYLOAD_LIMIT_BYTES,
+  UPLOAD_CONCURRENCY,
+  UPLOAD_RETRY_BACKOFF_MS,
+} from "./upload-constants";
 
 const log = createLogger("outbox");
 
@@ -27,6 +31,8 @@ export type SettledStatus = "successful" | "failed";
 export interface SettledItem {
   id: string;
   status: SettledStatus;
+  /** Why it failed, so a live list can explain a row without re-reading it. */
+  reason?: string;
 }
 
 export interface OutboxSnapshot {
@@ -50,14 +56,51 @@ export interface Outbox {
 
 export interface OutboxOptions {
   transport: Transport;
+  /** Carries the measurements the broker will not accept. */
+  largeTransport: Transport;
   concurrency?: number;
   retryBackoffMs?: readonly number[];
 }
 
 const REHYDRATE_COOLDOWN_MS = 10_000;
 
+/** The error family's own label for what went wrong, stored on the failed row. */
+function errorKind(err: unknown): string | undefined {
+  if (typeof err !== "object" || err === null || !("kind" in err)) return undefined;
+
+  const { kind } = err;
+  return typeof kind === "string" ? kind : undefined;
+}
+
+const yieldToEventLoop = (): Promise<void> => new Promise<void>((resolve) => setImmediate(resolve));
+
+// The broker counts UTF-8 bytes while a JS string counts UTF-16 code units, so
+// a measurement carrying non-ASCII comments would measure short and be refused
+// on the wire instead of routed to S3.
+function utf8ByteLength(value: string): number {
+  let bytes = 0;
+
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code < 0x80) {
+      bytes += 1;
+    } else if (code < 0x800) {
+      bytes += 2;
+    } else if (code >= 0xd800 && code <= 0xdbff) {
+      // Lead surrogate: the pair encodes to four bytes, so skip its tail.
+      bytes += 4;
+      i++;
+    } else {
+      bytes += 3;
+    }
+  }
+
+  return bytes;
+}
+
 class OutboxImpl implements Outbox {
   private readonly transport: Transport;
+  private readonly largeTransport: Transport;
   private readonly queue: AsyncQueuer<string>;
   private rehydrating = false;
   private lastRehydrateAt = 0;
@@ -80,6 +123,7 @@ class OutboxImpl implements Outbox {
 
   constructor(opts: OutboxOptions) {
     this.transport = opts.transport;
+    this.largeTransport = opts.largeTransport;
     const concurrency = opts.concurrency ?? UPLOAD_CONCURRENCY;
     const backoff = opts.retryBackoffMs ?? UPLOAD_RETRY_BACKOFF_MS;
     log.info("init", { concurrency, backoffSteps: backoff.length });
@@ -100,10 +144,11 @@ class OutboxImpl implements Outbox {
         // errors settle inline in runItem). Terminalize and end the trace here,
         // before onSettled would otherwise close it as "ok".
         if (this.destroyed) return;
-        log.error("worker exhausted retries - marking failed", { id, err: err.message });
-        getTrace(id)?.end("error", { err: err.message, closed_by: "retry_exhausted" });
-        this.scheduleSettled({ id, status: "failed" });
-        void this.markFailedAfterExhaustion(id);
+        const kind = errorKind(err);
+        log.error("worker exhausted retries - marking failed", { id, kind, err: err.message });
+        getTrace(id)?.end("error", { err: err.message, kind, closed_by: "retry_exhausted" });
+        this.scheduleSettled({ id, status: "failed", reason: kind });
+        void this.markFailedAfterExhaustion(id, kind);
       },
       onSettled: (id) => {
         log.debug("settled", { id });
@@ -301,19 +346,35 @@ class OutboxImpl implements Outbox {
     };
 
     trace?.setFields({ topic: row.data.topic, row_status_before: row.status });
+
+    // Yield before measuring for the same reason the MQTT transport yields
+    // before its own stringify: this one is sync and a large measurement at
+    // full worker concurrency would otherwise stall the JS thread.
+    await yieldToEventLoop();
+    if (this.destroyed) return;
+
+    // Serialized once here and handed to the transport, so sizing the payload
+    // does not cost a second pass over a multi-megabyte measurement.
+    const serialized = JSON.stringify(payload);
+    const bytes = utf8ByteLength(serialized);
+    const overBrokerLimit = bytes > MQTT_PAYLOAD_LIMIT_BYTES;
+    const transport = overBrokerLimit ? this.largeTransport : this.transport;
+    const route = overBrokerLimit ? "s3" : "mqtt";
+
+    trace?.setFields({ bytes, route });
     trace?.event("publish_start");
-    log.info("publish start", { id, topic: row.data.topic });
+    log.info("publish start", { id, topic: row.data.topic, bytes, route });
 
     // Phase 1 - deliver. Only transport errors are classified here, so a
     // later DB-write failure can't be mistaken for a publish failure.
     try {
-      await this.transport.publish(row.data.topic, payload, { traceId: id });
+      await transport.publish(row.data.topic, payload, { traceId: id, serialized });
     } catch (err) {
       // A teardown in flight rejects pending publishes; don't reschedule them
       // onto a queue we're about to discard.
       if (this.destroyed) return;
-      const kind = (err as { kind?: string })?.kind;
-      if (isRetryableMqttError(err)) {
+      const kind = errorKind(err);
+      if (isRetryableUploadError(err)) {
         // Rethrow so the AsyncRetryer schedules the next attempt. When every
         // attempt is exhausted the error escapes to the queue's onError,
         // which marks the row failed + emits the terminal settle.
@@ -327,7 +388,7 @@ class OutboxImpl implements Outbox {
         err: (err as Error)?.message,
       });
       try {
-        await markAsFailed(id);
+        await markAsFailed(id, kind);
       } catch (dbErr) {
         // The publish failure is terminal either way; if the status write
         // fails the row stays "pending" and is retried on the next drain.
@@ -336,7 +397,7 @@ class OutboxImpl implements Outbox {
           err: (dbErr as Error)?.message,
         });
       }
-      this.scheduleSettled({ id, status: "failed" });
+      this.scheduleSettled({ id, status: "failed", reason: kind });
       trace?.event("marked_failed", { kind });
       trace?.end("error", { err: (err as Error)?.message, kind });
       return;
@@ -364,9 +425,9 @@ class OutboxImpl implements Outbox {
   // Mark a row failed after the retryer exhausted every attempt. Invoked
   // fire-and-forget from onError (a void callback that can't await); the
   // terminal settle and trace close already happened synchronously there.
-  private async markFailedAfterExhaustion(id: string): Promise<void> {
+  private async markFailedAfterExhaustion(id: string, kind?: string): Promise<void> {
     try {
-      await markAsFailed(id);
+      await markAsFailed(id, kind);
     } catch (err) {
       log.warn("markAsFailed threw after retry exhaustion", {
         id,

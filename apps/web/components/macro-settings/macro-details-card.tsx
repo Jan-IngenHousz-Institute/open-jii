@@ -1,5 +1,6 @@
 "use client";
 
+import { SettingsCard } from "@/components/shared/settings-card";
 import { decodeBase64, encodeBase64 } from "@/util/base64";
 import { editMacroFormSchema } from "@/util/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,13 +10,6 @@ import { useForm } from "react-hook-form";
 import type { UpdateMacroRequestBody, MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@repo/ui/components/card";
 import {
   Form,
   FormControl,
@@ -80,95 +74,92 @@ export function MacroDetailsCard({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("macroSettings.generalSettings")}</CardTitle>
-        <CardDescription>{t("macroSettings.generalDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("macroSettings.name")}</FormLabel>
+    <SettingsCard
+      title={t("macroSettings.generalSettings")}
+      description={t("macroSettings.generalDescription")}
+    >
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("macroSettings.name")}</FormLabel>
+                <FormControl>
+                  <Input {...field} trim placeholder={t("macroSettings.name")} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("macroSettings.description")}</FormLabel>
+                <FormControl>
+                  <RichTextarea
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    placeholder={t("macroSettings.description")}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="language"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("macroSettings.language")}</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <Input {...field} trim placeholder={t("macroSettings.name")} />
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  <SelectContent>
+                    <SelectItem value="python">Python</SelectItem>
+                    <SelectItem value="r">R</SelectItem>
+                    <SelectItem value="javascript">JavaScript</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium">{t("macroSettings.code")}</h3>
+            <p className="text-muted-foreground text-sm">{t("macroSettings.codeDescription")}</p>
             <FormField
               control={form.control}
-              name="description"
+              name="code"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("macroSettings.description")}</FormLabel>
                   <FormControl>
-                    <RichTextarea
+                    <MacroCodeEditor
                       value={field.value ?? ""}
                       onChange={field.onChange}
-                      placeholder={t("macroSettings.description")}
+                      language={form.watch("language")}
+                      label=""
+                      error={form.formState.errors.code?.message?.toString()}
                     />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="language"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("macroSettings.language")}</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="python">Python</SelectItem>
-                      <SelectItem value="r">R</SelectItem>
-                      <SelectItem value="javascript">JavaScript</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="space-y-2">
-              <h3 className="text-lg font-medium">{t("macroSettings.code")}</h3>
-              <p className="text-muted-foreground text-sm">{t("macroSettings.codeDescription")}</p>
-              <FormField
-                control={form.control}
-                name="code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <MacroCodeEditor
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                        language={form.watch("language")}
-                        label=""
-                        error={form.formState.errors.code?.message?.toString()}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isUpdating}>
-                {isUpdating ? t("macroSettings.saving") : t("macroSettings.save")}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+          </div>
+          <div className="flex justify-end">
+            <Button type="submit" disabled={isUpdating}>
+              {isUpdating ? t("macroSettings.saving") : t("macroSettings.save")}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </SettingsCard>
   );
 }

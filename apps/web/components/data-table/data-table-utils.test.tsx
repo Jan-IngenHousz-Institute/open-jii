@@ -5,6 +5,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
+import type { DataTableFeatures } from "./data-table-features";
 import { formatValue, LoadingRows, DataTableHeader, DataTableRows } from "./data-table-utils";
 
 vi.mock("./cells/array/data-table-array-cell", () => ({
@@ -95,6 +96,14 @@ describe("formatValue", () => {
     expect(formatValue(null, "STRING", "row-1")).toBe("");
   });
 
+  // A zero is a measurement, and on a dark reading it is the one the row exists for.
+  it("renders a zero rather than blanking it", () => {
+    const result = formatValue(0, "DOUBLE", "row-1", "par");
+
+    render(<div>{result}</div>);
+    expect(screen.getByText("0")).toBeInTheDocument();
+  });
+
   it("renders user cell for CONTRIBUTOR type", () => {
     const userData = JSON.stringify({ id: "u1", name: "John Doe", image: "" });
     const result = formatValue(userData, WellKnownColumnTypes.CONTRIBUTOR, "row-1", "col");
@@ -123,8 +132,9 @@ describe("formatValue", () => {
   });
 
   it("renders chart cell for numeric array types", () => {
-    const result = formatValue("[1.5, 2.3]", "ARRAY<DOUBLE>", "row-1", "col", vi.fn());
-    expect(React.isValidElement(result)).toBe(true);
+    const result = formatValue("[1.5, 2.3]", "ARRAY<DOUBLE>", "row-1", "col");
+    render(<div>{result}</div>);
+    expect(screen.getByText("chart:[1.5, 2.3]")).toBeInTheDocument();
   });
 
   it("renders annotations cell for annotation struct type", () => {
@@ -134,7 +144,6 @@ describe("formatValue", () => {
       "ARRAY<STRUCT<id: STRING, rowId: STRING, type: STRING, content: STRUCT<text: STRING, flagType: STRING>, createdBy: STRING, createdByName: STRING, createdAt: TIMESTAMP, updatedAt: TIMESTAMP>>",
       "row-1",
       "annotations",
-      undefined,
       vi.fn(),
       vi.fn(),
     );
@@ -198,7 +207,7 @@ describe("DataTableHeader", () => {
           getContext: () => ({}),
         })),
       },
-    ] as unknown as HeaderGroup<Record<string, unknown>>[];
+    ] as unknown as HeaderGroup<DataTableFeatures, Record<string, unknown>>[];
   }
 
   it("renders header text and aligns numeric types right", () => {
@@ -218,6 +227,10 @@ describe("DataTableHeader", () => {
     expect(screen.getByText("name").closest("th")).toHaveClass("text-left");
     expect(screen.getByText("value").closest("th")).toHaveClass("text-right");
     expect(screen.getByText("count").closest("th")).toHaveClass("text-right");
+    // The cell is right-aligned, but the name sits in a row of its own; pushed apart it
+    // ends up over the left edge of a column read up its right.
+    expect(screen.getByText("value").parentElement).toHaveClass("justify-end");
+    expect(screen.getByText("name").parentElement).toHaveClass("justify-between");
   });
 
   it("does not render placeholder headers", () => {
@@ -337,7 +350,7 @@ describe("DataTableRows", () => {
           },
         ],
       },
-    ] as unknown as Row<Record<string, unknown>>[];
+    ] as unknown as Row<DataTableFeatures, Record<string, unknown>>[];
 
     render(
       <table>

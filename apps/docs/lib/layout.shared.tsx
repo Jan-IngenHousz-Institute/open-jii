@@ -18,25 +18,27 @@ export const DOCS_CONTENT_ROOT = "apps/docs/content";
 export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
+      // One lockup, not a mark plus a "Docs" label: "DOCS" is part of the
+      // artwork, so the accessible name lives in `alt` and nothing else here
+      // may repeat it. See apps/docs/public/img/openjii-docs-lockup.svg.
       title: (
         <>
           <Image
-            src="/img/openjii-logo-horizontal.svg"
-            alt="openJII"
-            width={85}
+            src="/img/openjii-docs-lockup.svg"
+            alt="openJII Docs"
+            width={91}
             height={40}
             className="block dark:hidden"
             priority
           />
           <Image
-            src="/img/openjii-logo-horizontal-dark.svg"
-            alt="openJII"
-            width={85}
+            src="/img/openjii-docs-lockup-dark.svg"
+            alt="openJII Docs"
+            width={91}
             height={40}
             className="hidden dark:block"
             priority
           />
-          <span className="text-fd-muted-foreground text-sm font-medium">Docs</span>
         </>
       ),
       url: "/",

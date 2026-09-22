@@ -74,6 +74,10 @@ describe("organizationMembershipFamilies", () => {
   it("refreshes the collaborators lists, where membership decides the outside badge", () => {
     expect(invalidates(families, orpc.sharing.listGrants.key())).toBe(true);
   });
+
+  it("refreshes global search, where membership controls visibility and roster matching", () => {
+    expect(invalidates(families, orpc.search.globalSearch.key())).toBe(true);
+  });
 });
 
 describe("organizationAuthFamilies", () => {
@@ -95,6 +99,10 @@ describe("organizationProfileFamilies", () => {
     // collaborators family is added at the call sites that can — rename and delete.
     expect(invalidates(organizationProfileFamilies(), orpc.sharing.listGrants.key())).toBe(false);
   });
+
+  it("refreshes global search after organization create, update or delete", () => {
+    expect(invalidates(organizationProfileFamilies(), orpc.search.globalSearch.key())).toBe(true);
+  });
 });
 
 describe("organizationTeamFamilies", () => {
@@ -105,6 +113,7 @@ describe("organizationTeamFamilies", () => {
       orpc.organizations.listOrganizationTeams.key(),
       orpc.organizations.listGranteeTeams.key(),
       orpc.sharing.listGrants.key(),
+      orpc.search.globalSearch.key(),
     ]) {
       expect(invalidates(families, key), JSON.stringify(key)).toBe(true);
     }

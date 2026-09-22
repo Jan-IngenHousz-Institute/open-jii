@@ -59,6 +59,7 @@ function item(key: string, status: MeasurementItem["status"]): MeasurementItem {
     hasComment: false,
     dayKey: "2026-05-18",
     workbookRunId: "run-1",
+    failureReason: null,
   };
 }
 
@@ -89,6 +90,24 @@ describe("MeasurementsRunRow", () => {
     );
     expect(screen.getByText("Photosynthesis")).toBeTruthy();
     expect(screen.getByText("3 measurements")).toBeTruthy();
+  });
+
+  it("announces why a collapsed run failed, because its label hides the children", () => {
+    const failed = { ...item("a", "failed"), failureReason: "CredentialError" };
+    render(<MeasurementsRunRow {...defaultProps} entry={entry(failed, item("b", "failed"))} />);
+
+    expect(screen.getByA11yHint("recentMeasurements:failureReason.credentials")).toBeTruthy();
+  });
+
+  it("leaves a run with nothing wrong without a hint", () => {
+    render(
+      <MeasurementsRunRow
+        {...defaultProps}
+        entry={entry(item("a", "successful"), item("b", "successful"))}
+      />,
+    );
+
+    expect(screen.queryByA11yHint(/failureReason/)).toBeNull();
   });
 
   it("toggles the run open when the row is pressed", () => {

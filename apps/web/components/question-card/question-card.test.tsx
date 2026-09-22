@@ -39,23 +39,21 @@ describe("QuestionCard", () => {
     render(<QuestionCard stepSpecification={defaultSpec} />);
     expect(screen.getByText("questionCard.requiredLabel")).toBeInTheDocument();
   });
-  it("shows required checkbox as checked when required is true", () => {
+  it("shows the required toggle as on when required is true", () => {
     const spec = { ...defaultSpec, required: true };
     render(<QuestionCard stepSpecification={spec} />);
 
-    const checkbox = screen.getByRole("checkbox");
-    expect(checkbox).toBeChecked();
+    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true");
   });
 
-  it("calls onToggleRequired when checkbox is clicked", async () => {
+  it("calls onToggleRequired when the required toggle is clicked", async () => {
     const mockOnToggleRequired = vi.fn();
     render(
       <QuestionCard stepSpecification={defaultSpec} onToggleRequired={mockOnToggleRequired} />,
     );
 
     const user = userEvent.setup();
-    const checkbox = screen.getByRole("checkbox");
-    await user.click(checkbox);
+    await user.click(screen.getByRole("switch"));
 
     expect(mockOnToggleRequired).toHaveBeenCalledTimes(1);
   });
@@ -128,10 +126,12 @@ describe("QuestionCard", () => {
     render(<QuestionCard stepSpecification={defaultSpec} disabled={true} />);
 
     const input = screen.getByPlaceholderText("questionCard.placeholder");
-    const checkbox = screen.getByRole("checkbox");
 
     expect(input).toBeDisabled();
-    expect(checkbox).toBeDisabled();
+    expect(screen.getByRole("switch")).toBeDisabled();
+    for (const radio of screen.getAllByRole("radio")) {
+      expect(radio).toBeDisabled();
+    }
   });
 
   it("passes handlers to SelectOptionsEditor", () => {

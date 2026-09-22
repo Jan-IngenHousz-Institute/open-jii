@@ -46,14 +46,20 @@ export interface IotDeviceGroupMemberDto {
   addedAt: Date;
 }
 
+/** Roster row plus the binding count the status badge resolves against. */
+export interface IotDeviceGroupMemberBoundDto extends IotDeviceGroupMemberDto {
+  boundExperimentCount: number;
+}
+
 /** Repo roster row: member plus the fleet-index key, stripped before the contract. */
 export interface IotDeviceGroupMemberRecordDto extends IotDeviceGroupMemberDto {
   thingName: string;
 }
 
 /** Roster row enriched with connectivity; null means the fleet index was unavailable. */
-export interface IotDeviceGroupMemberConnectivityDto extends IotDeviceGroupMemberDto {
+export interface IotDeviceGroupMemberConnectivityDto extends IotDeviceGroupMemberBoundDto {
   connected: boolean | null;
+  lastSeenAt: string | null;
 }
 
 /** Per-device batch outcome; the batch itself succeeds even when rows fail. */

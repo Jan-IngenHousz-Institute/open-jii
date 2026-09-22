@@ -99,7 +99,7 @@ export function ExperimentVisibilityForm({
             // Same copy the macro/protocol/workbook control shows, from the same
             // key: the published state means the same thing on all four types, so
             // it is worded once rather than per type.
-            <div className="bg-surface-light text-muted-foreground flex items-center gap-2 rounded-md p-2 text-xs">
+            <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-md p-2 text-xs">
               <Info className="text-primary h-4 w-4 shrink-0" />
               <div className="leading-tight">{t("resourceVisibility.publishedDescription")}</div>
             </div>
@@ -132,7 +132,7 @@ export function ExperimentVisibilityForm({
                           variant="outline"
                           disabled={isArchived || isSavingEmbargo}
                           className={cn(
-                            "hover:bg-surface-light w-full justify-between font-normal disabled:hover:bg-transparent",
+                            "w-full justify-between font-normal disabled:hover:bg-transparent",
                             !selectedDate && "text-muted-foreground",
                           )}
                         >
@@ -152,7 +152,7 @@ export function ExperimentVisibilityForm({
                     </Popover>
                   </FormControl>
                   {helperText && (
-                    <div className="bg-surface-light text-muted-foreground flex items-center gap-2 rounded-md p-2 text-sm">
+                    <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-md p-2 text-sm">
                       <Info className="text-primary h-4 w-4 shrink-0" />
                       <div className="leading-tight">{helperText}</div>
                     </div>

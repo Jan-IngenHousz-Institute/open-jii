@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useWorkbookVersionQuery } from "~/features/experiments/hooks/use-experiment-flow-query";
+import { useFlowSnapshotsStore } from "~/features/measurement-flow/stores/use-flow-snapshots-store";
 import { useMeasurementFlowStore } from "~/features/measurement-flow/stores/use-measurement-flow-store";
 import { hydrateFlowNodes } from "~/features/measurement-flow/utils/hydrate-flow-nodes";
 import { orpc } from "~/shared/api/orpc";
 
+import { listItems } from "@repo/api/shared/listing";
 import { cellsToFlowGraph } from "@repo/api/transforms/cells-to-flow";
 
 // Loads an experiment's workbook flow into the store: fetch the workbook version
@@ -17,6 +19,7 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
 } {
   const setFlowGraph = useMeasurementFlowStore((s) => s.setFlowGraph);
   const setFlowNodes = useMeasurementFlowStore((s) => s.setFlowNodes);
+  const setSnapshots = useFlowSnapshotsStore((s) => s.setSnapshots);
 
   // Shares the ["experiments"] cache key with useExperiments(), so this reads
   // from cache (no extra fetch) in the normal flow.
@@ -26,12 +29,12 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
     error: experimentsError,
   } = useQuery(
     orpc.experiments.listExperiments.queryOptions({
-      input: { filter: "member" },
+      input: { scope: "related" },
       enabled: !!experimentId,
     }),
   );
 
-  const selected = experimentsData?.find((e) => e.id === experimentId);
+  const selected = listItems(experimentsData).find((e) => e.id === experimentId);
   const workbookId = selected?.workbookId ?? undefined;
   const workbookVersionId = selected?.workbookVersionId ?? undefined;
   const hasWorkbook = !!workbookId && !!workbookVersionId;
@@ -54,8 +57,12 @@ export function useLoadExperimentFlow(experimentId: string | undefined): {
       edges,
       cells,
       workbookVersionId,
+      workbookId,
     );
-  }, [versionData, workbookVersionId, setFlowGraph]);
+    // Persisted once here so a cold-start resume can re-attach the code offline
+    // without the workbook-version query cache.
+    if (workbookVersionId) setSnapshots(workbookVersionId, body?.entitySnapshots);
+  }, [versionData, workbookVersionId, workbookId, setFlowGraph, setSnapshots]);
 
   // The list resolved but the experiment has no workbook: every experiment is
   // workbook-backed, so surface an error rather than hang.
