@@ -899,4 +899,4 @@ metrics:
     slots: [alert]
     severity: warning
     runbook: docs/runbooks/metrics-forwarder-errors.md
-    notes: Errors only, never liveness: the forwarder is S3 event driven, so a quiet day is indistinguishable from a dead function and a liveness rule would fire forever.
+    notes: Errors only and never liveness, because the forwarder is S3 event driven, so a quiet day is indistinguishable from a dead function and a liveness rule would fire forever.
