@@ -62,19 +62,21 @@ Claude Code auto-discovers them, but the files under `.agents/` are the source. 
 assumes the team's supported macOS/Linux development environments. The shared hooks require Bash,
 Git, and `jq`; a missing `jq` prints a warning and skips the hook.
 
-| Skill                      | Read it when                                                                     |
-| -------------------------- | -------------------------------------------------------------------------------- |
-| `openjii-local-stack`      | Preparing a local checkout, seeding, or getting a dev session cookie.            |
-| `openjii-mobile-device`    | Getting a dev build onto a real Android phone, over cable or Wi-Fi.              |
-| `openjii-mobile-control`   | Driving a connected phone to verify or reproduce mobile behaviour.               |
-| `openjii-docs-update`      | A change alters what a user sees or does, so docs and screenshots follow.        |
-| `openjii-prepare-release`  | Preparing or rehearsing a release, CMS notes, a mobile gate, or a Linear update. |
-| `openjii-linear`           | Anything touching an `OJD-####` ticket, the backlog, or project status.          |
-| `openjii-work-design`      | An idea needs designing as a project and splitting into tickets.                 |
-| `openjii-ticket-refine`    | One ticket needs writing, or bringing up to the ticket gate.                     |
-| `openjii-testing-criteria` | A PR is ready for review and the ticket needs its handoff sections for QA.       |
-| `openjii-backlog-triage`   | Bulk label, project or gate hygiene across many tickets.                         |
-| `unslop`                   | Writing or editing prose a human will read: docs, PR bodies, changelogs.         |
+| Skill                      | Read it when                                                                                                          |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `openjii-local-stack`      | Preparing a local checkout, seeding, or getting a dev session cookie.                                                 |
+| `openjii-mobile-device`    | Getting a dev build onto a real Android phone, over cable or Wi-Fi.                                                   |
+| `openjii-mobile-control`   | Driving a connected phone to verify or reproduce mobile behaviour.                                                    |
+| `openjii-docs-update`      | A change alters what a user sees or does, so docs and screenshots follow.                                             |
+| `openjii-prepare-release`  | Preparing or rehearsing a release, CMS notes, a mobile gate, or a Linear update.                                      |
+| `openjii-linear`           | Anything touching an `OJD-####` ticket, the backlog, or project status.                                               |
+| `openjii-work-design`      | An idea needs designing as a project and splitting into tickets.                                                      |
+| `openjii-ticket-refine`    | One ticket needs writing, or bringing up to the ticket gate.                                                          |
+| `openjii-testing-criteria` | A PR is ready for review and the ticket needs its handoff sections for QA.                                            |
+| `openjii-backlog-triage`   | Bulk label, project or gate hygiene across many tickets.                                                              |
+| `openjii-morning`          | The start of a working day, or coming back after time away, and you need to know whether the platform needs a person. |
+| `openjii-triage`           | A digest line, a Grafana alert or a runbook points at a metric id and you need evidence rather than a guess.          |
+| `unslop`                   | Writing or editing prose a human will read: docs, PR bodies, changelogs.                                              |
 
 `unslop` comes from a third party rather than from this repo, so it does not open with
 `Read AGENTS.md first` like the `openjii-*` guides do. It carries no repo-specific paths and needs
