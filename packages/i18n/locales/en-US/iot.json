@@ -927,7 +927,8 @@
         "residualAxis": "Off by, % of range",
         "tolerance": "Allowed",
         "residualsTruncated": "The script reported the first residuals only.",
-        "showReadings": "Show what the bench measured, {{points}} readings across {{series}} series"
+        "showReadings": "Show what the bench measured, {{points}} readings across {{series}} series",
+        "decisionFailed": "That decision could not be recorded."
       },
       "write": {
         "hint": "Write the approved coefficients to the device. Each block is confirmed by reading it back.",
@@ -1191,7 +1192,12 @@
         "alreadyDone": "{{serial}} has already had its turn in this sitting.",
         "unregistered": "{{serial}} is not a registered device, so its run cannot be recorded yet.",
         "unnamed": "This unit's firmware names no identifier, so the bench cannot tell which device it is.",
-        "title": "Calibration bench"
+        "title": "Calibration bench",
+        "unitOf": "{{index}} of {{total}}",
+        "nextToReview": "Next",
+        "reviewNow_one": "Review 1 run",
+        "reviewNow_other": "Review {{count}} runs",
+        "approvedNotWritten": "Approved coefficients reach a unit the next time it is on a port."
       }
     },
     "workbookBar": {

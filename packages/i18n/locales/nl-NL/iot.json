@@ -927,7 +927,8 @@
         "residualAxis": "Afwijking, % van het bereik",
         "tolerance": "Toegestaan",
         "residualsTruncated": "Het script rapporteerde alleen de eerste residuen.",
-        "showReadings": "Toon wat de opstelling heeft gemeten, {{points}} metingen in {{series}} series"
+        "showReadings": "Toon wat de opstelling heeft gemeten, {{points}} metingen in {{series}} series",
+        "decisionFailed": "Die beslissing kon niet worden vastgelegd."
       },
       "write": {
         "hint": "Schrijf de goedgekeurde coëfficiënten naar het apparaat. Elk blok wordt bevestigd door het terug te lezen.",
@@ -1191,7 +1192,12 @@
         "alreadyDone": "{{serial}} is in deze sessie al aan de beurt geweest.",
         "unregistered": "{{serial}} is geen geregistreerd apparaat, dus de meting kan nog niet worden vastgelegd.",
         "unnamed": "De firmware van deze unit noemt geen identificatie, dus de bank kan niet bepalen om welk apparaat het gaat.",
-        "title": "Kalibratiebank"
+        "title": "Kalibratiebank",
+        "unitOf": "{{index}} van {{total}}",
+        "nextToReview": "Volgende",
+        "reviewNow_one": "1 meting beoordelen",
+        "reviewNow_other": "{{count}} metingen beoordelen",
+        "approvedNotWritten": "Goedgekeurde coëfficiënten bereiken een unit de volgende keer dat die op een poort zit."
       }
     },
     "workbookBar": {

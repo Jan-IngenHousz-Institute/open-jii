@@ -21,6 +21,7 @@ import { CalibrationConnectStep } from "../wizard/calibration-connect-step";
 import { CalibrationLiveSeries } from "../wizard/calibration-live-series";
 import { CalibrationOperatorPrompt } from "../wizard/calibration-operator-prompt";
 import { CalibrationWizardActions } from "../wizard/calibration-wizard-actions";
+import { BenchReview } from "./bench-review";
 import { unitOnPort } from "./bench-session-unit";
 import { unitAlreadyDone } from "./bench-unit";
 import type { BenchUnit } from "./bench-unit";
@@ -51,6 +52,7 @@ export function CalibrationBenchSession({
   const { t } = useTranslation("iot");
 
   const [units, setUnits] = useState<BenchUnit[]>([]);
+  const [isReviewing, setIsReviewing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isRecorded, setIsRecorded] = useState(false);
@@ -151,6 +153,29 @@ export function CalibrationBenchSession({
     return null;
   }
 
+  /** What this sitting has done, and the one way out of it. */
+  function renderSitting() {
+    return (
+      <div className="space-y-4">
+        <BenchUnitTally units={units} />
+        {units.length > 0 && (
+          <p className="text-muted-foreground text-xs">
+            {t("iot.calibration.bench.approvedNotWritten")}
+          </p>
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={onChangeProcedure}
+        >
+          {t("iot.calibration.bench.changeProcedure")}
+        </Button>
+      </div>
+    );
+  }
+
   function renderActions() {
     if (isRecorded) {
       return (
@@ -161,8 +186,8 @@ export function CalibrationBenchSession({
             </Button>
           }
           secondary={
-            <Button type="button" variant="outline" onClick={onChangeProcedure}>
-              {t("iot.calibration.bench.changeProcedure")}
+            <Button type="button" variant="outline" onClick={() => setIsReviewing(true)}>
+              {t("iot.calibration.bench.reviewNow", { count: units.length })}
             </Button>
           }
         />
@@ -179,6 +204,23 @@ export function CalibrationBenchSession({
           </Button>
         }
       />
+    );
+  }
+
+  if (isReviewing) {
+    return (
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="min-w-0">
+          <BenchReview
+            units={units}
+            outputSchema={definition.outputSchema}
+            onDone={() => setIsReviewing(false)}
+          />
+        </div>
+        <InsetPanel padding="lg" className="lg:sticky lg:top-20 lg:self-start">
+          {renderSitting()}
+        </InsetPanel>
+      </div>
     );
   }
 
@@ -220,7 +262,7 @@ export function CalibrationBenchSession({
       </div>
 
       <InsetPanel padding="lg" className="lg:sticky lg:top-20 lg:self-start">
-        <BenchUnitTally units={units} />
+        {renderSitting()}
       </InsetPanel>
     </div>
   );
