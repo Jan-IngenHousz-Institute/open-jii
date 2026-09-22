@@ -14,14 +14,7 @@ interface CalibrationRigChipProps {
   noSetpoints?: string;
 }
 
-/**
- * What one role on the bench is, and what a step may ask of it.
- *
- * The ranges are why this is on the chip rather than in the popover behind it: a sweep is
- * written by typing numbers, and these are the numbers the instrument will accept.
- *
- * Renders as phrasing content throughout, because the strip puts it inside a button.
- */
+/** Phrasing content throughout, because the strip puts it inside a button. */
 export function CalibrationRigChip({
   role,
   model,

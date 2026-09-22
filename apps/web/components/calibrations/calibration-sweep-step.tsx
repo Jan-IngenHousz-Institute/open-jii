@@ -40,12 +40,7 @@ interface CalibrationSweepStepProps {
   onChange: (step: ProcedureStep) => void;
 }
 
-/**
- * The shape of every calibration: drive something through a range, record at each point.
- *
- * The stimulus is either an instrument the platform can drive or the operator doing it by
- * hand, and a bench often needs both: a lamp the supply steps, and a filter someone swaps.
- */
+/** The stimulus is an instrument the platform drives or the operator by hand, and a bench often needs both. */
 export function CalibrationSweepStep({
   step,
   sources,

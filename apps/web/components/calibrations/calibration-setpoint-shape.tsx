@@ -13,13 +13,7 @@ interface CalibrationSetpointShapeProps {
 /** Two points make a line whatever the spacing, so the shape only says something above that. */
 const MIN_POINTS = 3;
 
-/**
- * The points a sweep will step through, drawn.
- *
- * They are authored as a column of numbers, which is the right way to edit them and a poor
- * way to read them: whether a ramp is even, doubles as it climbs, or crowds the bottom of
- * the range decides what the fit can see, and none of that is visible in a list.
- */
+/** Whether a ramp is even or crowds one end decides what the fit can see, and a column of numbers hides it. */
 export function CalibrationSetpointShape({ values, unit }: CalibrationSetpointShapeProps) {
   const { t } = useTranslation("iot");
 

@@ -29,13 +29,7 @@ function producedBy(step: ProcedureStep): ProducedSeries | null {
   return { name: step.series, columns, optional: step.optional ?? false };
 }
 
-/**
- * What a phase hands the fit: the series its steps record, and the columns inside each.
- *
- * These are the names the script has to spell exactly, so showing them is the difference
- * between a typo caught while writing and a run that fails at the bench. Two steps may
- * write the same series, in which case the payload carries both sets of columns.
- */
+/** The names the script must spell exactly. Two steps may write one series, so both sets of columns land in it. */
 export function producedSeries(
   procedure: CaptureProcedure,
   phase: ProcedurePhase,

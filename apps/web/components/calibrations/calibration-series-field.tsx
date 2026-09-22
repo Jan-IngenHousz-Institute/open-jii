@@ -17,13 +17,7 @@ interface CalibrationSeriesFieldProps {
   onChange: (series: string) => void;
 }
 
-/**
- * What a step's readings are called when the script receives them.
- *
- * One name per phase, and never one ending in the retaken suffix: readings an operator
- * took again are kept under that, and a series named the same way would absorb another
- * step's discarded attempts and feed them to the fit as real data.
- */
+/** Never the retaken suffix: such a series would absorb discarded attempts and feed them to the fit. */
 export function CalibrationSeriesField({
   series,
   taken,

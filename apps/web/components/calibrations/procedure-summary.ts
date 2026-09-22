@@ -1,10 +1,4 @@
-/**
- * What a phase of a procedure amounts to, before anyone stands at a bench.
- *
- * A definition is read far more often than it is written, and the question a reader
- * arrives with is how much bench time it asks for and how much of that time they have to
- * be there. Both are declared; nothing here estimates.
- */
+/** How much bench time a phase asks for, and how much of it the operator must be there. Declared, never estimated. */
 import { formatDurationShort } from "@/components/iot-devices/monitoring/format-duration";
 
 import type {
@@ -20,10 +14,7 @@ export interface PhaseSummary {
   steps: number;
   /** Readings the bench takes, a sweep counting one per setpoint. */
   points: number;
-  /**
-   * Milliseconds the procedure waits on itself: settle steps, a sweep settling at each
-   * setpoint, and the gaps between repeated samples. What the operator takes is theirs.
-   */
+  /** Milliseconds the procedure waits on itself; what the operator takes is theirs. */
   waitMs: number;
   /** Steps that stop for a person, whether to do something or to read something off. */
   stops: number;

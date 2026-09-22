@@ -47,11 +47,7 @@ function toDraft(definition: CalibrationDefinition): DefinitionDraft {
   };
 }
 
-/**
- * Why the page is not saving, or null when it is. A draft is briefly invalid on almost
- * every keystroke, so only a refusal that persists is worth showing: without it, editing
- * goes on over a document that silently never lands.
- */
+/** A draft is briefly invalid on most keystrokes, so only a persistent refusal is shown. */
 function saveBlocker(draft: DefinitionDraft | undefined): string | null {
   if (draft === undefined) {
     return null;
@@ -68,14 +64,7 @@ function saveBlocker(draft: DefinitionDraft | undefined): string | null {
   return where === "" ? issue.message : `${where}: ${issue.message}`;
 }
 
-/**
- * One bench procedure, read and written on the same page.
- *
- * Editing is in place rather than behind a form: an author works a piece at a time,
- * trying the procedure at the bench between changes. The whole document autosaves as one,
- * so a rename that reaches into the steps cannot be half-saved. A definition a run already
- * points at is frozen, because the run records which definition it ran rather than a copy.
- */
+/** Autosaves as one document, so a rename reaching into the steps cannot half-save. */
 export function CalibrationDefinitionDetail() {
   const { t } = useTranslation("iot");
   const params = useParams<{ definitionId: string }>();

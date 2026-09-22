@@ -20,13 +20,6 @@ interface CalibrationAddStepProps {
   onAdd: (kind: StepKind) => void;
 }
 
-/**
- * Where the next step goes.
- *
- * Between two cells it is a line that opens on hover, the way a cell is inserted anywhere
- * else in the platform; at the end of an empty phase it is a labelled row, because there
- * is nothing above it to insert after.
- */
 export function CalibrationAddStep({
   unavailable = {},
   variant = "inline",

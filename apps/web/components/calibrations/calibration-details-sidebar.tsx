@@ -35,13 +35,7 @@ interface CalibrationDetailsSidebarProps {
   definition: CalibrationDefinitionDetail;
 }
 
-/**
- * What the definition is, beside what it does.
- *
- * The family belongs here rather than in the procedure: it decides which device the
- * platform will let this run against, and with it which instruments, setpoints and
- * writable coefficients everything else is checked against.
- */
+/** The family decides which devices, instruments and coefficients the rest is checked against. */
 export function CalibrationDetailsSidebar({
   definitionId,
   definition,

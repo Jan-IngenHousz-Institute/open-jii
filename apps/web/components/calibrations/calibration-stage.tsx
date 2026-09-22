@@ -5,20 +5,12 @@ import type { ReactNode } from "react";
 interface CalibrationStageProps {
   index: number;
   title: string;
-  /** Marks a stage a definition can leave empty, so an empty one does not read as unfinished. */
   note?: string;
-  /** What the stage amounts to, opposite its title: counts, and the time it asks for. */
   summary?: ReactNode;
   children: ReactNode;
 }
 
-/**
- * One stage of the procedure, numbered in the order a run executes it.
- *
- * The four parts of a definition are not peers: the bench is a precondition, the capture
- * and the verification are phases of a run, and the fit sits between them. Numbering them
- * is what makes the document read as the thing it describes.
- */
+/** One stage of the procedure, numbered in the order a run executes it. */
 export function CalibrationStage({ index, title, note, summary, children }: CalibrationStageProps) {
   return (
     <section className="space-y-3">

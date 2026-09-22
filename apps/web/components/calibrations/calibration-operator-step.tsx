@@ -16,13 +16,7 @@ interface CalibrationOperatorStepProps {
   onChange: (step: OperatorStep) => void;
 }
 
-/**
- * Something for the person at the bench to do, and optionally a word they must type for
- * the run to go on.
- *
- * The typed word is not ceremony: a dark measurement taken with the lid open is not
- * distinguishable in the data from one taken correctly, and it invalidates the run.
- */
+/** A dark reading taken with the lid open is indistinguishable in the data, so the word gates it. */
 export function CalibrationOperatorStep({ step, canEdit, onChange }: CalibrationOperatorStepProps) {
   const { t } = useTranslation("iot");
   const promptId = useId();

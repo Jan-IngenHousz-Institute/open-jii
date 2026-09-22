@@ -42,14 +42,7 @@ interface CalibrationRigStripProps {
   onChange: (procedure: CaptureProcedure) => void;
 }
 
-/**
- * The bench this procedure expects, as one line above the document it runs.
- *
- * A rig is not a sequence of things to do, it is the context the steps are written
- * against: the roles they may name, the setpoints they may drive, the readings they may
- * ask for. It belongs where a workbook keeps the family it is written for, not as a card
- * in the flow.
- */
+/** The rig is the context the steps are written against, not a step in the flow. */
 export function CalibrationRigStrip({
   procedure,
   family,

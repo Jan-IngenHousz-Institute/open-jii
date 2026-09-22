@@ -19,10 +19,7 @@ interface CalibrationLayoutContentProps {
   definition: CalibrationDefinitionDetail;
   children: React.ReactNode;
   actions?: React.ReactNode;
-  /**
-   * The bench subroute renders through this same shell, but it is a full-page tool with
-   * its own Back action; no tab strip belongs above it.
-   */
+  /** The bench subroute is a full-page tool with its own Back action. */
   showTabs?: boolean;
 }
 

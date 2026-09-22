@@ -9,18 +9,7 @@ import { useTranslation } from "@repo/i18n";
 import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
-/**
- * Running a procedure against whatever hardware is on the bench.
- *
- * An author tries a procedure out here, because one that reads plausibly still fails at
- * the bench: a command the firmware does not answer, a sweep that saturates, a fit whose
- * bounds were guessed. An operator works through a tray of units here for the same reason
- * the author is here, which is that this is where the rig is.
- *
- * Nothing asks which device it is. The unit announces itself when the port opens, and
- * being asked to name it first is both a step and a way to record a run against the wrong
- * hardware.
- */
+/** The unit announces itself when the port opens, so nothing asks which device it is. */
 export function CalibrationRunContent() {
   const { t } = useTranslation("iot");
   const locale = useLocale();

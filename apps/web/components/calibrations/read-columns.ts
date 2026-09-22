@@ -24,13 +24,7 @@ function toColumnName(text: string): string {
   return /^[a-z]/.test(cleaned) ? cleaned : FALLBACK_COLUMN;
 }
 
-/**
- * What a reading calls its column before anyone renames it.
- *
- * A bench instrument is named for the job it does on the rig, so its role is the column
- * the script will want ("par_ref"). A device answers many things, so the command is what
- * tells the readings apart ("par_raw" beside "spec").
- */
+/** An instrument is named by its rig role; a device answers many things, so by its command. */
 export function columnForRead(read: ProcedureRead, sources: ReadSource[]): string {
   if (!("instrument" in read)) {
     return OPERATOR_COLUMN;
@@ -44,14 +38,7 @@ export function columnForRead(read: ProcedureRead, sources: ReadSource[]): strin
   return toColumnName(read.command ?? read.instrument);
 }
 
-/**
- * The reading a step opens with, and the one an author adds next.
- *
- * A bench records the device against a reference at every point, so the next reading is
- * the role nothing in this step has asked yet. A device's command list is alphabetical
- * and its first entry is as likely to be "battery" as anything worth recording, so it
- * opens on the handshake every driver answers instead.
- */
+/** Opens on the role nothing has asked yet; a device's alphabetical first command is rarely the one wanted. */
 export function defaultRead(sources: ReadSource[], taken: ProcedureRead[]): ProcedureRead {
   const asked = taken.flatMap((read) => ("instrument" in read ? [read.instrument] : []));
   const source = sources.find((candidate) => !asked.includes(candidate.role)) ?? sources.at(0);
@@ -72,10 +59,7 @@ export function defaultRead(sources: ReadSource[], taken: ProcedureRead[]): Proc
   };
 }
 
-/**
- * Whether the column is still the one the reading gave itself, rather than a name the
- * author chose. Only the first kind follows the reading when the source changes.
- */
+/** A generated column follows the reading when its source changes; an author's chosen name does not. */
 export function isDefaultColumn(read: ProcedureRead, sources: ReadSource[]): boolean {
   const suggested = columnForRead(read, sources);
   return read.as === suggested || new RegExp(`^${suggested}_\\d+$`).test(read.as);

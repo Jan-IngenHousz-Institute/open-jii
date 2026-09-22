@@ -26,12 +26,7 @@ interface CalibrationFitDraftActionProps {
   onDraft: (script: string) => void;
 }
 
-/**
- * Writes the fit the capture and the blocks already describe.
- *
- * It replaces the script outright and the page autosaves, so it asks first: what it
- * produces is a starting point, not a merge into whatever is there.
- */
+/** Replaces the script outright and the page autosaves, so it asks first. */
 export function CalibrationFitDraftAction({
   series,
   outputSchema,

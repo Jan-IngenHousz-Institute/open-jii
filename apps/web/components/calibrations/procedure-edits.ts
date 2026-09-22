@@ -1,8 +1,4 @@
-/**
- * Edits on a capture procedure: one document in, one document out. A role is a name three
- * other places point at, so renaming one in the rig alone would leave the steps naming an
- * instrument that no longer exists.
- */
+/** A role is a name three other places point at, so a rig-only rename orphans the steps. */
 import type {
   CaptureProcedure,
   ProcedureRead,
@@ -106,10 +102,7 @@ export function takenSeries(procedure: CaptureProcedure, phase: ProcedurePhase):
   );
 }
 
-/**
- * A step of the given kind that the contract already accepts, so adding one never leaves
- * the document unsaveable. What it does is a placeholder; what it is, is valid.
- */
+/** Valid by the contract, so adding a step never leaves the document unsaveable. */
 export function newStep(
   kind: StepKind,
   taken: string[],

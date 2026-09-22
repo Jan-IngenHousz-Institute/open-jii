@@ -35,13 +35,7 @@ interface CalibrationRigRowProps {
   onRemove: () => void;
 }
 
-/**
- * One piece of bench equipment: what the steps call it, what it is, and what it answers.
- *
- * The model is picked rather than typed, because the setpoints and readings a step may
- * name come from it, and because a handshake naming one unit of a model ("Par_REF") tells
- * the platform nothing about which model that is.
- */
+/** The model is picked, not typed: the setpoints and readings a step may name come from it. */
 export function CalibrationRigRow({
   instrument,
   instruments,

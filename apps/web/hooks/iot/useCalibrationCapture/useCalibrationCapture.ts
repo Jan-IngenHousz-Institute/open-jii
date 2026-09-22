@@ -36,11 +36,7 @@ export type PhaseFailure =
   | { kind: "noProcedure" }
   | { kind: "failed"; message: string; partial: CalibrationRunPayload };
 
-/**
- * The unit on the port, held against the device this session is for. A family whose
- * firmware announces no identifier of its own leaves the question open, and the record
- * says as much rather than implying the two were compared.
- */
+/** A family whose firmware announces no identifier leaves the question open, rather than implying a match. */
 export type UnitIdentity =
   | { kind: "unnamed" }
   /** It said who it is, and there was no expectation to hold it against. */
@@ -66,14 +62,7 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/**
- * Connecting a rig and running a procedure's phases against it.
- *
- * Owned here rather than in the wizard because it is the half a definition's author needs
- * too: trying a procedure at the bench while writing it is the only way to find out that
- * a handshake, a command or a setpoint was wrong. What differs between the two callers is
- * only what they do with the readings afterwards.
- */
+/** Owned here because a definition's author needs the same half when trying a procedure at the bench. */
 export function useCalibrationCapture(
   procedure: CaptureProcedure | undefined,
   family: CalibrationFamily,
@@ -195,14 +184,7 @@ export function useCalibrationCapture(
 
   const disconnectAll = connections.disconnectAll;
 
-  /**
-   * Between one unit and the next: the bench goes quiet and the unit's port is let go, but
-   * the instruments stay bound.
-   *
-   * A batch is one setup and many units. Closing the lamp and the reference between each
-   * would make the operator rebuild the rig for every piece of hardware they pick up, and
-   * every one of those reconnections is a chance to bind the wrong port.
-   */
+  /** A batch is one setup and many units, so the instruments stay bound between them. */
   const releaseUnit = useCallback(async (): Promise<string | null> => {
     stop();
     await inFlightRef.current;
@@ -256,10 +238,7 @@ export function useCalibrationCapture(
     disconnect: () => void connections.disconnectAll(),
     rig,
     operator,
-    /**
-     * The procedure is loaded, the unit answering is the device this session is for, and
-     * every role the run requires is bound.
-     */
+    /** Procedure loaded, unit identified, every required role bound. */
     canStart:
       procedure !== undefined &&
       connection?.family === family &&

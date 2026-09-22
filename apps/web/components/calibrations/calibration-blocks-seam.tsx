@@ -26,14 +26,7 @@ function writableNames(family: CalibrationFamily): Map<string, Set<string>> {
   return writable;
 }
 
-/**
- * What the fit submits, and how far each coefficient gets.
- *
- * A block the family has no console command for is not a mistake: the run still records
- * it, and a technician reads it off the approval. But an author choosing between two
- * names should know which one ends up on the device, and that is decided by a registry
- * they cannot see from here.
- */
+/** Which block names the writer registry covers, since only those reach a device. */
 export function CalibrationBlocksSeam({ outputSchema, family }: CalibrationBlocksSeamProps) {
   const { t } = useTranslation("iot");
   const writable = writableNames(family);

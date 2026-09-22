@@ -40,15 +40,7 @@ interface CalibrationOutputSchemaEditorProps {
   onChange: (schema: CalibrationOutputSchema) => void;
 }
 
-/**
- * The coefficients this definition produces, and whether the platform can write each one
- * back to a device.
- *
- * This is the coupling that otherwise fails silently: a block whose name no writer covers
- * captures, fits, passes review and is approved, and then never reaches the hardware. The
- * author finds out at the bench, under a message that reads like the family is
- * unsupported. Offering the names the registry holds is what keeps that from happening.
- */
+/** A block no writer covers passes review and never reaches hardware, so the registry's names are offered. */
 export function CalibrationOutputSchemaEditor({
   family,
   outputSchema,

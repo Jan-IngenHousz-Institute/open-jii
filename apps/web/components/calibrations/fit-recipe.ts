@@ -1,11 +1,4 @@
-/**
- * A first fit, written from what the capture records and what the blocks declare.
- *
- * The two ends of the script are already on the page: the series and their columns above
- * it, the blocks and their coefficients below. Retyping them into Python is where an
- * author spends an afternoon and introduces the misspelling that only fails at the bench.
- * What the recipe cannot decide it says so in the block, rather than guessing.
- */
+/** A first fit drafted from the recorded series and the declared blocks; what it cannot decide it says so. */
 import type {
   CalibrationOutputSchema,
   CoefficientSpec,
@@ -55,13 +48,7 @@ function numberCoefficients(coefficients: Coefficients): NumberCoefficient[] {
     .map(([name, spec]) => ({ name, spec }));
 }
 
-/**
- * Which two columns the line is drawn through.
- *
- * Two readings taken at the same point are a device against a reference, and the drive
- * only orders them. One reading is the drive against what it produced, which is how a
- * lamp or an LED is characterised.
- */
+/** Two readings at one point are device against reference; one reading is the drive against its output. */
 function axes(series: ProducedSeries): { x: string; y: string } | null {
   const hasStimulus = series.columns.includes(SWEEP_STIMULUS_COLUMN);
   const readings = series.columns.filter((column) => column !== SWEEP_STIMULUS_COLUMN);
@@ -253,10 +240,7 @@ function importLines(plans: BlockPlan[]): string[] {
   return ["import math", "", `from qc import ${helpers.join(", ")}`, ""];
 }
 
-/**
- * A runnable draft of the fit for the blocks this definition declares, taking each block
- * in turn from the series recorded in the same order.
- */
+/** A runnable draft, taking each declared block from the series recorded in the same order. */
 export function fitRecipe(series: ProducedSeries[], outputSchema: CalibrationOutputSchema): string {
   const plans = Object.entries(outputSchema.blocks).map(([block, coefficients], index) =>
     planBlock(block, coefficients, series.at(index)),

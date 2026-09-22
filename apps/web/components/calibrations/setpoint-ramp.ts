@@ -6,13 +6,6 @@ function trim(value: number): number {
   return Number(value.toPrecision(10));
 }
 
-/**
- * An evenly spaced ramp from one setting to another.
- *
- * A sweep's points are the one list an author would otherwise type out in full, and they
- * are nearly always a ramp: six currents from dark to full, ten brightnesses up the LED's
- * range. Typing them is where the transcription errors come from.
- */
 export function setpointRamp(from: number, to: number, points: number): number[] {
   if (!Number.isFinite(from) || !Number.isFinite(to)) {
     return [];

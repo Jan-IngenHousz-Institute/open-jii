@@ -37,11 +37,7 @@ interface CalibrationOutputBlockProps {
   onRemoveCoefficient: (name: string) => void;
 }
 
-/**
- * One block of coefficients, which is the unit a device is written and a run is reviewed
- * in: a bench that produced two of three blocks writes the two and records why the third
- * is missing.
- */
+/** A block is the unit a device is written and a run is reviewed in. */
 export function CalibrationOutputBlock({
   block,
   coefficients,

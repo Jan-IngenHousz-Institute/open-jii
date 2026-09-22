@@ -15,13 +15,7 @@ interface CalibrationDevicePickerProps {
   onSelect: (deviceId: string) => void;
 }
 
-/**
- * Which device this procedure is about to be tried on.
- *
- * A bench session is always a record against one device, so trying a procedure out is not
- * a dry run in the sense of touching nothing: it produces a run like any other, which the
- * author can then reject. Saying which device up front is what makes that honest.
- */
+/** A trial produces a real run against a real device, which the author can then reject. */
 export function CalibrationDevicePicker({
   devices,
   isLoading,

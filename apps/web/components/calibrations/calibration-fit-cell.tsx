@@ -25,15 +25,7 @@ interface CalibrationFitCellProps {
   onSchemaChange: (schema: CalibrationOutputSchema) => void;
 }
 
-/**
- * The last cell of the document: the code the captured readings are handed to, and the
- * coefficients it has to submit.
- *
- * Those two belong together. The blocks are not a separate thing the definition declares,
- * they are this script's contract: a name here is what `submit()` must use, and whether
- * the platform has a console command for it decides whether the number ever reaches a
- * device.
- */
+/** The blocks are the script's contract: a name here is what `submit()` must use. */
 export function CalibrationFitCell({
   script,
   outputSchema,

@@ -1,10 +1,3 @@
-/**
- * Which registered device the unit on the port is, worked out from what it announced.
- *
- * The bench is handed hardware and finds out what it is, rather than being told beforehand
- * and hoping. The fleet is already loaded for the devices overview, so the answer is a
- * comparison rather than a request.
- */
 import { serialsMatch } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import type { CalibrationFamily } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 
@@ -17,7 +10,6 @@ interface RegisteredDevice {
 
 export type UnitOnPort =
   | { kind: "waiting" }
-  /** It answered, but with nothing that names it, so the fleet cannot be searched. */
   | { kind: "unnamed" }
   | { kind: "unregistered"; serial: string }
   | { kind: "registered"; serial: string; device: RegisteredDevice };

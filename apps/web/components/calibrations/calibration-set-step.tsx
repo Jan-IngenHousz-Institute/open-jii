@@ -25,13 +25,7 @@ interface CalibrationSetStepProps {
   onChange: (step: SetStep) => void;
 }
 
-/**
- * One setpoint applied and left there, with nothing read.
- *
- * The limits come from the instrument rather than the author, because a supply asked for
- * a current it cannot give is the difference between a lamp at 6.6 A and a refused
- * command halfway through a sweep.
- */
+/** Limits come from the instrument: a supply asked for a current it cannot give refuses mid-sweep. */
 export function CalibrationSetStep({ step, targets, canEdit, onChange }: CalibrationSetStepProps) {
   const { t } = useTranslation("iot");
   const roleId = useId();

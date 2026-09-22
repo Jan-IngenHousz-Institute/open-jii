@@ -1,8 +1,4 @@
-/**
- * Edits on a calibration's output schema: one document in, one document out. Names are
- * records rather than lists, and their order is kept: the page autosaves on a key built
- * from the document, so a reordered record would read as a change.
- */
+/** Record order is kept: the autosave key is built from the document, so a reorder reads as a change. */
 import type {
   CalibrationOutputSchema,
   CoefficientSpec,
@@ -93,11 +89,7 @@ export function removeCoefficient(
   return { blocks: { ...schema.blocks, [block]: coefficients } };
 }
 
-/**
- * How a coefficient the platform can write is declared. A per-channel one is submitted as
- * an array, so declaring it as a number makes the first real fit fail validation. Where the
- * writer knows how many entries the device holds, that is the length rather than a guess.
- */
+/** A per-channel coefficient is submitted as an array, so declaring it a number fails the first real fit. */
 export function specForWritable(coefficient: WritableCoefficient): CoefficientSpec {
   return coefficient.isArray
     ? { type: "number_array", length: coefficient.length ?? DEFAULT_ARRAY_LENGTH }
@@ -145,11 +137,7 @@ export function withLength(spec: CoefficientSpec, length: number): CoefficientSp
   return spec.type === "number" ? spec : { ...spec, length };
 }
 
-/**
- * The same coefficient under a new type, keeping the bounds where they still apply.
- * An integer array cannot carry fractional bounds, so those are dropped rather than
- * rounded into something the author did not ask for.
- */
+/** An integer array cannot carry fractional bounds, so those are dropped rather than rounded. */
 export function retypeCoefficient(spec: CoefficientSpec, type: CoefficientType): CoefficientSpec {
   const length = spec.type === "number" ? DEFAULT_ARRAY_LENGTH : spec.length;
   const isWhole = (value: number | undefined) => value === undefined || Number.isInteger(value);

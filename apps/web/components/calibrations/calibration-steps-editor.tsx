@@ -31,14 +31,7 @@ interface CalibrationStepsEditorProps {
   onChange: (procedure: CaptureProcedure) => void;
 }
 
-/**
- * One phase of a procedure, written the way this platform writes an executable document:
- * a column of cells, each with its own identity, insertable anywhere.
- *
- * Every name a step can hold comes from the rig above it: the instruments it declared,
- * the setpoints those can be driven through, the readings they answer. Typing one is how
- * a procedure passes review and then stalls at the bench.
- */
+/** Every name a step can hold comes from the rig above it; a typed one stalls at the bench. */
 export function CalibrationStepsEditor({
   procedure,
   phase,

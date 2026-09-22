@@ -50,13 +50,7 @@ import { unitOnPort } from "./unit-on-port";
 
 type WizardStep = "choose" | "connect" | "capture" | "recorded" | "review" | "write" | "done";
 
-/**
- * The three things a session actually consists of, which the six steps are phases of.
- *
- * Choosing a procedure takes a moment, a capture takes minutes at a bench, and approving is
- * a decision; six equal circles would give them the same weight. The step still names
- * itself, in the card's title.
- */
+/** Six equal circles would give choosing, capturing and deciding the same weight. */
 type WizardPhase = "setUp" | "measure" | "decide";
 
 const PHASE_ORDER: readonly WizardPhase[] = ["setUp", "measure", "decide"];
@@ -65,8 +59,7 @@ const PHASE_OF: Record<WizardStep, WizardPhase> = {
   choose: "setUp",
   connect: "setUp",
   capture: "measure",
-  // Still measuring: the unit is done and the next one is the obvious next act, so a
-  // sitting that has just recorded one has not reached a decision about anything.
+  // A recorded unit has decided nothing; the next unit is the obvious next act.
   recorded: "measure",
   review: "decide",
   write: "decide",
@@ -80,18 +73,12 @@ export interface CalibrationWriteSession {
 }
 
 interface CalibrationWizardProps {
-  /**
-   * The device this session is for. Absent at a bench, which takes whatever hardware is put
-   * on it and works out which device that is from what the unit announces.
-   */
+  /** Absent at a bench, which works out the device from what the unit announces. */
   deviceId?: string;
   family: CalibrationFamily;
   /** What the platform has this device registered as; the unit that answers has to be it. */
   serialNumber?: string;
-  /**
-   * Entered from a definition rather than from a device: that procedure is fixed, and the
-   * wizard opens on Connect.
-   */
+  /** Entered from a definition: the procedure is fixed and the wizard opens on Connect. */
   presetDefinitionId?: string;
   /** Entered to finish a write, rather than to measure anything. */
   writeSession?: CalibrationWriteSession;
@@ -158,9 +145,8 @@ export function CalibrationWizard({
   const [verifyOutcome, setVerifyOutcome] = useState<PhaseResult | null>(null);
   const [hasChecked, setHasChecked] = useState(false);
   const [units, setUnits] = useState<SessionUnit[]>([]);
-  // Some firmware names the unit on the port and some does not. An Ambit's MAC is only in
-  // its boot dump, which costs a reboot, so for those families the operator says which
-  // device this is rather than the bench guessing or refusing.
+  // An Ambit's MAC is only in its boot dump, which costs a reboot, so that family is named
+  // by the operator rather than by the port.
   const [chosenDeviceId, setChosenDeviceId] = useState<string | null>(null);
 
   const definitions = useCalibrationDefinitions(family);
@@ -327,10 +313,7 @@ export function CalibrationWizard({
     }
   }
 
-  /**
-   * On record separately from the write itself: the coefficients are on the hardware by the
-   * time this can fail, and the operator has to be able to record that without writing again.
-   */
+  /** The coefficients are on the hardware by the time this can fail, so it records without writing again. */
   async function recordWrite(
     results: CalibrationWriteResults,
     state: Record<string, unknown> | undefined,
@@ -907,12 +890,7 @@ export function CalibrationWizard({
     return <CalibrationWizardActions primary={renderClose()} />;
   }
 
-  /**
-   * One unit is done and the bench is still standing.
-   *
-   * Nothing is decided here: a batch is measured first and reviewed together, because a
-   * verdict reached to get back to the hardware faster is the one a batch gets wrong.
-   */
+  /** Nothing is decided here: a batch is measured first and reviewed together. */
   function renderRecorded() {
     const just = units.at(-1);
 
@@ -930,13 +908,7 @@ export function CalibrationWizard({
     );
   }
 
-  /**
-   * Everything that belongs to the unit rather than to the sitting.
-   *
-   * The rig, the procedure and the tally outlive a unit; every other piece of session state
-   * is about the one that just left the bench, and carrying any of it into the next unit
-   * would attribute one unit's write to another.
-   */
+  /** The rig, procedure and tally outlive a unit; carrying anything else over misattributes its write. */
   function forgetUnit() {
     setRun(null);
     setPayload(null);
@@ -1016,10 +988,7 @@ export function CalibrationWizard({
     }
   }
 
-  // A bench session is not a form to fill in, it is a workspace: the step's work on the left
-  // and the session itself on the right, where what is on the ports and how far the run has
-  // got stay readable without stepping backwards. The grid is the platform's own detail
-  // layout, the one every other device tab uses.
+  // The platform's detail grid: the step's work on the left, the session itself on the right.
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
       <div className="min-w-0 space-y-6">

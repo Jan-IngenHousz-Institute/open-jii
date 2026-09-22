@@ -55,13 +55,6 @@ function parseLine(line: string, numbersOnly: boolean): SetpointValue | undefine
   }
 }
 
-/**
- * The points a sweep steps through, one per line.
- *
- * A sweep is the one place a procedure carries a list of values rather than a single one,
- * and it is read and rewritten far more often than anything else here: a bench that
- * saturates at 4 A is fixed by deleting a line.
- */
 export function CalibrationSetpointValues({
   values,
   numbersOnly,

@@ -928,8 +928,7 @@
         "residualAxis": "Afwijking, % van het bereik",
         "tolerance": "Toegestaan",
         "residualsTruncated": "Het script rapporteerde alleen de eerste residuen.",
-        "showReadings": "Toon wat de opstelling heeft gemeten, {{points}} metingen in {{series}} series",
-        "decisionFailed": "Die beslissing kon niet worden vastgelegd."
+        "showReadings": "Toon wat de opstelling heeft gemeten, {{points}} metingen in {{series}} series"
       },
       "write": {
         "hint": "Schrijf de goedgekeurde coëfficiënten naar het apparaat. Elk blok wordt bevestigd door het terug te lezen.",
@@ -980,8 +979,7 @@
           "visibility": "Zichtbaarheid",
           "updated": "Bijgewerkt"
         },
-        "retry": "Opnieuw proberen",
-        "createFailed": "Deze kalibratie kon niet worden aangemaakt."
+        "retry": "Opnieuw proberen"
       },
       "detail": {
         "rig": "Benodigde opstelling",
@@ -991,7 +989,6 @@
         "steps": "Opname",
         "verify": "Controle na het schrijven",
         "created": "Aangemaakt",
-        "firmwareFloor": "Vereist firmware",
         "notWritable": "Het platform heeft geen console-opdracht voor {{coefficients}}. Een run wordt vastgelegd, maar deze waarden bereiken het apparaat nooit.",
         "describePlaceholder": "Beschrijf wat deze opstelling meet en waartegen.",
         "readOnly": "Je kunt deze kalibratie lezen maar niet wijzigen.",
@@ -1025,8 +1022,6 @@
         "drivesNothing": "niets dat het platform kan instellen"
       },
       "procedure": {
-        "captureHint": "Wat de meetbank doet, in de volgorde waarin hij het doet. Elke naam in een stap komt uit de opstelling hierboven.",
-        "verifyHint": "Draait nadat de coëfficiënten geschreven zijn, zodat vastligt wat het apparaat gekalibreerd las.",
         "addStep": "Stap toevoegen",
         "kind": {
           "operator": "De persoon aan de meetbank iets laten doen",
@@ -1109,8 +1104,6 @@
       "trial": {
         "action": "Uitvoeren aan de meetbank",
         "title": "Kalibratie uitvoeren",
-        "chooseDevice": "Welk apparaat",
-        "chooseHint": "Een sessie aan de meetbank wordt vastgelegd bij één apparaat. Kies het {{family}}-apparaat om deze procedure op te proberen; de meting die daaruit komt kan net als elke andere worden afgewezen.",
         "noDevices": "Er is geen apparaat van deze familie op uw naam geregistreerd. Registreer er een om deze procedure aan de meetbank te proberen."
       },
       "produces": {

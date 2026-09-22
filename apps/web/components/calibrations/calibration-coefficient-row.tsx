@@ -42,14 +42,7 @@ interface CalibrationCoefficientRowProps {
   onRemove: () => void;
 }
 
-/**
- * One number the fit produces: what it is called, what shape it has, and what range is
- * plausible for it.
- *
- * The bounds are not a formality. A fit that lands outside them is reported as out of
- * range at review, which is the last point before a wrong coefficient is written to a
- * device and quietly scales every reading it takes afterwards.
- */
+/** Bounds are checked at review, the last point before a wrong coefficient reaches a device. */
 export function CalibrationCoefficientRow({
   name,
   spec,

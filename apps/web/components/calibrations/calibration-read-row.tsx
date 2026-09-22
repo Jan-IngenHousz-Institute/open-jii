@@ -36,12 +36,7 @@ interface CalibrationReadRowProps {
   onRemove: () => void;
 }
 
-/**
- * One reading taken at a point in the procedure, and the column it lands in.
- *
- * The column name is what the script indexes the DataFrame by, so it is as load bearing
- * as the command: a fit reads `points["par_raw"]` because a read step said so here.
- */
+/** The column name is what the script indexes the DataFrame by, so it is as load bearing as the command. */
 export function CalibrationReadRow({
   read,
   sources,
@@ -85,10 +80,7 @@ export function CalibrationReadRow({
     }
   }
 
-  /**
-   * A column the author named is theirs to keep; one the reading gave itself follows the
-   * reading, so picking a different instrument does not leave `par_ref` on a lamp.
-   */
+  /** A generated column follows its reading; an author's chosen name stays put. */
   function columnFor(next: ProcedureRead): string {
     if (!isDefaultColumn(read, sources)) {
       return read.as;

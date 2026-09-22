@@ -37,10 +37,7 @@ export function useAutosaveStatus(): { status: AutosaveStatus | null; error: unk
   return { status: ctx.status, error: ctx.error };
 }
 
-/**
- * No-op when no provider is mounted, so callers can use it unconditionally. A null status
- * reports that there is nothing to say: the host is showing the state itself.
- */
+/** No-op without a provider, so callers can use it unconditionally; null means nothing to say. */
 export function useReportAutosaveStatus(report: {
   status: AutosaveStatus | null;
   error: unknown;

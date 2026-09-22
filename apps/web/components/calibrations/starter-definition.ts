@@ -6,15 +6,7 @@ import { familyCalibrationCapabilities, isSensorFamily } from "@repo/iot";
 
 import { specForWritable } from "./output-schema-edits";
 
-/**
- * What a brand new calibration opens with.
- *
- * A definition needs a procedure, a script and an output schema before it can exist at
- * all, so creating one cannot ask for a name and leave the rest blank. It starts from a
- * procedure that runs, and from the blocks this family can actually be written with,
- * taken from the writer registry: an author who keeps those names ends up with a
- * calibration that reaches the hardware, rather than one that is only ever recorded.
- */
+/** A definition needs a procedure, script and schema to exist, so a new one cannot start blank. */
 export function starterDefinition(
   family: CalibrationFamily,
 ): Omit<CreateCalibrationDefinitionBody, "name" | "organizationId"> {
@@ -76,11 +68,7 @@ ${skipped}
 `;
 }
 
-/**
- * A name nothing else holds, since one name is one calibration. Numbered rather than
- * stamped: an author renames it in a moment, and "Untitled calibration 2" says which of
- * their unfinished ones this is.
- */
+/** Numbered rather than stamped: "Untitled calibration 2" says which unfinished one this is. */
 export function untitledCalibrationName(taken: string[]): string {
   return freeName("Untitled calibration", taken);
 }

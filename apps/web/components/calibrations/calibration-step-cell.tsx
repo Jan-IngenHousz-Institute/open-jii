@@ -33,14 +33,7 @@ interface CalibrationStepCellProps {
   onRemove: () => void;
 }
 
-/**
- * One step of a procedure, as a cell of the same kind a workbook is written in.
- *
- * A procedure is an executable document, which this platform already knows how to draw:
- * an identity colour and icon per kind, a line that says what the step does while it is
- * closed, and the run, collapse and delete affordances in the places they live everywhere
- * else. What is inside the cell is the only part particular to calibration.
- */
+/** A procedure is an executable document, drawn as the workbook cells this platform already uses. */
 export function CalibrationStepCell({
   step,
   index,

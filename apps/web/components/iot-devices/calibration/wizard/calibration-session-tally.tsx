@@ -10,13 +10,7 @@ interface CalibrationSessionTallyProps {
   units: SessionUnit[];
 }
 
-/**
- * What this sitting has got through.
- *
- * An operator with a tray of hardware needs two things the screen would not otherwise
- * answer: how far along they are, and whether the unit in their hand has already had its
- * turn. Both are read at a glance rather than counted off the table.
- */
+/** How far along the sitting is, and whether the unit in hand has already had its turn. */
 export function CalibrationSessionTally({ units }: CalibrationSessionTallyProps) {
   const { t } = useTranslation("iot");
 

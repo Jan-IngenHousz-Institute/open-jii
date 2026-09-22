@@ -21,13 +21,7 @@ interface CalibrationNumberFieldProps {
   className?: string;
 }
 
-/**
- * A number in a document that is saved as it is typed.
- *
- * Every number goes through states that are not numbers: "", "-", "1e". Committing those
- * would put a document the contract refuses in front of the author and stop the page
- * saving, so the text stands on its own until it parses into something acceptable.
- */
+/** Typing passes through "", "-" and "1e", so the text stands alone until it parses. */
 export function CalibrationNumberField({
   label,
   value,

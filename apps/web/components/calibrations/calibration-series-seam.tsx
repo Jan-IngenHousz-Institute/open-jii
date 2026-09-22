@@ -9,12 +9,7 @@ interface CalibrationSeriesSeamProps {
   series: ProducedSeries[];
 }
 
-/**
- * What the capture hands the fit, on the seam between them.
- *
- * The script addresses these by name and nothing checks the spelling until a bench run
- * fails, so the names an author has to type are kept in front of them while they type.
- */
+/** Nothing checks these names until a bench run fails, so they stay in front of the author. */
 export function CalibrationSeriesSeam({ series }: CalibrationSeriesSeamProps) {
   const { t } = useTranslation("iot");
 

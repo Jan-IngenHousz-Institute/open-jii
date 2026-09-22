@@ -18,13 +18,7 @@ interface CalibrationDuplicateActionProps {
   definition: CalibrationDefinitionDetail;
 }
 
-/**
- * The way on from a definition a run has closed.
- *
- * A run records which definition it ran rather than a copy of it, so editing one that has
- * been run is refused. Without this the refusal is a dead end: the author's only route to
- * the next revision is retyping five coupled artefacts into a blank one.
- */
+/** A run freezes its definition, so duplicating is the only route to the next revision. */
 export function CalibrationDuplicateAction({ definition }: CalibrationDuplicateActionProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();

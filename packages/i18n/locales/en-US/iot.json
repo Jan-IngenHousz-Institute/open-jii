@@ -928,8 +928,7 @@
         "residualAxis": "Off by, % of range",
         "tolerance": "Allowed",
         "residualsTruncated": "The script reported the first residuals only.",
-        "showReadings": "Show what the bench measured, {{points}} readings across {{series}} series",
-        "decisionFailed": "That decision could not be recorded."
+        "showReadings": "Show what the bench measured, {{points}} readings across {{series}} series"
       },
       "write": {
         "hint": "Write the approved coefficients to the device. Each block is confirmed by reading it back.",
@@ -980,8 +979,7 @@
           "visibility": "Visibility",
           "updated": "Updated"
         },
-        "retry": "Try again",
-        "createFailed": "That calibration could not be created."
+        "retry": "Try again"
       },
       "detail": {
         "rig": "The rig it needs",
@@ -991,7 +989,6 @@
         "steps": "Capture",
         "verify": "Check after the write",
         "created": "Created",
-        "firmwareFloor": "Needs firmware",
         "notWritable": "The platform has no console command for {{coefficients}}. A run producing these is recorded, but they never reach the device.",
         "describePlaceholder": "Say what this bench measures and against what.",
         "readOnly": "You can read this calibration but not change it.",
@@ -1025,8 +1022,6 @@
         "drivesNothing": "nothing the platform can set"
       },
       "procedure": {
-        "captureHint": "What the bench does, in the order it does it. Every name a step can hold comes from the rig above.",
-        "verifyHint": "Run after the coefficients are written, so the record says what the device read once calibrated.",
         "addStep": "Add step",
         "kind": {
           "operator": "Ask the person at the bench to do something",
@@ -1109,8 +1104,6 @@
       "trial": {
         "action": "Run at the bench",
         "title": "Run a calibration",
-        "chooseDevice": "Which device",
-        "chooseHint": "A bench session is recorded against one device. Pick the {{family}} device to try this procedure on; the run it produces can be rejected like any other.",
         "noDevices": "No device of this family is registered to you. Register one to try this procedure at the bench."
       },
       "produces": {
