@@ -87,14 +87,14 @@ sibling that solves it and mirror it rather than inventing a second way to do th
 
 ## Tests
 
-Vitest with jsdom, colocated `.test.tsx`, 902 files. The suite runs with `isolate: false`, which has
+Vitest with jsdom, colocated `.test.tsx`, 970 files. The suite runs with `isolate: false`, which has
 real consequences for mocking, all of them explained in `apps/web/TESTING.md`. Use MSW through
 `test/msw/mount.ts`, which takes a contract procedure rather than a URL, and build fixtures from
 `test/factories.ts`.
 
 ## Known debt
 
-The app addresses itself three ways. 1,405 files use `@/`, 215 use `~/` and 661 use a `../`
+The app addresses itself three ways. 1,510 files use `@/`, 220 use `~/` and 672 use a `../`
 relative. This is structural rather than sloppy: `tsconfig.json` maps `~/*` to the app root as a
 wildcard but enumerates `@/` per folder, so `~/env` and anything under `app/` have no `@/`
 equivalent, and the `restrictEnvAccess` lint message tells people to write `~/env`. Adding a `@/*`
@@ -112,13 +112,13 @@ Four files are large enough to be hard to hold in your head:
 implementation is pending, which breaks the no-commented-out-code rule in [prose.md](prose.md).
 Either the backend work is tracked and this waits in a ticket, or the markup goes. No ticket.
 
-There are 251 type assertions in non-test source here, the second highest in the repo after
+There are 257 type assertions in non-test source here, the second highest in the repo after
 `packages/ui`. See [code.md](code.md) for how that gets unwound. No ticket.
 
 ## Decisions
 
-- 2026-09-21. `@/` is the alias this app standardises on, because 1,405 files already use it and
-  215 use `~/`. `apps/mobile` keeps `~/` because its import-boundary lint rules are written
+- 2026-09-21. `@/` is the alias this app standardises on, because 1,510 files already use it and
+  220 use `~/`. `apps/mobile` keeps `~/` because its import-boundary lint rules are written
   against it, so the two apps differ on purpose.
 - 2026-09-21. The 83 tests under `app/**/__tests__/` stay there so route directories hold only the
   files Next treats specially. Everywhere else, tests sit next to their subject.

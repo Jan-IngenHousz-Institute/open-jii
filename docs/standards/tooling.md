@@ -59,12 +59,13 @@ vitest project.
 
 ## Known debt
 
-The type-check script name is split across the repo. Eleven packages declare `typecheck`, five apps
-declare `check-types`, mobile declares both identically, and `apps/backend`, `packages/database`,
-`apps/macro-sandbox` and `apps/tools` declare neither. `turbo.json` only knows `check-types`, so the
-root `pnpm typecheck` command and the CI type-check step cover disjoint halves of the workspace and
-neither covers everything. Renaming them all to `check-types` and deleting the root `typecheck`
-script is the fix. Needs a ticket.
+The type-check script name is split across the repo. Eleven workspaces declare `typecheck`, five
+declare `check-types`, `apps/mobile` declares both identically, and eight declare neither, including
+`apps/backend`, `packages/database` and both sandboxes. `turbo.json` only knows `check-types`, so
+the root `pnpm typecheck` command and the CI type-check step cover disjoint halves of the workspace
+and neither covers everything. Renaming them all to `check-types` and deleting the root `typecheck`
+script is the fix, and new packages are already picking the right name unprompted:
+`packages/monitoring` arrived with `check-types`. Needs a ticket.
 
 Four root scripts go through turbo without a declared task: `typecheck`, `ui-add`, `view-report` and
 the test project variants. No ticket.

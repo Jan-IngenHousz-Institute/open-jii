@@ -116,20 +116,20 @@ puffery, the padded groups of three and the giveaway vocabulary come out.
 
 ## Known debt
 
-Em dashes are the large one. 59 tracked markdown and MDX files contain them, the worst being
+Em dashes are the large one. 62 tracked markdown and MDX files contain them, the worst being
 `apps/docs/content/guide/reference/access-troubleshooting.mdx` with 36 and `apps/mobile/CONTEXT.md`
-with 30, and both `AGENTS.md` and `apps/web/TESTING.md` are in the list. Another 529 TypeScript,
+with 30, and both `AGENTS.md` and `apps/web/TESTING.md` are in the list. Another 548 TypeScript,
 TSX and Python files have them inside comments and TSDoc. None of that is worth sweeping, because
 replacing an em dash changes the grammar around it and each one needs a person to decide, so fix
 them in the files you were editing anyway. No ticket.
 
-The exception is the 31 em dashes sitting in copy users actually read, spread over 8 shared locale
-files with 12 in `en-US`, 9 in `de-DE` and 10 in `nl-NL`, plus 2 more in the mobile locales. That
+The exception is the 39 em dashes sitting in copy users actually read, spread over the shared locale files and the
+mobile ones. That
 set is small enough to fix in one pass, and it is the only part of this debt a researcher ever sees.
 Needs a ticket.
 
 Nothing checks for em dashes today, so more keep arriving. The plan is a CI step that looks only at
-the lines a pull request adds, which keeps the 588 files already in the tree from blocking it on the
+the lines a pull request adds, which keeps the 610 files already in the tree from blocking it on the
 first day. Needs a ticket.
 
 `CONTRIBUTING.md` and `apps/docs/content/developers/contributing/index.mdx` are two hand-maintained
@@ -143,7 +143,7 @@ it, and only two files contain a TODO or a FIXME.
 ## Decisions
 
 - 2026-09-21. Em dashes are banned rather than discouraged, and the check will only ever look at
-  added lines. A check across the whole tree would have failed on 588 files the day it landed, and
+  added lines. A check across the whole tree would have failed on 610 files the day it landed, and
   somebody would have turned it off inside a week.
 - 2026-09-21. This document owns prose for the repo, while `docs/agents/ticket-standard.md` keeps
   owning prose written into Linear, because its budgets and heading sets only mean anything there.

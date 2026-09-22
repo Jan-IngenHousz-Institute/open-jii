@@ -197,7 +197,7 @@ enforcement tags.
 | [`docs/standards/mobile.md`](docs/standards/mobile.md)                   | Working on the Android app.                                           |
 | [`docs/standards/data.md`](docs/standards/data.md)                       | Changing a pipeline or the shared Python libraries.                   |
 | [`docs/standards/shared-packages.md`](docs/standards/shared-packages.md) | Changing auth, iot, cms, analytics or transactional.                  |
-| [`docs/standards/macro-sandbox.md`](docs/standards/macro-sandbox.md)     | Touching the runtimes that execute user macros.                       |
+| [`docs/standards/sandboxes.md`](docs/standards/sandboxes.md)             | Touching a runtime that executes code somebody else wrote.            |
 | [`docs/standards/docs-site.md`](docs/standards/docs-site.md)             | Writing documentation a user reads.                                   |
 | [`docs/standards/infrastructure.md`](docs/standards/infrastructure.md)   | Changing OpenTofu, when that is explicitly the task.                  |
 | [`docs/standards/tooling.md`](docs/standards/tooling.md)                 | Changing shared config, turbo tasks or the devkit.                    |

@@ -123,18 +123,18 @@ any single line of it. Nothing in prettier produces that; it is a choice the aut
 
 ## Known debt
 
-There are 913 type assertions in non-test source, plus another 1,196 in test files, so rule 1 is
+There are 926 type assertions in non-test source, plus another 1,211 in test files, so rule 1 is
 aspiration-shaped in practice even though it is the rule going forward. They are spread as follows:
-283 in `packages/ui`, 251 in `apps/web`, 159 in `apps/mobile`, 91 in `apps/backend`, 35 in
+284 in `packages/ui`, 257 in `apps/web`, 159 in `apps/mobile`, 91 in `apps/backend`, 35 in
 `packages/iot`, and the rest in single digits across the other packages. Most are narrowing casts
 rather than `any`, which is the milder half of the problem. No ticket for the backlog itself.
 
-A lint rule for rule 1 cannot land as an error while those 913 exist. The plan is
+A lint rule for rule 1 cannot land as an error while those 926 exist. The plan is
 `@typescript-eslint/consistent-type-assertions` with `assertionStyle: "never"`, introduced as a
 warning, then promoted to an error per package as each one reaches zero, starting with the packages
 already in single digits. Needs a ticket.
 
-`packages/ui/eslint.config.js` ignores `src/**` entirely, so all 65 components are linted for theme
+`packages/ui/eslint.config.js` ignores `src/**` entirely, so all 63 components are linted for theme
 tokens only and nothing else. That is where 58 of the repo's 67 `as any` casts sit, unseen by the
 type-checked rules every other package gets. Replacing the blanket ignore with an explicit list of
 legacy files would put new code under the real config. Needs a ticket.
@@ -155,8 +155,8 @@ Eleven files are named for a grab bag rather than a responsibility, against rule
 `fp-utils.ts` is the deliberate exception: it is the `Result` and `AppError` implementation and the
 name is historical. Move an item onto its owner when you next touch it. No ticket.
 
-Rule 10 describes the house style rather than correcting it. There are 1,551 braceless single-line
-`if` statements in non-test source, 685 of them in `apps/web` and 323 in `apps/mobile`, and almost
+Rule 10 describes the house style rather than correcting it. There are 1,625 braceless single-line
+`if` statements in non-test source, 718 of them in `apps/web` and 330 in `apps/mobile`, and almost
 all of them are guard clauses: 334 end in `return`, 160 in a bare `return;`, 39 in `continue;` and
 14 in a `throw`. A handful do real work on the same line, such as the three in
 `apps/backend/src/common/utils/orpc-fp.ts` that assign to a log object, and those are the ones to
@@ -165,7 +165,7 @@ put braces on when you are next in the file. No ticket.
 ## Decisions
 
 - 2026-09-21. Type assertions are banned in the rule text rather than allowed with an escape hatch,
-  even though 913 exist. Writing the escape hatch down would get it used, and the count is the
+  even though 926 exist. Writing the escape hatch down would get it used, and the count is the
   argument for a warning-first lint rule, not for a softer rule.
 - 2026-09-21. A small named-export entry point for one domain stays allowed while `export *` and
   root barrels do not, which is the line that keeps import paths stable without dragging a whole
@@ -174,7 +174,7 @@ put braces on when you are next in the file. No ticket.
   same conversion logic implemented twice, once in web and once in the backend, which is worse than
   a directory of pure functions.
 - 2026-09-21. Rule 10 allows the braceless guard clause instead of demanding braces everywhere. The
-  repo has 1,551 of them and they are nearly all early returns, which is the normal idiom in this
+  repo has 1,625 of them and they are nearly all early returns, which is the normal idiom in this
   language; the thing actually worth forbidding is a braceless body that does work and then carries
   on.
 - 2026-09-21. Rule 15 keeps `process.env` out of application code even though only `apps/web`

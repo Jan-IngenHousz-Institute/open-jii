@@ -120,7 +120,7 @@ whether something is broken.
 
 ## Tests
 
-Colocated `.spec.ts`, 281 files today and no `.test.ts`. Vitest runs with `fileParallelism: false`
+Colocated `.spec.ts`, 299 files today and no `.test.ts`. Vitest runs with `fileParallelism: false`
 and `isolate: false`, so files share a worker and order is decided by the layer sequencer. The only
 adapter that gets mocked wholesale is analytics; everything else talks to the real test database
 through `TestHarness`, which also provides `createTestUser` and supertest verbs that carry a

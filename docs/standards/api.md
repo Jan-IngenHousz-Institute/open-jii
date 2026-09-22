@@ -82,7 +82,7 @@ needs it, it belongs in that app.
 
 ## Tests
 
-Colocated `.spec.ts`, 43 files, running under the base vitest config in a node environment. The
+Colocated `.spec.ts`, 48 files, running under the base vitest config in a node environment. The
 interesting one is `contract.spec.ts`, which checks properties of the whole router rather than
 examples of one procedure, so the guarantees hold for endpoints nobody thought to test.
 

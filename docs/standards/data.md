@@ -65,7 +65,7 @@ deployed, however correct it is.
 
 ## Tests
 
-pytest, 16 files, all under `tests/lib/` in a flat layout rather than mirroring `src/lib`. They
+pytest, 17 files, all under `tests/lib/` in a flat layout rather than mirroring `src/lib`. They
 cover the libraries. The pipelines themselves are only covered where they call into a library.
 
 ## Known debt

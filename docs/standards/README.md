@@ -65,7 +65,7 @@ rather than on the published docs site.
 | [testing.md](testing.md)                 | Test policy across every workspace.                                         |
 | [mobile.md](mobile.md)                   | `apps/mobile`.                                                              |
 | [data.md](data.md)                       | `apps/data`, the pipelines and the libraries.                               |
-| [macro-sandbox.md](macro-sandbox.md)     | `apps/macro-sandbox`.                                                       |
+| [sandboxes.md](sandboxes.md)             | `apps/macro-sandbox` and `apps/calibration-sandbox`.                        |
 | [docs-site.md](docs-site.md)             | Writing for `apps/docs`.                                                    |
 | [shared-packages.md](shared-packages.md) | `packages/auth`, `iot`, `cms`, `analytics`, `transactional`.                |
 | [tooling.md](tooling.md)                 | `tooling/*`, `turbo.json`, the root scripts.                                |

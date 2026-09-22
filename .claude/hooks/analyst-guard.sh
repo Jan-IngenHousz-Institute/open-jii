@@ -56,6 +56,9 @@ prod_window_open() {
   [ -f "$PROD_MARKER" ] || return 1
   local age
   age=$(($(date +%s) - $(stat -f %m "$PROD_MARKER" 2>/dev/null || stat -c %Y "$PROD_MARKER")))
+  # A marker dated in the future gives a negative age, which would read as open for longer than a
+  # window. Treat it as just opened instead.
+  [ "$age" -lt 0 ] && age=0
   [ "$age" -lt "$PROD_WINDOW_SECONDS" ]
 }
 
