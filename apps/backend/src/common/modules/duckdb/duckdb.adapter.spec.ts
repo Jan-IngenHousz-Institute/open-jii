@@ -75,6 +75,50 @@ describe("DuckDbAdapter (localMode end-to-end)", () => {
     `);
   });
 
+  it("resolves an enrichment join into its own scan", async () => {
+    // This adapter implements ExperimentDataReadPort, whose enrichmentJoins is
+    // optional, so omitting it compiled and silently served rows without the
+    // enrichment. Executing the query is the only way to catch that.
+    await session.run(`
+      CREATE TABLE experiment_devices AS
+      SELECT * FROM (VALUES ('exp-1', 'macro-1', {'name': 'Sensor A'}))
+      AS t(experiment_id, macro_id, device)
+    `);
+
+    const queryResult = await adapter.buildExperimentQuery({
+      tableName: "macro-1",
+      tableType: "macro",
+      experimentId: "exp-1",
+      enrichmentJoins: [
+        {
+          relation: "experiment_devices",
+          alias: "enr_device",
+          on: [
+            { served: "experiment_id", joined: "experiment_id" },
+            { served: "macro_id", joined: "macro_id" },
+          ],
+          select: [{ expression: "enr_device.device", alias: "device" }],
+        },
+      ],
+    });
+
+    expect(queryResult.isSuccess()).toBe(true);
+    if (!queryResult.isSuccess()) {
+      return;
+    }
+
+    expect(queryResult.value).toContain("LEFT JOIN");
+    expect(queryResult.value).toContain('enr_device.device AS "device"');
+
+    const dataResult = await adapter.executeSqlQuery("centrum", queryResult.value);
+    expect(dataResult.isSuccess()).toBe(true);
+    if (!dataResult.isSuccess()) {
+      return;
+    }
+
+    expect(dataResult.value.columns.map((column) => column.name)).toContain("device");
+  });
+
   // The native instance keeps the worker's event loop alive until closed.
   afterAll(async () => {
     await session.onModuleDestroy();

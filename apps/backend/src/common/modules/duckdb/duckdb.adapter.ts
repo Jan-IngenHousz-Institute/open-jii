@@ -2,13 +2,17 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
-import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
+import type {
+  EnrichmentJoin,
+  ExperimentTableMetadata,
+} from "../../../experiments/core/models/experiment-data.model";
 import type { ExperimentDataReadPort } from "../../../experiments/core/ports/experiment-data-read.port";
 import { Result, success, failure, AppError } from "../../utils/fp-utils";
 import { DuckDbQueryBuilderService } from "../databricks/services/query-builder/duckdb-query-builder.service";
 import type {
   AggregationSpec,
   FilterCondition,
+  JoinSpec,
 } from "../databricks/services/query-builder/query-builder.types";
 import type { SchemaData } from "../databricks/services/sql/sql.types";
 import { DeltaSharingService } from "../delta/services/sharing/delta-sharing.service";
@@ -129,6 +133,7 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
     tableType: "static" | "macro" | "upload";
     experimentId: string;
     columns?: string[];
+    enrichmentJoins?: EnrichmentJoin[];
     variants?: { columnName: string; schema: string }[];
     exceptColumns?: string[];
     filters?: FilterCondition[];
@@ -139,7 +144,7 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
     limit?: number;
     offset?: number;
   }): Promise<Result<string>> {
-    const { tableName, tableType, experimentId, ...queryParams } = params;
+    const { tableName, tableType, experimentId, enrichmentJoins, ...queryParams } = params;
 
     const target = this.resolveTarget(tableName, tableType, experimentId);
     if (target.isFailure()) {
@@ -155,11 +160,56 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
       return success(EMPTY_RESULT_QUERY);
     }
 
+    const joinsResult = await this.resolveJoins(enrichmentJoins ?? []);
+    if (joinsResult.isFailure()) {
+      return joinsResult;
+    }
+
     return this.queryBuilder.buildQuery({
       ...queryParams,
       table: fromResult.value,
+      joins: joinsResult.value,
       whereConditions,
     });
+  }
+
+  /**
+   * Each dimension is its own scan here, because this engine reads files
+   * rather than a catalog: there is no `centrum.experiment_contributors` to
+   * name, only the parquet the share hands back. Listings are unscoped,
+   * since the dimensions are small and an experiment-scoped hint would prune
+   * a share down to nothing for a dimension that is legitimately sparse.
+   */
+  private async resolveJoins(joins: EnrichmentJoin[]): Promise<Result<JoinSpec[]>> {
+    const resolved: JoinSpec[] = [];
+
+    for (const join of joins) {
+      const sourceResult = await this.fromExpression(join.relation, []);
+      if (sourceResult.isFailure()) {
+        return sourceResult;
+      }
+
+      // A dimension with no data files cannot be given a shape here, and a
+      // LEFT JOIN against nothing would have to project NULLs this route
+      // cannot name. Failing loudly beats serving rows with the enrichment
+      // silently missing, which is what happened before joins reached here.
+      if (sourceResult.value === null) {
+        return failure(
+          AppError.internal(
+            `Delta Sharing returned no data files for '${join.relation}', so the ` +
+              `enrichment it provides cannot be resolved`,
+          ),
+        );
+      }
+
+      const { relation: _relation, derive, ...spec } = join;
+      resolved.push({
+        ...spec,
+        table: derive ? derive.replace("{relation}", sourceResult.value) : sourceResult.value,
+      });
+    }
+
+    return success(resolved);
   }
 
   async executeSqlQuery(_schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
