@@ -141,7 +141,14 @@ metrics:
       metric: GetRecords.IteratorAgeMilliseconds
       stat: Maximum
       dimensions: { StreamName: "${KINESIS_STREAM_NAME}" }
-    baseline: { method: threshold, max: 600000 }
+    # Prod's consumer runs continuously, so ten minutes of lag is a fault there. Dev's
+    # runs on a schedule and sits near 2.8M ms, where 600000 was under the reading in
+    # 315 of the last 316 hours.
+    baseline:
+      method: threshold
+      max: 600000
+      per_environment:
+        dev: { method: threshold, max: 7200000 }
     runbook: docs/runbooks/ingest-lag.md
     notes: The single best pipeline-lag alarm. Consumer down => age climbs while ingest looks healthy.
 
@@ -368,7 +375,7 @@ metrics:
 
   - num: 23
     id: sandbox-errors
-    name: Macro sandbox errors/throttles
+    name: Sandbox errors/throttles (macro and calibration)
     family: observability
     source: aws
     phase: P1

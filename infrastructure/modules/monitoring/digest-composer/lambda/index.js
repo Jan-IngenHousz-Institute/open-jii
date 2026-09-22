@@ -7,7 +7,13 @@ const path = require("node:path");
 const https = require("node:https");
 const { CloudWatchClient, GetMetricDataCommand } = require("@aws-sdk/client-cloudwatch");
 
-const { activeSignals, buildQuery, parseCatalog, partitionByConfig } = require("./lib/catalog.js");
+const {
+  activeSignals,
+  buildQuery,
+  parseCatalog,
+  partitionByConfig,
+  resolveForEnvironment,
+} = require("./lib/catalog.js");
 const { averageBaseline, evaluate } = require("./lib/baseline.js");
 const { renderLevels, renderObservability } = require("./lib/render.js");
 const {
@@ -210,7 +216,8 @@ exports.handler = async (event) => {
   };
   const now = Date.now();
 
-  const { usable, configErrors } = partitionByConfig(activeSignals(loadCatalog()), process.env);
+  const selected = resolveForEnvironment(activeSignals(loadCatalog()), options.environment);
+  const { usable, configErrors } = partitionByConfig(selected, process.env);
   if (configErrors.length > 0) {
     console.warn(JSON.stringify({ configErrors }));
   }

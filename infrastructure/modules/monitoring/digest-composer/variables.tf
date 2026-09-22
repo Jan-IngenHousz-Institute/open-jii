@@ -29,7 +29,7 @@ variable "server_function_name" {
 }
 
 variable "macro_function_names" {
-  description = "Macro sandbox Lambda function names"
+  description = "Sandbox Lambda function names the errors signal covers, macro and calibration"
   type        = list(string)
 }
 

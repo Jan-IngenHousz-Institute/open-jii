@@ -6,6 +6,7 @@ import {
   parseCatalog,
   partitionByConfig,
   resolvePlaceholders,
+  resolveForEnvironment,
 } from "./catalog.js";
 import type { CatalogMetric } from "./types.js";
 
@@ -151,5 +152,53 @@ describe("partitionByConfig", () => {
     ];
 
     expect(partitionByConfig(metrics, env).configErrors).toEqual(["bad-logs"]);
+  });
+});
+
+describe("resolveForEnvironment", () => {
+  const entry: CatalogMetric = {
+    num: 8,
+    id: "ingest-lag",
+    name: "Ingest lag",
+    family: "observability",
+    source: "aws",
+    phase: "P1",
+    active: true,
+    slots: ["alert"],
+    baseline: {
+      method: "threshold",
+      max: 600000,
+      per_environment: { dev: { method: "threshold", max: 7200000 } },
+    },
+  };
+
+  it("swaps in the named environment's rule", () => {
+    const [resolved] = resolveForEnvironment([entry], "dev");
+
+    expect(resolved.baseline).toEqual({ method: "threshold", max: 7200000 });
+  });
+
+  it("leaves an environment with no override on the shared rule", () => {
+    const [resolved] = resolveForEnvironment([entry], "prod");
+
+    expect(resolved.baseline?.max).toBe(600000);
+  });
+
+  it("drops per_environment so nothing downstream can read the wrong number", () => {
+    const [resolved] = resolveForEnvironment([entry], "dev");
+
+    expect(resolved.baseline?.per_environment).toBeUndefined();
+  });
+
+  it("does not mutate the entry it was given", () => {
+    resolveForEnvironment([entry], "dev");
+
+    expect(entry.baseline?.max).toBe(600000);
+  });
+
+  it("passes through an entry with no baseline at all", () => {
+    const bare: CatalogMetric = { ...entry, baseline: undefined };
+
+    expect(resolveForEnvironment([bare], "dev")[0].baseline).toBeUndefined();
   });
 });

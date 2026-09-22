@@ -1213,8 +1213,9 @@ EOT
       summary     = "Calibration sandbox errors"
     }
     labels = {
-      severity = "warning"
-      service  = "calibration-sandbox"
+      metric_id = "sandbox-errors"
+      severity  = "warning"
+      service   = "calibration-sandbox"
     }
   }
 

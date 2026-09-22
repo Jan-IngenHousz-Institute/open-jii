@@ -2967,8 +2967,11 @@ module "digest_composer" {
   alb_arn                    = module.backend_alb.alb_arn
   cloudfront_distribution_id = module.opennext.cloudfront_distribution_id
   server_function_name       = module.opennext.server_function_name
-  macro_function_names       = values(module.macro_sandbox.function_names)
-  db_cluster_identifier      = "open-jii-${var.environment}-db-cluster"
+  macro_function_names = concat(
+    values(module.macro_sandbox.function_names),
+    [module.calibration_sandbox.function_name],
+  )
+  db_cluster_identifier = "open-jii-${var.environment}-db-cluster"
 
   # Empty webhooks make the Lambda log the rendered digest instead of posting, so this
   # applies cleanly before the Slack channels exist.

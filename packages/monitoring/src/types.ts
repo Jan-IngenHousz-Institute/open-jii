@@ -26,6 +26,12 @@ export interface MetricBaseline {
   anomaly?: "any-nonzero";
   anomaly_pct?: number;
   nodata?: "alert";
+  /**
+   * Replaces the fields above in the named environment. One catalog still serves every
+   * environment, but a number that is right for a continuous consumer is wrong for a
+   * scheduled one, and a threshold nothing can stay under is not a threshold.
+   */
+  per_environment?: Record<string, Omit<MetricBaseline, "per_environment">>;
 }
 
 /**
