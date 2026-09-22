@@ -71,3 +71,34 @@ The PoC uses `databricks-gpt-5-6-luna`, selected by the user on 21 September 202
 Compare successful tasks, failure categories, input/output tokens and end-to-end latency. Keep historical runs when changing the default. Synthetic scoped-tool evaluation and live backend workflow evidence measure different things; report them separately. A changed fixture or tool contract starts a new comparison series.
 
 Token quotas are not currency budgets. The spike does not maintain a verified endpoint price catalogue, calculate actual Databricks invoices, route traffic by quality, or automatically promote models. Before a shared pilot, add dated per-endpoint price units and usage reconciliation, project spending alerts and a kill switch, comparable regression runs, and an operator-controlled rollout/rollback record. Do not label an unknown price as zero.
+
+## Runtime protocol-writing skill
+
+The Databricks agent loads its skill catalogue from `skills/runtime-catalog.json`. The first
+packaged skill, `multispeq-protocol-writing`, covers method selection, paired protocol/macro
+baselines, pulse and detector ordering, firmware differences, analysis windows, and validation.
+This is knowledge for the researcher-facing Python agent. It is not a coding-assistant skill.
+The separate `skills/catalog.json` remains a candidate catalogue and is not loaded at runtime.
+
+The turn API supplies a compact catalogue and an internal `read_skill(skillId, resource)` tool.
+The model can read `SKILL.md`, then request the relevant reference files. Python resolves only
+manifest-listed resources; it does not accept arbitrary paths or fetch websites. Local reads
+consume the same tool-round and token allowance as other work. They do not reach Nest; mixed
+rounds send only platform tool calls to the backend, where existing authorization still applies.
+Skill instructions do not grant protocol execution, device access, or automatic confirmation.
+
+The loader rejects symlinks and enforces 32 KiB per file, 128 KiB per package, 8 KiB for the
+catalogue, and 64 KiB of cumulative reads per turn. A request uses an immutable content snapshot.
+Its identity includes content, catalogue prompt, local tool schema, versioned read/provenance
+protocol and read limits. That hash is bound to the encrypted continuation; a changed package requires a
+new turn. Turn responses include `skillLibrary.hash` and read provenance (resource, SHA-256,
+byte count and call ID). Evaluation answer sheets validate read IDs, allowlisted resources, content digests and byte counts
+against the package. They retain that metadata and reject missing or
+changed packages unless explicitly scoring historical evidence with `--allow-legacy-contract`.
+Deploy the evaluator and agent from the same skill revision for comparable runs.
+
+To update the skill, edit its Markdown references and allowlist, run the Python tests, then
+review a representative protocol request. Schema acceptance is not proof of firmware support,
+scientific validity or safe hardware operation. Provider-free tests can establish loading,
+continuation integrity and tool routing; they cannot establish that a live model follows the
+skill correctly. Deploying the package to a Databricks App remains a separate operation.

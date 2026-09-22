@@ -12,6 +12,8 @@ from urllib.parse import urlparse
 
 import httpx
 
+from skill_library import SkillLibraryError, load_skill_library
+
 from evaluation.contract import CONTRACT_SHA256, SYSTEM_PROMPT, TOOLS
 from evaluation.dataset import DATASET_PATH, FIXTURE_KIND, load_dataset
 from evaluation.tool_contract import tool_arguments_are_valid
@@ -85,12 +87,23 @@ def run_live_case(
     headers = {"X-OpenJII-Gateway-Key": gateway_token}
     response = _post_json(client, f"{agent_url}/v1/agent/turns", start_body, headers)
     model_profile = response.get("modelProfile")
+    skill_library = load_skill_library()
+    library_hash = skill_library.hash
+    skill_reads: list[dict[str, Any]] = []
     tool_requests: list[dict[str, Any]] = []
     tool_results: list[dict[str, Any]] = []
 
     for _round in range(5):
         if response.get("modelProfile") != model_profile:
             raise RuntimeError("Agent model profile changed during the evaluated turn")
+        try:
+            library = skill_library.validate_provenance(response.get("skillLibrary"))
+        except SkillLibraryError as error:
+            raise RuntimeError("Agent skill library or read provenance is invalid") from error
+        reads = library["reads"]
+        if not isinstance(reads, list) or reads[:len(skill_reads)] != skill_reads:
+            raise RuntimeError("Agent skill read provenance changed during the evaluated turn")
+        skill_reads = reads
         status = response.get("status")
         if status == "completed":
             answer = response.get("content")
@@ -105,6 +118,7 @@ def run_live_case(
                 "model": model,
                 "contractSha256": CONTRACT_SHA256,
                 "modelProfile": model_profile,
+                "skillLibrary": {"hash": library_hash, "reads": skill_reads},
                 "usage": usage if isinstance(usage, dict) else {},
                 "latencyMs": round((time.perf_counter() - started_at) * 1_000),
             }
@@ -267,6 +281,11 @@ def _load_answer_sheet(path: Path, *, allow_legacy_contract: bool = False) -> li
             raise ValueError(f"{path}:{line_number}: invalid or unlabelled evaluation outputs")
         if not allow_legacy_contract and outputs.get("contractSha256") != CONTRACT_SHA256:
             raise ValueError("Answer sheet uses an unknown or stale contract. Use --allow-legacy-contract only for explicitly historical scoring.")
+        if not allow_legacy_contract:
+            try:
+                load_skill_library().validate_provenance(outputs.get("skillLibrary"))
+            except SkillLibraryError as error:
+                raise ValueError("Answer sheet uses an unknown or stale skill library or invalid read provenance. Use --allow-legacy-contract only for explicitly historical scoring.") from error
         rows.append(row)
     if not rows:
         raise ValueError(f"{path}: answer sheet is empty")

@@ -119,6 +119,22 @@ Your account is not in the pilot cohort, or the assistant flag has not loaded. T
 fallback route. Continue with the standard platform tools or ask an openJII administrator whether
 your account should be included.
 
+## Ask for a MultispeQ protocol
+
+The assistant agent has a protocol-writing reference skill for MultispeQ. It can load guidance
+on choosing a measurement method, adapting an existing protocol and macro together, and checking
+pulse ordering, detector channels and analysis windows.
+
+For example: “I have a MultispeQ v2 and want to compare sun and shade. Help me choose between
+ambient PAR and a photosystem II yield measurement, then draft the protocol and paired macro.”
+Include the firmware version and an existing protocol name or ID when available. The assistant
+may need those details before proposing measurement settings.
+
+A draft is a proposal for review. Ambient PAR alone cannot provide photosystem II yield, and a
+schema-valid protocol has not necessarily been tested on your device. Ask the assistant to state
+which settings came from a documented baseline, what it changed, and which checks still require
+an instrument test. The skill does not give the assistant permission to operate equipment.
+
 ## Related guides
 
 - [A tour of the platform](/guide/get-started/platform-tour)

@@ -1,6 +1,7 @@
 """Resumable orchestration; platform tools execute at openJII's authorization boundary."""
 
 import base64
+import copy
 import hashlib
 import json
 import os
@@ -10,6 +11,7 @@ from typing import Any, Awaitable, Callable, NoReturn
 
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import HTTPException
+from skill_library import MAX_TURN_READ_BYTES, READ_SKILL_TOOL, SkillLibrary, SkillLibraryError, load_skill_library
 
 MAX_STATE_BYTES = 1_400_000
 TURN_TTL = 600
@@ -37,12 +39,12 @@ def start_state(body: Any, validate_payload: Callable) -> dict[str, Any]:
     if not isinstance(body, dict) or body.get("protocolVersion") != 1:
         fail("INVALID_REQUEST", "Agent protocol version 1 is required.")
     model, validated = validate_payload({"model": body.get("model"), "messages": body.get("messages")})
-    messages = validated["messages"]
+    messages = copy.deepcopy(validated["messages"])
     if any(m.get("role") not in {"system", "user", "assistant"}
            or not isinstance(m.get("content"), str) or set(m) - {"role", "content"}
            for m in messages):
         fail("INVALID_REQUEST", "Initial messages must contain only a role and text content.")
-    tools = body.get("tools")
+    tools = copy.deepcopy(body.get("tools"))
     if not isinstance(tools, list) or not 1 <= len(tools) <= len(TOOL_NAMES):
         fail("INVALID_REQUEST", "Provide the approved platform tool definitions.")
     names = []
@@ -61,7 +63,18 @@ def start_state(body: Any, validate_payload: Callable) -> dict[str, Any]:
     caps = {"maxToolRounds": 4, "maxOutputTokens": 8192, "maxToolCallsPerRound": 8, "maxTotalTokens": 100_000}
     if not isinstance(limits, dict) or any(not bounded_integer(limits.get(k), cap) for k, cap in caps.items()):
         fail("INVALID_REQUEST", "Agent limits exceed the permitted bounds.")
+    library = current_skill_library()
+    if library.catalog:
+        tools.append(copy.deepcopy(READ_SKILL_TOOL))
+        system = next((message for message in messages if message["role"] == "system"), None)
+        if system is not None:
+            system["content"] += "\n\n" + library.prompt()
+        else:
+            if len(messages) >= 100:
+                fail("INVALID_REQUEST", "Leave room for the packaged skill catalog in initial messages.")
+            messages.insert(0, {"role": "system", "content": library.prompt()})
     return {"version": 1, "turnId": str(uuid.uuid4()), "model": model, "messages": messages, "tools": tools,
+            "skillLibraryHash": library.hash, "skillReads": [], "skillReadBytes": 0,
             "limits": limits, "round": 0, "expiresAt": int(time.time()) + TURN_TTL,
             "usage": {"inputTokens": 0, "outputTokens": 0}, "usageComplete": True, "usedCallIds": []}
 
@@ -96,8 +109,24 @@ def resume_state(body: Any) -> dict[str, Any]:
             fail("INVALID_TOOL_RESULT", "A completed tool must provide a result.")
         content = result["result"] if result["status"] == "completed" else {"error": "Tool unavailable or access denied."}
         state["messages"].append({"role": "tool", "tool_call_id": call["id"], "content": json.dumps(content)})
+    result_start = next(index for index in range(len(state["messages"]) - 1, -1, -1)
+                        if state["messages"][index]["role"] == "assistant") + 1
+    tool_results = {message["tool_call_id"]: message for message in state["messages"][result_start:]}
+    state["messages"][result_start:] = [tool_results[call["id"]]
+                                        for call in state["messages"][result_start - 1]["tool_calls"]]
     del state["pending"]
     return state
+
+
+def current_skill_library() -> SkillLibrary:
+    try:
+        return load_skill_library()
+    except SkillLibraryError:
+        fail("SKILL_LIBRARY_UNAVAILABLE", "The packaged research skill library is invalid or unavailable.", 503)
+
+
+def skill_provenance(state: dict[str, Any]) -> dict[str, Any]:
+    return {"hash": state.get("skillLibraryHash"), "reads": copy.deepcopy(state.get("skillReads", []))}
 
 
 async def advance(state: dict[str, Any], complete: Completion) -> dict[str, Any]:
@@ -107,17 +136,35 @@ async def advance(state: dict[str, Any], complete: Completion) -> dict[str, Any]
         async def traced(model, payload):
             return await traced_completion(complete, model, payload)
         try:
-            result = await _advance(state, traced)
+            library = current_skill_library()
+            if state.get("skillLibraryHash") != library.hash:
+                fail("INVALID_CONTINUATION", "The skill package changed. Start a new turn.", 409)
+            result = await _advance(state, traced, library)
+            result["skillLibrary"] = skill_provenance(state)
         except HTTPException as error:
             detail = error.detail if isinstance(error.detail, dict) else {
                 "code": "PROVIDER_UNAVAILABLE", "message": "The agent could not complete this turn."}
             raise HTTPException(error.status_code, {**detail, "usage": dict(state["usage"]),
-                                "usageComplete": state.get("usageComplete", False)}) from None
+                                "usageComplete": state.get("usageComplete", False),
+                                "skillLibrary": skill_provenance(state)}) from None
         record_agent_output(span, result)
         return result
 
 
-async def _advance(state: dict[str, Any], complete: Completion) -> dict[str, Any]:
+async def _advance(state: dict[str, Any], complete: Completion, library: SkillLibrary) -> dict[str, Any]:
+    while True:
+        result = await _advance_step(state, complete, library)
+        if result is not None:
+            return result
+
+
+async def _advance_step(state: dict[str, Any], complete: Completion, library: SkillLibrary) -> dict[str, Any] | None:
+    from model_profiles import profile_metadata
+
+    if state["expiresAt"] <= time.time():
+        fail("TOOL_LOOP_LIMIT", "This turn expired before another model step.")
+    if "modelProfile" in state and state["modelProfile"] != profile_metadata(state["model"]):
+        fail("INVALID_CONTINUATION", "The model profile changed. Start a new turn.", 409)
     if len(json.dumps(state).encode()) > MAX_STATE_BYTES:
         fail("TOOL_LOOP_LIMIT", "This turn exceeds the context size limit.")
     if not state.get("usageComplete", False):
@@ -184,7 +231,7 @@ async def _advance(state: dict[str, Any], complete: Completion) -> dict[str, Any
         try:
             call_id, function = call["id"], call["function"]
             name, arguments = function["name"], function["arguments"]
-            if not isinstance(call_id, str) or not 1 <= len(call_id) <= 200 or call_id in state["usedCallIds"]:
+            if not isinstance(call_id, str) or not 1 <= len(call_id) <= 200 or not call_id.strip() or call_id in state["usedCallIds"]:
                 raise ValueError("invalid id")
             if not isinstance(name, str) or name not in names or call.get("type") != "function" or not isinstance(arguments, str):
                 raise ValueError("invalid function")
@@ -198,9 +245,27 @@ async def _advance(state: dict[str, Any], complete: Completion) -> dict[str, Any
         state["usedCallIds"].append(call_id)
     state["messages"].append({"role": "assistant", "content": message.get("content"), "tool_calls": normalized})
     state["round"] += 1
-    state["pending"] = pending
+    platform_pending = []
+    for call in pending:
+        if call["name"] != "read_skill":
+            platform_pending.append(call)
+            continue
+        try:
+            result = library.read(call["arguments"])
+            if state["skillReadBytes"] + result["bytes"] > MAX_TURN_READ_BYTES:
+                fail("TOOL_LOOP_LIMIT", "This turn exceeded its packaged skill read limit.")
+            state["skillReadBytes"] += result["bytes"]
+            state["skillReads"].append({"callId": call["id"], **{
+                key: result[key] for key in ("skillId", "resource", "sha256", "bytes")
+            }})
+        except SkillLibraryError as error:
+            result = {"error": {"code": "INVALID_SKILL_RESOURCE", "message": str(error)}}
+        state["messages"].append({"role": "tool", "tool_call_id": call["id"], "content": json.dumps(result)})
+    if not platform_pending:
+        return None
+    state["pending"] = platform_pending
     raw = json.dumps(state).encode()
     if len(raw) > MAX_STATE_BYTES:
         fail("TOOL_LOOP_LIMIT", "This turn exceeds the context size limit.")
-    return {"status": "tool_requests", "requests": pending, "usage": state["usage"], "usageComplete": state["usageComplete"],
+    return {"status": "tool_requests", "requests": platform_pending, "usage": state["usage"], "usageComplete": state["usageComplete"],
             "continuationToken": cipher().encrypt(raw).decode()}

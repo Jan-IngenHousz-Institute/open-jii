@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": [
+    {
+      "id": "multispeq-protocol-writing",
+      "description": "Write, adapt or review MultispeQ/PhotosynQ protocol JSON and its paired macro: baseline selection, pulse timing, LEDs/detectors, variables/repeats, firmware conflicts, scientific limits and validation. Load before drafting or changing a MultispeQ protocol.",
+      "resources": {
+        "SKILL.md": "multispeq-protocol-writing/SKILL.md",
+        "references/analysis-and-integration.md": "multispeq-protocol-writing/references/analysis-and-integration.md",
+        "references/command-semantics.md": "multispeq-protocol-writing/references/command-semantics.md",
+        "references/method-selection.md": "multispeq-protocol-writing/references/method-selection.md",
+        "references/sources-and-examples.md": "multispeq-protocol-writing/references/sources-and-examples.md",
+        "references/verification.md": "multispeq-protocol-writing/references/verification.md"
+      }
+    }
+  ]
+}

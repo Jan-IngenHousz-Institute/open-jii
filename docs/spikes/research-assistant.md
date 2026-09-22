@@ -142,3 +142,22 @@ The user guide and provider ADR now describe post-turn text delivery, model comp
 The staged evidence consists of `assistant-confirm-collection.webm`, `assistant-research-history.webm` and `assistant-knowledge-usage.webm`. The confirmation clip captures the fresh declared-capture confirmation. The history clip replays saved research and does not prove the creation actions. The knowledge and usage clip was corrected after live corpus data loaded. Describe each clip only by the actions actually visible in it.
 
 Video publication remains pending human frame review for private data, credentials, unrelated tabs and misleading transient states. The new confirmation clip proves canonical attachment for experiment `84cab6e4-db03-487a-bf68-c7afcff27b65`; it does not prove recovery from a crash before the created entity ID is recorded.
+
+## MultispeQ runtime skill follow-up
+
+The protocol-writing skill is packaged under `apps/assistant-agent/skills/` for the Databricks
+Python agent, rather than installed in a coding assistant. Its allowlist and internal `read_skill`
+tool support progressive reference loading. Content covers observable/method selection, paired
+protocol and macro provenance, firmware/documentation conflicts, signal ordering, analysis
+windows, and explicit validation levels. The existing candidate skill catalogue remains dormant.
+
+Evaluation evidence now includes the skill-library hash and read provenance as well as the
+backend tool-contract hash and model profile. Historical runs without these fields remain
+historical; they do not establish behavior with the new skill. Runtime tests use mocked model
+responses and cannot establish hardware validity or live-model instruction following. A deployed
+Databricks App must receive this package before its users can use the skill.
+
+This follow-up passed independent content/runtime review, 135 provider-free Python tests, and
+the documentation build/link/media/local-export checks. The reviewed local agent was restarted
+and its health endpoint responded successfully. No live-model or hardware validation is claimed
+for the new skill.

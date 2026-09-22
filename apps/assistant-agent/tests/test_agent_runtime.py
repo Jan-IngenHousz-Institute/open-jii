@@ -12,7 +12,8 @@ TOOL = {"type": "function", "function": {"name": "search_knowledge", "parameters
 
 
 @pytest.fixture
-def client(monkeypatch):
+def client(monkeypatch, tmp_path):
+    monkeypatch.setattr("skill_library.SKILLS_ROOT", tmp_path)
     monkeypatch.setenv("ASSISTANT_GATEWAY_TOKEN", "test-server-secret")
     monkeypatch.setenv("ASSISTANT_ALLOWED_MODELS", "test-model")
     return TestClient(server.app)
@@ -51,7 +52,8 @@ def test_turn_resumes_with_scoped_tool_result_and_cumulative_usage(client, monke
     done = client.post('/v1/agent/turns/continue', json=result_body(token), headers=HEADERS)
     assert done.json() == {"status": "completed", "content": "Answer with source", "stopReason": "stop",
                            "usage": {"inputTokens": 30, "outputTokens": 11}, "usageComplete": True,
-                           "modelProfile": first.json()["modelProfile"]}
+                           "modelProfile": first.json()["modelProfile"],
+                           "skillLibrary": first.json()["skillLibrary"]}
     assert len(calls) == 2
 
 

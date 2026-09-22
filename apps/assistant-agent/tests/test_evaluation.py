@@ -3,6 +3,8 @@ import json
 import httpx
 import pytest
 
+from skill_library import load_skill_library
+
 from evaluation.dataset import DATASET_PATH, FIXTURE_KIND, load_dataset
 from evaluation.runner import _load_answer_sheet, run_live_case
 from evaluation.scorers import (
@@ -230,7 +232,8 @@ def test_preserved_answer_sheet_must_keep_synthetic_evidence_label(tmp_path):
 
 
 @pytest.mark.parametrize("profile_changes", [False, True])
-def test_live_case_uses_continuation_api_without_leaking_fixture_or_expectations(profile_changes):
+@pytest.mark.parametrize("library_changes", [False, True, "lost-reads", "forged-read"])
+def test_live_case_uses_continuation_api_without_leaking_fixture_or_expectations(profile_changes, library_changes):
     row = {
         "inputs": {"messages": [{"role": "user", "content": "Find the guide."}]},
         "expectations": {"scenario": "knowledge_citation"},
@@ -246,6 +249,8 @@ def test_live_case_uses_continuation_api_without_leaking_fixture_or_expectations
         },
     }
     requests: list[dict] = []
+    entry = load_skill_library().read({"skillId": "multispeq-protocol-writing", "resource": "SKILL.md"})
+    provenance = [{"callId": "skill-1", **{key: entry[key] for key in ("skillId", "resource", "sha256", "bytes")}}]
 
     def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content)
@@ -260,6 +265,7 @@ def test_live_case_uses_continuation_api_without_leaking_fixture_or_expectations
                 200,
                 json={
                     "status": "tool_requests",
+                    "skillLibrary": {"hash": load_skill_library().hash, "reads": provenance},
                     "modelProfile": {"sha256": "first", "settings": {}},
                     "requests": [
                         {
@@ -289,6 +295,7 @@ def test_live_case_uses_continuation_api_without_leaking_fixture_or_expectations
             200,
             json={
                 "status": "completed",
+                "skillLibrary": {"hash": "changed" if library_changes is True else load_skill_library().hash, "reads": [] if library_changes == "lost-reads" else ([{**provenance[0], "sha256": "forged"}] if library_changes == "forged-read" else provenance)},
                 "modelProfile": {"sha256": "changed" if profile_changes else "first", "settings": {}},
                 "content": "The guide says to use the scoped result.",
                 "usage": {"inputTokens": 2, "outputTokens": 2},
@@ -299,6 +306,11 @@ def test_live_case_uses_continuation_api_without_leaking_fixture_or_expectations
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         if profile_changes:
             with pytest.raises(RuntimeError, match="model profile changed"):
+                run_live_case(row, client=client, agent_url="http://assistant.test",
+                              gateway_token="test-gateway", model="test-model")
+            return
+        if library_changes:
+            with pytest.raises(RuntimeError, match="skill (library|read provenance)"):
                 run_live_case(row, client=client, agent_url="http://assistant.test",
                               gateway_token="test-gateway", model="test-model")
             return
@@ -315,6 +327,7 @@ def test_live_case_uses_continuation_api_without_leaking_fixture_or_expectations
     assert outputs["toolRequests"][0]["name"] == "search_knowledge"
     assert outputs["toolResults"][0]["status"] == "completed"
     assert outputs["evidenceMode"] == "live_model_synthetic_scoped_tool_results"
+    assert outputs["skillLibrary"] == {"hash": load_skill_library().hash, "reads": provenance}
     assert outputs["model"] == "test-model"
     assert outputs["modelProfile"]["sha256"] == "first"
     assert outputs["usage"] == {"inputTokens": 2, "outputTokens": 2}
@@ -352,5 +365,45 @@ def test_historical_contract_requires_explicit_override(tmp_path):
             _load_answer_sheet(sheet)
         assert len(_load_answer_sheet(sheet, allow_legacy_contract=True)) == 1
     row["outputs"]["contractSha256"] = CONTRACT_SHA256
+    for library in (None, {"hash": "stale", "reads": []}):
+        row["outputs"]["skillLibrary"] = library
+        sheet.write_text(json.dumps(row) + "\n")
+        with pytest.raises(ValueError, match="stale skill library"):
+            _load_answer_sheet(sheet)
+        assert len(_load_answer_sheet(sheet, allow_legacy_contract=True)) == 1
+    row["outputs"]["skillLibrary"] = {"hash": load_skill_library().hash, "reads": []}
     sheet.write_text(json.dumps(row) + "\n")
     assert len(_load_answer_sheet(sheet)) == 1
+
+
+@pytest.mark.parametrize("mutation", ["digest", "bytes", "resource", "duplicate", "extra-field", "call-id"])
+def test_preserved_skill_reads_must_match_packaged_resource(tmp_path, mutation):
+    from evaluation.contract import CONTRACT_SHA256
+
+    library = load_skill_library()
+    resource = library.read({"skillId": "multispeq-protocol-writing", "resource": "SKILL.md"})
+    record = {"callId": "skill-1", **{key: resource[key] for key in ("skillId", "resource", "sha256", "bytes")}}
+    reads = [record]
+    if mutation == "digest":
+        record["sha256"] = "0" * 64
+    elif mutation == "bytes":
+        record["bytes"] += 1
+    elif mutation == "resource":
+        record["resource"] = "not-packaged.md"
+    elif mutation == "duplicate":
+        reads.append(dict(record))
+    elif mutation == "extra-field":
+        record["path"] = "not-a-resource"
+    else:
+        record["callId"] = ""
+    row = {"inputs": {}, "expectations": {}, "outputs": {
+        "toolRequests": [], "answer": "Preserved answer", "toolResults": [],
+        "evidenceMode": "live_model_synthetic_scoped_tool_results",
+        "contractSha256": CONTRACT_SHA256,
+        "skillLibrary": {"hash": library.hash, "reads": reads},
+    }}
+    sheet = tmp_path / "answers.jsonl"
+    sheet.write_text(json.dumps(row) + "\n")
+    with pytest.raises(ValueError, match="invalid read provenance"):
+        _load_answer_sheet(sheet)
+    assert len(_load_answer_sheet(sheet, allow_legacy_contract=True)) == 1
