@@ -206,11 +206,19 @@ describe("QueryBuilder Base", () => {
         .where("`experiment_id` = 'e1'")
         .build();
 
-      expect(query).toContain("base.*,");
-      expect(query).toContain("c.user AS `contributor`,");
+      expect(query).toContain("base.*");
+      expect(query).toContain("c.user AS `contributor`");
       expect(query).toContain(
         "FROM (SELECT * FROM cat.centrum.experiment_raw_data WHERE `experiment_id` = 'e1') base LEFT JOIN",
       );
+
+      // The parse reads the join's output rather than sharing its SELECT, so
+      // it appears at an outer level: textually before the join it wraps.
+      expect(query.indexOf("from_json")).toBeLessThan(query.indexOf("c.user"));
+      expect(query).not.toMatch(
+        /from_json[^)]*\)[^)]*as parsed_questions_data,?\s*\n\s*FROM \(SELECT \* FROM cat/,
+      );
+
       // The flattening levels above the join are untouched.
       expect(query).toContain("* EXCEPT (questions_data, parsed_questions_data)");
       expect(query).toContain("parsed_questions_data.*");

@@ -583,19 +583,28 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     //     promotes the flattened fields into the FROM rowsource so the
     //     WHERE can reference them by their bare name.
     //   Level 4 (only when explicit `select` columns): final projection.
+    // The join's projection and the variant parse cannot share a SELECT. The
+    // parse reads a column the join aliases, which resolves only where lateral
+    // alias support exists, and a base column of the same name would win over
+    // the alias and drop the enrichment without an error.
+    const joinedSource =
+      this.joins.length > 0
+        ? `(
+        SELECT
+          ${baseStar}${joinProjection ? `,\n          ${joinProjection}` : ""}
+        FROM ${this.buildFromClause(`(SELECT * FROM ${this.fromClause} ${where})`)}
+      )`
+        : null;
+
     const flattenedView = `
       SELECT
         * EXCEPT (${allExceptColumns}),
         ${expandedColumns}
       FROM (
         SELECT
-          ${baseStar},${joinProjection ? `\n          ${joinProjection},` : ""}
+          ${joinedSource ? "*" : baseStar},
           ${parsedColumns}
-        FROM ${
-          this.joins.length > 0
-            ? this.buildFromClause(`(SELECT * FROM ${this.fromClause} ${where})`)
-            : `${this.fromClause}\n        ${where}`
-        }
+        FROM ${joinedSource ?? `${this.fromClause}\n        ${where}`}
       )
     `.trim();
     const filteredFlattened =
