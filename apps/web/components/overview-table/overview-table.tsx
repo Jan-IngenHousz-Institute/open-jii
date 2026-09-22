@@ -168,7 +168,7 @@ export function OverviewTable<T extends RowData>({
                     }
                     className={cn(
                       "h-10 px-6 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]",
-                      TEXT_MUTED,
+                      header.column.getIsSorted() ? TEXT_STRONG : TEXT_MUTED,
                       meta.className,
                     )}
                   >
