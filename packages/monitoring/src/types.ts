@@ -77,6 +77,10 @@ export interface MetricReading {
   historyCount: number;
 }
 
+export interface EvaluatedReading extends MetricReading {
+  evaluation: Evaluation;
+}
+
 export type EvaluationState = "ok" | "anomaly" | "missing" | "no-data";
 
 export interface Evaluation {

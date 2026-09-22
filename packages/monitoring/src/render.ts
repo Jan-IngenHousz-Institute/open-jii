@@ -1,37 +1,19 @@
 import { deviationPercent } from "./baseline.js";
 import { formatValue } from "./format.js";
 import type { LinkButton, SlackBlock, SlackMessage } from "./slack.js";
-import { actions, context, header, image, section, table } from "./slack.js";
-import type { CatalogMetric, Evaluation, MetricReading } from "./types.js";
-
-export interface EvaluatedReading extends MetricReading {
-  evaluation: Evaluation;
-  /** A CloudWatch-rendered chart of this metric, when the composer produced one. */
-  chartUrl?: string;
-}
-
-/**
- * A parent message and one reply per anomaly.
- *
- * The parent is the whole morning at a glance. Each reply carries the detail and the
- * links for one anomaly, so the channel stays one table however bad the day is and
- * nobody scrolls past nine buttons to reach the second problem.
- *
- * With no bot token the composer posts the parent alone, so the replies are additive
- * rather than a prerequisite.
- */
-export interface Digest {
-  parent: SlackMessage;
-  replies: SlackMessage[];
-}
+import { actions, context, header, section, table } from "./slack.js";
+import type { EvaluatedReading, MetricReading } from "./types.js";
 
 export interface RenderOptions {
   environment: string;
   runbookBaseUrl?: string;
   /** Where the catalog entry lives, so a reader can change what a signal means. */
   catalogUrl?: string;
-  /** CloudWatch console, for opening the query behind a reading. */
-  consoleUrl?: string;
+  /**
+   * The full report for this run. Slack carries the verdict and the table; everything
+   * a reader might want after that lives one click away rather than in the message.
+   */
+  reportUrl?: string;
 }
 
 /**
@@ -72,39 +54,9 @@ export function deltaGlyph(value: number, baseline: number | null, window: strin
   return ` ${arrow} ${deviation > 0 ? "+" : ""}${deviation.toFixed(0)}% vs ${window}`;
 }
 
-/**
- * Links, each answering a different question.
- *
- * Grafana's own alert template carries four: the query that produced the reading, the
- * dashboard, the panel, and a silence. This is the same idea with the links this system
- * has. The catalog entry stands in for the silence, because it is where a threshold
- * actually gets changed and the composer keeps no state between runs.
- */
-function sharedLinks(options: RenderOptions): LinkButton[] {
-  const buttons: LinkButton[] = [];
-
-  if (options.catalogUrl) {
-    buttons.push({ label: "Catalog", url: options.catalogUrl });
-  }
-
-  return buttons;
-}
-
-/** The links for one anomaly, each answering a different question about it. */
-function linksFor(metric: CatalogMetric, options: RenderOptions): LinkButton[] {
-  const buttons: LinkButton[] = [];
-
-  if (options.runbookBaseUrl && metric.runbook) {
-    buttons.push({ label: "Runbook", url: `${options.runbookBaseUrl}/${metric.runbook}` });
-  }
-  if (options.consoleUrl && metric.signal?.namespace) {
-    buttons.push({
-      label: "Query in CloudWatch",
-      url: `${options.consoleUrl}graph~()*7e'${encodeURIComponent(metric.signal.namespace)}`,
-    });
-  }
-
-  return buttons;
+/** One link out: the report, which is where everything else lives. */
+function linkOut(options: RenderOptions): LinkButton[] {
+  return options.reportUrl ? [{ label: "Open the report", url: options.reportUrl }] : [];
 }
 
 /** Things that went wrong with the digest itself, as opposed to with the platform. */
@@ -128,36 +80,11 @@ function selfCheckLines({ configErrors, failedRegions }: SelfChecks): string[] {
   return lines;
 }
 
-/** One reply: what this anomaly is, and everything needed to act on it. */
-function replyFor(entry: EvaluatedReading, options: RenderOptions): SlackMessage {
-  const { metric } = entry;
-  const heading = `*${metric.num} · ${metric.name}*`;
-  const body = [
-    heading,
-    `${readingOf(entry)} · ${entry.evaluation.reason ?? ""}`,
-    metric.severity ? `\`${metric.id}\` · ${metric.severity}` : `\`${metric.id}\``,
-  ].join("\n");
-
-  const blocks: SlackBlock[] = [section(body)];
-
-  if (entry.chartUrl) {
-    blocks.push(image(entry.chartUrl, `${metric.name} over the anomaly window`));
-  }
-
-  const buttons = linksFor(metric, options);
-  if (buttons.length > 0) {
-    blocks.push(actions(buttons));
-  }
-  blocks.push(context(`\`claude /openjii-triage ${metric.id}\``));
-
-  return { text: `${metric.num} ${metric.name}: ${readingOf(entry)}`, blocks };
-}
-
 export function renderObservability(
   readings: EvaluatedReading[],
   checks: SelfChecks,
   options: RenderOptions,
-): Digest {
+): SlackMessage {
   const { environment } = options;
   const anomalies = readings.filter((entry) => entry.evaluation.state === "anomaly");
   const missing = readings.filter((entry) => entry.evaluation.state === "missing");
@@ -174,7 +101,12 @@ export function renderObservability(
   if (anomalies.length === 0) {
     const quiet = `Heartbeat · ${environment} · nothing to act on · ${readings.length} signals checked`;
     const text = [quiet, ...notes].join("\n");
-    return { parent: { text, blocks: [context(text)] }, replies: [] };
+    const quietBlocks: SlackBlock[] = [context(text)];
+    const quietLinks = linkOut(options);
+    if (quietLinks.length > 0) {
+      quietBlocks.push(actions(quietLinks));
+    }
+    return { text, blocks: quietBlocks };
   }
 
   const ordered = [...anomalies].sort(bySeverity);
@@ -211,16 +143,13 @@ export function renderObservability(
   const footer = [`${readings.length} signals read`, ...notes];
   blocks.push(context(footer.join(" · ")));
 
-  const buttons = sharedLinks(options);
+  const buttons = linkOut(options);
   if (buttons.length > 0) {
     blocks.push(actions(buttons));
   }
   lines.push(...notes);
 
-  return {
-    parent: { text: lines.join("\n"), blocks },
-    replies: ordered.map((entry) => replyFor(entry, options)),
-  };
+  return { text: lines.join("\n"), blocks };
 }
 
 export function renderLevels(
@@ -229,7 +158,7 @@ export function renderLevels(
   title: string,
   window: string,
   options: RenderOptions,
-): Digest {
+): SlackMessage {
   const reporting = readings.filter((entry) => entry.value !== null);
   const heading = `${title} · ${options.environment}`;
   const blocks: SlackBlock[] = [header(heading)];
@@ -261,5 +190,5 @@ export function renderLevels(
     lines.push(...notes);
   }
 
-  return { parent: { text: lines.join("\n"), blocks }, replies: [] };
+  return { text: lines.join("\n"), blocks };
 }
