@@ -54,6 +54,30 @@ export abstract class BaseQueryBuilder {
     return this.joins.length > 0 ? `${this.baseAlias}.*` : "*";
   }
 
+  /**
+   * Whether a filter names a column a join produced. Such a column is a SELECT
+   * alias, so it does not exist in the WHERE of the level that joins, and the
+   * filter has to be applied one level up.
+   */
+  protected targetsJoinAlias(column: string): boolean {
+    const root = column.split(".")[0];
+
+    return this.joins.some((join) => join.select.some((selected) => selected.alias === root));
+  }
+
+  /**
+   * Columns the joins re-project under a name the base relation already uses.
+   * They have to leave the base star in the same SELECT that adds the join's
+   * projection, or both survive into the next level under one name.
+   */
+  protected shadowedBy(exceptColumns: string[]): string[] {
+    const aliases = new Set(
+      this.joins.flatMap((join) => join.select.map((column) => column.alias)),
+    );
+
+    return exceptColumns.filter((column) => aliases.has(column));
+  }
+
   /** Aliased expressions the joins contribute, or an empty string. */
   protected buildJoinProjection(): string {
     return this.joins
@@ -235,11 +259,25 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
   protected limitValue?: number;
   protected offsetValue?: number;
   protected exceptColumns: string[] = [];
+  /** Filters naming an enrichment column; applied above the join. */
+  protected postJoinConditions: string[] = [];
 
   select(columns?: string[]): this {
     if (columns && columns.length > 0) {
       this.selectClause = columns.map((c) => this.escapeIdentifier(c)).join(", ");
     }
+    return this;
+  }
+
+  filter(condition: FilterCondition): this {
+    const sql = this.buildFilterCondition(condition);
+
+    if (this.targetsJoinAlias(condition.column)) {
+      this.postJoinConditions.push(sql);
+    } else {
+      this.where(sql);
+    }
+
     return this;
   }
 
@@ -335,6 +373,10 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
         ? `${selectKeyword} ${selectPart} FROM ${this.buildFromClause(`(SELECT * FROM ${this.fromClause}${where})`)}`
         : `${selectKeyword} ${selectPart} FROM ${this.fromClause}${where}`;
 
+    if (this.postJoinConditions.length > 0) {
+      query = `SELECT * FROM (${query}) WHERE ${this.postJoinConditions.join(" AND ")}`;
+    }
+
     if (this.groupByColumns.length > 0) {
       query += ` GROUP BY ${this.groupByColumns.join(", ")}`;
     }
@@ -411,7 +453,7 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
    */
   filter(condition: FilterCondition): this {
     const sql = this.buildFilterCondition(condition);
-    if (this.flattenedFieldSet().has(condition.column)) {
+    if (this.flattenedFieldSet().has(condition.column) || this.targetsJoinAlias(condition.column)) {
       this.whereFlattened(sql);
     } else {
       this.where(sql);
@@ -506,10 +548,17 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     const offsetClause = this.offsetValue ? `OFFSET ${this.offsetValue}` : "";
 
     // Columns to exclude from final result (raw VARIANTs, parsed aliases, and user-specified)
+    // Anything a join shadows is dropped one level down, so it must not be
+    // named again here: by this point it is already gone.
+    const shadowed = this.shadowedBy(this.exceptColumns);
     const allExceptColumns = [
       ...this.variantColumns.flatMap((v) => [v.column, v.alias]),
-      ...this.exceptColumns,
+      ...this.exceptColumns.filter((column) => !shadowed.includes(column)),
     ].join(", ");
+    const baseStar =
+      shadowed.length > 0
+        ? this.starExceptClause(shadowed, this.buildBaseStar())
+        : this.buildBaseStar();
 
     const parsedColumns = this.variantColumns
       .map((v) => {
@@ -540,7 +589,7 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
         ${expandedColumns}
       FROM (
         SELECT
-          ${this.buildBaseStar()},${joinProjection ? `\n          ${joinProjection},` : ""}
+          ${baseStar},${joinProjection ? `\n          ${joinProjection},` : ""}
           ${parsedColumns}
         FROM ${
           this.joins.length > 0

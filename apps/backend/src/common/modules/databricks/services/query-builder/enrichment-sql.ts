@@ -127,7 +127,11 @@ export const DUCKDB_ENRICHMENT_SQL: EnrichmentSql = {
       `list_sort(list(struct_pack(created_at := created_at, metadata_id := metadata_id, ` +
       `json := CAST(metadata AS JSON)))), item -> item.json) AS meta_records ` +
       `FROM {relation} GROUP BY experiment_id)`,
-    expression: `CASE WHEN enr_metadata.meta_records IS NOT NULL THEN list_reduce(
+    // The merge works in maps, but the reader flattens this column with
+    // variant_extract, which needs an object variant. Casting the map straight
+    // to VARIANT yields a list of key/value entries instead, so it goes
+    // through JSON, which is also what the Spark twin does via to_json.
+    expression: `CASE WHEN enr_metadata.meta_records IS NOT NULL THEN CAST(CAST(list_reduce(
         list_transform(
           enr_metadata.meta_records,
           meta -> ${duckDbDropKeys(
@@ -145,6 +149,6 @@ export const DUCKDB_ENRICHMENT_SQL: EnrichmentSql = {
             x
           )
         END
-      ) END`,
+      ) AS JSON) AS VARIANT) END`,
   }),
 };

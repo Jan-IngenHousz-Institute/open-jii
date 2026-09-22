@@ -143,8 +143,10 @@ describe("ExperimentDataRepository", () => {
             "skip_macro_processing",
             "annotations",
             "questions_data",
-            "custom_metadata",
           ],
+          // Supplied by a join rather than the served relation, so it is
+          // dropped rather than excluded when there is no schema to flatten.
+          omitEnrichment: ["custom_metadata"],
           orderDirection: "ASC",
           limit: 5,
           offset: 0,
@@ -525,7 +527,6 @@ describe("ExperimentDataRepository", () => {
             "output_data",
             "skip_macro_processing",
             "annotations",
-            "custom_metadata",
           ],
           orderDirection: "ASC",
         }),
@@ -584,7 +585,6 @@ describe("ExperimentDataRepository", () => {
             "user_id",
             "workbook_version_id",
             "annotations",
-            "custom_metadata",
           ],
           orderDirection: "ASC",
           limit: 5,
@@ -643,7 +643,6 @@ describe("ExperimentDataRepository", () => {
             "workbook_version_id",
             "annotations",
             "macro_output",
-            "custom_metadata",
           ],
           orderDirection: "ASC",
           limit: 5,
@@ -696,8 +695,10 @@ describe("ExperimentDataRepository", () => {
             "skip_macro_processing",
             "annotations",
             "questions_data",
-            "custom_metadata",
           ],
+          // Supplied by a join rather than the served relation, so it is
+          // dropped rather than excluded when there is no schema to flatten.
+          omitEnrichment: ["custom_metadata"],
           orderDirection: "ASC",
           limit: 5,
           offset: 0,

@@ -2,7 +2,7 @@ import type { DuckDBConnection } from "@duckdb/node-api";
 import { DuckDBInstance } from "@duckdb/node-api";
 
 import { MACRO_TABLE_CONFIG } from "../../../../../experiments/core/models/experiment-data.model";
-import { DuckDbSqlQueryBuilder } from "./duckdb-query-builder.base";
+import { DuckDbSqlQueryBuilder, DuckDbVariantQueryBuilder } from "./duckdb-query-builder.base";
 import { DuckDbQueryBuilderService } from "./duckdb-query-builder.service";
 import { DUCKDB_ENRICHMENT_SQL } from "./enrichment-sql";
 
@@ -102,6 +102,94 @@ describe("DuckDbQueryBuilder", () => {
 
     const MACRO_SCHEMA = "OBJECT<SPAD: DOUBLE, `Leaf Temp`: DOUBLE, meta: OBJECT<unit: STRING>>";
 
+    it("resolves a filter on an enrichment column", async () => {
+      // The column is a SELECT alias, and WHERE is resolved before aliases
+      // exist, so the filter belongs above the join rather than in the
+      // subquery the join reads from.
+      await connection.run(`
+        CREATE OR REPLACE TABLE filter_rows AS
+        SELECT * FROM (VALUES
+          ('exp-1', CAST(1 AS BIGINT), 'user-1'),
+          ('exp-1', CAST(2 AS BIGINT), 'user-2')
+        ) AS t(experiment_id, id, user_id)
+      `);
+      await connection.run(`
+        CREATE OR REPLACE TABLE filter_contributors AS
+        SELECT * FROM (VALUES
+          ('exp-1', 'user-1', {'id': 'user-1', 'name': 'Ada'}),
+          ('exp-1', 'user-2', {'id': 'user-2', 'name': 'Grace'})
+        ) AS t(experiment_id, user_id, "user")
+      `);
+
+      const rows = await run(
+        new DuckDbSqlQueryBuilder()
+          .from("filter_rows")
+          .except(["experiment_id"])
+          .join({
+            table: "filter_contributors",
+            alias: "enr_contributor",
+            on: [
+              { served: "experiment_id", joined: "experiment_id" },
+              { served: "user_id", joined: "user_id" },
+            ],
+            select: [{ expression: "enr_contributor.user", alias: "contributor" }],
+          })
+          .whereEquals("experiment_id", "exp-1")
+          .filter({ column: "contributor.name", operator: "equals", value: "Grace" })
+          .build(),
+      );
+
+      expect(rows).toHaveLength(1);
+      expect(String(rows[0].id)).toBe("2");
+    });
+
+    it("keeps a join's name when it re-projects an excluded base column", async () => {
+      // The base star and the join's projection share one SELECT, so a column
+      // the join overwrites has to leave the star there. Excluding it a level
+      // up leaves both alive: DuckDB renames one, Spark calls it ambiguous,
+      // and either way the un-enriched value is what reaches the reader.
+      await connection.run(`
+        CREATE OR REPLACE TABLE shadow_rows AS
+        SELECT * FROM (VALUES
+          ('exp-1', CAST(1 AS BIGINT), ['from-base'], CAST({'plot': 'A'} AS VARIANT))
+        ) AS t(experiment_id, id, annotations, questions_data)
+      `);
+      await connection.run(`
+        CREATE OR REPLACE TABLE shadow_annotations AS
+        SELECT * FROM (VALUES ('exp-1', CAST(1 AS BIGINT), ['from-join']))
+        AS t(experiment_id, id, db_annotations)
+      `);
+
+      const sql = new DuckDbVariantQueryBuilder()
+        .from("shadow_rows")
+        .parseVariant("questions_data", "OBJECT<plot: STRING>")
+        .except(["experiment_id", "annotations"])
+        .join({
+          table: "shadow_annotations",
+          alias: "enr_annotation",
+          on: [
+            { served: "experiment_id", joined: "experiment_id" },
+            { served: "id", joined: "id" },
+          ],
+          select: [
+            {
+              expression: "list_concat(base.annotations, enr_annotation.db_annotations)",
+              alias: "annotations",
+            },
+          ],
+        })
+        .build();
+
+      const rows = await run(sql);
+
+      expect(Object.keys(rows[0])).toContain("annotations");
+      expect(Object.keys(rows[0])).not.toContain("annotations_1");
+      expect(JSON.stringify(rows[0].annotations)).toContain("from-base");
+      expect(JSON.stringify(rows[0].annotations)).toContain("from-join");
+      // The variant alongside it still flattens.
+      expect(rows[0].plot).toBe("A");
+    });
+
     it("merges custom metadata, matching on a question answer", async () => {
       // Dev has no experiment where a blob matches on a question answer, so
       // this branch and the oldest-first fold can only be exercised here.
@@ -154,7 +242,12 @@ describe("DuckDbQueryBuilder", () => {
       );
 
       const metadata = new Map(
-        rows.map((row) => [String(row.id), JSON.stringify(row.custom_metadata)]),
+        rows.map((row) => [
+          String(row.id),
+          JSON.stringify(row.custom_metadata, (_key: string, value: unknown) =>
+            typeof value === "bigint" ? String(value) : value,
+          ),
+        ]),
       );
 
       // Plot B appears in both blobs; the newer overwrites treatment while

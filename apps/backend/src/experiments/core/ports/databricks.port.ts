@@ -68,6 +68,8 @@ export interface DatabricksPort {
     experimentId: string;
     columns?: string[];
     enrichmentJoins?: (sql: EnrichmentSql) => EnrichmentJoin[];
+    /** Enrichment aliases to drop, having no schema to flatten. */
+    omitEnrichment?: string[];
     variants?: { columnName: string; schema: string }[];
     exceptColumns?: string[];
     filters?: FilterCondition[];

@@ -154,6 +154,41 @@ describe("QueryBuilder Base", () => {
     });
   });
 
+  describe("filters over enrichment joins", () => {
+    const contributor = {
+      table: "cat.centrum.experiment_contributors",
+      alias: "c",
+      on: [{ served: "experiment_id", joined: "experiment_id" }],
+      select: [{ expression: "c.user", alias: "contributor" }],
+    };
+
+    it("applies a filter on a joined column above the join", () => {
+      const query = new SqlQueryBuilder()
+        .from("t")
+        .join(contributor)
+        .whereEquals("experiment_id", "e1")
+        .filter({ column: "contributor.name", operator: "equals", value: "Ada" })
+        .build();
+
+      // The mandatory predicate stays inside, where it cannot be ambiguous.
+      expect(query).toContain("FROM (SELECT * FROM t WHERE `experiment_id` = 'e1') base");
+      // The enrichment filter runs one level up, where the alias exists.
+      expect(query).toMatch(/^SELECT \* FROM \(SELECT/);
+      expect(query).toContain("WHERE `contributor`.`name` = 'Ada'");
+    });
+
+    it("leaves a filter on a base column inside the join's source", () => {
+      const query = new SqlQueryBuilder()
+        .from("t")
+        .join(contributor)
+        .filter({ column: "device_id", operator: "equals", value: "d1" })
+        .build();
+
+      expect(query).toContain("WHERE `device_id` = 'd1') base");
+      expect(query).not.toMatch(/^SELECT \* FROM \(SELECT/);
+    });
+  });
+
   describe("VariantQueryBuilder enrichment joins", () => {
     it("joins outside the filter and keeps variant flattening intact", () => {
       const query = new VariantQueryBuilder()

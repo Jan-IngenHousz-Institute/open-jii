@@ -172,7 +172,13 @@ export class DuckDbVariantQueryBuilder extends VariantQueryBuilder {
     const limitClause = this.limitValue ? `LIMIT ${this.limitValue}` : "";
     const offsetClause = this.offsetValue ? `OFFSET ${this.offsetValue}` : "";
 
-    const allExceptColumns = [...this.variantColumns.map((v) => v.column), ...this.exceptColumns];
+    // Anything a join shadows is dropped one level down, so naming it again
+    // here would exclude a column that no longer exists.
+    const shadowed = this.shadowedBy(this.exceptColumns);
+    const allExceptColumns = [
+      ...this.variantColumns.map((v) => v.column),
+      ...this.exceptColumns.filter((column) => !shadowed.includes(column)),
+    ];
 
     const extractions = this.variantColumns
       .flatMap((v) =>
@@ -193,7 +199,11 @@ export class DuckDbVariantQueryBuilder extends VariantQueryBuilder {
         ${this.starExceptClause(allExceptColumns)},
         ${extractions}
       FROM (
-        SELECT ${this.buildBaseStar()}${joinProjection ? `, ${joinProjection}` : ""}
+        SELECT ${
+          shadowed.length > 0
+            ? this.starExceptClause(shadowed, this.buildBaseStar())
+            : this.buildBaseStar()
+        }${joinProjection ? `, ${joinProjection}` : ""}
         FROM ${source}
       )
     `.trim();

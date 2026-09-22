@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
+import { retainEnrichment } from "../../../experiments/core/models/enrichment";
 import type {
   EnrichmentJoin,
   EnrichmentSql,
@@ -136,6 +137,8 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
     experimentId: string;
     columns?: string[];
     enrichmentJoins?: (sql: EnrichmentSql) => EnrichmentJoin[];
+    /** Enrichment aliases to drop, having no schema to flatten. */
+    omitEnrichment?: string[];
     variants?: { columnName: string; schema: string }[];
     exceptColumns?: string[];
     filters?: FilterCondition[];
@@ -146,7 +149,8 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
     limit?: number;
     offset?: number;
   }): Promise<Result<string>> {
-    const { tableName, tableType, experimentId, enrichmentJoins, ...queryParams } = params;
+    const { tableName, tableType, experimentId, enrichmentJoins, omitEnrichment, ...queryParams } =
+      params;
 
     const target = this.resolveTarget(tableName, tableType, experimentId);
     if (target.isFailure()) {
@@ -162,7 +166,9 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
       return success(EMPTY_RESULT_QUERY);
     }
 
-    const joinsResult = await this.resolveJoins(enrichmentJoins?.(DUCKDB_ENRICHMENT_SQL) ?? []);
+    const joinsResult = await this.resolveJoins(
+      retainEnrichment(enrichmentJoins?.(DUCKDB_ENRICHMENT_SQL) ?? [], omitEnrichment),
+    );
     if (joinsResult.isFailure()) {
       return joinsResult;
     }
@@ -264,7 +270,9 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
 
   /** Replace pre-signed file URLs with a count so SQL stays loggable. */
   private static redactSignedUrls(sql: string): string {
-    return sql.replace(/read_parquet\(\[(.*?)\]/s, (_match, urls: string) => {
+    // Global and non-greedy: enrichment adds a scan per dimension, and missing
+    // one leaks that dimension's pre-signed URLs into the log verbatim.
+    return sql.replace(/read_parquet\(\[(.*?)\]/gs, (_match, urls: string) => {
       const count = urls.split("', '").length;
       return `read_parquet([<${count} pre-signed url(s) redacted>]`;
     });

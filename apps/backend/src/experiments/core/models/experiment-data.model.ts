@@ -1,6 +1,6 @@
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
-type VariantColumn = "macro_output" | "questions_data" | "custom_metadata" | "uploaded_data";
+export type VariantColumn = "macro_output" | "questions_data" | "custom_metadata" | "uploaded_data";
 
 export type ExperimentTableType = "static" | "macro" | "upload";
 

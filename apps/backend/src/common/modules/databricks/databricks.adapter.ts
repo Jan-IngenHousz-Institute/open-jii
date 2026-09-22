@@ -4,6 +4,7 @@ import { Readable } from "stream";
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { zExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
 
+import { retainEnrichment } from "../../../experiments/core/models/enrichment";
 import { isExportFormat } from "../../../experiments/core/models/experiment-data-exports.model";
 import type {
   ExportFormat,
@@ -15,7 +16,6 @@ import type {
   EnrichmentJoin,
   EnrichmentSql,
 } from "../../../experiments/core/models/experiment-data.model";
-import { SPARK_ENRICHMENT_SQL } from "./services/query-builder/enrichment-sql";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { DataUploadJobInput } from "../../../experiments/core/ports/databricks.port";
 import type { DeviceLifecycleEventRow } from "../../../iot/core/models/device-lifecycle-event.model";
@@ -55,6 +55,7 @@ import type { UploadFileResponse } from "./services/files/files.types";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
 import type { DatabricksHealthCheck } from "./services/jobs/jobs.types";
 import type { DatabricksJobRunResponse } from "./services/jobs/jobs.types";
+import { SPARK_ENRICHMENT_SQL } from "./services/query-builder/enrichment-sql";
 import { QueryBuilderService } from "./services/query-builder/query-builder.service";
 import type {
   AggregationSpec,
@@ -1235,6 +1236,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     experimentId: string;
     columns?: string[];
     enrichmentJoins?: (sql: EnrichmentSql) => EnrichmentJoin[];
+    /** Enrichment aliases to drop, having no schema to flatten. */
+    omitEnrichment?: string[];
     variants?: { columnName: string; schema: string }[];
     exceptColumns?: string[];
     filters?: FilterCondition[];
@@ -1251,6 +1254,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       experimentId,
       columns,
       enrichmentJoins,
+      omitEnrichment,
       variants,
       exceptColumns,
       filters,
@@ -1267,7 +1271,10 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
     // The config names dimensions unqualified, because it has no catalog. A
     // dimension that aggregates before joining supplies the query around it.
-    const joins = (enrichmentJoins?.(SPARK_ENRICHMENT_SQL) ?? []).map((join) => {
+    const joins = retainEnrichment(
+      enrichmentJoins?.(SPARK_ENRICHMENT_SQL) ?? [],
+      omitEnrichment,
+    ).map((join) => {
       const qualified = `${catalog}.${schema}.${join.relation}`;
 
       return {

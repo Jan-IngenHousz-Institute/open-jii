@@ -18,6 +18,7 @@ import type {
   ExperimentTableMetadata,
   SchemaDataDto,
   TableDataDto,
+  VariantColumn,
 } from "../models/experiment-data.model";
 import { ExperimentDto } from "../models/experiment.model";
 import { CACHE_PORT } from "../ports/cache.port";
@@ -398,38 +399,32 @@ export class ExperimentDataRepository {
       );
     }
 
+    const schemas: Record<VariantColumn, string | null | undefined> = {
+      macro_output: macroSchema,
+      questions_data: questionsSchema,
+      custom_metadata: customMetadataSchema,
+      uploaded_data: uploadSchema,
+    };
+
     const exceptColumns = [...config.exceptColumns];
     const variants: { columnName: string; schema: string }[] = [];
+    const omitEnrichment: string[] = [];
 
-    if (config.variantColumns.includes("macro_output")) {
-      if (macroSchema) {
-        variants.push({ columnName: "macro_output", schema: macroSchema });
-      } else {
-        exceptColumns.push("macro_output");
+    for (const columnName of config.variantColumns) {
+      const schema = schemas[columnName];
+
+      if (schema) {
+        variants.push({ columnName, schema });
+        continue;
       }
-    }
 
-    if (config.variantColumns.includes("questions_data")) {
-      if (questionsSchema) {
-        variants.push({ columnName: "questions_data", schema: questionsSchema });
+      // Without a schema there is nothing to flatten. A column the served
+      // relation carries is excluded; one that only an enrichment join
+      // supplies has to drop the join, because there is nothing to exclude.
+      if (config.enrichedVariantColumns.includes(columnName)) {
+        omitEnrichment.push(columnName);
       } else {
-        exceptColumns.push("questions_data");
-      }
-    }
-
-    if (config.variantColumns.includes("custom_metadata")) {
-      if (customMetadataSchema) {
-        variants.push({ columnName: "custom_metadata", schema: customMetadataSchema });
-      } else {
-        exceptColumns.push("custom_metadata");
-      }
-    }
-
-    if (config.variantColumns.includes("uploaded_data")) {
-      if (uploadSchema) {
-        variants.push({ columnName: "uploaded_data", schema: uploadSchema });
-      } else {
-        exceptColumns.push("uploaded_data");
+        exceptColumns.push(columnName);
       }
     }
 
@@ -439,6 +434,7 @@ export class ExperimentDataRepository {
       experimentId,
       columns,
       enrichmentJoins: config.enrichmentJoins,
+      omitEnrichment,
       variants: variants.length > 0 ? variants : undefined,
       exceptColumns: exceptColumns.length > 0 ? exceptColumns : undefined,
       filters,
