@@ -168,6 +168,8 @@ export const zCalibrationDefinition = z.object({
 /** A definition plus what the caller may do with it; the detail route only. */
 export const zCalibrationDefinitionDetail = zCalibrationDefinition.extend({
   capabilities: zResourceCapabilities,
+  /** Above zero the definition is closed to edits, since a run records which one it ran. */
+  runCount: z.number().int().nonnegative(),
 });
 
 export const zCalibrationDefinitionSummary = zCalibrationDefinition.omit({

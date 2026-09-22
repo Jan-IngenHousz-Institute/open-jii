@@ -865,7 +865,8 @@
         "roleMissing": "Connect the instruments the run needs before continuing.",
         "unitConfirmed": "Serial {{serial}} matches this device's record.",
         "wrongUnit": "This unit reports serial {{reported}}, but this device is registered as {{expected}}. Coefficients would go to the wrong unit, so the run cannot start.",
-        "unnamedUnit": "The unit on this port did not report a serial number, so it cannot be checked against this device's record. Make sure the right one is connected."
+        "unnamedUnit": "The unit on this port did not report a serial number, so it cannot be checked against this device's record. Make sure the right one is connected.",
+        "unitNamed": "Reports {{serial}}"
       },
       "prompt": {
         "confirmLabel": "Type {{token}} to continue",
@@ -898,7 +899,8 @@
         "pointsTaken": "{{taken}} points",
         "retaken": "{{series}} point {{point}} taken again (attempt {{attempt}})",
         "series_one": "{{series}}: {{count}} row captured",
-        "series_other": "{{series}}: {{count}} rows captured"
+        "series_other": "{{series}}: {{count}} rows captured",
+        "start": "Start the run"
       },
       "review": {
         "hint": "Approving applies the computed blocks to this device's record. Nothing reaches the hardware until the next step.",
@@ -963,6 +965,194 @@
         "onDeviceValue": "{{confirmed}} of {{blocks}} blocks confirmed",
         "onDeviceUnrecorded": "{{confirmed}} confirmed, not yet recorded"
       },
+      "library": {
+        "title": "Calibrations",
+        "create": "New calibration",
+        "allFamilies": "All device families",
+        "searchPlaceholder": "Search calibrations...",
+        "clearSearch": "Clear search",
+        "noMatches": "No calibration matches that search.",
+        "empty": "No calibration procedure has been written yet.",
+        "columns": {
+          "name": "Procedure",
+          "family": "Family",
+          "visibility": "Visibility",
+          "updated": "Updated"
+        },
+        "retry": "Try again"
+      },
+      "detail": {
+        "rig": "The rig it needs",
+        "procedure": "What it does at the bench",
+        "produces": "What it produces",
+        "script": "How it fits",
+        "steps": "Capture",
+        "verify": "Check after the write",
+        "created": "Created",
+        "notWritable": "The platform has no console command for {{coefficients}}. A run producing these is recorded, but they never reach the device.",
+        "describePlaceholder": "Say what this bench measures and against what.",
+        "readOnly": "You can read this calibration but not change it.",
+        "frozen_one": "One run has recorded this calibration, so it can no longer be edited. Duplicate it to take the procedure into a new one.",
+        "frozen_other": "{{count}} runs have recorded this calibration, so it can no longer be edited. Duplicate it to take the procedure into a new one.",
+        "notSaving": "Not saving while the definition is incomplete.",
+        "verifyOptional": "optional",
+        "duplicate": "Duplicate"
+      },
+      "rig": {
+        "hint": "Each instrument takes a serial port of its own at the bench. Renaming a role renames it in every step that uses it.",
+        "dut": "The device being calibrated",
+        "role": "Role",
+        "instrument": "Instrument",
+        "handshake": "Identifies itself as",
+        "handshakeRequired": "An instrument has to say what it answers to, or nothing can be bound to this role.",
+        "add": "Add instrument",
+        "remove": "Remove {{role}}",
+        "usedBy_one": "Named by 1 step, so it cannot be removed.",
+        "usedBy_other": "Named by {{count}} steps, so it cannot be removed.",
+        "setpoints": "Setpoints",
+        "readings": "Readings",
+        "none": "None",
+        "roleTaken": "Another instrument in this rig already has this name.",
+        "roleInvalid": "Lowercase letters, digits and underscores, starting with a letter.",
+        "anyInstrument": "Any that answers the handshake",
+        "anyInstrumentHint": "Any instrument whose identity reply carries this handshake. Naming the instrument is what lets the steps offer its setpoints and readings.",
+        "drives": "drives",
+        "answers": "answers",
+        "setpointRange": "{{name}} {{min}}…{{max}} {{unit}}",
+        "drivesNothing": "nothing the platform can set"
+      },
+      "procedure": {
+        "addStep": "Add step",
+        "kind": {
+          "operator": "Ask the person at the bench to do something",
+          "settle": "Wait for readings to settle",
+          "set": "Drive one setpoint and leave it there",
+          "read": "Record readings at one point",
+          "sweep": "Step through a range, recording at each point"
+        },
+        "kindName": {
+          "operator": "Ask",
+          "settle": "Wait",
+          "set": "Set",
+          "read": "Record",
+          "sweep": "Sweep"
+        },
+        "label": {
+          "settle": "Wait {{ms}} ms",
+          "set": "{{instrument}} {{setpoint}} to {{value}}",
+          "read": "Record {{series}}",
+          "sweepInstrument": "Sweep {{instrument}} {{setpoint}}, {{points}} points",
+          "sweepOperator": "Sweep by hand, {{points}} points"
+        },
+        "moveUp": "Move step {{position}} up",
+        "moveDown": "Move step {{position}} down",
+        "removeStep": "Remove step {{position}}",
+        "collapseStep": "Close step {{position}}",
+        "expandStep": "Open step {{position}}",
+        "optional": "Optional",
+        "optionalHint": "Skip this step when the instrument it needs is missing",
+        "waitFor": "Wait (ms)",
+        "prompt": "What to do",
+        "promptPlaceholder": "Anything the operator should do before this reading",
+        "confirm": "Typed to continue",
+        "confirmPlaceholder": "DARK",
+        "confirmHint": "Leave empty to let the operator continue with a click.",
+        "instrument": "Instrument",
+        "setpoint": "Setpoint",
+        "value": "Value",
+        "series": "Series",
+        "seriesTaken": "Another step in this phase already produces this series.",
+        "seriesReserved": "A series may not end in _retaken: that names the readings an operator took again.",
+        "nameInvalid": "Lowercase letters, digits and underscores, starting with a letter.",
+        "driven": "Driven by",
+        "operatorSource": "The operator",
+        "operatorPrompt": "Ask for",
+        "operatorStimulusPrompt": "Set up {value}, then wait for the reading to settle.",
+        "placeholderHint": "{value} is replaced with the point being set up.",
+        "settleAfter": "Settle (ms)",
+        "values": "Points",
+        "valuesHint": "One per line: a number, a label, or a JSON object for a compound setup.",
+        "valuesNumericHint": "One per line, in the instrument's own units.",
+        "rampFrom": "From",
+        "rampTo": "To",
+        "rampPoints": "Points",
+        "rampFill": "Fill the sweep",
+        "rampRange": "The instrument takes {{min}} to {{max}} {{unit}}.",
+        "records": "Records",
+        "addRead": "Add reading",
+        "source": "From",
+        "command": "Command",
+        "reading": "Reading",
+        "column": "Column",
+        "columnTaken": "This step already records a column with this name.",
+        "typed": "Typed as",
+        "typeNumber": "Number",
+        "typeText": "Text",
+        "repeat": "Samples",
+        "sampling": "Sampling…",
+        "interval": "Every (ms)",
+        "timeout": "Timeout (ms)",
+        "removeRead": "Remove {{column}}",
+        "operatorReadPrompt": "Enter the reference reading",
+        "nothingToDrive": "Nothing in this rig has a setpoint to drive",
+        "emptyPhase": "No steps.",
+        "sweepSpan_one": "{{count}} point at {{from}} {{unit}}",
+        "sweepSpan_other": "{{count}} points from {{from}} to {{to}} {{unit}}",
+        "sweepSpanPlain_one": "{{count}} point at {{from}}",
+        "sweepSpanPlain_other": "{{count}} points from {{from}} to {{to}}"
+      },
+      "trial": {
+        "action": "Run at the bench",
+        "title": "Run a calibration",
+        "noDevices": "No device of this family is registered to you. Register one to try this procedure at the bench."
+      },
+      "produces": {
+        "hint": "A block is written to a device as one unit and reviewed as one. The names the platform can write are offered here; min and max are what a fit is flagged against at review.",
+        "block": "Block",
+        "coefficient": "Coefficient",
+        "type": "Type",
+        "length": "Entries",
+        "min": "Min",
+        "max": "Max",
+        "addBlock": "Add block",
+        "addPlainBlock": "Block of my own",
+        "addCoefficient": "Add coefficient",
+        "addPlain": "Coefficient of my own",
+        "removeBlock": "Remove block {{block}}",
+        "removeCoefficient": "Remove {{name}}",
+        "blockTaken": "Another block already has this name.",
+        "nameTaken": "This block already has a coefficient with this name.",
+        "nameInvalid": "Lowercase letters, digits and underscores, starting with a letter.",
+        "recordedOnly": "Recorded with the run. The platform has no command to write this one."
+      },
+      "fit": {
+        "label": "Fit, submitting {{coefficients}} coefficients in {{blocks}} blocks",
+        "submits": "What it submits",
+        "draft": "Draft the fit",
+        "draftTitle": "Replace the script with a drafted fit?",
+        "draftConfirm": "The draft is written from the series recorded above and the blocks below, fitting them in the order they are declared. Whatever is in the script now is lost.",
+        "draftCancel": "Keep what I wrote",
+        "draftReplace": "Replace it"
+      },
+      "sidebar": {
+        "id": "Calibration ID",
+        "title": "Details",
+        "family": "Device family",
+        "familyHint": "Which device this runs against, and with it the instruments and coefficients everything else is checked against.",
+        "firmware": "Minimum firmware",
+        "firmwarePlaceholder": "Any",
+        "firmwareHint": "A run is refused below this. Older firmware answers unknown commands with numbers that look like data.",
+        "firmwareInvalid": "Version numbers only, like 1.03 or 1.1.3.",
+        "saved": "Calibration updated"
+      },
+      "seam": {
+        "produces": "The capture records",
+        "submits": "The fit submits",
+        "optional": "may be absent",
+        "reachesDevice": "reaches the device",
+        "recordedOnly": "recorded only",
+        "recordsNothing": "No step records a reading yet, so the fit receives nothing."
+      },
       "phase": {
         "setUp": "Set up",
         "measure": "Measure",
@@ -979,14 +1169,25 @@
         "noProcedure": "Pick a procedure to see the bench it needs and the steps it runs.",
         "deviceUnnamed": "Reports no serial"
       },
-      "procedure": {
-        "label": {
-          "settle": "Wait {{ms}} ms",
-          "set": "{{instrument}} {{setpoint}} to {{value}}",
-          "read": "Record {{series}}",
-          "sweepInstrument": "Sweep {{instrument}} {{setpoint}}, {{points}} points",
-          "sweepOperator": "Sweep by hand, {{points}} points"
-        }
+      "stage": {
+        "stepCount_one": "{{count}} step",
+        "stepCount_other": "{{count}} steps",
+        "pointCount_one": "{{count}} reading",
+        "pointCount_other": "{{count}} readings",
+        "waiting": "{{duration}} of waiting"
+      },
+      "sitting": {
+        "recorded": "{{unit}} is recorded.",
+        "recordedHint": "Nothing is decided yet. Work through the units first and review what you measured together.",
+        "rigStaysBound": "The lamp and the references stay connected. Only the unit's own port is released.",
+        "nextUnit": "Next unit",
+        "review_one": "Review 1 run",
+        "review_other": "Review {{count}} runs",
+        "thisSitting": "This sitting",
+        "recordedOf": "{{recorded}} of {{total}} recorded",
+        "alreadyDone": "{{serial}} has already had its turn in this sitting.",
+        "whichDevice": "Which device is this?",
+        "whichDeviceHint": "This unit's firmware does not report an identifier over the console, so the run has to be recorded against a device you name."
       }
     },
     "workbookBar": {

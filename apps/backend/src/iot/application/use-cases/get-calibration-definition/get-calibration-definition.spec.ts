@@ -3,6 +3,7 @@ import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-cal
 import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { IotCalibrationDefinitionRepository } from "../../../core/repositories/iot-calibration-definition.repository";
+import { IotCalibrationRunRepository } from "../../../core/repositories/iot-calibration-run.repository";
 import { GetCalibrationDefinitionUseCase } from "./get-calibration-definition";
 
 const PROCEDURE: CaptureProcedure = {
@@ -21,8 +22,10 @@ const OUTPUT_SCHEMA = { blocks: { par: { spec: { type: "number" as const } } } }
 describe("GetCalibrationDefinitionUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: GetCalibrationDefinitionUseCase;
+  let runRepository: IotCalibrationRunRepository;
   let userId: string;
   let definitionId: string;
+  let deviceId: string;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -32,6 +35,9 @@ describe("GetCalibrationDefinitionUseCase", () => {
     await testApp.beforeEach();
     userId = await testApp.createTestUser({ name: "Calibration Author" });
     useCase = testApp.module.get(GetCalibrationDefinitionUseCase);
+    runRepository = testApp.module.get(IotCalibrationRunRepository);
+    const device = await testApp.createIotDevice({ createdBy: userId, deviceType: "minipar" });
+    deviceId = device.id;
 
     const definition = await testApp.module.get(IotCalibrationDefinitionRepository).create(
       {
@@ -66,6 +72,27 @@ describe("GetCalibrationDefinitionUseCase", () => {
     expect(result.value.captureProcedure).toEqual(PROCEDURE);
     expect(result.value.outputSchema).toEqual(OUTPUT_SCHEMA);
     expect(result.value.script).toBe("submit({})");
+  });
+
+  // The update use case refuses a definition a run points at. Sending the count with the
+  // definition is what lets the page say so before the author edits anything.
+  it("counts the runs that have closed the definition to edits", async () => {
+    const fresh = await useCase.execute(definitionId, userId);
+    assertSuccess(fresh);
+    expect(fresh.value.runCount).toBe(0);
+
+    const run = await runRepository.create({
+      definitionId,
+      deviceId,
+      requestedBy: userId,
+      inputSource: "bench_wizard",
+      status: "computed",
+    });
+    assertSuccess(run);
+
+    const afterRun = await useCase.execute(definitionId, userId);
+    assertSuccess(afterRun);
+    expect(afterRun.value.runCount).toBe(1);
   });
 
   it("reports a missing definition", async () => {

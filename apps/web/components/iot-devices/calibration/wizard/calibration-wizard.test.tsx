@@ -5,6 +5,7 @@ import {
   createCalibrationDefinitionSummary,
   createCalibrationRun,
   createDeviceCalibration,
+  createIotDevice,
 } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor, within } from "@/test/test-utils";
@@ -997,6 +998,104 @@ describe("CalibrationWizard", () => {
       });
       expect(reportSpy.params.calibrationId).toBe(applied.id);
       expect(device.sent).toContain("get_cal_par");
+    });
+  });
+
+  // A sitting binds the rig once and passes many units through it, so it neither asks which
+  // device is coming nor decides anything between them.
+  describe("a sitting, with no device named up front", () => {
+    const REGISTERED = createIotDevice({
+      deviceType: "minipar",
+      serialNumber: "A4:CF:12:AA:93:B0",
+      name: "Bench MiniPAR",
+    });
+
+    function renderSitting() {
+      render(<CalibrationWizard family="minipar" onClose={vi.fn()} />);
+    }
+
+    beforeEach(() => {
+      server.mount(contract.iot.listIotDevices, { body: [REGISTERED] });
+      server.mount(contract.iot.createCalibrationRun, {
+        status: 201,
+        body: createCalibrationRun({ deviceId: REGISTERED.id, definitionId: DEFINITION_ID }),
+      });
+    });
+
+    it("records the unit the port named and stops short of deciding anything", async () => {
+      attachMiniPar([420, 150, 8.33], "a4cf12aa93b0");
+      renderSitting();
+
+      await captureThreePoints();
+
+      expect(await screen.findByText("iot.calibration.sitting.recorded")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "iot.calibration.review.approve" })).toBeNull();
+    });
+
+    it("keeps the sitting's tally so a unit is not run twice", async () => {
+      attachMiniPar([420, 150, 8.33], "a4cf12aa93b0");
+      renderSitting();
+
+      await captureThreePoints();
+      await screen.findByText("iot.calibration.sitting.recorded");
+
+      expect(screen.getByText("Bench MiniPAR")).toBeInTheDocument();
+      expect(screen.getByText("iot.calibration.sitting.recordedOf")).toBeInTheDocument();
+    });
+
+    it("returns to the port for the next unit, resting the bench rather than closing it", async () => {
+      const console = miniparConsole([420, 150, 8.33]);
+      const driver = new MiniParDriver({ timeoutMs: 500, protocolTimeoutMs: 500 });
+      driver.initialize(console.transport);
+      const connections = mountConnections({
+        connections: [
+          {
+            id: "conn-1",
+            label: "MiniPAR",
+            family: "minipar",
+            identity: { family: "minipar", deviceId: "a4cf12aa93b0", raw: {} },
+            driver,
+          },
+        ],
+      });
+      renderSitting();
+
+      await captureThreePoints();
+      await userEvent.click(
+        await screen.findByRole("button", { name: "iot.calibration.sitting.nextUnit" }),
+      );
+
+      await waitFor(() => {
+        expect(connections.disconnectAll).toHaveBeenCalled();
+      });
+      // The tally outlives the unit: the rig and the sitting are still standing.
+      expect(await screen.findByText("iot.calibration.sitting.thisSitting")).toBeInTheDocument();
+    });
+
+    it("offers the sitting's runs for review once at least one is recorded", async () => {
+      attachMiniPar([420, 150, 8.33], "a4cf12aa93b0");
+      renderSitting();
+
+      await captureThreePoints();
+      await userEvent.click(
+        await screen.findByRole("button", { name: "iot.calibration.sitting.review" }),
+      );
+
+      expect(
+        await screen.findByRole("button", { name: "iot.calibration.review.approve" }),
+      ).toBeInTheDocument();
+    });
+
+    // An Ambit's MAC costs a reboot to read, so that family is named by the operator instead.
+    it("asks which device a unit is when the port cannot name it", async () => {
+      attachMiniPar([420, 150, 8.33]);
+      renderSitting();
+
+      await userEvent.click(await screen.findByRole("radio"));
+      await userEvent.click(screen.getByRole("button", { name: "iot.calibration.cta.next" }));
+
+      expect(await screen.findByText("iot.calibration.sitting.whichDevice")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "iot.calibration.cta.next" })).toBeDisabled();
     });
   });
 });

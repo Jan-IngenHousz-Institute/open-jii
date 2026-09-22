@@ -50,6 +50,19 @@ describe("navigation-config", () => {
       expect(macros.url(locale)).toBe(`/${locale}/platform/macros`);
     });
 
+    // Calibration is something done to a device, not a document filed beside protocols.
+    // `children` is what the sidebar renders as sub-navigation; `items` is drawn by nothing.
+    it("keeps calibration under devices rather than in the library", () => {
+      expect(mainNavigation.devices.navigable).toBe(false);
+      const urls = mainNavigation.devices.children.map((child) => child.url(locale));
+      expect(urls).toEqual([`/${locale}/platform/devices`, `/${locale}/platform/calibrations`]);
+      expect(
+        mainNavigation.library.children.some((child) =>
+          child.url(locale).includes("/platform/calibrations"),
+        ),
+      ).toBe(false);
+    });
+
     it("generates sub-item URLs containing parent path", () => {
       for (const key of ["experiments", "organizations"] as const) {
         mainNavigation[key].items.forEach((item) => {

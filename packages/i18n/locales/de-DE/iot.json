@@ -865,7 +865,8 @@
         "roleMissing": "Verbinden Sie die benötigten Instrumente, bevor Sie fortfahren.",
         "unitConfirmed": "Seriennummer {{serial}} stimmt mit dem Datensatz dieses Geräts überein.",
         "wrongUnit": "Dieses Gerät meldet die Seriennummer {{reported}}, registriert ist dieses Gerät aber als {{expected}}. Die Koeffizienten gingen an das falsche Gerät, daher kann der Lauf nicht starten.",
-        "unnamedUnit": "Das Gerät an diesem Port hat keine Seriennummer gemeldet, daher lässt es sich nicht mit dem Datensatz dieses Geräts abgleichen. Stellen Sie sicher, dass das richtige angeschlossen ist."
+        "unnamedUnit": "Das Gerät an diesem Port hat keine Seriennummer gemeldet, daher lässt es sich nicht mit dem Datensatz dieses Geräts abgleichen. Stellen Sie sicher, dass das richtige angeschlossen ist.",
+        "unitNamed": "Meldet {{serial}}"
       },
       "prompt": {
         "confirmLabel": "Geben Sie {{token}} ein, um fortzufahren",
@@ -898,7 +899,8 @@
         "pointsTaken": "{{taken}} Punkte",
         "retaken": "{{series}} Punkt {{point}} erneut aufgenommen (Versuch {{attempt}})",
         "series_one": "{{series}}: {{count}} Zeile aufgezeichnet",
-        "series_other": "{{series}}: {{count}} Zeilen aufgezeichnet"
+        "series_other": "{{series}}: {{count}} Zeilen aufgezeichnet",
+        "start": "Lauf starten"
       },
       "review": {
         "hint": "Die Freigabe übernimmt die berechneten Blöcke in den Datensatz dieses Geräts. Die Hardware wird erst im nächsten Schritt beschrieben.",
@@ -963,6 +965,194 @@
         "onDeviceValue": "{{confirmed}} von {{blocks}} Blöcken bestätigt",
         "onDeviceUnrecorded": "{{confirmed}} bestätigt, noch nicht aufgezeichnet"
       },
+      "library": {
+        "title": "Kalibrierungen",
+        "create": "Neue Kalibrierung",
+        "allFamilies": "Alle Gerätefamilien",
+        "searchPlaceholder": "Kalibrierungen suchen...",
+        "clearSearch": "Suche löschen",
+        "noMatches": "Keine Kalibrierung passt zu dieser Suche.",
+        "empty": "Es wurde noch kein Kalibrierverfahren geschrieben.",
+        "columns": {
+          "name": "Verfahren",
+          "family": "Familie",
+          "visibility": "Sichtbarkeit",
+          "updated": "Aktualisiert"
+        },
+        "retry": "Erneut versuchen"
+      },
+      "detail": {
+        "rig": "Benötigter Aufbau",
+        "procedure": "Ablauf am Prüfstand",
+        "produces": "Ergebnis",
+        "script": "Auswertung",
+        "steps": "Aufnahme",
+        "verify": "Prüfung nach dem Schreiben",
+        "created": "Erstellt",
+        "notWritable": "Für {{coefficients}} gibt es keinen Konsolenbefehl. Ein Lauf wird protokolliert, die Werte erreichen das Gerät aber nie.",
+        "describePlaceholder": "Beschreiben, was dieser Prüfstand misst und wogegen.",
+        "readOnly": "Sie können diese Kalibrierung lesen, aber nicht ändern.",
+        "frozen_one": "Ein Lauf hat diese Kalibrierung protokolliert, daher kann sie nicht mehr geändert werden. Erstellen Sie ein Duplikat, um die Prozedur in eine neue zu übernehmen.",
+        "frozen_other": "{{count}} Läufe haben diese Kalibrierung protokolliert, daher kann sie nicht mehr geändert werden. Erstellen Sie ein Duplikat, um die Prozedur in eine neue zu übernehmen.",
+        "notSaving": "Wird nicht gespeichert, solange die Definition unvollständig ist.",
+        "verifyOptional": "optional",
+        "duplicate": "Duplizieren"
+      },
+      "rig": {
+        "hint": "Jedes Instrument belegt am Messplatz einen eigenen seriellen Anschluss. Eine Rolle umzubenennen benennt sie in jedem Schritt um, der sie verwendet.",
+        "dut": "Das Gerät, das kalibriert wird",
+        "role": "Rolle",
+        "instrument": "Instrument",
+        "handshake": "Meldet sich als",
+        "handshakeRequired": "Ein Instrument muss angeben, worauf es antwortet, sonst lässt sich dieser Rolle nichts zuordnen.",
+        "add": "Instrument hinzufügen",
+        "remove": "{{role}} entfernen",
+        "usedBy_one": "Von 1 Schritt verwendet und deshalb nicht entfernbar.",
+        "usedBy_other": "Von {{count}} Schritten verwendet und deshalb nicht entfernbar.",
+        "setpoints": "Sollwerte",
+        "readings": "Messwerte",
+        "none": "Keine",
+        "roleTaken": "Ein anderes Instrument in diesem Aufbau trägt diesen Namen bereits.",
+        "roleInvalid": "Kleinbuchstaben, Ziffern und Unterstriche, beginnend mit einem Buchstaben.",
+        "anyInstrument": "Beliebiges, das sich so meldet",
+        "anyInstrumentHint": "Jedes Instrument, dessen Kennung diesen Text enthält. Erst die Angabe des Instruments lässt die Schritte seine Sollwerte und Messwerte anbieten.",
+        "drives": "steuert",
+        "answers": "antwortet",
+        "setpointRange": "{{name}} {{min}}…{{max}} {{unit}}",
+        "drivesNothing": "nichts, was die Plattform setzen kann"
+      },
+      "procedure": {
+        "addStep": "Schritt hinzufügen",
+        "kind": {
+          "operator": "Die Person am Messplatz um etwas bitten",
+          "settle": "Warten, bis sich die Messwerte beruhigt haben",
+          "set": "Einen Sollwert setzen und dort belassen",
+          "read": "Messwerte an einem Punkt aufzeichnen",
+          "sweep": "Einen Bereich durchfahren und an jedem Punkt aufzeichnen"
+        },
+        "kindName": {
+          "operator": "Bitten",
+          "settle": "Warten",
+          "set": "Setzen",
+          "read": "Aufzeichnen",
+          "sweep": "Durchfahren"
+        },
+        "label": {
+          "settle": "{{ms}} ms warten",
+          "set": "{{instrument}} {{setpoint}} auf {{value}}",
+          "read": "{{series}} aufzeichnen",
+          "sweepInstrument": "{{instrument}} {{setpoint}} durchfahren, {{points}} Punkte",
+          "sweepOperator": "Von Hand durchfahren, {{points}} Punkte"
+        },
+        "moveUp": "Schritt {{position}} nach oben",
+        "moveDown": "Schritt {{position}} nach unten",
+        "removeStep": "Schritt {{position}} entfernen",
+        "collapseStep": "Schritt {{position}} zuklappen",
+        "expandStep": "Schritt {{position}} aufklappen",
+        "optional": "Optional",
+        "optionalHint": "Diesen Schritt überspringen, wenn das benötigte Instrument fehlt",
+        "waitFor": "Warten (ms)",
+        "prompt": "Was zu tun ist",
+        "promptPlaceholder": "Alles, was vor dieser Messung zu tun ist",
+        "confirm": "Zum Fortfahren eingeben",
+        "confirmPlaceholder": "DARK",
+        "confirmHint": "Leer lassen, damit ein Klick zum Fortfahren genügt.",
+        "instrument": "Instrument",
+        "setpoint": "Sollwert",
+        "value": "Wert",
+        "series": "Serie",
+        "seriesTaken": "Ein anderer Schritt dieser Phase erzeugt diese Serie bereits.",
+        "seriesReserved": "Eine Serie darf nicht auf _retaken enden: so heißen wiederholte Messungen.",
+        "nameInvalid": "Kleinbuchstaben, Ziffern und Unterstriche, beginnend mit einem Buchstaben.",
+        "driven": "Angetrieben von",
+        "operatorSource": "Der Bediener",
+        "operatorPrompt": "Fragen nach",
+        "operatorStimulusPrompt": "{value} aufbauen und warten, bis sich der Messwert beruhigt hat.",
+        "placeholderHint": "{value} wird durch den jeweiligen Punkt ersetzt.",
+        "settleAfter": "Beruhigen (ms)",
+        "values": "Punkte",
+        "valuesHint": "Einer pro Zeile: eine Zahl, eine Bezeichnung oder ein JSON-Objekt für einen zusammengesetzten Aufbau.",
+        "valuesNumericHint": "Einer pro Zeile, in den Einheiten des Instruments.",
+        "rampFrom": "Von",
+        "rampTo": "Bis",
+        "rampPoints": "Punkte",
+        "rampFill": "Sweep füllen",
+        "rampRange": "Das Instrument nimmt {{min}} bis {{max}} {{unit}}.",
+        "records": "Zeichnet auf",
+        "addRead": "Messwert hinzufügen",
+        "source": "Von",
+        "command": "Befehl",
+        "reading": "Messwert",
+        "column": "Spalte",
+        "columnTaken": "Dieser Schritt zeichnet bereits eine Spalte dieses Namens auf.",
+        "typed": "Eingabe als",
+        "typeNumber": "Zahl",
+        "typeText": "Text",
+        "repeat": "Messungen",
+        "sampling": "Abtastung…",
+        "interval": "Alle (ms)",
+        "timeout": "Zeitlimit (ms)",
+        "removeRead": "{{column}} entfernen",
+        "operatorReadPrompt": "Referenzwert eingeben",
+        "nothingToDrive": "In diesem Aufbau hat nichts einen Sollwert zum Setzen",
+        "emptyPhase": "Keine Schritte.",
+        "sweepSpan_one": "{{count}} Punkt bei {{from}} {{unit}}",
+        "sweepSpan_other": "{{count}} Punkte von {{from}} bis {{to}} {{unit}}",
+        "sweepSpanPlain_one": "{{count}} Punkt bei {{from}}",
+        "sweepSpanPlain_other": "{{count}} Punkte von {{from}} bis {{to}}"
+      },
+      "trial": {
+        "action": "Am Messplatz ausführen",
+        "title": "Kalibrierung ausführen",
+        "noDevices": "Für Sie ist kein Gerät dieser Familie registriert. Registrieren Sie eines, um diese Prozedur am Messplatz zu erproben."
+      },
+      "produces": {
+        "hint": "Ein Block wird als Einheit auf ein Gerät geschrieben und als Einheit geprüft. Die Namen, die die Plattform schreiben kann, werden hier angeboten; Min und Max sind die Werte, gegen die eine Anpassung bei der Prüfung geprüft wird.",
+        "block": "Block",
+        "coefficient": "Koeffizient",
+        "type": "Typ",
+        "length": "Einträge",
+        "min": "Min",
+        "max": "Max",
+        "addBlock": "Block hinzufügen",
+        "addPlainBlock": "Eigener Block",
+        "addCoefficient": "Koeffizient hinzufügen",
+        "addPlain": "Eigener Koeffizient",
+        "removeBlock": "Block {{block}} entfernen",
+        "removeCoefficient": "{{name}} entfernen",
+        "blockTaken": "Ein anderer Block trägt diesen Namen bereits.",
+        "nameTaken": "Dieser Block enthält bereits einen Koeffizienten dieses Namens.",
+        "nameInvalid": "Kleinbuchstaben, Ziffern und Unterstriche, beginnend mit einem Buchstaben.",
+        "recordedOnly": "Wird mit dem Lauf aufgezeichnet. Die Plattform hat keinen Befehl, um diesen zu schreiben."
+      },
+      "fit": {
+        "label": "Anpassung, liefert {{coefficients}} Koeffizienten in {{blocks}} Blöcken",
+        "submits": "Was sie liefert",
+        "draft": "Anpassung entwerfen",
+        "draftTitle": "Skript durch eine entworfene Anpassung ersetzen?",
+        "draftConfirm": "Der Entwurf entsteht aus den oben aufgezeichneten Serien und den Blöcken darunter, in der Reihenfolge ihrer Deklaration. Was jetzt im Skript steht, geht verloren.",
+        "draftCancel": "Meines behalten",
+        "draftReplace": "Ersetzen"
+      },
+      "sidebar": {
+        "id": "Kalibrierungs-ID",
+        "title": "Details",
+        "family": "Gerätefamilie",
+        "familyHint": "Gegen welches Gerät dies läuft, und damit auch die Instrumente und Koeffizienten, gegen die alles Übrige geprüft wird.",
+        "firmware": "Mindest-Firmware",
+        "firmwarePlaceholder": "Beliebig",
+        "firmwareHint": "Darunter wird ein Lauf abgelehnt. Ältere Firmware beantwortet unbekannte Befehle mit Zahlen, die wie Messwerte aussehen.",
+        "firmwareInvalid": "Nur Versionsnummern, etwa 1.03 oder 1.1.3.",
+        "saved": "Kalibrierung aktualisiert"
+      },
+      "seam": {
+        "produces": "Die Aufnahme erfasst",
+        "submits": "Der Fit liefert",
+        "optional": "kann fehlen",
+        "reachesDevice": "erreicht das Gerät",
+        "recordedOnly": "nur erfasst",
+        "recordsNothing": "Noch erfasst kein Schritt eine Messung, der Fit erhält also nichts."
+      },
       "phase": {
         "setUp": "Aufbau",
         "measure": "Messen",
@@ -979,14 +1169,25 @@
         "noProcedure": "Wählen Sie einen Ablauf, um den benötigten Messplatz und die Schritte zu sehen.",
         "deviceUnnamed": "Meldet keine Seriennummer"
       },
-      "procedure": {
-        "label": {
-          "settle": "{{ms}} ms warten",
-          "set": "{{instrument}} {{setpoint}} auf {{value}}",
-          "read": "{{series}} aufzeichnen",
-          "sweepInstrument": "{{instrument}} {{setpoint}} durchfahren, {{points}} Punkte",
-          "sweepOperator": "Von Hand durchfahren, {{points}} Punkte"
-        }
+      "stage": {
+        "stepCount_one": "{{count}} Schritt",
+        "stepCount_other": "{{count}} Schritte",
+        "pointCount_one": "{{count}} Messung",
+        "pointCount_other": "{{count}} Messungen",
+        "waiting": "{{duration}} Wartezeit"
+      },
+      "sitting": {
+        "recorded": "{{unit}} ist erfasst.",
+        "recordedHint": "Noch ist nichts entschieden. Arbeiten Sie erst die Einheiten ab und prüfen Sie das Gemessene danach gemeinsam.",
+        "rigStaysBound": "Lampe und Referenzen bleiben verbunden. Nur der Port der Einheit wird freigegeben.",
+        "nextUnit": "Nächste Einheit",
+        "review_one": "1 Lauf prüfen",
+        "review_other": "{{count}} Läufe prüfen",
+        "thisSitting": "Diese Sitzung",
+        "recordedOf": "{{recorded}} von {{total}} erfasst",
+        "alreadyDone": "{{serial}} war in dieser Sitzung bereits an der Reihe.",
+        "whichDevice": "Welches Gerät ist das?",
+        "whichDeviceHint": "Die Firmware dieser Einheit meldet über die Konsole keine Kennung, daher muss der Lauf einem von Ihnen benannten Gerät zugeordnet werden."
       }
     },
     "workbookBar": {
