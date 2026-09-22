@@ -251,3 +251,9 @@ variable "data_platform_sp_application_id" {
   type        = string
   default     = "122ea6e5-a082-45b5-9df6-ef5482868fdc"
 }
+
+variable "enable_liveness_alerts" {
+  description = "Absence-based Grafana rules. Off until the composer and the heartbeat export have each run once, because such a rule fires from the moment it applies until its producer reports."
+  type        = bool
+  default     = false
+}

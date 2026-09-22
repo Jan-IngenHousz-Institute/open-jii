@@ -35,6 +35,10 @@ const KNOWN_FAMILIES = ["observability", "usage"];
 const KNOWN_SLOTS = ["alert", "exception", "pulse", "weekly", "dashboard", "s3"];
 const KNOWN_SOURCES = ["aws", "dbx", "pg", "posthog", "gh", "composer"];
 const KNOWN_STATS = ["Sum", "Maximum", "Minimum", "Average", "SampleCount"];
+const KNOWN_SEVERITIES = ["critical", "warning"];
+// Anything else falls back to a bare count in the digest, which is how an iterator age
+// came to read as "8.8M".
+const KNOWN_UNITS = ["milliseconds", "seconds", "minutes", "bytes", "percent"];
 const DIGEST_SLOTS = ["exception", "alert", "pulse", "weekly"];
 
 // Only these signal fields are passed through placeholder resolution; a placeholder
@@ -194,6 +198,19 @@ describe("catalog vocabulary", () => {
     expect(badSlot.map((m) => m.id)).toEqual([]);
     expect(badSource.map((m) => m.id)).toEqual([]);
     expect(badStat.map((m) => m.id)).toEqual([]);
+  });
+
+  it("uses only severities the routing and the ordering understand", () => {
+    // A severity the renderer does not know sorts with the unranked rather than above
+    // critical, and the notification policy has no branch for it, so it would neither
+    // lead the digest nor reach a pager.
+    const offenders = metrics.filter((m) => m.severity && !KNOWN_SEVERITIES.includes(m.severity));
+    expect(offenders.map((m) => m.id)).toEqual([]);
+  });
+
+  it("uses only units the formatter can render", () => {
+    const offenders = metrics.filter((m) => m.signal?.unit && !KNOWN_UNITS.includes(m.signal.unit));
+    expect(offenders.map((m) => m.id)).toEqual([]);
   });
 
   it("names every entry, since the digest prints the name", () => {

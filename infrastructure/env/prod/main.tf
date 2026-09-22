@@ -1138,6 +1138,21 @@ module "metrics_heartbeat_export" {
     }
   ]
 
+  # The export is the monitoring producer, so its own failures have to reach someone.
+  # The dead-man covers silence; this covers a run that ran and threw.
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
   providers = {
     databricks.workspace = databricks.workspace
   }
@@ -2899,6 +2914,7 @@ module "grafana_dashboard" {
   # forever, which is either permanently firing or permanently silent.
   digest_composer_function_name   = module.digest_composer.function_name
   metrics_forwarder_function_name = module.metrics_forwarder.function_name
+  enable_liveness_alerts          = var.enable_liveness_alerts
   db_cluster_identifier           = "open-jii-${var.environment}-db-cluster"
 
   # IoT and Kinesis monitoring

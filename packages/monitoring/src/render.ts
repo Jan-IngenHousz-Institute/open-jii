@@ -13,11 +13,22 @@ export interface RenderOptions {
 
 export { formatValue };
 
-/** Critical first: the order someone reads them in is the order they should act. */
-const SEVERITY_ORDER = ["critical", "warning", undefined];
+/**
+ * Critical first: the order someone reads them in is the order they should act.
+ *
+ * Rank rather than indexOf, because indexOf returns -1 for a value it does not know and
+ * an unrecognised severity would then sort above critical, which is the one place it
+ * must never appear.
+ */
+const SEVERITY_RANK: Record<string, number> = { critical: 0, warning: 1 };
+const UNRANKED = 2;
+
+function rankOf(severity: string | undefined): number {
+  return severity === undefined ? UNRANKED : (SEVERITY_RANK[severity] ?? UNRANKED);
+}
 
 function bySeverity(a: EvaluatedReading, b: EvaluatedReading): number {
-  return SEVERITY_ORDER.indexOf(a.metric.severity) - SEVERITY_ORDER.indexOf(b.metric.severity);
+  return rankOf(a.metric.severity) - rankOf(b.metric.severity);
 }
 
 function reading(entry: EvaluatedReading | MetricReading): string {

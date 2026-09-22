@@ -88,6 +88,9 @@ jobs:
       # Empty routes that severity to the existing channel, so the split lands inert.
       TF_VAR_slack_critical_webhook_url: ${{ secrets.SLACK_CRITICAL_WEBHOOK_URL }}
       TF_VAR_slack_warning_webhook_url: ${{ secrets.SLACK_WARNING_WEBHOOK_URL }}
+      # Absence-based rules stay off until a producer has reported once; set the
+      # variable to true in the environment to turn them on without a code change.
+      TF_VAR_enable_liveness_alerts: ${{ vars.ENABLE_LIVENESS_ALERTS || 'false' }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
@@ -176,6 +179,9 @@ jobs:
       # Empty routes that severity to the existing channel, so the split lands inert.
       TF_VAR_slack_critical_webhook_url: ${{ secrets.SLACK_CRITICAL_WEBHOOK_URL }}
       TF_VAR_slack_warning_webhook_url: ${{ secrets.SLACK_WARNING_WEBHOOK_URL }}
+      # Absence-based rules stay off until a producer has reported once; set the
+      # variable to true in the environment to turn them on without a code change.
+      TF_VAR_enable_liveness_alerts: ${{ vars.ENABLE_LIVENESS_ALERTS || 'false' }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
