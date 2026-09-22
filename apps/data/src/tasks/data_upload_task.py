@@ -25,6 +25,7 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import LongType, StringType, StructField, StructType, TimestampType
 
 from ambyte import find_byte_folders, load_files_per_byte, process_trace_files
+from openjii.json_scrub import scrub_non_finite_json_value
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -67,6 +68,18 @@ logger.info(
 # COMMAND ----------
 
 # DBTITLE 1,Tabular Processor (csv/tsv/json/ndjson)
+def _serialize_dataframe_rows(frame: pd.DataFrame) -> list[str]:
+    """Encode dataframe rows as strict JSON, replacing non-finite values with null."""
+    rows = frame.astype(object).where(pd.notnull(frame), None).to_dict(orient="records")
+    payloads = []
+    for row in rows:
+        payload = scrub_non_finite_json_value(json.dumps(row, default=str))
+        if payload is None:
+            raise AssertionError("A serialized dataframe row cannot be None")
+        payloads.append(payload)
+    return payloads
+
+
 def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> dict:
     """Shared pipeline for tabular uploads: pandas parse → JSON-encode rows → write parquet.
 
@@ -99,7 +112,7 @@ def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> 
     logger.info(f"Found {len(matched_files)} {label} file(s) to process")
 
     uploaded_at = datetime.now(timezone.utc)
-    all_rows: list[dict] = []
+    all_payloads: list[str] = []
     file_count = 0
     error_count = 0
 
@@ -108,17 +121,15 @@ def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> 
             # pandas reads UC volumes via the /Volumes FUSE path; strip the dbfs:
             # scheme dbutils.fs.ls prepends. /dbfs only mounts DBFS, not volumes.
             local_path = path[len("dbfs:") :] if path.startswith("dbfs:") else path
-            df = parser(local_path)
-            df = df.where(pd.notnull(df), None)
-            rows = df.to_dict(orient="records")
-            logger.info(f"Parsed {os.path.basename(path)}: {len(rows)} rows")
-            all_rows.extend(rows)
+            payloads = _serialize_dataframe_rows(parser(local_path))
+            logger.info(f"Parsed {os.path.basename(path)}: {len(payloads)} rows")
+            all_payloads.extend(payloads)
             file_count += 1
         except Exception as e:
             logger.error(f"Error parsing {path}: {e}")
             error_count += 1
 
-    if not all_rows:
+    if not all_payloads:
         raise Exception(f"No rows parsed from {file_count} files ({error_count} errors)")
 
     records = [
@@ -129,10 +140,10 @@ def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> 
             "upload_id": UPLOAD_ID,
             "created_by": USER_ID,
             "uploaded_at": uploaded_at,
-            "uploaded_data": json.dumps(row, default=str),
+            "uploaded_data": payload,
             "row_index": i,
         }
-        for i, row in enumerate(all_rows)
+        for i, payload in enumerate(all_payloads)
     ]
 
     schema = StructType([
@@ -377,8 +388,7 @@ def process_ambyte_upload() -> dict:
         raise Exception(f"All ambyte processing failed ({error_count} errors)")
 
     combined_df = pd.concat(combined_dataframes, ignore_index=True)
-    combined_df = combined_df.where(pd.notnull(combined_df), None)
-    rows = combined_df.to_dict(orient="records")
+    payloads = _serialize_dataframe_rows(combined_df)
 
     uploaded_at = datetime.now(timezone.utc)
     records = [
@@ -389,10 +399,10 @@ def process_ambyte_upload() -> dict:
             "upload_id": UPLOAD_ID,
             "created_by": USER_ID,
             "uploaded_at": uploaded_at,
-            "uploaded_data": json.dumps(row, default=str),
+            "uploaded_data": payload,
             "row_index": i,
         }
-        for i, row in enumerate(rows)
+        for i, payload in enumerate(payloads)
     ]
 
     schema = StructType([
