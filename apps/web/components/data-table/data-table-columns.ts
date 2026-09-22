@@ -131,6 +131,8 @@ interface CreateTableColumnsParams {
   onToggleCellExpansion?: OnToggleCellExpansionHandler;
   isCellExpanded?: IsCellExpandedFn;
   errorColumn?: string;
+  /** Keep the given order, for callers whose order already carries meaning. */
+  preserveOrder?: boolean;
 }
 
 /**
@@ -146,6 +148,7 @@ export function createTableColumns({
   onToggleCellExpansion,
   isCellExpanded,
   errorColumn,
+  preserveOrder = false,
 }: CreateTableColumnsParams) {
   const columnHelper = createColumnHelper<DataTableFeatures, DataRow>();
 
@@ -154,7 +157,7 @@ export function createTableColumns({
     return columns;
   }
 
-  const sortedColumns = sortColumnsForDisplay(dataColumns);
+  const sortedColumns = preserveOrder ? dataColumns : sortColumnsForDisplay(dataColumns);
 
   function getHeader(columnName: string) {
     return columnName;

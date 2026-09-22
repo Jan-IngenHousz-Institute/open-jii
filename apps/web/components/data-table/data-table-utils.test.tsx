@@ -96,6 +96,14 @@ describe("formatValue", () => {
     expect(formatValue(null, "STRING", "row-1")).toBe("");
   });
 
+  // A zero is a measurement, and on a dark reading it is the one the row exists for.
+  it("renders a zero rather than blanking it", () => {
+    const result = formatValue(0, "DOUBLE", "row-1", "par");
+
+    render(<div>{result}</div>);
+    expect(screen.getByText("0")).toBeInTheDocument();
+  });
+
   it("renders user cell for CONTRIBUTOR type", () => {
     const userData = JSON.stringify({ id: "u1", name: "John Doe", image: "" });
     const result = formatValue(userData, WellKnownColumnTypes.CONTRIBUTOR, "row-1", "col");
@@ -219,6 +227,10 @@ describe("DataTableHeader", () => {
     expect(screen.getByText("name").closest("th")).toHaveClass("text-left");
     expect(screen.getByText("value").closest("th")).toHaveClass("text-right");
     expect(screen.getByText("count").closest("th")).toHaveClass("text-right");
+    // The cell is right-aligned, but the name sits in a row of its own; pushed apart it
+    // ends up over the left edge of a column read up its right.
+    expect(screen.getByText("value").parentElement).toHaveClass("justify-end");
+    expect(screen.getByText("name").parentElement).toHaveClass("justify-between");
   });
 
   it("does not render placeholder headers", () => {
