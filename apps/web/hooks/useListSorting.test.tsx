@@ -35,8 +35,16 @@ describe("useListSorting", () => {
       { field: "name", direction: "desc" },
       { field: "status", direction: "asc" },
     ]);
+    act(() => result.current.toggleSort("name", true));
+    expect(result.current.sort).toEqual([{ field: "status", direction: "asc" }]);
     act(() => result.current.toggleSort("owner", true));
     expect(result.current.sort.map((item) => item.field)).toEqual(["status", "owner"]);
+  });
+
+  it("starts empty when the URL has no sort or malformed sort JSON", () => {
+    expect(renderHook(() => useListSorting(zExperimentSort)).result.current.sort).toEqual([]);
+    vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams("sort=%7B"));
+    expect(renderHook(() => useListSorting(zExperimentSort)).result.current.sort).toEqual([]);
   });
 
   it("restores valid URL sorting and ignores invalid fields", () => {
