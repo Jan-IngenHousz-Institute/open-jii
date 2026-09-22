@@ -19,7 +19,7 @@ export function OrganizationMembershipTags({
   membershipStatus,
   showMemberTag = true,
 }: OrganizationMembershipTagsProps) {
-  const { t } = useTranslation("organizations");
+  const { t } = useTranslation("common");
 
   const isPrivate = visibility === "private";
   const isMember = membershipStatus === "member" && showMemberTag;

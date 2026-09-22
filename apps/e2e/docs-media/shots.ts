@@ -180,6 +180,29 @@ export const SHOTS: readonly Shot[] = [
     scope: "Collaborators tab showing every row kind the access model can produce",
   },
   {
+    slug: "join-code-card",
+    publish: "img/guide/web/join-code-card.webp",
+    frame: "desktop",
+    // The card renders only for a public, non-archived experiment the capturing
+    // user can share, which the Access Showcase experiment is not.
+    route: async () =>
+      `/platform/experiments/${await experimentId(
+        "[Seed] Field Trial 2025 — Corn Photosynthesis",
+      )}/collaborators`,
+    async prepare(page) {
+      const create = page.getByRole("button", { name: /^Create (a new )?join code$/ });
+      if (await create.isVisible().catch(() => false)) {
+        await create.click();
+        await settle(page, 2500);
+      }
+      await page.getByText(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/).waitFor({ timeout: 15_000 });
+      await dismissToasts(page);
+      await settle(page, 1200);
+    },
+    scope:
+      "Join code card in its active state: code, QR, expiry, redemption counter and the workbook note",
+  },
+  {
     slug: "experiment-devices",
     publish: "img/guide/web/experiment-devices.webp",
     frame: "desktop",

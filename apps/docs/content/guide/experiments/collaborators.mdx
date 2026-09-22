@@ -3,7 +3,7 @@ title: "Collaborators & access levels"
 description: "Add people or organizations to your experiment, choose between Can view and Can edit, and handle requests to join."
 ---
 
-{/* verified: code@2a0698c44 2026-08-17 */}
+{/* verified: code@e06b09200 2026-09-22 */}
 
 Experiments are meant to be shared. Everyone you share an experiment with directly
 appears in one list, and each row carries one setting: how much they can do.
@@ -89,6 +89,59 @@ Anyone viewing a **public** experiment they are not part of can select **Request
 to join**, with an optional message. People who can manage the experiment see
 these under the **Requests** sub-tab and can **Approve** or **Reject** them.
 Approved people join with **Can view**, so they can start contributing.
+
+## Join codes
+
+Approving thirty people one at a time does not work in a workshop. A **join code**
+is the way round it: an eight-character code, shown as `XXXX-XXXX` with a QR
+beside it, that anyone signed in to the Android app can enter to join the
+experiment straight away. No request, no approval. They join with **Can view**,
+the level that lets them measure.
+
+The card is on the **Collaborators** tab, above the collaborator list. It only
+appears on a **public** experiment that is not archived, and only for people who
+can manage access. A private experiment has no card at all; publish it from the
+**Overview** tab first, and note that publishing cannot be undone.
+
+![The join code card with its code, QR and redemption counter](/img/guide/web/join-code-card.webp)
+
+<Callout type="warn">
+  Participants can only measure if the attached workbook is public too. The code grants **Can view**
+  on the *experiment*, which says nothing about the workbook behind it. A participant who joins a
+  public experiment whose workbook is private gets as far as the measurement screen and is told the
+  workbook is not shared with them. Check the workbook's visibility before the workshop.
+</Callout>
+
+### Creating, sharing and ending one
+
+Pick how long the code should last, then select **Create join code**. The choices
+are 1 day, 7 days, 30 days, and no expiry; 7 days is the default. The card then
+shows the code in large type, its QR, the expiry date and how many people have
+used it. That counter updates on its own while the card is open, so you can leave
+it projected during a session and watch the number climb.
+
+**Copy code** copies the code itself, for reading out or writing on a whiteboard.
+**Copy link** copies the address the QR encodes, which is a page that hands the
+visitor to the app. Both stay valid until the code expires or you end it.
+
+An experiment has **one** active code at a time.
+
+- **Regenerate** issues a new code and stops the old one.
+- **Revoke** stops the current code without issuing another.
+
+Either way, anyone who already joined keeps their access. Ending a code only
+closes the door behind them, which is what makes regenerating between two
+workshops safe.
+
+An expired code is not deleted. The card shows a banner naming it and the date it
+ran out, with the expiry picker and **Create a new code** beside it.
+
+### What participants see
+
+The QR encodes a public page showing the code as text, a link that opens the app,
+and a link to the Play Store for anyone who does not have it yet. The code itself
+is the fallback: it can always be typed in by hand. Their side of this is in
+[Join an experiment from the app](/guide/measuring/joining-an-experiment).
 
 ## Changing a level, removing someone, leaving
 

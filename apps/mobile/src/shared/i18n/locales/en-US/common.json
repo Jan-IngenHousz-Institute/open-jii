@@ -31,5 +31,10 @@
     "requiredMessage": "openJII needs access to your camera to scan QR codes.",
     "grant": "Grant permission",
     "openSettings": "Open settings"
+  },
+  "membership": {
+    "member": "Joined",
+    "requested": "Requested",
+    "private": "Private"
   }
 }

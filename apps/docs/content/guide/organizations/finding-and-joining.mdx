@@ -3,7 +3,7 @@ title: "Find and join an organization"
 description: "Browse the directory, ask to join a public organization, and track or cancel your request."
 ---
 
-{/* verified: code@cd4ecb0f7 2026-08-19 */}
+{/* verified: code@e06b09200 2026-09-22 */}
 
 There are two ways into an organization: someone invites you, or you ask.
 
@@ -41,21 +41,28 @@ The Android app covers the requester's side of all of this. You can browse the
 directory, ask to join, and withdraw a request. Deciding requests is web only, so
 an Owner or Admin still answers yours from a browser.
 
-![The organization directory in the Android app, with a Joined tag on the organization the user belongs to](/img/mobile/organizations-directory.png)
+Organizations live on the app's **Discover** screen, on a tab of their own beside
+Experiments.
+
+![The Discover screen in the Android app, on the Organizations tab](/img/mobile/discover-organizations-tab.png)
 
 Two ways in:
 
-- **Profile → Organizations** opens the directory from anywhere.
-- On **Home**, a card appears while you belong to no organization at all. It reads
-  "Join your organization" and opens the same directory. Once you are a member it
-  disappears on its own, and there is nothing to dismiss.
+- **Profile → Find experiments and organizations** opens Discover from anywhere.
+- On **Home**, a card reading "Find something to join" appears while you are in no
+  experiment and no organization. It opens the same screen and disappears on its
+  own once you are in an experiment. There is nothing to dismiss.
 
-The directory lists your own organizations first, then everything else public. Type
-in the search field and the list narrows after a moment; the search runs on the
-server, so it matches descriptions, locations and types as well as names. Clearing
-the field brings the whole directory back. Each row shows the organization's type,
-location and member count, with a **Joined** or **Requested** tag when one applies
-and **Private** on the organizations you belong to that are not listed publicly.
+Discover opens on the **Experiments** tab; select **Organizations** to get this
+list. One search field serves both tabs and keeps what you typed when you switch,
+so a term you tried on one tab is already applied on the other. The search runs on
+the server, so it matches descriptions, locations and types as well as names, and
+it takes a moment to catch up with your typing. The × clears it.
+
+The list shows your own organizations first, then everything else public. Each row
+shows the organization's type, location and member count, with a **Joined** or
+**Requested** tag when one applies and **Private** on the organizations you belong
+to that are not listed publicly.
 
 ### Ask to join
 
@@ -74,9 +81,10 @@ because the request has to reach the server to mean anything.
 ### While your request is pending
 
 The Home card changes to **Request pending** with the organization's name and opens
-that organization when tapped. On the organization itself, **Cancel request** asks
-you to confirm and then withdraws it. You are back to Request to join and can ask
-again later.
+that organization when tapped. It only does that while you are in no experiment;
+once you have joined one, Home stops nudging you and Profile is where you go. On
+the organization itself, **Cancel request** asks you to confirm and then withdraws
+it. You are back to Request to join and can ask again later.
 
 You get an email when the request is decided, approved or rejected. There is no
 in-app notification, so the app catches up the next time you open the

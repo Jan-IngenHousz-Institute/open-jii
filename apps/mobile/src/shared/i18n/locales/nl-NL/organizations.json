@@ -20,11 +20,6 @@
     "government_agency": "Overheidsinstantie",
     "university": "Universiteit"
   },
-  "membership": {
-    "member": "Lid geworden",
-    "requested": "Aangevraagd",
-    "private": "Privé"
-  },
   "role": {
     "owner": "Eigenaar",
     "admin": "Beheerder",

@@ -1,6 +1,7 @@
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
 import { View } from "react-native";
+import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ExperimentSelectionStep } from "./experiment-selection-step";
@@ -8,13 +9,26 @@ import { ExperimentSelectionStep } from "./experiment-selection-step";
 interface PickerState {
   selectedExperimentId: string | undefined;
   flowError: unknown;
+  options: { value: string; label: string }[];
+  rows: { id: string }[] | undefined;
+  isLoading: boolean;
+  isPaused: boolean;
+  error: unknown;
+  push: Mock<(href: unknown) => void>;
 }
 
 const state = vi.hoisted<PickerState>(() => ({
   selectedExperimentId: "exp-1",
   flowError: undefined,
+  options: [{ value: "exp-1", label: "Canopy Phi2 Sweep" }],
+  rows: [{ id: "exp-1" }],
+  isLoading: false,
+  isPaused: false,
+  error: undefined,
+  push: vi.fn<(href: unknown) => void>(),
 }));
 
+vi.mock("expo-router", () => ({ router: { push: (href: unknown) => state.push(href) } }));
 vi.mock("~/features/connection/hooks/use-device-connection", () => ({
   useConnectedDevice: () => ({ data: undefined }),
 }));
@@ -23,9 +37,11 @@ vi.mock("~/features/connection/stores/use-device-sheet-store", () => ({
 }));
 vi.mock("~/features/experiments/hooks/use-experiments", () => ({
   useExperiments: () => ({
-    experiments: [{ value: "exp-1", label: "Canopy Phi2 Sweep" }],
-    isLoading: false,
-    error: undefined,
+    experiments: state.options,
+    rows: state.rows,
+    isLoading: state.isLoading,
+    isPaused: state.isPaused,
+    error: state.error,
     refetch: vi.fn(),
     isRefetching: false,
   }),
@@ -67,6 +83,8 @@ vi.mock("~/shared/i18n", () => ({
         "measurementFlow:flowStates.error": "Failed to load experiment. Please try again.",
         "experiments:detail.workbookNotShared":
           "This experiment's workbook isn't shared with you. Ask the organizer to make it public.",
+        "measurementFlow:picker.emptyTitle": "You're not in any experiment yet",
+        "measurementFlow:picker.emptyAction": "Find experiments",
       })[key] ?? key,
   }),
 }));
@@ -79,9 +97,89 @@ const NOT_SHARED =
   "This experiment's workbook isn't shared with you. Ask the organizer to make it public.";
 const GENERIC = "Failed to load experiment. Please try again.";
 
+const EMPTY_PROMPT = "You're not in any experiment yet";
+
 beforeEach(() => {
   state.selectedExperimentId = "exp-1";
   state.flowError = undefined;
+  state.options = [{ value: "exp-1", label: "Canopy Phi2 Sweep" }];
+  state.rows = [{ id: "exp-1" }];
+  state.isLoading = false;
+  state.isPaused = false;
+  state.error = undefined;
+  state.push.mockClear();
+});
+
+describe("ExperimentSelectionStep empty prompt", () => {
+  function emptyResponse() {
+    state.options = [];
+    state.rows = [];
+    state.selectedExperimentId = undefined;
+  }
+
+  it("prompts only once a response actually came back empty", () => {
+    emptyResponse();
+
+    render(<ExperimentSelectionStep />);
+
+    expect(screen.getByText(EMPTY_PROMPT)).toBeTruthy();
+    expect(screen.getByText("Find experiments")).toBeTruthy();
+  });
+
+  it("sends the student to the hub", () => {
+    emptyResponse();
+
+    render(<ExperimentSelectionStep />);
+    fireEvent.press(screen.getByText("Find experiments"));
+
+    expect(state.push).toHaveBeenCalledWith("/discover");
+  });
+
+  it("says nothing while the first fetch is still running", () => {
+    emptyResponse();
+    state.rows = undefined;
+    state.isLoading = true;
+
+    render(<ExperimentSelectionStep />);
+
+    expect(screen.queryByText(EMPTY_PROMPT)).toBeNull();
+  });
+
+  it("says nothing on a cold offline load, where the list is unknown, not empty", () => {
+    emptyResponse();
+    state.rows = undefined;
+    state.isPaused = true;
+
+    render(<ExperimentSelectionStep />);
+
+    expect(screen.queryByText(EMPTY_PROMPT)).toBeNull();
+  });
+
+  it("says nothing when the read failed", () => {
+    emptyResponse();
+    state.error = new Error("boom");
+
+    render(<ExperimentSelectionStep />);
+
+    expect(screen.queryByText(EMPTY_PROMPT)).toBeNull();
+  });
+
+  it("says nothing when it is the local filter that emptied the list", () => {
+    render(<ExperimentSelectionStep />);
+
+    fireEvent.changeText(
+      screen.getByPlaceholderText("experimentSelection.searchPlaceholder"),
+      "zz",
+    );
+
+    expect(screen.queryByText(EMPTY_PROMPT)).toBeNull();
+  });
+
+  it("says nothing for someone who is in an experiment", () => {
+    render(<ExperimentSelectionStep />);
+
+    expect(screen.queryByText(EMPTY_PROMPT)).toBeNull();
+  });
 });
 
 describe("ExperimentSelectionStep flow-load failures", () => {

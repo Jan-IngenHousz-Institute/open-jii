@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
+import { FlaskConical } from "lucide-react-native";
 import React from "react";
 import { ActivityIndicator, View } from "react-native";
 import type { Mock } from "vitest";
@@ -45,9 +46,12 @@ vi.mock("~/shared/ui/hooks/use-theme-colors", () => ({
 vi.mock("~/shared/i18n", () => ({
   useTranslation: () => ({
     i18n: { language: "en-US" },
-    t: (key: string, values?: { count?: number }) => {
+    t: (key: string, values?: { count?: number; name?: string }) => {
       if (key === "experiments:detail.collaborators")
         return `${String(values?.count)} collaborators`;
+      if (key === "experiments:detail.locations")
+        return `${String(values?.count)} ${values?.count === 1 ? "location" : "locations"}`;
+      if (key === "experiments:detail.by") return `by ${String(values?.name)}`;
       return (
         {
           "common:retry": "Retry",
@@ -61,6 +65,10 @@ vi.mock("~/shared/i18n", () => ({
           "experiments:detail.noDescription": "This experiment has not been described yet.",
           "experiments:detail.showMore": "Show more",
           "experiments:detail.showLess": "Show less",
+          "experiments:detail.since": "On openJII since",
+          "experiments:status.stale": "Stale",
+          "experiments:status.published": "Published",
+          "experiments:status.archived": "Archived",
         }[key] ?? key
       );
     },
@@ -200,5 +208,122 @@ describe("ExperimentDetailScreen", () => {
     fireEvent.press(screen.getByText("Show more"));
     expect(screen.getByText(long)).toBeTruthy();
     expect(screen.getByText("Show less")).toBeTruthy();
+  });
+});
+
+describe("ExperimentDetailScreen density", () => {
+  it("carries the flask tile the organization detail has", () => {
+    render(<ExperimentDetailScreen />);
+
+    expect(screen.UNSAFE_getByType(FlaskConical)).toBeTruthy();
+  });
+
+  it("names the organization and the owner in one subtitle", () => {
+    state.experiment = {
+      ...EXPERIMENT,
+      ownerFirstName: "Sofie",
+      ownerLastName: "de Vries",
+    };
+
+    render(<ExperimentDetailScreen />);
+
+    expect(screen.getByText("Canopy Lab · by Sofie de Vries")).toBeTruthy();
+  });
+
+  it("keeps the half of a name it has when the other is null", () => {
+    state.experiment = {
+      ...EXPERIMENT,
+      ownerFirstName: "Sofie",
+      ownerLastName: null,
+    };
+
+    render(<ExperimentDetailScreen />);
+
+    expect(screen.getByText("Canopy Lab · by Sofie")).toBeTruthy();
+  });
+
+  it("drops the owner clause entirely when both names are null", () => {
+    state.experiment = {
+      ...EXPERIMENT,
+      ownerFirstName: null,
+      ownerLastName: null,
+    };
+
+    render(<ExperimentDetailScreen />);
+
+    expect(screen.getByText("Canopy Lab")).toBeTruthy();
+    expect(screen.queryByText(/ by /u)).toBeNull();
+  });
+
+  it("renders the since row from createdAt", () => {
+    render(<ExperimentDetailScreen />);
+
+    expect(screen.getByText("On openJII since")).toBeTruthy();
+    expect(screen.getByText("January 2026")).toBeTruthy();
+  });
+
+  it("says nothing about since when createdAt is unparseable", () => {
+    state.experiment = { ...EXPERIMENT, createdAt: "not-a-date" };
+
+    render(<ExperimentDetailScreen />);
+
+    expect(screen.queryByText("On openJII since")).toBeNull();
+  });
+
+  describe("the status tag", () => {
+    it("says nothing for an active experiment", () => {
+      render(<ExperimentDetailScreen />);
+
+      expect(screen.queryByText("Stale")).toBeNull();
+      expect(screen.queryByText("Published")).toBeNull();
+    });
+
+    it("tags a stale experiment beside the membership tag", () => {
+      state.experiment = { ...EXPERIMENT, status: "stale" } as unknown as Experiment;
+
+      render(<ExperimentDetailScreen />);
+
+      expect(screen.getByText("Stale")).toBeTruthy();
+    });
+  });
+
+  describe("the stat row is gated on what the access read actually carries", () => {
+    it("shows the collaborators tile when membersCount is present", () => {
+      render(<ExperimentDetailScreen />);
+
+      expect(screen.getByText("6 collaborators")).toBeTruthy();
+    });
+
+    it("renders no stat row at all when neither stat came back", () => {
+      state.experiment = {
+        ...EXPERIMENT,
+        membersCount: undefined,
+        locations: undefined,
+      };
+
+      render(<ExperimentDetailScreen />);
+
+      expect(screen.queryByText(/collaborators/u)).toBeNull();
+      expect(screen.queryByText(/locations?/u)).toBeNull();
+    });
+
+    it("shows the locations tile only when locations came back populated", () => {
+      state.experiment = {
+        ...EXPERIMENT,
+        locations: [{ id: "l1" }, { id: "l2" }],
+      } as unknown as Experiment;
+
+      render(<ExperimentDetailScreen />);
+
+      expect(screen.getByText("2 locations")).toBeTruthy();
+    });
+
+    it("treats an empty locations array as no locations, not as zero", () => {
+      state.experiment = { ...EXPERIMENT, locations: [] };
+
+      render(<ExperimentDetailScreen />);
+
+      expect(screen.queryByText(/locations?/u)).toBeNull();
+    });
   });
 });

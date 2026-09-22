@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { Search, X } from "lucide-react-native";
 import React, { useMemo } from "react";
 import {
@@ -35,7 +36,7 @@ export function ExperimentSelectionStep() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation(["measurementFlow", "experiments"]);
-  const { experiments, isLoading, error, refetch, isRefetching } = useExperiments();
+  const { experiments, rows, isLoading, isPaused, error, refetch, isRefetching } = useExperiments();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
   const setExperimentId = useMeasurementFlowStore((s) => s.setExperimentId);
   const { isReady: experimentFlowReady, error: flowError } =
@@ -67,6 +68,10 @@ export function ExperimentSelectionStep() {
       (e) => e.label.toLowerCase().includes(q) || (e.description ?? "").toLowerCase().includes(q),
     );
   }, [sorted, search]);
+
+  // `experiments.length === 0` is also true while the first fetch is paused
+  // offline, so the prompt gates on an actual loaded-empty response instead.
+  const hasNoExperiments = rows?.length === 0 && !isPaused && !error;
 
   const selectedExperiment = experiments.find((e) => e.value === selectedExperimentId);
   const selectedMeta = selectedExperimentId ? flowMeta[selectedExperimentId] : undefined;
@@ -140,6 +145,20 @@ export function ExperimentSelectionStep() {
             data={filtered}
             keyExtractor={(item) => item.value}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 0 }}
+            ListEmptyComponent={
+              hasNoExperiments ? (
+                <View className="items-center gap-3 py-10">
+                  <Text className="text-muted-body text-center">
+                    {t("measurementFlow:picker.emptyTitle")}
+                  </Text>
+                  <Button
+                    title={t("measurementFlow:picker.emptyAction")}
+                    onPress={() => router.push("/discover")}
+                    variant="light"
+                  />
+                </View>
+              ) : null
+            }
             refreshControl={
               <RefreshControl
                 refreshing={isRefetching}

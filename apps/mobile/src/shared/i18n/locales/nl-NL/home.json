@@ -31,9 +31,11 @@
     "reconnectSub": "Tik om je laatste apparaat opnieuw te verbinden"
   },
   "organizations": {
-    "joinTitle": "Word lid van je organisatie",
-    "joinSubtitle": "Zoek je school of lab en vraag toegang aan",
     "pendingTitle": "Aanvraag in behandeling"
+  },
+  "discover": {
+    "joinTitle": "Vind iets om aan deel te nemen",
+    "joinSubtitle": "Openbare experimenten en organisaties, of voer een deelnamecode in"
   },
   "recent": {
     "sectionTitle": "Recente metingen",

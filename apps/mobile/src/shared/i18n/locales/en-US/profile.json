@@ -20,8 +20,8 @@
   },
   "account": {
     "section": "Account",
-    "organizations": "Organizations",
-    "organizationsSub": "Find and join organizations",
+    "discover": "Find experiments and organizations",
+    "discoverSub": "Public experiments, organizations, or a join code",
     "appSettings": "App settings",
     "appSettingsSub": "Theme, units, offline mode",
     "helpFeedback": "Help & feedback",
