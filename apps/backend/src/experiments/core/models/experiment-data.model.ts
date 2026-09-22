@@ -23,6 +23,21 @@ export interface EnrichmentSql {
   struct(fields: [string, string][]): string;
   sortedCollect(inner: string): string;
   castToString(expression: string): string;
+
+  /**
+   * Custom metadata is the one enrichment with no portable shape: a blob holds
+   * rows keyed by an identifier the measurement supplies, and blobs merge
+   * oldest-first so later ones win. Each engine spells the whole thing, since
+   * decomposing it into primitives would produce a template nobody can read.
+   *
+   * `matchableColumns` are the measurement columns a blob may select with a
+   * `column:` prefix; `hasQuestionsData` says whether question answers are
+   * available to match on instead.
+   */
+  customMetadata(options: { matchableColumns: string[]; hasQuestionsData: boolean }): {
+    derive: string;
+    expression: string;
+  };
 }
 
 export interface EnrichmentJoin {
@@ -44,6 +59,12 @@ export interface EnrichmentJoin {
 }
 
 export interface TableConfig {
+  /**
+   * Variant columns the served relation does not carry, supplied by an
+   * enrichment join instead. Excluding one of these would fail, because there
+   * is nothing on the base relation to exclude.
+   */
+  enrichedVariantColumns: VariantColumn[];
   displayName: string;
   defaultSortColumn?: string;
   errorColumn?: string;
@@ -83,6 +104,25 @@ const DEVICE_JOIN: EnrichmentJoin = {
  * `hasUpstreamAnnotations` covers the tables whose payload already carries
  * annotations of its own, which are concatenated ahead of the stored ones.
  */
+/**
+ * Metadata blobs hold rows keyed by an identifier each measurement supplies,
+ * so the match runs per row and cannot be folded in upstream. The engine
+ * spells the merge; only which columns are matchable is decided here.
+ */
+const metadataJoin =
+  (matchableColumns: string[], hasQuestionsData: boolean) =>
+  (sql: EnrichmentSql): EnrichmentJoin => {
+    const { derive, expression } = sql.customMetadata({ matchableColumns, hasQuestionsData });
+
+    return {
+      relation: "experiment_metadata_source",
+      alias: "enr_metadata",
+      derive,
+      on: [{ served: "experiment_id", joined: "experiment_id" }],
+      select: [{ expression, alias: "custom_metadata" }],
+    };
+  };
+
 const annotationJoin =
   (hasUpstreamAnnotations: boolean) =>
   (sql: EnrichmentSql): EnrichmentJoin => {
@@ -152,13 +192,20 @@ export const STATIC_TABLE_CONFIG: Partial<Record<string, TableConfig>> = {
       "annotations",
     ],
     variantColumns: ["questions_data", "custom_metadata"],
-    enrichmentJoins: (sql) => [contributorJoin("user_id"), DEVICE_JOIN, annotationJoin(true)(sql)],
+    enrichedVariantColumns: ["custom_metadata"],
+    enrichmentJoins: (sql) => [
+      contributorJoin("user_id"),
+      DEVICE_JOIN,
+      annotationJoin(true)(sql),
+      metadataJoin(["device_id"], true)(sql),
+    ],
   },
   [ExperimentTableName.DEVICE]: {
     displayName: "Device Metadata",
     defaultSortColumn: "processed_timestamp",
     exceptColumns: ["experiment_id"],
     variantColumns: [],
+    enrichedVariantColumns: [],
     enrichmentJoins: () => [],
   },
 };
@@ -181,7 +228,13 @@ export const MACRO_TABLE_CONFIG: TableConfig = {
     "annotations",
   ],
   variantColumns: ["macro_output", "questions_data", "custom_metadata"],
-  enrichmentJoins: (sql) => [contributorJoin("user_id"), DEVICE_JOIN, annotationJoin(true)(sql)],
+  enrichedVariantColumns: ["custom_metadata"],
+  enrichmentJoins: (sql) => [
+    contributorJoin("user_id"),
+    DEVICE_JOIN,
+    annotationJoin(true)(sql),
+    metadataJoin(["device_id"], true)(sql),
+  ],
 };
 
 /** Full configuration for user-uploaded tables (display + query). */
@@ -197,7 +250,14 @@ export const UPLOAD_TABLE_CONFIG: TableConfig = {
     "created_by",
   ],
   variantColumns: ["uploaded_data", "custom_metadata"],
-  enrichmentJoins: (sql) => [contributorJoin("created_by"), annotationJoin(false)(sql)],
+  enrichedVariantColumns: ["custom_metadata"],
+  // Uploads carry neither a device id nor question answers, so nothing can
+  // match; the join exists to supply the column the base relation lacks.
+  enrichmentJoins: (sql) => [
+    contributorJoin("created_by"),
+    annotationJoin(false)(sql),
+    metadataJoin([], false)(sql),
+  ],
 };
 
 /**

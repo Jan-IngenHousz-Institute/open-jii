@@ -26,6 +26,10 @@ const STUB_SQL: EnrichmentSql = {
   struct: (fields) => fields.map(([name]) => name).join(","),
   sortedCollect: (inner) => inner,
   castToString: (expression) => expression,
+  customMetadata: ({ matchableColumns, hasQuestionsData }) => ({
+    derive: `(SELECT experiment_id FROM {relation} GROUP BY experiment_id)`,
+    expression: `metadata(${matchableColumns.join(",")},${String(hasQuestionsData)})`,
+  }),
 };
 
 const rawDataConfig = STATIC_TABLE_CONFIG[ExperimentTableName.RAW_DATA];
@@ -60,12 +64,22 @@ describe("served table configuration", () => {
         expect(RAW_IDENTIFIERS[name].length).toBeGreaterThan(0);
       });
 
-      it("joins each dimension on the experiment as well as the identifier", () => {
+      it("scopes every dimension to the experiment", () => {
         for (const join of joins) {
-          // A pseudonym is salted per experiment, so joining on the user alone
-          // would resolve one contributor across every experiment they touch.
+          // Without this a contributor pseudonym, which is salted per
+          // experiment, would resolve across every experiment they touch, and
+          // a metadata blob would match measurements from another study.
           expect(join.on.map((pair) => pair.served)).toContain("experiment_id");
-          expect(join.on.length).toBeGreaterThan(1);
+        }
+      });
+
+      it("supplies every variant column the served relation does not carry", () => {
+        // These exist only in the enriched layer. Excluding one would fail,
+        // because there is nothing on the base relation to exclude.
+        const produced = joins.flatMap((join) => join.select.map((column) => column.alias));
+
+        for (const column of config.enrichedVariantColumns) {
+          expect(produced).toContain(column);
         }
       });
 
