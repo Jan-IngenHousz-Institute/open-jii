@@ -125,8 +125,3 @@ variable "metrics_forwarder_function_name" {
   default     = ""
 }
 
-variable "enable_liveness_alerts" {
-  description = "Absence-based rules fire from the moment they are applied until their producer has run once, so they stay off until the first run is confirmed."
-  type        = bool
-  default     = false
-}

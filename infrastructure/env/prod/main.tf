@@ -2914,7 +2914,6 @@ module "grafana_dashboard" {
   # forever, which is either permanently firing or permanently silent.
   digest_composer_function_name   = module.digest_composer.function_name
   metrics_forwarder_function_name = module.metrics_forwarder.function_name
-  enable_liveness_alerts          = var.enable_liveness_alerts
   db_cluster_identifier           = "open-jii-${var.environment}-db-cluster"
 
   # IoT and Kinesis monitoring

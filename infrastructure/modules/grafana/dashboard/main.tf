@@ -1825,15 +1825,15 @@ resource "grafana_rule_group" "monitoring_self_health" {
   }
 }
 
-# Absence-based rules, held behind a switch.
+# Absence-based rules.
 #
-# A Lambda that has never run publishes no Invocations at all, so this group fires from
-# the moment it is applied until its producer's first run. That is the failure the
-# catalog already gates eight entries for, and it is not one to repeat in Grafana. The
-# switch is flipped in the same checkpoint that flips those entries, once a first run
-# has been seen.
+# A Lambda that has never run publishes no Invocations at all, so on a fresh environment
+# this fires until the first scheduled digest. That reading is correct rather than false:
+# the composer genuinely is not running yet, and it clears itself at 06:30. Holding it
+# behind a flag instead would mean the dead-man is off by default, which is the one
+# outcome this rule exists to prevent.
 resource "grafana_rule_group" "monitoring_liveness" {
-  count = var.enable_liveness_alerts && var.digest_composer_function_name != "" ? 1 : 0
+  count = var.digest_composer_function_name != "" ? 1 : 0
 
   provider         = grafana.amg
   name             = "Monitoring Liveness"
@@ -1933,8 +1933,6 @@ resource "grafana_rule_group" "monitoring_liveness" {
 # Databricks job rather than a Lambda, so tying it to a function name would drop it
 # silently the moment that name were empty.
 resource "grafana_rule_group" "collector_liveness" {
-  count = var.enable_liveness_alerts ? 1 : 0
-
   provider         = grafana.amg
   name             = "Collector Liveness"
   folder_uid       = grafana_folder.folder.uid
