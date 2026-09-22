@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pyspark.sql import SparkSession
 
-from openjii.centrum import SILVER_TABLE_DEFAULT
+from openjii.centrum import BRONZE_TABLE_DEFAULT, SILVER_TABLE_DEFAULT
 
 _spark = SparkSession.getActiveSession() or SparkSession.builder.getOrCreate()
 
@@ -35,6 +35,7 @@ def _with_default(key: str, default: str) -> str:
 CATALOG_NAME: str = _required("CATALOG_NAME")
 CENTRUM_SCHEMA_NAME: str = _with_default("CENTRUM_SCHEMA_NAME", "centrum")
 SILVER_TABLE: str = _with_default("SILVER_TABLE", SILVER_TABLE_DEFAULT)
+BRONZE_TABLE: str = _with_default("BRONZE_TABLE", BRONZE_TABLE_DEFAULT)
 
 
 def centrum_table(name: str) -> str:

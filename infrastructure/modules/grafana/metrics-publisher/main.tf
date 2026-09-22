@@ -97,6 +97,7 @@ resource "aws_lambda_function" "metrics_publisher" {
       AURORA_RESOURCE_ID   = var.aurora_cluster_resource_id
       AWS_RDS_REGION       = var.aws_region
       CLOUDWATCH_NAMESPACE = "OpenJII/UserRegistrations"
+      ENVIRONMENT          = var.environment
     }
   }
 

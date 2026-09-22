@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "npm ci --omit=dev && zip -Xr function.zip index.js node_modules"
+    "build": "npm ci --omit=dev && rm -f function.zip && zip -Xr function.zip index.js node_modules"
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch": "^3.0.0",

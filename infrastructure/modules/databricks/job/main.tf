@@ -72,8 +72,11 @@ resource "databricks_job" "this" {
     content {
       task_key = task.value.key
 
-      # Reference environment for serverless tasks if specified
-      environment_key = var.use_serverless && length(var.environments) > 0 ? var.environments[0].environment_key : null
+      # A serverless environment applies to notebook tasks only; the Jobs API rejects
+      # environment_key on a pipeline task, so a mixed job must not set it there.
+      environment_key = var.use_serverless && length(var.environments) > 0 && task.value.task_type == "notebook" ? var.environments[0].environment_key : null
+
+      run_if = task.value.run_if
 
       dynamic "new_cluster" {
         for_each = (!var.use_serverless && task.value.task_type == "notebook" && task.value.compute_type == "new_cluster") ? [1] : []

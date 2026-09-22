@@ -20,6 +20,23 @@ EXPERIMENT_CONTRIBUTORS_WINDOW_TABLE = "experiment_contributors_window"
 EXPERIMENT_DEVICES_WINDOW_TABLE = "experiment_devices_window"
 DAILY_ACTIVITY_BY_RESOURCE_TABLE = "daily_activity_by_resource"
 
+# Ops tables: internal health signals read by the heartbeat export. Every row
+# in the silence table is a device id, so neither table may reach the public
+# endpoint; the prefix is what an allowlist keys on.
+OPS_DEVICE_SILENCE_TABLE = "ops_device_silence"
+OPS_INGEST_QUALITY_TABLE = "ops_ingest_quality"
+
+# A device is silent once quiet for this many multiples of its own median
+# publish interval. A flat hour count would flag a daily logger every
+# afternoon and miss a ten-second logger for most of a day.
+DEVICE_SILENCE_CADENCE_MULTIPLIER = 3
+
+# Floor under the cadence rule, so one dropped packet from a device that
+# publishes every few seconds does not read as silence.
+DEVICE_SILENCE_FLOOR_MINUTES = 60
+
+INGEST_QUALITY_WINDOW_HOURS = 24
+
 # Resource kinds the list-page activity strips cover. Workbooks are keyed by
 # version because that is what a measurement records.
 RESOURCE_TYPE_PROTOCOL = "protocol"

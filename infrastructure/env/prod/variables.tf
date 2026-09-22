@@ -46,6 +46,20 @@ variable "slack_webhook_url" {
   sensitive   = true
 }
 
+variable "slack_heartbeat_webhook_url" {
+  description = "Slack incoming webhook for the daily observability digest; empty logs instead of posting"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "slack_usage_webhook_url" {
+  description = "Slack incoming webhook for the usage pulse and weekly note; empty logs instead of posting"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "slack_channel" {
   description = "Slack channel for monitoring notifications"
   type        = string
