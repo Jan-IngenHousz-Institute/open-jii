@@ -37,7 +37,8 @@ const CLOUDWATCH_UNITS = new Set([
   "None",
 ]);
 
-function isDimensionMap(value: unknown): value is Record<string, string | number> {
+/** JSON.parse happily returns null, a number or an array; none of them has fields. */
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -63,12 +64,19 @@ export function parseObservations(body: string): ParseResult {
     }
 
     const lineNumber = index + 1;
-    let parsed: Record<string, unknown>;
+    let parsed: unknown;
 
     try {
-      parsed = JSON.parse(line) as Record<string, unknown>;
+      parsed = JSON.parse(line);
     } catch {
       skipped.push({ line: lineNumber, reason: "invalid json" });
+      return;
+    }
+
+    // A bare `null` parses fine and then throws on the first field read, which would
+    // abandon the rest of the file rather than costing this line.
+    if (!isRecord(parsed)) {
+      skipped.push({ line: lineNumber, reason: "not a json object" });
       return;
     }
 
@@ -107,7 +115,7 @@ export function parseObservations(body: string): ParseResult {
     }
 
     const dimensions = parsed.dimensions ?? {};
-    if (!isDimensionMap(dimensions)) {
+    if (!isRecord(dimensions)) {
       skipped.push({ line: lineNumber, reason: "invalid dimensions" });
       return;
     }

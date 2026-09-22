@@ -21,6 +21,8 @@ export interface RegionEntry {
 export interface SeriesResult {
   Id?: string;
   Values?: number[];
+  /** Complete | PartialData | InternalError | Forbidden. Only the first is a reading. */
+  StatusCode?: string;
 }
 
 function window(from: number, to: number): TimeWindow {
@@ -69,6 +71,41 @@ export function readSeries(
     }
     const index = Number(series.Id.slice(1));
     into.set(index, [...(into.get(index) ?? []), ...(series.Values ?? [])]);
+  }
+
+  return into;
+}
+
+/**
+ * Metric indices whose series did not come back whole.
+ *
+ * A Forbidden or InternalError result carries no values, and PartialData carries too few.
+ * Left alone, each would aggregate to an absent Sum, which normalizes to zero and reports
+ * an error counter we were not allowed to read as healthy.
+ */
+export function incompleteSeries(results: SeriesResult[] | undefined): number[] {
+  const indices = new Set<number>();
+
+  for (const series of results ?? []) {
+    if (
+      series.Id !== undefined &&
+      series.StatusCode !== undefined &&
+      series.StatusCode !== "Complete"
+    ) {
+      indices.add(Number(series.Id.slice(1)));
+    }
+  }
+
+  return [...indices];
+}
+
+/** Folds one attempt's series into the window's, so a retry never re-adds its own page. */
+export function mergeSeries(
+  into: Map<number, number[]>,
+  from: ReadonlyMap<number, number[]>,
+): Map<number, number[]> {
+  for (const [index, values] of from) {
+    into.set(index, [...(into.get(index) ?? []), ...values]);
   }
 
   return into;

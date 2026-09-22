@@ -5,6 +5,8 @@ import {
   assembleWindow,
   dailyWindows,
   groupByRegion,
+  incompleteSeries,
+  mergeSeries,
   readSeries,
   weeklyWindows,
 } from "./window.js";
@@ -98,6 +100,51 @@ describe("readSeries", () => {
     const values = readSeries([{ Values: [1] }, { Id: "m0", Values: [2] }]);
 
     expect([...values.keys()]).toEqual([0]);
+  });
+});
+
+describe("incompleteSeries", () => {
+  it("names the metric behind any status other than Complete", () => {
+    expect(
+      incompleteSeries([
+        { Id: "m0", Values: [1], StatusCode: "Complete" },
+        { Id: "m1", Values: [], StatusCode: "Forbidden" },
+        { Id: "m2", Values: [], StatusCode: "InternalError" },
+        { Id: "m3", Values: [1], StatusCode: "PartialData" },
+      ]),
+    ).toEqual([1, 2, 3]);
+  });
+
+  it("treats one bad series of a SEARCH as spoiling that metric's total", () => {
+    // A SEARCH returns one series per match under a single Id. A Sum missing one of them
+    // is not a smaller number, it is the wrong number.
+    expect(
+      incompleteSeries([
+        { Id: "m0", Values: [1], StatusCode: "Complete" },
+        { Id: "m0", Values: [], StatusCode: "InternalError" },
+      ]),
+    ).toEqual([0]);
+  });
+
+  it("accepts a response that reports no status at all", () => {
+    expect(incompleteSeries([{ Id: "m0", Values: [1] }])).toEqual([]);
+    expect(incompleteSeries(undefined)).toEqual([]);
+  });
+});
+
+describe("mergeSeries", () => {
+  it("appends rather than replaces, so a paged read keeps both pages", () => {
+    const window = new Map([[0, [1, 2]]]);
+    mergeSeries(window, new Map([[0, [3]]]));
+
+    expect(window.get(0)).toEqual([1, 2, 3]);
+  });
+
+  it("does not touch the window when the attempt collected nothing", () => {
+    const window = new Map([[0, [1]]]);
+    mergeSeries(window, new Map());
+
+    expect([...window]).toEqual([[0, [1]]]);
   });
 });
 

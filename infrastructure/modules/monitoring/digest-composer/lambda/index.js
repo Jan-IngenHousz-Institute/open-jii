@@ -14,9 +14,15 @@ const {
   assembleWindow,
   dailyWindows,
   groupByRegion,
+  incompleteSeries,
+  mergeSeries,
   readSeries,
   weeklyWindows,
 } = require("./lib/window.js");
+
+// GetMetricData paginates. The digest asks for hourly points over at most a week, so one
+// page is the norm; the cap only stops a malformed NextToken from looping forever.
+const MAX_PAGES = 10;
 
 const clients = new Map();
 
@@ -32,14 +38,39 @@ function loadCatalog() {
   return parseCatalog(fs.readFileSync(path.join(__dirname, "catalog.yaml"), "utf8"));
 }
 
-function queryWindow(client, entries, { start, end }) {
-  return client.send(
-    new GetMetricDataCommand({
-      StartTime: start,
-      EndTime: end,
-      MetricDataQueries: entries.map(({ metric, index }) => buildQuery(metric, index, process.env)),
-    }),
-  );
+/**
+ * Every page of one attempt, collected apart from the window so a throw part way through
+ * discards what it read. Merging as it went would let the per-metric retry add a page the
+ * failed batch had already counted, which for a Sum is a silently doubled total.
+ */
+async function readWindow(client, entries, { start, end }) {
+  const values = new Map();
+  const incomplete = new Set();
+  let token;
+  let pages = 0;
+
+  do {
+    const response = await client.send(
+      new GetMetricDataCommand({
+        StartTime: start,
+        EndTime: end,
+        MetricDataQueries: entries.map(({ metric, index }) =>
+          buildQuery(metric, index, process.env),
+        ),
+        ...(token === undefined ? {} : { NextToken: token }),
+      }),
+    );
+
+    readSeries(response.MetricDataResults, values);
+    for (const index of incompleteSeries(response.MetricDataResults)) {
+      incomplete.add(index);
+    }
+
+    token = response.NextToken;
+    pages += 1;
+  } while (token !== undefined && pages < MAX_PAGES);
+
+  return { values, incomplete };
 }
 
 async function fetchWindow(metrics, timeWindow, failedRegions) {
@@ -52,11 +83,22 @@ async function fetchWindow(metrics, timeWindow, failedRegions) {
     // One region failing must not cost the whole digest. A rejected SEARCH
     // expression or a throttle would otherwise throw out of the handler and
     // deliver nothing, and nothing watches for the digest's own silence.
+    let batch;
     try {
-      readSeries((await queryWindow(client, entries, timeWindow)).MetricDataResults, values);
-      continue;
+      batch = await readWindow(client, entries, timeWindow);
     } catch (error) {
       console.error(JSON.stringify({ region, message: error.message }));
+    }
+
+    if (batch !== undefined) {
+      mergeSeries(values, batch.values);
+      for (const index of batch.incomplete) {
+        unqueried.add(index);
+      }
+      if (batch.incomplete.size > 0) {
+        failedRegions.add(region === "default" ? (process.env.AWS_REGION ?? "default") : region);
+      }
+      continue;
     }
 
     // GetMetricData rejects the whole request over one bad expression, so without
@@ -64,7 +106,13 @@ async function fetchWindow(metrics, timeWindow, failedRegions) {
     let lost = 0;
     for (const entry of entries) {
       try {
-        readSeries((await queryWindow(client, [entry], timeWindow)).MetricDataResults, values);
+        const single = await readWindow(client, [entry], timeWindow);
+        if (single.incomplete.size > 0) {
+          unqueried.add(entry.index);
+          lost += 1;
+          continue;
+        }
+        mergeSeries(values, single.values);
       } catch (error) {
         console.error(JSON.stringify({ region, metric: entry.metric.id, message: error.message }));
         unqueried.add(entry.index);

@@ -52,6 +52,26 @@ describe("parseObservations", () => {
     expect(skipped).toEqual([{ line: 1, reason: "namespace Custom/Other" }]);
   });
 
+  it("skips a bare null without abandoning the rest of the file", () => {
+    // JSON.parse("null") succeeds, so the guard is the only thing between it and a
+    // TypeError that would discard every later observation in the object.
+    const { observations, skipped } = parseObservations(`null\n${observationLine}`);
+
+    expect(observations).toHaveLength(1);
+    expect(skipped).toEqual([{ line: 1, reason: "not a json object" }]);
+  });
+
+  it("skips json that parses to a scalar or an array", () => {
+    const { observations, skipped } = parseObservations(`12\n"text"\n[1,2]\n${observationLine}`);
+
+    expect(observations).toHaveLength(1);
+    expect(skipped).toEqual([
+      { line: 1, reason: "not a json object" },
+      { line: 2, reason: "not a json object" },
+      { line: 3, reason: "not a json object" },
+    ]);
+  });
+
   it("reports the line number of malformed json without dropping the rest of the file", () => {
     const { observations, skipped } = parseObservations(`not json\n${observationLine}`);
 

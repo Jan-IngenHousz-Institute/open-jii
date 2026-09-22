@@ -58,6 +58,7 @@ metrics:
     severity: critical
     signal:
       namespace: AWS/IoT
+      # Keyed on RuleName and ActionType; a schema naming only RuleName matches nothing.
       search: SEARCH('{AWS/IoT,ActionType,RuleName} MetricName="Failure"', 'Sum')
       stat: Sum
     baseline: { method: same-weekday-4w, anomaly: any-nonzero }
@@ -74,8 +75,7 @@ metrics:
     slots: [exception, dashboard]
     signal:
       namespace: AWS/IoT
-      # Every Connect.* metric carries Protocol (MQTT), so a dimensionless {AWS/IoT}
-      # schema matches nothing. Verified against Connect.Success, which has data.
+      # Every Connect.* metric is keyed on Protocol (MQTT), never dimensionless.
       search: SEARCH('{AWS/IoT,Protocol} MetricName="Connect.AuthError" OR MetricName="Connect.ClientError" OR MetricName="Connect.ServerError"', 'Sum')
       stat: Sum
     baseline: { method: same-weekday-4w, anomaly_pct: 200 }
