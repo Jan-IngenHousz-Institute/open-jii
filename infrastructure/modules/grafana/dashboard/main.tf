@@ -1637,6 +1637,292 @@ resource "grafana_rule_group" "ingest_path" {
   }
 }
 
+# Monitoring Self Health
+#
+# Nothing watched the watchers: a composer that throws every morning produces no digest
+# and no complaint, because the digest is the only thing that would have complained.
+#
+# Split into two groups on purpose. These rules watch for a signal that is present and
+# wrong, so they are safe from the moment they apply. The liveness group below watches
+# for a signal that is absent, which fires until its producer has run once.
+resource "grafana_rule_group" "monitoring_self_health" {
+  count = var.digest_composer_function_name != "" && var.metrics_forwarder_function_name != "" ? 1 : 0
+
+  provider         = grafana.amg
+  name             = "Monitoring Self Health"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  # Catalog entry 65, the "ran and threw" half. Liveness below is the "never ran" half,
+  # and the same runbook opens by telling them apart.
+  rule {
+    name      = "Digest Composer Errors"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/Lambda"
+        metricName = "Errors"
+        statistic  = "Sum"
+        dimensions = {
+          FunctionName = var.digest_composer_function_name
+        }
+      })
+
+      relative_time_range {
+        from = 3600
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    # The composer runs three times a day, so no Errors datapoint is the normal state
+    # for most of the hour rather than a fault.
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "0s"
+
+    annotations = {
+      description = "The digest composer threw. No digest was delivered for that run. Runbook: docs/runbooks/digest-composer-liveness.md"
+      summary     = "Digest composer is failing"
+    }
+    labels = {
+      severity  = "critical"
+      service   = "monitoring"
+      metric_id = "digest-composer-liveness"
+    }
+  }
+
+  # Catalog entry 66. Errors only, never liveness: the forwarder is S3 event driven, so
+  # a quiet day has no invocations at all and a liveness rule would fire through it.
+  rule {
+    name      = "Metrics Forwarder Errors"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/Lambda"
+        metricName = "Errors"
+        statistic  = "Sum"
+        dimensions = {
+          FunctionName = var.metrics_forwarder_function_name
+        }
+      })
+
+      relative_time_range {
+        from = 3600
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+
+    annotations = {
+      description = "The metrics forwarder threw. Heartbeat files are still in S3, but every lakehouse signal in the digest goes quiet until this clears. Runbook: docs/runbooks/metrics-forwarder-errors.md"
+      summary     = "Metrics forwarder is failing to publish"
+    }
+    labels = {
+      severity  = "warning"
+      service   = "monitoring"
+      metric_id = "metrics-forwarder-errors"
+    }
+  }
+}
+
+# Absence-based rules, held behind a switch.
+#
+# A Lambda that has never run publishes no Invocations at all, so this group fires from
+# the moment it is applied until its producer's first run. That is the failure the
+# catalog already gates eight entries for, and it is not one to repeat in Grafana. The
+# switch is flipped in the same checkpoint that flips those entries, once a first run
+# has been seen.
+resource "grafana_rule_group" "monitoring_liveness" {
+  count = var.enable_liveness_alerts && var.digest_composer_function_name != "" ? 1 : 0
+
+  provider         = grafana.amg
+  name             = "Monitoring Liveness"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
+
+  # Catalog entry 65, the "never ran" half.
+  rule {
+    name      = "Digest Composer Stopped Running"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "AWS/Lambda"
+        metricName = "Invocations"
+        statistic  = "Sum"
+        dimensions = {
+          FunctionName = var.digest_composer_function_name
+        }
+      })
+
+      # 26 hours: the daily digests are the shortest cadence, so a window just over a
+      # day always spans at least two expected runs and a single missed one is not
+      # enough to fire.
+      relative_time_range {
+        from = 93600
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B < 1"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    # Absence is the entire signal here, so NoData has to mean firing. exec_err is
+    # evaluated per evaluation rather than over the window, which is why `for` is long
+    # enough that a single CloudWatch blip cannot page.
+    no_data_state  = "Alerting"
+    exec_err_state = "Alerting"
+    for            = "30m"
+
+    annotations = {
+      description = "The digest composer has not run for over a day. While this is true, nothing is watching the platform on a schedule. Runbook: docs/runbooks/digest-composer-liveness.md"
+      summary     = "Digest composer stopped running"
+    }
+    labels = {
+      severity  = "critical"
+      service   = "monitoring"
+      metric_id = "digest-composer-liveness"
+    }
+  }
+}
+
 resource "grafana_notification_policy" "policy" {
   provider = grafana.amg
 

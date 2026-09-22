@@ -2854,7 +2854,12 @@ module "grafana_dashboard" {
   slack_webhook_url          = var.slack_webhook_url
   slack_critical_webhook_url = var.slack_critical_webhook_url
   slack_warning_webhook_url  = var.slack_warning_webhook_url
-  db_cluster_identifier      = "open-jii-${var.environment}-db-cluster"
+
+  # Passed in rather than interpolated: a rule watching a misspelled function is NoData
+  # forever, which is either permanently firing or permanently silent.
+  digest_composer_function_name   = module.digest_composer.function_name
+  metrics_forwarder_function_name = module.metrics_forwarder.function_name
+  db_cluster_identifier           = "open-jii-${var.environment}-db-cluster"
 
   # IoT and Kinesis monitoring
   kinesis_stream_name = module.kinesis.kinesis_stream_name

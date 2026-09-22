@@ -112,3 +112,21 @@ variable "ingest_lag_threshold_ms" {
   type        = number
   default     = 600000
 }
+
+variable "digest_composer_function_name" {
+  description = "Composer Lambda to watch. Empty leaves the self-health rules out entirely."
+  type        = string
+  default     = ""
+}
+
+variable "metrics_forwarder_function_name" {
+  description = "Forwarder Lambda to watch. Empty leaves the self-health rules out entirely."
+  type        = string
+  default     = ""
+}
+
+variable "enable_liveness_alerts" {
+  description = "Absence-based rules fire from the moment they are applied until their producer has run once, so they stay off until the first run is confirmed."
+  type        = bool
+  default     = false
+}

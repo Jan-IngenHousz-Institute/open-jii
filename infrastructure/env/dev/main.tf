@@ -2823,7 +2823,12 @@ module "grafana_dashboard" {
   slack_webhook_url          = var.slack_webhook_url
   slack_critical_webhook_url = var.slack_critical_webhook_url
   slack_warning_webhook_url  = var.slack_warning_webhook_url
-  db_cluster_identifier      = "open-jii-${var.environment}-db-cluster"
+
+  # Passed in rather than interpolated: a rule watching a misspelled function is NoData
+  # forever, which is either permanently firing or permanently silent.
+  digest_composer_function_name   = module.digest_composer.function_name
+  metrics_forwarder_function_name = module.metrics_forwarder.function_name
+  db_cluster_identifier           = "open-jii-${var.environment}-db-cluster"
 
   # Measured over 14 days on this stream: the median iterator age is 2.8M ms and the
   # catalog's 600000 would have fired in 315 of 316 hours, because dev's consumer runs
