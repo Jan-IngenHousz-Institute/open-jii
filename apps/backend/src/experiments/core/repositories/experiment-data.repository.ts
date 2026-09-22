@@ -438,6 +438,7 @@ export class ExperimentDataRepository {
       tableType,
       experimentId,
       columns,
+      enrichmentJoins: config.enrichmentJoins,
       variants: variants.length > 0 ? variants : undefined,
       exceptColumns: exceptColumns.length > 0 ? exceptColumns : undefined,
       filters,

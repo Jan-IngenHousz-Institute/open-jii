@@ -88,6 +88,7 @@ export class QueryBuilderService {
     const {
       table,
       columns,
+      joins,
       exceptColumns,
       whereClause,
       whereConditions,
@@ -100,6 +101,10 @@ export class QueryBuilderService {
     } = params;
 
     const builder = this.query().from(table).select(columns);
+
+    for (const join of joins ?? []) {
+      builder.join(join);
+    }
 
     if (distinct) {
       builder.distinct();
@@ -139,6 +144,7 @@ export class QueryBuilderService {
     const {
       table,
       columns,
+      joins,
       variants = [],
       exceptColumns,
       whereClause,
@@ -152,6 +158,10 @@ export class QueryBuilderService {
     } = params;
 
     const builder = this.variantQuery().from(table).select(columns);
+
+    for (const join of joins ?? []) {
+      builder.join(join);
+    }
 
     if (distinct) {
       builder.distinct();

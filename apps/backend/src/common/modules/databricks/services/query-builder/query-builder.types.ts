@@ -77,6 +77,8 @@ export interface AggregationSpec {
 export interface QueryParams {
   table: string;
   columns?: string[];
+  /** Dimensions to rebuild at read time; see JoinSpec. */
+  joins?: JoinSpec[];
   variants?: { columnName: string; schema: string }[];
   exceptColumns?: string[];
   whereClause?: string;
@@ -119,4 +121,29 @@ export class QueryBuilderInputError extends Error {
     super(message);
     this.name = "QueryBuilderInputError";
   }
+}
+
+/**
+ * A left join the served relation needs to rebuild a column the pipeline used
+ * to materialise. `select` names the expressions the join contributes, already
+ * aliased: a star projection over a join would also pull in the joined table's
+ * own keys, which is how an identifier leaks into a response.
+ */
+export interface JoinOn {
+  /** Column on the served relation, or an expression over it. */
+  served: string;
+  joined: string;
+  /**
+   * The served side is SQL rather than an identifier, so it is emitted
+   * verbatim. Only ever set from static configuration, never from a request.
+   */
+  servedIsExpression?: boolean;
+}
+
+export interface JoinSpec {
+  /** Fully qualified relation, or a parenthesised subquery. */
+  table: string;
+  alias: string;
+  on: JoinOn[];
+  select: { expression: string; alias: string }[];
 }

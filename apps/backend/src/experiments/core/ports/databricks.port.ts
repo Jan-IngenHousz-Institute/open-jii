@@ -15,6 +15,7 @@ import type { Result } from "../../../common/utils/fp-utils";
 import type { ExportFormat, ExportMetadata } from "../models/experiment-data-exports.model";
 import type { UploadMetadata } from "../models/experiment-data-uploads.model";
 import type { ExperimentTableMetadata } from "../models/experiment-data.model";
+import type { EnrichmentJoin } from "../models/experiment-data.model";
 
 // Semantic input for the data upload job trigger. The adapter maps these onto
 // SOURCE_KIND-specific widget keys; `experimentName` only feeds the ambyte
@@ -66,6 +67,7 @@ export interface DatabricksPort {
     tableType: "static" | "macro" | "upload";
     experimentId: string;
     columns?: string[];
+    enrichmentJoins?: EnrichmentJoin[];
     variants?: { columnName: string; schema: string }[];
     exceptColumns?: string[];
     filters?: FilterCondition[];

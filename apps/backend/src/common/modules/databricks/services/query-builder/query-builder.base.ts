@@ -6,12 +6,64 @@ import type {
   AggregateExpression,
   FilterCondition,
   FilterValue,
+  JoinSpec,
   TimeBucketUnit,
 } from "./query-builder.types";
 import { VariantSchema } from "./schema/variant-schema";
 
 export abstract class BaseQueryBuilder {
   protected isDistinct = false;
+  protected joins: JoinSpec[] = [];
+
+  /** Alias for the served relation, so a star projection can stay scoped to it. */
+  protected readonly baseAlias = "base";
+
+  join(spec: JoinSpec): this {
+    this.joins.push(spec);
+    return this;
+  }
+
+  /** `<table> base LEFT JOIN ...`, or the bare table when nothing joins. */
+  protected buildFromClause(table: string): string {
+    if (this.joins.length === 0) {
+      return table;
+    }
+
+    const joined = this.joins.map((join) => {
+      const on = join.on
+        .map(({ served, joined: joinedColumn, servedIsExpression }) => {
+          const left = servedIsExpression
+            ? served
+            : `${this.baseAlias}.${this.escapeIdentifier(served)}`;
+
+          return `${left} = ${join.alias}.${this.escapeIdentifier(joinedColumn)}`;
+        })
+        .join(" AND ");
+
+      return `LEFT JOIN ${join.table} ${join.alias} ON ${on}`;
+    });
+
+    return `${table} ${this.baseAlias} ${joined.join(" ")}`;
+  }
+
+  /**
+   * The star to project. Scoped to the served relation once anything joins, so
+   * the joined tables' own key columns never reach the result.
+   */
+  protected buildBaseStar(): string {
+    return this.joins.length > 0 ? `${this.baseAlias}.*` : "*";
+  }
+
+  /** Aliased expressions the joins contribute, or an empty string. */
+  protected buildJoinProjection(): string {
+    return this.joins
+      .flatMap((join) =>
+        join.select.map(
+          (column) => `${column.expression} AS ${this.escapeIdentifier(column.alias)}`,
+        ),
+      )
+      .join(", ");
+  }
 
   abstract select(columns?: string[]): this;
   abstract from(table: string): this;
@@ -75,9 +127,9 @@ export abstract class BaseQueryBuilder {
    * Star-projection column-exclusion clause. Spark spells it `* EXCEPT (...)`;
    * dialects override (DuckDB: `* EXCLUDE (...)`).
    */
-  starExceptClause(columns: string[]): string {
+  starExceptClause(columns: string[], star = "*"): string {
     const list = columns.map((c) => this.escapeIdentifier(c)).join(", ");
-    return `* EXCEPT (${list})`;
+    return `${star} EXCEPT (${list})`;
   }
 
   /**
@@ -260,16 +312,28 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
     // PARSE_SYNTAX_ERROR, and it would be redundant anyway since
     // un-listed columns are already excluded by virtue of not being
     // projected. Drop EXCEPT silently in that case.
-    if (this.exceptColumns.length > 0 && this.selectClause === "*") {
-      selectPart = this.starExceptClause(this.exceptColumns);
+    if (this.selectClause === "*") {
+      const star = this.buildBaseStar();
+      selectPart =
+        this.exceptColumns.length > 0 ? this.starExceptClause(this.exceptColumns, star) : star;
+
+      const joinProjection = this.buildJoinProjection();
+      if (joinProjection) {
+        selectPart = `${selectPart}, ${joinProjection}`;
+      }
     }
 
     const selectKeyword = this.isDistinct ? "SELECT DISTINCT" : "SELECT";
-    let query = `${selectKeyword} ${selectPart} FROM ${this.fromClause}`;
+    const where =
+      this.whereConditions.length > 0 ? ` WHERE ${this.whereConditions.join(" AND ")}` : "";
 
-    if (this.whereConditions.length > 0) {
-      query += ` WHERE ${this.whereConditions.join(" AND ")}`;
-    }
+    // Filter before joining. It is the cheaper order, and it keeps a bare
+    // `experiment_id` in the WHERE from being ambiguous between the served
+    // relation and a joined one.
+    let query =
+      this.joins.length > 0
+        ? `${selectKeyword} ${selectPart} FROM ${this.buildFromClause(`(SELECT * FROM ${this.fromClause}${where})`)}`
+        : `${selectKeyword} ${selectPart} FROM ${this.fromClause}${where}`;
 
     if (this.groupByColumns.length > 0) {
       query += ` GROUP BY ${this.groupByColumns.join(", ")}`;
@@ -455,6 +519,7 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
       .join(",\n          ");
 
     const expandedColumns = this.variantColumns.map((v) => `${v.alias}.*`).join(",\n        ");
+    const joinProjection = this.buildJoinProjection();
 
     // Query structure:
     //   Level 1 (innermost): base columns + from_json() to parse VARIANTs.
@@ -475,10 +540,13 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
         ${expandedColumns}
       FROM (
         SELECT
-          *,
+          ${this.buildBaseStar()},${joinProjection ? `\n          ${joinProjection},` : ""}
           ${parsedColumns}
-        FROM ${this.fromClause}
-        ${where}
+        FROM ${
+          this.joins.length > 0
+            ? this.buildFromClause(`(SELECT * FROM ${this.fromClause} ${where})`)
+            : `${this.fromClause}\n        ${where}`
+        }
       )
     `.trim();
     const filteredFlattened =

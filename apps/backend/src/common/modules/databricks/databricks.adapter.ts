@@ -11,6 +11,7 @@ import type {
 } from "../../../experiments/core/models/experiment-data-exports.model";
 import type { UploadMetadata } from "../../../experiments/core/models/experiment-data-uploads.model";
 import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
+import type { EnrichmentJoin } from "../../../experiments/core/models/experiment-data.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { DataUploadJobInput } from "../../../experiments/core/ports/databricks.port";
 import type { DeviceLifecycleEventRow } from "../../../iot/core/models/device-lifecycle-event.model";
@@ -1229,6 +1230,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     tableType: "static" | "macro" | "upload";
     experimentId: string;
     columns?: string[];
+    enrichmentJoins?: EnrichmentJoin[];
     variants?: { columnName: string; schema: string }[];
     exceptColumns?: string[];
     filters?: FilterCondition[];
@@ -1244,6 +1246,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       tableType,
       experimentId,
       columns,
+      enrichmentJoins,
       variants,
       exceptColumns,
       filters,
@@ -1258,6 +1261,17 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     const catalog = this.configService.getCatalogName();
     const schema = this.configService.getCentrumSchemaName();
 
+    // The config names dimensions unqualified, because it has no catalog. A
+    // dimension that aggregates before joining supplies the query around it.
+    const joins = (enrichmentJoins ?? []).map((join) => {
+      const qualified = `${catalog}.${schema}.${join.relation}`;
+
+      return {
+        ...join,
+        table: join.derive ? join.derive.replace("{relation}", qualified) : qualified,
+      };
+    });
+
     if (tableType === "macro") {
       // Macro tables share a single physical table, filtered by experiment_id and macro_id
       const table = `${catalog}.${schema}.${this.MACRO_DATA_TABLE_NAME}`;
@@ -1269,6 +1283,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       return this.queryBuilder.buildQuery({
         table,
         columns,
+        joins,
         variants,
         exceptColumns,
         whereConditions,
@@ -1294,6 +1309,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       return this.queryBuilder.buildQuery({
         table,
         columns,
+        joins,
         variants,
         exceptColumns,
         whereConditions,
@@ -1327,6 +1343,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     return this.queryBuilder.buildQuery({
       table,
       columns,
+      joins,
       variants,
       exceptColumns,
       whereConditions,

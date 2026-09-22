@@ -108,6 +108,80 @@ describe("QueryBuilder Base", () => {
     });
   });
 
+  describe("SqlQueryBuilder enrichment joins", () => {
+    const contributor = {
+      table: "cat.centrum.experiment_contributors",
+      alias: "c",
+      on: [
+        { served: "experiment_id", joined: "experiment_id" },
+        { served: "user_id", joined: "user_id" },
+      ],
+      select: [{ expression: "c.user", alias: "contributor" }],
+    };
+
+    it("scopes the star to the served relation so joined keys cannot leak", () => {
+      const query = new SqlQueryBuilder().from("t").join(contributor).build();
+
+      expect(query).toContain("SELECT base.*, c.user AS `contributor`");
+      expect(query).toContain("LEFT JOIN cat.centrum.experiment_contributors c");
+      expect(query).toContain("ON base.`experiment_id` = c.`experiment_id`");
+      expect(query).toContain("AND base.`user_id` = c.`user_id`");
+    });
+
+    it("filters before joining, so a shared column name stays unambiguous", () => {
+      const query = new SqlQueryBuilder()
+        .from("t")
+        .whereEquals("experiment_id", "e1")
+        .join(contributor)
+        .build();
+
+      // experiment_id exists on both sides; qualifying it at the outer level
+      // would be ambiguous, so the WHERE stays inside its own rowsource.
+      expect(query).toContain("FROM (SELECT * FROM t WHERE `experiment_id` = 'e1') base");
+      expect(query).not.toMatch(/\) base LEFT JOIN .* WHERE/);
+    });
+
+    it("keeps EXCEPT against the scoped star", () => {
+      const query = new SqlQueryBuilder().from("t").except(["user_id"]).join(contributor).build();
+
+      expect(query).toContain("SELECT base.* EXCEPT (`user_id`), c.user AS `contributor`");
+    });
+
+    it("emits today's shape when nothing joins", () => {
+      const query = new SqlQueryBuilder().from("t").whereEquals("experiment_id", "e1").build();
+
+      expect(query).toBe("SELECT * FROM t WHERE `experiment_id` = 'e1'");
+    });
+  });
+
+  describe("VariantQueryBuilder enrichment joins", () => {
+    it("joins outside the filter and keeps variant flattening intact", () => {
+      const query = new VariantQueryBuilder()
+        .from("cat.centrum.experiment_raw_data")
+        .parseVariant("questions_data", "STRUCT<a: STRING>")
+        .join({
+          table: "cat.centrum.experiment_contributors",
+          alias: "c",
+          on: [
+            { served: "experiment_id", joined: "experiment_id" },
+            { served: "user_id", joined: "user_id" },
+          ],
+          select: [{ expression: "c.user", alias: "contributor" }],
+        })
+        .where("`experiment_id` = 'e1'")
+        .build();
+
+      expect(query).toContain("base.*,");
+      expect(query).toContain("c.user AS `contributor`,");
+      expect(query).toContain(
+        "FROM (SELECT * FROM cat.centrum.experiment_raw_data WHERE `experiment_id` = 'e1') base LEFT JOIN",
+      );
+      // The flattening levels above the join are untouched.
+      expect(query).toContain("* EXCEPT (questions_data, parsed_questions_data)");
+      expect(query).toContain("parsed_questions_data.*");
+    });
+  });
+
   describe("VariantQueryBuilder", () => {
     let builder: VariantQueryBuilder;
 

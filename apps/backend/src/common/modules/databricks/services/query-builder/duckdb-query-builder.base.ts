@@ -41,9 +41,9 @@ export class DuckDbSqlQueryBuilder extends SqlQueryBuilder {
     return duckDbEscapeIdentifier(identifier);
   }
 
-  starExceptClause(columns: string[]): string {
+  starExceptClause(columns: string[], star = "*"): string {
     const list = columns.map((c) => this.escapeIdentifier(c)).join(", ");
-    return `* EXCLUDE (${list})`;
+    return `${star} EXCLUDE (${list})`;
   }
 
   pseudonymExpression(saltSql: string, colSql: string): string {
@@ -72,9 +72,9 @@ export class DuckDbVariantQueryBuilder extends VariantQueryBuilder {
     return duckDbEscapeIdentifier(identifier);
   }
 
-  starExceptClause(columns: string[]): string {
+  starExceptClause(columns: string[], star = "*"): string {
     const list = columns.map((c) => this.escapeIdentifier(c)).join(", ");
-    return `* EXCLUDE (${list})`;
+    return `${star} EXCLUDE (${list})`;
   }
 
   pseudonymExpression(saltSql: string, colSql: string): string {
