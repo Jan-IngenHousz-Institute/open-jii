@@ -22,6 +22,16 @@ describe("formatValue", () => {
     expect(formatValue(2 * 60 * 60_000, "milliseconds")).toBe("2h");
   });
 
+  it("carries a rounded part instead of printing 60m or 24h", () => {
+    // Rounding each part on its own lets a value land one unit short of the next one up.
+    expect(formatValue(7_171_000, "milliseconds")).toBe("2h");
+    expect(formatValue(171_060_000, "milliseconds")).toBe("2d");
+    expect(formatValue(3_599_999, "milliseconds")).toBe("1h");
+    expect(formatValue(59_999, "milliseconds")).toBe("1m");
+    expect(formatValue(999.6, "milliseconds")).toBe("1.0s");
+    expect(formatValue(86_385_000, "milliseconds")).toBe("1d");
+  });
+
   it("sizes bytes", () => {
     expect(formatValue(66_322_432, "bytes")).toBe("63.3 MB");
     expect(formatValue(512, "bytes")).toBe("512 B");

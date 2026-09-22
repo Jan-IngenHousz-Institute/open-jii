@@ -198,7 +198,6 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    # Inactive until the heartbeat export task that publishes this lands.
     active: true
     slots: [exception, dashboard]
     signal:
@@ -232,7 +231,6 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    # Inactive until the heartbeat export task that publishes this lands.
     active: true
     slots: [exception, dashboard]
     signal:
@@ -254,7 +252,6 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    # Inactive until the heartbeat export task that publishes this lands.
     active: true
     slots: [exception]
     signal:
@@ -520,7 +517,6 @@ metrics:
     family: usage
     source: dbx
     phase: P2
-    # Inactive until the heartbeat export task that publishes this lands.
     active: true
     # Pulse only: Maximum over a seven-day window would report the peak day as if it
     # were the week, so the weekly note has no honest way to render a 24h gauge.
@@ -542,7 +538,6 @@ metrics:
     family: usage
     source: dbx
     phase: P2
-    # Inactive until the heartbeat export task that publishes this lands.
     active: true
     slots: [pulse]
     signal:
@@ -630,7 +625,6 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    # Inactive until the heartbeat export task that publishes this lands.
     active: true
     slots: [alert, dashboard]
     severity: critical
@@ -750,7 +744,6 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    # Inactive until the heartbeat export task that publishes this lands.
     active: true
     slots: [exception, s3]
     signal:

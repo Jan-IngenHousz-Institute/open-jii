@@ -8,28 +8,38 @@
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
 
+// Each branch picks its bucket from the rounded value rather than the raw one, and splits
+// a rounded total into parts rather than rounding the parts. Splitting first prints an
+// hour and fifty-nine and a half minutes as "1h 60m".
 function duration(milliseconds: number): string {
   const ms = Math.abs(milliseconds);
+  const seconds = ms / 1000;
 
-  if (ms < 1000) {
+  if (seconds < 0.9995) {
     return `${Math.round(ms)}ms`;
   }
-  if (ms < MINUTE) {
-    return `${(ms / 1000).toFixed(ms < 10_000 ? 1 : 0)}s`;
+  if (seconds < 9.95) {
+    return `${seconds.toFixed(1)}s`;
   }
-  if (ms < HOUR) {
-    return `${Math.round(ms / MINUTE)}m`;
+  if (seconds < 59.5) {
+    return `${seconds.toFixed(0)}s`;
   }
-  if (ms < DAY) {
-    const hours = Math.floor(ms / HOUR);
-    const minutes = Math.round((ms % HOUR) / MINUTE);
+
+  const totalMinutes = Math.round(ms / MINUTE);
+  if (totalMinutes < 60) {
+    return `${totalMinutes}m`;
+  }
+
+  if (totalMinutes < 24 * 60) {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
     return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
   }
 
-  const days = Math.floor(ms / DAY);
-  const hours = Math.round((ms % DAY) / HOUR);
+  const totalHours = Math.round(ms / HOUR);
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
   return hours === 0 ? `${days}d` : `${days}d ${hours}h`;
 }
 
