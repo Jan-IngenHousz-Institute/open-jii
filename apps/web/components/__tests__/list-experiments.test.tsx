@@ -203,7 +203,7 @@ describe("ListExperiments", () => {
     await screen.findByRole("link", { name: "Exp 1" });
     expect(screen.queryByRole("button", { name: "resetSorting" })).toBeNull();
     await user.click(screen.getByRole("button", { name: /columns.name:/ }));
-    await waitFor(() => expect(spy.calls.at(-1)?.query?.["sort[0][field]"]).toBe("name"));
+    await waitFor(() => expect(spy.calls.at(-1)?.query["sort[0][field]"]).toBe("name"));
     expect(screen.getByRole("button", { name: /columns.name:/ }).closest("th")).toHaveAttribute(
       "aria-sort",
       "ascending",
@@ -216,7 +216,7 @@ describe("ListExperiments", () => {
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "resetSorting" }));
-    await waitFor(() => expect(spy.calls.at(-1)?.query?.sort).toBeUndefined());
+    await waitFor(() => expect(spy.calls.at(-1)?.query.sort).toBeUndefined());
   });
 
   it("restores a shared sort URL in the archive", async () => {

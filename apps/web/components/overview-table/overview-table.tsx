@@ -97,7 +97,7 @@ export function OverviewTable<T extends RowData>({
           label: typeof column.header === "string" ? column.header : undefined,
         } satisfies OverviewColumnMeta,
       })),
-    [columns, getRowHref],
+    [columns, getRowHref, sorting],
   );
   const table = useTable({
     features: overviewTableFeatures,

@@ -1,10 +1,13 @@
 "use client";
 
-import { z } from "zod";
+import type { z } from "zod";
 
 import { useUrlState } from "./useUrlState";
 
-type SortItem = { field: string; direction: "asc" | "desc" };
+interface SortItem {
+  field: string;
+  direction: "asc" | "desc";
+}
 
 /** URL-backed, ordered server sort. The caller supplies its resource allowlist schema. */
 export function useListSorting<T extends SortItem>(schema: z.ZodType<T[]>) {
