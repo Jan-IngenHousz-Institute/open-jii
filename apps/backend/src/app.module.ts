@@ -3,6 +3,7 @@ import type { MiddlewareConsumer, NestModule } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
 import { ScheduleModule } from "@nestjs/schedule";
+import { ThrottlerModule } from "@nestjs/throttler";
 import { ORPCError, ORPCModule } from "@orpc/nest";
 import { experimental_RethrowHandlerPlugin as RethrowHandlerPlugin } from "@orpc/server/plugins";
 import { AuthGuard, AuthModule as BetterAuthModule } from "@thallesp/nestjs-better-auth";
@@ -61,6 +62,7 @@ const orpcLogger = new Logger("ORPC");
       },
     }),
     ScheduleModule.forRoot(),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
     BetterAuthModule.forRoot({ auth }),
     ORPCModule.forRoot({
       interceptors: [createOrpcErrorLoggingInterceptor(orpcLogger)],

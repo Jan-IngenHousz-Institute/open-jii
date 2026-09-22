@@ -7,10 +7,10 @@ import type { ResourceScope } from "@repo/api/shared/listing";
 
 import { AppError, Result, success } from "../../../../common/utils/fp-utils";
 import { ResourceMetricsService } from "../../../../metrics/application/resource-metrics.service";
-import { ExperimentDto } from "../../../core/models/experiment.model";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
+import type { ExperimentSearchRow } from "../../../core/repositories/experiment.repository";
 
-type ExperimentWithActivity = ExperimentDto & { activity: ResourceSeries | null };
+type ExperimentWithActivity = ExperimentSearchRow & { activity: ResourceSeries | null };
 
 @Injectable()
 export class ListExperimentsUseCase {
@@ -27,7 +27,7 @@ export class ListExperimentsUseCase {
     status?: ExperimentStatus,
     search?: string,
     sort?: ExperimentSort,
-  ): Promise<Result<ExperimentDto[]>> {
+  ): Promise<Result<ExperimentSearchRow[]>> {
     this.logger.log({
       msg: "Listing experiments",
       operation: "list",
@@ -48,7 +48,7 @@ export class ListExperimentsUseCase {
     );
 
     result.fold(
-      (experiments: ExperimentDto[]) => {
+      (experiments: ExperimentSearchRow[]) => {
         this.logger.debug({
           msg: "Found experiments",
           operation: "list",

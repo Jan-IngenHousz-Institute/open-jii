@@ -72,21 +72,9 @@
     "next": "Next",
     "backToOverview": "Back to overview"
   },
-  "cameraPermission": {
-    "deniedTitle": "Permission disabled",
-    "requiredTitle": "Camera access required",
-    "deniedMessage": "Camera access has been permanently denied. Open your device settings to enable it for openJII.",
-    "requiredMessage": "openJII needs access to your camera to scan QR codes.",
-    "grant": "Grant permission",
-    "openSettings": "Open settings"
-  },
   "instructionNode": {
     "heading": "Instruction Details",
     "empty": "No instructions available"
-  },
-  "qrScanner": {
-    "alignPrompt": "Align a QR code within the frame",
-    "matchNote": "The QR code must match exactly one of the available options."
   },
   "questionsSubmit": {
     "editComment": "Edit comment",

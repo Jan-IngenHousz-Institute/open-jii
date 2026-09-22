@@ -6,6 +6,7 @@ import { experimentDevicesContract } from "./domains/experiment/devices/experime
 import { experimentContract } from "./domains/experiment/experiment.contract";
 import { experimentExportsContract } from "./domains/experiment/exports/experiment-exports.contract";
 import { experimentFlowsContract } from "./domains/experiment/flows/experiment-flows.contract";
+import { experimentJoinCodesContract } from "./domains/experiment/join-codes/experiment-join-codes.contract";
 import { experimentJoinRequestsContract } from "./domains/experiment/join-requests/experiment-join-requests.contract";
 import { experimentLocationsContract } from "./domains/experiment/locations/experiment-locations.contract";
 import { experimentMetadataContract } from "./domains/experiment/metadata/experiment-metadata.contract";
@@ -52,6 +53,7 @@ export const contract = {
     ...experimentDashboardsContract,
     ...experimentVisualizationsContract,
     ...experimentJoinRequestsContract,
+    ...experimentJoinCodesContract,
     ...experimentTransferRequestsContract,
     ...experimentProjectTransferWebhookContract,
   },

@@ -76,6 +76,7 @@ describe("DeleteExperimentDashboardUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: false,
           canContribute: false,
+          membershipStatus: "none" as const,
         }),
       );
 
@@ -108,6 +109,7 @@ describe("DeleteExperimentDashboardUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: true,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -133,6 +135,7 @@ describe("DeleteExperimentDashboardUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: false,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -160,6 +163,7 @@ describe("DeleteExperimentDashboardUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: false,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -182,6 +186,7 @@ describe("DeleteExperimentDashboardUseCase", () => {
           hasArchiveAccess: false,
           isAdmin: false,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -206,6 +211,7 @@ describe("DeleteExperimentDashboardUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: true,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -242,6 +248,7 @@ describe("DeleteExperimentDashboardUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: false,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 

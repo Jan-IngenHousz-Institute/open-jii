@@ -72,21 +72,9 @@
     "next": "Volgende",
     "backToOverview": "Terug naar overzicht"
   },
-  "cameraPermission": {
-    "deniedTitle": "Toestemming uitgeschakeld",
-    "requiredTitle": "Cameratoegang vereist",
-    "deniedMessage": "Cameratoegang is permanent geweigerd. Open de instellingen op je toestel om dit voor openJII in te schakelen.",
-    "requiredMessage": "openJII heeft toegang tot je camera nodig om QR-codes te scannen.",
-    "grant": "Toestemming geven",
-    "openSettings": "Instellingen openen"
-  },
   "instructionNode": {
     "heading": "Instructiedetails",
     "empty": "Geen instructies beschikbaar"
-  },
-  "qrScanner": {
-    "alignPrompt": "Plaats een QR-code binnen het kader",
-    "matchNote": "De QR-code moet exact overeenkomen met een van de beschikbare opties."
   },
   "questionsSubmit": {
     "editComment": "Opmerking bewerken",

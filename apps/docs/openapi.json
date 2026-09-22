@@ -862,6 +862,14 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "membershipStatus": {
+                            "enum": [
+                              "none",
+                              "pending_request",
+                              "member"
+                            ],
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -877,7 +885,8 @@
                           "organizationId",
                           "createdBy",
                           "createdAt",
-                          "updatedAt"
+                          "updatedAt",
+                          "membershipStatus"
                         ]
                       }
                     },
@@ -1176,6 +1185,14 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "membershipStatus": {
+                                "enum": [
+                                  "none",
+                                  "pending_request",
+                                  "member"
+                                ],
+                                "type": "string"
                               }
                             },
                             "required": [
@@ -1191,7 +1208,8 @@
                               "organizationId",
                               "createdBy",
                               "createdAt",
-                              "updatedAt"
+                              "updatedAt",
+                              "membershipStatus"
                             ]
                           }
                         },
@@ -2265,13 +2283,22 @@
                         "canLeave",
                         "canTransfer"
                       ]
+                    },
+                    "membershipStatus": {
+                      "enum": [
+                        "none",
+                        "pending_request",
+                        "member"
+                      ],
+                      "type": "string"
                     }
                   },
                   "required": [
                     "experiment",
                     "hasAccess",
                     "isAdmin",
-                    "capabilities"
+                    "capabilities",
+                    "membershipStatus"
                   ]
                 }
               }
@@ -13533,6 +13560,386 @@
                     {
                       "not": {}
                     }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/join-code": {
+      "get": {
+        "operationId": "experiments.getJoinCode",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the experiment"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "joinCode": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "experimentId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "code": {
+                              "type": "string"
+                            },
+                            "expiresAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "redemptionCount": {
+                              "type": "integer"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "createdBy": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "experimentId",
+                            "code",
+                            "expiresAt",
+                            "redemptionCount",
+                            "createdAt",
+                            "createdBy"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "joinCode"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "experiments.createJoinCode",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the experiment"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expiresIn": {
+                    "default": "7d",
+                    "enum": [
+                      "1d",
+                      "7d",
+                      "30d",
+                      "never"
+                    ],
+                    "type": "string",
+                    "description": "How long the new code stays valid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "experimentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "redemptionCount": {
+                      "type": "integer"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "createdBy": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "experimentId",
+                    "code",
+                    "expiresAt",
+                    "redemptionCount",
+                    "createdAt",
+                    "createdBy"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "experiments.revokeJoinCode",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the experiment"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "not": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiment-join-codes/{code}": {
+      "get": {
+        "operationId": "experiments.resolveJoinCode",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The join code, with or without its display hyphen"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "experiment": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "organizationName": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "status": {
+                          "enum": [
+                            "active",
+                            "stale",
+                            "archived",
+                            "published"
+                          ],
+                          "type": "string"
+                        },
+                        "hasWorkbook": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "description",
+                        "status",
+                        "hasWorkbook"
+                      ]
+                    },
+                    "membershipStatus": {
+                      "enum": [
+                        "none",
+                        "pending_request",
+                        "member"
+                      ],
+                      "type": "string"
+                    },
+                    "expiresAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "experiment",
+                    "membershipStatus",
+                    "expiresAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiment-join-codes/{code}/redeem": {
+      "post": {
+        "operationId": "experiments.redeemJoinCode",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The join code, with or without its display hyphen"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "experimentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "outcome": {
+                      "enum": [
+                        "joined",
+                        "already_member"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "experimentId",
+                    "outcome"
                   ]
                 }
               }
