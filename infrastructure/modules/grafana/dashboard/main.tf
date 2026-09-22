@@ -1729,7 +1729,7 @@ resource "grafana_rule_group" "monitoring_self_health" {
     # for most of the hour rather than a fault.
     no_data_state  = "OK"
     exec_err_state = "OK"
-    for            = "0s"
+    for            = "1m"
 
     annotations = {
       description = "The digest composer threw. No digest was delivered for that run. Runbook: docs/runbooks/digest-composer-liveness.md"
@@ -1927,6 +1927,18 @@ resource "grafana_rule_group" "monitoring_liveness" {
     }
 
   }
+}
+
+# The lakehouse export's dead-man. Separate from the group above because it watches a
+# Databricks job rather than a Lambda, so tying it to a function name would drop it
+# silently the moment that name were empty.
+resource "grafana_rule_group" "collector_liveness" {
+  count = var.enable_liveness_alerts ? 1 : 0
+
+  provider         = grafana.amg
+  name             = "Collector Liveness"
+  folder_uid       = grafana_folder.folder.uid
+  interval_seconds = 300
 
   # Catalog entry 10. The lakehouse export publishes this on every scheduler cycle for
   # no reason other than so its absence can alarm. It is the only signal that tells you

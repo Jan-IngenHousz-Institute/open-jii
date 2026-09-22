@@ -272,6 +272,19 @@ describe("active entries", () => {
     expect(offenders.map((m) => m.id)).toEqual([]);
   });
 
+  it("keeps every per-environment override as actionable as the rule it replaces", () => {
+    // resolveForEnvironment swaps the whole baseline, so an override written as
+    // { max: 7200000 } loses the method and evaluates to ok forever in that environment
+    // while looking configured. A threshold nobody can cross is the bug this catches.
+    const offenders = metrics.flatMap((metric) =>
+      Object.entries(metric.baseline?.per_environment ?? {})
+        .filter(([, override]) => isInertForDigest(override))
+        .map(([environment]) => `${metric.id} in ${environment}`),
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
   it("are all queryable once the composer's environment is fully populated", () => {
     const fullEnvironment = Object.fromEntries(
       [...composerEnvironmentKeys()].map((key) => [key, `value-for-${key}`]),
