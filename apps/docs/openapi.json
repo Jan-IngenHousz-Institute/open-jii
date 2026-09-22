@@ -475,6 +475,47 @@
             "allowReserved": true
           },
           {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "field": {
+                    "enum": [
+                      "name",
+                      "status",
+                      "owner",
+                      "organization",
+                      "members",
+                      "updated"
+                    ],
+                    "type": "string"
+                  },
+                  "direction": {
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "field",
+                  "direction"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 2,
+              "description": "Up to two ordered sort criteria"
+            },
+            "style": "deepObject",
+            "explode": true,
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
             "name": "page",
             "in": "query",
             "schema": {
