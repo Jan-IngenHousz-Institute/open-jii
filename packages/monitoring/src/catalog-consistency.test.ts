@@ -37,6 +37,11 @@ const composerHandler = readFileSync(
   "utf8",
 );
 
+// The handler is plain JavaScript outside the package, so nothing typechecks it against
+// the renderers it calls. This file is the only thing that can.
+const rendererPath = "packages/monitoring/src/render.ts";
+const rendererSource = readFileSync(join(repoRoot, rendererPath), "utf8");
+
 const metrics = parseCatalog(catalogSource);
 const passes = parsePasses(catalogSource);
 
@@ -468,7 +473,7 @@ describe("the digests and their reports cannot drift", () => {
   function digestMemberships(): Record<string, Membership> {
     const blocks = [
       ...composerHandler.matchAll(
-        /if \(digest === "(\w+)"\) \{\s*const metrics = ([\s\S]*?)\);\s*\n\s*const readings/g,
+        /if \(digestName === "(\w+)"\) \{\s*const metrics = ([\s\S]*?)\);\s*\n\s*const readings/g,
       ),
     ];
 
@@ -565,5 +570,77 @@ describe("the digests and their reports cannot drift", () => {
     );
 
     expect(empty.map(([report]) => report)).toEqual([]);
+  });
+});
+
+describe("the composer reads only environment it is given", () => {
+  // SLACK_BOT_TOKEN, HEARTBEAT_CHANNEL_ID and USAGE_CHANNEL_ID were read by the handler
+  // and set by nothing, so the threaded replies were dead on arrival and nothing said so.
+
+  // Supplied by the Lambda runtime rather than by the module's environment block.
+  const RUNTIME_PROVIDED = ["AWS_REGION"];
+
+  it("has terraform set every variable the handler reads", () => {
+    const read = [...composerHandler.matchAll(/process\.env\.([A-Z0-9_]+)/g)].map((use) => use[1]);
+    const provided = composerEnvironmentKeys();
+    const unset = [...new Set(read)]
+      .filter((name) => !provided.has(name))
+      .filter((name) => !RUNTIME_PROVIDED.includes(name))
+      .sort();
+
+    expect(
+      read.length,
+      "the handler reads no environment, so this parse is broken",
+    ).toBeGreaterThan(0);
+    expect(unset, "environment the composer reads and its terraform never sets").toEqual([]);
+  });
+
+  it("has something read every variable terraform sets", () => {
+    // An environment variable nothing reads is either a leftover or a wire that was
+    // never finished, and both read as configuration that works. A placeholder is read
+    // by name out of the catalog rather than by the handler, so it counts too.
+    const read = new Set(
+      [...composerHandler.matchAll(/process\.env\.([A-Z0-9_]+)/g)].map((use) => use[1]),
+    );
+    const resolved = new Set(metrics.flatMap((m) => placeholdersIn(m.signal)));
+    const unread = [...composerEnvironmentKeys()]
+      .filter((name) => !read.has(name) && !resolved.has(name))
+      .sort();
+
+    expect(unread, "environment the composer's terraform sets and the handler never reads").toEqual(
+      [],
+    );
+  });
+});
+
+describe("the handler and the renderers agree on what a digest is", () => {
+  // The renderers returned a flat message for one commit while the handler still read a
+  // parent and its replies. Everything typechecked, every unit test passed, and all three
+  // digests would have thrown at 06:30. Nothing else compares the two.
+
+  function digestFields(): string[] {
+    const body = /export interface Digest \{([\s\S]*?)\n\}/.exec(rendererSource)?.[1] ?? "";
+    return [...body.matchAll(/^\s{2}(\w+):/gm)].map((field) => field[1]).sort();
+  }
+
+  function fieldsTheHandlerReads(): string[] {
+    const reads = [...composerHandler.matchAll(/\bdigest\.(\w+)/g)].map((read) => read[1]);
+    return [...new Set(reads)].sort();
+  }
+
+  it("reads only fields the renderers return", () => {
+    const declared = digestFields();
+    const read = fieldsTheHandlerReads();
+
+    expect(declared.length, `no Digest interface found in ${rendererPath}`).toBeGreaterThan(0);
+    expect(
+      read.length,
+      "the handler reads no digest fields, so this parse is broken",
+    ).toBeGreaterThan(0);
+    expect(read.filter((field) => !declared.includes(field))).toEqual([]);
+  });
+
+  it("reads every field the renderers return, so nothing is rendered and dropped", () => {
+    expect(fieldsTheHandlerReads()).toEqual(digestFields());
   });
 });

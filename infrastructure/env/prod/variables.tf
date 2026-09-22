@@ -263,3 +263,21 @@ variable "data_platform_sp_application_id" {
   default     = "122ea6e5-a082-45b5-9df6-ef5482868fdc"
 }
 
+variable "slack_bot_token" {
+  description = "Slack bot token for the digest composer; empty posts through the webhooks with no replies"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "slack_heartbeat_channel_id" {
+  description = "Channel the observability digest threads into; needs slack_bot_token"
+  type        = string
+  default     = ""
+}
+
+variable "slack_usage_channel_id" {
+  description = "Channel the usage digests thread into; needs slack_bot_token"
+  type        = string
+  default     = ""
+}

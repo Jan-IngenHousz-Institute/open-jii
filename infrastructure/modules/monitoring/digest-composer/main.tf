@@ -91,8 +91,10 @@ resource "aws_lambda_function" "digest_composer" {
       HEARTBEAT_WEBHOOK_URL      = var.heartbeat_webhook_url
       USAGE_WEBHOOK_URL          = var.usage_webhook_url
       RUNBOOK_BASE_URL           = var.runbook_base_url
-      CATALOG_URL                = "${var.runbook_base_url}/docs/monitoring/metrics-catalog.yaml"
       GRAFANA_ENDPOINT           = var.grafana_endpoint
+      SLACK_BOT_TOKEN            = var.slack_bot_token
+      HEARTBEAT_CHANNEL_ID       = var.heartbeat_channel_id
+      USAGE_CHANNEL_ID           = var.usage_channel_id
     }
   }
 

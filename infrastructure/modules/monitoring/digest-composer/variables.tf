@@ -69,3 +69,22 @@ variable "grafana_endpoint" {
   type        = string
   default     = ""
 }
+
+variable "slack_bot_token" {
+  description = "Slack bot token, which is what buys threads; empty posts through the webhooks instead"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "heartbeat_channel_id" {
+  description = "Channel the observability digest threads into; needs slack_bot_token to take effect"
+  type        = string
+  default     = ""
+}
+
+variable "usage_channel_id" {
+  description = "Channel the usage digests thread into; needs slack_bot_token to take effect"
+  type        = string
+  default     = ""
+}

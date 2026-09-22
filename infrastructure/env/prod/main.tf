@@ -1070,7 +1070,6 @@ module "metrics_pipeline_scheduler" {
   depends_on = [module.metrics_pipeline]
 }
 
-
 # The heartbeat export runs on its own schedule rather than as a second task on the
 # metrics scheduler.
 #
@@ -3031,6 +3030,12 @@ module "digest_composer" {
   # Each digest links its own report, which is a dashboard generated from the same
   # catalog entries the digest read.
   grafana_endpoint = module.managed_grafana_workspace.amg_url
+
+  # A bot token is what lets each anomaly hang under the summary instead of filling the
+  # channel. Without one the summary still posts, through the webhooks below.
+  slack_bot_token      = var.slack_bot_token
+  heartbeat_channel_id = var.slack_heartbeat_channel_id
+  usage_channel_id     = var.slack_usage_channel_id
 
   # Empty webhooks make the Lambda log the rendered digest instead of posting, so this
   # applies cleanly before the Slack channels exist.

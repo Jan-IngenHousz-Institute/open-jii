@@ -291,13 +291,10 @@ async function deliver(channel, digest) {
 }
 
 exports.handler = async (event) => {
-  const digest = event?.digest;
-  const region = process.env.AWS_REGION ?? "eu-central-1";
+  const digestName = event?.digest;
   const options = {
     environment: process.env.ENVIRONMENT ?? "unknown",
     runbookBaseUrl: process.env.RUNBOOK_BASE_URL,
-    catalogUrl: process.env.CATALOG_URL,
-    consoleUrl: `https://${region}.console.aws.amazon.com/cloudwatch/home?region=${region}#metricsV2:`,
   };
   const now = Date.now();
 
@@ -310,7 +307,7 @@ exports.handler = async (event) => {
   const failedRegions = new Set();
   const selfChecks = () => ({ configErrors, failedRegions: [...failedRegions] });
 
-  if (digest === "observability") {
+  if (digestName === "observability") {
     const metrics = usable.filter(
       (metric) =>
         metric.family === "observability" &&
@@ -321,7 +318,7 @@ exports.handler = async (event) => {
       evaluation: evaluate(reading),
     }));
 
-    const reportUrl = reportUrlFor(digest, dailyWindows(now).current, options.environment);
+    const reportUrl = reportUrlFor(digestName, dailyWindows(now).current, options.environment);
 
     await deliver(
       "heartbeat",
@@ -330,13 +327,13 @@ exports.handler = async (event) => {
     return;
   }
 
-  if (digest === "pulse") {
+  if (digestName === "pulse") {
     const metrics = usable.filter(
       (metric) => metric.family === "usage" && metric.slots.includes("pulse"),
     );
     const readings = await collectDaily(metrics, now, failedRegions);
 
-    const reportUrl = reportUrlFor(digest, dailyWindows(now).current, options.environment);
+    const reportUrl = reportUrlFor(digestName, dailyWindows(now).current, options.environment);
 
     await deliver(
       "usage",
@@ -345,11 +342,11 @@ exports.handler = async (event) => {
     return;
   }
 
-  if (digest === "weekly") {
+  if (digestName === "weekly") {
     const metrics = usable.filter((metric) => metric.slots.includes("weekly"));
     const readings = await collectWeekly(metrics, now, failedRegions);
 
-    const reportUrl = reportUrlFor(digest, weeklyWindows(now).current, options.environment);
+    const reportUrl = reportUrlFor(digestName, weeklyWindows(now).current, options.environment);
 
     await deliver(
       "usage",
@@ -361,5 +358,5 @@ exports.handler = async (event) => {
     return;
   }
 
-  throw new Error(`Unknown digest type: ${JSON.stringify(digest)}`);
+  throw new Error(`Unknown digest type: ${JSON.stringify(digestName)}`);
 };

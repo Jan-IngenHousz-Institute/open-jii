@@ -7,6 +7,21 @@ Lambda that composes the platform heartbeat digests from `docs/monitoring/metric
 
 With empty webhook variables the Lambda logs the rendered digest instead of posting, so it deploys safely before the Slack channels exist.
 
+## How a digest arrives
+
+The observability digest posts one summary and threads one reply per anomaly. The summary is a
+table grouped by severity, critical first, each row leading with the catalog number so a line in
+Slack, a panel on the report and a runbook all name the same thing. Each reply carries that
+anomaly's id, its reading, its runbook and the triage command for it, so the channel stays one
+table however bad the day is.
+
+Threading needs `slack_bot_token` and the channel id for that digest. An incoming webhook answers
+with the literal string `ok` and no message timestamp, so there is nothing to reply to. With only
+a webhook set, the summary still posts and the replies are dropped, which is why they are additive
+rather than a prerequisite.
+
+The usage digests are a single message. A level has no detail to open.
+
 ## The report each digest links
 
 Slack carries the verdict, not the evidence. Every digest ends in a button to its own

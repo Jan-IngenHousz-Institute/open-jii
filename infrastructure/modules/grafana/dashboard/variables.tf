@@ -124,4 +124,3 @@ variable "metrics_forwarder_function_name" {
   type        = string
   default     = ""
 }
-

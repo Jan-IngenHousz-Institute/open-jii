@@ -2,13 +2,26 @@ import { deviationPercent } from "./baseline.js";
 import { formatValue } from "./format.js";
 import type { LinkButton, SlackBlock, SlackMessage } from "./slack.js";
 import { actions, context, header, section, table } from "./slack.js";
-import type { EvaluatedReading, MetricReading } from "./types.js";
+import type { CatalogMetric, EvaluatedReading, MetricReading } from "./types.js";
+
+/**
+ * A parent message and one reply per anomaly.
+ *
+ * The parent is the whole morning at a glance. Each reply carries one anomaly's
+ * identifier, its runbook and its triage command, so the channel stays one table however
+ * bad the day is and nobody scrolls past the first problem to reach the second.
+ *
+ * With no bot token the composer posts the parent alone, so the replies are additive
+ * rather than a prerequisite.
+ */
+export interface Digest {
+  parent: SlackMessage;
+  replies: SlackMessage[];
+}
 
 export interface RenderOptions {
   environment: string;
   runbookBaseUrl?: string;
-  /** Where the catalog entry lives, so a reader can change what a signal means. */
-  catalogUrl?: string;
   /**
    * The full report for this run. Slack carries the verdict and the table; everything
    * a reader might want after that lives one click away rather than in the message.
@@ -34,10 +47,16 @@ function bySeverity(a: EvaluatedReading, b: EvaluatedReading): number {
   return rankOf(a.metric.severity) - rankOf(b.metric.severity);
 }
 
+type ReportingReading = MetricReading & { value: number };
+
+function isReporting(entry: MetricReading): entry is ReportingReading {
+  return entry.value !== null;
+}
+
 /** Largest movement first, so a reader sees what changed before what merely exists. */
-function byMovement(a: MetricReading, b: MetricReading): number {
-  const moved = (entry: MetricReading) =>
-    entry.value === null ? -1 : Math.abs(deviationPercent(entry.value, entry.baseline) ?? 0);
+function byMovement(a: ReportingReading, b: ReportingReading): number {
+  const moved = (entry: ReportingReading) =>
+    Math.abs(deviationPercent(entry.value, entry.baseline) ?? 0);
   return moved(b) - moved(a);
 }
 
@@ -54,9 +73,16 @@ export function deltaGlyph(value: number, baseline: number | null, window: strin
   return ` ${arrow} ${deviation > 0 ? "+" : ""}${deviation.toFixed(0)}% vs ${window}`;
 }
 
-/** One link out: the report, which is where everything else lives. */
-function linkOut(options: RenderOptions): LinkButton[] {
+/** The summary's one link: the evidence behind every number above it. */
+function summaryLinks(options: RenderOptions): LinkButton[] {
   return options.reportUrl ? [{ label: "Open the report", url: options.reportUrl }] : [];
+}
+
+/** One anomaly's link: what to do about it. */
+function runbookLink(metric: CatalogMetric, options: RenderOptions): LinkButton[] {
+  return options.runbookBaseUrl && metric.runbook
+    ? [{ label: "Runbook", url: `${options.runbookBaseUrl}/${metric.runbook}` }]
+    : [];
 }
 
 /** Things that went wrong with the digest itself, as opposed to with the platform. */
@@ -80,11 +106,31 @@ function selfCheckLines({ configErrors, failedRegions }: SelfChecks): string[] {
   return lines;
 }
 
+/** One reply: what this anomaly is, and everything needed to act on it. */
+function replyFor(entry: EvaluatedReading, options: RenderOptions): SlackMessage {
+  const { metric } = entry;
+  const body = [
+    `*${metric.num} · ${metric.name}*`,
+    `${readingOf(entry)} · ${entry.evaluation.reason ?? ""}`,
+    metric.severity ? `\`${metric.id}\` · ${metric.severity}` : `\`${metric.id}\``,
+  ].join("\n");
+
+  const blocks: SlackBlock[] = [section(body)];
+  const buttons = runbookLink(metric, options);
+
+  if (buttons.length > 0) {
+    blocks.push(actions(buttons));
+  }
+  blocks.push(context(`\`claude /openjii-triage ${metric.id}\``));
+
+  return { text: `${metric.num} ${metric.name}: ${readingOf(entry)}`, blocks };
+}
+
 export function renderObservability(
   readings: EvaluatedReading[],
   checks: SelfChecks,
   options: RenderOptions,
-): SlackMessage {
+): Digest {
   const { environment } = options;
   const anomalies = readings.filter((entry) => entry.evaluation.state === "anomaly");
   const missing = readings.filter((entry) => entry.evaluation.state === "missing");
@@ -102,11 +148,13 @@ export function renderObservability(
     const quiet = `Heartbeat · ${environment} · nothing to act on · ${readings.length} signals checked`;
     const text = [quiet, ...notes].join("\n");
     const quietBlocks: SlackBlock[] = [context(text)];
-    const quietLinks = linkOut(options);
+    const quietLinks = summaryLinks(options);
+
     if (quietLinks.length > 0) {
       quietBlocks.push(actions(quietLinks));
     }
-    return { text, blocks: quietBlocks };
+
+    return { parent: { text, blocks: quietBlocks }, replies: [] };
   }
 
   const ordered = [...anomalies].sort(bySeverity);
@@ -143,13 +191,16 @@ export function renderObservability(
   const footer = [`${readings.length} signals read`, ...notes];
   blocks.push(context(footer.join(" · ")));
 
-  const buttons = linkOut(options);
+  const buttons = summaryLinks(options);
   if (buttons.length > 0) {
     blocks.push(actions(buttons));
   }
   lines.push(...notes);
 
-  return { text: lines.join("\n"), blocks };
+  return {
+    parent: { text: lines.join("\n"), blocks },
+    replies: ordered.map((entry) => replyFor(entry, options)),
+  };
 }
 
 export function renderLevels(
@@ -158,8 +209,8 @@ export function renderLevels(
   title: string,
   window: string,
   options: RenderOptions,
-): SlackMessage {
-  const reporting = readings.filter((entry) => entry.value !== null);
+): Digest {
+  const reporting = readings.filter(isReporting);
   const heading = `${title} · ${options.environment}`;
   const blocks: SlackBlock[] = [header(heading)];
   const lines = [heading];
@@ -174,9 +225,7 @@ export function renderLevels(
       entry.metric.name,
       readingOf(entry),
       // deltaGlyph leads with a space and names the window; a column wants neither.
-      deltaGlyph(entry.value ?? 0, entry.baseline, window)
-        .replace(` vs ${window}`, "")
-        .trim(),
+      deltaGlyph(entry.value, entry.baseline, window).replace(` vs ${window}`, "").trim(),
     ]);
 
     blocks.push(section(table(rows)));
@@ -190,5 +239,11 @@ export function renderLevels(
     lines.push(...notes);
   }
 
-  return { text: lines.join("\n"), blocks };
+  const buttons = summaryLinks(options);
+  if (buttons.length > 0) {
+    blocks.push(actions(buttons));
+  }
+
+  // A level has no detail to open, so there is nothing to thread under it.
+  return { parent: { text: lines.join("\n"), blocks }, replies: [] };
 }
