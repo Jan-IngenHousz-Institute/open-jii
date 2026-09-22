@@ -29,6 +29,19 @@ def _serialize_dataframe_rows(frame: pd.DataFrame) -> list[str]:
     return serializer(frame)
 
 
+def _quote_spark_sql_string(value: str | None) -> str:
+    module = ast.parse(_TASK_PATH.read_text())
+    function = next(
+        node
+        for node in module.body
+        if isinstance(node, ast.FunctionDef) and node.name == "_quote_spark_sql_string"
+    )
+    namespace: dict[str, Any] = {}
+    exec(compile(ast.Module(body=[function], type_ignores=[]), _TASK_PATH, "exec"), namespace)
+    quote = cast(Callable[[str | None], str], namespace["_quote_spark_sql_string"])
+    return quote(value)
+
+
 def _strict_loads(payload: str) -> dict:
     def reject(token: str) -> None:
         raise ValueError(f"non-standard token {token}")
@@ -94,3 +107,9 @@ def test_pandas_upload_paths_use_the_shared_serializer() -> None:
     }
 
     assert callers == {"_process_tabular_upload", "process_ambyte_upload"}
+
+
+def test_upload_metadata_uses_spark_sql_string_escaping() -> None:
+    assert _quote_spark_sql_string(None) == "NULL"
+    assert _quote_spark_sql_string("O'Brien") == r"'O\'Brien'"
+    assert _quote_spark_sql_string(r"a\' OR 1=1 -- ") == r"'a\\\' OR 1=1 -- '"
