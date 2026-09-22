@@ -102,6 +102,78 @@ describe("DuckDbQueryBuilder", () => {
 
     const MACRO_SCHEMA = "OBJECT<SPAD: DOUBLE, `Leaf Temp`: DOUBLE, meta: OBJECT<unit: STRING>>";
 
+    it("merges custom metadata, matching on a question answer", async () => {
+      // Dev has no experiment where a blob matches on a question answer, so
+      // this branch and the oldest-first fold can only be exercised here.
+      const older = JSON.stringify({
+        identifierColumnId: "plot",
+        experimentQuestionId: "select_plot",
+        rows: [
+          { _id: "r1", plot: "A", treatment: "control", depth: 10 },
+          { _id: "r2", plot: "B", treatment: "nitrogen", depth: 20 },
+        ],
+      });
+      const newer = JSON.stringify({
+        identifierColumnId: "plot",
+        experimentQuestionId: "select_plot",
+        rows: [{ _id: "r3", plot: "B", treatment: "nitrogen-revised" }],
+      });
+
+      await connection.run(`
+        CREATE OR REPLACE TABLE meta_rows AS
+        SELECT * FROM (VALUES
+          ('exp-1', CAST(1 AS BIGINT), 'dev-1', CAST('{"select_plot":"B"}' AS JSON)),
+          ('exp-1', CAST(2 AS BIGINT), 'dev-2', CAST('{"select_plot":"A"}' AS JSON)),
+          ('exp-1', CAST(3 AS BIGINT), 'dev-3', CAST('{"select_plot":"Z"}' AS JSON))
+        ) AS t(experiment_id, id, device_id, questions_data)
+      `);
+      await connection.run(`
+        CREATE OR REPLACE TABLE meta_source AS
+        SELECT * FROM (VALUES
+          ('exp-1', 'm1', TIMESTAMP '2026-01-01', CAST('${older}' AS JSON)),
+          ('exp-1', 'm2', TIMESTAMP '2026-02-01', CAST('${newer}' AS JSON))
+        ) AS t(experiment_id, metadata_id, created_at, metadata)
+      `);
+
+      const { derive, expression } = DUCKDB_ENRICHMENT_SQL.customMetadata({
+        matchableColumns: ["device_id"],
+        hasQuestionsData: true,
+      });
+
+      const rows = await run(
+        new DuckDbSqlQueryBuilder()
+          .from("meta_rows")
+          .except(["experiment_id", "questions_data"])
+          .join({
+            table: derive.replace("{relation}", "meta_source"),
+            alias: "enr_metadata",
+            on: [{ served: "experiment_id", joined: "experiment_id" }],
+            select: [{ expression, alias: "custom_metadata" }],
+          })
+          .build(),
+      );
+
+      const metadata = new Map(
+        rows.map((row) => [String(row.id), JSON.stringify(row.custom_metadata)]),
+      );
+
+      // Plot B appears in both blobs; the newer overwrites treatment while
+      // depth survives from the older one.
+      expect(metadata.get("1")).toContain("nitrogen-revised");
+      expect(metadata.get("1")).toContain("20");
+      expect(metadata.get("1")).not.toContain('"nitrogen"');
+
+      // Plot A only exists in the older blob.
+      expect(metadata.get("2")).toContain("control");
+
+      // The identifier column and the internal id never reach the reader.
+      expect(metadata.get("2")).not.toContain("plot");
+      expect(metadata.get("2")).not.toContain("_id");
+
+      // Plot Z matches no row in either blob.
+      expect(metadata.get("3")).toBe("null");
+    });
+
     it("runs the real enrichment config end to end", async () => {
       // The config emitted Spark SQL until the dialect seam landed, so DuckDB
       // rejected it outright. This runs the actual served configuration rather
