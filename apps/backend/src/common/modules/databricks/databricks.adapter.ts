@@ -1276,10 +1276,15 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       omitEnrichment,
     ).map((join) => {
       const qualified = `${catalog}.${schema}.${join.relation}`;
+      // A derive groups its whole source otherwise, and a paged read pays for
+      // that twice: once for the count and once for the page.
+      const scoped = `(SELECT * FROM ${qualified} WHERE experiment_id = ${this.queryBuilder
+        .query()
+        .escapeValue(experimentId)})`;
 
       return {
         ...join,
-        table: join.derive ? join.derive.replace("{relation}", qualified) : qualified,
+        table: join.derive ? join.derive.replace("{relation}", scoped) : qualified,
       };
     });
 

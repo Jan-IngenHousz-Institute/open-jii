@@ -168,6 +168,7 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
 
     const joinsResult = await this.resolveJoins(
       retainEnrichment(enrichmentJoins?.(DUCKDB_ENRICHMENT_SQL) ?? [], omitEnrichment),
+      experimentId,
     );
     if (joinsResult.isFailure()) {
       return joinsResult;
@@ -188,31 +189,44 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
    * since the dimensions are small and an experiment-scoped hint would prune
    * a share down to nothing for a dimension that is legitimately sparse.
    */
-  private async resolveJoins(joins: EnrichmentJoin[]): Promise<Result<JoinSpec[]>> {
+  private async resolveJoins(
+    joins: EnrichmentJoin[],
+    experimentId: string,
+  ): Promise<Result<JoinSpec[]>> {
     const resolved: JoinSpec[] = [];
 
-    for (const join of joins) {
-      const sourceResult = await this.fromExpression(join.relation, []);
+    // One experiment's files, and all dimensions at once: these listings are
+    // independent HTTP calls, and a paged read builds two queries, so running
+    // them in series puts eight round trips ahead of the first row.
+    const scopes: [string, string][] = [["experiment_id", experimentId]];
+    const sources = await Promise.all(
+      joins.map((join) => this.fromExpression(join.relation, scopes)),
+    );
+
+    for (const [index, join] of joins.entries()) {
+      const sourceResult = sources[index];
       if (sourceResult.isFailure()) {
-        return sourceResult;
+        return failure(sourceResult.error);
       }
 
-      // A dimension with no data files cannot be given a shape here, and a
-      // LEFT JOIN against nothing would have to project NULLs this route
-      // cannot name. Failing loudly beats serving rows whose enrichment is
-      // silently absent.
+      // A dimension with no data files has no shape to join against: this
+      // route sees files, not a schema, so it cannot project typed NULLs. An
+      // empty annotations or metadata source is ordinary on a new deployment,
+      // so the join is dropped rather than failing the read, which leaves the
+      // columns it supplies absent instead of wrong.
       if (sourceResult.value === null) {
-        return failure(
-          AppError.internal(
-            `Delta Sharing returned no data files for '${join.relation}', so the ` +
-              `enrichment it provides cannot be resolved`,
-          ),
-        );
+        this.logger.warn({
+          msg: "Enrichment dropped: the share holds no data files for this relation",
+          operation: "resolveJoins",
+          relation: join.relation,
+          columns: join.select.map((column) => column.alias),
+        });
+        continue;
       }
 
       resolved.push({
         table: join.derive
-          ? join.derive.replace("{relation}", sourceResult.value)
+          ? join.derive.replace("{relation}", this.scopedSource(sourceResult.value, experimentId))
           : sourceResult.value,
         alias: join.alias,
         on: join.on,
@@ -221,6 +235,17 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
     }
 
     return success(resolved);
+  }
+
+  /**
+   * A dimension that aggregates before joining would otherwise group its whole
+   * source; the file listing is only a hint, so the predicate has to be in the
+   * SQL as well.
+   */
+  private scopedSource(source: string, experimentId: string): string {
+    const escaped = this.queryBuilder.query().escapeValue(experimentId);
+
+    return `(SELECT * FROM ${source} WHERE experiment_id = ${escaped})`;
   }
 
   async executeSqlQuery(_schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
