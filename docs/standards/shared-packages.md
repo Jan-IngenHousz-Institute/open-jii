@@ -1,7 +1,8 @@
 # Shared packages
 
-`packages/auth`, `iot`, `cms`, `analytics` and `transactional`. Each one is small, each is consumed
-by more than one app, and the rules they share are about their public surface and their build.
+`packages/auth`, `iot`, `cms`, `analytics`, `transactional` and `monitoring`. Each one is small,
+each is consumed by more than one place, and the rules they share are about their public surface and
+their build.
 
 `packages/api`, `database`, `ui` and `i18n` have their own documents because they carry more
 specific rules.
@@ -53,10 +54,16 @@ client.
 **`packages/transactional`** is React Email templates plus eleven thin `render/*` modules, one per
 message.
 
+**`packages/monitoring`** holds the decision logic for the platform heartbeat, split so that the
+part worth testing is not inside a Lambda: parsing the metrics catalogue and building the CloudWatch
+queries, deriving baselines and deciding what counts as an anomaly, formatting the Slack digests,
+and turning the heartbeat file into datapoints. The Lambdas are thin wrappers around it, which is
+why this package has tests and they do not.
+
 ## Tests
 
-`packages/auth` has 5 specs and `packages/iot` has 22, both colocated. `cms`, `analytics` and
-`transactional` have none and no vitest configuration.
+`packages/auth` has 5 specs, `packages/iot` has 34 and `packages/monitoring` has 6, all colocated.
+`cms`, `analytics` and `transactional` have none and no vitest configuration.
 
 ## Known debt
 
@@ -79,5 +86,8 @@ because a broken email template fails loudly and the flag defaults are conservat
 - 2026-09-21. Permissions stay in `packages/auth` rather than being re-derived in the backend, even
   though it means a backend change sometimes has to go through a package rebuild. One authority for
   who may do what is worth the extra step.
+- 2026-09-22. `packages/monitoring` exists so the heartbeat's decision logic can be tested without
+  invoking a Lambda. Anything in a monitoring Lambda that is worth an assertion belongs here
+  instead.
 - 2026-09-21. The generated Contentful SDK is exported verbatim rather than wrapped. A wrapper would
   have to be regenerated alongside it, and there is nothing to add.

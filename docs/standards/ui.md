@@ -16,7 +16,7 @@ set, described in `apps/mobile/docs/styling.md`.
 ## Shape
 
 ```text
-src/components/<name>.tsx        62 components, one per file, kebab-case
+src/components/<name>.tsx        63 components, one per file, kebab-case
 src/components/charts/           36 files: the Plotly chart family and its runtime
 src/components/map/              the map layer
 src/hooks/                       the six exported hooks
@@ -70,14 +70,14 @@ added outside those will drift from the others the first time the theme changes.
 
 ## Tests
 
-Vitest with jsdom and React Testing Library, 64 files, all under `__tests__/`. Chart tests live in
+Vitest with jsdom and React Testing Library, 65 files, all under `__tests__/`. Chart tests live in
 `__tests__/charts/`. Because Plotly needs a real layout engine, apps mock
 `@repo/ui/components/charts/*` rather than rendering them, so the only place a chart is genuinely
 exercised is here.
 
 ## Known debt
 
-`eslint.config.js` ignores `src/**` entirely, so the 62 components and 36 chart files are checked by
+`eslint.config.js` ignores `src/**` entirely, so the 63 components and 36 chart files are checked by
 the theme rule and nothing else. The comment in `eslint.theme.config.js` is honest about why: the
 full type-aware config reports about 2,600 problems across the vendored components. The consequence
 is that 283 type assertions live here, 58 of them `as any`, more than any other workspace and
@@ -102,4 +102,4 @@ There are both a `map.tsx` and a `map/` directory. No ticket.
 - 2026-09-21. This package stays consumed from source with no build step. It keeps the edit loop
   immediate, and the cost is that consumers compile it, which is already true of every app here.
 - 2026-09-21. `__tests__/` stays this package's convention rather than being colocated to match the
-  apps. All 64 files already follow it and renaming them changes nothing.
+  apps. All 65 files already follow it and renaming them changes nothing.

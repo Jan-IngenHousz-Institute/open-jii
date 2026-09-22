@@ -10,9 +10,13 @@ export function markerPath(root: string): string {
   return join(root, ".claude", "analyst-prod.ok");
 }
 
+/**
+ * Clamped at both ends. A marker dated in the future, which a clock adjustment is enough to
+ * produce, would otherwise report more than a full window and quietly extend it.
+ */
 export function remainingSeconds(modified: Date, now: Date): number {
   const elapsed = Math.floor((now.getTime() - modified.getTime()) / 1000);
-  return Math.max(0, WINDOW_SECONDS - elapsed);
+  return Math.min(WINDOW_SECONDS, Math.max(0, WINDOW_SECONDS - elapsed));
 }
 
 export function describeRemaining(seconds: number): string {

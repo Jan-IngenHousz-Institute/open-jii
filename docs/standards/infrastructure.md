@@ -1,6 +1,6 @@
 # Infrastructure
 
-`infrastructure/`, which is OpenTofu. Three environment root modules, 37 reusable modules, and a
+`infrastructure/`, which is OpenTofu. Three environment root modules, 40 reusable modules, and a
 separate root for data governance.
 
 Change it only when that is explicitly the task. An infrastructure change that rides along with a
@@ -16,7 +16,7 @@ feature is how an environment ends up in a state nobody intended.
 ```text
 env/dev, env/prod, env/dr    one root module each: backend.tf, main.tf, variables.tf, versions.tf
 data-governance/             a separate root with its own state, applied by hand
-modules/                     37 reusable modules
+modules/                     40 reusable modules
 ```
 
 Environments are separated by root module and remote state, not by workspaces. Each `backend.tf`

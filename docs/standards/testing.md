@@ -1,6 +1,6 @@
 # Testing
 
-How tests are written and where they go, across every workspace. There are 1,482 test files today
+How tests are written and where they go, across every workspace. There are 1,603 test files today
 and the conventions genuinely differ per workspace, so the table below is the reference rather than
 a single house rule.
 
@@ -15,18 +15,20 @@ you write a web test. This document does not repeat it.
 
 ## Where tests live
 
-| Workspace        | Runner               | Suffix            | Placement                                         | Harness                                                 |
-| ---------------- | -------------------- | ----------------- | ------------------------------------------------- | ------------------------------------------------------- |
-| `apps/backend`   | vitest, node         | `.spec.ts` (281)  | colocated                                         | `src/test/test-harness.ts`, real Postgres               |
-| `apps/web`       | vitest, jsdom        | `.test.tsx` (902) | colocated, except 83 under `app/` in `__tests__/` | `test/test-utils.tsx`, `test/factories.ts`, `test/msw/` |
-| `apps/mobile`    | vitest, two projects | `.test.ts` (127)  | colocated                                         | `vitest.setup.ts`, `@repo/vitest-config/mobile`         |
-| `apps/data`      | pytest               | `test_*.py` (16)  | flat `tests/lib/`                                 | `tests/conftest.py`, local Spark and a fake `dlt`       |
-| `apps/e2e`       | playwright           | `.spec.ts` (2)    | own package                                       | a running stack                                         |
-| `packages/api`   | vitest, node         | `.spec.ts` (43)   | colocated                                         | none needed                                             |
-| `packages/iot`   | vitest, node         | `.spec.ts` (22)   | colocated                                         | `src/driver/testing/mock-transport.ts`                  |
-| `packages/ui`    | vitest, jsdom        | `.test.tsx` (64)  | all in `__tests__/`                               | none                                                    |
-| `packages/auth`  | vitest, node         | both, 3 and 2     | colocated                                         | none                                                    |
-| `tooling/devkit` | vitest, node         | `.test.ts` (19)   | colocated                                         | fixture clients                                         |
+| Workspace                  | Runner               | Suffix            | Placement                                         | Harness                                                 |
+| -------------------------- | -------------------- | ----------------- | ------------------------------------------------- | ------------------------------------------------------- |
+| `apps/backend`             | vitest, node         | `.spec.ts` (299)  | colocated                                         | `src/test/test-harness.ts`, real Postgres               |
+| `apps/web`                 | vitest, jsdom        | `.test.tsx` (970) | colocated, except 83 under `app/` in `__tests__/` | `test/test-utils.tsx`, `test/factories.ts`, `test/msw/` |
+| `apps/mobile`              | vitest, two projects | `.test.ts` (130)  | colocated                                         | `vitest.setup.ts`, `@repo/vitest-config/mobile`         |
+| `apps/data`                | pytest               | `test_*.py` (17)  | flat `tests/lib/`                                 | `tests/conftest.py`, local Spark and a fake `dlt`       |
+| `apps/calibration-sandbox` | pytest               | `test_*.py` (3)   | `tests/`                                          | the composed stack                                      |
+| `apps/e2e`                 | playwright           | `.spec.ts` (2)    | own package                                       | a running stack                                         |
+| `packages/api`             | vitest, node         | `.spec.ts` (48)   | colocated                                         | none needed                                             |
+| `packages/iot`             | vitest, node         | `.spec.ts` (34)   | colocated                                         | `src/driver/testing/mock-transport.ts`                  |
+| `packages/ui`              | vitest, jsdom        | `.test.tsx` (65)  | all in `__tests__/`                               | none                                                    |
+| `packages/monitoring`      | vitest, node         | `.test.ts` (6)    | colocated                                         | none needed                                             |
+| `packages/auth`            | vitest, node         | both, 3 and 2     | colocated                                         | none                                                    |
+| `tooling/devkit`           | vitest, node         | `.test.ts` (23)   | colocated                                         | fixture clients                                         |
 
 `packages/analytics`, `cms`, `database`, `i18n` and `transactional` have no tests and no vitest
 configuration at all.
@@ -94,9 +96,9 @@ characters before the collision probability stops mattering.
 
 ## Known debt
 
-`packages/ui` keeps all 64 of its test files in `__tests__/` directories while the rest of the repo
+`packages/ui` keeps all 65 of its test files in `__tests__/` directories while the rest of the repo
 colocates. Worse, `src/**` is excluded from the type-aware lint configuration there, so those tests
-are close to the only automated check those 65 components get. No ticket.
+are close to the only automated check those 63 components get. No ticket.
 
 `packages/auth` is the only workspace using both suffixes, with three `.spec.ts` and two `.test.ts`.
 Normalising the two is a rename. No ticket.
@@ -110,7 +112,7 @@ Contentful client that both web and mobile depend on. Needs a ticket.
 time, in two places that look unrelated. No ticket.
 
 `apps/data` runs ruff and pyright over `src/lib` and `tests` only. The pipelines and tasks that run
-in production are excluded from both, and the 16 pytest files cover the libraries rather than the
+in production are excluded from both, and the 17 pytest files cover the libraries rather than the
 pipelines. Needs a ticket.
 
 `apps/backend/test/app.e2e-spec.ts` and its `jest-e2e.json` are a Jest harness nothing runs. No

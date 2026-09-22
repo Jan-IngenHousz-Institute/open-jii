@@ -83,7 +83,7 @@ the protocol. `packages/iot/src/driver/testing/mock-transport.ts` is the shared 
 
 ## Tests
 
-Vitest with two projects in one config, 127 colocated `.test.ts` files. The `node` project runs
+Vitest with two projects in one config, 130 colocated `.test.ts` files. The `node` project runs
 logic and React Native Testing Library; the `jsdom` project picks up anything under
 `src/**/hooks/**` that needs a DOM. This is the only workspace with enforced coverage thresholds:
 35% globally, and per layer 85% on `features/**/domain/**`, 75% on `shared/db/**`, 70% on
