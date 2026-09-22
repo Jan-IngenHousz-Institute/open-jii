@@ -1,10 +1,14 @@
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 
-export const useActiveDeviceCalibration = (deviceId: string, options?: { enabled?: boolean }) =>
+/** Null until a bench has worked out which device the unit on the port is. */
+export const useActiveDeviceCalibration = (
+  deviceId: string | null,
+  options?: { enabled?: boolean },
+) =>
   useQuery(
     orpc.iot.getActiveDeviceCalibration.queryOptions({
-      input: { deviceId },
-      enabled: options?.enabled ?? true,
+      input: { deviceId: deviceId ?? "" },
+      enabled: (options?.enabled ?? true) && deviceId !== null,
     }),
   );

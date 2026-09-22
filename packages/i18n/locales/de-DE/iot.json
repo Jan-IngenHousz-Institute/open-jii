@@ -899,7 +899,8 @@
         "pointsTaken": "{{taken}} Punkte",
         "retaken": "{{series}} Punkt {{point}} erneut aufgenommen (Versuch {{attempt}})",
         "series_one": "{{series}}: {{count}} Zeile aufgezeichnet",
-        "series_other": "{{series}}: {{count}} Zeilen aufgezeichnet"
+        "series_other": "{{series}}: {{count}} Zeilen aufgezeichnet",
+        "start": "Lauf starten"
       },
       "review": {
         "hint": "Die Freigabe übernimmt die berechneten Blöcke in den Datensatz dieses Geräts. Die Hardware wird erst im nächsten Schritt beschrieben.",
@@ -1182,22 +1183,18 @@
         "pointCount_other": "{{count}} Messungen",
         "waiting": "{{duration}} Wartezeit"
       },
-      "bench": {
-        "chooseFirst": "Wählen Sie die Prozedur für diese Sitzung. Der Aufbau wird einmal verbunden und bleibt verbunden, während Einheiten kommen und gehen.",
+      "sitting": {
+        "recorded": "{{unit}} ist erfasst.",
+        "recordedHint": "Noch ist nichts entschieden. Arbeiten Sie erst die Einheiten ab und prüfen Sie das Gemessene danach gemeinsam.",
+        "rigStaysBound": "Lampe und Referenzen bleiben verbunden. Nur der Port der Einheit wird freigegeben.",
+        "nextUnit": "Nächste Einheit",
+        "review_one": "1 Lauf prüfen",
+        "review_other": "{{count}} Läufe prüfen",
         "thisSitting": "Diese Sitzung",
         "recordedOf": "{{recorded}} von {{total}} erfasst",
-        "nextUnit": "Nächste Einheit",
-        "changeProcedure": "Prozedur wechseln",
-        "recording": "Wird erfasst…",
         "alreadyDone": "{{serial}} war in dieser Sitzung bereits an der Reihe.",
-        "unregistered": "{{serial}} ist kein registriertes Gerät, daher kann der Lauf noch nicht erfasst werden.",
-        "unnamed": "Die Firmware dieser Einheit nennt keine Kennung, daher kann die Bank das Gerät nicht zuordnen.",
-        "title": "Kalibrierbank",
-        "unitOf": "{{index}} von {{total}}",
-        "nextToReview": "Weiter",
-        "reviewNow_one": "1 Lauf prüfen",
-        "reviewNow_other": "{{count}} Läufe prüfen",
-        "approvedNotWritten": "Freigegebene Koeffizienten erreichen eine Einheit, sobald sie wieder an einem Port hängt."
+        "whichDevice": "Welches Gerät ist das?",
+        "whichDeviceHint": "Die Firmware dieser Einheit meldet über die Konsole keine Kennung, daher muss der Lauf einem von Ihnen benannten Gerät zugeordnet werden."
       }
     },
     "workbookBar": {

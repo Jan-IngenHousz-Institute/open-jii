@@ -51,8 +51,10 @@ describe("navigation-config", () => {
     });
 
     // Calibration is something done to a device, not a document filed beside protocols.
+    // `children` is what the sidebar renders as sub-navigation; `items` is drawn by nothing.
     it("keeps calibration under devices rather than in the library", () => {
-      const urls = mainNavigation.devices.items.map((item) => item.url(locale));
+      expect(mainNavigation.devices.navigable).toBe(false);
+      const urls = mainNavigation.devices.children.map((child) => child.url(locale));
       expect(urls).toEqual([`/${locale}/platform/devices`, `/${locale}/platform/calibrations`]);
       expect(
         mainNavigation.library.children.some((child) =>

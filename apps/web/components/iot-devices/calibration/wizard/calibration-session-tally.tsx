@@ -4,10 +4,10 @@ import { CheckCircle2, XCircle } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
 
-import type { BenchUnit } from "./bench-unit";
+import type { SessionUnit } from "./session-unit";
 
-interface BenchUnitTallyProps {
-  units: BenchUnit[];
+interface CalibrationSessionTallyProps {
+  units: SessionUnit[];
 }
 
 /**
@@ -17,16 +17,12 @@ interface BenchUnitTallyProps {
  * answer: how far along they are, and whether the unit in their hand has already had its
  * turn. Both are read at a glance rather than counted off the table.
  */
-export function BenchUnitTally({ units }: BenchUnitTallyProps) {
+export function CalibrationSessionTally({ units }: CalibrationSessionTallyProps) {
   const { t } = useTranslation("iot");
-
-  if (units.length === 0) {
-    return null;
-  }
 
   const recorded = units.filter((unit) => unit.outcome === "recorded").length;
 
-  function renderUnit(unit: BenchUnit) {
+  function renderUnit(unit: SessionUnit) {
     const isRecorded = unit.outcome === "recorded";
 
     return (
@@ -50,10 +46,10 @@ export function BenchUnitTally({ units }: BenchUnitTallyProps) {
     <section className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-2">
         <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-          {t("iot.calibration.bench.thisSitting")}
+          {t("iot.calibration.sitting.thisSitting")}
         </p>
         <p className="text-muted-foreground text-xs tabular-nums">
-          {t("iot.calibration.bench.recordedOf", { recorded, total: units.length })}
+          {t("iot.calibration.sitting.recordedOf", { recorded, total: units.length })}
         </p>
       </div>
       <ul className="space-y-1">{units.map(renderUnit)}</ul>

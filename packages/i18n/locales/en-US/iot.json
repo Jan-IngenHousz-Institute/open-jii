@@ -899,7 +899,8 @@
         "pointsTaken": "{{taken}} points",
         "retaken": "{{series}} point {{point}} taken again (attempt {{attempt}})",
         "series_one": "{{series}}: {{count}} row captured",
-        "series_other": "{{series}}: {{count}} rows captured"
+        "series_other": "{{series}}: {{count}} rows captured",
+        "start": "Start the run"
       },
       "review": {
         "hint": "Approving applies the computed blocks to this device's record. Nothing reaches the hardware until the next step.",
@@ -1182,22 +1183,18 @@
         "pointCount_other": "{{count}} readings",
         "waiting": "{{duration}} of waiting"
       },
-      "bench": {
-        "chooseFirst": "Pick the procedure this sitting runs. The rig is connected once and stays connected while units come and go.",
+      "sitting": {
+        "recorded": "{{unit}} is recorded.",
+        "recordedHint": "Nothing is decided yet. Work through the units first and review what you measured together.",
+        "rigStaysBound": "The lamp and the references stay connected. Only the unit's own port is released.",
+        "nextUnit": "Next unit",
+        "review_one": "Review 1 run",
+        "review_other": "Review {{count}} runs",
         "thisSitting": "This sitting",
         "recordedOf": "{{recorded}} of {{total}} recorded",
-        "nextUnit": "Next unit",
-        "changeProcedure": "Change procedure",
-        "recording": "Recording…",
         "alreadyDone": "{{serial}} has already had its turn in this sitting.",
-        "unregistered": "{{serial}} is not a registered device, so its run cannot be recorded yet.",
-        "unnamed": "This unit's firmware names no identifier, so the bench cannot tell which device it is.",
-        "title": "Calibration bench",
-        "unitOf": "{{index}} of {{total}}",
-        "nextToReview": "Next",
-        "reviewNow_one": "Review 1 run",
-        "reviewNow_other": "Review {{count}} runs",
-        "approvedNotWritten": "Approved coefficients reach a unit the next time it is on a port."
+        "whichDevice": "Which device is this?",
+        "whichDeviceHint": "This unit's firmware does not report an identifier over the console, so the run has to be recorded against a device you name."
       }
     },
     "workbookBar": {

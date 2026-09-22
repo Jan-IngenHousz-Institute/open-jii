@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { unitOnPort } from "./bench-session-unit";
+import { unitOnPort } from "./unit-on-port";
 
 const AMBIT = {
   id: "11111111-1111-4111-8111-111111111111",

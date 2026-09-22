@@ -1,5 +1,6 @@
 "use client";
 
+import { CalibrationDevicePicker } from "@/components/calibrations/calibration-device-picker";
 import { PanelCard } from "@/components/iot-devices/monitoring/panel-card";
 import { useActiveDeviceCalibration } from "@/hooks/iot/useActiveDeviceCalibration/useActiveDeviceCalibration";
 import { useApproveCalibrationRun } from "@/hooks/iot/useApproveCalibrationRun/useApproveCalibrationRun";
@@ -8,6 +9,7 @@ import { useCalibrationCapture } from "@/hooks/iot/useCalibrationCapture/useCali
 import { useCalibrationDefinition } from "@/hooks/iot/useCalibrationDefinition/useCalibrationDefinition";
 import { useCalibrationDefinitions } from "@/hooks/iot/useCalibrationDefinitions/useCalibrationDefinitions";
 import { useCreateCalibrationRun } from "@/hooks/iot/useCreateCalibrationRun/useCreateCalibrationRun";
+import { useIotDevices } from "@/hooks/iot/useIotDevices/useIotDevices";
 import { useRejectCalibrationRun } from "@/hooks/iot/useRejectCalibrationRun/useRejectCalibrationRun";
 import { useReportDeviceCalibrationWrite } from "@/hooks/iot/useReportDeviceCalibrationWrite/useReportDeviceCalibrationWrite";
 import { CheckCircle2, CircleDashed, Loader2, TriangleAlert } from "lucide-react";
@@ -42,8 +44,11 @@ import { CalibrationReview } from "./calibration-review";
 import { CalibrationSessionRail } from "./calibration-session-rail";
 import { CalibrationWizardActions } from "./calibration-wizard-actions";
 import { CalibrationWriteStep } from "./calibration-write-step";
+import type { SessionUnit } from "./session-unit";
+import { unitAlreadyDone } from "./session-unit";
+import { unitOnPort } from "./unit-on-port";
 
-type WizardStep = "choose" | "connect" | "capture" | "review" | "write" | "done";
+type WizardStep = "choose" | "connect" | "capture" | "recorded" | "review" | "write" | "done";
 
 /**
  * The three things a session actually consists of, which the six steps are phases of.
@@ -60,6 +65,9 @@ const PHASE_OF: Record<WizardStep, WizardPhase> = {
   choose: "setUp",
   connect: "setUp",
   capture: "measure",
+  // Still measuring: the unit is done and the next one is the obvious next act, so a
+  // sitting that has just recorded one has not reached a decision about anything.
+  recorded: "measure",
   review: "decide",
   write: "decide",
   done: "decide",
@@ -72,10 +80,14 @@ export interface CalibrationWriteSession {
 }
 
 interface CalibrationWizardProps {
-  deviceId: string;
+  /**
+   * The device this session is for. Absent at a bench, which takes whatever hardware is put
+   * on it and works out which device that is from what the unit announces.
+   */
+  deviceId?: string;
   family: CalibrationFamily;
   /** What the platform has this device registered as; the unit that answers has to be it. */
-  serialNumber: string;
+  serialNumber?: string;
   /**
    * Entered from a definition rather than from a device: that procedure is fixed, and the
    * wizard opens on Connect.
@@ -145,11 +157,33 @@ export function CalibrationWizard({
   const [verification, setVerification] = useState<CalibrationRunPayload | null>(null);
   const [verifyOutcome, setVerifyOutcome] = useState<PhaseResult | null>(null);
   const [hasChecked, setHasChecked] = useState(false);
+  const [units, setUnits] = useState<SessionUnit[]>([]);
+  // Some firmware names the unit on the port and some does not. An Ambit's MAC is only in
+  // its boot dump, which costs a reboot, so for those families the operator says which
+  // device this is rather than the bench guessing or refusing.
+  const [chosenDeviceId, setChosenDeviceId] = useState<string | null>(null);
 
   const definitions = useCalibrationDefinitions(family);
   const definition = useCalibrationDefinition(definitionId);
-  const active = useActiveDeviceCalibration(deviceId);
-  const capture = useCalibrationCapture(definition.data?.captureProcedure, family, serialNumber);
+  const capture = useCalibrationCapture(
+    definition.data?.captureProcedure,
+    family,
+    serialNumber ?? null,
+  );
+
+  // Told which device, or left to find out. A bench asks the port and holds the answer
+  // against the fleet; the query is already in cache from the page that opened this.
+  const fleet = useIotDevices({ enabled: deviceId === undefined });
+  const onPort = unitOnPort(capture.connection?.identity.deviceId, family, fleet.data);
+  // Nobody named a device, so this is a bench working through whatever is put on it.
+  const isSitting = deviceId === undefined;
+  const resolved = onPort.kind === "registered" ? onPort.device.id : null;
+  const runDeviceId = deviceId ?? resolved ?? chosenDeviceId;
+  /** The port said nothing that names it, so the fleet cannot be searched on its behalf. */
+  const isUnitUnnamed =
+    isSitting && capture.connection !== undefined && onPort.kind !== "registered";
+  const repeated = onPort.kind === "registered" ? unitAlreadyDone(units, onPort.serial) : undefined;
+  const active = useActiveDeviceCalibration(runDeviceId);
   const { operator, rig } = capture;
   const createRun = useCreateCalibrationRun();
   const approveRun = useApproveCalibrationRun();
@@ -179,7 +213,9 @@ export function CalibrationWizard({
   const reportedSerial = capture.unit?.kind === "match" ? capture.unit.serial : undefined;
 
   async function submitRun(readings: CalibrationRunPayload, notRun: SkippedSeriesList) {
-    if (!definition.data || !connection) return;
+    // A run records which device it was taken on, so a unit the fleet does not hold has
+    // nowhere to be recorded and the bench says so rather than posting it somewhere.
+    if (!definition.data || !connection || runDeviceId === null) return;
 
     setIsSubmitting(true);
     setSubmitError(null);
@@ -190,7 +226,7 @@ export function CalibrationWizard({
         reported === undefined ? undefined : zReportedFirmwareVersion.safeParse(reported);
 
       const created = await createRun.mutateAsync({
-        deviceId,
+        deviceId: runDeviceId,
         definitionId: definition.data.id,
         payload: readings,
         skippedSeries: notRun.length > 0 ? notRun : undefined,
@@ -199,7 +235,19 @@ export function CalibrationWizard({
         preInfo: { ...connection.identity.raw },
       });
       setRun(created);
-      setStep("review");
+      if (isSitting && onPort.kind === "registered") {
+        setUnits((done) => [
+          ...done,
+          {
+            serial: onPort.serial,
+            deviceId: onPort.device.id,
+            deviceName: onPort.device.name,
+            runId: created.id,
+            outcome: "recorded",
+          },
+        ]);
+      }
+      setStep(isSitting ? "recorded" : "review");
     } catch (error) {
       setSubmitError(messageOf(error));
     } finally {
@@ -404,6 +452,8 @@ export function CalibrationWizard({
         return t("iot.calibration.connect.hint");
       case "capture":
         return t("iot.calibration.capture.hint");
+      case "recorded":
+        return t("iot.calibration.sitting.recordedHint");
       case "review":
         return isRunComputed ? t("iot.calibration.review.hint") : undefined;
       case "write":
@@ -458,18 +508,52 @@ export function CalibrationWizard({
     );
   }
 
+  function renderDeviceChoice() {
+    const candidates = fleet.data?.filter((device) => device.deviceType === family);
+
+    return (
+      <div className="space-y-3 rounded-lg border p-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">{t("iot.calibration.sitting.whichDevice")}</p>
+          <p className="text-muted-foreground text-sm">
+            {t("iot.calibration.sitting.whichDeviceHint")}
+          </p>
+        </div>
+        <CalibrationDevicePicker
+          devices={candidates}
+          isLoading={fleet.isLoading}
+          isError={fleet.isError}
+          selectedId={chosenDeviceId}
+          onSelect={setChosenDeviceId}
+        />
+      </div>
+    );
+  }
+
   function renderConnect() {
     return (
-      <CalibrationConnectStep
-        family={family}
-        connection={connection}
-        unit={capture.unit}
-        isConnecting={capture.isConnecting}
-        error={capture.connectError}
-        rig={rig}
-        onConnect={capture.connect}
-        onDisconnect={capture.disconnect}
-      />
+      <div className="space-y-4">
+        {/* The commonest mistake in a batch is picking a unit off the wrong side of the
+            table, and it is only catchable before the run rather than after it. */}
+        {repeated !== undefined && (
+          <Alert>
+            <AlertDescription>
+              {t("iot.calibration.sitting.alreadyDone", { serial: repeated.serial })}
+            </AlertDescription>
+          </Alert>
+        )}
+        <CalibrationConnectStep
+          family={family}
+          connection={connection}
+          unit={capture.unit}
+          isConnecting={capture.isConnecting}
+          error={capture.connectError}
+          rig={rig}
+          onConnect={capture.connect}
+          onDisconnect={capture.disconnect}
+        />
+        {isUnitUnnamed && renderDeviceChoice()}
+      </div>
     );
   }
 
@@ -489,7 +573,9 @@ export function CalibrationWizard({
           <Button
             type="button"
             onClick={() => setStep(isWriteOnly ? "write" : "capture")}
-            disabled={isWriteOnly ? connection === undefined : !capture.canStart}
+            disabled={
+              isWriteOnly ? connection === undefined : !capture.canStart || runDeviceId === null
+            }
           >
             {t("iot.calibration.cta.next")}
           </Button>
@@ -821,6 +907,77 @@ export function CalibrationWizard({
     return <CalibrationWizardActions primary={renderClose()} />;
   }
 
+  /**
+   * One unit is done and the bench is still standing.
+   *
+   * Nothing is decided here: a batch is measured first and reviewed together, because a
+   * verdict reached to get back to the hardware faster is the one a batch gets wrong.
+   */
+  function renderRecorded() {
+    const just = units.at(-1);
+
+    return (
+      <div className="space-y-3">
+        <p className="text-sm">
+          {t("iot.calibration.sitting.recorded", {
+            unit: just?.deviceName ?? just?.serial ?? "",
+          })}
+        </p>
+        <p className="text-muted-foreground text-sm">
+          {t("iot.calibration.sitting.rigStaysBound")}
+        </p>
+      </div>
+    );
+  }
+
+  /**
+   * Everything that belongs to the unit rather than to the sitting.
+   *
+   * The rig, the procedure and the tally outlive a unit; every other piece of session state
+   * is about the one that just left the bench, and carrying any of it into the next unit
+   * would attribute one unit's write to another.
+   */
+  function forgetUnit() {
+    setRun(null);
+    setPayload(null);
+    setSkipped([]);
+    setSubmitError(null);
+    setApplied(null);
+    setWriteResults(null);
+    setPostInfo(undefined);
+    setWriteError(null);
+    setReportError(null);
+    setIsReported(false);
+    setVerification(null);
+    setVerifyOutcome(null);
+    setHasChecked(false);
+    setChosenDeviceId(null);
+  }
+
+  /** The rig stays bound; only the hardware in the operator's hands changes. */
+  async function nextUnit() {
+    forgetUnit();
+    await capture.releaseUnit();
+    setStep("connect");
+  }
+
+  function renderRecordedActions() {
+    return (
+      <CalibrationWizardActions
+        secondary={
+          <Button type="button" variant="outline" onClick={() => setStep("review")}>
+            {t("iot.calibration.sitting.review", { count: units.length })}
+          </Button>
+        }
+        primary={
+          <Button type="button" onClick={() => void nextUnit()}>
+            {t("iot.calibration.sitting.nextUnit")}
+          </Button>
+        }
+      />
+    );
+  }
+
   function renderStep() {
     switch (step) {
       case "choose":
@@ -829,6 +986,8 @@ export function CalibrationWizard({
         return renderConnect();
       case "capture":
         return renderCapture();
+      case "recorded":
+        return renderRecorded();
       case "review":
         return renderReview();
       case "write":
@@ -846,6 +1005,8 @@ export function CalibrationWizard({
         return renderConnectActions();
       case "capture":
         return renderCaptureActions();
+      case "recorded":
+        return renderRecordedActions();
       case "review":
         return renderReviewActions();
       case "write":
@@ -883,6 +1044,7 @@ export function CalibrationWizard({
       <div className="lg:sticky lg:top-20 lg:self-start">
         {step !== "done" && (
           <CalibrationSessionRail
+            units={units}
             family={family}
             procedure={definition.data?.captureProcedure}
             connection={connection}

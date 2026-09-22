@@ -14,6 +14,8 @@ import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
 
 import { CalibrationElapsed } from "./calibration-elapsed";
+import { CalibrationSessionTally } from "./calibration-session-tally";
+import type { SessionUnit } from "./session-unit";
 
 interface CalibrationSessionRailProps {
   family: CalibrationFamily;
@@ -27,6 +29,8 @@ interface CalibrationSessionRailProps {
   /** The capture is behind us, so every step reads as run rather than as still to do. */
   isComplete: boolean;
   isRunning: boolean;
+  /** What this sitting has already put through the rig; empty on a single-device session. */
+  units: SessionUnit[];
 }
 
 /** 12px, not 11: this is read at arm's length from a bench, not leaned into. */
@@ -48,6 +52,7 @@ export function CalibrationSessionRail({
   activeStep,
   isComplete,
   isRunning,
+  units,
 }: CalibrationSessionRailProps) {
   const { t } = useTranslation("iot");
 
@@ -218,6 +223,7 @@ export function CalibrationSessionRail({
         {renderDevice()}
         {renderBench()}
         {renderSteps()}
+        {units.length > 0 && <CalibrationSessionTally units={units} />}
       </aside>
     </InsetPanel>
   );

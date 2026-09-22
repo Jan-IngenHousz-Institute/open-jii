@@ -899,7 +899,8 @@
         "pointsTaken": "{{taken}} punten",
         "retaken": "{{series}} punt {{point}} opnieuw genomen (poging {{attempt}})",
         "series_one": "{{series}}: {{count}} rij vastgelegd",
-        "series_other": "{{series}}: {{count}} rijen vastgelegd"
+        "series_other": "{{series}}: {{count}} rijen vastgelegd",
+        "start": "Meting starten"
       },
       "review": {
         "hint": "Goedkeuren past de berekende blokken toe op het record van dit apparaat. De hardware wordt pas in de volgende stap beschreven.",
@@ -1182,22 +1183,18 @@
         "pointCount_other": "{{count}} metingen",
         "waiting": "{{duration}} wachten"
       },
-      "bench": {
-        "chooseFirst": "Kies de procedure voor deze sessie. De opstelling wordt één keer verbonden en blijft verbonden terwijl units komen en gaan.",
+      "sitting": {
+        "recorded": "{{unit}} is vastgelegd.",
+        "recordedHint": "Er is nog niets besloten. Werk eerst de units af en beoordeel daarna samen wat je hebt gemeten.",
+        "rigStaysBound": "De lamp en de referenties blijven verbonden. Alleen de poort van de unit wordt vrijgegeven.",
+        "nextUnit": "Volgende unit",
+        "review_one": "1 meting beoordelen",
+        "review_other": "{{count}} metingen beoordelen",
         "thisSitting": "Deze sessie",
         "recordedOf": "{{recorded}} van {{total}} vastgelegd",
-        "nextUnit": "Volgende unit",
-        "changeProcedure": "Procedure wijzigen",
-        "recording": "Vastleggen…",
         "alreadyDone": "{{serial}} is in deze sessie al aan de beurt geweest.",
-        "unregistered": "{{serial}} is geen geregistreerd apparaat, dus de meting kan nog niet worden vastgelegd.",
-        "unnamed": "De firmware van deze unit noemt geen identificatie, dus de bank kan niet bepalen om welk apparaat het gaat.",
-        "title": "Kalibratiebank",
-        "unitOf": "{{index}} van {{total}}",
-        "nextToReview": "Volgende",
-        "reviewNow_one": "1 meting beoordelen",
-        "reviewNow_other": "{{count}} metingen beoordelen",
-        "approvedNotWritten": "Goedgekeurde coëfficiënten bereiken een unit de volgende keer dat die op een poort zit."
+        "whichDevice": "Welk apparaat is dit?",
+        "whichDeviceHint": "De firmware van deze unit meldt geen identificatie via de console, dus de meting moet worden vastgelegd op een apparaat dat jij aanwijst."
       }
     },
     "workbookBar": {

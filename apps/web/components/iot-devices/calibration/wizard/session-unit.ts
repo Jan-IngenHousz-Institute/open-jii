@@ -5,7 +5,7 @@
  * is a recorded run rather than a verdict. The verdict arrives at review, and the write
  * arrives after that, whenever the unit is next on a port.
  */
-export interface BenchUnit {
+export interface SessionUnit {
   /** What the unit answered when asked who it is; the identity the whole sitting keys on. */
   serial: string;
   /** The registered device this unit is, where the fleet holds one. */
@@ -18,6 +18,6 @@ export interface BenchUnit {
 }
 
 /** Whether this unit has already had its turn, which is the batch's commonest mistake. */
-export function unitAlreadyDone(units: BenchUnit[], serial: string): BenchUnit | undefined {
+export function unitAlreadyDone(units: SessionUnit[], serial: string): SessionUnit | undefined {
   return units.find((unit) => unit.serial === serial);
 }

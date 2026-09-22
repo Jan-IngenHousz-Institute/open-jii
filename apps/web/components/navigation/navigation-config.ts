@@ -88,25 +88,28 @@ export const mainNavigation = {
       },
     ] as NavLink[],
   },
+  // A group rather than a link, because calibration is something done to a device and
+  // belongs beside the fleet rather than in the library with protocols and macros. Only
+  // `children` renders as sub-navigation; `items` is drawn by nothing.
   devices: {
     titleKey: "iot.devices.tabLabel",
     namespace: "iot",
     url: (locale: string) => `/${locale}/platform/devices`,
     icon: "RadioReceiver",
-    items: [
+    navigable: false,
+    children: [
       {
         titleKey: "sidebar.overview",
         namespace: "navigation",
         url: (locale: string) => `/${locale}/platform/devices`,
       },
-      // Calibration is something done to a device at a bench, not a document kept in the
-      // library beside protocols and macros.
       {
         titleKey: "sidebar.calibrations",
         namespace: "navigation",
         url: (locale: string) => `/${locale}/platform/calibrations`,
       },
     ] as NavLink[],
+    items: [] as NavLink[],
   },
   workbooks: {
     titleKey: "sidebar.workbooks",
