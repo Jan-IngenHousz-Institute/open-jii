@@ -513,7 +513,9 @@
             "style": "deepObject",
             "explode": true,
             "allowEmptyValue": true,
-            "allowReserved": true
+            "allowReserved": true,
+            "description": "Up to two ordered sort criteria. Encode as sort[0][field]=name&sort[0][direction]=asc (and sort[1] for a secondary criterion).",
+            "example": "sort[0][field]=updated&sort[0][direction]=desc&sort[1][field]=owner&sort[1][direction]=asc"
           },
           {
             "name": "page",

@@ -214,6 +214,9 @@ describe("ListExperiments", () => {
     expect(
       screen.getByRole("button", { name: /columns.status:.*sortSecondary/ }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /columns.status:/ }).closest("th"),
+    ).not.toHaveAttribute("aria-sort");
 
     await user.click(screen.getByRole("button", { name: "resetSorting" }));
     await waitFor(() => expect(spy.calls.at(-1)?.query.sort).toBeUndefined());

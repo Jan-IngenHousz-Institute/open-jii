@@ -160,9 +160,10 @@ export function OverviewTable<T extends RowData>({
                     key={header.id}
                     aria-hidden={meta.spacer ? true : undefined}
                     aria-sort={
-                      header.column.getIsSorted() === "asc"
+                      header.column.getSortIndex() === 0 && header.column.getIsSorted() === "asc"
                         ? "ascending"
-                        : header.column.getIsSorted() === "desc"
+                        : header.column.getSortIndex() === 0 &&
+                            header.column.getIsSorted() === "desc"
                           ? "descending"
                           : undefined
                     }
