@@ -29,6 +29,7 @@ function reading(
 }
 
 const options = { environment: "dev", runbookBaseUrl: "https://example.test" };
+const clean = { configErrors: [], failedRegions: [] };
 
 describe("formatValue", () => {
   it("abbreviates large numbers and keeps small ones readable", () => {
@@ -62,7 +63,7 @@ describe("renderObservability", () => {
     expect(output).toBe("*No anomalies* · 1 signals checked (dev)");
   });
 
-  it("renders an anomaly with its reason, runbook, triage command and context blob", () => {
+  it("renders an anomaly with its reason, runbook and triage command", () => {
     const output = renderObservability(
       [
         {
@@ -85,7 +86,9 @@ describe("renderObservability", () => {
     expect(output).toContain("above threshold 600000");
     expect(output).toContain("<https://example.test/docs/runbooks/ingest-lag.md|runbook>");
     expect(output).toContain("claude /openjii-triage ingest-lag");
-    expect(output).toContain('"id":"ingest-lag"');
+    // The raw context blob used to sit under every line. It repeated the value and the
+    // reason already stated above it, in a channel humans read.
+    expect(output).not.toContain('"id":"ingest-lag"');
   });
 
   it("pluralizes only when there are several anomalies", () => {
@@ -158,11 +161,48 @@ describe("renderObservability", () => {
 
     expect(output).not.toContain("runbook");
   });
+
+  it("puts critical anomalies above warnings and marks them", () => {
+    // Severity already decides who gets woken; it should decide reading order too.
+    const warning = {
+      ...reading("kinesis-write-throttling", "Throttling", 3),
+      evaluation: { state: "anomaly" as const, reason: "nonzero" },
+    };
+    warning.metric.severity = "warning";
+    const critical = {
+      ...reading("ingest-forwarding-failures", "Forwarding failures", 20),
+      evaluation: { state: "anomaly" as const, reason: "nonzero" },
+    };
+    critical.metric.severity = "critical";
+
+    const output = renderObservability([warning, critical], clean, options);
+    const lines = output.split("\n");
+
+    expect(lines[1]).toContain("Forwarding failures");
+    expect(lines[1]).toContain("*critical*");
+    expect(lines[2]).toContain("Throttling");
+    expect(lines[2]).not.toContain("*critical*");
+  });
+
+  it("reads a duration as a duration rather than an abbreviated float", () => {
+    const entry = {
+      ...reading("ingest-lag", "Iterator age", 8_797_000, null, "docs/runbooks/ingest-lag.md"),
+      evaluation: { state: "anomaly" as const, reason: "above 2h" },
+    };
+    if (entry.metric.signal) {
+      entry.metric.signal.unit = "milliseconds";
+    } else {
+      entry.metric.signal = { unit: "milliseconds" };
+    }
+
+    const output = renderObservability([entry], clean, options);
+
+    expect(output).toContain("2h 27m");
+    expect(output).not.toContain("8.8M");
+  });
 });
 
 describe("renderLevels", () => {
-  const clean = { configErrors: [], failedRegions: [] };
-
   it("lists each reporting metric with its delta", () => {
     const output = renderLevels(
       [reading("m", "Measurements", 48_200, 40_000)],

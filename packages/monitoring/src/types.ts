@@ -1,3 +1,5 @@
+import type { MetricUnit } from "./format.js";
+
 export type MetricFamily = "observability" | "usage";
 
 export type MetricSlot = "alert" | "exception" | "pulse" | "weekly" | "dashboard" | "s3";
@@ -7,6 +9,8 @@ export type SignalKind = "cloudwatch" | "logs_insights" | "posthog";
 
 export interface MetricSignal {
   kind?: SignalKind;
+  /** What the number is, so the digest can render it as a duration, a size or a rate. */
+  unit?: MetricUnit;
   namespace?: string;
   metric?: string;
   search?: string;

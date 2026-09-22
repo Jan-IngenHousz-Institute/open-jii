@@ -1,4 +1,5 @@
 import { deviationPercent } from "./baseline.js";
+import { formatValue } from "./format.js";
 import type { CatalogMetric, Evaluation, MetricReading } from "./types.js";
 
 export interface EvaluatedReading extends MetricReading {
@@ -10,14 +11,17 @@ export interface RenderOptions {
   runbookBaseUrl?: string;
 }
 
-export function formatValue(value: number): string {
-  if (Math.abs(value) >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(1)}M`;
-  }
-  if (Math.abs(value) >= 1_000) {
-    return `${(value / 1_000).toFixed(1)}k`;
-  }
-  return Number.isInteger(value) ? String(value) : value.toFixed(2);
+export { formatValue };
+
+/** Critical first: the order someone reads them in is the order they should act. */
+const SEVERITY_ORDER = ["critical", "warning", undefined];
+
+function bySeverity(a: EvaluatedReading, b: EvaluatedReading): number {
+  return SEVERITY_ORDER.indexOf(a.metric.severity) - SEVERITY_ORDER.indexOf(b.metric.severity);
+}
+
+function reading(entry: EvaluatedReading | MetricReading): string {
+  return entry.value === null ? "no data" : formatValue(entry.value, entry.metric.signal?.unit);
 }
 
 export function deltaGlyph(value: number, baseline: number | null, window: string): string {
@@ -57,20 +61,15 @@ export function renderObservability(
     lines.push(
       `*${anomalies.length} anomal${anomalies.length === 1 ? "y" : "ies"}* (${environment})`,
     );
-    for (const entry of anomalies) {
-      const context = JSON.stringify({
-        id: entry.metric.id,
-        value: entry.value,
-        baseline: entry.baseline,
-        reason: entry.evaluation.reason,
-      });
-      // A nodata anomaly has no value; printing 0 would read as a healthy counter
-      const reading = entry.value === null ? "no data" : formatValue(entry.value);
+    for (const entry of [...anomalies].sort(bySeverity)) {
+      // Severity decides who is woken, so it belongs on the line rather than only in
+      // the routing. A reading of "no data" is a nodata anomaly; printing 0 there
+      // would read as a healthy counter.
+      const mark = entry.metric.severity === "critical" ? "*critical* " : "";
 
       lines.push(
-        `• *${entry.metric.name}*: ${reading} (${entry.evaluation.reason})` +
-          `${runbookLink(entry.metric, runbookBaseUrl)} · \`claude /openjii-triage ${entry.metric.id}\`` +
-          `\n  \`${context}\``,
+        `• ${mark}*${entry.metric.name}*: ${reading(entry)}, ${entry.evaluation.reason}` +
+          `${runbookLink(entry.metric, runbookBaseUrl)} · \`claude /openjii-triage ${entry.metric.id}\``,
       );
     }
   }
@@ -112,7 +111,8 @@ export function renderLevels(
       continue;
     }
     lines.push(
-      `• ${entry.metric.name}: ${formatValue(entry.value)}${deltaGlyph(entry.value, entry.baseline, window)}`,
+      `• ${entry.metric.name}: ${formatValue(entry.value, entry.metric.signal?.unit)}` +
+        `${deltaGlyph(entry.value, entry.baseline, window)}`,
     );
   }
 
