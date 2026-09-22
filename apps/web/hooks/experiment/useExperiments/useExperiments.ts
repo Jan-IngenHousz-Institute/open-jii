@@ -7,7 +7,7 @@ import { zExperimentSort } from "@repo/api/domains/experiment/experiment.schema"
 import { isPaginatedList } from "@repo/api/shared/listing";
 
 import { useDebounce } from "../../useDebounce";
-import { useListState } from "../../useListState";
+import { useListSorting } from "../../useListSorting";
 import { useSearchPending } from "../../useSearchPending";
 
 export const useExperiments = ({
@@ -22,7 +22,7 @@ export const useExperiments = ({
   const [status, setStatusState] = useState<ExperimentStatus | undefined>(initialStatus);
   const [search, setSearchState] = useState<string>(initialSearch);
   const [page, setPage] = useState(1);
-  const { sort, setSort, toggleSort } = useListState(zExperimentSort);
+  const { sort, setSort, toggleSort } = useListSorting(zExperimentSort);
   const [debouncedSearch] = useDebounce(search, 300);
 
   const setSearch = (value: string) => {
