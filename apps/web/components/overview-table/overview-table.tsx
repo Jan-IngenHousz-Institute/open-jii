@@ -3,8 +3,8 @@
 import { DocsHelpLink } from "@/components/docs-help-link";
 import { rowSortingFeature, tableFeatures, useTable } from "@tanstack/react-table";
 import type { ColumnDef, RowData, SortingState } from "@tanstack/react-table";
-import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 
@@ -183,7 +183,10 @@ export function OverviewTable<T extends RowData>({
                         {header.column.getIsSorted() === "asc" ? (
                           <ArrowUp aria-hidden className="text-status-active-foreground size-3.5" />
                         ) : header.column.getIsSorted() === "desc" ? (
-                          <ArrowDown aria-hidden className="text-status-active-foreground size-3.5" />
+                          <ArrowDown
+                            aria-hidden
+                            className="text-status-active-foreground size-3.5"
+                          />
                         ) : (
                           <ArrowUpDown aria-hidden className="size-3.5 opacity-50" />
                         )}
