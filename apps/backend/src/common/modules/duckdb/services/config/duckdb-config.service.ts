@@ -6,16 +6,12 @@ import { AppError } from "../../../../utils/fp-utils";
 /**
  * Engine knobs from duckdb.* plus the physical table names, reused from the
  * databricks.* namespace rather than duplicated. Deliberately lazy: nothing
- * is validated at boot so the app starts with warehouse-mode dummy envs;
+ * is validated at boot, so the app starts without a reachable lakehouse;
  * `assertReady()` runs at first use and reports every missing key at once.
  */
 @Injectable()
 export class DuckDbConfigService {
   constructor(private readonly configService: ConfigService) {}
-
-  isDuckDbReadAdapter(): boolean {
-    return this.configService.get<string>("duckdb.readAdapter") === "duckdb";
-  }
 
   isLocalMode(): boolean {
     return this.configService.get<boolean>("duckdb.localMode") === true;

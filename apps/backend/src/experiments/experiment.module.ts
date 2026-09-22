@@ -1,6 +1,5 @@
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Module } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import type { Cache } from "cache-manager";
 
 import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
@@ -89,7 +88,6 @@ import { CACHE_PORT } from "./core/ports/cache.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { EMAIL_PORT } from "./core/ports/email.port";
 import { EXPERIMENT_DATA_READ_PORT } from "./core/ports/experiment-data-read.port";
-import type { ExperimentDataReadPort } from "./core/ports/experiment-data-read.port";
 import { ExperimentDashboardRepository } from "./core/repositories/experiment-dashboard.repository";
 // Repositories
 import { ExperimentDataAnnotationsRepository } from "./core/repositories/experiment-data-annotations.repository";
@@ -160,15 +158,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     },
     {
       provide: EXPERIMENT_DATA_READ_PORT,
-      useFactory: (
-        configService: ConfigService,
-        warehouseAdapter: DatabricksAdapter,
-        duckDbAdapter: DuckDbAdapter,
-      ): ExperimentDataReadPort =>
-        configService.get<string>("duckdb.readAdapter") === "duckdb"
-          ? duckDbAdapter
-          : warehouseAdapter,
-      inject: [ConfigService, DatabricksAdapter, DuckDbAdapter],
+      useExisting: DuckDbAdapter,
     },
     {
       provide: AWS_PORT,

@@ -13,7 +13,6 @@ import { DuckDbSessionService } from "./services/session/duckdb-session.service"
 
 const TEST_CONFIG = {
   duckdb: {
-    readAdapter: "duckdb",
     localMode: true,
     memoryLimit: "512MB",
     threads: "1",
@@ -225,7 +224,7 @@ describe("DuckDbAdapter with an empty share", () => {
     // Not local mode: exercise the Delta Sharing path with a server that
     // serves no data files for the table.
     const configService = new ConfigService({
-      duckdb: { readAdapter: "duckdb", localMode: false },
+      duckdb: { localMode: false },
       delta: { endpoint: "https://share.example", bearerToken: "t", shareName: "s" },
       databricks: TEST_CONFIG.databricks,
     });

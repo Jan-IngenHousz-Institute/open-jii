@@ -2248,10 +2248,6 @@ module "backend_ecs" {
       value = "enriched_experiment_uploaded_data"
     },
     {
-      name  = "EXPERIMENT_DATA_READ_ADAPTER"
-      value = "warehouse"
-    },
-    {
       name  = "DELTA_SHARE_NAME"
       value = module.delta_sharing_share.share_name
     },

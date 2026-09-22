@@ -6,19 +6,17 @@ const makeService = (config: Record<string, unknown>): DuckDbConfigService =>
   new DuckDbConfigService(new ConfigService(config));
 
 describe("DuckDbConfigService", () => {
-  it("defaults to the warehouse adapter with safe engine knobs", () => {
+  it("falls back to safe engine knobs when nothing is configured", () => {
     const service = makeService({});
 
-    expect(service.isDuckDbReadAdapter()).toBe(false);
     expect(service.isLocalMode()).toBe(false);
     expect(service.getMemoryLimit()).toBe("2GB");
     expect(service.getThreads()).toBe(2);
   });
 
-  it("selects duckdb when the flag is set", () => {
-    const service = makeService({ duckdb: { readAdapter: "duckdb", threads: "4" } });
+  it("takes the configured thread count", () => {
+    const service = makeService({ duckdb: { threads: "4" } });
 
-    expect(service.isDuckDbReadAdapter()).toBe(true);
     expect(service.getThreads()).toBe(4);
   });
 
