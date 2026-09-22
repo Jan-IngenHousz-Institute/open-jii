@@ -11,8 +11,6 @@ export interface RenderOptions {
   runbookBaseUrl?: string;
 }
 
-export { formatValue };
-
 /**
  * Critical first: the order someone reads them in is the order they should act.
  *

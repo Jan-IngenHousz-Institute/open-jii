@@ -36,6 +36,7 @@ describe("formatValue", () => {
 
   it("abbreviates a plain count, with or without a declared unit", () => {
     expect(formatValue(3_700)).toBe("3.7k");
+    expect(formatValue(48_200)).toBe("48.2k");
     expect(formatValue(2_400_000)).toBe("2.4M");
     expect(formatValue(7)).toBe("7");
     expect(formatValue(1.5)).toBe("1.50");

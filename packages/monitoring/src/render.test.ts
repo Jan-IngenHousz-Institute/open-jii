@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { deltaGlyph, formatValue, renderLevels, renderObservability } from "./render.js";
+import { deltaGlyph, renderLevels, renderObservability } from "./render.js";
 import type { MetricReading } from "./types.js";
 
 function reading(
@@ -30,15 +30,6 @@ function reading(
 
 const options = { environment: "dev", runbookBaseUrl: "https://example.test" };
 const clean = { configErrors: [], failedRegions: [] };
-
-describe("formatValue", () => {
-  it("abbreviates large numbers and keeps small ones readable", () => {
-    expect(formatValue(2_400_000)).toBe("2.4M");
-    expect(formatValue(48_200)).toBe("48.2k");
-    expect(formatValue(7)).toBe("7");
-    expect(formatValue(1.5)).toBe("1.50");
-  });
-});
 
 describe("deltaGlyph", () => {
   it("marks direction only outside a five percent dead band", () => {
