@@ -171,13 +171,18 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
       experimentId,
     );
     if (joinsResult.isFailure()) {
-      return joinsResult;
+      return failure(joinsResult.error);
     }
+
+    const { joins, dropped } = joinsResult.value;
 
     return this.queryBuilder.buildQuery({
       ...queryParams,
       table: fromResult.value,
-      joins: joinsResult.value,
+      joins,
+      // A column a dropped join would have rebuilt keeps whatever the served
+      // relation holds; excluding it would delete data nothing replaces.
+      exceptColumns: queryParams.exceptColumns?.filter((column) => !dropped.includes(column)),
       whereConditions,
     });
   }
@@ -185,15 +190,16 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
   /**
    * Each dimension is its own scan here, because this engine reads files
    * rather than a catalog: there is no `centrum.experiment_contributors` to
-   * name, only the parquet the share hands back. Listings are unscoped,
-   * since the dimensions are small and an experiment-scoped hint would prune
-   * a share down to nothing for a dimension that is legitimately sparse.
+   * name, only the parquet the share hands back. The listings carry the
+   * experiment as a hint and run together, since they are independent calls
+   * and a paged read builds two queries.
    */
   private async resolveJoins(
     joins: EnrichmentJoin[],
     experimentId: string,
-  ): Promise<Result<JoinSpec[]>> {
+  ): Promise<Result<{ joins: JoinSpec[]; dropped: string[] }>> {
     const resolved: JoinSpec[] = [];
+    const dropped: string[] = [];
 
     // One experiment's files, and all dimensions at once: these listings are
     // independent HTTP calls, and a paged read builds two queries, so running
@@ -215,18 +221,21 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
       // so the join is dropped rather than failing the read, which leaves the
       // columns it supplies absent instead of wrong.
       if (sourceResult.value === null) {
-        this.logger.warn({
+        this.logger.debug({
           msg: "Enrichment dropped: the share holds no data files for this relation",
           operation: "resolveJoins",
           relation: join.relation,
           columns: join.select.map((column) => column.alias),
         });
+        dropped.push(...join.select.map((column) => column.alias));
         continue;
       }
 
       resolved.push({
         table: join.derive
-          ? join.derive.replace("{relation}", this.scopedSource(sourceResult.value, experimentId))
+          ? join.derive.replace("{relation}", () =>
+              this.scopedSource(sourceResult.value ?? "", experimentId),
+            )
           : sourceResult.value,
         alias: join.alias,
         on: join.on,
@@ -234,7 +243,7 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
       });
     }
 
-    return success(resolved);
+    return success({ joins: resolved, dropped });
   }
 
   /**

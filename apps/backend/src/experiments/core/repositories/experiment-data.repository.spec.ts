@@ -743,7 +743,7 @@ describe("ExperimentDataRepository", () => {
           tableName: "device",
           tableType: "static",
           experimentId,
-          exceptColumns: ["experiment_id"],
+          exceptColumns: ["experiment_id", "client_id"],
           orderDirection: "ASC",
           limit: 5,
           offset: 0,
@@ -825,7 +825,7 @@ describe("ExperimentDataRepository", () => {
       expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           tableType: "static",
-          exceptColumns: ["experiment_id"],
+          exceptColumns: ["experiment_id", "client_id"],
         }),
       );
     });

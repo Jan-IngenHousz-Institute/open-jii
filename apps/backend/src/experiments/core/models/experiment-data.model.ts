@@ -203,7 +203,10 @@ export const STATIC_TABLE_CONFIG: Partial<Record<string, TableConfig>> = {
   [ExperimentTableName.DEVICE]: {
     displayName: "Device Metadata",
     defaultSortColumn: "processed_timestamp",
-    exceptColumns: ["experiment_id"],
+    // client_id is the raw identifier the device struct replaces everywhere
+    // else; this table has always been served from gold, which is why it was
+    // not covered when the others were.
+    exceptColumns: ["experiment_id", "client_id"],
     variantColumns: [],
     enrichedVariantColumns: [],
     enrichmentJoins: () => [],

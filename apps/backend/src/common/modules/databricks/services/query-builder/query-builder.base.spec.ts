@@ -154,6 +154,43 @@ describe("QueryBuilder Base", () => {
     });
   });
 
+  describe("explicit projections over enrichment joins", () => {
+    const contributor = {
+      table: "cat.centrum.experiment_contributors",
+      alias: "c",
+      on: [{ served: "experiment_id", joined: "experiment_id" }],
+      select: [{ expression: "c.user", alias: "contributor" }],
+    };
+
+    it("never projects an excluded column, even when asked for by name", () => {
+      // `columns` arrives as a free-form client string, so naming an excluded
+      // column must not be a way around the exclusion list.
+      const query = new SqlQueryBuilder()
+        .from("t")
+        .select(["id", "user_id", "client_id"])
+        .except(["user_id", "client_id"])
+        .join(contributor)
+        .build();
+
+      expect(query).toContain("`id`");
+      expect(query).not.toContain("`user_id`");
+      expect(query).not.toContain("`client_id`");
+    });
+
+    it("sources a named enrichment column from the join that supplies it", () => {
+      const query = new SqlQueryBuilder()
+        .from("t")
+        .select(["id", "contributor"])
+        .join(contributor)
+        .build();
+
+      // Selecting the bare name would resolve against a relation that has no
+      // such column; it has to come from the join's expression.
+      expect(query).toContain("c.user AS `contributor`");
+      expect(query).not.toMatch(/SELECT `id`, `contributor` FROM/);
+    });
+  });
+
   describe("filters over enrichment joins", () => {
     const contributor = {
       table: "cat.centrum.experiment_contributors",

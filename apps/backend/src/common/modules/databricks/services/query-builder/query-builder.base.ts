@@ -54,6 +54,19 @@ export abstract class BaseQueryBuilder {
     return this.joins.length > 0 ? `${this.baseAlias}.*` : "*";
   }
 
+  /** The aliased expression a join contributes for this name, if any. */
+  protected joinProjectionFor(alias: string): string | null {
+    for (const join of this.joins) {
+      for (const column of join.select) {
+        if (column.alias === alias) {
+          return `${column.expression} AS ${this.escapeIdentifier(alias)}`;
+        }
+      }
+    }
+
+    return null;
+  }
+
   /**
    * Whether a filter names a column a join produced. Such a column is a SELECT
    * alias, so it does not exist in the WHERE of the level that joins, and the
@@ -261,9 +274,12 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
   protected exceptColumns: string[] = [];
   /** Filters naming an enrichment column; applied above the join. */
   protected postJoinConditions: string[] = [];
+  /** The requested columns, kept so the projection can be rebuilt in build(). */
+  protected selectedColumns: string[] = [];
 
   select(columns?: string[]): this {
     if (columns && columns.length > 0) {
+      this.selectedColumns = [...columns];
       this.selectClause = columns.map((c) => this.escapeIdentifier(c)).join(", ");
     }
     return this;
@@ -345,11 +361,18 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
     }
 
     let selectPart = this.selectClause;
+
     // Databricks/Spark only accepts EXCEPT after a star projection (`*` or
-    // `tbl.*`). Combining it with an explicit column list throws
-    // PARSE_SYNTAX_ERROR, and it would be redundant anyway since
-    // un-listed columns are already excluded by virtue of not being
-    // projected. Drop EXCEPT silently in that case.
+    // `tbl.*`), so an explicit list applies the same rules by construction:
+    // an excluded column is left out, and an enrichment column is taken from
+    // the join that supplies it rather than the relation that does not.
+    if (this.selectClause !== "*" && this.selectedColumns.length > 0) {
+      selectPart = this.selectedColumns
+        .filter((column) => !this.exceptColumns.includes(column))
+        .map((column) => this.joinProjectionFor(column) ?? this.escapeIdentifier(column))
+        .join(", ");
+    }
+
     if (this.selectClause === "*") {
       const star = this.buildBaseStar();
       selectPart =

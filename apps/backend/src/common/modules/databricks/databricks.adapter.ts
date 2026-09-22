@@ -1271,21 +1271,24 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
     // The config names dimensions unqualified, because it has no catalog. A
     // dimension that aggregates before joining supplies the query around it.
+    const escapedExperimentId = this.queryBuilder.query().escapeValue(experimentId);
     const joins = retainEnrichment(
       enrichmentJoins?.(SPARK_ENRICHMENT_SQL) ?? [],
       omitEnrichment,
     ).map((join) => {
       const qualified = `${catalog}.${schema}.${join.relation}`;
-      // A derive groups its whole source otherwise, and a paged read pays for
-      // that twice: once for the count and once for the page.
-      const scoped = `(SELECT * FROM ${qualified} WHERE experiment_id = ${this.queryBuilder
-        .query()
-        .escapeValue(experimentId)})`;
 
-      return {
-        ...join,
-        table: join.derive ? join.derive.replace("{relation}", scoped) : qualified,
-      };
+      if (!join.derive) {
+        return { ...join, table: qualified };
+      }
+
+      // A derive groups its whole source otherwise, and a paged read pays for
+      // that twice: once for the count and once for the page. The replacement
+      // goes through a function because a string one would expand $& and $n,
+      // which appear in pre-signed URLs on the other engine.
+      const scoped = `(SELECT * FROM ${qualified} WHERE experiment_id = ${escapedExperimentId})`;
+
+      return { ...join, table: join.derive.replace("{relation}", () => scoped) };
     });
 
     if (tableType === "macro") {
