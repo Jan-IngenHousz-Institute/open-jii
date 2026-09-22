@@ -39,9 +39,19 @@ export const zExperiment = z.object({
   locations: zExperimentLocationList.optional(),
 });
 
+/**
+ * The caller's relationship to an experiment. Deliberately absent from
+ * {@link zExperiment}: create, update and transfer build that DTO with no caller in
+ * hand, and an optional field there would be rendered as `none` wherever it is
+ * simply unknown.
+ */
+export const zExperimentMembershipStatus = z.enum(["none", "pending_request", "member"]);
+
 const zExperimentListEntry = zExperiment.extend({
   /** Present on the paginated list, which reads it for the rows it returns. */
   activity: zResourceSeries.nullable().optional(),
+  /** `member` means the caller can contribute, not merely read. */
+  membershipStatus: zExperimentMembershipStatus,
 });
 
 export const zExperimentList = z.array(zExperimentListEntry);
@@ -55,6 +65,8 @@ export const zExperimentAccess = z.object({
    * kept for existing call sites; the collaborators surface gates on `canShare`.
    */
   capabilities: zResourceCapabilities,
+  /** Resolved from the same `can(contribute)` as `capabilities`, so list and detail agree. */
+  membershipStatus: zExperimentMembershipStatus,
 });
 
 export const zExperimentFlowNodeType = z.enum([
@@ -276,6 +288,7 @@ export const zExperimentFlowGraph = z
 
 // Infer types from Zod schemas
 export type ExperimentStatus = z.infer<typeof zExperimentStatus>;
+export type ExperimentMembershipStatus = z.infer<typeof zExperimentMembershipStatus>;
 export type ExperimentVisibility = z.infer<typeof zExperimentVisibility>;
 export type Experiment = z.infer<typeof zExperiment>;
 export type ExperimentListItem = z.infer<typeof zExperimentListEntry>;

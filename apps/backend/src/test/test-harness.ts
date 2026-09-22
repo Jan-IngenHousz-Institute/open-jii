@@ -41,6 +41,7 @@ import {
   accounts,
   experimentDashboards,
   experimentVisualizations,
+  experimentJoinCodes,
   experimentJoinRequests,
   resourceGrants,
   ensurePersonalOrganization,
@@ -205,6 +206,9 @@ export class TestHarness {
     await this.database.delete(auditLogs).execute();
     await this.database.delete(invitations).execute();
     await this.database.delete(experimentJoinRequests).execute();
+    // Cascades with experiments, but the `code` unique index spans every row, so a
+    // leftover would collide with a later test rather than merely linger.
+    await this.database.delete(experimentJoinCodes).execute();
     await this.database.delete(experimentMembers).execute();
     await this.database.delete(experimentLocations).execute();
     // Dashboards/visualizations reference experiments, delete before experiments

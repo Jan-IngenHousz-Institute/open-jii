@@ -15,6 +15,7 @@ import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { usePrecachedExperimentData } from "~/features/experiments/hooks/use-precached-experiment-data";
 import { useRecentExperimentActivity } from "~/features/experiments/hooks/use-recent-experiment-activity";
 import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
+import { isApiStatus } from "~/features/experiments/utils/api-error";
 import { useExperimentsFlowMeta } from "~/features/measurement-flow/hooks/use-experiments-flow-meta";
 import { useLoadExperimentFlow } from "~/features/measurement-flow/hooks/use-load-experiment-flow";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
@@ -33,11 +34,12 @@ import { OfflineModeIndicator } from "./offline-mode-indicator";
 export function ExperimentSelectionStep() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
-  const { t } = useTranslation("measurementFlow");
+  const { t } = useTranslation(["measurementFlow", "experiments"]);
   const { experiments, isLoading, error, refetch, isRefetching } = useExperiments();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
   const setExperimentId = useMeasurementFlowStore((s) => s.setExperimentId);
-  const { isReady: experimentFlowReady } = useLoadExperimentFlow(selectedExperimentId);
+  const { isReady: experimentFlowReady, error: flowError } =
+    useLoadExperimentFlow(selectedExperimentId);
   const { clearHistory } = useFlowAnswersStore();
   const { data: precachedData } = usePrecachedExperimentData(selectedExperimentId);
   const { data: connectedDevice } = useConnectedDevice();
@@ -183,6 +185,15 @@ export function ExperimentSelectionStep() {
             actionLabel={t("experimentSelection.deviceBannerAction")}
             onAction={() => useDeviceSheetStore.getState().open()}
           />
+        ) : null}
+        {selectedExperimentId && flowError ? (
+          <Text className="text-error text-center text-[12.5px]">
+            {/* A public experiment can pin a private workbook: the read is
+                refused even though the experiment itself is readable. */}
+            {isApiStatus(flowError, 403)
+              ? t("experiments:detail.workbookNotShared")
+              : t("measurementFlow:flowStates.error")}
+          </Text>
         ) : null}
         <Button
           title={

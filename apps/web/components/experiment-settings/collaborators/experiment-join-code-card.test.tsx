@@ -1,0 +1,296 @@
+import { server } from "@/test/msw/server";
+import { act, render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import { focusManager } from "@tanstack/react-query";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { contract } from "@repo/api/contract";
+import { QrCode } from "@repo/ui/components/qr-code";
+
+import { ExperimentJoinCodeCard } from "./experiment-join-code-card";
+
+const EXPERIMENT_ID = "22222222-2222-2222-2222-222222222222";
+
+// The site language the organizer is browsing in. The landing URL must ignore it.
+const { localeRef } = vi.hoisted(() => ({ localeRef: { current: "en-US" } }));
+vi.mock("@/hooks/useLocale", () => ({ useLocale: () => localeRef.current }));
+
+const ACTIVE_CODE = {
+  id: "11111111-1111-1111-1111-111111111111",
+  experimentId: EXPERIMENT_ID,
+  code: "KP7Q4WMX",
+  expiresAt: "2026-09-25T00:00:00.000Z",
+  redemptionCount: 0,
+  createdAt: "2026-09-18T00:00:00.000Z",
+  createdBy: null,
+};
+
+function renderCard() {
+  return render(<ExperimentJoinCodeCard experimentId={EXPERIMENT_ID} />);
+}
+
+/**
+ * The module path, not the background tile `qrcode.react` draws first. The
+ * colour contract itself is guarded in `packages/ui`; here only the encoded
+ * value matters, so the path is picked positionally rather than by fill.
+ */
+function modulesOf(root: Element | null): string | null {
+  const paths = Array.from(root?.querySelectorAll("svg path") ?? []);
+  return paths[1]?.getAttribute("d") ?? null;
+}
+
+describe("ExperimentJoinCodeCard", () => {
+  beforeEach(() => {
+    localeRef.current = "en-US";
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    focusManager.setFocused(undefined);
+  });
+
+  it("shows a loading line while the read is in flight", () => {
+    server.mount(contract.experiments.getJoinCode, {
+      body: { joinCode: null },
+      delay: "infinite",
+    });
+
+    renderCard();
+
+    expect(screen.getByText("joinCode.loading")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "joinCode.create" })).not.toBeInTheDocument();
+  });
+
+  it("shows the error state with Retry and never the create form when the read fails", async () => {
+    server.mount(contract.experiments.getJoinCode, { status: 500 });
+
+    renderCard();
+
+    expect(await screen.findByText("joinCode.loadFailed")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "joinCode.retry" })).toBeInTheDocument();
+    // The bug this guards: a failed read rendered as "no code yet" invites the
+    // organizer to mint a second code over one that already exists.
+    expect(screen.queryByRole("button", { name: "joinCode.create" })).not.toBeInTheDocument();
+    expect(screen.queryByText("joinCode.introEmpty joinCode.workbookHint")).not.toBeInTheDocument();
+  });
+
+  it("recovers to the create form when Retry succeeds", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.experiments.getJoinCode, { status: 500 });
+
+    renderCard();
+    await screen.findByText("joinCode.loadFailed");
+
+    server.mount(contract.experiments.getJoinCode, { body: { joinCode: null } });
+    await user.click(screen.getByRole("button", { name: "joinCode.retry" }));
+
+    expect(await screen.findByRole("button", { name: "joinCode.create" })).toBeInTheDocument();
+  });
+
+  it("offers the expiry select and Create for a 200 with no code, including the workbook sentence", async () => {
+    server.mount(contract.experiments.getJoinCode, { body: { joinCode: null } });
+
+    renderCard();
+
+    expect(await screen.findByRole("button", { name: "joinCode.create" })).toBeInTheDocument();
+    expect(screen.getByText("joinCode.introEmpty joinCode.workbookHint")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "joinCode.expiresIn" })).toHaveTextContent(
+      "joinCode.expiry.7d",
+    );
+  });
+
+  it("sends the selected expiry when the code is created", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.experiments.getJoinCode, { body: { joinCode: null } });
+    const create = server.mount(contract.experiments.createJoinCode, { body: ACTIVE_CODE });
+
+    renderCard();
+
+    await user.click(await screen.findByRole("combobox", { name: "joinCode.expiresIn" }));
+    await user.click(await screen.findByRole("option", { name: "joinCode.expiry.30d" }));
+    await user.click(screen.getByRole("button", { name: "joinCode.create" }));
+
+    await waitFor(() => expect(create.body).toMatchObject({ expiresIn: "30d" }));
+  });
+
+  it("renders the code, QR, expiry, counter and actions for an active code", async () => {
+    server.mount(contract.experiments.getJoinCode, { body: { joinCode: ACTIVE_CODE } });
+
+    const { container } = renderCard();
+
+    expect(await screen.findByText("KP7Q-4WMX")).toBeInTheDocument();
+    expect(screen.getByText("joinCode.introActive joinCode.workbookHint")).toBeInTheDocument();
+    expect(screen.getByText(/joinCode\.expiresOn/)).toBeInTheDocument();
+    expect(screen.getByText(/joinCode\.redeemed:0/)).toBeInTheDocument();
+    expect(container.querySelector('[aria-label="joinCode.qrLabel"] svg')).not.toBeNull();
+    for (const name of ["joinCode.copyCode", "joinCode.copyLink", "joinCode.regenerate"]) {
+      expect(screen.getByRole("button", { name })).toBeInTheDocument();
+    }
+    expect(screen.getByRole("button", { name: "joinCode.revoke" })).toBeInTheDocument();
+  });
+
+  it("says the code never expires when there is no expiry", async () => {
+    server.mount(contract.experiments.getJoinCode, {
+      body: { joinCode: { ...ACTIVE_CODE, expiresAt: null } },
+    });
+
+    renderCard();
+
+    expect(await screen.findByText(/joinCode\.neverExpires/)).toBeInTheDocument();
+  });
+
+  it("copies the formatted code and the en-US landing URL whatever the site language is", async () => {
+    const user = userEvent.setup();
+    // `userEvent.setup()` installs its own clipboard stub, so this has to land after it.
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      writable: true,
+      configurable: true,
+    });
+    localeRef.current = "nl-NL";
+    server.mount(contract.experiments.getJoinCode, { body: { joinCode: ACTIVE_CODE } });
+
+    renderCard();
+
+    await user.click(await screen.findByRole("button", { name: "joinCode.copyCode" }));
+    expect(writeText).toHaveBeenCalledWith("KP7Q-4WMX");
+
+    await user.click(screen.getByRole("button", { name: "joinCode.copyLink" }));
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/en-US/join/KP7Q-4WMX`);
+  });
+
+  it("encodes that same URL in the QR", async () => {
+    localeRef.current = "nl-NL";
+    server.mount(contract.experiments.getJoinCode, { body: { joinCode: ACTIVE_CODE } });
+
+    const { container } = renderCard();
+    await screen.findByText("KP7Q-4WMX");
+
+    const rendered = modulesOf(container.querySelector('[aria-label="joinCode.qrLabel"]'));
+    const expected = modulesOf(
+      render(<QrCode value={`${window.location.origin}/en-US/join/KP7Q-4WMX`} />).container,
+    );
+
+    expect(rendered).toBeTruthy();
+    expect(rendered).toBe(expected);
+  });
+
+  it("confirms before regenerating and keeps the selected expiry", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.experiments.getJoinCode, { body: { joinCode: ACTIVE_CODE } });
+    const create = server.mount(contract.experiments.createJoinCode, { body: ACTIVE_CODE });
+
+    renderCard();
+
+    await user.click(await screen.findByRole("button", { name: "joinCode.regenerate" }));
+    expect(await screen.findByText("joinCode.confirmBody")).toBeInTheDocument();
+    expect(create.called).toBe(false);
+
+    const dialog = screen.getByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "joinCode.regenerate" }));
+
+    await waitFor(() => expect(create.body).toMatchObject({ expiresIn: "7d" }));
+  });
+
+  it("confirms before revoking", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.experiments.getJoinCode, { body: { joinCode: ACTIVE_CODE } });
+    const revoke = server.mount(contract.experiments.revokeJoinCode);
+
+    renderCard();
+
+    await user.click(await screen.findByRole("button", { name: "joinCode.revoke" }));
+    expect(await screen.findByText("joinCode.confirmBody")).toBeInTheDocument();
+    expect(revoke.called).toBe(false);
+
+    const dialog = screen.getByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "joinCode.revoke" }));
+
+    await waitFor(() => expect(revoke.called).toBe(true));
+  });
+
+  it("shows the expired banner and Create a new code for a past expiry", async () => {
+    server.mount(contract.experiments.getJoinCode, {
+      body: { joinCode: { ...ACTIVE_CODE, expiresAt: "2020-01-01T00:00:00.000Z" } },
+    });
+
+    renderCard();
+
+    expect(await screen.findByText("joinCode.expiredBanner")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "joinCode.createAgain" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "joinCode.copyCode" })).not.toBeInTheDocument();
+  });
+
+  it("flips to the expired state when the clock passes expiresAt, with no reload", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-09-18T00:00:00.000Z"));
+    server.mount(contract.experiments.getJoinCode, {
+      body: { joinCode: { ...ACTIVE_CODE, expiresAt: "2026-09-18T00:00:30.000Z" } },
+    });
+
+    renderCard();
+
+    expect(await screen.findByText("KP7Q-4WMX")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(31_000);
+    });
+
+    expect(screen.getByText("joinCode.expiredBanner")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "joinCode.createAgain" })).toBeInTheDocument();
+  });
+
+  it("updates the joined count from a poll, with no mutation in between", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let redemptionCount = 0;
+    const get = server.mount(contract.experiments.getJoinCode, {
+      body: () => ({ joinCode: { ...ACTIVE_CODE, redemptionCount } }),
+    });
+    const create = server.mount(contract.experiments.createJoinCode, { body: ACTIVE_CODE });
+
+    renderCard();
+
+    expect(await screen.findByText(/joinCode\.redeemed:0/)).toBeInTheDocument();
+
+    redemptionCount = 3;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_500);
+    });
+
+    await waitFor(() => expect(screen.getByText(/joinCode\.redeemed:3/)).toBeInTheDocument());
+    expect(get.callCount).toBeGreaterThan(1);
+    expect(create.called).toBe(false);
+  });
+
+  it("does not poll while the tab is in the background", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const get = server.mount(contract.experiments.getJoinCode, {
+      body: { joinCode: ACTIVE_CODE },
+    });
+
+    renderCard();
+    expect(await screen.findByText("KP7Q-4WMX")).toBeInTheDocument();
+    expect(get.callCount).toBe(1);
+
+    focusManager.setFocused(false);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(35_000);
+    });
+
+    expect(get.callCount).toBe(1);
+  });
+});
+
+describe("QrCode", () => {
+  it("encodes different values into different modules", () => {
+    const first = render(<QrCode value="https://openjii.org/en-US/join/KP7Q-4WMX" />);
+    const second = render(<QrCode value="https://openjii.org/en-US/join/ABCD-EFGH" />);
+
+    const firstPath = modulesOf(first.container);
+    const secondPath = modulesOf(second.container);
+
+    expect(firstPath).toBeTruthy();
+    expect(secondPath).toBeTruthy();
+    expect(firstPath).not.toBe(secondPath);
+  });
+});

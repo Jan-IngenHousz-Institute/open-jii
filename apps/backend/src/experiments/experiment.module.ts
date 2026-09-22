@@ -46,6 +46,11 @@ import { UploadDataUseCase } from "./application/use-cases/experiment-data-uploa
 import { GetDistinctColumnValuesUseCase } from "./application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
 import { GetExperimentTablesUseCase } from "./application/use-cases/experiment-data/get-experiment-tables";
+import { CreateJoinCodeUseCase } from "./application/use-cases/experiment-join-codes/create-join-code";
+import { GetJoinCodeUseCase } from "./application/use-cases/experiment-join-codes/get-join-code";
+import { RedeemJoinCodeUseCase } from "./application/use-cases/experiment-join-codes/redeem-join-code";
+import { ResolveJoinCodeUseCase } from "./application/use-cases/experiment-join-codes/resolve-join-code";
+import { RevokeJoinCodeUseCase } from "./application/use-cases/experiment-join-codes/revoke-join-code";
 import { ApproveJoinRequestUseCase } from "./application/use-cases/experiment-join-requests/approve-join-request";
 import { CancelJoinRequestUseCase } from "./application/use-cases/experiment-join-requests/cancel-join-request";
 import { GetMyJoinRequestUseCase } from "./application/use-cases/experiment-join-requests/get-my-join-request";
@@ -92,6 +97,7 @@ import { ExperimentDataExportsRepository } from "./core/repositories/experiment-
 import { ExperimentDataUploadsRepository } from "./core/repositories/experiment-data-uploads.repository";
 // Repositories
 import { ExperimentDataRepository } from "./core/repositories/experiment-data.repository";
+import { ExperimentJoinCodeRepository } from "./core/repositories/experiment-join-code.repository";
 import { ExperimentJoinRequestRepository } from "./core/repositories/experiment-join-request.repository";
 import { LocationRepository } from "./core/repositories/experiment-location.repository";
 import { ExperimentMetadataRepository } from "./core/repositories/experiment-metadata.repository";
@@ -107,12 +113,15 @@ import { ExperimentDataExportsController } from "./presentation/experiment-data-
 import { ExperimentDataUploadsController } from "./presentation/experiment-data-uploads.controller";
 import { ExperimentDataController } from "./presentation/experiment-data.controller";
 import { ExperimentFlowsController } from "./presentation/experiment-flows.controller";
+import { ExperimentJoinCodeRedemptionController } from "./presentation/experiment-join-code-redemption.controller";
+import { ExperimentJoinCodesController } from "./presentation/experiment-join-codes.controller";
 import { ExperimentJoinRequestsController } from "./presentation/experiment-join-requests.controller";
 import { ExperimentLocationsController } from "./presentation/experiment-locations.controller";
 import { ExperimentMetadataController } from "./presentation/experiment-metadata.controller";
 import { ExperimentVisualizationsController } from "./presentation/experiment-visualizations.controller";
 import { ExperimentWorkbooksController } from "./presentation/experiment-workbooks.controller";
 import { ExperimentController } from "./presentation/experiment.controller";
+import { JoinCodeThrottlerGuard } from "./presentation/join-code-throttler.guard";
 import { ProjectTransferRequestsController } from "./presentation/project-transfer-requests.controller";
 import { ProjectTransferWebhookController } from "./presentation/project-transfer-webhook.controller";
 
@@ -137,6 +146,8 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ExperimentWorkbooksController,
     ExperimentContributorsController,
     ExperimentJoinRequestsController,
+    ExperimentJoinCodesController,
+    ExperimentJoinCodeRedemptionController,
     ExperimentMetadataController,
     ExperimentVisualizationsController,
     ExperimentDashboardsController,
@@ -177,6 +188,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     // Repositories
     ExperimentRepository,
     ExperimentJoinRequestRepository,
+    ExperimentJoinCodeRepository,
     ExperimentMetadataRepository,
     ExperimentDataAnnotationsRepository,
     ExperimentVisualizationRepository,
@@ -227,6 +239,14 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     ApproveJoinRequestUseCase,
     RejectJoinRequestUseCase,
     CancelJoinRequestUseCase,
+
+    // Experiment join code use cases
+    GetJoinCodeUseCase,
+    CreateJoinCodeUseCase,
+    RevokeJoinCodeUseCase,
+    ResolveJoinCodeUseCase,
+    RedeemJoinCodeUseCase,
+    JoinCodeThrottlerGuard,
 
     // Experiment location use cases
     GetExperimentLocationsUseCase,

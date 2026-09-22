@@ -140,6 +140,12 @@ export enum ErrorCodes {
   EXPERIMENT_DUPLICATE_NAME = "EXPERIMENT_DUPLICATE_NAME", // Name already exists
   EXPERIMENT_INVALID_STATE = "EXPERIMENT_INVALID_STATE", // Invalid state for operation
 
+  // ==================== Domain Operations - Experiment Join Codes ====================
+  // Location: src/experiments/application/use-cases/experiment-join-codes/
+  // Two 404s, so a joiner learns whether to re-type the code or ask the organizer.
+  JOIN_CODE_NOT_FOUND = "JOIN_CODE_NOT_FOUND", // No code with that value has ever existed
+  JOIN_CODE_EXPIRED = "JOIN_CODE_EXPIRED", // Code exists but was revoked or has passed its expiry
+
   // ==================== Domain Operations - Experiments Data ====================
   // Location: src/experiments/application/use-cases/
   EXPERIMENT_DATA_UPLOAD_FAILED = "EXPERIMENT_DATA_UPLOAD_FAILED", // Data upload failed

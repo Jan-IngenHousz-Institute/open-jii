@@ -19,5 +19,17 @@
   "notFoundTitle": "This screen doesn't exist.",
   "notFoundCta": "Go to home screen!",
   "modalTitle": "Modal",
-  "modalExample": "This is an example modal. You can edit it in app/modal.tsx."
+  "modalExample": "This is an example modal. You can edit it in app/modal.tsx.",
+  "qrScanner": {
+    "alignPrompt": "Align a QR code within the frame",
+    "matchNote": "The QR code must match exactly one of the available options."
+  },
+  "cameraPermission": {
+    "deniedTitle": "Permission disabled",
+    "requiredTitle": "Camera access required",
+    "deniedMessage": "Camera access has been permanently denied. Open your device settings to enable it for openJII.",
+    "requiredMessage": "openJII needs access to your camera to scan QR codes.",
+    "grant": "Grant permission",
+    "openSettings": "Open settings"
+  }
 }

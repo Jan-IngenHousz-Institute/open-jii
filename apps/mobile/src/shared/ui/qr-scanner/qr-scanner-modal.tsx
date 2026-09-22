@@ -38,7 +38,7 @@ export function QRScannerModal({
 }: QRScannerModalProps) {
   const [permission, requestPermission] = useCameraPermission();
   const { colors } = useTheme();
-  const { t } = useTranslation("measurementFlow");
+  const { t } = useTranslation("common");
   const { height } = Dimensions.get("window");
 
   // scanned is a guard for double-fires during a single visibility cycle, not
@@ -116,7 +116,7 @@ export function QRScannerModal({
         >
           <View className="rounded-full border border-white/20 bg-white/10 px-5 py-2.5">
             <Text className="text-sm font-medium text-white">
-              {t("measurementFlow:qrScanner.alignPrompt")}
+              {t("common:qrScanner.alignPrompt")}
             </Text>
           </View>
         </View>
@@ -129,7 +129,7 @@ export function QRScannerModal({
           >
             <Info size={18} color="rgba(255,255,255,0.9)" />
             <Text className="flex-1 text-xs leading-5 text-white">
-              {t("measurementFlow:qrScanner.matchNote")}
+              {t("common:qrScanner.matchNote")}
             </Text>
           </View>
         )}

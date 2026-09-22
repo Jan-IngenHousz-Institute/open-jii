@@ -133,9 +133,11 @@ vi.mock("@repo/i18n", () => ({
       (key === "signInMethods.passkeysCount" || key === "sharing.collaboratorCount") &&
       typeof options?.count === "number"
         ? `${key}:${options.count}`
-        : key === "workbooks.duplicateName" && typeof options?.name === "string"
-          ? `Fork of ${options.name}`
-          : key,
+        : key === "joinCode.redeemed" && typeof options?.joined === "number"
+          ? `${key}:${options.joined}`
+          : key === "workbooks.duplicateName" && typeof options?.name === "string"
+            ? `Fork of ${options.name}`
+            : key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
   defaultLocale: "en-US",

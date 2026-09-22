@@ -709,4 +709,77 @@ describe("ExperimentCollaboratorsPage", () => {
       );
     });
   });
+  describe("join code card", () => {
+    const publicAccess = () =>
+      accessPayload({ experiment: { visibility: "public", status: "active" } });
+
+    it("sits between the header block and the filter row for a public experiment", async () => {
+      server.mount(contract.experiments.getExperimentAccess, { body: publicAccess() });
+      server.mount(contract.experiments.getJoinCode, { body: { joinCode: null } });
+
+      renderPage();
+
+      const card = await screen.findByText("joinCode.title");
+      const heading = screen.getByText("experimentSettings.collaborators");
+      const filter = screen.getByPlaceholderText(
+        "experimentSettings.filterCollaboratorsPlaceholder",
+      );
+      expect(heading.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(card.compareDocumentPosition(filter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("is absent, and asks for no code, on a private experiment", async () => {
+      server.mount(contract.experiments.getExperimentAccess, { body: accessPayload() });
+      const get = server.mount(contract.experiments.getJoinCode, { body: { joinCode: null } });
+
+      renderPage();
+
+      await waitFor(() =>
+        expect(screen.getByText("experimentSettings.collaborators")).toBeInTheDocument(),
+      );
+      expect(screen.queryByText("joinCode.title")).not.toBeInTheDocument();
+      expect(get.called).toBe(false);
+    });
+
+    it("is absent, and asks for no code, on an archived public experiment", async () => {
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: accessPayload({ experiment: { visibility: "public", status: "archived" } }),
+      });
+      const get = server.mount(contract.experiments.getJoinCode, { body: { joinCode: null } });
+
+      renderPage();
+
+      await waitFor(() =>
+        expect(screen.getByText("experimentSettings.collaborators")).toBeInTheDocument(),
+      );
+      expect(screen.queryByText("joinCode.title")).not.toBeInTheDocument();
+      expect(get.called).toBe(false);
+    });
+
+    it("is absent, and asks for no code, for a user who cannot share", async () => {
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: accessPayload({
+          experiment: { visibility: "public", status: "active" },
+          isAdmin: false,
+          capabilities: {
+            canContribute: true,
+            canUpdate: false,
+            canManage: false,
+            canShare: false,
+            canLeave: true,
+            canTransfer: false,
+          },
+        }),
+      });
+      const get = server.mount(contract.experiments.getJoinCode, { body: { joinCode: null } });
+
+      renderPage();
+
+      await waitFor(() =>
+        expect(screen.getByText("experimentSettings.collaborators")).toBeInTheDocument(),
+      );
+      expect(screen.queryByText("joinCode.title")).not.toBeInTheDocument();
+      expect(get.called).toBe(false);
+    });
+  });
 });

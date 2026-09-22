@@ -37,7 +37,7 @@ export function CameraPermissionState({
   requestPermission,
 }: CameraPermissionStateProps) {
   const { colors, classes } = useTheme();
-  const { t } = useTranslation("measurementFlow");
+  const { t } = useTranslation("common");
 
   if (!permission) {
     return (
@@ -62,26 +62,26 @@ export function CameraPermissionState({
       <View className="items-center gap-2">
         <Text className={clsx("text-xl font-bold", classes.text)}>
           {permanentlyDenied
-            ? t("measurementFlow:cameraPermission.deniedTitle")
-            : t("measurementFlow:cameraPermission.requiredTitle")}
+            ? t("common:cameraPermission.deniedTitle")
+            : t("common:cameraPermission.requiredTitle")}
         </Text>
         <Text className={clsx("text-center text-sm leading-5", classes.textMuted)}>
           {permanentlyDenied
-            ? t("measurementFlow:cameraPermission.deniedMessage")
-            : t("measurementFlow:cameraPermission.requiredMessage")}
+            ? t("common:cameraPermission.deniedMessage")
+            : t("common:cameraPermission.requiredMessage")}
         </Text>
       </View>
 
       {!permanentlyDenied ? (
         <Button
           onPress={requestPermission}
-          title={t("measurementFlow:cameraPermission.grant")}
+          title={t("common:cameraPermission.grant")}
           variant="primary"
         />
       ) : (
         <Button
           onPress={() => Linking.openSettings()}
-          title={t("measurementFlow:cameraPermission.openSettings")}
+          title={t("common:cameraPermission.openSettings")}
           variant="outline"
         />
       )}

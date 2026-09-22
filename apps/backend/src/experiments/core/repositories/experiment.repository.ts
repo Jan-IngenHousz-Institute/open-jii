@@ -2,7 +2,10 @@ import { Injectable, Inject } from "@nestjs/common";
 
 import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import { ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
-import type { ExperimentSort } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentMembershipStatus,
+  ExperimentSort,
+} from "@repo/api/domains/experiment/experiment.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 import {
   asc,
@@ -12,6 +15,7 @@ import {
   or,
   ne,
   experiments,
+  experimentJoinRequests,
   experimentMembers,
   experimentLocations,
   exists,
@@ -46,6 +50,7 @@ import {
 } from "../../../common/utils/profile-anonymization";
 import {
   accessibleResourceCondition,
+  contributingResourceCondition,
   relatedResourceCondition,
   resourceTierExpression,
 } from "../../../common/utils/resource-access-scope";
@@ -61,8 +66,14 @@ import {
   ExperimentDto,
 } from "../models/experiment.model";
 
-/** A listing row plus its relevance score, which global search merges on across types. */
-export type ExperimentSearchRow = ExperimentDto & { score: number };
+/**
+ * A listing row plus its relevance score, which global search merges on across
+ * types, and the caller's relationship to it.
+ */
+export type ExperimentSearchRow = ExperimentDto & {
+  score: number;
+  membershipStatus: ExperimentMembershipStatus;
+};
 
 /**
  * Contributors plus the experiment's anonymization setting, so no caller can publish
@@ -272,6 +283,34 @@ export class ExperimentRepository {
   ) {
     const { organizationId, includeArchived = false } = options ?? {};
 
+    // What the caller may do with the row, not merely whether they can see it. Both
+    // arms are uncorrelated on the caller's side, so Postgres hash-builds them once
+    // per statement rather than per row.
+    const isMember =
+      contributingResourceCondition({
+        database: this.database,
+        resourceType: "experiment",
+        resourceIdColumn: experiments.id,
+        organizationIdColumn: experiments.organizationId,
+        userId,
+      }) ?? sql`false`;
+    // No caller, no relationship to report: the `related` scope below reads `userId`
+    // the same defensive way, because callers reach here with it unset.
+    const hasPendingRequest = userId
+      ? exists(
+          this.database
+            .select()
+            .from(experimentJoinRequests)
+            .where(
+              and(
+                eq(experimentJoinRequests.experimentId, experiments.id),
+                eq(experimentJoinRequests.userId, userId),
+                eq(experimentJoinRequests.status, "pending"),
+              ),
+            ),
+        )
+      : sql`false`;
+
     const experimentFields = {
       id: experiments.id,
       name: experiments.name,
@@ -294,6 +333,11 @@ export class ExperimentRepository {
         where ${resourceGrants.resourceType} = 'experiment'
         and ${resourceGrants.resourceId} = ${experiments.id}
         and ${resourceGrants.granteeType} = 'user')`,
+      membershipStatus: sql<ExperimentMembershipStatus>`CASE
+        WHEN ${isMember} THEN 'member'
+        WHEN ${hasPendingRequest} THEN 'pending_request'
+        ELSE 'none'
+      END`,
     };
 
     {
@@ -609,6 +653,44 @@ export class ExperimentRepository {
     });
   }
 
+  /**
+   * The caller's relationship to one experiment, from the same `can(contribute)` the
+   * guards give. Shared by the access read and the join-code preview so the two can
+   * never disagree with each other or with a list row.
+   */
+  async membershipStatusFor(
+    experimentId: string,
+    userId: string,
+    canContribute: boolean,
+  ): Promise<Result<ExperimentMembershipStatus>> {
+    return tryCatch(() => this.resolveMembershipStatus(experimentId, userId, canContribute));
+  }
+
+  private async resolveMembershipStatus(
+    experimentId: string,
+    userId: string,
+    canContribute: boolean,
+  ): Promise<ExperimentMembershipStatus> {
+    if (canContribute) {
+      return "member";
+    }
+
+    // A point lookup: the partial unique index covers exactly this predicate.
+    const pending = await this.database
+      .select({ id: experimentJoinRequests.id })
+      .from(experimentJoinRequests)
+      .where(
+        and(
+          eq(experimentJoinRequests.experimentId, experimentId),
+          eq(experimentJoinRequests.userId, userId),
+          eq(experimentJoinRequests.status, "pending"),
+        ),
+      )
+      .limit(1);
+
+    return pending.length > 0 ? "pending_request" : "none";
+  }
+
   async checkAccess(
     experimentId: string,
     userId: string,
@@ -619,6 +701,7 @@ export class ExperimentRepository {
       hasArchiveAccess: boolean;
       isAdmin: boolean;
       canContribute: boolean;
+      membershipStatus: ExperimentMembershipStatus;
     }>
   > {
     return tryCatch(async () => {
@@ -655,6 +738,7 @@ export class ExperimentRepository {
           isAdmin: false,
           hasArchiveAccess: false,
           canContribute: false,
+          membershipStatus: "none" as const,
         };
       }
 
@@ -690,6 +774,11 @@ export class ExperimentRepository {
         isAdmin,
         hasArchiveAccess,
         canContribute: contribute.allow,
+        membershipStatus: await this.resolveMembershipStatus(
+          experimentId,
+          userId,
+          contribute.allow,
+        ),
       };
     });
   }

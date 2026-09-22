@@ -3,6 +3,7 @@
 import { DocsHelpLink } from "@/components/docs-help-link";
 import { ErrorDisplay } from "@/components/error-display";
 import { ExperimentInviteModal } from "@/components/experiment-settings/collaborators/experiment-invite-modal";
+import { ExperimentJoinCodeCard } from "@/components/experiment-settings/collaborators/experiment-join-code-card";
 import { ExperimentJoinRequestsPanel } from "@/components/experiment-settings/collaborators/experiment-join-requests-panel";
 import { ExperimentPendingInvitationsPanel } from "@/components/experiment-settings/collaborators/experiment-pending-invitations-panel";
 import { ExperimentRequestToJoin } from "@/components/experiment-settings/collaborators/experiment-request-to-join";
@@ -139,6 +140,10 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
           <ExperimentRequestToJoin experimentId={id} />
         </div>
       ) : null}
+
+      {canShare && experiment.visibility === "public" && !isArchived && (
+        <ExperimentJoinCodeCard experimentId={id} />
+      )}
 
       {hasTabs && (
         <div className="flex items-center gap-3">
