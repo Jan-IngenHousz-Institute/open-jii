@@ -199,8 +199,8 @@ export class DuckDbAdapter implements ExperimentDataReadPort {
 
       // A dimension with no data files cannot be given a shape here, and a
       // LEFT JOIN against nothing would have to project NULLs this route
-      // cannot name. Failing loudly beats serving rows with the enrichment
-      // silently missing, which is what happened before joins reached here.
+      // cannot name. Failing loudly beats serving rows whose enrichment is
+      // silently absent.
       if (sourceResult.value === null) {
         return failure(
           AppError.internal(

@@ -13,6 +13,7 @@ import { baseConfig } from "@repo/vitest-config/base";
  */
 const LAYER_ORDER: [string, number][] = [
   ["/utils/", 0],
+  ["/models/", 0],
   ["/guards/", 1],
   ["/authorization/", 2],
   ["/services/", 2],

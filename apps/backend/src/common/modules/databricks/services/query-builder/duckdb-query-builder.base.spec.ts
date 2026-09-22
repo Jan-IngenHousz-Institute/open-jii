@@ -191,8 +191,8 @@ describe("DuckDbQueryBuilder", () => {
     });
 
     it("merges custom metadata, matching on a question answer", async () => {
-      // Dev has no experiment where a blob matches on a question answer, so
-      // this branch and the oldest-first fold can only be exercised here.
+      // A blob selects its row either by an allowlisted column or by a
+      // question answer, and merges oldest-first so later blobs win.
       const older = JSON.stringify({
         identifierColumnId: "plot",
         experimentQuestionId: "select_plot",
@@ -268,9 +268,8 @@ describe("DuckDbQueryBuilder", () => {
     });
 
     it("runs the real enrichment config end to end", async () => {
-      // The config emitted Spark SQL until the dialect seam landed, so DuckDB
-      // rejected it outright. This runs the actual served configuration rather
-      // than a hand-written approximation of it.
+      // Runs the served configuration itself, so a spelling that only this
+      // engine rejects cannot pass unnoticed.
       await connection.run(`
         CREATE OR REPLACE TABLE raw_rows AS
         SELECT * FROM (VALUES
@@ -333,9 +332,9 @@ describe("DuckDbQueryBuilder", () => {
     });
 
     it("carries an enrichment join through the variant path", async () => {
-      // This builder reimplements build() rather than extending the Spark twin,
-      // so a join added to the base class reaches it only if it is wired here
-      // too. It was not, and nothing failed: the column simply vanished.
+      // This builder reimplements build() rather than extending the Spark
+      // twin, so a join reaches it only when wired here as well. Nothing
+      // fails when it is not: the column simply vanishes.
       await connection.run(`
         CREATE OR REPLACE TABLE devices AS
         SELECT * FROM (VALUES ('exp-1', 'm-1', {'name': 'Sensor A'}))

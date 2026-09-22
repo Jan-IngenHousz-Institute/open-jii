@@ -5,12 +5,6 @@ export type VariantColumn = "macro_output" | "questions_data" | "custom_metadata
 export type ExperimentTableType = "static" | "macro" | "upload";
 
 /**
- * A dimension the enriched layer folded in, rebuilt at read time so the payload
- * is materialised once rather than copied into a second table. The relation is
- * unqualified; the adapter qualifies it with the catalog and schema it already
- * resolves for the served table.
- */
-/**
  * The list and struct expressions the enrichment joins need. Each read engine
  * spells these differently, so the domain states what is required and the
  * query-builder module supplies the SQL. The join's shape and keys stay here
@@ -40,6 +34,12 @@ export interface EnrichmentSql {
   };
 }
 
+/**
+ * A dimension the enriched layer folded in, rebuilt at read time so the payload
+ * is materialised once rather than copied into a second table. The relation is
+ * unqualified; the adapter qualifies it with the catalog and schema it already
+ * resolves for the served table.
+ */
 export interface EnrichmentJoin {
   relation: string;
   alias: string;
@@ -96,15 +96,6 @@ const DEVICE_JOIN: EnrichmentJoin = {
 };
 
 /**
- * Annotations are written against a measurement after it lands, so they cannot
- * be folded in when the row is built. The struct and its ordering mirror
- * `add_annotation_column`; a reader compares these arrays to what the enriched
- * table produced, so field order is part of the contract.
- *
- * `hasUpstreamAnnotations` covers the tables whose payload already carries
- * annotations of its own, which are concatenated ahead of the stored ones.
- */
-/**
  * Metadata blobs hold rows keyed by an identifier each measurement supplies,
  * so the match runs per row and cannot be folded in upstream. The engine
  * spells the merge; only which columns are matchable is decided here.
@@ -123,6 +114,15 @@ const metadataJoin =
     };
   };
 
+/**
+ * Annotations are written against a measurement after it lands, so they cannot
+ * be folded in when the row is built. The struct and its ordering mirror
+ * `add_annotation_column`; a reader compares these arrays to what the enriched
+ * table produced, so field order is part of the contract.
+ *
+ * `hasUpstreamAnnotations` covers the tables whose payload already carries
+ * annotations of its own, which are concatenated ahead of the stored ones.
+ */
 const annotationJoin =
   (hasUpstreamAnnotations: boolean) =>
   (sql: EnrichmentSql): EnrichmentJoin => {
