@@ -53,11 +53,15 @@ CloudWatch. With `grafana_endpoint` empty the digests render without the button.
 
 ## Build
 
-`function.zip` is committed, like the metrics-publisher module, so Terraform stays authoritative and a fresh checkout can plan. Rebuild and commit it after changing the handler, `packages/monitoring`, or `docs/monitoring/metrics-catalog.yaml`:
+`function.zip` is committed, like the metrics-publisher module, so Terraform stays authoritative and a fresh checkout can plan. Rebuild and commit it after changing the handler, `packages/monitoring`, or `docs/monitoring/metrics-catalog.yaml`.
+
+**Two bundles embed `packages/monitoring`, not one.** A change to the package means rebuilding the forwarder as well, or CI fails on the one you forgot:
 
 ```bash
-pnpm turbo run build --filter=@repo/monitoring   # refresh dist/ first
-cd infrastructure/modules/monitoring/digest-composer/lambda && npm run build
+rm -rf packages/monitoring/dist                  # tsc leaves outputs for deleted sources
+pnpm turbo run build --filter=@repo/monitoring
+(cd infrastructure/modules/monitoring/digest-composer/lambda && npm run build)
+(cd infrastructure/modules/monitoring/metrics-forwarder/lambda && npm run build)
 ```
 
-The build copies the catalog and the compiled package into the zip; skipping the first step ships a stale `lib/`.
+The lambda build copies the catalog and the whole of `dist/` into the zip. Skipping the package build ships a stale `lib/`, and skipping the `rm -rf` ships compiled files whose sources no longer exist. `Monitoring Lambda Bundle Build` rebuilds all three bundles from a clean checkout and compares them file by file, so both mistakes fail the PR rather than reaching a Lambda.
