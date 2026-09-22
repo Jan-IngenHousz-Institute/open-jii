@@ -10,6 +10,12 @@ import type { CalibrationFamily } from "@repo/api/domains/iot/calibration/iot-ca
 import { CalibrationStepsEditor } from "./calibration-steps-editor";
 import type { ProcedurePhase, StepKind } from "./procedure-edits";
 
+// A sweep draws its points, and Plotly has no business in jsdom. Mocked at the wrapper,
+// because that is where the dynamic import happens.
+vi.mock("@/components/charts/scatter-chart", () => ({
+  ScatterChart: () => <div data-testid="scatter" />,
+}));
+
 const bench: CaptureProcedure = {
   instruments: [
     { role: "dut" },

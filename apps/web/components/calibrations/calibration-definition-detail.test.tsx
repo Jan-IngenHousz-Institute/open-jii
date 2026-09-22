@@ -11,6 +11,12 @@ import { AutosaveIndicator } from "../shared/autosave/autosave-indicator";
 import { AutosaveStatusProvider } from "../shared/autosave/autosave-status-context";
 import { CalibrationDefinitionDetail } from "./calibration-definition-detail";
 
+// A sweep draws its points, and Plotly has no business in jsdom. Mocked at the wrapper,
+// because that is where the dynamic import happens.
+vi.mock("@/components/charts/scatter-chart", () => ({
+  ScatterChart: () => <div data-testid="scatter" />,
+}));
+
 /** The page as its layout composes it: the indicator reads what the detail reports. */
 function renderDetail() {
   render(
