@@ -16,10 +16,10 @@ export const useRevokeExperimentJoinCode = (options?: UseRevokeExperimentJoinCod
 
   return useMutation(
     orpc.experiments.revokeJoinCode.mutationOptions({
-      onSuccess: (...args) => {
-        toast({ description: t("joinCode.revoked") });
-        options?.onSuccess?.(...args);
-      },
+      // No success toast: the dialog that owns this mutation shows the outcome
+      // itself, and a toast mounts a dismissable layer that steals the next Escape
+      // from the open dialog. Errors keep theirs — they have no other surface.
+      onSuccess: options?.onSuccess,
       onError: (...args) => {
         const [error] = args;
         toast({
