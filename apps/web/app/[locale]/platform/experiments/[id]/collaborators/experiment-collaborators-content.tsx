@@ -3,7 +3,7 @@
 import { DocsHelpLink } from "@/components/docs-help-link";
 import { ErrorDisplay } from "@/components/error-display";
 import { ExperimentInviteModal } from "@/components/experiment-settings/collaborators/experiment-invite-modal";
-import { ExperimentJoinCodeCard } from "@/components/experiment-settings/collaborators/experiment-join-code-card";
+import { ExperimentJoinCodeButton } from "@/components/experiment-settings/collaborators/experiment-join-code-dialog";
 import { ExperimentJoinRequestsPanel } from "@/components/experiment-settings/collaborators/experiment-join-requests-panel";
 import { ExperimentPendingInvitationsPanel } from "@/components/experiment-settings/collaborators/experiment-pending-invitations-panel";
 import { ExperimentRequestToJoin } from "@/components/experiment-settings/collaborators/experiment-request-to-join";
@@ -141,10 +141,6 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
         </div>
       ) : null}
 
-      {canShare && experiment.visibility === "public" && !isArchived && (
-        <ExperimentJoinCodeCard experimentId={id} />
-      )}
-
       {hasTabs && (
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
@@ -157,6 +153,9 @@ export default function ExperimentCollaboratorsPage({ params }: ExperimentCollab
               className="pl-9"
             />
           </div>
+          {canShare && experiment.visibility === "public" && !isArchived && (
+            <ExperimentJoinCodeButton experimentId={id} />
+          )}
           <Button onClick={() => setIsInviteOpen(true)} disabled={isArchived || !canShare}>
             <UserPlus className="h-4 w-4" />
             {t("experimentSettings.invite")}

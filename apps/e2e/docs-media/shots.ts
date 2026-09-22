@@ -183,21 +183,26 @@ export const SHOTS: readonly Shot[] = [
     slug: "join-code-card",
     publish: "img/guide/web/join-code-card.webp",
     frame: "desktop",
-    // The card renders only for a public, non-archived experiment the capturing
+    // The button renders only for a public, non-archived experiment the capturing
     // user can share, which the Access Showcase experiment is not.
     route: async () =>
       `/platform/experiments/${await experimentId(
         "[Seed] Field Trial 2025 — Corn Photosynthesis",
       )}/collaborators`,
     async prepare(page) {
-      const code = page.getByText(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
-      // "Create join code" on a card with no code yet, "Create a new code" once the
-      // seeded one has expired. The expired card renders its code inside a sentence,
-      // so only these two labels distinguish "needs creating" from "already active".
-      const create = page.getByRole("button", { name: /^Create (join code|a new code)$/ });
+      // The code and its actions live in a dialog now; the trigger sits beside Invite.
+      await page.getByRole("button", { name: /^Join code/ }).click();
+      const dialog = page.getByRole("dialog");
+      await dialog.waitFor({ timeout: 15_000 });
 
-      // The card fetches before it can show any of its states, so deciding
-      // immediately races the request and reads an empty card as an active one.
+      const code = dialog.getByText(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+      // "Create join code" with no code yet, "Create a new code" once the seeded one
+      // has expired. The expired state renders its code inside a sentence, so only
+      // these two labels distinguish "needs creating" from "already active".
+      const create = dialog.getByRole("button", { name: /^Create (join code|a new code)$/ });
+
+      // The dialog fetches before it can show any of its states, so deciding
+      // immediately races the request and reads an empty dialog as an active one.
       await code.or(create).first().waitFor({ state: "visible", timeout: 15_000 });
 
       if (await create.isVisible().catch(() => false)) {
@@ -209,7 +214,7 @@ export const SHOTS: readonly Shot[] = [
       await settle(page, 1200);
     },
     scope:
-      "Join code card in its active state: code, QR, expiry, redemption counter and the workbook note",
+      "Join code dialog in its active state: code, QR, expiry, redemption counter and the workbook note",
   },
   {
     slug: "experiment-devices",

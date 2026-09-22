@@ -709,23 +709,43 @@ describe("ExperimentCollaboratorsPage", () => {
       );
     });
   });
-  describe("join code card", () => {
+  describe("join code button", () => {
     const publicAccess = () =>
       accessPayload({ experiment: { visibility: "public", status: "active" } });
 
-    it("sits between the header block and the filter row for a public experiment", async () => {
+    it("sits in the filter row, before Invite, for a public experiment", async () => {
       server.mount(contract.experiments.getExperimentAccess, { body: publicAccess() });
       server.mount(contract.experiments.getJoinCode, { body: { joinCode: null } });
 
       renderPage();
 
-      const card = await screen.findByText("joinCode.title");
-      const heading = screen.getByText("experimentSettings.collaborators");
+      const joinCode = await screen.findByRole("button", { name: /joinCode\.title/ });
+      const invite = screen.getByRole("button", { name: /experimentSettings\.invite/ });
       const filter = screen.getByPlaceholderText(
         "experimentSettings.filterCollaboratorsPlaceholder",
       );
-      expect(heading.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      expect(card.compareDocumentPosition(filter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+      // Same row as the filter and Invite, rather than a band above them.
+      expect(joinCode.closest("div")).toBe(invite.closest("div"));
+      expect(
+        filter.compareDocumentPosition(joinCode) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        joinCode.compareDocumentPosition(invite) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it("opens the dialog when clicked", async () => {
+      const user = userEvent.setup();
+      server.mount(contract.experiments.getExperimentAccess, { body: publicAccess() });
+      server.mount(contract.experiments.getJoinCode, { body: { joinCode: null } });
+
+      renderPage();
+
+      await user.click(await screen.findByRole("button", { name: /joinCode\.title/ }));
+
+      expect(await screen.findByRole("dialog")).toBeInTheDocument();
+      expect(await screen.findByRole("button", { name: "joinCode.create" })).toBeInTheDocument();
     });
 
     it("is absent, and asks for no code, on a private experiment", async () => {
@@ -737,7 +757,7 @@ describe("ExperimentCollaboratorsPage", () => {
       await waitFor(() =>
         expect(screen.getByText("experimentSettings.collaborators")).toBeInTheDocument(),
       );
-      expect(screen.queryByText("joinCode.title")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /joinCode\.title/ })).not.toBeInTheDocument();
       expect(get.called).toBe(false);
     });
 
@@ -752,7 +772,37 @@ describe("ExperimentCollaboratorsPage", () => {
       await waitFor(() =>
         expect(screen.getByText("experimentSettings.collaborators")).toBeInTheDocument(),
       );
-      expect(screen.queryByText("joinCode.title")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /joinCode\.title/ })).not.toBeInTheDocument();
+      expect(get.called).toBe(false);
+    });
+
+    it("is absent for a manager who cannot share, while the filter row still renders", async () => {
+      // `canManage` alone keeps the filter row on screen, so this is the case that
+      // actually exercises the `canShare` half of the gate rather than the row's own.
+      server.mount(contract.experiments.getExperimentAccess, {
+        body: accessPayload({
+          experiment: { visibility: "public", status: "active" },
+          isAdmin: true,
+          capabilities: {
+            canContribute: true,
+            canUpdate: true,
+            canManage: true,
+            canShare: false,
+            canLeave: true,
+            canTransfer: false,
+          },
+        }),
+      });
+      const get = server.mount(contract.experiments.getJoinCode, { body: { joinCode: null } });
+
+      renderPage();
+
+      await waitFor(() =>
+        expect(
+          screen.getByPlaceholderText("experimentSettings.filterCollaboratorsPlaceholder"),
+        ).toBeInTheDocument(),
+      );
+      expect(screen.queryByRole("button", { name: /joinCode\.title/ })).not.toBeInTheDocument();
       expect(get.called).toBe(false);
     });
 
@@ -778,7 +828,7 @@ describe("ExperimentCollaboratorsPage", () => {
       await waitFor(() =>
         expect(screen.getByText("experimentSettings.collaborators")).toBeInTheDocument(),
       );
-      expect(screen.queryByText("joinCode.title")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /joinCode\.title/ })).not.toBeInTheDocument();
       expect(get.called).toBe(false);
     });
   });
