@@ -74,7 +74,7 @@ Git, and `jq`; a missing `jq` prints a warning and skips the hook.
 | `openjii-ticket-refine`    | One ticket needs writing, or bringing up to the ticket gate.                                                 |
 | `openjii-testing-criteria` | A PR is ready for review and the ticket needs its handoff sections for QA.                                   |
 | `openjii-backlog-triage`   | Bulk label, project or gate hygiene across many tickets.                                                     |
-| `openjii-daily`            | Once a day, or coming back after time away, and you need to know whether the platform needs a person.        |
+| `openjii-daily-round`      | Once a day, or coming back after time away, and you need to know whether the platform needs a person.        |
 | `openjii-triage`           | A digest line, a Grafana alert or a runbook points at a metric id and you need evidence rather than a guess. |
 | `unslop`                   | Writing or editing prose a human will read: docs, PR bodies, changelogs.                                     |
 

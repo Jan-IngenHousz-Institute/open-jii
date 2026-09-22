@@ -1,5 +1,5 @@
 ---
-name: openjii-daily
+name: openjii-daily-round
 description: Run the daily round over the platform heartbeat. Use once a day, or after time away, to find out whether the platform needs a person before anybody reports a problem. Reads the digests and the alert state, says what changed since the last round, and hands off to openjii-triage for anything that needs digging.
 ---
 
