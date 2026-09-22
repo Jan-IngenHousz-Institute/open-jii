@@ -4,6 +4,7 @@ import { DocsHelpLink } from "@/components/docs-help-link";
 import { rowSortingFeature, tableFeatures, useTable } from "@tanstack/react-table";
 import type { ColumnDef, RowData, SortingState } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 
@@ -179,8 +180,13 @@ export function OverviewTable<T extends RowData>({
                         onClick={(event) => sorting.onToggle(header.column.id, event.shiftKey)}
                       >
                         <table.FlexRender header={header} />
-                        {header.column.getIsSorted() === "asc" ? "↑" : null}
-                        {header.column.getIsSorted() === "desc" ? "↓" : null}
+                        {header.column.getIsSorted() === "asc" ? (
+                          <ArrowUp aria-hidden className="text-status-active-foreground size-3.5" />
+                        ) : header.column.getIsSorted() === "desc" ? (
+                          <ArrowDown aria-hidden className="text-status-active-foreground size-3.5" />
+                        ) : (
+                          <ArrowUpDown aria-hidden className="size-3.5 opacity-50" />
+                        )}
                         {header.column.getSortIndex() > 0 ? <span aria-hidden>2</span> : null}
                       </button>
                     ) : (

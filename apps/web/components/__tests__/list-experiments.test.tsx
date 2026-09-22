@@ -201,7 +201,7 @@ describe("ListExperiments", () => {
     render(<ListExperiments />);
 
     await screen.findByRole("link", { name: "Exp 1" });
-    expect(screen.queryByRole("button", { name: "experiments.resetSorting" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "resetSorting" })).toBeNull();
     await user.click(screen.getByRole("button", { name: /columns.name:/ }));
     await waitFor(() => expect(spy.calls.at(-1)?.query?.["sort[0][field]"]).toBe("name"));
     expect(screen.getByRole("button", { name: /columns.name:/ }).closest("th")).toHaveAttribute(
@@ -215,7 +215,7 @@ describe("ListExperiments", () => {
       screen.getByRole("button", { name: /columns.status:.*sortSecondary/ }),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "experiments.resetSorting" }));
+    await user.click(screen.getByRole("button", { name: "resetSorting" }));
     await waitFor(() => expect(spy.calls.at(-1)?.query?.sort).toBeUndefined());
   });
 
@@ -234,7 +234,7 @@ describe("ListExperiments", () => {
       "sort[0][field]": "updated",
       "sort[0][direction]": "desc",
     });
-    expect(screen.getByRole("button", { name: "experiments.resetSorting" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "resetSorting" })).toBeInTheDocument();
   });
 
   it("hides pagination when the collection is empty", async () => {
