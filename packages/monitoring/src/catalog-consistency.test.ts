@@ -23,6 +23,11 @@ const heartbeatConstants = readFileSync(
   "utf8",
 );
 
+// Named so a failure says where to look. The rules live in terraform and the entries live
+// in yaml, so a mismatch is otherwise a hunt through two languages.
+const grafanaRulesPath = "infrastructure/modules/grafana/dashboard/main.tf";
+const grafanaRules = readFileSync(join(repoRoot, grafanaRulesPath), "utf8");
+
 const metrics = parseCatalog(catalogSource);
 const passes = parsePasses(catalogSource);
 
@@ -63,6 +68,27 @@ function composerEnvironmentKeys(): Set<string> {
   // containing an interpolation's braces does not truncate it.
   const body = blocks[1].split(/\n\s*}\s*\n/)[0];
   return new Set([...body.matchAll(/^\s+([A-Z][A-Z0-9_]*)\s+=/gm)].map(([, key]) => key));
+}
+
+interface AlertRule {
+  metricId: string;
+  severity: string;
+}
+
+/** Every Grafana rule that claims a catalog entry, with the severity it routes on. */
+function alertRules(): AlertRule[] {
+  const rules: AlertRule[] = [];
+
+  for (const [, body] of grafanaRules.matchAll(/labels = \{([^}]*)\}/g)) {
+    const id = /metric_id\s*=\s*"([^"]+)"/.exec(body);
+    if (id === null) {
+      continue;
+    }
+    const severity = /severity\s*=\s*"([^"]+)"/.exec(body);
+    rules.push({ metricId: id[1], severity: severity === null ? "" : severity[1] });
+  }
+
+  return rules;
 }
 
 function digestEvaluated(metric: CatalogMetric): boolean {
@@ -325,5 +351,58 @@ describe("signals", () => {
       .flatMap((m) => placeholdersIn(m.signal).map((name) => ({ id: m.id, name })))
       .filter(({ name }) => !provided.has(name));
     expect(unprovided).toEqual([]);
+  });
+});
+
+describe("catalog and grafana rules cannot drift", () => {
+  // The catalog is what the digest reads and the runbooks cite; the rules are what wakes
+  // someone. Nothing else compares them, and they are edited months apart.
+
+  it("gives every active alert entry a rule that claims it", () => {
+    const claimed = new Set(alertRules().map((rule) => rule.metricId));
+    const unwatched = metrics
+      .filter((m) => m.active && m.slots.includes("alert"))
+      .filter((m) => !claimed.has(m.id));
+
+    expect(
+      unwatched.map((m) => m.id),
+      `active alert entries with no rule in ${grafanaRulesPath}`,
+    ).toEqual([]);
+  });
+
+  it("points every rule at an entry that actually carries an alert slot", () => {
+    // A metric_id that resolves to nothing, or to a dashboard-only entry, means the rule
+    // links to a runbook and a severity the catalog never agreed to.
+    const byId = new Map(metrics.map((m) => [m.id, m]));
+    const orphans = alertRules().filter(
+      (rule) => !byId.get(rule.metricId)?.slots.includes("alert"),
+    );
+
+    expect(
+      orphans.map((rule) => rule.metricId),
+      `metric_id labels in ${grafanaRulesPath} with no alert-slot entry`,
+    ).toEqual([]);
+  });
+
+  it("agrees on severity, since that is what decides the destination", () => {
+    const byId = new Map(metrics.map((m) => [m.id, m]));
+    const mismatched = alertRules()
+      .filter((rule) => byId.has(rule.metricId))
+      .filter((rule) => rule.severity !== byId.get(rule.metricId)?.severity)
+      .map((rule) => ({
+        metricId: rule.metricId,
+        rule: rule.severity,
+        catalog: byId.get(rule.metricId)?.severity,
+      }));
+
+    expect(
+      mismatched,
+      `severity disagreements between the catalog and ${grafanaRulesPath}`,
+    ).toEqual([]);
+  });
+
+  it("finds a non-trivial number of rules, so a broken parse cannot pass silently", () => {
+    // Every assertion above is vacuously true if the regex stops matching.
+    expect(alertRules().length).toBeGreaterThan(5);
   });
 });

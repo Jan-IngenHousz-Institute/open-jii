@@ -388,8 +388,9 @@ EOT
       summary     = "5xx errors detected on backend service"
     }
     labels = {
-      severity = "critical"
-      service  = "backend"
+      metric_id = "backend-5xx"
+      severity  = "critical"
+      service   = "backend"
     }
   }
 }
@@ -475,8 +476,9 @@ resource "grafana_rule_group" "cloudfront_errors" {
       summary     = "Site may be down: high 5xx rate on CloudFront"
     }
     labels = {
-      severity = "critical"
-      service  = "frontend"
+      metric_id = "cloudfront-errors"
+      severity  = "critical"
+      service   = "frontend"
     }
   }
 }
@@ -644,8 +646,9 @@ EOT
       summary     = "Site may be down: Server Lambda errors detected"
     }
     labels = {
-      severity = "critical"
-      service  = "frontend"
+      metric_id = "opennext-lambda-errors"
+      severity  = "critical"
+      service   = "frontend"
     }
   }
 
@@ -965,8 +968,9 @@ EOT
         summary     = "Macro sandbox ${rule.key} error rate high"
       }
       labels = {
-        severity = "warning"
-        service  = "macro-sandbox"
+        metric_id = "sandbox-errors"
+        severity  = "warning"
+        service   = "macro-sandbox"
       }
     }
   }
