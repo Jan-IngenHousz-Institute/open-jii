@@ -4,16 +4,14 @@ import { DateTime } from "luxon";
 import React, { useLayoutEffect } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { OrganizationJoinCta } from "~/features/organizations/components/organization-join-cta";
-import { OrganizationMembershipTags } from "~/features/organizations/components/organization-membership-tag";
 import { OrganizationOpenOnWebButton } from "~/features/organizations/components/organization-open-on-web-button";
 import { organizationRoleLabelKey } from "~/features/organizations/components/organization-role-label";
-import { organizationTypeLabelKey } from "~/features/organizations/components/organization-type-label";
 import { OrganizationUnavailable } from "~/features/organizations/components/organization-unavailable";
 import { resolveOrganizationWebsite } from "~/features/organizations/domain/website";
 import { useOrganization } from "~/features/organizations/hooks/use-organization";
 import { colors } from "~/shared/constants/colors";
-import type { SupportedLocale } from "~/shared/i18n";
 import { useTranslation } from "~/shared/i18n";
+import { luxonLocale } from "~/shared/i18n/luxon-locale";
 import { showAlert } from "~/shared/ui/AlertDialog";
 import { Avatar } from "~/shared/ui/Avatar";
 import { Button } from "~/shared/ui/Button";
@@ -21,12 +19,9 @@ import { Card } from "~/shared/ui/Card";
 import { Tag } from "~/shared/ui/Tag";
 import { cn } from "~/shared/ui/cn";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+import { OrganizationMembershipTags } from "~/shared/ui/organization-membership-tag";
+import { organizationTypeLabelKey } from "~/shared/ui/organization-type-label";
 import { extractTextFromHTML } from "~/shared/utils/extract-text-from-html";
-
-const LUXON_LOCALE: Record<SupportedLocale, string> = {
-  "en-US": "en-GB",
-  "nl-NL": "nl-NL",
-};
 
 const ROW_CLASS = "border-divider mt-3 flex-row items-center justify-between border-t pt-2.5";
 
@@ -86,8 +81,7 @@ export function OrganizationDetailScreen() {
   const typeKey = organizationTypeLabelKey(organization.type);
   const subtitle = [typeKey ? t(typeKey) : null, organization.location].filter(Boolean).join(" · ");
 
-  const luxonLocale = LUXON_LOCALE[i18n.language as SupportedLocale] ?? "en-GB";
-  const createdAt = DateTime.fromISO(organization.createdAt).setLocale(luxonLocale);
+  const createdAt = DateTime.fromISO(organization.createdAt).setLocale(luxonLocale(i18n.language));
   const since = createdAt.isValid ? createdAt.toFormat("LLLL yyyy") : null;
 
   // Authored in web's rich-text editor, so it arrives as HTML.

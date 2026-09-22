@@ -5,6 +5,7 @@ const FEATURES = [
   "alerts",
   "auth",
   "connection",
+  "discover",
   "experiments",
   "home",
   "measurement-flow",

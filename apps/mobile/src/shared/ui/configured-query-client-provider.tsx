@@ -124,7 +124,10 @@ export function ConfiguredQueryClientProvider({ children }) {
         // previous builds silently persisted none of the oRPC queries.
         // v5: listExperiments moved from the deprecated filter=member input
         // to scope=related, changing its persisted oRPC query key.
-        buster: "v5-experiments-related-scope",
+        // v6: related rows gained membershipStatus, so the stored row shape
+        // changed; the filter also stopped admitting any other listExperiments
+        // input, so a previously persisted paged blob must not be read back.
+        buster: "v6-experiments-membership-status",
         dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
       }}
     >

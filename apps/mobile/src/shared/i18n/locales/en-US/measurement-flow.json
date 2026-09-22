@@ -42,6 +42,10 @@
       "nodesAndDuration": "{{nodes}} nodes · ≈ {{minutes}} min"
     }
   },
+  "picker": {
+    "emptyTitle": "You're not in any experiment yet",
+    "emptyAction": "Find experiments"
+  },
   "hero": {
     "activeFlow": "IN PROGRESS",
     "stepOfTotal": "Step {{step}} of {{total}}",

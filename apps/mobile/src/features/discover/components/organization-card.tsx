@@ -1,13 +1,13 @@
 import { Building2, ChevronRight } from "lucide-react-native";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
-import { OrganizationMembershipTags } from "~/features/organizations/components/organization-membership-tag";
-import { organizationTypeLabelKey } from "~/features/organizations/components/organization-type-label";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
 import { Avatar } from "~/shared/ui/Avatar";
 import { Card } from "~/shared/ui/Card";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+import { OrganizationMembershipTags } from "~/shared/ui/organization-membership-tag";
+import { organizationTypeLabelKey } from "~/shared/ui/organization-type-label";
 
 import type { OrganizationDirectoryEntry } from "@repo/api/domains/organization/organization.schema";
 

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "captureContext": {
     "captureStartedOn": "2026-07-19",
-    "lastRecapturedOn": "2026-09-15",
+    "lastRecapturedOn": "2026-09-22",
     "applicationId": "com.openjii.app",
     "appVersion": "2.16.1",
     "appVersionCode": 160,
@@ -20,7 +20,8 @@
       "The visible first name belongs to the user's dev testing account and was explicitly approved for publication.",
       "The public Google Play URL was verified, but the signed-in phone showed the account-specific Internal Beta listing and linked device names; that screenshot was rejected.",
       "The Offline ready picker was recaptured with the visible Classroom search filter so only the meaningful demo experiment appears; no experiment data was renamed, deleted, or modified.",
-      "The two organizations captures (2026-09-15) were taken on an Android emulator (1344x2992) against the local seeded stack as the seed persona otto@orgseed.local; only seeded organization names and a seeded message appear, and the join request shown was not sent. Reviewed and published by Vlad."
+      "The two organizations captures (2026-09-15) were taken on an Android emulator (1344x2992) against the local seeded stack as the seed persona otto@orgseed.local; only seeded organization names and a seeded message appear, and the join request shown was not sent. Reviewed and published by Vlad.",
+      "The three Discover/join-code captures (2026-09-22) were taken on an Android emulator (1344x2992) against the local seeded stack as the seed persona elif@orgseed.local; only seeded organization and experiment names appear (Canopy Lab, Delta Phenotyping Centre, [Seed] Field Trial 2025), the search term was trial, and the join shown was not sent. Reviewed and published by Vlad."
     ]
   },
   "assets": [
@@ -89,6 +90,30 @@
       "disposition": "published",
       "recapturedOn": "2026-09-15",
       "scope": "Request to join sheet over the seeded Canopy Lab profile with a seeded message and counter; request not sent"
+    },
+    {
+      "path": "/img/mobile/discover-experiments-tab.png",
+      "kind": "screenshot",
+      "sha256": "1f8dfae95a895283da7cb43f0526ca7727289feaae20af18275d89e21b095beb",
+      "disposition": "published",
+      "recapturedOn": "2026-09-22",
+      "scope": "Discover hub on the Experiments tab, light, search term trial; the Have a join code row first, four seeded experiments, one with a Stale tag"
+    },
+    {
+      "path": "/img/mobile/discover-organizations-tab.png",
+      "kind": "screenshot",
+      "sha256": "a0e8c0c9c196bc23d076ec60610a0e1161fc075784ef70c958d3d271cba99a6d",
+      "disposition": "published",
+      "recapturedOn": "2026-09-22",
+      "scope": "Discover hub on the Organizations tab, four seeded organizations under the same search field"
+    },
+    {
+      "path": "/img/mobile/join-code-preview.png",
+      "kind": "screenshot",
+      "sha256": "5c6873c7f27085f93cf992b0d3c690c1c94fea56a0a8e76d5a1bedc18c3215fe",
+      "disposition": "published",
+      "recapturedOn": "2026-09-22",
+      "scope": "Join code preview for the seeded Cereal Photosynthesis Atlas / Canopy Lab: code and validity line, Can view sentence, no-workbook hint, Join experiment; not tapped"
     }
   ],
   "unmetCaptures": [

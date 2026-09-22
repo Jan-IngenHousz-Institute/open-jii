@@ -1,5 +1,6 @@
 import { useLocalSearchParams, useNavigation } from "expo-router";
-import { Archive } from "lucide-react-native";
+import { Archive, FlaskConical } from "lucide-react-native";
+import { DateTime } from "luxon";
 import React, { useLayoutEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { ExperimentJoinCta } from "~/features/experiments/components/experiment-join-cta";
@@ -7,21 +8,28 @@ import { ExperimentMembershipTag } from "~/features/experiments/components/exper
 import { ExperimentOpenOnWebButton } from "~/features/experiments/components/experiment-open-on-web-button";
 import { ExperimentUnavailable } from "~/features/experiments/components/experiment-unavailable";
 import { useExperimentAccess } from "~/features/experiments/hooks/use-experiment-access";
+import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
+import { luxonLocale } from "~/shared/i18n/luxon-locale";
+import { Avatar } from "~/shared/ui/Avatar";
 import { Banner } from "~/shared/ui/Banner";
 import { Button } from "~/shared/ui/Button";
 import { Card } from "~/shared/ui/Card";
+import { Tag } from "~/shared/ui/Tag";
+import { experimentStatusLabelKey } from "~/shared/ui/experiment-status-label";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
 import { ellipsize } from "~/shared/utils/ellipsize";
 import { extractTextFromHTML } from "~/shared/utils/extract-text-from-html";
 
 const DESCRIPTION_PREVIEW_LENGTH = 220;
 
+const ROW_CLASS = "border-divider mt-3 flex-row items-center justify-between border-t pt-2.5";
+
 export function ExperimentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
   const themeColors = useThemeColors();
-  const { t } = useTranslation(["common", "experiments"]);
+  const { t, i18n } = useTranslation(["common", "experiments"]);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const { experiment, membershipStatus, isLoading, isPaused, error, isUnavailable, refetch } =
     useExperimentAccess(id);
@@ -70,6 +78,29 @@ export function ExperimentDetailScreen() {
   }
 
   const isArchived = experiment.status === "archived";
+  const statusKey = experimentStatusLabelKey(experiment.status);
+
+  const owner = [experiment.ownerFirstName, experiment.ownerLastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  const subtitle = [
+    experiment.organizationName,
+    owner.length > 0 ? t("experiments:detail.by", { name: owner }) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const createdAt = DateTime.fromISO(experiment.createdAt).setLocale(luxonLocale(i18n.language));
+  const since = createdAt.isValid ? createdAt.toFormat("LLLL yyyy") : null;
+
+  // Both are absent from the access read today: `checkAccess` selects an
+  // explicit field list that carries neither. Each tile is gated on its own
+  // value so the row simply does not render rather than showing a blank stat.
+  const locationCount = experiment.locations?.length;
+  const hasCollaborators = typeof experiment.membersCount === "number";
+  const hasLocations = typeof locationCount === "number" && locationCount > 0;
+
   // Authored in web's rich-text editor, so it arrives as HTML.
   const description = experiment.description
     ? extractTextFromHTML(experiment.description).trim()
@@ -79,29 +110,57 @@ export function ExperimentDetailScreen() {
   return (
     <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
       <Card padded>
-        <View className="flex-row items-center gap-2">
-          <Text
-            className="text-on-surface min-w-0 shrink"
-            style={{ fontFamily: "Poppins-Bold", fontSize: 17, lineHeight: 22 }}
-            numberOfLines={2}
-          >
-            {experiment.name}
-          </Text>
-          <View className="shrink-0">
-            <ExperimentMembershipTag membershipStatus={membershipStatus} />
+        <View className="flex-row items-center gap-3">
+          <Avatar size={56} icon={<FlaskConical size={24} color={colors.jii.darkGreen} />} />
+          <View className="min-w-0 flex-1">
+            <View className="flex-row items-center gap-2">
+              <Text
+                className="text-on-surface min-w-0 shrink"
+                style={{ fontFamily: "Poppins-Bold", fontSize: 17, lineHeight: 22 }}
+                numberOfLines={2}
+              >
+                {experiment.name}
+              </Text>
+              <View className="shrink-0 flex-row items-center gap-1.5">
+                <ExperimentMembershipTag membershipStatus={membershipStatus} />
+                {statusKey ? <Tag>{t(statusKey)}</Tag> : null}
+              </View>
+            </View>
+            {subtitle ? (
+              <Text className="text-muted-body mt-0.5 text-[12.5px]">{subtitle}</Text>
+            ) : null}
           </View>
         </View>
 
-        {experiment.organizationName ? (
-          <Text className="text-muted-body mt-0.5 text-[12.5px]">
-            {experiment.organizationName}
-          </Text>
-        ) : null}
-
-        {typeof experiment.membersCount === "number" ? (
-          <Text className="text-muted-body mt-0.5 text-[12.5px]">
-            {t("experiments:detail.collaborators", { count: experiment.membersCount })}
-          </Text>
+        {hasCollaborators || hasLocations ? (
+          <View className="mt-3 flex-row gap-2.5">
+            {hasCollaborators ? (
+              <View className="bg-surface flex-1 rounded-xl p-2.5">
+                <Text
+                  className="text-on-surface"
+                  style={{ fontFamily: "Poppins-Bold", fontSize: 16, lineHeight: 20 }}
+                >
+                  {experiment.membersCount}
+                </Text>
+                <Text className="text-muted-body text-[11px]">
+                  {t("experiments:detail.collaborators", { count: experiment.membersCount })}
+                </Text>
+              </View>
+            ) : null}
+            {hasLocations ? (
+              <View className="bg-surface flex-1 rounded-xl p-2.5">
+                <Text
+                  className="text-on-surface"
+                  style={{ fontFamily: "Poppins-Bold", fontSize: 16, lineHeight: 20 }}
+                >
+                  {locationCount}
+                </Text>
+                <Text className="text-muted-body text-[11px]">
+                  {t("experiments:detail.locations", { count: locationCount })}
+                </Text>
+              </View>
+            ) : null}
+          </View>
         ) : null}
 
         <Text className="text-on-surface mt-3 text-[13px] leading-5">
@@ -125,6 +184,13 @@ export function ExperimentDetailScreen() {
               )}
             </Text>
           </Pressable>
+        ) : null}
+
+        {since ? (
+          <View className={ROW_CLASS}>
+            <Text className="text-muted-body text-[13px]">{t("experiments:detail.since")}</Text>
+            <Text className="text-on-surface text-[13px]">{since}</Text>
+          </View>
         ) : null}
 
         {isArchived ? (

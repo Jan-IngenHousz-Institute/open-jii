@@ -22,6 +22,7 @@ import type { MeasurementRunEntry } from "~/features/recent-measurements/utils/g
 import { groupMeasurementsByRun } from "~/features/recent-measurements/utils/group-measurements-by-run";
 import { getMeasurement } from "~/shared/db/measurements-storage";
 import { useTranslation } from "~/shared/i18n";
+import { luxonLocale } from "~/shared/i18n/luxon-locale";
 import { createLogger } from "~/shared/observability/logger";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 
@@ -110,7 +111,7 @@ export function RecentMeasurementsScreen() {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const locale = i18n.language === "nl-NL" ? "nl-NL" : "en-GB";
+  const locale = luxonLocale(i18n.language);
 
   // Day sections + run entries, keyed on the measurements alone: expanding a
   // run must not re-run the day bucketing (Luxon, per-item) that OJD-1470

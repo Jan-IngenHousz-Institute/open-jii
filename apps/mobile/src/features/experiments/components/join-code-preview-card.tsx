@@ -1,19 +1,14 @@
 import { DateTime } from "luxon";
 import React from "react";
 import { Text, View } from "react-native";
-import type { SupportedLocale } from "~/shared/i18n";
 import { useTranslation } from "~/shared/i18n";
+import { luxonLocale } from "~/shared/i18n/luxon-locale";
 import { Button } from "~/shared/ui/Button";
 import { Card } from "~/shared/ui/Card";
 import { extractTextFromHTML } from "~/shared/utils/extract-text-from-html";
 
 import type { JoinCodePreview } from "@repo/api/domains/experiment/join-codes/experiment-join-codes.schema";
 import { formatJoinCode } from "@repo/api/domains/experiment/join-codes/experiment-join-codes.schema";
-
-const LUXON_LOCALE: Record<SupportedLocale, string> = {
-  "en-US": "en-GB",
-  "nl-NL": "nl-NL",
-};
 
 interface JoinCodePreviewCardProps {
   code: string;
@@ -37,8 +32,9 @@ export function JoinCodePreviewCard({
   const { experiment, membershipStatus, expiresAt } = preview;
   const isMember = membershipStatus === "member";
 
-  const luxonLocale = LUXON_LOCALE[i18n.language as SupportedLocale] ?? "en-GB";
-  const expiry = expiresAt ? DateTime.fromISO(expiresAt).setLocale(luxonLocale) : undefined;
+  const expiry = expiresAt
+    ? DateTime.fromISO(expiresAt).setLocale(luxonLocale(i18n.language))
+    : undefined;
   const validity =
     expiry?.isValid === true
       ? t("experiments:joinCode.validUntil", { date: expiry.toFormat("d LLL yyyy") })

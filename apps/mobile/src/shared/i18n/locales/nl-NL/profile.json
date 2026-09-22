@@ -20,8 +20,8 @@
   },
   "account": {
     "section": "Account",
-    "organizations": "Organisaties",
-    "organizationsSub": "Organisaties vinden en lid worden",
+    "discover": "Experimenten en organisaties vinden",
+    "discoverSub": "Openbare experimenten, organisaties of een deelnamecode",
     "appSettings": "App-instellingen",
     "appSettingsSub": "Thema, eenheden, offlinemodus",
     "helpFeedback": "Help & feedback",

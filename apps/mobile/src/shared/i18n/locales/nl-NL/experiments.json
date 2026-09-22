@@ -28,6 +28,11 @@
     "joined": "Deelnemer",
     "requested": "Aangevraagd"
   },
+  "status": {
+    "stale": "Verouderd",
+    "published": "Gepubliceerd",
+    "archived": "Gearchiveerd"
+  },
   "detail": {
     "title": "Experiment",
     "openWeb": "Openen op het webplatform",
@@ -46,7 +51,11 @@
     "noWorkbook": "Dit experiment heeft nog geen meetwerkboek",
     "workbookNotShared": "Het werkboek van dit experiment is niet met jou gedeeld. Vraag de organisator om het openbaar te maken.",
     "flowInProgress": "Er loopt al een meting",
-    "flowInProgressAction": "Openen"
+    "flowInProgressAction": "Openen",
+    "by": "door {{name}}",
+    "since": "Op openJII sinds",
+    "locations_one": "locatie",
+    "locations_other": "locaties"
   },
   "join": {
     "cta": "Verzoek tot deelname",

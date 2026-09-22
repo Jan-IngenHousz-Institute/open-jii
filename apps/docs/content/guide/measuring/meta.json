@@ -1,4 +1,10 @@
 {
   "title": "Measuring",
-  "pages": ["index", "installing-app", "taking-measurements", "offline-sync"]
+  "pages": [
+    "index",
+    "installing-app",
+    "joining-an-experiment",
+    "taking-measurements",
+    "offline-sync"
+  ]
 }

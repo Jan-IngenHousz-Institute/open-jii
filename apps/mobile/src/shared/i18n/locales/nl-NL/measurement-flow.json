@@ -42,6 +42,10 @@
       "nodesAndDuration": "{{nodes}} nodes · ≈ {{minutes}} min"
     }
   },
+  "picker": {
+    "emptyTitle": "Je neemt nog niet deel aan een experiment",
+    "emptyAction": "Experimenten zoeken"
+  },
   "hero": {
     "activeFlow": "BEZIG",
     "stepOfTotal": "Stap {{step}} van {{total}}",
