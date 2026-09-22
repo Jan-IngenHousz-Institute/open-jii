@@ -28,7 +28,7 @@ async function generate() {
   // HTTP adapter accepts the indexed bracket form used by the clients. Keep
   // that wire format explicit in the published document for generated clients.
   const experimentList = openApiDocument.paths?.["/api/v1/experiments"] as
-    | { get?: { parameters?: Array<Record<string, unknown>> } }
+    | { get?: { parameters?: Record<string, unknown>[] } }
     | undefined;
   const sortParameter = experimentList?.get?.parameters?.find(
     (parameter) => parameter.name === "sort",
