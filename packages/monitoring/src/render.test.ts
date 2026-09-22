@@ -120,6 +120,18 @@ describe("renderObservability", () => {
     expect(body.indexOf("Forwarding failures")).toBeLessThan(body.indexOf("Throttling"));
   });
 
+  it("heads the ungraded group with what to do, since OTHER says nothing", () => {
+    const unrated = {
+      ...reading("silent-devices", "Silent devices", 12, 3),
+      evaluation: { state: "anomaly" as const, reason: "300% above the last 4 Tuesdays" },
+    };
+
+    const body = json(renderObservability([unrated], clean, options).parent, "section");
+
+    expect(body).toContain("FOR REVIEW");
+    expect(body).not.toContain("OTHER");
+  });
+
   it("renders a nodata anomaly as absent rather than as zero", () => {
     const digest = renderObservability(
       [

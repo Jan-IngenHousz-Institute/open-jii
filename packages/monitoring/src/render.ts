@@ -168,7 +168,9 @@ export function renderObservability(
   let group: string | undefined;
 
   for (const entry of ordered) {
-    const severity = (entry.metric.severity ?? "other").toUpperCase();
+    // An entry with no severity has no alert rule behind it, so it is reported rather
+    // than acted on. "OTHER" said nothing about which of the two a reader is looking at.
+    const severity = (entry.metric.severity ?? "for review").toUpperCase();
     if (severity !== group) {
       if (group !== undefined) {
         rows.push([""]);
