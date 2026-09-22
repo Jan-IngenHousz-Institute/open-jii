@@ -110,6 +110,36 @@ describe("parseObservations", () => {
 
     expect(parseObservations(noUnit).observations[0]?.datum.Unit).toBe("None");
   });
+
+  it("skips a unit CloudWatch would reject, which would fail the whole batch", () => {
+    const badUnit = JSON.stringify({
+      namespace: "OpenJII/Data",
+      metric: "M",
+      value: 2,
+      unit: "Bananas",
+      timestamp: "2026-08-16T06:15:00Z",
+    });
+
+    const { observations, skipped } = parseObservations(`${badUnit}\n${observationLine}`);
+
+    expect(observations).toHaveLength(1);
+    expect(skipped).toEqual([{ line: 1, reason: "invalid unit Bananas" }]);
+  });
+
+  it("skips dimensions that are not a map, instead of publishing one per character", () => {
+    const stringDimensions = JSON.stringify({
+      namespace: "OpenJII/Data",
+      metric: "M",
+      value: 2,
+      timestamp: "2026-08-16T06:15:00Z",
+      dimensions: "dev",
+    });
+
+    const { observations, skipped } = parseObservations(stringDimensions);
+
+    expect(observations).toEqual([]);
+    expect(skipped).toEqual([{ line: 1, reason: "invalid dimensions" }]);
+  });
 });
 
 describe("batchByNamespace", () => {

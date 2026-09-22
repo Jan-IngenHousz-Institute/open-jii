@@ -8,12 +8,15 @@ const https = require("node:https");
 const { CloudWatchClient, GetMetricDataCommand } = require("@aws-sdk/client-cloudwatch");
 
 const { activeSignals, buildQuery, parseCatalog, partitionByConfig } = require("./lib/catalog.js");
-const { aggregate, averageBaseline, evaluate, normalizeAbsent } = require("./lib/baseline.js");
+const { averageBaseline, evaluate } = require("./lib/baseline.js");
 const { renderLevels, renderObservability } = require("./lib/render.js");
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-const WEEK_MS = 7 * DAY_MS;
-const BASELINE_WEEKS = [1, 2, 3, 4];
+const {
+  assembleWindow,
+  dailyWindows,
+  groupByRegion,
+  readSeries,
+  weeklyWindows,
+} = require("./lib/window.js");
 
 const clients = new Map();
 
@@ -29,79 +32,61 @@ function loadCatalog() {
   return parseCatalog(fs.readFileSync(path.join(__dirname, "catalog.yaml"), "utf8"));
 }
 
-async function fetchWindow(metrics, start, end, failedRegions) {
-  const byRegion = new Map();
-  metrics.forEach((metric, index) => {
-    const region = metric.signal.region ?? "default";
-    const entries = byRegion.get(region) ?? [];
-    entries.push({ metric, index });
-    byRegion.set(region, entries);
-  });
+function queryWindow(client, entries, { start, end }) {
+  return client.send(
+    new GetMetricDataCommand({
+      StartTime: start,
+      EndTime: end,
+      MetricDataQueries: entries.map(({ metric, index }) => buildQuery(metric, index, process.env)),
+    }),
+  );
+}
 
-  const results = new Array(metrics.length).fill(null);
-
-  // Absent and unasked are different facts. Without this an absent Sum from a failed
-  // region normalizes to zero, so an error counter we could not read reports healthy.
+async function fetchWindow(metrics, timeWindow, failedRegions) {
+  const values = new Map();
   const unqueried = new Set();
 
-  for (const [region, entries] of byRegion) {
-    let response;
+  for (const [region, entries] of groupByRegion(metrics)) {
+    const client = cloudwatchFor(region === "default" ? undefined : region);
 
     // One region failing must not cost the whole digest. A rejected SEARCH
     // expression or a throttle would otherwise throw out of the handler and
     // deliver nothing, and nothing watches for the digest's own silence.
     try {
-      response = await cloudwatchFor(region === "default" ? undefined : region).send(
-        new GetMetricDataCommand({
-          StartTime: start,
-          EndTime: end,
-          MetricDataQueries: entries.map(({ metric, index }) =>
-            buildQuery(metric, index, process.env),
-          ),
-        }),
-      );
+      readSeries((await queryWindow(client, entries, timeWindow)).MetricDataResults, values);
+      continue;
     } catch (error) {
       console.error(JSON.stringify({ region, message: error.message }));
-      failedRegions.add(region === "default" ? (process.env.AWS_REGION ?? "default") : region);
-      for (const { index } of entries) {
-        unqueried.add(index);
+    }
+
+    // GetMetricData rejects the whole request over one bad expression, so without
+    // this retry a single malformed entry costs every metric sharing its region.
+    let lost = 0;
+    for (const entry of entries) {
+      try {
+        readSeries((await queryWindow(client, [entry], timeWindow)).MetricDataResults, values);
+      } catch (error) {
+        console.error(JSON.stringify({ region, metric: entry.metric.id, message: error.message }));
+        unqueried.add(entry.index);
+        lost += 1;
       }
-      continue;
     }
 
-    // A SEARCH query returns one series per matched metric, all sharing its Id
-    const valuesByIndex = new Map();
-    for (const series of response.MetricDataResults ?? []) {
-      const index = Number(series.Id.slice(1));
-      const bucket = valuesByIndex.get(index) ?? [];
-      bucket.push(...(series.Values ?? []));
-      valuesByIndex.set(index, bucket);
-    }
-
-    for (const [index, values] of valuesByIndex) {
-      results[index] = aggregate(values, metrics[index].signal.stat);
+    if (lost > 0) {
+      failedRegions.add(region === "default" ? (process.env.AWS_REGION ?? "default") : region);
     }
   }
 
-  return results.map((value, index) =>
-    unqueried.has(index) ? null : normalizeAbsent(value, metrics[index].signal.stat),
-  );
+  return assembleWindow(metrics, values, unqueried);
 }
 
 async function collectDaily(metrics, now, failedRegions) {
-  const current = await fetchWindow(metrics, new Date(now - DAY_MS), new Date(now), failedRegions);
+  const { current: currentWindow, history: historyWindows } = dailyWindows(now);
+  const current = await fetchWindow(metrics, currentWindow, failedRegions);
 
   const history = [];
-  for (const weeks of BASELINE_WEEKS) {
-    const offset = weeks * WEEK_MS;
-    history.push(
-      await fetchWindow(
-        metrics,
-        new Date(now - DAY_MS - offset),
-        new Date(now - offset),
-        failedRegions,
-      ),
-    );
+  for (const past of historyWindows) {
+    history.push(await fetchWindow(metrics, past, failedRegions));
   }
 
   return metrics.map((metric, index) => {
@@ -116,13 +101,9 @@ async function collectDaily(metrics, now, failedRegions) {
 }
 
 async function collectWeekly(metrics, now, failedRegions) {
-  const current = await fetchWindow(metrics, new Date(now - WEEK_MS), new Date(now), failedRegions);
-  const prior = await fetchWindow(
-    metrics,
-    new Date(now - 2 * WEEK_MS),
-    new Date(now - WEEK_MS),
-    failedRegions,
-  );
+  const windows = weeklyWindows(now);
+  const current = await fetchWindow(metrics, windows.current, failedRegions);
+  const prior = await fetchWindow(metrics, windows.prior, failedRegions);
 
   return metrics.map((metric, index) => ({
     metric,
@@ -187,6 +168,7 @@ exports.handler = async (event) => {
   }
 
   const failedRegions = new Set();
+  const selfChecks = () => ({ configErrors, failedRegions: [...failedRegions] });
 
   if (digest === "observability") {
     const metrics = usable.filter(
@@ -199,8 +181,7 @@ exports.handler = async (event) => {
       evaluation: evaluate(reading),
     }));
 
-    const selfChecks = { configErrors, failedRegions: [...failedRegions] };
-    await deliver("heartbeat", renderObservability(readings, selfChecks, options));
+    await deliver("heartbeat", renderObservability(readings, selfChecks(), options));
     return;
   }
 
@@ -208,25 +189,19 @@ exports.handler = async (event) => {
     const metrics = usable.filter(
       (metric) => metric.family === "usage" && metric.slots.includes("pulse"),
     );
+    const readings = await collectDaily(metrics, now, failedRegions);
 
-    await deliver(
-      "usage",
-      renderLevels(await collectDaily(metrics, now, failedRegions), "Daily pulse", "4w", options),
-    );
+    await deliver("usage", renderLevels(readings, selfChecks(), "Daily pulse", "4w", options));
     return;
   }
 
   if (digest === "weekly") {
     const metrics = usable.filter((metric) => metric.slots.includes("weekly"));
+    const readings = await collectWeekly(metrics, now, failedRegions);
 
     await deliver(
       "usage",
-      renderLevels(
-        await collectWeekly(metrics, now, failedRegions),
-        "Week in numbers",
-        "last week",
-        options,
-      ),
+      renderLevels(readings, selfChecks(), "Week in numbers", "last week", options),
     );
     return;
   }

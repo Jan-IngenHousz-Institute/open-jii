@@ -7,6 +7,9 @@ locals {
     for name in var.macro_function_names : "FunctionName=\"${name}\""
   ])
 
+  # The weekly digest runs after the grafana/metrics-publisher job, which publishes
+  # WeeklyNewUsers at Monday 06:00 stamped with the publish time. Moving either schedule
+  # past the other makes the registrations line report the week before last instead.
   digests = {
     observability = { schedule = "cron(30 6 * * ? *)" }
     pulse         = { schedule = "cron(35 6 * * ? *)" }

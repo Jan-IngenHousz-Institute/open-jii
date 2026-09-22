@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "sync": "rm -rf ./lib && cp -R ../../../../../packages/monitoring/dist ./lib",
-    "build": "npm run sync && npm ci --omit=dev && zip -Xr function.zip index.js package.json lib node_modules > /dev/null"
+    "build": "npm run sync && npm ci --omit=dev && rm -f function.zip && zip -Xr function.zip index.js package.json lib node_modules > /dev/null"
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch": "^3.0.0",

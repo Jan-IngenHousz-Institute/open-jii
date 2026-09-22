@@ -91,7 +91,7 @@ export function renderObservability(
   if (failedRegions.length > 0) {
     lines.push(
       `*Self-check:* CloudWatch queries failed in ${failedRegions.join(", ")};` +
-        ` metrics from there are missing above, not healthy.`,
+        ` the metrics they cover are missing above, not healthy.`,
     );
   }
 
@@ -100,6 +100,7 @@ export function renderObservability(
 
 export function renderLevels(
   readings: MetricReading[],
+  { configErrors, failedRegions }: SelfChecks,
   title: string,
   window: string,
   { environment }: RenderOptions,
@@ -117,6 +118,13 @@ export function renderLevels(
 
   if (lines.length === 1) {
     lines.push("• No signals reporting yet.");
+  }
+
+  // A dropped metric leaves no line at all, so without this a quiet number and an
+  // unreadable one look the same, and the audience reads a partial list as the total.
+  const unread = [...failedRegions, ...configErrors];
+  if (unread.length > 0) {
+    lines.push(`*Self-check:* the list above is incomplete; could not read ${unread.join(", ")}.`);
   }
 
   return lines.join("\n");

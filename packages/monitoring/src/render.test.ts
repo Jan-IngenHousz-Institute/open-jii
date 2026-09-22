@@ -161,9 +161,12 @@ describe("renderObservability", () => {
 });
 
 describe("renderLevels", () => {
+  const clean = { configErrors: [], failedRegions: [] };
+
   it("lists each reporting metric with its delta", () => {
     const output = renderLevels(
       [reading("m", "Measurements", 48_200, 40_000)],
+      clean,
       "Daily pulse",
       "4w",
       options,
@@ -171,11 +174,33 @@ describe("renderLevels", () => {
 
     expect(output).toContain("*Daily pulse* (dev)");
     expect(output).toContain("• Measurements: 48.2k ▲ +21% vs 4w");
+    expect(output).not.toContain("Self-check");
   });
 
   it("skips metrics with no data rather than printing blanks", () => {
-    const output = renderLevels([reading("m", "Measurements", null)], "Daily pulse", "4w", options);
+    const output = renderLevels(
+      [reading("m", "Measurements", null)],
+      clean,
+      "Daily pulse",
+      "4w",
+      options,
+    );
 
     expect(output).toContain("No signals reporting yet.");
+  });
+
+  it("says the list is incomplete when a region or a placeholder dropped a metric", () => {
+    const output = renderLevels(
+      [reading("m", "Measurements", 12)],
+      { configErrors: ["kinesis-incoming"], failedRegions: ["eu-central-1"] },
+      "Daily pulse",
+      "4w",
+      options,
+    );
+
+    expect(output).toContain("• Measurements: 12");
+    expect(output).toContain(
+      "*Self-check:* the list above is incomplete; could not read eu-central-1, kinesis-incoming.",
+    );
   });
 });

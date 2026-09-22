@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { activeSignals, parseCatalog, parsePasses, partitionByConfig } from "./catalog.js";
+import { ALLOWED_NAMESPACES } from "./forwarder.js";
 import type { CatalogMetric, MetricBaseline } from "./types.js";
 
 // These tests read the real catalog, not fixtures. Their job is to make the hand checks
@@ -16,6 +17,10 @@ const composerTerraform = readFileSync(
 );
 const runbookFiles = readdirSync(join(repoRoot, "docs/runbooks")).filter((name) =>
   name.endsWith(".md"),
+);
+const heartbeatConstants = readFileSync(
+  join(repoRoot, "apps/data/src/lib/openjii/openjii/heartbeat/constants.py"),
+  "utf8",
 );
 
 const metrics = parseCatalog(catalogSource);
@@ -285,6 +290,29 @@ describe("signals", () => {
       return placeholdersIn(signal).map((name) => ({ id: m.id, name }));
     });
     expect(offenders).toEqual([]);
+  });
+
+  it("name the same series the heartbeat exporter emits, in both directions", () => {
+    // The exporter and the catalog hard-code these names independently, so a rename on
+    // either side leaves both test suites green while the series the rules watch goes
+    // dark. Nothing else in either language compares the two.
+    const emitted = new Set(
+      [...heartbeatConstants.matchAll(/^[A-Z0-9_]+_METRIC = "([^"]+)"/gm)].map(([, name]) => name),
+    );
+    expect(emitted.size).toBeGreaterThan(5);
+
+    // Scoped by the forwarder's own allowlist, which is the set of namespaces the
+    // exporter can reach; OpenJII/UserRegistrations has a different producer.
+    const catalogued = metrics.filter(
+      (m) => m.signal?.namespace && ALLOWED_NAMESPACES.has(m.signal.namespace),
+    );
+
+    expect(catalogued.filter((m) => !emitted.has(m.signal?.metric ?? "")).map((m) => m.id)).toEqual(
+      [],
+    );
+    expect(
+      [...emitted].filter((name) => !catalogued.some((m) => m.signal?.metric === name)),
+    ).toEqual([]);
   });
 
   it("use only placeholders the composer's terraform actually provides", () => {

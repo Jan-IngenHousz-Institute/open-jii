@@ -3,6 +3,44 @@ import type { ForwarderDatum, SkippedLine } from "./types.js";
 /** Namespaces the forwarder role is allowed to publish into. */
 export const ALLOWED_NAMESPACES = new Set(["OpenJII/Data", "OpenJII/Usage"]);
 
+/**
+ * PutMetricData rejects the whole request over one unrecognised unit, so a typo in a
+ * single line would otherwise cost every datapoint batched with it.
+ */
+const CLOUDWATCH_UNITS = new Set([
+  "Seconds",
+  "Microseconds",
+  "Milliseconds",
+  "Bytes",
+  "Kilobytes",
+  "Megabytes",
+  "Gigabytes",
+  "Terabytes",
+  "Bits",
+  "Kilobits",
+  "Megabits",
+  "Gigabits",
+  "Terabits",
+  "Percent",
+  "Count",
+  "Bytes/Second",
+  "Kilobytes/Second",
+  "Megabytes/Second",
+  "Gigabytes/Second",
+  "Terabytes/Second",
+  "Bits/Second",
+  "Kilobits/Second",
+  "Megabits/Second",
+  "Gigabits/Second",
+  "Terabits/Second",
+  "Count/Second",
+  "None",
+]);
+
+function isDimensionMap(value: unknown): value is Record<string, string | number> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export interface ParseResult {
   observations: ForwarderDatum[];
   skipped: SkippedLine[];
@@ -62,14 +100,24 @@ export function parseObservations(body: string): ParseResult {
       return;
     }
 
-    const dimensions = (parsed.dimensions ?? {}) as Record<string, string | number>;
+    const unit = parsed.unit ?? "None";
+    if (typeof unit !== "string" || !CLOUDWATCH_UNITS.has(unit)) {
+      skipped.push({ line: lineNumber, reason: `invalid unit ${String(parsed.unit)}` });
+      return;
+    }
+
+    const dimensions = parsed.dimensions ?? {};
+    if (!isDimensionMap(dimensions)) {
+      skipped.push({ line: lineNumber, reason: "invalid dimensions" });
+      return;
+    }
 
     observations.push({
       namespace,
       datum: {
         MetricName: metric,
         Value: value,
-        Unit: typeof parsed.unit === "string" ? parsed.unit : "None",
+        Unit: unit,
         Timestamp: timestamp,
         Dimensions: Object.entries(dimensions).map(([name, dimensionValue]) => ({
           Name: name,
