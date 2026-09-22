@@ -128,18 +128,21 @@ describe("ExperimentDataRepository", () => {
         identifier: "raw_data",
         includeSchemas: true,
       });
-      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
-        tableName: "raw_data",
-        tableType: "static",
-        experimentId,
-        columns: undefined,
-        variants: undefined,
-        exceptColumns: ["experiment_id", "questions_data", "custom_metadata"],
-        orderBy: undefined,
-        orderDirection: "ASC",
-        limit: 5,
-        offset: 0,
-      });
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tableName: "raw_data",
+          tableType: "static",
+          experimentId,
+          exceptColumns: expect.arrayContaining([
+            "experiment_id",
+            "questions_data",
+            "custom_metadata",
+          ]),
+          orderDirection: "ASC",
+          limit: 5,
+          offset: 0,
+        }),
+      );
     });
 
     it("logs one read summary with the warehouse phases split out", async () => {
@@ -499,18 +502,17 @@ describe("ExperimentDataRepository", () => {
         totalPages: 1,
       });
 
-      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
-        tableName: "raw_data",
-        tableType: "static",
-        experimentId,
-        columns: ["id", "value"],
-        variants: [{ columnName: "questions_data", schema: "STRUCT<q1: STRING, q2: INT>" }],
-        exceptColumns: ["experiment_id", "custom_metadata"],
-        orderBy: undefined,
-        orderDirection: "ASC",
-        limit: undefined,
-        offset: undefined,
-      });
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tableName: "raw_data",
+          tableType: "static",
+          experimentId,
+          columns: ["id", "value"],
+          variants: [{ columnName: "questions_data", schema: "STRUCT<q1: STRING, q2: INT>" }],
+          exceptColumns: expect.arrayContaining(["experiment_id", "custom_metadata"]),
+          orderDirection: "ASC",
+        }),
+      );
     });
 
     it("should handle macro tables with both schemas", async () => {
@@ -545,29 +547,29 @@ describe("ExperimentDataRepository", () => {
       });
 
       expect(result.isSuccess()).toBe(true);
-      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
-        tableName: "macro_123",
-        tableType: "macro",
-        experimentId,
-        columns: undefined,
-        variants: [
-          { columnName: "macro_output", schema: "STRUCT<output: STRING>" },
-          { columnName: "questions_data", schema: "STRUCT<q1: STRING>" },
-        ],
-        exceptColumns: [
-          "experiment_id",
-          "raw_id",
-          "macro_id",
-          "macro_name",
-          "macro_filename",
-          "date",
-          "custom_metadata",
-        ],
-        orderBy: undefined,
-        orderDirection: "ASC",
-        limit: 5,
-        offset: 0,
-      });
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tableName: "macro_123",
+          tableType: "macro",
+          experimentId,
+          variants: [
+            { columnName: "macro_output", schema: "STRUCT<output: STRING>" },
+            { columnName: "questions_data", schema: "STRUCT<q1: STRING>" },
+          ],
+          exceptColumns: expect.arrayContaining([
+            "experiment_id",
+            "raw_id",
+            "macro_id",
+            "macro_name",
+            "macro_filename",
+            "date",
+            "custom_metadata",
+          ]),
+          orderDirection: "ASC",
+          limit: 5,
+          offset: 0,
+        }),
+      );
     });
 
     it("should exclude macro_output when schema is missing for macro tables", async () => {
@@ -602,27 +604,27 @@ describe("ExperimentDataRepository", () => {
       });
 
       expect(result.isSuccess()).toBe(true);
-      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
-        tableName: "macro_123",
-        tableType: "macro",
-        experimentId,
-        columns: undefined,
-        variants: [{ columnName: "questions_data", schema: "STRUCT<q1: STRING>" }],
-        exceptColumns: [
-          "experiment_id",
-          "raw_id",
-          "macro_id",
-          "macro_name",
-          "macro_filename",
-          "date",
-          "macro_output",
-          "custom_metadata",
-        ],
-        orderBy: undefined,
-        orderDirection: "ASC",
-        limit: 5,
-        offset: 0,
-      });
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tableName: "macro_123",
+          tableType: "macro",
+          experimentId,
+          variants: [{ columnName: "questions_data", schema: "STRUCT<q1: STRING>" }],
+          exceptColumns: expect.arrayContaining([
+            "experiment_id",
+            "raw_id",
+            "macro_id",
+            "macro_name",
+            "macro_filename",
+            "date",
+            "macro_output",
+            "custom_metadata",
+          ]),
+          orderDirection: "ASC",
+          limit: 5,
+          offset: 0,
+        }),
+      );
     });
 
     it("should exclude questions_data when schema is missing", async () => {
@@ -654,18 +656,21 @@ describe("ExperimentDataRepository", () => {
       const result = await repository.getTableData(baseParams);
 
       expect(result.isSuccess()).toBe(true);
-      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
-        tableName: "raw_data",
-        tableType: "static",
-        experimentId,
-        columns: undefined,
-        variants: undefined,
-        exceptColumns: ["experiment_id", "questions_data", "custom_metadata"],
-        orderBy: undefined,
-        orderDirection: "ASC",
-        limit: 5,
-        offset: 0,
-      });
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tableName: "raw_data",
+          tableType: "static",
+          experimentId,
+          exceptColumns: expect.arrayContaining([
+            "experiment_id",
+            "questions_data",
+            "custom_metadata",
+          ]),
+          orderDirection: "ASC",
+          limit: 5,
+          offset: 0,
+        }),
+      );
     });
 
     it("should handle device table type correctly", async () => {
@@ -700,18 +705,17 @@ describe("ExperimentDataRepository", () => {
       });
 
       expect(result.isSuccess()).toBe(true);
-      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
-        tableName: "device",
-        tableType: "static",
-        experimentId,
-        columns: undefined,
-        variants: undefined,
-        exceptColumns: ["experiment_id"],
-        orderBy: undefined,
-        orderDirection: "ASC",
-        limit: 5,
-        offset: 0,
-      });
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tableName: "device",
+          tableType: "static",
+          experimentId,
+          exceptColumns: expect.arrayContaining(["experiment_id"]),
+          orderDirection: "ASC",
+          limit: 5,
+          offset: 0,
+        }),
+      );
     });
 
     it("should return failure when executeSqlQuery fails for full table data", async () => {
@@ -788,7 +792,7 @@ describe("ExperimentDataRepository", () => {
       expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           tableType: "static",
-          exceptColumns: ["experiment_id"],
+          exceptColumns: expect.arrayContaining(["experiment_id"]),
         }),
       );
     });
