@@ -22,7 +22,6 @@ import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { CalibrationBlocksSeam } from "./calibration-blocks-seam";
 import { CalibrationDetailsSidebar } from "./calibration-details-sidebar";
 import { CalibrationFitCell } from "./calibration-fit-cell";
 import { CalibrationRigStrip } from "./calibration-rig-strip";
@@ -219,8 +218,6 @@ export function CalibrationDefinitionDetail() {
             onSchemaChange={editOutputSchema}
           />
         </CalibrationStage>
-
-        <CalibrationBlocksSeam outputSchema={current.outputSchema} family={definition.family} />
 
         <CalibrationStage
           index={4}

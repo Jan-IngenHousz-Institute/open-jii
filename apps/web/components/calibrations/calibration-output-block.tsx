@@ -1,7 +1,6 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
-import { useId, useState } from "react";
+import { Plus, X } from "lucide-react";
 
 import type { CoefficientSpec } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
@@ -13,11 +12,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
-import { Input } from "@repo/ui/components/input";
-import { Label } from "@repo/ui/components/label";
 
-import { CalibrationCoefficientRow } from "./calibration-coefficient-row";
-import { COEFFICIENT_NAME_PATTERN, specForWritable, uniqueName } from "./output-schema-edits";
+import { CalibrationCoefficientLine } from "./calibration-coefficient-line";
+import { specForWritable, uniqueName } from "./output-schema-edits";
 
 /** What a coefficient the author adds by hand is called before they rename it. */
 const NEW_COEFFICIENT = "coefficient";
@@ -51,43 +48,9 @@ export function CalibrationOutputBlock({
   onRemoveCoefficient,
 }: CalibrationOutputBlockProps) {
   const { t } = useTranslation("iot");
-  const blockId = useId();
-
-  const [draftBlock, setDraftBlock] = useState(block);
-  const [committedBlock, setCommittedBlock] = useState(block);
-
-  if (block !== committedBlock) {
-    setCommittedBlock(block);
-    setDraftBlock(block);
-  }
-
-  const isTaken = draftBlock !== block && takenBlocks.includes(draftBlock);
-  const isMalformed = !COEFFICIENT_NAME_PATTERN.test(draftBlock);
-  const blockError = isTaken
-    ? t("iot.calibration.produces.blockTaken")
-    : isMalformed
-      ? t("iot.calibration.produces.nameInvalid")
-      : null;
 
   const declared = Object.keys(coefficients);
   const offered = writable.filter((candidate) => !declared.includes(candidate.name));
-
-  function handleBlockChange(value: string) {
-    setDraftBlock(value);
-    if (value !== block && COEFFICIENT_NAME_PATTERN.test(value) && !takenBlocks.includes(value)) {
-      onRename(value);
-    }
-  }
-
-  function handleBlockBlur() {
-    if (blockError !== null) {
-      setDraftBlock(block);
-    }
-  }
-
-  function addWritable(coefficient: WritableCoefficient) {
-    onSetCoefficient(coefficient.name, specForWritable(coefficient));
-  }
 
   function addPlain() {
     onSetCoefficient(uniqueName(NEW_COEFFICIENT, declared), { type: "number" });
@@ -98,7 +61,7 @@ export function CalibrationOutputBlock({
       <DropdownMenuItem
         key={coefficient.name}
         className="font-mono"
-        onSelect={() => addWritable(coefficient)}
+        onSelect={() => onSetCoefficient(coefficient.name, specForWritable(coefficient))}
       >
         {coefficient.name}
       </DropdownMenuItem>
@@ -107,15 +70,18 @@ export function CalibrationOutputBlock({
 
   function renderCoefficient([name, spec]: [string, CoefficientSpec], index: number) {
     return (
-      <CalibrationCoefficientRow
-        // Positional, so renaming one does not remount its row mid-keystroke.
+      <CalibrationCoefficientLine
+        // Positional, so renaming one does not remount its line mid-keystroke.
         key={index}
+        block={block}
         name={name}
         spec={spec}
         isWritable={writable.some((candidate) => candidate.name === name)}
         takenNames={declared}
+        takenBlocks={takenBlocks}
         canEdit={canEdit}
         onRename={(to) => onRenameCoefficient(name, to)}
+        onRenameBlock={onRename}
         onChange={(next) => onSetCoefficient(name, next)}
         onRemove={() => onRemoveCoefficient(name)}
       />
@@ -123,55 +89,35 @@ export function CalibrationOutputBlock({
   }
 
   return (
-    <div className="space-y-3 rounded-md border p-3">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-40 flex-1 space-y-1">
-          <Label htmlFor={blockId} className="text-xs">
-            {t("iot.calibration.produces.block")}
-          </Label>
-          <Input
-            id={blockId}
-            value={draftBlock}
-            onChange={(event) => handleBlockChange(event.target.value)}
-            onBlur={handleBlockBlur}
-            disabled={!canEdit}
-            aria-invalid={blockError !== null}
-            className="font-mono"
-          />
-        </div>
-
-        {canEdit && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={onRemove}
-            aria-label={t("iot.calibration.produces.removeBlock", { block })}
-          >
-            <Trash2 className="size-4" aria-hidden />
-          </Button>
-        )}
-      </div>
-
-      {blockError !== null && <p className="text-destructive text-xs">{blockError}</p>}
-
-      <ul className="space-y-2">{Object.entries(coefficients).map(renderCoefficient)}</ul>
+    <div className="group/block">
+      <ul>{Object.entries(coefficients).map(renderCoefficient)}</ul>
 
       {canEdit && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" variant="outline" size="sm">
-              <Plus className="mr-2 size-4" aria-hidden />
-              {t("iot.calibration.produces.addCoefficient")}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            {offered.map(renderOffered)}
-            <DropdownMenuItem onSelect={addPlain}>
-              {t("iot.calibration.produces.addPlain")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="text-muted-foreground flex items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="ghost" size="sm" className="h-7 text-xs">
+                <Plus className="mr-1 size-3" aria-hidden />
+                {t("iot.calibration.produces.addCoefficient")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {offered.map(renderOffered)}
+              <DropdownMenuItem onSelect={addPlain}>
+                {t("iot.calibration.produces.addPlain")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label={t("iot.calibration.produces.removeBlock", { block })}
+            className="hover:text-destructive opacity-0 transition-opacity group-hover/block:opacity-100"
+          >
+            <X className="inline size-3" aria-hidden />
+          </button>
+        </div>
       )}
     </div>
   );

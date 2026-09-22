@@ -1016,10 +1016,12 @@
         "roleInvalid": "Kleine letters, cijfers en liggende streepjes, beginnend met een letter.",
         "anyInstrument": "Elk instrument dat zich zo meldt",
         "anyInstrumentHint": "Elk instrument waarvan de identificatie deze tekst bevat. Pas als het instrument benoemd is, kunnen de stappen zijn instelwaarden en meetwaarden aanbieden.",
-        "drives": "stuurt aan",
+        "drives": "stuurt",
         "answers": "antwoordt",
         "setpointRange": "{{name}} {{min}}…{{max}} {{unit}}",
-        "drivesNothing": "niets dat het platform kan instellen"
+        "drivesNothing": "niets dat het platform kan instellen",
+        "answeringTo": "meldt zich als",
+        "anyHandshake": "wat dan ook"
       },
       "procedure": {
         "addStep": "Stap toevoegen",
@@ -1099,7 +1101,24 @@
         "sweepSpan_one": "{{count}} punt op {{from}} {{unit}}",
         "sweepSpan_other": "{{count}} punten van {{from}} tot {{to}} {{unit}}",
         "sweepSpanPlain_one": "{{count}} punt op {{from}}",
-        "sweepSpanPlain_other": "{{count}} punten van {{from}} tot {{to}}"
+        "sweepSpanPlain_other": "{{count}} punten van {{from}} tot {{to}}",
+        "sentence": {
+          "operator": "Vraag de operator: <prompt/>",
+          "operatorConfirm": "Vraag de operator: <prompt/> Ze typen <confirm/> om verder te gaan.",
+          "settle": "Wacht <ms/> ms.",
+          "set": "Zet <instrument/> <setpoint/> op <value/> <unit/>.",
+          "read": "Leg <reads/> vast in <series/>.",
+          "readPrompt": "Vraag de operator: <prompt/> Leg daarna <reads/> vast in <series/>.",
+          "sweepInstrument": "Doorloop <instrument/> <setpoint/> langs <values/>, met <settle/> ms rust op elk punt, en leg <reads/> vast in <series/>.",
+          "sweepOperator": "Vraag de operator voor elk van <values/>: <prompt/> Leg <reads/> vast in <series/>, met <settle/> ms rust op elk punt."
+        },
+        "from": "van",
+        "as": "als",
+        "maySkip": "mag worden overgeslagen",
+        "noSettle": "geen",
+        "promptRequired": "Een stap die niets vraagt houdt de meting voor niets tegen.",
+        "commandPlaceholder": "commando",
+        "settleFor": "Rust"
       },
       "trial": {
         "action": "Uitvoeren aan de meetbank",
@@ -1123,7 +1142,15 @@
         "blockTaken": "Een ander blok heeft deze naam al.",
         "nameTaken": "Dit blok heeft al een coëfficiënt met deze naam.",
         "nameInvalid": "Kleine letters, cijfers en liggende streepjes, beginnend met een letter.",
-        "recordedOnly": "Wordt met de meting vastgelegd. Het platform heeft geen commando om deze te schrijven."
+        "recordedOnly": "alleen vastgelegd, er is geen schrijver voor",
+        "between": "tussen",
+        "and": "en",
+        "entriesSuffix": "waarden",
+        "typeName": {
+          "number": "een getal",
+          "number_array": "getallen",
+          "integer_array": "gehele getallen"
+        }
       },
       "fit": {
         "label": "Fit, levert {{coefficients}} coëfficiënten in {{blocks}} blokken",

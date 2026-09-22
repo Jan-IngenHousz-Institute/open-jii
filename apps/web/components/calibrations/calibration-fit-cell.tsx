@@ -1,8 +1,5 @@
 "use client";
 
-import { CellWrapper } from "@/components/workbook/cell-wrapper";
-import { Code } from "lucide-react";
-
 import type {
   CalibrationFamily,
   CalibrationOutputSchema,
@@ -37,51 +34,28 @@ export function CalibrationFitCell({
 }: CalibrationFitCellProps) {
   const { t } = useTranslation("iot");
 
-  const blocks = Object.entries(outputSchema.blocks);
-  const coefficients = blocks.reduce(
-    (total, [, entries]) => total + Object.keys(entries).length,
-    0,
-  );
-
   return (
-    <CellWrapper
-      icon={<Code className="h-4 w-4" />}
-      label={
-        <span data-testid="fit-label">
-          {t("iot.calibration.fit.label", { blocks: blocks.length, coefficients })}
-        </span>
-      }
-      labelText={t("iot.calibration.detail.script")}
-      accentColor="var(--node-analysis)"
-      readOnly={!canEdit}
-      // Folded like the steps on a closed document; what it submits is on the seam below.
-      isCollapsed={!canEdit}
-      className="border"
-    >
-      <div className="space-y-5 px-4 py-4">
-        <div className="space-y-2">
-          <CalibrationScriptEditor script={script} canEdit={canEdit} onChange={onScriptChange} />
-          {canEdit && (
-            <CalibrationFitDraftAction
-              series={series}
-              outputSchema={outputSchema}
-              onDraft={onScriptChange}
-            />
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-            {t("iot.calibration.fit.submits")}
-          </p>
-          <CalibrationOutputSchemaEditor
-            family={family}
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <CalibrationScriptEditor script={script} canEdit={canEdit} onChange={onScriptChange} />
+        {canEdit && (
+          <CalibrationFitDraftAction
+            series={series}
             outputSchema={outputSchema}
-            canEdit={canEdit}
-            onChange={onSchemaChange}
+            onDraft={onScriptChange}
           />
-        </div>
+        )}
       </div>
-    </CellWrapper>
+
+      <div className="space-y-2">
+        <p className="text-muted-foreground text-sm">{t("iot.calibration.fit.submits")}</p>
+        <CalibrationOutputSchemaEditor
+          family={family}
+          outputSchema={outputSchema}
+          canEdit={canEdit}
+          onChange={onSchemaChange}
+        />
+      </div>
+    </div>
   );
 }

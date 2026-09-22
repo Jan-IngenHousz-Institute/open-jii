@@ -1019,7 +1019,9 @@
         "drives": "steuert",
         "answers": "antwortet",
         "setpointRange": "{{name}} {{min}}…{{max}} {{unit}}",
-        "drivesNothing": "nichts, was die Plattform setzen kann"
+        "drivesNothing": "nichts, was die Plattform setzen kann",
+        "answeringTo": "meldet sich als",
+        "anyHandshake": "beliebig"
       },
       "procedure": {
         "addStep": "Schritt hinzufügen",
@@ -1099,7 +1101,24 @@
         "sweepSpan_one": "{{count}} Punkt bei {{from}} {{unit}}",
         "sweepSpan_other": "{{count}} Punkte von {{from}} bis {{to}} {{unit}}",
         "sweepSpanPlain_one": "{{count}} Punkt bei {{from}}",
-        "sweepSpanPlain_other": "{{count}} Punkte von {{from}} bis {{to}}"
+        "sweepSpanPlain_other": "{{count}} Punkte von {{from}} bis {{to}}",
+        "sentence": {
+          "operator": "Bitte an die bedienende Person: <prompt/>",
+          "operatorConfirm": "Bitte an die bedienende Person: <prompt/> Sie tippt <confirm/>, um fortzufahren.",
+          "settle": "Warte <ms/> ms.",
+          "set": "Stelle <instrument/> <setpoint/> auf <value/> <unit/>.",
+          "read": "Erfasse <reads/> in <series/>.",
+          "readPrompt": "Bitte an die bedienende Person: <prompt/> Erfasse danach <reads/> in <series/>.",
+          "sweepInstrument": "Fahre <instrument/> <setpoint/> über <values/>, mit <settle/> ms Beruhigung je Punkt, und erfasse <reads/> in <series/>.",
+          "sweepOperator": "Bitte an die bedienende Person für jeden Wert aus <values/>: <prompt/> Erfasse <reads/> in <series/>, mit <settle/> ms Beruhigung je Punkt."
+        },
+        "from": "von",
+        "as": "als",
+        "maySkip": "kann übersprungen werden",
+        "noSettle": "keine",
+        "promptRequired": "Ein Schritt, der nichts verlangt, hält den Lauf grundlos an.",
+        "commandPlaceholder": "Befehl",
+        "settleFor": "Beruhigung"
       },
       "trial": {
         "action": "Am Messplatz ausführen",
@@ -1123,7 +1142,15 @@
         "blockTaken": "Ein anderer Block trägt diesen Namen bereits.",
         "nameTaken": "Dieser Block enthält bereits einen Koeffizienten dieses Namens.",
         "nameInvalid": "Kleinbuchstaben, Ziffern und Unterstriche, beginnend mit einem Buchstaben.",
-        "recordedOnly": "Wird mit dem Lauf aufgezeichnet. Die Plattform hat keinen Befehl, um diesen zu schreiben."
+        "recordedOnly": "nur erfasst, kein Schreiber dafür",
+        "between": "zwischen",
+        "and": "und",
+        "entriesSuffix": "Werte",
+        "typeName": {
+          "number": "eine Zahl",
+          "number_array": "Zahlen",
+          "integer_array": "ganze Zahlen"
+        }
       },
       "fit": {
         "label": "Anpassung, liefert {{coefficients}} Koeffizienten in {{blocks}} Blöcken",

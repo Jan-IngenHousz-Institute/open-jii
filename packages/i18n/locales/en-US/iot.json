@@ -1019,7 +1019,9 @@
         "drives": "drives",
         "answers": "answers",
         "setpointRange": "{{name}} {{min}}…{{max}} {{unit}}",
-        "drivesNothing": "nothing the platform can set"
+        "drivesNothing": "nothing the platform can set",
+        "answeringTo": "answering to",
+        "anyHandshake": "anything"
       },
       "procedure": {
         "addStep": "Add step",
@@ -1099,7 +1101,24 @@
         "sweepSpan_one": "{{count}} point at {{from}} {{unit}}",
         "sweepSpan_other": "{{count}} points from {{from}} to {{to}} {{unit}}",
         "sweepSpanPlain_one": "{{count}} point at {{from}}",
-        "sweepSpanPlain_other": "{{count}} points from {{from}} to {{to}}"
+        "sweepSpanPlain_other": "{{count}} points from {{from}} to {{to}}",
+        "sentence": {
+          "operator": "Ask the operator: <prompt/>",
+          "operatorConfirm": "Ask the operator: <prompt/> They type <confirm/> to go on.",
+          "settle": "Wait <ms/> ms.",
+          "set": "Set <instrument/> <setpoint/> to <value/> <unit/>.",
+          "read": "Record <reads/> into <series/>.",
+          "readPrompt": "Ask the operator: <prompt/> Then record <reads/> into <series/>.",
+          "sweepInstrument": "Step <instrument/> <setpoint/> through <values/>, settling <settle/> ms at each point, recording <reads/> into <series/>.",
+          "sweepOperator": "For each of <values/>, ask the operator: <prompt/> Record <reads/> into <series/>, settling <settle/> ms at each point."
+        },
+        "from": "from",
+        "as": "as",
+        "maySkip": "may be skipped",
+        "noSettle": "no",
+        "promptRequired": "A step that asks nothing stops the run for nothing.",
+        "commandPlaceholder": "command",
+        "settleFor": "Settle for"
       },
       "trial": {
         "action": "Run at the bench",
@@ -1123,7 +1142,15 @@
         "blockTaken": "Another block already has this name.",
         "nameTaken": "This block already has a coefficient with this name.",
         "nameInvalid": "Lowercase letters, digits and underscores, starting with a letter.",
-        "recordedOnly": "Recorded with the run. The platform has no command to write this one."
+        "recordedOnly": "recorded only, no writer for it",
+        "between": "between",
+        "and": "and",
+        "entriesSuffix": "entries",
+        "typeName": {
+          "number": "a number",
+          "number_array": "numbers",
+          "integer_array": "whole numbers"
+        }
       },
       "fit": {
         "label": "Fit, submitting {{coefficients}} coefficients in {{blocks}} blocks",

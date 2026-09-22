@@ -41,9 +41,10 @@ function mountDefinition() {
 }
 
 function rowFor(value: string) {
+  // A token's accessible name is the field it edits; its text is the value.
   const row = screen
     .getAllByRole("listitem")
-    .find((candidate) => within(candidate).queryByDisplayValue(value) !== null);
+    .find((candidate) => candidate.textContent.includes(value));
   if (!row) {
     throw new Error(`No row for ${value}`);
   }
@@ -62,9 +63,15 @@ describe("CalibrationDefinitionDetail", () => {
     renderDetail();
     await screen.findByText("iot.calibration.detail.rig");
 
-    const slope = within(rowFor("slope")).getByLabelText("iot.calibration.produces.max");
+    await userEvent.click(
+      within(rowFor("slope")).getByRole("button", { name: "iot.calibration.produces.max" }),
+    );
+    const slope = within(rowFor("slope")).getByRole("textbox", {
+      name: "iot.calibration.produces.max",
+    });
     await userEvent.clear(slope);
     await userEvent.type(slope, "12");
+    await userEvent.tab();
 
     expect(await screen.findByText("autosave.saved")).toBeInTheDocument();
 
@@ -87,9 +94,10 @@ describe("CalibrationDefinitionDetail", () => {
     renderDetail();
     await screen.findByText("iot.calibration.detail.rig");
 
-    // The rig is a strip of instruments now; a role's details open from its chip.
-    await userEvent.click(screen.getByRole("button", { name: /lamp/ }));
-    await userEvent.clear(await screen.findByDisplayValue("KIPRIM"));
+    // The rig is a line per instrument; a handshake is a value in it.
+    await userEvent.click(screen.getByRole("button", { name: "iot.calibration.rig.handshake" }));
+    await userEvent.clear(screen.getByRole("textbox", { name: "iot.calibration.rig.handshake" }));
+    await userEvent.tab();
 
     expect(await screen.findByText("iot.calibration.detail.notSaving")).toBeInTheDocument();
     expect(screen.getByText(/captureProcedure.instruments/)).toBeInTheDocument();
@@ -116,8 +124,9 @@ describe("CalibrationDefinitionDetail", () => {
       screen.queryByRole("button", { name: /iot.calibration.rig.add/ }),
     ).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /lamp/ }));
-    expect(await screen.findByDisplayValue("KIPRIM")).toBeDisabled();
+    // Nothing on the page is a control: every value is text.
+    expect(screen.queryByRole("button", { name: "iot.calibration.rig.handshake" })).toBeNull();
+    expect(screen.getByText("KIPRIM")).toBeInTheDocument();
   });
 
   // The server refuses the save outright. Offering every field and then failing once, at
@@ -132,25 +141,21 @@ describe("CalibrationDefinitionDetail", () => {
     expect(await screen.findByText("iot.calibration.detail.frozen")).toBeInTheDocument();
     expect(screen.queryByText("iot.calibration.detail.readOnly")).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: /lamp/ }));
-    expect(await screen.findByDisplayValue("KIPRIM")).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "iot.calibration.rig.handshake" })).toBeNull();
+    expect(screen.getByText("KIPRIM")).toBeInTheDocument();
   });
 
-  // Rendered open, a procedure nobody can edit is a page of greyed-out fields.
-  it("opens a closed procedure as a list of its steps", async () => {
+  // A closed procedure is read, so it is the sentences and nothing to click.
+  it("reads a closed procedure as its steps, with nothing to change", async () => {
     server.mount(contract.iot.getCalibrationDefinition, {
       body: { ...definition, runCount: 2 },
     });
 
     renderDetail();
 
-    expect(await screen.findByTestId("step-label")).toBeInTheDocument();
-    expect(screen.queryByLabelText("iot.calibration.procedure.instrument")).toBeNull();
-
-    await userEvent.click(
-      screen.getByRole("button", { name: "iot.calibration.procedure.expandStep" }),
-    );
-
-    expect(screen.getByLabelText("iot.calibration.procedure.instrument")).toBeDisabled();
+    await screen.findByText("iot.calibration.detail.frozen");
+    expect(screen.getAllByRole("listitem").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "iot.calibration.procedure.addStep" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "iot.calibration.procedure.values" })).toBeNull();
   });
 });

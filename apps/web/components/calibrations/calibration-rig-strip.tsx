@@ -1,6 +1,6 @@
 "use client";
 
-import { Cpu, Plus, Settings2 } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 import {
@@ -18,10 +18,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 
-import { CalibrationRigChip } from "./calibration-rig-chip";
-import { CalibrationRigRow } from "./calibration-rig-row";
+import { CalibrationRigLine } from "./calibration-rig-line";
 import type { AuxiliaryInstrument } from "./procedure-edits";
 import {
   addInstrument,
@@ -32,7 +30,6 @@ import {
   replaceInstrument,
   uniqueRole,
 } from "./procedure-edits";
-import type { SetpointOption } from "./rig-sources";
 import { setpointTargets } from "./rig-sources";
 
 interface CalibrationRigStripProps {
@@ -58,7 +55,7 @@ export function CalibrationRigStrip({
   const hasRoomForMore = procedure.instruments.length < MAX_RIG_INSTRUMENTS;
   const targets = setpointTargets(procedure, family);
 
-  function setpointsFor(role: string): SetpointOption[] {
+  function setpointsFor(role: string) {
     return targets.find((target) => target.role === role)?.setpoints ?? [];
   }
 
@@ -94,55 +91,48 @@ export function CalibrationRigStrip({
     const model = instruments.find((candidate) => candidate.model === instrument.model);
 
     return (
-      <Popover key={index}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="bg-card hover:border-primary/40 flex items-start gap-2 rounded-lg border px-3 py-2 text-left"
-          >
-            <Settings2 className="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden />
-            <CalibrationRigChip
-              role={instrument.role}
-              model={instrument.model ?? instrument.handshake}
-              setpoints={setpointsFor(instrument.role)}
-              readings={(model?.readings ?? []).map((reading) => reading.name)}
-            />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent align="start" className="w-[32rem]">
-          <ul>
-            <CalibrationRigRow
-              instrument={instrument}
-              instruments={instruments}
-              takenRoles={takenRoles}
-              usedBySteps={usage[instrument.role] ?? 0}
-              canEdit={canEdit}
-              onChange={(next) => onChange(replaceInstrument(procedure, instrument.role, next))}
-              onRename={(role) => onChange(renameInstrumentRole(procedure, instrument.role, role))}
-              onRemove={() => onChange(removeInstrument(procedure, instrument.role))}
-            />
-          </ul>
-        </PopoverContent>
-      </Popover>
+      <CalibrationRigLine
+        // Positional, so renaming a role does not remount its line mid-keystroke.
+        key={index}
+        instrument={instrument}
+        instruments={instruments}
+        takenRoles={takenRoles}
+        usedBySteps={usage[instrument.role] ?? 0}
+        setpoints={setpointsFor(instrument.role)}
+        readings={(model?.readings ?? []).map((reading) => reading.name)}
+        canEdit={canEdit}
+        onChange={(next) => onChange(replaceInstrument(procedure, instrument.role, next))}
+        onRename={(role) => onChange(renameInstrumentRole(procedure, instrument.role, role))}
+        onRemove={() => onChange(removeInstrument(procedure, instrument.role))}
+      />
     );
   }
 
-  // A grid, not a wrapping row: the roles are peers, and card widths should not follow
-  // whatever each instrument's setpoint names happen to be.
-  return (
-    <div className="grid gap-2 sm:grid-cols-2">
-      <div className="bg-muted/40 flex items-start gap-2 rounded-lg border border-dashed px-3 py-2">
-        <Cpu className="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden />
-        <CalibrationRigChip
-          role={DUT_ROLE}
-          model={t("iot.calibration.rig.dut")}
-          setpoints={setpointsFor(DUT_ROLE)}
-          readings={[]}
-          noSetpoints={t("iot.calibration.rig.drivesNothing")}
-        />
-      </div>
+  const dutSetpoints = setpointsFor(DUT_ROLE);
 
-      {auxiliary.map(renderInstrument)}
+  return (
+    <div className="space-y-2">
+      <ul>
+        <li className="flex gap-3 py-1 text-[15px] leading-7">
+          <span className="w-20 shrink-0 font-mono">{DUT_ROLE}</span>
+          <p className="text-muted-foreground min-w-0">
+            {t("iot.calibration.rig.dut")}
+            {dutSetpoints.length > 0 && (
+              <span className="text-sm">
+                {" · "}
+                {t("iot.calibration.rig.drives")}{" "}
+                <span className="font-mono">
+                  {dutSetpoints
+                    .map((s) => `${s.name} ${String(s.min)}…${String(s.max)} ${s.unit}`)
+                    .join(", ")}
+                </span>
+              </span>
+            )}
+          </p>
+        </li>
+
+        {auxiliary.map(renderInstrument)}
+      </ul>
 
       {canEdit && (
         <DropdownMenu>
@@ -150,10 +140,11 @@ export function CalibrationRigStrip({
             <Button
               type="button"
               variant="ghost"
-              className="text-muted-foreground h-auto border border-dashed px-3"
+              size="sm"
+              className="text-muted-foreground -ml-2 h-7"
               disabled={!hasRoomForMore}
             >
-              <Plus className="mr-2 size-4" aria-hidden />
+              <Plus className="mr-1.5 size-3.5" aria-hidden />
               {t("iot.calibration.rig.add")}
             </Button>
           </DropdownMenuTrigger>

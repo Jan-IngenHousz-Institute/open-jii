@@ -1,4 +1,4 @@
-import { render, screen } from "@/test/test-utils";
+import { render, screen, within } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -74,109 +74,131 @@ function renderEditor(
   return { onChange, user: userEvent.setup({ pointerEventsCheck: 0 }) };
 }
 
-/** Each cell says what it does while closed; that line is how a phase reads. */
+/** A step is one sentence, and the phase is the sentences in running order. */
 function stepLines() {
-  return screen.queryAllByTestId("step-label").map((node) => node.textContent);
+  return screen.queryAllByRole("listitem").map((node) => node.textContent);
 }
 
-/** The rails sit before every cell, so "the last one" appends to the phase. */
-function insertButtons(kind: StepKind) {
-  return screen.getAllByRole("button", { name: `iot.calibration.procedure.kindName.${kind}` });
+async function addStep(user: ReturnType<typeof userEvent.setup>, kind: StepKind) {
+  await user.click(screen.getByRole("button", { name: "iot.calibration.procedure.addStep" }));
+  // Each item carries its kind and a line about it, so the name is matched rather than equalled.
+  await user.click(
+    await screen.findByRole("menuitem", {
+      name: new RegExp(`kindName\\.${kind}\\b`),
+    }),
+  );
+}
+
+/** A value reads as text until it is clicked, so a test reaches one the way a person does. */
+async function openToken(
+  user: ReturnType<typeof userEvent.setup>,
+  scope: HTMLElement,
+  label: string,
+) {
+  await user.click(within(scope).getByRole("button", { name: label }));
+  return within(scope).getByRole("textbox", { name: label });
 }
 
 describe("CalibrationStepsEditor", () => {
   it("reads as a document: one line per step, in running order", () => {
     renderEditor();
 
-    expect(stepLines()).toEqual([
-      "iot.calibration.procedure.label.set",
-      "iot.calibration.procedure.label.sweepInstrument",
-    ]);
+    const lines = stepLines();
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toContain("lamp");
+    expect(lines[0]).toContain("current_a");
+    expect(lines[1]).toContain("par_sweep");
   });
 
-  // Nothing is typed that the rig already knows: a setpoint an instrument does not have
-  // is only refused at the bench, halfway through a sweep.
+  // Every name a step can hold comes from the rig above it; a typed one stalls at the bench.
   it("offers the setpoints the instrument a step drives actually has", async () => {
     const { user } = renderEditor();
 
-    await user.click(screen.getAllByLabelText("iot.calibration.procedure.setpoint")[0]);
-
-    expect(await screen.findByRole("option", { name: "current_a" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "voltage_v" })).toBeInTheDocument();
-  });
-
-  it("offers a bench instrument's readings, and the family's commands for the device", async () => {
-    const { user } = renderEditor();
-
-    // The reference answers a fixed set of readings, so the field is a choice.
-    await user.click(screen.getByLabelText("iot.calibration.procedure.reading"));
-    expect(await screen.findByRole("option", { name: "par_raw" })).toBeInTheDocument();
-
-    // The device answers whatever its firmware knows, so the field takes text and offers.
-    expect(screen.getByLabelText("iot.calibration.procedure.command")).toHaveValue("par_raw");
-  });
-
-  // A reading that takes one sample at the driver's own pace is the common one, so its
-  // three knobs stay out of the way until they are wanted.
-  it("keeps the sampling knobs folded away until asked for", async () => {
-    const { user } = renderEditor();
-
-    expect(screen.queryByLabelText("iot.calibration.procedure.timeout")).toBeNull();
-
+    const [line] = screen.getAllByRole("listitem");
     await user.click(
-      screen.getAllByRole("button", { name: "iot.calibration.procedure.sampling" })[0],
+      within(line).getByRole("combobox", { name: "iot.calibration.procedure.setpoint" }),
     );
 
-    expect(screen.getByLabelText("iot.calibration.procedure.timeout")).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: /current_a/ })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /voltage_v/ })).toBeInTheDocument();
   });
 
-  it("inserts a step where the author asked for it, not at the end", async () => {
+  it("offers a bench instrument's readings as a closed list, and the device's as free text", async () => {
+    const { user } = renderEditor();
+
+    const sweep = screen.getAllByRole("listitem")[1];
+    // par_ref is bench equipment, so what it answers is fixed.
+    expect(
+      within(sweep).getByRole("combobox", { name: "iot.calibration.procedure.reading" }),
+    ).toBeInTheDocument();
+    // The device answers whatever its firmware knows, so its command is typed.
+    await user.click(
+      within(sweep).getByRole("button", { name: "iot.calibration.procedure.command" }),
+    );
+    expect(
+      within(sweep).getByRole("textbox", { name: "iot.calibration.procedure.command" }),
+    ).toHaveValue("par_raw");
+  });
+
+  it("appends a step to the phase", async () => {
     const { onChange, user } = renderEditor();
 
-    // The first rail sits above the first cell.
-    await user.click(insertButtons("settle")[0]);
+    await addStep(user, "settle");
 
-    const added = onChange.mock.calls[0][0];
-    expect(added.steps.map((step) => step.kind)).toEqual(["settle", "set", "sweep"]);
-    expect(zCaptureProcedure.safeParse(added).success).toBe(true);
+    expect(onChange.mock.calls[0][0].steps.map((step) => step.kind)).toEqual([
+      "set",
+      "sweep",
+      "settle",
+    ]);
   });
 
-  // A set step needs something to drive; a rig of nothing but the device has nothing.
-  it("will not offer a set step when nothing can be driven", () => {
-    renderEditor({ ...bench, instruments: [{ role: "dut" }] });
+  it("will not offer a set step when nothing can be driven", async () => {
+    const { user } = renderEditor(
+      { instruments: [{ role: "dut" }], steps: [] },
+      "steps",
+      // A MiniPAR drives nothing of its own, so a rig of just the device drives nothing.
+      "minipar",
+    );
 
-    expect(insertButtons("set")[0]).toBeDisabled();
-    expect(insertButtons("sweep")[0]).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "iot.calibration.procedure.addStep" }));
+
+    // Radix keeps a disabled item in the menu; what matters is that it cannot be chosen.
+    const item = await screen.findByText("iot.calibration.procedure.kindName.set");
+    expect(item.closest("[role='menuitem']")).toHaveAttribute("aria-disabled", "true");
   });
 
-  // Opening by hand costs the author two choices before the range and the ramp appear,
-  // on a rig that already declared what it can drive.
   it("opens a new sweep on a setpoint the rig can drive", async () => {
     const { onChange, user } = renderEditor();
 
-    await user.click(insertButtons("sweep")[0]);
+    await addStep(user, "sweep");
 
-    expect(onChange.mock.calls[0][0].steps[0]).toMatchObject({
-      kind: "sweep",
-      stimulus: { instrument: "lamp", set: "current_a" },
+    const added = onChange.mock.calls[0][0].steps.at(-1);
+    expect(added?.kind === "sweep" && added.stimulus).toMatchObject({
+      instrument: "lamp",
+      set: "current_a",
     });
   });
 
   it("leaves a sweep to the operator when the rig drives nothing", async () => {
-    const { onChange, user } = renderEditor({ ...bench, instruments: [{ role: "dut" }] });
+    const { onChange, user } = renderEditor(
+      { instruments: [{ role: "dut" }], steps: [] },
+      "steps",
+      // A MiniPAR drives nothing of its own, so a rig of just the device drives nothing.
+      "minipar",
+    );
 
-    await user.click(insertButtons("sweep")[0]);
+    await addStep(user, "sweep");
 
-    const added = onChange.mock.calls[0][0].steps[0];
-    expect(added).toMatchObject({ kind: "sweep" });
-    expect(added).not.toHaveProperty("stimulus.instrument");
+    const added = onChange.mock.calls[0][0].steps.at(-1);
+    expect(added?.kind === "sweep" && "operator" in added.stimulus).toBe(true);
   });
 
   it("moves a step, because order is the procedure", async () => {
     const { onChange, user } = renderEditor();
 
+    const [line] = screen.getAllByRole("listitem");
     await user.click(
-      screen.getAllByRole("button", { name: "iot.calibration.procedure.moveDown" })[0],
+      within(line).getByRole("button", { name: "iot.calibration.procedure.moveDown" }),
     );
 
     expect(onChange.mock.calls[0][0].steps.map((step) => step.kind)).toEqual(["sweep", "set"]);
@@ -185,26 +207,29 @@ describe("CalibrationStepsEditor", () => {
   it("rewrites the points a sweep steps through", async () => {
     const { onChange, user } = renderEditor();
 
-    const values = screen.getByLabelText("iot.calibration.procedure.values");
+    const sweep = screen.getAllByRole("listitem")[1];
+    const values = await openToken(user, sweep, "iot.calibration.procedure.values");
     await user.clear(values);
-    await user.type(values, "1{Enter}2{Enter}3");
+    await user.type(values, "0, 1, 2");
+    await user.tab();
 
-    expect(onChange.mock.calls.at(-1)?.[0].steps[1]).toMatchObject({
-      stimulus: { values: [1, 2, 3] },
-    });
+    const step = onChange.mock.calls.at(-1)?.[0].steps[1];
+    expect(step?.kind === "sweep" && step.stimulus.values).toEqual([0, 1, 2]);
   });
 
-  // The verify phase is absent until it holds a step, because the contract refuses an
-  // empty one.
   it("creates the verify phase with its first step and drops it with its last", async () => {
     const { onChange, user } = renderEditor(bench, "verify");
 
-    await user.click(
-      screen.getByRole("button", { name: "iot.calibration.procedure.kindName.settle" }),
-    );
+    await addStep(user, "settle");
     expect(onChange.mock.calls[0][0].verify).toHaveLength(1);
 
-    await user.click(screen.getByRole("button", { name: "iot.calibration.procedure.removeStep" }));
-    expect(onChange.mock.calls.at(-1)?.[0]).not.toHaveProperty("verify");
+    const [line] = screen.getAllByRole("listitem");
+    await user.click(
+      within(line).getByRole("button", { name: "iot.calibration.procedure.removeStep" }),
+    );
+
+    // The contract refuses an empty verify phase, so the last removal drops the phase.
+    expect(zCaptureProcedure.safeParse(onChange.mock.calls.at(-1)?.[0]).success).toBe(true);
+    expect(onChange.mock.calls.at(-1)?.[0].verify).toBeUndefined();
   });
 });
