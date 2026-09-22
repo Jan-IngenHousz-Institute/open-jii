@@ -20,8 +20,14 @@ aws logs filter-log-events --log-group-name AWSIotLogsV2 \
 ```
 
 The `ruleName` and `reason` fields in the matched events answer both "which channel" and "which
-action". If nothing matches, IoT logging may be off for the account, in which case use the per-rule
-CloudWatch metrics under `AWS/IoT` with a `RuleName` dimension instead.
+action". If nothing matches, IoT logging may be off for the account, in which case read the
+`AWS/IoT` `Failure` metric instead. It is keyed on `RuleName` **and** `ActionType`, so one series
+per action already answers "which action", and a query naming only `RuleName` matches nothing:
+
+```bash
+aws cloudwatch list-metrics --namespace AWS/IoT --metric-name Failure \
+  --query 'Metrics[].Dimensions[].Value' --output text
+```
 
 ## Likely causes, most common first
 

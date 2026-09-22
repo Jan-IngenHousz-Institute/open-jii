@@ -9,10 +9,14 @@ flapping links.
 
 The three Connect errors mean different things and have different fixes:
 
+Every `Connect.*` metric is keyed on `Protocol`, so the dimension is not optional: omit it and the
+query matches nothing, which reads exactly like a quiet day.
+
 ```bash
 # On Linux, GNU date wants -d '24 hours ago' where BSD date wants -v-24H
 aws cloudwatch get-metric-statistics --namespace AWS/IoT \
   --metric-name Connect.AuthError \
+  --dimensions Name=Protocol,Value=MQTT \
   --start-time "$(date -u -v-24H +%Y-%m-%dT%H:%M:%SZ)" \
   --end-time "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   --period 3600 --statistics Sum

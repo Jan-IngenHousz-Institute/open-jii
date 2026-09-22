@@ -58,7 +58,7 @@ metrics:
     severity: critical
     signal:
       namespace: AWS/IoT
-      search: SEARCH('{AWS/IoT,RuleName} MetricName="Failure"', 'Sum')
+      search: SEARCH('{AWS/IoT,ActionType,RuleName} MetricName="Failure"', 'Sum')
       stat: Sum
     baseline: { method: same-weekday-4w, anomaly: any-nonzero }
     runbook: docs/runbooks/ingest-forwarding-failures.md
@@ -74,7 +74,9 @@ metrics:
     slots: [exception, dashboard]
     signal:
       namespace: AWS/IoT
-      search: SEARCH('{AWS/IoT} MetricName="Connect.AuthError" OR MetricName="Connect.ClientError" OR MetricName="Connect.ServerError"', 'Sum')
+      # Every Connect.* metric carries Protocol (MQTT), so a dimensionless {AWS/IoT}
+      # schema matches nothing. Verified against Connect.Success, which has data.
+      search: SEARCH('{AWS/IoT,Protocol} MetricName="Connect.AuthError" OR MetricName="Connect.ClientError" OR MetricName="Connect.ServerError"', 'Sum')
       stat: Sum
     baseline: { method: same-weekday-4w, anomaly_pct: 200 }
     runbook: docs/runbooks/iot-auth-failures.md
