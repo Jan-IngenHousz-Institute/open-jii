@@ -106,6 +106,189 @@ describe("ExperimentRepository", () => {
   });
 
   describe("findAll", () => {
+    it("applies explicit name sorting to both list shapes before paging", async () => {
+      for (const name of ["Charlie", "Alpha", "Bravo"]) {
+        await testApp.createExperiment({ name, userId: testUserId });
+      }
+      const sort = [{ field: "name", direction: "asc" }] as const;
+
+      const all = await repository.findAll(
+        testUserId,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        [...sort],
+      );
+      const first = await repository.findPage(
+        testUserId,
+        1,
+        2,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        [...sort],
+      );
+      const second = await repository.findPage(
+        testUserId,
+        2,
+        2,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        [...sort],
+      );
+      assertSuccess(all);
+      assertSuccess(first);
+      assertSuccess(second);
+
+      expect(all.value.map((item) => item.name)).toEqual(["Alpha", "Bravo", "Charlie"]);
+      expect(first.value.items.map((item) => item.name)).toEqual(["Alpha", "Bravo"]);
+      expect(second.value.items.map((item) => item.name)).toEqual(["Charlie"]);
+    });
+
+    it("uses the second field within first-field ties and keeps page boundaries stable", async () => {
+      for (const name of ["Alpha", "Bravo", "Charlie"]) {
+        await testApp.createExperiment({ name, status: "active", userId: testUserId });
+      }
+      const sort = [
+        { field: "status", direction: "asc" },
+        { field: "name", direction: "desc" },
+      ] as const;
+      const first = await repository.findPage(
+        testUserId,
+        1,
+        2,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        [...sort],
+      );
+      const second = await repository.findPage(
+        testUserId,
+        2,
+        2,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        [...sort],
+      );
+      assertSuccess(first);
+      assertSuccess(second);
+
+      expect(first.value.items.map((item) => item.name)).toEqual(["Charlie", "Bravo"]);
+      expect(second.value.items.map((item) => item.name)).toEqual(["Alpha"]);
+      expect(
+        new Set([...first.value.items, ...second.value.items].map((item) => item.id)).size,
+      ).toBe(3);
+    });
+
+    it("uses an explicit order even when searching", async () => {
+      await testApp.createExperiment({ name: "Alpha Project", userId: testUserId });
+      await testApp.createExperiment({ name: "Zeta Project", userId: testUserId });
+
+      const result = await repository.findPage(
+        testUserId,
+        1,
+        20,
+        undefined,
+        undefined,
+        "Project",
+        undefined,
+        [{ field: "name", direction: "desc" }],
+      );
+      assertSuccess(result);
+      expect(result.value.items.map((item) => item.name)).toEqual([
+        "Zeta Project",
+        "Alpha Project",
+      ]);
+    });
+
+    it("uses ID to keep equal sort values stable across pages", async () => {
+      for (const name of ["First", "Second", "Third"]) {
+        await testApp.createExperiment({ name, status: "active", userId: testUserId });
+      }
+      const sort = [{ field: "status", direction: "asc" }] as const;
+      const first = await repository.findPage(
+        testUserId,
+        1,
+        2,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        [...sort],
+      );
+      const second = await repository.findPage(
+        testUserId,
+        2,
+        2,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        [...sort],
+      );
+      assertSuccess(first);
+      assertSuccess(second);
+      const ids = [...first.value.items, ...second.value.items].map((item) => item.id);
+      expect(ids).toEqual([...ids].sort());
+      expect(new Set(ids).size).toBe(3);
+    });
+
+    it("sorts computed owner, organization, and member columns plus updated time", async () => {
+      const amy = await testApp.createTestUser({ name: "Amy Researcher" });
+      const zoe = await testApp.createTestUser({ name: "Zoe Researcher" });
+      const extra = await testApp.createTestUser({ name: "Extra Member" });
+      const aOrg = await testApp.createOrganization("A Lab");
+      const zOrg = await testApp.createOrganization("Z Lab");
+      const { experiment: first } = await testApp.createExperiment({
+        name: "Zoe experiment",
+        userId: zoe,
+        organizationId: aOrg,
+      });
+      const { experiment: second } = await testApp.createExperiment({
+        name: "Amy experiment",
+        userId: amy,
+        organizationId: zOrg,
+      });
+      await testApp.addExperimentCollaborator(first.id, testUserId);
+      await testApp.addExperimentCollaborator(second.id, testUserId);
+      await testApp.addExperimentCollaborator(second.id, extra);
+      await testApp.database
+        .update(experimentsTable)
+        .set({ updatedAt: new Date("2025-01-01T00:00:00Z") })
+        .where(eq(experimentsTable.id, first.id));
+      await testApp.database
+        .update(experimentsTable)
+        .set({ updatedAt: new Date("2025-01-02T00:00:00Z") })
+        .where(eq(experimentsTable.id, second.id));
+
+      for (const [field, expected] of [
+        ["owner", [second.id, first.id]],
+        ["organization", [first.id, second.id]],
+        ["members", [first.id, second.id]],
+        ["updated", [first.id, second.id]],
+      ] as const) {
+        const result = await repository.findAll(
+          testUserId,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          [{ field, direction: "asc" }],
+        );
+        assertSuccess(result);
+        expect(result.value.map((item) => item.id)).toEqual(expected);
+      }
+    });
+
     it("should return all experiments without filter", async () => {
       // Arrange
       const { experiment: experiment1 } = await testApp.createExperiment({

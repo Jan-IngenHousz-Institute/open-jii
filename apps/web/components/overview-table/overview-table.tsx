@@ -1,8 +1,8 @@
 "use client";
 
 import { DocsHelpLink } from "@/components/docs-help-link";
-import { tableFeatures, useTable } from "@tanstack/react-table";
-import type { ColumnDef, RowData } from "@tanstack/react-table";
+import { rowSortingFeature, tableFeatures, useTable } from "@tanstack/react-table";
+import type { ColumnDef, RowData, SortingState } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import type { ReactNode } from "react";
@@ -23,6 +23,8 @@ import { cn } from "@repo/ui/lib/utils";
 export interface OverviewTableColumn<T extends RowData> {
   /** Translated header label; null renders an aria-hidden spacer head (actions column). */
   header: ReactNode;
+  /** Stable server sort field. Omit for columns that are not sortable. */
+  sortId?: string;
   /** Extra classes for both the head and every cell of the column. */
   className?: string;
   /** Row cell content; `href` is the row's navigation target (for name links). */
@@ -41,6 +43,11 @@ interface OverviewTableProps<T extends RowData> {
   getRowHref: (item: T) => string;
   emptyMessage: string;
   emptyHelpPath?: string;
+  sorting?: {
+    state: SortingState;
+    onToggle: (field: string, multi: boolean) => void;
+    labels: { unsorted: string; asc: string; desc: string; secondary: string };
+  };
 }
 
 const HEADER_BG = "bg-muted/50";
@@ -51,11 +58,12 @@ const EMPTY_ITEMS: never[] = [];
 
 export const overviewTableText = { strong: TEXT_STRONG, muted: TEXT_MUTED };
 
-const overviewTableFeatures = tableFeatures({});
+const overviewTableFeatures = tableFeatures({ rowSortingFeature });
 
 interface OverviewColumnMeta {
   className?: string;
   spacer: boolean;
+  label?: string;
 }
 
 export function OverviewTable<T extends RowData>({
@@ -70,18 +78,22 @@ export function OverviewTable<T extends RowData>({
   getRowHref,
   emptyMessage,
   emptyHelpPath,
+  sorting,
 }: OverviewTableProps<T>) {
   const router = useRouter();
   const loading = isLoading === true;
   const tableColumns = useMemo<ColumnDef<typeof overviewTableFeatures, T>[]>(
     () =>
       columns.map((column, index) => ({
-        id: `column-${index}`,
+        id: column.sortId ?? `column-${index}`,
+        accessorFn: column.sortId ? () => null : undefined,
+        enableSorting: Boolean(sorting && column.sortId),
         header: () => column.header,
         cell: ({ row }) => column.cell(row.original, getRowHref(row.original)),
         meta: {
           className: column.className,
           spacer: column.header == null,
+          label: typeof column.header === "string" ? column.header : undefined,
         } satisfies OverviewColumnMeta,
       })),
     [columns, getRowHref],
@@ -91,6 +103,8 @@ export function OverviewTable<T extends RowData>({
     data: items ?? EMPTY_ITEMS,
     columns: tableColumns,
     getRowId: (item) => getRowKey(item),
+    manualSorting: true,
+    state: { sorting: sorting?.state ?? [] },
   });
 
   if (!loading && items === undefined) {
@@ -144,13 +158,34 @@ export function OverviewTable<T extends RowData>({
                   <TableHead
                     key={header.id}
                     aria-hidden={meta.spacer ? true : undefined}
+                    aria-sort={
+                      header.column.getIsSorted() === "asc"
+                        ? "ascending"
+                        : header.column.getIsSorted() === "desc"
+                          ? "descending"
+                          : undefined
+                    }
                     className={cn(
                       "h-10 px-6 align-middle text-[11px] font-semibold uppercase tracking-[0.02em]",
                       TEXT_MUTED,
                       meta.className,
                     )}
                   >
-                    {header.isPlaceholder ? null : <table.FlexRender header={header} />}
+                    {header.isPlaceholder ? null : sorting && header.column.getCanSort() ? (
+                      <button
+                        type="button"
+                        className="hover:text-foreground inline-flex items-center gap-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
+                        aria-label={`${meta.label ?? header.column.id}: ${sorting.labels[header.column.getIsSorted() || "unsorted"]}${header.column.getSortIndex() > 0 ? `, ${sorting.labels.secondary}` : ""}`}
+                        onClick={(event) => sorting.onToggle(header.column.id, event.shiftKey)}
+                      >
+                        <table.FlexRender header={header} />
+                        {header.column.getIsSorted() === "asc" ? "↑" : null}
+                        {header.column.getIsSorted() === "desc" ? "↓" : null}
+                        {header.column.getSortIndex() > 0 ? <span aria-hidden>2</span> : null}
+                      </button>
+                    ) : (
+                      <table.FlexRender header={header} />
+                    )}
                   </TableHead>
                 );
               })}

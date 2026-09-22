@@ -1,7 +1,7 @@
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
@@ -191,6 +191,50 @@ describe("ListExperiments", () => {
         status: "archived",
       });
     });
+  });
+
+  it("sorts through the API, adds a secondary field, and resets", async () => {
+    const spy = server.mount(contract.experiments.listExperiments, {
+      body: envelope([createExperiment({ id: "1", name: "Exp 1" })]),
+    });
+    const user = userEvent.setup();
+    render(<ListExperiments />);
+
+    await screen.findByRole("link", { name: "Exp 1" });
+    expect(screen.queryByRole("button", { name: "experiments.resetSorting" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: /columns.name:/ }));
+    await waitFor(() => expect(spy.calls.at(-1)?.query?.["sort[0][field]"]).toBe("name"));
+    expect(screen.getByRole("button", { name: /columns.name:/ }).closest("th")).toHaveAttribute(
+      "aria-sort",
+      "ascending",
+    );
+    await user.keyboard("{Shift>}");
+    await user.click(screen.getByRole("button", { name: /columns.status:/ }));
+    await user.keyboard("{/Shift}");
+    expect(
+      screen.getByRole("button", { name: /columns.status:.*sortSecondary/ }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "experiments.resetSorting" }));
+    await waitFor(() => expect(spy.calls.at(-1)?.query?.sort).toBeUndefined());
+  });
+
+  it("restores a shared sort URL in the archive", async () => {
+    const nav = await import("next/navigation");
+    const raw = encodeURIComponent(JSON.stringify([{ field: "updated", direction: "desc" }]));
+    vi.mocked(nav.useSearchParams).mockReturnValue(new nav.ReadonlyURLSearchParams(`sort=${raw}`));
+    const spy = server.mount(contract.experiments.listExperiments, {
+      body: envelope([createExperiment({ id: "old-1", name: "Old Exp" })]),
+    });
+    render(<ListExperiments archived />);
+
+    await screen.findByRole("link", { name: "Old Exp" });
+    expect(spy.calls.at(-1)?.query).toMatchObject({
+      status: "archived",
+      "sort[0][field]": "updated",
+      "sort[0][direction]": "desc",
+    });
+    expect(screen.getByRole("button", { name: "experiments.resetSorting" })).toBeInTheDocument();
   });
 
   it("hides pagination when the collection is empty", async () => {

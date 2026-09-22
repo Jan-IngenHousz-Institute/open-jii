@@ -3,6 +3,19 @@ import { z } from "zod";
 /** `related` narrows to rows the caller is tied to (authorship, any grant, owning-org membership). */
 export const zResourceScope = z.enum(["related", "all"]);
 
+export const zSortDirection = z.enum(["asc", "desc"]);
+
+/** Ordered server-side sorting criteria. A resource supplies its own field allowlist. */
+export function zListSort<T extends z.ZodType<string>>(fields: T) {
+  return z
+    .array(z.object({ field: fields, direction: zSortDirection }))
+    .min(1)
+    .max(2)
+    .refine((sort) => new Set(sort.map((item) => item.field)).size === sort.length, {
+      message: "Sort fields must be unique",
+    });
+}
+
 /**
  * Page selector for the list procedures. Both are optional and neither carries a schema
  * default: `page` presence is what switches a listing from an array to an envelope, so a

@@ -2,6 +2,7 @@ import { Injectable, Inject } from "@nestjs/common";
 
 import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import { ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentSort } from "@repo/api/domains/experiment/experiment.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 import {
   asc,
@@ -267,6 +268,7 @@ export class ExperimentRepository {
       organizationId?: string;
       includeArchived?: boolean;
     },
+    sort?: ExperimentSort,
   ) {
     const { organizationId, includeArchived = false } = options ?? {};
 
@@ -423,9 +425,27 @@ export class ExperimentRepository {
       // Browse keeps tiers strict and recency within them; search folds tier into one
       // score so a strong public match can still beat a weak owned one. Both end on
       // `id` so paging never drops or repeats a row on ties.
-      const orderBy = search
-        ? [desc(score), asc(experiments.id)]
-        : [desc(tier), desc(experiments.updatedAt), asc(experiments.id)];
+      const sortFields = {
+        name: experimentFields.name,
+        status: experimentFields.status,
+        owner: sql<
+          string | null
+        >`nullif(concat_ws(' ', ${experimentFields.ownerFirstName}, ${experimentFields.ownerLastName}), '')`,
+        organization: experimentFields.organizationName,
+        members: experimentFields.membersCount,
+        updated: experimentFields.updatedAt,
+      };
+      const orderBy = sort?.length
+        ? [
+            ...sort.map(
+              ({ field, direction }) =>
+                sql`${direction === "asc" ? asc(sortFields[field]) : desc(sortFields[field])} nulls last`,
+            ),
+            asc(experiments.id),
+          ]
+        : search
+          ? [desc(score), asc(experiments.id)]
+          : [desc(tier), desc(experiments.updatedAt), asc(experiments.id)];
 
       const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -443,9 +463,17 @@ export class ExperimentRepository {
       organizationId?: string;
       includeArchived?: boolean;
     },
+    sort?: ExperimentSort,
   ): Promise<Result<ExperimentSearchRow[]>> {
     return tryCatch(async () => {
-      const { where, orderBy, fields } = this.buildListing(userId, scope, status, search, options);
+      const { where, orderBy, fields } = this.buildListing(
+        userId,
+        scope,
+        status,
+        search,
+        options,
+        sort,
+      );
 
       let query = this.database
         .select(fields)
@@ -478,9 +506,17 @@ export class ExperimentRepository {
       organizationId?: string;
       includeArchived?: boolean;
     },
+    sort?: ExperimentSort,
   ): Promise<Result<{ items: ExperimentSearchRow[]; totalCount: number }>> {
     return tryCatch(async () => {
-      const { where, orderBy, fields } = this.buildListing(userId, scope, status, search, options);
+      const { where, orderBy, fields } = this.buildListing(
+        userId,
+        scope,
+        status,
+        search,
+        options,
+        sort,
+      );
 
       let rows = this.database
         .select(fields)

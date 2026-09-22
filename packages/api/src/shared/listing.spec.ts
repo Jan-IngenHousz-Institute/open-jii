@@ -7,6 +7,7 @@ import {
   resolveListScope,
   zPaginated,
   zPaginationQuery,
+  zListSort,
 } from "./listing";
 
 describe("resolveListScope", () => {
@@ -27,6 +28,37 @@ describe("resolveListScope", () => {
   it("lets scope win when both are sent, including the widening direction", () => {
     expect(resolveListScope({ scope: "all", filter: "my" })).toBe("all");
     expect(resolveListScope({ scope: "related", filter: "member" })).toBe("related");
+  });
+});
+
+describe("zListSort", () => {
+  const schema = zListSort(z.enum(["name", "updated"]));
+
+  it("accepts one or two distinct allowed fields", () => {
+    expect(schema.parse([{ field: "name", direction: "asc" }])).toHaveLength(1);
+    expect(
+      schema.parse([
+        { field: "name", direction: "desc" },
+        { field: "updated", direction: "asc" },
+      ]),
+    ).toHaveLength(2);
+  });
+
+  it("rejects unknown, duplicate, and excessive criteria", () => {
+    expect(schema.safeParse([{ field: "activity", direction: "asc" }]).success).toBe(false);
+    expect(
+      schema.safeParse([
+        { field: "name", direction: "asc" },
+        { field: "name", direction: "desc" },
+      ]).success,
+    ).toBe(false);
+    expect(
+      schema.safeParse([
+        { field: "name", direction: "asc" },
+        { field: "updated", direction: "asc" },
+        { field: "name", direction: "desc" },
+      ]).success,
+    ).toBe(false);
   });
 });
 

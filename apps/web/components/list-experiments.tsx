@@ -8,6 +8,7 @@ import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments
 import { useLocale } from "~/hooks/useLocale";
 
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import { SearchInput } from "@repo/ui/components/search-input";
 
 interface ListExperimentsProps {
@@ -27,6 +28,9 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
     setSearch,
     page,
     setPage,
+    sort,
+    setSort,
+    toggleSort,
   } = useExperiments({ archived });
   const { t } = useTranslation(["experiments", "common"]);
   const locale = useLocale();
@@ -46,6 +50,13 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
             className="w-full md:w-56"
           />
         }
+        filters={
+          sort.length ? (
+            <Button variant="outline" size="sm" onClick={() => setSort([])}>
+              {t("experiments.resetSorting")}
+            </Button>
+          ) : undefined
+        }
       />
 
       <div
@@ -55,6 +66,16 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
       >
         <OverviewTable
           columns={getExperimentColumns(t, locale)}
+          sorting={{
+            state: sort.map(({ field, direction }) => ({ id: field, desc: direction === "desc" })),
+            onToggle: (field, multi) => toggleSort(field as (typeof sort)[number]["field"], multi),
+            labels: {
+              unsorted: t("experiments.sortUnsorted"),
+              asc: t("experiments.sortAscending"),
+              desc: t("experiments.sortDescending"),
+              secondary: t("experiments.sortSecondary"),
+            },
+          }}
           items={data?.items}
           isLoading={isLoading}
           error={error}
