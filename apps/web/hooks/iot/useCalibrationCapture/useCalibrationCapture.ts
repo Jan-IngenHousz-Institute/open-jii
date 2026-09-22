@@ -43,12 +43,19 @@ export type PhaseFailure =
  */
 export type UnitIdentity =
   | { kind: "unnamed" }
+  /** It said who it is, and there was no expectation to hold it against. */
+  | { kind: "reported"; serial: string }
   | { kind: "match"; serial: string }
   | { kind: "mismatch"; reported: string; expected: string };
 
-function identifyUnit(reported: string | undefined, expected: string): UnitIdentity {
+function identifyUnit(reported: string | undefined, expected: string | null): UnitIdentity {
   if (reported === undefined || reported.trim() === "") {
     return { kind: "unnamed" };
+  }
+  // A bench takes whatever is put on it and works out afterwards which device that is, so
+  // there is nothing for the unit to contradict.
+  if (expected === null) {
+    return { kind: "reported", serial: reported };
   }
   return serialsMatch(reported, expected)
     ? { kind: "match", serial: reported }
@@ -70,7 +77,8 @@ function messageOf(error: unknown): string {
 export function useCalibrationCapture(
   procedure: CaptureProcedure | undefined,
   family: CalibrationFamily,
-  serialNumber: string,
+  /** The device this session is for, or null at a bench that identifies units as they come. */
+  serialNumber: string | null,
 ) {
   const [events, setEvents] = useState<ProcedureProgress[]>([]);
   const [failure, setFailure] = useState<PhaseFailure | null>(null);
@@ -187,6 +195,31 @@ export function useCalibrationCapture(
 
   const disconnectAll = connections.disconnectAll;
 
+  /**
+   * Between one unit and the next: the bench goes quiet and the unit's port is let go, but
+   * the instruments stay bound.
+   *
+   * A batch is one setup and many units. Closing the lamp and the reference between each
+   * would make the operator rebuild the rig for every piece of hardware they pick up, and
+   * every one of those reconnections is a chance to bind the wrong port.
+   */
+  const releaseUnit = useCallback(async (): Promise<string | null> => {
+    stop();
+    await inFlightRef.current;
+
+    // Rested, not shut down: a lamp must not be left driving current while someone has
+    // their hands on the bench swapping hardware.
+    let notAtRest: string | null = null;
+    try {
+      await rigRef.current.rest();
+    } catch (error) {
+      notAtRest = messageOf(error);
+    }
+    await disconnectAll();
+
+    return notAtRest;
+  }, [disconnectAll, stop]);
+
   /** Stop, wait for the interpreter to let go, rest and close the bench, then release the device. */
   const leave = useCallback(async (): Promise<string | null> => {
     stop();
@@ -240,6 +273,7 @@ export function useCalibrationCapture(
     capture,
     verify,
     stop,
+    releaseUnit,
     leave,
   };
 }

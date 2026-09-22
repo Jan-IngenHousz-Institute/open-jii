@@ -865,7 +865,8 @@
         "roleMissing": "Verbind de instrumenten die de meting nodig heeft voordat u verdergaat.",
         "unitConfirmed": "Serienummer {{serial}} komt overeen met het record van dit apparaat.",
         "wrongUnit": "Dit exemplaar meldt serienummer {{reported}}, maar dit apparaat staat geregistreerd als {{expected}}. De coëfficiënten zouden naar het verkeerde exemplaar gaan, dus de run kan niet starten.",
-        "unnamedUnit": "Het exemplaar op deze poort meldde geen serienummer, dus het kan niet tegen het record van dit apparaat worden gecontroleerd. Zorg dat het juiste is aangesloten."
+        "unnamedUnit": "Het exemplaar op deze poort meldde geen serienummer, dus het kan niet tegen het record van dit apparaat worden gecontroleerd. Zorg dat het juiste is aangesloten.",
+        "unitNamed": "Meldt {{serial}}"
       },
       "prompt": {
         "confirmLabel": "Typ {{token}} om door te gaan",
@@ -1179,6 +1180,18 @@
         "pointCount_one": "{{count}} meting",
         "pointCount_other": "{{count}} metingen",
         "waiting": "{{duration}} wachten"
+      },
+      "bench": {
+        "chooseFirst": "Kies de procedure voor deze sessie. De opstelling wordt één keer verbonden en blijft verbonden terwijl units komen en gaan.",
+        "thisSitting": "Deze sessie",
+        "recordedOf": "{{recorded}} van {{total}} vastgelegd",
+        "nextUnit": "Volgende unit",
+        "changeProcedure": "Procedure wijzigen",
+        "recording": "Vastleggen…",
+        "alreadyDone": "{{serial}} is in deze sessie al aan de beurt geweest.",
+        "unregistered": "{{serial}} is geen geregistreerd apparaat, dus de meting kan nog niet worden vastgelegd.",
+        "unnamed": "De firmware van deze unit noemt geen identificatie, dus de bank kan niet bepalen om welk apparaat het gaat.",
+        "title": "Kalibratiebank"
       }
     },
     "workbookBar": {

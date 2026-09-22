@@ -865,7 +865,8 @@
         "roleMissing": "Verbinden Sie die benötigten Instrumente, bevor Sie fortfahren.",
         "unitConfirmed": "Seriennummer {{serial}} stimmt mit dem Datensatz dieses Geräts überein.",
         "wrongUnit": "Dieses Gerät meldet die Seriennummer {{reported}}, registriert ist dieses Gerät aber als {{expected}}. Die Koeffizienten gingen an das falsche Gerät, daher kann der Lauf nicht starten.",
-        "unnamedUnit": "Das Gerät an diesem Port hat keine Seriennummer gemeldet, daher lässt es sich nicht mit dem Datensatz dieses Geräts abgleichen. Stellen Sie sicher, dass das richtige angeschlossen ist."
+        "unnamedUnit": "Das Gerät an diesem Port hat keine Seriennummer gemeldet, daher lässt es sich nicht mit dem Datensatz dieses Geräts abgleichen. Stellen Sie sicher, dass das richtige angeschlossen ist.",
+        "unitNamed": "Meldet {{serial}}"
       },
       "prompt": {
         "confirmLabel": "Geben Sie {{token}} ein, um fortzufahren",
@@ -1179,6 +1180,18 @@
         "pointCount_one": "{{count}} Messung",
         "pointCount_other": "{{count}} Messungen",
         "waiting": "{{duration}} Wartezeit"
+      },
+      "bench": {
+        "chooseFirst": "Wählen Sie die Prozedur für diese Sitzung. Der Aufbau wird einmal verbunden und bleibt verbunden, während Einheiten kommen und gehen.",
+        "thisSitting": "Diese Sitzung",
+        "recordedOf": "{{recorded}} von {{total}} erfasst",
+        "nextUnit": "Nächste Einheit",
+        "changeProcedure": "Prozedur wechseln",
+        "recording": "Wird erfasst…",
+        "alreadyDone": "{{serial}} war in dieser Sitzung bereits an der Reihe.",
+        "unregistered": "{{serial}} ist kein registriertes Gerät, daher kann der Lauf noch nicht erfasst werden.",
+        "unnamed": "Die Firmware dieser Einheit nennt keine Kennung, daher kann die Bank das Gerät nicht zuordnen.",
+        "title": "Kalibrierbank"
       }
     },
     "workbookBar": {

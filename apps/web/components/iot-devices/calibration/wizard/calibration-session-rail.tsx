@@ -78,6 +78,9 @@ export function CalibrationSessionRail({
     if (unit?.kind === "mismatch") {
       return t("iot.calibration.rail.deviceWrongUnit", { reported: unit.reported });
     }
+    if (unit?.kind === "reported") {
+      return unit.serial;
+    }
     if (unit?.kind === "match") {
       return unit.serial;
     }

@@ -865,7 +865,8 @@
         "roleMissing": "Connect the instruments the run needs before continuing.",
         "unitConfirmed": "Serial {{serial}} matches this device's record.",
         "wrongUnit": "This unit reports serial {{reported}}, but this device is registered as {{expected}}. Coefficients would go to the wrong unit, so the run cannot start.",
-        "unnamedUnit": "The unit on this port did not report a serial number, so it cannot be checked against this device's record. Make sure the right one is connected."
+        "unnamedUnit": "The unit on this port did not report a serial number, so it cannot be checked against this device's record. Make sure the right one is connected.",
+        "unitNamed": "Reports {{serial}}"
       },
       "prompt": {
         "confirmLabel": "Type {{token}} to continue",
@@ -1179,6 +1180,18 @@
         "pointCount_one": "{{count}} reading",
         "pointCount_other": "{{count}} readings",
         "waiting": "{{duration}} of waiting"
+      },
+      "bench": {
+        "chooseFirst": "Pick the procedure this sitting runs. The rig is connected once and stays connected while units come and go.",
+        "thisSitting": "This sitting",
+        "recordedOf": "{{recorded}} of {{total}} recorded",
+        "nextUnit": "Next unit",
+        "changeProcedure": "Change procedure",
+        "recording": "Recording…",
+        "alreadyDone": "{{serial}} has already had its turn in this sitting.",
+        "unregistered": "{{serial}} is not a registered device, so its run cannot be recorded yet.",
+        "unnamed": "This unit's firmware names no identifier, so the bench cannot tell which device it is.",
+        "title": "Calibration bench"
       }
     },
     "workbookBar": {
