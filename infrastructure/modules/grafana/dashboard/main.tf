@@ -1924,6 +1924,91 @@ resource "grafana_rule_group" "monitoring_liveness" {
       service   = "monitoring"
       metric_id = "digest-composer-liveness"
     }
+
+  }
+
+  # Catalog entry 10. The lakehouse export publishes this on every scheduler cycle for
+  # no reason other than so its absence can alarm. It is the only signal that tells you
+  # the collector died rather than that the platform went quiet.
+  rule {
+    name      = "Heartbeat Collector Dead-Man"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Data"
+        metricName = "CollectorHeartbeat"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+      })
+
+      # Thirty minutes covers two scheduler cycles, so one missed run is not enough.
+      relative_time_range {
+        from = 1800
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "count"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B < 1"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "Alerting"
+    exec_err_state = "Alerting"
+    for            = "15m"
+
+    annotations = {
+      description = "The lakehouse heartbeat export has stopped publishing. Every dbx signal in the digest is now absent rather than healthy. Runbook: docs/runbooks/dlt-heartbeat.md"
+      summary     = "Heartbeat collector stopped reporting"
+    }
+    labels = {
+      metric_id = "dlt-heartbeat"
+      severity  = "critical"
+      service   = "monitoring"
+    }
   }
 }
 
