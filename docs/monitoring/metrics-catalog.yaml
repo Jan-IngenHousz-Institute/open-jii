@@ -34,6 +34,9 @@ passes:
   - date: 2026-09-14
     range: [64, 64]
     note: gold materialization age split out of 10
+  - date: 2026-09-22
+    range: [65, 66]
+    note: the digest's own two lambdas, so the reporter's silence is itself reportable
 
 metrics:
   # Ingest path
@@ -869,3 +872,31 @@ metrics:
     active: false
     slots: [weekly, exception, s3]
     notes: Capture-timestamp vs upload-time; offline-first fails silently as data marooned on phones.
+
+  # Self-health. The digest reports on the platform; these two report on the digest.
+  # Both inactive and signal-less on purpose: liveness is absence, and a baseline rule
+  # has no "min", so an active entry here would evaluate to ok forever and read as
+  # covered. The Grafana rules carry these ids and are where the watching happens.
+  - num: 65
+    id: digest-composer-liveness
+    name: Digest composer stopped running
+    family: observability
+    source: aws
+    phase: P1
+    active: false
+    slots: [alert]
+    severity: critical
+    runbook: docs/runbooks/digest-composer-liveness.md
+    notes: A lambda that never runs publishes no metric, so absence is the only signal. Watched by the Grafana rule labelled with this id, not by the digest, which cannot report its own silence.
+
+  - num: 66
+    id: metrics-forwarder-errors
+    name: Metrics forwarder failing to publish
+    family: observability
+    source: aws
+    phase: P1
+    active: false
+    slots: [alert]
+    severity: warning
+    runbook: docs/runbooks/metrics-forwarder-errors.md
+    notes: Errors only, never liveness: the forwarder is S3 event driven, so a quiet day is indistinguishable from a dead function and a liveness rule would fire forever.
