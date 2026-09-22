@@ -115,4 +115,29 @@ describe("fitRecipe", () => {
     expect(script).toContain('blocks["par"]');
     expect(script).toContain('blocks["led"]');
   });
+
+  // A reading with nothing to plot against, and a block of a shape no single fit produces,
+  // are both things the recipe says it could not decide rather than guessing at.
+  it("leaves a block to the author when it cannot decide the fit", () => {
+    const noAxes: ProducedSeries = { name: "single", columns: ["counts"], optional: false };
+
+    const script = fitRecipe([noAxes], { blocks: { odd: { a: { type: "number" } } } });
+
+    expect(script).not.toContain("assess_linear_fit");
+    expect(script).toContain("single");
+  });
+
+  it("says why a block of three coefficients was left alone", () => {
+    const script = fitRecipe([PAR_SWEEP], {
+      blocks: {
+        cubic: {
+          a: { type: "number" },
+          b: { type: "number" },
+          c: { type: "number" },
+        },
+      },
+    });
+
+    expect(script).toContain("3 coefficients");
+  });
 });

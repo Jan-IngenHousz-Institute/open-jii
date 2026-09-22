@@ -142,3 +142,23 @@ describe("uniqueName", () => {
     expect(uniqueName("block", ["block", "block_2"])).toBe("block_3");
   });
 });
+
+describe("withBound", () => {
+  // Bounds are what review checks a fit against, so dropping one must leave the rest intact.
+  it("clears one bound and keeps the other, whatever shape the coefficient has", () => {
+    expect(withBound({ type: "number", min: 0, max: 5 }, "min", undefined)).toEqual({
+      type: "number",
+      max: 5,
+    });
+    expect(withBound({ type: "number_array", length: 6, min: 0 }, "max", 9)).toEqual({
+      type: "number_array",
+      length: 6,
+      min: 0,
+      max: 9,
+    });
+    expect(withBound({ type: "integer_array", length: 3, max: 4 }, "max", undefined)).toEqual({
+      type: "integer_array",
+      length: 3,
+    });
+  });
+});

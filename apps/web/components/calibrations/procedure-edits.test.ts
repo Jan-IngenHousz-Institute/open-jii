@@ -15,6 +15,7 @@ import {
   removeRead,
   removeStep,
   renameInstrumentRole,
+  replaceRead,
   replaceStep,
   stepReads,
   takenSeries,
@@ -157,5 +158,22 @@ describe("step edits", () => {
     expect(stepReads(added)).toHaveLength(3);
     expect(stepReads(removeRead(added, 0))).toHaveLength(2);
     expect(stepReads(removeRead(newStep("read", []), 0))).toHaveLength(1);
+  });
+
+  it("replaces one reading and leaves its siblings alone", () => {
+    const step = procedure.steps[1];
+    const next = { instrument: "dut", command: "par", as: "par" } as const;
+
+    const replaced = replaceRead(step, 0, next);
+
+    expect(stepReads(replaced)[0]).toEqual(next);
+    expect(stepReads(replaced)[1]).toEqual(stepReads(step)[1]);
+  });
+
+  // A settle or operator step holds no readings, so there is nothing to replace in one.
+  it("hands back a step that takes no readings untouched", () => {
+    const settle = newStep("settle", []);
+
+    expect(replaceRead(settle, 0, { instrument: "dut", command: "par", as: "par" })).toBe(settle);
   });
 });
