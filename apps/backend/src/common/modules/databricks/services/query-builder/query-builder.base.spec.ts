@@ -155,6 +155,15 @@ describe("QueryBuilder Base", () => {
       expect(query).toContain("LIMIT 10");
     });
 
+    it("escapes apostrophes in variant schema string literals", () => {
+      const query = builder
+        .from("events")
+        .parseVariant("payload", "STRUCT<`Fm'`:DOUBLE>", "data")
+        .build();
+
+      expect(query).toContain("from_json(payload::string, 'STRUCT<`Fm''`:DOUBLE>') as data");
+    });
+
     it("escapes column identifiers with spaces or reserved words", () => {
       const query = builder
         .from("events")
