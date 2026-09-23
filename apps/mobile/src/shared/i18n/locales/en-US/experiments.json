@@ -43,8 +43,6 @@
     "loadFailed": "Could not load this experiment.",
     "archived": "This experiment is archived",
     "noDescription": "This experiment has not been described yet.",
-    "collaborators_one": "{{count}} collaborator",
-    "collaborators_other": "{{count}} collaborators",
     "showMore": "Show more",
     "showLess": "Show less",
     "startMeasuring": "Start measuring",
@@ -53,9 +51,8 @@
     "flowInProgress": "A measurement is in progress",
     "flowInProgressAction": "Open it",
     "by": "by {{name}}",
-    "since": "On openJII since",
-    "locations_one": "location",
-    "locations_other": "locations"
+    "collaboratorsLabel": "Collaborators",
+    "since": "On openJII since"
   },
   "join": {
     "cta": "Request to join",

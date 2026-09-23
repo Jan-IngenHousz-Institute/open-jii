@@ -1539,6 +1539,88 @@ describe("ExperimentRepository", () => {
         .where(eq(experimentsTable.id, "00000000-0000-0000-0000-000000000000"));
       expect(experimentCheck.length).toBe(0);
     });
+
+    it("counts the direct collaborator grants", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: `Members two ${faker.string.uuid()}`,
+        userId: testUserId,
+      });
+      for (const email of ["one@example.com", "two@example.com"]) {
+        await testApp.addExperimentCollaborator(
+          experiment.id,
+          await testApp.createTestUser({ email }),
+        );
+      }
+
+      const result = await repository.checkAccess(experiment.id, testUserId);
+
+      assertSuccess(result);
+      expect(result.value.experiment?.membersCount).toBe(2);
+    });
+
+    it("reports zero when nobody was granted it", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: `Members none ${faker.string.uuid()}`,
+        userId: testUserId,
+      });
+
+      const result = await repository.checkAccess(experiment.id, testUserId);
+
+      assertSuccess(result);
+      expect(result.value.experiment?.membersCount).toBe(0);
+    });
+
+    it("does not count team or organization grants", async () => {
+      // Reach through a team or an org is unbounded, so it is not a headcount.
+      const organizationId = await testApp.createOrganization();
+      const teamId = await testApp.createTeam(organizationId);
+      await testApp.addTeamMember(teamId, await testApp.createTestUser({}));
+      const { experiment } = await testApp.createExperiment({
+        name: `Members indirect ${faker.string.uuid()}`,
+        userId: testUserId,
+      });
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "team",
+        granteeId: teamId,
+        role: "viewer",
+      });
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "organization",
+        granteeId: organizationId,
+        role: "viewer",
+      });
+
+      const result = await repository.checkAccess(experiment.id, testUserId);
+
+      assertSuccess(result);
+      expect(result.value.experiment?.membersCount).toBe(0);
+    });
+
+    it("agrees with the list row for the same experiment", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: `Members agreement ${faker.string.uuid()}`,
+        userId: testUserId,
+      });
+      await testApp.addExperimentCollaborator(
+        experiment.id,
+        await testApp.createTestUser({ email: "agree@example.com" }),
+      );
+
+      const listed = await repository.findAll(testUserId, "all");
+      const access = await repository.checkAccess(experiment.id, testUserId);
+      assertSuccess(listed);
+      assertSuccess(access);
+
+      const row = listed.value.find((entry) => entry.id === experiment.id);
+      expect({ list: row?.membersCount, access: access.value.experiment?.membersCount }).toEqual({
+        list: 1,
+        access: 1,
+      });
+    });
   });
 
   describe("findExpiredEmbargoes", () => {

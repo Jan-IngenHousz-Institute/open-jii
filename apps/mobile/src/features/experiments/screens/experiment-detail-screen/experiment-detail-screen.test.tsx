@@ -47,10 +47,6 @@ vi.mock("~/shared/i18n", () => ({
   useTranslation: () => ({
     i18n: { language: "en-US" },
     t: (key: string, values?: { count?: number; name?: string }) => {
-      if (key === "experiments:detail.collaborators")
-        return `${String(values?.count)} collaborators`;
-      if (key === "experiments:detail.locations")
-        return `${String(values?.count)} ${values?.count === 1 ? "location" : "locations"}`;
       if (key === "experiments:detail.by") return `by ${String(values?.name)}`;
       return (
         {
@@ -66,6 +62,7 @@ vi.mock("~/shared/i18n", () => ({
           "experiments:detail.showMore": "Show more",
           "experiments:detail.showLess": "Show less",
           "experiments:detail.since": "On openJII since",
+          "experiments:detail.collaboratorsLabel": "Collaborators",
           "experiments:status.stale": "Stale",
           "experiments:status.published": "Published",
           "experiments:status.archived": "Archived",
@@ -109,7 +106,6 @@ describe("ExperimentDetailScreen", () => {
 
     expect(screen.getByText("Canopy Phi2 Sweep")).toBeTruthy();
     expect(screen.getByText("Canopy Lab")).toBeTruthy();
-    expect(screen.getByText("6 collaborators")).toBeTruthy();
     expect(screen.getByText("Phi2 across the canopy profile.")).toBeTruthy();
     expect(screen.getByTestId("join-cta")).toBeTruthy();
   });
@@ -287,43 +283,35 @@ describe("ExperimentDetailScreen density", () => {
     });
   });
 
-  describe("the stat row is gated on what the access read actually carries", () => {
-    it("shows the collaborators tile when membersCount is present", () => {
+  describe("the collaborators row", () => {
+    it("reads as a label and a value, like the since row beneath it", () => {
       render(<ExperimentDetailScreen />);
 
-      expect(screen.getByText("6 collaborators")).toBeTruthy();
+      expect(screen.getByText("Collaborators")).toBeTruthy();
+      expect(screen.getByText("6")).toBeTruthy();
     });
 
-    it("renders no stat row at all when neither stat came back", () => {
-      state.experiment = {
-        ...EXPERIMENT,
-        membersCount: undefined,
-        locations: undefined,
-      };
+    it("renders nothing when the read carried no count", () => {
+      state.experiment = { ...EXPERIMENT, membersCount: undefined };
 
       render(<ExperimentDetailScreen />);
 
-      expect(screen.queryByText(/collaborators/u)).toBeNull();
-      expect(screen.queryByText(/locations?/u)).toBeNull();
+      expect(screen.queryByText("Collaborators")).toBeNull();
     });
 
-    it("shows the locations tile only when locations came back populated", () => {
-      state.experiment = {
-        ...EXPERIMENT,
-        locations: [{ id: "l1" }, { id: "l2" }],
-      } as unknown as Experiment;
+    it("shows a zero count, which is a real answer", () => {
+      state.experiment = { ...EXPERIMENT, membersCount: 0 };
 
       render(<ExperimentDetailScreen />);
 
-      expect(screen.getByText("2 locations")).toBeTruthy();
+      expect(screen.getByText("Collaborators")).toBeTruthy();
+      expect(screen.getByText("0")).toBeTruthy();
     });
 
-    it("treats an empty locations array as no locations, not as zero", () => {
-      state.experiment = { ...EXPERIMENT, locations: [] };
+    it("carries no stat tiles any more", () => {
+      const { toJSON } = render(<ExperimentDetailScreen />);
 
-      render(<ExperimentDetailScreen />);
-
-      expect(screen.queryByText(/locations?/u)).toBeNull();
+      expect(JSON.stringify(toJSON())).not.toContain("bg-surface");
     });
   });
 });

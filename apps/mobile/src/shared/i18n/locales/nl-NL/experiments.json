@@ -43,8 +43,6 @@
     "loadFailed": "Kon dit experiment niet laden.",
     "archived": "Dit experiment is gearchiveerd",
     "noDescription": "Dit experiment heeft nog geen beschrijving.",
-    "collaborators_one": "{{count}} deelnemer",
-    "collaborators_other": "{{count}} deelnemers",
     "showMore": "Meer tonen",
     "showLess": "Minder tonen",
     "startMeasuring": "Beginnen met meten",
@@ -53,9 +51,8 @@
     "flowInProgress": "Er loopt al een meting",
     "flowInProgressAction": "Openen",
     "by": "door {{name}}",
-    "since": "Op openJII sinds",
-    "locations_one": "locatie",
-    "locations_other": "locaties"
+    "collaboratorsLabel": "Deelnemers",
+    "since": "Op openJII sinds"
   },
   "join": {
     "cta": "Verzoek tot deelname",
