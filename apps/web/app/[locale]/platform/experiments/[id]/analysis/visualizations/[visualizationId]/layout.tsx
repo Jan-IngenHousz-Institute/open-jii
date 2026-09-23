@@ -32,6 +32,7 @@ export default function VisualizationLayout({ children }: LayoutProps) {
 
   const { data: accessData } = useExperimentAccess(experimentId);
   const { data, isLoading, error } = useExperimentVisualization(visualizationId, experimentId);
+  const canEdit = accessData?.isAdmin ?? false;
 
   if (accessData?.experiment.status === "archived") {
     notFound();
@@ -46,7 +47,12 @@ export default function VisualizationLayout({ children }: LayoutProps) {
         loadingMessage={t("common.loading")}
       >
         {data && (
-          <VisualizationFormShell key={data.id} experimentId={experimentId} visualization={data}>
+          <VisualizationFormShell
+            key={data.id}
+            experimentId={experimentId}
+            visualization={data}
+            canEdit={canEdit}
+          >
             {children}
           </VisualizationFormShell>
         )}
@@ -73,10 +79,12 @@ function buildDefaults(visualization: ExperimentVisualization): ChartFormValues 
 function VisualizationFormShell({
   experimentId,
   visualization,
+  canEdit,
   children,
 }: {
   experimentId: string;
   visualization: ExperimentVisualization;
+  canEdit: boolean;
   children: React.ReactNode;
 }) {
   const defaults = useMemo(() => buildDefaults(visualization), [visualization]);
@@ -94,6 +102,7 @@ function VisualizationFormShell({
           form={form}
           experimentId={experimentId}
           visualizationId={visualization.id}
+          canEdit={canEdit}
         />
         <DataSourcesFieldArrayProvider form={form}>
           <VisualizationLayoutContent experimentId={experimentId} visualization={visualization}>
@@ -109,11 +118,13 @@ function AutosaveBinding({
   form,
   experimentId,
   visualizationId,
+  canEdit,
 }: {
   form: ReturnType<typeof useForm<ChartFormValues>>;
   experimentId: string;
   visualizationId: string;
+  canEdit: boolean;
 }) {
-  useVisualizationAutosave({ form, experimentId, visualizationId });
+  useVisualizationAutosave({ form, experimentId, visualizationId, enabled: canEdit });
   return null;
 }

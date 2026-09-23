@@ -1,5 +1,6 @@
 "use client";
 
+import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { FormProvider, useForm } from "react-hook-form";
@@ -89,7 +90,10 @@ function DashboardFormShellBody({
   dashboard,
   children,
 }: DashboardFormShellBodyProps) {
-  useDashboardAutosave({ form, experimentId, dashboardId });
+  const { data: accessData } = useExperimentAccess(experimentId);
+  const canEdit = accessData?.isAdmin ?? false;
+
+  useDashboardAutosave({ form, experimentId, dashboardId, enabled: canEdit });
   return (
     <DashboardLayoutContent experimentId={experimentId} dashboard={dashboard}>
       {children}

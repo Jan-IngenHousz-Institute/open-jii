@@ -82,9 +82,10 @@ export function WorkbookDraftEditor({
     isValid: (c) => zWorkbookCellArray.safeParse(c).success,
     save,
     delayMs: AUTO_SAVE_DELAY,
+    enabled: canEdit,
   });
 
-  useReportAutosaveStatus(autosave);
+  useReportAutosaveStatus({ status: canEdit ? autosave.status : null, error: autosave.error });
 
   // Adopt a newer server copy: fork pointers live inside `cells`, so a
   // never-reconciling editor silently un-forks cells it overwrites (OJD-1722).

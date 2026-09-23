@@ -18,12 +18,15 @@ interface UseDashboardAutosaveOptions {
   form: UseFormReturn<DashboardFormValues>;
   experimentId: string;
   dashboardId: string;
+  /** The backend's `manage` gate; without it nothing saves and no status is reported. */
+  enabled?: boolean;
 }
 
 export function useDashboardAutosave({
   form,
   experimentId,
   dashboardId,
+  enabled = true,
 }: UseDashboardAutosaveOptions) {
   const values = useWatch({ control: form.control }) as DashboardFormValues;
   const { mutateAsync } = useExperimentDashboardUpdate({ experimentId });
@@ -45,6 +48,7 @@ export function useDashboardAutosave({
     value: values,
     toKey: stringifyDashboard,
     save,
+    enabled,
   });
-  useReportAutosaveStatus(autosave);
+  useReportAutosaveStatus({ status: enabled ? autosave.status : null, error: autosave.error });
 }
