@@ -8,11 +8,11 @@ import dlt
 from pyspark.sql import functions as F
 
 from openjii.centrum import (
-    ENRICHED_MACRO_DATA_VIEW,
-    ENRICHED_RAW_DATA_VIEW,
-    ENRICHED_UPLOADED_DATA_VIEW,
     EXPERIMENT_DEVICE_DATA_TABLE,
+    EXPERIMENT_MACRO_DATA_TABLE,
+    EXPERIMENT_RAW_DATA_TABLE,
     EXPERIMENT_TABLE_METADATA,
+    EXPERIMENT_UPLOADED_DATA_TABLE,
     METADATA_SOURCE_TABLE,
 )
 from openjii.centrum.runtime import CATALOG_NAME
@@ -57,7 +57,7 @@ def experiment_table_metadata():
     )
 
     raw_data_metadata = (
-        dlt.read(ENRICHED_RAW_DATA_VIEW)
+        dlt.read(EXPERIMENT_RAW_DATA_TABLE)
         .groupBy("experiment_id")
         .agg(
             F.count("*").alias("row_count"),
@@ -95,7 +95,7 @@ def experiment_table_metadata():
     )
 
     upload_metadata = (
-        dlt.read(ENRICHED_UPLOADED_DATA_VIEW)
+        dlt.read(EXPERIMENT_UPLOADED_DATA_TABLE)
         .groupBy("experiment_id", "upload_table_id")
         .agg(
             F.count("*").alias("row_count"),
@@ -119,11 +119,9 @@ def experiment_table_metadata():
 
     metadata = raw_data_metadata.unionByName(device_metadata).unionByName(upload_metadata)
 
-    # Published by the macro pipeline, so read by qualified name.
-    macro_view = f"{CATALOG_NAME}.centrum.{ENRICHED_MACRO_DATA_VIEW}"
-
     macro_metadata = (
-        spark.read.table(macro_view)
+        # Published by the macro pipeline, so read by qualified name.
+        spark.read.table(f"{CATALOG_NAME}.centrum.{EXPERIMENT_MACRO_DATA_TABLE}")
         .groupBy("experiment_id", "macro_id")
         .agg(
             F.count("*").alias("row_count"),

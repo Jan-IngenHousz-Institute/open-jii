@@ -18,6 +18,8 @@ from openjii.centrum.runtime import SILVER_TABLE
 
 @dlt.table(
     name=EXPERIMENT_RAW_DATA_TABLE,
+    # The enriched views read one experiment at a time through this table.
+    cluster_by=["experiment_id"],
     comment="Gold layer: Per-experiment raw sample data partitioned by experiment_id with VARIANT sample",
     table_properties={
         "quality": "gold",

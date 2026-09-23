@@ -14,14 +14,26 @@ variable "name" {
 }
 
 variable "table_type" {
-  description = "Must be one of MANAGED or EXTERNAL. Change forces the creation of a new resource."
+  description = "Must be one of MANAGED, EXTERNAL or VIEW. Change forces the creation of a new resource."
   type        = string
   default     = "MANAGED"
 
   validation {
-    condition     = contains(["MANAGED", "EXTERNAL"], var.table_type)
-    error_message = "table_type must be one of MANAGED or EXTERNAL."
+    condition     = contains(["MANAGED", "EXTERNAL", "VIEW"], var.table_type)
+    error_message = "table_type must be one of MANAGED, EXTERNAL or VIEW."
   }
+}
+
+variable "view_definition" {
+  description = "The SELECT a VIEW stores. Only for table_type VIEW."
+  type        = string
+  default     = null
+}
+
+variable "warehouse_id" {
+  description = "SQL warehouse that runs the DDL. Without one the provider starts a cluster."
+  type        = string
+  default     = null
 }
 
 variable "comment" {

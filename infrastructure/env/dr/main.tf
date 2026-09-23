@@ -573,10 +573,10 @@ module "backend_ecs" {
   environment_variables = [
     { name = "DATABRICKS_CATALOG_NAME", value = var.databricks_catalog_name },
     { name = "DATABRICKS_CENTRUM_SCHEMA_NAME", value = "centrum" },
-    { name = "DATABRICKS_RAW_DATA_TABLE_NAME", value = "enriched_experiment_raw_data" },
+    { name = "DATABRICKS_RAW_DATA_TABLE_NAME", value = "enriched_experiment_raw_data_view" },
     { name = "DATABRICKS_DEVICE_DATA_TABLE_NAME", value = "experiment_device_data" },
-    { name = "DATABRICKS_MACRO_DATA_TABLE_NAME", value = "enriched_experiment_macro_data" },
-    { name = "DATABRICKS_UPLOADED_DATA_TABLE_NAME", value = "enriched_experiment_uploaded_data" },
+    { name = "DATABRICKS_MACRO_DATA_TABLE_NAME", value = "enriched_experiment_macro_data_view" },
+    { name = "DATABRICKS_UPLOADED_DATA_TABLE_NAME", value = "enriched_experiment_uploaded_data_view" },
     { name = "DB_HOST", value = module.aurora_db.cluster_endpoint },
     { name = "DB_NAME", value = module.aurora_db.database_name },
     { name = "DB_PORT", value = module.aurora_db.cluster_port },

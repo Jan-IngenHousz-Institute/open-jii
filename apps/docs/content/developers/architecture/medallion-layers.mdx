@@ -36,9 +36,15 @@ AUTO CDC keeps the latest value per key but cannot add up, so the measurement co
 
 Flexible result shapes use Databricks VARIANT values where the protocol or macro output cannot be represented by one rigid relational schema. Stable identifiers remain separate from display labels so renaming a macro does not change the table identity.
 
+## Enriched views
+
+The enriched data joins each measurement or macro result to its contributor, device, annotations and custom metadata. Annotations and custom metadata change after a measurement arrives, and every historical row has to show them as they are now. The joins are plain SQL views, defined in `apps/data/src/views/` and created by terraform: a view stores no data, so the join runs when someone reads, for the experiment they read, and an edit shows on the next read. The gold tables are clustered by `experiment_id` so that read touches only that experiment's files.
+
+The backend reads the views under interim names ending in `_view`. The materialized tables with the original names still serve the export and the readers outside this repository until they are replaced by views of the same names.
+
 ## Macro execution pipeline
 
-`experiment_macro_data` and `enriched_experiment_macro_data` belong to the macro pipeline, which reads `experiment_raw_data` and the contributor, device, annotation and metadata tables from Centrum. Centrum's `experiment_table_metadata` reads the enriched view by its qualified name, so the view has to exist before a Centrum update starts.
+`experiment_macro_data` and `enriched_experiment_macro_data` belong to the macro pipeline, which reads `experiment_raw_data` and the contributor, device, annotation and metadata tables from Centrum. Centrum's `experiment_table_metadata` reads `experiment_macro_data` by its qualified name, so that table has to exist before a Centrum update starts.
 
 ## Why the layers matter
 

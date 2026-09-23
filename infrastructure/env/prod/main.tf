@@ -1384,6 +1384,30 @@ module "experiment_custom_metadata_table" {
   depends_on = [databricks_grants.centrum_schema]
 }
 
+# The enriched data as plain views: the join runs when someone reads, for the
+# experiment they read, so no pipeline recomputes it. Interim names while the
+# materialized views of the same names still serve readers outside the backend.
+module "enriched_views" {
+  source   = "../../modules/databricks/sql-table"
+  for_each = toset(["enriched_experiment_raw_data", "enriched_experiment_macro_data", "enriched_experiment_uploaded_data"])
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "${each.key}_view"
+  table_type   = "VIEW"
+  view_definition = templatefile(
+    "${path.root}/../../../apps/data/src/views/${each.key}.sql",
+    { catalog = module.databricks_catalog.catalog_name },
+  )
+  warehouse_id = var.backend_databricks_warehouse_id
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.experiment_annotations_table, module.experiment_custom_metadata_table]
+}
+
 module "data_export_job" {
   source = "../../modules/databricks/job"
 
@@ -2189,7 +2213,7 @@ module "backend_ecs" {
     },
     {
       name  = "DATABRICKS_RAW_DATA_TABLE_NAME"
-      value = "enriched_experiment_raw_data"
+      value = "enriched_experiment_raw_data_view"
     },
     {
       name  = "DATABRICKS_DEVICE_DATA_TABLE_NAME"
@@ -2197,11 +2221,11 @@ module "backend_ecs" {
     },
     {
       name  = "DATABRICKS_MACRO_DATA_TABLE_NAME"
-      value = "enriched_experiment_macro_data"
+      value = "enriched_experiment_macro_data_view"
     },
     {
       name  = "DATABRICKS_UPLOADED_DATA_TABLE_NAME"
-      value = "enriched_experiment_uploaded_data"
+      value = "enriched_experiment_uploaded_data_view"
     },
     {
       name  = "DB_HOST"
