@@ -40,8 +40,8 @@ Flexible result shapes use Databricks VARIANT values where the protocol or macro
 
 An environment where Centrum already owns these tables moves them to the macro pipeline instead of rebuilding them. Rebuilding would run every historical macro through the sandbox again. The macro pipeline must not run before the tables are reassigned, because it cannot define a table another pipeline owns.
 
-1. Before approving the deploy, stop the Centrum pipeline and wait until it has fully stopped. In dev, pause the ingestion scheduler job first. Centrum is the only ingest path, so measurements queue in Kinesis meanwhile; keep the window well inside the stream's retention, which is 72 hours in prod.
-2. Approve the deploy. It applies terraform, which moves both notebooks from Centrum to the macro pipeline, and deploys the notebooks afterwards. In dev it also creates the macro scheduler job, which runs at quarter past and quarter to the hour; pause it before it first fires. If the macro pipeline started when it was created, stop it, and confirm Centrum is still stopped.
+1. Before approving the deploy, stop the Centrum pipeline and wait until it has fully stopped. Centrum is the only ingest path, so measurements queue in Kinesis meanwhile; keep the window well inside the stream's retention, which is 72 hours in prod.
+2. Approve the deploy. It applies terraform, which moves both notebooks from Centrum to the macro pipeline, and deploys the notebooks afterwards. If the macro pipeline started when it was created, stop it, and confirm Centrum is still stopped.
 3. Reassign both tables to the macro pipeline. Databricks requires this to run as the owner and run-as principal of both pipelines, which here is the node service principal, from this workspace, on Databricks Runtime 16.3 or later:
 
    ```sql
@@ -51,7 +51,7 @@ An environment where Centrum already owns these tables moves them to the macro p
      SET TBLPROPERTIES ("pipelines.pipelineId" = "<macro pipeline id>");
    ```
 
-4. Once the notebook deploy has finished, start the macro pipeline, then Centrum, then resume the schedulers.
+4. Once the notebook deploy has finished, start the macro pipeline, then Centrum.
 
 Check the first macro update with `databricks pipelines list-pipeline-events <macro pipeline id>` before moving production; its flow progress events carry the rows each flow processed. It should process only the rows that arrived since Centrum stopped. If it processes the whole of `experiment_raw_data`, the stream did not keep its progress through the move, and that has to be resolved before production.
 
