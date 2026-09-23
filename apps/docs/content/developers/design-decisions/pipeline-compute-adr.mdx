@@ -1,0 +1,113 @@
+---
+title: "ADR: Size pipeline compute per workload"
+description: "Why Centrum and the macro pipeline run on the node types, editions and spot settings they do, and what each alternative lost on."
+---
+
+{/* verified: code@35e73aeea 2026-09-23 */}
+
+# ADR: Size pipeline compute per workload
+
+**Date:** 2026-09-23  
+**Status:** Accepted
+
+## Context
+
+Every classic pipeline node was `r5d.large`, fixed by a single cluster policy shared by both pipelines. Spot settings were the workspace defaults, both pipelines ran in development mode in production, and the macro pipeline ran on the ADVANCED edition without using any ADVANCED feature.
+
+The pipelines do different work:
+
+- **Centrum** runs continuously. It ingests from Kinesis, parses and decompresses payloads with Python UDFs, maintains streaming and AUTO CDC tables, and refreshes small materialized views every minute. Its silver tables use expectations.
+- **The macro pipeline** runs continuously. Its tasks mostly wait on the macro sandbox over HTTP, three requests in flight per task. The sandbox's reserved concurrency is 10 in dev and 20 in production.
+
+The evidence came from `system.compute.node_timeline` over seven days, on `r5d.large` nodes:
+
+| Role                       | CPU average | CPU p95 | Swap average |
+| -------------------------- | ----------- | ------- | ------------ |
+| Centrum worker, dev        | 72%         | 97%     | about 1%     |
+| Centrum driver, dev        | 48%         | 98%     | about 1.5%   |
+| Macro worker, dev          | 19%         | 57%     | 0.1%         |
+| Centrum worker, production | 66%         | 98%     | 31%          |
+| Centrum driver, production | 37%         | 76%     | 43%          |
+
+Neither environment matched the target. Production still ran the older architecture, with macros inside Centrum and full rewrites of the enriched tables. Dev ran most of the new architecture but restarted its clusters about every hour, which hides memory that builds up over days.
+
+Costs came from the Databricks pricing data, `system.billing.list_prices`, AWS's price list and spot prices for `eu-central-1`, and AWS's spot advisor, all as of the date above. On the Premium plan a DBU costs $0.36 on ADVANCED, $0.25 on PRO and $0.20 on CORE, and DBUs are most of a node's cost.
+
+## Decision
+
+| Pipeline     | Driver, on-demand | Workers, spot with fallback      | Edition  | Mode       |
+| ------------ | ----------------- | -------------------------------- | -------- | ---------- |
+| Centrum dev  | `r7i.large`       | 1 × `r6id.large`                 | ADVANCED | production |
+| Centrum prod | `r7i.large`       | `r6id.large`, autoscaling 2 to 6 | ADVANCED | production |
+| Macro dev    | `r5a.large`       | 1 × `r5a.large`                  | CORE     | production |
+| Macro prod   | `r5a.large`       | 1 × `m5a.xlarge`                 | CORE     | production |
+
+Each pipeline has its own policy. It pins the node types, spot with fallback to on-demand, an on-demand driver, automatic zone choice and a spot bid of 100%. The Centrum policy allows up to 8 workers, so workers can be added without a policy edit. The macro policy fixes one worker, because a second would pass the sandbox's concurrency.
+
+- **Centrum workers keep 8 GB per core.** Python UDF workers run outside Spark's heap and cannot spill, and the new architecture had not yet run on long-lived clusters. `r6id` is the newest `r` generation the workspace runs the disk cache on, and spot capacity for `r6id.large` is reclaimed less than 5% of the time. Production keeps the 2 to 6 range it already had, so older code can run on the new nodes safely.
+- **The Centrum driver takes `r7i.large`.** The driver runs no tasks, so local NVMe is wasted on it. Its CPU is what peaks, and `r7i` costs the same as `r6id` on-demand.
+- **Macro workers are the cheapest task slots.** At three requests per task, dev's sandbox allows 2 slots and production's 4. The work waits rather than computes, so core speed buys nothing. `m5a` and `r5a` have the lowest DBU rate per core among types that spot rarely reclaims, and both keep 16 GB per node, above the 10 GB the dev worker uses.
+- **The macro driver takes `r5a.large`,** the cheapest on-demand node with 16 GB.
+- **The macro pipeline runs on CORE,** because it uses neither AUTO CDC nor expectations. Centrum stays on ADVANCED for its expectations.
+- **Both environments run in production mode.** It restarts the cluster after recoverable failures such as memory leaks, and retries. Retry limits stay at their documented defaults.
+
+## Consequences
+
+**Benefits:**
+
+- The macro pipeline costs a little over half of what the configuration it replaces would have cost.
+- Workers run on types that spot rarely reclaims, instead of `r5d.large`, which is reclaimed more than 20% of the time.
+- Choosing compute now follows a written method, in [Pipeline compute](/developers/architecture/pipeline-compute).
+
+**Trade-offs / Risks:**
+
+- Centrum costs about 6% more at the same worker count. The saving on Centrum has to come from the lighter architecture, not from the nodes.
+- The disk cache's benefit, and the per-generation speed gains, are vendor claims rather than measurements on our workload.
+- Dev and production run different macro worker types, because their sandboxes allow different concurrency.
+- Whether editing a running continuous pipeline's settings restarts it is unverified, so a restart has to be planned for each production promotion.
+
+## Alternatives Considered
+
+Prices are per node-hour, ADVANCED for Centrum and CORE for macro, on spot for workers and on-demand for drivers.
+
+**Centrum workers:**
+
+| Type                          | Price  | Why not                                                                            |
+| ----------------------------- | ------ | ---------------------------------------------------------------------------------- |
+| `r5d.large`, the previous one | $0.236 | Spot capacity is reclaimed more than 20% of the time, and the cores are older.     |
+| `r5.large`                    | $0.220 | No local disk, so no disk cache, and spill goes to EBS.                            |
+| `r5a.large`                   | $0.209 | No local disk, and the slowest cores offered, on workers that run hot.             |
+| `r7i.large`                   | $0.264 | No local NVMe variant exists.                                                      |
+| `r8id.xlarge`, per 2 cores    | $0.303 | About 20% more per core, and the workspace does not run the disk cache on it.      |
+| `r6id.xlarge`                 | $0.531 | 7% more per core and reclaimed more often than `r6id.large`.                       |
+| `m6id.xlarge`                 | $0.401 | 4 GB per core. It was the first proposal and lost to the off-heap Python argument. |
+| `c` family                    |        | 2 GB per core.                                                                     |
+| `i4i.large`                   | $0.309 | Pays about 25% more for terabytes of disk.                                         |
+
+**Drivers:**
+
+| Type                        | Centrum          | Macro            | Why not                                                                             |
+| --------------------------- | ---------------- | ---------------- | ----------------------------------------------------------------------------------- |
+| `r5d.large` or `r6id.large` | $0.335 to $0.365 | $0.263 to $0.284 | Local NVMe that a driver never uses.                                                |
+| `r5.large`                  | $0.314           | $0.242           | The frugal Centrum option, on the same cores as before. Kept as the fallback.       |
+| `r5a.large` for Centrum     | $0.285           |                  | Slower cores on the resource that peaks.                                            |
+| `m7i.xlarge`                | $0.544           |                  | Four cores at 50% more. The next step if Centrum's driver CPU stays the bottleneck. |
+
+**Macro workers:**
+
+| Type                               | Price            | Why not                                                                   |
+| ---------------------------------- | ---------------- | ------------------------------------------------------------------------- |
+| `m7i.xlarge` or `m6id.xlarge`      | $0.279           | Pays for faster cores the work cannot use. `m6id` is also reclaimed more. |
+| `c5a.xlarge` or `m5a.large`        | $0.113 to $0.220 | 8 GB per node, below what the dev worker uses.                            |
+| Fewer cores, six requests per task |                  | Needs a code change and a different value per environment.                |
+
+**Everywhere:**
+
+- **Graviton and fleet types.** They are offered in the workspace, but Databricks publishes no pipeline price for them, and pipeline support is unverified.
+- **Photon.** It raises the DBU rate and does not speed up Python UDFs.
+- **PRO for Centrum.** It would save 31% per DBU, but only if the silver expectations became plain filters and lost their data-quality metrics.
+- **Declared retry limits.** Limits found set by hand on production were never exercised, because development mode does not retry. A limit of five update retries could stop ingest.
+
+## Conclusion
+
+Compute is chosen per role from measured load, not copied from one policy. Revisit Centrum's workers once the new architecture has run on long-lived clusters. If swap stays near zero there, general-purpose `m6id` workers are the next candidate. Revisit Centrum's driver if its CPU stays at its peak after the trigger intervals change.
