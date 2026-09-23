@@ -82,6 +82,41 @@ describe("CalibrationCoefficientLine", () => {
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ min: 0.1 }));
   });
 
+  it("drops a bound that is cleared or is not a number", async () => {
+    const { onChange, user } = renderLine({ type: "number", min: 0.1, max: 10 });
+
+    await user.click(screen.getByRole("button", { name: "iot.calibration.produces.min" }));
+    await user.clear(screen.getByRole("textbox", { name: "iot.calibration.produces.min" }));
+    await user.tab();
+    expect(onChange).toHaveBeenLastCalledWith(expect.not.objectContaining({ min: 0.1 }));
+
+    await user.click(screen.getByRole("button", { name: "iot.calibration.produces.max" }));
+    const max = screen.getByRole("textbox", { name: "iot.calibration.produces.max" });
+    await user.clear(max);
+    await user.type(max, "lots");
+    await user.tab();
+    expect(onChange).toHaveBeenLastCalledWith(expect.not.objectContaining({ max: 10 }));
+  });
+
+  it("resizes an array within what a device can hold, and ignores anything else", async () => {
+    const { onChange, user } = renderLine({ type: "number_array", length: 6 });
+
+    await user.click(screen.getByRole("button", { name: "iot.calibration.produces.entries" }));
+    let length = screen.getByRole("textbox", { name: "iot.calibration.produces.entries" });
+    await user.clear(length);
+    await user.type(length, "10");
+    await user.tab();
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ length: 10 }));
+
+    onChange.mockClear();
+    await user.click(screen.getByRole("button", { name: "iot.calibration.produces.entries" }));
+    length = screen.getByRole("textbox", { name: "iot.calibration.produces.entries" });
+    await user.clear(length);
+    await user.type(length, "0");
+    await user.tab();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("asks for the array's length once it is retyped as one", async () => {
     const { onChange, user } = renderLine();
 
