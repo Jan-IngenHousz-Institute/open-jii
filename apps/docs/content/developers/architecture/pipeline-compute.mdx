@@ -15,7 +15,7 @@ Work through these in order. Each step narrows the candidates before the next on
 
 1. **Size for the code that will run.** Measure the architecture the new configuration will carry. Production may still run older code, and dev may be ahead of it or behind it. Write down which one you measured and in which direction it errs.
 2. **Measure on long-lived clusters.** Memory builds up over days, so a cluster that restarts every hour looks healthier than it is. The query at the end of this page reads `system.compute.node_timeline` per pipeline.
-3. **Read memory as swap and I/O wait, not as memory used.** Spark claims its heap when it starts, so memory used is always high and says nothing about headroom. Swap shows that a node is full. I/O wait shows whether it is paging actively.
+3. **Read memory as swap, not as memory used.** Spark claims its heap when it starts, so memory used is always high and says nothing about headroom. Swap shows that a node is full. I/O wait alongside it suggests the node is paging, but disk and network work raise I/O wait too, so it only counts together with swap.
 4. **Classify each role.** A worker is CPU-bound, memory-bound, or waiting on something outside the cluster. The driver runs no tasks: its memory grows with the number of flows, and its CPU plans every micro-batch.
 5. **Fix memory per core first.** Python UDF workers run outside Spark's heap, one per running task, and they cannot spill to disk. More cores on the same memory means more of them. Memory per core decides the family: `r` gives 8 GB per core, `m` 4 GB and `c` 2 GB.
 6. **Then pick the generation.** DBUs are most of a pipeline's bill, and Databricks raises the DBU rate per core by about 10% with each generation. AWS's claims of better price-performance per generation are measured per EC2 dollar, so they do not settle the choice. Decide on how often spot capacity is reclaimed in `eu-central-1`, whether a local NVMe variant exists and the workspace runs the disk cache on it, and on core speed only where the role is CPU-bound.
@@ -24,7 +24,7 @@ Work through these in order. Each step narrows the candidates before the next on
 9. **Keep drivers on-demand and without local NVMe.** Losing the driver stops the update, and a driver never uses local disk. Size its memory for the flows and its cores for the peaks.
 10. **Let the features decide the edition.** AUTO CDC needs PRO, and expectations need ADVANCED. A pipeline with neither runs on CORE, which costs 44% less per DBU than ADVANCED.
 11. **Keep spot for workers only.** Workers run on spot with fallback to on-demand, behind an on-demand driver. Production Centrum keeps at least two workers because it carries ingest, so one reclaimed node does not stall every flow. Dev and the macro pipeline accept that stall, because a few minutes of delay there costs less than a second node.
-12. **Roll out on dev first and gate production on the code.** Watch dev for at least a day. Terraform applies before the bundle deploys, and a running continuous pipeline keeps its code until it restarts, so production must not get compute sized for code it is not yet running.
+12. **Roll out on dev first and gate production on the code.** Watch dev for at least a day. Terraform applies before the bundle deploys, and a continuous pipeline restarts by itself when its settings change, so it comes back on the new compute running its old code. Restart it again once the bundle has deployed. If the apply also adds notebooks to the pipeline, that first restart fails until the bundle uploads them. Production must not get compute sized for code it is not yet running.
 
 ## Where the numbers come from
 
@@ -50,9 +50,10 @@ SELECT t.driver,
   round(avg(t.mem_swap_percent), 1) AS swap_avg,
   round(max(t.mem_swap_percent), 1) AS swap_max
 FROM system.compute.node_timeline t
-JOIN (SELECT DISTINCT cluster_id, cluster_name FROM system.compute.clusters) c USING (cluster_id)
+JOIN (
+  SELECT DISTINCT cluster_id FROM system.compute.clusters WHERE cluster_name LIKE '%<pipeline id>%'
+) c USING (cluster_id)
 WHERE t.start_time >= current_timestamp() - INTERVAL 7 DAYS
-  AND c.cluster_name LIKE '%<pipeline id>%'
 GROUP BY t.driver
 ```
 

@@ -64,7 +64,7 @@ Each pipeline has its own policy. It pins the node types, spot with fallback to 
 - Centrum costs about 6% more at the same worker count. The saving on Centrum has to come from the lighter architecture, not from the nodes.
 - The disk cache's benefit, and the per-generation speed gains, are vendor claims rather than measurements on our workload.
 - Dev and production run different macro worker types, because their sandboxes allow different concurrency.
-- Whether editing a running continuous pipeline's settings restarts it is unverified, so a restart has to be planned for each production promotion.
+- A continuous pipeline restarts by itself when its settings change, so the Terraform apply restarts both pipelines on their old code before the bundle deploys. Each promotion needs a second restart once the bundle is in place.
 
 ## Alternatives Considered
 
