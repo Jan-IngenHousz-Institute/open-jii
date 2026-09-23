@@ -394,9 +394,22 @@ module "node_cluster_policy" {
       value = "r5d.large"
     }
     num_workers = {
-      type     = "range"
-      minValue = 1
-      maxValue = 4
+      type       = "range"
+      minValue   = 1
+      maxValue   = 4
+      isOptional = true
+    }
+    "autoscale.min_workers" = {
+      type       = "range"
+      minValue   = 2
+      maxValue   = 6
+      isOptional = true
+    }
+    "autoscale.max_workers" = {
+      type       = "range"
+      minValue   = 2
+      maxValue   = 6
+      isOptional = true
     }
   })
 
@@ -698,6 +711,7 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/hooks",
   ]
 
+  # Use Databricks per-flow trigger defaults; notebooks may override individual tables.
   configuration = {
     "CATALOG_NAME"                    = module.databricks_catalog.catalog_name
     "BRONZE_TABLE"                    = "raw_data"
@@ -708,7 +722,6 @@ module "centrum_pipeline" {
     "CHECKPOINT_PATH"                 = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
     "ENVIRONMENT"                     = upper(var.environment)
     "MONITORING_SLACK_CHANNEL"        = var.slack_channel
-    "pipelines.trigger.interval"      = "120 seconds"
     "LARGE_IOT_S3_PATH"               = "s3://${module.large_iot_s3.bucket_id}/"
     "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust the r5d.large driver
@@ -723,7 +736,9 @@ module "centrum_pipeline" {
   serverless       = false
 
   node_type_id = "r5d.large"
-  num_workers  = 4
+  autoscale    = true
+  min_workers  = 2
+  max_workers  = 6
   policy_id    = module.node_cluster_policy.policy_id
 
   run_as = {
