@@ -78,7 +78,6 @@ resource "databricks_pipeline" "this" {
     "pipeline.name" : var.name,
     "pipeline.schema" : var.schema_name,
     "pipeline.logLevel" : var.log_level,
-    "pipeline.trigger.retry_on_failure" : "false",
   }, var.configuration)
 
   # Development mode can be toggled

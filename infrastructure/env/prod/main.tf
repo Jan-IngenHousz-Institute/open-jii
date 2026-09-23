@@ -822,13 +822,18 @@ module "centrum_pipeline" {
     "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust a 16 GB driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
+    # The retry limits set live on production, declared so an apply keeps them.
+    # Unset, production mode restarts a continuous pipeline without limit.
+    "pipelines.maxFlowRetryAttempts"   = "20"
+    "pipelines.numUpdateRetryAttempts" = "5"
   }
 
   # AUTO CDC needs PRO, and the silver expectations need ADVANCED.
   edition = "ADVANCED"
 
-  continuous_mode  = true
-  development_mode = true
+  continuous_mode = true
+  # Production mode restarts the cluster and retries after a recoverable failure.
+  development_mode = false
   serverless       = false
 
   node_type_id        = "m6id.xlarge"
@@ -892,7 +897,7 @@ module "macro_execution_pipeline" {
   edition = "CORE"
 
   continuous_mode  = true
-  development_mode = true
+  development_mode = false
   serverless       = false
 
   node_type_id        = "m5a.xlarge"
