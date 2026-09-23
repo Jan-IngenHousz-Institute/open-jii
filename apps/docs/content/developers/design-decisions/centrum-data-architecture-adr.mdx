@@ -35,10 +35,10 @@ The durable boundaries are:
    normalized once in Silver, and are projected into shared Gold tables and
    enriched views. The pipeline is split into modules under
    `apps/data/src/pipelines/centrum/`, but those modules form one logical
-   pipeline rather than one deployment per experiment. Where a workload has to
-   be isolated for operational reasons it gets its own deployment writing into
-   the same schema, never its own schema and never one per experiment. Macro
-   execution is the one such split today.
+   pipeline rather than one deployment per experiment. Where a workload on
+   experiment data has to be isolated for operational reasons it gets its own
+   deployment writing into the same schema, never its own schema and never one
+   per experiment. Macro execution is the one such split today.
 2. **Experiment-oriented Gold data.** `experiment_raw_data`,
    `experiment_device_data`, `experiment_macro_data`, and
    `experiment_uploaded_data` keep stable experiment and entity identifiers.

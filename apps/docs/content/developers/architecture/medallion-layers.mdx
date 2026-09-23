@@ -16,7 +16,7 @@ The current data platform keeps all research data in one central Unity Catalog s
 | Gold           | `experiment_raw_data`, `experiment_device_data`, `experiment_devices`, `experiment_macro_data`, `experiment_uploaded_data`, `experiment_contributors`, `experiment_status`, `experiment_table_metadata`, and the incremental sources beneath them: `bridge_experiment_device`, `bridge_experiment_contributor`, `agg_experiment_device` | Produce experiment-oriented facts, device and contributor summaries, macro output, upload data, status, and query metadata.           |
 | Enriched views | `enriched_experiment_raw_data`, `enriched_experiment_macro_data`, `enriched_experiment_uploaded_data`                                                                                                                                                                                                                                   | Join display and user context for application-facing reads without duplicating it into every raw record.                              |
 
-The exact deployed names are configured through `apps/data/src/lib/openjii/openjii/centrum/runtime.py`; the pipeline definitions live under `apps/data/src/pipelines/centrum/`.
+The exact deployed names are configured through `apps/data/src/lib/openjii/openjii/centrum/runtime.py`; the pipeline definitions live under `apps/data/src/pipelines/centrum/`, and the macro pipeline's under `apps/data/src/pipelines/macros/`.
 
 ## Bronze: preserve provenance
 
@@ -40,9 +40,9 @@ Flexible result shapes use Databricks VARIANT values where the protocol or macro
 
 An environment where Centrum already owns these tables moves them to the macro pipeline instead of rebuilding them. Rebuilding would run every historical macro through the sandbox again. The macro pipeline must not run before the tables are reassigned, because it cannot define a table another pipeline owns.
 
-1. Stop the Centrum pipeline and wait until it has fully stopped. In dev, pause the ingestion scheduler job first.
-2. Apply the change that moves both notebooks from Centrum to the macro pipeline. In dev this creates the macro scheduler job, which runs at quarter past and quarter to the hour; pause it before it first fires. If the macro pipeline started when it was created, stop it.
-3. Reassign both tables to the macro pipeline:
+1. Before approving the deploy, stop the Centrum pipeline and wait until it has fully stopped. In dev, pause the ingestion scheduler job first. Centrum is the only ingest path, so measurements queue in Kinesis meanwhile; keep the window well inside the stream's retention, which is 72 hours in prod.
+2. Approve the deploy. It applies terraform, which moves both notebooks from Centrum to the macro pipeline, and deploys the notebooks afterwards. In dev it also creates the macro scheduler job, which runs at quarter past and quarter to the hour; pause it before it first fires. If the macro pipeline started when it was created, stop it, and confirm Centrum is still stopped.
+3. Reassign both tables to the macro pipeline. Databricks requires this to run as the owner and run-as principal of both pipelines, which here is the node service principal, from this workspace, on Databricks Runtime 16.3 or later:
 
    ```sql
    ALTER STREAMING TABLE <catalog>.centrum.experiment_macro_data
@@ -51,7 +51,7 @@ An environment where Centrum already owns these tables moves them to the macro p
      SET TBLPROPERTIES ("pipelines.pipelineId" = "<macro pipeline id>");
    ```
 
-4. Start the macro pipeline, then Centrum, then resume the schedulers.
+4. Once the notebook deploy has finished, start the macro pipeline, then Centrum, then resume the schedulers.
 
 Check the first macro update in `macro_execution_pipeline_event_log` before moving production. It should process only the rows that arrived since Centrum stopped. If it processes the whole of `experiment_raw_data`, the stream did not keep its progress through the move, and that has to be resolved before production.
 

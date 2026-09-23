@@ -783,6 +783,10 @@ module "macro_execution_pipeline" {
     "CATALOG_NAME"        = module.databricks_catalog.catalog_name
     "CENTRUM_SCHEMA_NAME" = "centrum"
     "ENVIRONMENT"         = upper(var.environment)
+    # The cadence both tables had inside Centrum. Unset, a continuous pipeline
+    # falls back to five seconds for the stream and one minute for the enriched
+    # view, which is a full recompute every time.
+    "pipelines.trigger.interval" = "120 seconds"
   }
 
   continuous_mode  = true
