@@ -21,7 +21,7 @@ import {
   getAnonymizedAvatarUrl,
 } from "../../../common/utils/profile-anonymization";
 import { findOwningOrgOwnerIds } from "../../../sharing/core/resource-staffing";
-import { JOIN_GRANT_ROLE } from "../join-grant";
+import { insertJoinGrant } from "../join-grant";
 import type {
   ExperimentJoinRequestDto,
   JoinRequestStatus,
@@ -169,17 +169,14 @@ export class ExperimentJoinRequestRepository {
           return false;
         }
 
-        await tx
-          .insert(resourceGrants)
-          .values({
-            resourceType: "experiment",
-            resourceId: experimentId,
-            granteeType: "user",
-            granteeId: requesterUserId,
-            role: JOIN_GRANT_ROLE,
-            createdBy: decidedBy,
-          })
-          .onConflictDoNothing();
+        // Return value ignored on purpose: an approval is decided by its claim on
+        // the request above, not by whether the grant row was new. Someone already
+        // holding a tier is still approved.
+        await insertJoinGrant(tx, {
+          experimentId,
+          userId: requesterUserId,
+          createdBy: decidedBy,
+        });
 
         return true;
       });

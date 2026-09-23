@@ -115,8 +115,7 @@ export function ExperimentDetailScreen() {
           <View className="min-w-0 flex-1">
             <View className="flex-row items-center gap-2">
               <Text
-                className="text-on-surface min-w-0 shrink"
-                style={{ fontFamily: "Poppins-Bold", fontSize: 17, lineHeight: 22 }}
+                className="text-on-surface font-poppins-bold min-w-0 shrink text-[17px] leading-[22px]"
                 numberOfLines={2}
               >
                 {experiment.name}
@@ -136,10 +135,7 @@ export function ExperimentDetailScreen() {
           <View className="mt-3 flex-row gap-2.5">
             {hasCollaborators ? (
               <View className="bg-surface flex-1 rounded-xl p-2.5">
-                <Text
-                  className="text-on-surface"
-                  style={{ fontFamily: "Poppins-Bold", fontSize: 16, lineHeight: 20 }}
-                >
+                <Text className="text-on-surface font-poppins-bold text-[16px] leading-[20px]">
                   {experiment.membersCount}
                 </Text>
                 <Text className="text-muted-body text-[11px]">
@@ -149,10 +145,7 @@ export function ExperimentDetailScreen() {
             ) : null}
             {hasLocations ? (
               <View className="bg-surface flex-1 rounded-xl p-2.5">
-                <Text
-                  className="text-on-surface"
-                  style={{ fontFamily: "Poppins-Bold", fontSize: 16, lineHeight: 20 }}
-                >
+                <Text className="text-on-surface font-poppins-bold text-[16px] leading-[20px]">
                   {locationCount}
                 </Text>
                 <Text className="text-muted-body text-[11px]">

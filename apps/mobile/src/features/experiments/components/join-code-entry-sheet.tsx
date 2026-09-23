@@ -55,7 +55,7 @@ export const JoinCodeEntrySheet = forwardRef<BottomSheetModal>(
         android_keyboardInputMode="adjustResize"
       >
         <BottomSheetView className="bg-card px-4" style={{ paddingBottom: insets.bottom + 16 }}>
-          <Text className="text-on-surface" style={{ fontFamily: "Poppins-Bold", fontSize: 17 }}>
+          <Text className="text-on-surface font-poppins-bold text-[17px]">
             {t("experiments:joinCode.enterTitle")}
           </Text>
           <Text className="text-muted-body mt-1 text-[12.5px]">

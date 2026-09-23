@@ -9,10 +9,7 @@ export function ExperimentUnavailable() {
 
   return (
     <View className="items-center px-8 py-16">
-      <Text
-        className="text-on-surface text-center"
-        style={{ fontFamily: "Poppins-Bold", fontSize: 17 }}
-      >
+      <Text className="text-on-surface font-poppins-bold text-center text-[17px]">
         {t("experiments:detail.unavailable")}
       </Text>
       <Text className="text-muted-body mt-2 text-center text-[13px]">

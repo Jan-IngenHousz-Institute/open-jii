@@ -5,6 +5,7 @@ import type { RedeemJoinCodeResponse } from "@repo/api/domains/experiment/join-c
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { insertJoinGrant } from "../../../core/join-grant";
 import { ExperimentJoinCodeRepository } from "../../../core/repositories/experiment-join-code.repository";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
 import { joinCodeNotFound, joinCodeRefusal } from "./join-code-validity";
@@ -103,7 +104,7 @@ export class RedeemJoinCodeUseCase {
       // `pending`, so an approval that committed in between is not overwritten.
       await this.joinRequestRepository.cancelPendingForUser(tx, experiment.id, userId, userId);
 
-      const granted = await this.joinCodeRepository.insertJoinGrant(tx, {
+      const granted = await insertJoinGrant(tx, {
         experimentId: experiment.id,
         userId,
         // Whoever made the code authorized the access, which is the whole audit trail.
