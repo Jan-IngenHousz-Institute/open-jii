@@ -1,16 +1,19 @@
 # Databricks notebook source
 # DBTITLE 1,Gold Layer - Experiment Device Data
-# Gold: the device aggregate joined to its registry-resolved device struct.
+# Gold: each device's latest attributes, joined to its measurement count and its
+# registry-resolved device struct.
 
 # COMMAND ----------
 import dlt
 from pyspark.sql import functions as F
 
 from openjii.centrum import (
-    AGG_EXPERIMENT_DEVICE_TABLE,
     EXPERIMENT_DEVICE_DATA_TABLE,
     EXPERIMENT_DEVICES_TABLE,
+    LATEST_EXPERIMENT_DEVICE_TABLE,
 )
+from openjii.centrum.runtime import CATALOG_NAME, METRICS_SCHEMA_NAME
+from openjii.metrics import EXPERIMENT_DEVICE_COUNTS_TABLE
 
 # COMMAND ----------
 
@@ -28,11 +31,10 @@ from openjii.centrum import (
     }
 )
 def experiment_device_data():
-    """Join only. The aggregate it used to perform now lives in
-    agg_experiment_device, which is what lets that side convert to a streaming
-    table instead of rescanning silver on every trigger.
+    """Joins only, over inputs of one row per device, so a refresh never touches
+    the measurements themselves.
     """
-    aggregated = dlt.read(AGG_EXPERIMENT_DEVICE_TABLE).withColumn(
+    aggregated = dlt.read(LATEST_EXPERIMENT_DEVICE_TABLE).withColumn(
         "id",
         F.abs(
             F.hash(
@@ -44,6 +46,9 @@ def experiment_device_data():
     )
     devices = dlt.read(EXPERIMENT_DEVICES_TABLE)
 
+    # Published by the metrics pipeline, so read by qualified name.
+    counts = spark.read.table(f"{CATALOG_NAME}.{METRICS_SCHEMA_NAME}.{EXPERIMENT_DEVICE_COUNTS_TABLE}")
+
     # Attach the registry-resolved device struct via the trusted client_id
     # (NULL for Cognito/unregistered rows; left join keeps every device row).
     return (
@@ -52,6 +57,13 @@ def experiment_device_data():
             devices,
             (aggregated.experiment_id == devices.experiment_id)
             & (aggregated.client_id == devices.client_id),
+            "left"
+        )
+        .join(
+            counts,
+            aggregated.experiment_id.eqNullSafe(counts.experiment_id)
+            & aggregated.device_id.eqNullSafe(counts.device_id)
+            & aggregated.device_firmware.eqNullSafe(counts.device_firmware),
             "left"
         )
         .select(
@@ -63,7 +75,7 @@ def experiment_device_data():
             aggregated.device_name,
             aggregated.device_version,
             aggregated.device_battery,
-            aggregated.total_measurements,
+            counts.total_measurements,
             aggregated.processed_timestamp,
             devices.device,
         )

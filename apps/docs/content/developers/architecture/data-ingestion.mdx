@@ -112,8 +112,7 @@ MQTT is at-least-once delivery. Consumers must not assume that receiving PUBACK 
 Centrum runs in continuous mode in both environments and uses Databricks' default
 trigger intervals: five seconds for streaming queries, including Kinesis ingestion;
 one minute for complete-refresh queries using only Delta inputs; and ten minutes for
-complete-refresh queries with non-Delta inputs. The device aggregate retains its
-explicit ten-minute interval. Production compute autoscales between two and six
+complete-refresh queries with non-Delta inputs. Production compute autoscales between two and six
 workers; dev runs on one fixed worker. Processing time can exceed the trigger
 interval, so this is not a five-second end-to-end latency guarantee.
 
