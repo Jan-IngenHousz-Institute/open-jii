@@ -3,8 +3,8 @@
 # Gold: the experiment-to-client_id pairs that have published data. Many-to-many,
 # so a bridge rather than a dimension.
 #
-# A streaming table rather than a materialized view. This pipeline is continuous
-# and not serverless, and a materialized view in that configuration is always
+# A streaming table rather than a materialized view. This pipeline is not
+# serverless, and a materialized view outside a serverless pipeline is always
 # fully recomputed, so the distinct over silver ran end to end on every trigger.
 # AUTO CDC keyed on the pair keeps the same set by merging only the rows a
 # trigger brought in. The registry lookup that used to sit above the distinct is

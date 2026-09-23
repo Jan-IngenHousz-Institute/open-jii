@@ -1,8 +1,8 @@
 """Runtime configuration read from ``spark.conf`` at import time.
 
 Only safe to import inside the running pipeline (or any other context with an
-active Spark session); see ``openjii.centrum.runtime`` for the rationale.
-Tests should import ``openjii.macros`` instead.
+active Spark session); see ``openjii.centrum.runtime`` for the rationale. Tests
+that load a macro notebook stub this module in ``sys.modules``.
 """
 
 from __future__ import annotations

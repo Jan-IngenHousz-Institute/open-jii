@@ -1,5 +1,5 @@
-"""This pipeline is continuous and not serverless, so every materialized view in
-it is fully recomputed on every trigger. Three gold tables used to sit in a shape
+"""This pipeline is not serverless, so every materialized view in it is fully
+recomputed on every trigger. Three gold tables used to sit in a shape
 that could not convert: a registry or profile lookup above a distinct, and a join
 above a groupBy. Each was split so the aggregate stood alone.
 

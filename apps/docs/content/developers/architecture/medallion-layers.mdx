@@ -40,8 +40,8 @@ Flexible result shapes use Databricks VARIANT values where the protocol or macro
 
 An environment where Centrum already owns these tables moves them to the macro pipeline instead of rebuilding them. Rebuilding would run every historical macro through the sandbox again. The macro pipeline must not run before the tables are reassigned, because it cannot define a table another pipeline owns.
 
-1. Stop the Centrum pipeline and wait until it has fully stopped. In dev, pause both scheduler jobs first.
-2. Apply the change that moves both notebooks from Centrum to the macro pipeline.
+1. Stop the Centrum pipeline and wait until it has fully stopped. In dev, pause the ingestion scheduler job first.
+2. Apply the change that moves both notebooks from Centrum to the macro pipeline. In dev this creates the macro scheduler job, which runs at quarter past and quarter to the hour; pause it before it first fires. If the macro pipeline started when it was created, stop it.
 3. Reassign both tables to the macro pipeline:
 
    ```sql
@@ -53,7 +53,7 @@ An environment where Centrum already owns these tables moves them to the macro p
 
 4. Start the macro pipeline, then Centrum, then resume the schedulers.
 
-Check the first macro update in the event log before moving production. It should process only the rows that arrived since Centrum stopped. If it processes the whole of `experiment_raw_data`, the stream did not keep its progress through the move, and that has to be resolved before production.
+Check the first macro update in `macro_execution_pipeline_event_log` before moving production. It should process only the rows that arrived since Centrum stopped. If it processes the whole of `experiment_raw_data`, the stream did not keep its progress through the move, and that has to be resolved before production.
 
 ## Why the layers matter
 

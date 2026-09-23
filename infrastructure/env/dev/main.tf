@@ -895,6 +895,12 @@ module "macro_execution_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/enriched_experiment_macro_data",
   ]
 
+  event_log = {
+    catalog = module.databricks_catalog.catalog_name
+    schema  = "centrum"
+    name    = "macro_execution_pipeline_event_log"
+  }
+
   configuration = {
     "CATALOG_NAME"        = module.databricks_catalog.catalog_name
     "CENTRUM_SCHEMA_NAME" = "centrum"

@@ -49,9 +49,10 @@ class BackendClient:
     WEBHOOK_MACRO_BATCH_PATH = "/api/v1/macros/execute-batch"
     WEBHOOK_IOT_REGISTRY_PATH = "/api/v1/iot/devices/registry"
 
-    # Each macro group becomes one synchronous Lambda invocation, and AWS caps
-    # that request payload at 6 MB. A single outsized sample breaches it well
-    # under max_batch_size, so chunks are bounded by bytes as well as by count.
+    # Keeps the request under the backend's 10 MB JSON body limit, so one
+    # outsized sample fails alone instead of failing every item in its chunk.
+    # It does not bound the Lambda invocation: the backend restores workbook
+    # context after this point, which can copy each measurement again.
     MAX_BATCH_BYTES = 4 * 1024 * 1024
 
     def __init__(self, base_url: str, api_key_id: str, webhook_secret: str, timeout: int = 30):

@@ -6,9 +6,8 @@
 # Runs in its own pipeline because the sandbox call is sequential HTTP from a
 # Spark task, and sharing the ingest pipeline's compute let those tasks hold the
 # slots the Kinesis reader needs. The table was moved here from the Centrum
-# pipeline rather than recreated, so its name, its query and its streaming
-# progress carry over. Keep the query as it was: a changed plan can stop the
-# stream resuming from the progress it moved with.
+# pipeline rather than recreated. Keep the query as it was: a changed streaming
+# plan can invalidate the progress the stream resumes from.
 
 # COMMAND ----------
 import dlt

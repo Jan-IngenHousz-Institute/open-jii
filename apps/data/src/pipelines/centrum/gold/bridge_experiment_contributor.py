@@ -4,8 +4,8 @@
 # so a bridge rather than a dimension.
 #
 # A streaming table rather than a materialized view, for the same reason as the
-# device bridge: a materialized view in a continuous non-serverless pipeline is
-# always fully recomputed, so the distinct over silver ran end to end on every
+# device bridge: a materialized view in a non-serverless pipeline is always
+# fully recomputed, so the distinct over silver ran end to end on every
 # trigger. The profile lookup that used to sit above the distinct is downstream,
 # in experiment_contributors.
 
