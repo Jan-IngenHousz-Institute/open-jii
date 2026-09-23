@@ -166,3 +166,25 @@ describe("WorkbookDraftEditor server reconciliation", () => {
     expect(hasCell("added-elsewhere")).toBe(false);
   });
 });
+
+describe("WorkbookDraftEditor access", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    updateWorkbook.mockClear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("never saves a change made without update access", async () => {
+    const cells: WorkbookCell[] = [createProtocolCell({ id: "cell-1" })];
+    render(<WorkbookDraftEditor id="wb-1" initialCells={cells} canEdit={false} name="wb" />);
+
+    screen.getByRole("button", { name: "local edit" }).click();
+    await waitFor(() => expect(hasCell("local-edit")).toBe(true));
+    await vi.advanceTimersByTimeAsync(3000);
+
+    expect(updateWorkbook).not.toHaveBeenCalled();
+  });
+});
