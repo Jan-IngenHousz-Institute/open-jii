@@ -40,7 +40,7 @@ The durable boundaries are:
    the same schema, never its own schema and never one per experiment. Macro
    execution is the one such split today.
 2. **Experiment-oriented Gold data.** `experiment_raw_data`,
-   `experiment_device_data`, `fact_macro_result`, and
+   `experiment_device_data`, `experiment_macro_data`, and
    `experiment_uploaded_data` keep stable experiment and entity identifiers.
    Application reads select the shared physical table and filter it by the
    authorized experiment.

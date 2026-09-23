@@ -10,19 +10,3 @@ pipeline those tasks held its slots for hours and ingestion stalled behind them.
 The table it publishes is centrum-schema gold either way: a compute boundary does
 not get its own namespace.
 """
-
-from .constants import (
-    EXPERIMENT_RAW_DATA_TABLE,
-    FACT_MACRO_RESULT_TABLE,
-    LEGACY_MACRO_DATA_TABLE,
-    MACRO_RESULT_BACKFILL_FLOW,
-    MACRO_RESULT_LIVE_FLOW,
-)
-
-__all__ = [
-    "EXPERIMENT_RAW_DATA_TABLE",
-    "FACT_MACRO_RESULT_TABLE",
-    "LEGACY_MACRO_DATA_TABLE",
-    "MACRO_RESULT_BACKFILL_FLOW",
-    "MACRO_RESULT_LIVE_FLOW",
-]

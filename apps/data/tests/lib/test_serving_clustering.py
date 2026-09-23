@@ -12,19 +12,19 @@ from pathlib import Path
 
 import pytest
 
-_CENTRUM = Path(__file__).parents[2] / "src/pipelines/centrum"
+_PIPELINES = Path(__file__).parents[2] / "src/pipelines"
 
 _SERVING_TABLE_FILES = [
-    "enriched/enriched_experiment_raw_data.py",
-    "enriched/enriched_experiment_macro_data.py",
-    "enriched/enriched_experiment_uploaded_data.py",
-    "gold/experiment_device_data.py",
+    "centrum/enriched/enriched_experiment_raw_data.py",
+    "macros/enriched_experiment_macro_data.py",
+    "centrum/enriched/enriched_experiment_uploaded_data.py",
+    "centrum/gold/experiment_device_data.py",
 ]
 
 
 def _table_kwargs(relative_path: str) -> dict[str, ast.expr]:
     """The keyword arguments of the file's single ``dlt.table`` call."""
-    module = ast.parse((_CENTRUM / relative_path).read_text())
+    module = ast.parse((_PIPELINES / relative_path).read_text())
     # Qualified, because these bodies also call spark.table.
     calls = [
         node

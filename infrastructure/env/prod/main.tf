@@ -693,7 +693,6 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/sources",
     # enriched
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/enriched/enriched_experiment_raw_data",
-    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/enriched/enriched_experiment_macro_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/enriched/enriched_experiment_uploaded_data",
     # event hooks
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/hooks",
@@ -756,10 +755,11 @@ module "centrum_pipeline" {
 }
 
 # Macro execution is a separate deployment, not a separate domain: it publishes
-# fact_macro_result into centrum like any other gold table. It runs on its own
-# compute because the sandbox call is sequential HTTP from a Spark task, and
-# sharing centrum's cluster meant those tasks held the slots the Kinesis reader
-# needs for its prefetch job. In September that starved ingestion for days.
+# experiment_macro_data and its enriched view into centrum like any other gold
+# table. It runs on its own compute because the sandbox call is sequential HTTP
+# from a Spark task, and sharing centrum's cluster meant those tasks held the
+# slots the Kinesis reader needs for its prefetch job. Both tables were moved
+# here from the Centrum pipeline; see the migration in the data architecture docs. In September that starved ingestion for days.
 module "macro_execution_pipeline" {
   source = "../../modules/databricks/pipeline"
 
@@ -769,13 +769,13 @@ module "macro_execution_pipeline" {
 
   notebook_paths = [
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/macros/experiment_macro_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/macros/enriched_experiment_macro_data",
   ]
 
   configuration = {
-    "CATALOG_NAME"           = module.databricks_catalog.catalog_name
-    "CENTRUM_SCHEMA_NAME"    = "centrum"
-    "ENVIRONMENT"            = upper(var.environment)
-    "MACRO_BACKFILL_CUTOVER" = var.macro_backfill_cutover
+    "CATALOG_NAME"        = module.databricks_catalog.catalog_name
+    "CENTRUM_SCHEMA_NAME" = "centrum"
+    "ENVIRONMENT"         = upper(var.environment)
   }
 
   continuous_mode  = true

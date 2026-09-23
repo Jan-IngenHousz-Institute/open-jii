@@ -15,6 +15,7 @@ from openjii.centrum import (
     EXPERIMENT_TABLE_METADATA,
     METADATA_SOURCE_TABLE,
 )
+from openjii.centrum.runtime import CATALOG_NAME
 
 # COMMAND ----------
 
@@ -52,28 +53,6 @@ def experiment_table_metadata():
         .groupBy("experiment_id")
         .agg(
             F.expr("nullif(schema_of_variant_agg(_row), 'VOID')").alias("custom_metadata_schema")
-        )
-    )
-
-    macro_metadata = (
-        dlt.read(ENRICHED_MACRO_DATA_VIEW)
-        .groupBy("experiment_id", "macro_id")
-        .agg(
-            F.count("*").alias("row_count"),
-            F.expr("nullif(schema_of_variant_agg(macro_output), 'VOID')").alias("macro_schema"),
-            F.expr("nullif(schema_of_variant_agg(questions_data), 'VOID')").alias("questions_schema")
-        )
-        .join(custom_metadata_schemas, "experiment_id", "left")
-        .select(
-            F.col("experiment_id"),
-            F.col("macro_id").alias("identifier"),
-            F.lit("macro").alias("table_type"),
-            F.lit(None).cast("string").alias("display_name"),
-            F.col("row_count"),
-            F.col("macro_schema"),
-            F.col("questions_schema"),
-            F.col("custom_metadata_schema"),
-            F.lit(None).cast("string").alias("upload_schema"),
         )
     )
 
@@ -138,9 +117,35 @@ def experiment_table_metadata():
         )
     )
 
-    return (
-        macro_metadata
-        .unionByName(raw_data_metadata)
-        .unionByName(device_metadata)
-        .unionByName(upload_metadata)
+    metadata = raw_data_metadata.unionByName(device_metadata).unionByName(upload_metadata)
+
+    # The macro pipeline publishes this view, and on a fresh environment it has
+    # not run yet when this pipeline first does. Reading a missing table fails
+    # when the frame is defined, so the macro part is only built once it exists.
+    macro_view = f"{CATALOG_NAME}.centrum.{ENRICHED_MACRO_DATA_VIEW}"
+    if not spark.catalog.tableExists(macro_view):
+        return metadata
+
+    macro_metadata = (
+        spark.read.table(macro_view)
+        .groupBy("experiment_id", "macro_id")
+        .agg(
+            F.count("*").alias("row_count"),
+            F.expr("nullif(schema_of_variant_agg(macro_output), 'VOID')").alias("macro_schema"),
+            F.expr("nullif(schema_of_variant_agg(questions_data), 'VOID')").alias("questions_schema")
+        )
+        .join(custom_metadata_schemas, "experiment_id", "left")
+        .select(
+            F.col("experiment_id"),
+            F.col("macro_id").alias("identifier"),
+            F.lit("macro").alias("table_type"),
+            F.lit(None).cast("string").alias("display_name"),
+            F.col("row_count"),
+            F.col("macro_schema"),
+            F.col("questions_schema"),
+            F.col("custom_metadata_schema"),
+            F.lit(None).cast("string").alias("upload_schema"),
+        )
     )
+
+    return macro_metadata.unionByName(metadata)

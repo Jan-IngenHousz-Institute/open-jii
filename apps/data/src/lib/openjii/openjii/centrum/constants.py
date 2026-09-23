@@ -17,11 +17,6 @@ EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
 EXPERIMENT_DEVICE_DATA_TABLE = "experiment_device_data"
 EXPERIMENT_MACRO_DATA_TABLE = "experiment_macro_data"
 
-# Macro results, published by the macro-execution pipeline rather than this one.
-# First table on the dimensional naming: one row per measurement per macro, so a
-# fact. The rest of the layer follows in the rename, and `fact_` is load-bearing:
-# an aggregate never carries a dimension's name again.
-FACT_MACRO_RESULT_TABLE = "fact_macro_result"
 EXPERIMENT_CONTRIBUTORS_TABLE = "experiment_contributors"
 EXPERIMENT_DEVICES_TABLE = "experiment_devices"
 EXPERIMENT_TABLE_METADATA = "experiment_table_metadata"

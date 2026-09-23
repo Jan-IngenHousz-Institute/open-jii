@@ -248,14 +248,3 @@ variable "data_platform_sp_application_id" {
   type        = string
   default     = "122ea6e5-a082-45b5-9df6-ef5482868fdc"
 }
-
-variable "macro_backfill_cutover" {
-  description = <<-EOT
-    Timestamp at which the centrum-owned experiment_macro_data stopped being
-    written, as `yyyy-MM-ddTHH:mm:ss`. The macro pipeline's live flow reads
-    experiment_raw_data from here forward and the one-time backfill covers
-    everything before it. No default: picking this is a deliberate cutover
-    decision, and a wrong value either duplicates history or skips rows.
-  EOT
-  type        = string
-}

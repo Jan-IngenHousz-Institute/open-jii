@@ -717,7 +717,6 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/sources",
     # enriched
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/enriched/enriched_experiment_raw_data",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/enriched/enriched_experiment_macro_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/enriched/enriched_experiment_uploaded_data",
     # event hooks
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/hooks",
@@ -810,14 +809,6 @@ module "pipeline_scheduler" {
       key         = "trigger_centrum_pipeline"
       task_type   = "pipeline"
       pipeline_id = module.centrum_pipeline.pipeline_id
-    },
-    # Macro execution reads experiment_raw_data, so it follows rather than runs
-    # beside. Prod needs no equivalent: both pipelines are continuous there.
-    {
-      key         = "trigger_macro_execution_pipeline"
-      task_type   = "pipeline"
-      pipeline_id = module.macro_execution_pipeline.pipeline_id
-      depends_on  = "trigger_centrum_pipeline"
     }
   ]
 
@@ -832,14 +823,66 @@ module "pipeline_scheduler" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.centrum_pipeline, module.macro_execution_pipeline]
+  depends_on = [module.centrum_pipeline]
+}
+
+# Macros get their own job. In the same job as Centrum, a macro update running
+# for hours kept that job active, and max_concurrent_runs = 1 then skipped the
+# next ingestion runs. The macro pipeline reads experiment_raw_data as a stream,
+# so it needs no ordering against Centrum: each run picks up whatever arrived.
+# Offset by a quarter hour so it usually starts after an ingestion run lands.
+# Prod needs neither job: both pipelines are continuous there.
+module "macro_pipeline_scheduler" {
+  source = "../../modules/databricks/job"
+
+  name        = "Macro-Pipeline-Scheduler-DEV"
+  description = "Runs macro execution on its own cadence, independent of ingestion"
+
+  schedule = "0 15/30 6-18 ? * MON-FRI"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key         = "trigger_macro_execution_pipeline"
+      task_type   = "pipeline"
+      pipeline_id = module.macro_execution_pipeline.pipeline_id
+    }
+  ]
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.macro_execution_pipeline]
 }
 
 # Macro execution is a separate deployment, not a separate domain: it publishes
-# fact_macro_result into centrum like any other gold table. It runs on its own
-# compute because the sandbox call is sequential HTTP from a Spark task, and
-# sharing centrum's cluster meant those tasks held the slots the Kinesis reader
-# needs for its prefetch job.
+# experiment_macro_data and its enriched view into centrum like any other gold
+# table. It runs on its own compute because the sandbox call is sequential HTTP
+# from a Spark task, and sharing centrum's cluster meant those tasks held the
+# slots the Kinesis reader needs for its prefetch job. Both tables were moved
+# here from the Centrum pipeline; see the migration in the data architecture docs.
 module "macro_execution_pipeline" {
   source = "../../modules/databricks/pipeline"
 
@@ -849,13 +892,13 @@ module "macro_execution_pipeline" {
 
   notebook_paths = [
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/experiment_macro_data",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/enriched_experiment_macro_data",
   ]
 
   configuration = {
-    "CATALOG_NAME"           = module.databricks_catalog.catalog_name
-    "CENTRUM_SCHEMA_NAME"    = "centrum"
-    "ENVIRONMENT"            = var.environment
-    "MACRO_BACKFILL_CUTOVER" = var.macro_backfill_cutover
+    "CATALOG_NAME"        = module.databricks_catalog.catalog_name
+    "CENTRUM_SCHEMA_NAME" = "centrum"
+    "ENVIRONMENT"         = var.environment
   }
 
   continuous_mode  = false

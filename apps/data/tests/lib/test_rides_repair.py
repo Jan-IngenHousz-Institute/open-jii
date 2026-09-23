@@ -56,8 +56,8 @@ def test_repair_targets_the_table_the_macro_pipeline_writes() -> None:
     unknown table is silently skipped, so the de-interleave would stop applying
     with no error and unphysical NPQt would land in gold again."""
     from data_repair.manifest import list_repairs
-    from openjii.centrum import FACT_MACRO_RESULT_TABLE
+    from openjii.centrum import EXPERIMENT_MACRO_DATA_TABLE
 
     rides = [r for r in list_repairs() if r.issue == "OJD-571 / GH#1056"]
 
-    assert [r.table for r in rides] == [FACT_MACRO_RESULT_TABLE]
+    assert [r.table for r in rides] == [EXPERIMENT_MACRO_DATA_TABLE]

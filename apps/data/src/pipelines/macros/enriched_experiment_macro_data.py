@@ -2,6 +2,11 @@
 # DBTITLE 1,Enriched Layer - Experiment Macro Data
 # Enriched: experiment_macro_data joined with contributors, annotations, and
 # custom metadata. Adds local-time columns derived from timezone.
+#
+# Lives in the macro pipeline beside the table it enriches. In the Centrum
+# pipeline it would make Centrum depend on this pipeline's output while this
+# pipeline depends on Centrum's, and a fresh environment could run neither.
+# The contributor, device, annotation and metadata tables come from Centrum.
 
 # COMMAND ----------
 import dlt
@@ -15,9 +20,10 @@ from openjii.centrum import (
     ENRICHED_MACRO_DATA_VIEW,
     EXPERIMENT_CONTRIBUTORS_TABLE,
     EXPERIMENT_DEVICES_TABLE,
-    FACT_MACRO_RESULT_TABLE,
+    EXPERIMENT_MACRO_DATA_TABLE,
     METADATA_SOURCE_TABLE,
 )
+from openjii.macros.runtime import centrum_table
 
 # COMMAND ----------
 
@@ -38,17 +44,11 @@ from openjii.centrum import (
 )
 def enriched_experiment_macro_data():
     """Enriched macro data with user profiles, annotations, and user metadata."""
-    # Same schema, but the macro-execution pipeline owns it now, and dlt.read
-    # only resolves datasets declared in this one. Read the catalog off the
-    # session rather than openjii.centrum.runtime: that module requires six
-    # confs this file has no use for, and importing it makes the notebook
-    # unloadable in a test.
-    catalog = spark.conf.get("CATALOG_NAME")
-    macro_data = spark.read.table(f"{catalog}.centrum.{FACT_MACRO_RESULT_TABLE}")
-    contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
-    devices = dlt.read(EXPERIMENT_DEVICES_TABLE)
-    annotations_source = dlt.read(ANNOTATIONS_SOURCE_TABLE)
-    metadata_source = dlt.read(METADATA_SOURCE_TABLE)
+    macro_data = dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
+    contributors = spark.read.table(centrum_table(EXPERIMENT_CONTRIBUTORS_TABLE))
+    devices = spark.read.table(centrum_table(EXPERIMENT_DEVICES_TABLE))
+    annotations_source = spark.read.table(centrum_table(ANNOTATIONS_SOURCE_TABLE))
+    metadata_source = spark.read.table(centrum_table(METADATA_SOURCE_TABLE))
 
     enriched = (
         macro_data

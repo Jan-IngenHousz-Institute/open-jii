@@ -165,7 +165,7 @@ This is a read-time boundary, not an ingestion transformation. It does not
 rewrite MQTT payloads, source measurement columns, workbook output cells, or
 mobile upload payloads. Canonical projection is used when a host exposes a value
 to macro `json`, builds macro `ctx`, or resolves a workbook branch field.
-Databricks writes macro results separately to `fact_macro_result`; it does
+Databricks writes macro results separately to `experiment_macro_data`; it does
 not replace the source measurement.
 
 Language sandboxes receive the value prepared by their host. There is no

@@ -83,9 +83,7 @@ def _reinvert_pam_udf(data: pd.Series) -> pd.Series:
 
 
 @inline_repair(
-    # Matches openjii.centrum.FACT_MACRO_RESULT_TABLE, spelled out because this
-    # package does not depend on openjii. test_rides_repair pins the two together.
-    table="fact_macro_result",
+    table="experiment_macro_data",
     issue="OJD-571 / GH#1056",
     description=(
         "RIDES 2.0/2.1 in-place de-interleave of PAM.data_raw. Inverse "
