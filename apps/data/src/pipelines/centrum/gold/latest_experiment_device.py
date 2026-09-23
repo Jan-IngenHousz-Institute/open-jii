@@ -7,8 +7,8 @@
 # A streaming table rather than a materialized view, which outside a serverless
 # pipeline would aggregate all of silver on every trigger. AUTO CDC keeps the
 # newest row per key from the rows a trigger brought in, so the attributes are the
-# latest reported. It cannot sum, so the measurement count comes from the metrics
-# pipeline's experiment_device_counts instead.
+# latest reported. It cannot sum, so the experiment_device_data view counts the
+# measurements when someone reads.
 
 # COMMAND ----------
 import dlt

@@ -35,6 +35,12 @@ LATEST_EXPERIMENT_DEVICE_TABLE = "latest_experiment_device"
 LATEST_DEVICE_DATA_TABLE = "latest_device_data"
 LATEST_DEVICE_EVENT_TABLE = "latest_device_event"
 
+# One sample per distinct schema of a VARIANT column, so the metadata table
+# infers schemas without reading every row.
+EXPERIMENT_RAW_DATA_SCHEMAS_TABLE = "experiment_raw_data_schemas"
+EXPERIMENT_UPLOADED_DATA_SCHEMAS_TABLE = "experiment_uploaded_data_schemas"
+EXPERIMENT_MACRO_DATA_SCHEMAS_TABLE = "experiment_macro_data_schemas"
+
 # Enriched (gold)
 ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
 ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"

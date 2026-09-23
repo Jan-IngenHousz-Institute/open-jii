@@ -20,10 +20,6 @@ EXPERIMENT_CONTRIBUTORS_WINDOW_TABLE = "experiment_contributors_window"
 EXPERIMENT_DEVICES_WINDOW_TABLE = "experiment_devices_window"
 DAILY_ACTIVITY_BY_RESOURCE_TABLE = "daily_activity_by_resource"
 
-# Counts that Centrum's gold tables read back. A count needs a view, and only on
-# this serverless pipeline can a view refresh incrementally.
-EXPERIMENT_DEVICE_COUNTS_TABLE = "experiment_device_counts"
-
 # Ops tables: internal health signals read by the heartbeat export. Every row
 # in the silence table is a device id, so neither table may reach the public
 # endpoint; the prefix is what an allowlist keys on.
