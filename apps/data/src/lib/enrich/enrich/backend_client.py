@@ -8,8 +8,10 @@ from Databricks pipelines.
 import hashlib
 import hmac
 import json
+import threading
 import time
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from urllib.parse import urljoin
 
@@ -24,6 +26,14 @@ import requests
 # so a larger chunk buys no more time. Raising this needs per-macro output
 # sizing, not a larger constant.
 DEFAULT_MACRO_BATCH_SIZE = 25
+
+# Macro requests one task keeps in flight. A task used to wait on each request in
+# turn, holding its slot while the sandbox ran. The macro pipeline runs one task
+# per core, four in production, and each request fans out to one sandbox
+# invocation per macro group. The sandbox has 20 reserved executions in
+# production and the backend retries a throttled invocation, so three per task
+# leaves room for requests spanning several groups and for macro runs from the app.
+MACRO_REQUESTS_IN_FLIGHT = 3
 
 
 class BackendIntegrationError(Exception):
@@ -70,11 +80,22 @@ class BackendClient:
         self.api_key_id = api_key_id
         self.webhook_secret = webhook_secret
         self.timeout = timeout
-        self.session = self._create_session()
+        # A requests.Session is not guaranteed to be thread-safe, and macro
+        # requests are sent from several threads, so each thread gets its own.
+        self._sessions = threading.local()
+        # Lives as long as the client, so its threads keep their sessions and
+        # connections from one UDF batch to the next.
+        self._macro_requests = ThreadPoolExecutor(
+            max_workers=MACRO_REQUESTS_IN_FLIGHT, thread_name_prefix="macro-request"
+        )
 
-    def _create_session(self) -> requests.Session:
-        """Create HTTP session for making requests."""
-        return requests.Session()
+    @property
+    def session(self) -> requests.Session:
+        session = getattr(self._sessions, "session", None)
+        if session is None:
+            session = requests.Session()
+            self._sessions.session = session
+        return session
 
     def _create_hmac_signature(self, payload: dict[str, Any], timestamp: int) -> str:
         """
@@ -354,38 +375,46 @@ class BackendClient:
             ),
         )
 
-        all_results: list[dict[str, Any]] = []
-        all_errors: list[str] = []
+        chunks = list(self._chunk_items(sorted_items, max_batch_size))
+        if len(chunks) == 1:
+            outcomes = [self._execute_macro_chunk(chunks[0], timeout)]
+        else:
+            # map yields in submission order, so results keep chunk order.
+            outcomes = list(
+                self._macro_requests.map(lambda chunk: self._execute_macro_chunk(chunk, timeout), chunks)
+            )
 
-        for batch in self._chunk_items(sorted_items, max_batch_size):
-            payload = {"items": batch, "timeout": timeout}
-
-            try:
-                result = self._make_request(self.WEBHOOK_MACRO_BATCH_PATH, payload)
-                all_results.extend(result.get("results", []))
-                batch_errors = result.get("errors", [])
-                if batch_errors:
-                    all_errors.extend(batch_errors)
-            except BackendIntegrationError as e:
-                # Don't lose other chunks: synthesize per-item failure entries
-                # so the caller can map them back via (id, macro_id), and keep
-                # iterating. A transient 5xx on one chunk shouldn't take down
-                # the rest of the partition.
-                chunk_error = f"Chunk failed: {str(e)[:500]}"
-                for item in batch:
-                    all_results.append(
-                        {
-                            "id": item.get("id"),
-                            "macro_id": item.get("macro_id"),
-                            "success": False,
-                            "error": chunk_error,
-                        }
-                    )
-                all_errors.append(chunk_error)
-            except Exception as e:
-                raise BackendIntegrationError(f"Unexpected error in macro batch execution: {e!s}") from e
+        all_results = [result for results, _ in outcomes for result in results]
+        all_errors = [error for _, errors in outcomes for error in errors]
 
         response: dict[str, Any] = {"results": all_results}
         if all_errors:
             response["errors"] = all_errors
         return response
+
+    def _execute_macro_chunk(
+        self, batch: list[dict[str, Any]], timeout: int
+    ) -> tuple[list[dict[str, Any]], list[str]]:
+        """One request's results and errors. A failed request fails only its own items."""
+        payload = {"items": batch, "timeout": timeout}
+
+        try:
+            result = self._make_request(self.WEBHOOK_MACRO_BATCH_PATH, payload)
+            return result.get("results", []), result.get("errors", [])
+        except BackendIntegrationError as e:
+            # Don't lose other chunks: synthesize per-item failure entries
+            # so the caller can map them back via (id, macro_id). A transient
+            # 5xx on one chunk shouldn't take down the rest of the partition.
+            chunk_error = f"Chunk failed: {str(e)[:500]}"
+            failures = [
+                {
+                    "id": item.get("id"),
+                    "macro_id": item.get("macro_id"),
+                    "success": False,
+                    "error": chunk_error,
+                }
+                for item in batch
+            ]
+            return failures, [chunk_error]
+        except Exception as e:
+            raise BackendIntegrationError(f"Unexpected error in macro batch execution: {e!s}") from e

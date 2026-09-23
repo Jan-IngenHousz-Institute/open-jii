@@ -27,7 +27,13 @@ EXPERIMENT_UPLOADED_DATA_TABLE = "experiment_uploaded_data"
 # hence bridge rather than dim.
 BRIDGE_EXPERIMENT_CONTRIBUTOR_TABLE = "bridge_experiment_contributor"
 BRIDGE_EXPERIMENT_DEVICE_TABLE = "bridge_experiment_device"
-AGG_EXPERIMENT_DEVICE_TABLE = "agg_experiment_device"
+
+# The newest row per key, kept by AUTO CDC, so the tables above them never
+# aggregate all of silver.
+LATEST_EXPERIMENT_ACTIVITY_TABLE = "latest_experiment_activity"
+LATEST_EXPERIMENT_DEVICE_TABLE = "latest_experiment_device"
+LATEST_DEVICE_DATA_TABLE = "latest_device_data"
+LATEST_DEVICE_EVENT_TABLE = "latest_device_event"
 
 # Enriched (gold)
 ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"

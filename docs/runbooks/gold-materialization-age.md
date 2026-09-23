@@ -4,8 +4,8 @@
 newest `status_updated_at` in `centrum.experiment_status`, which only advances when the centrum
 pipeline completes an update, so it is a proxy for "when did the lakehouse last finish work".
 
-This is deviation-based rather than a fixed threshold, deliberately: the centrum pipeline runs on a
-weekday-daytime schedule in dev and continuously in prod, so any absolute number that is meaningful
+This is deviation-based rather than a fixed threshold, deliberately: how often gold rematerializes
+depends on each environment's load and trigger interval, so any absolute number that is meaningful
 in one environment is noise in the other. What fires is the age being far outside its own recent
 pattern, which is meaningful in both.
 
@@ -21,7 +21,7 @@ Open `Centrum-DLT-Pipeline-<ENV>` and read the last completed update. The usual 
 short list as `ingest-lag`: a failed update, a paused pipeline, or an update that is running but
 wedged on one flow.
 
-An overnight or weekend rise in dev is expected and is not an incident. The comparison is against
+A rise in dev overnight or at the weekend, when little data arrives, is not by itself an incident. The comparison is against
 the same window on previous days, so a genuine regression shows as the age being unusual _for that
 time of day_, not merely large.
 

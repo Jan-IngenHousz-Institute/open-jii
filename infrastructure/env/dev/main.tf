@@ -713,7 +713,10 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_contributors",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/bridge_experiment_contributor",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/bridge_experiment_device",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/agg_experiment_device",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/latest_experiment_activity",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/latest_device_data",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/latest_device_event",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/latest_experiment_device",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/sources",
     # enriched
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/enriched/enriched_experiment_raw_data",
@@ -774,8 +777,8 @@ module "centrum_pipeline" {
 
 # Macro execution is a separate deployment, not a separate domain: it publishes
 # experiment_macro_data and its enriched view into centrum like any other gold
-# table. It runs on its own compute because the sandbox call is sequential HTTP
-# from a Spark task, and sharing centrum's cluster meant those tasks held the
+# table. It runs on its own compute because a Spark task waits on the sandbox
+# over HTTP, and sharing centrum's cluster meant those tasks held the
 # slots the Kinesis reader needs for its prefetch job.
 module "macro_execution_pipeline" {
   source = "../../modules/databricks/pipeline"
@@ -848,6 +851,7 @@ module "metrics_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/experiment_contributors_window",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/experiment_devices_window",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/daily_activity_by_resource",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/experiment_device_counts",
     # ops: read by the heartbeat export, never by the public endpoint
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/ops_device_silence",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/ops_ingest_quality",

@@ -31,7 +31,10 @@ dlt.create_streaming_table(
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
         "delta.autoOptimize.autoCompact": "true",
-        "delta.enableChangeDataFeed": "true"
+        "delta.enableChangeDataFeed": "true",
+        # The metrics pipeline is serverless, and its views over silver can only
+        # refresh incrementally when silver has row tracking.
+        "delta.enableRowTracking": "true",
     },
     expect_all={"valid_device_id": "device_id IS NOT NULL"},
     expect_all_or_drop={"valid_timestamp": "timestamp IS NOT NULL"},

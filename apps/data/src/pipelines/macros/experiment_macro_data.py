@@ -3,8 +3,8 @@
 # Gold: per-macro execution results via the backend sandbox UDF, with VARIANT
 # output column and inline-repair application.
 #
-# Runs in its own pipeline because the sandbox call is sequential HTTP from a
-# Spark task, and sharing the ingest pipeline's compute let those tasks hold the
+# Runs in its own pipeline because a Spark task waits on the sandbox over HTTP,
+# and sharing the ingest pipeline's compute let those tasks hold the
 # slots the Kinesis reader needs. The table was moved here from the Centrum
 # pipeline rather than recreated. Keep the query as it was: a changed streaming
 # plan can invalidate the progress the stream resumes from.
