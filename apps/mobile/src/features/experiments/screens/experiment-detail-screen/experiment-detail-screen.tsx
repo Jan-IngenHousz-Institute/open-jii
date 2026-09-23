@@ -94,12 +94,7 @@ export function ExperimentDetailScreen() {
   const createdAt = DateTime.fromISO(experiment.createdAt).setLocale(luxonLocale(i18n.language));
   const since = createdAt.isValid ? createdAt.toFormat("LLLL yyyy") : null;
 
-  // Both are absent from the access read today: `checkAccess` selects an
-  // explicit field list that carries neither. Each tile is gated on its own
-  // value so the row simply does not render rather than showing a blank stat.
-  const locationCount = experiment.locations?.length;
   const hasCollaborators = typeof experiment.membersCount === "number";
-  const hasLocations = typeof locationCount === "number" && locationCount > 0;
 
   // Authored in web's rich-text editor, so it arrives as HTML.
   const description = experiment.description
@@ -131,31 +126,6 @@ export function ExperimentDetailScreen() {
           </View>
         </View>
 
-        {hasCollaborators || hasLocations ? (
-          <View className="mt-3 flex-row gap-2.5">
-            {hasCollaborators ? (
-              <View className="bg-surface flex-1 rounded-xl p-2.5">
-                <Text className="text-on-surface font-poppins-bold text-[16px] leading-[20px]">
-                  {experiment.membersCount}
-                </Text>
-                <Text className="text-muted-body text-[11px]">
-                  {t("experiments:detail.collaborators", { count: experiment.membersCount })}
-                </Text>
-              </View>
-            ) : null}
-            {hasLocations ? (
-              <View className="bg-surface flex-1 rounded-xl p-2.5">
-                <Text className="text-on-surface font-poppins-bold text-[16px] leading-[20px]">
-                  {locationCount}
-                </Text>
-                <Text className="text-muted-body text-[11px]">
-                  {t("experiments:detail.locations", { count: locationCount })}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-
         <Text className="text-on-surface mt-3 text-[13px] leading-5">
           {description.length > 0
             ? isDescriptionExpanded
@@ -177,6 +147,15 @@ export function ExperimentDetailScreen() {
               )}
             </Text>
           </Pressable>
+        ) : null}
+
+        {hasCollaborators ? (
+          <View className={ROW_CLASS}>
+            <Text className="text-muted-body text-[13px]">
+              {t("experiments:detail.collaboratorsLabel")}
+            </Text>
+            <Text className="text-on-surface text-[13px]">{experiment.membersCount}</Text>
+          </View>
         ) : null}
 
         {since ? (

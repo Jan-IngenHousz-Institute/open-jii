@@ -92,6 +92,18 @@ const COLLABORATOR_GRANT_ROLE = "viewer";
 const { searchVector: _experimentSearchVector, ...experimentColumns } =
   getTableColumns(experiments);
 
+/**
+ * Direct collaborator grants only; org/team reach is unbounded and not a count.
+ * One definition, so the listing and the access read cannot disagree. The outer
+ * column is qualified by hand: Drizzle only does that when the query has joins.
+ */
+function experimentMembersCountSql(): SQL<number> {
+  return sql<number>`(select count(*)::int from ${resourceGrants}
+    where ${resourceGrants.resourceType} = 'experiment'
+    and ${resourceGrants.resourceId} = ${sql.identifier("experiments")}.${sql.identifier("id")}
+    and ${resourceGrants.granteeType} = 'user')`;
+}
+
 @Injectable()
 export class ExperimentRepository {
   constructor(
@@ -328,11 +340,7 @@ export class ExperimentRepository {
       ownerFirstName: getAnonymizedFirstName(),
       ownerLastName: getAnonymizedLastName(),
       organizationName: owningOrganizationNameSql("experiments"),
-      // Direct collaborator grants only; org/team reach is unbounded and not a count.
-      membersCount: sql<number>`(select count(*)::int from ${resourceGrants}
-        where ${resourceGrants.resourceType} = 'experiment'
-        and ${resourceGrants.resourceId} = ${experiments.id}
-        and ${resourceGrants.granteeType} = 'user')`,
+      membersCount: experimentMembersCountSql(),
       membershipStatus: sql<ExperimentMembershipStatus>`CASE
         WHEN ${isMember} THEN 'member'
         WHEN ${hasPendingRequest} THEN 'pending_request'
@@ -722,6 +730,7 @@ export class ExperimentRepository {
         ownerFirstName: getAnonymizedFirstName(),
         ownerLastName: getAnonymizedLastName(),
         organizationName: owningOrganizationNameSql("experiments"),
+        membersCount: experimentMembersCountSql(),
       };
 
       const result = await this.database
