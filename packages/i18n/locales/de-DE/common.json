@@ -76,7 +76,12 @@
     "showLess": "Weniger anzeigen",
     "forkedFrom": "Geforkt von",
     "viewOriginal": "Original ansehen",
-    "overview": "Übersicht"
+    "overview": "Übersicht",
+    "resetSorting": "Sortierung zurücksetzen",
+    "sortUnsorted": "unsortiert",
+    "sortAscending": "aufsteigend",
+    "sortDescending": "absteigend",
+    "sortSecondary": "zweite Sortierung"
   },
   "navigation": {
     "experiments": "Experimente",

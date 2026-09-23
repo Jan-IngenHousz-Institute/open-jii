@@ -1,3 +1,5 @@
+import { eq, experiments, profiles, workbooks } from "@repo/database";
+
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
 import { WorkbookRepository } from "./workbook.repository";
@@ -199,6 +201,168 @@ describe("WorkbookRepository listing scope and pagination", () => {
       assertSuccess(once);
       assertSuccess(twice);
       expect(twice.value.items.map((w) => w.id)).toEqual(once.value.items.map((w) => w.id));
+    });
+  });
+
+  describe("explicit sorting", () => {
+    it("uses the requested fields before pagination", async () => {
+      for (const name of ["Charlie", "Alpha", "Bravo"]) {
+        await testApp.createWorkbook({ name, createdBy: owner, visibility: "public" });
+      }
+
+      const result = await repository.findPage(1, 2, {
+        userId: owner,
+        sort: [
+          { field: "name", direction: "desc" },
+          { field: "updated", direction: "asc" },
+        ],
+      });
+
+      assertSuccess(result);
+      expect(result.value.items.map((workbook) => workbook.name)).toEqual(["Charlie", "Bravo"]);
+    });
+
+    it("uses an explicit sort even when searching", async () => {
+      await testApp.createWorkbook({
+        name: "Alpha Project",
+        description: "shared search term",
+        createdBy: owner,
+        visibility: "public",
+      });
+      await testApp.createWorkbook({
+        name: "Zeta Project",
+        description: "shared search term",
+        createdBy: owner,
+        visibility: "public",
+      });
+
+      const result = await repository.findPage(1, 20, {
+        search: "shared",
+        userId: owner,
+        sort: [{ field: "name", direction: "desc" }],
+      });
+
+      assertSuccess(result);
+      expect(result.value.items.map((workbook) => workbook.name)).toEqual([
+        "Zeta Project",
+        "Alpha Project",
+      ]);
+    });
+
+    it("sorts every field in both directions, including computed counts and null authors", async () => {
+      const amy = await testApp.createTestUser({ name: "Amy Author" });
+      const zoe = await testApp.createTestUser({ name: "Zoe Author" });
+      const anonymous = await testApp.createTestUser({ name: "Hidden Author" });
+      const alpha = await testApp.createWorkbook({
+        name: "Alpha Workbook",
+        createdBy: amy,
+        visibility: "public",
+      });
+      const bravo = await testApp.createWorkbook({
+        name: "Bravo Workbook",
+        createdBy: zoe,
+        visibility: "public",
+      });
+      const charlie = await testApp.createWorkbook({
+        name: "Charlie Workbook",
+        createdBy: anonymous,
+        visibility: "public",
+      });
+
+      await testApp.database
+        .update(profiles)
+        .set({ firstName: "", lastName: "" })
+        .where(eq(profiles.userId, anonymous));
+      await testApp.database
+        .update(workbooks)
+        .set({ updatedAt: new Date("2025-01-03T00:00:00Z") })
+        .where(eq(workbooks.id, alpha.id));
+      await testApp.database
+        .update(workbooks)
+        .set({ updatedAt: new Date("2025-01-01T00:00:00Z") })
+        .where(eq(workbooks.id, bravo.id));
+      await testApp.database
+        .update(workbooks)
+        .set({ updatedAt: new Date("2025-01-02T00:00:00Z") })
+        .where(eq(workbooks.id, charlie.id));
+
+      for (let index = 0; index < 1; index += 1) {
+        const { experiment } = await testApp.createExperiment({
+          name: `Workbook sort one ${crypto.randomUUID()}`,
+          userId: owner,
+          visibility: "public",
+        });
+        await testApp.database
+          .update(experiments)
+          .set({ workbookId: bravo.id })
+          .where(eq(experiments.id, experiment.id));
+      }
+      for (let index = 0; index < 2; index += 1) {
+        const { experiment } = await testApp.createExperiment({
+          name: `Workbook sort two ${crypto.randomUUID()}`,
+          userId: owner,
+          visibility: "public",
+        });
+        await testApp.database
+          .update(experiments)
+          .set({ workbookId: charlie.id })
+          .where(eq(experiments.id, experiment.id));
+      }
+
+      const expected = {
+        name: [alpha.id, bravo.id, charlie.id],
+        usedBy: [alpha.id, bravo.id, charlie.id],
+        user: [alpha.id, bravo.id, charlie.id],
+        updated: [bravo.id, charlie.id, alpha.id],
+      } as const;
+
+      for (const field of ["name", "usedBy", "user", "updated"] as const) {
+        const ascending = await repository.findAll({
+          userId: owner,
+          sort: [{ field, direction: "asc" }],
+        });
+        const descending = await repository.findAll({
+          userId: owner,
+          sort: [{ field, direction: "desc" }],
+        });
+        assertSuccess(ascending);
+        assertSuccess(descending);
+
+        expect(
+          ascending.value.map((workbook) => workbook.id),
+          `${field} ascending`,
+        ).toEqual(expected[field]);
+        expect(
+          descending.value.map((workbook) => workbook.id),
+          `${field} descending`,
+        ).toEqual(
+          field === "user" ? [bravo.id, alpha.id, charlie.id] : [...expected[field]].reverse(),
+        );
+      }
+    });
+
+    it("uses the ID tie-breaker for explicit sorts across pages", async () => {
+      const created = await Promise.all(
+        ["Tie one", "Tie two", "Tie three"].map((name) =>
+          testApp.createWorkbook({ name, createdBy: owner, visibility: "public" }),
+        ),
+      );
+      const [first, second] = await Promise.all([
+        repository.findPage(1, 2, {
+          userId: owner,
+          sort: [{ field: "usedBy", direction: "asc" }],
+        }),
+        repository.findPage(2, 2, {
+          userId: owner,
+          sort: [{ field: "usedBy", direction: "asc" }],
+        }),
+      ]);
+
+      assertSuccess(first);
+      assertSuccess(second);
+      const ids = [...first.value.items, ...second.value.items].map((workbook) => workbook.id);
+      expect(ids).toEqual([...created.map((workbook) => workbook.id)].sort());
+      expect(new Set(ids).size).toBe(created.length);
     });
   });
 });

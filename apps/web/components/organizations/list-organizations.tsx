@@ -8,6 +8,7 @@ import { useOrganizationsList } from "@/hooks/organization/useOrganizationsList/
 import { useLocale } from "@/hooks/useLocale";
 
 import { useTranslation } from "@repo/i18n";
+import { Button } from "@repo/ui/components/button";
 import { SearchInput } from "@repo/ui/components/search-input";
 
 import { organizationPath } from "./organization-routes";
@@ -33,6 +34,9 @@ export function ListOrganizations() {
     page,
     totalPages,
     setPage,
+    sort,
+    setSort,
+    toggleSort,
   } = useOrganizationsList();
   const hasSearch = debouncedSearch.trim() !== "";
 
@@ -52,6 +56,13 @@ export function ListOrganizations() {
             className="w-full md:w-64"
           />
         }
+        filters={
+          sort.length ? (
+            <Button variant="outline" size="sm" onClick={() => setSort([])}>
+              {t("common.resetSorting")}
+            </Button>
+          ) : undefined
+        }
       />
 
       <div
@@ -61,6 +72,16 @@ export function ListOrganizations() {
       >
         <OverviewTable
           columns={getOrganizationColumns(t)}
+          sorting={{
+            state: sort.map(({ field, direction }) => ({ id: field, desc: direction === "desc" })),
+            onToggle: (field, multi) => toggleSort(field as (typeof sort)[number]["field"], multi),
+            labels: {
+              unsorted: t("common.sortUnsorted"),
+              asc: t("common.sortAscending"),
+              desc: t("common.sortDescending"),
+              secondary: t("common.sortSecondary"),
+            },
+          }}
           items={isError ? undefined : organizations}
           isLoading={isPending}
           error={error}

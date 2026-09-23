@@ -44,6 +44,7 @@ export class OrganizationController {
       const result = await this.listOrganizationsUseCase.execute(session.user.id, {
         search: input.search,
         scope: input.scope,
+        sort: input.sort,
       });
 
       if (result.isSuccess()) {

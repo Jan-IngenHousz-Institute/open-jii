@@ -15,6 +15,7 @@ export function getOrganizationColumns(
   return [
     {
       header: t("organizations.fields.name"),
+      sortId: "name",
       cell: (organization, href) => (
         <>
           <div className="flex min-w-0 items-center gap-2">
@@ -48,6 +49,7 @@ export function getOrganizationColumns(
     },
     {
       header: t("organizations.tabs.members"),
+      sortId: "members",
       className: "hidden w-44 sm:table-cell",
       cell: (organization) => (
         <span
@@ -60,6 +62,7 @@ export function getOrganizationColumns(
     },
     {
       header: t("organizations.resources.title"),
+      sortId: "resources",
       className: "hidden w-56 lg:table-cell",
       cell: (organization) => {
         const label = organization.isMember

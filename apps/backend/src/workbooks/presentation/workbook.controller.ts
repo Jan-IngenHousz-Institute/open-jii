@@ -67,6 +67,7 @@ export class WorkbookController {
         search: input.search,
         scope: resolveListScope(input),
         userId: session.user.id,
+        sort: input.sort,
       };
 
       if (input.page !== undefined) {

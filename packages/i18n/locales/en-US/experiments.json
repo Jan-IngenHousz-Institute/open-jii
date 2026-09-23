@@ -23,11 +23,6 @@
     "published": "Published"
   },
   "lastUpdate": "Last update",
-  "resetSorting": "Reset sorting",
-  "sortUnsorted": "unsorted",
-  "sortAscending": "ascending",
-  "sortDescending": "descending",
-  "sortSecondary": "secondary sort",
   "columns": {
     "name": "Name",
     "updated": "Updated",

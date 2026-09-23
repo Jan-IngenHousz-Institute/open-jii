@@ -2,14 +2,17 @@ import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
+import { zWorkbookSort } from "@repo/api/domains/workbook/workbook.schema";
 import { isPaginatedList } from "@repo/api/shared/listing";
 
 import { useDebounce } from "../../useDebounce";
+import { useListSorting } from "../../useListSorting";
 import { useSearchPending } from "../../useSearchPending";
 
 export function useWorkbooks({ initialSearch = "" }: { initialSearch?: string } = {}) {
   const [search, setSearchState] = useState<string>(initialSearch);
   const [page, setPage] = useState(1);
+  const { sort, setSort, toggleSort } = useListSorting(zWorkbookSort);
   const [debouncedSearch] = useDebounce(search, 300);
 
   const setSearch = (value: string) => {
@@ -22,6 +25,7 @@ export function useWorkbooks({ initialSearch = "" }: { initialSearch?: string } 
       input: {
         search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
         page,
+        sort: sort.length ? sort : undefined,
       },
       placeholderData: (prev) => prev,
     }),
@@ -55,5 +59,14 @@ export function useWorkbooks({ initialSearch = "" }: { initialSearch?: string } 
     setSearch,
     page,
     setPage,
+    sort,
+    setSort: (next: typeof sort) => {
+      setSort(next);
+      setPage(1);
+    },
+    toggleSort: (field: (typeof sort)[number]["field"], multi: boolean) => {
+      toggleSort(field, multi);
+      setPage(1);
+    },
   };
 }

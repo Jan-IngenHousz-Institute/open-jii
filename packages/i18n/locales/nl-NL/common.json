@@ -76,7 +76,12 @@
     "showLess": "Minder tonen",
     "forkedFrom": "Geforkt van",
     "viewOriginal": "Origineel bekijken",
-    "overview": "Overzicht"
+    "overview": "Overzicht",
+    "resetSorting": "Sortering wissen",
+    "sortUnsorted": "ongesorteerd",
+    "sortAscending": "oplopend",
+    "sortDescending": "aflopend",
+    "sortSecondary": "tweede sortering"
   },
   "navigation": {
     "experiments": "Experimenten",

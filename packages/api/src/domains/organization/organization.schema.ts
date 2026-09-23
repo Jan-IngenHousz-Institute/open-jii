@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { zResourceScope } from "../../shared/listing";
+import { zListSort, zResourceScope } from "../../shared/listing";
 import { zExperimentStatus } from "../experiment/experiment.schema";
 import { zDeviceType } from "../iot/iot.schema";
 import { zMacroLanguage } from "../macro/macro.schema";
@@ -43,6 +43,9 @@ export const zOrganizationRole = z.enum(["owner", "admin", "member"]);
  */
 export const zOrganizationMembershipStatus = z.enum(["none", "pending_request", "member"]);
 
+export const zOrganizationSort = zListSort(z.enum(["name", "members", "resources"]));
+export type OrganizationSort = z.infer<typeof zOrganizationSort>;
+
 export const zOrganizationIdPathParam = z.object({
   id: z.string().uuid().describe("ID of the organization"),
 });
@@ -62,6 +65,7 @@ export const zOrganizationDirectoryQuery = z.object({
    * endpoint, so both slices match and rank identically.
    */
   scope: zResourceScope.optional().describe("Which slice of the visible set to return"),
+  sort: zOrganizationSort.optional().describe("Up to two ordered sort criteria"),
 });
 
 /**

@@ -76,6 +76,28 @@ describe("ListWorkbooks", () => {
     expect(link.getAttribute("href")).toContain("/platform/workbooks/wb-1");
   });
 
+  it("sorts by name, adds a secondary field, and resets", async () => {
+    const spy = server.mount(contract.workbooks.listWorkbooks, {
+      body: envelope([createWorkbook({ id: "wb-1", name: "Test WB" })]),
+    });
+    const user = userEvent.setup();
+    render(<ListWorkbooks />);
+
+    await screen.findByRole("link", { name: "Test WB" });
+    await user.click(screen.getByRole("button", { name: /workbooks.columns.name:/ }));
+    await waitFor(() => expect(spy.calls.at(-1)?.query["sort[0][field]"]).toBe("name"));
+
+    await user.keyboard("{Shift>}");
+    await user.click(screen.getByRole("button", { name: /workbooks.columns.usedBy:/ }));
+    await user.keyboard("{/Shift}");
+    expect(
+      screen.getByRole("button", { name: /workbooks.columns.usedBy:.*common.sortSecondary/ }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "common.resetSorting" }));
+    await waitFor(() => expect(spy.calls.at(-1)?.query.sort).toBeUndefined());
+  });
+
   it("navigates pages when the server reports more than one page", async () => {
     const spy = server.mount(contract.workbooks.listWorkbooks, {
       body: (call: { query: Record<string, string> }) =>

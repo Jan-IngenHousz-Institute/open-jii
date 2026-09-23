@@ -198,6 +198,31 @@ describe("WorkbookController", () => {
         userId: testUserId,
       });
     });
+
+    it("passes explicit sorting to the list use case", async () => {
+      const executeSpy = vi.spyOn(listWorkbooksUseCase, "execute").mockResolvedValue(success([]));
+
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.workbooks.listWorkbooks))
+        .query({
+          "sort[0][field]": "usedBy",
+          "sort[0][direction]": "desc",
+          "sort[1][field]": "name",
+          "sort[1][direction]": "asc",
+        })
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(executeSpy).toHaveBeenCalledWith({
+        search: undefined,
+        scope: "all",
+        userId: testUserId,
+        sort: [
+          { field: "usedBy", direction: "desc" },
+          { field: "name", direction: "asc" },
+        ],
+      });
+    });
   });
 
   describe("listWorkbooks paginated", () => {

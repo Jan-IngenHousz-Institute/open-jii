@@ -53,7 +53,7 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
         filters={
           sort.length ? (
             <Button variant="outline" size="sm" onClick={() => setSort([])}>
-              {t("resetSorting")}
+              {t("common.resetSorting")}
             </Button>
           ) : undefined
         }
@@ -70,10 +70,10 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
             state: sort.map(({ field, direction }) => ({ id: field, desc: direction === "desc" })),
             onToggle: (field, multi) => toggleSort(field as (typeof sort)[number]["field"], multi),
             labels: {
-              unsorted: t("sortUnsorted"),
-              asc: t("sortAscending"),
-              desc: t("sortDescending"),
-              secondary: t("sortSecondary"),
+              unsorted: t("common.sortUnsorted"),
+              asc: t("common.sortAscending"),
+              desc: t("common.sortDescending"),
+              secondary: t("common.sortSecondary"),
             },
           }}
           items={data?.items}

@@ -76,7 +76,12 @@
     "showLess": "Show less",
     "forkedFrom": "Forked from",
     "viewOriginal": "View original",
-    "overview": "Overview"
+    "overview": "Overview",
+    "resetSorting": "Reset sorting",
+    "sortUnsorted": "unsorted",
+    "sortAscending": "ascending",
+    "sortDescending": "descending",
+    "sortSecondary": "secondary sort"
   },
   "navigation": {
     "experiments": "Experiments",

@@ -119,6 +119,7 @@ export function getWorkbookColumns(
   return [
     {
       header: t("workbooks.columns.name"),
+      sortId: "name",
       cell: (workbook, href) => (
         <>
           <div className="flex min-w-0 items-center gap-2">
@@ -142,6 +143,7 @@ export function getWorkbookColumns(
     },
     {
       header: t("workbooks.columns.usedBy"),
+      sortId: "usedBy",
       className: "hidden w-36 sm:table-cell",
       cell: (workbook) => {
         const usedBy = workbook.experimentCount ?? 0;
@@ -158,6 +160,7 @@ export function getWorkbookColumns(
     },
     {
       header: t("workbooks.columns.user"),
+      sortId: "user",
       className: "hidden w-48 xl:table-cell",
       cell: (workbook) => {
         const author = workbook.createdByName ?? `${workbook.createdBy.slice(0, 8)}…`;
@@ -188,6 +191,7 @@ export function getWorkbookColumns(
     },
     {
       header: t("workbooks.columns.updated"),
+      sortId: "updated",
       className: "hidden w-40 lg:table-cell",
       cell: (workbook) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>

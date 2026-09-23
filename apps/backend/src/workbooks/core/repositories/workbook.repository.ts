@@ -1,5 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
+import type { WorkbookSort } from "@repo/api/domains/workbook/workbook.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 import {
   and,
@@ -55,6 +56,7 @@ export interface WorkbookFilter {
   userId?: string;
   /** Narrow to one owning organization (the org profile's resources showcase). */
   organizationId?: string;
+  sort?: WorkbookSort;
 }
 
 /** A listing row plus its relevance score, which global search merges on across types. */
@@ -305,9 +307,26 @@ export class WorkbookRepository {
         : sql<number>`0::int`;
 
       // Both orderings end on `id` so paging never drops or repeats a row on ties.
-      const orderBy = search
-        ? [desc(score), asc(workbooks.id)]
-        : [desc(tier), asc(workbooks.name), asc(workbooks.id)];
+      const authorName = sql<
+        string | null
+      >`nullif(trim(concat_ws(' ', ${getAnonymizedFirstName()}, ${getAnonymizedLastName()})), '')`;
+      const sortFields = {
+        name: workbooks.name,
+        usedBy: experimentCountSql(),
+        user: authorName,
+        updated: workbooks.updatedAt,
+      };
+      const orderBy = filter?.sort?.length
+        ? [
+            ...filter.sort.map(
+              ({ field, direction }) =>
+                sql`${direction === "asc" ? asc(sortFields[field]) : desc(sortFields[field])} nulls last`,
+            ),
+            asc(workbooks.id),
+          ]
+        : search
+          ? [desc(score), asc(workbooks.id)]
+          : [desc(tier), asc(workbooks.name), asc(workbooks.id)];
 
       const where = conditions.length > 0 ? and(...conditions) : undefined;
 

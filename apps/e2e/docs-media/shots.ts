@@ -124,6 +124,13 @@ export const SHOTS: readonly Shot[] = [
     scope: "Ownership-ranked Organizations overview with member and resource counts",
   },
   {
+    slug: "workbooks-list",
+    publish: "img/guide/web/workbooks-list.webp",
+    frame: "desktop",
+    route: "/platform/workbooks",
+    scope: "Workbooks overview with searchable sortable columns and pagination",
+  },
+  {
     slug: "report-issue",
     publish: "img/guide/web/report-issue.webp",
     frame: "desktop",
