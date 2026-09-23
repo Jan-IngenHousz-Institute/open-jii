@@ -392,10 +392,10 @@ locals {
   ]
 }
 
-# Centrum's workers are general-purpose: its streams and small views fit in 16 GB
-# per node without swapping on dev, so four cores share that. The driver's memory
-# grows with the number of flows, so it keeps 16 GB on a memory-optimized node. Both
-# are the newest generation the disk cache runs on, with local NVMe for spill.
+# Workers keep 8 GB per core: Python UDF workers run outside Spark's heap and cannot
+# spill, and the end state has not yet run on long-lived clusters. r6id is the newest
+# r generation the disk cache runs on, and spot rarely reclaims it. The driver runs no
+# tasks, so it drops local NVMe for the next generation's cores: its CPU is what peaks.
 module "node_cluster_policy" {
   source = "../../modules/databricks/cluster-policy"
 
@@ -409,29 +409,29 @@ module "node_cluster_policy" {
     }
     node_type_id = {
       type  = "fixed"
-      value = "m6id.xlarge"
+      value = "r6id.large"
     }
     driver_node_type_id = {
       type  = "fixed"
-      value = "r6id.large"
+      value = "r7i.large"
     }
     # Ranges above what the pipelines run, so workers can be added without a policy edit.
     num_workers = {
       type       = "range"
       minValue   = 1
-      maxValue   = 6
+      maxValue   = 8
       isOptional = true
     }
     "autoscale.min_workers" = {
       type       = "range"
       minValue   = 1
-      maxValue   = 6
+      maxValue   = 8
       isOptional = true
     }
     "autoscale.max_workers" = {
       type       = "range"
       minValue   = 1
-      maxValue   = 6
+      maxValue   = 8
       isOptional = true
     }
     # The spot settings the workspace applied by default, pinned so they cannot drift:
@@ -470,9 +470,9 @@ module "node_cluster_policy" {
   depends_on = [module.databricks_workspace]
 }
 
-# The macro tasks mostly wait on the sandbox over HTTP, so the worker's cores are
-# chosen for price, not speed. Four of them hold the in-flight budget set against
-# the sandbox's reserved concurrency.
+# The macro tasks mostly wait on the sandbox over HTTP, so cores are bought as task
+# slots at the lowest price. Each slot keeps three requests in flight, and the slots
+# stay within the sandbox's reserved concurrency, which is why the worker is fixed.
 module "macro_cluster_policy" {
   source = "../../modules/databricks/cluster-policy"
 
@@ -490,13 +490,11 @@ module "macro_cluster_policy" {
     }
     driver_node_type_id = {
       type  = "fixed"
-      value = "r6id.large"
+      value = "r5a.large"
     }
     num_workers = {
-      type       = "range"
-      minValue   = 1
-      maxValue   = 2
-      isOptional = true
+      type  = "fixed"
+      value = 1
     }
     "aws_attributes.availability" = {
       type  = "fixed"
@@ -822,10 +820,6 @@ module "centrum_pipeline" {
     "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust a 16 GB driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
-    # The retry limits set live on production, declared so an apply keeps them.
-    # Unset, production mode restarts a continuous pipeline without limit.
-    "pipelines.maxFlowRetryAttempts"   = "20"
-    "pipelines.numUpdateRetryAttempts" = "5"
   }
 
   # AUTO CDC needs PRO, and the silver expectations need ADVANCED.
@@ -836,11 +830,11 @@ module "centrum_pipeline" {
   development_mode = false
   serverless       = false
 
-  node_type_id        = "m6id.xlarge"
-  driver_node_type_id = "r6id.large"
+  node_type_id        = "r6id.large"
+  driver_node_type_id = "r7i.large"
   autoscale           = true
-  min_workers         = 1
-  max_workers         = 3
+  min_workers         = 2
+  max_workers         = 6
   policy_id           = module.node_cluster_policy.policy_id
 
   run_as = {
@@ -901,7 +895,7 @@ module "macro_execution_pipeline" {
   serverless       = false
 
   node_type_id        = "m5a.xlarge"
-  driver_node_type_id = "r6id.large"
+  driver_node_type_id = "r5a.large"
   num_workers         = 1
   policy_id           = module.macro_cluster_policy.policy_id
 
