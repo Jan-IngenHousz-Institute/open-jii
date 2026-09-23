@@ -828,9 +828,6 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_raw_data_schemas",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_uploaded_data_schemas",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/sources",
-    # enriched
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/enriched/enriched_experiment_raw_data",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/enriched/enriched_experiment_uploaded_data",
     # event hooks
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/hooks",
   ]
@@ -888,7 +885,7 @@ module "centrum_pipeline" {
 }
 
 # Macro execution is a separate deployment, not a separate domain: it publishes
-# experiment_macro_data and its enriched view into centrum like any other gold
+# experiment_macro_data and its schema samples into centrum like any other gold
 # table. It runs on its own compute because a Spark task waits on the sandbox
 # over HTTP, and sharing centrum's cluster meant those tasks held the
 # slots the Kinesis reader needs for its prefetch job.
@@ -902,17 +899,12 @@ module "macro_execution_pipeline" {
   notebook_paths = [
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/experiment_macro_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/experiment_macro_data_schemas",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/enriched_experiment_macro_data",
   ]
 
   configuration = {
     "CATALOG_NAME"        = module.databricks_catalog.catalog_name
     "CENTRUM_SCHEMA_NAME" = "centrum"
     "ENVIRONMENT"         = var.environment
-    # The cadence both tables had inside Centrum. Unset, a continuous pipeline
-    # falls back to five seconds for the stream and one minute for the enriched
-    # view, which is a full recompute every time.
-    "pipelines.trigger.interval" = "120 seconds"
   }
 
   # Neither AUTO CDC nor expectations, so CORE is enough.
@@ -1513,17 +1505,20 @@ module "experiment_custom_metadata_table" {
 # tables of the same names still serve readers outside the backend.
 module "serving_views" {
   source = "../../modules/databricks/sql-table"
-  for_each = toset([
-    "enriched_experiment_raw_data",
-    "enriched_experiment_macro_data",
-    "enriched_experiment_uploaded_data",
-    "experiment_table_metadata",
-    "experiment_device_data",
-  ])
+  # Keyed by the SQL file, valued by the view's name. The enriched views took over
+  # the names of the materialized views they replaced. The other two add read-time
+  # counts on top of pipeline tables that keep the plain names.
+  for_each = {
+    enriched_experiment_raw_data      = "enriched_experiment_raw_data"
+    enriched_experiment_macro_data    = "enriched_experiment_macro_data"
+    enriched_experiment_uploaded_data = "enriched_experiment_uploaded_data"
+    experiment_table_metadata         = "experiment_table_metadata_view"
+    experiment_device_data            = "experiment_device_data_view"
+  }
 
   catalog_name = module.databricks_catalog.catalog_name
   schema_name  = "centrum"
-  name         = "${each.key}_view"
+  name         = each.value
   table_type   = "VIEW"
   view_definition = templatefile(
     "${path.root}/../../../apps/data/src/views/${each.key}.sql",
@@ -2310,7 +2305,7 @@ module "backend_ecs" {
     },
     {
       name  = "DATABRICKS_RAW_DATA_TABLE_NAME"
-      value = "enriched_experiment_raw_data_view"
+      value = "enriched_experiment_raw_data"
     },
     {
       name  = "DATABRICKS_DEVICE_DATA_TABLE_NAME"
@@ -2318,11 +2313,11 @@ module "backend_ecs" {
     },
     {
       name  = "DATABRICKS_MACRO_DATA_TABLE_NAME"
-      value = "enriched_experiment_macro_data_view"
+      value = "enriched_experiment_macro_data"
     },
     {
       name  = "DATABRICKS_UPLOADED_DATA_TABLE_NAME"
-      value = "enriched_experiment_uploaded_data_view"
+      value = "enriched_experiment_uploaded_data"
     },
     {
       name  = "DB_HOST"

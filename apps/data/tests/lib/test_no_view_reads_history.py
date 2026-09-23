@@ -4,8 +4,6 @@ The pipelines run on classic compute, where a batch read inside a dataset is a
 materialized view recomputed from scratch on every refresh. Over silver or a
 payload table that is a scan of every measurement ever taken. Streaming reads
 and reads of the rollups are fine. A deliberate full refresh is not affected.
-
-The allowlist names what still does it; it only ever shrinks.
 """
 
 from __future__ import annotations
@@ -22,15 +20,6 @@ _MEASUREMENT_TABLES = {
     "EXPERIMENT_RAW_DATA_TABLE",
     "EXPERIMENT_UPLOADED_DATA_TABLE",
     "EXPERIMENT_MACRO_DATA_TABLE",
-    "ENRICHED_RAW_DATA_VIEW",
-    "ENRICHED_UPLOADED_DATA_VIEW",
-    "ENRICHED_MACRO_DATA_VIEW",
-}
-
-_ALLOWED = {
-    "centrum/enriched/enriched_experiment_raw_data.py",
-    "centrum/enriched/enriched_experiment_uploaded_data.py",
-    "macros/enriched_experiment_macro_data.py",
 }
 
 _NOTEBOOKS = sorted(
@@ -75,7 +64,4 @@ def _measurement_batch_reads(notebook: str) -> set[str]:
 
 @pytest.mark.parametrize("notebook", _NOTEBOOKS)
 def test_no_notebook_reads_measurements_in_full(notebook: str) -> None:
-    if notebook in _ALLOWED:
-        pytest.skip("allowlisted until its incremental replacement lands")
-
     assert _measurement_batch_reads(notebook) == set()
