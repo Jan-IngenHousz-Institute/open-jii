@@ -530,6 +530,33 @@ describe("ExecuteMacroBatchUseCase", () => {
       });
     }
 
+    it("splits a group whose restored contexts pass Lambda's request limit, keeping order", async () => {
+      const macro = await createTestMacro();
+      const invokeSpy = mockEchoLambda();
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+      // About 1.7 MB each, doubled when the marker is restored: the two no
+      // longer fit one 6 MB invocation, although the request carrying them did.
+      const blob = "x".repeat(1_700_000);
+      const item = (id: string) => ({
+        id,
+        macro_id: macro.id,
+        data: { phi2: 0.5, blob },
+        context: { measurement: { $macroInput: true } },
+      });
+
+      const result = await useCase.execute({ items: [item("item-a"), item("item-b")] });
+
+      assertSuccess(result);
+      const invoked = invokeSpy.mock.calls.map(([, payload]) =>
+        (payload as LambdaExecutionPayload).items.map(({ id }) => id),
+      );
+      expect(invoked).toEqual([["item-a"], ["item-b"]]);
+      expect(result.value.results.map(({ id, success }) => ({ id, success }))).toEqual([
+        { id: "item-a", success: true },
+        { id: "item-b", success: true },
+      ]);
+    });
+
     it("normalizes a mixed valid/empty/wrapped batch, runs only valid siblings, and preserves order", async () => {
       const macro = await createTestMacro();
       const invokeSpy = mockEchoLambda();

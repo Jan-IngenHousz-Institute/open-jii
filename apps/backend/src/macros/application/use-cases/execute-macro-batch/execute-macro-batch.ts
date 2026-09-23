@@ -28,6 +28,11 @@ import { MacroRepository } from "../../../core/repositories/macro.repository";
 export class ExecuteMacroBatchUseCase {
   private readonly logger = new Logger(ExecuteMacroBatchUseCase.name);
 
+  // Lambda refuses a synchronous request over 6 MB. Restoring each item's
+  // context can copy its measurement a second time, so the limit is checked on
+  // the payload as sent, not on the request this service received.
+  private static readonly MAX_INVOCATION_BYTES = 6 * 1024 * 1024;
+
   constructor(
     private readonly macroRepository: MacroRepository,
     private readonly macroSnapshotRepository: MacroSnapshotRepository,
@@ -227,103 +232,133 @@ export class ExecuteMacroBatchUseCase {
 
     const functionName = this.lambdaPort.getFunctionNameForLanguage(macro.language);
 
-    const payload: LambdaExecutionPayload = {
-      script: macro.code,
-      items: validItems.map(({ item, data }) => ({
-        id: item.id,
-        data,
-        // A mobile upload leaves a marker where ctx held this same measurement;
-        // macro code must still see the value it saw at capture time.
-        context: item.context ? restoreMacroInputInContext(item.context, item.data) : item.context,
-      })),
-      timeout,
-    };
+    const payloadItems = validItems.map(({ item, data }) => ({
+      id: item.id,
+      data,
+      // A mobile upload leaves a marker where ctx held this same measurement;
+      // macro code must still see the value it saw at capture time.
+      context: item.context ? restoreMacroInputInContext(item.context, item.data) : item.context,
+    }));
 
+    // In turn, so a group never holds more than one sandbox execution.
+    const validResults: MacroBatchExecutionResultItem[] = [];
+    const errors: string[] = [];
+    for (const chunk of this.chunkByInvocationBytes(macro.code, timeout, payloadItems)) {
+      const outcome = await this.invokeChunk(functionName, macro, macroId, chunk, timeout);
+      validResults.push(...outcome.results);
+      if (outcome.error) {
+        errors.push(outcome.error);
+      }
+    }
+
+    return {
+      results: assemble(validResults),
+      ...(errors.length > 0 ? { error: errors.join("; ") } : {}),
+    };
+  }
+
+  /**
+   * Splits a group's items into invocations under Lambda's request limit,
+   * measured the way the Lambda service encodes the payload. An item over the
+   * limit on its own still goes alone, so Lambda refuses that item and not its
+   * siblings.
+   */
+  private chunkByInvocationBytes(
+    script: string,
+    timeout: number,
+    items: LambdaExecutionPayload["items"],
+  ): LambdaExecutionPayload["items"][] {
+    const envelopeBytes = Buffer.byteLength(JSON.stringify({ script, items: [], timeout }));
+    const chunks: LambdaExecutionPayload["items"][] = [];
+    let chunk: LambdaExecutionPayload["items"] = [];
+    let chunkBytes = envelopeBytes;
+
+    for (const item of items) {
+      // The comma joining this item to the one before it is part of the body.
+      const itemBytes = Buffer.byteLength(JSON.stringify(item)) + 1;
+      const isFull =
+        chunk.length > 0 && chunkBytes + itemBytes > ExecuteMacroBatchUseCase.MAX_INVOCATION_BYTES;
+
+      if (isFull) {
+        chunks.push(chunk);
+        chunk = [];
+        chunkBytes = envelopeBytes;
+      }
+
+      chunk.push(item);
+      chunkBytes += itemBytes;
+    }
+
+    if (chunk.length > 0) {
+      chunks.push(chunk);
+    }
+    return chunks;
+  }
+
+  /**
+   * Invokes the sandbox for one chunk and maps its results. Never throws; a
+   * failed invocation fails only the items it carried.
+   */
+  private async invokeChunk(
+    functionName: string,
+    macro: MacroScript,
+    macroId: string,
+    items: LambdaExecutionPayload["items"],
+    timeout: number,
+  ): Promise<{ results: MacroBatchExecutionResultItem[]; error?: string }> {
+    const failAll = (errorMsg: string) => ({
+      results: items.map(({ id }) => ({
+        id,
+        macro_id: macroId,
+        success: false,
+        error: errorMsg,
+      })),
+      error: `Macro ${macro.name} (${macroId}): ${errorMsg}`,
+    });
+
+    const payload: LambdaExecutionPayload = { script: macro.code, items, timeout };
     const lambdaResult = await this.lambdaPort.invokeLambda(functionName, payload);
 
     if (lambdaResult.isFailure()) {
-      const errorMsg = lambdaResult.error.message;
-      return {
-        results: assemble(
-          validItems.map(({ item }) => ({
-            id: item.id,
-            macro_id: macroId,
-            success: false,
-            error: errorMsg,
-          })),
-        ),
-        error: `Macro ${macro.name} (${macroId}): ${errorMsg}`,
-      };
+      return failAll(lambdaResult.error.message);
     }
 
     const parseResult = LambdaExecutionResponseSchema.safeParse(lambdaResult.value.payload);
     if (!parseResult.success) {
-      return {
-        results: assemble(
-          validItems.map(({ item }) => ({
-            id: item.id,
-            macro_id: macroId,
-            success: false,
-            error: "Invalid Lambda response payload",
-          })),
-        ),
-        error: `Macro ${macro.name} (${macroId}): Invalid Lambda response payload`,
-      };
+      return failAll("Invalid Lambda response payload");
     }
 
     const lambdaResponse = parseResult.data;
 
     if (lambdaResponse.status === "error") {
-      const errorMsg = lambdaResponse.errors?.join("; ") ?? "Lambda execution failed";
-      return {
-        results: assemble(
-          validItems.map(({ item }) => ({
-            id: item.id,
-            macro_id: macroId,
-            success: false,
-            error: errorMsg,
-          })),
-        ),
-        error: `Macro ${macro.name} (${macroId}): ${errorMsg}`,
-      };
+      return failAll(lambdaResponse.errors?.join("; ") ?? "Lambda execution failed");
     }
 
-    // The sandbox returns one result per valid item, in order, echoing each
-    // request ID. A count or per-position ID mismatch fails the whole group
-    // safely (position stays authoritative; ID equality is only a check,
-    // compatible with duplicate/empty IDs). Length is checked first.
+    // The sandbox returns one result per item, in order, echoing each request
+    // ID. A count or per-position ID mismatch fails the whole chunk safely
+    // (position stays authoritative; ID equality is only a check, compatible
+    // with duplicate/empty IDs). Length is checked first.
     const lambdaResults = lambdaResponse.results;
     const mismatch =
-      lambdaResults.length !== validItems.length ||
-      validItems.some(({ item }, index) => lambdaResults[index].id !== item.id);
+      lambdaResults.length !== items.length ||
+      items.some(({ id }, index) => lambdaResults[index].id !== id);
 
     if (mismatch) {
-      const errorMsg = "Lambda response did not match the requested items";
-      return {
-        results: assemble(
-          validItems.map(({ item }) => ({
-            id: item.id,
-            macro_id: macroId,
-            success: false,
-            error: errorMsg,
-          })),
-        ),
-        error: `Macro ${macro.name} (${macroId}): ${errorMsg}`,
-      };
+      return failAll("Lambda response did not match the requested items");
     }
 
     // Counts and per-position IDs are validated; consume positionally.
-    const validResults = validItems.map(({ item }, index): MacroBatchExecutionResultItem => {
-      const r = lambdaResults[index];
-      return {
-        id: item.id,
-        macro_id: macroId,
-        success: r.success,
-        output: r.output,
-        error: r.error,
-      };
-    });
-
-    return { results: assemble(validResults) };
+    return {
+      results: items.map(({ id }, index): MacroBatchExecutionResultItem => {
+        const r = lambdaResults[index];
+        return {
+          id,
+          macro_id: macroId,
+          success: r.success,
+          output: r.output,
+          error: r.error,
+        };
+      }),
+    };
   }
 }
