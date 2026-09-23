@@ -20,6 +20,7 @@ resource "databricks_pipeline" "this" {
   provider = databricks.workspace
 
   catalog = var.catalog_name
+  edition = var.edition
 
   # Support for notebook libraries
   dynamic "library" {
@@ -77,6 +78,15 @@ resource "databricks_pipeline" "this" {
     "pipeline.logLevel" : var.log_level,
     "pipeline.trigger.retry_on_failure" : "false",
   }, var.configuration)
+
+  dynamic "event_log" {
+    for_each = var.event_log != null ? [var.event_log] : []
+    content {
+      catalog = event_log.value.catalog
+      schema  = event_log.value.schema
+      name    = event_log.value.name
+    }
+  }
 
   # Development mode can be toggled
   development = var.development_mode

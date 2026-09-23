@@ -25,6 +25,19 @@ variable "configuration" {
   default     = {}
 }
 
+# AUTO CDC needs PRO or ADVANCED, so the gold bridges stop working if a pipeline
+# is ever created as CORE. Declared rather than inherited from a provider default.
+variable "edition" {
+  description = "Pipeline product edition: CORE, PRO or ADVANCED"
+  type        = string
+  default     = "ADVANCED"
+
+  validation {
+    condition     = contains(["CORE", "PRO", "ADVANCED"], var.edition)
+    error_message = "edition must be one of CORE, PRO or ADVANCED."
+  }
+}
+
 variable "development_mode" {
   description = "Whether to run the pipeline in development mode"
   type        = bool
@@ -136,4 +149,14 @@ variable "environment_dependencies" {
     condition     = length(var.environment_dependencies) == 0 || var.serverless
     error_message = "environment_dependencies applies to serverless pipelines only; non-serverless pipelines install libraries through their cluster policy."
   }
+}
+
+variable "event_log" {
+  description = "Unity Catalog table the pipeline publishes its event log to. Unpublished, the log belongs to the principal the pipeline runs as and event_log() returns PERMISSION_DENIED for everyone else, which hides the refresh technique each flow actually chose."
+  type = object({
+    catalog = string
+    schema  = string
+    name    = string
+  })
+  default = null
 }

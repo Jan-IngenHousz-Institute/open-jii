@@ -2,6 +2,11 @@
 # DBTITLE 1,Enriched Layer - Experiment Macro Data
 # Enriched: experiment_macro_data joined with contributors, annotations, and
 # custom metadata. Adds local-time columns derived from timezone.
+#
+# Lives in the macro pipeline beside the table it enriches. In the Centrum
+# pipeline it would make Centrum depend on this pipeline's output while this
+# pipeline depends on Centrum's, and a fresh environment could run neither.
+# The contributor, device, annotation and metadata tables come from Centrum.
 
 # COMMAND ----------
 import dlt
@@ -18,12 +23,14 @@ from openjii.centrum import (
     EXPERIMENT_MACRO_DATA_TABLE,
     METADATA_SOURCE_TABLE,
 )
+from openjii.macros.runtime import centrum_table
 
 # COMMAND ----------
 
 @dlt.table(
     name=ENRICHED_MACRO_DATA_VIEW,
     comment="Enriched materialized view: Macro data with expanded VARIANT, questions, user struct, and annotations. Qualified for incremental refresh.",
+    cluster_by=["experiment_id"],
     table_properties={
         "quality": "gold",
         "delta.enableRowTracking": "true",
@@ -38,10 +45,10 @@ from openjii.centrum import (
 def enriched_experiment_macro_data():
     """Enriched macro data with user profiles, annotations, and user metadata."""
     macro_data = dlt.read(EXPERIMENT_MACRO_DATA_TABLE)
-    contributors = dlt.read(EXPERIMENT_CONTRIBUTORS_TABLE)
-    devices = dlt.read(EXPERIMENT_DEVICES_TABLE)
-    annotations_source = dlt.read(ANNOTATIONS_SOURCE_TABLE)
-    metadata_source = dlt.read(METADATA_SOURCE_TABLE)
+    contributors = spark.read.table(centrum_table(EXPERIMENT_CONTRIBUTORS_TABLE))
+    devices = spark.read.table(centrum_table(EXPERIMENT_DEVICES_TABLE))
+    annotations_source = spark.read.table(centrum_table(ANNOTATIONS_SOURCE_TABLE))
+    metadata_source = spark.read.table(centrum_table(METADATA_SOURCE_TABLE))
 
     enriched = (
         macro_data

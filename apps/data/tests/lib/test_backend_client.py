@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import json
 import re
+from typing import Any
 
 import pytest
 import responses
@@ -19,6 +20,16 @@ SECRET = "shhh"
 @pytest.fixture
 def client() -> BackendClient:
     return BackendClient(base_url=BASE_URL, api_key_id=API_KEY_ID, webhook_secret=SECRET)
+
+
+def _sent_batches() -> list[list[dict[str, Any]]]:
+    """The items carried by each recorded POST, in call order."""
+    batches = []
+    for call in responses.calls:
+        body = call.request.body
+        assert body is not None
+        batches.append(json.loads(body)["items"])
+    return batches
 
 
 def _expected_signature(payload: dict, timestamp: int, secret: str = SECRET) -> str:
@@ -133,6 +144,70 @@ def test_execute_macro_batch_chunks_by_max_size(client: BackendClient) -> None:
 
 
 @responses.activate
+def test_execute_macro_batch_chunks_by_serialized_size(
+    client: BackendClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Three ~445 byte items under a 1 KB budget -> 2 HTTP calls, although
+    # max_batch_size alone would have sent all three together.
+    monkeypatch.setattr(BackendClient, "MAX_BATCH_BYTES", 1024)
+    responses.add(
+        responses.POST,
+        f"{BASE_URL}/api/v1/macros/execute-batch",
+        json={"success": True, "results": []},
+        status=200,
+    )
+    items = [{"id": str(i), "macro_id": "m", "data": {"blob": "x" * 400}} for i in range(3)]
+    client.execute_macro_batch(items, max_batch_size=500)
+    assert len(responses.calls) == 2
+
+
+@responses.activate
+def test_execute_macro_batch_packs_several_macro_groups_into_one_request(
+    client: BackendClient,
+) -> None:
+    """The backend invokes one Lambda per group in a request, so groups sharing
+    a request run in parallel. Capping the request caps every group inside it,
+    which is what keeps one invocation inside its output budget."""
+    responses.add(
+        responses.POST,
+        f"{BASE_URL}/api/v1/macros/execute-batch",
+        json={"success": True, "results": []},
+        status=200,
+    )
+    items = [{"id": str(i), "macro_id": "a" if i < 2 else "b", "data": {}} for i in range(4)]
+    client.execute_macro_batch(items, max_batch_size=4)
+
+    sent = _sent_batches()
+    assert len(sent) == 1
+    assert [item["macro_id"] for item in sent[0]] == ["a", "a", "b", "b"]
+
+
+@responses.activate
+def test_execute_macro_batch_sends_an_oversized_item_alone(
+    client: BackendClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A sample larger than the whole budget is still sent, so the backend can
+    # reject that one row rather than the pipeline dropping it silently.
+    monkeypatch.setattr(BackendClient, "MAX_BATCH_BYTES", 256)
+    responses.add(
+        responses.POST,
+        f"{BASE_URL}/api/v1/macros/execute-batch",
+        json={"success": True, "results": []},
+        status=200,
+    )
+    items = [
+        {"id": "0", "macro_id": "m", "data": {}},
+        {"id": "1", "macro_id": "m", "data": {"blob": "x" * 500}},
+    ]
+    client.execute_macro_batch(items, max_batch_size=500)
+
+    assert len(responses.calls) == 2
+    assert [item["id"] for item in _sent_batches()[1]] == ["1"]
+
+
+@responses.activate
 def test_execute_macro_batch_chunk_failure_synthesizes_per_item_errors(client: BackendClient) -> None:
     # Two chunks: first succeeds, second 500s. Caller should get all 4 results,
     # with the failed chunk's items marked success=False.
@@ -187,7 +262,9 @@ def test_execute_macro_batch_sorts_same_macro_by_workbook_version(client: Backen
         ]
     )
 
-    body = responses.calls[0].request.body
-    assert body is not None
-    sent = json.loads(body)["items"]
-    assert [item["id"] for item in sent] == ["live", "v1", "v2"]
+    # Sorting keeps one version's items adjacent inside the request. The
+    # backend groups them again on its side and invokes a Lambda per group, so
+    # all three still travel in one request.
+    sent = _sent_batches()
+    assert len(sent) == 1
+    assert [item["id"] for item in sent[0]] == ["live", "v1", "v2"]

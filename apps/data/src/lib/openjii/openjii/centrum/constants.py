@@ -16,10 +16,18 @@ EXPERIMENT_STATUS_TABLE = "experiment_status"
 EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
 EXPERIMENT_DEVICE_DATA_TABLE = "experiment_device_data"
 EXPERIMENT_MACRO_DATA_TABLE = "experiment_macro_data"
+
 EXPERIMENT_CONTRIBUTORS_TABLE = "experiment_contributors"
 EXPERIMENT_DEVICES_TABLE = "experiment_devices"
 EXPERIMENT_TABLE_METADATA = "experiment_table_metadata"
 EXPERIMENT_UPLOADED_DATA_TABLE = "experiment_uploaded_data"
+
+# Distinct key pairs, split out so each aggregate is the top node of its own
+# table, which is what a streaming-table conversion needs. Many-to-many pairs,
+# hence bridge rather than dim.
+BRIDGE_EXPERIMENT_CONTRIBUTOR_TABLE = "bridge_experiment_contributor"
+BRIDGE_EXPERIMENT_DEVICE_TABLE = "bridge_experiment_device"
+AGG_EXPERIMENT_DEVICE_TABLE = "agg_experiment_device"
 
 # Enriched (gold)
 ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"

@@ -1,6 +1,8 @@
 """Timezone safety tests for enriched Centrum measurements."""
 
 import importlib.util
+import sys
+import types
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -8,7 +10,7 @@ import pytest
 from enrich.timezone import drop_invalid_timezone
 from pyspark.sql import functions as F
 
-_ENRICHED_PIPELINE_DIR = Path(__file__).parents[2] / "src/pipelines/centrum/enriched"
+_PIPELINES_DIR = Path(__file__).parents[2] / "src/pipelines"
 _HOSTILE_TIMEZONES = (
     "ROC",
     "Factory",
@@ -61,13 +63,13 @@ def test_invalid_timezone_is_dropped_without_dropping_measurement(spark):
     ("pipeline_file", "view_function", "source_table_constant", "source_kind"),
     [
         (
-            "enriched_experiment_raw_data.py",
+            "centrum/enriched/enriched_experiment_raw_data.py",
             "enriched_experiment_raw_data",
             "EXPERIMENT_RAW_DATA_TABLE",
             "raw",
         ),
         (
-            "enriched_experiment_macro_data.py",
+            "macros/enriched_experiment_macro_data.py",
             "enriched_experiment_macro_data",
             "EXPERIMENT_MACRO_DATA_TABLE",
             "macro",
@@ -83,8 +85,13 @@ def test_enriched_views_guard_timezone(
     source_table_constant,
     source_kind,
 ):
+    # The macro notebook imports its runtime, which reads spark.conf at import.
+    fake_runtime = types.ModuleType("openjii.macros.runtime")
+    fake_runtime.centrum_table = lambda name: f"open_jii_test.centrum.{name}"
+    monkeypatch.setitem(sys.modules, "openjii.macros.runtime", fake_runtime)
+
     spec = importlib.util.spec_from_file_location(
-        f"timezone_regression_{source_kind}", _ENRICHED_PIPELINE_DIR / pipeline_file
+        f"timezone_regression_{source_kind}", _PIPELINES_DIR / pipeline_file
     )
     assert spec is not None and spec.loader is not None
     pipeline = importlib.util.module_from_spec(spec)
@@ -95,6 +102,8 @@ def test_enriched_views_guard_timezone(
     monkeypatch.setattr(
         fake_dlt, "read", lambda name: source if name == source_table else MagicMock(name=name)
     )
+    # The macro view reads its Centrum inputs by qualified name.
+    monkeypatch.setattr(pipeline, "spark", MagicMock(name="spark"), raising=False)
     monkeypatch.setattr(pipeline, "add_annotation_column", lambda frame, _source: frame)
     monkeypatch.setattr(pipeline, "add_custom_metadata_column", lambda frame, _source: frame)
     guard = MagicMock(name="drop_invalid_timezone")

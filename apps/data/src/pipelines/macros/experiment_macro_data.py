@@ -2,6 +2,12 @@
 # DBTITLE 1,Gold Layer - Experiment Macro Data
 # Gold: per-macro execution results via the backend sandbox UDF, with VARIANT
 # output column and inline-repair application.
+#
+# Runs in its own pipeline because the sandbox call is sequential HTTP from a
+# Spark task, and sharing the ingest pipeline's compute let those tasks hold the
+# slots the Kinesis reader needs. The table was moved here from the Centrum
+# pipeline rather than recreated. Keep the query as it was: a changed streaming
+# plan can invalidate the progress the stream resumes from.
 
 # COMMAND ----------
 import dlt
@@ -14,7 +20,7 @@ from openjii.centrum import (
     EXPERIMENT_RAW_DATA_TABLE,
     MACRO_ID_UUID_PATTERN,
 )
-from openjii.centrum.runtime import ENVIRONMENT
+from openjii.macros.runtime import ENVIRONMENT, centrum_table
 
 # COMMAND ----------
 
@@ -37,7 +43,7 @@ def experiment_macro_data():
     sandbox_macro_udf = make_execute_macro_udf(ENVIRONMENT, dbutils)
 
     base_df = (
-        dlt.read_stream(EXPERIMENT_RAW_DATA_TABLE)
+        spark.readStream.table(centrum_table(EXPERIMENT_RAW_DATA_TABLE))
         .filter("macros IS NOT NULL")
         .filter("size(macros) > 0")
         .select(

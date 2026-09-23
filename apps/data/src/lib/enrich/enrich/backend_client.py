@@ -9,10 +9,21 @@ import hashlib
 import hmac
 import json
 import time
+from collections.abc import Iterator
 from typing import Any
 from urllib.parse import urljoin
 
 import requests
+
+# The chunk size the macro UDF posts in. Bound by what one sandbox invocation
+# may emit, not by round trips. Every handler rejects a wrapper whose
+# uncompressed stdout exceeds 10 MB, and that check runs before the response is
+# compressed, so the consumer's larger decompressed ceiling never applies. The
+# heaviest macro observed emits ~340 KB a row, which leaves room for about 30.
+# The timeout is a whole-batch budget on the same invocation and caps at 60 s,
+# so a larger chunk buys no more time. Raising this needs per-macro output
+# sizing, not a larger constant.
+DEFAULT_MACRO_BATCH_SIZE = 25
 
 
 class BackendIntegrationError(Exception):
@@ -37,6 +48,12 @@ class BackendClient:
     WEBHOOK_USER_METADATA_PATH = "/api/v1/users/metadata"
     WEBHOOK_MACRO_BATCH_PATH = "/api/v1/macros/execute-batch"
     WEBHOOK_IOT_REGISTRY_PATH = "/api/v1/iot/devices/registry"
+
+    # Keeps the request under the backend's 10 MB JSON body limit, so one
+    # outsized sample fails alone instead of failing every item in its chunk.
+    # It does not bound the Lambda invocation: the backend restores workbook
+    # context after this point, which can copy each measurement again.
+    MAX_BATCH_BYTES = 4 * 1024 * 1024
 
     def __init__(self, base_url: str, api_key_id: str, webhook_secret: str, timeout: int = 30):
         """
@@ -261,11 +278,45 @@ class BackendClient:
 
         return registry
 
+    def _chunk_items(
+        self,
+        items: list[dict[str, Any]],
+        max_batch_size: int,
+    ) -> Iterator[list[dict[str, Any]]]:
+        """Yield request chunks bounded by both item count and serialized size.
+
+        A chunk may span macro groups. The backend invokes one Lambda per group
+        in a request, so several groups in one request run in parallel, and a
+        chunk capped at max_batch_size caps every group inside it anyway. An
+        item larger than the budget still goes out alone, so the backend
+        rejects that one row rather than the pipeline dropping it.
+        """
+        batch: list[dict[str, Any]] = []
+        # The envelope and the commas joining the items are part of the body.
+        envelope_bytes = len(json.dumps({"items": [], "timeout": 0}, separators=(",", ":")))
+        batch_bytes = envelope_bytes
+
+        for item in items:
+            # Measured the way the body is built, or the budget bounds nothing.
+            item_bytes = len(json.dumps(item, separators=(",", ":"))) + 1
+            is_full = len(batch) >= max_batch_size or batch_bytes + item_bytes > self.MAX_BATCH_BYTES
+
+            if batch and is_full:
+                yield batch
+                batch = []
+                batch_bytes = envelope_bytes
+
+            batch.append(item)
+            batch_bytes += item_bytes
+
+        if batch:
+            yield batch
+
     def execute_macro_batch(
         self,
         items: list[dict[str, Any]],
         timeout: int = 30,
-        max_batch_size: int = 500,
+        max_batch_size: int = DEFAULT_MACRO_BATCH_SIZE,
     ) -> dict[str, Any]:
         """
         Execute macros via the backend batch endpoint.
@@ -278,7 +329,8 @@ class BackendClient:
             items: Dicts with id, macro_id, data, and optional
                 workbook_version_id/context.
             timeout: Per-Lambda timeout in seconds (1-60).
-            max_batch_size: Max items per HTTP request (default 500, API limit 5000).
+            max_batch_size: Max items per HTTP request. Also bounded by
+                MAX_BATCH_BYTES, and by what one sandbox invocation may emit.
 
         Returns:
             Dict with 'results' list and optional 'errors' list.
@@ -290,8 +342,10 @@ class BackendClient:
         if not items:
             return {"results": []}
 
-        # Keep each HTTP chunk as homogeneous as possible. A macro UUID may
-        # point at different immutable code across workbook versions.
+        # Group items so a chunk splits into as few Lambda calls as it can: the
+        # backend turns each macro and workbook version group in a request into
+        # one call. A macro UUID points at different code across versions, so
+        # the version is part of the key.
         sorted_items = sorted(
             items,
             key=lambda item: (
@@ -303,9 +357,7 @@ class BackendClient:
         all_results: list[dict[str, Any]] = []
         all_errors: list[str] = []
 
-        # Chunk into batches to avoid payload size limits
-        for i in range(0, len(sorted_items), max_batch_size):
-            batch = sorted_items[i : i + max_batch_size]
+        for batch in self._chunk_items(sorted_items, max_batch_size):
             payload = {"items": batch, "timeout": timeout}
 
             try:

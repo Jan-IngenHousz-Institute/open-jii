@@ -6,14 +6,14 @@
 import dlt
 
 from enrich.device_metadata import add_device_registry
-from openjii.centrum import EXPERIMENT_DEVICES_TABLE
-from openjii.centrum.runtime import ENVIRONMENT, SILVER_TABLE
+from openjii.centrum import BRIDGE_EXPERIMENT_DEVICE_TABLE, EXPERIMENT_DEVICES_TABLE
+from openjii.centrum.runtime import ENVIRONMENT
 
 # COMMAND ----------
 
 @dlt.table(
     name=EXPERIMENT_DEVICES_TABLE,
-    comment="Gold layer: Registry-resolved devices per experiment (client_id -> device), full refresh each run.",
+    comment="Gold layer: Registry-resolved devices per experiment (client_id -> device).",
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
@@ -28,15 +28,9 @@ def experiment_devices():
     broker-authenticated client_id (== Thing name for X.509 devices). Cognito
     rows have a non-Thing client_id and resolve to a NULL device struct.
 
-    Mirrors experiment_contributors: distinct keys from the data, enriched once
-    per run from the backend, then joined by the gold device dimension.
+    Mirrors experiment_contributors: distinct keys from the bridge, enriched once
+    per run from the backend, then joined by the gold device dimension. The
+    registry lookup is a non-deterministic UDF, so this table still recomputes in
+    full, but over the few hundred distinct pairs rather than every measurement.
     """
-    unique_devices = (
-        dlt.read(SILVER_TABLE)
-        .filter("experiment_id IS NOT NULL")
-        .filter("client_id IS NOT NULL")
-        .select("experiment_id", "client_id")
-        .distinct()
-    )
-
-    return add_device_registry(unique_devices, ENVIRONMENT, dbutils)
+    return add_device_registry(dlt.read(BRIDGE_EXPERIMENT_DEVICE_TABLE), ENVIRONMENT, dbutils)

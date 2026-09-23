@@ -21,6 +21,7 @@ from openjii.centrum import (
 @dlt.table(
     name=ENRICHED_UPLOADED_DATA_VIEW,
     comment="Enriched view: uploaded rows joined with contributors, annotations, and experiment metadata. Mirrors enriched_experiment_macro_data.",
+    cluster_by=["experiment_id"],
     table_properties={
         "quality": "gold",
         "delta.enableRowTracking": "true",

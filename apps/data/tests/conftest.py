@@ -57,6 +57,10 @@ def fake_dlt(monkeypatch: pytest.MonkeyPatch) -> Iterator[types.ModuleType]:
 
     fake.read = lambda name: None  # type: ignore[attr-defined]
     fake.read_stream = lambda name: None  # type: ignore[attr-defined]
+    # The gold bridges call these at module level, so an import-based test of
+    # one fails on the fixture rather than on the file it is testing.
+    fake.create_streaming_table = lambda **kwargs: None  # type: ignore[attr-defined]
+    fake.create_auto_cdc_flow = lambda **kwargs: None  # type: ignore[attr-defined]
 
     monkeypatch.setitem(sys.modules, "dlt", fake)
     yield fake

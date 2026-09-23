@@ -684,14 +684,15 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_raw_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_device_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_devices",
-    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_macro_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_uploaded_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_table_metadata",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/experiment_contributors",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/bridge_experiment_contributor",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/bridge_experiment_device",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/agg_experiment_device",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/gold/sources",
     # enriched
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/enriched/enriched_experiment_raw_data",
-    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/enriched/enriched_experiment_macro_data",
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/enriched/enriched_experiment_uploaded_data",
     # event hooks
     "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/centrum/hooks",
@@ -713,6 +714,15 @@ module "centrum_pipeline" {
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust the r5d.large driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
   }
+
+  event_log = {
+    catalog = module.databricks_catalog.catalog_name
+    schema  = "centrum"
+    name    = "centrum_pipeline_event_log"
+  }
+
+  # AUTO CDC on the gold bridges needs PRO or ADVANCED.
+  edition = "ADVANCED"
 
   continuous_mode  = true
   development_mode = true
@@ -742,6 +752,71 @@ module "centrum_pipeline" {
   }
 
   depends_on = [module.node_cluster_policy, databricks_grants.centrum_schema]
+}
+
+# Macro execution is a separate deployment, not a separate domain: it publishes
+# experiment_macro_data and its enriched view into centrum like any other gold
+# table. It runs on its own compute because the sandbox call is sequential HTTP
+# from a Spark task, and sharing centrum's cluster meant those tasks held the
+# slots the Kinesis reader needs for its prefetch job. In September that starved
+# ingestion for days. Both tables were moved here from the Centrum pipeline; see
+# the migration in the data architecture docs.
+module "macro_execution_pipeline" {
+  source = "../../modules/databricks/pipeline"
+
+  name         = "Macro-Execution-DLT-Pipeline-PROD"
+  schema_name  = "centrum"
+  catalog_name = module.databricks_catalog.catalog_name
+
+  notebook_paths = [
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/macros/experiment_macro_data",
+    "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/pipelines/macros/enriched_experiment_macro_data",
+  ]
+
+  event_log = {
+    catalog = module.databricks_catalog.catalog_name
+    schema  = "centrum"
+    name    = "macro_execution_pipeline_event_log"
+  }
+
+  configuration = {
+    "CATALOG_NAME"        = module.databricks_catalog.catalog_name
+    "CENTRUM_SCHEMA_NAME" = "centrum"
+    "ENVIRONMENT"         = upper(var.environment)
+    # The cadence both tables had inside Centrum. Unset, a continuous pipeline
+    # falls back to five seconds for the stream and one minute for the enriched
+    # view, which is a full recompute every time.
+    "pipelines.trigger.interval" = "120 seconds"
+  }
+
+  continuous_mode  = true
+  development_mode = true
+  serverless       = false
+
+  node_type_id = "r5d.large"
+  num_workers  = 2
+  policy_id    = module.node_cluster_policy.policy_id
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_RUN"
+    },
+    {
+      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.centrum_pipeline]
 }
 
 module "metrics_pipeline" {

@@ -708,14 +708,15 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_raw_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_device_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_devices",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_macro_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_uploaded_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_table_metadata",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_contributors",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/bridge_experiment_contributor",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/bridge_experiment_device",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/agg_experiment_device",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/sources",
     # enriched
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/enriched/enriched_experiment_raw_data",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/enriched/enriched_experiment_macro_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/enriched/enriched_experiment_uploaded_data",
     # event hooks
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/hooks",
@@ -737,6 +738,15 @@ module "centrum_pipeline" {
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust the r5d.large driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
   }
+
+  event_log = {
+    catalog = module.databricks_catalog.catalog_name
+    schema  = "centrum"
+    name    = "centrum_pipeline_event_log"
+  }
+
+  # AUTO CDC on the gold bridges needs PRO or ADVANCED.
+  edition = "ADVANCED"
 
   continuous_mode  = false
   development_mode = true
@@ -806,6 +816,121 @@ module "pipeline_scheduler" {
     {
       principal_application_id = module.node_service_principal.service_principal_application_id
       permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.centrum_pipeline]
+}
+
+# Macros get their own job. In the same job as Centrum, a macro update running
+# for hours kept that job active, and max_concurrent_runs = 1 then skipped the
+# next ingestion runs. The macro pipeline reads experiment_raw_data as a stream,
+# so it needs no ordering against Centrum: each run picks up whatever arrived.
+# Offset by a quarter hour so it usually starts after an ingestion run lands.
+# Prod needs neither job: both pipelines are continuous there.
+module "macro_pipeline_scheduler" {
+  source = "../../modules/databricks/job"
+
+  name        = "Macro-Pipeline-Scheduler-DEV"
+  description = "Runs macro execution on its own cadence, independent of ingestion"
+
+  schedule = "0 15/30 6-18 ? * MON-FRI"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "STANDARD"
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  task_retry_config = {
+    retries                   = 2
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  tasks = [
+    {
+      key         = "trigger_macro_execution_pipeline"
+      task_type   = "pipeline"
+      pipeline_id = module.macro_execution_pipeline.pipeline_id
+    }
+  ]
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.macro_execution_pipeline]
+}
+
+# Macro execution is a separate deployment, not a separate domain: it publishes
+# experiment_macro_data and its enriched view into centrum like any other gold
+# table. It runs on its own compute because the sandbox call is sequential HTTP
+# from a Spark task, and sharing centrum's cluster meant those tasks held the
+# slots the Kinesis reader needs for its prefetch job. Both tables were moved
+# here from the Centrum pipeline; see the migration in the data architecture docs.
+module "macro_execution_pipeline" {
+  source = "../../modules/databricks/pipeline"
+
+  name         = "Macro-Execution-DLT-Pipeline-DEV"
+  schema_name  = "centrum"
+  catalog_name = module.databricks_catalog.catalog_name
+
+  notebook_paths = [
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/experiment_macro_data",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/enriched_experiment_macro_data",
+  ]
+
+  event_log = {
+    catalog = module.databricks_catalog.catalog_name
+    schema  = "centrum"
+    name    = "macro_execution_pipeline_event_log"
+  }
+
+  configuration = {
+    "CATALOG_NAME"        = module.databricks_catalog.catalog_name
+    "CENTRUM_SCHEMA_NAME" = "centrum"
+    "ENVIRONMENT"         = var.environment
+    # The cadence both tables had inside Centrum. Unset, a continuous pipeline
+    # falls back to five seconds for the stream and one minute for the enriched
+    # view, which is a full recompute every time.
+    "pipelines.trigger.interval" = "120 seconds"
+  }
+
+  continuous_mode  = false
+  development_mode = true
+  serverless       = false
+
+  node_type_id = "r5d.large"
+  num_workers  = 1
+  policy_id    = module.node_cluster_policy.policy_id
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_RUN"
+    },
+    {
+      principal_application_id = module.github_cicd_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE"
     }
   ]
 
