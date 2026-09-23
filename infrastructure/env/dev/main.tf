@@ -717,6 +717,8 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/latest_device_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/latest_device_event",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/latest_experiment_device",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_raw_data_schemas",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_uploaded_data_schemas",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/sources",
     # enriched
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/enriched/enriched_experiment_raw_data",
@@ -789,6 +791,7 @@ module "macro_execution_pipeline" {
 
   notebook_paths = [
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/experiment_macro_data",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/experiment_macro_data_schemas",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/enriched_experiment_macro_data",
   ]
 
@@ -851,7 +854,6 @@ module "metrics_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/experiment_contributors_window",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/experiment_devices_window",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/daily_activity_by_resource",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/experiment_device_counts",
     # ops: read by the heartbeat export, never by the public endpoint
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/ops_device_silence",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/metrics/ops_ingest_quality",
@@ -1392,12 +1394,18 @@ module "experiment_custom_metadata_table" {
   depends_on = [databricks_grants.centrum_schema]
 }
 
-# The enriched data as plain views: the join runs when someone reads, for the
-# experiment they read, so no pipeline recomputes it. Interim names while the
-# materialized views of the same names still serve readers outside the backend.
-module "enriched_views" {
-  source   = "../../modules/databricks/sql-table"
-  for_each = toset(["enriched_experiment_raw_data", "enriched_experiment_macro_data", "enriched_experiment_uploaded_data"])
+# Plain views over gold: the joins and counts run when someone reads, for the
+# experiment they read, so no pipeline recomputes them. Interim names while the
+# tables of the same names still serve readers outside the backend.
+module "serving_views" {
+  source = "../../modules/databricks/sql-table"
+  for_each = toset([
+    "enriched_experiment_raw_data",
+    "enriched_experiment_macro_data",
+    "enriched_experiment_uploaded_data",
+    "experiment_table_metadata",
+    "experiment_device_data",
+  ])
 
   catalog_name = module.databricks_catalog.catalog_name
   schema_name  = "centrum"
@@ -2192,7 +2200,7 @@ module "backend_ecs" {
     },
     {
       name  = "DATABRICKS_DEVICE_DATA_TABLE_NAME"
-      value = "experiment_device_data"
+      value = "experiment_device_data_view"
     },
     {
       name  = "DATABRICKS_MACRO_DATA_TABLE_NAME"
