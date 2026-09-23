@@ -753,8 +753,7 @@ module "centrum_pipeline" {
 # table. It runs on its own compute because the sandbox call is sequential HTTP
 # from a Spark task, and sharing centrum's cluster meant those tasks held the
 # slots the Kinesis reader needs for its prefetch job. In September that starved
-# ingestion for days. Both tables were moved here from the Centrum pipeline; see
-# the migration in the data architecture docs.
+# ingestion for days.
 module "macro_execution_pipeline" {
   source = "../../modules/databricks/pipeline"
 

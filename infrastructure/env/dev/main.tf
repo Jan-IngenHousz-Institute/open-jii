@@ -742,7 +742,7 @@ module "centrum_pipeline" {
   # AUTO CDC on the gold bridges needs PRO or ADVANCED.
   edition = "ADVANCED"
 
-  continuous_mode  = false
+  continuous_mode  = true
   development_mode = true
   serverless       = false
 
@@ -772,111 +772,11 @@ module "centrum_pipeline" {
   depends_on = [module.node_cluster_policy, databricks_grants.centrum_schema]
 }
 
-module "pipeline_scheduler" {
-  source = "../../modules/databricks/job"
-
-  name        = "Pipeline-Scheduler-DEV"
-  description = "Orchestrates central pipeline execution"
-
-  # Schedule: Every 30 minutes between 6am and 6pm UTC, weekdays only (Mon-Fri)
-  # Format: "seconds minutes hours day-of-month month day-of-week"
-  schedule = "0 0/30 6-18 ? * MON-FRI"
-
-  max_concurrent_runs           = 1
-  use_serverless                = true
-  continuous                    = false
-  serverless_performance_target = "STANDARD"
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
-  }
-
-  # Configure task retries
-  task_retry_config = {
-    retries                   = 2
-    min_retry_interval_millis = 60000
-    retry_on_timeout          = true
-  }
-
-  tasks = [
-    {
-      key         = "trigger_centrum_pipeline"
-      task_type   = "pipeline"
-      pipeline_id = module.centrum_pipeline.pipeline_id
-    }
-  ]
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE_RUN"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-
-  depends_on = [module.centrum_pipeline]
-}
-
-# Macros get their own job. In the same job as Centrum, a macro update running
-# for hours kept that job active, and max_concurrent_runs = 1 then skipped the
-# next ingestion runs. The macro pipeline reads experiment_raw_data as a stream,
-# so it needs no ordering against Centrum: each run picks up whatever arrived.
-# Offset by a quarter hour so it usually starts after an ingestion run lands.
-# Prod needs neither job: both pipelines are continuous there.
-module "macro_pipeline_scheduler" {
-  source = "../../modules/databricks/job"
-
-  name        = "Macro-Pipeline-Scheduler-DEV"
-  description = "Runs macro execution on its own cadence, independent of ingestion"
-
-  schedule = "0 15/30 6-18 ? * MON-FRI"
-
-  max_concurrent_runs           = 1
-  use_serverless                = true
-  continuous                    = false
-  serverless_performance_target = "STANDARD"
-
-  run_as = {
-    service_principal_name = module.node_service_principal.service_principal_application_id
-  }
-
-  task_retry_config = {
-    retries                   = 2
-    min_retry_interval_millis = 60000
-    retry_on_timeout          = true
-  }
-
-  tasks = [
-    {
-      key         = "trigger_macro_execution_pipeline"
-      task_type   = "pipeline"
-      pipeline_id = module.macro_execution_pipeline.pipeline_id
-    }
-  ]
-
-  permissions = [
-    {
-      principal_application_id = module.node_service_principal.service_principal_application_id
-      permission_level         = "CAN_MANAGE_RUN"
-    }
-  ]
-
-  providers = {
-    databricks.workspace = databricks.workspace
-  }
-
-  depends_on = [module.macro_execution_pipeline]
-}
-
 # Macro execution is a separate deployment, not a separate domain: it publishes
 # experiment_macro_data and its enriched view into centrum like any other gold
 # table. It runs on its own compute because the sandbox call is sequential HTTP
 # from a Spark task, and sharing centrum's cluster meant those tasks held the
-# slots the Kinesis reader needs for its prefetch job. Both tables were moved
-# here from the Centrum pipeline; see the migration in the data architecture docs.
+# slots the Kinesis reader needs for its prefetch job.
 module "macro_execution_pipeline" {
   source = "../../modules/databricks/pipeline"
 
@@ -899,7 +799,7 @@ module "macro_execution_pipeline" {
     "pipelines.trigger.interval" = "120 seconds"
   }
 
-  continuous_mode  = false
+  continuous_mode  = true
   development_mode = true
   serverless       = false
 
