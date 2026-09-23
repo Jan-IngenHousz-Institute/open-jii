@@ -1,7 +1,9 @@
+WITH
 -- Uploaded rows joined at read time with their contributor and annotations as
 -- they are now. Uploaded rows carry no question answers or device, so no custom
 -- metadata can match them. ${catalog} is filled in by terraform.
-WITH db_annotations AS (
+-- Inside the WITH because Unity Catalog drops comments above a view's first keyword.
+db_annotations AS (
   SELECT
     experiment_id,
     row_id,

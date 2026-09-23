@@ -1,8 +1,10 @@
+WITH
 -- Measurements joined at read time with their contributor, device, annotations
 -- and custom metadata as they are now. A plain view stores nothing, so an edit
 -- to an annotation or to custom metadata shows on the next read and nothing is
 -- recomputed on a pipeline trigger. ${catalog} is filled in by terraform.
-WITH db_annotations AS (
+-- Inside the WITH because Unity Catalog drops comments above a view's first keyword.
+db_annotations AS (
   SELECT
     experiment_id,
     row_id,

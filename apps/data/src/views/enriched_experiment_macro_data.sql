@@ -1,7 +1,9 @@
+WITH
 -- Macro results joined at read time with their contributor, device, annotations
 -- and custom metadata as they are now. See enriched_experiment_raw_data.sql for
 -- why this is a plain view. ${catalog} is filled in by terraform.
-WITH db_annotations AS (
+-- Inside the WITH because Unity Catalog drops comments above a view's first keyword.
+db_annotations AS (
   SELECT
     experiment_id,
     row_id,
