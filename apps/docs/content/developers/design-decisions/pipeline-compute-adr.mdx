@@ -10,7 +10,7 @@ description: "Why Centrum and the macro pipeline run on the node types, editions
 **Date:** 2026-09-23  
 **Status:** Accepted  
 **Amended:** 2026-09-23, both drivers moved to four cores after the macro pipeline failed to start on dev.  
-**Amended:** 2026-09-24, Centrum's driver moved to 32 GB after it ran in swap on dev.
+**Amended:** 2026-09-24, Centrum's driver moved to 32 GB after it ran in swap on dev, and streaming shuffles and state were sized to the workers' cores.
 
 ## Context
 
@@ -49,6 +49,7 @@ Each pipeline has its own policy. It pins the node types, spot with fallback to 
 - **Centrum workers keep 8 GB per core.** Python UDF workers run outside Spark's heap and cannot spill, and the new architecture had not yet run on long-lived clusters. `r6id` is the newest `r` generation the workspace runs the disk cache on, and spot capacity for `r6id.large` is reclaimed less than 5% of the time. Production keeps the 2 to 6 range it already had, so older code can run on the new nodes safely.
 - **Both drivers take four cores.** A driver runs no tasks, so local NVMe is wasted on it, but it boots the Spark runtime and plans every micro-batch. On two cores it often misses Databricks' 300-second driver startup timeout. The 25 most recent dev clusters with an `r5d.large` driver took a median of 11 minutes to start, with 8 driver startup timeouts among them, and the macro pipeline did not start at all on the `r5a.large` driver first chosen here. Five Centrum clusters with a four-core Graviton driver started in a median of under 3 minutes. `m7i.xlarge` keeps the 16 GB of the first choices and the Intel generation of Centrum's, with twice the cores.
 - **Centrum's driver takes `r7i.xlarge`, with 32 GB.** On `m7i.xlarge`, dev's Centrum driver used 93% of its memory and half its swap through a steady hour. Its JVM heap is 7.6 GB, of which about 2.3 GB stays live, so the pressure comes from outside the heap. With the heap partly in swap, the full garbage collection due about every ten minutes paused every flow for 2 to 4 seconds, and once for 33. The macro driver swapped 17% and keeps `m7i.xlarge`.
+- **Streaming shuffles and state run at the workers' cores.** Streaming micro-batches skip adaptive execution, so at the default of 200 partitions the schema-sample deduplications and Delta's file-state jobs ran 200 tasks per trigger for a handful of rows. On dev they took about half of the worker's time, and the Kinesis prefetch waited behind them for a slot: a median of 0.67 s and a p90 of 7.2 s, against none when they were not running. `spark.sql.shuffle.partitions` matches the cores the workers can reach, and the deduplications keep their state in 2 partitions.
 - **Macro workers are the cheapest task slots.** At three requests per task, dev's sandbox allows 2 slots and production's 4. The work waits rather than computes, so core speed buys nothing. `m5a` and `r5a` have the lowest DBU rate per core among types that spot rarely reclaims, and both keep 16 GB per node, above the 10 GB the dev worker uses.
 - **The macro pipeline runs on CORE,** because it uses neither AUTO CDC nor expectations. Centrum stays on ADVANCED for its expectations.
 - **Both environments run in production mode.** It restarts the cluster after recoverable failures such as memory leaks, and retries. Retry limits stay at their documented defaults.

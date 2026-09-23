@@ -822,6 +822,9 @@ module "centrum_pipeline" {
     "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust a 16 GB driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
+    # Streaming skips AQE, so shuffles run at this count: one per worker core.
+    "spark.sql.shuffle.partitions"              = "12"
+    "spark.sql.streaming.stateStore.partitions" = "2"
   }
 
   # AUTO CDC needs PRO, and the silver expectations need ADVANCED.
@@ -883,6 +886,9 @@ module "macro_execution_pipeline" {
     "CATALOG_NAME"        = module.databricks_catalog.catalog_name
     "CENTRUM_SCHEMA_NAME" = "centrum"
     "ENVIRONMENT"         = upper(var.environment)
+    # Streaming skips AQE, so shuffles run at this count: one per worker core.
+    "spark.sql.shuffle.partitions"              = "4"
+    "spark.sql.streaming.stateStore.partitions" = "2"
   }
 
   # Neither AUTO CDC nor expectations, so CORE is enough.
