@@ -451,6 +451,16 @@ describe("Experiment Schema", () => {
         search: "special chars !@#$%",
       });
 
+      const sort = [
+        { field: "owner", direction: "asc" },
+        { field: "members", direction: "desc" },
+      ];
+      expect(zExperimentFilterQuery.parse({ sort }).sort).toEqual(sort);
+      expect(
+        zExperimentFilterQuery.safeParse({ sort: [{ field: "activity", direction: "asc" }] })
+          .success,
+      ).toBe(false);
+
       // Test combinations
       expect(
         zExperimentFilterQuery.parse({

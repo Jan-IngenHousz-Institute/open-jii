@@ -33,6 +33,7 @@ export function getExperimentColumns(
   return [
     {
       header: t("columns.name"),
+      sortId: "name",
       cell: (experiment, href) => (
         <>
           <div className="flex min-w-0 items-center gap-2">
@@ -63,6 +64,7 @@ export function getExperimentColumns(
     },
     {
       header: t("columns.status"),
+      sortId: "status",
       className: "hidden w-28 sm:table-cell",
       cell: (experiment) => (
         <ExperimentStatusIndicator
@@ -73,6 +75,7 @@ export function getExperimentColumns(
     },
     {
       header: t("columns.owner"),
+      sortId: "owner",
       className: "hidden w-48 lg:table-cell",
       cell: (experiment) => {
         const name = ownerName(experiment);
@@ -97,6 +100,7 @@ export function getExperimentColumns(
     },
     {
       header: t("columns.organization"),
+      sortId: "organization",
       className: "hidden w-44 xl:table-cell",
       cell: (experiment) => (
         <span
@@ -109,6 +113,7 @@ export function getExperimentColumns(
     },
     {
       header: t("columns.members"),
+      sortId: "members",
       className: "hidden w-24 lg:table-cell",
       cell: (experiment) =>
         experiment.membersCount != null && experiment.membersCount > 0 ? (
@@ -139,6 +144,7 @@ export function getExperimentColumns(
     },
     {
       header: t("columns.updated"),
+      sortId: "updated",
       className: "hidden w-32 lg:table-cell",
       cell: (experiment) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>

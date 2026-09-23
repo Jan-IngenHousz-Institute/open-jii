@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
+import type { ExperimentSort } from "@repo/api/domains/experiment/experiment.schema";
 import type { ResourceSeries } from "@repo/api/domains/metrics/metrics.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 
@@ -25,6 +26,7 @@ export class ListExperimentsUseCase {
     scope?: ResourceScope,
     status?: ExperimentStatus,
     search?: string,
+    sort?: ExperimentSort,
   ): Promise<Result<ExperimentDto[]>> {
     this.logger.log({
       msg: "Listing experiments",
@@ -35,7 +37,15 @@ export class ListExperimentsUseCase {
       search,
     });
 
-    const result = await this.experimentRepository.findAll(userId, scope, status, search);
+    const result = await this.experimentRepository.findAll(
+      userId,
+      scope,
+      status,
+      search,
+      undefined,
+      undefined,
+      sort,
+    );
 
     result.fold(
       (experiments: ExperimentDto[]) => {
@@ -67,6 +77,7 @@ export class ListExperimentsUseCase {
     scope?: ResourceScope,
     status?: ExperimentStatus,
     search?: string,
+    sort?: ExperimentSort,
   ): Promise<Result<{ items: ExperimentWithActivity[]; totalCount: number }>> {
     this.logger.log({
       msg: "Listing experiments",
@@ -77,6 +88,7 @@ export class ListExperimentsUseCase {
       scope,
       status,
       search,
+      sort,
     });
 
     const paged = await this.experimentRepository.findPage(
@@ -86,6 +98,8 @@ export class ListExperimentsUseCase {
       scope,
       status,
       search,
+      undefined,
+      sort,
     );
     if (paged.isFailure()) {
       return paged;

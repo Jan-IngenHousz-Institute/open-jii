@@ -21,6 +21,11 @@
     "stale": "Veraltet"
   },
   "lastUpdate": "Letzte Aktualisierung",
+  "resetSorting": "Sortierung zurücksetzen",
+  "sortUnsorted": "unsortiert",
+  "sortAscending": "aufsteigend",
+  "sortDescending": "absteigend",
+  "sortSecondary": "zweite Sortierung",
   "columns": {
     "name": "Name",
     "updated": "Aktualisiert",
