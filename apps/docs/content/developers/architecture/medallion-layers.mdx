@@ -36,7 +36,7 @@ Flexible result shapes use Databricks VARIANT values where the protocol or macro
 
 ## Macro execution pipeline
 
-`experiment_macro_data` and `enriched_experiment_macro_data` belong to the macro pipeline, which reads `experiment_raw_data` and the contributor, device, annotation and metadata tables from Centrum. Centrum's `experiment_table_metadata` reads the enriched view by its qualified name and skips it until the view exists, so a fresh environment can run Centrum before the macro pipeline has run once.
+`experiment_macro_data` and `enriched_experiment_macro_data` belong to the macro pipeline, which reads `experiment_raw_data` and the contributor, device, annotation and metadata tables from Centrum. Centrum's `experiment_table_metadata` reads the enriched view by its qualified name, so the view has to exist before a Centrum update starts.
 
 ## Why the layers matter
 

@@ -119,12 +119,8 @@ def experiment_table_metadata():
 
     metadata = raw_data_metadata.unionByName(device_metadata).unionByName(upload_metadata)
 
-    # The macro pipeline publishes this view, and on a fresh environment it has
-    # not run yet when this pipeline first does. Reading a missing table fails
-    # when the frame is defined, so the macro part is only built once it exists.
+    # Published by the macro pipeline, so read by qualified name.
     macro_view = f"{CATALOG_NAME}.centrum.{ENRICHED_MACRO_DATA_VIEW}"
-    if not spark.catalog.tableExists(macro_view):
-        return metadata
 
     macro_metadata = (
         spark.read.table(macro_view)
