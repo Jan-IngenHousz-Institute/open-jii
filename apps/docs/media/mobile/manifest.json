@@ -110,10 +110,10 @@
     {
       "path": "/img/mobile/join-code-preview.png",
       "kind": "screenshot",
-      "sha256": "5c6873c7f27085f93cf992b0d3c690c1c94fea56a0a8e76d5a1bedc18c3215fe",
+      "sha256": "082f0271fd1cbf34fc43efee061021b2031e618280fb82157e09675d5500d317",
       "disposition": "published",
-      "recapturedOn": "2026-09-22",
-      "scope": "Join code preview for the seeded Cereal Photosynthesis Atlas / Canopy Lab: code and validity line, Can view sentence, no-workbook hint, Join experiment; not tapped"
+      "recapturedOn": "2026-09-23",
+      "scope": "Join code preview for the seeded Cereal Photosynthesis Atlas / Canopy Lab, redesigned to mirror the experiment detail card: identity block, description, Code / Valid until / You'll join as rows, Join experiment, no-workbook caption; not tapped"
     }
   ],
   "unmetCaptures": [

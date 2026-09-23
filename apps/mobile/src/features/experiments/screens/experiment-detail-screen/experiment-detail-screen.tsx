@@ -7,6 +7,7 @@ import { ExperimentJoinCta } from "~/features/experiments/components/experiment-
 import { ExperimentMembershipTag } from "~/features/experiments/components/experiment-membership-tag";
 import { ExperimentOpenOnWebButton } from "~/features/experiments/components/experiment-open-on-web-button";
 import { ExperimentUnavailable } from "~/features/experiments/components/experiment-unavailable";
+import { DETAIL_ROW_CLASS } from "~/features/experiments/components/join-code-preview-card";
 import { useExperimentAccess } from "~/features/experiments/hooks/use-experiment-access";
 import { colors } from "~/shared/constants/colors";
 import { useTranslation } from "~/shared/i18n";
@@ -22,8 +23,6 @@ import { ellipsize } from "~/shared/utils/ellipsize";
 import { extractTextFromHTML } from "~/shared/utils/extract-text-from-html";
 
 const DESCRIPTION_PREVIEW_LENGTH = 220;
-
-const ROW_CLASS = "border-divider mt-3 flex-row items-center justify-between border-t pt-2.5";
 
 export function ExperimentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -150,7 +149,7 @@ export function ExperimentDetailScreen() {
         ) : null}
 
         {hasCollaborators ? (
-          <View className={ROW_CLASS}>
+          <View className={DETAIL_ROW_CLASS}>
             <Text className="text-muted-body text-[13px]">
               {t("experiments:detail.collaboratorsLabel")}
             </Text>
@@ -159,7 +158,7 @@ export function ExperimentDetailScreen() {
         ) : null}
 
         {since ? (
-          <View className={ROW_CLASS}>
+          <View className={DETAIL_ROW_CLASS}>
             <Text className="text-muted-body text-[13px]">{t("experiments:detail.since")}</Text>
             <Text className="text-on-surface text-[13px]">{since}</Text>
           </View>

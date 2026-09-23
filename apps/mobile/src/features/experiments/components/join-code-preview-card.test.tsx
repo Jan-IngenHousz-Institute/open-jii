@@ -10,24 +10,23 @@ import { JoinCodePreviewCard } from "./join-code-preview-card";
 vi.mock("~/shared/i18n", () => ({
   useTranslation: () => ({
     i18n: { language: "en-US" },
-    t: (key: string, values?: { date?: string }) => {
-      if (key === "experiments:joinCode.validUntil") return `valid until ${String(values?.date)}`;
-      return (
-        {
-          "common:retry": "Retry",
-          "experiments:joinCode.codeLabel": "Code",
-          "experiments:joinCode.noExpiry": "no expiry date",
-          "experiments:joinCode.canViewHint":
-            "You'll join with Can view: you can take measurements and see the data.",
-          "experiments:joinCode.noWorkbookHint": "This experiment has no measurement workbook yet",
-          "experiments:joinCode.join": "Join experiment",
-          "experiments:joinCode.joining": "Joining…",
-          "experiments:joinCode.alreadyMember": "You're already in this experiment",
-          "experiments:joinCode.openExperiment": "Open experiment",
-          "experiments:joinCode.offlineHint": "You're offline. Reconnect to join.",
-        }[key] ?? key
-      );
-    },
+    t: (key: string) =>
+      ({
+        "common:retry": "Retry",
+        "experiments:joinCode.codeLabel": "Code",
+        "experiments:joinCode.validUntil": "Valid until",
+        "experiments:joinCode.noExpiry": "No expiry",
+        "experiments:joinCode.accessLevel": "You'll join as",
+        "experiments:joinCode.accessLevelValue": "Can view",
+        "experiments:joinCode.noWorkbookHint": "This experiment has no measurement workbook yet",
+        "experiments:joinCode.join": "Join experiment",
+        "experiments:joinCode.joining": "Joining…",
+        "experiments:joinCode.openExperiment": "Open experiment",
+        "experiments:joinCode.offlineHint": "You're offline. Reconnect to join.",
+        // ExperimentMembershipTag pins t to the experiments namespace, so its
+        // key arrives bare.
+        "membership.joined": "Joined",
+      })[key] ?? key,
   }),
 }));
 
@@ -74,35 +73,50 @@ describe("JoinCodePreviewCard", () => {
     expect(screen.getByText("Phi2 across the canopy profile.")).toBeTruthy();
   });
 
-  it("shows the code hyphenated, with when it stops working", () => {
-    renderCard(PREVIEW);
+  describe("the label/value rows, matching the detail card it lands on", () => {
+    it("shows the code hyphenated", () => {
+      renderCard(PREVIEW);
 
-    expect(screen.getByText("KP7Q-4WMX")).toBeTruthy();
-    expect(screen.getByText(/valid until 25 Sept? 2026/u)).toBeTruthy();
+      expect(screen.getByText("Code")).toBeTruthy();
+      expect(screen.getByText("KP7Q-4WMX")).toBeTruthy();
+    });
+
+    it("shows when the code stops working", () => {
+      renderCard(PREVIEW);
+
+      expect(screen.getByText("Valid until")).toBeTruthy();
+      expect(screen.getByText(/25 Sept? 2026/u)).toBeTruthy();
+    });
+
+    it("says a code without an expiry has none, rather than showing an empty date", () => {
+      renderCard({ ...PREVIEW, expiresAt: null });
+
+      expect(screen.getByText("Valid until")).toBeTruthy();
+      expect(screen.getByText("No expiry")).toBeTruthy();
+    });
+
+    it("names the access level the code grants", () => {
+      renderCard(PREVIEW);
+
+      expect(screen.getByText("You'll join as")).toBeTruthy();
+      expect(screen.getByText("Can view")).toBeTruthy();
+    });
   });
 
-  it("says a code without an expiry has none, rather than showing an empty date", () => {
-    renderCard({ ...PREVIEW, expiresAt: null });
-
-    expect(screen.getByText(/no expiry date/u)).toBeTruthy();
-  });
-
-  it("offers Join with the Can view sentence to someone not yet in", () => {
+  it("offers Join, and no membership tag, to someone not yet in", () => {
     renderCard(PREVIEW);
 
-    expect(
-      screen.getByText("You'll join with Can view: you can take measurements and see the data."),
-    ).toBeTruthy();
+    expect(screen.queryByText("Joined")).toBeNull();
 
     fireEvent.press(screen.getByText("Join experiment"));
     expect(onJoin).toHaveBeenCalledOnce();
     expect(screen.queryByText("Open experiment")).toBeNull();
   });
 
-  it("offers Open experiment, not Join, to someone already in", () => {
+  it("tags a member and offers Open experiment, not Join", () => {
     renderCard({ ...PREVIEW, membershipStatus: "member" });
 
-    expect(screen.getByText("You're already in this experiment")).toBeTruthy();
+    expect(screen.getByText("Joined")).toBeTruthy();
     expect(screen.queryByText("Join experiment")).toBeNull();
 
     fireEvent.press(screen.getByText("Open experiment"));
