@@ -557,6 +557,46 @@ describe("ExecuteMacroBatchUseCase", () => {
       ]);
     });
 
+    it("invokes a split group's chunks together, so the group fits one Lambda timeout", async () => {
+      const macro = await createTestMacro();
+      vi.spyOn(lambdaPort, "getFunctionNameForLanguage").mockReturnValue("test-fn");
+      // The first invocation only returns once the second has started, which
+      // never happens if the chunks run one after another.
+      let started = 0;
+      let releaseFirst: () => void = () => undefined;
+      const bothStarted = new Promise<void>((resolve) => {
+        releaseFirst = resolve;
+      });
+      vi.spyOn(lambdaPort, "invokeLambda").mockImplementation(async (_fn, payload) => {
+        started += 1;
+        if (started === 2) {
+          releaseFirst();
+        }
+        await bothStarted;
+        const items = (payload as LambdaExecutionPayload).items;
+        return success({
+          statusCode: 200,
+          payload: {
+            status: "success",
+            results: items.map((it) => ({ id: it.id, success: true, output: { echo: 1 } })),
+          },
+        });
+      });
+      const blob = "x".repeat(1_700_000);
+      const item = (id: string) => ({
+        id,
+        macro_id: macro.id,
+        data: { phi2: 0.5, blob },
+        context: { measurement: { $macroInput: true } },
+      });
+
+      const result = await useCase.execute({ items: [item("item-a"), item("item-b")] });
+
+      assertSuccess(result);
+      expect(started).toBe(2);
+      expect(result.value.results.map(({ id }) => id)).toEqual(["item-a", "item-b"]);
+    });
+
     it("normalizes a mixed valid/empty/wrapped batch, runs only valid siblings, and preserves order", async () => {
       const macro = await createTestMacro();
       const invokeSpy = mockEchoLambda();

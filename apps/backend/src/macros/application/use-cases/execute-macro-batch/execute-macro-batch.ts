@@ -240,16 +240,17 @@ export class ExecuteMacroBatchUseCase {
       context: item.context ? restoreMacroInputInContext(item.context, item.data) : item.context,
     }));
 
-    // In turn, so a group never holds more than one sandbox execution.
-    const validResults: MacroBatchExecutionResultItem[] = [];
-    const errors: string[] = [];
-    for (const chunk of this.chunkByInvocationBytes(macro.code, timeout, payloadItems)) {
-      const outcome = await this.invokeChunk(functionName, macro, macroId, chunk, timeout);
-      validResults.push(...outcome.results);
-      if (outcome.error) {
-        errors.push(outcome.error);
-      }
-    }
+    // Together, so a split group still finishes within one Lambda timeout, which
+    // is all the caller's request allows. The Lambda client retries a throttled one.
+    const outcomes = await Promise.all(
+      this.chunkByInvocationBytes(macro.code, timeout, payloadItems).map((chunk) =>
+        this.invokeChunk(functionName, macro, macroId, chunk, timeout),
+      ),
+    );
+    const validResults: MacroBatchExecutionResultItem[] = outcomes.flatMap(
+      (outcome) => outcome.results,
+    );
+    const errors = outcomes.flatMap((outcome) => (outcome.error ? [outcome.error] : []));
 
     return {
       results: assemble(validResults),
