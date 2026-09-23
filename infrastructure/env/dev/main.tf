@@ -739,12 +739,6 @@ module "centrum_pipeline" {
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
   }
 
-  event_log = {
-    catalog = module.databricks_catalog.catalog_name
-    schema  = "centrum"
-    name    = "centrum_pipeline_event_log"
-  }
-
   # AUTO CDC on the gold bridges needs PRO or ADVANCED.
   edition = "ADVANCED"
 
@@ -894,12 +888,6 @@ module "macro_execution_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/experiment_macro_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/enriched_experiment_macro_data",
   ]
-
-  event_log = {
-    catalog = module.databricks_catalog.catalog_name
-    schema  = "centrum"
-    name    = "macro_execution_pipeline_event_log"
-  }
 
   configuration = {
     "CATALOG_NAME"        = module.databricks_catalog.catalog_name

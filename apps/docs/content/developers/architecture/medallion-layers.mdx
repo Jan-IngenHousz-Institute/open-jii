@@ -53,7 +53,7 @@ An environment where Centrum already owns these tables moves them to the macro p
 
 4. Once the notebook deploy has finished, start the macro pipeline, then Centrum, then resume the schedulers.
 
-Check the first macro update in `macro_execution_pipeline_event_log` before moving production. It should process only the rows that arrived since Centrum stopped. If it processes the whole of `experiment_raw_data`, the stream did not keep its progress through the move, and that has to be resolved before production.
+Check the first macro update with `databricks pipelines list-pipeline-events <macro pipeline id>` before moving production; its flow progress events carry the rows each flow processed. It should process only the rows that arrived since Centrum stopped. If it processes the whole of `experiment_raw_data`, the stream did not keep its progress through the move, and that has to be resolved before production.
 
 ## Why the layers matter
 
