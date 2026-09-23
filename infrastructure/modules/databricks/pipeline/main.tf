@@ -50,6 +50,7 @@ resource "databricks_pipeline" "this" {
         content {
           min_workers = var.min_workers
           max_workers = var.max_workers
+          mode        = var.autoscale_mode
         }
       }
 
