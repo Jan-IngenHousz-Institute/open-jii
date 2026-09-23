@@ -39,7 +39,8 @@ resource "databricks_pipeline" "this" {
       label = "default"
 
       # Use smallest available instance or specified type
-      node_type_id = var.node_type_id != null ? var.node_type_id : data.databricks_node_type.smallest[0].id
+      node_type_id        = var.node_type_id != null ? var.node_type_id : data.databricks_node_type.smallest[0].id
+      driver_node_type_id = var.driver_node_type_id
 
       # Cluster policy if specified
       policy_id = var.policy_id
