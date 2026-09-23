@@ -212,8 +212,8 @@ def test_execute_macro_batch_sends_an_oversized_item_alone(
     ]
     client.execute_macro_batch(items, max_batch_size=500)
 
-    assert len(responses.calls) == 2
-    assert [item["id"] for item in _sent_batches()[1]] == ["1"]
+    # Chunks are in flight together, so the calls arrive in either order.
+    assert sorted([item["id"] for item in batch] for batch in _sent_batches()) == [["0"], ["1"]]
 
 
 _BATCH_URL = f"{BASE_URL}/api/v1/macros/execute-batch"
