@@ -1,7 +1,7 @@
 import { deviationPercent } from "./baseline.js";
 import { formatValue } from "./format.js";
 import type { LinkButton, SlackBlock, SlackMessage } from "./slack.js";
-import { actions, context, header, section, table } from "./slack.js";
+import { actions, context, divider, header, section, table } from "./slack.js";
 import type { CatalogMetric, EvaluatedReading, MetricReading } from "./types.js";
 
 /**
@@ -11,8 +11,8 @@ import type { CatalogMetric, EvaluatedReading, MetricReading } from "./types.js"
  * identifier, its runbook and its triage command, so the channel stays one table however
  * bad the day is and nobody scrolls past the first problem to reach the second.
  *
- * With no bot token the composer posts the parent alone, so the replies are additive
- * rather than a prerequisite.
+ * With no bot token there is nothing to thread under, and `flatten` puts the replies
+ * inline instead.
  */
 export interface Digest {
   parent: SlackMessage;
@@ -185,7 +185,8 @@ export function renderObservability(
       readingOf(entry),
       entry.evaluation.reason ?? "",
     ]);
-    lines.push(`${entry.metric.num} ${entry.metric.name}: ${readingOf(entry)}`);
+    const reason = entry.evaluation.reason ? ` (${entry.evaluation.reason})` : "";
+    lines.push(`${entry.metric.num} ${entry.metric.name}: ${readingOf(entry)}${reason}`);
   }
 
   blocks.push(section(table(rows)));
@@ -248,4 +249,43 @@ export function renderLevels(
 
   // A level has no detail to open, so there is nothing to thread under it.
   return { parent: { text: lines.join("\n"), blocks }, replies: [] };
+}
+
+// Slack rejects a message of more than 50 blocks, and a rejected digest is no digest.
+const MAX_BLOCKS = 50;
+
+/**
+ * The digest as one message, for a transport that cannot thread.
+ *
+ * A webhook returns no message timestamp, so replies have nothing to hang under. Dropping
+ * them would lose each anomaly's runbook and triage command, which are the two things that
+ * turn a reading into an action. They go inline under the summary instead, most severe
+ * first, and whatever does not fit the block limit is left to the report.
+ */
+export function flatten({ parent, replies }: Digest): SlackMessage {
+  if (replies.length === 0) {
+    return parent;
+  }
+
+  // Room for the divider, and for the note that says some detail did not fit.
+  const budget = MAX_BLOCKS - parent.blocks.length - 2;
+  const inline: SlackBlock[] = [];
+  let shown = 0;
+
+  for (const reply of replies) {
+    if (inline.length + reply.blocks.length > budget) {
+      break;
+    }
+    inline.push(...reply.blocks);
+    shown += 1;
+  }
+
+  const blocks = [...parent.blocks, divider(), ...inline];
+  const hidden = replies.length - shown;
+
+  if (hidden > 0) {
+    blocks.push(context(`${hidden} more on the report.`));
+  }
+
+  return { text: parent.text, blocks };
 }

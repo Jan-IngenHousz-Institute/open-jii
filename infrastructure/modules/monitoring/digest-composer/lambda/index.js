@@ -15,7 +15,7 @@ const {
   resolveForEnvironment,
 } = require("./lib/catalog.js");
 const { averageBaseline, evaluate } = require("./lib/baseline.js");
-const { renderLevels, renderObservability } = require("./lib/render.js");
+const { flatten, renderLevels, renderObservability } = require("./lib/render.js");
 const {
   assembleWindow,
   dailyWindows,
@@ -236,8 +236,10 @@ function post(url, body, headers = {}) {
  *
  * An incoming webhook answers with the literal string "ok" and no message timestamp, so
  * there is nothing to reply to. chat.postMessage returns the ts, which is what lets the
- * detail for each anomaly hang under one summary instead of filling the channel.
- * Without a token the parent still posts, so the replies are additive.
+ * detail for each anomaly hang under one summary instead of filling the channel. Without
+ * a token the same detail goes inline under the summary, so nothing is lost either way.
+ *
+ * Every path logs the text it delivered: the daily round reads the digest from this log.
  */
 async function deliver(channel, digest) {
   const webhookUrl = {
@@ -277,7 +279,14 @@ async function deliver(channel, digest) {
       }
     }
 
-    console.log(JSON.stringify({ channel, delivered: "thread", replies: digest.replies.length }));
+    console.log(
+      JSON.stringify({
+        channel,
+        delivered: "thread",
+        replies: digest.replies.length,
+        text: digest.parent.text,
+      }),
+    );
     return;
   }
 
@@ -286,8 +295,10 @@ async function deliver(channel, digest) {
     return;
   }
 
-  await post(webhookUrl, digest.parent);
-  console.log(JSON.stringify({ channel, delivered: "webhook", replies: 0 }));
+  await post(webhookUrl, flatten(digest));
+  console.log(
+    JSON.stringify({ channel, delivered: "webhook", replies: 0, text: digest.parent.text }),
+  );
 }
 
 exports.handler = async (event) => {

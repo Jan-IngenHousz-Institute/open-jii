@@ -17,8 +17,10 @@ table however bad the day is.
 
 Threading needs `slack_bot_token` and the channel id for that digest. An incoming webhook answers
 with the literal string `ok` and no message timestamp, so there is nothing to reply to. With only
-a webhook set, the summary still posts and the replies are dropped, which is why they are additive
-rather than a prerequisite.
+a webhook set, `flatten` puts each reply's content inline under the summary instead, most severe
+first, so every anomaly keeps its runbook and triage command either way. Slack rejects a message of
+more than 50 blocks, so on a very bad morning the anomalies that do not fit are left to the report
+and the message says how many.
 
 The usage digests are a single message. A level has no detail to open.
 

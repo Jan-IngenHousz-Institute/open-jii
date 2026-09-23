@@ -26,9 +26,10 @@ aws logs tail /aws/lambda/<env>-digest-composer --since 30h --format short
 
 Widen `--since` to cover the whole gap when you have been away.
 
-Each delivery logs one JSON object. `text` is the rendered digest. A line with
-`"delivered": false` means no webhook is configured for that channel and the digest was only
-logged, which is normal in an environment that has not been wired to Slack.
+Each delivery logs one JSON object carrying `text`, the summary exactly as it was posted, with
+one line per anomaly led by its catalog number. `delivered` says how it went out: `"thread"` with a
+bot token, `"webhook"` without one, and `false` when no webhook is configured and the digest was
+only logged, which is normal in an environment that has not been wired to Slack.
 
 `docs/monitoring/metrics-catalog.yaml` is the source of truth for what every line means. Do not
 infer a metric's meaning from its name in the digest; look the id up.

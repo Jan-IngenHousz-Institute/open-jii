@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { deltaGlyph, renderLevels, renderObservability } from "./render.js";
+import { deltaGlyph, flatten, renderLevels, renderObservability } from "./render.js";
 import type { CatalogMetric, MetricReading } from "./types.js";
 
 function reading(
@@ -316,5 +316,44 @@ describe("threaded replies", () => {
     );
 
     expect(digest.replies).toEqual([]);
+  });
+});
+
+describe("a digest that cannot thread", () => {
+  const anomaly = (num: number) => ({
+    ...reading(`signal-${num}`, `Signal ${num}`, 20, 0, `docs/runbooks/signal-${num}.md`, {
+      num,
+      severity: "critical" as const,
+    }),
+    evaluation: { state: "anomaly" as const, reason: "expected 0" },
+  });
+
+  it("keeps each anomaly's runbook and triage command in the one message it can post", () => {
+    // A webhook cannot thread. Dropping the replies would leave a table with no way to
+    // act on it, which is less than the digest carried before it had replies at all.
+    const message = flatten(renderObservability([anomaly(8)], clean, options));
+
+    expect(json(message, "actions")).toContain("https://example.test/docs/runbooks/signal-8.md");
+    expect(json(message, "context")).toContain("claude /openjii-triage signal-8");
+  });
+
+  it("stays inside Slack's block limit however bad the day, and says what it left out", () => {
+    const readings = Array.from({ length: 40 }, (_, index) => anomaly(index + 1));
+    const message = flatten(renderObservability(readings, clean, options));
+
+    expect(message.blocks.length).toBeLessThanOrEqual(50);
+    expect(json(message, "context")).toMatch(/\d+ more on the report\./);
+  });
+
+  it("leaves a digest with nothing to thread exactly as it was", () => {
+    const digest = renderLevels(
+      [reading("m", "Measurements", 10)],
+      clean,
+      "Daily pulse",
+      "4w",
+      options,
+    );
+
+    expect(flatten(digest)).toEqual(digest.parent);
   });
 });

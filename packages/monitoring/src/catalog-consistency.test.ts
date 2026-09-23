@@ -640,6 +640,25 @@ describe("the handler and the renderers agree on what a digest is", () => {
     expect(read.filter((field) => !declared.includes(field))).toEqual([]);
   });
 
+  it("posts the flattened digest through a webhook, so the links survive without threads", () => {
+    const webhookPosts = [...composerHandler.matchAll(/await post\(webhookUrl, ([^)]*\)?)\)/g)];
+
+    expect(webhookPosts.map((call) => call[1])).toEqual(["flatten(digest)"]);
+  });
+
+  it("logs the text it delivered on every path, since the daily round reads it there", () => {
+    // Only the undelivered path used to log the digest, so on any environment wired to
+    // Slack the round had nothing to read and reported a quiet morning.
+    const deliveries = [
+      ...composerHandler.matchAll(/JSON\.stringify\(\{\s*channel,\s*delivered:[^}]*\}/g),
+    ];
+
+    expect(deliveries.length, "no delivery log lines found, so this parse is broken").toBe(3);
+    expect(deliveries.filter((line) => !line[0].includes("text:")).map((line) => line[0])).toEqual(
+      [],
+    );
+  });
+
   it("reads every field the renderers return, so nothing is rendered and dropped", () => {
     expect(fieldsTheHandlerReads()).toEqual(digestFields());
   });
