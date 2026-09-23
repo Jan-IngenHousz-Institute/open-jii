@@ -691,6 +691,7 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/hooks",
   ]
 
+  # Use Databricks per-flow trigger defaults; notebooks may override individual tables.
   configuration = {
     "CATALOG_NAME"                    = module.databricks_catalog.catalog_name
     "BRONZE_TABLE"                    = "raw_data"
@@ -701,7 +702,6 @@ module "centrum_pipeline" {
     "CHECKPOINT_PATH"                 = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
     "ENVIRONMENT"                     = var.environment
     "MONITORING_SLACK_CHANNEL"        = var.slack_channel
-    "pipelines.trigger.interval"      = "120 seconds"
     "LARGE_IOT_S3_PATH"               = "s3://${module.large_iot_s3.bucket_id}/"
     "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust the r5d.large driver
