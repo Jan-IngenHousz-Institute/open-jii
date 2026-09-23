@@ -1150,7 +1150,8 @@
           "number": "een getal",
           "number_array": "getallen",
           "integer_array": "gehele getallen"
-        }
+        },
+        "noBound": "geen"
       },
       "fit": {
         "label": "Fit, levert {{coefficients}} coëfficiënten in {{blocks}} blokken",
@@ -1159,7 +1160,9 @@
         "draftTitle": "Het script vervangen door een opgestelde fit?",
         "draftConfirm": "Het concept komt uit de hierboven vastgelegde series en de blokken eronder, in de volgorde waarin ze zijn opgegeven. Wat er nu in het script staat, gaat verloren.",
         "draftCancel": "Houd wat ik schreef",
-        "draftReplace": "Vervangen"
+        "draftReplace": "Vervangen",
+        "scriptLines_one": "Het script, {{count}} regel",
+        "scriptLines_other": "Het script, {{count}} regels"
       },
       "sidebar": {
         "id": "Kalibratie-ID",

@@ -1,11 +1,13 @@
 "use client";
 
+import { useLocale } from "@/hooks/useLocale";
 import { X } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
 import type { BenchInstrumentSummary } from "@repo/iot";
 import { cn } from "@repo/ui/lib/utils";
 
+import { formatList } from "./format-list";
 import { InlineChoice } from "./inline-choice";
 import { InlineToken } from "./inline-token";
 import type { AuxiliaryInstrument } from "./procedure-edits";
@@ -43,9 +45,12 @@ export function CalibrationRigLine({
   onRemove,
 }: CalibrationRigLineProps) {
   const { t } = useTranslation("iot");
+  const locale = useLocale();
 
   const model = instruments.find((candidate) => candidate.model === instrument.model);
-  const isTaken = takenRoles.filter((role) => role !== instrument.role).includes(instrument.role);
+  // takenRoles carries every role including this one's own, once each; a rename that
+  // collides shows up as this role appearing twice, not as it "still" being in the list.
+  const isTaken = takenRoles.filter((role) => role === instrument.role).length > 1;
   const roleError = isTaken
     ? t("iot.calibration.rig.roleTaken")
     : ROLE_PATTERN.test(instrument.role)
@@ -111,23 +116,26 @@ export function CalibrationRigLine({
           onCommit={(handshake) => onChange({ ...instrument, handshake })}
         />
 
+        {/* Read as one clause continuing the sentence above, not a second, comma-spliced
+            fact bolted on with a middot: "…, and drives X and Y." */}
         {setpoints.length > 0 && (
           <span className="text-muted-foreground text-sm">
-            {" · "}
+            {", "}
             {t("iot.calibration.rig.drives")}{" "}
             <span className="font-mono">
-              {setpoints
-                .map((s) => `${s.name} ${String(s.min)}…${String(s.max)} ${s.unit}`)
-                .join(", ")}
+              {formatList(
+                locale,
+                setpoints.map((s) => `${s.name} ${String(s.min)}…${String(s.max)} ${s.unit}`),
+              )}
             </span>
           </span>
         )}
 
         {readings.length > 0 && (
           <span className="text-muted-foreground text-sm">
-            {" · "}
+            {setpoints.length > 0 ? ` ${t("iot.calibration.produces.and")} ` : ", "}
             {t("iot.calibration.rig.answers")}{" "}
-            <span className="font-mono">{readings.join(", ")}</span>
+            <span className="font-mono">{formatList(locale, readings)}</span>
           </span>
         )}
 
@@ -138,7 +146,7 @@ export function CalibrationRigLine({
             disabled={usedBySteps > 0}
             aria-label={t("iot.calibration.rig.remove", { role: instrument.role })}
             className={cn(
-              "text-muted-foreground/0 group-hover:text-muted-foreground/70 hover:!text-destructive ml-1 align-middle transition-colors",
+              "text-muted-foreground/0 group-hover:text-muted-foreground/70 hover:text-destructive! ml-1 align-middle transition-colors",
               usedBySteps > 0 && "hidden",
             )}
           >

@@ -1150,7 +1150,8 @@
           "number": "eine Zahl",
           "number_array": "Zahlen",
           "integer_array": "ganze Zahlen"
-        }
+        },
+        "noBound": "keine"
       },
       "fit": {
         "label": "Anpassung, liefert {{coefficients}} Koeffizienten in {{blocks}} Blöcken",
@@ -1159,7 +1160,9 @@
         "draftTitle": "Skript durch eine entworfene Anpassung ersetzen?",
         "draftConfirm": "Der Entwurf entsteht aus den oben aufgezeichneten Serien und den Blöcken darunter, in der Reihenfolge ihrer Deklaration. Was jetzt im Skript steht, geht verloren.",
         "draftCancel": "Meines behalten",
-        "draftReplace": "Ersetzen"
+        "draftReplace": "Ersetzen",
+        "scriptLines_one": "Das Skript, {{count}} Zeile",
+        "scriptLines_other": "Das Skript, {{count}} Zeilen"
       },
       "sidebar": {
         "id": "Kalibrierungs-ID",

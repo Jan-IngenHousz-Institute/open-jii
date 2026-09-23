@@ -51,14 +51,16 @@ export function CalibrationCoefficientLine({
   const { t } = useTranslation("iot");
 
   const isArray = spec.type !== "number";
-  const isTaken = takenNames.filter((entry) => entry !== name).includes(name);
+  // takenNames/takenBlocks carry every sibling including this one's own, once each; a
+  // rename that collides shows up as the name appearing twice, not as it "still" being there.
+  const isTaken = takenNames.filter((entry) => entry === name).length > 1;
   const nameError = isTaken
     ? t("iot.calibration.produces.nameTaken")
     : COEFFICIENT_NAME_PATTERN.test(name)
       ? undefined
       : t("iot.calibration.produces.nameInvalid");
 
-  const isBlockTaken = takenBlocks.filter((entry) => entry !== block).includes(block);
+  const isBlockTaken = takenBlocks.filter((entry) => entry === block).length > 1;
   const blockError = isBlockTaken
     ? t("iot.calibration.produces.blockTaken")
     : COEFFICIENT_NAME_PATTERN.test(block)
@@ -74,7 +76,9 @@ export function CalibrationCoefficientLine({
         canEdit={canEdit}
         mono
         inputMode="decimal"
-        placeholder="…"
+        // Not "…": the rig already uses that glyph for a range's own separator
+        // ("current_a 0…10 A"), and a bound with nothing set is a different fact.
+        placeholder={t("iot.calibration.produces.noBound")}
         onCommit={(text) => {
           const parsed = Number(text.trim());
           onChange(
@@ -147,10 +151,14 @@ export function CalibrationCoefficientLine({
         </span>
       )}
 
-      <span className="text-muted-foreground text-sm">
-        {t("iot.calibration.produces.between")} {boundToken("min")}{" "}
-        {t("iot.calibration.produces.and")} {boundToken("max")}
-      </span>
+      {/* Reading closes the affordance: with nothing to click and neither bound set,
+          "between none and none" would be noise rather than a fact. */}
+      {(canEdit || spec.min !== undefined || spec.max !== undefined) && (
+        <span className="text-muted-foreground text-sm">
+          {t("iot.calibration.produces.between")} {boundToken("min")}{" "}
+          {t("iot.calibration.produces.and")} {boundToken("max")}
+        </span>
+      )}
 
       {!isWritable && (
         <span className="text-muted-foreground text-xs">
@@ -163,7 +171,7 @@ export function CalibrationCoefficientLine({
           type="button"
           onClick={onRemove}
           aria-label={t("iot.calibration.produces.removeCoefficient", { name })}
-          className="text-muted-foreground/0 group-hover:text-muted-foreground/70 hover:!text-destructive ml-auto transition-colors"
+          className="text-muted-foreground/0 group-hover:text-muted-foreground/70 hover:text-destructive! ml-auto transition-colors"
         >
           <X className="inline size-3" aria-hidden />
         </button>

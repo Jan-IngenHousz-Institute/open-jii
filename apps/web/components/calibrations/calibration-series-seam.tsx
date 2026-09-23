@@ -1,8 +1,11 @@
 "use client";
 
+import { useLocale } from "@/hooks/useLocale";
+
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 
+import { formatList } from "./format-list";
 import type { ProducedSeries } from "./produced-series";
 
 interface CalibrationSeriesSeamProps {
@@ -12,6 +15,7 @@ interface CalibrationSeriesSeamProps {
 /** Nothing checks these names until a bench run fails, so they stay in front of the author. */
 export function CalibrationSeriesSeam({ series }: CalibrationSeriesSeamProps) {
   const { t } = useTranslation("iot");
+  const locale = useLocale();
 
   if (series.length === 0) {
     return (
@@ -32,7 +36,9 @@ export function CalibrationSeriesSeam({ series }: CalibrationSeriesSeamProps) {
             {t("iot.calibration.seam.optional")}
           </Badge>
         )}
-        <span className="text-muted-foreground text-xs">{produced.columns.join(" · ")}</span>
+        <span className="text-muted-foreground text-xs">
+          {formatList(locale, produced.columns)}
+        </span>
       </li>
     );
   }

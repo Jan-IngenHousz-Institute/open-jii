@@ -1,10 +1,19 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
+import { useState } from "react";
+
 import type {
   CalibrationFamily,
   CalibrationOutputSchema,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@repo/ui/components/collapsible";
+import { cn } from "@repo/ui/lib/utils";
 
 import { CalibrationFitDraftAction } from "./calibration-fit-draft-action";
 import { CalibrationOutputSchemaEditor } from "./calibration-output-schema-editor";
@@ -33,19 +42,32 @@ export function CalibrationFitCell({
   onSchemaChange,
 }: CalibrationFitCellProps) {
   const { t } = useTranslation("iot");
+  const lines = script.split("\n").length;
+  // Reading is about the shape a calibration has, not the Python that produces it: open
+  // while there is work to do on the script, closed once it is only there to be trusted.
+  const [isOpen, setIsOpen] = useState(canEdit);
 
   return (
     <div className="space-y-5">
-      <div className="space-y-2">
-        <CalibrationScriptEditor script={script} canEdit={canEdit} onChange={onScriptChange} />
-        {canEdit && (
-          <CalibrationFitDraftAction
-            series={series}
-            outputSchema={outputSchema}
-            onDraft={onScriptChange}
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground group/trigger flex items-center gap-1.5 text-sm">
+          <ChevronRight
+            className={cn("size-3.5 transition-transform", isOpen && "rotate-90")}
+            aria-hidden
           />
-        )}
-      </div>
+          {t("iot.calibration.fit.scriptLines", { count: lines })}
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-2 pt-2">
+          <CalibrationScriptEditor script={script} canEdit={canEdit} onChange={onScriptChange} />
+          {canEdit && (
+            <CalibrationFitDraftAction
+              series={series}
+              outputSchema={outputSchema}
+              onDraft={onScriptChange}
+            />
+          )}
+        </CollapsibleContent>
+      </Collapsible>
 
       <div className="space-y-2">
         <p className="text-muted-foreground text-sm">{t("iot.calibration.fit.submits")}</p>

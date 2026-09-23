@@ -38,6 +38,20 @@ describe("block edits", () => {
     expect(zCalibrationOutputSchema.safeParse(renamed).success).toBe(true);
   });
 
+  // A block is a key in this record: renaming one onto an existing name would not collide,
+  // it would merge, and the loser's coefficients would vanish with no warning.
+  it("refuses a rename that would land on an existing block", () => {
+    const refused = renameBlock(schema, "par", "spec");
+
+    expect(refused).toBe(schema);
+  });
+
+  it("allows a block to keep its own name", () => {
+    const same = renameBlock(schema, "par", "par");
+
+    expect(same.blocks.par).toEqual(schema.blocks.par);
+  });
+
   it("adds an empty block and removes one", () => {
     const added = addBlock(schema, "baseline");
 
@@ -52,6 +66,12 @@ describe("coefficient edits", () => {
 
     expect(Object.keys(renamed.blocks.par)).toEqual(["gain", "intercept"]);
     expect(renamed.blocks.par.gain).toEqual({ type: "number", min: 0.1, max: 10 });
+  });
+
+  it("refuses a rename that would land on a sibling coefficient", () => {
+    const refused = renameCoefficient(schema, "par", "slope", "intercept");
+
+    expect(refused).toBe(schema);
   });
 
   it("adds and removes one without touching its neighbours", () => {

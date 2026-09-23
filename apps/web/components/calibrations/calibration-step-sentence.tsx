@@ -39,7 +39,9 @@ export function CalibrationStepSentence({
   const { t } = useTranslation("iot");
 
   function seriesToken(series: string, onCommit: (series: string) => void) {
-    const taken = takenSeries.filter((name) => name !== series).includes(series);
+    // takenSeries carries every step's series including this one's own, once each; a
+    // rename that collides shows up as the name appearing twice, not as it "still" being there.
+    const taken = takenSeries.filter((name) => name === series).length > 1;
     return (
       <InlineToken
         value={series}

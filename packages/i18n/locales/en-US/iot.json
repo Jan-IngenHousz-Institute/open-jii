@@ -1150,7 +1150,8 @@
           "number": "a number",
           "number_array": "numbers",
           "integer_array": "whole numbers"
-        }
+        },
+        "noBound": "none"
       },
       "fit": {
         "label": "Fit, submitting {{coefficients}} coefficients in {{blocks}} blocks",
@@ -1159,7 +1160,9 @@
         "draftTitle": "Replace the script with a drafted fit?",
         "draftConfirm": "The draft is written from the series recorded above and the blocks below, fitting them in the order they are declared. Whatever is in the script now is lost.",
         "draftCancel": "Keep what I wrote",
-        "draftReplace": "Replace it"
+        "draftReplace": "Replace it",
+        "scriptLines_one": "The script, {{count}} line",
+        "scriptLines_other": "The script, {{count}} lines"
       },
       "sidebar": {
         "id": "Calibration ID",
