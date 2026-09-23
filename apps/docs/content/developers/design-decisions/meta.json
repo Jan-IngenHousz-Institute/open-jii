@@ -8,6 +8,7 @@
     "macro-sandbox-adr",
     "mobile-offline-outbox-adr",
     "fumadocs-migration-adr",
+    "pipeline-compute-adr",
     "mqtt-topic-proposal",
     "data-governance-adr",
     "data-ingestion-adr",

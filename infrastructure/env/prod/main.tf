@@ -377,7 +377,25 @@ module "github_cicd_service_principal" {
   }
 }
 
-# Cluster policy for cost control and resource management
+locals {
+  # The pipeline wheels, installed through the cluster policies.
+  pipeline_libraries = [
+    {
+      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
+    },
+    {
+      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
+    },
+    {
+      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/data_repair-0.1.0-py3-none-any.whl"
+    }
+  ]
+}
+
+# Workers keep 8 GB per core: Python UDF workers run outside Spark's heap and cannot
+# spill, and the end state has not yet run on long-lived clusters. r6id is the newest
+# r generation the disk cache runs on, and spot rarely reclaims it. The driver runs no
+# tasks, so it drops local NVMe for the next generation's cores: its CPU is what peaks.
 module "node_cluster_policy" {
   source = "../../modules/databricks/cluster-policy"
 
@@ -391,39 +409,112 @@ module "node_cluster_policy" {
     }
     node_type_id = {
       type  = "fixed"
-      value = "r5d.large"
+      value = "r6id.large"
     }
+    driver_node_type_id = {
+      type  = "fixed"
+      value = "r7i.large"
+    }
+    # Ranges above what the pipelines run, so workers can be added without a policy edit.
     num_workers = {
       type       = "range"
       minValue   = 1
-      maxValue   = 4
+      maxValue   = 8
       isOptional = true
     }
     "autoscale.min_workers" = {
       type       = "range"
-      minValue   = 2
-      maxValue   = 6
+      minValue   = 1
+      maxValue   = 8
       isOptional = true
     }
     "autoscale.max_workers" = {
       type       = "range"
-      minValue   = 2
-      maxValue   = 6
+      minValue   = 1
+      maxValue   = 8
       isOptional = true
+    }
+    # The spot settings the workspace applied by default, pinned so they cannot drift:
+    # workers on spot, falling back to on-demand, behind an on-demand driver.
+    "aws_attributes.availability" = {
+      type  = "fixed"
+      value = "SPOT_WITH_FALLBACK"
+    }
+    "aws_attributes.first_on_demand" = {
+      type  = "fixed"
+      value = 1
+    }
+    "aws_attributes.zone_id" = {
+      type  = "fixed"
+      value = "auto"
+    }
+    "aws_attributes.spot_bid_price_percent" = {
+      type  = "fixed"
+      value = 100
     }
   })
 
-  libraries = [
+  libraries = local.pipeline_libraries
+
+  permissions = [
     {
-      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
-    },
-    {
-      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
-    },
-    {
-      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/data_repair-0.1.0-py3-none-any.whl"
+      service_principal_name = module.node_service_principal.service_principal_application_id
+      permission_level       = "CAN_USE"
     }
   ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_workspace]
+}
+
+# The macro tasks mostly wait on the sandbox over HTTP, so cores are bought as task
+# slots at the lowest price. Each slot keeps three requests in flight, and the slots
+# stay within the sandbox's reserved concurrency, which is why the worker is fixed.
+module "macro_cluster_policy" {
+  source = "../../modules/databricks/cluster-policy"
+
+  name        = "macro-pipeline-cluster-policy-${var.environment}"
+  description = "Cluster policy for the macro execution pipeline with pre-installed libraries and cost controls"
+
+  definition = jsonencode({
+    cluster_type = {
+      type   = "allowlist"
+      values = ["all-purpose", "dlt"]
+    }
+    node_type_id = {
+      type  = "fixed"
+      value = "m5a.xlarge"
+    }
+    driver_node_type_id = {
+      type  = "fixed"
+      value = "r5a.large"
+    }
+    num_workers = {
+      type  = "fixed"
+      value = 1
+    }
+    "aws_attributes.availability" = {
+      type  = "fixed"
+      value = "SPOT_WITH_FALLBACK"
+    }
+    "aws_attributes.first_on_demand" = {
+      type  = "fixed"
+      value = 1
+    }
+    "aws_attributes.zone_id" = {
+      type  = "fixed"
+      value = "auto"
+    }
+    "aws_attributes.spot_bid_price_percent" = {
+      type  = "fixed"
+      value = 100
+    }
+  })
+
+  libraries = local.pipeline_libraries
 
   permissions = [
     {
@@ -729,22 +820,24 @@ module "centrum_pipeline" {
     "MONITORING_SLACK_CHANNEL"        = var.slack_channel
     "LARGE_IOT_S3_PATH"               = "s3://${module.large_iot_s3.bucket_id}/"
     "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
-    # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust the r5d.large driver
+    # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust a 16 GB driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
   }
 
-  # AUTO CDC on the gold bridges needs PRO or ADVANCED.
+  # AUTO CDC needs PRO, and the silver expectations need ADVANCED.
   edition = "ADVANCED"
 
-  continuous_mode  = true
-  development_mode = true
+  continuous_mode = true
+  # Production mode restarts the cluster and retries after a recoverable failure.
+  development_mode = false
   serverless       = false
 
-  node_type_id = "r5d.large"
-  autoscale    = true
-  min_workers  = 2
-  max_workers  = 6
-  policy_id    = module.node_cluster_policy.policy_id
+  node_type_id        = "r6id.large"
+  driver_node_type_id = "r7i.large"
+  autoscale           = true
+  min_workers         = 2
+  max_workers         = 6
+  policy_id           = module.node_cluster_policy.policy_id
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
@@ -797,13 +890,17 @@ module "macro_execution_pipeline" {
     "pipelines.trigger.interval" = "120 seconds"
   }
 
+  # Neither AUTO CDC nor expectations, so CORE is enough.
+  edition = "CORE"
+
   continuous_mode  = true
-  development_mode = true
+  development_mode = false
   serverless       = false
 
-  node_type_id = "r5d.large"
-  num_workers  = 2
-  policy_id    = module.node_cluster_policy.policy_id
+  node_type_id        = "m5a.xlarge"
+  driver_node_type_id = "r5a.large"
+  num_workers         = 1
+  policy_id           = module.macro_cluster_policy.policy_id
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
@@ -824,7 +921,7 @@ module "macro_execution_pipeline" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.centrum_pipeline]
+  depends_on = [module.macro_cluster_policy, module.centrum_pipeline]
 }
 
 module "metrics_pipeline" {

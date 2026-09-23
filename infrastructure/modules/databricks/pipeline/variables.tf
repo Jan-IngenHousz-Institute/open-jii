@@ -56,6 +56,12 @@ variable "node_type_id" {
   default     = null
 }
 
+variable "driver_node_type_id" {
+  description = "The node type ID for the driver. Defaults to the worker node type."
+  type        = string
+  default     = null
+}
+
 variable "autoscale" {
   description = "Whether to enable autoscaling for the pipeline cluster"
   type        = bool
