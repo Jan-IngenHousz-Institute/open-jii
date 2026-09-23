@@ -9,20 +9,11 @@ import {
   JOIN_CODE_ALPHABET,
   JOIN_CODE_LENGTH,
 } from "@repo/api/domains/experiment/join-codes/experiment-join-codes.schema";
-import {
-  and,
-  eq,
-  experimentJoinCodes,
-  experiments,
-  isNull,
-  resourceGrants,
-  sql,
-} from "@repo/database";
+import { and, eq, experimentJoinCodes, experiments, isNull, sql } from "@repo/database";
 import type { DatabaseInstance, DbOrTx, Transaction } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import { owningOrganizationNameSql } from "../../../common/utils/owning-organization";
-import { JOIN_GRANT_ROLE } from "../join-grant";
 import type { ExperimentJoinCodeDto } from "../models/experiment-join-code.model";
 
 /** The experiment columns every join-code decision and the joiner's preview are made from. */
@@ -171,32 +162,6 @@ export class ExperimentJoinCodeRepository {
 
       return rows.length > 0 ? rows[0] : null;
     });
-  }
-
-  /**
-   * Mint the contributing grant a redemption buys, on the caller's transaction.
-   * `onConflictDoNothing` rather than an upsert: someone who already holds a higher
-   * tier must not be demoted to `viewer` by scanning a code. Reports whether a row
-   * was actually written, which is what the redemption counter is allowed to count.
-   */
-  async insertJoinGrant(
-    tx: DbOrTx,
-    values: { experimentId: string; userId: string; createdBy: string | null },
-  ): Promise<boolean> {
-    const inserted = await tx
-      .insert(resourceGrants)
-      .values({
-        resourceType: "experiment",
-        resourceId: values.experimentId,
-        granteeType: "user",
-        granteeId: values.userId,
-        role: JOIN_GRANT_ROLE,
-        createdBy: values.createdBy,
-      })
-      .onConflictDoNothing()
-      .returning({ id: resourceGrants.id });
-
-    return inserted.length > 0;
   }
 
   /**

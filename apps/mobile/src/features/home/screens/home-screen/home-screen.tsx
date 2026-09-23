@@ -22,7 +22,7 @@ export function HomeScreen() {
       <HomeDiscoverCard />
       <HomeWhatsNewCard />
       <HomeRecentMeasurements />
-      <View style={{ height: 24 }} />
+      <View className="h-6" />
     </ScrollView>
   );
 }

@@ -49,18 +49,13 @@ export function JoinCodePreviewCard({
     <Card padded>
       <Text className="text-muted-body text-[12.5px]">
         {`${t("experiments:joinCode.codeLabel")} `}
-        <Text className="text-on-surface" style={{ fontFamily: "Overpass-Bold", letterSpacing: 2 }}>
+        <Text className="text-on-surface font-overpass-bold tracking-[2px]">
           {formatJoinCode(code)}
         </Text>
         {` · ${validity}`}
       </Text>
 
-      <Text
-        className="text-on-surface mt-2"
-        style={{ fontFamily: "Poppins-Bold", fontSize: 17, lineHeight: 22 }}
-      >
-        {experiment.name}
-      </Text>
+      <Text className="text-on-surface mt-2">{experiment.name}</Text>
       {experiment.organizationName ? (
         <Text className="text-muted-body mt-0.5 text-[12.5px]">{experiment.organizationName}</Text>
       ) : null}

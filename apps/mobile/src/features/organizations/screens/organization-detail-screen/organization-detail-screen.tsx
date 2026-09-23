@@ -128,8 +128,7 @@ export function OrganizationDetailScreen() {
           <View className="min-w-0 flex-1">
             <View className="flex-row items-center gap-2">
               <Text
-                className="text-on-surface min-w-0 shrink"
-                style={{ fontFamily: "Poppins-Bold", fontSize: 17, lineHeight: 22 }}
+                className="text-on-surface font-poppins-bold min-w-0 shrink text-[17px] leading-[22px]"
                 numberOfLines={2}
               >
                 {organization.name}
@@ -153,10 +152,7 @@ export function OrganizationDetailScreen() {
 
         <View className="mt-3 flex-row gap-2.5">
           <View className="bg-surface flex-1 rounded-xl p-2.5">
-            <Text
-              className="text-on-surface"
-              style={{ fontFamily: "Poppins-Bold", fontSize: 16, lineHeight: 20 }}
-            >
+            <Text className="text-on-surface font-poppins-bold text-[16px] leading-[20px]">
               {organization.memberCount}
             </Text>
             <Text className="text-muted-body text-[11px]">
@@ -164,10 +160,7 @@ export function OrganizationDetailScreen() {
             </Text>
           </View>
           <View className="bg-surface flex-1 rounded-xl p-2.5">
-            <Text
-              className="text-on-surface"
-              style={{ fontFamily: "Poppins-Bold", fontSize: 16, lineHeight: 20 }}
-            >
+            <Text className="text-on-surface font-poppins-bold text-[16px] leading-[20px]">
               {organization.resourceCount}
             </Text>
             {/* resourceCount is access-scoped: a non-member sees the public part. */}

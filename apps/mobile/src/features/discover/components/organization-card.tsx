@@ -45,8 +45,7 @@ export function OrganizationCard({ organization, onPress }: OrganizationCardProp
           <View className="min-w-0 flex-1">
             <View className="flex-row items-center gap-2">
               <Text
-                className="text-on-surface min-w-0 shrink"
-                style={{ fontFamily: "Poppins-Bold", fontSize: 15, lineHeight: 19 }}
+                className="text-on-surface font-poppins-bold min-w-0 shrink text-[15px] leading-[19px]"
                 numberOfLines={1}
               >
                 {organization.name}

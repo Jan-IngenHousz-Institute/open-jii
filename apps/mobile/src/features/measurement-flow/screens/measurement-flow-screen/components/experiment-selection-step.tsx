@@ -91,10 +91,7 @@ export function ExperimentSelectionStep() {
         <View className="px-4 pb-2 pt-4">
           <View className="flex-row items-start justify-between">
             <View className="flex-1 pr-3">
-              <Text
-                className="text-on-surface"
-                style={{ fontFamily: "Poppins-Bold", fontSize: 22, lineHeight: 26 }}
-              >
+              <Text className="text-on-surface font-poppins-bold text-[22px] leading-[26px]">
                 {t("experimentSelection.heroTitle")}
               </Text>
             </View>
