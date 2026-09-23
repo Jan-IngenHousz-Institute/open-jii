@@ -83,6 +83,11 @@ class BackendClient:
         # A requests.Session is not guaranteed to be thread-safe, and macro
         # requests are sent from several threads, so each thread gets its own.
         self._sessions = threading.local()
+        # Lives as long as the client, so its threads keep their sessions and
+        # connections from one UDF batch to the next.
+        self._macro_requests = ThreadPoolExecutor(
+            max_workers=MACRO_REQUESTS_IN_FLIGHT, thread_name_prefix="macro-request"
+        )
 
     @property
     def session(self) -> requests.Session:
@@ -371,9 +376,13 @@ class BackendClient:
         )
 
         chunks = list(self._chunk_items(sorted_items, max_batch_size))
-        with ThreadPoolExecutor(max_workers=MACRO_REQUESTS_IN_FLIGHT) as pool:
+        if len(chunks) == 1:
+            outcomes = [self._execute_macro_chunk(chunks[0], timeout)]
+        else:
             # map yields in submission order, so results keep chunk order.
-            outcomes = list(pool.map(lambda chunk: self._execute_macro_chunk(chunk, timeout), chunks))
+            outcomes = list(
+                self._macro_requests.map(lambda chunk: self._execute_macro_chunk(chunk, timeout), chunks)
+            )
 
         all_results = [result for results, _ in outcomes for result in results]
         all_errors = [error for _, errors in outcomes for error in errors]

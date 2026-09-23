@@ -54,14 +54,19 @@ def latest_experiment_device_source():
             "device_battery",
             "client_id",
             "processed_timestamp",
+            "timestamp",
+            "id",
         )
     )
 
 
+# Rows from one batch share processed_timestamp, so the measurement's own time and
+# then its id break the tie: the newest measurement's attributes win.
 dlt.create_auto_cdc_flow(
     target=LATEST_EXPERIMENT_DEVICE_TABLE,
     source=LATEST_EXPERIMENT_DEVICE_SOURCE,
     keys=["experiment_id", "device_key"],
-    sequence_by=F.col("processed_timestamp"),
+    sequence_by=F.struct("processed_timestamp", "timestamp", "id"),
     stored_as_scd_type=1,
+    except_column_list=["timestamp", "id"],
 )
