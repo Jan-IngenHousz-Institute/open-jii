@@ -415,22 +415,23 @@ module "node_cluster_policy" {
       type  = "fixed"
       value = "r6id.large"
     }
+    # Ranges above what the pipelines run, so workers can be added without a policy edit.
     num_workers = {
       type       = "range"
       minValue   = 1
-      maxValue   = 3
+      maxValue   = 6
       isOptional = true
     }
     "autoscale.min_workers" = {
       type       = "range"
       minValue   = 1
-      maxValue   = 3
+      maxValue   = 6
       isOptional = true
     }
     "autoscale.max_workers" = {
       type       = "range"
       minValue   = 1
-      maxValue   = 3
+      maxValue   = 6
       isOptional = true
     }
     # The spot settings the workspace applied by default, pinned so they cannot drift:
@@ -492,8 +493,10 @@ module "macro_cluster_policy" {
       value = "r6id.large"
     }
     num_workers = {
-      type  = "fixed"
-      value = 1
+      type       = "range"
+      minValue   = 1
+      maxValue   = 2
+      isOptional = true
     }
     "aws_attributes.availability" = {
       type  = "fixed"
