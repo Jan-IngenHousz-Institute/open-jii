@@ -22,7 +22,7 @@ from openjii.macros import (
     MACRO_RESULT_BACKFILL_FLOW,
     MACRO_RESULT_LIVE_FLOW,
 )
-from openjii.macros.runtime import ENVIRONMENT, centrum_table
+from openjii.macros.runtime import ENVIRONMENT, MACRO_BACKFILL_CUTOVER, centrum_table
 
 # COMMAND ----------
 
@@ -81,7 +81,8 @@ def experiment_macro_data_live():
     sandbox_macro_udf = make_execute_macro_udf(ENVIRONMENT, dbutils)
 
     base_df = (
-        spark.readStream.table(centrum_table(EXPERIMENT_RAW_DATA_TABLE))
+        spark.readStream.option("startingTimestamp", MACRO_BACKFILL_CUTOVER)
+        .table(centrum_table(EXPERIMENT_RAW_DATA_TABLE))
         .filter("macros IS NOT NULL")
         .filter("size(macros) > 0")
         .select(

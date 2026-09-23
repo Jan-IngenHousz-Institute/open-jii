@@ -34,6 +34,13 @@ ENVIRONMENT: str = _with_default("ENVIRONMENT", "dev").lower()
 CATALOG_NAME: str = _required("CATALOG_NAME")
 CENTRUM_SCHEMA_NAME: str = _with_default("CENTRUM_SCHEMA_NAME", "centrum")
 
+# The instant the centrum-owned table stopped being written. The backfill owns
+# every row before it and the live flow owns everything after, so the two never
+# cover the same measurement. Required rather than defaulted: a Delta stream with
+# no starting bound replays the whole table, which would re-run every historical
+# macro through the sandbox and append a second copy of what the backfill moved.
+MACRO_BACKFILL_CUTOVER: str = _required("MACRO_BACKFILL_CUTOVER")
+
 
 def centrum_table(name: str) -> str:
     """Fully qualified centrum table name for cross-pipeline reads."""

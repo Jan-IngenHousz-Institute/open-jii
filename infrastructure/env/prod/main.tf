@@ -772,9 +772,10 @@ module "macro_execution_pipeline" {
   ]
 
   configuration = {
-    "CATALOG_NAME"        = module.databricks_catalog.catalog_name
-    "CENTRUM_SCHEMA_NAME" = "centrum"
-    "ENVIRONMENT"         = upper(var.environment)
+    "CATALOG_NAME"           = module.databricks_catalog.catalog_name
+    "CENTRUM_SCHEMA_NAME"    = "centrum"
+    "ENVIRONMENT"            = upper(var.environment)
+    "MACRO_BACKFILL_CUTOVER" = var.macro_backfill_cutover
   }
 
   continuous_mode  = true
