@@ -182,6 +182,10 @@ class BackendClient:
                     f"API request failed with status {response.status_code}: {response.text}"
                 )
 
+        # A body that is not JSON will not parse on a retry either. Requests raises
+        # this as a RequestException with no response, which would read as transient.
+        except requests.exceptions.JSONDecodeError as e:
+            raise BackendIntegrationError(f"Invalid JSON response: {e!s}") from e
         except requests.RequestException as e:
             error_msg = f"Request failed: {e!s}"
             # bool(Response) is False for 4xx/5xx: must use `is not None` here.

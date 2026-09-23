@@ -347,6 +347,16 @@ def test_a_refused_request_is_not_retried(client: BackendClient) -> None:
 
 
 @responses.activate
+def test_a_response_that_is_not_json_is_not_retried(client: BackendClient) -> None:
+    responses.add(responses.POST, _BATCH_URL, body="<html>proxy error</html>", status=200)
+
+    response = _one_item_batch(client)
+
+    assert len(responses.calls) == 1
+    assert [result["success"] for result in response["results"]] == [False]
+
+
+@responses.activate
 def test_the_items_fail_once_every_attempt_has_failed(client: BackendClient) -> None:
     responses.add(responses.POST, _BATCH_URL, json={"message": "throttled"}, status=429)
 
