@@ -776,8 +776,7 @@ module "centrum_pipeline" {
 # experiment_macro_data and its enriched view into centrum like any other gold
 # table. It runs on its own compute because the sandbox call is sequential HTTP
 # from a Spark task, and sharing centrum's cluster meant those tasks held the
-# slots the Kinesis reader needs for its prefetch job. Both tables were moved
-# here from the Centrum pipeline; see the migration in the data architecture docs.
+# slots the Kinesis reader needs for its prefetch job.
 module "macro_execution_pipeline" {
   source = "../../modules/databricks/pipeline"
 
