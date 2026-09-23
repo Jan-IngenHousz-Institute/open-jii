@@ -1,7 +1,8 @@
 # Databricks notebook source
 # DBTITLE 1,Gold Layer - Experiment Device Data
-# Gold: each device's latest attributes, joined to its measurement count and its
-# registry-resolved device struct.
+# Gold: each device's latest attributes, joined to its registry-resolved device
+# struct. The measurement count is added when someone reads, by the
+# experiment_device_data view.
 
 # COMMAND ----------
 import dlt
@@ -12,8 +13,6 @@ from openjii.centrum import (
     EXPERIMENT_DEVICES_TABLE,
     LATEST_EXPERIMENT_DEVICE_TABLE,
 )
-from openjii.centrum.runtime import CATALOG_NAME, METRICS_SCHEMA_NAME
-from openjii.metrics import EXPERIMENT_DEVICE_COUNTS_TABLE
 
 # COMMAND ----------
 
@@ -46,9 +45,6 @@ def experiment_device_data():
     )
     devices = dlt.read(EXPERIMENT_DEVICES_TABLE)
 
-    # Published by the metrics pipeline, so read by qualified name.
-    counts = spark.read.table(f"{CATALOG_NAME}.{METRICS_SCHEMA_NAME}.{EXPERIMENT_DEVICE_COUNTS_TABLE}")
-
     # Attach the registry-resolved device struct via the trusted client_id
     # (NULL for Cognito/unregistered rows; left join keeps every device row).
     return (
@@ -57,13 +53,6 @@ def experiment_device_data():
             devices,
             (aggregated.experiment_id == devices.experiment_id)
             & (aggregated.client_id == devices.client_id),
-            "left"
-        )
-        .join(
-            counts,
-            aggregated.experiment_id.eqNullSafe(counts.experiment_id)
-            & aggregated.device_id.eqNullSafe(counts.device_id)
-            & aggregated.device_firmware.eqNullSafe(counts.device_firmware),
             "left"
         )
         .select(
@@ -75,7 +64,6 @@ def experiment_device_data():
             aggregated.device_name,
             aggregated.device_version,
             aggregated.device_battery,
-            counts.total_measurements,
             aggregated.processed_timestamp,
             devices.device,
         )

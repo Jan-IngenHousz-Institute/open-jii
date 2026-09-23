@@ -10,6 +10,7 @@ import { AwsModule } from "../common/modules/aws/aws.module";
 import { CacheAdapter } from "../common/modules/cache/cache.adapter";
 import { CacheModule } from "../common/modules/cache/cache.module";
 import { MetricsModule } from "../metrics/metrics.module";
+import { MacroSandboxService } from "./application/services/macro-sandbox.service";
 // Use Cases
 import { AddCompatibleProtocolsUseCase } from "./application/use-cases/add-compatible-protocols/add-compatible-protocols";
 import { CreateMacroUseCase } from "./application/use-cases/create-macro/create-macro";
@@ -69,6 +70,9 @@ import { MacroController } from "./presentation/macro.controller";
     ListCompatibleProtocolsUseCase,
     AddCompatibleProtocolsUseCase,
     RemoveCompatibleProtocolUseCase,
+
+    // Services
+    MacroSandboxService,
 
     // Macro execution use cases
     ExecuteMacroUseCase,

@@ -31,7 +31,6 @@ _ALLOWED = {
     "centrum/enriched/enriched_experiment_raw_data.py",
     "centrum/enriched/enriched_experiment_uploaded_data.py",
     "macros/enriched_experiment_macro_data.py",
-    "centrum/gold/experiment_table_metadata.py",
 }
 
 _NOTEBOOKS = sorted(

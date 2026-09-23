@@ -11,7 +11,9 @@ import time
 from typing import Any
 
 import pytest
+import requests
 import responses
+from enrich import backend_client
 from enrich.backend_client import MACRO_REQUESTS_IN_FLIGHT, BackendClient, BackendIntegrationError
 
 BASE_URL = "https://api.example.test"
@@ -22,6 +24,11 @@ SECRET = "shhh"
 @pytest.fixture
 def client() -> BackendClient:
     return BackendClient(base_url=BASE_URL, api_key_id=API_KEY_ID, webhook_secret=SECRET)
+
+
+@pytest.fixture(autouse=True)
+def no_retry_delay(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(backend_client, "MACRO_REQUEST_RETRY_DELAYS", (0, 0))
 
 
 def _sent_batches() -> list[list[dict[str, Any]]]:
@@ -205,8 +212,8 @@ def test_execute_macro_batch_sends_an_oversized_item_alone(
     ]
     client.execute_macro_batch(items, max_batch_size=500)
 
-    assert len(responses.calls) == 2
-    assert [item["id"] for item in _sent_batches()[1]] == ["1"]
+    # Chunks are in flight together, so the calls arrive in either order.
+    assert sorted([item["id"] for item in batch] for batch in _sent_batches()) == [["0"], ["1"]]
 
 
 _BATCH_URL = f"{BASE_URL}/api/v1/macros/execute-batch"
@@ -311,3 +318,50 @@ def test_execute_macro_batch_sorts_same_macro_by_workbook_version(client: Backen
     sent = _sent_batches()
     assert len(sent) == 1
     assert [item["id"] for item in sent[0]] == ["live", "v1", "v2"]
+
+
+def _one_item_batch(client: BackendClient) -> dict[str, Any]:
+    return client.execute_macro_batch([{"id": "1", "macro_id": "m", "data": {}}])
+
+
+@responses.activate
+def test_a_transient_failure_is_retried_before_the_items_fail(client: BackendClient) -> None:
+    responses.add(responses.POST, _BATCH_URL, json={"message": "restarting"}, status=503)
+    responses.add(responses.POST, _BATCH_URL, body=requests.ConnectionError("connection reset"))
+    responses.add_callback(responses.POST, _BATCH_URL, callback=_echo_results)
+
+    response = _one_item_batch(client)
+
+    assert len(responses.calls) == 3
+    assert [result["success"] for result in response["results"]] == [True]
+
+
+@responses.activate
+def test_a_refused_request_is_not_retried(client: BackendClient) -> None:
+    responses.add(responses.POST, _BATCH_URL, json={"message": "bad request"}, status=400)
+
+    response = _one_item_batch(client)
+
+    assert len(responses.calls) == 1
+    assert [result["success"] for result in response["results"]] == [False]
+
+
+@responses.activate
+def test_a_response_that_is_not_json_is_not_retried(client: BackendClient) -> None:
+    responses.add(responses.POST, _BATCH_URL, body="<html>proxy error</html>", status=200)
+
+    response = _one_item_batch(client)
+
+    assert len(responses.calls) == 1
+    assert [result["success"] for result in response["results"]] == [False]
+
+
+@responses.activate
+def test_the_items_fail_once_every_attempt_has_failed(client: BackendClient) -> None:
+    responses.add(responses.POST, _BATCH_URL, json={"message": "throttled"}, status=429)
+
+    response = _one_item_batch(client)
+
+    assert len(responses.calls) == len(backend_client.MACRO_REQUEST_RETRY_DELAYS) + 1
+    assert [result["success"] for result in response["results"]] == [False]
+    assert "Chunk failed" in response["results"][0]["error"]

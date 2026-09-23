@@ -1135,7 +1135,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
   /**
    * Read row counts and (optionally) schemas from the experiment_table_metadata
-   * cache table in a single query.
+   * view in a single query. The view counts rows when read, so counts are current.
    */
   async getExperimentTableMetadata(
     experimentId: string,
@@ -1167,7 +1167,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     }
 
     const queryResult = this.queryBuilder.buildQuery({
-      table: `${catalog}.${schema}.experiment_table_metadata`,
+      table: `${catalog}.${schema}.experiment_table_metadata_view`,
       columns,
       whereConditions,
     });

@@ -6,6 +6,14 @@
  */
 import { z } from "zod";
 
+import type { MacroBatchExecutionResultItem } from "@repo/api/domains/macro/macro.schema";
+
+/** One macro's results in item order, and a summary of what failed, if anything. */
+export interface MacroRunOutcome {
+  results: MacroBatchExecutionResultItem[];
+  error?: string;
+}
+
 /**
  * Stable failed-result message for a recognized-but-empty measurement envelope.
  * The macro is not invoked; only this item fails. `source` attributes the

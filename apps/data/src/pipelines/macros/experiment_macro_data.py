@@ -26,6 +26,8 @@ from openjii.macros.runtime import ENVIRONMENT, centrum_table
 
 @dlt.table(
     name=EXPERIMENT_MACRO_DATA_TABLE,
+    # The enriched views read one experiment at a time through this table.
+    cluster_by=["experiment_id"],
     comment="Gold layer: Unified macro processing with VARIANT column for flexible schema",
     table_properties={
         "quality": "gold",

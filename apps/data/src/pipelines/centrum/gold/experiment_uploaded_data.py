@@ -12,6 +12,8 @@ from openjii.centrum import EXPERIMENT_UPLOADED_DATA_TABLE, RAW_UPLOADED_DATA_TA
 
 @dlt.table(
     name=EXPERIMENT_UPLOADED_DATA_TABLE,
+    # The enriched views read one experiment at a time through this table.
+    cluster_by=["experiment_id"],
     comment="Gold layer: User-uploaded tabular data with VARIANT row payloads. Peer of experiment_macro_data; anchored by stable upload_table_id.",
     table_properties={
         "quality": "gold",
