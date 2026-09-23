@@ -3,7 +3,7 @@ title: "Data ingestion"
 description: "The verified path from an MQTT publish to the central Databricks lakehouse."
 ---
 
-{/* verified: code@b92f75cb4 2026-07-23 */}
+{/* verified: code@e0782684a 2026-09-23 */}
 
 openJII uses an extract-load-transform path: capture and acknowledge the measurement first, preserve the raw event, then refine it in Databricks.
 
@@ -108,6 +108,14 @@ The `sample` field is gzip-compressed and base64-encoded before upload, with `_s
 The IoT rule in `infrastructure/modules/iot-core/main.tf` selects the original topic and authenticated MQTT client ID into the event. It forwards each event to Kinesis and writes a raw archive object to S3. The Databricks Bronze pipeline reads Kinesis directly using a Unity Catalog service credential and records Kinesis sequence, shard, arrival, and ingestion metadata.
 
 MQTT is at-least-once delivery. Consumers must not assume that receiving PUBACK means every downstream transformation is already complete, or that an event can never be seen twice.
+
+Centrum uses Databricks' default trigger intervals in continuous production mode:
+five seconds for streaming queries, including Kinesis ingestion; one minute for
+complete-refresh queries using only Delta inputs; and ten minutes for
+complete-refresh queries with non-Delta inputs. Production compute autoscales
+between two and six workers. These intervals apply only to continuous mode;
+dev retains its triggered schedule and one fixed worker. Processing time can
+exceed the trigger interval, so this is not a five-second end-to-end latency guarantee.
 
 ## Imported and uploaded data
 
