@@ -11,7 +11,6 @@ import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui/components/form";
-import { FormColorInput } from "@repo/ui/components/form-color-input";
 import { Input } from "@repo/ui/components/input";
 import {
   Select,
@@ -20,12 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/components/select";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
 
 import type { ChartFormValues } from "../../charts/chart-config";
-import { getDefaultSeriesColor, getSuggestedSeriesColor } from "../../charts/colors/palettes";
+import { getDefaultSeriesColor } from "../../charts/colors/palettes";
 import { dataSourcesByRole, makeDataSource } from "../../charts/data/data-sources";
 import { useDataSourcesFieldArray } from "../context/data-sources-field-array-context";
+import { SeriesColorField } from "./series-color-field";
 
 interface MultiColumnShelfProps {
   form: UseFormReturn<ChartFormValues>;
@@ -191,34 +190,10 @@ export function MultiColumnShelf({
                   )}
 
                   {showSeriesColor && (
-                    <FormField
-                      control={form.control}
-                      name={`config.color.${seriesIndex}` as const}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-medium">
-                            {t("workspace.shelves.color")}
-                          </FormLabel>
-                          <FormControl>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <FormColorInput
-                                  value={typeof field.value === "string" ? field.value : undefined}
-                                  fallback={getSuggestedSeriesColor()}
-                                  onCommit={field.onChange}
-                                  disabled={isColorMapped}
-                                />
-                              </TooltipTrigger>
-                              {isColorMapped && (
-                                <TooltipContent>
-                                  {t("workspace.shelves.seriesColorDisabledByColorDimension")}
-                                </TooltipContent>
-                              )}
-                            </Tooltip>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                    <SeriesColorField
+                      form={form}
+                      seriesIndex={seriesIndex}
+                      isColorMapped={isColorMapped}
                     />
                   )}
                 </div>

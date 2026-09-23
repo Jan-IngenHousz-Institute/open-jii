@@ -19,12 +19,15 @@ interface UseVisualizationAutosaveOptions {
   form: UseFormReturn<ChartFormValues>;
   experimentId: string;
   visualizationId: string;
+  /** The backend's `manage` gate; without it nothing saves and no status is reported. */
+  enabled?: boolean;
 }
 
 export function useVisualizationAutosave({
   form,
   experimentId,
   visualizationId,
+  enabled = true,
 }: UseVisualizationAutosaveOptions) {
   const values = useWatch({ control: form.control }) as ChartFormValues;
   const { mutateAsync } = useExperimentVisualizationUpdate({ experimentId });
@@ -45,6 +48,7 @@ export function useVisualizationAutosave({
     value: values,
     toKey: stringifyChart,
     save,
+    enabled,
   });
-  useReportAutosaveStatus(autosave);
+  useReportAutosaveStatus({ status: enabled ? autosave.status : null, error: autosave.error });
 }
