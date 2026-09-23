@@ -35,11 +35,20 @@ DEFAULT_MACRO_BATCH_SIZE = 25
 # leaves room for requests spanning several groups and for macro runs from the app.
 MACRO_REQUESTS_IN_FLIGHT = 3
 
+# Seconds to wait before each retry of a macro request that failed transiently.
+# A failed request writes a permanent error into every row it carried, so a
+# backend restart or a throttled moment should not decide a measurement's result.
+MACRO_REQUEST_RETRY_DELAYS = (1, 4)
+
 
 class BackendIntegrationError(Exception):
     """Exception raised for backend integration errors."""
 
     pass
+
+
+class TransientBackendError(BackendIntegrationError):
+    """The backend was unreachable, timed out, throttled or answered with a 5xx."""
 
 
 class BackendClient:
@@ -184,7 +193,10 @@ class BackendClient:
                 body = (err_response.text or "")[:2000]
                 if body:
                     print(f"[BackendClient] HTTP {err_response.status_code} body: {body}")
-            raise BackendIntegrationError(error_msg) from e
+            status = err_response.status_code if err_response is not None else None
+            is_transient = status is None or status == 429 or status >= 500
+            error_type = TransientBackendError if is_transient else BackendIntegrationError
+            raise error_type(error_msg) from e
 
     def get_user_metadata(self, user_ids: list[str]) -> dict[str, dict[str, Any]]:
         """
@@ -395,11 +407,12 @@ class BackendClient:
     def _execute_macro_chunk(
         self, batch: list[dict[str, Any]], timeout: int
     ) -> tuple[list[dict[str, Any]], list[str]]:
-        """One request's results and errors. A failed request fails only its own items."""
+        """One request's results and errors. A failed request fails only its own items,
+        once any transient failure has been retried."""
         payload = {"items": batch, "timeout": timeout}
 
         try:
-            result = self._make_request(self.WEBHOOK_MACRO_BATCH_PATH, payload)
+            result = self._make_request_with_retries(self.WEBHOOK_MACRO_BATCH_PATH, payload)
             return result.get("results", []), result.get("errors", [])
         except BackendIntegrationError as e:
             # Don't lose other chunks: synthesize per-item failure entries
@@ -418,3 +431,14 @@ class BackendClient:
             return failures, [chunk_error]
         except Exception as e:
             raise BackendIntegrationError(f"Unexpected error in macro batch execution: {e!s}") from e
+
+    def _make_request_with_retries(self, endpoint: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """``_make_request``, tried again after each transient failure."""
+        for delay in MACRO_REQUEST_RETRY_DELAYS:
+            try:
+                return self._make_request(endpoint, payload)
+            except TransientBackendError as error:
+                print(f"[BackendClient] Retrying in {delay} s after a transient failure: {error!s}")
+                time.sleep(delay)
+
+        return self._make_request(endpoint, payload)
