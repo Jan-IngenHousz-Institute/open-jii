@@ -44,7 +44,7 @@ The enriched data joins each measurement or macro result to its contributor, dev
 
 Two more views add what cannot be stored incrementally. `experiment_table_metadata` adds each table's row count and an upload table's newest name to the stored schemas. `experiment_device_data` adds each device's measurement count per firmware, read from `clean_data` because gold carries no firmware.
 
-The backend reads the views under interim names ending in `_view`. The tables with the original names still serve the export and the readers outside this repository until they are replaced by views of the same names.
+The backend and the export read the views under interim names ending in `_view`. The tables with the original names still serve the readers outside this repository until they are replaced by views of the same names.
 
 ## Macro execution pipeline
 
