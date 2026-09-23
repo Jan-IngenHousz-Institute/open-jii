@@ -111,7 +111,7 @@ def test_the_aggregate_is_the_top_node() -> None:
 
 def test_the_aggregate_declares_its_own_trigger_interval() -> None:
     """It cannot convert, so the only lever left on its full scans is cadence.
-    Falling back to the pipeline-wide interval silently restores 720 a day."""
+    Falling back to the one-minute default silently runs 1,440 a day."""
     table = _kwargs(_call("agg_experiment_device.py", "table"))
     spark_conf = table["spark_conf"]
 

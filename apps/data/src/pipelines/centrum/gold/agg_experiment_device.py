@@ -15,8 +15,9 @@
 # It gets its own trigger interval instead. The only consumer is the measurement
 # count shown against a device in an experiment's device list, and the pipeline's
 # own end-to-end lag runs from six to eighty-six minutes, so refreshing this every
-# ten minutes leaves the number fresher than the data it describes while cutting
-# its full scans of silver from 720 a day to 144.
+# ten minutes leaves the number fresher than the data it describes. Unset, it
+# would take Databricks' one-minute default for a materialized view over Delta
+# inputs: 1,440 full scans of silver a day instead of 144.
 
 # COMMAND ----------
 import dlt
