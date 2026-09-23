@@ -78,6 +78,7 @@ export class ExperimentController {
           scope,
           input.status,
           input.search,
+          input.sort,
         );
         if (paged.isSuccess()) {
           return toPage(paged.value, input.page, pageSize, formatDatesList);
@@ -90,6 +91,7 @@ export class ExperimentController {
         scope,
         input.status,
         input.search,
+        input.sort,
       );
       if (result.isSuccess()) {
         return formatDatesList(result.value);

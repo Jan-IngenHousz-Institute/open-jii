@@ -177,6 +177,27 @@ describe("ExperimentController", () => {
   });
 
   describe("listExperiments paginated", () => {
+    it("accepts an explicit sort and keeps the paginated response shape", async () => {
+      await testApp.createExperiment({ name: "Zulu", userId: testUserId });
+      await testApp.createExperiment({ name: "Alpha", userId: testUserId });
+
+      const response: SuperTestResponse<{ items: { name: string }[] }> = await testApp
+        .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
+        .query({ page: 1, "sort[0][field]": "name", "sort[0][direction]": "asc" })
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.items.map((item) => item.name)).toEqual(["Alpha", "Zulu"]);
+    });
+
+    it("rejects a sort field outside the experiment allowlist", async () => {
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
+        .query({ page: 1, "sort[0][field]": "activity", "sort[0][direction]": "asc" })
+        .withAuth(testUserId)
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
     it("returns the page envelope when a page is requested", async () => {
       await testApp.createExperiment({ name: "Paged one", userId: testUserId });
 

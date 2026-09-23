@@ -20,6 +20,11 @@
     "archived": "Gearchiveerd",
     "stale": "Verlopen"
   },
+  "resetSorting": "Sortering wissen",
+  "sortUnsorted": "ongesorteerd",
+  "sortAscending": "oplopend",
+  "sortDescending": "aflopend",
+  "sortSecondary": "tweede sortering",
   "columns": {
     "name": "Naam",
     "updated": "Bijgewerkt",
