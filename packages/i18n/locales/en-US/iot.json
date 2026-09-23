@@ -1019,7 +1019,6 @@
         "drives": "drives",
         "answers": "answers",
         "setpointRange": "{{name}} {{min}}…{{max}} {{unit}}",
-        "drivesNothing": "nothing the platform can set",
         "answeringTo": "answering to",
         "anyHandshake": "anything"
       },

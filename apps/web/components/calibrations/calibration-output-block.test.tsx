@@ -40,9 +40,7 @@ async function openToken(user: ReturnType<typeof userEvent.setup>, label: string
 }
 
 describe("CalibrationOutputBlock", () => {
-  // The block is named where it is read, on the coefficients it holds, rather than in a
-  // header of its own.
-  it("renames the block from the name a coefficient carries", async () => {
+  it("renames the block from the header it names itself in", async () => {
     const { onRename, user } = renderBlock();
 
     const block = await openToken(user, "iot.calibration.produces.block");
@@ -108,6 +106,14 @@ describe("CalibrationOutputBlock", () => {
     expect(screen.queryByRole("menuitem", { name: "slope" })).toBeNull();
   });
 
+  it("removes the whole block", async () => {
+    const { onRemove, user } = renderBlock();
+
+    await user.click(screen.getByRole("button", { name: "iot.calibration.produces.removeBlock" }));
+
+    expect(onRemove).toHaveBeenCalled();
+  });
+
   it("says a coefficient is only recorded when no writer covers it", () => {
     renderBlock({ coefficients: { drift: { type: "number" } } });
 
@@ -121,5 +127,8 @@ describe("CalibrationOutputBlock", () => {
       screen.queryByRole("button", { name: "iot.calibration.produces.addCoefficient" }),
     ).toBeNull();
     expect(screen.queryByRole("button", { name: "iot.calibration.produces.block" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "iot.calibration.produces.removeBlock" }),
+    ).toBeNull();
   });
 });

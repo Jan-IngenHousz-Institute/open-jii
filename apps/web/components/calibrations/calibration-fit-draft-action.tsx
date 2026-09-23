@@ -43,8 +43,13 @@ export function CalibrationFitDraftAction({
   return (
     <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
       <AlertDialogTrigger asChild>
-        <Button type="button" variant="outline" size="sm">
-          <Wand2 className="mr-2 size-4" aria-hidden />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground -mr-2.5 h-7"
+        >
+          <Wand2 className="size-3.5" aria-hidden />
           {t("iot.calibration.fit.draft")}
         </Button>
       </AlertDialogTrigger>

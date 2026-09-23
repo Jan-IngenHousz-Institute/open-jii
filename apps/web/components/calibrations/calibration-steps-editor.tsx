@@ -21,6 +21,7 @@ import {
 } from "./procedure-edits";
 import { defaultRead } from "./read-columns";
 import { readSources, setpointTargets } from "./rig-sources";
+import { numericSetpoints } from "./setpoint-list";
 
 interface CalibrationStepsEditorProps {
   procedure: CaptureProcedure;
@@ -68,9 +69,7 @@ export function CalibrationStepsEditor({
         stimulus: {
           instrument: target.role,
           set: setpoint?.name ?? "",
-          values: step.stimulus.values.flatMap((point) =>
-            typeof point === "number" ? [point] : [],
-          ),
+          values: numericSetpoints(step.stimulus.values),
         },
       };
     }

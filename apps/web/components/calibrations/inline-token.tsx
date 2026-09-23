@@ -1,7 +1,9 @@
 "use client";
 
+import type { ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 
+import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
 import { cn } from "@repo/ui/lib/utils";
 
 /**
@@ -21,6 +23,7 @@ interface InlineTokenProps {
   mono?: boolean;
   /** Shown in place of an empty value, and styled as absent rather than as content. */
   placeholder?: string;
+  /** Why the value is refused, shown on hover so a red word is never left unexplained. */
   invalid?: string;
   inputMode?: "text" | "decimal";
   className?: string;
@@ -71,9 +74,23 @@ export function InlineToken({
 
   const shown = value === "" ? (placeholder ?? "") : value;
   const face = cn(mono && "font-mono", value === "" && "text-muted-foreground italic", className);
+  const isInvalid = invalid !== undefined;
+
+  function withReason(token: ReactElement) {
+    if (invalid === undefined) {
+      return token;
+    }
+
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{token}</TooltipTrigger>
+        <TooltipContent>{invalid}</TooltipContent>
+      </Tooltip>
+    );
+  }
 
   if (!canEdit) {
-    return <span className={cn(face, invalid !== undefined && "text-destructive")}>{shown}</span>;
+    return withReason(<span className={cn(face, isInvalid && "text-destructive")}>{shown}</span>);
   }
 
   if (isEditing) {
@@ -84,7 +101,7 @@ export function InlineToken({
         // Sized to its content, so a sentence does not carry a row of equal boxes.
         size={Math.max(draft.length + 1, 3)}
         aria-label={label}
-        aria-invalid={invalid !== undefined}
+        aria-invalid={isInvalid}
         inputMode={inputMode}
         onChange={(event) => setDraft(event.target.value)}
         onBlur={commit}
@@ -98,19 +115,20 @@ export function InlineToken({
     );
   }
 
-  return (
+  return withReason(
     <button
       type="button"
       aria-label={label}
+      aria-invalid={isInvalid}
       onClick={() => setDraft(value)}
       className={cn(
         TOKEN,
         face,
         "hover:bg-muted -mx-0.5 px-0.5 text-left",
-        invalid !== undefined && "decoration-destructive text-destructive",
+        isInvalid && "decoration-destructive text-destructive",
       )}
     >
       {shown}
-    </button>
+    </button>,
   );
 }

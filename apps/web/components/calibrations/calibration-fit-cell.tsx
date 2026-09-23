@@ -50,15 +50,15 @@ export function CalibrationFitCell({
   return (
     <div className="space-y-5">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground group/trigger flex items-center gap-1.5 text-sm">
-          <ChevronRight
-            className={cn("size-3.5 transition-transform", isOpen && "rotate-90")}
-            aria-hidden
-          />
-          {t("iot.calibration.fit.scriptLines", { count: lines })}
-        </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-2 pt-2">
-          <CalibrationScriptEditor script={script} canEdit={canEdit} onChange={onScriptChange} />
+        <div className="flex items-center justify-between gap-3">
+          <CollapsibleTrigger className="text-muted-foreground hover:text-foreground group/trigger flex items-center gap-1.5 text-sm">
+            <ChevronRight
+              className={cn("size-3.5 transition-transform", isOpen && "rotate-90")}
+              aria-hidden
+            />
+            {t("iot.calibration.fit.scriptLines", { count: lines })}
+          </CollapsibleTrigger>
+
           {canEdit && (
             <CalibrationFitDraftAction
               series={series}
@@ -66,11 +66,15 @@ export function CalibrationFitCell({
               onDraft={onScriptChange}
             />
           )}
+        </div>
+
+        <CollapsibleContent className="pt-2">
+          <CalibrationScriptEditor script={script} canEdit={canEdit} onChange={onScriptChange} />
         </CollapsibleContent>
       </Collapsible>
 
       <div className="space-y-2">
-        <p className="text-muted-foreground text-sm">{t("iot.calibration.fit.submits")}</p>
+        <h3 className="text-sm font-medium">{t("iot.calibration.fit.submits")}</h3>
         <CalibrationOutputSchemaEditor
           family={family}
           outputSchema={outputSchema}

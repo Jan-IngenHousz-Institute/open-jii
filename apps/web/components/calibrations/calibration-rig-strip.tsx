@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/hooks/useLocale";
 import { Plus } from "lucide-react";
 
 import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
@@ -20,6 +21,8 @@ import {
 } from "@repo/ui/components/dropdown-menu";
 
 import { CalibrationRigLine } from "./calibration-rig-line";
+import { formatList } from "./format-list";
+import { formatRange } from "./format-range";
 import type { AuxiliaryInstrument } from "./procedure-edits";
 import {
   addInstrument,
@@ -47,6 +50,7 @@ export function CalibrationRigStrip({
   onChange,
 }: CalibrationRigStripProps) {
   const { t } = useTranslation("iot");
+  const locale = useLocale();
 
   const instruments = benchInstrumentSummaries();
   const auxiliary = procedure.instruments.filter(isAuxiliaryInstrument);
@@ -112,19 +116,17 @@ export function CalibrationRigStrip({
 
   return (
     <div className="space-y-2">
-      <ul>
-        <li className="flex gap-3 py-1 text-[15px] leading-7">
-          <span className="w-20 shrink-0 font-mono">{DUT_ROLE}</span>
+      <ul className="grid grid-cols-[max-content_1fr_auto] gap-x-6">
+        <li className="col-span-3 grid grid-cols-subgrid items-baseline py-1 text-[15px] leading-7">
+          <span className="font-mono">{DUT_ROLE}</span>
           <p className="text-muted-foreground min-w-0">
             {t("iot.calibration.rig.dut")}
             {dutSetpoints.length > 0 && (
               <span className="text-sm">
-                {" · "}
+                {", "}
                 {t("iot.calibration.rig.drives")}{" "}
                 <span className="font-mono">
-                  {dutSetpoints
-                    .map((s) => `${s.name} ${String(s.min)}…${String(s.max)} ${s.unit}`)
-                    .join(", ")}
+                  {formatList(locale, dutSetpoints.map(formatRange))}
                 </span>
               </span>
             )}
@@ -141,10 +143,10 @@ export function CalibrationRigStrip({
               type="button"
               variant="ghost"
               size="sm"
-              className="text-muted-foreground -ml-2 h-7"
+              className="text-muted-foreground -ml-2.5 h-7"
               disabled={!hasRoomForMore}
             >
-              <Plus className="mr-1.5 size-3.5" aria-hidden />
+              <Plus className="size-3.5" aria-hidden />
               {t("iot.calibration.rig.add")}
             </Button>
           </DropdownMenuTrigger>

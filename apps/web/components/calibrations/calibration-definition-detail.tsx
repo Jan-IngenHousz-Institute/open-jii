@@ -203,9 +203,10 @@ export function CalibrationDefinitionDetail() {
             canEdit={canEdit}
             onChange={editProcedure}
           />
-        </CalibrationStage>
 
-        <CalibrationSeriesSeam series={captured} />
+          {/* What these steps hand the fit, at the foot of the stage that produces it. */}
+          <CalibrationSeriesSeam series={captured} />
+        </CalibrationStage>
 
         <CalibrationStage index={3} title={t("iot.calibration.detail.script")}>
           <CalibrationFitCell

@@ -140,7 +140,7 @@ describe("CalibrationRigLine", () => {
 
     expect(container.querySelector("p")).toHaveTextContent(
       "kiprim-dc iot.calibration.rig.answeringTo KIPRIM, iot.calibration.rig.drives " +
-        "current_a 0…10 A iot.calibration.produces.and iot.calibration.rig.answers " +
+        "current_a 0\u2060…\u206010 A iot.calibration.produces.and iot.calibration.rig.answers " +
         "temperature_c",
     );
   });

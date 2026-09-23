@@ -77,6 +77,22 @@ describe("InlineToken", () => {
     expect(screen.getByRole("button", { name: "Column" })).toHaveClass("text-destructive");
   });
 
+  it("says why a value is refused when the reader points at it", async () => {
+    const { user } = renderToken({ invalid: "That name is taken" });
+
+    await user.hover(screen.getByRole("button", { name: "Column" }));
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("That name is taken");
+  });
+
+  it("explains a refused value on a closed document too", async () => {
+    const { user } = renderToken({ canEdit: false, invalid: "That name is taken" });
+
+    await user.hover(screen.getByText("par_raw"));
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("That name is taken");
+  });
+
   it("is plain text on a document nobody can edit", () => {
     renderToken({ canEdit: false });
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { ArrowDown, ArrowUp, X } from "lucide-react";
 
 import type { ProcedureStep } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
@@ -49,7 +50,7 @@ export function CalibrationStepLine({
   const isOptional = isSkippable && step.optional === true;
 
   // Whether a ramp is even or crowds one end decides what the fit can see, and a list of
-  // numbers in a sentence hides that as completely as a column of them did.
+  // numbers in a sentence hides it.
   const stimulus = step.kind === "sweep" ? step.stimulus : undefined;
   const driven = stimulus !== undefined && "instrument" in stimulus ? stimulus : undefined;
   const ramp =
@@ -70,7 +71,7 @@ export function CalibrationStepLine({
 
   function renderRowActions() {
     return (
-      <span className="text-muted-foreground/0 group-hover:text-muted-foreground/70 focus-within:text-muted-foreground/70 ml-1 whitespace-nowrap transition-colors">
+      <>
         <button
           type="button"
           onClick={() => onMove(index - 1)}
@@ -97,18 +98,37 @@ export function CalibrationStepLine({
         >
           <X className="inline size-3" aria-hidden />
         </button>
-      </span>
+      </>
     );
   }
 
-  return (
-    <li className="group py-1.5">
-      <div className="flex gap-3">
-        <span className="text-muted-foreground flex shrink-0 select-none items-baseline gap-1.5 pt-0.5 text-xs tabular-nums">
-          <span className="w-4 text-right">{index + 1}</span>
-          <Icon className="size-3.5 translate-y-0.5" aria-hidden />
-        </span>
+  function renderMaySkip() {
+    return (
+      <button
+        type="button"
+        onClick={toggleOptional}
+        disabled={!canEdit}
+        className={cn(
+          "text-muted-foreground text-xs",
+          canEdit && "hover:text-foreground underline decoration-dotted underline-offset-4",
+        )}
+      >
+        {t("iot.calibration.procedure.maySkip")}
+      </button>
+    );
+  }
 
+  const isMarkedOptional = isSkippable && isOptional;
+  const canMarkOptional = isSkippable && !isOptional && canEdit;
+
+  return (
+    <li className="group relative flex items-baseline gap-3 py-1.5">
+      <span className="text-muted-foreground flex shrink-0 select-none items-baseline gap-1.5 text-xs tabular-nums">
+        <span className="w-4 text-right">{index + 1}</span>
+        <Icon className="size-3.5 translate-y-0.5" aria-hidden />
+      </span>
+
+      <div className="min-w-0 flex-1 space-y-2">
         <p className={cn("text-[15px] leading-7", isOptional && "text-muted-foreground")}>
           <CalibrationStepSentence
             step={step}
@@ -118,30 +138,25 @@ export function CalibrationStepLine({
             canEdit={canEdit}
             onChange={onChange}
           />
-
-          {isSkippable && (isOptional || canEdit) && (
-            <button
-              type="button"
-              onClick={toggleOptional}
-              disabled={!canEdit}
-              className={cn(
-                "text-muted-foreground ml-2 align-middle text-xs",
-                canEdit && "hover:text-foreground underline decoration-dotted underline-offset-4",
-                !isOptional && "opacity-0 focus:opacity-100 group-hover:opacity-100",
-              )}
-            >
-              {t("iot.calibration.procedure.maySkip")}
-            </button>
-          )}
-
-          {canEdit && renderRowActions()}
+          {isMarkedOptional && <span className="ml-2">{renderMaySkip()}</span>}
         </p>
+
+        {/* Drawn off the step rather than written into it, so it sits in a well
+            instead of floating unframed on the card. */}
+        {ramp !== null && (
+          <InsetPanel padding="sm" className="max-w-md">
+            <CalibrationSetpointShape values={ramp.values} unit={ramp.unit} />
+          </InsetPanel>
+        )}
       </div>
 
-      {ramp !== null && (
-        <div className="max-w-md pl-10">
-          <CalibrationSetpointShape values={ramp.values} unit={ramp.unit} />
-        </div>
+      {/* Floats over the row rather than taking a column of it: reserving the width
+          would rewrap every sentence for controls that are hidden most of the time. */}
+      {canEdit && (
+        <span className="bg-card text-muted-foreground shadow-xs pointer-events-none absolute right-0 top-1.5 flex h-7 items-center gap-1.5 rounded-md border px-1.5 opacity-0 transition-opacity focus-within:pointer-events-auto focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
+          {canMarkOptional && renderMaySkip()}
+          {renderRowActions()}
+        </span>
       )}
     </li>
   );

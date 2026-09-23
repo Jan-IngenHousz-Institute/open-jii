@@ -7,15 +7,21 @@ import type {
 import { useTranslation } from "@repo/i18n";
 import { Trans } from "@repo/i18n/client";
 
+import { formatSpan } from "./format-range";
 import { InlineChoice } from "./inline-choice";
 import { InlineToken } from "./inline-token";
 import { ROLE_PATTERN } from "./procedure-edits";
-import type { ReadSource, SetpointTarget } from "./rig-sources";
+import type { ReadSource, SetpointOption, SetpointTarget } from "./rig-sources";
 import type { SetpointValue } from "./setpoint-list";
-import { formatSetpoints, parseSetpoints } from "./setpoint-list";
+import { formatSetpoints, numericSetpoints, parseSetpoints } from "./setpoint-list";
 import { StepReadsClause } from "./step-reads-clause";
 
 const OPERATOR_STIMULUS = "operator";
+
+/** The longest wait a settle step may hold, as the procedure contract counts it. */
+const MAX_WAIT_MS = 600_000;
+
+type StepOf<K extends ProcedureStep["kind"]> = Extract<ProcedureStep, { kind: K }>;
 
 interface CalibrationStepSentenceProps {
   step: ProcedureStep;
@@ -38,10 +44,20 @@ export function CalibrationStepSentence({
 }: CalibrationStepSentenceProps) {
   const { t } = useTranslation("iot");
 
+  function setpointOptions(setpoints: SetpointOption[]) {
+    return setpoints.map((setpoint) => ({ value: setpoint.name, hint: formatSpan(setpoint) }));
+  }
+
+  function roleOptions() {
+    return targets.map((target) => ({ value: target.role }));
+  }
+
   function seriesToken(series: string, onCommit: (series: string) => void) {
     // takenSeries carries every step's series including this one's own, once each; a
     // rename that collides shows up as the name appearing twice, not as it "still" being there.
-    const taken = takenSeries.filter((name) => name === series).length > 1;
+    const isTaken = takenSeries.filter((name) => name === series).length > 1;
+    const isWellFormed = ROLE_PATTERN.test(series);
+
     return (
       <InlineToken
         value={series}
@@ -49,9 +65,9 @@ export function CalibrationStepSentence({
         canEdit={canEdit}
         mono
         invalid={
-          taken
+          isTaken
             ? t("iot.calibration.procedure.seriesTaken")
-            : ROLE_PATTERN.test(series)
+            : isWellFormed
               ? undefined
               : t("iot.calibration.procedure.nameInvalid")
         }
@@ -61,6 +77,18 @@ export function CalibrationStepSentence({
   }
 
   function settleToken(ms: number | undefined, onCommit: (ms: number | undefined) => void) {
+    // Cleared means no settle at all; anything that is not a number keeps what was there.
+    function commitSettle(text: string) {
+      const isCleared = text.trim() === "";
+      const parsed = Number(text.trim());
+
+      if (isCleared) {
+        onCommit(undefined);
+      } else if (Number.isFinite(parsed)) {
+        onCommit(parsed);
+      }
+    }
+
     return (
       <InlineToken
         value={ms === undefined ? "" : String(ms)}
@@ -68,10 +96,7 @@ export function CalibrationStepSentence({
         canEdit={canEdit}
         inputMode="decimal"
         placeholder={t("iot.calibration.procedure.noSettle")}
-        onCommit={(text) => {
-          const parsed = Number(text.trim());
-          onCommit(text.trim() === "" ? undefined : Number.isFinite(parsed) ? parsed : ms);
-        }}
+        onCommit={commitSettle}
       />
     );
   }
@@ -81,37 +106,44 @@ export function CalibrationStepSentence({
     numbersOnly: boolean,
     onCommit: (v: SetpointValue[]) => void,
   ) {
+    function commitValues(text: string) {
+      const parsed = parseSetpoints(text, numbersOnly);
+      if (parsed !== null) {
+        onCommit(parsed);
+      }
+    }
+
     return (
       <InlineToken
         value={formatSetpoints(values)}
         label={t("iot.calibration.procedure.values")}
         canEdit={canEdit}
         mono
-        onCommit={(text) => {
-          const parsed = parseSetpoints(text, numbersOnly);
-          if (parsed !== null) {
-            onCommit(parsed);
-          }
-        }}
+        onCommit={commitValues}
       />
     );
   }
 
-  function renderOperator() {
-    if (step.kind !== "operator") return null;
+  function readsClause(reads: ProcedureRead[], onCommit: (reads: ProcedureRead[]) => void) {
+    return (
+      <StepReadsClause reads={reads} sources={sources} canEdit={canEdit} onChange={onCommit} />
+    );
+  }
+
+  function renderOperator(operator: StepOf<"operator">) {
     const prompt = (
       <InlineToken
-        value={step.prompt}
+        value={operator.prompt}
         label={t("iot.calibration.procedure.prompt")}
         canEdit={canEdit}
         invalid={
-          step.prompt.trim() === "" ? t("iot.calibration.procedure.promptRequired") : undefined
+          operator.prompt.trim() === "" ? t("iot.calibration.procedure.promptRequired") : undefined
         }
-        onCommit={(next) => onChange({ ...step, prompt: next })}
+        onCommit={(next) => onChange({ ...operator, prompt: next })}
       />
     );
 
-    if (step.confirm === undefined) {
+    if (operator.confirm === undefined) {
       return (
         <Trans
           t={t}
@@ -129,12 +161,12 @@ export function CalibrationStepSentence({
           prompt,
           confirm: (
             <InlineToken
-              value={step.confirm}
+              value={operator.confirm}
               label={t("iot.calibration.procedure.confirm")}
               canEdit={canEdit}
               mono
               onCommit={(next) =>
-                onChange({ ...step, confirm: next.trim() === "" ? undefined : next })
+                onChange({ ...operator, confirm: next.trim() === "" ? undefined : next })
               }
             />
           ),
@@ -143,8 +175,16 @@ export function CalibrationStepSentence({
     );
   }
 
-  function renderSettle() {
-    if (step.kind !== "settle") return null;
+  function renderSettle(settle: StepOf<"settle">) {
+    function commitWait(text: string) {
+      const parsed = Number(text.trim());
+      const isInRange = Number.isInteger(parsed) && parsed >= 1 && parsed <= MAX_WAIT_MS;
+
+      if (isInRange) {
+        onChange({ ...settle, ms: parsed });
+      }
+    }
+
     return (
       <Trans
         t={t}
@@ -152,16 +192,11 @@ export function CalibrationStepSentence({
         components={{
           ms: (
             <InlineToken
-              value={String(step.ms)}
+              value={String(settle.ms)}
               label={t("iot.calibration.procedure.waitFor")}
               canEdit={canEdit}
               inputMode="decimal"
-              onCommit={(text) => {
-                const parsed = Number(text.trim());
-                if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 600_000) {
-                  onChange({ ...step, ms: parsed });
-                }
-              }}
+              onCommit={commitWait}
             />
           ),
         }}
@@ -169,10 +204,22 @@ export function CalibrationStepSentence({
     );
   }
 
-  function renderSet() {
-    if (step.kind !== "set") return null;
-    const target = targets.find((candidate) => candidate.role === step.instrument);
-    const setpoint = target?.setpoints.find((candidate) => candidate.name === step.set);
+  function renderSet(set: StepOf<"set">) {
+    const target = targets.find((candidate) => candidate.role === set.instrument);
+    const setpoint = target?.setpoints.find((candidate) => candidate.name === set.set);
+
+    // A new instrument's setpoints are not the old one's, so its first one is taken.
+    function changeInstrument(instrument: string) {
+      const next = targets.find((candidate) => candidate.role === instrument);
+      onChange({ ...set, instrument, set: next?.setpoints.at(0)?.name ?? "" });
+    }
+
+    function commitValue(text: string) {
+      const parsed = Number(text.trim());
+      if (Number.isFinite(parsed)) {
+        onChange({ ...set, value: parsed });
+      }
+    }
 
     return (
       <Trans
@@ -181,41 +228,30 @@ export function CalibrationStepSentence({
         components={{
           instrument: (
             <InlineChoice
-              value={step.instrument}
+              value={set.instrument}
               label={t("iot.calibration.procedure.driven")}
-              options={targets.map((candidate) => ({ value: candidate.role }))}
+              options={roleOptions()}
               canEdit={canEdit}
-              onCommit={(instrument) => {
-                const next = targets.find((candidate) => candidate.role === instrument);
-                onChange({ ...step, instrument, set: next?.setpoints.at(0)?.name ?? "" });
-              }}
+              onCommit={changeInstrument}
             />
           ),
           setpoint: (
             <InlineChoice
-              value={step.set}
+              value={set.set}
               label={t("iot.calibration.procedure.setpoint")}
-              options={(target?.setpoints ?? []).map((candidate) => ({
-                value: candidate.name,
-                hint: `${String(candidate.min)}…${String(candidate.max)} ${candidate.unit}`,
-              }))}
+              options={setpointOptions(target?.setpoints ?? [])}
               canEdit={canEdit}
-              onCommit={(set) => onChange({ ...step, set })}
+              onCommit={(name) => onChange({ ...set, set: name })}
             />
           ),
           value: (
             <InlineToken
-              value={String(step.value)}
+              value={String(set.value)}
               label={t("iot.calibration.procedure.value")}
               canEdit={canEdit}
               mono
               inputMode="decimal"
-              onCommit={(text) => {
-                const parsed = Number(text.trim());
-                if (Number.isFinite(parsed)) {
-                  onChange({ ...step, value: parsed });
-                }
-              }}
+              onCommit={commitValue}
             />
           ),
           unit: <span className="text-muted-foreground">{setpoint?.unit ?? ""}</span>,
@@ -224,19 +260,11 @@ export function CalibrationStepSentence({
     );
   }
 
-  function renderRead() {
-    if (step.kind !== "read") return null;
-    const reads = (
-      <StepReadsClause
-        reads={step.read}
-        sources={sources}
-        canEdit={canEdit}
-        onChange={(read: ProcedureRead[]) => onChange({ ...step, read })}
-      />
-    );
-    const series = seriesToken(step.series, (next) => onChange({ ...step, series: next }));
+  function renderRead(read: StepOf<"read">) {
+    const reads = readsClause(read.read, (next) => onChange({ ...read, read: next }));
+    const series = seriesToken(read.series, (next) => onChange({ ...read, series: next }));
 
-    if (step.prompt === undefined) {
+    if (read.prompt === undefined) {
       return (
         <Trans
           t={t}
@@ -255,11 +283,11 @@ export function CalibrationStepSentence({
           series,
           prompt: (
             <InlineToken
-              value={step.prompt}
+              value={read.prompt}
               label={t("iot.calibration.procedure.prompt")}
               canEdit={canEdit}
               onCommit={(prompt) =>
-                onChange({ ...step, prompt: prompt.trim() === "" ? undefined : prompt })
+                onChange({ ...read, prompt: prompt.trim() === "" ? undefined : prompt })
               }
             />
           ),
@@ -268,28 +296,15 @@ export function CalibrationStepSentence({
     );
   }
 
-  function renderSweep() {
-    if (step.kind !== "sweep") return null;
-    const stimulus = step.stimulus;
-    const byInstrument = "instrument" in stimulus;
-    const target = byInstrument
-      ? targets.find((candidate) => candidate.role === stimulus.instrument)
-      : undefined;
-
+  function renderSweep(sweep: StepOf<"sweep">) {
+    const stimulus = sweep.stimulus;
     const shared = {
-      reads: (
-        <StepReadsClause
-          reads={step.read}
-          sources={sources}
-          canEdit={canEdit}
-          onChange={(read: ProcedureRead[]) => onChange({ ...step, read })}
-        />
-      ),
-      series: seriesToken(step.series, (series) => onChange({ ...step, series })),
-      settle: settleToken(step.settleMs, (settleMs) => onChange({ ...step, settleMs })),
+      reads: readsClause(sweep.read, (read) => onChange({ ...sweep, read })),
+      series: seriesToken(sweep.series, (series) => onChange({ ...sweep, series })),
+      settle: settleToken(sweep.settleMs, (settleMs) => onChange({ ...sweep, settleMs })),
     };
 
-    if (!byInstrument) {
+    if (!("instrument" in stimulus)) {
       return (
         <Trans
           t={t}
@@ -297,19 +312,46 @@ export function CalibrationStepSentence({
           components={{
             ...shared,
             values: valuesToken(stimulus.values, false, (values) =>
-              onChange({ ...step, stimulus: { ...stimulus, values } }),
+              onChange({ ...sweep, stimulus: { ...stimulus, values } }),
             ),
             prompt: (
               <InlineToken
                 value={stimulus.operator}
                 label={t("iot.calibration.procedure.operatorPrompt")}
                 canEdit={canEdit}
-                onCommit={(operator) => onChange({ ...step, stimulus: { ...stimulus, operator } })}
+                onCommit={(operator) => onChange({ ...sweep, stimulus: { ...stimulus, operator } })}
               />
             ),
           }}
         />
       );
+    }
+
+    const target = targets.find((candidate) => candidate.role === stimulus.instrument);
+
+    // Handing the sweep to the operator keeps its points; handing it to an instrument keeps
+    // only the ones it can be driven to, on that instrument's first setpoint.
+    function changeSource(role: string) {
+      if (role === OPERATOR_STIMULUS) {
+        onChange({
+          ...sweep,
+          stimulus: {
+            operator: t("iot.calibration.procedure.operatorStimulusPrompt"),
+            values: stimulus.values,
+          },
+        });
+        return;
+      }
+
+      const next = targets.find((candidate) => candidate.role === role);
+      onChange({
+        ...sweep,
+        stimulus: {
+          instrument: role,
+          set: next?.setpoints.at(0)?.name ?? "",
+          values: numericSetpoints(stimulus.values),
+        },
+      });
     }
 
     return (
@@ -319,58 +361,27 @@ export function CalibrationStepSentence({
         components={{
           ...shared,
           values: valuesToken(stimulus.values, true, (values) =>
-            onChange({
-              ...step,
-              stimulus: {
-                ...stimulus,
-                values: values.flatMap((point) => (typeof point === "number" ? [point] : [])),
-              },
-            }),
+            onChange({ ...sweep, stimulus: { ...stimulus, values: numericSetpoints(values) } }),
           ),
           instrument: (
             <InlineChoice
               value={stimulus.instrument}
               label={t("iot.calibration.procedure.driven")}
               options={[
-                ...targets.map((candidate) => ({ value: candidate.role })),
+                ...roleOptions(),
                 { value: OPERATOR_STIMULUS, label: t("iot.calibration.procedure.operatorSource") },
               ]}
               canEdit={canEdit}
-              onCommit={(role) => {
-                if (role === OPERATOR_STIMULUS) {
-                  onChange({
-                    ...step,
-                    stimulus: {
-                      operator: t("iot.calibration.procedure.operatorStimulusPrompt"),
-                      values: stimulus.values,
-                    },
-                  });
-                  return;
-                }
-                const next = targets.find((candidate) => candidate.role === role);
-                onChange({
-                  ...step,
-                  stimulus: {
-                    instrument: role,
-                    set: next?.setpoints.at(0)?.name ?? "",
-                    values: stimulus.values.flatMap((point) =>
-                      typeof point === "number" ? [point] : [],
-                    ),
-                  },
-                });
-              }}
+              onCommit={changeSource}
             />
           ),
           setpoint: (
             <InlineChoice
               value={stimulus.set}
               label={t("iot.calibration.procedure.setpoint")}
-              options={(target?.setpoints ?? []).map((candidate) => ({
-                value: candidate.name,
-                hint: `${String(candidate.min)}…${String(candidate.max)} ${candidate.unit}`,
-              }))}
+              options={setpointOptions(target?.setpoints ?? [])}
               canEdit={canEdit}
-              onCommit={(set) => onChange({ ...step, stimulus: { ...stimulus, set } })}
+              onCommit={(set) => onChange({ ...sweep, stimulus: { ...stimulus, set } })}
             />
           ),
         }}
@@ -380,14 +391,14 @@ export function CalibrationStepSentence({
 
   switch (step.kind) {
     case "operator":
-      return renderOperator();
+      return renderOperator(step);
     case "settle":
-      return renderSettle();
+      return renderSettle(step);
     case "set":
-      return renderSet();
+      return renderSet(step);
     case "read":
-      return renderRead();
+      return renderRead(step);
     case "sweep":
-      return renderSweep();
+      return renderSweep(step);
   }
 }

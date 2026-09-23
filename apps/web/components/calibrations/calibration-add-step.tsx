@@ -51,8 +51,13 @@ export function CalibrationAddStep({ unavailable = {}, onAdd }: CalibrationAddSt
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="ghost" size="sm" className="text-muted-foreground -ml-2 h-7">
-          <Plus className="mr-1.5 size-3.5" aria-hidden />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground -ml-2.5 h-7"
+        >
+          <Plus className="size-3.5" aria-hidden />
           {t("iot.calibration.procedure.addStep")}
         </Button>
       </DropdownMenuTrigger>

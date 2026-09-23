@@ -1019,7 +1019,6 @@
         "drives": "stuurt",
         "answers": "antwoordt",
         "setpointRange": "{{name}} {{min}}…{{max}} {{unit}}",
-        "drivesNothing": "niets dat het platform kan instellen",
         "answeringTo": "meldt zich als",
         "anyHandshake": "wat dan ook"
       },

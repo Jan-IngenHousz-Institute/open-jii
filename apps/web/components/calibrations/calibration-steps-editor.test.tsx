@@ -193,6 +193,51 @@ describe("CalibrationStepsEditor", () => {
     expect(added?.kind === "sweep" && "operator" in added.stimulus).toBe(true);
   });
 
+  // Offered from the row's hover controls while it is only a possibility, then read in the
+  // sentence once set, because by then it is a fact about the step.
+  it("marks a sweep as one the operator may skip, and says so in its sentence", async () => {
+    const { onChange, user } = renderEditor();
+
+    const [, sweep] = screen.getAllByRole("listitem");
+    const offer = within(sweep).getByRole("button", { name: "iot.calibration.procedure.maySkip" });
+    expect(offer.closest("p")).toBeNull();
+
+    await user.click(offer);
+
+    expect(onChange.mock.calls[0][0].steps[1]).toEqual(expect.objectContaining({ optional: true }));
+    const [, marked] = screen.getAllByRole("listitem");
+    const label = within(marked).getByRole("button", {
+      name: "iot.calibration.procedure.maySkip",
+    });
+    expect(label.closest("p")).not.toBeNull();
+  });
+
+  it("clears a skip from the sentence that states it", async () => {
+    const optional = {
+      ...bench,
+      steps: bench.steps.map((step) =>
+        step.kind === "sweep" ? { ...step, optional: true } : step,
+      ),
+    };
+    const { onChange, user } = renderEditor(optional);
+
+    const [, sweep] = screen.getAllByRole("listitem");
+    await user.click(
+      within(sweep).getByRole("button", { name: "iot.calibration.procedure.maySkip" }),
+    );
+
+    expect(onChange.mock.calls[0][0].steps[1]).not.toHaveProperty("optional", true);
+  });
+
+  it("offers no skip on a step the run cannot do without", () => {
+    renderEditor();
+
+    const [set] = screen.getAllByRole("listitem");
+    expect(
+      within(set).queryByRole("button", { name: "iot.calibration.procedure.maySkip" }),
+    ).toBeNull();
+  });
+
   it("moves a step, because order is the procedure", async () => {
     const { onChange, user } = renderEditor();
 

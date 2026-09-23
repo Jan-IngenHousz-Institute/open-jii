@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, configure } from "@testing-library/react";
 import { Fragment, createElement } from "react";
+import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 
 import { server } from "./msw/server";
@@ -165,8 +166,8 @@ vi.mock("@repo/i18n/client", () => ({
     components,
   }: {
     i18nKey?: string;
-    children?: unknown;
-    components?: Record<string, unknown>;
+    children?: ReactNode;
+    components?: Record<string, ReactNode>;
   }) =>
     children ??
     createElement(
@@ -174,7 +175,7 @@ vi.mock("@repo/i18n/client", () => ({
       null,
       i18nKey ?? null,
       ...Object.entries(components ?? {}).map(([slot, node]) =>
-        createElement(Fragment, { key: slot }, node as never),
+        createElement(Fragment, { key: slot }, node),
       ),
     ),
 }));

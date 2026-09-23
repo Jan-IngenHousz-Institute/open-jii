@@ -1,5 +1,6 @@
 "use client";
 
+import { InsetPanel } from "@/components/shared/inset-panel";
 import { useLocale } from "@/hooks/useLocale";
 
 import { useTranslation } from "@repo/i18n";
@@ -19,9 +20,9 @@ export function CalibrationSeriesSeam({ series }: CalibrationSeriesSeamProps) {
 
   if (series.length === 0) {
     return (
-      <p className="text-muted-foreground ml-3 border-l py-2 pl-5 text-xs">
-        {t("iot.calibration.seam.recordsNothing")}
-      </p>
+      <InsetPanel padding="sm">
+        <p className="text-muted-foreground text-xs">{t("iot.calibration.seam.recordsNothing")}</p>
+      </InsetPanel>
     );
   }
 
@@ -43,10 +44,12 @@ export function CalibrationSeriesSeam({ series }: CalibrationSeriesSeamProps) {
     );
   }
 
+  // Recessed rather than raised: this is what the steps above produce, read off them
+  // rather than authored, so it sits below the page the way every other well does.
   return (
-    <div className="ml-3 border-l py-2 pl-5">
+    <InsetPanel padding="sm">
       <p className="text-muted-foreground mb-1 text-xs">{t("iot.calibration.seam.produces")}</p>
       <ul className="space-y-1">{series.map(renderSeries)}</ul>
-    </div>
+    </InsetPanel>
   );
 }

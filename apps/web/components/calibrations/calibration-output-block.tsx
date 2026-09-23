@@ -14,7 +14,8 @@ import {
 } from "@repo/ui/components/dropdown-menu";
 
 import { CalibrationCoefficientLine } from "./calibration-coefficient-line";
-import { specForWritable, uniqueName } from "./output-schema-edits";
+import { InlineToken } from "./inline-token";
+import { COEFFICIENT_NAME_PATTERN, specForWritable, uniqueName } from "./output-schema-edits";
 
 /** What a coefficient the author adds by hand is called before they rename it. */
 const NEW_COEFFICIENT = "coefficient";
@@ -50,6 +51,12 @@ export function CalibrationOutputBlock({
   const { t } = useTranslation("iot");
 
   const declared = Object.keys(coefficients);
+  const isBlockTaken = takenBlocks.filter((entry) => entry === block).length > 1;
+  const blockError = isBlockTaken
+    ? t("iot.calibration.produces.blockTaken")
+    : COEFFICIENT_NAME_PATTERN.test(block)
+      ? undefined
+      : t("iot.calibration.produces.nameInvalid");
   const offered = writable.filter((candidate) => !declared.includes(candidate.name));
 
   function addPlain() {
@@ -73,31 +80,62 @@ export function CalibrationOutputBlock({
       <CalibrationCoefficientLine
         // Positional, so renaming one does not remount its line mid-keystroke.
         key={index}
-        block={block}
         name={name}
         spec={spec}
         isWritable={writable.some((candidate) => candidate.name === name)}
         takenNames={declared}
-        takenBlocks={takenBlocks}
         canEdit={canEdit}
         onRename={(to) => onRenameCoefficient(name, to)}
-        onRenameBlock={onRename}
         onChange={(next) => onSetCoefficient(name, next)}
         onRemove={() => onRemoveCoefficient(name)}
       />
     );
   }
 
+  // A subgrid of the schema's own grid, so every block's coefficients share one name
+  // column instead of each block sizing its own.
   return (
-    <div className="group/block">
-      <ul>{Object.entries(coefficients).map(renderCoefficient)}</ul>
+    <div className="col-span-3 grid grid-cols-subgrid">
+      <div className="group/header col-span-3 grid grid-cols-subgrid items-baseline leading-7">
+        <InlineToken
+          value={block}
+          label={t("iot.calibration.produces.block")}
+          canEdit={canEdit}
+          mono
+          invalid={blockError}
+          onCommit={onRename}
+          className="font-mono text-[15px] font-medium"
+        />
+        <span />
+        {canEdit && (
+          <span className="flex h-7 items-center self-start">
+            <button
+              type="button"
+              onClick={onRemove}
+              aria-label={t("iot.calibration.produces.removeBlock", { block })}
+              className="text-muted-foreground/0 group-hover/header:text-muted-foreground/70 hover:text-destructive! transition-colors"
+            >
+              <X className="size-3" aria-hidden />
+            </button>
+          </span>
+        )}
+      </div>
+
+      <ul className="col-span-3 grid grid-cols-subgrid">
+        {Object.entries(coefficients).map(renderCoefficient)}
+      </ul>
 
       {canEdit && (
-        <div className="text-muted-foreground flex items-center gap-1">
+        <div className="col-span-3 pl-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button type="button" variant="ghost" size="sm" className="h-7 text-xs">
-                <Plus className="mr-1 size-3" aria-hidden />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground -ml-2.5 h-7 text-xs"
+              >
+                <Plus className="size-3" aria-hidden />
                 {t("iot.calibration.produces.addCoefficient")}
               </Button>
             </DropdownMenuTrigger>
@@ -108,15 +146,6 @@ export function CalibrationOutputBlock({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <button
-            type="button"
-            onClick={onRemove}
-            aria-label={t("iot.calibration.produces.removeBlock", { block })}
-            className="hover:text-destructive opacity-0 transition-opacity group-hover/block:opacity-100"
-          >
-            <X className="inline size-3" aria-hidden />
-          </button>
         </div>
       )}
     </div>

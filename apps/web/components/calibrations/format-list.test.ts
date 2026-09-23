@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { formatList } from "./format-list";
 
 describe("formatList", () => {
-  // The whole point: a rig line reads as one sentence, not a run of names glued with "·".
+  // A rig line reads as one sentence, not a run of names glued with "·".
   it("joins two names with the locale's own word for and", () => {
     expect(formatList("en-US", ["par_raw", "par_ref"])).toBe("par_raw and par_ref");
   });

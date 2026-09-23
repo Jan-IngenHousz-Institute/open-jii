@@ -6,6 +6,11 @@ export type SetpointValue = Extract<Stimulus, { operator: string }>["values"][nu
 /** The most points a sweep may hold, as the procedure contract counts them. */
 const MAX_POINTS = 64;
 
+/** An instrument can only be driven to numbers, so the operator's labels drop out when one takes over. */
+export function numericSetpoints(values: SetpointValue[]): number[] {
+  return values.flatMap((value) => (typeof value === "number" ? [value] : []));
+}
+
 export function formatSetpoints(values: SetpointValue[]): string {
   return values
     .map((value) => (typeof value === "object" ? JSON.stringify(value) : String(value)))

@@ -12,20 +12,16 @@ function renderLine(
 ) {
   const onChange = vi.fn();
   const onRename = vi.fn();
-  const onRenameBlock = vi.fn();
   const onRemove = vi.fn();
   const { container } = render(
     <CalibrationCoefficientLine
-      block="par"
       name="slope"
       spec={spec}
       isWritable
       takenNames={["slope"]}
-      takenBlocks={["par"]}
       canEdit
       onChange={onChange}
       onRename={onRename}
-      onRenameBlock={onRenameBlock}
       onRemove={onRemove}
       {...props}
     />,
@@ -34,34 +30,21 @@ function renderLine(
     container,
     onChange,
     onRename,
-    onRenameBlock,
     onRemove,
     user: userEvent.setup({ pointerEventsCheck: 0 }),
   };
 }
 
 describe("CalibrationCoefficientLine", () => {
-  it("names the coefficient by its block and its own name", () => {
+  // The block names itself in its own header, so a line carries only what differs between
+  // its siblings.
+  it("carries its own name and leaves the block to its header", () => {
     renderLine();
 
     expect(
-      screen.getByRole("button", { name: "iot.calibration.produces.block" }),
-    ).toHaveTextContent("par");
-    expect(
       screen.getByRole("button", { name: "iot.calibration.produces.coefficient" }),
     ).toHaveTextContent("slope");
-  });
-
-  it("renames the block from the coefficient line, since it has no header of its own", async () => {
-    const { onRenameBlock, user } = renderLine();
-
-    await user.click(screen.getByRole("button", { name: "iot.calibration.produces.block" }));
-    const block = screen.getByRole("textbox", { name: "iot.calibration.produces.block" });
-    await user.clear(block);
-    await user.type(block, "spec");
-    await user.tab();
-
-    expect(onRenameBlock).toHaveBeenLastCalledWith("spec");
+    expect(screen.queryByRole("button", { name: "iot.calibration.produces.block" })).toBeNull();
   });
 
   // The rig already uses "…" as a range's own separator ("current_a 0…10 A"); an unset

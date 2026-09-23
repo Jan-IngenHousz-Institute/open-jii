@@ -8,6 +8,7 @@ import type { BenchInstrumentSummary } from "@repo/iot";
 import { cn } from "@repo/ui/lib/utils";
 
 import { formatList } from "./format-list";
+import { formatRange } from "./format-range";
 import { InlineChoice } from "./inline-choice";
 import { InlineToken } from "./inline-token";
 import type { AuxiliaryInstrument } from "./procedure-edits";
@@ -77,7 +78,7 @@ export function CalibrationRigLine({
   }
 
   return (
-    <li className="group flex gap-3 py-1 text-[15px] leading-7">
+    <li className="group col-span-3 grid grid-cols-subgrid items-baseline py-1 text-[15px] leading-7">
       <InlineToken
         value={instrument.role}
         label={t("iot.calibration.rig.role")}
@@ -85,7 +86,7 @@ export function CalibrationRigLine({
         mono
         invalid={roleError}
         onCommit={onRename}
-        className="w-20 shrink-0 font-mono"
+        className="font-mono"
       />
 
       <p className="min-w-0">
@@ -122,12 +123,7 @@ export function CalibrationRigLine({
           <span className="text-muted-foreground text-sm">
             {", "}
             {t("iot.calibration.rig.drives")}{" "}
-            <span className="font-mono">
-              {formatList(
-                locale,
-                setpoints.map((s) => `${s.name} ${String(s.min)}…${String(s.max)} ${s.unit}`),
-              )}
-            </span>
+            <span className="font-mono">{formatList(locale, setpoints.map(formatRange))}</span>
           </span>
         )}
 
@@ -138,22 +134,24 @@ export function CalibrationRigLine({
             <span className="font-mono">{formatList(locale, readings)}</span>
           </span>
         )}
+      </p>
 
-        {canEdit && (
+      {canEdit && (
+        <span className="flex h-7 items-center self-start">
           <button
             type="button"
             onClick={onRemove}
             disabled={usedBySteps > 0}
             aria-label={t("iot.calibration.rig.remove", { role: instrument.role })}
             className={cn(
-              "text-muted-foreground/0 group-hover:text-muted-foreground/70 hover:text-destructive! ml-1 align-middle transition-colors",
+              "text-muted-foreground/0 group-hover:text-muted-foreground/70 hover:text-destructive! transition-colors",
               usedBySteps > 0 && "hidden",
             )}
           >
-            <X className="inline size-3" aria-hidden />
+            <X className="size-3" aria-hidden />
           </button>
-        )}
-      </p>
+        </span>
+      )}
     </li>
   );
 }

@@ -8,7 +8,7 @@ import type { ReadSource } from "./rig-sources";
 const FALLBACK_COLUMN = "value";
 
 /** Every family's driver answers this, and a rig always declares the device. */
-const FALLBACK_COMMAND = "hello";
+export const FALLBACK_COMMAND = "hello";
 
 /** What the operator types is the reference the device is held against. */
 const OPERATOR_COLUMN = "reference";

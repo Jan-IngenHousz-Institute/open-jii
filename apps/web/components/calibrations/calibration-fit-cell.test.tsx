@@ -2,9 +2,11 @@ import { render, screen } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import type { CalibrationOutputSchema } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
+
 import { CalibrationFitCell } from "./calibration-fit-cell";
 
-const SCHEMA = { blocks: { par: { slope: { type: "number" as const } } } };
+const SCHEMA: CalibrationOutputSchema = { blocks: { par: { slope: { type: "number" } } } };
 
 function renderCell(props: Partial<Parameters<typeof CalibrationFitCell>[0]> = {}) {
   render(

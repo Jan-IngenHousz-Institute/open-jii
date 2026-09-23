@@ -1019,7 +1019,6 @@
         "drives": "steuert",
         "answers": "antwortet",
         "setpointRange": "{{name}} {{min}}…{{max}} {{unit}}",
-        "drivesNothing": "nichts, was die Plattform setzen kann",
         "answeringTo": "meldet sich als",
         "anyHandshake": "beliebig"
       },
