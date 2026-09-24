@@ -338,6 +338,20 @@
   }
 }
 
+/* A row that arrives in an open table holds a light tint for a moment, then fades. */
+@theme {
+  --animate-row-landed: row-landed 3s cubic-bezier(0.4, 0, 1, 1);
+}
+
+@keyframes row-landed {
+  from {
+    background-color: color-mix(in oklab, var(--status-active) 50%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
 /* A utility, not a --color-* mapping: a gradient has no single value. */
 @utility bg-canvas {
   background-image: linear-gradient(270.03deg, var(--canvas-from) 0%, var(--canvas-to) 100%);

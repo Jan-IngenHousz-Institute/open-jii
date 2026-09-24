@@ -100,6 +100,8 @@ export interface DataTableProps {
    * itself information, such as a sweep whose setpoint leads the readings it produced.
    */
   preserveColumnOrder?: boolean;
+  /** Rows that just arrived, tinted briefly so a reader notices them. */
+  landedRowIds?: ReadonlySet<string>;
   className?: string;
 }
 
@@ -122,6 +124,7 @@ export function DataTable({
   errorColumn,
   loadingRowCount = 10,
   preserveColumnOrder = false,
+  landedRowIds,
   className,
 }: DataTableProps) {
   const { t } = useTranslation();
@@ -262,6 +265,7 @@ export function DataTable({
                 tableRows={rows}
                 columns={orderedColumns}
                 errorColumn={errorColumn}
+                landedRowIds={landedRowIds}
                 onToggleCellExpansion={toggleCellExpansion}
               />
             )}
