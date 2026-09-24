@@ -30,20 +30,18 @@ def _fetch_device_registry(
 ) -> dict[str, dict[str, Any]]:
     if not thing_names:
         return {}
-    try:
-        return backend_client.get_device_registry(thing_names)
-    except Exception as e:
-        print(f"Error fetching device registry: {e!s}")
-        return {}
+    # A lookup failure must fail the update, not replace resolved devices with
+    # nulls. Only a successful response can establish that a device is unknown.
+    return backend_client.get_device_registry(thing_names)
 
 
 def add_device_registry(df, environment: str, dbutils):
     """
     Add a `device` struct resolved from the trusted client_id.
 
-    Mirrors add_user_column: fetches the registry once per Spark batch, keyed by
-    client_id (== Thing name for X.509 devices). Cognito/mobile client ids and
-    NULLs match no registry row and resolve to a NULL struct.
+    Fetches the registry in bounded requests per Spark batch, keyed by client_id
+    (== Thing name for X.509 devices). Cognito/mobile client ids and NULLs match
+    no registry row and resolve to a NULL struct. Lookup errors fail the update.
 
     Args:
         df: PySpark DataFrame with a 'client_id' column

@@ -66,6 +66,7 @@ class BackendClient:
     WEBHOOK_USER_METADATA_PATH = "/api/v1/users/metadata"
     WEBHOOK_MACRO_BATCH_PATH = "/api/v1/macros/execute-batch"
     WEBHOOK_IOT_REGISTRY_PATH = "/api/v1/iot/devices/registry"
+    DEVICE_REGISTRY_BATCH_SIZE = 500
 
     # Keeps the request under the backend's 10 MB JSON body limit, so one
     # outsized sample fails alone instead of failing every item in its chunk.
@@ -269,6 +270,8 @@ class BackendClient:
         For an X.509 device the MQTT client id equals its Thing name, so the
         pipeline passes distinct client_id values here; Cognito/mobile client ids
         match no registry row and are simply absent from the result.
+        Requests stay within the backend's 500-name limit. A failed chunk raises
+        instead of returning a partial registry that would erase device metadata.
 
         Returns:
             Dict mapping thing_name -> {id, serialNumber, deviceType, status, createdBy}
@@ -277,40 +280,37 @@ class BackendClient:
             return {}
         if not isinstance(thing_names, list):
             raise BackendIntegrationError("thing_names must be a list")
-        if len(thing_names) > 500:
-            raise BackendIntegrationError(f"Too many thing names in batch: {len(thing_names)} (max 500)")
-
-        valid = [t for t in thing_names if t is not None and str(t).strip()]
+        valid = list(dict.fromkeys(t for t in thing_names if t is not None and str(t).strip()))
         if not valid:
             return {}
 
-        payload = {"thingNames": valid}
-
-        try:
-            result = self._make_request(self.WEBHOOK_IOT_REGISTRY_PATH, payload)
-        except BackendIntegrationError:
-            raise
-        except Exception as e:
-            raise BackendIntegrationError(f"Unexpected error fetching device registry: {e!s}") from e
-
         registry: dict[str, dict[str, Any]] = {}
-        devices_list = result.get("devices", [])
+        for offset in range(0, len(valid), self.DEVICE_REGISTRY_BATCH_SIZE):
+            payload = {"thingNames": valid[offset : offset + self.DEVICE_REGISTRY_BATCH_SIZE]}
 
-        if not isinstance(devices_list, list):
-            raise BackendIntegrationError(
-                f"Invalid response format: expected 'devices' to be a list, got {type(devices_list)}"
-            )
+            try:
+                result = self._make_request(self.WEBHOOK_IOT_REGISTRY_PATH, payload)
+            except BackendIntegrationError:
+                raise
+            except Exception as e:
+                raise BackendIntegrationError(f"Unexpected error fetching device registry: {e!s}") from e
 
-        for device in devices_list:
-            if not isinstance(device, dict) or "thingName" not in device:
-                continue
-            registry[device["thingName"]] = {
-                "id": device.get("id"),
-                "serialNumber": device.get("serialNumber"),
-                "deviceType": device.get("deviceType"),
-                "status": device.get("status"),
-                "createdBy": device.get("createdBy"),
-            }
+            devices_list = result.get("devices")
+            if not isinstance(devices_list, list):
+                raise BackendIntegrationError(
+                    f"Invalid response format: expected 'devices' to be a list, got {type(devices_list)}"
+                )
+
+            for device in devices_list:
+                if not isinstance(device, dict) or "thingName" not in device:
+                    continue
+                registry[device["thingName"]] = {
+                    "id": device.get("id"),
+                    "serialNumber": device.get("serialNumber"),
+                    "deviceType": device.get("deviceType"),
+                    "status": device.get("status"),
+                    "createdBy": device.get("createdBy"),
+                }
 
         return registry
 
