@@ -22,8 +22,22 @@ function defaults(overrides: Partial<ChartFormValues> = {}): ChartFormValues {
 }
 
 const tables: ExperimentTableMetadata[] = [
-  { identifier: "readings", displayName: "Readings", tableType: "static", totalRows: 100 },
-  { identifier: "events", displayName: "Events", tableType: "static", totalRows: 50 },
+  {
+    identifier: "readings",
+    displayName: "Readings",
+    tableType: "static",
+    totalRows: 100,
+    latestRowAt: null,
+    schemaRevision: null,
+  },
+  {
+    identifier: "events",
+    displayName: "Events",
+    tableType: "static",
+    totalRows: 50,
+    latestRowAt: null,
+    schemaRevision: null,
+  },
 ];
 
 const columns: ExperimentDataColumn[] = [

@@ -61,7 +61,8 @@ jobs:
           HEAD="${{ inputs.ref || github.sha }}"
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
-          elif git diff --name-only "$BASE" "$HEAD" | grep -q '^infrastructure/'; then
+          # OpenTofu reads the serving views' SQL from apps/data.
+          elif git diff --name-only "$BASE" "$HEAD" | grep -qE '^(infrastructure/|apps/data/src/views/)'; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "changed=false" >> $GITHUB_OUTPUT

@@ -1,6 +1,6 @@
 """Table metadata from gold to what the backend reads: the sample notebooks keep a
 sample per schema, the metadata notebook merges them, and the view adds each
-table's row count and an upload's newest name."""
+table's row count, when its newest row arrived and an upload's newest name."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import importlib.util
 import sys
 import types
 from collections.abc import Iterator
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -24,10 +25,10 @@ _SCHEMA = f"{_CATALOG}.centrum"
 _GOLD = {
     "experiment_raw_data": """
         SELECT * FROM VALUES
-          ('e1', parse_json('{"plot": "A1"}')),
-          ('e1', parse_json('{"plot": "B2", "note": "dry"}')),
-          ('e2', CAST(NULL AS VARIANT))
-        AS t(experiment_id, questions_data)
+          ('e1', parse_json('{"plot": "A1"}'), TIMESTAMP'2026-09-22 10:00:00'),
+          ('e1', parse_json('{"plot": "B2", "note": "dry"}'), TIMESTAMP'2026-09-22 10:05:00'),
+          ('e2', CAST(NULL AS VARIANT), TIMESTAMP'2026-09-22 11:00:00')
+        AS t(experiment_id, questions_data, processed_timestamp)
     """,
     "experiment_device_data": """
         SELECT * FROM VALUES
@@ -43,9 +44,11 @@ _GOLD = {
     """,
     "experiment_macro_data": """
         SELECT * FROM VALUES
-          ('e1', 'mac-1', parse_json('{"phi2": 0.7}'), parse_json('{"plot": "A1"}')),
-          ('e1', 'mac-1', parse_json('{"phi2": 0.653}'), parse_json('{"plot": "B2"}'))
-        AS t(experiment_id, macro_id, macro_output, questions_data)
+          ('e1', 'mac-1', parse_json('{"phi2": 0.7}'), parse_json('{"plot": "A1"}'),
+           TIMESTAMP'2026-09-22 10:00:00'),
+          ('e1', 'mac-1', parse_json('{"phi2": 0.653}'), parse_json('{"plot": "B2"}'),
+           TIMESTAMP'2026-09-22 10:05:00')
+        AS t(experiment_id, macro_id, macro_output, questions_data, processed_timestamp)
     """,
     "experiment_metadata_source": """
         SELECT * FROM VALUES
@@ -81,7 +84,7 @@ def _notebook(notebook: str, function: str, spark: SparkSession) -> DataFrame:
     return getattr(module, function)()
 
 
-def test_the_view_reports_each_table_with_its_schemas_count_and_name(
+def test_the_view_reports_each_table_with_its_schemas_count_newest_row_and_name(
     spark: SparkSession,
     fake_dlt: types.ModuleType,
     monkeypatch: pytest.MonkeyPatch,
@@ -101,6 +104,7 @@ def test_the_view_reports_each_table_with_its_schemas_count_and_name(
 
     view = spark.sql(_VIEW.read_text().replace("${catalog}", _CATALOG))
     rows = {(row.experiment_id, row.identifier): row.asDict() for row in view.collect()}
+    revisions = {key: row.pop("schema_revision") for key, row in rows.items()}
 
     assert rows == {
         ("e1", "raw_data"): {
@@ -109,6 +113,7 @@ def test_the_view_reports_each_table_with_its_schemas_count_and_name(
             "table_type": "static",
             "display_name": None,
             "row_count": 2,
+            "latest_row_at": datetime(2026, 9, 22, 10, 5),
             "macro_schema": None,
             "questions_schema": "OBJECT<note: STRING, plot: STRING>",
             "custom_metadata_schema": "OBJECT<soil: STRING>",
@@ -120,6 +125,7 @@ def test_the_view_reports_each_table_with_its_schemas_count_and_name(
             "table_type": "static",
             "display_name": None,
             "row_count": 1,
+            "latest_row_at": datetime(2026, 9, 22, 11, 0),
             "macro_schema": None,
             "questions_schema": None,
             "custom_metadata_schema": None,
@@ -131,6 +137,7 @@ def test_the_view_reports_each_table_with_its_schemas_count_and_name(
             "table_type": "static",
             "display_name": None,
             "row_count": 2,
+            "latest_row_at": None,
             "macro_schema": None,
             "questions_schema": None,
             "custom_metadata_schema": None,
@@ -142,6 +149,7 @@ def test_the_view_reports_each_table_with_its_schemas_count_and_name(
             "table_type": "upload",
             "display_name": "Soil v2",
             "row_count": 2,
+            "latest_row_at": datetime(2026, 9, 21, 9, 0),
             "macro_schema": None,
             "questions_schema": None,
             "custom_metadata_schema": None,
@@ -153,9 +161,15 @@ def test_the_view_reports_each_table_with_its_schemas_count_and_name(
             "table_type": "macro",
             "display_name": None,
             "row_count": 2,
+            "latest_row_at": datetime(2026, 9, 22, 10, 5),
             "macro_schema": "OBJECT<phi2: DOUBLE>",
             "questions_schema": "OBJECT<plot: STRING>",
             "custom_metadata_schema": "OBJECT<soil: STRING>",
             "upload_schema": None,
         },
     }
+
+    # Tables with the same schemas share a revision; any schema difference changes it.
+    assert revisions[("e2", "raw_data")] == revisions[("e1", "device")]
+    distinct = [("e1", "raw_data"), ("e2", "raw_data"), ("e1", "t1"), ("e1", "mac-1")]
+    assert len({revisions[key] for key in distinct}) == len(distinct)
