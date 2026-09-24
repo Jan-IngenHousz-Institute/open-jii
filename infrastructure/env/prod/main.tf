@@ -846,6 +846,9 @@ module "centrum_pipeline" {
     # Adds the Python and other processes' memory to the driver's metrics, which the
     # JVM heap figures leave out.
     "spark.executor.processTreeMetrics.enabled" = "true"
+    # Databricks' default heap, about 80% of the node, left its own services too little
+    # and the driver swapped. The heap holds about 6 GB after a full collection.
+    "spark.driver.memory" = "12g"
   }
 
   run_as = {
@@ -915,6 +918,9 @@ module "macro_execution_pipeline" {
     # Adds the Python and other processes' memory to the driver's metrics, which the
     # JVM heap figures leave out.
     "spark.executor.processTreeMetrics.enabled" = "true"
+    # Databricks' default heap, about 80% of the node, left its own services too little
+    # and the driver swapped. The heap holds 2 to 4 GB between collections.
+    "spark.driver.memory" = "5g"
   }
 
   run_as = {
