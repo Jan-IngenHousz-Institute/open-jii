@@ -270,12 +270,16 @@ export class AuthorizationService {
     return rows.length > 0;
   }
 
-  /** Every organization the user belongs to, in any role, including their personal one. */
+  /**
+   * Every organization the user belongs to, in any role, including their personal one. Ordered,
+   * so the same memberships always produce the same flag cache key.
+   */
   async listMemberOrganizationIds(userId: string): Promise<string[]> {
     const rows = await this.db
       .select({ organizationId: organizationMembers.organizationId })
       .from(organizationMembers)
-      .where(eq(organizationMembers.userId, userId));
+      .where(eq(organizationMembers.userId, userId))
+      .orderBy(organizationMembers.organizationId);
     return rows.map((row) => row.organizationId);
   }
 
