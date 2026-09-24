@@ -166,11 +166,11 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     },
     {
       provide: CACHE_PORT,
-      // Table metadata is read before every warehouse statement. A minute
-      // spares that round trip yet keeps the row counts behind pagination
-      // totals close to the pipeline's cadence.
+      // Table metadata is read before every warehouse statement and polled by
+      // open experiment pages. Fifteen seconds spares most round trips while
+      // a poll still sees new rows within one interval.
       useFactory: (cache: Cache) =>
-        new CacheAdapter(cache, { prefix: "experiment:", ttlMs: 60 * 1000 }),
+        new CacheAdapter(cache, { prefix: "experiment:", ttlMs: 15 * 1000 }),
       inject: [CACHE_MANAGER],
     },
 

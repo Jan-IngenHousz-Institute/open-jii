@@ -994,9 +994,11 @@
         "readOnly": "Sie können diese Kalibrierung lesen, aber nicht ändern.",
         "frozen_one": "Ein Lauf hat diese Kalibrierung protokolliert, daher kann sie nicht mehr geändert werden. Erstellen Sie ein Duplikat, um die Prozedur in eine neue zu übernehmen.",
         "frozen_other": "{{count}} Läufe haben diese Kalibrierung protokolliert, daher kann sie nicht mehr geändert werden. Erstellen Sie ein Duplikat, um die Prozedur in eine neue zu übernehmen.",
-        "notSaving": "Wird nicht gespeichert, solange die Definition unvollständig ist.",
         "verifyOptional": "optional",
-        "duplicate": "Duplizieren"
+        "duplicate": "Duplizieren",
+        "notSaving_one": "Wird nicht gespeichert: 1 Problem. Die rot markierten Werte sagen, warum.",
+        "notSaving_other": "Wird nicht gespeichert: {{count}} Probleme. Die rot markierten Werte sagen, warum.",
+        "problemStep": "Schritt {{position}}"
       },
       "rig": {
         "hint": "Jedes Instrument belegt am Messplatz einen eigenen seriellen Anschluss. Eine Rolle umzubenennen benennt sie in jedem Schritt um, der sie verwendet.",
@@ -1019,7 +1021,16 @@
         "drives": "steuert",
         "answers": "antwortet",
         "setpointRange": "{{name}} {{min}}…{{max}} {{unit}}",
-        "drivesNothing": "nichts, was die Plattform setzen kann"
+        "answeringTo": "meldet sich als",
+        "anyHandshake": "beliebig",
+        "unused": "noch von keinem Schritt verwendet",
+        "andMore": "+{{count}} weitere",
+        "purpose": {
+          "kiprim-dc": "Labornetzteil für die Kalibrierlampe",
+          "calitool-spectral-board": "Steuert eine LED und liest zwölf Spektralkanäle",
+          "minipar-reference": "Ein MiniPAR als Referenzsensor",
+          "micropython-par-reference": "PAR-Referenzfotodiode auf einer MicroPython-Platine"
+        }
       },
       "procedure": {
         "addStep": "Schritt hinzufügen",
@@ -1044,9 +1055,6 @@
           "sweepInstrument": "{{instrument}} {{setpoint}} durchfahren, {{points}} Punkte",
           "sweepOperator": "Von Hand durchfahren, {{points}} Punkte"
         },
-        "moveUp": "Schritt {{position}} nach oben",
-        "moveDown": "Schritt {{position}} nach unten",
-        "removeStep": "Schritt {{position}} entfernen",
         "collapseStep": "Schritt {{position}} zuklappen",
         "expandStep": "Schritt {{position}} aufklappen",
         "optional": "Optional",
@@ -1099,7 +1107,33 @@
         "sweepSpan_one": "{{count}} Punkt bei {{from}} {{unit}}",
         "sweepSpan_other": "{{count}} Punkte von {{from}} bis {{to}} {{unit}}",
         "sweepSpanPlain_one": "{{count}} Punkt bei {{from}}",
-        "sweepSpanPlain_other": "{{count}} Punkte von {{from}} bis {{to}}"
+        "sweepSpanPlain_other": "{{count}} Punkte von {{from}} bis {{to}}",
+        "sentence": {
+          "operator": "Bitte an die bedienende Person: <prompt/>",
+          "operatorConfirm": "Bitte an die bedienende Person: <prompt/> Sie tippt <confirm/>, um fortzufahren.",
+          "settle": "Warte <ms/> ms.",
+          "set": "Stelle <instrument/> <setpoint/> auf <value/> <unit/>.",
+          "read": "Erfasse <reads/> in <series/>.",
+          "readPrompt": "Bitte an die bedienende Person: <prompt/> Erfasse danach <reads/> in <series/>.",
+          "sweepInstrument": "Fahre <instrument/> <setpoint/> über <values/>, mit <settle/> ms Beruhigung je Punkt, und erfasse <reads/> in <series/>.",
+          "sweepOperator": "Bitte an <instrument/> für jeden Wert aus <values/>: <prompt/> Erfasse <reads/> in <series/>, mit <settle/> ms Beruhigung je Punkt."
+        },
+        "from": "von",
+        "as": "als",
+        "maySkip": "kann übersprungen werden",
+        "noSettle": "keine",
+        "promptRequired": "Ein Schritt, der nichts verlangt, hält den Lauf grundlos an.",
+        "commandPlaceholder": "Befehl",
+        "settleFor": "Beruhigung",
+        "menu": {
+          "label": "Aktionen für Schritt {{position}}",
+          "moveUp": "Nach oben",
+          "moveDown": "Nach unten",
+          "remove": "Schritt entfernen",
+          "askFirst": "Zuerst den Bediener fragen"
+        },
+        "readPromptDefault": "Beschreiben Sie, was der Bediener vor dieser Messung vorbereiten soll.",
+        "operatorInSentence": "die bedienende Person"
       },
       "trial": {
         "action": "Am Messplatz ausführen",
@@ -1112,8 +1146,8 @@
         "coefficient": "Koeffizient",
         "type": "Typ",
         "length": "Einträge",
-        "min": "Min",
-        "max": "Max",
+        "min": "Minimum für {{name}}",
+        "max": "Maximum für {{name}}",
         "addBlock": "Block hinzufügen",
         "addPlainBlock": "Eigener Block",
         "addCoefficient": "Koeffizient hinzufügen",
@@ -1123,16 +1157,28 @@
         "blockTaken": "Ein anderer Block trägt diesen Namen bereits.",
         "nameTaken": "Dieser Block enthält bereits einen Koeffizienten dieses Namens.",
         "nameInvalid": "Kleinbuchstaben, Ziffern und Unterstriche, beginnend mit einem Buchstaben.",
-        "recordedOnly": "Wird mit dem Lauf aufgezeichnet. Die Plattform hat keinen Befehl, um diesen zu schreiben."
+        "recordedOnly": "nur erfasst, kein Schreiber dafür",
+        "between": "zwischen",
+        "and": "und",
+        "entriesSuffix": "Werte",
+        "typeName": {
+          "number": "eine Zahl",
+          "number_array": "Zahlen",
+          "integer_array": "ganze Zahlen"
+        },
+        "noBound": "keine"
       },
       "fit": {
         "label": "Anpassung, liefert {{coefficients}} Koeffizienten in {{blocks}} Blöcken",
-        "submits": "Was sie liefert",
+        "submits": "Übermittelte Koeffizienten",
         "draft": "Anpassung entwerfen",
         "draftTitle": "Skript durch eine entworfene Anpassung ersetzen?",
         "draftConfirm": "Der Entwurf entsteht aus den oben aufgezeichneten Serien und den Blöcken darunter, in der Reihenfolge ihrer Deklaration. Was jetzt im Skript steht, geht verloren.",
         "draftCancel": "Meines behalten",
-        "draftReplace": "Ersetzen"
+        "draftReplace": "Ersetzen",
+        "scriptLines_one": "Das Skript, {{count}} Zeile",
+        "scriptLines_other": "Das Skript, {{count}} Zeilen",
+        "leaveEditor": "Tab rückt ein. Esc und dann Tab verlassen das Skript."
       },
       "sidebar": {
         "id": "Kalibrierungs-ID",
@@ -1143,7 +1189,10 @@
         "firmwarePlaceholder": "Beliebig",
         "firmwareHint": "Darunter wird ein Lauf abgelehnt. Ältere Firmware beantwortet unbekannte Befehle mit Zahlen, die wie Messwerte aussehen.",
         "firmwareInvalid": "Nur Versionsnummern, etwa 1.03 oder 1.1.3.",
-        "saved": "Kalibrierung aktualisiert"
+        "saved": "Kalibrierung aktualisiert",
+        "waiting": "Wartezeit pro Durchlauf",
+        "waitingValue": "{{duration}}",
+        "waitingValueOperator": "{{duration}}, zuzüglich der Schritte des Bedieners"
       },
       "seam": {
         "produces": "Die Aufnahme erfasst",
@@ -1188,6 +1237,13 @@
         "alreadyDone": "{{serial}} war in dieser Sitzung bereits an der Reihe.",
         "whichDevice": "Welches Gerät ist das?",
         "whichDeviceHint": "Die Firmware dieser Einheit meldet über die Konsole keine Kennung, daher muss der Lauf einem von Ihnen benannten Gerät zugeordnet werden."
+      },
+      "invalid": {
+        "number": "Muss eine Zahl sein.",
+        "wholeRange": "Eine ganze Zahl von {{min}} bis {{max}}.",
+        "numbers": "Zahlen durch Kommas getrennt, höchstens {{max}}.",
+        "points": "Punkte durch Kommas getrennt, höchstens {{max}}.",
+        "wholeNumber": "Muss eine ganze Zahl sein."
       }
     },
     "workbookBar": {

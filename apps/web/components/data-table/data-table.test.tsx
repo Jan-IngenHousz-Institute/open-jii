@@ -213,6 +213,16 @@ describe("DataTable", () => {
     expect(container.querySelector("tbody tr")?.className).toContain("border-l-destructive");
   });
 
+  it("tints only the rows that just landed", () => {
+    const { container } = render(
+      <DataTable columns={COLUMNS} rows={ROWS} landedRowIds={new Set(["row-2"])} />,
+    );
+    const [first, second] = Array.from(container.querySelectorAll("tbody tr"));
+
+    expect(second.className).toContain("animate-row-landed");
+    expect(first.className).not.toContain("animate-row-landed");
+  });
+
   it("toggles selection through the header and the row checkboxes", async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();

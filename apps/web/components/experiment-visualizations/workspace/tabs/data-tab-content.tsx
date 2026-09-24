@@ -50,6 +50,8 @@ export function DataTabContent({
   const { t } = useTranslation("experimentVisualizations");
   const chartType = useWatch({ control: form.control, name: "chartType" });
   const def = getChartTypeDef(chartType);
+  // A failed refresh keeps the tables it already listed selectable.
+  const isTablesUnavailable = Boolean(tablesError) && tables.length === 0;
 
   if (isTablesLoading) {
     return (
@@ -84,7 +86,7 @@ export function DataTabContent({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {tablesError ? (
+                  {isTablesUnavailable ? (
                     <div className="text-destructive px-2 py-1.5 text-sm">
                       {t("workspace.inspector.failedToLoadTables")}
                     </div>

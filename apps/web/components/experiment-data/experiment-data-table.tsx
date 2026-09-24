@@ -6,6 +6,7 @@ import type {
   TableMetadata,
 } from "@/components/data-table/data-table-columns";
 import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
+import { useLandedRowIds } from "@/hooks/useLandedRowIds";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { PaginationState, RowSelectionState } from "@tanstack/react-table";
 import React, { useCallback, useEffect, useState } from "react";
@@ -131,6 +132,15 @@ export function ExperimentDataTable({
     setRowSelection({});
   }, [filtersKey]);
 
+  const viewKey = [
+    pagination.pageIndex,
+    pagination.pageSize,
+    sortColumn,
+    sortDirection,
+    filtersKey,
+  ].join("|");
+  const landedRowIds = useLandedRowIds(tableRows, viewKey);
+
   const handlePaginationChange = useCallback<typeof setPagination>((updaterOrValue) => {
     setPagination(updaterOrValue);
     setRowSelection({});
@@ -190,6 +200,7 @@ export function ExperimentDataTable({
           isLoading={isLoading}
           loadingRowCount={loadingRowCount}
           errorColumn={errorColumn}
+          landedRowIds={landedRowIds}
           toolbar={
             <>
               {columns.length > 0 && (

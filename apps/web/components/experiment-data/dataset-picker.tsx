@@ -1,5 +1,6 @@
 "use client";
 
+import { useAnimatedNumber } from "@/hooks/useAnimatedNumber";
 import { useLocale } from "@/hooks/useLocale";
 import { datasetLabel } from "@/util/dataset-label";
 import { formatLocaleNumber } from "@/util/format-locale-number";
@@ -44,6 +45,7 @@ export function DatasetPicker({ tables, value, onChange }: DatasetPickerProps) {
   const [open, setOpen] = useState(false);
 
   const selected = tables.find((table) => table.identifier === value);
+  const shownRows = useAnimatedNumber(selected?.totalRows ?? 0, value);
 
   const renderRow = (table: ExperimentTableMetadata) => (
     <CommandItem
@@ -92,7 +94,7 @@ export function DatasetPicker({ tables, value, onChange }: DatasetPickerProps) {
               <span className="text-muted-foreground text-xs tabular-nums">
                 {t("experimentData.datasetRows", {
                   count: selected.totalRows,
-                  rows: formatLocaleNumber(selected.totalRows, locale),
+                  rows: formatLocaleNumber(shownRows, locale),
                 })}
               </span>
             )}

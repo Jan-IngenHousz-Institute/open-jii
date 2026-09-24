@@ -54,6 +54,13 @@ export interface ExperimentTableMetadata {
   tableType: ExperimentTableType;
   displayName: string | null;
   rowCount: number;
+  /**
+   * ISO time the newest row's data reached the platform; for a macro result, its source
+   * measurement's. Null for an empty table or one without arrival times.
+   */
+  latestRowAt: string | null;
+  /** Changes whenever any of the table's schemas does. */
+  schemaRevision: string | null;
   macroSchema?: string | null;
   questionsSchema?: string | null;
   customMetadataSchema?: string | null;

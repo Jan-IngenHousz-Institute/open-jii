@@ -7,7 +7,7 @@ import type {
   FilterCondition,
 } from "../../../common/modules/databricks/services/query-builder/query-builder.types";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
-import { Result, success, failure, AppError } from "../../../common/utils/fp-utils";
+import { Result, success, failure, AppError, tryCatch } from "../../../common/utils/fp-utils";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
 import {
   MACRO_TABLE_CONFIG,
@@ -298,25 +298,18 @@ export class ExperimentDataRepository {
   }
 
   /**
-   * Schemas and row count for one table, held for a minute: every read needs
-   * them to build its SQL, and they only move when the pipeline runs. A failed
-   * lookup is thrown through the cache so it is never stored, and callers
-   * sharing the in-flight load all see the failure.
+   * Schemas, row count and newest row of every table in an experiment, as one
+   * cached snapshot. Reads build their SQL from it and the tables listing
+   * serves it, so a count the page has seen is the count its next read uses.
+   * A failed lookup is thrown through the cache so it is never stored, and
+   * callers sharing the in-flight load all see the failure.
    */
-  private tableMetadataCacheKey(experimentId: string, tableName: string): string {
-    return `table-metadata:${experimentId}:${tableName}`;
-  }
-
-  private async tableMetadata(
-    experimentId: string,
-    tableName: string,
-  ): Promise<Result<ExperimentTableMetadata[]>> {
-    try {
+  tablesMetadata(experimentId: string): Promise<Result<ExperimentTableMetadata[]>> {
+    return tryCatch(async () => {
       const rows = await this.cachePort.tryCache(
-        this.tableMetadataCacheKey(experimentId, tableName),
+        this.tablesMetadataCacheKey(experimentId),
         async () => {
           const result = await this.databricksPort.getExperimentTableMetadata(experimentId, {
-            identifier: tableName,
             includeSchemas: true,
           });
           if (result.isFailure()) {
@@ -325,13 +318,23 @@ export class ExperimentDataRepository {
           return result.value;
         },
       );
-      return success(rows ?? []);
-    } catch (error) {
-      if (error instanceof AppError) {
-        return failure(error);
-      }
-      throw error;
+      return rows ?? [];
+    });
+  }
+
+  private tablesMetadataCacheKey(experimentId: string): string {
+    return `table-metadata:${experimentId}`;
+  }
+
+  private async tableMetadata(
+    experimentId: string,
+    tableName: string,
+  ): Promise<Result<ExperimentTableMetadata[]>> {
+    const result = await this.tablesMetadata(experimentId);
+    if (result.isFailure()) {
+      return result;
     }
+    return success(result.value.filter((table) => table.identifier === tableName));
   }
 
   /**

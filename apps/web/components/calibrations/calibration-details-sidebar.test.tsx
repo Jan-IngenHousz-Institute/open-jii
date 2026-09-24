@@ -106,4 +106,42 @@ describe("CalibrationDetailsSidebar", () => {
     });
     expect(updateSpy.body).toMatchObject({ minFirmwareVersion: null });
   });
+
+  // The server refuses every edit once a run points at the definition, so a field that
+  // looked editable would only end in an error.
+  it("reads the family and the firmware floor as text once runs have closed it", () => {
+    renderSidebar(createCalibrationDefinitionDetail({ runCount: 3, minFirmwareVersion: "1.03" }));
+
+    expect(screen.queryByRole("combobox", { name: "iot.calibration.sidebar.family" })).toBeNull();
+    expect(screen.queryByDisplayValue("1.03")).toBeNull();
+    expect(screen.getByText("1.03")).toBeInTheDocument();
+  });
+
+  it("says how long a run waits on itself, and that the operator's steps come on top", () => {
+    const definition = createCalibrationDefinitionDetail();
+    renderSidebar({
+      ...definition,
+      captureProcedure: {
+        instruments: [{ role: "dut" }],
+        steps: [
+          { kind: "operator", prompt: "Cover the sensor" },
+          { kind: "settle", ms: 1500 },
+        ],
+        verify: [{ kind: "settle", ms: 500 }],
+      },
+    });
+
+    expect(screen.getByText("iot.calibration.sidebar.waiting")).toBeInTheDocument();
+    expect(screen.getByText("iot.calibration.sidebar.waitingValueOperator")).toBeInTheDocument();
+  });
+
+  it("gives the waiting alone when no step stops for the operator", () => {
+    const definition = createCalibrationDefinitionDetail();
+    renderSidebar({
+      ...definition,
+      captureProcedure: { instruments: [{ role: "dut" }], steps: [{ kind: "settle", ms: 1500 }] },
+    });
+
+    expect(screen.getByText("iot.calibration.sidebar.waitingValue")).toBeInTheDocument();
+  });
 });

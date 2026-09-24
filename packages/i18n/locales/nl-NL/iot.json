@@ -994,9 +994,11 @@
         "readOnly": "Je kunt deze kalibratie lezen maar niet wijzigen.",
         "frozen_one": "Eén run heeft deze kalibratie vastgelegd, dus deze kan niet meer worden gewijzigd. Maak een duplicaat om de procedure mee te nemen naar een nieuwe.",
         "frozen_other": "{{count}} runs hebben deze kalibratie vastgelegd, dus deze kan niet meer worden gewijzigd. Maak een duplicaat om de procedure mee te nemen naar een nieuwe.",
-        "notSaving": "Wordt niet opgeslagen zolang de definitie onvolledig is.",
         "verifyOptional": "optioneel",
-        "duplicate": "Dupliceren"
+        "duplicate": "Dupliceren",
+        "notSaving_one": "Wordt niet opgeslagen: 1 probleem. De rood gemarkeerde waarden zeggen waarom.",
+        "notSaving_other": "Wordt niet opgeslagen: {{count}} problemen. De rood gemarkeerde waarden zeggen waarom.",
+        "problemStep": "stap {{position}}"
       },
       "rig": {
         "hint": "Elk instrument krijgt aan de meetbank een eigen seriële poort. Een rol hernoemen hernoemt die in elke stap die hem gebruikt.",
@@ -1016,10 +1018,19 @@
         "roleInvalid": "Kleine letters, cijfers en liggende streepjes, beginnend met een letter.",
         "anyInstrument": "Elk instrument dat zich zo meldt",
         "anyInstrumentHint": "Elk instrument waarvan de identificatie deze tekst bevat. Pas als het instrument benoemd is, kunnen de stappen zijn instelwaarden en meetwaarden aanbieden.",
-        "drives": "stuurt aan",
+        "drives": "stuurt",
         "answers": "antwoordt",
         "setpointRange": "{{name}} {{min}}…{{max}} {{unit}}",
-        "drivesNothing": "niets dat het platform kan instellen"
+        "answeringTo": "meldt zich als",
+        "anyHandshake": "wat dan ook",
+        "unused": "nog door geen enkele stap gebruikt",
+        "andMore": "+{{count}} meer",
+        "purpose": {
+          "kiprim-dc": "Labvoeding voor de kalibratielamp",
+          "calitool-spectral-board": "Stuurt één led aan en leest twaalf spectrale kanalen",
+          "minipar-reference": "Een MiniPAR als referentiesensor",
+          "micropython-par-reference": "PAR-referentiefotodiode op een MicroPython-bord"
+        }
       },
       "procedure": {
         "addStep": "Stap toevoegen",
@@ -1044,9 +1055,6 @@
           "sweepInstrument": "{{instrument}} {{setpoint}} doorlopen, {{points}} punten",
           "sweepOperator": "Met de hand doorlopen, {{points}} punten"
         },
-        "moveUp": "Stap {{position}} omhoog",
-        "moveDown": "Stap {{position}} omlaag",
-        "removeStep": "Stap {{position}} verwijderen",
         "collapseStep": "Stap {{position}} inklappen",
         "expandStep": "Stap {{position}} uitklappen",
         "optional": "Optioneel",
@@ -1099,7 +1107,33 @@
         "sweepSpan_one": "{{count}} punt op {{from}} {{unit}}",
         "sweepSpan_other": "{{count}} punten van {{from}} tot {{to}} {{unit}}",
         "sweepSpanPlain_one": "{{count}} punt op {{from}}",
-        "sweepSpanPlain_other": "{{count}} punten van {{from}} tot {{to}}"
+        "sweepSpanPlain_other": "{{count}} punten van {{from}} tot {{to}}",
+        "sentence": {
+          "operator": "Vraag de operator: <prompt/>",
+          "operatorConfirm": "Vraag de operator: <prompt/> Ze typen <confirm/> om verder te gaan.",
+          "settle": "Wacht <ms/> ms.",
+          "set": "Zet <instrument/> <setpoint/> op <value/> <unit/>.",
+          "read": "Leg <reads/> vast in <series/>.",
+          "readPrompt": "Vraag de operator: <prompt/> Leg daarna <reads/> vast in <series/>.",
+          "sweepInstrument": "Doorloop <instrument/> <setpoint/> langs <values/>, met <settle/> ms rust op elk punt, en leg <reads/> vast in <series/>.",
+          "sweepOperator": "Vraag <instrument/> voor elk van <values/>: <prompt/> Leg <reads/> vast in <series/>, met <settle/> ms rust op elk punt."
+        },
+        "from": "van",
+        "as": "als",
+        "maySkip": "mag worden overgeslagen",
+        "noSettle": "geen",
+        "promptRequired": "Een stap die niets vraagt houdt de meting voor niets tegen.",
+        "commandPlaceholder": "commando",
+        "settleFor": "Rust",
+        "menu": {
+          "label": "Acties voor stap {{position}}",
+          "moveUp": "Omhoog",
+          "moveDown": "Omlaag",
+          "remove": "Stap verwijderen",
+          "askFirst": "Eerst de operator vragen"
+        },
+        "readPromptDefault": "Beschrijf wat de operator moet klaarzetten voordat deze meting wordt gedaan.",
+        "operatorInSentence": "de operator"
       },
       "trial": {
         "action": "Uitvoeren aan de meetbank",
@@ -1112,8 +1146,8 @@
         "coefficient": "Coëfficiënt",
         "type": "Type",
         "length": "Waarden",
-        "min": "Min",
-        "max": "Max",
+        "min": "Minimum voor {{name}}",
+        "max": "Maximum voor {{name}}",
         "addBlock": "Blok toevoegen",
         "addPlainBlock": "Eigen blok",
         "addCoefficient": "Coëfficiënt toevoegen",
@@ -1123,16 +1157,28 @@
         "blockTaken": "Een ander blok heeft deze naam al.",
         "nameTaken": "Dit blok heeft al een coëfficiënt met deze naam.",
         "nameInvalid": "Kleine letters, cijfers en liggende streepjes, beginnend met een letter.",
-        "recordedOnly": "Wordt met de meting vastgelegd. Het platform heeft geen commando om deze te schrijven."
+        "recordedOnly": "alleen vastgelegd, er is geen schrijver voor",
+        "between": "tussen",
+        "and": "en",
+        "entriesSuffix": "waarden",
+        "typeName": {
+          "number": "een getal",
+          "number_array": "getallen",
+          "integer_array": "gehele getallen"
+        },
+        "noBound": "geen"
       },
       "fit": {
         "label": "Fit, levert {{coefficients}} coëfficiënten in {{blocks}} blokken",
-        "submits": "Wat het oplevert",
+        "submits": "Coëfficiënten die het oplevert",
         "draft": "Fit opstellen",
         "draftTitle": "Het script vervangen door een opgestelde fit?",
         "draftConfirm": "Het concept komt uit de hierboven vastgelegde series en de blokken eronder, in de volgorde waarin ze zijn opgegeven. Wat er nu in het script staat, gaat verloren.",
         "draftCancel": "Houd wat ik schreef",
-        "draftReplace": "Vervangen"
+        "draftReplace": "Vervangen",
+        "scriptLines_one": "Het script, {{count}} regel",
+        "scriptLines_other": "Het script, {{count}} regels",
+        "leaveEditor": "Tab springt in. Druk op Esc en dan Tab om het script te verlaten."
       },
       "sidebar": {
         "id": "Kalibratie-ID",
@@ -1143,7 +1189,10 @@
         "firmwarePlaceholder": "Elke",
         "firmwareHint": "Daaronder wordt een meting geweigerd. Oudere firmware beantwoordt onbekende commando's met getallen die op meetwaarden lijken.",
         "firmwareInvalid": "Alleen versienummers, zoals 1.03 of 1.1.3.",
-        "saved": "Kalibratie bijgewerkt"
+        "saved": "Kalibratie bijgewerkt",
+        "waiting": "Wachttijd per run",
+        "waitingValue": "{{duration}}",
+        "waitingValueOperator": "{{duration}}, plus de stappen van de operator"
       },
       "seam": {
         "produces": "De opname legt vast",
@@ -1188,6 +1237,13 @@
         "alreadyDone": "{{serial}} is in deze sessie al aan de beurt geweest.",
         "whichDevice": "Welk apparaat is dit?",
         "whichDeviceHint": "De firmware van deze unit meldt geen identificatie via de console, dus de meting moet worden vastgelegd op een apparaat dat jij aanwijst."
+      },
+      "invalid": {
+        "number": "Moet een getal zijn.",
+        "wholeRange": "Een geheel getal van {{min}} tot {{max}}.",
+        "numbers": "Getallen gescheiden door komma's, hoogstens {{max}}.",
+        "points": "Punten gescheiden door komma's, hoogstens {{max}}.",
+        "wholeNumber": "Moet een geheel getal zijn."
       }
     },
     "workbookBar": {

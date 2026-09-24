@@ -8,6 +8,7 @@ import { useAutosave } from "@/hooks/useAutosave";
 import { Lock } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useCallback, useState } from "react";
+import type { z } from "zod";
 import { parseApiError } from "~/util/apiError";
 
 import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
@@ -22,7 +23,6 @@ import { EmptyState } from "@repo/ui/components/empty-state";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { toast } from "@repo/ui/hooks/use-toast";
 
-import { CalibrationBlocksSeam } from "./calibration-blocks-seam";
 import { CalibrationDetailsSidebar } from "./calibration-details-sidebar";
 import { CalibrationFitCell } from "./calibration-fit-cell";
 import { CalibrationRigStrip } from "./calibration-rig-strip";
@@ -47,21 +47,48 @@ function toDraft(definition: CalibrationDefinition): DefinitionDraft {
   };
 }
 
-/** A draft is briefly invalid on most keystrokes, so only a persistent refusal is shown. */
-function saveBlocker(draft: DefinitionDraft | undefined): string | null {
+type Translate = (key: string, values?: Record<string, unknown>) => string;
+
+/** What keeps a draft from saving. A draft is briefly invalid on most keystrokes, so only a persistent refusal is shown. */
+function saveIssues(draft: DefinitionDraft | undefined): z.ZodIssue[] {
   if (draft === undefined) {
-    return null;
+    return [];
   }
 
   const parsed = zUpdateCalibrationDefinitionBody.safeParse(draft);
-  if (parsed.success) {
-    return null;
+  return parsed.success ? [] : parsed.error.issues;
+}
+
+/** Where a problem sits, named the way the page names it rather than as a schema path. */
+function locateIssue(path: (string | number)[], draft: DefinitionDraft, t: Translate): string {
+  const [section, part, index, ...rest] = path;
+  const position = typeof index === "number" ? index + 1 : undefined;
+
+  if (section === "captureProcedure" && part === "instruments" && typeof index === "number") {
+    const role = draft.captureProcedure.instruments.at(index)?.role;
+    return role === undefined || role === ""
+      ? t("iot.calibration.detail.rig")
+      : `${t("iot.calibration.detail.rig")}, ${role}`;
+  }
+  if (section === "captureProcedure" && (part === "steps" || part === "verify")) {
+    const stage = t(
+      part === "steps" ? "iot.calibration.detail.steps" : "iot.calibration.detail.verify",
+    );
+    return position === undefined
+      ? stage
+      : `${stage}, ${t("iot.calibration.detail.problemStep", { position })}`;
+  }
+  if (section === "outputSchema") {
+    const name = [index, ...rest].filter((segment) => typeof segment === "string").join(".");
+    return name === ""
+      ? t("iot.calibration.fit.submits")
+      : `${t("iot.calibration.fit.submits")}, ${name}`;
+  }
+  if (section === "script") {
+    return t("iot.calibration.detail.script");
   }
 
-  const [issue] = parsed.error.issues;
-  const where = issue.path.join(".");
-
-  return where === "" ? issue.message : `${where}: ${issue.message}`;
+  return t("iot.calibration.detail.steps");
 }
 
 /** Autosaves as one document, so a rename reaching into the steps cannot half-save. */
@@ -96,12 +123,13 @@ export function CalibrationDefinitionDetail() {
     [definitionId, update],
   );
 
-  const blocker = saveBlocker(edited);
+  const issues = saveIssues(edited);
+  const isBlocked = issues.length > 0;
 
   const autosave = useAutosave<DefinitionDraft | undefined>({
     value: edited,
     toKey: (value) => JSON.stringify(value ?? null),
-    isValid: (value) => value !== undefined && saveBlocker(value) === null,
+    isValid: (value) => value !== undefined && saveIssues(value).length === 0,
     save,
     // Enabling anchors the saved copy to what the server sent, so the first edit is
     // the first thing saved.
@@ -110,7 +138,7 @@ export function CalibrationDefinitionDetail() {
 
   // A blocked or frozen draft has no save state worth reporting: "all changes saved" would
   // be a lie, and a spinner would promise a save that is not coming.
-  const isReportable = canEdit && blocker === null;
+  const isReportable = canEdit && !isBlocked;
   useReportAutosaveStatus({
     status: isReportable ? autosave.status : null,
     error: autosave.error,
@@ -138,6 +166,15 @@ export function CalibrationDefinitionDetail() {
   const captured = producedSeries(current.captureProcedure, "steps");
   const capture = phaseSummary(current.captureProcedure, "steps");
   const verify = phaseSummary(current.captureProcedure, "verify");
+
+  // One line per distinct problem: the same refusal from two refinements reads once.
+  const problems = [
+    ...new Set(issues.map((issue) => `${locateIssue(issue.path, current, t)}: ${issue.message}`)),
+  ];
+
+  function renderProblem(problem: string) {
+    return <li key={problem}>{problem}</li>;
+  }
 
   function editProcedure(captureProcedure: CaptureProcedure) {
     setDraft({ ...current, captureProcedure });
@@ -174,11 +211,13 @@ export function CalibrationDefinitionDetail() {
           </Alert>
         )}
 
-        {blocker !== null && (
+        {isBlocked && (
           <Alert variant="destructive">
             <AlertDescription>
-              {t("iot.calibration.detail.notSaving")}
-              <span className="mt-1 block font-mono text-xs">{blocker}</span>
+              {t("iot.calibration.detail.notSaving", { count: problems.length })}
+              <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs">
+                {problems.map(renderProblem)}
+              </ul>
             </AlertDescription>
           </Alert>
         )}
@@ -204,9 +243,10 @@ export function CalibrationDefinitionDetail() {
             canEdit={canEdit}
             onChange={editProcedure}
           />
-        </CalibrationStage>
 
-        <CalibrationSeriesSeam series={captured} />
+          {/* What these steps hand the fit, at the foot of the stage that produces it. */}
+          <CalibrationSeriesSeam series={captured} />
+        </CalibrationStage>
 
         <CalibrationStage index={3} title={t("iot.calibration.detail.script")}>
           <CalibrationFitCell
@@ -219,8 +259,6 @@ export function CalibrationDefinitionDetail() {
             onSchemaChange={editOutputSchema}
           />
         </CalibrationStage>
-
-        <CalibrationBlocksSeam outputSchema={current.outputSchema} family={definition.family} />
 
         <CalibrationStage
           index={4}
