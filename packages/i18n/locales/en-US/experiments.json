@@ -208,6 +208,7 @@
     "freshness": {
       "live": "Live",
       "paused": "Paused",
+      "updating": "Updating",
       "behind": "Last refreshed {{time}}",
       "newestRow": "Newest row {{time}}",
       "noRows": "No rows yet",

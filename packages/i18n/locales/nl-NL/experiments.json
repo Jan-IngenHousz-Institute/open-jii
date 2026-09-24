@@ -181,6 +181,7 @@
     "freshness": {
       "live": "Live",
       "paused": "Gepauzeerd",
+      "updating": "Bijwerken",
       "behind": "Laatst ververst {{time}}",
       "newestRow": "Nieuwste rij {{time}}",
       "noRows": "Nog geen rijen",

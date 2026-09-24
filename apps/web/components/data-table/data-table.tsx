@@ -2,6 +2,7 @@
 
 import { isEditableTarget } from "@/components/shortcuts/is-editable-target";
 import { showShortcutHint } from "@/components/shortcuts/use-shortcut-hint";
+import { useAnimatedNumber } from "@/hooks/useAnimatedNumber";
 import { useLocale } from "@/hooks/useLocale";
 import { formatLocaleNumber } from "@/util/format-locale-number";
 import { useHotkey } from "@tanstack/react-hotkeys";
@@ -184,6 +185,7 @@ export function DataTable({
 
   const pageState = pagination?.mode === "server" ? pagination.state : clientPagination;
   const totalRows = pagination?.mode === "server" ? pagination.totalRows : rows.length;
+  const shownTotalRows = useAnimatedNumber(totalRows);
   const totalPages =
     pagination?.mode === "server"
       ? pagination.totalPages
@@ -276,7 +278,7 @@ export function DataTable({
       {isPaged && (
         <div className="mt-4 flex w-full flex-col items-center justify-between gap-4 overflow-auto p-1 text-sm sm:flex-row sm:gap-8">
           <div className="flex-1 whitespace-nowrap">
-            {t("dataTable.totalRows")}: {formatLocaleNumber(totalRows, locale)}
+            {t("dataTable.totalRows")}: {formatLocaleNumber(shownTotalRows, locale)}
           </div>
           <div className="flex items-center space-x-2">
             <Label className="whitespace-nowrap">{t("dataTable.rowsPerPage")}:</Label>

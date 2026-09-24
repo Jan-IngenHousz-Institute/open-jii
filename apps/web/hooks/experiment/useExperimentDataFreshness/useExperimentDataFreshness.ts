@@ -1,5 +1,5 @@
 import { orpc } from "@/lib/orpc";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import type { ExperimentTableMetadata } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -37,6 +37,7 @@ export const useExperimentDataFreshness = (experimentId: string, tableName?: str
   const {
     data: tables,
     dataUpdatedAt,
+    isFetching: isChecking,
     refetch,
   } = useQuery(
     orpc.experiments.getExperimentTables.queryOptions({
@@ -49,6 +50,11 @@ export const useExperimentDataFreshness = (experimentId: string, tableName?: str
 
   // Other screens share the listing and may refetch it while this one is
   // paused, so a pause holds the rows still and resume applies what moved.
+  const isLoadingRows =
+    useIsFetching({
+      queryKey: orpc.experiments.getExperimentData.key({ input: { id: experimentId } }),
+    }) > 0;
+
   const versions = useRef<Map<string, string> | null>(null);
   useEffect(() => {
     if (!tables || isPaused) {
@@ -100,6 +106,8 @@ export const useExperimentDataFreshness = (experimentId: string, tableName?: str
     status,
     newestRowAt: tables ? newestOf(tables, tableName) : null,
     refreshedAt: new Date(dataUpdatedAt),
+    isChecking,
+    isLoadingRows,
     isPaused,
     togglePaused,
   };

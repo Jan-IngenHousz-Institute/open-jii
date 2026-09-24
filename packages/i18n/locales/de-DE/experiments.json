@@ -184,6 +184,7 @@
     "freshness": {
       "live": "Live",
       "paused": "Pausiert",
+      "updating": "Wird aktualisiert",
       "behind": "Zuletzt aktualisiert {{time}}",
       "newestRow": "Neueste Zeile {{time}}",
       "noRows": "Noch keine Zeilen",

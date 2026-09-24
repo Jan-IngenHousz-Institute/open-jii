@@ -4,7 +4,7 @@ import { useExperimentDataFreshness } from "@/hooks/experiment/useExperimentData
 import type { DataFreshnessStatus } from "@/hooks/experiment/useExperimentDataFreshness/useExperimentDataFreshness";
 import { useLocale } from "@/hooks/useLocale";
 import { formatRelativeTime } from "@/util/date";
-import { Pause, Play } from "lucide-react";
+import { Loader2, Pause, Play } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -26,17 +26,32 @@ interface DataFreshnessProps {
 export function DataFreshness({ experimentId, tableName }: DataFreshnessProps) {
   const { t } = useTranslation("experiments");
   const locale = useLocale();
-  const { hasLoaded, status, newestRowAt, refreshedAt, isPaused, togglePaused } =
-    useExperimentDataFreshness(experimentId, tableName);
+  const {
+    hasLoaded,
+    status,
+    newestRowAt,
+    refreshedAt,
+    isChecking,
+    isLoadingRows,
+    isPaused,
+    togglePaused,
+  } = useExperimentDataFreshness(experimentId, tableName);
 
   if (!hasLoaded) {
     return null;
   }
 
-  const statusLabel =
+  const liveLabel =
     status === "behind"
       ? t("experimentData.freshness.behind", { time: formatRelativeTime(refreshedAt, locale) })
       : t(`experimentData.freshness.${status}`);
+  const statusLabel = isLoadingRows ? t("experimentData.freshness.updating") : liveLabel;
+  const isBusy = isChecking || isLoadingRows;
+  const statusIcon = isBusy ? (
+    <Loader2 className="size-3 shrink-0 animate-spin" aria-hidden="true" />
+  ) : (
+    <span className={cn("h-2 w-2 shrink-0 rounded-full", DOT_CLASS[status])} />
+  );
   const newestLabel =
     newestRowAt === null
       ? t("experimentData.freshness.noRows")
@@ -48,7 +63,7 @@ export function DataFreshness({ experimentId, tableName }: DataFreshnessProps) {
 
   return (
     <div className="text-muted-foreground inline-flex items-center gap-1.5 text-xs">
-      <span className={cn("h-2 w-2 shrink-0 rounded-full", DOT_CLASS[status])} />
+      {statusIcon}
       <span>{statusLabel}</span>
       <span aria-hidden="true">·</span>
       <span>{newestLabel}</span>
