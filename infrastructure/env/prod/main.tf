@@ -1479,24 +1479,45 @@ module "experiment_custom_metadata_table" {
 }
 
 # Plain views over gold: the joins and counts run when someone reads, for the
-# experiment they read, so no pipeline recomputes them. Interim names while the
-# tables of the same names still serve readers outside the backend.
-module "serving_views" {
+# experiment they read, so no pipeline recomputes them. The enriched views carry the
+# names of the materialized views they replaced. The provider cannot rename a view,
+# so a name change here must come with a new address to replace it.
+module "enriched_views" {
   source = "../../modules/databricks/sql-table"
-  # Keyed by the SQL file, valued by the view's name. The enriched views took over
-  # the names of the materialized views they replaced. The other two add read-time
-  # counts on top of pipeline tables that keep the plain names.
-  for_each = {
-    enriched_experiment_raw_data      = "enriched_experiment_raw_data"
-    enriched_experiment_macro_data    = "enriched_experiment_macro_data"
-    enriched_experiment_uploaded_data = "enriched_experiment_uploaded_data"
-    experiment_table_metadata         = "experiment_table_metadata_view"
-    experiment_device_data            = "experiment_device_data_view"
-  }
+  for_each = toset([
+    "enriched_experiment_raw_data",
+    "enriched_experiment_macro_data",
+    "enriched_experiment_uploaded_data",
+  ])
 
   catalog_name = module.databricks_catalog.catalog_name
   schema_name  = "centrum"
-  name         = each.value
+  name         = each.key
+  table_type   = "VIEW"
+  view_definition = templatefile(
+    "${path.root}/../../../apps/data/src/views/${each.key}.sql",
+    { catalog = module.databricks_catalog.catalog_name },
+  )
+  warehouse_id = var.backend_databricks_warehouse_id
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.experiment_annotations_table, module.experiment_custom_metadata_table]
+}
+
+# Read-time counts on top of pipeline tables that keep the plain names.
+module "serving_views" {
+  source = "../../modules/databricks/sql-table"
+  for_each = toset([
+    "experiment_table_metadata",
+    "experiment_device_data",
+  ])
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "${each.key}_view"
   table_type   = "VIEW"
   view_definition = templatefile(
     "${path.root}/../../../apps/data/src/views/${each.key}.sql",
