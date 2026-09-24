@@ -96,13 +96,13 @@ export function ExperimentVisibilityCard({
   };
 
   return (
-    <>
+    <div className="space-y-4">
       <CardHeader>
         <CardTitle>{t("experimentVisibility.visibilityCardTitle")}</CardTitle>
         <CardDescription>{t("experimentVisibility.visibilityCardDescription")}</CardDescription>
         <DocsHelpLink path="/guide/sharing/visibility-embargo" className="mt-1" />
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         <ExperimentVisibilityForm
           form={form}
           currentVisibility={isPublic ? "public" : "private"}
@@ -143,6 +143,6 @@ export function ExperimentVisibilityCard({
           </DialogContent>
         </Dialog>
       </CardContent>
-    </>
+    </div>
   );
 }

@@ -3,24 +3,30 @@
 # Gold: per-macro execution results via the backend sandbox UDF, with VARIANT
 # output column and inline-repair application.
 #
-# Runs in its own pipeline because a Spark task waits on the sandbox over HTTP,
-# and sharing the ingest pipeline's compute let those tasks hold the
-# slots the Kinesis reader needs. The table was moved here from the Centrum
-# pipeline rather than recreated. Keep the query as it was: a changed streaming
-# plan can invalidate the progress the stream resumes from.
+# Runs in its own pipeline because Spark tasks wait on sandbox HTTP requests.
+# Sharing the ingest pipeline's compute let those tasks hold the slots the Kinesis
+# reader needs. The table was moved here from the Centrum
+# pipeline rather than recreated. Preserve its qualified source, table identity,
+# and checkpoint; the range shuffle below changes only stateless distribution.
 
 # COMMAND ----------
 import dlt
 from pyspark.sql import functions as F
 
 from data_repair import apply_inline_repairs
-from enrich.macro_execution import make_execute_macro_udf
+from enrich.macro_execution import distribute_macro_execution_rows, make_execute_macro_udf
 from openjii.centrum import (
     EXPERIMENT_MACRO_DATA_TABLE,
     EXPERIMENT_RAW_DATA_TABLE,
     MACRO_ID_UUID_PATTERN,
 )
-from openjii.macros.runtime import ENVIRONMENT, centrum_table
+from openjii.macros.runtime import (
+    ENVIRONMENT,
+    MACRO_EXECUTION_PARTITIONS,
+    MACRO_MAX_BYTES_PER_TRIGGER,
+    MACRO_MAX_FILES_PER_TRIGGER,
+    centrum_table,
+)
 
 # COMMAND ----------
 
@@ -45,7 +51,10 @@ def experiment_macro_data():
     sandbox_macro_udf = make_execute_macro_udf(ENVIRONMENT, dbutils)
 
     base_df = (
-        spark.readStream.table(centrum_table(EXPERIMENT_RAW_DATA_TABLE))
+        spark.readStream
+        .option("maxFilesPerTrigger", MACRO_MAX_FILES_PER_TRIGGER)
+        .option("maxBytesPerTrigger", MACRO_MAX_BYTES_PER_TRIGGER)
+        .table(centrum_table(EXPERIMENT_RAW_DATA_TABLE))
         .filter("macros IS NOT NULL")
         .filter("size(macros) > 0")
         .select(
@@ -98,18 +107,27 @@ def experiment_macro_data():
         )
     )
 
+    should_execute = (
+        F.col("macro_id").isNotNull()
+        & F.col("macro_id").rlike(MACRO_ID_UUID_PATTERN)
+        & ~F.coalesce(F.col("skip_macro_processing"), F.lit(False))
+    )
+
     return (
         base_df
         .transform(lambda df: apply_inline_repairs(df, EXPERIMENT_MACRO_DATA_TABLE))
-        # NULL.rlike(...) returns NULL (treated as false in F.when), so the
-        # explicit isNotNull() guard is required, otherwise null macro_ids
-        # would silently land with no output and no error.
+        .transform(
+            lambda df: distribute_macro_execution_rows(
+                df,
+                MACRO_EXECUTION_PARTITIONS,
+            )
+        )
+        # The UDF checks eligibility itself because Spark eagerly evaluates it
+        # outside F.when. Keep the outer guard for null sandbox-result semantics.
         .withColumn(
             "sandbox_result",
             F.when(
-                F.col("macro_id").isNotNull()
-                & F.col("macro_id").rlike(MACRO_ID_UUID_PATTERN)
-                & ~F.coalesce(F.col("skip_macro_processing"), F.lit(False)),
+                should_execute,
                 sandbox_macro_udf(
                     F.struct(
                         "id",
@@ -117,6 +135,7 @@ def experiment_macro_data():
                         F.col("data"),
                         "workbook_version_id",
                         "macro_context",
+                        should_execute.alias("should_execute"),
                     )
                 ),
             )

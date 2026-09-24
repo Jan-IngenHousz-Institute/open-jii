@@ -265,7 +265,8 @@ module "macro_sandbox" {
   lambda_sg_id        = module.vpc.macro_sandbox_lambda_security_group_id
 
   languages = {
-    python = { memory = 1024, timeout = 65 }
+    # 1769 MB is one full vCPU, and a Python call's start-up is CPU-bound imports.
+    python = { memory = 1769, timeout = 65 }
     js     = { memory = 512, timeout = 65 }
     r      = { memory = 1024, timeout = 65 }
   }
@@ -888,9 +889,12 @@ module "macro_execution_pipeline" {
   ]
 
   configuration = {
-    "CATALOG_NAME"        = module.databricks_catalog.catalog_name
-    "CENTRUM_SCHEMA_NAME" = "centrum"
-    "ENVIRONMENT"         = upper(var.environment)
+    "MACRO_MAX_FILES_PER_TRIGGER" = "16"
+    "MACRO_MAX_BYTES_PER_TRIGGER" = "16777216"
+    "MACRO_EXECUTION_PARTITIONS"  = "16"
+    "CATALOG_NAME"                = module.databricks_catalog.catalog_name
+    "CENTRUM_SCHEMA_NAME"         = "centrum"
+    "ENVIRONMENT"                 = upper(var.environment)
   }
 
   # Neither AUTO CDC nor expectations, so CORE is enough.

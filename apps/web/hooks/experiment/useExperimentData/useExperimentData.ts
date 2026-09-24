@@ -110,6 +110,9 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
       },
       staleTime: STALE_TIME,
       enabled,
+      // The experiment's freshness line refreshes changed tables and honours its pause.
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
     }),
   );
 

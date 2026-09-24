@@ -65,6 +65,8 @@ export function VisualizationDataStrip({
 
   const tableLabel = tables.find((tbl) => tbl.identifier === selectedTableName)?.displayName;
   const hasTable = Boolean(selectedTableName);
+  // A failed refresh keeps the tables it already listed selectable.
+  const isTablesUnavailable = Boolean(tablesError) && tables.length === 0;
   const hasColumns = columns.length > 0;
   const filters = useWatch({ control: form.control, name: "dataConfig.filters" }) ?? [];
   const filtersSummary = filters.length > 0 ? String(filters.length) : undefined;
@@ -108,7 +110,7 @@ export function VisualizationDataStrip({
             />
           </SelectTrigger>
           <SelectContent>
-            {tablesError ? (
+            {isTablesUnavailable ? (
               <div className="text-destructive px-2 py-1.5 text-xs">
                 {tViz("workspace.inspector.failedToLoadTables")}
               </div>

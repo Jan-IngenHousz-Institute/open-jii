@@ -3,7 +3,14 @@ import { describe, expect, it } from "vitest";
 import { datasetLabel } from "./dataset-label";
 
 function table(tableType: "static" | "macro" | "upload", displayName: string) {
-  return { identifier: "id", tableType, displayName, totalRows: 0 };
+  return {
+    identifier: "id",
+    tableType,
+    displayName,
+    totalRows: 0,
+    latestRowAt: null,
+    schemaRevision: null,
+  };
 }
 
 describe("datasetLabel", () => {

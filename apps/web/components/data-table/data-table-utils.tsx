@@ -269,6 +269,7 @@ export function DataTableRows({
   tableRows,
   columns = [],
   errorColumn,
+  landedRowIds,
   onToggleCellExpansion,
 }: {
   rows: Row<DataTableFeatures, DataRow>[];
@@ -277,6 +278,7 @@ export function DataTableRows({
   tableRows?: DataRow[];
   columns?: TableMetadata["rawColumns"];
   errorColumn?: string;
+  landedRowIds?: ReadonlySet<string>;
   onToggleCellExpansion?: OnToggleCellExpansionHandler;
 }) {
   const { t } = useTranslation();
@@ -303,6 +305,7 @@ export function DataTableRows({
         ? columns.find((col) => col.name === expandedCell.columnName)
         : undefined;
     const isExpandedRow = !!expandedColumn;
+    const hasJustLanded = landedRowIds?.has(rowId) ?? false;
 
     return (
       <React.Fragment key={row.id}>
@@ -312,6 +315,7 @@ export function DataTableRows({
             "",
             hasError && "border-l-destructive bg-destructive/5 border-l-2",
             isExpandedRow && "border-l-status-active-foreground bg-status-active/20 border-l-2",
+            hasJustLanded && "motion-safe:animate-row-landed",
           )}
         >
           {row.getVisibleCells().map((cell, cellIndex) => (

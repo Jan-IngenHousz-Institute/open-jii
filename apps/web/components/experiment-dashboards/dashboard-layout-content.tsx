@@ -13,11 +13,13 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Textarea } from "@repo/ui/components/textarea";
 
+import { DataFreshness } from "../experiment-data/data-freshness";
 import { AutosaveIndicator } from "../shared/autosave/autosave-indicator";
 import type { DashboardFormValues } from "./dashboard-form-shell";
 import { DashboardGradientBody } from "./dashboard-gradient-body";
 import { useDashboardMode } from "./dashboard-mode-context";
 import { MetaField } from "./meta-field";
+import { useDashboardTableNames } from "./use-dashboard-table-names";
 
 interface DashboardLayoutContentProps {
   experimentId: string;
@@ -42,6 +44,8 @@ export function DashboardLayoutContent({
 
   const name = useWatch({ control: form.control, name: "name" });
   const description = useWatch({ control: form.control, name: "description" }) ?? "";
+  const widgets = useWatch({ control: form.control, name: "widgets" });
+  const tableNames = useDashboardTableNames(experimentId, widgets);
 
   const handleTitleSave = (newName: string): Promise<void> => {
     form.setValue("name", newName, { shouldDirty: true, shouldTouch: true });
@@ -82,7 +86,11 @@ export function DashboardLayoutContent({
               />
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              {isEditing && <AutosaveIndicator />}
+              {isEditing ? (
+                <AutosaveIndicator />
+              ) : (
+                <DataFreshness experimentId={experimentId} tableNames={tableNames} />
+              )}
               {canEdit && (
                 <Button variant="outline" size="sm" onClick={toggleMode}>
                   <ToggleModeIcon className="mr-2 size-4" />

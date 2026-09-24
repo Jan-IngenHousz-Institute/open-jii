@@ -28,6 +28,24 @@ Work through these in order. Each step narrows the candidates before the next on
 13. **Keep spot for workers only.** Workers run on spot with fallback to on-demand, behind an on-demand driver. Production Centrum keeps at least two workers because it carries ingest, so one reclaimed node does not stall every flow. Dev and the macro pipeline accept that stall, because a few minutes of delay there costs less than a second node.
 14. **Roll out on dev first and gate production on the code.** Watch dev for at least a day. Terraform applies before the bundle deploys, and a continuous pipeline restarts by itself when its settings change, so it comes back on the new compute running its old code. Restart it again once the bundle has deployed. If the apply also adds notebooks to the pipeline, that first restart fails until the bundle uploads them. Production must not get compute sized for code it is not yet running.
 
+## Macro batch limits
+
+The macro pipeline sets three controls in its Terraform configuration:
+
+| Setting                       | Initial value | Controls                                        |
+| ----------------------------- | ------------- | ----------------------------------------------- |
+| `MACRO_MAX_FILES_PER_TRIGGER` | 16            | Source files admitted to a new micro-batch      |
+| `MACRO_MAX_BYTES_PER_TRIGGER` | 16777216      | Soft input budget of 16 MiB per new micro-batch |
+| `MACRO_EXECUTION_PARTITIONS`  | 16            | Range partitions before sandbox execution       |
+
+The reader stops admitting files when either input limit is reached. These are starting values to tune on dev, not guarantees of row count, memory use or elapsed time. A single oversized file can exceed the byte budget. Exploding macros and expanding their results can increase the work further. Range partitioning spreads distinct row IDs within each macro/version group; identical keys can remain skewed, and small batches need not fill every partition.
+
+Each task retains up to three concurrent HTTP requests. Each request contains one macro/version group, at most 25 items and the existing HTTP byte budget. Imported and invalid macro rows skip the sandbox inside the Python UDF. Transient request retries remain enabled, so sandbox execution is not exactly-once.
+
+Admission settings can change while retaining the existing source, flow, table and checkpoint. An already planned batch must finish with its original input range before the new limits apply. Restarting with smaller input limits will not reduce that batch's input range. The stateless range shuffle and eligibility guard do apply when an unfinished batch is replayed, so they can reduce task size and unnecessary sandbox calls within that same range. Use a normal checkpoint-resuming update, never a full refresh or manual offset edit. See [Databricks admission controls](https://docs.databricks.com/aws/en/structured-streaming/batch-size).
+
+On dev, verify a completed batch and an interrupted batch resume without missing or duplicated committed rows. Watch batch duration, commit gaps, maximum task rows, backlog growth and backend errors before promoting to production. A shorter commit gap is insufficient if the backlog keeps growing. Watch the backend WAF rate-rule blocked-request metric and macro errors containing `Chunk failed` and `403`; a WAF rejection becomes a failed result without retry. Restore the previous settings to roll back; the same pending-batch constraint applies.
+
 ## Where the numbers come from
 
 A node costs its DBU rate times the price per DBU, plus the EC2 price, per hour.

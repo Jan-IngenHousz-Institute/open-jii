@@ -63,7 +63,9 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
     return <ErrorDisplay error={error} title={t("failedToLoad")} />;
   }
 
-  if (tablesError) {
+  // A failed background refresh keeps the rows already on screen.
+  const isTablesUnavailable = tablesError !== null && tables === undefined;
+  if (isTablesUnavailable) {
     return <ErrorDisplay error={tablesError} title={t("failedToLoad")} />;
   }
 

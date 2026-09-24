@@ -422,6 +422,17 @@ export const zExperimentTableMetadata = z.object({
     .describe("Whether this is a static table, a macro table, or a user-uploaded table"),
   displayName: z.string().describe("Human-readable display name of the table for UI"),
   totalRows: z.number().int().describe("Total number of rows in the table"),
+  latestRowAt: z
+    .string()
+    .datetime()
+    .nullable()
+    .describe(
+      "When the table's newest data reached the platform; for a macro result, when its source measurement did. Null for an empty table",
+    ),
+  schemaRevision: z
+    .string()
+    .nullable()
+    .describe("Changes whenever the table's schema does, which can be after its rows changed"),
   defaultSortColumn: z.string().optional().describe("Default column to sort by in the UI"),
   errorColumn: z.string().optional().describe("Column name that contains error information if any"),
 });

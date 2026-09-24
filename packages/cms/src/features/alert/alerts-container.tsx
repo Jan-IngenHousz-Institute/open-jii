@@ -49,7 +49,7 @@ export const AlertsContainer: React.FC<AlertsContainerProps> = ({ alerts }) => {
   if (visible.length === 0) return null;
 
   return (
-    <div ref={containerRef} className="sticky top-0 z-40">
+    <div ref={containerRef} className="bg-background sticky top-0 z-40">
       {visible.map((alert) => (
         <AlertBanner
           key={alert.sys.id}

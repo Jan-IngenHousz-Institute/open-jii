@@ -51,6 +51,8 @@ describe("ExperimentDataController", () => {
           tableType: "static" as const,
           displayName: "Raw Data",
           totalRows: 1000,
+          latestRowAt: "2026-09-22T10:05:00.000Z",
+          schemaRevision: null,
         },
       ];
 

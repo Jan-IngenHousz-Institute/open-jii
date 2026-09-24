@@ -80,7 +80,7 @@ export function OwningOrganizationField({
           className={
             isMeta
               ? "text-muted-foreground text-sm leading-[21px]"
-              : "text-muted-foreground text-sm"
+              : "text-muted-foreground block w-fit text-sm"
           }
         />
       </div>
