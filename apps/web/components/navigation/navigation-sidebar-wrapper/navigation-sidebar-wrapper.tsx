@@ -7,9 +7,11 @@ import { AppSidebar } from "../navigation-sidebar/navigation-sidebar";
 
 export async function NavigationSidebarWrapper({
   locale,
+  isCalibrationEnabled,
   ...props
 }: Omit<React.ComponentProps<typeof AppSidebar>, "locale" | "navigationData" | "translations"> & {
   locale: string;
+  isCalibrationEnabled: boolean;
 }) {
   // Get translations server-side
   const { t: tNavigation } = await initTranslations({
@@ -26,6 +28,13 @@ export async function NavigationSidebarWrapper({
     locale,
     namespaces: ["iot"],
   });
+
+  // With calibration flagged off, Devices has only its overview left, so it goes back to
+  // being a plain link rather than a group of one.
+  const deviceChildren = mainNavigation.devices.children.filter(
+    (child) => isCalibrationEnabled || child.url(locale) !== `/${locale}/platform/calibrations`,
+  );
+  const hasDeviceGroup = deviceChildren.length > 1;
 
   // Prepare navigation data server-side using config
   const navigationData = {
@@ -59,8 +68,8 @@ export async function NavigationSidebarWrapper({
         url: mainNavigation.devices.url(locale),
         icon: mainNavigation.devices.icon,
         isActive: true,
-        navigable: false,
-        children: mainNavigation.devices.children.map((child) => ({
+        navigable: !hasDeviceGroup,
+        children: (hasDeviceGroup ? deviceChildren : []).map((child) => ({
           title: tNavigation(child.titleKey, { ns: child.namespace }),
           url: child.url(locale),
         })),

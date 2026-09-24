@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 
+import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
+import { AnalyticsModule } from "../common/modules/analytics/analytics.module";
 import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { EmailModule } from "../common/modules/email/services/email.module";
 import { ExperimentModule } from "../experiments/experiment.module";
@@ -21,6 +23,7 @@ import { ListOrganizationResourcesUseCase } from "./application/use-cases/list-o
 import { ListOrganizationTeamGrantsUseCase } from "./application/use-cases/list-organization-team-grants/list-organization-team-grants";
 import { ListOrganizationTeamsUseCase } from "./application/use-cases/list-organization-teams/list-organization-teams";
 import { ListOrganizationsUseCase } from "./application/use-cases/list-organizations/list-organizations";
+import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { ORGANIZATION_EMAIL_PORT } from "./core/ports/email.port";
 import { OrganizationJoinRequestRepository } from "./core/repositories/organization-join-request.repository";
 import { OrganizationRepository } from "./core/repositories/organization.repository";
@@ -41,6 +44,7 @@ import { OrganizationController } from "./presentation/organization.controller";
  */
 @Module({
   imports: [
+    AnalyticsModule,
     EmailModule,
     ExperimentModule,
     ProtocolModule,
@@ -56,6 +60,10 @@ import { OrganizationController } from "./presentation/organization.controller";
     {
       provide: ORGANIZATION_EMAIL_PORT,
       useExisting: EmailAdapter,
+    },
+    {
+      provide: ANALYTICS_PORT,
+      useExisting: AnalyticsAdapter,
     },
     ListOrganizationsUseCase,
     ListMyOrganizationsUseCase,

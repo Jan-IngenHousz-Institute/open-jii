@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
 import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 import type {
@@ -8,6 +9,8 @@ import type {
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { calibrationDefinitions, eq } from "@repo/database";
 
+import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
+import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
 
@@ -40,6 +43,7 @@ const DEFINITION_BODY = {
 describe("IotCalibrationController", () => {
   const testApp = TestHarness.App;
   let userId: string;
+  let analyticsAdapter: MockAnalyticsAdapter;
 
   beforeAll(async () => {
     await testApp.setup({ mock: { AnalyticsAdapter: true } });
@@ -48,6 +52,8 @@ describe("IotCalibrationController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     userId = await testApp.createTestUser({ name: "Bench Operator" });
+    analyticsAdapter = testApp.module.get(AnalyticsAdapter);
+    analyticsAdapter.setFlag(FEATURE_FLAGS.CALIBRATION, true);
   });
 
   afterEach(() => {
@@ -255,6 +261,84 @@ describe("IotCalibrationController", () => {
         )
         .withAuth(outsider)
         .expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
+  // Hidden until PostHog targets someone: the gate sits in front of every handler, so even
+  // the owner of a definition gets nothing from it.
+  describe("while calibration is flagged off", () => {
+    it("refuses every definition endpoint (403)", async () => {
+      const created: SuperTestResponse<CalibrationDefinition> = await testApp
+        .post(testApp.resolveOrpcPath(contract.iot.createCalibrationDefinition))
+        .withAuth(userId)
+        .send(DEFINITION_BODY)
+        .expect(StatusCodes.CREATED);
+      const definitionId = created.body.id;
+      analyticsAdapter.setFlag(FEATURE_FLAGS.CALIBRATION, false);
+
+      const endpoints = [
+        {
+          name: "listCalibrationDefinitions",
+          call: () =>
+            testApp
+              .get(testApp.resolveOrpcPath(contract.iot.listCalibrationDefinitions))
+              .withAuth(userId),
+        },
+        {
+          name: "getCalibrationDefinition",
+          call: () =>
+            testApp
+              .get(testApp.resolveOrpcPath(contract.iot.getCalibrationDefinition, { definitionId }))
+              .withAuth(userId),
+        },
+        {
+          name: "createCalibrationDefinition",
+          call: () =>
+            testApp
+              .post(testApp.resolveOrpcPath(contract.iot.createCalibrationDefinition))
+              .withAuth(userId)
+              .send(DEFINITION_BODY),
+        },
+        {
+          name: "updateCalibrationDefinition",
+          call: () =>
+            testApp
+              .patch(
+                testApp.resolveOrpcPath(contract.iot.updateCalibrationDefinition, { definitionId }),
+              )
+              .withAuth(userId)
+              .send({ name: "Renamed" }),
+        },
+        {
+          name: "setCalibrationDefinitionVisibility",
+          call: () =>
+            testApp
+              .patch(
+                testApp.resolveOrpcPath(contract.iot.setCalibrationDefinitionVisibility, {
+                  definitionId,
+                }),
+              )
+              .withAuth(userId)
+              .send({ visibility: "public" }),
+        },
+        {
+          name: "deleteCalibrationDefinition",
+          call: () =>
+            testApp
+              .delete(
+                testApp.resolveOrpcPath(contract.iot.deleteCalibrationDefinition, { definitionId }),
+              )
+              .withAuth(userId),
+        },
+      ];
+
+      for (const endpoint of endpoints) {
+        const response = await endpoint.call();
+        expect({ endpoint: endpoint.name, status: response.status }).toEqual({
+          endpoint: endpoint.name,
+          status: StatusCodes.FORBIDDEN,
+        });
+      }
     });
   });
 });

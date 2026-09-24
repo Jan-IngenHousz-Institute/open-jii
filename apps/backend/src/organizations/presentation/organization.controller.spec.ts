@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
 import type {
   GranteeTeamList,
@@ -15,9 +16,11 @@ import type {
 import { zSharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
+import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { assertSuccess } from "../../common/utils/fp-utils";
 import { CreateIotDeviceGroupUseCase } from "../../iot/application/use-cases/create-iot-device-group/create-iot-device-group";
 import { IotCalibrationDefinitionRepository } from "../../iot/core/repositories/iot-calibration-definition.repository";
+import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { OrganizationRepository } from "../core/repositories/organization.repository";
@@ -27,9 +30,10 @@ describe("OrganizationController", () => {
   let ownerId: string;
   let memberId: string;
   let outsiderId: string;
+  let analyticsAdapter: MockAnalyticsAdapter;
 
   beforeAll(async () => {
-    await testApp.setup();
+    await testApp.setup({ mock: { AnalyticsAdapter: true } });
   });
 
   beforeEach(async () => {
@@ -40,6 +44,8 @@ describe("OrganizationController", () => {
       email: "outsider@example.com",
       name: "Otto Outsider",
     });
+    analyticsAdapter = testApp.module.get(AnalyticsAdapter);
+    analyticsAdapter.setFlag(FEATURE_FLAGS.CALIBRATION, true);
   });
 
   afterEach(() => {
@@ -634,6 +640,22 @@ describe("OrganizationController", () => {
         status: "archived",
         visibility: "private",
       });
+    });
+
+    // Rows and total leave together, so the invariant above still holds with the flag off.
+    it("keeps calibration definitions out of the showcase while calibration is flagged off", async () => {
+      const publicOrg = await seedPublicOrg();
+      await seedOneOfEveryType(publicOrg);
+      analyticsAdapter.setFlag(FEATURE_FLAGS.CALIBRATION, false);
+
+      const response: SuperTestResponse<OrganizationResources> = await testApp
+        .get(path(publicOrg))
+        .withAuth(memberId)
+        .expect(StatusCodes.OK);
+
+      expect(rowsPerType(response.body)).toEqual(response.body.totals);
+      expect(response.body.totals.calibration_definition).toBe(0);
+      expect(response.body.totals.protocol).toBe(1);
     });
 
     it("holds the same invariant for an outsider, who sees strictly less", async () => {

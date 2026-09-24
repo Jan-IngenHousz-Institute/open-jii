@@ -1,3 +1,4 @@
+import { CalibrationGate } from "@/components/calibrations/calibration-gate";
 import DeviceCalibrationContent from "@/components/iot-devices/calibration/device-calibration-content";
 import { buildDeviceMetadata } from "@/lib/platform-metadata";
 import { safeMetadata } from "@/lib/safe-metadata";
@@ -15,5 +16,9 @@ export function generateMetadata({ params }: DeviceCalibrationPageProps): Promis
 }
 
 export default function DeviceCalibrationPage() {
-  return <DeviceCalibrationContent />;
+  return (
+    <CalibrationGate>
+      <DeviceCalibrationContent />
+    </CalibrationGate>
+  );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsCalibrationEnabled } from "@/components/calibrations/calibration-flag-context";
 import { WorkspaceBand } from "@/components/workspace-band";
 import { useLocale } from "@/hooks/useLocale";
 import Link from "next/link";
@@ -57,6 +58,7 @@ export function IotDeviceDetailTabs({
   const { t } = useTranslation("iot");
   const pathname = usePathname();
   const locale = useLocale();
+  const isCalibrationEnabled = useIsCalibrationEnabled();
 
   const basePath = `/${locale}/platform/devices/${deviceId}`;
   const tabs = DEVICE_TABS.filter((tab) => {
@@ -66,7 +68,7 @@ export function IotDeviceDetailTabs({
     if (tab.value === "onboarding") return canManage && !isMobileFamily;
     if (tab.value === "firmware") return hasManagedFirmware;
     // Coefficients are written to hardware: manage, and never a phone.
-    if (tab.value === "calibration") return canManage && !isMobileFamily;
+    if (tab.value === "calibration") return isCalibrationEnabled && canManage && !isMobileFamily;
     return true;
   });
   // Match all routes first so a filtered-out tab does not highlight Overview.

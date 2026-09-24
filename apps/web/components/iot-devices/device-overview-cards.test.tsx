@@ -1,3 +1,4 @@
+import { CalibrationFlagProvider } from "@/components/calibrations/calibration-flag-context";
 import {
   createActiveDeviceCalibration,
   createExperiment,
@@ -19,6 +20,14 @@ const boundExperiment = {
   status: "active" as const,
   addedAt: new Date().toISOString(),
 };
+
+function renderWithCalibration(device: ReturnType<typeof makeDevice>) {
+  return render(
+    <CalibrationFlagProvider isEnabled>
+      <DeviceOverviewCards device={device} />
+    </CalibrationFlagProvider>,
+  );
+}
 
 function makeDevice(overrides: Parameters<typeof createIotDeviceDetail>[0] = {}) {
   return createIotDeviceDetail({ id: DEVICE_ID, status: "active", ...overrides });
@@ -258,7 +267,7 @@ describe("DeviceOverviewCards", () => {
   it("says so when the device has never been calibrated, linking its tab", async () => {
     server.mount(contract.iot.listDeviceExperiments, { body: [] });
 
-    render(<DeviceOverviewCards device={makeDevice()} />);
+    renderWithCalibration(makeDevice());
 
     expect(await screen.findByText("iot.devices.detail.cards.calibrationNone")).toBeInTheDocument();
     expect(
@@ -292,10 +301,22 @@ describe("DeviceOverviewCards", () => {
       }),
     });
 
-    render(<DeviceOverviewCards device={makeDevice()} />);
+    renderWithCalibration(makeDevice());
 
     expect(await screen.findByText("iot.calibration.active.unconfirmed")).toBeInTheDocument();
     expect(screen.getByText("iot.devices.detail.cards.calibrationCaption")).toBeInTheDocument();
+  });
+
+  // The server refuses the read while calibration is flagged off, so it is not even asked.
+  it("gives no calibration card, and asks nothing, while calibration is flagged off", async () => {
+    server.mount(contract.iot.listDeviceExperiments, { body: [] });
+    const activeCalibration = server.mount(contract.iot.getActiveDeviceCalibration, { body: null });
+
+    render(<DeviceOverviewCards device={makeDevice()} />);
+
+    expect(await screen.findByText("iot.devices.detail.cards.firmwareTitle")).toBeInTheDocument();
+    expect(screen.queryByText("iot.devices.detail.cards.calibrationTitle")).toBeNull();
+    expect(activeCalibration.called).toBe(false);
   });
 
   it("gives a phone no calibration card", async () => {
