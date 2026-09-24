@@ -1,5 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, configure } from "@testing-library/react";
+import { Fragment, createElement } from "react";
+import type { ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 
 import { server } from "./msw/server";
@@ -156,8 +158,26 @@ vi.mock("@repo/i18n/client", () => ({
     t: (key: string) => key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
-  Trans: ({ i18nKey, children }: { i18nKey?: string; children?: unknown }) =>
-    children ?? i18nKey ?? null,
+  // The key stands in for the sentence, and the slots are rendered after it: a sentence
+  // whose values are interactive is only reachable in a test if they actually mount.
+  Trans: ({
+    i18nKey,
+    children,
+    components,
+  }: {
+    i18nKey?: string;
+    children?: ReactNode;
+    components?: Record<string, ReactNode>;
+  }) =>
+    children ??
+    createElement(
+      Fragment,
+      null,
+      i18nKey ?? null,
+      ...Object.entries(components ?? {}).map(([slot, node]) =>
+        createElement(Fragment, { key: slot }, node),
+      ),
+    ),
 }));
 
 vi.mock("@repo/i18n/server", () => {

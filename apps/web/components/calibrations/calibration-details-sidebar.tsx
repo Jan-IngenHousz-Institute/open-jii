@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDurationShort } from "@/components/iot-devices/monitoring/format-duration";
 import { OwningOrganizationField } from "@/components/organizations/owning-organization-field";
 import { DetailsSidebarCard } from "@/components/shared/details-sidebar-card";
 import { ResourcePublishControl } from "@/components/visibility/resource-publish-control";
@@ -27,6 +28,8 @@ import {
 } from "@repo/ui/components/select";
 import { toast } from "@repo/ui/hooks/use-toast";
 
+import { phaseSummary } from "./procedure-summary";
+
 /** Families disagree on shape: "1.03" and "1.1.3" are both whole versions. */
 const FIRMWARE_PATTERN = /^\d+(\.\d+){1,2}$/;
 
@@ -51,7 +54,14 @@ export function CalibrationDetailsSidebar({
 
   // Capability, not ownership: publishing is manage, moving it out is transfer.
   const { canUpdate, canManage, canTransfer } = definition.capabilities;
+  // A run closes the definition to every edit the server takes, these fields included.
+  const canEdit = canUpdate && definition.runCount === 0;
   const isFirmwareMalformed = firmware !== "" && !FIRMWARE_PATTERN.test(firmware);
+
+  const capture = phaseSummary(definition.captureProcedure, "steps");
+  const verify = phaseSummary(definition.captureProcedure, "verify");
+  const waitMs = capture.waitMs + verify.waitMs;
+  const hasOperatorSteps = capture.stops + verify.stops > 0;
 
   async function save(changes: UpdateCalibrationDefinitionBody) {
     try {
@@ -96,7 +106,7 @@ export function CalibrationDetailsSidebar({
 
       <div className="space-y-1">
         <Label htmlFor={familyId}>{t("iot.calibration.sidebar.family")}</Label>
-        {canUpdate ? (
+        {canEdit ? (
           <Select
             value={definition.family}
             onValueChange={handleFamilyChange}
@@ -115,16 +125,22 @@ export function CalibrationDetailsSidebar({
 
       <div className="space-y-1">
         <Label htmlFor={firmwareId}>{t("iot.calibration.sidebar.firmware")}</Label>
-        <Input
-          id={firmwareId}
-          value={firmware}
-          onChange={(event) => setFirmware(event.target.value)}
-          onBlur={handleFirmwareBlur}
-          disabled={!canUpdate || isUpdating}
-          placeholder={t("iot.calibration.sidebar.firmwarePlaceholder")}
-          aria-invalid={isFirmwareMalformed}
-          className="font-mono"
-        />
+        {canEdit ? (
+          <Input
+            id={firmwareId}
+            value={firmware}
+            onChange={(event) => setFirmware(event.target.value)}
+            onBlur={handleFirmwareBlur}
+            disabled={isUpdating}
+            placeholder={t("iot.calibration.sidebar.firmwarePlaceholder")}
+            aria-invalid={isFirmwareMalformed}
+            className="font-mono"
+          />
+        ) : (
+          <p className="text-muted-foreground font-mono text-sm">
+            {definition.minFirmwareVersion ?? t("iot.calibration.sidebar.firmwarePlaceholder")}
+          </p>
+        )}
         <p
           className={
             isFirmwareMalformed ? "text-destructive text-xs" : "text-muted-foreground text-xs"
@@ -133,6 +149,18 @@ export function CalibrationDetailsSidebar({
           {isFirmwareMalformed
             ? t("iot.calibration.sidebar.firmwareInvalid")
             : t("iot.calibration.sidebar.firmwareHint")}
+        </p>
+      </div>
+
+      <div className="space-y-1">
+        <h4 className="text-sm font-medium">{t("iot.calibration.sidebar.waiting")}</h4>
+        <p className="text-muted-foreground text-sm">
+          {t(
+            hasOperatorSteps
+              ? "iot.calibration.sidebar.waitingValueOperator"
+              : "iot.calibration.sidebar.waitingValue",
+            { duration: formatDurationShort(waitMs / 1000) },
+          )}
         </p>
       </div>
 

@@ -1,13 +1,19 @@
 "use client";
 
-import { CellWrapper } from "@/components/workbook/cell-wrapper";
-import { Code } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { useState } from "react";
 
 import type {
   CalibrationFamily,
   CalibrationOutputSchema,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@repo/ui/components/collapsible";
+import { cn } from "@repo/ui/lib/utils";
 
 import { CalibrationFitDraftAction } from "./calibration-fit-draft-action";
 import { CalibrationOutputSchemaEditor } from "./calibration-output-schema-editor";
@@ -36,31 +42,23 @@ export function CalibrationFitCell({
   onSchemaChange,
 }: CalibrationFitCellProps) {
   const { t } = useTranslation("iot");
-
-  const blocks = Object.entries(outputSchema.blocks);
-  const coefficients = blocks.reduce(
-    (total, [, entries]) => total + Object.keys(entries).length,
-    0,
-  );
+  const lines = script.split("\n").length;
+  // Reading is about the shape a calibration has, not the Python that produces it: open
+  // while there is work to do on the script, closed once it is only there to be trusted.
+  const [isOpen, setIsOpen] = useState(canEdit);
 
   return (
-    <CellWrapper
-      icon={<Code className="h-4 w-4" />}
-      label={
-        <span data-testid="fit-label">
-          {t("iot.calibration.fit.label", { blocks: blocks.length, coefficients })}
-        </span>
-      }
-      labelText={t("iot.calibration.detail.script")}
-      accentColor="var(--node-analysis)"
-      readOnly={!canEdit}
-      // Folded like the steps on a closed document; what it submits is on the seam below.
-      isCollapsed={!canEdit}
-      className="border"
-    >
-      <div className="space-y-5 px-4 py-4">
-        <div className="space-y-2">
-          <CalibrationScriptEditor script={script} canEdit={canEdit} onChange={onScriptChange} />
+    <div className="space-y-5">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <div className="flex items-center justify-between gap-3">
+          <CollapsibleTrigger className="text-muted-foreground hover:text-foreground focus-visible:ring-ring -my-1 flex items-center gap-1.5 rounded-sm py-1 text-sm focus-visible:outline-none focus-visible:ring-1">
+            <ChevronRight
+              className={cn("size-3.5 transition-transform", isOpen && "rotate-90")}
+              aria-hidden
+            />
+            {t("iot.calibration.fit.scriptLines", { count: lines })}
+          </CollapsibleTrigger>
+
           {canEdit && (
             <CalibrationFitDraftAction
               series={series}
@@ -70,18 +68,20 @@ export function CalibrationFitCell({
           )}
         </div>
 
-        <div className="space-y-2">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-            {t("iot.calibration.fit.submits")}
-          </p>
-          <CalibrationOutputSchemaEditor
-            family={family}
-            outputSchema={outputSchema}
-            canEdit={canEdit}
-            onChange={onSchemaChange}
-          />
-        </div>
+        <CollapsibleContent className="pt-2">
+          <CalibrationScriptEditor script={script} canEdit={canEdit} onChange={onScriptChange} />
+        </CollapsibleContent>
+      </Collapsible>
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">{t("iot.calibration.fit.submits")}</h3>
+        <CalibrationOutputSchemaEditor
+          family={family}
+          outputSchema={outputSchema}
+          canEdit={canEdit}
+          onChange={onSchemaChange}
+        />
       </div>
-    </CellWrapper>
+    </div>
   );
 }

@@ -9,6 +9,9 @@ export const FEATURE_FLAGS = {
   EXPERIMENT_DELETION: "experiment-deletion",
   MACRO_DELETION: "macro-deletion",
   WORKBOOK_DELETION: "workbook-deletion",
+  // The PostHog key is the one that once hid the device registry; it was kept there when
+  // the registry shipped and now hides device calibration instead.
+  CALIBRATION: "iot-devices",
 } as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS];
@@ -24,4 +27,5 @@ export const FEATURE_FLAG_DEFAULTS: Record<FeatureFlagKey, boolean> = {
   [FEATURE_FLAGS.EXPERIMENT_DELETION]: false, // Default to disabled for safety
   [FEATURE_FLAGS.MACRO_DELETION]: false, // Default to disabled for safety
   [FEATURE_FLAGS.WORKBOOK_DELETION]: false, // Default to disabled for safety
+  [FEATURE_FLAGS.CALIBRATION]: false, // Hidden until targeted in PostHog
 };

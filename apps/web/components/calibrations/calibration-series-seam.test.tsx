@@ -12,7 +12,7 @@ describe("CalibrationSeriesSeam", () => {
     render(<CalibrationSeriesSeam series={series} />);
 
     expect(screen.getByText('inputs["par_sweep"]')).toBeInTheDocument();
-    expect(screen.getByText("par_raw · par_ref")).toBeInTheDocument();
+    expect(screen.getByText("par_raw and par_ref")).toBeInTheDocument();
   });
 
   // A phase the operator may skip still reaches the fit, which has to cope with its absence.

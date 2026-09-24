@@ -45,10 +45,21 @@ function renderEditor(initial = schema, family: CalibrationFamily = "minipar") {
   return { onChange, user: userEvent.setup({ pointerEventsCheck: 0 }) };
 }
 
+/** A value reads as text until it is clicked, so a test reaches one the way a person does. */
+async function openToken(
+  user: ReturnType<typeof userEvent.setup>,
+  within_: HTMLElement,
+  label: string,
+) {
+  await user.click(within(within_).getByRole("button", { name: label }));
+  return within(within_).getByRole("textbox", { name: label });
+}
+
 function rowFor(name: string) {
+  // A token's accessible name is the field it edits; its text is the value.
   const row = screen
     .getAllByRole("listitem")
-    .find((candidate) => within(candidate).queryByDisplayValue(name) !== null);
+    .find((candidate) => candidate.textContent.includes(name));
   if (!row) {
     throw new Error(`No row for ${name}`);
   }
@@ -126,7 +137,9 @@ describe("CalibrationOutputSchemaEditor", () => {
       blocks: { par: { slope: { type: "number", min: 0.1, max: 10 } } },
     });
 
-    await user.type(within(rowFor("slope")).getByDisplayValue("slope"), "_a");
+    const name = await openToken(user, rowFor("slope"), "iot.calibration.produces.coefficient");
+    await user.type(name, "_a");
+    await user.tab();
 
     const renamed = onChange.mock.calls.at(-1)?.[0];
     expect(renamed?.blocks.par.slope_a).toEqual({ type: "number", min: 0.1, max: 10 });
@@ -135,13 +148,16 @@ describe("CalibrationOutputSchemaEditor", () => {
   it("keeps a bound the author is still typing out of the document", async () => {
     const { onChange, user } = renderEditor();
 
-    const min = within(rowFor("slope")).getByLabelText("iot.calibration.produces.min");
+    const min = await openToken(user, rowFor("slope"), "iot.calibration.produces.min");
     await user.type(min, "-");
 
+    // A lone minus is not a bound yet, and committing it would put a document the contract
+    // refuses in front of the author.
     expect(min).toHaveValue("-");
     expect(onChange).not.toHaveBeenCalled();
 
     await user.type(min, "2.5");
+    await user.tab();
     expect(onChange.mock.calls.at(-1)?.[0].blocks.par.slope).toEqual({ type: "number", min: -2.5 });
   });
 
@@ -149,16 +165,19 @@ describe("CalibrationOutputSchemaEditor", () => {
     const { onChange, user } = renderEditor();
     const row = rowFor("slope");
 
-    await user.click(within(row).getByRole("combobox"));
-    await user.click(await screen.findByRole("option", { name: "number_array" }));
+    await user.click(within(row).getByRole("combobox", { name: "iot.calibration.produces.type" }));
+    await user.click(
+      await screen.findByRole("option", { name: "iot.calibration.produces.typeName.number_array" }),
+    );
 
     expect(onChange.mock.calls[0][0].blocks.par.slope).toEqual({
       type: "number_array",
       length: 10,
     });
-    expect(within(rowFor("slope")).getByLabelText("iot.calibration.produces.length")).toHaveValue(
-      "10",
-    );
+    // The length is asked for in the line itself, where the type was just changed.
+    expect(
+      within(rowFor("slope")).getByRole("button", { name: "iot.calibration.produces.entries" }),
+    ).toHaveTextContent("10");
   });
 
   it("removes a coefficient", async () => {

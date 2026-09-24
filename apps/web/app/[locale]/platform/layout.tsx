@@ -1,5 +1,6 @@
 import { ActivityProvider } from "@/components/activity/activity-context";
 import { PasskeyCreatePrompt } from "@/components/auth/passkey-create-prompt";
+import { CalibrationFlagProvider } from "@/components/calibrations/calibration-flag-context";
 import { CommandPalette } from "@/components/command/command-palette";
 import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
 import { PlatformHeaderProvider } from "@/components/navigation/site-header/platform-header-context";
@@ -15,7 +16,9 @@ import { redirect } from "next/navigation";
 import type React from "react";
 import { Suspense } from "react";
 import { auth } from "~/app/actions/auth";
+import { isFeatureFlagEnabled } from "~/lib/posthog-server";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { SidebarEdgePeek, SidebarInset, SidebarProvider } from "@repo/ui/components/sidebar";
 import { Toaster } from "@repo/ui/components/toaster";
 
@@ -56,33 +59,41 @@ export default async function AppLayout({
   }
 
   const releaseNotes = await fetchWebReleaseNotes(locale);
+  // The same distinct id the backend checks, so one PostHog rule decides both sides.
+  const isCalibrationEnabled = await isFeatureFlagEnabled(
+    FEATURE_FLAGS.CALIBRATION,
+    session.user.email || session.user.id,
+  );
 
   return (
     <SidebarProvider defaultWidth={232}>
-      <ActivityProvider>
-        <NavigationSidebarWrapper
-          locale={locale}
-          releaseNotes={releaseNotes}
-          user={{ id: session.user.id, email: session.user.email }}
-        />
-        <SidebarEdgePeek />
-        <SidebarInset>
-          <PlatformHeaderProvider>
-            <SiteHeader locale={locale} />
-            <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 py-4 md:px-6 md:py-6">
-              <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
-                <Suspense>{children}</Suspense>
-              </PageContainer>
-            </div>
-          </PlatformHeaderProvider>
-        </SidebarInset>
-        <ShortcutsRoot locale={locale} />
-        <CommandPalette locale={locale} />
-        <Toaster />
-        <ShortcutHint />
-        <PasskeyCreatePrompt userId={session.user.id} sessionId={session.session.id} />
-        <WhatsNewSheet entries={releaseNotes} />
-      </ActivityProvider>
+      <CalibrationFlagProvider isEnabled={isCalibrationEnabled}>
+        <ActivityProvider>
+          <NavigationSidebarWrapper
+            locale={locale}
+            releaseNotes={releaseNotes}
+            user={{ id: session.user.id, email: session.user.email }}
+            isCalibrationEnabled={isCalibrationEnabled}
+          />
+          <SidebarEdgePeek />
+          <SidebarInset>
+            <PlatformHeaderProvider>
+              <SiteHeader locale={locale} />
+              <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 py-4 md:px-6 md:py-6">
+                <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
+                  <Suspense>{children}</Suspense>
+                </PageContainer>
+              </div>
+            </PlatformHeaderProvider>
+          </SidebarInset>
+          <ShortcutsRoot locale={locale} />
+          <CommandPalette locale={locale} />
+          <Toaster />
+          <ShortcutHint />
+          <PasskeyCreatePrompt userId={session.user.id} sessionId={session.session.id} />
+          <WhatsNewSheet entries={releaseNotes} />
+        </ActivityProvider>
+      </CalibrationFlagProvider>
     </SidebarProvider>
   );
 }

@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { contract } from "@repo/api/contract";
 import type { CaptureProcedure } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 import type {
@@ -10,8 +11,10 @@ import type {
   DeviceCalibration,
 } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 
+import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
 import { AwsAdapter } from "../../common/modules/aws/aws.adapter";
 import { success } from "../../common/utils/fp-utils";
+import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
 import { TestHarness } from "../../test/test-harness";
 import type { SuperTestResponse } from "../../test/test-harness";
 
@@ -52,6 +55,7 @@ describe("IotCalibrationRunController", () => {
   const testApp = TestHarness.App;
   let userId: string;
   let deviceId: string;
+  let analyticsAdapter: MockAnalyticsAdapter;
 
   beforeAll(async () => {
     await testApp.setup({ mock: { AnalyticsAdapter: true } });
@@ -60,6 +64,8 @@ describe("IotCalibrationRunController", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     userId = await testApp.createTestUser({ name: "Bench Operator" });
+    analyticsAdapter = testApp.module.get(AnalyticsAdapter);
+    analyticsAdapter.setFlag(FEATURE_FLAGS.CALIBRATION, true);
     const awsAdapter = testApp.module.get(AwsAdapter);
     vi.spyOn(awsAdapter, "getCalibrationSandboxFunctionName").mockReturnValue("test-calibration");
     vi.spyOn(awsAdapter, "invokeLambda").mockResolvedValue(
@@ -310,6 +316,115 @@ describe("IotCalibrationRunController", () => {
         .withAuth(userId)
         .send({ writeResults: { led: { verified: true } } })
         .expect(StatusCodes.BAD_REQUEST);
+    });
+  });
+
+  // Hidden until PostHog targets someone: the gate sits in front of every handler, so a
+  // caller who can reach the device still gets nothing from its calibration.
+  describe("while calibration is flagged off", () => {
+    it("refuses every run and device calibration endpoint (403)", async () => {
+      const definitionId = (await createDefinition()).body.id;
+      const approved = await createRun(definitionId);
+      const applied = await approveRun(approved.body.id);
+      const pending = await createRun(definitionId);
+      analyticsAdapter.setFlag(FEATURE_FLAGS.CALIBRATION, false);
+
+      const endpoints = [
+        {
+          name: "createCalibrationRun",
+          call: () =>
+            testApp
+              .post(testApp.resolveOrpcPath(contract.iot.createCalibrationRun, { deviceId }))
+              .withAuth(userId)
+              .send({ definitionId, payload: PAYLOAD }),
+        },
+        {
+          name: "createExternalCalibrationRun",
+          call: () =>
+            testApp
+              .post(
+                testApp.resolveOrpcPath(contract.iot.createExternalCalibrationRun, { deviceId }),
+              )
+              .withAuth(userId)
+              .send({ definitionId, blocks: COMPUTED.blocks }),
+        },
+        {
+          name: "listDeviceCalibrationRuns",
+          call: () =>
+            testApp
+              .get(testApp.resolveOrpcPath(contract.iot.listDeviceCalibrationRuns, { deviceId }))
+              .withAuth(userId),
+        },
+        {
+          name: "getCalibrationRun",
+          call: () =>
+            testApp
+              .get(
+                testApp.resolveOrpcPath(contract.iot.getCalibrationRun, {
+                  runId: approved.body.id,
+                }),
+              )
+              .withAuth(userId),
+        },
+        {
+          name: "approveCalibrationRun",
+          call: () =>
+            testApp
+              .post(
+                testApp.resolveOrpcPath(contract.iot.approveCalibrationRun, {
+                  runId: pending.body.id,
+                }),
+              )
+              .withAuth(userId)
+              .send({}),
+        },
+        {
+          name: "rejectCalibrationRun",
+          call: () =>
+            testApp
+              .post(
+                testApp.resolveOrpcPath(contract.iot.rejectCalibrationRun, {
+                  runId: pending.body.id,
+                }),
+              )
+              .withAuth(userId)
+              .send({}),
+        },
+        {
+          name: "getActiveDeviceCalibration",
+          call: () =>
+            testApp
+              .get(testApp.resolveOrpcPath(contract.iot.getActiveDeviceCalibration, { deviceId }))
+              .withAuth(userId),
+        },
+        {
+          name: "listDeviceCalibrations",
+          call: () =>
+            testApp
+              .get(testApp.resolveOrpcPath(contract.iot.listDeviceCalibrations, { deviceId }))
+              .withAuth(userId),
+        },
+        {
+          name: "reportDeviceCalibrationWrite",
+          call: () =>
+            testApp
+              .post(
+                testApp.resolveOrpcPath(contract.iot.reportDeviceCalibrationWrite, {
+                  calibrationId: applied.body.id,
+                }),
+              )
+              .withAuth(userId)
+              .send({ writeResults: { par: { verified: true } } }),
+        },
+      ];
+
+      for (const endpoint of endpoints) {
+        const response = await endpoint.call();
+        expect({ endpoint: endpoint.name, status: response.status }).toEqual({
+          endpoint: endpoint.name,
+          status: StatusCodes.FORBIDDEN,
+        });
+      }
     });
   });
 });

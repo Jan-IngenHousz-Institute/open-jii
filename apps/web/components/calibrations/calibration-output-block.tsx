@@ -1,7 +1,6 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
-import { useId, useState } from "react";
+import { Plus } from "lucide-react";
 
 import type { CoefficientSpec } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
@@ -13,10 +12,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
-import { Input } from "@repo/ui/components/input";
-import { Label } from "@repo/ui/components/label";
 
-import { CalibrationCoefficientRow } from "./calibration-coefficient-row";
+import { CalibrationCoefficientLine } from "./calibration-coefficient-line";
+import { CalibrationRowRemove } from "./calibration-row-remove";
+import { InlineToken } from "./inline-token";
 import { COEFFICIENT_NAME_PATTERN, specForWritable, uniqueName } from "./output-schema-edits";
 
 /** What a coefficient the author adds by hand is called before they rename it. */
@@ -51,42 +50,26 @@ export function CalibrationOutputBlock({
   onRemoveCoefficient,
 }: CalibrationOutputBlockProps) {
   const { t } = useTranslation("iot");
-  const blockId = useId();
-
-  const [draftBlock, setDraftBlock] = useState(block);
-  const [committedBlock, setCommittedBlock] = useState(block);
-
-  if (block !== committedBlock) {
-    setCommittedBlock(block);
-    setDraftBlock(block);
-  }
-
-  const isTaken = draftBlock !== block && takenBlocks.includes(draftBlock);
-  const isMalformed = !COEFFICIENT_NAME_PATTERN.test(draftBlock);
-  const blockError = isTaken
-    ? t("iot.calibration.produces.blockTaken")
-    : isMalformed
-      ? t("iot.calibration.produces.nameInvalid")
-      : null;
 
   const declared = Object.keys(coefficients);
+  const isBlockTaken = takenBlocks.filter((entry) => entry === block).length > 1;
+  const blockError = isBlockTaken
+    ? t("iot.calibration.produces.blockTaken")
+    : COEFFICIENT_NAME_PATTERN.test(block)
+      ? undefined
+      : t("iot.calibration.produces.nameInvalid");
   const offered = writable.filter((candidate) => !declared.includes(candidate.name));
 
-  function handleBlockChange(value: string) {
-    setDraftBlock(value);
-    if (value !== block && COEFFICIENT_NAME_PATTERN.test(value) && !takenBlocks.includes(value)) {
-      onRename(value);
+  // A rename onto another block would merge the two, so it is refused before it commits.
+  function validateBlockName(to: string) {
+    const isTaken = to !== block && takenBlocks.includes(to);
+    if (isTaken) {
+      return t("iot.calibration.produces.blockTaken");
     }
-  }
 
-  function handleBlockBlur() {
-    if (blockError !== null) {
-      setDraftBlock(block);
-    }
-  }
-
-  function addWritable(coefficient: WritableCoefficient) {
-    onSetCoefficient(coefficient.name, specForWritable(coefficient));
+    return COEFFICIENT_NAME_PATTERN.test(to)
+      ? undefined
+      : t("iot.calibration.produces.nameInvalid");
   }
 
   function addPlain() {
@@ -98,7 +81,7 @@ export function CalibrationOutputBlock({
       <DropdownMenuItem
         key={coefficient.name}
         className="font-mono"
-        onSelect={() => addWritable(coefficient)}
+        onSelect={() => onSetCoefficient(coefficient.name, specForWritable(coefficient))}
       >
         {coefficient.name}
       </DropdownMenuItem>
@@ -107,8 +90,8 @@ export function CalibrationOutputBlock({
 
   function renderCoefficient([name, spec]: [string, CoefficientSpec], index: number) {
     return (
-      <CalibrationCoefficientRow
-        // Positional, so renaming one does not remount its row mid-keystroke.
+      <CalibrationCoefficientLine
+        // Positional, so renaming one does not remount its line mid-keystroke.
         key={index}
         name={name}
         spec={spec}
@@ -122,56 +105,57 @@ export function CalibrationOutputBlock({
     );
   }
 
+  // A subgrid of the schema's own grid, so every block's coefficients share one name
+  // column instead of each block sizing its own.
   return (
-    <div className="space-y-3 rounded-md border p-3">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-40 flex-1 space-y-1">
-          <Label htmlFor={blockId} className="text-xs">
-            {t("iot.calibration.produces.block")}
-          </Label>
-          <Input
-            id={blockId}
-            value={draftBlock}
-            onChange={(event) => handleBlockChange(event.target.value)}
-            onBlur={handleBlockBlur}
-            disabled={!canEdit}
-            aria-invalid={blockError !== null}
-            className="font-mono"
-          />
-        </div>
-
+    <div className="col-span-3 grid grid-cols-subgrid">
+      <div className="group/header col-span-3 grid grid-cols-subgrid items-baseline leading-7">
+        <InlineToken
+          value={block}
+          label={t("iot.calibration.produces.block")}
+          canEdit={canEdit}
+          mono
+          invalid={blockError}
+          validate={validateBlockName}
+          onCommit={onRename}
+          className="font-mono text-[15px] font-medium"
+        />
+        <span />
         {canEdit && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={onRemove}
-            aria-label={t("iot.calibration.produces.removeBlock", { block })}
-          >
-            <Trash2 className="size-4" aria-hidden />
-          </Button>
+          <CalibrationRowRemove
+            label={t("iot.calibration.produces.removeBlock", { block })}
+            onRemove={onRemove}
+            revealClassName="group-hover/header:text-muted-foreground/70"
+          />
         )}
       </div>
 
-      {blockError !== null && <p className="text-destructive text-xs">{blockError}</p>}
-
-      <ul className="space-y-2">{Object.entries(coefficients).map(renderCoefficient)}</ul>
+      <ul className="col-span-3 grid grid-cols-subgrid">
+        {Object.entries(coefficients).map(renderCoefficient)}
+      </ul>
 
       {canEdit && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" variant="outline" size="sm">
-              <Plus className="mr-2 size-4" aria-hidden />
-              {t("iot.calibration.produces.addCoefficient")}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            {offered.map(renderOffered)}
-            <DropdownMenuItem onSelect={addPlain}>
-              {t("iot.calibration.produces.addPlain")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="col-span-3 pl-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground -ml-2.5 h-7 text-xs"
+              >
+                <Plus className="size-3" aria-hidden />
+                {t("iot.calibration.produces.addCoefficient")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {offered.map(renderOffered)}
+              <DropdownMenuItem onSelect={addPlain}>
+                {t("iot.calibration.produces.addPlain")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       )}
     </div>
   );

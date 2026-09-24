@@ -113,15 +113,25 @@ export function CalibrationOutputSchemaEditor({
 
   return (
     <div className="space-y-3">
-      <p className="text-muted-foreground text-sm">{t("iot.calibration.produces.hint")}</p>
+      {/* Guidance on what to declare, so it goes where there is still something to declare. */}
+      {canEdit && (
+        <p className="text-muted-foreground text-sm">{t("iot.calibration.produces.hint")}</p>
+      )}
 
-      <div className="space-y-3">{blocks.map(renderBlock)}</div>
+      <div className="grid grid-cols-[max-content_1fr_auto] gap-x-6 gap-y-4">
+        {blocks.map(renderBlock)}
+      </div>
 
       {canEdit && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button type="button" variant="outline" size="sm">
-              <Plus className="mr-2 size-4" aria-hidden />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground -ml-2.5 h-7"
+            >
+              <Plus className="size-3.5" aria-hidden />
               {t("iot.calibration.produces.addBlock")}
             </Button>
           </DropdownMenuTrigger>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsCalibrationEnabled } from "@/components/calibrations/calibration-flag-context";
 import { Archive, ArrowRightLeft, ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -89,7 +90,8 @@ export function SiteHeader({ locale }: { locale: string }) {
   );
   const best = matches.sort((a, b) => b.url.length - a.url.length).at(0);
   const label = best ? t(best.titleKey, { ns: best.namespace }) : null;
-  const actions = overviewActions(pathname, locale, t);
+  const isCalibrationEnabled = useIsCalibrationEnabled();
+  const actions = overviewActions(pathname, locale, t, isCalibrationEnabled);
 
   return (
     <header
@@ -167,7 +169,12 @@ function EventCreateAction({ event, label }: { event: PlatformHeaderEvent; label
   );
 }
 
-function overviewActions(pathname: string, locale: string, t: Translate) {
+function overviewActions(
+  pathname: string,
+  locale: string,
+  t: Translate,
+  isCalibrationEnabled: boolean,
+) {
   if (pathname === `/${locale}/platform/experiments`) {
     const archiveLabel = t("experiments.viewArchived", { ns: "experiments" });
     const transferLabel = t("transferRequest.title");
@@ -219,7 +226,8 @@ function overviewActions(pathname: string, locale: string, t: Translate) {
     );
   }
 
-  if (pathname === `/${locale}/platform/calibrations`) {
+  // The page is not there while calibration is flagged off, so neither is its create action.
+  if (isCalibrationEnabled && pathname === `/${locale}/platform/calibrations`) {
     return (
       <EventCreateAction
         event={OPEN_CALIBRATION_CREATE_EVENT}

@@ -8,11 +8,10 @@ import type { CalibrationFamily } from "@repo/api/domains/iot/calibration/iot-ca
 import { useTranslation } from "@repo/i18n";
 
 import { CalibrationAddStep } from "./calibration-add-step";
-import { CalibrationStepCell } from "./calibration-step-cell";
+import { CalibrationStepLine } from "./calibration-step-line";
 import type { ProcedurePhase, StepKind } from "./procedure-edits";
 import {
   addStep,
-  insertStep,
   moveStep,
   newStep,
   phaseSteps,
@@ -22,6 +21,7 @@ import {
 } from "./procedure-edits";
 import { defaultRead } from "./read-columns";
 import { readSources, setpointTargets } from "./rig-sources";
+import { numericSetpoints } from "./setpoint-list";
 
 interface CalibrationStepsEditorProps {
   procedure: CaptureProcedure;
@@ -69,9 +69,7 @@ export function CalibrationStepsEditor({
         stimulus: {
           instrument: target.role,
           set: setpoint?.name ?? "",
-          values: step.stimulus.values.flatMap((point) =>
-            typeof point === "number" ? [point] : [],
-          ),
+          values: numericSetpoints(step.stimulus.values),
         },
       };
     }
@@ -79,29 +77,22 @@ export function CalibrationStepsEditor({
     return step;
   }
 
-  function renderCell(step: ProcedureStep, index: number) {
+  function renderStep(step: ProcedureStep, index: number) {
     return (
-      // Positional, so editing a step does not remount it mid-keystroke.
-      <div key={index}>
-        <CalibrationStepCell
-          step={step}
-          index={index}
-          count={steps.length}
-          sources={sources}
-          targets={targets}
-          takenSeries={series}
-          canEdit={canEdit}
-          onChange={(next) => onChange(replaceStep(procedure, phase, index, next))}
-          onMove={(to) => onChange(moveStep(procedure, phase, index, to))}
-          onRemove={() => onChange(removeStep(procedure, phase, index))}
-        />
-        {canEdit && (
-          <CalibrationAddStep
-            unavailable={unavailable}
-            onAdd={(kind) => onChange(insertStep(procedure, phase, index + 1, buildStep(kind)))}
-          />
-        )}
-      </div>
+      <CalibrationStepLine
+        // Positional, so editing a step does not remount it mid-keystroke.
+        key={index}
+        step={step}
+        index={index}
+        count={steps.length}
+        sources={sources}
+        targets={targets}
+        takenSeries={series}
+        canEdit={canEdit}
+        onChange={(next) => onChange(replaceStep(procedure, phase, index, next))}
+        onMove={(to) => onChange(moveStep(procedure, phase, index, to))}
+        onRemove={() => onChange(removeStep(procedure, phase, index))}
+      />
     );
   }
 
@@ -118,14 +109,15 @@ export function CalibrationStepsEditor({
   }
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
+      <ol className="space-y-0.5">{steps.map(renderStep)}</ol>
       {canEdit && (
         <CalibrationAddStep
+          variant="bottom"
           unavailable={unavailable}
-          onAdd={(kind) => onChange(insertStep(procedure, phase, 0, buildStep(kind)))}
+          onAdd={(kind) => onChange(addStep(procedure, phase, buildStep(kind)))}
         />
       )}
-      {steps.map(renderCell)}
     </div>
   );
 }
