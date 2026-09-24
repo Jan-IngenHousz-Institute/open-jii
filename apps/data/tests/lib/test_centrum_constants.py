@@ -8,11 +8,9 @@ import openjii.centrum as centrum
 def test_upload_constants_exported() -> None:
     assert centrum.RAW_UPLOADED_DATA_TABLE == "raw_uploaded_data"
     assert centrum.EXPERIMENT_UPLOADED_DATA_TABLE == "experiment_uploaded_data"
-    assert centrum.ENRICHED_UPLOADED_DATA_VIEW == "enriched_experiment_uploaded_data"
     for name in (
         "RAW_UPLOADED_DATA_TABLE",
         "EXPERIMENT_UPLOADED_DATA_TABLE",
-        "ENRICHED_UPLOADED_DATA_VIEW",
     ):
         assert name in centrum.__all__
 

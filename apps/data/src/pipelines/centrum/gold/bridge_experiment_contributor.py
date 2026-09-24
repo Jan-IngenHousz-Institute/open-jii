@@ -40,7 +40,7 @@ def bridge_experiment_contributor_source():
 
     Sourced from sensor measurements plus data uploaders: an uploader may never
     have submitted a measurement, so include their created_by here too, otherwise
-    the enriched_experiment_uploaded_data contributor join can't resolve them.
+    the enriched uploaded data view's contributor join can't resolve them.
     """
     sensor_users = (
         dlt.read_stream(SILVER_TABLE)
