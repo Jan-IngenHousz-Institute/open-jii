@@ -290,7 +290,8 @@ module "macro_sandbox" {
   lambda_sg_id        = module.vpc.macro_sandbox_lambda_security_group_id
 
   languages = {
-    python = { memory = 1024, timeout = 65 }
+    # 1769 MB is one full vCPU, and a Python call's start-up is CPU-bound imports.
+    python = { memory = 1769, timeout = 65 }
     js     = { memory = 512, timeout = 65 }
     r      = { memory = 1024, timeout = 65 }
   }
