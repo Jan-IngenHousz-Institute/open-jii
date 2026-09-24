@@ -1,5 +1,5 @@
-import { renderHook, waitFor } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
+import { act, renderHook } from "@/test/test-utils";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useAnimatedNumber } from "./useAnimatedNumber";
 
@@ -15,19 +15,33 @@ function renderCount(initialProps: Props) {
 }
 
 describe("useAnimatedNumber", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("shows the first value as it is", () => {
     const { result } = renderCount({ value: 120 });
 
     expect(result.current).toBe(120);
   });
 
-  it("counts from the old value and settles on the new one", async () => {
+  it("counts from the old value and settles on the new one", () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"] });
     const { result, rerender } = renderCount({ value: 100 });
 
     rerender({ value: 200 });
-
     expect(result.current).toBe(100);
-    await waitFor(() => expect(result.current).toBe(200));
+
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+    expect(result.current).toBeGreaterThan(100);
+    expect(result.current).toBeLessThan(200);
+
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(result.current).toBe(200);
   });
 
   it("shows a count filling in from zero as it is", () => {
