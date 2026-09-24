@@ -423,7 +423,9 @@ locals {
 # Workers keep 8 GB per core: Python UDF workers run outside Spark's heap and cannot
 # spill, and the end state has not yet run on long-lived clusters. r6id is the newest
 # r generation the disk cache runs on, and spot rarely reclaims it. The driver runs no
-# tasks, so it drops local NVMe for the next generation's cores: its CPU is what peaks.
+# tasks, so it skips local NVMe, but it needs four cores: on two, the Spark driver often
+# misses its 300-second startup timeout. It needs 32 GB too: on 16 it ran in swap, and its
+# full garbage collections paused every flow for seconds.
 module "node_cluster_policy" {
   source = "../../modules/databricks/cluster-policy"
 
@@ -441,7 +443,7 @@ module "node_cluster_policy" {
     }
     driver_node_type_id = {
       type  = "fixed"
-      value = "r7i.large"
+      value = "r7i.xlarge"
     }
     # Ranges above what the pipelines run, so workers can be added without a policy edit.
     num_workers = {
@@ -500,7 +502,8 @@ module "node_cluster_policy" {
 
 # The macro tasks mostly wait on the sandbox over HTTP, so cores are bought as task
 # slots at the lowest price. Each slot keeps three requests in flight, and the slots
-# stay within the sandbox's reserved concurrency, which is why the worker is fixed.
+# stay within the sandbox's reserved concurrency, which is why the worker is fixed. The
+# driver takes four cores for the same startup timeout as Centrum's.
 module "macro_cluster_policy" {
   source = "../../modules/databricks/cluster-policy"
 
@@ -518,7 +521,7 @@ module "macro_cluster_policy" {
     }
     driver_node_type_id = {
       type  = "fixed"
-      value = "r5a.large"
+      value = "m7i.xlarge"
     }
     num_workers = {
       type  = "fixed"
@@ -858,7 +861,7 @@ module "centrum_pipeline" {
   serverless       = false
 
   node_type_id        = "r6id.large"
-  driver_node_type_id = "r7i.large"
+  driver_node_type_id = "r7i.xlarge"
   num_workers         = 1
   policy_id           = module.node_cluster_policy.policy_id
 
@@ -920,7 +923,7 @@ module "macro_execution_pipeline" {
   serverless       = false
 
   node_type_id        = "r5a.large"
-  driver_node_type_id = "r5a.large"
+  driver_node_type_id = "m7i.xlarge"
   num_workers         = 1
   policy_id           = module.macro_cluster_policy.policy_id
 
