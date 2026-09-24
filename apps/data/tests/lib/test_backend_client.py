@@ -395,3 +395,35 @@ def test_missing_result_cannot_consume_other_versions_duplicate(client: BackendC
     result = client.execute_macro_batch(items)
     assert [r["success"] for r in result["results"]] == [False, True]
     assert "No result returned" in result["results"][0]["error"]
+
+
+@responses.activate
+def test_macro_response_count_mismatch_is_logged_and_missing_rows_fail(client, capsys):
+    responses.add(responses.POST, _BATCH_URL, json={"success": True, "results": []})
+    response = client.execute_macro_batch(
+        [
+            {"id": "first", "macro_id": "m", "data": {}},
+            {"id": "second", "macro_id": "m", "data": {}},
+        ]
+    )
+    assert "expected 2 results, received 0" in capsys.readouterr().out
+    assert [(r["id"], r["success"]) for r in response["results"]] == [("first", False), ("second", False)]
+
+
+@responses.activate
+def test_macro_wrong_response_key_is_logged_even_when_count_matches(client, capsys):
+    responses.add(
+        responses.POST,
+        _BATCH_URL,
+        json={
+            "success": True,
+            "results": [
+                {"id": "unexpected", "macro_id": "m", "success": True},
+            ],
+        },
+    )
+    response = client.execute_macro_batch([{"id": "expected", "macro_id": "m", "data": {}}])
+    assert "Unexpected macro result keys: 1" in capsys.readouterr().out
+    assert len(response["results"]) == 1
+    assert response["results"][0]["id"] == "expected"
+    assert response["results"][0]["success"] is False

@@ -395,14 +395,24 @@ class BackendClient:
 
         def execute(batch):
             results, errors = self._execute_macro_chunk([item for _, item in batch], timeout)
+            if len(results) != len(batch):
+                print(
+                    "[BackendClient] Macro batch response cardinality mismatch: "
+                    f"expected {len(batch)} results, received {len(results)}"
+                )
             positions: dict[tuple[Any, Any], deque[int]] = defaultdict(deque)
             for index, item in batch:
                 positions[(item.get("id"), item.get("macro_id"))].append(index)
             indexed_results = []
+            unexpected_results = 0
             for result in results:
                 key = (result.get("id"), result.get("macro_id"))
                 if positions.get(key):
                     indexed_results.append((positions[key].popleft(), result))
+                else:
+                    unexpected_results += 1
+            if unexpected_results:
+                print(f"[BackendClient] Unexpected macro result keys: {unexpected_results}")
             # Missing entries must occupy their original positions; otherwise a
             # later duplicate could consume another workbook version's result.
             for index, item in batch:
