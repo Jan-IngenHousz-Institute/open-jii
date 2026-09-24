@@ -396,7 +396,8 @@ locals {
 # spill, and the end state has not yet run on long-lived clusters. r6id is the newest
 # r generation the disk cache runs on, and spot rarely reclaims it. The driver runs no
 # tasks, so it skips local NVMe, but it needs four cores: on two, the Spark driver often
-# misses its 300-second startup timeout.
+# misses its 300-second startup timeout. It needs 32 GB too: on 16 it ran in swap, and its
+# full garbage collections paused every flow for seconds.
 module "node_cluster_policy" {
   source = "../../modules/databricks/cluster-policy"
 
@@ -414,7 +415,7 @@ module "node_cluster_policy" {
     }
     driver_node_type_id = {
       type  = "fixed"
-      value = "m7i.xlarge"
+      value = "r7i.xlarge"
     }
     # Ranges above what the pipelines run, so workers can be added without a policy edit.
     num_workers = {
@@ -835,7 +836,7 @@ module "centrum_pipeline" {
   serverless       = false
 
   node_type_id        = "r6id.large"
-  driver_node_type_id = "m7i.xlarge"
+  driver_node_type_id = "r7i.xlarge"
   autoscale           = true
   min_workers         = 2
   max_workers         = 6
