@@ -31,6 +31,8 @@ function versionOf(table: ExperimentTableMetadata): string {
 export const useExperimentDataFreshness = (experimentId: string, tableName?: string) => {
   const queryClient = useQueryClient();
   const [isPaused, setIsPaused] = useState(false);
+  // What the page showed when paused, so the newest-row time matches the rows held still.
+  const [heldTables, setHeldTables] = useState<ExperimentTableMetadata[] | undefined>();
   const [overdueAt, setOverdueAt] = useState(0);
 
   // A hidden tab stops polling: refetchIntervalInBackground stays off.
@@ -94,9 +96,11 @@ export const useExperimentDataFreshness = (experimentId: string, tableName?: str
     if (isPaused) {
       void refetch();
     }
+    setHeldTables(isPaused ? undefined : tables);
     setIsPaused(!isPaused);
   };
 
+  const shownTables = isPaused ? (heldTables ?? tables) : tables;
   const isBehind = !isPaused && dataUpdatedAt > 0 && overdueAt === dataUpdatedAt;
   const liveStatus: DataFreshnessStatus = isBehind ? "behind" : "live";
   const status: DataFreshnessStatus = isPaused ? "paused" : liveStatus;
@@ -104,7 +108,7 @@ export const useExperimentDataFreshness = (experimentId: string, tableName?: str
   return {
     hasLoaded: tables !== undefined,
     status,
-    newestRowAt: tables ? newestOf(tables, tableName) : null,
+    newestRowAt: shownTables ? newestOf(shownTables, tableName) : null,
     refreshedAt: new Date(dataUpdatedAt),
     isChecking,
     isLoadingRows,

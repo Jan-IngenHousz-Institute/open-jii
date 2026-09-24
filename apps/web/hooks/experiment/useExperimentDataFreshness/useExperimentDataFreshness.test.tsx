@@ -55,11 +55,11 @@ describe("useExperimentDataFreshness", () => {
     expect(queryClient.getQueryState(dataKey("macro-1"))?.isInvalidated).toBe(false);
   });
 
-  it("holds the rows still while paused and applies what moved on resume", async () => {
+  it("holds the rows and their newest time still while paused, and applies what moved on resume", async () => {
     const queryClient = createTestQueryClient();
     queryClient.setQueryDefaults(orpc.experiments.getExperimentData.key(), { gcTime: Infinity });
     queryClient.setQueryData(dataKey("raw_data"), []);
-    const moved = { ...RAW, totalRows: 11 };
+    const moved = { ...RAW, totalRows: 11, latestRowAt: "2026-09-22T10:09:00.000Z" };
     const spy = server.mount(contract.experiments.getExperimentTables, {
       body: () => (spy.callCount > 1 ? [moved] : [RAW]),
     });
@@ -73,12 +73,14 @@ describe("useExperimentDataFreshness", () => {
       queryClient.refetchQueries({ queryKey: orpc.experiments.getExperimentTables.key() }),
     );
     expect(queryClient.getQueryState(dataKey("raw_data"))?.isInvalidated).toBe(false);
+    expect(result.current.newestRowAt).toBe(RAW.latestRowAt);
 
     act(() => result.current.togglePaused());
 
     await waitFor(() =>
       expect(queryClient.getQueryState(dataKey("raw_data"))?.isInvalidated).toBe(true),
     );
+    expect(result.current.newestRowAt).toBe("2026-09-22T10:09:00.000Z");
   });
 
   it("reports the asked table's newest row, or the experiment's without one", async () => {
