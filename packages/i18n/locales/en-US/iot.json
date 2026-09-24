@@ -994,9 +994,11 @@
         "readOnly": "You can read this calibration but not change it.",
         "frozen_one": "One run has recorded this calibration, so it can no longer be edited. Duplicate it to take the procedure into a new one.",
         "frozen_other": "{{count}} runs have recorded this calibration, so it can no longer be edited. Duplicate it to take the procedure into a new one.",
-        "notSaving": "Not saving while the definition is incomplete.",
         "verifyOptional": "optional",
-        "duplicate": "Duplicate"
+        "duplicate": "Duplicate",
+        "notSaving_one": "Not saving: 1 problem. The values marked in red say why.",
+        "notSaving_other": "Not saving: {{count}} problems. The values marked in red say why.",
+        "problemStep": "step {{position}}"
       },
       "rig": {
         "hint": "Each instrument takes a serial port of its own at the bench. Renaming a role renames it in every step that uses it.",
@@ -1019,7 +1021,16 @@
         "drives": "drives",
         "answers": "answers",
         "setpointRange": "{{name}} {{min}}…{{max}} {{unit}}",
-        "drivesNothing": "nothing the platform can set"
+        "answeringTo": "answering to",
+        "anyHandshake": "anything",
+        "unused": "not used by any step yet",
+        "andMore": "+{{count}} more",
+        "purpose": {
+          "kiprim-dc": "Bench power supply for the calibration lamp",
+          "calitool-spectral-board": "Drives one LED and reads twelve spectral channels",
+          "minipar-reference": "A MiniPAR used as the reference sensor",
+          "micropython-par-reference": "PAR reference photodiode on a MicroPython board"
+        }
       },
       "procedure": {
         "addStep": "Add step",
@@ -1044,9 +1055,6 @@
           "sweepInstrument": "Sweep {{instrument}} {{setpoint}}, {{points}} points",
           "sweepOperator": "Sweep by hand, {{points}} points"
         },
-        "moveUp": "Move step {{position}} up",
-        "moveDown": "Move step {{position}} down",
-        "removeStep": "Remove step {{position}}",
         "collapseStep": "Close step {{position}}",
         "expandStep": "Open step {{position}}",
         "optional": "Optional",
@@ -1099,7 +1107,33 @@
         "sweepSpan_one": "{{count}} point at {{from}} {{unit}}",
         "sweepSpan_other": "{{count}} points from {{from}} to {{to}} {{unit}}",
         "sweepSpanPlain_one": "{{count}} point at {{from}}",
-        "sweepSpanPlain_other": "{{count}} points from {{from}} to {{to}}"
+        "sweepSpanPlain_other": "{{count}} points from {{from}} to {{to}}",
+        "sentence": {
+          "operator": "Ask the operator: <prompt/>",
+          "operatorConfirm": "Ask the operator: <prompt/> They type <confirm/> to go on.",
+          "settle": "Wait <ms/> ms.",
+          "set": "Set <instrument/> <setpoint/> to <value/> <unit/>.",
+          "read": "Record <reads/> into <series/>.",
+          "readPrompt": "Ask the operator: <prompt/> Then record <reads/> into <series/>.",
+          "sweepInstrument": "Step <instrument/> <setpoint/> through <values/>, settling <settle/> ms at each point, recording <reads/> into <series/>.",
+          "sweepOperator": "For each of <values/>, ask <instrument/>: <prompt/> Record <reads/> into <series/>, settling <settle/> ms at each point."
+        },
+        "from": "from",
+        "as": "as",
+        "maySkip": "may be skipped",
+        "noSettle": "no",
+        "promptRequired": "A step that asks nothing stops the run for nothing.",
+        "commandPlaceholder": "command",
+        "settleFor": "Settle for",
+        "menu": {
+          "label": "Step {{position}} actions",
+          "moveUp": "Move up",
+          "moveDown": "Move down",
+          "remove": "Remove step",
+          "askFirst": "Ask the operator first"
+        },
+        "readPromptDefault": "Describe what the operator should set up before this reading is taken.",
+        "operatorInSentence": "the operator"
       },
       "trial": {
         "action": "Run at the bench",
@@ -1112,8 +1146,8 @@
         "coefficient": "Coefficient",
         "type": "Type",
         "length": "Entries",
-        "min": "Min",
-        "max": "Max",
+        "min": "Min for {{name}}",
+        "max": "Max for {{name}}",
         "addBlock": "Add block",
         "addPlainBlock": "Block of my own",
         "addCoefficient": "Add coefficient",
@@ -1123,16 +1157,28 @@
         "blockTaken": "Another block already has this name.",
         "nameTaken": "This block already has a coefficient with this name.",
         "nameInvalid": "Lowercase letters, digits and underscores, starting with a letter.",
-        "recordedOnly": "Recorded with the run. The platform has no command to write this one."
+        "recordedOnly": "recorded only, no writer for it",
+        "between": "between",
+        "and": "and",
+        "entriesSuffix": "entries",
+        "typeName": {
+          "number": "a number",
+          "number_array": "numbers",
+          "integer_array": "whole numbers"
+        },
+        "noBound": "none"
       },
       "fit": {
         "label": "Fit, submitting {{coefficients}} coefficients in {{blocks}} blocks",
-        "submits": "What it submits",
+        "submits": "Coefficients it submits",
         "draft": "Draft the fit",
         "draftTitle": "Replace the script with a drafted fit?",
         "draftConfirm": "The draft is written from the series recorded above and the blocks below, fitting them in the order they are declared. Whatever is in the script now is lost.",
         "draftCancel": "Keep what I wrote",
-        "draftReplace": "Replace it"
+        "draftReplace": "Replace it",
+        "scriptLines_one": "The script, {{count}} line",
+        "scriptLines_other": "The script, {{count}} lines",
+        "leaveEditor": "Tab indents. Press Esc, then Tab, to move on from the script."
       },
       "sidebar": {
         "id": "Calibration ID",
@@ -1143,7 +1189,10 @@
         "firmwarePlaceholder": "Any",
         "firmwareHint": "A run is refused below this. Older firmware answers unknown commands with numbers that look like data.",
         "firmwareInvalid": "Version numbers only, like 1.03 or 1.1.3.",
-        "saved": "Calibration updated"
+        "saved": "Calibration updated",
+        "waiting": "Waiting per run",
+        "waitingValue": "{{duration}}",
+        "waitingValueOperator": "{{duration}}, plus the operator's steps"
       },
       "seam": {
         "produces": "The capture records",
@@ -1188,6 +1237,13 @@
         "alreadyDone": "{{serial}} has already had its turn in this sitting.",
         "whichDevice": "Which device is this?",
         "whichDeviceHint": "This unit's firmware does not report an identifier over the console, so the run has to be recorded against a device you name."
+      },
+      "invalid": {
+        "number": "Must be a number.",
+        "wholeRange": "A whole number from {{min}} to {{max}}.",
+        "numbers": "Numbers separated by commas, at most {{max}}.",
+        "points": "Points separated by commas, at most {{max}}.",
+        "wholeNumber": "Must be a whole number."
       }
     },
     "workbookBar": {

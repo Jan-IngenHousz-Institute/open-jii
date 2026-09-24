@@ -47,6 +47,7 @@ export function CalibrationSetpointShape({ values, unit }: CalibrationSetpointSh
         data={data}
         config={{
           sparkline: true,
+          backgroundColor: "transparent",
           showLegend: false,
           showHoverName: false,
           displayModeBar: false,

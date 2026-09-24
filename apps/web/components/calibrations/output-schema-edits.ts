@@ -41,6 +41,13 @@ export function renameBlock(
   from: string,
   to: string,
 ): CalibrationOutputSchema {
+  // A block is a key in this record, so renaming one onto an existing name would not
+  // create a collision to warn about: the merge below would just silently keep the last
+  // one written and lose the other's coefficients.
+  if (to !== from && to in schema.blocks) {
+    return schema;
+  }
+
   const blocks: Blocks = {};
   for (const [block, coefficients] of Object.entries(schema.blocks)) {
     blocks[block === from ? to : block] = coefficients;
@@ -66,8 +73,15 @@ export function renameCoefficient(
   from: string,
   to: string,
 ): CalibrationOutputSchema {
+  const existing = schema.blocks[block] ?? {};
+  // Same reasoning as renameBlock: a coefficient is a key within the block, so a rename
+  // onto a sibling's name would merge the two silently rather than colliding visibly.
+  if (to !== from && to in existing) {
+    return schema;
+  }
+
   const coefficients: Coefficients = {};
-  for (const [name, spec] of Object.entries(schema.blocks[block] ?? {})) {
+  for (const [name, spec] of Object.entries(existing)) {
     coefficients[name === from ? to : name] = spec;
   }
 

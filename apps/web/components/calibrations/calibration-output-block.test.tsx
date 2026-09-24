@@ -30,53 +30,55 @@ function renderBlock(props: Partial<Parameters<typeof CalibrationOutputBlock>[0]
       {...props}
     />,
   );
-  return handlers;
+  return { ...handlers, user: userEvent.setup({ pointerEventsCheck: 0 }) };
+}
+
+/** A value reads as text until it is clicked, so a test reaches one the way a person does. */
+async function openToken(user: ReturnType<typeof userEvent.setup>, label: string) {
+  await user.click(screen.getByRole("button", { name: label }));
+  return screen.getByRole("textbox", { name: label });
 }
 
 describe("CalibrationOutputBlock", () => {
-  it("renames the block a device is written in", async () => {
-    const { onRename } = renderBlock();
+  it("renames the block from the header it names itself in", async () => {
+    const { onRename, user } = renderBlock();
 
-    const field = screen.getByLabelText("iot.calibration.produces.block");
-    await userEvent.clear(field);
-    await userEvent.type(field, "spec");
+    const block = await openToken(user, "iot.calibration.produces.block");
+    await user.clear(block);
+    await user.type(block, "spec");
+    await user.tab();
 
     expect(onRename).toHaveBeenLastCalledWith("spec");
   });
 
-  it("refuses a block name the schema already holds, and puts the saved one back", async () => {
-    const { onRename } = renderBlock({ takenBlocks: ["par", "led"] });
+  // Committing it would merge the two blocks, so it is refused with the reason in view.
+  it("refuses a block name the schema already holds, says why, and keeps the saved one", async () => {
+    const { onRename, user } = renderBlock({ takenBlocks: ["par", "led"] });
 
-    const field = screen.getByLabelText("iot.calibration.produces.block");
-    await userEvent.clear(field);
-    await userEvent.type(field, "led");
-    expect(screen.getByText("iot.calibration.produces.blockTaken")).toBeInTheDocument();
+    const block = await openToken(user, "iot.calibration.produces.block");
+    await user.clear(block);
+    await user.type(block, "led");
 
-    await userEvent.tab();
-    expect(field).toHaveValue("par");
-    expect(onRename).not.toHaveBeenCalledWith("led");
-  });
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "iot.calibration.produces.blockTaken",
+    );
+    await user.tab();
 
-  it("refuses a block name the fit script could not address", async () => {
-    const { onRename } = renderBlock();
-
-    const field = screen.getByLabelText("iot.calibration.produces.block");
-    await userEvent.clear(field);
-    await userEvent.type(field, "1par");
-
-    expect(screen.getByText("iot.calibration.produces.nameInvalid")).toBeInTheDocument();
-    expect(onRename).not.toHaveBeenCalledWith("1par");
+    expect(onRename).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "iot.calibration.produces.block" }),
+    ).toHaveTextContent("par");
   });
 
   // A per-channel coefficient declared as a number fails validation on the first real fit,
   // so taking the shape from the writer is what keeps the author out of that.
   it("adds a writable coefficient in the shape its writer declares", async () => {
-    const { onSetCoefficient } = renderBlock();
+    const { onSetCoefficient, user } = renderBlock();
 
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "iot.calibration.produces.addCoefficient" }),
     );
-    await userEvent.click(await screen.findByRole("menuitem", { name: "channels" }));
+    await user.click(await screen.findByRole("menuitem", { name: "channels" }));
 
     expect(onSetCoefficient).toHaveBeenCalledWith("channels", {
       type: "number_array",
@@ -85,14 +87,14 @@ describe("CalibrationOutputBlock", () => {
   });
 
   it("offers a plain coefficient under a name nothing else holds", async () => {
-    const { onSetCoefficient } = renderBlock({
+    const { onSetCoefficient, user } = renderBlock({
       coefficients: { slope: { type: "number" }, coefficient: { type: "number" } },
     });
 
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "iot.calibration.produces.addCoefficient" }),
     );
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("menuitem", { name: "iot.calibration.produces.addPlain" }),
     );
 
@@ -100,21 +102,38 @@ describe("CalibrationOutputBlock", () => {
   });
 
   it("stops offering a writable name the block already declares", async () => {
-    renderBlock();
+    const { user } = renderBlock();
 
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "iot.calibration.produces.addCoefficient" }),
     );
 
     expect(screen.queryByRole("menuitem", { name: "slope" })).toBeNull();
   });
 
+  it("removes the whole block", async () => {
+    const { onRemove, user } = renderBlock();
+
+    await user.click(screen.getByRole("button", { name: "iot.calibration.produces.removeBlock" }));
+
+    expect(onRemove).toHaveBeenCalled();
+  });
+
+  it("says a coefficient is only recorded when no writer covers it", () => {
+    renderBlock({ coefficients: { drift: { type: "number" } } });
+
+    expect(screen.getByText("iot.calibration.produces.recordedOnly")).toBeInTheDocument();
+  });
+
   it("offers nothing to change on a definition a run has closed", () => {
     renderBlock({ canEdit: false });
 
-    expect(screen.getByLabelText("iot.calibration.produces.block")).toBeDisabled();
     expect(
       screen.queryByRole("button", { name: "iot.calibration.produces.addCoefficient" }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "iot.calibration.produces.block" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "iot.calibration.produces.removeBlock" }),
     ).toBeNull();
   });
 });

@@ -70,4 +70,15 @@ describe("CalibrationRigStrip", () => {
 
     expect(screen.queryByRole("button", { name: "iot.calibration.rig.add" })).toBeNull();
   });
+
+  // A model id says nothing to a first-time author; a supply and a reference look alike.
+  it("says what each instrument is for, and counts the channels it leaves out", async () => {
+    renderStrip();
+
+    await userEvent.click(screen.getByRole("button", { name: "iot.calibration.rig.add" }));
+
+    expect(await screen.findByText("iot.calibration.rig.purpose.kiprim-dc")).toBeInTheDocument();
+    const board = screen.getByRole("menuitem", { name: /calitool-spectral-board/ });
+    expect(board).toHaveTextContent("iot.calibration.rig.andMore");
+  });
 });
