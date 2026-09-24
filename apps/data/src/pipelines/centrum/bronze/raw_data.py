@@ -24,7 +24,9 @@ from openjii.centrum.runtime import (
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
+        # Auto compaction plans every write at 200 partitions whatever the pipeline sets;
+        # predictive optimization compacts these tables asynchronously instead.
+        "delta.autoOptimize.autoCompact": "false",
         "delta.enableChangeDataFeed": "true",
         "pipelines.reset.allowed": "false"
     }

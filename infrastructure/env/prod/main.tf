@@ -839,6 +839,14 @@ module "centrum_pipeline" {
   max_workers         = 6
   policy_id           = module.node_cluster_policy.policy_id
 
+  spark_conf = {
+    # Streaming skips AQE, so shuffles run at one per worker core.
+    "spark.sql.shuffle.partitions" = "12"
+    # Adds the Python and other processes' memory to the driver's metrics, which the
+    # JVM heap figures leave out.
+    "spark.executor.processTreeMetrics.enabled" = "true"
+  }
+
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
   }
@@ -896,6 +904,14 @@ module "macro_execution_pipeline" {
   driver_node_type_id = "m7i.xlarge"
   num_workers         = 1
   policy_id           = module.macro_cluster_policy.policy_id
+
+  spark_conf = {
+    # Streaming skips AQE, so shuffles run at one per worker core.
+    "spark.sql.shuffle.partitions" = "4"
+    # Adds the Python and other processes' memory to the driver's metrics, which the
+    # JVM heap figures leave out.
+    "spark.executor.processTreeMetrics.enabled" = "true"
+  }
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
