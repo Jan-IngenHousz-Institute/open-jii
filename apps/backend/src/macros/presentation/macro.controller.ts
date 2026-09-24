@@ -147,7 +147,7 @@ export class MacroController {
     return implement(macroContract.deleteMacro).handler(async ({ input }) => {
       const isDeletionEnabled = await this.analyticsPort.isFeatureFlagEnabled(
         FEATURE_FLAGS.MACRO_DELETION,
-        session.user.email || session.user.id,
+        session.user,
       );
 
       if (!isDeletionEnabled) {

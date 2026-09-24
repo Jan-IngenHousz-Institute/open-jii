@@ -50,7 +50,7 @@ These are already mocked globally. **Do not re-declare them in test files.**
 | `@repo/auth/client`               | `authClient` methods resolve `{ data: null, error: null }`, `useSession()` returns `{ data: null, isPending: false }`              |
 | `@repo/ui/hooks`                  | `toast()` noop spy                                                                                                                 |
 | `@/hooks/useLocale`               | Returns `"en-US"`                                                                                                                  |
-| `posthog-js`                      | Noop stubs (`init`, `capture`, `identify`, `reset`, `opt_in_capturing`, `opt_out_capturing`)                                       |
+| `posthog-js`                      | Noop stubs (`init`, `capture`, `identify`, `reset`, `get_property`, the person-property setters, opt-in/out)                       |
 | `posthog-js/react`                | `usePostHog()` returns a **stable singleton** with spied methods — safe to assert on directly                                      |
 | `React.use`                       | Spy wrapping real implementation                                                                                                   |
 

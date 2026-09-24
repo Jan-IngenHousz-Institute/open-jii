@@ -14,8 +14,11 @@ export interface AnalyticsPort {
   /**
    * Check if a feature flag is enabled
    * @param flagKey - The feature flag key to check
-   * @param distinctId - Optional user identifier
+   * @param user - The signed-in user; omit to evaluate anonymously
    * @returns Whether the flag is enabled
    */
-  isFeatureFlagEnabled(flagKey: FeatureFlagKey, distinctId?: string): Promise<boolean>;
+  isFeatureFlagEnabled(
+    flagKey: FeatureFlagKey,
+    user?: { id: string; email: string },
+  ): Promise<boolean>;
 }

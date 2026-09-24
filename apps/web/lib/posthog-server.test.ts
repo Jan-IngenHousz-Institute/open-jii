@@ -1,9 +1,15 @@
+import { createMyOrganization, createSession } from "@/test/factories";
 import { PostHog } from "posthog-node";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { auth } from "~/app/actions/auth";
 
 import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
 
-import { isFeatureFlagEnabled, shutdownPostHog } from "./posthog-server";
+import {
+  isFeatureFlagEnabled,
+  isFeatureFlagEnabledForViewer,
+  shutdownPostHog,
+} from "./posthog-server";
 
 // Mock the env module
 vi.mock("~/env", () => ({
@@ -25,6 +31,12 @@ vi.mock("posthog-node", () => ({
   }),
 }));
 
+const listMyOrganizations = vi.hoisted(() => vi.fn());
+
+vi.mock("./server-orpc", () => ({
+  createServerOrpcClient: vi.fn(() => ({ organizations: { listMyOrganizations } })),
+}));
+
 describe("posthog-server", () => {
   beforeEach(async () => {
     // Reset the singleton by shutting down first
@@ -44,6 +56,7 @@ describe("posthog-server", () => {
       expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.MULTI_LANGUAGE,
         "anonymous",
+        { personProperties: undefined },
       );
     });
 
@@ -63,6 +76,7 @@ describe("posthog-server", () => {
       expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.MULTI_LANGUAGE,
         "user123",
+        { personProperties: undefined },
       );
     });
 
@@ -189,6 +203,62 @@ describe("posthog-server", () => {
       // Use again - should create new instance
       await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
       expect(PostHog).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("isFeatureFlagEnabledForViewer", () => {
+    afterEach(() => {
+      vi.mocked(auth).mockResolvedValue(null);
+      listMyOrganizations.mockReset();
+    });
+
+    it("should evaluate a signed-out visitor anonymously", async () => {
+      mockPostHogInstance.isFeatureEnabled.mockResolvedValue(false);
+
+      await isFeatureFlagEnabledForViewer(FEATURE_FLAGS.MULTI_LANGUAGE);
+
+      expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
+        FEATURE_FLAGS.MULTI_LANGUAGE,
+        "anonymous",
+        { personProperties: undefined },
+      );
+      expect(listMyOrganizations).not.toHaveBeenCalled();
+    });
+
+    it("should evaluate a signed-in user with their email and memberships", async () => {
+      vi.mocked(auth).mockResolvedValue(
+        createSession({ user: { id: "user-ana", email: "ana@example.com" } }),
+      );
+      listMyOrganizations.mockResolvedValue([
+        createMyOrganization({ id: "org-qa" }),
+        createMyOrganization({ id: "org-lab" }),
+      ]);
+      mockPostHogInstance.isFeatureEnabled.mockResolvedValue(true);
+
+      const result = await isFeatureFlagEnabledForViewer(FEATURE_FLAGS.MULTI_LANGUAGE);
+
+      expect(result).toBe(true);
+      expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
+        FEATURE_FLAGS.MULTI_LANGUAGE,
+        "ana@example.com",
+        { personProperties: { email: "ana@example.com", organization_ids: "org-qa,org-lab" } },
+      );
+    });
+
+    it("should still evaluate the user when their memberships cannot be read", async () => {
+      vi.mocked(auth).mockResolvedValue(
+        createSession({ user: { id: "user-ana", email: "ana@example.com" } }),
+      );
+      listMyOrganizations.mockRejectedValue(new Error("backend unavailable"));
+      mockPostHogInstance.isFeatureEnabled.mockResolvedValue(false);
+
+      await isFeatureFlagEnabledForViewer(FEATURE_FLAGS.MULTI_LANGUAGE);
+
+      expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
+        FEATURE_FLAGS.MULTI_LANGUAGE,
+        "ana@example.com",
+        { personProperties: { email: "ana@example.com", organization_ids: "" } },
+      );
     });
   });
 

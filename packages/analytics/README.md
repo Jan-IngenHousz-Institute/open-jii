@@ -58,6 +58,22 @@ const config = createPostHogClientConfig(
 posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, config);
 ```
 
+## Targeting an organisation
+
+Every flag evaluation for a signed-in user carries their `email` and `organization_ids`, the ids of
+every organisation they belong to, comma-joined (`flagPersonProperties`). PostHog evaluates with
+them without storing them, so they apply before the user accepts analytics cookies. To turn a flag
+on for an organisation's members:
+
+1. In openJII, open the organisation and copy its id from the address bar:
+   `/platform/organizations/<id>`.
+2. In PostHog, open the flag and add a release condition set: person property `organization_ids`,
+   operator "contains", the id as the value, rollout 100%. "is any of" never matches this property.
+3. Condition sets are OR'd, so each further organisation gets its own set.
+
+Members get the flag on their next page load, and backend checks follow within a minute. Adding
+someone to the organisation in openJII puts them in the rollout.
+
 ## Available Feature Flags
 
 - `MULTI_LANGUAGE`: Enable multi-language support
