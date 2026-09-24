@@ -110,11 +110,13 @@ The IoT rule in `infrastructure/modules/iot-core/main.tf` selects the original t
 MQTT is at-least-once delivery. Consumers must not assume that receiving PUBACK means every downstream transformation is already complete, or that an event can never be seen twice.
 
 Centrum runs in continuous mode in both environments and uses Databricks' default
-trigger intervals: five seconds for streaming queries, including Kinesis ingestion;
-one minute for complete-refresh queries using only Delta inputs; and ten minutes for
-complete-refresh queries with non-Delta inputs. Production compute autoscales between two and six
-workers; dev runs on one fixed worker. Processing time can exceed the trigger
-interval, so this is not a five-second end-to-end latency guarantee.
+trigger intervals. Its streaming queries, including Kinesis ingestion, trigger every
+four seconds: the driver logs `The trigger interval is 4000 milliseconds` for each of
+them. Complete-refresh queries use the documented defaults of one minute with only
+Delta inputs and ten minutes with non-Delta inputs. Production compute autoscales
+between two and six workers; dev runs on one fixed worker. Each hop from bronze to
+gold waits for its own query's next trigger, and processing can outlast the interval,
+so the interval is not an end-to-end latency guarantee.
 
 ## Imported and uploaded data
 
