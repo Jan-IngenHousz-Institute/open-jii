@@ -75,7 +75,7 @@ measurements AS (
     raw.device_name,
     raw.timestamp,
     raw.timestamp AS measurement_time_utc,
-    CASE WHEN try_make_timestamp(2000, 1, 1, 0, 0, 0, raw.timezone) IS NOT NULL THEN raw.timezone END AS timezone,
+    raw.timezone,
     raw.date,
     raw.macros,
     raw.questions_data,
@@ -113,6 +113,7 @@ SELECT
   m.longitude,
   m.data,
   m.processed_timestamp,
+  -- Gold keeps only zones Spark accepts, so these conversions cannot fail.
   CASE WHEN m.timezone IS NOT NULL
     THEN date_format(from_utc_timestamp(m.measurement_time_utc, m.timezone), 'yyyy-MM-dd HH:mm:ss')
   END AS measurement_time_local,
