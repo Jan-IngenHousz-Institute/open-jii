@@ -889,9 +889,12 @@ module "macro_execution_pipeline" {
   ]
 
   configuration = {
-    "CATALOG_NAME"        = module.databricks_catalog.catalog_name
-    "CENTRUM_SCHEMA_NAME" = "centrum"
-    "ENVIRONMENT"         = upper(var.environment)
+    "MACRO_MAX_FILES_PER_TRIGGER" = "16"
+    "MACRO_MAX_BYTES_PER_TRIGGER" = "16777216"
+    "MACRO_EXECUTION_PARTITIONS"  = "16"
+    "CATALOG_NAME"                = module.databricks_catalog.catalog_name
+    "CENTRUM_SCHEMA_NAME"         = "centrum"
+    "ENVIRONMENT"                 = upper(var.environment)
   }
 
   # Neither AUTO CDC nor expectations, so CORE is enough.

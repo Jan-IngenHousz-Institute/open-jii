@@ -172,12 +172,9 @@ def test_execute_macro_batch_chunks_by_serialized_size(
 
 
 @responses.activate
-def test_execute_macro_batch_packs_several_macro_groups_into_one_request(
+def test_execute_macro_batch_keeps_macro_groups_in_separate_requests(
     client: BackendClient,
 ) -> None:
-    """The backend invokes one Lambda per group in a request, so groups sharing
-    a request run in parallel. Capping the request caps every group inside it,
-    which is what keeps one invocation inside its output budget."""
     responses.add(
         responses.POST,
         f"{BASE_URL}/api/v1/macros/execute-batch",
@@ -188,8 +185,7 @@ def test_execute_macro_batch_packs_several_macro_groups_into_one_request(
     client.execute_macro_batch(items, max_batch_size=4)
 
     sent = _sent_batches()
-    assert len(sent) == 1
-    assert [item["macro_id"] for item in sent[0]] == ["a", "a", "b", "b"]
+    assert sorted([item["macro_id"] for item in batch] for batch in sent) == [["a", "a"], ["b", "b"]]
 
 
 @responses.activate
@@ -312,12 +308,8 @@ def test_execute_macro_batch_sorts_same_macro_by_workbook_version(client: Backen
         ]
     )
 
-    # Sorting keeps one version's items adjacent inside the request. The
-    # backend groups them again on its side and invokes a Lambda per group, so
-    # all three still travel in one request.
     sent = _sent_batches()
-    assert len(sent) == 1
-    assert [item["id"] for item in sent[0]] == ["live", "v1", "v2"]
+    assert sorted([item["id"] for item in batch] for batch in sent) == [["live"], ["v1"], ["v2"]]
 
 
 def _one_item_batch(client: BackendClient) -> dict[str, Any]:
@@ -365,3 +357,41 @@ def test_the_items_fail_once_every_attempt_has_failed(client: BackendClient) -> 
     assert len(responses.calls) == len(backend_client.MACRO_REQUEST_RETRY_DELAYS) + 1
     assert [result["success"] for result in response["results"]] == [False]
     assert "Chunk failed" in response["results"][0]["error"]
+
+
+@responses.activate
+def test_macro_results_keep_duplicate_positions_across_versions(client: BackendClient) -> None:
+    def respond(request):
+        items = json.loads(request.body)["items"]
+        assert len({(i["macro_id"], i.get("workbook_version_id")) for i in items}) == 1
+        results = [
+            {"id": i["id"], "macro_id": i["macro_id"], "success": True, "output": i["data"]} for i in items
+        ]
+        return 200, {}, json.dumps({"success": True, "results": list(reversed(results)), "errors": None})
+
+    responses.add_callback(responses.POST, _BATCH_URL, callback=respond)
+    items = [
+        {"id": "same", "macro_id": "m", "workbook_version_id": "v2", "data": "second"},
+        {"id": "same", "macro_id": "m", "workbook_version_id": "v1", "data": "first"},
+        {"id": "another", "macro_id": "m", "workbook_version_id": "v2", "data": "third"},
+        {"id": "same", "macro_id": "m", "workbook_version_id": "v1", "data": "first"},
+    ]
+    result = client.execute_macro_batch(items)
+    assert [r["output"] for r in result["results"]] == [i["data"] for i in items]
+
+
+@responses.activate
+def test_missing_result_cannot_consume_other_versions_duplicate(client: BackendClient) -> None:
+    def respond(request):
+        items = json.loads(request.body)["items"]
+        if items[0]["workbook_version_id"] == "missing":
+            return 200, {}, json.dumps({"success": True, "results": []})
+        return _echo_results(request)
+
+    responses.add_callback(responses.POST, _BATCH_URL, callback=respond)
+    items = [
+        {"id": "same", "macro_id": "m", "workbook_version_id": v, "data": {}} for v in ["missing", "present"]
+    ]
+    result = client.execute_macro_batch(items)
+    assert [r["success"] for r in result["results"]] == [False, True]
+    assert "No result returned" in result["results"][0]["error"]

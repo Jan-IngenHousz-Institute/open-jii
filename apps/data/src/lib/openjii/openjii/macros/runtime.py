@@ -38,3 +38,19 @@ CENTRUM_SCHEMA_NAME: str = _with_default("CENTRUM_SCHEMA_NAME", "centrum")
 def centrum_table(name: str) -> str:
     """Fully qualified centrum table name for cross-pipeline reads."""
     return f"{CATALOG_NAME}.{CENTRUM_SCHEMA_NAME}.{name}"
+
+
+def _positive_int(key: str, default: int) -> int:
+    try:
+        value = int(_with_default(key, str(default)))
+    except ValueError as error:
+        raise ValueError(f"{key} must be a positive integer") from error
+    if value < 1:
+        raise ValueError(f"{key} must be a positive integer")
+    return value
+
+
+# Admission changes apply only after a previously planned batch completes.
+MACRO_MAX_FILES_PER_TRIGGER = _positive_int("MACRO_MAX_FILES_PER_TRIGGER", 16)
+MACRO_MAX_BYTES_PER_TRIGGER = _positive_int("MACRO_MAX_BYTES_PER_TRIGGER", 16 * 1024 * 1024)
+MACRO_EXECUTION_PARTITIONS = _positive_int("MACRO_EXECUTION_PARTITIONS", 16)

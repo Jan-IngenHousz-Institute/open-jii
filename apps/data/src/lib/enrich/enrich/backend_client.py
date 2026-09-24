@@ -10,6 +10,7 @@ import hmac
 import json
 import threading
 import time
+from collections import defaultdict, deque
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
@@ -322,9 +323,7 @@ class BackendClient:
     ) -> Iterator[list[dict[str, Any]]]:
         """Yield request chunks bounded by both item count and serialized size.
 
-        A chunk may span macro groups. The backend invokes one Lambda per group
-        in a request, so several groups in one request run in parallel, and a
-        chunk capped at max_batch_size caps every group inside it anyway. An
+        The caller supplies one macro/workbook-version group at a time. An
         item larger than the budget still goes out alone, so the backend
         rejects that one row rather than the pipeline dropping it.
         """
@@ -379,28 +378,57 @@ class BackendClient:
         if not items:
             return {"results": []}
 
-        # Group items so a chunk splits into as few Lambda calls as it can: the
-        # backend turns each macro and workbook version group in a request into
-        # one call. A macro UUID points at different code across versions, so
-        # the version is part of the key.
-        sorted_items = sorted(
-            items,
-            key=lambda item: (
-                item.get("macro_id") or "",
-                item.get("workbook_version_id") or "",
-            ),
-        )
+        if max_batch_size < 1:
+            raise ValueError("max_batch_size must be at least 1")
 
-        chunks = list(self._chunk_items(sorted_items, max_batch_size))
-        if len(chunks) == 1:
-            outcomes = [self._execute_macro_chunk(chunks[0], timeout)]
+        # One group per request bounds backend fan-out even with overlapping
+        # requests. Source positions distinguish duplicate ids across versions,
+        # which the backend does not include in its response keys.
+        groups: dict[tuple[str, str], list[tuple[int, dict[str, Any]]]] = {}
+        for index, item in enumerate(items):
+            key = (item.get("macro_id") or "", item.get("workbook_version_id") or "")
+            groups.setdefault(key, []).append((index, item))
+        batches = []
+        for group in groups.values():
+            start = 0
+            for chunk in self._chunk_items([item for _, item in group], max_batch_size):
+                batches.append(group[start : start + len(chunk)])
+                start += len(chunk)
+
+        def execute(batch):
+            results, errors = self._execute_macro_chunk([item for _, item in batch], timeout)
+            positions: dict[tuple[Any, Any], deque[int]] = defaultdict(deque)
+            for index, item in batch:
+                positions[(item.get("id"), item.get("macro_id"))].append(index)
+            indexed_results = []
+            for result in results:
+                key = (result.get("id"), result.get("macro_id"))
+                if positions.get(key):
+                    indexed_results.append((positions[key].popleft(), result))
+            # Missing entries must occupy their original positions; otherwise a
+            # later duplicate could consume another workbook version's result.
+            for index, item in batch:
+                key = (item.get("id"), item.get("macro_id"))
+                if index in positions[key]:
+                    indexed_results.append(
+                        (
+                            index,
+                            {
+                                "id": item.get("id"),
+                                "macro_id": item.get("macro_id"),
+                                "success": False,
+                                "error": "No result returned for item " + str(item.get("id")),
+                            },
+                        )
+                    )
+            return indexed_results, errors
+
+        if len(batches) == 1:
+            outcomes = [execute(batches[0])]
         else:
-            # map yields in submission order, so results keep chunk order.
-            outcomes = list(
-                self._macro_requests.map(lambda chunk: self._execute_macro_chunk(chunk, timeout), chunks)
-            )
-
-        all_results = [result for results, _ in outcomes for result in results]
+            outcomes = list(self._macro_requests.map(execute, batches))
+        indexed_results = [result for results, _ in outcomes for result in results]
+        all_results = [result for _, result in sorted(indexed_results, key=lambda pair: pair[0])]
         all_errors = [error for _, errors in outcomes for error in errors]
 
         response: dict[str, Any] = {"results": all_results}
@@ -417,7 +445,7 @@ class BackendClient:
 
         try:
             result = self._make_request_with_retries(self.WEBHOOK_MACRO_BATCH_PATH, payload)
-            return result.get("results", []), result.get("errors", [])
+            return result.get("results", []), result.get("errors") or []
         except BackendIntegrationError as e:
             # Don't lose other chunks: synthesize per-item failure entries
             # so the caller can map them back via (id, macro_id). A transient
