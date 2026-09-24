@@ -89,6 +89,9 @@ try:
         import scipy
         libraries["scipy"] = scipy
     if "pd" in macro_names:
+        # pandas imports SciPy itself for methods such as Kendall correlation and
+        # spline interpolation, which would spend the timer.
+        load_scipy()
         import pandas as pd
         libraries["pd"] = pd
 except ImportError as e:

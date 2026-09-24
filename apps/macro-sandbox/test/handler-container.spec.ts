@@ -70,11 +70,10 @@ function buildImage(spec: LangSpec): void {
   }
 }
 
-function runContainer(name: string, image: string, port: number): void {
+function runContainer(name: string, image: string, port: number, options: string[] = []): void {
   spawnSync("docker", ["rm", "-f", name], { encoding: "utf8" });
-  const res = spawnSync("docker", ["run", "-d", "--name", name, "-p", `${port}:8080`, image], {
-    encoding: "utf8",
-  });
+  const args = ["run", "-d", "--name", name, "-p", `${port}:8080`, ...options, image];
+  const res = spawnSync("docker", args, { encoding: "utf8" });
   if (res.status !== 0) throw new Error(`docker run ${name} failed: ${res.stderr}`);
 }
 
@@ -236,6 +235,45 @@ describe.skipIf(!ENABLED)("handler container data contract", () => {
       });
 
       expect(response.results[0]).toEqual({ id: "plain", success: true, output: { mean: 2 } });
+    });
+
+    describe("on a quarter of a core", () => {
+      const throttledPort = 9104;
+
+      beforeAll(async () => {
+        const name = "mstest-python-throttled";
+        runContainer(name, "localhost/macro-sandbox-passthrough-py", throttledPort, [
+          "--cpus=0.25",
+        ]);
+        containers.push(name);
+        await waitReady(throttledPort, {
+          script: b64('output["ready"] = True'),
+          items: [{ id: "warm", data: {} }],
+          timeout: 30,
+        });
+      }, 300_000);
+
+      it("loads the SciPy that pandas imports on its own before an item's one-second timer", async () => {
+        // Kendall correlation and spline interpolation make pandas import SciPy itself.
+        const script = [
+          'output["tau"] = float(pd.Series([1, 2, 3, 4]).corr(pd.Series([1, 3, 2, 4]), method="kendall"))',
+          'output["filled"] = pd.Series([1.0, None, 3.0]).interpolate(method="spline", order=1).tolist()',
+        ].join("\n");
+
+        const response = await invoke(throttledPort, {
+          script: b64(script),
+          items: [{ id: "pandas-scipy", data: {} }],
+          timeout: 30,
+        });
+
+        expect(response.results[0]?.error).toBeUndefined();
+        expect(response.results[0]?.output?.tau).toBeCloseTo(2 / 3);
+        expect(response.results[0]?.output?.filled).toEqual([
+          expect.closeTo(1),
+          expect.closeTo(2),
+          expect.closeTo(3),
+        ]);
+      });
     });
   });
 });
