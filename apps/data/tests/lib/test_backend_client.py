@@ -6,11 +6,15 @@ import hashlib
 import hmac
 import json
 import re
+import threading
+import time
 from typing import Any
 
 import pytest
+import requests
 import responses
-from enrich.backend_client import BackendClient, BackendIntegrationError
+from enrich import backend_client
+from enrich.backend_client import MACRO_REQUESTS_IN_FLIGHT, BackendClient, BackendIntegrationError
 
 BASE_URL = "https://api.example.test"
 API_KEY_ID = "key-123"
@@ -20,6 +24,11 @@ SECRET = "shhh"
 @pytest.fixture
 def client() -> BackendClient:
     return BackendClient(base_url=BASE_URL, api_key_id=API_KEY_ID, webhook_secret=SECRET)
+
+
+@pytest.fixture(autouse=True)
+def no_retry_delay(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(backend_client, "MACRO_REQUEST_RETRY_DELAYS", (0, 0))
 
 
 def _sent_batches() -> list[list[dict[str, Any]]]:
@@ -203,43 +212,84 @@ def test_execute_macro_batch_sends_an_oversized_item_alone(
     ]
     client.execute_macro_batch(items, max_batch_size=500)
 
-    assert len(responses.calls) == 2
-    assert [item["id"] for item in _sent_batches()[1]] == ["1"]
+    # Chunks are in flight together, so the calls arrive in either order.
+    assert sorted([item["id"] for item in batch] for batch in _sent_batches()) == [["0"], ["1"]]
+
+
+_BATCH_URL = f"{BASE_URL}/api/v1/macros/execute-batch"
+
+
+def _echo_results(request: Any) -> tuple[int, dict[str, str], str]:
+    items = json.loads(request.body)["items"]
+    results = [{"id": item["id"], "macro_id": item["macro_id"], "success": True} for item in items]
+    return 200, {}, json.dumps({"success": True, "results": results})
 
 
 @responses.activate
 def test_execute_macro_batch_chunk_failure_synthesizes_per_item_errors(client: BackendClient) -> None:
-    # Two chunks: first succeeds, second 500s. Caller should get all 4 results,
-    # with the failed chunk's items marked success=False.
-    responses.add(
-        responses.POST,
-        f"{BASE_URL}/api/v1/macros/execute-batch",
-        json={
-            "success": True,
-            "results": [
-                {"id": "0", "macro_id": "m", "success": True, "output": {"x": 1}},
-                {"id": "1", "macro_id": "m", "success": True, "output": {"x": 2}},
-            ],
-        },
-        status=200,
-    )
-    responses.add(
-        responses.POST,
-        f"{BASE_URL}/api/v1/macros/execute-batch",
-        json={"success": False, "message": "kaboom"},
-        status=500,
-    )
+    """Requests run concurrently, so the failing one is chosen by content, not by
+    arrival order: only the items it carried fail."""
+
+    def respond(request: Any) -> tuple[int, dict[str, str], str]:
+        items = json.loads(request.body)["items"]
+        if items[0]["id"] == "2":
+            return 500, {}, json.dumps({"success": False, "message": "kaboom"})
+        return _echo_results(request)
+
+    responses.add_callback(responses.POST, _BATCH_URL, callback=respond)
 
     items = [{"id": str(i), "macro_id": "m", "data": {}} for i in range(4)]
     response = client.execute_macro_batch(items, max_batch_size=2)
 
-    assert len(response["results"]) == 4
-    successes = [r for r in response["results"] if r.get("success")]
-    failures = [r for r in response["results"] if not r.get("success")]
-    assert len(successes) == 2
-    assert len(failures) == 2
-    assert all("Chunk failed" in (f.get("error") or "") for f in failures)
+    outcome = {result["id"]: result["success"] for result in response["results"]}
+    assert outcome == {"0": True, "1": True, "2": False, "3": False}
+    failures = [result for result in response["results"] if not result["success"]]
+    assert all("Chunk failed" in result["error"] for result in failures)
     assert "errors" in response
+
+
+@responses.activate
+def test_execute_macro_batch_keeps_several_requests_in_flight(client: BackendClient) -> None:
+    """A task mostly waits on the sandbox, so its requests overlap, up to the limit.
+    The barrier only releases once the limit is in flight together, and times out
+    if the pool never gets there."""
+    all_in_flight = threading.Barrier(MACRO_REQUESTS_IN_FLIGHT, timeout=5)
+    lock = threading.Lock()
+    in_flight = 0
+    peak = 0
+
+    def respond(request: Any) -> tuple[int, dict[str, str], str]:
+        nonlocal in_flight, peak
+        with lock:
+            in_flight += 1
+            peak = max(peak, in_flight)
+        all_in_flight.wait()
+        with lock:
+            in_flight -= 1
+        return _echo_results(request)
+
+    responses.add_callback(responses.POST, _BATCH_URL, callback=respond)
+
+    items = [{"id": str(i), "macro_id": "m", "data": {}} for i in range(MACRO_REQUESTS_IN_FLIGHT * 3)]
+    client.execute_macro_batch(items, max_batch_size=1)
+
+    assert len(responses.calls) == MACRO_REQUESTS_IN_FLIGHT * 3
+    assert peak == MACRO_REQUESTS_IN_FLIGHT
+
+
+@responses.activate
+def test_execute_macro_batch_keeps_chunk_order_whatever_order_requests_finish(client: BackendClient) -> None:
+    def respond(request: Any) -> tuple[int, dict[str, str], str]:
+        first_id = json.loads(request.body)["items"][0]["id"]
+        time.sleep(0.1 if first_id == "0" else 0)
+        return _echo_results(request)
+
+    responses.add_callback(responses.POST, _BATCH_URL, callback=respond)
+
+    items = [{"id": str(i), "macro_id": "m", "data": {}} for i in range(4)]
+    response = client.execute_macro_batch(items, max_batch_size=1)
+
+    assert [result["id"] for result in response["results"]] == ["0", "1", "2", "3"]
 
 
 def test_execute_macro_batch_empty_short_circuits(client: BackendClient) -> None:
@@ -268,3 +318,50 @@ def test_execute_macro_batch_sorts_same_macro_by_workbook_version(client: Backen
     sent = _sent_batches()
     assert len(sent) == 1
     assert [item["id"] for item in sent[0]] == ["live", "v1", "v2"]
+
+
+def _one_item_batch(client: BackendClient) -> dict[str, Any]:
+    return client.execute_macro_batch([{"id": "1", "macro_id": "m", "data": {}}])
+
+
+@responses.activate
+def test_a_transient_failure_is_retried_before_the_items_fail(client: BackendClient) -> None:
+    responses.add(responses.POST, _BATCH_URL, json={"message": "restarting"}, status=503)
+    responses.add(responses.POST, _BATCH_URL, body=requests.ConnectionError("connection reset"))
+    responses.add_callback(responses.POST, _BATCH_URL, callback=_echo_results)
+
+    response = _one_item_batch(client)
+
+    assert len(responses.calls) == 3
+    assert [result["success"] for result in response["results"]] == [True]
+
+
+@responses.activate
+def test_a_refused_request_is_not_retried(client: BackendClient) -> None:
+    responses.add(responses.POST, _BATCH_URL, json={"message": "bad request"}, status=400)
+
+    response = _one_item_batch(client)
+
+    assert len(responses.calls) == 1
+    assert [result["success"] for result in response["results"]] == [False]
+
+
+@responses.activate
+def test_a_response_that_is_not_json_is_not_retried(client: BackendClient) -> None:
+    responses.add(responses.POST, _BATCH_URL, body="<html>proxy error</html>", status=200)
+
+    response = _one_item_batch(client)
+
+    assert len(responses.calls) == 1
+    assert [result["success"] for result in response["results"]] == [False]
+
+
+@responses.activate
+def test_the_items_fail_once_every_attempt_has_failed(client: BackendClient) -> None:
+    responses.add(responses.POST, _BATCH_URL, json={"message": "throttled"}, status=429)
+
+    response = _one_item_batch(client)
+
+    assert len(responses.calls) == len(backend_client.MACRO_REQUEST_RETRY_DELAYS) + 1
+    assert [result["success"] for result in response["results"]] == [False]
+    assert "Chunk failed" in response["results"][0]["error"]

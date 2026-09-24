@@ -56,10 +56,36 @@ variable "node_type_id" {
   default     = null
 }
 
+variable "driver_node_type_id" {
+  description = "The node type ID for the driver. Defaults to the worker node type."
+  type        = string
+  default     = null
+}
+
+variable "spark_conf" {
+  description = "Spark configuration for the pipeline cluster"
+  type        = map(string)
+  default     = {}
+}
+
 variable "autoscale" {
   description = "Whether to enable autoscaling for the pipeline cluster"
   type        = bool
   default     = false
+}
+
+# Enhanced autoscaling is only the default for pipelines created in the UI.
+# Terraform edits an existing pipeline, which can otherwise stay on legacy
+# cluster autoscaling, and that mode scales streaming workloads poorly.
+variable "autoscale_mode" {
+  description = "Autoscaling algorithm when autoscaling is enabled: ENHANCED or LEGACY"
+  type        = string
+  default     = "ENHANCED"
+
+  validation {
+    condition     = contains(["ENHANCED", "LEGACY"], var.autoscale_mode)
+    error_message = "autoscale_mode must be ENHANCED or LEGACY."
+  }
 }
 
 variable "min_workers" {

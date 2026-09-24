@@ -1,15 +1,17 @@
 # Databricks notebook source
 # DBTITLE 1,Gold Layer - Experiment Device Data
-# Gold: the device aggregate joined to its registry-resolved device struct.
+# Gold: each device's latest attributes, joined to its registry-resolved device
+# struct. The measurement count is added when someone reads, by the
+# experiment_device_data view.
 
 # COMMAND ----------
 import dlt
 from pyspark.sql import functions as F
 
 from openjii.centrum import (
-    AGG_EXPERIMENT_DEVICE_TABLE,
     EXPERIMENT_DEVICE_DATA_TABLE,
     EXPERIMENT_DEVICES_TABLE,
+    LATEST_EXPERIMENT_DEVICE_TABLE,
 )
 
 # COMMAND ----------
@@ -28,11 +30,10 @@ from openjii.centrum import (
     }
 )
 def experiment_device_data():
-    """Join only. The aggregate it used to perform now lives in
-    agg_experiment_device, which is what lets that side convert to a streaming
-    table instead of rescanning silver on every trigger.
+    """Joins only, over inputs of one row per device, so a refresh never touches
+    the measurements themselves.
     """
-    aggregated = dlt.read(AGG_EXPERIMENT_DEVICE_TABLE).withColumn(
+    aggregated = dlt.read(LATEST_EXPERIMENT_DEVICE_TABLE).withColumn(
         "id",
         F.abs(
             F.hash(
@@ -63,7 +64,6 @@ def experiment_device_data():
             aggregated.device_name,
             aggregated.device_version,
             aggregated.device_battery,
-            aggregated.total_measurements,
             aggregated.processed_timestamp,
             devices.device,
         )

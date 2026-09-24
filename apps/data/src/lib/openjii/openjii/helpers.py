@@ -112,7 +112,7 @@ def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="cen
     Returns
     -------
     dict
-        Keys: identifier, row_count, macro_schema, questions_schema, custom_metadata_schema.
+        Keys: identifier, macro_schema, questions_schema, custom_metadata_schema.
     """
     from pyspark.sql import SparkSession
     from pyspark.sql.functions import col
@@ -122,7 +122,7 @@ def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="cen
     metadata_df = (
         spark.table(f"{catalog_name}.{schema_name}.experiment_table_metadata")
         .filter((col("experiment_id") == experiment_id) & (col("identifier") == identifier))
-        .select("identifier", "row_count", "macro_schema", "questions_schema", "custom_metadata_schema")
+        .select("identifier", "macro_schema", "questions_schema", "custom_metadata_schema")
     )
 
     rows = metadata_df.collect()
@@ -132,7 +132,6 @@ def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="cen
     row = rows[0]
     return {
         "identifier": row.identifier,
-        "row_count": row.row_count,
         "macro_schema": row.macro_schema,
         "questions_schema": row.questions_schema,
         "custom_metadata_schema": row.custom_metadata_schema,
@@ -142,7 +141,7 @@ def get_table_metadata(experiment_id, identifier, catalog_name, schema_name="cen
 # Table type configuration: (source_table_name, order_by_column)
 _TABLE_CONFIG = {
     "raw_data": ("enriched_experiment_raw_data", "timestamp"),
-    "device": ("experiment_device_data", "processed_timestamp"),
+    "device": ("experiment_device_data_view", "processed_timestamp"),
     "macro": ("enriched_experiment_macro_data", "timestamp"),
     "upload": ("enriched_experiment_uploaded_data", "uploaded_at"),
 }

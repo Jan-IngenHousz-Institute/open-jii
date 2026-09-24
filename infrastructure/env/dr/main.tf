@@ -574,7 +574,7 @@ module "backend_ecs" {
     { name = "DATABRICKS_CATALOG_NAME", value = var.databricks_catalog_name },
     { name = "DATABRICKS_CENTRUM_SCHEMA_NAME", value = "centrum" },
     { name = "DATABRICKS_RAW_DATA_TABLE_NAME", value = "enriched_experiment_raw_data" },
-    { name = "DATABRICKS_DEVICE_DATA_TABLE_NAME", value = "experiment_device_data" },
+    { name = "DATABRICKS_DEVICE_DATA_TABLE_NAME", value = "experiment_device_data_view" },
     { name = "DATABRICKS_MACRO_DATA_TABLE_NAME", value = "enriched_experiment_macro_data" },
     { name = "DATABRICKS_UPLOADED_DATA_TABLE_NAME", value = "enriched_experiment_uploaded_data" },
     { name = "DB_HOST", value = module.aurora_db.cluster_endpoint },

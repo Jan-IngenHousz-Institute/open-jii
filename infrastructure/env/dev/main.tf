@@ -405,7 +405,27 @@ module "github_cicd_service_principal" {
   }
 }
 
-# Cluster policy for cost control and resource management
+locals {
+  # The pipeline wheels, installed through the cluster policies.
+  pipeline_libraries = [
+    {
+      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
+    },
+    {
+      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
+    },
+    {
+      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/data_repair-0.1.0-py3-none-any.whl"
+    }
+  ]
+}
+
+# Workers keep 8 GB per core: Python UDF workers run outside Spark's heap and cannot
+# spill, and the end state has not yet run on long-lived clusters. r6id is the newest
+# r generation the disk cache runs on, and spot rarely reclaims it. The driver runs no
+# tasks, so it skips local NVMe, but it needs four cores: on two, the Spark driver often
+# misses its 300-second startup timeout. It needs 32 GB too: on 16 it ran in swap, and its
+# full garbage collections paused every flow for seconds.
 module "node_cluster_policy" {
   source = "../../modules/databricks/cluster-policy"
 
@@ -419,25 +439,113 @@ module "node_cluster_policy" {
     }
     node_type_id = {
       type  = "fixed"
-      value = "r5d.large"
+      value = "r6id.large"
+    }
+    driver_node_type_id = {
+      type  = "fixed"
+      value = "r7i.xlarge"
+    }
+    # Ranges above what the pipelines run, so workers can be added without a policy edit.
+    num_workers = {
+      type       = "range"
+      minValue   = 1
+      maxValue   = 8
+      isOptional = true
+    }
+    "autoscale.min_workers" = {
+      type       = "range"
+      minValue   = 1
+      maxValue   = 8
+      isOptional = true
+    }
+    "autoscale.max_workers" = {
+      type       = "range"
+      minValue   = 1
+      maxValue   = 8
+      isOptional = true
+    }
+    # The spot settings the workspace applied by default, pinned so they cannot drift:
+    # workers on spot, falling back to on-demand, behind an on-demand driver.
+    "aws_attributes.availability" = {
+      type  = "fixed"
+      value = "SPOT_WITH_FALLBACK"
+    }
+    "aws_attributes.first_on_demand" = {
+      type  = "fixed"
+      value = 1
+    }
+    "aws_attributes.zone_id" = {
+      type  = "fixed"
+      value = "auto"
+    }
+    "aws_attributes.spot_bid_price_percent" = {
+      type  = "fixed"
+      value = 100
+    }
+  })
+
+  libraries = local.pipeline_libraries
+
+  permissions = [
+    {
+      service_principal_name = module.node_service_principal.service_principal_application_id
+      permission_level       = "CAN_USE"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.databricks_workspace]
+}
+
+# The macro tasks mostly wait on the sandbox over HTTP, so cores are bought as task
+# slots at the lowest price. Each slot keeps three requests in flight, and the slots
+# stay within the sandbox's reserved concurrency, which is why the worker is fixed. The
+# driver takes four cores for the same startup timeout as Centrum's.
+module "macro_cluster_policy" {
+  source = "../../modules/databricks/cluster-policy"
+
+  name        = "macro-pipeline-cluster-policy-${var.environment}"
+  description = "Cluster policy for the macro execution pipeline with pre-installed libraries and cost controls"
+
+  definition = jsonencode({
+    cluster_type = {
+      type   = "allowlist"
+      values = ["all-purpose", "dlt"]
+    }
+    node_type_id = {
+      type  = "fixed"
+      value = "r5a.large"
+    }
+    driver_node_type_id = {
+      type  = "fixed"
+      value = "m7i.xlarge"
     }
     num_workers = {
       type  = "fixed"
       value = 1
     }
+    "aws_attributes.availability" = {
+      type  = "fixed"
+      value = "SPOT_WITH_FALLBACK"
+    }
+    "aws_attributes.first_on_demand" = {
+      type  = "fixed"
+      value = 1
+    }
+    "aws_attributes.zone_id" = {
+      type  = "fixed"
+      value = "auto"
+    }
+    "aws_attributes.spot_bid_price_percent" = {
+      type  = "fixed"
+      value = 100
+    }
   })
 
-  libraries = [
-    {
-      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/enrich-0.1.0-py3-none-any.whl"
-    },
-    {
-      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
-    },
-    {
-      whl = "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/data_repair-0.1.0-py3-none-any.whl"
-    }
-  ]
+  libraries = local.pipeline_libraries
 
   permissions = [
     {
@@ -713,15 +821,18 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_contributors",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/bridge_experiment_contributor",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/bridge_experiment_device",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/agg_experiment_device",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/latest_experiment_activity",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/latest_device_data",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/latest_device_event",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/latest_experiment_device",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_raw_data_schemas",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_uploaded_data_schemas",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/sources",
-    # enriched
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/enriched/enriched_experiment_raw_data",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/enriched/enriched_experiment_uploaded_data",
     # event hooks
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/hooks",
   ]
 
+  # Use Databricks per-flow trigger defaults; notebooks may override individual tables.
   configuration = {
     "CATALOG_NAME"                    = module.databricks_catalog.catalog_name
     "BRONZE_TABLE"                    = "raw_data"
@@ -732,23 +843,32 @@ module "centrum_pipeline" {
     "CHECKPOINT_PATH"                 = "/Volumes/${module.databricks_catalog.catalog_name}/centrum/checkpoints/kinesis"
     "ENVIRONMENT"                     = var.environment
     "MONITORING_SLACK_CHANNEL"        = var.slack_channel
-    "pipelines.trigger.interval"      = "120 seconds"
     "LARGE_IOT_S3_PATH"               = "s3://${module.large_iot_s3.bucket_id}/"
     "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
-    # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust the r5d.large driver
+    # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust a 16 GB driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
   }
 
-  # AUTO CDC on the gold bridges needs PRO or ADVANCED.
+  # AUTO CDC needs PRO, and the silver expectations need ADVANCED.
   edition = "ADVANCED"
 
-  continuous_mode  = true
-  development_mode = true
+  continuous_mode = true
+  # Production mode restarts the cluster and retries after a recoverable failure.
+  development_mode = false
   serverless       = false
 
-  node_type_id = "r5d.large"
-  num_workers  = 1
-  policy_id    = module.node_cluster_policy.policy_id
+  node_type_id        = "r6id.large"
+  driver_node_type_id = "r7i.xlarge"
+  num_workers         = 1
+  policy_id           = module.node_cluster_policy.policy_id
+
+  spark_conf = {
+    # Streaming skips AQE, so shuffles run at one per worker core.
+    "spark.sql.shuffle.partitions" = "2"
+    # Adds the Python and other processes' memory to the driver's metrics, which the
+    # JVM heap figures leave out.
+    "spark.executor.processTreeMetrics.enabled" = "true"
+  }
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
@@ -773,9 +893,9 @@ module "centrum_pipeline" {
 }
 
 # Macro execution is a separate deployment, not a separate domain: it publishes
-# experiment_macro_data and its enriched view into centrum like any other gold
-# table. It runs on its own compute because the sandbox call is sequential HTTP
-# from a Spark task, and sharing centrum's cluster meant those tasks held the
+# experiment_macro_data and its schema samples into centrum like any other gold
+# table. It runs on its own compute because a Spark task waits on the sandbox
+# over HTTP, and sharing centrum's cluster meant those tasks held the
 # slots the Kinesis reader needs for its prefetch job.
 module "macro_execution_pipeline" {
   source = "../../modules/databricks/pipeline"
@@ -786,26 +906,34 @@ module "macro_execution_pipeline" {
 
   notebook_paths = [
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/experiment_macro_data",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/enriched_experiment_macro_data",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/macros/experiment_macro_data_schemas",
   ]
 
   configuration = {
     "CATALOG_NAME"        = module.databricks_catalog.catalog_name
     "CENTRUM_SCHEMA_NAME" = "centrum"
     "ENVIRONMENT"         = var.environment
-    # The cadence both tables had inside Centrum. Unset, a continuous pipeline
-    # falls back to five seconds for the stream and one minute for the enriched
-    # view, which is a full recompute every time.
-    "pipelines.trigger.interval" = "120 seconds"
   }
 
+  # Neither AUTO CDC nor expectations, so CORE is enough.
+  edition = "CORE"
+
   continuous_mode  = true
-  development_mode = true
+  development_mode = false
   serverless       = false
 
-  node_type_id = "r5d.large"
-  num_workers  = 1
-  policy_id    = module.node_cluster_policy.policy_id
+  node_type_id        = "r5a.large"
+  driver_node_type_id = "m7i.xlarge"
+  num_workers         = 1
+  policy_id           = module.macro_cluster_policy.policy_id
+
+  spark_conf = {
+    # Streaming skips AQE, so shuffles run at one per worker core.
+    "spark.sql.shuffle.partitions" = "2"
+    # Adds the Python and other processes' memory to the driver's metrics, which the
+    # JVM heap figures leave out.
+    "spark.executor.processTreeMetrics.enabled" = "true"
+  }
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
@@ -826,7 +954,7 @@ module "macro_execution_pipeline" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.centrum_pipeline]
+  depends_on = [module.macro_cluster_policy, module.centrum_pipeline]
 }
 
 module "metrics_pipeline" {
@@ -1386,6 +1514,60 @@ module "experiment_custom_metadata_table" {
   }
 
   depends_on = [databricks_grants.centrum_schema]
+}
+
+# Plain views over gold: the joins and counts run when someone reads, for the
+# experiment they read, so no pipeline recomputes them. The enriched views carry the
+# names of the materialized views they replaced. The provider cannot rename a view,
+# so a name change here must come with a new address to replace it.
+module "enriched_views" {
+  source = "../../modules/databricks/sql-table"
+  for_each = toset([
+    "enriched_experiment_raw_data",
+    "enriched_experiment_macro_data",
+    "enriched_experiment_uploaded_data",
+  ])
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = each.key
+  table_type   = "VIEW"
+  view_definition = templatefile(
+    "${path.root}/../../../apps/data/src/views/${each.key}.sql",
+    { catalog = module.databricks_catalog.catalog_name },
+  )
+  warehouse_id = var.backend_databricks_warehouse_id
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.experiment_annotations_table, module.experiment_custom_metadata_table]
+}
+
+# Read-time counts on top of pipeline tables that keep the plain names.
+module "serving_views" {
+  source = "../../modules/databricks/sql-table"
+  for_each = toset([
+    "experiment_table_metadata",
+    "experiment_device_data",
+  ])
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = "${each.key}_view"
+  table_type   = "VIEW"
+  view_definition = templatefile(
+    "${path.root}/../../../apps/data/src/views/${each.key}.sql",
+    { catalog = module.databricks_catalog.catalog_name },
+  )
+  warehouse_id = var.backend_databricks_warehouse_id
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.experiment_annotations_table, module.experiment_custom_metadata_table]
 }
 
 module "data_export_job" {
@@ -2164,7 +2346,7 @@ module "backend_ecs" {
     },
     {
       name  = "DATABRICKS_DEVICE_DATA_TABLE_NAME"
-      value = "experiment_device_data"
+      value = "experiment_device_data_view"
     },
     {
       name  = "DATABRICKS_MACRO_DATA_TABLE_NAME"

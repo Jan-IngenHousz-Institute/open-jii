@@ -1,0 +1,61 @@
+---
+title: "ADR: Size pipeline compute per workload"
+description: "Why Centrum and the macro pipeline run on the node types, editions and spot settings they do."
+---
+
+{/* verified: code@35e73aeea 2026-09-23 */}
+
+# ADR: Size pipeline compute per workload
+
+**Date:** 2026-09-23  
+**Status:** Accepted  
+**Amended:** 2026-09-24, larger drivers, and streaming shuffles sized to the workers.
+
+## Context
+
+Both pipelines shared one cluster policy that put every node on `r5d.large`, a type spot often reclaims, and production ran them in development mode. Yet they do different work. Centrum ingests from Kinesis, runs Python UDFs and maintains streaming and AUTO CDC tables, so its workers need memory and steady cores. The macro pipeline mostly waits on the macro sandbox over HTTP, so its workers only need to be cheap.
+
+## Decision
+
+| Pipeline | Driver, on-demand | Workers, spot with fallback                    | Edition  |
+| -------- | ----------------- | ---------------------------------------------- | -------- |
+| Centrum  | `r7i.xlarge`      | `r6id.large`, 1 in dev, 2 to 6 in production   | ADVANCED |
+| Macro    | `m7i.xlarge`      | `r5a.large` in dev, `m5a.xlarge` in production | CORE     |
+
+Each pipeline has its own cluster policy, which pins these types.
+
+- **Centrum workers keep 8 GB per core.** Python UDF workers run outside Spark's heap and cannot spill. `r6id` has local NVMe for the disk cache, and spot rarely reclaims it.
+- **Drivers get four cores.** On two, the Spark driver often misses its startup timeout, and clusters took over ten minutes to start or never did.
+- **Centrum's driver gets 32 GB.** On 16 GB it ran in swap, and its garbage collections froze every flow for seconds at a time.
+- **Streaming shuffles match the workers' cores.** Stateful streaming operators skip adaptive execution, so the default of 200 partitions turned a few rows into 200 tasks per trigger.
+- **Auto compaction is off on bronze and silver.** It always plans at 200 partitions and held up ingestion. Predictive optimization compacts these tables asynchronously instead.
+- **Macro workers are the cheapest cores spot rarely reclaims.** The work waits on HTTP, so faster cores buy nothing.
+- **The macro pipeline runs on CORE,** since it uses neither AUTO CDC nor expectations.
+- **Both environments run in production mode,** which restarts and retries after recoverable failures.
+
+## Consequences
+
+**Benefits:**
+
+- Clusters start in minutes, and ingestion no longer waits behind oversized shuffles.
+- The macro pipeline costs less than before, and spot rarely reclaims any worker.
+
+**Trade-offs / Risks:**
+
+- Centrum costs more per node, so its savings have to come from the lighter architecture.
+- The larger drivers cost a few dollars a day more per pipeline and environment.
+- Bronze and silver hold small files until predictive optimization compacts them.
+- A settings change restarts a continuous pipeline, so each promotion restarts it twice, once for Terraform and once after the bundle deploys.
+
+## Alternatives Considered
+
+- Two-core drivers were cheaper, but failed to start.
+- General-purpose `m6id` workers had too little memory per core for Centrum's Python UDFs.
+- Other `r` workers lacked local NVMe or disk cache support, or cost more per core.
+- Photon costs more and does not speed up Python UDFs.
+- PRO would make Centrum cheaper, but its silver expectations would lose their data-quality metrics.
+- Graviton has no published pipeline price.
+
+## Conclusion
+
+Compute is sized per role from measured load. Once the new architecture has run for a while, check that Centrum's driver stays out of swap and the macro driver's memory levels off, and whether Centrum's workers can move to general-purpose nodes.

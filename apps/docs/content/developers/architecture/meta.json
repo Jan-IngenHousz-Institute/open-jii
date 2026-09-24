@@ -5,6 +5,7 @@
     "identity-access-management",
     "data-ingestion",
     "time-synchronization",
-    "medallion-layers"
+    "medallion-layers",
+    "pipeline-compute"
   ]
 }

@@ -17,6 +17,9 @@ resource "databricks_sql_table" "this" {
   comment      = var.comment
   properties   = length(var.properties) > 0 ? var.properties : null
 
+  view_definition = var.view_definition
+  warehouse_id    = var.warehouse_id
+
   dynamic "column" {
     for_each = var.columns
     content {
