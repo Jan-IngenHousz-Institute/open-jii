@@ -113,7 +113,9 @@ Centrum runs in continuous mode in both environments and uses Databricks' defaul
 trigger intervals. Its streaming queries, including Kinesis ingestion, trigger every
 four seconds: the driver logs `The trigger interval is 4000 milliseconds` for each of
 them. Complete-refresh queries use the documented defaults of one minute with only
-Delta inputs and ten minutes with non-Delta inputs. Production compute autoscales
+Delta inputs and ten minutes with non-Delta inputs. The AUTO CDC tables beneath the
+device and contributor summaries are the exception: each merge costs seconds of fixed
+work however few rows it carries, so they trigger every two minutes. Production compute autoscales
 between two and six workers; dev runs on one fixed worker. Each hop from bronze to
 gold waits for its own query's next trigger, and processing can outlast the interval,
 so the interval is not an end-to-end latency guarantee.
