@@ -412,7 +412,7 @@ module "node_cluster_policy" {
     }
     node_type_id = {
       type  = "fixed"
-      value = "r6id.large"
+      value = "r6id.xlarge"
     }
     driver_node_type_id = {
       type  = "fixed"
@@ -833,7 +833,7 @@ module "centrum_pipeline" {
   development_mode = false
   serverless       = false
 
-  node_type_id        = "r6id.large"
+  node_type_id        = "r6id.xlarge"
   driver_node_type_id = "r7i.xlarge"
   autoscale           = true
   min_workers         = 2

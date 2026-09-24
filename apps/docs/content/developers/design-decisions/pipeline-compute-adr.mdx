@@ -9,7 +9,7 @@ description: "Why Centrum and the macro pipeline run on the node types, editions
 
 **Date:** 2026-09-23  
 **Status:** Accepted  
-**Amended:** 2026-09-24, larger drivers, and streaming shuffles sized to the workers.
+**Amended:** 2026-09-24, larger drivers, streaming shuffle settings, and 32 GB production Centrum workers.
 
 ## Context
 
@@ -17,12 +17,14 @@ Both pipelines shared one cluster policy that put every node on `r5d.large`, a t
 
 ## Decision
 
-| Pipeline | Driver, on-demand | Workers, spot with fallback                    | Edition  |
-| -------- | ----------------- | ---------------------------------------------- | -------- |
-| Centrum  | `r7i.xlarge`      | `r6id.large`, 1 in dev, 2 to 6 in production   | ADVANCED |
-| Macro    | `m7i.xlarge`      | `r5a.large` in dev, `m5a.xlarge` in production | CORE     |
+| Pipeline | Driver, on-demand | Workers, spot with fallback                                 | Edition  |
+| -------- | ----------------- | ----------------------------------------------------------- | -------- |
+| Centrum  | `r7i.xlarge`      | `r6id.large`, 1 in dev; `r6id.xlarge`, 2 to 6 in production | ADVANCED |
+| Macro    | `m7i.xlarge`      | `r5a.large` in dev, `m5a.xlarge` in production              | CORE     |
 
 Each pipeline has its own cluster policy, which pins these types.
+
+Production Centrum workers move from 16 GB and two cores to 32 GB and four cores as a mitigation for executor out-of-memory failures observed on the older production pipeline. Memory per core remains 8 GB, so this does not guarantee that memory available per concurrent task increases. The split pipeline has not been shown to need this size; reassess it after rollout using executor failures, swap and successful data commits. The larger workers increase compute cost at the same worker count. Keep the existing 12-partition shuffle setting until measurements justify changing it.
 
 - **Centrum workers keep 8 GB per core.** Python UDF workers run outside Spark's heap and cannot spill. `r6id` has local NVMe for the disk cache, and spot rarely reclaims it.
 - **Drivers get four cores.** On two, the Spark driver often misses its startup timeout, and clusters took over ten minutes to start or never did.
