@@ -841,7 +841,7 @@ module "centrum_pipeline" {
   policy_id           = module.node_cluster_policy.policy_id
 
   spark_conf = {
-    # Streaming skips AQE, so shuffles run at one per worker core.
+    # Keep the existing shuffle count while measuring the worker-memory change.
     "spark.sql.shuffle.partitions" = "12"
     # Adds the Python and other processes' memory to the driver's metrics, which the
     # JVM heap figures leave out.

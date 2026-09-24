@@ -29,7 +29,7 @@ Production Centrum workers move from 16 GB and two cores to 32 GB and four cores
 - **Centrum workers keep 8 GB per core.** Python UDF workers run outside Spark's heap and cannot spill. `r6id` has local NVMe for the disk cache, and spot rarely reclaims it.
 - **Drivers get four cores.** On two, the Spark driver often misses its startup timeout, and clusters took over ten minutes to start or never did.
 - **Centrum's driver gets 32 GB.** On 16 GB it ran in swap, and its garbage collections froze every flow for seconds at a time.
-- **Streaming shuffles match the workers' cores.** Stateful streaming operators skip adaptive execution, so the default of 200 partitions turned a few rows into 200 tasks per trigger.
+- **Production Centrum keeps 12 shuffle partitions.** This was set when its maximum six workers had two cores each. Keep it unchanged while measuring the larger workers; a node resize does not itself change a stateful checkpoint's partition count.
 - **Auto compaction is off on bronze and silver.** It always plans at 200 partitions and held up ingestion. Predictive optimization compacts these tables asynchronously instead.
 - **Macro workers are the cheapest cores spot rarely reclaims.** The work waits on HTTP, so faster cores buy nothing.
 - **The macro pipeline runs on CORE,** since it uses neither AUTO CDC nor expectations.
