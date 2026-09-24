@@ -148,7 +148,7 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
           <h4 className="text-sm font-medium">{tCommon("common.forkedFrom")}</h4>
           <Link
             href={`/${locale}/platform/protocols/${protocol.forkedFrom}`}
-            className="text-primary hover:text-primary/80 text-sm underline underline-offset-2"
+            className="text-primary hover:text-primary/80 block w-fit text-sm underline underline-offset-2"
           >
             {tCommon("common.viewOriginal")}
           </Link>

@@ -73,7 +73,7 @@ export function ExperimentMembersTrail({
   return (
     <Link
       href={href}
-      className="hover:bg-muted/50 group -mx-2 flex items-center gap-3 rounded-md px-2 py-1 transition-colors"
+      className="hover:bg-muted/50 group -mx-2 -my-1 flex items-center gap-3 rounded-md px-2 py-1 transition-colors"
     >
       {/* No stack at all when nothing may be credited: a lone "+3" bubble beside no
           faces reads as three hidden people rather than as the total. */}

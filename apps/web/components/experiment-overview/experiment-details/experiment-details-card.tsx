@@ -135,7 +135,8 @@ export function ExperimentDetailsCard({
       <div className={panelContentVariants({ collapsed: isCollapsed, transitionsReady })}>
         {/* The collapsed body is a zero-height grid rather than `hidden`, so it
             keeps its animation but is still a flex item: the card's own bottom
-            padding would sit under nothing. */}
+            padding would sit under nothing, and its gap-2 still opens above the
+            body, so the summary's pb-1 makes up the rest of the usual 12px. */}
         <Card
           padding="sm"
           className={cn("relative shadow-none", isMobileCollapsed && "pb-0 lg:pb-3")}
@@ -161,7 +162,7 @@ export function ExperimentDetailsCard({
 
           {/* Mobile collapsed summary */}
           {isMobileCollapsed && (
-            <div className="text-muted-foreground -mt-2 truncate px-6 pb-3 text-sm lg:hidden">
+            <div className="text-muted-foreground -mt-2 truncate px-6 pb-1 text-sm lg:hidden">
               {t("updated")} {formatDate(experiment.updatedAt)}, {t("experimentId")} {experiment.id}
             </div>
           )}
@@ -228,7 +229,9 @@ export function ExperimentDetailsCard({
                 </div>
               </CardContent>
 
-              <Separator decorative={false} className="mx-4 my-4 w-auto" />
+              {canManage || canRequestToJoin ? (
+                <Separator decorative={false} className="mx-4 my-4 w-auto" />
+              ) : null}
 
               {canManage ? (
                 <ExperimentVisibilityCard
@@ -241,7 +244,7 @@ export function ExperimentDetailsCard({
               ) : null}
 
               {canRequestToJoin ? (
-                <div className="px-6 py-4">
+                <div className="px-6">
                   <ExperimentRequestToJoin experimentId={experimentId} />
                 </div>
               ) : null}
