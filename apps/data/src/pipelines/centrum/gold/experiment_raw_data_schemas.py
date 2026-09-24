@@ -25,6 +25,7 @@ from openjii.variant_schema import variant_schema_key
         "pipelines.autoOptimize.managed": "true",
         "delta.feature.variantType-preview": "supported",
     },
+    spark_conf={"spark.sql.streaming.stateStore.partitions": "2"},
 )
 def experiment_raw_data_schemas():
     return (

@@ -823,8 +823,7 @@ module "centrum_pipeline" {
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust a 16 GB driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
     # Streaming skips AQE, so shuffles run at this count: one per worker core.
-    "spark.sql.shuffle.partitions"              = "12"
-    "spark.sql.streaming.stateStore.partitions" = "2"
+    "spark.sql.shuffle.partitions" = "12"
   }
 
   # AUTO CDC needs PRO, and the silver expectations need ADVANCED.
@@ -887,8 +886,7 @@ module "macro_execution_pipeline" {
     "CENTRUM_SCHEMA_NAME" = "centrum"
     "ENVIRONMENT"         = upper(var.environment)
     # Streaming skips AQE, so shuffles run at this count: one per worker core.
-    "spark.sql.shuffle.partitions"              = "4"
-    "spark.sql.streaming.stateStore.partitions" = "2"
+    "spark.sql.shuffle.partitions" = "4"
   }
 
   # Neither AUTO CDC nor expectations, so CORE is enough.
