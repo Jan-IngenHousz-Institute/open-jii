@@ -24,7 +24,7 @@ const bannerVariants = cva(
     variants: {
       severity: {
         info: "bg-secondary border-b border-primary/5",
-        warning: "bg-accent/70 border-b border-primary/5",
+        warning: "bg-status-stale border-b border-status-stale-foreground/5",
         critical: "bg-destructive/10 border-b border-destructive/5",
       },
     },
@@ -36,7 +36,7 @@ const blobVariants = cva("h-28 w-56 rounded-full", {
   variants: {
     severity: {
       info: "from-primary/25 to-accent/30",
-      warning: "from-accent/40 to-primary/15",
+      warning: "from-status-stale-foreground/30 to-status-stale-foreground/20",
       critical: "from-destructive/30 to-destructive/20",
     },
   },
@@ -47,7 +47,8 @@ const badgeVariants = cva("flex h-7 w-7 flex-none items-center justify-center ro
   variants: {
     severity: {
       info: "bg-primary/10 text-foreground border border-primary/5",
-      warning: "bg-accent/80 text-foreground border border-primary/5",
+      warning:
+        "bg-status-stale-foreground/10 text-foreground border border-status-stale-foreground/5",
       critical: "bg-destructive/10 text-foreground border border-destructive/5",
     },
   },
