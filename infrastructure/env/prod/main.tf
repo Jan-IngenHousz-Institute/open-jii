@@ -365,7 +365,7 @@ module "node_cluster_policy" {
     }
     node_type_id = {
       type  = "fixed"
-      value = "r5d.large"
+      value = "r5d.xlarge"
     }
     num_workers = {
       type       = "range"
@@ -696,7 +696,7 @@ module "centrum_pipeline" {
     "MONITORING_SLACK_CHANNEL"        = var.slack_channel
     "LARGE_IOT_S3_PATH"               = "s3://${module.large_iot_s3.bucket_id}/"
     "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
-    # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust the r5d.large driver
+    # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust the driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
   }
 
@@ -704,7 +704,7 @@ module "centrum_pipeline" {
   development_mode = true
   serverless       = false
 
-  node_type_id = "r5d.large"
+  node_type_id = "r5d.xlarge"
   autoscale    = true
   min_workers  = 2
   max_workers  = 6

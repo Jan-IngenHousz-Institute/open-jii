@@ -117,6 +117,14 @@ between two and six workers. These intervals apply only to continuous mode;
 dev retains its triggered schedule and one fixed worker. Processing time can
 exceed the trigger interval, so this is not a five-second end-to-end latency guarantee.
 
+Production Centrum uses `r5d.xlarge` nodes with 32 GB and four cores, including
+the driver because this release uses the same node type for both roles. This
+increases memory per node from 16 GB as a mitigation for executor out-of-memory
+failures. Memory per core remains 8 GB, so more concurrent tasks can consume the
+extra capacity. Confirm improvement through successful data commits and fewer
+executor failures after a normal restart that preserves checkpoints. The larger
+nodes increase compute cost at the same worker count.
+
 ## Imported and uploaded data
 
 Not all data starts in MQTT:
