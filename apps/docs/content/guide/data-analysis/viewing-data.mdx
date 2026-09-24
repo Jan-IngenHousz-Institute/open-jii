@@ -23,8 +23,21 @@ macro produced, and anything uploaded.
 Numeric columns can open a quick table chart. This is useful for checking a
 distribution while cleaning data; it is not a saved analysis.
 
+## New rows arrive on their own
+
+You do not need to reload the page to see new measurements. While the browser
+tab is visible, the Data page checks for new rows every 30 seconds and refreshes
+the table when the dataset in front of you changes. Your sort, filters, page and
+selected rows stay where they were.
+
+The line under the page description says **Live** and when the newest row in
+the dataset arrived. Select the pause button beside it to hold the table still
+while you work through it, and select it again to catch up. If the page cannot
+reach the platform for two minutes, the line says when it last refreshed
+instead. Dashboards and the visualization editor show the same line.
+
 {/* NEEDS-LIVE-CHECK: confirm representative MultispeQ and Ambyte tables, filter operators, raw-trace visibility, and the processing delay from mobile sync to visible row. */}
-{/* NEEDS-RECAPTURE: this frame predates the dataset picker and still shows the tab strip it replaced. */}
+{/* NEEDS-RECAPTURE: this frame predates the dataset picker and the live-update line, and still shows the tab strip the picker replaced. */}
 ![A populated Data tab with dataset tabs, filtering controls, and sortable columns](/img/guide/web/data-first-measurement.png)
 
 ![A saved line visualization built from an experiment dataset](/img/guide/web/charts-filters.png)

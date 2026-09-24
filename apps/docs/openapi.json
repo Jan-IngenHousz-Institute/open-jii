@@ -2262,6 +2262,18 @@
                         "type": "integer",
                         "description": "Total number of rows in the table"
                       },
+                      "latestRowAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "When the table's newest row reached the platform; null for an empty table"
+                      },
                       "defaultSortColumn": {
                         "type": "string",
                         "description": "Default column to sort by in the UI"
@@ -2275,7 +2287,8 @@
                       "identifier",
                       "tableType",
                       "displayName",
-                      "totalRows"
+                      "totalRows",
+                      "latestRowAt"
                     ]
                   }
                 }

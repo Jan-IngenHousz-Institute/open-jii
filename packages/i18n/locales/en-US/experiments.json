@@ -190,7 +190,7 @@
   },
   "experimentData": {
     "title": "Experiment Data",
-    "description": "View, download and manage data associated with this experiment. New data is processed every 2 minutes, though depending on platform load, processing times may vary. UTC = Coordinated Universal Time",
+    "description": "View, download and manage data associated with this experiment. New measurements appear while the page is open. UTC = Coordinated Universal Time",
     "uploadData": "Upload Data",
     "noData": "No measurements recorded yet. Use the openJII mobile app to add measurements.",
     "readMore": "Read more",
@@ -204,7 +204,16 @@
     "datasetRows_other": "{{rows}} rows",
     "datasetGroupStatic": "Source",
     "datasetGroupMacro": "Processed",
-    "datasetGroupUpload": "Uploaded"
+    "datasetGroupUpload": "Uploaded",
+    "freshness": {
+      "live": "Live",
+      "paused": "Paused",
+      "behind": "Last refreshed {{time}}",
+      "newestRow": "Newest row {{time}}",
+      "noRows": "No rows yet",
+      "pause": "Pause live updates",
+      "resume": "Resume live updates"
+    }
   },
   "experiment": "Experiment",
   "detailsTitle": "Details",

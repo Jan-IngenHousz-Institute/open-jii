@@ -16,6 +16,7 @@ describe("CompressionMiddleware", () => {
     tableType: "macro",
     displayName: `Processed Data (${index})`,
     totalRows: index,
+    latestRowAt: null,
   }));
 
   beforeAll(async () => {

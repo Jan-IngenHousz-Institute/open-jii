@@ -180,7 +180,16 @@
     "datasetRows_other": "{{rows}} Zeilen",
     "datasetGroupStatic": "Quelle",
     "datasetGroupMacro": "Verarbeitet",
-    "datasetGroupUpload": "Hochgeladen"
+    "datasetGroupUpload": "Hochgeladen",
+    "freshness": {
+      "live": "Live",
+      "paused": "Pausiert",
+      "behind": "Zuletzt aktualisiert {{time}}",
+      "newestRow": "Neueste Zeile {{time}}",
+      "noRows": "Noch keine Zeilen",
+      "pause": "Live-Aktualisierung pausieren",
+      "resume": "Live-Aktualisierung fortsetzen"
+    }
   },
   "experiment": "Experiment",
   "experimentId": "Experiment-ID",

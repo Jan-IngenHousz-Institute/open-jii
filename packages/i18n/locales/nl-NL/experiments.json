@@ -177,7 +177,16 @@
     "datasetRows_other": "{{rows}} rijen",
     "datasetGroupStatic": "Bron",
     "datasetGroupMacro": "Verwerkt",
-    "datasetGroupUpload": "Geüpload"
+    "datasetGroupUpload": "Geüpload",
+    "freshness": {
+      "live": "Live",
+      "paused": "Gepauzeerd",
+      "behind": "Laatst ververst {{time}}",
+      "newestRow": "Nieuwste rij {{time}}",
+      "noRows": "Nog geen rijen",
+      "pause": "Live-updates pauzeren",
+      "resume": "Live-updates hervatten"
+    }
   },
   "experiment": "Experiment",
   "experimentId": "Experiment-ID",

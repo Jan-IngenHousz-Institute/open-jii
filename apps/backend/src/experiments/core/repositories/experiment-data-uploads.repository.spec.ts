@@ -83,6 +83,7 @@ describe("ExperimentDataUploadsRepository", () => {
             tableType: "upload",
             displayName: "leaf_traits",
             rowCount: 10,
+            latestRowAt: null,
           },
         ]),
       );
@@ -117,6 +118,7 @@ describe("ExperimentDataUploadsRepository", () => {
             tableType: "upload",
             displayName: "leaf_traits",
             rowCount: 1000,
+            latestRowAt: null,
           },
         ]),
       );
@@ -155,6 +157,7 @@ describe("ExperimentDataUploadsRepository", () => {
             tableType: "macro",
             displayName: null,
             rowCount: 5,
+            latestRowAt: null,
           },
         ]),
       );

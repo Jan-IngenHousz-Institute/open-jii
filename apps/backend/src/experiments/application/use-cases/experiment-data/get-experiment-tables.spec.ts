@@ -53,9 +53,27 @@ describe("GetExperimentTablesUseCase", () => {
       // Mock getExperimentTableMetadata response
       const macroId = faker.string.uuid();
       const mockMetadata = [
-        { identifier: ExperimentTableName.RAW_DATA, tableType: "static" as const, rowCount: 100 },
-        { identifier: ExperimentTableName.DEVICE, tableType: "static" as const, rowCount: 50 },
-        { identifier: macroId, tableType: "macro" as const, rowCount: 25 },
+        {
+          identifier: ExperimentTableName.RAW_DATA,
+          tableType: "static" as const,
+          displayName: null,
+          rowCount: 100,
+          latestRowAt: "2026-09-22T10:05:00.000Z",
+        },
+        {
+          identifier: ExperimentTableName.DEVICE,
+          tableType: "static" as const,
+          displayName: null,
+          rowCount: 50,
+          latestRowAt: null,
+        },
+        {
+          identifier: macroId,
+          tableType: "macro" as const,
+          displayName: null,
+          rowCount: 25,
+          latestRowAt: null,
+        },
       ];
 
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
@@ -82,6 +100,7 @@ describe("GetExperimentTablesUseCase", () => {
           tableType: "static",
           displayName: "Raw Data",
           totalRows: 100,
+          latestRowAt: "2026-09-22T10:05:00.000Z",
           defaultSortColumn: "timestamp",
           errorColumn: undefined,
         },
@@ -90,6 +109,7 @@ describe("GetExperimentTablesUseCase", () => {
           tableType: "macro",
           displayName: "Processed Data (some_macro)",
           totalRows: 25,
+          latestRowAt: null,
           defaultSortColumn: "timestamp",
           errorColumn: "macro_error",
         },
@@ -98,7 +118,7 @@ describe("GetExperimentTablesUseCase", () => {
       // Verify Databricks adapter calls
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(databricksPort.getExperimentTableMetadata).toHaveBeenCalledWith(experiment.id, {
-        includeSchemas: false,
+        includeSchemas: true,
       });
     });
 
@@ -111,7 +131,12 @@ describe("GetExperimentTablesUseCase", () => {
       });
 
       const mockMetadata = [
-        { identifier: ExperimentTableName.RAW_DATA, tableType: "static" as const, rowCount: 100 },
+        {
+          identifier: ExperimentTableName.RAW_DATA,
+          tableType: "static" as const,
+          rowCount: 100,
+          latestRowAt: null,
+        },
       ];
 
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
@@ -167,6 +192,7 @@ describe("GetExperimentTablesUseCase", () => {
             tableType: "upload" as const,
             displayName: "leaf_traits",
             rowCount: 42,
+            latestRowAt: null,
           },
         ]),
       );
@@ -181,6 +207,7 @@ describe("GetExperimentTablesUseCase", () => {
           tableType: "upload",
           displayName: "leaf_traits",
           totalRows: 42,
+          latestRowAt: null,
           defaultSortColumn: "uploaded_at",
           errorColumn: undefined,
         },
@@ -194,7 +221,9 @@ describe("GetExperimentTablesUseCase", () => {
       });
       const uploadId = faker.string.uuid();
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
-        success([{ identifier: uploadId, tableType: "upload" as const, rowCount: 7 }]),
+        success([
+          { identifier: uploadId, tableType: "upload" as const, rowCount: 7, latestRowAt: null },
+        ]),
       );
 
       const result = await useCase.execute(experiment.id, testUserId);

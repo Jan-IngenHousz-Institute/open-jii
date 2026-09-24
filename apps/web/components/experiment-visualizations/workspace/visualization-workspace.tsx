@@ -24,6 +24,7 @@ import { TooltipProvider } from "@repo/ui/components/tooltip";
 
 import { useExperimentData } from "../../../hooks/experiment/useExperimentData/useExperimentData";
 import { useExperimentTables } from "../../../hooks/experiment/useExperimentTables/useExperimentTables";
+import { DataFreshness } from "../../experiment-data/data-freshness";
 import type { ChartFormValues } from "../charts/chart-config";
 import { getChartTypeDef } from "../charts/chart-registry";
 import { ChartTypePicker } from "./chart-type-picker";
@@ -137,6 +138,8 @@ export function VisualizationWorkspace({
   };
 
   const isLoadingShell = isLoadingTables;
+  // A chart with no table yet reports the whole experiment.
+  const freshnessTable = tableName === "" ? undefined : tableName;
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -144,26 +147,29 @@ export function VisualizationWorkspace({
         <div className="flex items-center justify-between gap-2">
           <ChartTypePicker value={watchedChartType} onChange={handleChartTypeChange} />
 
-          <Button
-            type="button"
-            variant="outline"
-            size={isInspectorOpen ? "icon" : "sm"}
-            onClick={() => setIsInspectorOpen((prev) => !prev)}
-            aria-label={t(
-              isInspectorOpen ? "workspace.inspector.collapse" : "workspace.inspector.expand",
-            )}
-            aria-expanded={isInspectorOpen}
-            className="bg-card text-muted-foreground hover:text-foreground gap-2"
-          >
-            {isInspectorOpen ? (
-              <PanelRightClose className="size-4" />
-            ) : (
-              <>
-                <PanelRightOpen className="size-4" />
-                <span>{t("workspace.inspector.expandLabel")}</span>
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-3">
+            <DataFreshness experimentId={experimentId} tableName={freshnessTable} />
+            <Button
+              type="button"
+              variant="outline"
+              size={isInspectorOpen ? "icon" : "sm"}
+              onClick={() => setIsInspectorOpen((prev) => !prev)}
+              aria-label={t(
+                isInspectorOpen ? "workspace.inspector.collapse" : "workspace.inspector.expand",
+              )}
+              aria-expanded={isInspectorOpen}
+              className="bg-card text-muted-foreground hover:text-foreground gap-2"
+            >
+              {isInspectorOpen ? (
+                <PanelRightClose className="size-4" />
+              ) : (
+                <>
+                  <PanelRightOpen className="size-4" />
+                  <span>{t("workspace.inspector.expandLabel")}</span>
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">

@@ -19,6 +19,9 @@ import { DashboardModeProvider } from "./dashboard-mode-context";
 vi.mock("../shared/autosave/autosave-indicator", () => ({
   AutosaveIndicator: () => <span data-testid="save-indicator" />,
 }));
+vi.mock("../experiment-data/data-freshness", () => ({
+  DataFreshness: () => <span data-testid="data-freshness" />,
+}));
 vi.mock("./dashboard-gradient-body", () => ({
   DashboardGradientBody: ({
     isEditing,
@@ -119,6 +122,12 @@ describe("DashboardLayoutContent", () => {
   it("renders the save indicator while in edit mode", async () => {
     renderLayout({ isAdmin: true, initialMode: "edit" });
     expect(await screen.findByTestId("save-indicator")).toBeInTheDocument();
+    expect(screen.queryByTestId("data-freshness")).toBeNull();
+  });
+
+  it("shows how current the data is while viewing", () => {
+    renderLayout();
+    expect(screen.getByTestId("data-freshness")).toBeInTheDocument();
   });
 
   it("renders the metadata fields with formatted dates and the creator name", () => {

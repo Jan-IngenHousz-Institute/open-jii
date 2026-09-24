@@ -10,6 +10,7 @@ function table(overrides: Partial<ExperimentTableMetadata> = {}): ExperimentTabl
     identifier: "raw_data",
     tableType: "static",
     displayName: "Raw Data",
+    latestRowAt: null,
     totalRows: 122840,
     ...overrides,
   };

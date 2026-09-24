@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { z } from "zod";
 
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -15,8 +15,7 @@ import type {
   ExperimentTableMetadata,
   ExperimentTableType,
 } from "../../../core/models/experiment-data.model";
-import { DATABRICKS_PORT } from "../../../core/ports/databricks.port";
-import type { DatabricksPort } from "../../../core/ports/databricks.port";
+import { ExperimentDataRepository } from "../../../core/repositories/experiment-data.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
 export interface TableMetadataDto {
@@ -24,6 +23,7 @@ export interface TableMetadataDto {
   tableType: ExperimentTableType;
   displayName: string;
   totalRows: number;
+  latestRowAt: string | null;
   defaultSortColumn?: string;
   errorColumn?: string;
 }
@@ -36,7 +36,7 @@ export class GetExperimentTablesUseCase {
 
   constructor(
     private readonly experimentRepository: ExperimentRepository,
-    @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
+    private readonly experimentDataRepository: ExperimentDataRepository,
     private readonly macroRepository: MacroRepository,
   ) {}
 
@@ -67,9 +67,7 @@ export class GetExperimentTablesUseCase {
 
     // Read authorization is enforced by the `@CanAccess({ resource: "experiment",
     // action: "read" })` route guard.
-    const metadataResult = await this.databricksPort.getExperimentTableMetadata(experimentId, {
-      includeSchemas: false,
-    });
+    const metadataResult = await this.experimentDataRepository.tablesMetadata(experimentId);
 
     if (metadataResult.isFailure()) {
       this.logger.error({
@@ -105,6 +103,7 @@ export class GetExperimentTablesUseCase {
     identifier,
     tableType,
     rowCount,
+    latestRowAt,
   }: ExperimentTableMetadata): TableMetadataDto {
     const config = STATIC_TABLE_CONFIG[identifier];
     return {
@@ -112,13 +111,14 @@ export class GetExperimentTablesUseCase {
       tableType,
       displayName: config?.displayName ?? identifier,
       totalRows: rowCount,
+      latestRowAt,
       defaultSortColumn: config?.defaultSortColumn,
       errorColumn: config?.errorColumn,
     };
   }
 
   private mapMacroTable(
-    { identifier, tableType, rowCount }: ExperimentTableMetadata,
+    { identifier, tableType, rowCount, latestRowAt }: ExperimentTableMetadata,
     macroNamesMap: Map<string, { name: string; filename: string }>,
   ): TableMetadataDto {
     const macroInfo = macroNamesMap.get(identifier);
@@ -131,6 +131,7 @@ export class GetExperimentTablesUseCase {
       tableType,
       displayName,
       totalRows: rowCount,
+      latestRowAt,
       defaultSortColumn: MACRO_TABLE_CONFIG.defaultSortColumn,
       errorColumn: MACRO_TABLE_CONFIG.errorColumn,
     };
@@ -141,12 +142,14 @@ export class GetExperimentTablesUseCase {
     tableType,
     displayName,
     rowCount,
+    latestRowAt,
   }: ExperimentTableMetadata): TableMetadataDto {
     return {
       identifier,
       tableType,
       displayName: displayName ?? identifier,
       totalRows: rowCount,
+      latestRowAt,
       defaultSortColumn: UPLOAD_TABLE_CONFIG.defaultSortColumn,
       errorColumn: UPLOAD_TABLE_CONFIG.errorColumn,
     };

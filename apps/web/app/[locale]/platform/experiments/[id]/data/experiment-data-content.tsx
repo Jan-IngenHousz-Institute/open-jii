@@ -7,6 +7,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
+import { DataFreshness } from "~/components/experiment-data/data-freshness";
 import { DatasetPicker } from "~/components/experiment-data/dataset-picker";
 import { ExperimentDataTable } from "~/components/experiment-data/experiment-data-table";
 import { MetadataUploadModal } from "~/components/experiment-data/metadata-upload-modal/metadata-upload-modal";
@@ -96,9 +97,10 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
     return (
       <PageContainer width="fluid" className="space-y-8">
         <div className="flex items-center justify-between gap-6">
-          <div>
+          <div className="space-y-1">
             <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
             <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
+            <DataFreshness experimentId={id} />
           </div>
           <div className="flex shrink-0 gap-3">
             <Button
@@ -157,9 +159,10 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
   return (
     <PageContainer width="fluid" className="space-y-8">
       <div className="flex items-center justify-between gap-6">
-        <div>
+        <div className="space-y-1">
           <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
           <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
+          <DataFreshness experimentId={id} tableName={activeTable.identifier} />
         </div>
         <div className="flex shrink-0 gap-3">
           <Button

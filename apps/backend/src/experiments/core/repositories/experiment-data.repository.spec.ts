@@ -48,7 +48,7 @@ describe("ExperimentDataRepository", () => {
     await testApp.beforeEach();
     repository = testApp.module.get(ExperimentDataRepository);
     databricksPort = testApp.module.get(DATABRICKS_PORT);
-    // Table metadata is cached per experiment and table; the fixtures reuse both.
+    // Table metadata is cached per experiment; the fixtures reuse it.
     await testApp.module.get<Cache>(CACHE_MANAGER).clear();
   });
 
@@ -75,6 +75,7 @@ describe("ExperimentDataRepository", () => {
           identifier: "raw_data",
           tableType: "static",
           rowCount: 100,
+          latestRowAt: null,
           macroSchema: null,
           questionsSchema: null,
           customMetadataSchema: null,
@@ -125,7 +126,6 @@ describe("ExperimentDataRepository", () => {
       ]);
 
       expect(databricksPort.getExperimentTableMetadata).toHaveBeenCalledWith(experimentId, {
-        identifier: "raw_data",
         includeSchemas: true,
       });
       expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith({
@@ -149,6 +149,7 @@ describe("ExperimentDataRepository", () => {
           tableType: "static",
           displayName: null,
           rowCount: 100,
+          latestRowAt: null,
           macroSchema: null,
           questionsSchema: null,
           customMetadataSchema: null,
@@ -213,6 +214,7 @@ describe("ExperimentDataRepository", () => {
           tableType: "static",
           displayName: null,
           rowCount: 100,
+          latestRowAt: null,
           macroSchema: null,
           questionsSchema: null,
           customMetadataSchema: null,
@@ -273,6 +275,7 @@ describe("ExperimentDataRepository", () => {
           tableType: "static",
           displayName: null,
           rowCount: 100,
+          latestRowAt: null,
           macroSchema: null,
           questionsSchema: null,
           customMetadataSchema: null,
@@ -300,6 +303,52 @@ describe("ExperimentDataRepository", () => {
       expect(metadataSpy).toHaveBeenCalledTimes(1);
     });
 
+    it("reads a table from the snapshot the tables listing served", async () => {
+      const mockMetadata: ExperimentTableMetadata[] = [
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          displayName: null,
+          rowCount: 100,
+          latestRowAt: "2026-09-22T10:05:00.000Z",
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+        },
+        {
+          identifier: "macro_123",
+          tableType: "macro",
+          displayName: null,
+          rowCount: 7,
+          latestRowAt: null,
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+        },
+      ];
+      const pageData = {
+        columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
+        rows: [["1"]],
+        totalRows: 1,
+        truncated: false,
+      };
+      const metadataSpy = vi
+        .spyOn(databricksPort, "getExperimentTableMetadata")
+        .mockResolvedValue(success(mockMetadata));
+      metadataSpy.mockClear();
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(pageData));
+
+      const listing = await repository.tablesMetadata(experimentId);
+      const page = await repository.getTableData({ ...baseParams, page: 1, pageSize: 5 });
+
+      assertSuccess(listing);
+      assertSuccess(page);
+      expect(listing.value).toEqual(mockMetadata);
+      expect(page.value[0]).toMatchObject({ totalRows: 100, totalPages: 20 });
+      expect(metadataSpy).toHaveBeenCalledTimes(1);
+    });
+
     it("does not cache a failed metadata lookup", async () => {
       const mockMetadata: ExperimentTableMetadata[] = [
         {
@@ -307,6 +356,7 @@ describe("ExperimentDataRepository", () => {
           tableType: "static",
           displayName: null,
           rowCount: 100,
+          latestRowAt: null,
           macroSchema: null,
           questionsSchema: null,
           customMetadataSchema: null,
@@ -343,6 +393,7 @@ describe("ExperimentDataRepository", () => {
           identifier: "raw_data",
           tableType: "static",
           rowCount: 10,
+          latestRowAt: null,
           macroSchema: null,
           questionsSchema: null,
           customMetadataSchema: null,
@@ -393,6 +444,7 @@ describe("ExperimentDataRepository", () => {
           identifier: "raw_data",
           tableType: "static",
           rowCount: 10,
+          latestRowAt: null,
           macroSchema: null,
           questionsSchema: null,
           customMetadataSchema: null,
@@ -454,6 +506,7 @@ describe("ExperimentDataRepository", () => {
           identifier: "raw_data",
           tableType: "static",
           rowCount: 100,
+          latestRowAt: null,
           macroSchema: null,
           questionsSchema: "STRUCT<q1: STRING, q2: INT>",
           customMetadataSchema: null,
@@ -519,6 +572,7 @@ describe("ExperimentDataRepository", () => {
           identifier: "macro_123",
           tableType: "macro",
           rowCount: 50,
+          latestRowAt: null,
           macroSchema: "STRUCT<output: STRING>",
           questionsSchema: "STRUCT<q1: STRING>",
           customMetadataSchema: null,
@@ -576,6 +630,7 @@ describe("ExperimentDataRepository", () => {
           identifier: "macro_123",
           tableType: "macro",
           rowCount: 50,
+          latestRowAt: null,
           macroSchema: null,
           questionsSchema: "STRUCT<q1: STRING>",
           customMetadataSchema: null,
@@ -631,6 +686,7 @@ describe("ExperimentDataRepository", () => {
           identifier: "raw_data",
           tableType: "static",
           rowCount: 100,
+          latestRowAt: null,
           macroSchema: null,
           questionsSchema: null,
           customMetadataSchema: null,
@@ -674,6 +730,7 @@ describe("ExperimentDataRepository", () => {
           identifier: "device",
           tableType: "static",
           rowCount: 10,
+          latestRowAt: null,
           macroSchema: null,
           questionsSchema: null,
           customMetadataSchema: null,
@@ -720,6 +777,7 @@ describe("ExperimentDataRepository", () => {
           identifier: "raw_data",
           tableType: "static",
           rowCount: 100,
+          latestRowAt: null,
           macroSchema: null,
           questionsSchema: null,
           customMetadataSchema: null,
@@ -758,6 +816,7 @@ describe("ExperimentDataRepository", () => {
           tableType: "static",
           displayName: null,
           rowCount: 10,
+          latestRowAt: null,
           macroSchema: null,
           questionsSchema: null,
           customMetadataSchema: null,
@@ -799,6 +858,7 @@ describe("ExperimentDataRepository", () => {
           identifier: "raw_data",
           tableType: "static",
           rowCount: 100,
+          latestRowAt: null,
           macroSchema: null,
           questionsSchema: null,
           customMetadataSchema: null,
@@ -835,6 +895,7 @@ describe("ExperimentDataRepository", () => {
           identifier: "unknown_table",
           tableType: "static",
           rowCount: 10,
+          latestRowAt: null,
           macroSchema: null,
           questionsSchema: null,
           customMetadataSchema: null,
@@ -872,6 +933,7 @@ describe("ExperimentDataRepository", () => {
         identifier: "raw_data",
         tableType: "static",
         rowCount: 10,
+        latestRowAt: null,
         macroSchema: null,
         questionsSchema: null,
         customMetadataSchema: null,

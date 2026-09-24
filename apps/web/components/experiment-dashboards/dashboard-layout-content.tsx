@@ -13,6 +13,7 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Textarea } from "@repo/ui/components/textarea";
 
+import { DataFreshness } from "../experiment-data/data-freshness";
 import { AutosaveIndicator } from "../shared/autosave/autosave-indicator";
 import type { DashboardFormValues } from "./dashboard-form-shell";
 import { DashboardGradientBody } from "./dashboard-gradient-body";
@@ -82,7 +83,7 @@ export function DashboardLayoutContent({
               />
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              {isEditing && <AutosaveIndicator />}
+              {isEditing ? <AutosaveIndicator /> : <DataFreshness experimentId={experimentId} />}
               {canEdit && (
                 <Button variant="outline" size="sm" onClick={toggleMode}>
                   <ToggleModeIcon className="mr-2 size-4" />

@@ -618,6 +618,7 @@ export function createExperimentTable(
     tableType: "static",
     displayName: `Table ${tableSeq}`,
     totalRows: 100,
+    latestRowAt: null,
     defaultSortColumn: undefined,
     errorColumn: undefined,
     ...overrides,
