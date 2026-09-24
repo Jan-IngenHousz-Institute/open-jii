@@ -55,7 +55,8 @@ const fetchMyOrganizationIds = cache(async () => {
     const client = await createServerOrpcClient();
     const organizations = await client.organizations.listMyOrganizations();
     return organizations.map(({ id }) => id);
-  } catch {
+  } catch (error) {
+    console.error("[PostHog] Failed to load memberships for flag evaluation:", error);
     return [];
   }
 });

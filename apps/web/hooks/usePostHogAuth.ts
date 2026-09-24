@@ -16,7 +16,7 @@ import { useMyOrganizations } from "./organization/useMyOrganizations/useMyOrgan
  */
 export function usePostHogAuth() {
   const { data: session, isPending } = useSession();
-  const { data: organizations } = useMyOrganizations();
+  const { data: organizations, isPending: isOrganizationsPending } = useMyOrganizations();
   const consent = useSyncExternalStore(
     subscribeToConsentStatus,
     getConsentStatus,
@@ -50,24 +50,25 @@ export function usePostHogAuth() {
     }
   }, [email, name, hasConsented]);
 
-  // Accepting cookies resets PostHog, so this re-runs on consent to restore the overrides.
+  // Both cookie-banner choices reset PostHog, so any consent change re-applies the overrides.
+  // A failed membership fetch still sends the email rather than holding every flag back.
   useEffect(() => {
-    if (!email || !organizations) {
+    if (!email || isOrganizationsPending) {
       return;
     }
 
     const properties = flagPersonProperties({
       email,
-      organizationIds: organizations.map(({ id }) => id),
+      organizationIds: organizations?.map(({ id }) => id) ?? [],
     });
     posthog.setPersonPropertiesForFlags(properties, true);
     hasFlagOverrides.current = true;
 
     // Stored on the person, so PostHog's release-condition picker can offer the properties.
-    if (hasConsented) {
+    if (consent === "accepted") {
       posthog.setPersonProperties(properties);
     }
-  }, [email, organizations, hasConsented]);
+  }, [email, organizations, isOrganizationsPending, consent]);
 }
 
 /**

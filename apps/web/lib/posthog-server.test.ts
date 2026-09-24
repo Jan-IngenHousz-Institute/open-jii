@@ -249,10 +249,18 @@ describe("posthog-server", () => {
       vi.mocked(auth).mockResolvedValue(
         createSession({ user: { id: "user-ana", email: "ana@example.com" } }),
       );
-      listMyOrganizations.mockRejectedValue(new Error("backend unavailable"));
+      const error = new Error("backend unavailable");
+      listMyOrganizations.mockRejectedValue(error);
       mockPostHogInstance.isFeatureEnabled.mockResolvedValue(false);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       await isFeatureFlagEnabledForViewer(FEATURE_FLAGS.MULTI_LANGUAGE);
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "[PostHog] Failed to load memberships for flag evaluation:",
+        error,
+      );
+      consoleErrorSpy.mockRestore();
 
       expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.MULTI_LANGUAGE,

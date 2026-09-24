@@ -16,8 +16,8 @@ const flagProperties = { email: "ana@example.com", organization_ids: "org-qa,org
 
 // jsdom serves http, where the Secure consent cookie cannot be stored, so read it as an https
 // browser would and let setConsentStatus announce the change.
-function acceptCookies() {
-  return vi.spyOn(document, "cookie", "get").mockReturnValue("jii_cookie_consent=accepted");
+function storeConsent(status: "accepted" | "rejected") {
+  return vi.spyOn(document, "cookie", "get").mockReturnValue(`jii_cookie_consent=${status}`);
 }
 
 function mockSession(data: typeof session | null, isPending = false) {
@@ -64,7 +64,7 @@ describe("usePostHogAuth", () => {
       expect(posthog.setPersonPropertiesForFlags).toHaveBeenCalledOnce();
     });
 
-    storedConsent = acceptCookies();
+    storedConsent = storeConsent("accepted");
     act(() => {
       setConsentStatus("accepted");
     });
@@ -77,6 +77,39 @@ describe("usePostHogAuth", () => {
     });
     expect(posthog.setPersonPropertiesForFlags).toHaveBeenCalledTimes(2);
     expect(posthog.setPersonProperties).toHaveBeenCalledWith(flagProperties);
+  });
+
+  it("restores the flag properties after the user rejects cookies", async () => {
+    mockSession(session);
+    renderHook(() => usePostHogAuth());
+    await waitFor(() => {
+      expect(posthog.setPersonPropertiesForFlags).toHaveBeenCalledOnce();
+    });
+
+    storedConsent = storeConsent("rejected");
+    act(() => {
+      setConsentStatus("rejected");
+    });
+
+    await waitFor(() => {
+      expect(posthog.setPersonPropertiesForFlags).toHaveBeenCalledTimes(2);
+    });
+    expect(posthog.identify).not.toHaveBeenCalled();
+    expect(posthog.setPersonProperties).not.toHaveBeenCalled();
+  });
+
+  it("still sends the email when the memberships cannot be loaded", async () => {
+    server.mount(contract.organizations.listMyOrganizations, { status: 500 });
+    mockSession(session);
+
+    renderHook(() => usePostHogAuth());
+
+    await waitFor(() => {
+      expect(posthog.setPersonPropertiesForFlags).toHaveBeenCalledWith(
+        { email: "ana@example.com", organization_ids: "" },
+        true,
+      );
+    });
   });
 
   it("leaves PostHog alone while the session is loading", () => {

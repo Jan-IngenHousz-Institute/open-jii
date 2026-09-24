@@ -55,14 +55,10 @@ describe("AnalyticsAdapter", () => {
       });
 
       expect(result).toBe(true);
-
-      const [flagKey, distinctId, personProperties] = flagsServiceSpy.mock.calls[0];
-      expect(flagKey).toBe(FEATURE_FLAGS.EXPERIMENT_DELETION);
-      expect(distinctId).toBe(email);
-      expect(personProperties?.email).toBe(email);
-      expect(personProperties?.organization_ids.split(",").sort()).toEqual(
-        [firstOrgId, secondOrgId].sort(),
-      );
+      expect(flagsServiceSpy).toHaveBeenCalledWith(FEATURE_FLAGS.EXPERIMENT_DELETION, email, {
+        email,
+        organization_ids: [firstOrgId, secondOrgId].sort().join(","),
+      });
     });
 
     it("should fall back to the user id when the user has no email", async () => {
@@ -79,26 +75,17 @@ describe("AnalyticsAdapter", () => {
       });
     });
 
-    it("should evaluate anonymously without a user", async () => {
-      const flagsServiceSpy = vi
-        .spyOn(flagsService, "isFeatureFlagEnabled")
-        .mockResolvedValue(false);
-
-      const result = await adapter.isFeatureFlagEnabled(
-        FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
-      );
-
-      expect(flagsServiceSpy).toHaveBeenCalledWith(FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING);
-      expect(result).toBe(false);
-    });
-
     it("should handle errors from flags service", async () => {
+      const userId = await testApp.createTestUser({});
       const flagsServiceSpy = vi
         .spyOn(flagsService, "isFeatureFlagEnabled")
         .mockRejectedValue(new Error("Service error"));
 
       await expect(
-        adapter.isFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING),
+        adapter.isFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING, {
+          id: userId,
+          email: "flag-error@example.com",
+        }),
       ).rejects.toThrow("Service error");
 
       expect(flagsServiceSpy).toHaveBeenCalledOnce();

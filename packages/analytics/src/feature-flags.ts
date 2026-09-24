@@ -30,6 +30,12 @@ export const FEATURE_FLAG_DEFAULTS: Record<FeatureFlagKey, boolean> = {
   [FEATURE_FLAGS.CALIBRATION]: false, // Hidden until targeted in PostHog
 };
 
+/** The signed-in user a flag is evaluated for. */
+export interface FlagUser {
+  id: string;
+  email: string;
+}
+
 /**
  * Person properties sent with every flag evaluation for a signed-in user. PostHog evaluates with
  * them without storing them, so a condition on the email or an organization matches even before

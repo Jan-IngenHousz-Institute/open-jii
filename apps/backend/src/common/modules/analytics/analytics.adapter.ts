@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { FeatureFlagKey } from "@repo/analytics";
+import type { FeatureFlagKey, FlagUser } from "@repo/analytics";
 import { flagPersonProperties } from "@repo/analytics";
 
 import { AuthorizationService } from "../../../authorization/authorization.service";
@@ -24,24 +24,12 @@ export class AnalyticsAdapter implements AnalyticsPort {
    * Check if a feature flag is enabled
    * @param flagKey - The feature flag key to check
    * @param user - The signed-in user, whose email and organization memberships go with the
-   * evaluation so a flag can target either; omit to evaluate anonymously
+   * evaluation so a flag can target either
    * @returns Whether the flag is enabled
    */
-  async isFeatureFlagEnabled(
-    flagKey: FeatureFlagKey,
-    user?: { id: string; email: string },
-  ): Promise<boolean> {
-    if (!user) {
-      this.logger.debug({
-        msg: "Checking feature flag",
-        operation: "isFeatureFlagEnabled",
-        flagKey,
-        distinctId: "anonymous",
-      });
-      return this.flagsService.isFeatureFlagEnabled(flagKey);
-    }
-
-    // The web client identifies by email, so both sides evaluate the same person.
+  async isFeatureFlagEnabled(flagKey: FeatureFlagKey, user: FlagUser): Promise<boolean> {
+    // Matches the web client's identity once the user accepts cookies; before that the browser
+    // evaluates cookieless, so only 0% and 100% rollouts agree between the two.
     const distinctId = user.email || user.id;
     const organizationIds = await this.authorizationService.listMemberOrganizationIds(user.id);
 
