@@ -35,6 +35,7 @@ export class GlobalSearchUseCase {
     userId: string,
     query: string,
     limit: number,
+    includeCalibrations: boolean,
   ): Promise<Result<{ results: SearchResult[] }>> {
     this.logger.log({ msg: "Global search", operation: "globalSearch" });
 
@@ -51,7 +52,10 @@ export class GlobalSearchUseCase {
         this.protocolRepository.findAll(query, undefined, userId, limit),
         this.macroRepository.findAll({ search: query, userId }, limit),
         this.workbookRepository.findAll({ search: query, userId }, limit),
-        this.calibrationDefinitionRepository.search(query, userId, limit),
+        // A hidden feature's results would open a page that is not there, so it is not asked.
+        includeCalibrations
+          ? this.calibrationDefinitionRepository.search(query, userId, limit)
+          : Promise.resolve(success([])),
         // Organizations are a grantee, never a grantable resource, so their boundary is
         // the directory's own — public or the caller's, personal workspaces never —
         // rather than the shared resource access scope.

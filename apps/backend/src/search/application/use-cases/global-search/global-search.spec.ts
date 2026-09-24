@@ -45,7 +45,7 @@ describe("GlobalSearchUseCase", () => {
     });
     await testApp.createOrganization("Photosynthesis Lab", { visibility: "public" });
 
-    const result = await useCase.execute(userId, "photosynthesis", 20);
+    const result = await useCase.execute(userId, "photosynthesis", 20, true);
 
     assertSuccess(result);
     const types = result.value.results.map((r) => r.type);
@@ -69,6 +69,22 @@ describe("GlobalSearchUseCase", () => {
     expect(organization?.meta).toBeNull();
   });
 
+  // A result would open a page the caller cannot reach while calibration is flagged off.
+  it("leaves calibration definitions out when calibration is not included", async () => {
+    await testApp.createProtocol({ name: "Photosynthesis protocol", createdBy: userId });
+    await testApp.createCalibrationDefinition({
+      name: "Photosynthesis bench calibration",
+      createdBy: userId,
+    });
+
+    const result = await useCase.execute(userId, "photosynthesis", 20, false);
+
+    assertSuccess(result);
+    const types = result.value.results.map((r) => r.type);
+    expect(types).toContain("protocol");
+    expect(types).not.toContain("calibration_definition");
+  });
+
   it("matches description text (FTS) and tolerates typos in the name (trigram)", async () => {
     await testApp.createProtocol({
       name: "Bioluminescence",
@@ -77,12 +93,12 @@ describe("GlobalSearchUseCase", () => {
     });
 
     // Description word, matched through the weighted full-text vector.
-    const byDescription = await useCase.execute(userId, "chlorophyll", 20);
+    const byDescription = await useCase.execute(userId, "chlorophyll", 20, true);
     assertSuccess(byDescription);
     expect(byDescription.value.results.some((r) => r.title === "Bioluminescence")).toBe(true);
 
     // Misspelled name ("bioluminecence" — missing an 's'), matched through trigram similarity.
-    const byTypo = await useCase.execute(userId, "bioluminecence", 20);
+    const byTypo = await useCase.execute(userId, "bioluminecence", 20, true);
     assertSuccess(byTypo);
     expect(byTypo.value.results.some((r) => r.title === "Bioluminescence")).toBe(true);
   });
@@ -95,7 +111,7 @@ describe("GlobalSearchUseCase", () => {
       createdBy: userId,
     });
 
-    const result = await useCase.execute(userId, "ridge-01", 20);
+    const result = await useCase.execute(userId, "ridge-01", 20, true);
 
     assertSuccess(result);
     expect(
@@ -110,12 +126,12 @@ describe("GlobalSearchUseCase", () => {
     await testApp.createMacro({ name: "Data analysis", language: "python", createdBy: userId });
     await testApp.createProtocol({ name: "Leaf scan", family: "multispeq", createdBy: userId });
 
-    const byLanguage = await useCase.execute(userId, "python", 20);
+    const byLanguage = await useCase.execute(userId, "python", 20, true);
     assertSuccess(byLanguage);
     const macro = byLanguage.value.results.find((r) => r.title === "Data analysis");
     expect(macro?.meta).toBe("python");
 
-    const byFamily = await useCase.execute(userId, "multispeq", 20);
+    const byFamily = await useCase.execute(userId, "multispeq", 20, true);
     assertSuccess(byFamily);
     const protocol = byFamily.value.results.find((r) => r.title === "Leaf scan");
     expect(protocol?.meta).toBe("multispeq");
@@ -136,7 +152,7 @@ describe("GlobalSearchUseCase", () => {
       .set({ workbookId: workbook.id })
       .where(eq(experiments.id, experiment.id));
 
-    const result = await useCase.execute(userId, "orbitron", 20);
+    const result = await useCase.execute(userId, "orbitron", 20, true);
 
     assertSuccess(result);
     expect(
@@ -164,13 +180,13 @@ describe("GlobalSearchUseCase", () => {
       cells: [{ id: "c1", type: "macro", payload: { macroId: macro.id, language: "python" } }],
     });
 
-    const byProtocol = await useCase.execute(userId, "zorptastic", 20);
+    const byProtocol = await useCase.execute(userId, "zorptastic", 20, true);
     assertSuccess(byProtocol);
     expect(
       byProtocol.value.results.some((r) => r.type === "workbook" && r.title === "Plain notebook A"),
     ).toBe(true);
 
-    const byMacro = await useCase.execute(userId, "wibblonian", 20);
+    const byMacro = await useCase.execute(userId, "wibblonian", 20, true);
     assertSuccess(byMacro);
     expect(
       byMacro.value.results.some((r) => r.type === "workbook" && r.title === "Plain notebook B"),
@@ -184,7 +200,7 @@ describe("GlobalSearchUseCase", () => {
       visibility: "private",
     });
 
-    const result = await useCase.execute(userId, "photosynthesis", 20);
+    const result = await useCase.execute(userId, "photosynthesis", 20, true);
 
     assertSuccess(result);
     expect(result.value.results.some((r) => r.title === "Secret photosynthesis study")).toBe(false);
@@ -197,7 +213,7 @@ describe("GlobalSearchUseCase", () => {
       visibility: "public",
     });
 
-    const result = await useCase.execute(userId, "photosynthesis", 20);
+    const result = await useCase.execute(userId, "photosynthesis", 20, true);
 
     assertSuccess(result);
     expect(result.value.results.some((r) => r.title === "Open photosynthesis study")).toBe(true);
@@ -218,7 +234,7 @@ describe("GlobalSearchUseCase", () => {
       });
       await testApp.createExperiment({ name: "Zephyrine", userId, visibility: "public" });
 
-      const result = await useCase.execute(userId, "zephyrine", 20);
+      const result = await useCase.execute(userId, "zephyrine", 20, true);
 
       assertSuccess(result);
       // The experiment wins on its name hit, not because experiments are listed first.
@@ -236,7 +252,7 @@ describe("GlobalSearchUseCase", () => {
         createdBy: userId,
       });
 
-      const result = await useCase.execute(userId, "vorbulon", 8);
+      const result = await useCase.execute(userId, "vorbulon", 8, true);
 
       assertSuccess(result);
       // The old fan-out capped every type at 8; overfetching removes that ceiling, so a
@@ -257,7 +273,7 @@ describe("GlobalSearchUseCase", () => {
         createdBy: userId,
       });
 
-      const result = await useCase.execute(userId, "grindelwax", 20);
+      const result = await useCase.execute(userId, "grindelwax", 20, true);
 
       assertSuccess(result);
       const titles = result.value.results.map((r) => r.title);
@@ -297,7 +313,7 @@ describe("GlobalSearchUseCase", () => {
         organizationId: orgId,
       });
 
-      const result = await useCase.execute(userId, "photosynthesis", 20);
+      const result = await useCase.execute(userId, "photosynthesis", 20, true);
 
       assertSuccess(result);
       const titles = result.value.results.map((r) => r.title);
@@ -341,7 +357,7 @@ describe("GlobalSearchUseCase", () => {
         });
       }
 
-      const result = await useCase.execute(userId, "photosynthesis", 20);
+      const result = await useCase.execute(userId, "photosynthesis", 20, true);
 
       assertSuccess(result);
       const titles = result.value.results.map((r) => r.title);
@@ -360,7 +376,7 @@ describe("GlobalSearchUseCase", () => {
       });
       await testApp.addOrganizationMember(orgId, otherUserId, "owner");
 
-      const toOutsider = await useCase.execute(userId, "photosynthesis", 20);
+      const toOutsider = await useCase.execute(userId, "photosynthesis", 20, true);
       assertSuccess(toOutsider);
       expect(toOutsider.value.results.some((r) => r.title === "Photosynthesis Consortium")).toBe(
         false,
@@ -368,7 +384,7 @@ describe("GlobalSearchUseCase", () => {
 
       await testApp.addOrganizationMember(orgId, userId, "member");
 
-      const toMember = await useCase.execute(userId, "photosynthesis", 20);
+      const toMember = await useCase.execute(userId, "photosynthesis", 20, true);
       assertSuccess(toMember);
       expect(toMember.value.results.some((r) => r.title === "Photosynthesis Consortium")).toBe(
         true,
@@ -383,7 +399,7 @@ describe("GlobalSearchUseCase", () => {
         `UPDATE organizations SET name = 'Photosynthesis workspace', visibility = 'public' WHERE id = '${personalOrgId}'`,
       );
 
-      const result = await useCase.execute(userId, "photosynthesis", 20);
+      const result = await useCase.execute(userId, "photosynthesis", 20, true);
 
       assertSuccess(result);
       expect(result.value.results.some((r) => r.type === "organization")).toBe(false);
@@ -397,7 +413,7 @@ describe("GlobalSearchUseCase", () => {
         type: "research_institute",
       });
 
-      const byType = await useCase.execute(userId, "research institute", 20);
+      const byType = await useCase.execute(userId, "research institute", 20, true);
       assertSuccess(byType);
       const organization = byType.value.results.find((r) => r.title === "Vorbulon Collective");
       expect(organization?.meta).toBe("research_institute");
@@ -411,7 +427,7 @@ describe("GlobalSearchUseCase", () => {
       const name = `Vorbulon ${type}`;
       await testApp.createOrganization(name, { visibility: "public", type });
 
-      const result = await useCase.execute(userId, query, 20);
+      const result = await useCase.execute(userId, query, 20, true);
 
       assertSuccess(result);
       expect(result.value.results.some((row) => row.title === name)).toBe(true);
@@ -423,7 +439,7 @@ describe("GlobalSearchUseCase", () => {
         type: "private_company",
       });
 
-      const result = await useCase.execute(userId, "ate", 20);
+      const result = await useCase.execute(userId, "ate", 20, true);
 
       assertSuccess(result);
       expect(result.value.results.some((row) => row.title === "Vorbulon Collective")).toBe(false);
@@ -466,7 +482,7 @@ describe("GlobalSearchUseCase", () => {
       });
       await testApp.createOrganization("Wageningen Collective", { visibility: "public" });
 
-      const result = await useCase.execute(userId, "wageningen", 20);
+      const result = await useCase.execute(userId, "wageningen", 20, true);
 
       assertSuccess(result);
       const titles = result.value.results
@@ -497,7 +513,7 @@ describe("GlobalSearchUseCase", () => {
         const theirs = await testApp.createOrganization("Rhine Sensors", { visibility: "public" });
         await testApp.addOrganizationMember(theirs, colleague, "member");
 
-        const result = await useCase.execute(userId, "zephyrina", 20);
+        const result = await useCase.execute(userId, "zephyrina", 20, true);
 
         assertSuccess(result);
         const titles = result.value.results
@@ -517,7 +533,7 @@ describe("GlobalSearchUseCase", () => {
         const theirs = await testApp.createOrganization("Rhine Sensors", { visibility: "public" });
         await testApp.createTeam(theirs, "Vorbulon Canopy Squad");
 
-        const result = await useCase.execute(userId, "vorbulon", 20);
+        const result = await useCase.execute(userId, "vorbulon", 20, true);
 
         assertSuccess(result);
         const titles = result.value.results
@@ -540,7 +556,7 @@ describe("GlobalSearchUseCase", () => {
         await testApp.addOrganizationMember(orgId, userId, "member");
         await testApp.addOrganizationMember(orgId, departed, "member");
 
-        const result = await useCase.execute(userId, "grindelwax", 20);
+        const result = await useCase.execute(userId, "grindelwax", 20, true);
 
         assertSuccess(result);
         expect(result.value.results.some((r) => r.type === "organization")).toBe(false);
@@ -553,7 +569,7 @@ describe("GlobalSearchUseCase", () => {
         description: "studies chlorophyll fluorescence",
       });
 
-      const result = await useCase.execute(userId, "chlorophyll", 20);
+      const result = await useCase.execute(userId, "chlorophyll", 20, true);
 
       assertSuccess(result);
       const organization = result.value.results.find((r) => r.type === "organization");

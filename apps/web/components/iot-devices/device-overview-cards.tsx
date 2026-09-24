@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsCalibrationEnabled } from "@/components/calibrations/calibration-flag-context";
 import { resolveMonitoringPreset } from "@/components/iot-devices/monitoring/monitoring-range";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useActiveDeviceCalibration } from "@/hooks/iot/useActiveDeviceCalibration/useActiveDeviceCalibration";
@@ -53,7 +54,9 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
 
   const isMobileFamily = device.deviceType === "mobile";
   const isManagedFirmware = hasManagedFirmware(device.deviceType);
-  const isCalibrationFamily = zCalibrationFamily.safeParse(device.deviceType).success;
+  // Only asked when the flag is on: the server refuses the read otherwise.
+  const hasCalibration =
+    useIsCalibrationEnabled() && zCalibrationFamily.safeParse(device.deviceType).success;
 
   const {
     data: boundData,
@@ -90,7 +93,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
 
   const { data: activeCalibration, isLoading: isLoadingCalibration } = useActiveDeviceCalibration(
     device.id,
-    { enabled: isCalibrationFamily },
+    { enabled: hasCalibration },
   );
 
   // Names for the viewer's own experiments; anything else stays opaque.
@@ -369,7 +372,7 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
         {renderFirmwareBody()}
       </OverviewCard>
     ),
-    isCalibrationFamily && (
+    hasCalibration && (
       <OverviewCard
         key="calibration"
         icon={<SlidersHorizontal aria-hidden />}

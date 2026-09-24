@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { AnalyticsAdapter } from "../common/modules/analytics/analytics.adapter";
 import { AnalyticsModule } from "../common/modules/analytics/analytics.module";
 import { AwsAdapter } from "../common/modules/aws/aws.adapter";
 import { AwsModule } from "../common/modules/aws/aws.module";
@@ -67,6 +68,7 @@ import { RotateIotCredentialsUseCase } from "./application/use-cases/rotate-iot-
 import { RotateIotDeviceGroupCredentialsUseCase } from "./application/use-cases/rotate-iot-device-group-credentials/rotate-iot-device-group-credentials";
 import { UpdateCalibrationDefinitionUseCase } from "./application/use-cases/update-calibration-definition/update-calibration-definition";
 import { UpdateIotDeviceGroupUseCase } from "./application/use-cases/update-iot-device-group/update-iot-device-group";
+import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { IOT_DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { GITHUB_PORT } from "./core/ports/github.port";
@@ -104,6 +106,10 @@ import { IotController } from "./presentation/iot.controller";
     IotCalibrationRunController,
   ],
   providers: [
+    {
+      provide: ANALYTICS_PORT,
+      useExisting: AnalyticsAdapter,
+    },
     GetDeviceRegistryUseCase,
     GetIotCredentialsUseCase,
     GetIotUploadUrlUseCase,

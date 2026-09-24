@@ -1,3 +1,4 @@
+import { CalibrationFlagProvider } from "@/components/calibrations/calibration-flag-context";
 import { render, screen } from "@/test/test-utils";
 import { usePathname } from "next/navigation";
 import { describe, it, expect, vi } from "vitest";
@@ -7,15 +8,21 @@ import { SidebarProvider } from "@repo/ui/components/sidebar";
 import { PlatformHeaderDetail, PlatformHeaderProvider } from "./platform-header-context";
 import { SiteHeader } from "./site-header";
 
-function renderHeader(pathname: string, detail?: { href: string; label: string }) {
+function renderHeader(
+  pathname: string,
+  detail?: { href: string; label: string },
+  { isCalibrationEnabled = false } = {},
+) {
   vi.mocked(usePathname).mockReturnValue(pathname);
   return render(
-    <SidebarProvider>
-      <PlatformHeaderProvider>
-        <SiteHeader locale="en" />
-        {detail && <PlatformHeaderDetail {...detail} />}
-      </PlatformHeaderProvider>
-    </SidebarProvider>,
+    <CalibrationFlagProvider isEnabled={isCalibrationEnabled}>
+      <SidebarProvider>
+        <PlatformHeaderProvider>
+          <SiteHeader locale="en" />
+          {detail && <PlatformHeaderDetail {...detail} />}
+        </PlatformHeaderProvider>
+      </SidebarProvider>
+    </CalibrationFlagProvider>,
   );
 }
 
@@ -111,10 +118,16 @@ describe("SiteHeader", () => {
   // A calibration is created in place rather than on a form page, so the header's action
   // is an event the library listens for, as the workbooks list does.
   it("gives the calibration library a create action with a plus icon", () => {
-    renderHeader("/en/platform/calibrations");
+    renderHeader("/en/platform/calibrations", undefined, { isCalibrationEnabled: true });
 
     const create = screen.getByRole("button", { name: "iot.calibration.library.create" });
     expect(create.querySelector("svg")).toBeInTheDocument();
+  });
+
+  it("offers no calibration create action while calibration is flagged off", () => {
+    renderHeader("/en/platform/calibrations");
+
+    expect(screen.queryByRole("button", { name: "iot.calibration.library.create" })).toBeNull();
   });
 
   it("labels the account section", () => {

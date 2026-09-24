@@ -33,21 +33,33 @@ vi.mock("../navigation-sidebar/navigation-sidebar", () => ({
 
 describe("NavigationSidebarWrapper", () => {
   it("renders AppSidebar with correct locale", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
+    const Component = await NavigationSidebarWrapper({
+      locale: "en",
+      user: testUser,
+      isCalibrationEnabled: true,
+    });
     render(Component);
 
     expect(screen.getByTestId("sidebar-locale")).toHaveTextContent("en");
   });
 
   it("renders AppSidebar with correct locale for German", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "de", user: testUser });
+    const Component = await NavigationSidebarWrapper({
+      locale: "de",
+      user: testUser,
+      isCalibrationEnabled: true,
+    });
     render(Component);
 
     expect(screen.getByTestId("sidebar-locale")).toHaveTextContent("de");
   });
 
   it("prepares navigation data with translations", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
+    const Component = await NavigationSidebarWrapper({
+      locale: "en",
+      user: testUser,
+      isCalibrationEnabled: true,
+    });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
@@ -110,7 +122,11 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("always offers the devices navigation", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
+    const Component = await NavigationSidebarWrapper({
+      locale: "en",
+      user: testUser,
+      isCalibrationEnabled: true,
+    });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
@@ -122,8 +138,54 @@ describe("NavigationSidebarWrapper", () => {
     expect(navigationData.navDevices[0].url).toBe("/en/platform/devices");
   });
 
+  // Calibration is done to a device, so it sits under Devices, and only for people the
+  // flag is on for; for everyone else Devices is a plain link, not a group of one.
+  it("groups calibrations under devices while calibration is flagged on", async () => {
+    const Component = await NavigationSidebarWrapper({
+      locale: "en",
+      user: testUser,
+      isCalibrationEnabled: true,
+    });
+    render(Component);
+
+    const navigationData = JSON.parse(screen.getByTestId("sidebar-navigationData").textContent) as {
+      navDevices: { navigable: boolean; children: { url: string }[] }[];
+    };
+
+    expect(navigationData.navDevices[0].navigable).toBe(false);
+    expect(navigationData.navDevices[0].children.map((child) => child.url)).toEqual([
+      "/en/platform/devices",
+      "/en/platform/calibrations",
+    ]);
+  });
+
+  it("leaves calibrations out, and devices a plain link, while calibration is flagged off", async () => {
+    const Component = await NavigationSidebarWrapper({
+      locale: "en",
+      user: testUser,
+      isCalibrationEnabled: false,
+    });
+    render(Component);
+
+    const navigationDataElement = screen.getByTestId("sidebar-navigationData");
+    const navigationData = JSON.parse(navigationDataElement.textContent) as {
+      navDevices: { url: string; navigable: boolean; children: { url: string }[] }[];
+    };
+
+    expect(navigationData.navDevices[0]).toMatchObject({
+      url: "/en/platform/devices",
+      navigable: true,
+      children: [],
+    });
+    expect(navigationDataElement).not.toHaveTextContent("/en/platform/calibrations");
+  });
+
   it("prepares library navigation with protocols child", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
+    const Component = await NavigationSidebarWrapper({
+      locale: "en",
+      user: testUser,
+      isCalibrationEnabled: true,
+    });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
@@ -163,7 +225,11 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("prepares library navigation with macros child", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
+    const Component = await NavigationSidebarWrapper({
+      locale: "en",
+      user: testUser,
+      isCalibrationEnabled: true,
+    });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
@@ -196,7 +262,11 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("prepares translations object correctly", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
+    const Component = await NavigationSidebarWrapper({
+      locale: "en",
+      user: testUser,
+      isCalibrationEnabled: true,
+    });
     render(Component);
 
     const translationsElement = screen.getByTestId("sidebar-translations");
@@ -213,7 +283,11 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("uses correct locale in URLs for German", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "de", user: testUser });
+    const Component = await NavigationSidebarWrapper({
+      locale: "de",
+      user: testUser,
+      isCalibrationEnabled: true,
+    });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
@@ -231,6 +305,7 @@ describe("NavigationSidebarWrapper", () => {
     const Component = await NavigationSidebarWrapper({
       locale: "en",
       user: testUser,
+      isCalibrationEnabled: true,
       className: "test-class",
     });
     render(Component);
@@ -239,7 +314,11 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("handles dashboard items correctly", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
+    const Component = await NavigationSidebarWrapper({
+      locale: "en",
+      user: testUser,
+      isCalibrationEnabled: true,
+    });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
@@ -255,7 +334,11 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("maps dashboard items with correct namespace and titleKey", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
+    const Component = await NavigationSidebarWrapper({
+      locale: "en",
+      user: testUser,
+      isCalibrationEnabled: true,
+    });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
@@ -274,7 +357,11 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("maps experiments items with titleKey and namespace", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
+    const Component = await NavigationSidebarWrapper({
+      locale: "en",
+      user: testUser,
+      isCalibrationEnabled: true,
+    });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");
@@ -292,7 +379,11 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("maps library children items correctly", async () => {
-    const Wrapper = await NavigationSidebarWrapper({ locale: "en", user: testUser });
+    const Wrapper = await NavigationSidebarWrapper({
+      locale: "en",
+      user: testUser,
+      isCalibrationEnabled: true,
+    });
     render(<SidebarProvider>{Wrapper}</SidebarProvider>);
 
     const component = Wrapper as React.ReactElement<{
@@ -318,7 +409,11 @@ describe("NavigationSidebarWrapper", () => {
   });
 
   it("prepares workbooks navigation", async () => {
-    const Component = await NavigationSidebarWrapper({ locale: "en", user: testUser });
+    const Component = await NavigationSidebarWrapper({
+      locale: "en",
+      user: testUser,
+      isCalibrationEnabled: true,
+    });
     render(Component);
 
     const navigationDataElement = screen.getByTestId("sidebar-navigationData");

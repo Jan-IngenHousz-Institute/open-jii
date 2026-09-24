@@ -1,8 +1,9 @@
-import { Controller, Logger } from "@nestjs/common";
+import { Controller, Inject, Logger } from "@nestjs/common";
 import { Implement, implement } from "@orpc/nest";
 import { Session } from "@thallesp/nestjs-better-auth";
 import type { UserSession } from "@thallesp/nestjs-better-auth";
 
+import { FEATURE_FLAGS } from "@repo/analytics";
 import { organizationContract } from "@repo/api/domains/organization/organization.contract";
 
 import { formatDates, formatDatesList } from "../../common/utils/date-formatter";
@@ -16,12 +17,16 @@ import { ListOrganizationResourcesUseCase } from "../application/use-cases/list-
 import { ListOrganizationTeamGrantsUseCase } from "../application/use-cases/list-organization-team-grants/list-organization-team-grants";
 import { ListOrganizationTeamsUseCase } from "../application/use-cases/list-organization-teams/list-organization-teams";
 import { ListOrganizationsUseCase } from "../application/use-cases/list-organizations/list-organizations";
+import { ANALYTICS_PORT } from "../core/ports/analytics.port";
+import type { AnalyticsPort } from "../core/ports/analytics.port";
 
 @Controller()
 export class OrganizationController {
   private readonly logger = new Logger(OrganizationController.name);
 
   constructor(
+    @Inject(ANALYTICS_PORT)
+    private readonly analyticsPort: AnalyticsPort,
     private readonly listOrganizationsUseCase: ListOrganizationsUseCase,
     private readonly listMyOrganizationsUseCase: ListMyOrganizationsUseCase,
     private readonly getOrganizationUseCase: GetOrganizationUseCase,
@@ -97,11 +102,22 @@ export class OrganizationController {
   listOrganizationResources(@Session() session: UserSession) {
     return implement(organizationContract.listOrganizationResources).handler(async ({ input }) => {
       const result = await this.listOrganizationResourcesUseCase.execute(input.id, session.user.id);
+      const isCalibrationEnabled = await this.analyticsPort.isFeatureFlagEnabled(
+        FEATURE_FLAGS.CALIBRATION,
+        session.user.email || session.user.id,
+      );
 
+      // Calibration is flagged off for most people, and a row would open a page that is
+      // not there for them; its count goes to zero with the rows so no header promises one.
       if (result.isSuccess()) {
+        const { resources, totals } = result.value;
         return {
-          resources: formatDatesList(result.value.resources),
-          totals: result.value.totals,
+          resources: formatDatesList(
+            isCalibrationEnabled
+              ? resources
+              : resources.filter((resource) => resource.type !== "calibration_definition"),
+          ),
+          totals: isCalibrationEnabled ? totals : { ...totals, calibration_definition: 0 },
         };
       }
 
