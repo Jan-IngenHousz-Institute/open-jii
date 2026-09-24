@@ -28,12 +28,10 @@ import requests
 # sizing, not a larger constant.
 DEFAULT_MACRO_BATCH_SIZE = 25
 
-# Macro requests one task keeps in flight. A task used to wait on each request in
-# turn, holding its slot while the sandbox ran. The macro pipeline runs one task
-# per core, four in production, and each request fans out to one sandbox
-# invocation per macro group. The sandbox has 20 reserved executions in
-# production and the backend retries a throttled invocation, so three per task
-# leaves room for requests spanning several groups and for macro runs from the app.
+# Each request targets one macro/version group. Three concurrent requests per
+# task give four production task slots twelve client requests in flight, leaving
+# room beneath the sandbox's twenty reserved executions. Retries can outlive a
+# failed request, so this is not a global bound on physical Lambda executions.
 MACRO_REQUESTS_IN_FLIGHT = 3
 
 # Seconds to wait before each retry of a macro request that failed transiently.
