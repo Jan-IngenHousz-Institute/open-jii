@@ -62,6 +62,12 @@ variable "driver_node_type_id" {
   default     = null
 }
 
+variable "spark_conf" {
+  description = "Spark configuration for the pipeline cluster"
+  type        = map(string)
+  default     = {}
+}
+
 variable "autoscale" {
   description = "Whether to enable autoscaling for the pipeline cluster"
   type        = bool

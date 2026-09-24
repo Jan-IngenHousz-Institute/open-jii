@@ -1,26 +1,33 @@
-"""The enriched views become plain SQL views. Each must return exactly what the
-materialized view it replaces computes, column for column and row for row, so
-both run here over the same small tables."""
+"""The enriched views join gold with the backend's tables when they are read.
+These run each view's SQL over small tables and check what a reader gets back."""
 
 from __future__ import annotations
 
-import importlib.util
-import sys
-import types
+import json
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 import pytest
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
 pytestmark = pytest.mark.spark
 
-_DATA = Path(__file__).parents[2]
-_VIEWS = _DATA / "src/views"
-_PIPELINES = _DATA / "src/pipelines"
+_VIEWS = Path(__file__).parents[2] / "src/views"
 _CATALOG = "spark_catalog"
+
+# Timezones Spark cannot use, next to one it can.
+_TIMEZONES = (
+    "Europe/Amsterdam",
+    "ROC",
+    "Factory",
+    "Mars/Olympus",
+    " Europe/Amsterdam ",
+    "europe/amsterdam",
+    "Europe/Amsterdam\x00",
+    "') from x --",
+)
 
 _ANNOTATION = (
     "STRUCT<id: STRING, rowId: STRING, type: STRING, content: STRUCT<text: STRING, flagType: STRING>, "
@@ -120,13 +127,6 @@ _TABLES = {
     """,
 }
 
-# The pipeline reads the backend's tables through these mirrors; the views read
-# the backend's tables directly.
-_MIRRORS = {
-    "experiment_annotations_source": "experiment_annotations",
-    "experiment_metadata_source": "experiment_custom_metadata",
-}
-
 
 @pytest.fixture(scope="module")
 def centrum(spark: SparkSession, tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
@@ -134,71 +134,132 @@ def centrum(spark: SparkSession, tmp_path_factory: pytest.TempPathFactory) -> It
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {_CATALOG}.centrum LOCATION '{location}'")
     for name, query in _TABLES.items():
         spark.sql(f"CREATE TABLE {_CATALOG}.centrum.{name} USING parquet AS {query}")
-    for mirror, source in _MIRRORS.items():
-        spark.sql(
-            f"CREATE TABLE {_CATALOG}.centrum.{mirror} USING parquet AS SELECT * FROM {_CATALOG}.centrum.{source}"
-        )
+
+    # One measurement per timezone in experiment e3, ids from 10 up.
+    spark.createDataFrame(
+        list(enumerate(_TIMEZONES)), "position int, timezone string"
+    ).createOrReplaceTempView("timezones")
+    spark.sql(
+        f"""
+        INSERT INTO {_CATALOG}.centrum.experiment_raw_data
+        SELECT 'e3', 10L + position, 'd9', 'MultispeQ', TIMESTAMP'2026-09-06 12:00:00', timezone,
+          DATE'2026-09-06', CAST(NULL AS ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>),
+          CAST(NULL AS VARIANT), CAST(NULL AS ARRAY<{_ANNOTATION}>), 'u9', 'c9', CAST(NULL AS STRING),
+          CAST(NULL AS STRING), CAST(NULL AS DOUBLE), CAST(NULL AS DOUBLE), parse_json('[]'),
+          TIMESTAMP'2026-09-23 10:03:00'
+        FROM timezones
+        """
+    )
 
     yield f"{_CATALOG}.centrum"
 
     spark.sql(f"DROP DATABASE {_CATALOG}.centrum CASCADE")
 
 
-def _materialized_view(
-    spark: SparkSession,
-    fake_dlt: types.ModuleType,
-    monkeypatch: pytest.MonkeyPatch,
-    schema: str,
-    notebook: str,
-    function: str,
-) -> DataFrame:
-    """What the pipeline's materialized view computes, from the notebook itself."""
-    runtime = types.ModuleType("openjii.macros.runtime")
-    runtime.centrum_table = lambda name: f"{schema}.{name}"  # type: ignore[attr-defined]
-    monkeypatch.setitem(sys.modules, "openjii.macros.runtime", runtime)
-    monkeypatch.setattr(fake_dlt, "read", lambda name: spark.table(f"{schema}.{name}"))
-
-    spec = importlib.util.spec_from_file_location(f"enriched_parity_{function}", _PIPELINES / notebook)
-    assert spec is not None and spec.loader is not None
-    pipeline = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(pipeline)
-    monkeypatch.setattr(pipeline, "spark", spark, raising=False)
-
-    return getattr(pipeline, function)()
-
-
-def _view(spark: SparkSession, name: str) -> DataFrame:
-    return spark.sql((_VIEWS / f"{name}.sql").read_text().replace("${catalog}", _CATALOG))
-
-
-def _comparable(frame: DataFrame) -> tuple[list[tuple[str, str]], list[dict[str, Any]]]:
-    schema = [(field.name, field.dataType.simpleString()) for field in frame.schema.fields]
+def _rows(spark: SparkSession, name: str) -> dict[int, dict[str, Any]]:
+    """The view's rows by id, with VARIANT columns read back as JSON values."""
+    frame = spark.sql((_VIEWS / f"{name}.sql").read_text().replace("${catalog}", _CATALOG))
     readable = [
         F.to_json(F.col(field.name)).alias(field.name)
         if field.dataType.typeName() == "variant"
         else F.col(field.name)
         for field in frame.schema.fields
     ]
-    rows = [row.asDict(recursive=True) for row in frame.select(*readable).orderBy("id").collect()]
-    return schema, rows
+    variants = {field.name for field in frame.schema.fields if field.dataType.typeName() == "variant"}
+
+    rows = {}
+    for row in frame.select(*readable).collect():
+        values = row.asDict(recursive=True)
+        for column in variants:
+            values[column] = json.loads(values[column]) if values[column] is not None else None
+        rows[values["id"]] = values
+    return rows
 
 
-@pytest.mark.parametrize(
-    ("name", "notebook"),
-    [
-        ("enriched_experiment_raw_data", "centrum/enriched/enriched_experiment_raw_data.py"),
-        ("enriched_experiment_macro_data", "macros/enriched_experiment_macro_data.py"),
-        ("enriched_experiment_uploaded_data", "centrum/enriched/enriched_experiment_uploaded_data.py"),
-    ],
-)
-def test_the_view_returns_what_the_materialized_view_computes(
-    spark: SparkSession,
-    fake_dlt: types.ModuleType,
-    monkeypatch: pytest.MonkeyPatch,
-    centrum: str,
-    name: str,
-    notebook: str,
+def _annotation_ids(row: dict[str, Any]) -> list[str]:
+    return [annotation["id"] for annotation in row["annotations"]]
+
+
+def test_each_measurement_gets_its_contributor_and_device_in_its_own_experiment(
+    spark: SparkSession, centrum: str
 ) -> None:
-    expected = _materialized_view(spark, fake_dlt, monkeypatch, centrum, notebook, name)
+    rows = _rows(spark, "enriched_experiment_raw_data")
 
-    assert _comparable(_view(spark, name)) == _comparable(expected)
+    assert rows[1]["contributor"] == {"id": "u1", "name": "Ann", "avatar": None}
+    assert rows[1]["device"]["id"] == "dev-1"
+    # u1 has another profile row in e2, and c1 is registered in e1 only.
+    assert rows[3]["contributor"]["avatar"] == "ann.png"
+    assert rows[3]["device"] is None
+    assert rows[2]["contributor"] is None
+    assert rows[2]["device"] is None
+
+
+def test_annotations_from_the_device_come_before_those_added_in_the_app(
+    spark: SparkSession, centrum: str
+) -> None:
+    rows = _rows(spark, "enriched_experiment_raw_data")
+
+    assert _annotation_ids(rows[1]) == ["payload-1", "a1", "a2"]
+    # a3 has row id 1 too, but in e2.
+    assert _annotation_ids(rows[3]) == ["a4"]
+    assert rows[2]["annotations"] == []
+
+
+def test_custom_metadata_matches_by_question_or_device_and_later_uploads_win(
+    spark: SparkSession, centrum: str
+) -> None:
+    rows = _rows(spark, "enriched_experiment_raw_data")
+
+    # Plot A1 matches soil and colour by question; device d1 matches a later colour.
+    assert rows[1]["custom_metadata"] == {"soil": "clay", "color": "blue"}
+    assert rows[2]["custom_metadata"] == {"soil": "sand"}
+    assert rows[3]["custom_metadata"] is None
+
+
+def test_a_timezone_spark_cannot_use_is_dropped_and_the_measurement_kept(
+    spark: SparkSession, centrum: str
+) -> None:
+    rows = _rows(spark, "enriched_experiment_raw_data")
+    by_timezone = {_TIMEZONES[row["id"] - 10]: row for row in rows.values() if row["experiment_id"] == "e3"}
+
+    assert len(by_timezone) == len(_TIMEZONES)
+    valid = by_timezone.pop("Europe/Amsterdam")
+    assert valid["timezone"] == "Europe/Amsterdam"
+    assert valid["measurement_time_local"] == "2026-09-06 14:00:00"
+    assert valid["local_time"] == "14:00"
+    for row in by_timezone.values():
+        assert row["measurement_time_utc"] is not None
+        assert row["timezone"] is None
+        assert row["measurement_time_local"] is None
+        assert row["local_time"] is None
+
+
+def test_macro_results_keep_their_error_and_get_the_same_enrichment(
+    spark: SparkSession, centrum: str
+) -> None:
+    rows = _rows(spark, "enriched_experiment_macro_data")
+
+    assert set(rows) == {101, 102}
+    assert rows[101]["contributor"]["name"] == "Ann"
+    assert rows[101]["device"]["id"] == "dev-1"
+    assert rows[101]["macro_output"] == {"phi2": 0.7}
+    assert rows[101]["local_time"] == "10:00"
+    assert _annotation_ids(rows[101]) == ["payload-1", "a5"]
+    assert rows[101]["custom_metadata"] == {"soil": "clay", "color": "blue"}
+    assert rows[102]["macro_error"] == "Macro failed"
+    assert rows[102]["timezone"] is None
+    assert rows[102]["annotations"] == []
+
+
+def test_uploaded_rows_credit_their_uploader_and_carry_their_annotations(
+    spark: SparkSession, centrum: str
+) -> None:
+    rows = _rows(spark, "enriched_experiment_uploaded_data")
+
+    assert set(rows) == {1001, 1002}
+    assert rows[1001]["contributor"]["name"] == "Ann"
+    assert _annotation_ids(rows[1001]) == ["a6"]
+    assert rows[1001]["uploaded_data"] == {"ph": 6.5}
+    # u3 is not a contributor of e1.
+    assert rows[1002]["contributor"] is None
+    assert rows[1002]["annotations"] == []

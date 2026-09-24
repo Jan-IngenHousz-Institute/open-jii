@@ -23,11 +23,16 @@ BRIDGE_EXPERIMENT_CONTRIBUTOR_SOURCE = f"{BRIDGE_EXPERIMENT_CONTRIBUTOR_TABLE}_s
 dlt.create_streaming_table(
     name=BRIDGE_EXPERIMENT_CONTRIBUTOR_TABLE,
     comment="Gold layer: one row per (experiment_id, user_id) that has contributed data.",
+    # A merge costs seconds of fixed work however few rows it carries, and every
+    # reader of this table judges freshness in minutes or hours.
+    spark_conf={"pipelines.trigger.interval": "2 minutes"},
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
+        # Each merge rewrites this small table's one file anyway; predictive
+        # optimization compacts it asynchronously instead.
+        "delta.autoOptimize.autoCompact": "false",
         "delta.enableRowTracking": "true",
         "delta.enableChangeDataFeed": "true",
     },
@@ -40,7 +45,7 @@ def bridge_experiment_contributor_source():
 
     Sourced from sensor measurements plus data uploaders: an uploader may never
     have submitted a measurement, so include their created_by here too, otherwise
-    the enriched_experiment_uploaded_data contributor join can't resolve them.
+    the enriched uploaded data view's contributor join can't resolve them.
     """
     sensor_users = (
         dlt.read_stream(SILVER_TABLE)
