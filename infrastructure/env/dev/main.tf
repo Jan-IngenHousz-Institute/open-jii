@@ -862,9 +862,12 @@ module "centrum_pipeline" {
   num_workers         = 1
   policy_id           = module.node_cluster_policy.policy_id
 
-  # Streaming skips AQE, so shuffles run at one per worker core. Set on the cluster
-  # because Delta's post-write jobs, such as auto compaction, ignore the pipeline's.
-  spark_conf = { "spark.sql.shuffle.partitions" = "2" }
+  # Streaming skips AQE, so shuffles run at one per worker core. Delta sizes the file
+  # state it rebuilds after writes, such as for auto compaction, separately.
+  spark_conf = {
+    "spark.sql.shuffle.partitions"              = "2"
+    "spark.databricks.delta.snapshotPartitions" = "2"
+  }
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
@@ -923,9 +926,12 @@ module "macro_execution_pipeline" {
   num_workers         = 1
   policy_id           = module.macro_cluster_policy.policy_id
 
-  # Streaming skips AQE, so shuffles run at one per worker core. Set on the cluster
-  # because Delta's post-write jobs, such as auto compaction, ignore the pipeline's.
-  spark_conf = { "spark.sql.shuffle.partitions" = "2" }
+  # Streaming skips AQE, so shuffles run at one per worker core. Delta sizes the file
+  # state it rebuilds after writes, such as for auto compaction, separately.
+  spark_conf = {
+    "spark.sql.shuffle.partitions"              = "2"
+    "spark.databricks.delta.snapshotPartitions" = "2"
+  }
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
