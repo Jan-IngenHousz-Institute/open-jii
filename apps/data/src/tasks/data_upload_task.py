@@ -18,11 +18,12 @@ import logging
 import os
 from datetime import datetime, timezone
 
+import numpy as np
 import pandas as pd
 from pyspark.dbutils import DBUtils
-from pyspark.sql import SparkSession
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql.types import LongType, StringType, StructField, StructType, TimestampType
+from pyspark.sql.types import DoubleType, FloatType, LongType, StringType, StructField, StructType, TimestampType
 
 from ambyte import find_byte_folders, load_files_per_byte, process_trace_files
 from openjii.json_scrub import scrub_non_finite_json_value
@@ -70,10 +71,15 @@ logger.info(
 # DBTITLE 1,Tabular Processor (csv/tsv/json/ndjson)
 def _serialize_dataframe_rows(frame: pd.DataFrame) -> list[str]:
     """Encode dataframe rows as strict JSON, replacing non-finite values with null."""
+    def encode_scalar(value):
+        if isinstance(value, np.floating) and not np.isfinite(value):
+            return None
+        return str(value)
+
     rows = frame.astype(object).where(pd.notnull(frame), None).to_dict(orient="records")
     payloads = []
     for row in rows:
-        payload = scrub_non_finite_json_value(json.dumps(row, default=str))
+        payload = scrub_non_finite_json_value(json.dumps(row, default=encode_scalar))
         if payload is None:
             raise AssertionError("A serialized dataframe row cannot be None")
         payloads.append(payload)
@@ -185,6 +191,22 @@ def process_tsv_upload() -> dict:
     return _process_tabular_upload("tsv", (".tsv",), lambda p: pd.read_csv(p, sep="\t"))
 
 
+def _serialize_parquet_rows(frame: DataFrame) -> DataFrame:
+    """Encode Spark rows with non-finite floating columns represented as JSON null."""
+    columns = []
+    for field in frame.schema.fields:
+        value = F.col("`" + field.name.replace("`", "``") + "`")
+        if isinstance(field.dataType, (FloatType, DoubleType)):
+            value = F.when(
+                F.isnan(value) | (value == float("inf")) | (value == float("-inf")),
+                F.lit(None).cast(field.dataType),
+            ).otherwise(value)
+        columns.append(value.alias(field.name))
+    return frame.select(
+        F.to_json(F.struct(*columns), options={"ignoreNullFields": "false"}).alias("uploaded_data")
+    )
+
+
 def process_parquet_upload() -> dict:
     """Parquet uploads via the native Spark reader (not pandas/pyarrow), so files
     written with newer parquet logical types (e.g. VARIANT in platform exports)
@@ -225,9 +247,7 @@ def process_parquet_upload() -> dict:
         try:
             # Spark reads UC volumes via /Volumes; strip the dbfs: scheme dbutils adds.
             spark_path = path[len("dbfs:") :] if path.startswith("dbfs:") else path
-            row_json = spark.read.parquet(spark_path).select(
-                F.to_json(F.struct("*")).alias("uploaded_data")
-            )
+            row_json = _serialize_parquet_rows(spark.read.parquet(spark_path))
             combined = row_json if combined is None else combined.unionByName(row_json)
             file_count += 1
         except Exception as e:
