@@ -100,7 +100,9 @@ describe("CalibrationDefinitionDetail", () => {
     await userEvent.tab();
 
     expect(await screen.findByText("iot.calibration.detail.notSaving")).toBeInTheDocument();
-    expect(screen.getByText(/captureProcedure.instruments/)).toBeInTheDocument();
+    // Placed the way the page names it, not as a schema path.
+    expect(screen.getByText(/^iot\.calibration\.detail\.rig, /)).toBeInTheDocument();
+    expect(screen.queryByText(/captureProcedure/)).toBeNull();
     // "All changes saved" beside an alert saying it is not saving is the worst of both.
     expect(screen.queryByText("autosave.saved")).toBeNull();
     expect(screen.queryByText("autosave.saving")).toBeNull();

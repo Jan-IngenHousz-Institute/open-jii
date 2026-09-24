@@ -4,6 +4,7 @@ import { Plus, X } from "lucide-react";
 
 import type { ProcedureRead } from "@repo/api/domains/iot/calibration/iot-calibration-procedure.schema";
 import { useTranslation } from "@repo/i18n";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
 
 import { InlineChoice } from "./inline-choice";
 import { InlineToken } from "./inline-token";
@@ -117,7 +118,8 @@ export function StepReadsClause({ reads, sources, canEdit, onChange }: StepReads
     const canRemove = canEdit && reads.length > 1;
 
     return (
-      <span key={index} className="whitespace-nowrap">
+      // Held on one line where there is room for it; a phone is narrower than one reading.
+      <span key={index} className="sm:whitespace-nowrap">
         {index > 0 && <span className="text-muted-foreground">, </span>}
 
         {renderReading(read, index)}
@@ -151,9 +153,9 @@ export function StepReadsClause({ reads, sources, canEdit, onChange }: StepReads
             type="button"
             aria-label={t("iot.calibration.procedure.removeRead", { column: read.as })}
             onClick={() => removeRead(index)}
-            className="text-muted-foreground/60 hover:text-destructive ml-0.5 align-middle"
+            className="text-muted-foreground/60 hover:bg-muted focus-visible:ring-ring hover:text-destructive -my-1 inline-flex size-6 items-center justify-center rounded-sm align-middle focus-visible:outline-none focus-visible:ring-1"
           >
-            <X className="inline size-3" aria-hidden />
+            <X className="size-3" aria-hidden />
           </button>
         )}
       </span>
@@ -174,14 +176,19 @@ export function StepReadsClause({ reads, sources, canEdit, onChange }: StepReads
     <span className="[word-spacing:normal]">
       {reads.map(renderRead)}
       {canEdit && (
-        <button
-          type="button"
-          aria-label={t("iot.calibration.procedure.addRead")}
-          onClick={addRead}
-          className="text-muted-foreground/60 hover:text-foreground ml-1 align-middle"
-        >
-          <Plus className="inline size-3" aria-hidden />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={t("iot.calibration.procedure.addRead")}
+              onClick={addRead}
+              className="text-muted-foreground/60 hover:bg-muted focus-visible:ring-ring hover:text-foreground -my-1 ml-0.5 inline-flex size-6 items-center justify-center rounded-sm align-middle focus-visible:outline-none focus-visible:ring-1"
+            >
+              <Plus className="size-3" aria-hidden />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{t("iot.calibration.procedure.addRead")}</TooltipContent>
+        </Tooltip>
       )}
     </span>
   );

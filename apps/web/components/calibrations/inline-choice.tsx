@@ -35,7 +35,12 @@ export function InlineChoice<T extends string>({
   mono = true,
   placeholder,
 }: InlineChoiceProps<T>) {
-  const chosen = options.find((option) => option.value === value);
+  // Two instruments can briefly share a role while it is being renamed; one entry per value
+  // keeps the list, and the value shown, from doubling.
+  const unique = options.filter(
+    (option, index) => options.findIndex((other) => other.value === option.value) === index,
+  );
+  const chosen = unique.find((option) => option.value === value);
   const shown = chosen?.label ?? (value === "" ? (placeholder ?? "") : value);
   const face = cn(mono && "font-mono", value === "" && "text-muted-foreground italic");
 
@@ -45,7 +50,7 @@ export function InlineChoice<T extends string>({
 
   // The select hands back a plain string; finding it among the options is what types it.
   function handleChange(picked: string) {
-    const option = options.find((candidate) => candidate.value === picked);
+    const option = unique.find((candidate) => candidate.value === picked);
     if (option !== undefined) {
       onCommit(option.value);
     }
@@ -74,7 +79,7 @@ export function InlineChoice<T extends string>({
       >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
-      <SelectContent>{options.map(renderOption)}</SelectContent>
+      <SelectContent>{unique.map(renderOption)}</SelectContent>
     </Select>
   );
 }

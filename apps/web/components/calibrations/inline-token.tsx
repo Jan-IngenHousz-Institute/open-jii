@@ -25,6 +25,11 @@ interface InlineTokenProps {
   placeholder?: string;
   /** Why the value is refused, shown on hover so a red word is never left unexplained. */
   invalid?: string;
+  /**
+   * Why a draft would be refused, checked as it is typed. A refused draft never commits:
+   * it stays red with its reason on screen, and leaving it puts the saved value back.
+   */
+  validate?: (draft: string) => string | undefined;
   inputMode?: "text" | "decimal";
   className?: string;
 }
@@ -40,6 +45,7 @@ export function InlineToken({
   mono = false,
   placeholder,
   invalid,
+  validate,
   inputMode = "text",
   className,
 }: InlineTokenProps) {
@@ -54,17 +60,23 @@ export function InlineToken({
     }
   }, [isEditing]);
 
+  const draftError = draft === null ? undefined : validate?.(draft);
+
   function commit() {
-    if (draft !== null && draft !== value) {
+    const isChanged = draft !== null && draft !== value;
+    if (isChanged && draftError === undefined) {
       onCommit(draft);
     }
     setDraft(null);
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    // Enter on a refused draft keeps the field open, so the reason stays in view.
     if (event.key === "Enter") {
       event.preventDefault();
-      commit();
+      if (draftError === undefined) {
+        commit();
+      }
     }
     if (event.key === "Escape") {
       event.preventDefault();
@@ -82,7 +94,7 @@ export function InlineToken({
     }
 
     return (
-      <Tooltip>
+      <Tooltip key="reason">
         <TooltipTrigger asChild>{token}</TooltipTrigger>
         <TooltipContent>{invalid}</TooltipContent>
       </Tooltip>
@@ -94,24 +106,32 @@ export function InlineToken({
   }
 
   if (isEditing) {
+    const isDraftRefused = draftError !== undefined;
+
     return (
-      <input
-        ref={input}
-        value={draft}
-        // Sized to its content, so a sentence does not carry a row of equal boxes.
-        size={Math.max(draft.length + 1, 3)}
-        aria-label={label}
-        aria-invalid={isInvalid}
-        inputMode={inputMode}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={commit}
-        onKeyDown={handleKeyDown}
-        className={cn(
-          TOKEN,
-          face,
-          "bg-muted/60 focus:ring-ring -mx-0.5 px-0.5 focus:outline-none focus:ring-1",
-        )}
-      />
+      <Tooltip key="draft" open={isDraftRefused}>
+        <TooltipTrigger asChild>
+          <input
+            ref={input}
+            value={draft}
+            // Sized to its content, so a sentence does not carry a row of equal boxes.
+            size={Math.max(draft.length + 1, 3)}
+            aria-label={label}
+            aria-invalid={isInvalid || isDraftRefused}
+            inputMode={inputMode}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={commit}
+            onKeyDown={handleKeyDown}
+            className={cn(
+              TOKEN,
+              face,
+              "bg-muted/60 focus:ring-ring -mx-0.5 px-0.5 focus:outline-none focus:ring-1",
+              isDraftRefused && "text-destructive focus:ring-destructive decoration-destructive",
+            )}
+          />
+        </TooltipTrigger>
+        <TooltipContent>{draftError}</TooltipContent>
+      </Tooltip>
     );
   }
 
@@ -124,7 +144,7 @@ export function InlineToken({
       className={cn(
         TOKEN,
         face,
-        "hover:bg-muted -mx-0.5 px-0.5 text-left",
+        "hover:bg-muted focus-visible:ring-ring -mx-0.5 px-0.5 text-left focus-visible:outline-none focus-visible:ring-1",
         isInvalid && "decoration-destructive text-destructive",
       )}
     >

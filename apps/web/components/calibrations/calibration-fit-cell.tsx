@@ -51,7 +51,7 @@ export function CalibrationFitCell({
     <div className="space-y-5">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <div className="flex items-center justify-between gap-3">
-          <CollapsibleTrigger className="text-muted-foreground hover:text-foreground group/trigger flex items-center gap-1.5 text-sm">
+          <CollapsibleTrigger className="text-muted-foreground hover:text-foreground focus-visible:ring-ring -my-1 flex items-center gap-1.5 rounded-sm py-1 text-sm focus-visible:outline-none focus-visible:ring-1">
             <ChevronRight
               className={cn("size-3.5 transition-transform", isOpen && "rotate-90")}
               aria-hidden

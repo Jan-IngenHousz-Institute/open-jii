@@ -1,11 +1,10 @@
 "use client";
 
-import { X } from "lucide-react";
-
 import type { CoefficientSpec } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { MAX_COEFFICIENT_ARRAY_LENGTH } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
 
+import { CalibrationRowRemove } from "./calibration-row-remove";
 import { InlineChoice } from "./inline-choice";
 import { InlineToken } from "./inline-token";
 import type { CoefficientType } from "./output-schema-edits";
@@ -53,22 +52,50 @@ export function CalibrationCoefficientLine({
       ? undefined
       : t("iot.calibration.produces.nameInvalid");
 
-  // A bound left empty, or typed as something other than a number, is no bound at all.
-  function commitBound(field: "min" | "max", text: string) {
-    const parsed = Number(text.trim());
-    const isNumber = text.trim() !== "" && Number.isFinite(parsed);
+  // A rename onto a sibling would merge the two, so it is refused before it commits.
+  function validateName(to: string) {
+    const isTaken = to !== name && takenNames.includes(to);
+    if (isTaken) {
+      return t("iot.calibration.produces.nameTaken");
+    }
 
-    onChange(withBound(spec, field, isNumber ? parsed : undefined));
+    return COEFFICIENT_NAME_PATTERN.test(to)
+      ? undefined
+      : t("iot.calibration.produces.nameInvalid");
   }
 
-  function commitLength(text: string) {
+  // Empty is allowed, and means no bound at all.
+  function validateBound(text: string) {
+    const parsed = Number(text.trim());
+    if (text.trim() === "") {
+      return undefined;
+    }
+    if (!Number.isFinite(parsed)) {
+      return t("iot.calibration.invalid.number");
+    }
+
+    // Whole numbers only for a whole-number array, as retyping one to it already enforces.
+    const isFractionOfWhole = spec.type === "integer_array" && !Number.isInteger(parsed);
+    return isFractionOfWhole ? t("iot.calibration.invalid.wholeNumber") : undefined;
+  }
+
+  function validateLength(text: string) {
     const parsed = Number(text.trim());
     const isAllowed =
       Number.isInteger(parsed) && parsed >= 1 && parsed <= MAX_COEFFICIENT_ARRAY_LENGTH;
 
-    if (isAllowed) {
-      onChange(withLength(spec, parsed));
-    }
+    return isAllowed
+      ? undefined
+      : t("iot.calibration.invalid.wholeRange", { min: 1, max: MAX_COEFFICIENT_ARRAY_LENGTH });
+  }
+
+  function commitBound(field: "min" | "max", text: string) {
+    const isEmpty = text.trim() === "";
+    onChange(withBound(spec, field, isEmpty ? undefined : Number(text.trim())));
+  }
+
+  function commitLength(text: string) {
+    onChange(withLength(spec, Number(text.trim())));
   }
 
   function boundToken(field: "min" | "max") {
@@ -76,13 +103,14 @@ export function CalibrationCoefficientLine({
     return (
       <InlineToken
         value={value === undefined ? "" : String(value)}
-        label={t(`iot.calibration.produces.${field}`)}
+        label={t(`iot.calibration.produces.${field}`, { name })}
         canEdit={canEdit}
         mono
         inputMode="decimal"
         // Not "…": the rig already uses that glyph for a range's own separator
         // ("current_a 0…10 A"), and a bound with nothing set is a different fact.
         placeholder={t("iot.calibration.produces.noBound")}
+        validate={validateBound}
         onCommit={(text) => commitBound(field, text)}
       />
     );
@@ -97,6 +125,7 @@ export function CalibrationCoefficientLine({
           canEdit={canEdit}
           mono
           invalid={nameError}
+          validate={validateName}
           onCommit={onRename}
           className="font-mono text-[15px]"
         />
@@ -123,6 +152,7 @@ export function CalibrationCoefficientLine({
               canEdit={canEdit}
               mono
               inputMode="decimal"
+              validate={validateLength}
               onCommit={commitLength}
             />{" "}
             {t("iot.calibration.produces.entriesSuffix")}
@@ -146,16 +176,11 @@ export function CalibrationCoefficientLine({
       </p>
 
       {canEdit && (
-        <span className="flex h-7 items-center self-start">
-          <button
-            type="button"
-            onClick={onRemove}
-            aria-label={t("iot.calibration.produces.removeCoefficient", { name })}
-            className="text-muted-foreground/0 group-hover:text-muted-foreground/70 hover:text-destructive! transition-colors"
-          >
-            <X className="size-3" aria-hidden />
-          </button>
-        </span>
+        <CalibrationRowRemove
+          label={t("iot.calibration.produces.removeCoefficient", { name })}
+          onRemove={onRemove}
+          revealClassName="group-hover:text-muted-foreground/70"
+        />
       )}
     </li>
   );

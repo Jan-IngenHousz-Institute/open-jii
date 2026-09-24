@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import type { CoefficientSpec } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { useTranslation } from "@repo/i18n";
@@ -14,6 +14,7 @@ import {
 } from "@repo/ui/components/dropdown-menu";
 
 import { CalibrationCoefficientLine } from "./calibration-coefficient-line";
+import { CalibrationRowRemove } from "./calibration-row-remove";
 import { InlineToken } from "./inline-token";
 import { COEFFICIENT_NAME_PATTERN, specForWritable, uniqueName } from "./output-schema-edits";
 
@@ -59,6 +60,18 @@ export function CalibrationOutputBlock({
       : t("iot.calibration.produces.nameInvalid");
   const offered = writable.filter((candidate) => !declared.includes(candidate.name));
 
+  // A rename onto another block would merge the two, so it is refused before it commits.
+  function validateBlockName(to: string) {
+    const isTaken = to !== block && takenBlocks.includes(to);
+    if (isTaken) {
+      return t("iot.calibration.produces.blockTaken");
+    }
+
+    return COEFFICIENT_NAME_PATTERN.test(to)
+      ? undefined
+      : t("iot.calibration.produces.nameInvalid");
+  }
+
   function addPlain() {
     onSetCoefficient(uniqueName(NEW_COEFFICIENT, declared), { type: "number" });
   }
@@ -103,21 +116,17 @@ export function CalibrationOutputBlock({
           canEdit={canEdit}
           mono
           invalid={blockError}
+          validate={validateBlockName}
           onCommit={onRename}
           className="font-mono text-[15px] font-medium"
         />
         <span />
         {canEdit && (
-          <span className="flex h-7 items-center self-start">
-            <button
-              type="button"
-              onClick={onRemove}
-              aria-label={t("iot.calibration.produces.removeBlock", { block })}
-              className="text-muted-foreground/0 group-hover/header:text-muted-foreground/70 hover:text-destructive! transition-colors"
-            >
-              <X className="size-3" aria-hidden />
-            </button>
-          </span>
+          <CalibrationRowRemove
+            label={t("iot.calibration.produces.removeBlock", { block })}
+            onRemove={onRemove}
+            revealClassName="group-hover/header:text-muted-foreground/70"
+          />
         )}
       </div>
 

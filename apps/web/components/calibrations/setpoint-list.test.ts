@@ -38,4 +38,25 @@ describe("numericSetpoints", () => {
   it("keeps only the points an instrument can be driven to", () => {
     expect(numericSetpoints([0.8, "dim", 3])).toEqual([0.8, 3]);
   });
+
+  // What the list writes, it has to read back: an edit to one point must not break the rest.
+  describe("formatSetpoints and parseSetpoints together", () => {
+    it("round-trips compound setups and labels that hold commas", () => {
+      const values = [0.8, { led: 1, filter: "red" }, "dim, then bright", "10", 3];
+
+      expect(parseSetpoints(formatSetpoints(values), false)).toEqual(values);
+    });
+
+    it("refuses a compound setup still being typed", () => {
+      expect(parseSetpoints('0.8, {"led": 1', false)).toBeNull();
+    });
+
+    it("refuses a compound setup whose settings are not numbers or labels", () => {
+      expect(parseSetpoints('{"led": [1, 2]}', false)).toBeNull();
+    });
+
+    it("refuses a compound setup where an instrument needs a number", () => {
+      expect(parseSetpoints('0.8, {"led": 1}', true)).toBeNull();
+    });
+  });
 });

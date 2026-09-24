@@ -23,7 +23,7 @@ interface InlineEditableTitleProps {
   headingLevel?: 1 | 2 | 3 | 4 | 5 | 6;
 }
 
-const titleVariants = cva("text-2xl transition-all duration-300", {
+const titleVariants = cva("text-2xl leading-tight transition-all duration-300", {
   variants: {
     editable: {
       true: "hover:bg-muted -ml-2 cursor-pointer rounded-md px-2 group",
@@ -79,9 +79,21 @@ export function InlineEditableTitle({
 
   return (
     <div
-      className={actionsInline ? "flex items-center gap-2" : "flex items-center justify-between"}
+      className={
+        actionsInline
+          ? "flex flex-wrap items-center gap-2"
+          : "flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
+      }
     >
-      <div className="flex min-w-0 items-center gap-2">
+      {/* The basis is what breaks the row: below it the badges and actions wrap underneath,
+          above it a long title wraps inside itself, as it always has. */}
+      <div
+        className={
+          actionsInline
+            ? "flex min-w-0 items-center gap-2"
+            : "flex min-w-0 flex-1 basis-80 items-center gap-2"
+        }
+      >
         {icon ? <span className="text-muted-foreground shrink-0">{icon}</span> : null}
         {isEditing ? (
           <div className="flex flex-1 items-center gap-2">
@@ -136,7 +148,7 @@ export function InlineEditableTitle({
       </div>
 
       {(badges ?? actions) && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {badges}
           {actions}
         </div>

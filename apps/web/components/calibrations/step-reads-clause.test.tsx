@@ -146,6 +146,24 @@ describe("StepReadsClause", () => {
     expect(onChange).toHaveBeenLastCalledWith([REFERENCE_READ]);
   });
 
+  // Two instruments share a role for as long as a colliding rename stands; the list of
+  // sources must still offer it once, not twice.
+  it("offers a source once while two instruments share its role", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    render(
+      <StepReadsClause
+        reads={[DEVICE_READ]}
+        sources={[...SOURCES, { role: "dut", offered: ["par"], isExhaustive: true }]}
+        canEdit
+        onChange={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("combobox", { name: "iot.calibration.procedure.source" }));
+
+    expect(await screen.findAllByRole("option", { name: "dut" })).toHaveLength(1);
+  });
+
   it("will not remove a step's last reading", () => {
     renderClause([DEVICE_READ]);
 

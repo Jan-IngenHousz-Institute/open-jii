@@ -82,23 +82,69 @@ describe("CalibrationCoefficientLine", () => {
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ min: 0.1 }));
   });
 
-  it("drops a bound that is cleared or is not a number", async () => {
+  it("drops a bound once it is cleared", async () => {
     const { onChange, user } = renderLine({ type: "number", min: 0.1, max: 10 });
 
     await user.click(screen.getByRole("button", { name: "iot.calibration.produces.min" }));
     await user.clear(screen.getByRole("textbox", { name: "iot.calibration.produces.min" }));
     await user.tab();
+
     expect(onChange).toHaveBeenLastCalledWith(expect.not.objectContaining({ min: 0.1 }));
+  });
+
+  // Refused while it is typed, rather than committed and quietly put back.
+  it("refuses a bound that is not a number, and says why", async () => {
+    const { onChange, user } = renderLine({ type: "number", min: 0.1, max: 10 });
 
     await user.click(screen.getByRole("button", { name: "iot.calibration.produces.max" }));
     const max = screen.getByRole("textbox", { name: "iot.calibration.produces.max" });
     await user.clear(max);
-    await user.type(max, "lots");
-    await user.tab();
-    expect(onChange).toHaveBeenLastCalledWith(expect.not.objectContaining({ max: 10 }));
+    await user.type(max, "lots{Enter}");
+
+    expect(max).toHaveAttribute("aria-invalid", "true");
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("iot.calibration.invalid.number");
+    expect(onChange).not.toHaveBeenCalled();
   });
 
-  it("resizes an array within what a device can hold, and ignores anything else", async () => {
+  it("refuses a fractional bound on a whole-number array", async () => {
+    const { onChange, user } = renderLine({ type: "integer_array", length: 6 });
+
+    await user.click(screen.getByRole("button", { name: "iot.calibration.produces.max" }));
+    await user.type(screen.getByRole("textbox", { name: "iot.calibration.produces.max" }), "0.5");
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "iot.calibration.invalid.wholeNumber",
+    );
+    await user.tab();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("takes a whole bound on a whole-number array", async () => {
+    const { onChange, user } = renderLine({ type: "integer_array", length: 6 });
+
+    await user.click(screen.getByRole("button", { name: "iot.calibration.produces.max" }));
+    await user.type(screen.getByRole("textbox", { name: "iot.calibration.produces.max" }), "255");
+    await user.tab();
+
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ max: 255 }));
+  });
+
+  it("refuses a coefficient name a sibling already holds", async () => {
+    const { onRename, user } = renderLine(undefined, { takenNames: ["slope", "intercept"] });
+
+    await user.click(screen.getByRole("button", { name: "iot.calibration.produces.coefficient" }));
+    const field = screen.getByRole("textbox", { name: "iot.calibration.produces.coefficient" });
+    await user.clear(field);
+    await user.type(field, "intercept");
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "iot.calibration.produces.nameTaken",
+    );
+    await user.tab();
+    expect(onRename).not.toHaveBeenCalled();
+  });
+
+  it("resizes an array within what a device can hold, and refuses anything else", async () => {
     const { onChange, user } = renderLine({ type: "number_array", length: 6 });
 
     await user.click(screen.getByRole("button", { name: "iot.calibration.produces.entries" }));
@@ -113,6 +159,9 @@ describe("CalibrationCoefficientLine", () => {
     length = screen.getByRole("textbox", { name: "iot.calibration.produces.entries" });
     await user.clear(length);
     await user.type(length, "0");
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "iot.calibration.invalid.wholeRange",
+    );
     await user.tab();
     expect(onChange).not.toHaveBeenCalled();
   });

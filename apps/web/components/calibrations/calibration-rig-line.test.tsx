@@ -87,19 +87,23 @@ describe("CalibrationRigLine", () => {
     );
   });
 
-  // Collision-checking happens where the document is judged as a whole, not in this line:
-  // the call reaches the parent, whose renameInstrumentRole a schema failure would reject.
-  it("reports a role typed over one the rig already holds, for the parent to judge", async () => {
-    const { onRename, user } = renderLine({ takenRoles: ["lamp", "par_ref"] });
+  // Committed, the rename would merge two instruments and every step addressing either,
+  // with no way back, so it never reaches the parent.
+  it.each(["par_ref", "dut"])(
+    "refuses a rename onto %s, which the rig already holds",
+    async (taken) => {
+      const { onRename, user } = renderLine({ takenRoles: ["dut", "lamp", "par_ref"] });
 
-    await user.click(screen.getByRole("button", { name: "iot.calibration.rig.role" }));
-    const role = screen.getByRole("textbox", { name: "iot.calibration.rig.role" });
-    await user.clear(role);
-    await user.type(role, "par_ref");
-    await user.tab();
+      await user.click(screen.getByRole("button", { name: "iot.calibration.rig.role" }));
+      const role = screen.getByRole("textbox", { name: "iot.calibration.rig.role" });
+      await user.clear(role);
+      await user.type(role, taken);
 
-    expect(onRename).toHaveBeenLastCalledWith("par_ref");
-  });
+      expect(await screen.findByRole("tooltip")).toHaveTextContent("iot.calibration.rig.roleTaken");
+      await user.tab();
+      expect(onRename).not.toHaveBeenCalled();
+    },
+  );
 
   // A handshake that only ever named the old model is not worth keeping past it.
   it("takes the new model's handshake when the old one was the model's own", async () => {
@@ -165,5 +169,20 @@ describe("CalibrationRigLine", () => {
     expect(screen.queryByRole("button", { name: "iot.calibration.rig.role" })).toBeNull();
     expect(screen.queryByRole("button", { name: "iot.calibration.rig.instrument" })).toBeNull();
     expect(screen.getByText("lamp")).toBeInTheDocument();
+  });
+
+  // Adding an instrument does nothing until a step drives or reads it.
+  it("points out an instrument no step uses yet", () => {
+    renderLine({ usedBySteps: 0 });
+
+    expect(screen.getByText("iot.calibration.rig.unused")).toBeInTheDocument();
+  });
+
+  it("says nothing about use once a step names the instrument, or on a closed definition", () => {
+    const { container } = renderLine({ usedBySteps: 1 });
+    expect(container).not.toHaveTextContent("iot.calibration.rig.unused");
+
+    const { container: closed } = renderLine({ usedBySteps: 0, canEdit: false });
+    expect(closed).not.toHaveTextContent("iot.calibration.rig.unused");
   });
 });

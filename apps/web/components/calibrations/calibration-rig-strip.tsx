@@ -35,6 +35,17 @@ import {
 } from "./procedure-edits";
 import { setpointTargets } from "./rig-sources";
 
+/** What each bench instrument is for, as its driver describes itself, keyed by model. */
+const INSTRUMENT_PURPOSE: Partial<Record<string, string>> = {
+  "kiprim-dc": "iot.calibration.rig.purpose.kiprim-dc",
+  "calitool-spectral-board": "iot.calibration.rig.purpose.calitool-spectral-board",
+  "minipar-reference": "iot.calibration.rig.purpose.minipar-reference",
+  "micropython-par-reference": "iot.calibration.rig.purpose.micropython-par-reference",
+};
+
+/** Channels named per instrument before the rest are counted: a twelve-channel board would fill the menu. */
+const OFFERED_CHANNELS = 3;
+
 interface CalibrationRigStripProps {
   procedure: CaptureProcedure;
   family: CalibrationFamily;
@@ -74,10 +85,13 @@ export function CalibrationRigStrip({
   }
 
   function renderAddOption(instrument: BenchInstrumentSummary) {
-    const offers = [
+    const channels = [
       ...instrument.setpoints.map((setpoint) => setpoint.name),
       ...instrument.readings.map((reading) => reading.name),
-    ].join(" · ");
+    ];
+    const shown = channels.slice(0, OFFERED_CHANNELS).join(", ");
+    const hidden = channels.length - OFFERED_CHANNELS;
+    const purpose = INSTRUMENT_PURPOSE[instrument.model];
 
     return (
       <DropdownMenuItem
@@ -86,7 +100,11 @@ export function CalibrationRigStrip({
         onSelect={() => handleAdd(instrument)}
       >
         <span className="font-mono">{instrument.model}</span>
-        <span className="text-muted-foreground font-mono text-[11px]">{offers}</span>
+        {purpose !== undefined && <span className="text-xs">{t(purpose)}</span>}
+        <span className="text-muted-foreground font-mono text-[11px]">
+          {shown}
+          {hidden > 0 && ` ${t("iot.calibration.rig.andMore", { count: hidden })}`}
+        </span>
       </DropdownMenuItem>
     );
   }
@@ -150,7 +168,7 @@ export function CalibrationRigStrip({
               {t("iot.calibration.rig.add")}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
+          <DropdownMenuContent align="start" className="w-72">
             {instruments.map(renderAddOption)}
           </DropdownMenuContent>
         </DropdownMenu>

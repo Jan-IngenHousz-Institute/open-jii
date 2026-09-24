@@ -1,12 +1,11 @@
 "use client";
 
 import { useLocale } from "@/hooks/useLocale";
-import { X } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
 import type { BenchInstrumentSummary } from "@repo/iot";
-import { cn } from "@repo/ui/lib/utils";
 
+import { CalibrationRowRemove } from "./calibration-row-remove";
 import { formatList } from "./format-list";
 import { formatRange } from "./format-range";
 import { InlineChoice } from "./inline-choice";
@@ -49,6 +48,8 @@ export function CalibrationRigLine({
   const locale = useLocale();
 
   const model = instruments.find((candidate) => candidate.model === instrument.model);
+  const isUnused = canEdit && usedBySteps === 0;
+
   // takenRoles carries every role including this one's own, once each; a rename that
   // collides shows up as this role appearing twice, not as it "still" being in the list.
   const isTaken = takenRoles.filter((role) => role === instrument.role).length > 1;
@@ -57,6 +58,17 @@ export function CalibrationRigLine({
     : ROLE_PATTERN.test(instrument.role)
       ? undefined
       : t("iot.calibration.rig.roleInvalid");
+
+  // Committed, a rename onto a role the rig already holds (the device's included) would
+  // merge the two instruments and every step addressing either, past any undoing.
+  function validateRole(to: string) {
+    const isTakenElsewhere = to !== instrument.role && takenRoles.includes(to);
+    if (isTakenElsewhere) {
+      return t("iot.calibration.rig.roleTaken");
+    }
+
+    return ROLE_PATTERN.test(to) ? undefined : t("iot.calibration.rig.roleInvalid");
+  }
 
   function handleModelChange(value: string) {
     if (value === ANY_INSTRUMENT) {
@@ -85,6 +97,7 @@ export function CalibrationRigLine({
         canEdit={canEdit}
         mono
         invalid={roleError}
+        validate={validateRole}
         onCommit={onRename}
         className="font-mono"
       />
@@ -134,23 +147,23 @@ export function CalibrationRigLine({
             <span className="font-mono">{formatList(locale, readings)}</span>
           </span>
         )}
+
+        {/* Adding an instrument does nothing on its own until a step drives or reads it. */}
+        {isUnused && (
+          <span className="text-muted-foreground/80 ml-2 text-xs italic">
+            {t("iot.calibration.rig.unused")}
+          </span>
+        )}
       </p>
 
       {canEdit && (
-        <span className="flex h-7 items-center self-start">
-          <button
-            type="button"
-            onClick={onRemove}
-            disabled={usedBySteps > 0}
-            aria-label={t("iot.calibration.rig.remove", { role: instrument.role })}
-            className={cn(
-              "text-muted-foreground/0 group-hover:text-muted-foreground/70 hover:text-destructive! transition-colors",
-              usedBySteps > 0 && "hidden",
-            )}
-          >
-            <X className="size-3" aria-hidden />
-          </button>
-        </span>
+        <CalibrationRowRemove
+          label={t("iot.calibration.rig.remove", { role: instrument.role })}
+          onRemove={onRemove}
+          revealClassName="group-hover:text-muted-foreground/70"
+          disabled={usedBySteps > 0}
+          hidden={usedBySteps > 0}
+        />
       )}
     </li>
   );

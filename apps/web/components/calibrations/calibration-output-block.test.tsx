@@ -51,15 +51,20 @@ describe("CalibrationOutputBlock", () => {
     expect(onRename).toHaveBeenLastCalledWith("spec");
   });
 
-  it("refuses a block name the schema already holds, and puts the saved one back", async () => {
+  // Committing it would merge the two blocks, so it is refused with the reason in view.
+  it("refuses a block name the schema already holds, says why, and keeps the saved one", async () => {
     const { onRename, user } = renderBlock({ takenBlocks: ["par", "led"] });
 
     const block = await openToken(user, "iot.calibration.produces.block");
     await user.clear(block);
     await user.type(block, "led");
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "iot.calibration.produces.blockTaken",
+    );
     await user.tab();
 
-    expect(onRename).toHaveBeenLastCalledWith("led");
+    expect(onRename).not.toHaveBeenCalled();
     expect(
       screen.getByRole("button", { name: "iot.calibration.produces.block" }),
     ).toHaveTextContent("par");

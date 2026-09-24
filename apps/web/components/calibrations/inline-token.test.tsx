@@ -99,4 +99,48 @@ describe("InlineToken", () => {
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.getByText("par_raw")).toBeInTheDocument();
   });
+
+  // Enter on a refused draft keeps the field open, so the reason stays on screen.
+  it("refuses a draft its check rejects, keeps the field open, and says why", async () => {
+    const { onCommit, user } = renderToken({
+      validate: (draft) => (draft.includes(" ") ? "No spaces" : undefined),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Column" }));
+    const field = screen.getByRole("textbox", { name: "Column" });
+    await user.clear(field);
+    await user.type(field, "par raw{Enter}");
+
+    expect(screen.getByRole("textbox", { name: "Column" })).toHaveAttribute("aria-invalid", "true");
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("No spaces");
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it("puts the saved value back when a refused draft is left", async () => {
+    const { onCommit, user } = renderToken({
+      validate: (draft) => (draft.includes(" ") ? "No spaces" : undefined),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Column" }));
+    const field = screen.getByRole("textbox", { name: "Column" });
+    await user.clear(field);
+    await user.type(field, "par raw");
+    await user.tab();
+
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Column" })).toHaveTextContent("par_raw");
+  });
+
+  it("commits a draft its check accepts", async () => {
+    const { onCommit, user } = renderToken({
+      validate: (draft) => (draft.includes(" ") ? "No spaces" : undefined),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Column" }));
+    const field = screen.getByRole("textbox", { name: "Column" });
+    await user.clear(field);
+    await user.type(field, "par{Enter}");
+
+    expect(onCommit).toHaveBeenCalledWith("par");
+  });
 });

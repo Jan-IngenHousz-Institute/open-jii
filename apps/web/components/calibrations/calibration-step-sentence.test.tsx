@@ -105,6 +105,19 @@ describe("CalibrationStepSentence", () => {
       expect(onChange).toHaveBeenLastCalledWith({ kind: "settle", ms: 250 });
     });
 
+    it("says what a wait must be while it is typed", async () => {
+      const { user } = renderSentence(settle);
+
+      await user.click(screen.getByRole("button", { name: "iot.calibration.procedure.waitFor" }));
+      const field = screen.getByRole("textbox", { name: "iot.calibration.procedure.waitFor" });
+      await user.clear(field);
+      await user.type(field, "0");
+
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "iot.calibration.invalid.wholeRange",
+      );
+    });
+
     it("keeps its wait when the new one is not a whole number the contract allows", async () => {
       const { onChange, user } = renderSentence(settle);
 
@@ -145,6 +158,20 @@ describe("CalibrationStepSentence", () => {
       expect(onChange).toHaveBeenLastCalledWith({ ...set, set: "voltage_v" });
     });
 
+    // An empty value would read as 0 and drive the instrument there without a word.
+    it("refuses a value left empty", async () => {
+      const { onChange, user } = renderSentence(set);
+
+      await user.click(screen.getByRole("button", { name: "iot.calibration.procedure.value" }));
+      await user.clear(screen.getByRole("textbox", { name: "iot.calibration.procedure.value" }));
+
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "iot.calibration.invalid.number",
+      );
+      await user.tab();
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
     it("takes a value only once it is a number", async () => {
       const { onChange, user } = renderSentence(set);
 
@@ -178,6 +205,21 @@ describe("CalibrationStepSentence", () => {
       expect(screen.getByRole("button", { name: "iot.calibration.procedure.series" })).toHaveClass(
         "text-destructive",
       );
+    });
+
+    it("refuses the suffix that names an operator's retaken readings", async () => {
+      const { onChange, user } = renderSentence(read);
+
+      await user.click(screen.getByRole("button", { name: "iot.calibration.procedure.series" }));
+      const field = screen.getByRole("textbox", { name: "iot.calibration.procedure.series" });
+      await user.clear(field);
+      await user.type(field, "dark_retaken");
+
+      expect(await screen.findByRole("tooltip")).toHaveTextContent(
+        "iot.calibration.procedure.seriesReserved",
+      );
+      await user.tab();
+      expect(onChange).not.toHaveBeenCalled();
     });
 
     it("marks a series name the fit could not index by", () => {
@@ -259,6 +301,36 @@ describe("CalibrationStepSentence", () => {
 
       await retype(user, "iot.calibration.procedure.settleFor", "");
       expect(onChange).toHaveBeenLastCalledWith({ ...sweep, settleMs: undefined });
+    });
+
+    it.each(["-1", "1.5", "600001"])(
+      "refuses a settle of %s, which the contract does not allow",
+      async (entered) => {
+        const { onChange, user } = renderSentence(sweep);
+
+        await retype(user, "iot.calibration.procedure.settleFor", entered);
+
+        expect(onChange).not.toHaveBeenCalled();
+      },
+    );
+
+    it("takes a settle of zero, which the contract allows", async () => {
+      const { onChange, user } = renderSentence(sweep);
+
+      await retype(user, "iot.calibration.procedure.settleFor", "0");
+
+      expect(onChange).toHaveBeenLastCalledWith({ ...sweep, settleMs: 0 });
+    });
+
+    it("hands the sweep back to an instrument, on its first setpoint", async () => {
+      const { onChange, user } = renderSentence(sweep);
+
+      await choose(user, "iot.calibration.procedure.driven", "lamp");
+
+      expect(onChange).toHaveBeenLastCalledWith({
+        ...sweep,
+        stimulus: { instrument: "lamp", set: "current_a", values: [1] },
+      });
     });
 
     it("keeps its settle when the new one is not a number", async () => {

@@ -89,6 +89,13 @@ async function addStep(user: ReturnType<typeof userEvent.setup>, kind: StepKind)
   );
 }
 
+/** A step's actions sit behind one button, and the menu opens outside the row. */
+async function openStepMenu(user: ReturnType<typeof userEvent.setup>, line: HTMLElement) {
+  await user.click(
+    within(line).getByRole("button", { name: "iot.calibration.procedure.menu.label" }),
+  );
+}
+
 /** A value reads as text until it is clicked, so a test reaches one the way a person does. */
 async function openToken(
   user: ReturnType<typeof userEvent.setup>,
@@ -193,16 +200,20 @@ describe("CalibrationStepsEditor", () => {
     expect(added?.kind === "sweep" && "operator" in added.stimulus).toBe(true);
   });
 
-  // Offered from the row's hover controls while it is only a possibility, then read in the
+  // Offered from the step's menu while it is only a possibility, then read in the
   // sentence once set, because by then it is a fact about the step.
   it("marks a sweep as one the operator may skip, and says so in its sentence", async () => {
     const { onChange, user } = renderEditor();
 
     const [, sweep] = screen.getAllByRole("listitem");
-    const offer = within(sweep).getByRole("button", { name: "iot.calibration.procedure.maySkip" });
-    expect(offer.closest("p")).toBeNull();
+    expect(
+      within(sweep).queryByRole("button", { name: "iot.calibration.procedure.maySkip" }),
+    ).toBeNull();
 
-    await user.click(offer);
+    await openStepMenu(user, sweep);
+    await user.click(
+      await screen.findByRole("menuitemcheckbox", { name: "iot.calibration.procedure.maySkip" }),
+    );
 
     expect(onChange.mock.calls[0][0].steps[1]).toEqual(expect.objectContaining({ optional: true }));
     const [, marked] = screen.getAllByRole("listitem");
@@ -242,8 +253,9 @@ describe("CalibrationStepsEditor", () => {
     const { onChange, user } = renderEditor();
 
     const [line] = screen.getAllByRole("listitem");
+    await openStepMenu(user, line);
     await user.click(
-      within(line).getByRole("button", { name: "iot.calibration.procedure.moveDown" }),
+      await screen.findByRole("menuitem", { name: "iot.calibration.procedure.menu.moveDown" }),
     );
 
     expect(onChange.mock.calls[0][0].steps.map((step) => step.kind)).toEqual(["sweep", "set"]);
@@ -269,12 +281,37 @@ describe("CalibrationStepsEditor", () => {
     expect(onChange.mock.calls[0][0].verify).toHaveLength(1);
 
     const [line] = screen.getAllByRole("listitem");
+    await openStepMenu(user, line);
     await user.click(
-      within(line).getByRole("button", { name: "iot.calibration.procedure.removeStep" }),
+      await screen.findByRole("menuitem", { name: "iot.calibration.procedure.menu.remove" }),
     );
 
     // The contract refuses an empty verify phase, so the last removal drops the phase.
     expect(zCaptureProcedure.safeParse(onChange.mock.calls.at(-1)?.[0]).success).toBe(true);
     expect(onChange.mock.calls.at(-1)?.[0].verify).toBeUndefined();
+  });
+
+  // Clearing a reading's instruction removes the clause, so the menu is how it comes back.
+  it("gives a reading without an instruction one to rewrite", async () => {
+    const { onChange, user } = renderEditor({
+      instruments: bench.instruments,
+      steps: [
+        {
+          kind: "read",
+          series: "dark",
+          read: [{ instrument: "dut", command: "hello", as: "reply" }],
+        },
+      ],
+    });
+
+    const [line] = screen.getAllByRole("listitem");
+    await openStepMenu(user, line);
+    await user.click(
+      await screen.findByRole("menuitem", { name: "iot.calibration.procedure.menu.askFirst" }),
+    );
+
+    expect(onChange.mock.calls.at(-1)?.[0].steps[0]).toEqual(
+      expect.objectContaining({ prompt: "iot.calibration.procedure.readPromptDefault" }),
+    );
   });
 });
