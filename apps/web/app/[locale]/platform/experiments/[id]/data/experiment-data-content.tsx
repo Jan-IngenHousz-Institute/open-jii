@@ -71,7 +71,10 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
     return <ErrorDisplay error={error} title={t("failedToLoad")} />;
   }
 
-  if (tablesError) {
+  // A failed background refresh keeps the rows on screen and the poller that
+  // retries it, so only a first load with nothing cached shows the error.
+  const isTablesUnavailable = tablesError !== null && tables === undefined;
+  if (isTablesUnavailable) {
     return <ErrorDisplay error={tablesError} title={t("failedToLoad")} />;
   }
 
@@ -162,7 +165,7 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
         <div className="space-y-1">
           <h4 className="text-lg font-medium">{t("experimentData.title")}</h4>
           <p className="text-muted-foreground text-sm">{t("experimentData.description")}</p>
-          <DataFreshness experimentId={id} tableName={activeTable.identifier} />
+          <DataFreshness experimentId={id} tableNames={[activeTable.identifier]} />
         </div>
         <div className="flex shrink-0 gap-3">
           <Button
