@@ -5,27 +5,49 @@ import json
 import statistics
 from typing import List, Dict, Any, Union
 
-# Try to import numpy and scipy, fall back to standard library if not available
-try:
-    import numpy as np
-    NUMPY_AVAILABLE = True
-except ImportError:
-    NUMPY_AVAILABLE = False
-    print("[HELPERS] WARNING: NumPy not available. Some advanced functions may be limited.")
+# Importing numpy and scipy is most of a sandbox call's start-up and most macros need
+# neither, so both load on first use. The wrapper loads them up front for a macro that
+# names one of these helpers.
+NUMPY_HELPERS = frozenset({"MathMULTREG", "MathEXPINVREG", "MathPOLYREG", "TransformTrace"})
+SCIPY_HELPERS = frozenset({"MathLINREG", "MathEXPINVREG", "TransformTrace"})
+NUMPY_AVAILABLE = False
+SCIPY_AVAILABLE = False
+SCIPY_SIGNAL_AVAILABLE = False
+_numpy_loaded = False
+_scipy_loaded = False
 
-try:
-    from scipy import stats
-    from scipy.optimize import curve_fit
-    SCIPY_AVAILABLE = True
-except ImportError:
-    SCIPY_AVAILABLE = False
-    print("[HELPERS] WARNING: SciPy not available. Some advanced functions may be limited.")
 
-try:
-    from scipy.signal import savgol_filter
-    SCIPY_SIGNAL_AVAILABLE = True
-except ImportError:
-    SCIPY_SIGNAL_AVAILABLE = False
+def load_numpy():
+    global NUMPY_AVAILABLE, _numpy_loaded, np
+    if _numpy_loaded:
+        return
+    _numpy_loaded = True
+
+    try:
+        import numpy as np
+        NUMPY_AVAILABLE = True
+    except ImportError:
+        print("[HELPERS] WARNING: NumPy not available. Some advanced functions may be limited.")
+
+
+def load_scipy():
+    global SCIPY_AVAILABLE, SCIPY_SIGNAL_AVAILABLE, _scipy_loaded, stats, curve_fit, savgol_filter
+    if _scipy_loaded:
+        return
+    _scipy_loaded = True
+
+    try:
+        from scipy import stats
+        from scipy.optimize import curve_fit
+        SCIPY_AVAILABLE = True
+    except ImportError:
+        print("[HELPERS] WARNING: SciPy not available. Some advanced functions may be limited.")
+
+    try:
+        from scipy.signal import savgol_filter
+        SCIPY_SIGNAL_AVAILABLE = True
+    except ImportError:
+        pass
 
 
 def ArrayNth(arr: List[Union[int, float]], size: int = 1, idx: int = 0) -> List[Union[int, float]]:
@@ -257,7 +279,8 @@ def MathLINREG(x: List[float], y: List[float]) -> Dict[str, float]:
     """
     if len(x) != len(y) or len(x) < 2:
         return None
-    
+
+    load_scipy()
     try:
         if SCIPY_AVAILABLE:
             slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
@@ -582,6 +605,7 @@ def MathMULTREG(input_raw: List[List[float]]) -> Dict[str, Any]:
     if not input_raw or len(input_raw) < 2:
         return None
     
+    load_numpy()
     if not NUMPY_AVAILABLE:
         print("[HELPERS] WARNING: NumPy required for MathMULTREG")
         return None
@@ -626,7 +650,9 @@ def MathEXPINVREG(input_raw: List[List[float]]) -> Dict[str, Any]:
     """
     if not input_raw or len(input_raw) < 3:
         return None
-    
+
+    load_numpy()
+    load_scipy()
     if not NUMPY_AVAILABLE or not SCIPY_AVAILABLE:
         print("[HELPERS] WARNING: NumPy and SciPy required for MathEXPINVREG")
         return None
@@ -679,6 +705,7 @@ def MathPOLYREG(input_raw: List[List[float]], degree: int) -> Dict[str, Any]:
     if not input_raw or len(input_raw) < degree + 1:
         return None
     
+    load_numpy()
     if not NUMPY_AVAILABLE:
         print("[HELPERS] WARNING: NumPy required for MathPOLYREG")
         return None
@@ -722,6 +749,7 @@ def TransformTrace(fn: str, a1: List[float], a2: Union[float, List[float]] = Non
     if not isinstance(a1, list) or len(a1) == 0:
         return None
     
+    load_numpy()
     try:
         if NUMPY_AVAILABLE:
             arr = np.array(a1)
@@ -830,6 +858,7 @@ def TransformTrace(fn: str, a1: List[float], a2: Union[float, List[float]] = Non
                 return result
                 
         elif fn == 'sgf':  # Savitzky-Golay filter
+            load_scipy()
             if SCIPY_SIGNAL_AVAILABLE and NUMPY_AVAILABLE:
                 window_length = min(5, len(arr) if len(arr) % 2 == 1 else len(arr) - 1)
                 if window_length >= 3:
