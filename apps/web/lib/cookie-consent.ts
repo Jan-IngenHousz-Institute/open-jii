@@ -7,6 +7,7 @@ export type ConsentStatus = "pending" | "accepted" | "rejected";
 
 const CONSENT_COOKIE_NAME = "jii_cookie_consent";
 const CONSENT_EXPIRY_DAYS = 365; // 1 year
+const CONSENT_CHANGE_EVENT = "jii-cookie-consent-change";
 
 /**
  * Get the current consent status from the cookie
@@ -45,4 +46,13 @@ export function setConsentStatus(status: "accepted" | "rejected"): void {
   expiryDate.setDate(expiryDate.getDate() + CONSENT_EXPIRY_DAYS);
 
   document.cookie = `${CONSENT_COOKIE_NAME}=${status}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax; Secure`;
+  window.dispatchEvent(new Event(CONSENT_CHANGE_EVENT));
+}
+
+/**
+ * Subscribe to changes made through setConsentStatus, in the shape useSyncExternalStore takes
+ */
+export function subscribeToConsentStatus(onChange: () => void): () => void {
+  window.addEventListener(CONSENT_CHANGE_EVENT, onChange);
+  return () => window.removeEventListener(CONSENT_CHANGE_EVENT, onChange);
 }

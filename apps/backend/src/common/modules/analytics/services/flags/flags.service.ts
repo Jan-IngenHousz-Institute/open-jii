@@ -22,7 +22,8 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
   // Every evaluation is an HTTP round trip and polling surfaces hit flagged
   // routes several times a minute; a minute of staleness is fine.
   private static readonly FLAG_CACHE_TTL_MS = 60_000;
-  // Keyed per (flag, user); insertion order makes the oldest the eviction candidate.
+  // Keyed per (flag, user, person properties); insertion order makes the oldest the
+  // eviction candidate.
   private static readonly FLAG_CACHE_MAX_ENTRIES = 5_000;
   private readonly flagCache = new Map<string, { value: boolean; expiresAt: number }>();
 
@@ -104,10 +105,15 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
    * Check if a feature flag is enabled
    * @param flagKey - The feature flag key to check
    * @param distinctId - User identifier (defaults to 'anonymous')
+   * @param personProperties - Evaluated as the person's properties, over what PostHog has stored
    * @returns Whether the flag is enabled (falls back to default on error)
    */
-  async isFeatureFlagEnabled(flagKey: FeatureFlagKey, distinctId = "anonymous"): Promise<boolean> {
-    const cacheKey = `${flagKey}:${distinctId}`;
+  async isFeatureFlagEnabled(
+    flagKey: FeatureFlagKey,
+    distinctId = "anonymous",
+    personProperties?: Record<string, string>,
+  ): Promise<boolean> {
+    const cacheKey = `${flagKey}:${distinctId}:${JSON.stringify(personProperties ?? {})}`;
     const cached = this.flagCache.get(cacheKey);
     if (cached !== undefined && cached.expiresAt > Date.now()) {
       return cached.value;
@@ -124,7 +130,7 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         return FEATURE_FLAG_DEFAULTS[flagKey];
       }
 
-      const isEnabled = await client.isFeatureEnabled(flagKey, distinctId);
+      const isEnabled = await client.isFeatureEnabled(flagKey, distinctId, { personProperties });
       const result = isEnabled ?? FEATURE_FLAG_DEFAULTS[flagKey];
 
       this.logger.debug(

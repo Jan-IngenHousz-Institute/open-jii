@@ -167,6 +167,7 @@ describe("FlagsService", () => {
       expect(mockClient.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
         "anonymous",
+        { personProperties: undefined },
       );
     });
 
@@ -196,7 +197,49 @@ describe("FlagsService", () => {
       expect(mockClient.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
         "user-123",
+        { personProperties: undefined },
       );
+    });
+
+    it("should pass person properties to PostHog", async () => {
+      const mockClient = {
+        isFeatureEnabled: vi.fn().mockResolvedValue(true),
+        shutdown: vi.fn().mockResolvedValue(undefined),
+      };
+      mockGetPostHogServerClient.mockReturnValue(mockClient);
+
+      await service.isFeatureFlagEnabled(FEATURE_FLAGS.EXPERIMENT_DELETION, "props-user", {
+        organization_ids: "org-a,org-b",
+      });
+
+      expect(mockClient.isFeatureEnabled).toHaveBeenCalledWith(
+        FEATURE_FLAGS.EXPERIMENT_DELETION,
+        "props-user",
+        { personProperties: { organization_ids: "org-a,org-b" } },
+      );
+    });
+
+    it("should cache each set of person properties separately", async () => {
+      const mockClient = {
+        isFeatureEnabled: vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false),
+        shutdown: vi.fn().mockResolvedValue(undefined),
+      };
+      mockGetPostHogServerClient.mockReturnValue(mockClient);
+
+      const inPilot = { organization_ids: "org-pilot" };
+      const elsewhere = { organization_ids: "org-other" };
+
+      await expect(
+        service.isFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION, "cache-user", inPilot),
+      ).resolves.toBe(true);
+      await expect(
+        service.isFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION, "cache-user", elsewhere),
+      ).resolves.toBe(false);
+      await expect(
+        service.isFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION, "cache-user", inPilot),
+      ).resolves.toBe(true);
+
+      expect(mockClient.isFeatureEnabled).toHaveBeenCalledTimes(2);
     });
 
     it("should return default when PostHog returns null", async () => {

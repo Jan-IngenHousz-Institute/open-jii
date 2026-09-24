@@ -270,6 +270,15 @@ export class AuthorizationService {
     return rows.length > 0;
   }
 
+  /** Every organization the user belongs to, in any role, including their personal one. */
+  async listMemberOrganizationIds(userId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ organizationId: organizationMembers.organizationId })
+      .from(organizationMembers)
+      .where(eq(organizationMembers.userId, userId));
+    return rows.map((row) => row.organizationId);
+  }
+
   /**
    * Whether the user has the standing to move a resource out of `organizationId`
    * — the organization side of the transfer gate, on top of `can(manage)`. Pass

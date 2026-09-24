@@ -79,10 +79,12 @@ async function validateProtocolCode(
   code: unknown,
   logger: Logger,
   analyticsPort: AnalyticsPort,
+  user: UserSession["user"],
   useStrictValidation = false,
 ) {
   const validationAsWarning = await analyticsPort.isFeatureFlagEnabled(
     FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
+    user,
   );
 
   if (validationAsWarning && !useStrictValidation) {
@@ -195,6 +197,7 @@ export class ProtocolController {
         input.code,
         this.logger,
         this.analyticsPort,
+        session.user,
       );
       if (validationResult.isFailure()) {
         return throwOrpcFailure(validationResult, this.logger);
@@ -250,6 +253,7 @@ export class ProtocolController {
           body.code,
           this.logger,
           this.analyticsPort,
+          session.user,
         );
         if (validationResult.isFailure()) {
           return throwOrpcFailure(validationResult, this.logger);
@@ -308,7 +312,7 @@ export class ProtocolController {
     return implement(protocolContract.deleteProtocol).handler(async ({ input }) => {
       const isDeletionEnabled = await this.analyticsPort.isFeatureFlagEnabled(
         FEATURE_FLAGS.PROTOCOL_DELETION,
-        session.user.email || session.user.id,
+        session.user,
       );
 
       if (!isDeletionEnabled) {

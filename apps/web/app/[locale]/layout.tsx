@@ -3,7 +3,7 @@ import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
 import React from "react";
 import type { ReactNode } from "react";
-import { isFeatureFlagEnabled } from "~/lib/posthog-server";
+import { isFeatureFlagEnabledForViewer } from "~/lib/posthog-server";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { ContentfulPreviewProvider } from "@repo/cms/contentful";
@@ -31,11 +31,9 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
 
   const { isEnabled: preview } = await draftMode();
 
-  // Check multi-language feature flag
-  const isMultiLanguageEnabled = await isFeatureFlagEnabled(FEATURE_FLAGS.MULTI_LANGUAGE);
-
-  // If multi-language is disabled, only allow default locale
-  if (!isMultiLanguageEnabled && locale !== defaultLocale) {
+  // Only another locale needs the flag, so default-locale pages skip the session lookup.
+  const isOtherLocale = locale !== defaultLocale;
+  if (isOtherLocale && !(await isFeatureFlagEnabledForViewer(FEATURE_FLAGS.MULTI_LANGUAGE))) {
     notFound();
   }
 
@@ -53,9 +51,11 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
         targetOrigin={allowedOriginList}
       >
         <TranslationsProvider locale={locale} namespaces={[...namespaces]} resources={resources}>
-          <PostHogIdentifier />
           <AlertsBar locale={locale} preview={preview} />
-          <QueryProvider>{children}</QueryProvider>
+          <QueryProvider>
+            <PostHogIdentifier />
+            {children}
+          </QueryProvider>
         </TranslationsProvider>
       </ContentfulPreviewProvider>
     </div>

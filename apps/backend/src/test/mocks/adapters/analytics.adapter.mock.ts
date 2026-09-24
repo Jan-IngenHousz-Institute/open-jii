@@ -5,7 +5,10 @@ export class MockAnalyticsAdapter {
   private flags = new Map<FeatureFlagKey, boolean>();
   readonly reportedErrors: { error: unknown; properties: Record<string, unknown> }[] = [];
 
-  isFeatureFlagEnabled(flagKey: FeatureFlagKey, _distinctId?: string): Promise<boolean> {
+  isFeatureFlagEnabled(
+    flagKey: FeatureFlagKey,
+    _user?: { id: string; email: string },
+  ): Promise<boolean> {
     return Promise.resolve(this.flags.get(flagKey) ?? FEATURE_FLAG_DEFAULTS[flagKey]);
   }
 

@@ -356,6 +356,31 @@ describe("AuthorizationService.can", () => {
     });
   });
 
+  describe("listMemberOrganizationIds", () => {
+    it("lists every organization the user belongs to", async () => {
+      const { orgId, memberId } = await makeOrgWithMember("multi-org@example.com");
+      const [second] = await testApp.database
+        .insert(organizations)
+        .values({ name: `Org ${crypto.randomUUID()}`, slug: `org-${crypto.randomUUID()}` })
+        .returning();
+      await testApp.database
+        .insert(organizationMembers)
+        .values({ organizationId: second.id, userId: memberId, role: "admin" });
+
+      const ids = await authz.listMemberOrganizationIds(memberId);
+
+      expect(ids).toHaveLength(2);
+      expect(ids).toEqual(expect.arrayContaining([orgId, second.id]));
+    });
+
+    it("leaves out organizations the user does not belong to", async () => {
+      const { orgId } = await makeOrgWithMember("listed-member@example.com");
+      const outsider = await testApp.createTestUser({ email: "unlisted@example.com" });
+
+      await expect(authz.listMemberOrganizationIds(outsider)).resolves.not.toContain(orgId);
+    });
+  });
+
   describe("getOwnership", () => {
     it("returns the owning org and visibility for an existing resource", async () => {
       const orgId = await ensurePersonalOrganization(testApp.database, { id: ownerId });
