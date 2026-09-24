@@ -1,6 +1,7 @@
 WITH
--- Each experiment table's schemas from the pipeline, with its row count, when its
--- newest row arrived and an upload's newest name, taken when someone reads. A count
+-- Each experiment table's schemas from the pipeline and a fingerprint of them, with
+-- its row count, when its newest data arrived and an upload's newest name, taken when
+-- someone reads. A macro result carries its source measurement's arrival time. A count
 -- cannot be kept incrementally on classic compute, and the gold tables are clustered
 -- by experiment, so a read scans only the experiment it asks for. ${catalog} is
 -- filled in by terraform.
@@ -39,7 +40,15 @@ SELECT
   metadata.macro_schema,
   metadata.questions_schema,
   metadata.custom_metadata_schema,
-  metadata.upload_schema
+  metadata.upload_schema,
+  -- The schemas refresh apart from the counts, so a reader polling the counts
+  -- also needs this to notice a column that arrived after its row.
+  md5(concat_ws('|',
+    coalesce(metadata.macro_schema, ''),
+    coalesce(metadata.questions_schema, ''),
+    coalesce(metadata.custom_metadata_schema, ''),
+    coalesce(metadata.upload_schema, '')
+  )) AS schema_revision
 FROM ${catalog}.centrum.experiment_table_metadata AS metadata
 LEFT JOIN tables_now
   ON metadata.experiment_id = tables_now.experiment_id

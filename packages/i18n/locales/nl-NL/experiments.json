@@ -183,7 +183,7 @@
       "paused": "Gepauzeerd",
       "updating": "Bijwerken",
       "behind": "Laatst ververst {{time}}",
-      "newestRow": "Nieuwste rij {{time}}",
+      "newestData": "Nieuwste gegevens ontvangen {{time}}",
       "noRows": "Nog geen rijen",
       "pause": "Live-updates pauzeren",
       "resume": "Live-updates hervatten"

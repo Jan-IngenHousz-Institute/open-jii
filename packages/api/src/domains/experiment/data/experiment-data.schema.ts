@@ -426,7 +426,13 @@ export const zExperimentTableMetadata = z.object({
     .string()
     .datetime()
     .nullable()
-    .describe("When the table's newest row reached the platform; null for an empty table"),
+    .describe(
+      "When the table's newest data reached the platform; for a macro result, when its source measurement did. Null for an empty table",
+    ),
+  schemaRevision: z
+    .string()
+    .nullable()
+    .describe("Changes whenever the table's schema does, which can be after its rows changed"),
   defaultSortColumn: z.string().optional().describe("Default column to sort by in the UI"),
   errorColumn: z.string().optional().describe("Column name that contains error information if any"),
 });

@@ -84,6 +84,7 @@ describe("ExperimentDataUploadsRepository", () => {
             displayName: "leaf_traits",
             rowCount: 10,
             latestRowAt: null,
+            schemaRevision: null,
           },
         ]),
       );
@@ -119,6 +120,7 @@ describe("ExperimentDataUploadsRepository", () => {
             displayName: "leaf_traits",
             rowCount: 1000,
             latestRowAt: null,
+            schemaRevision: null,
           },
         ]),
       );
@@ -158,6 +160,7 @@ describe("ExperimentDataUploadsRepository", () => {
             displayName: null,
             rowCount: 5,
             latestRowAt: null,
+            schemaRevision: null,
           },
         ]),
       );

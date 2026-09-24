@@ -104,6 +104,7 @@ def test_the_view_reports_each_table_with_its_schemas_count_newest_row_and_name(
 
     view = spark.sql(_VIEW.read_text().replace("${catalog}", _CATALOG))
     rows = {(row.experiment_id, row.identifier): row.asDict() for row in view.collect()}
+    revisions = {key: row.pop("schema_revision") for key, row in rows.items()}
 
     assert rows == {
         ("e1", "raw_data"): {
@@ -167,3 +168,8 @@ def test_the_view_reports_each_table_with_its_schemas_count_newest_row_and_name(
             "upload_schema": None,
         },
     }
+
+    # Tables with the same schemas share a revision; any schema difference changes it.
+    assert revisions[("e2", "raw_data")] == revisions[("e1", "device")]
+    distinct = [("e1", "raw_data"), ("e2", "raw_data"), ("e1", "t1"), ("e1", "mac-1")]
+    assert len({revisions[key] for key in distinct}) == len(distinct)

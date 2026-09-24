@@ -210,7 +210,7 @@
       "paused": "Paused",
       "updating": "Updating",
       "behind": "Last refreshed {{time}}",
-      "newestRow": "Newest row {{time}}",
+      "newestData": "Newest data received {{time}}",
       "noRows": "No rows yet",
       "pause": "Pause live updates",
       "resume": "Resume live updates"

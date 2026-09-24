@@ -24,6 +24,7 @@ export interface TableMetadataDto {
   displayName: string;
   totalRows: number;
   latestRowAt: string | null;
+  schemaRevision: string | null;
   defaultSortColumn?: string;
   errorColumn?: string;
 }
@@ -104,6 +105,7 @@ export class GetExperimentTablesUseCase {
     tableType,
     rowCount,
     latestRowAt,
+    schemaRevision,
   }: ExperimentTableMetadata): TableMetadataDto {
     const config = STATIC_TABLE_CONFIG[identifier];
     return {
@@ -112,13 +114,14 @@ export class GetExperimentTablesUseCase {
       displayName: config?.displayName ?? identifier,
       totalRows: rowCount,
       latestRowAt,
+      schemaRevision,
       defaultSortColumn: config?.defaultSortColumn,
       errorColumn: config?.errorColumn,
     };
   }
 
   private mapMacroTable(
-    { identifier, tableType, rowCount, latestRowAt }: ExperimentTableMetadata,
+    { identifier, tableType, rowCount, latestRowAt, schemaRevision }: ExperimentTableMetadata,
     macroNamesMap: Map<string, { name: string; filename: string }>,
   ): TableMetadataDto {
     const macroInfo = macroNamesMap.get(identifier);
@@ -132,6 +135,7 @@ export class GetExperimentTablesUseCase {
       displayName,
       totalRows: rowCount,
       latestRowAt,
+      schemaRevision,
       defaultSortColumn: MACRO_TABLE_CONFIG.defaultSortColumn,
       errorColumn: MACRO_TABLE_CONFIG.errorColumn,
     };
@@ -143,6 +147,7 @@ export class GetExperimentTablesUseCase {
     displayName,
     rowCount,
     latestRowAt,
+    schemaRevision,
   }: ExperimentTableMetadata): TableMetadataDto {
     return {
       identifier,
@@ -150,6 +155,7 @@ export class GetExperimentTablesUseCase {
       displayName: displayName ?? identifier,
       totalRows: rowCount,
       latestRowAt,
+      schemaRevision,
       defaultSortColumn: UPLOAD_TABLE_CONFIG.defaultSortColumn,
       errorColumn: UPLOAD_TABLE_CONFIG.errorColumn,
     };

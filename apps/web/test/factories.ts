@@ -619,6 +619,7 @@ export function createExperimentTable(
     displayName: `Table ${tableSeq}`,
     totalRows: 100,
     latestRowAt: null,
+    schemaRevision: null,
     defaultSortColumn: undefined,
     errorColumn: undefined,
     ...overrides,

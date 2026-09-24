@@ -18,12 +18,12 @@ const DOT_CLASS: Record<DataFreshnessStatus, string> = {
 
 interface DataFreshnessProps {
   experimentId: string;
-  /** Whose newest row to report; omitted, the newest in the experiment. */
-  tableName?: string;
+  /** Whose newest data to report; omitted, the newest in the experiment. */
+  tableNames?: string[];
 }
 
 /** Keeps the experiment's rows and charts current, and says how current they are. */
-export function DataFreshness({ experimentId, tableName }: DataFreshnessProps) {
+export function DataFreshness({ experimentId, tableNames }: DataFreshnessProps) {
   const { t } = useTranslation("experiments");
   const locale = useLocale();
   const {
@@ -35,7 +35,7 @@ export function DataFreshness({ experimentId, tableName }: DataFreshnessProps) {
     isLoadingRows,
     isPaused,
     togglePaused,
-  } = useExperimentDataFreshness(experimentId, tableName);
+  } = useExperimentDataFreshness(experimentId, tableNames);
 
   if (!hasLoaded) {
     return null;
@@ -55,7 +55,7 @@ export function DataFreshness({ experimentId, tableName }: DataFreshnessProps) {
   const newestLabel =
     newestRowAt === null
       ? t("experimentData.freshness.noRows")
-      : t("experimentData.freshness.newestRow", { time: formatRelativeTime(newestRowAt, locale) });
+      : t("experimentData.freshness.newestData", { time: formatRelativeTime(newestRowAt, locale) });
   const toggleLabel = t(
     isPaused ? "experimentData.freshness.resume" : "experimentData.freshness.pause",
   );

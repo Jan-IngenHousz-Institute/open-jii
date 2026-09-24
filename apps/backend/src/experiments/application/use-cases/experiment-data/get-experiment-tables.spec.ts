@@ -59,6 +59,7 @@ describe("GetExperimentTablesUseCase", () => {
           displayName: null,
           rowCount: 100,
           latestRowAt: "2026-09-22T10:05:00.000Z",
+          schemaRevision: null,
         },
         {
           identifier: ExperimentTableName.DEVICE,
@@ -66,6 +67,7 @@ describe("GetExperimentTablesUseCase", () => {
           displayName: null,
           rowCount: 50,
           latestRowAt: null,
+          schemaRevision: null,
         },
         {
           identifier: macroId,
@@ -73,6 +75,7 @@ describe("GetExperimentTablesUseCase", () => {
           displayName: null,
           rowCount: 25,
           latestRowAt: null,
+          schemaRevision: null,
         },
       ];
 
@@ -101,6 +104,7 @@ describe("GetExperimentTablesUseCase", () => {
           displayName: "Raw Data",
           totalRows: 100,
           latestRowAt: "2026-09-22T10:05:00.000Z",
+          schemaRevision: null,
           defaultSortColumn: "timestamp",
           errorColumn: undefined,
         },
@@ -110,6 +114,7 @@ describe("GetExperimentTablesUseCase", () => {
           displayName: "Processed Data (some_macro)",
           totalRows: 25,
           latestRowAt: null,
+          schemaRevision: null,
           defaultSortColumn: "timestamp",
           errorColumn: "macro_error",
         },
@@ -136,6 +141,7 @@ describe("GetExperimentTablesUseCase", () => {
           tableType: "static" as const,
           rowCount: 100,
           latestRowAt: null,
+          schemaRevision: null,
         },
       ];
 
@@ -193,6 +199,7 @@ describe("GetExperimentTablesUseCase", () => {
             displayName: "leaf_traits",
             rowCount: 42,
             latestRowAt: null,
+            schemaRevision: null,
           },
         ]),
       );
@@ -208,6 +215,7 @@ describe("GetExperimentTablesUseCase", () => {
           displayName: "leaf_traits",
           totalRows: 42,
           latestRowAt: null,
+          schemaRevision: null,
           defaultSortColumn: "uploaded_at",
           errorColumn: undefined,
         },
@@ -222,7 +230,13 @@ describe("GetExperimentTablesUseCase", () => {
       const uploadId = faker.string.uuid();
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
         success([
-          { identifier: uploadId, tableType: "upload" as const, rowCount: 7, latestRowAt: null },
+          {
+            identifier: uploadId,
+            tableType: "upload" as const,
+            rowCount: 7,
+            latestRowAt: null,
+            schemaRevision: null,
+          },
         ]),
       );
 

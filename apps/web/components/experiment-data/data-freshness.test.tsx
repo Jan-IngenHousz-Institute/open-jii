@@ -16,7 +16,7 @@ describe("DataFreshness", () => {
     render(<DataFreshness experimentId="exp-1" />);
 
     expect(await screen.findByText("experimentData.freshness.live")).toBeInTheDocument();
-    expect(screen.getByText("experimentData.freshness.newestRow")).toBeInTheDocument();
+    expect(screen.getByText("experimentData.freshness.newestData")).toBeInTheDocument();
   });
 
   it("says there are no rows yet for an empty experiment", async () => {

@@ -2272,7 +2272,18 @@
                             "type": "null"
                           }
                         ],
-                        "description": "When the table's newest row reached the platform; null for an empty table"
+                        "description": "When the table's newest data reached the platform; for a macro result, when its source measurement did. Null for an empty table"
+                      },
+                      "schemaRevision": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Changes whenever the table's schema does, which can be after its rows changed"
                       },
                       "defaultSortColumn": {
                         "type": "string",
@@ -2288,7 +2299,8 @@
                       "tableType",
                       "displayName",
                       "totalRows",
-                      "latestRowAt"
+                      "latestRowAt",
+                      "schemaRevision"
                     ]
                   }
                 }

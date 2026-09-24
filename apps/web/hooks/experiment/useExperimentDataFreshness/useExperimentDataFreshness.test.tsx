@@ -2,6 +2,7 @@ import { orpc } from "@/lib/orpc";
 import { createExperimentTable } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { act, createTestQueryClient, renderHook, waitFor } from "@/test/test-utils";
+import { useQuery } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -12,12 +13,14 @@ const RAW = createExperimentTable({
   identifier: "raw_data",
   totalRows: 10,
   latestRowAt: "2026-09-22T10:05:00.000Z",
+  schemaRevision: "schema-1",
 });
 const MACRO = createExperimentTable({
   identifier: "macro-1",
   tableType: "macro",
   totalRows: 4,
   latestRowAt: "2026-09-22T10:07:00.000Z",
+  schemaRevision: "schema-1",
 });
 
 function dataKey(tableName: string) {
@@ -55,6 +58,55 @@ describe("useExperimentDataFreshness", () => {
     expect(queryClient.getQueryState(dataKey("macro-1"))?.isInvalidated).toBe(false);
   });
 
+  it("refetches a table whose schema changed after its rows did", async () => {
+    const queryClient = createTestQueryClient();
+    queryClient.setQueryDefaults(orpc.experiments.getExperimentData.key(), { gcTime: Infinity });
+    queryClient.setQueryData(dataKey("raw_data"), []);
+    const widened = { ...RAW, schemaRevision: "schema-2" };
+    const spy = server.mount(contract.experiments.getExperimentTables, {
+      body: () => (spy.callCount > 1 ? [widened] : [RAW]),
+    });
+
+    const { result } = renderHook(() => useExperimentDataFreshness("exp-1"), { queryClient });
+    await waitFor(() => expect(result.current.hasLoaded).toBe(true));
+
+    await act(() =>
+      queryClient.refetchQueries({ queryKey: orpc.experiments.getExperimentTables.key() }),
+    );
+
+    await waitFor(() =>
+      expect(queryClient.getQueryState(dataKey("raw_data"))?.isInvalidated).toBe(true),
+    );
+  });
+
+  it("retries rows whose refresh failed on the next poll, though nothing moved", async () => {
+    const queryClient = createTestQueryClient();
+    server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+    server.mount(contract.experiments.getExperimentData, { status: 500 });
+
+    const { result } = renderHook(
+      () => {
+        const freshness = useExperimentDataFreshness("exp-1");
+        const rows = useQuery(
+          orpc.experiments.getExperimentData.queryOptions({
+            input: { id: "exp-1", tableName: "raw_data", page: 1, pageSize: 10 },
+          }),
+        );
+        return { freshness, rows };
+      },
+      { queryClient },
+    );
+    await waitFor(() => expect(result.current.rows.isError).toBe(true));
+
+    const rowsSpy = server.mount(contract.experiments.getExperimentData, { body: [] });
+    await act(() =>
+      queryClient.refetchQueries({ queryKey: orpc.experiments.getExperimentTables.key() }),
+    );
+
+    await waitFor(() => expect(rowsSpy.callCount).toBe(1));
+    await waitFor(() => expect(result.current.rows.isError).toBe(false));
+  });
+
   it("holds the rows and their newest time still while paused, and applies what moved on resume", async () => {
     const queryClient = createTestQueryClient();
     queryClient.setQueryDefaults(orpc.experiments.getExperimentData.key(), { gcTime: Infinity });
@@ -83,14 +135,23 @@ describe("useExperimentDataFreshness", () => {
     expect(result.current.newestRowAt).toBe("2026-09-22T10:09:00.000Z");
   });
 
-  it("reports the asked table's newest row, or the experiment's without one", async () => {
-    server.mount(contract.experiments.getExperimentTables, { body: [RAW, MACRO] });
+  it("reports the asked tables' newest data, or the experiment's without any", async () => {
+    const newer = createExperimentTable({
+      identifier: "macro-2",
+      tableType: "macro",
+      latestRowAt: "2026-09-22T10:09:00.000Z",
+    });
+    server.mount(contract.experiments.getExperimentTables, { body: [RAW, MACRO, newer] });
 
-    const { result: table } = renderHook(() => useExperimentDataFreshness("exp-1", "raw_data"));
+    const { result: one } = renderHook(() => useExperimentDataFreshness("exp-1", ["raw_data"]));
+    const { result: two } = renderHook(() =>
+      useExperimentDataFreshness("exp-1", ["raw_data", "macro-1"]),
+    );
     const { result: experiment } = renderHook(() => useExperimentDataFreshness("exp-1"));
 
-    await waitFor(() => expect(table.current.newestRowAt).toBe("2026-09-22T10:05:00.000Z"));
-    await waitFor(() => expect(experiment.current.newestRowAt).toBe("2026-09-22T10:07:00.000Z"));
+    await waitFor(() => expect(one.current.newestRowAt).toBe("2026-09-22T10:05:00.000Z"));
+    await waitFor(() => expect(two.current.newestRowAt).toBe("2026-09-22T10:07:00.000Z"));
+    await waitFor(() => expect(experiment.current.newestRowAt).toBe("2026-09-22T10:09:00.000Z"));
   });
 
   it("reports no newest row for an experiment without rows", async () => {

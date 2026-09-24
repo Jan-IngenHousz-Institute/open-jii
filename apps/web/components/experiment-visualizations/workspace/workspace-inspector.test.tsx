@@ -28,6 +28,7 @@ const tables: ExperimentTableMetadata[] = [
     tableType: "static",
     totalRows: 100,
     latestRowAt: null,
+    schemaRevision: null,
   },
   {
     identifier: "events",
@@ -35,6 +36,7 @@ const tables: ExperimentTableMetadata[] = [
     tableType: "static",
     totalRows: 50,
     latestRowAt: null,
+    schemaRevision: null,
   },
 ];
 

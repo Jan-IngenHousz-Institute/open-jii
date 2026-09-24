@@ -139,7 +139,7 @@ export function VisualizationWorkspace({
 
   const isLoadingShell = isLoadingTables;
   // A chart with no table yet reports the whole experiment.
-  const freshnessTable = tableName === "" ? undefined : tableName;
+  const freshnessTables = tableName === "" ? undefined : [tableName];
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -148,7 +148,7 @@ export function VisualizationWorkspace({
           <ChartTypePicker value={watchedChartType} onChange={handleChartTypeChange} />
 
           <div className="flex items-center gap-3">
-            <DataFreshness experimentId={experimentId} tableName={freshnessTable} />
+            <DataFreshness experimentId={experimentId} tableNames={freshnessTables} />
             <Button
               type="button"
               variant="outline"

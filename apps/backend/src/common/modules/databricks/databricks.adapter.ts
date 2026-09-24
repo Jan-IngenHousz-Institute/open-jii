@@ -1155,12 +1155,20 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
           "display_name",
           "row_count",
           "latest_row_at",
+          "schema_revision",
           "macro_schema",
           "questions_schema",
           "custom_metadata_schema",
           "upload_schema",
         ]
-      : ["identifier", "table_type", "display_name", "row_count", "latest_row_at"];
+      : [
+          "identifier",
+          "table_type",
+          "display_name",
+          "row_count",
+          "latest_row_at",
+          "schema_revision",
+        ];
 
     const whereConditions: [string, string][] = [["experiment_id", experimentId]];
     if (options?.identifier) {
@@ -1201,6 +1209,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
       const displayName = row[2] ?? null;
       const rowCount = row[3] ? parseInt(row[3], 10) : 0;
       const latestRowAt = this.toIsoOrNull(row[4]);
+      const schemaRevision = row[5] ?? null;
 
       if (includeSchemas) {
         return {
@@ -1209,14 +1218,15 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
           displayName,
           rowCount,
           latestRowAt,
-          macroSchema: row[5],
-          questionsSchema: row[6],
-          customMetadataSchema: row[7],
-          uploadSchema: row[8],
+          schemaRevision,
+          macroSchema: row[6],
+          questionsSchema: row[7],
+          customMetadataSchema: row[8],
+          uploadSchema: row[9],
         };
       }
 
-      return { identifier, tableType, displayName, rowCount, latestRowAt };
+      return { identifier, tableType, displayName, rowCount, latestRowAt, schemaRevision };
     });
 
     return success(metadata);

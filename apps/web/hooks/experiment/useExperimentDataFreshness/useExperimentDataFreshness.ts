@@ -11,24 +11,27 @@ const BEHIND_AFTER_MS = 2 * 60_000;
 
 export type DataFreshnessStatus = "live" | "paused" | "behind";
 
-function newestOf(tables: ExperimentTableMetadata[], tableName: string | undefined): string | null {
+function newestOf(
+  tables: ExperimentTableMetadata[],
+  tableNames: string[] | undefined,
+): string | null {
   const times = tables
-    .filter((table) => tableName === undefined || table.identifier === tableName)
+    .filter((table) => tableNames === undefined || tableNames.includes(table.identifier))
     .flatMap((table) => (table.latestRowAt ? [table.latestRowAt] : []));
   return times.length > 0 ? times.reduce((a, b) => (a > b ? a : b)) : null;
 }
 
 function versionOf(table: ExperimentTableMetadata): string {
-  return `${table.totalRows}|${table.latestRowAt}`;
+  return `${table.totalRows}|${table.latestRowAt}|${table.schemaRevision}`;
 }
 
 /**
  * Polls the experiment's table listing while the page is visible and refetches
- * a table's rows and charts only when its count or newest row moves, so an
- * open page follows the pipeline without resetting what the user is doing.
- * `tableName` picks whose newest row to report; omitted, the whole experiment.
+ * a table's rows and charts only when its count, newest row or schema moves, so
+ * an open page follows the pipeline without resetting what the user is doing.
+ * `tableNames` picks whose newest data to report; omitted, the whole experiment.
  */
-export const useExperimentDataFreshness = (experimentId: string, tableName?: string) => {
+export const useExperimentDataFreshness = (experimentId: string, tableNames?: string[]) => {
   const queryClient = useQueryClient();
   const [isPaused, setIsPaused] = useState(false);
   // What the page showed when paused, so the newest-row time matches the rows held still.
@@ -78,7 +81,16 @@ export const useExperimentDataFreshness = (experimentId: string, tableName?: str
         }),
       });
     }
-  }, [tables, isPaused, experimentId, queryClient]);
+
+    // A version counts as seen once polled, so rows whose refresh failed are
+    // retried on every poll until they load, whether or not anything moved.
+    void queryClient.refetchQueries({
+      queryKey: orpc.experiments.getExperimentData.key({ input: { id: experimentId } }),
+      type: "active",
+      predicate: (query) => query.state.status === "error" && query.state.fetchStatus === "idle",
+    });
+    // An unchanged listing keeps its reference, so each poll is told apart by its time.
+  }, [tables, dataUpdatedAt, isPaused, experimentId, queryClient]);
 
   useEffect(() => {
     if (isPaused || dataUpdatedAt === 0) {
@@ -108,7 +120,7 @@ export const useExperimentDataFreshness = (experimentId: string, tableName?: str
   return {
     hasLoaded: tables !== undefined,
     status,
-    newestRowAt: shownTables ? newestOf(shownTables, tableName) : null,
+    newestRowAt: shownTables ? newestOf(shownTables, tableNames) : null,
     refreshedAt: new Date(dataUpdatedAt),
     isChecking,
     isLoadingRows,

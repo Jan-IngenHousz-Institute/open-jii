@@ -17,6 +17,7 @@ describe("CompressionMiddleware", () => {
     displayName: `Processed Data (${index})`,
     totalRows: index,
     latestRowAt: null,
+    schemaRevision: null,
   }));
 
   beforeAll(async () => {
