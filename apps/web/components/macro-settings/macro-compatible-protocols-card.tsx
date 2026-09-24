@@ -150,7 +150,7 @@ export function MacroCompatibleProtocolsCard({
   if (embedded) {
     return (
       <div className="space-y-4">
-        <div>
+        <div className="space-y-1">
           <h4 className="text-sm font-medium">{t("macroSettings.compatibleProtocols")}</h4>
           <p className="text-muted-foreground text-sm">
             {t("macroSettings.compatibleProtocolsDescription")}
