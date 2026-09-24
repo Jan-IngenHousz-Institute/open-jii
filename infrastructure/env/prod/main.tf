@@ -822,8 +822,6 @@ module "centrum_pipeline" {
     "DEVICE_LIFECYCLE_EVENTS_S3_PATH" = "s3://${module.iot_raw_archive_s3.bucket_id}/device-lifecycle-events/"
     # One shared Python REPL for all 17 notebooks; per-notebook REPLs exhaust a 16 GB driver
     "pipelines.enableSharedReplsForAllPythonPipeline" = "true"
-    # Streaming skips AQE, so shuffles run at this count: one per worker core.
-    "spark.sql.shuffle.partitions" = "12"
   }
 
   # AUTO CDC needs PRO, and the silver expectations need ADVANCED.
@@ -840,6 +838,10 @@ module "centrum_pipeline" {
   min_workers         = 2
   max_workers         = 6
   policy_id           = module.node_cluster_policy.policy_id
+
+  # Streaming skips AQE, so shuffles run at one per worker core. Set on the cluster
+  # because Delta's post-write jobs, such as auto compaction, ignore the pipeline's.
+  spark_conf = { "spark.sql.shuffle.partitions" = "12" }
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
@@ -885,8 +887,6 @@ module "macro_execution_pipeline" {
     "CATALOG_NAME"        = module.databricks_catalog.catalog_name
     "CENTRUM_SCHEMA_NAME" = "centrum"
     "ENVIRONMENT"         = upper(var.environment)
-    # Streaming skips AQE, so shuffles run at this count: one per worker core.
-    "spark.sql.shuffle.partitions" = "4"
   }
 
   # Neither AUTO CDC nor expectations, so CORE is enough.
@@ -900,6 +900,10 @@ module "macro_execution_pipeline" {
   driver_node_type_id = "m7i.xlarge"
   num_workers         = 1
   policy_id           = module.macro_cluster_policy.policy_id
+
+  # Streaming skips AQE, so shuffles run at one per worker core. Set on the cluster
+  # because Delta's post-write jobs, such as auto compaction, ignore the pipeline's.
+  spark_conf = { "spark.sql.shuffle.partitions" = "4" }
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
