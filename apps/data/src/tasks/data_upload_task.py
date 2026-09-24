@@ -21,9 +21,20 @@ from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 from pyspark.dbutils import DBUtils
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import Column, DataFrame, SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql.types import DoubleType, FloatType, LongType, StringType, StructField, StructType, TimestampType
+from pyspark.sql.types import (
+    ArrayType,
+    DataType,
+    DoubleType,
+    FloatType,
+    LongType,
+    MapType,
+    StringType,
+    StructField,
+    StructType,
+    TimestampType,
+)
 
 from ambyte import find_byte_folders, load_files_per_byte, process_trace_files
 from openjii.json_scrub import scrub_non_finite_json_value
@@ -192,16 +203,29 @@ def process_tsv_upload() -> dict:
 
 
 def _serialize_parquet_rows(frame: DataFrame) -> DataFrame:
-    """Encode Spark rows with non-finite floating columns represented as JSON null."""
-    columns = []
-    for field in frame.schema.fields:
-        value = F.col("`" + field.name.replace("`", "``") + "`")
-        if isinstance(field.dataType, (FloatType, DoubleType)):
-            value = F.when(
+    """Encode Spark rows with non-finite floats replaced by null at every nesting level."""
+    def normalize(value: Column, data_type: DataType) -> Column:
+        if isinstance(data_type, (FloatType, DoubleType)):
+            return F.when(
                 F.isnan(value) | (value == float("inf")) | (value == float("-inf")),
-                F.lit(None).cast(field.dataType),
+                F.lit(None).cast(data_type),
             ).otherwise(value)
-        columns.append(value.alias(field.name))
+        if isinstance(data_type, ArrayType):
+            return F.transform(value, lambda item: normalize(item, data_type.elementType))
+        if isinstance(data_type, MapType):
+            return F.transform_values(value, lambda key, item: normalize(item, data_type.valueType))
+        if isinstance(data_type, StructType):
+            fields = [
+                normalize(value.getField(field.name), field.dataType).alias(field.name)
+                for field in data_type.fields
+            ]
+            return F.when(value.isNotNull(), F.struct(*fields))
+        return value
+
+    columns = [
+        normalize(F.col("`" + field.name.replace("`", "``") + "`"), field.dataType).alias(field.name)
+        for field in frame.schema.fields
+    ]
     return frame.select(
         F.to_json(F.struct(*columns), options={"ignoreNullFields": "false"}).alias("uploaded_data")
     )
