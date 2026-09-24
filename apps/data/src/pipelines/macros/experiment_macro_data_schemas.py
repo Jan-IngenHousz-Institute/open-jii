@@ -34,6 +34,7 @@ def _samples(results: DataFrame, column: str) -> DataFrame:
         "pipelines.autoOptimize.managed": "true",
         "delta.feature.variantType-preview": "supported",
     },
+    spark_conf={"spark.sql.streaming.stateStore.partitions": "2"},
 )
 def experiment_macro_data_schemas():
     results = dlt.read_stream(EXPERIMENT_MACRO_DATA_TABLE)

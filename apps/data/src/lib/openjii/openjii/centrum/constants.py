@@ -41,18 +41,12 @@ EXPERIMENT_RAW_DATA_SCHEMAS_TABLE = "experiment_raw_data_schemas"
 EXPERIMENT_UPLOADED_DATA_SCHEMAS_TABLE = "experiment_uploaded_data_schemas"
 EXPERIMENT_MACRO_DATA_SCHEMAS_TABLE = "experiment_macro_data_schemas"
 
-# Enriched (gold)
-ENRICHED_RAW_DATA_VIEW = "enriched_experiment_raw_data"
-ENRICHED_MACRO_DATA_VIEW = "enriched_experiment_macro_data"
-ENRICHED_UPLOADED_DATA_VIEW = "enriched_experiment_uploaded_data"
-
 # Streaming bronze (non-Kinesis sources)
 RAW_IMPORTED_DATA_TABLE = "raw_imported_data"
 RAW_UPLOADED_DATA_TABLE = "raw_uploaded_data"
 RAW_LARGE_DATA_TABLE = "raw_large_data"
 
-# DLT mirrors of backend-managed tables
-ANNOTATIONS_SOURCE_TABLE = "experiment_annotations_source"
+# DLT mirror of a backend-managed table
 METADATA_SOURCE_TABLE = "experiment_metadata_source"
 
 # Backend's macro batch endpoint requires UUID macro_ids; non-UUIDs trigger

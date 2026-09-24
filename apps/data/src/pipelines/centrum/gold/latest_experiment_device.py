@@ -24,11 +24,16 @@ LATEST_EXPERIMENT_DEVICE_SOURCE = f"{LATEST_EXPERIMENT_DEVICE_TABLE}_source"
 dlt.create_streaming_table(
     name=LATEST_EXPERIMENT_DEVICE_TABLE,
     comment="Gold layer: latest reported attributes per (experiment_id, device_id, device_firmware).",
+    # A merge costs seconds of fixed work however few rows it carries, and every
+    # reader of this table judges freshness in minutes or hours.
+    spark_conf={"pipelines.trigger.interval": "2 minutes"},
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
+        # Each merge rewrites this small table's one file anyway; predictive
+        # optimization compacts it asynchronously instead.
+        "delta.autoOptimize.autoCompact": "false",
     },
 )
 

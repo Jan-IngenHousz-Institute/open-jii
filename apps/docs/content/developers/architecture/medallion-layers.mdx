@@ -5,7 +5,7 @@ description: "The current Bronze, Silver, Gold, and enriched-view model in the c
 
 {/* verified: code@dd3160056 2026-09-22 */}
 
-The current data platform keeps all research data in one central Unity Catalog schema, `centrum`. This replaces the per-experiment schema model described in the project's 2025 historical ADRs. Two other pipelines write alongside the main one. Macro execution runs in its own pipeline and publishes `experiment_macro_data`, `experiment_macro_data_schemas` and `enriched_experiment_macro_data` into `centrum`, because a macro is a synchronous HTTP call from a Spark task and sharing the ingest pipeline's compute let those calls hold the slots the stream reader needed. A small sibling schema, `metrics`, holds platform activity rollups produced by a separate serverless DLT pipeline reading the centrum tables. Its public-facing tables are aggregate-only; two backend-only tables (`daily_activity_by_experiment`, `experiment_contributors_window`) carry experiment- and contributor-grain rows that the backend aggregates per organization or user and never exposes unaggregated. Experiment isolation is now expressed through experiment identifiers, experiment-facing tables, access checks, and filtered queries rather than a separate Databricks schema for every experiment.
+The current data platform keeps all research data in one central Unity Catalog schema, `centrum`. This replaces the per-experiment schema model described in the project's 2025 historical ADRs. Two other pipelines write alongside the main one. Macro execution runs in its own pipeline and publishes `experiment_macro_data` and `experiment_macro_data_schemas` into `centrum`, because a macro is a synchronous HTTP call from a Spark task and sharing the ingest pipeline's compute let those calls hold the slots the stream reader needed. A small sibling schema, `metrics`, holds platform activity rollups produced by a separate serverless DLT pipeline reading the centrum tables. Its public-facing tables are aggregate-only; two backend-only tables (`daily_activity_by_experiment`, `experiment_contributors_window`) carry experiment- and contributor-grain rows that the backend aggregates per organization or user and never exposes unaggregated. Experiment isolation is now expressed through experiment identifiers, experiment-facing tables, access checks, and filtered queries rather than a separate Databricks schema for every experiment.
 
 ## Layers
 
@@ -42,13 +42,13 @@ Flexible result shapes use Databricks VARIANT values where the protocol or macro
 
 The enriched data joins each measurement or macro result to its contributor, device, annotations and custom metadata. Annotations and custom metadata change after a measurement arrives, and every historical row has to show them as they are now. The joins are plain SQL views, defined in `apps/data/src/views/` and created by terraform: a view stores no data, so the join runs when someone reads, for the experiment they read, and an edit shows on the next read. The gold tables are clustered by `experiment_id` so that read touches only that experiment's files.
 
-Two more views add what cannot be stored incrementally. `experiment_table_metadata` adds each table's row count and an upload table's newest name to the stored schemas. `experiment_device_data` adds each device's measurement count per firmware, read from `clean_data` because gold carries no firmware.
+Two more views add what cannot be stored incrementally. `experiment_table_metadata_view` adds each table's row count and an upload table's newest name to the schemas stored in `experiment_table_metadata`. `experiment_device_data_view` adds each device's measurement count per firmware to `experiment_device_data`, read from `clean_data` because gold carries no firmware.
 
-The backend and the export read the views under interim names ending in `_view`. The tables with the original names still serve the readers outside this repository until they are replaced by views of the same names.
+The enriched views carry the names of the materialized views they replaced, so readers outside this repository still find them. The other two end in `_view` because the pipeline tables beneath them keep the plain names.
 
 ## Macro execution pipeline
 
-`experiment_macro_data`, `experiment_macro_data_schemas` and `enriched_experiment_macro_data` belong to the macro pipeline, which reads `experiment_raw_data` and the contributor, device, annotation and metadata tables from Centrum. Centrum's `experiment_table_metadata` reads `experiment_macro_data_schemas` by its qualified name, so that table has to exist before a Centrum update starts.
+`experiment_macro_data` and `experiment_macro_data_schemas` belong to the macro pipeline, which streams `experiment_raw_data` from Centrum. Centrum's `experiment_table_metadata` reads `experiment_macro_data_schemas` by its qualified name, so that table has to exist before a Centrum update starts.
 
 ## Why the layers matter
 

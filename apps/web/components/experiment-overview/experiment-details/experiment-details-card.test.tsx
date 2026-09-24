@@ -1,9 +1,11 @@
 import { createExperiment, createLocation } from "@/test/factories";
+import { server } from "@/test/msw/server";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { formatDate } from "@/util/date";
 import type { ComponentProps } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+import { contract } from "@repo/api/contract";
 import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import { useSession } from "@repo/auth/client";
 
@@ -153,6 +155,28 @@ describe("ExperimentDetailsCard", () => {
   it("hides the visibility card without can(manage)", () => {
     renderComponent({ canManage: false });
     expect(screen.queryByTestId("experiment-visibility-card")).not.toBeInTheDocument();
+  });
+
+  it("draws no separator under the details when no section follows them", () => {
+    // A collaborator: nothing to manage, and nothing to request either.
+    renderComponent({
+      canManage: false,
+      canContribute: true,
+      experiment: { ...mockExperiment, visibility: "public" },
+    });
+    expect(screen.queryByRole("separator")).not.toBeInTheDocument();
+  });
+
+  it("separates the actions from the details for a manager", () => {
+    renderComponent();
+    expect(screen.getByRole("separator")).toBeInTheDocument();
+  });
+
+  it("separates the request to join from the details", async () => {
+    server.mount(contract.experiments.getMyJoinRequest, { status: 404 });
+    renderComponent({ canManage: false, experiment: { ...mockExperiment, visibility: "public" } });
+    await screen.findByText("experimentSettings.requestToJoinPrompt");
+    expect(screen.getByRole("separator")).toBeInTheDocument();
   });
 
   it("passes correct props to child components", () => {

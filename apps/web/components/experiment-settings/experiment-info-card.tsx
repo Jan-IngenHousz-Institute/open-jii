@@ -36,7 +36,7 @@ export function ExperimentInfoCard({
   return (
     <>
       <Separator decorative={false} className="mx-4 my-4 w-auto" />
-      <div className="px-6 pb-4">
+      <div className="px-6">
         <p className="text-muted-foreground mb-2 text-sm">
           {t(
             isDeletionEnabled

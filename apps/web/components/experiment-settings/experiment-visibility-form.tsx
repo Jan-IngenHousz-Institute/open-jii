@@ -123,7 +123,7 @@ export function ExperimentVisibilityForm({
                 : t("experimentSettings.pickADate");
 
               return (
-                <FormItem className="space-y-3">
+                <FormItem>
                   <FormLabel>{t("experimentSettings.embargoUntil")}</FormLabel>
                   <FormControl className="flex flex-col gap-3 sm:flex-row">
                     <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
