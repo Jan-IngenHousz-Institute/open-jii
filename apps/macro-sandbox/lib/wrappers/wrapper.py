@@ -21,10 +21,8 @@ try:
         MathMIN, MathROUND, MathSTDERR, MathSTDEV, MathSTDEVS,
         MathSUM, MathVARIANCE, info, warning, danger,
         MathMULTREG, MathEXPINVREG, MathPOLYREG, TransformTrace, calcSunAngle,
+        NUMPY_HELPERS, SCIPY_HELPERS, load_numpy, load_scipy,
     )
-    import numpy as np
-    import pandas as pd
-    import scipy
 except ImportError as e:
     print(json.dumps({"status": "error", "results": [], "errors": [f"Helper import failed: {e}"]}))
     sys.exit(0)
@@ -64,6 +62,37 @@ if isinstance(__macro_result__, dict):
     compiled_code = compile(wrapped_code, script_path, 'exec')
 except Exception as e:
     print(json.dumps({"status": "error", "results": [], "errors": [f"Failed to compile script: {str(e)}"]}))
+    sys.exit(0)
+
+
+def _referenced_names(code):
+    names = set(code.co_names)
+    for const in code.co_consts:
+        if isinstance(const, types.CodeType):
+            names |= _referenced_names(const)
+    return names
+
+
+# Importing numpy, pandas and scipy is most of a call's start-up, so only a macro that
+# names them pays for it. A macro has no getattr, globals or __import__ and can reach a
+# library only by its name. The import happens here, ahead of the audit hook and
+# outside the per-item timer that it could otherwise spend.
+macro_names = _referenced_names(compiled_code)
+libraries = {}
+try:
+    if "np" in macro_names or not NUMPY_HELPERS.isdisjoint(macro_names):
+        load_numpy()
+        import numpy as np
+        libraries["np"] = np
+    if "scipy" in macro_names or not SCIPY_HELPERS.isdisjoint(macro_names):
+        load_scipy()
+        import scipy
+        libraries["scipy"] = scipy
+    if "pd" in macro_names:
+        import pandas as pd
+        libraries["pd"] = pd
+except ImportError as e:
+    print(json.dumps({"status": "error", "results": [], "errors": [f"Helper import failed: {e}"]}))
     sys.exit(0)
 
 class SafeModule:
@@ -412,9 +441,7 @@ for item in batch_items:
         "info": SafeCallable(info),
         "warning": SafeCallable(warning),
         "danger": SafeCallable(danger),
-        "np": SafeModule(np),
-        "pd": SafeModule(pd),
-        "scipy": SafeModule(scipy),
+        **{name: SafeModule(module) for name, module in libraries.items()},
         "json_module": SafeModule(json)
     }
     

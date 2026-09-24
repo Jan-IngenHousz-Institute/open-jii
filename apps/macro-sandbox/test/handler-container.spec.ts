@@ -21,6 +21,8 @@ interface LangSpec {
   isolationScript: string;
 }
 
+const PYTHON_PORT = 9102;
+
 // Unique localhost tags rebuilt every run, so stale images cannot satisfy the suite.
 const LANGS: LangSpec[] = [
   {
@@ -35,7 +37,7 @@ const LANGS: LangSpec[] = [
     language: "python",
     image: "localhost/macro-sandbox-passthrough-py",
     dockerfile: "functions/python/Dockerfile",
-    port: 9102,
+    port: PYTHON_PORT,
     echoScript: 'output["seen"] = json',
     isolationScript:
       'if json.get("fail"):\n    raise ValueError("boom")\noutput["tag"] = json["tag"]',
@@ -189,4 +191,51 @@ describe.skipIf(!ENABLED)("handler container data contract", () => {
       });
     });
   }
+
+  describe("python libraries", () => {
+    const port = PYTHON_PORT;
+
+    it("gives a macro that names np, scipy, pd or their helpers what those libraries compute", async () => {
+      // Savitzky-Golay returns a straight line unchanged; the moving-average fallback bends its ends.
+      const script = [
+        'output["max"] = float(np.max([1, 5, 2]))',
+        'output["slope"] = MathLINREG([1, 2, 3, 4], [3, 5, 7, 9])["m"]',
+        'output["smoothed"] = TransformTrace("sgf", [1, 2, 3, 4, 5, 6, 7])',
+        'output["t"] = float(scipy.stats.ttest_1samp([1, 2, 3], 0).statistic)',
+        'output["total"] = int(pd.Series([1, 2, 3]).sum())',
+      ].join("\n");
+
+      const response = await invoke(port, {
+        script: b64(script),
+        items: [{ id: "libraries", data: {} }],
+        timeout: 10,
+      });
+
+      const output = response.results[0]?.output;
+      expect(response.results[0]?.success).toBe(true);
+      expect(output?.max).toBe(5);
+      expect(output?.slope).toBeCloseTo(2);
+      expect(output?.t).toBeCloseTo(2 * Math.sqrt(3));
+      expect(output?.total).toBe(6);
+      expect(output?.smoothed).toEqual([
+        expect.closeTo(1),
+        expect.closeTo(2),
+        expect.closeTo(3),
+        expect.closeTo(4),
+        expect.closeTo(5),
+        expect.closeTo(6),
+        expect.closeTo(7),
+      ]);
+    });
+
+    it("runs a macro that names none of them", async () => {
+      const response = await invoke(port, {
+        script: b64('output["mean"] = MathMEAN([1, 2, 3])'),
+        items: [{ id: "plain", data: {} }],
+        timeout: 10,
+      });
+
+      expect(response.results[0]).toEqual({ id: "plain", success: true, output: { mean: 2 } });
+    });
+  });
 });
