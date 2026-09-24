@@ -20,19 +20,50 @@ db_annotations AS (
   FROM ${catalog}.centrum.experiment_annotations
   GROUP BY experiment_id, row_id
 ),
+-- Each upload's rows keyed by their identifier value, built once per upload so a
+-- measurement looks its row up instead of scanning them all. The first row wins
+-- when a value repeats.
+metadata_rows AS (
+  SELECT
+    md.experiment_id,
+    md.metadata_id,
+    md.created_at,
+    variant_get(md.metadata, '$.experimentQuestionId', 'STRING') AS question_id,
+    variant_get(r.row, concat('$.', variant_get(md.metadata, '$.identifierColumnId', 'STRING')), 'STRING') AS identifier,
+    map_filter(
+      cast(r.row AS MAP<STRING, VARIANT>),
+      (k, v) -> k != '_id' AND k != variant_get(md.metadata, '$.identifierColumnId', 'STRING')
+    ) AS fields,
+    r.position
+  FROM ${catalog}.centrum.experiment_custom_metadata AS md
+  LATERAL VIEW posexplode(cast(variant_get(md.metadata, '$.rows', 'VARIANT') AS ARRAY<VARIANT>)) r AS position, row
+),
+metadata_lookups AS (
+  SELECT experiment_id, metadata_id, created_at, question_id,
+    map_from_entries(collect_list(struct(identifier, fields))) AS lookup
+  FROM (
+    SELECT *, row_number() OVER (PARTITION BY experiment_id, metadata_id, identifier ORDER BY position) AS nth
+    FROM metadata_rows
+    WHERE identifier IS NOT NULL
+  )
+  WHERE nth = 1
+  GROUP BY experiment_id, metadata_id, created_at, question_id
+),
 -- Oldest first, so a later upload replaces the keys it repeats.
 metadata_records AS (
   SELECT
     experiment_id,
-    transform(
-      array_sort(collect_list(named_struct(
-        'created_at', created_at,
-        'metadata_id', metadata_id,
-        'json', to_json(metadata)
-      ))),
-      item -> parse_json(item.json)
+    array_sort(
+      collect_list(named_struct('created_at', created_at, 'metadata_id', metadata_id, 'question_id', question_id, 'lookup', lookup)),
+      (l, r) -> CASE
+        WHEN l.created_at < r.created_at THEN -1
+        WHEN l.created_at > r.created_at THEN 1
+        WHEN l.metadata_id < r.metadata_id THEN -1
+        WHEN l.metadata_id > r.metadata_id THEN 1
+        ELSE 0
+      END
     ) AS records
-  FROM ${catalog}.centrum.experiment_custom_metadata
+  FROM metadata_lookups
   GROUP BY experiment_id
 ),
 results AS (
@@ -98,36 +129,19 @@ SELECT
   CASE WHEN md.records IS NOT NULL THEN aggregate(
     transform(
       md.records,
-      meta -> parse_json(to_json(map_filter(
-        cast(
-          try_element_at(
-            filter(
-              cast(variant_get(meta, '$.rows', 'VARIANT') AS ARRAY<VARIANT>),
-              candidate -> variant_get(candidate, concat('$.', variant_get(meta, '$.identifierColumnId', 'STRING')), 'STRING') =
-                CASE
-                  WHEN variant_get(meta, '$.experimentQuestionId', 'STRING') = 'column:device_id' THEN CAST(r.device_id AS STRING)
-                  WHEN variant_get(meta, '$.experimentQuestionId', 'STRING') LIKE 'column:%' THEN CAST(NULL AS STRING)
-                  ELSE variant_get(r.questions_data, concat('$.', variant_get(meta, '$.experimentQuestionId', 'STRING')), 'STRING')
-                END
-            ),
-            1
-          ) AS MAP<STRING, VARIANT>
-        ),
-        (k, v) -> k != '_id' AND k != variant_get(meta, '$.identifierColumnId', 'STRING')
-      )))
+      meta -> try_element_at(meta.lookup, CASE
+        WHEN meta.question_id = 'column:device_id' THEN CAST(r.device_id AS STRING)
+        WHEN meta.question_id LIKE 'column:%' THEN CAST(NULL AS STRING)
+        ELSE variant_get(r.questions_data, concat('$.', meta.question_id), 'STRING')
+      END)
     ),
-    CAST(NULL AS VARIANT),
+    CAST(NULL AS MAP<STRING, VARIANT>),
     (acc, x) -> CASE
       WHEN acc IS NULL THEN x
       WHEN x IS NULL THEN acc
-      ELSE parse_json(to_json(map_concat(
-        map_filter(
-          cast(acc AS MAP<STRING, VARIANT>),
-          (k, v) -> NOT array_contains(map_keys(cast(x AS MAP<STRING, VARIANT>)), k)
-        ),
-        cast(x AS MAP<STRING, VARIANT>)
-      )))
-    END
+      ELSE map_concat(map_filter(acc, (k, v) -> NOT array_contains(map_keys(x), k)), x)
+    END,
+    acc -> parse_json(to_json(acc))
   ) END AS custom_metadata
 FROM results AS r
 LEFT JOIN db_annotations AS a

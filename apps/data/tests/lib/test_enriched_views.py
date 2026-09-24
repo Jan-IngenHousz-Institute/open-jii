@@ -117,7 +117,8 @@ _TABLES = {
           ('md-1', 'e1',
            parse_json('{"identifierColumnId": "plot", "experimentQuestionId": "plot", "rows": [
              {"_id": "a", "plot": "A1", "soil": "clay", "color": "red"},
-             {"_id": "b", "plot": "B2", "soil": "sand"}]}'),
+             {"_id": "b", "plot": "B2", "soil": "sand"},
+             {"_id": "a2", "plot": "A1", "soil": "loam"}]}'),
            'u1', TIMESTAMP'2026-09-01 00:00:00', TIMESTAMP'2026-09-01 00:00:00'),
           ('md-2', 'e1',
            parse_json('{"identifierColumnId": "device", "experimentQuestionId": "column:device_id", "rows": [
@@ -210,7 +211,8 @@ def test_custom_metadata_matches_by_question_or_device_and_later_uploads_win(
 ) -> None:
     rows = _rows(spark, "enriched_experiment_raw_data")
 
-    # Plot A1 matches soil and colour by question; device d1 matches a later colour.
+    # Plot A1 matches soil and colour by question, from the first of its two rows;
+    # device d1 matches a later colour.
     assert rows[1]["custom_metadata"] == {"soil": "clay", "color": "blue"}
     assert rows[2]["custom_metadata"] == {"soil": "sand"}
     assert rows[3]["custom_metadata"] is None
