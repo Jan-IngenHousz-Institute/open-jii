@@ -67,6 +67,9 @@ class BackendClient:
     WEBHOOK_MACRO_BATCH_PATH = "/api/v1/macros/execute-batch"
     WEBHOOK_IOT_REGISTRY_PATH = "/api/v1/iot/devices/registry"
     DEVICE_REGISTRY_BATCH_SIZE = 500
+    DEVICE_REGISTRY_RETRY_DELAYS = (1, 2)
+    DEVICE_REGISTRY_REQUEST_TIMEOUT = 5
+    DEVICE_REGISTRY_LOOKUP_BUDGET = 30
 
     # Keeps the request under the backend's 10 MB JSON body limit, so one
     # outsized sample fails alone instead of failing every item in its chunk.
@@ -130,7 +133,9 @@ class BackendClient:
 
         return signature
 
-    def _make_request(self, endpoint: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def _make_request(
+        self, endpoint: str, payload: dict[str, Any], *, timeout: float | None = None
+    ) -> dict[str, Any]:
         """
         Make authenticated request to backend API.
 
@@ -166,7 +171,12 @@ class BackendClient:
             canonical_payload = json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
             # Use data with explicit content-type to ensure the exact canonical format is preserved
-            response = self.session.post(url, data=canonical_payload, headers=headers, timeout=self.timeout)
+            response = self.session.post(
+                url,
+                data=canonical_payload,
+                headers=headers,
+                timeout=self.timeout if timeout is None else timeout,
+            )
 
             response.raise_for_status()
 
@@ -285,16 +295,19 @@ class BackendClient:
             return {}
 
         registry: dict[str, dict[str, Any]] = {}
+        deadline = time.monotonic() + self.DEVICE_REGISTRY_LOOKUP_BUDGET
         for offset in range(0, len(valid), self.DEVICE_REGISTRY_BATCH_SIZE):
             payload = {"thingNames": valid[offset : offset + self.DEVICE_REGISTRY_BATCH_SIZE]}
 
             try:
-                result = self._make_request(self.WEBHOOK_IOT_REGISTRY_PATH, payload)
+                result = self._get_registry_chunk(payload, deadline)
             except BackendIntegrationError:
                 raise
             except Exception as e:
                 raise BackendIntegrationError(f"Unexpected error fetching device registry: {e!s}") from e
 
+            if not isinstance(result, dict):
+                raise BackendIntegrationError("Invalid registry response: expected an object")
             devices_list = result.get("devices")
             if not isinstance(devices_list, list):
                 raise BackendIntegrationError(
@@ -313,6 +326,32 @@ class BackendClient:
                 }
 
         return registry
+
+    def _get_registry_chunk(self, payload: dict[str, Any], deadline: float) -> dict[str, Any]:
+        def request() -> dict[str, Any]:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise BackendIntegrationError("Device registry lookup time budget exhausted")
+            return self._make_request(
+                self.WEBHOOK_IOT_REGISTRY_PATH,
+                payload,
+                timeout=min(self.DEVICE_REGISTRY_REQUEST_TIMEOUT, remaining),
+            )
+
+        for delay in self.DEVICE_REGISTRY_RETRY_DELAYS:
+            try:
+                return request()
+            except BackendIntegrationError as error:
+                cause = error.__cause__
+                response = getattr(cause, "response", None)
+                status = response.status_code if response is not None else None
+                transient = isinstance(cause, (requests.ConnectionError, requests.Timeout)) or (
+                    status is not None and (status == 429 or status >= 500)
+                )
+                if not transient:
+                    raise
+                time.sleep(min(delay, max(0, deadline - time.monotonic())))
+        return request()
 
     def _chunk_items(
         self,
