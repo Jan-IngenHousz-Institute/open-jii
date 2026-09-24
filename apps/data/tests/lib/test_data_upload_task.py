@@ -8,9 +8,9 @@ import numpy as np
 import pandas as pd
 import pytest
 from openjii.json_scrub import scrub_non_finite_json_value
-from pyspark.sql import DataFrame
+from pyspark.sql import Column, DataFrame
 from pyspark.sql import functions as F
-from pyspark.sql.types import DoubleType, FloatType
+from pyspark.sql.types import ArrayType, DataType, DoubleType, FloatType, MapType, StructType
 
 _TASK_PATH = Path(__file__).parents[2] / "src/tasks/data_upload_task.py"
 
@@ -41,7 +41,12 @@ def _serialize_parquet_rows(frame: DataFrame) -> DataFrame:
         if isinstance(node, ast.FunctionDef) and node.name == "_serialize_parquet_rows"
     )
     namespace: dict[str, Any] = {
+        "Column": Column,
         "DataFrame": DataFrame,
+        "DataType": DataType,
+        "ArrayType": ArrayType,
+        "MapType": MapType,
+        "StructType": StructType,
         "F": F,
         "DoubleType": DoubleType,
         "FloatType": FloatType,
@@ -189,3 +194,44 @@ def test_csv_and_parquet_non_finite_values_match(spark, tmp_path, numeric_type) 
     ]
     assert csv_rows == expected
     assert sorted(parquet_rows, key=lambda row: row["id"]) == expected
+
+
+@pytest.mark.spark
+@pytest.mark.parametrize("numeric_type", ["float", "double"])
+def test_nested_parquet_non_finite_values_become_null(spark, tmp_path, numeric_type) -> None:
+    schema = (
+        "id int, "
+        f"nested struct<`Fm'.value`:{numeric_type},`a``b`:array<{numeric_type}>,label:string>, "
+        f"arrays array<map<string,struct<value:{numeric_type}>>>, "
+        f"maps map<string,array<{numeric_type}>>"
+    )
+    frame = spark.createDataFrame(
+        [
+            (
+                0,
+                (float("nan"), [1.25, float("inf"), float("-inf"), None], "NaN"),
+                [{"reading": (float("inf"),), "null struct": None}, None, {}],
+                {"Infinity": [float("nan"), -2.5], "empty": [], "null array": None},
+            ),
+            (1, None, None, None),
+            (2, (1.25, [], "Infinity"), [], {}),
+        ],
+        schema,
+    )
+    path = str(tmp_path / "nested.parquet")
+    frame.write.parquet(path)
+
+    serialized = _serialize_parquet_rows(spark.read.parquet(path))
+    rows = [_strict_loads(row.uploaded_data) for row in serialized.collect()]
+
+    assert sorted(rows, key=lambda row: row["id"]) == [
+        {
+            "id": 0,
+            "nested": {"Fm'.value": None, "a`b": [1.25, None, None, None], "label": "NaN"},
+            "arrays": [{"reading": {"value": None}, "null struct": None}, None, {}],
+            "maps": {"Infinity": [None, -2.5], "empty": [], "null array": None},
+        },
+        {"id": 1, "nested": None, "arrays": None, "maps": None},
+        {"id": 2, "nested": {"Fm'.value": 1.25, "a`b": [], "label": "Infinity"}, "arrays": [], "maps": {}},
+    ]
+    assert serialized.filter(F.expr("try_parse_json(uploaded_data) IS NULL")).count() == 0
