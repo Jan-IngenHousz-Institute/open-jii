@@ -17,17 +17,8 @@ pytestmark = pytest.mark.spark
 _VIEWS = Path(__file__).parents[2] / "src/views"
 _CATALOG = "spark_catalog"
 
-# Timezones Spark cannot use, next to one it can.
-_TIMEZONES = (
-    "Europe/Amsterdam",
-    "ROC",
-    "Factory",
-    "Mars/Olympus",
-    " Europe/Amsterdam ",
-    "europe/amsterdam",
-    "Europe/Amsterdam\x00",
-    "') from x --",
-)
+# What gold stores: a zone Spark accepts, or null for one it rejected.
+_TIMEZONES = ("Europe/Amsterdam", None)
 
 _ANNOTATION = (
     "STRUCT<id: STRING, rowId: STRING, type: STRING, content: STRUCT<text: STRING, flagType: STRING>, "
@@ -47,7 +38,7 @@ _TABLES = {
            array(named_struct('id', 'm1', 'name', 'Fluo', 'filename', 'fluo.py')),
            parse_json('{{"plot": "A1"}}'), array({_PAYLOAD_ANNOTATION}),
            'u1', 'c1', 'p1', 'w1', 52.0D, 5.1D, parse_json('[{{"x": 1}}]'), TIMESTAMP'2026-09-23 10:00:00'),
-          ('e1', 2L, 'd2', 'Ambit', TIMESTAMP'2026-09-02 09:30:00', 'Not/AZone', DATE'2026-09-02',
+          ('e1', 2L, 'd2', 'Ambit', TIMESTAMP'2026-09-02 09:30:00', CAST(NULL AS STRING), DATE'2026-09-02',
            CAST(array() AS ARRAY<STRUCT<id: STRING, name: STRING, filename: STRING>>),
            parse_json('{{"plot": "B2"}}'), CAST(array() AS ARRAY<{_ANNOTATION}>),
            'u2', 'c9', 'p1', 'w1', 52.1D, 5.2D, parse_json('[{{"x": 2}}]'), TIMESTAMP'2026-09-23 10:01:00'),
@@ -66,7 +57,7 @@ _TABLES = {
            52.0D, 5.1D, 'mac-1', 'Fluo', 'fluo.py', 'w1', 'v1', parse_json('{{"phi2": 0.7}}'),
            CAST(NULL AS STRING), TIMESTAMP'2026-09-23 10:05:00', DATE'2026-09-01',
            parse_json('{{"plot": "A1"}}'), array({_PAYLOAD_ANNOTATION})),
-          ('e1', 102, 2L, 'd2', 'c9', 'Ambit', TIMESTAMP'2026-09-02 09:30:00', 'Not/AZone', 'u2',
+          ('e1', 102, 2L, 'd2', 'c9', 'Ambit', TIMESTAMP'2026-09-02 09:30:00', CAST(NULL AS STRING), 'u2',
            52.1D, 5.2D, 'mac-1', 'Fluo', 'fluo.py', 'w1', 'v1', CAST(NULL AS VARIANT),
            'Macro failed', TIMESTAMP'2026-09-23 10:06:00', DATE'2026-09-02',
            parse_json('{{"plot": "B2"}}'), CAST(NULL AS ARRAY<{_ANNOTATION}>))
@@ -117,7 +108,8 @@ _TABLES = {
           ('md-1', 'e1',
            parse_json('{"identifierColumnId": "plot", "experimentQuestionId": "plot", "rows": [
              {"_id": "a", "plot": "A1", "soil": "clay", "color": "red"},
-             {"_id": "b", "plot": "B2", "soil": "sand"}]}'),
+             {"_id": "b", "plot": "B2", "soil": "sand"},
+             {"_id": "a2", "plot": "A1", "soil": "loam"}]}'),
            'u1', TIMESTAMP'2026-09-01 00:00:00', TIMESTAMP'2026-09-01 00:00:00'),
           ('md-2', 'e1',
            parse_json('{"identifierColumnId": "device", "experimentQuestionId": "column:device_id", "rows": [
@@ -210,13 +202,14 @@ def test_custom_metadata_matches_by_question_or_device_and_later_uploads_win(
 ) -> None:
     rows = _rows(spark, "enriched_experiment_raw_data")
 
-    # Plot A1 matches soil and colour by question; device d1 matches a later colour.
+    # Plot A1 matches soil and colour by question, from the first of its two rows;
+    # device d1 matches a later colour.
     assert rows[1]["custom_metadata"] == {"soil": "clay", "color": "blue"}
     assert rows[2]["custom_metadata"] == {"soil": "sand"}
     assert rows[3]["custom_metadata"] is None
 
 
-def test_a_timezone_spark_cannot_use_is_dropped_and_the_measurement_kept(
+def test_local_time_follows_the_stored_zone_and_a_measurement_without_one_is_kept(
     spark: SparkSession, centrum: str
 ) -> None:
     rows = _rows(spark, "enriched_experiment_raw_data")

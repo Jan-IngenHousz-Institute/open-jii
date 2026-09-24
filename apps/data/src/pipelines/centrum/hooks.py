@@ -17,16 +17,17 @@ from openjii.centrum.runtime import ENVIRONMENT, MONITORING_SLACK_CHANNEL
 @dlt.on_event_hook(max_allowable_consecutive_failures=3)
 def send_slack_notifications(event):
 
-    # Get the webhook URL from the secret scope
-    SLACK_WEBHOOK_URL = dbutils.secrets.get(scope=f"event-hooks-{ENVIRONMENT}", key="slack-webhook-url")
-    SLACK_HEADERS = {
-        'Content-Type': 'application/json'
-    }
-
     if (
         event['event_type'] in ['update_progress', 'flow_progress', 'operation_progress']
         and event['details'].get(event['event_type'], {}).get('state') in ['FAILED', 'STOPPED']
     ):
+        # The hook sees every event in the log, so fetching the secret for each one
+        # left it hours behind; only the events that notify fetch it.
+        SLACK_WEBHOOK_URL = dbutils.secrets.get(scope=f"event-hooks-{ENVIRONMENT}", key="slack-webhook-url")
+        SLACK_HEADERS = {
+            'Content-Type': 'application/json'
+        }
+
         event_type = event['event_type']
         state = event['details'].get(event['event_type'], {}).get('state')
         pipeline_id = event['origin'].get('pipeline_id')

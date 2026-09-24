@@ -13,6 +13,7 @@ from data_repair import apply_inline_repairs
 from openjii import scrub_non_finite_json
 from openjii.centrum import EXPERIMENT_RAW_DATA_TABLE
 from openjii.centrum.runtime import SILVER_TABLE
+from openjii.timezones import usable_timezone
 
 # COMMAND ----------
 
@@ -152,7 +153,7 @@ def experiment_raw_data():
             "client_id",
             "device_name",
             "timestamp",
-            "timezone",
+            usable_timezone(F.col("timezone")).alias("timezone"),
             "macros",
             "questions_data",
             "annotations",
