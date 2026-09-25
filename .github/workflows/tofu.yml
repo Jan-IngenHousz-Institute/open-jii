@@ -81,9 +81,6 @@ jobs:
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
       TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
       TF_VAR_grafana_auth_service_token: ${{ secrets.GRAFANA_SERVICE_TOKEN }}
-      # Empty routes critical alerts to the main channel. Production sets it to the
-      # channel a phone hears; dev never does.
-      TF_VAR_slack_critical_webhook_url: ${{ secrets.SLACK_CRITICAL_WEBHOOK_URL }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
@@ -165,9 +162,6 @@ jobs:
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
       TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
       TF_VAR_grafana_auth_service_token: ${{ secrets.GRAFANA_SERVICE_TOKEN }}
-      # Empty routes critical alerts to the main channel. Production sets it to the
-      # channel a phone hears; dev never does.
-      TF_VAR_slack_critical_webhook_url: ${{ secrets.SLACK_CRITICAL_WEBHOOK_URL }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6

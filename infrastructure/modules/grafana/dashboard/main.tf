@@ -96,7 +96,6 @@ resource "grafana_dashboard" "registrations_dashboard" {
 }
 
 
-
 resource "grafana_dashboard" "dora_dashboard" {
   provider  = grafana.amg
   folder    = grafana_folder.folder.id
@@ -127,23 +126,6 @@ resource "grafana_contact_point" "slack" {
     ignore_changes = [slack]
   }
 }
-
-# Critical is the one severity with its own destination: the channel a phone hears.
-# It coalesces to the main webhook, so an environment that sets no critical webhook
-# delivers everything to one place, which is what dev does.
-#
-# Deliberately no ignore_changes here, unlike grafana_contact_point.slack above. Grafana
-# returns the url redacted, so each plan shows a diff on this one; that permadiff is the
-# price of being able to repoint it, which is the whole point of having it.
-resource "grafana_contact_point" "slack_critical" {
-  provider = grafana.amg
-  name     = "slack-critical"
-
-  slack {
-    url = var.slack_critical_webhook_url != "" ? var.slack_critical_webhook_url : var.slack_webhook_url
-  }
-}
-
 
 
 # ============================================================================
@@ -2123,7 +2105,7 @@ resource "grafana_notification_policy" "policy" {
       value = "critical"
     }
     group_by        = ["alertname"]
-    contact_point   = grafana_contact_point.slack_critical.name
+    contact_point   = grafana_contact_point.slack.name
     repeat_interval = "30m"
   }
 

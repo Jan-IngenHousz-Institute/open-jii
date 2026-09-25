@@ -2875,7 +2875,6 @@ module "grafana_dashboard" {
   load_balancer_arn          = module.backend_alb.alb_arn
   ecs_cluster_name           = module.backend_ecs.ecs_cluster_name
   slack_webhook_url          = var.slack_webhook_url
-  slack_critical_webhook_url = var.slack_critical_webhook_url
 
   # Passed in rather than interpolated: a rule watching a misspelled function is NoData
   # forever, which is either permanently firing or permanently silent.

@@ -46,13 +46,6 @@ variable "slack_webhook_url" {
   sensitive   = true
 }
 
-variable "slack_critical_webhook_url" {
-  description = "Slack incoming webhook for critical alerts only, a channel a phone hears; empty keeps them on slack_webhook_url"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
 variable "slack_channel" {
   description = "Slack channel for monitoring notifications"
   type        = string
