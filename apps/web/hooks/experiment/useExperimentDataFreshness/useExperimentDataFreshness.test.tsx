@@ -179,6 +179,28 @@ describe("useExperimentDataFreshness", () => {
     await waitFor(() => expect(spy.callCount).toBe(callsWhilePaused + 1));
   });
 
+  it("stops polling after ten idle minutes and catches up on the next input", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const spy = server.mount(contract.experiments.getExperimentTables, { body: [RAW] });
+
+    const { result } = renderHook(() => useExperimentDataFreshness("exp-1"));
+    await waitFor(() => expect(result.current.hasLoaded).toBe(true));
+
+    await act(() => vi.advanceTimersByTimeAsync(10 * 60_000));
+    expect(result.current.status).toBe("paused");
+    expect(result.current.isPaused).toBe(false);
+    const callsWhileIdle = spy.callCount;
+
+    await act(() => vi.advanceTimersByTimeAsync(5 * 60_000));
+    expect(spy.callCount).toBe(callsWhileIdle);
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown"));
+    });
+    expect(result.current.status).toBe("live");
+    await waitFor(() => expect(spy.callCount).toBe(callsWhileIdle + 1));
+  });
+
   it("says it is behind after two minutes without a successful refresh", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     server.mount(contract.experiments.getExperimentTables, { body: [RAW] });

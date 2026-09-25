@@ -40,6 +40,12 @@ interface ReadTrace {
 export class ExperimentDataRepository {
   private readonly logger = new Logger(ExperimentDataRepository.name);
 
+  /**
+   * Reads already running, keyed by their SQL. A second tab, a refetch or two charts asking the
+   * same question join the running statement instead of queueing a copy behind it.
+   */
+  private readonly readsInFlight = new Map<string, Promise<Result<SchemaData>>>();
+
   constructor(
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
     @Inject(CACHE_PORT) private readonly cachePort: CachePort,
@@ -453,11 +459,22 @@ export class ExperimentDataRepository {
     });
   }
 
+  private executeQuery(query: string): Promise<Result<SchemaData>> {
+    const running = this.readsInFlight.get(query);
+    if (running !== undefined) {
+      return running;
+    }
+
+    const read = this.runQuery(query).finally(() => this.readsInFlight.delete(query));
+    this.readsInFlight.set(query, read);
+    return read;
+  }
+
   /**
    * Execute a generated SQL; on failure log the SQL too, since errors like
    * `UNRESOLVED_COLUMN` depend on the exact compiled query.
    */
-  private async executeQuery(query: string): Promise<Result<SchemaData>> {
+  private async runQuery(query: string): Promise<Result<SchemaData>> {
     const dataResult = await this.databricksPort.executeSqlQuery(
       this.databricksPort.CENTRUM_SCHEMA_NAME,
       query,

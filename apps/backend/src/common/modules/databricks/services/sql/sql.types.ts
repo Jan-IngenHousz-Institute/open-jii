@@ -14,6 +14,7 @@ export interface ExecuteStatementRequest {
   schema: string;
   catalog: string;
   wait_timeout: string;
+  on_wait_timeout: "CONTINUE" | "CANCEL";
   disposition: string;
   format: string;
   byte_limit?: number;
