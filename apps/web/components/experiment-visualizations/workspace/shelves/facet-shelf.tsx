@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
+import { ColumnName } from "~/components/experiment-data/column-name";
 
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
@@ -79,7 +80,7 @@ export function FacetShelf({ form, columns, flat = false }: FacetShelfProps) {
             </SelectItem>
             {columns.map((column) => (
               <SelectItem key={column.name} value={column.name}>
-                {column.name}
+                <ColumnName column={column} />
               </SelectItem>
             ))}
           </SelectContent>

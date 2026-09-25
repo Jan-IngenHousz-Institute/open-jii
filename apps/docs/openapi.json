@@ -301,6 +301,27 @@
                               },
                               "type_text": {
                                 "type": "string"
+                              },
+                              "renamedFrom": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "enum": [
+                                      "macro_output",
+                                      "questions_data",
+                                      "custom_metadata",
+                                      "uploaded_data"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "source"
+                                ]
                               }
                             },
                             "required": [
@@ -687,6 +708,27 @@
                                     },
                                     "type_text": {
                                       "type": "string"
+                                    },
+                                    "renamedFrom": {
+                                      "type": "object",
+                                      "properties": {
+                                        "name": {
+                                          "type": "string"
+                                        },
+                                        "source": {
+                                          "enum": [
+                                            "macro_output",
+                                            "questions_data",
+                                            "custom_metadata",
+                                            "uploaded_data"
+                                          ],
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "name",
+                                        "source"
+                                      ]
                                     }
                                   },
                                   "required": [
@@ -979,6 +1021,27 @@
                                         },
                                         "type_text": {
                                           "type": "string"
+                                        },
+                                        "renamedFrom": {
+                                          "type": "object",
+                                          "properties": {
+                                            "name": {
+                                              "type": "string"
+                                            },
+                                            "source": {
+                                              "enum": [
+                                                "macro_output",
+                                                "questions_data",
+                                                "custom_metadata",
+                                                "uploaded_data"
+                                              ],
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "name",
+                                            "source"
+                                          ]
                                         }
                                       },
                                       "required": [
@@ -1315,6 +1378,27 @@
                               },
                               "type_text": {
                                 "type": "string"
+                              },
+                              "renamedFrom": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "enum": [
+                                      "macro_output",
+                                      "questions_data",
+                                      "custom_metadata",
+                                      "uploaded_data"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "source"
+                                ]
                               }
                             },
                             "required": [
@@ -1673,6 +1757,27 @@
                               },
                               "type_text": {
                                 "type": "string"
+                              },
+                              "renamedFrom": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "enum": [
+                                      "macro_output",
+                                      "questions_data",
+                                      "custom_metadata",
+                                      "uploaded_data"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "source"
+                                ]
                               }
                             },
                             "required": [
@@ -1985,6 +2090,27 @@
                                   },
                                   "type_text": {
                                     "type": "string"
+                                  },
+                                  "renamedFrom": {
+                                    "type": "object",
+                                    "properties": {
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "source": {
+                                        "enum": [
+                                          "macro_output",
+                                          "questions_data",
+                                          "custom_metadata",
+                                          "uploaded_data"
+                                        ],
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "name",
+                                      "source"
+                                    ]
                                   }
                                 },
                                 "required": [
@@ -2484,6 +2610,27 @@
                                 },
                                 "type_text": {
                                   "type": "string"
+                                },
+                                "renamedFrom": {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "source": {
+                                      "enum": [
+                                        "macro_output",
+                                        "questions_data",
+                                        "custom_metadata",
+                                        "uploaded_data"
+                                      ],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "source"
+                                  ]
                                 }
                               },
                               "required": [
@@ -7036,6 +7183,27 @@
                               },
                               "type_text": {
                                 "type": "string"
+                              },
+                              "renamedFrom": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "enum": [
+                                      "macro_output",
+                                      "questions_data",
+                                      "custom_metadata",
+                                      "uploaded_data"
+                                    ],
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "source"
+                                ]
                               }
                             },
                             "required": [

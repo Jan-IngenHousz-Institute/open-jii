@@ -487,6 +487,44 @@ describe("DatabricksAdapter", () => {
     });
   });
 
+  describe("getExperimentTableColumns", () => {
+    it("describes the table's view and keeps only the column section", async () => {
+      const sqlService = testApp.module.get(DatabricksSqlService);
+      const spy = vi.spyOn(sqlService, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [],
+          rows: [
+            ["id", "bigint", null],
+            ["device", "struct<serial: string>", null],
+            ["", "", ""],
+            ["# Clustering Information", "", ""],
+            ["experiment_id", "string", null],
+          ],
+          totalRows: 5,
+          truncated: false,
+        }),
+      );
+
+      const result = await databricksAdapter.getExperimentTableColumns("macro", "some_macro_id");
+
+      assertSuccess(result);
+      expect(result.value).toEqual(["id", "device"]);
+      const [schemaName, statement] = spy.mock.calls[0];
+      expect(schemaName).toBe(databricksAdapter.CENTRUM_SCHEMA_NAME);
+      expect(statement).toMatch(/^DESCRIBE TABLE /);
+      expect(statement).toContain(databricksAdapter.MACRO_DATA_TABLE_NAME);
+
+      spy.mockRestore();
+    });
+
+    it("fails for a static table it has no view for", async () => {
+      const result = await databricksAdapter.getExperimentTableColumns("static", "unknown");
+
+      assertFailure(result);
+      expect(result.error.code).toBe("UNKNOWN_TABLE_MAPPING");
+    });
+  });
+
   describe("buildExperimentQuery", () => {
     it("should build query for standard tables (raw_data, device)", () => {
       const result = databricksAdapter.buildExperimentQuery({

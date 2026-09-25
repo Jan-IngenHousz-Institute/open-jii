@@ -65,7 +65,8 @@ export interface DatabricksPort {
     tableType: "static" | "macro" | "upload";
     experimentId: string;
     columns?: string[];
-    variants?: { columnName: string; schema: string }[];
+    variants?: { columnName: string; schema: string; suffix?: string }[];
+    reservedColumns?: string[];
     exceptColumns?: string[];
     filters?: FilterCondition[];
     aggregation?: AggregationSpec;
@@ -75,6 +76,12 @@ export interface DatabricksPort {
     limit?: number;
     offset?: number;
   }): Result<string>;
+
+  /** Column names of the view an experiment table reads from, in its own order. */
+  getExperimentTableColumns(
+    tableType: "static" | "macro" | "upload",
+    tableName: string,
+  ): Promise<Result<string[]>>;
 
   executeSqlQuery(
     schemaName: string,

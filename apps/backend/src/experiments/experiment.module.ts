@@ -82,7 +82,7 @@ import { UpgradeWorkbookVersionUseCase } from "./application/use-cases/upgrade-w
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 // Ports
 import { AWS_PORT } from "./core/ports/aws.port";
-import { CACHE_PORT } from "./core/ports/cache.port";
+import { CACHE_PORT, SCHEMA_CACHE_PORT } from "./core/ports/cache.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
 import { EMAIL_PORT } from "./core/ports/email.port";
 import { ExperimentDashboardRepository } from "./core/repositories/experiment-dashboard.repository";
@@ -171,6 +171,14 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
       // a poll still sees new rows within one interval.
       useFactory: (cache: Cache) =>
         new CacheAdapter(cache, { prefix: "experiment:", ttlMs: 15 * 1000 }),
+      inject: [CACHE_MANAGER],
+    },
+    {
+      provide: SCHEMA_CACHE_PORT,
+      // A view's columns change only when infrastructure redefines it; an hour
+      // keeps the lookup off nearly every read.
+      useFactory: (cache: Cache) =>
+        new CacheAdapter(cache, { prefix: "experiment-schema:", ttlMs: 60 * 60 * 1000 }),
       inject: [CACHE_MANAGER],
     },
 

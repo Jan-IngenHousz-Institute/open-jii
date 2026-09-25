@@ -23,6 +23,12 @@ macro produced, and anything uploaded.
 Numeric columns can open a quick table chart. This is useful for checking a
 distribution while cleaning data; it is not a saved analysis.
 
+A field from a macro, a question, custom metadata or an uploaded file can have
+the same name as a column the table already has, such as `device` or `id`. The
+table keeps both. The table's own column keeps the plain name, and the field
+appears beside it under its own name with a small tag saying where it came from.
+Hover the tag to see why. Filters and chart pickers show the same tag.
+
 ## New rows arrive on their own
 
 You do not need to reload the page to see new measurements. While the browser

@@ -6,6 +6,7 @@ import type {
   AggregationSpec,
   FilterCondition,
 } from "../../../common/modules/databricks/services/query-builder/query-builder.types";
+import { FlattenedFields } from "../../../common/modules/databricks/services/query-builder/schema/flattened-fields";
 import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, success, failure, AppError, tryCatch } from "../../../common/utils/fp-utils";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
@@ -13,14 +14,17 @@ import {
   MACRO_TABLE_CONFIG,
   STATIC_TABLE_CONFIG,
   UPLOAD_TABLE_CONFIG,
+  VARIANT_COLUMN_SUFFIX,
 } from "../models/experiment-data.model";
 import type {
   ExperimentTableMetadata,
+  ExperimentTableType,
   SchemaDataDto,
   TableDataDto,
+  VariantColumn,
 } from "../models/experiment-data.model";
 import { ExperimentDto } from "../models/experiment.model";
-import { CACHE_PORT } from "../ports/cache.port";
+import { CACHE_PORT, SCHEMA_CACHE_PORT } from "../ports/cache.port";
 import type { CachePort } from "../ports/cache.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
@@ -36,6 +40,16 @@ interface ReadTrace {
   countMs?: number;
 }
 
+/** What a read of one table flattens and hides, and the names its base columns hold. */
+interface TableShape {
+  metadata: ExperimentTableMetadata;
+  variants: { columnName: VariantColumn; schema: string; suffix: string }[];
+  exceptColumns: string[];
+  reservedColumns: string[];
+}
+
+type RenamedColumns = Map<string, { name: string; source: VariantColumn }>;
+
 @Injectable()
 export class ExperimentDataRepository {
   private readonly logger = new Logger(ExperimentDataRepository.name);
@@ -49,6 +63,7 @@ export class ExperimentDataRepository {
   constructor(
     @Inject(DATABRICKS_PORT) private readonly databricksPort: DatabricksPort,
     @Inject(CACHE_PORT) private readonly cachePort: CachePort,
+    @Inject(SCHEMA_CACHE_PORT) private readonly schemaCache: CachePort,
     private readonly contributorAnonymizer: ContributorAnonymizerService,
   ) {}
 
@@ -97,19 +112,16 @@ export class ExperimentDataRepository {
       metadataMs: 0,
     };
 
-    const [metadataResult, metadataMs] = await this.measure(() =>
-      this.tableMetadata(experimentId, tableName),
+    const [shapeResult, metadataMs] = await this.measure(() =>
+      this.tableShape(experimentId, tableName),
     );
     read.metadataMs = metadataMs;
 
-    if (metadataResult.isFailure()) {
-      return metadataResult;
-    }
-    if (metadataResult.value.length === 0) {
-      return failure(AppError.notFound(`Table '${tableName}' not found in experiment`));
+    if (shapeResult.isFailure()) {
+      return shapeResult;
     }
 
-    const metadata = metadataResult.value[0];
+    const shape = shapeResult.value;
     const hasAggregation =
       (aggregation?.groupBy?.length ?? 0) > 0 || (aggregation?.functions?.length ?? 0) > 0;
     const hasFilters = (filters?.length ?? 0) > 0;
@@ -124,7 +136,7 @@ export class ExperimentDataRepository {
     // Aggregation summary: page/pageSize ignored, `limit` caps the result.
     if (hasAggregation) {
       read.mode = "aggregation";
-      const queryResult = this.buildQuery(experimentId, metadata, {
+      const queryResult = this.buildQuery(experimentId, shape, {
         filters: effectiveFilters,
         aggregation,
         orderBy,
@@ -134,7 +146,13 @@ export class ExperimentDataRepository {
       if (queryResult.isFailure()) {
         return queryResult;
       }
-      return this.getFullTableData({ tableName, experiment, query: queryResult.value, read });
+      return this.getFullTableData({
+        tableName,
+        experiment,
+        shape,
+        query: queryResult.value,
+        read,
+      });
     }
 
     // Filters or column projection requested.
@@ -144,7 +162,7 @@ export class ExperimentDataRepository {
         const offset = (page - 1) * pageSize;
 
         // COUNT(*) over the unpaged filter query.
-        const countSubqueryResult = this.buildQuery(experimentId, metadata, {
+        const countSubqueryResult = this.buildQuery(experimentId, shape, {
           columns,
           filters: effectiveFilters,
         });
@@ -153,7 +171,7 @@ export class ExperimentDataRepository {
         }
         const countSql = `SELECT COUNT(*) AS total FROM (${countSubqueryResult.value}) AS sub`;
 
-        const dataQueryResult = this.buildQuery(experimentId, metadata, {
+        const dataQueryResult = this.buildQuery(experimentId, shape, {
           columns,
           filters: effectiveFilters,
           orderBy,
@@ -183,6 +201,7 @@ export class ExperimentDataRepository {
           this.tablePage({
             tableName,
             experiment,
+            shape,
             page,
             pageSize,
             rowCount: totalRows,
@@ -193,7 +212,7 @@ export class ExperimentDataRepository {
 
       // Chart-style: all matching rows in one page, capped by `limit`.
       read.mode = "filtered-all";
-      const queryResult = this.buildQuery(experimentId, metadata, {
+      const queryResult = this.buildQuery(experimentId, shape, {
         columns,
         filters: effectiveFilters,
         orderBy,
@@ -203,14 +222,20 @@ export class ExperimentDataRepository {
       if (queryResult.isFailure()) {
         return queryResult;
       }
-      return this.getFullTableData({ tableName, experiment, query: queryResult.value, read });
+      return this.getFullTableData({
+        tableName,
+        experiment,
+        shape,
+        query: queryResult.value,
+        read,
+      });
     }
 
     // Plain paginated read (no filters, no aggregation, no projection).
     const usedPage = page ?? 1;
     const usedPageSize = pageSize ?? 5;
     const offset = (usedPage - 1) * usedPageSize;
-    const queryResult = this.buildQuery(experimentId, metadata, {
+    const queryResult = this.buildQuery(experimentId, shape, {
       orderBy,
       orderDirection,
       limit: usedPageSize,
@@ -223,9 +248,10 @@ export class ExperimentDataRepository {
     return this.getTableDataPage({
       tableName,
       experiment,
+      shape,
       page: usedPage,
       pageSize: usedPageSize,
-      rowCount: metadata.rowCount,
+      rowCount: shape.metadata.rowCount,
       query: queryResult.value,
       read,
     });
@@ -244,15 +270,12 @@ export class ExperimentDataRepository {
   }): Promise<Result<{ values: (string | number)[]; truncated: boolean }>> {
     const { experimentId, experiment, tableName, column, limit } = params;
 
-    const metadataResult = await this.tableMetadata(experimentId, tableName);
-    if (metadataResult.isFailure()) {
-      return metadataResult;
-    }
-    if (metadataResult.value.length === 0) {
-      return failure(AppError.notFound(`Table '${tableName}' not found in experiment`));
+    const shapeResult = await this.tableShape(experimentId, tableName);
+    if (shapeResult.isFailure()) {
+      return shapeResult;
     }
 
-    const queryResult = this.buildQuery(experimentId, metadataResult.value[0], {
+    const queryResult = this.buildQuery(experimentId, shapeResult.value, {
       columns: [column],
       distinct: true,
       orderBy: column,
@@ -363,24 +386,23 @@ export class ExperimentDataRepository {
     );
   }
 
-  private buildQuery(
-    experimentId: string,
-    metadata: ExperimentTableMetadata,
-    options: {
-      columns?: string[];
-      filters?: FilterCondition[];
-      aggregation?: AggregationSpec;
-      distinct?: boolean;
-      orderBy?: string;
-      orderDirection?: "ASC" | "DESC";
-      limit?: number;
-      offset?: number;
-    } = {},
-  ): Result<string> {
-    const { columns, filters, aggregation, distinct, orderBy, orderDirection, limit, offset } =
-      options;
+  /**
+   * The table's metadata, what a read of it flattens and hides, and the names its base columns
+   * hold. The view's columns are looked up only when a payload is flattened, since only then can
+   * a field's name clash with one of them.
+   */
+  private async tableShape(experimentId: string, tableName: string): Promise<Result<TableShape>> {
+    const metadataResult = await this.tableMetadata(experimentId, tableName);
+    if (metadataResult.isFailure()) {
+      return metadataResult;
+    }
+    if (metadataResult.value.length === 0) {
+      return failure(AppError.notFound(`Table '${tableName}' not found in experiment`));
+    }
+
+    const metadata = metadataResult.value[0];
     const {
-      identifier: tableName,
+      identifier,
       tableType,
       macroSchema,
       questionsSchema,
@@ -395,24 +417,28 @@ export class ExperimentDataRepository {
       if (tableType === "upload") {
         return UPLOAD_TABLE_CONFIG;
       }
-      return STATIC_TABLE_CONFIG[tableName];
+      return STATIC_TABLE_CONFIG[identifier];
     })();
 
     if (!config) {
       return failure(
         AppError.internal(
-          `No table configuration found for static table '${tableName}'`,
+          `No table configuration found for static table '${identifier}'`,
           "UNKNOWN_TABLE_CONFIG",
         ),
       );
     }
 
     const exceptColumns = [...config.exceptColumns];
-    const variants: { columnName: string; schema: string }[] = [];
+    const variants: TableShape["variants"] = [];
 
     if (config.variantColumns.includes("macro_output")) {
       if (macroSchema) {
-        variants.push({ columnName: "macro_output", schema: macroSchema });
+        variants.push({
+          columnName: "macro_output",
+          schema: macroSchema,
+          suffix: VARIANT_COLUMN_SUFFIX.macro_output,
+        });
       } else {
         exceptColumns.push("macro_output");
       }
@@ -420,7 +446,11 @@ export class ExperimentDataRepository {
 
     if (config.variantColumns.includes("questions_data")) {
       if (questionsSchema) {
-        variants.push({ columnName: "questions_data", schema: questionsSchema });
+        variants.push({
+          columnName: "questions_data",
+          schema: questionsSchema,
+          suffix: VARIANT_COLUMN_SUFFIX.questions_data,
+        });
       } else {
         exceptColumns.push("questions_data");
       }
@@ -428,7 +458,11 @@ export class ExperimentDataRepository {
 
     if (config.variantColumns.includes("custom_metadata")) {
       if (customMetadataSchema) {
-        variants.push({ columnName: "custom_metadata", schema: customMetadataSchema });
+        variants.push({
+          columnName: "custom_metadata",
+          schema: customMetadataSchema,
+          suffix: VARIANT_COLUMN_SUFFIX.custom_metadata,
+        });
       } else {
         exceptColumns.push("custom_metadata");
       }
@@ -436,18 +470,74 @@ export class ExperimentDataRepository {
 
     if (config.variantColumns.includes("uploaded_data")) {
       if (uploadSchema) {
-        variants.push({ columnName: "uploaded_data", schema: uploadSchema });
+        variants.push({
+          columnName: "uploaded_data",
+          schema: uploadSchema,
+          suffix: VARIANT_COLUMN_SUFFIX.uploaded_data,
+        });
       } else {
         exceptColumns.push("uploaded_data");
       }
     }
 
+    if (variants.length === 0) {
+      return success({ metadata, variants, exceptColumns, reservedColumns: [] });
+    }
+
+    const viewColumnsResult = await this.viewColumns(tableType, identifier);
+    if (viewColumnsResult.isFailure()) {
+      return viewColumnsResult;
+    }
+
+    const hidden = new Set<string>([...config.variantColumns, ...exceptColumns]);
+    const reservedColumns = viewColumnsResult.value.filter((column) => !hidden.has(column));
+    return success({ metadata, variants, exceptColumns, reservedColumns });
+  }
+
+  /** A view's columns change only when it is redefined, so they come from the long-lived cache. */
+  private viewColumns(
+    tableType: ExperimentTableType,
+    identifier: string,
+  ): Promise<Result<string[]>> {
+    // Macro and upload tables each read one shared view; every static table has its own.
+    const view = tableType === "static" ? `static:${identifier}` : tableType;
+    return tryCatch(async () => {
+      const columns = await this.schemaCache.tryCache(`view-columns:${view}`, async () => {
+        const result = await this.databricksPort.getExperimentTableColumns(tableType, identifier);
+        if (result.isFailure()) {
+          throw result.error;
+        }
+        return result.value;
+      });
+      return columns ?? [];
+    });
+  }
+
+  private buildQuery(
+    experimentId: string,
+    shape: TableShape,
+    options: {
+      columns?: string[];
+      filters?: FilterCondition[];
+      aggregation?: AggregationSpec;
+      distinct?: boolean;
+      orderBy?: string;
+      orderDirection?: "ASC" | "DESC";
+      limit?: number;
+      offset?: number;
+    } = {},
+  ): Result<string> {
+    const { columns, filters, aggregation, distinct, orderBy, orderDirection, limit, offset } =
+      options;
+    const { metadata, variants, exceptColumns, reservedColumns } = shape;
+
     return this.databricksPort.buildExperimentQuery({
-      tableName,
-      tableType,
+      tableName: metadata.identifier,
+      tableType: metadata.tableType,
       experimentId,
       columns,
       variants: variants.length > 0 ? variants : undefined,
+      reservedColumns: reservedColumns.length > 0 ? reservedColumns : undefined,
       exceptColumns: exceptColumns.length > 0 ? exceptColumns : undefined,
       filters,
       aggregation,
@@ -457,6 +547,21 @@ export class ExperimentDataRepository {
       limit,
       offset,
     });
+  }
+
+  /** Result columns a name clash renamed, keyed by the name they read as. */
+  private renamedColumns(shape: TableShape): RenamedColumns {
+    const sources = shape.variants.map(({ columnName, schema, suffix }) => ({
+      column: columnName,
+      schema,
+      suffix,
+    }));
+    const renamed = FlattenedFields.resolve(shape.reservedColumns, sources).filter(
+      ({ key, field }) => key !== field.name,
+    );
+    return new Map(
+      renamed.map(({ key, column, field }) => [key, { name: field.name, source: column }]),
+    );
   }
 
   private executeQuery(query: string): Promise<Result<SchemaData>> {
@@ -492,10 +597,11 @@ export class ExperimentDataRepository {
   private async getFullTableData(params: {
     tableName: string;
     experiment: ExperimentDto;
+    shape: TableShape;
     query: string;
     read: ReadTrace;
   }): Promise<Result<TableDataDto[]>> {
-    const { tableName, experiment, query, read } = params;
+    const { tableName, experiment, shape, query, read } = params;
 
     const [dataResult, dataMs] = await this.measure(() => this.executeQuery(query));
     if (dataResult.isFailure()) {
@@ -510,7 +616,7 @@ export class ExperimentDataRepository {
         name: tableName,
         catalog_name: experiment.name,
         schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
-        data: this.transformSchemaData(dataResult.value, experiment),
+        data: this.transformSchemaData(dataResult.value, experiment, shape),
         page: 1,
         pageSize: totalRows,
         totalRows,
@@ -522,13 +628,14 @@ export class ExperimentDataRepository {
   private async getTableDataPage(params: {
     tableName: string;
     experiment: ExperimentDto;
+    shape: TableShape;
     page: number;
     pageSize: number;
     rowCount: number;
     query: string;
     read: ReadTrace;
   }): Promise<Result<TableDataDto[]>> {
-    const { tableName, experiment, page, pageSize, rowCount, query, read } = params;
+    const { tableName, experiment, shape, page, pageSize, rowCount, query, read } = params;
 
     const [dataResult, dataMs] = await this.measure(() => this.executeQuery(query));
     if (dataResult.isFailure()) {
@@ -537,24 +644,33 @@ export class ExperimentDataRepository {
     this.logRead(read, dataMs, dataResult.value);
 
     return success([
-      this.tablePage({ tableName, experiment, page, pageSize, rowCount, data: dataResult.value }),
+      this.tablePage({
+        tableName,
+        experiment,
+        shape,
+        page,
+        pageSize,
+        rowCount,
+        data: dataResult.value,
+      }),
     ]);
   }
 
   private tablePage(params: {
     tableName: string;
     experiment: ExperimentDto;
+    shape: TableShape;
     page: number;
     pageSize: number;
     rowCount: number;
     data: SchemaData;
   }): TableDataDto {
-    const { tableName, experiment, page, pageSize, rowCount, data } = params;
+    const { tableName, experiment, shape, page, pageSize, rowCount, data } = params;
     return {
       name: tableName,
       catalog_name: experiment.name,
       schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
-      data: this.transformSchemaData(data, experiment),
+      data: this.transformSchemaData(data, experiment, shape),
       page,
       pageSize,
       totalRows: rowCount,
@@ -587,10 +703,20 @@ export class ExperimentDataRepository {
   }
 
   /**
-   * Convert schema data to DTO and route every row through the
-   * contributor anonymiser; the single seat for that policy.
+   * Convert schema data to DTO, tag the columns a name clash renamed, and route every row
+   * through the contributor anonymiser; the single seat for that policy.
    */
-  private transformSchemaData(schemaData: SchemaData, experiment: ExperimentDto): SchemaDataDto {
+  private transformSchemaData(
+    schemaData: SchemaData,
+    experiment: ExperimentDto,
+    shape: TableShape,
+  ): SchemaDataDto {
+    const renamed = this.renamedColumns(shape);
+    const columns = schemaData.columns.map((column) => {
+      const renamedFrom = renamed.get(column.name);
+      return renamedFrom === undefined ? column : { ...column, renamedFrom };
+    });
+
     const rows = schemaData.rows.map((row) => {
       const dataRow: Record<string, string | null> = {};
       row.forEach((value, index) => {
@@ -599,7 +725,7 @@ export class ExperimentDataRepository {
       return dataRow;
     });
     return {
-      columns: schemaData.columns,
+      columns,
       rows: this.contributorAnonymizer.anonymizeRows(rows, schemaData.columns, experiment),
       totalRows: schemaData.totalRows,
       truncated: schemaData.truncated,

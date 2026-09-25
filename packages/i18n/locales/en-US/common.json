@@ -1346,6 +1346,14 @@
     "searchPlaceholder": "Search columns…",
     "noColumnsLeft": "No columns left to add."
   },
+  "dataColumns": {
+    "sourceMacroOutput": "Macro output",
+    "sourceQuestion": "Question",
+    "sourceMetadata": "Metadata",
+    "sourceUpload": "Uploaded",
+    "renamedTooltip": "This table has its own {{name}} column, so this field is shown separately.",
+    "renamedExportName": "Exported files call it {{key}}."
+  },
   "dataFilters": {
     "placeholderSubstring": "Substring",
     "placeholderValue": "Value",

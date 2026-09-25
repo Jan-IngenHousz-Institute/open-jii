@@ -1346,6 +1346,14 @@
     "searchPlaceholder": "Kolommen zoeken…",
     "noColumnsLeft": "Geen kolommen meer om toe te voegen."
   },
+  "dataColumns": {
+    "sourceMacroOutput": "Macro-uitvoer",
+    "sourceQuestion": "Vraag",
+    "sourceMetadata": "Metadata",
+    "sourceUpload": "Geüpload",
+    "renamedTooltip": "Deze tabel heeft een eigen kolom {{name}}, dus dit veld wordt apart getoond.",
+    "renamedExportName": "In geëxporteerde bestanden heet het {{key}}."
+  },
   "dataFilters": {
     "placeholderSubstring": "Tekenreeks",
     "placeholderValue": "Waarde",

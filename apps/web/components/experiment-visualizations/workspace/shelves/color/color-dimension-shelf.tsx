@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { useId, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
+import { ColumnName } from "~/components/experiment-data/column-name";
 
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isCategoricalColumnType } from "@repo/api/transforms/column-type-utils";
@@ -119,7 +120,7 @@ export function ColorDimensionShelf({
             {columns.map((column) => (
               <SelectItem key={column.name} value={column.name}>
                 <div className="flex items-center gap-2">
-                  <span>{column.name}</span>
+                  <ColumnName column={column} />
                   <Badge
                     variant="outline"
                     className="text-muted-foreground h-4 px-1.5 py-0 font-mono text-[10px] font-normal leading-none"

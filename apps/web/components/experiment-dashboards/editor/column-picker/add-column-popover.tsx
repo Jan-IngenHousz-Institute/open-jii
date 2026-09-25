@@ -2,6 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import { ColumnName } from "~/components/experiment-data/column-name";
 
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
@@ -55,7 +56,9 @@ export function AddColumnPopover({ remaining, onAdd }: AddColumnPopoverProps) {
                   value={col.name}
                   onSelect={() => handleSelect(col.name)}
                 >
-                  <span className="min-w-0 flex-1 truncate">{col.name}</span>
+                  <span className="min-w-0 flex-1">
+                    <ColumnName column={col} />
+                  </span>
                   <span className="text-muted-foreground/70 ml-2 shrink-0 font-mono text-[10px] uppercase">
                     {col.type_name}
                   </span>

@@ -10,8 +10,10 @@ import type {
   OnToggleCellExpansionHandler,
   TableMetadata,
 } from "~/components/data-table/data-table-columns";
+import { ColumnSourceTag } from "~/components/experiment-data/column-source-tag";
 import { deviceDisplayName } from "~/components/experiment-visualizations/charts/data/device-cells";
 
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import {
   WellKnownColumnTypes,
   ExperimentColumnPrimitiveType,
@@ -214,7 +216,9 @@ export function DataTableHeader({
       <TableRow className="h-2">
         {headerGroup.headers.map((header, headerIndex) => {
           const columnDef = header.column.columnDef;
-          const meta: { type?: string } | undefined = columnDef.meta;
+          const meta:
+            | { type?: string; renamedFrom?: ExperimentDataColumn["renamedFrom"] }
+            | undefined = columnDef.meta;
           const columnName = header.column.id;
 
           const isNumericColumn = isNumericType(meta?.type);
@@ -248,8 +252,11 @@ export function DataTableHeader({
                     isNumericColumn ? "justify-end gap-1" : "justify-between",
                   )}
                 >
-                  <span>
+                  <span className="flex items-center gap-1.5">
                     <FlexRender header={header} />
+                    {meta?.renamedFrom ? (
+                      <ColumnSourceTag columnKey={columnName} renamedFrom={meta.renamedFrom} />
+                    ) : null}
                   </span>
                   {getSortIcon(isSortable, isCurrentlySorted, sortDirection)}
                 </div>

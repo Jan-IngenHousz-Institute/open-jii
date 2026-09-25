@@ -50,6 +50,9 @@ row count, and size when those values are available.
   context with the downloaded file.
 - Check row counts and missing values before transforming data.
 - Confirm how nested values and raw traces are represented in your chosen format.
+- A macro or question field with the same name as one of the table's own columns
+  is exported with a suffix: a macro's `device` becomes `device_output`, and a
+  question's `date` becomes `date_answer`.
 - Prefer Parquet when types and large columnar datasets matter; prefer CSV only
   when flattening and spreadsheet compatibility are acceptable.
 

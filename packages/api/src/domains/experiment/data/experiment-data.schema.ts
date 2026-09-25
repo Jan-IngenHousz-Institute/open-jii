@@ -29,11 +29,26 @@ export const zExperimentTableNameInput = z.union([
 // ambyte data is uploaded), so kept out of ExperimentTableName.
 export const AMBYTE_UPLOAD_TABLE_NAME = "raw_ambyte_data";
 
+/** The payload a flattened field came from. */
+export const zExperimentDataColumnSource = z.enum([
+  "macro_output",
+  "questions_data",
+  "custom_metadata",
+  "uploaded_data",
+]);
+
+export type ExperimentDataColumnSource = z.infer<typeof zExperimentDataColumnSource>;
+
 // Data column schema
 export const zExperimentDataColumn = z.object({
   name: z.string(),
   type_name: z.string(),
   type_text: z.string(),
+  /**
+   * Set when a payload field could not keep its own name because the table already has a column
+   * by it. `name` is then the key the field reads as; this is its own name and where it came from.
+   */
+  renamedFrom: z.object({ name: z.string(), source: zExperimentDataColumnSource }).optional(),
 });
 
 export type ExperimentDataColumn = z.infer<typeof zExperimentDataColumn>;
