@@ -3,6 +3,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X } from "lucide-react";
+import { ColumnName } from "~/components/experiment-data/column-name";
 
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
@@ -48,7 +49,9 @@ export function ColumnRow({ name, column, onRemove }: ColumnRowProps) {
       >
         <GripVertical className="h-3.5 w-3.5" />
       </Button>
-      <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
+      <span className="min-w-0 flex-1 font-medium">
+        <ColumnName column={{ name, renamedFrom: column?.renamedFrom }} />
+      </span>
       {column && (
         <span className="text-muted-foreground/70 shrink-0 font-mono text-[10px] uppercase">
           {column.type_name}

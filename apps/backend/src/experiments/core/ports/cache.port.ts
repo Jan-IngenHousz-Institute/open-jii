@@ -1,5 +1,8 @@
 export const CACHE_PORT = Symbol("EXPERIMENT_CACHE_PORT");
 
+/** For shapes that change only when a view is redefined, served far longer than table data. */
+export const SCHEMA_CACHE_PORT = Symbol("EXPERIMENT_SCHEMA_CACHE_PORT");
+
 export abstract class CachePort {
   /**
    * Read-through cache for a single key.

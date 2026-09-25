@@ -49,6 +49,21 @@ describe("AddFilterColumnPicker", () => {
     expect(onPick).toHaveBeenCalledWith(stringColumn);
   });
 
+  it("lists a renamed field under its own name with its source, and picks it by key", async () => {
+    const renamedColumn: ExperimentDataColumn = {
+      name: "device_output",
+      type_name: "STRING",
+      type_text: "STRING",
+      renamedFrom: { name: "device", source: "macro_output" },
+    };
+    const onPick = vi.fn();
+    render(<AddFilterColumnPicker columns={[renamedColumn]} onPick={onPick} />);
+
+    expect(screen.getByText("dataColumns.sourceMacroOutput")).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByText("device"));
+    expect(onPick).toHaveBeenCalledWith(renamedColumn);
+  });
+
   it("shows the empty state when no columns are filterable", () => {
     render(<AddFilterColumnPicker columns={[]} onPick={vi.fn()} />);
     expect(screen.getByText("dataFilters.noColumnsToFilter")).toBeInTheDocument();

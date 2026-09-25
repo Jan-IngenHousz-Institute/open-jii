@@ -1,7 +1,7 @@
 import nock from "nock";
 
 import { TestHarness } from "../../../test/test-harness";
-import { assertFailure, assertSuccess, success } from "../../utils/fp-utils";
+import { AppError, assertFailure, assertSuccess, failure, success } from "../../utils/fp-utils";
 import { DatabricksAdapter } from "./databricks.adapter";
 import { DatabricksAuthService } from "./services/auth/auth.service";
 import { DatabricksConfigService } from "./services/config/config.service";
@@ -487,7 +487,85 @@ describe("DatabricksAdapter", () => {
     });
   });
 
+  describe("getExperimentTableColumns", () => {
+    it("describes the table's view and keeps only the column section", async () => {
+      const sqlService = testApp.module.get(DatabricksSqlService);
+      const spy = vi.spyOn(sqlService, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [],
+          rows: [
+            ["id", "bigint", null],
+            ["device", "struct<serial: string>", null],
+            ["", "", ""],
+            ["# Clustering Information", "", ""],
+            ["experiment_id", "string", null],
+          ],
+          totalRows: 5,
+          truncated: false,
+        }),
+      );
+
+      const result = await databricksAdapter.getExperimentTableColumns("macro", "some_macro_id");
+
+      assertSuccess(result);
+      expect(result.value).toEqual(["id", "device"]);
+      const [schemaName, statement] = spy.mock.calls[0];
+      expect(schemaName).toBe(databricksAdapter.CENTRUM_SCHEMA_NAME);
+      expect(statement).toMatch(/^DESCRIBE TABLE /);
+      expect(statement).toContain(databricksAdapter.MACRO_DATA_TABLE_NAME);
+
+      spy.mockRestore();
+    });
+
+    it("fails for a static table it has no view for", async () => {
+      const result = await databricksAdapter.getExperimentTableColumns("static", "unknown");
+
+      assertFailure(result);
+      expect(result.error.code).toBe("UNKNOWN_TABLE_MAPPING");
+    });
+
+    it("passes on a failed DESCRIBE", async () => {
+      const sqlService = testApp.module.get(DatabricksSqlService);
+      const spy = vi
+        .spyOn(sqlService, "executeSqlQuery")
+        .mockResolvedValue(failure(AppError.internal("warehouse unavailable")));
+
+      const result = await databricksAdapter.getExperimentTableColumns("upload", "upload_1");
+
+      assertFailure(result);
+      expect(result.error.message).toBe("warehouse unavailable");
+      expect(spy.mock.calls[0][1]).toContain(databricksAdapter.UPLOADED_DATA_TABLE_NAME);
+
+      spy.mockRestore();
+    });
+  });
+
   describe("buildExperimentQuery", () => {
+    it("builds an upload table's query on the uploads table, filtered by its upload table id", () => {
+      const result = databricksAdapter.buildExperimentQuery({
+        tableName: "upload_1",
+        tableType: "upload",
+        experimentId: "exp-123",
+        columns: ["id"],
+      });
+
+      assertSuccess(result);
+      expect(result.value).toContain(databricksAdapter.UPLOADED_DATA_TABLE_NAME);
+      expect(result.value).toContain("`experiment_id` = 'exp-123'");
+      expect(result.value).toContain("`upload_table_id` = 'upload_1'");
+    });
+
+    it("fails for a static table it has no table for", () => {
+      const result = databricksAdapter.buildExperimentQuery({
+        tableName: "unknown",
+        tableType: "static",
+        experimentId: "exp-123",
+      });
+
+      assertFailure(result);
+      expect(result.error.code).toBe("UNKNOWN_TABLE_MAPPING");
+    });
+
     it("should build query for standard tables (raw_data, device)", () => {
       const result = databricksAdapter.buildExperimentQuery({
         tableName: "raw_data",

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { createTableColumns, getColumnWidth, sortColumnsForDisplay } from "./data-table-columns";
@@ -127,6 +128,20 @@ describe("createTableColumns", () => {
     expect(columns[0].meta).toEqual({ type: "DOUBLE" });
     // Arrays are narrower than the default, since they render as sparklines.
     expect(columns[1].size).toBe(120);
+  });
+
+  it("heads a renamed field with its own name while keying it by the name it reads as", () => {
+    const renamedColumn: ExperimentDataColumn = {
+      name: "device_output",
+      type_name: "STRING",
+      type_text: "STRING",
+      renamedFrom: { name: "device", source: "macro_output" },
+    };
+    const [column] = createTableColumns({ columns: [renamedColumn] });
+
+    expect(column.accessorKey).toBe("device_output");
+    expect(column.header).toBe("device");
+    expect(column.meta).toEqual({ type: "STRING", renamedFrom: renamedColumn.renamedFrom });
   });
 
   it("hands the formatter the value, its type and the row id", () => {

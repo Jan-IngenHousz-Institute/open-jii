@@ -4,6 +4,7 @@ import { InsetPanel } from "@/components/shared/inset-panel";
 import { Plus, Trash2 } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
+import { ColumnName } from "~/components/experiment-data/column-name";
 
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentRole } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
@@ -145,7 +146,7 @@ export function MultiColumnShelf({
                         {columns.map((column) => (
                           <SelectItem key={column.name} value={column.name}>
                             <div className="flex min-w-0 items-center gap-2">
-                              <span className="truncate">{column.name}</span>
+                              <ColumnName column={column} />
                               <Badge
                                 variant="outline"
                                 className="text-muted-foreground h-4 px-1.5 py-0 font-mono text-[10px] font-normal leading-none"
