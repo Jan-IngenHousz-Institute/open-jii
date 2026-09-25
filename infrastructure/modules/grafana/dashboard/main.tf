@@ -128,29 +128,19 @@ resource "grafana_contact_point" "slack" {
   }
 }
 
-# Severity decides the destination, not just how often a firing alert repeats. Both
-# coalesce to the original webhook, so until a variable is set these deliver exactly
-# where "slack" already delivered and the split is a no-op.
+# Critical is the one severity with its own destination: the channel a phone hears.
+# It coalesces to the main webhook, so an environment that sets no critical webhook
+# delivers everything to one place, which is what dev does.
 #
 # Deliberately no ignore_changes here, unlike grafana_contact_point.slack above. Grafana
-# returns the url redacted, so each plan shows a diff on these two; that permadiff is the
-# price of being able to repoint them later, which is the whole point of splitting them.
-# Adding ignore_changes would freeze both urls at whatever they were on first apply.
+# returns the url redacted, so each plan shows a diff on this one; that permadiff is the
+# price of being able to repoint it, which is the whole point of having it.
 resource "grafana_contact_point" "slack_critical" {
   provider = grafana.amg
   name     = "slack-critical"
 
   slack {
     url = var.slack_critical_webhook_url != "" ? var.slack_critical_webhook_url : var.slack_webhook_url
-  }
-}
-
-resource "grafana_contact_point" "slack_warning" {
-  provider = grafana.amg
-  name     = "slack-warning"
-
-  slack {
-    url = var.slack_warning_webhook_url != "" ? var.slack_warning_webhook_url : var.slack_webhook_url
   }
 }
 
@@ -389,7 +379,7 @@ EOT
     }
     labels = {
       metric_id = "backend-5xx"
-      severity  = "critical"
+      severity  = "warning"
       service   = "backend"
     }
   }
@@ -647,7 +637,7 @@ EOT
     }
     labels = {
       metric_id = "opennext-lambda-errors"
-      severity  = "critical"
+      severity  = "warning"
       service   = "frontend"
     }
   }
@@ -721,7 +711,7 @@ EOT
       summary     = "Lambda throttling detected"
     }
     labels = {
-      severity = "critical"
+      severity = "warning"
       service  = "lambda"
     }
   }
@@ -1047,7 +1037,7 @@ EOT
         summary     = "Macro sandbox ${rule.key} throttling detected"
       }
       labels = {
-        severity = "critical"
+        severity = "warning"
         service  = "macro-sandbox"
       }
     }
@@ -1120,7 +1110,7 @@ EOT
       summary     = "Macro sandbox rejected VPC traffic anomaly"
     }
     labels = {
-      severity = "critical"
+      severity = "warning"
       service  = "macro-sandbox"
       category = "security"
     }
@@ -1289,7 +1279,7 @@ EOT
       summary     = "Calibration sandbox throttling detected"
     }
     labels = {
-      severity = "critical"
+      severity = "warning"
       service  = "calibration-sandbox"
     }
   }
@@ -1361,7 +1351,7 @@ EOT
       summary     = "Calibration sandbox rejected VPC traffic anomaly"
     }
     labels = {
-      severity = "critical"
+      severity = "warning"
       service  = "calibration-sandbox"
       category = "security"
     }
@@ -1554,7 +1544,7 @@ resource "grafana_rule_group" "ingest_path" {
       summary     = "Ingest lag climbing on the data ingest stream"
     }
     labels = {
-      severity  = "critical"
+      severity  = "warning"
       service   = "ingest"
       metric_id = "ingest-lag"
     }
@@ -1736,7 +1726,7 @@ resource "grafana_rule_group" "monitoring_self_health" {
       summary     = "Digest composer is failing"
     }
     labels = {
-      severity  = "critical"
+      severity  = "warning"
       service   = "monitoring"
       metric_id = "digest-composer-liveness"
     }
@@ -1921,7 +1911,7 @@ resource "grafana_rule_group" "monitoring_liveness" {
       summary     = "Digest composer stopped running"
     }
     labels = {
-      severity  = "critical"
+      severity  = "warning"
       service   = "monitoring"
       metric_id = "digest-composer-liveness"
     }
@@ -2018,7 +2008,7 @@ resource "grafana_rule_group" "collector_liveness" {
     }
     labels = {
       metric_id = "dlt-heartbeat"
-      severity  = "critical"
+      severity  = "warning"
       service   = "monitoring"
     }
   }
@@ -2111,7 +2101,7 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     }
     labels = {
       metric_id = "metrics-mv-freshness"
-      severity  = "critical"
+      severity  = "warning"
       service   = "lakehouse"
     }
   }
@@ -2135,20 +2125,6 @@ resource "grafana_notification_policy" "policy" {
     group_by        = ["alertname"]
     contact_point   = grafana_contact_point.slack_critical.name
     repeat_interval = "30m"
-  }
-
-  # Warnings had no branch at all, so they fell through to the default and repeated every
-  # 12h beside everything else. Giving them their own destination is what lets the pager
-  # question be answered by swapping one contact point, with no rule or route touched.
-  policy {
-    matcher {
-      label = "severity"
-      match = "="
-      value = "warning"
-    }
-    group_by        = ["alertname"]
-    contact_point   = grafana_contact_point.slack_warning.name
-    repeat_interval = "12h"
   }
 
   policy {

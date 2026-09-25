@@ -15,7 +15,7 @@ const {
   resolveForEnvironment,
 } = require("./lib/catalog.js");
 const { averageBaseline, evaluate } = require("./lib/baseline.js");
-const { flatten, renderLevels, renderObservability } = require("./lib/render.js");
+const { renderLevels, renderObservability } = require("./lib/render.js");
 const {
   assembleWindow,
   dailyWindows,
@@ -231,74 +231,17 @@ function post(url, body, headers = {}) {
   });
 }
 
-/**
- * A bot token buys threads; a webhook does not.
- *
- * An incoming webhook answers with the literal string "ok" and no message timestamp, so
- * there is nothing to reply to. chat.postMessage returns the ts, which is what lets the
- * detail for each anomaly hang under one summary instead of filling the channel. Without
- * a token the same detail goes inline under the summary, so nothing is lost either way.
- *
- * Every path logs the text it delivered: the daily round reads the digest from this log.
- */
-async function deliver(channel, digest) {
-  const webhookUrl = {
-    heartbeat: process.env.HEARTBEAT_WEBHOOK_URL,
-    usage: process.env.USAGE_WEBHOOK_URL,
-  }[channel];
-  const botToken = process.env.SLACK_BOT_TOKEN;
-  const channelId = {
-    heartbeat: process.env.HEARTBEAT_CHANNEL_ID,
-    usage: process.env.USAGE_CHANNEL_ID,
-  }[channel];
-
-  if (botToken && channelId) {
-    const auth = { Authorization: `Bearer ${botToken}` };
-    const parent = JSON.parse(
-      await post(
-        "https://slack.com/api/chat.postMessage",
-        { channel: channelId, ...digest.parent },
-        auth,
-      ),
-    );
-
-    if (!parent.ok) {
-      throw new Error(`chat.postMessage failed: ${parent.error}`);
-    }
-
-    for (const reply of digest.replies) {
-      // One failed reply must not lose the summary that already landed.
-      try {
-        await post(
-          "https://slack.com/api/chat.postMessage",
-          { channel: channelId, thread_ts: parent.ts, ...reply },
-          auth,
-        );
-      } catch (error) {
-        console.error(JSON.stringify({ channel, reply: reply.text, message: error.message }));
-      }
-    }
-
-    console.log(
-      JSON.stringify({
-        channel,
-        delivered: "thread",
-        replies: digest.replies.length,
-        text: digest.parent.text,
-      }),
-    );
-    return;
-  }
+// Every path logs the text it posted: the daily round reads the digest from this log.
+async function deliver(digestName, message) {
+  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
 
   if (!webhookUrl) {
-    console.log(JSON.stringify({ channel, delivered: false, text: digest.parent.text }));
+    console.log(JSON.stringify({ digest: digestName, delivered: false, text: message.text }));
     return;
   }
 
-  await post(webhookUrl, flatten(digest));
-  console.log(
-    JSON.stringify({ channel, delivered: "webhook", replies: 0, text: digest.parent.text }),
-  );
+  await post(webhookUrl, message);
+  console.log(JSON.stringify({ digest: digestName, delivered: true, text: message.text }));
 }
 
 exports.handler = async (event) => {
@@ -332,7 +275,7 @@ exports.handler = async (event) => {
     const reportUrl = reportUrlFor(digestName, dailyWindows(now).current, options.environment);
 
     await deliver(
-      "heartbeat",
+      digestName,
       renderObservability(readings, selfChecks(), { ...options, reportUrl }),
     );
     return;
@@ -347,7 +290,7 @@ exports.handler = async (event) => {
     const reportUrl = reportUrlFor(digestName, dailyWindows(now).current, options.environment);
 
     await deliver(
-      "usage",
+      digestName,
       renderLevels(readings, selfChecks(), "Daily pulse", "4w", { ...options, reportUrl }),
     );
     return;
@@ -360,7 +303,7 @@ exports.handler = async (event) => {
     const reportUrl = reportUrlFor(digestName, weeklyWindows(now).current, options.environment);
 
     await deliver(
-      "usage",
+      digestName,
       renderLevels(readings, selfChecks(), "Week in numbers", "last week", {
         ...options,
         reportUrl,

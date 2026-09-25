@@ -2907,7 +2907,6 @@ module "grafana_dashboard" {
   ecs_cluster_name           = module.backend_ecs.ecs_cluster_name
   slack_webhook_url          = var.slack_webhook_url
   slack_critical_webhook_url = var.slack_critical_webhook_url
-  slack_warning_webhook_url  = var.slack_warning_webhook_url
 
   # Passed in rather than interpolated: a rule watching a misspelled function is NoData
   # forever, which is either permanently firing or permanently silent.
@@ -3031,16 +3030,8 @@ module "digest_composer" {
   # catalog entries the digest read.
   grafana_endpoint = module.managed_grafana_workspace.amg_url
 
-  # A bot token is what lets each anomaly hang under the summary instead of filling the
-  # channel. Without one the summary still posts, through the webhooks below.
-  slack_bot_token      = var.slack_bot_token
-  heartbeat_channel_id = var.slack_heartbeat_channel_id
-  usage_channel_id     = var.slack_usage_channel_id
-
-  # Empty webhooks make the Lambda log the rendered digest instead of posting, so this
-  # applies cleanly before the Slack channels exist.
-  heartbeat_webhook_url = var.slack_heartbeat_webhook_url
-  usage_webhook_url     = var.slack_usage_webhook_url
+  # The digests land beside every other alert, on the environment's one webhook.
+  slack_webhook_url = var.slack_webhook_url
 }
 
 module "aws_inspector" {

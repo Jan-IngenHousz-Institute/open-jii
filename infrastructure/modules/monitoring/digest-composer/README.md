@@ -2,27 +2,23 @@
 
 Lambda that composes the platform heartbeat digests from `docs/monitoring/metrics-catalog.yaml` and posts them to Slack. Three EventBridge schedules invoke it with `{ "digest": "observability" | "pulse" | "weekly" }`.
 
-- Observability (06:30 UTC daily): exception report to whichever channel its webhook points at. One line on normal days saying nothing is wrong; anomalies render with value vs expectation, runbook link, triage command, and a context blob. Self-check lines report signals that went silent or failed placeholder resolution.
-- Pulse (06:35 UTC daily) and weekly (Mon 07:00 UTC): usage levels to whichever channel its webhook points at, each number with a 4-week same-weekday (daily) or week-over-week (weekly) delta.
+- Observability (06:30 UTC daily): exception report on the environment's Slack webhook. One line on normal days saying nothing is wrong; anomalies render with value vs expectation, runbook link, triage command, and a context blob. Self-check lines report signals that went silent or failed placeholder resolution.
+- Pulse (06:35 UTC daily) and weekly (Mon 07:00 UTC): usage levels on the same webhook, each number with a 4-week same-weekday (daily) or week-over-week (weekly) delta.
 
-With empty webhook variables the Lambda logs the rendered digest instead of posting, so it deploys safely before the Slack channels exist.
+With an empty webhook variable the Lambda logs the rendered digest instead of posting, so it deploys safely before the Slack channel exists.
 
 ## How a digest arrives
 
-The observability digest posts one summary and threads one reply per anomaly. The summary is a
-table grouped by severity, critical first, each row leading with the catalog number so a line in
-Slack, a panel on the report and a runbook all name the same thing. Each reply carries that
-anomaly's id, its reading, its runbook and the triage command for it, so the channel stays one
-table however bad the day is.
+Every digest is one message on the environment's Slack webhook, the same one Databricks job
+events and Grafana alerts use. The observability digest leads with a table grouped by severity,
+critical first, each row led by the catalog number so a line in Slack, a panel on the report and a
+runbook all name the same thing. Under the table, each anomaly gets its id, its reading, its
+runbook and the triage command for it, most severe first. Slack rejects a message of more than 50
+blocks, so on a very bad morning the anomalies that do not fit are left to the report and the
+message says how many.
 
-Threading needs `slack_bot_token` and the channel id for that digest. An incoming webhook answers
-with the literal string `ok` and no message timestamp, so there is nothing to reply to. With only
-a webhook set, `flatten` puts each reply's content inline under the summary instead, most severe
-first, so every anomaly keeps its runbook and triage command either way. Slack rejects a message of
-more than 50 blocks, so on a very bad morning the anomalies that do not fit are left to the report
-and the message says how many.
-
-The usage digests are a single message. A level has no detail to open.
+The usage digests are one table each. A level with no reading is named as missing rather than
+dropped, so a note that shrank never passes as complete.
 
 ## The report each digest links
 

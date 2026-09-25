@@ -135,7 +135,7 @@ metrics:
     phase: P1
     active: true
     slots: [alert, dashboard]
-    severity: critical
+    severity: warning
     signal:
       namespace: AWS/Kinesis
       metric: GetRecords.IteratorAgeMilliseconds
@@ -179,7 +179,7 @@ metrics:
     phase: P2
     active: true
     slots: [alert, dashboard]
-    severity: critical
+    severity: warning
     signal:
       namespace: OpenJII/Data
       metric: CollectorHeartbeat
@@ -294,7 +294,7 @@ metrics:
     phase: P1
     active: true
     slots: [alert, dashboard]
-    severity: critical
+    severity: warning
     signal:
       namespace: AWS/ApplicationELB
       metric: HTTPCode_Target_5XX_Count
@@ -415,7 +415,7 @@ metrics:
     phase: P1
     active: true
     slots: [alert, dashboard]
-    severity: critical
+    severity: warning
     signal:
       namespace: AWS/Lambda
       metric: Errors
@@ -627,7 +627,7 @@ metrics:
     phase: P2
     active: true
     slots: [alert, dashboard]
-    severity: critical
+    severity: warning
     signal:
       namespace: OpenJII/Data
       metric: MetricsPipelineAgeMinutes
@@ -889,7 +889,7 @@ metrics:
     phase: P1
     active: false
     slots: [alert]
-    severity: critical
+    severity: warning
     runbook: docs/runbooks/digest-composer-liveness.md
     notes: A lambda that never runs publishes no metric, so absence is the only signal. Watched by the Grafana rule labelled with this id, not by the digest, which cannot report its own silence.
 

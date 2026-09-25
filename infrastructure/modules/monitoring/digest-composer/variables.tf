@@ -38,15 +38,8 @@ variable "db_cluster_identifier" {
   type        = string
 }
 
-variable "heartbeat_webhook_url" {
-  description = "Slack incoming webhook the observability digest posts to; empty logs the digest instead"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "usage_webhook_url" {
-  description = "Slack incoming webhook the usage digests post to; empty logs the digest instead"
+variable "slack_webhook_url" {
+  description = "Slack incoming webhook every digest posts to; empty logs the digest instead"
   type        = string
   sensitive   = true
   default     = ""
@@ -70,21 +63,3 @@ variable "grafana_endpoint" {
   default     = ""
 }
 
-variable "slack_bot_token" {
-  description = "Slack bot token, which is what buys threads; empty posts through the webhooks instead"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "heartbeat_channel_id" {
-  description = "Channel the observability digest threads into; needs slack_bot_token to take effect"
-  type        = string
-  default     = ""
-}
-
-variable "usage_channel_id" {
-  description = "Channel the usage digests thread into; needs slack_bot_token to take effect"
-  type        = string
-  default     = ""
-}

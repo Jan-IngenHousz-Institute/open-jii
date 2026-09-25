@@ -49,14 +49,7 @@ variable "slack_webhook_url" {
 }
 
 variable "slack_critical_webhook_url" {
-  description = "Where critical alerts go; empty sends them to slack_webhook_url as before"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "slack_warning_webhook_url" {
-  description = "Where warning alerts go; empty sends them to slack_webhook_url as before"
+  description = "Where critical alerts go, which on production is a channel a phone hears; empty sends them to slack_webhook_url"
   type        = string
   sensitive   = true
   default     = ""

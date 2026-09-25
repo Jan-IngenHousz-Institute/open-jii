@@ -39,8 +39,8 @@ const composerHandler = readFileSync(
 
 // The handler is plain JavaScript outside the package, so nothing typechecks it against
 // the renderers it calls. This file is the only thing that can.
-const rendererPath = "packages/monitoring/src/render.ts";
-const rendererSource = readFileSync(join(repoRoot, rendererPath), "utf8");
+const slackPath = "packages/monitoring/src/slack.ts";
+const slackSource = readFileSync(join(repoRoot, slackPath), "utf8");
 
 const metrics = parseCatalog(catalogSource);
 const passes = parsePasses(catalogSource);
@@ -574,8 +574,8 @@ describe("the digests and their reports cannot drift", () => {
 });
 
 describe("the composer reads only environment it is given", () => {
-  // SLACK_BOT_TOKEN, HEARTBEAT_CHANNEL_ID and USAGE_CHANNEL_ID were read by the handler
-  // and set by nothing, so the threaded replies were dead on arrival and nothing said so.
+  // Three variables were once read by the handler and set by nothing, so the feature
+  // behind them was dead on arrival and nothing said so.
 
   // Supplied by the Lambda runtime rather than by the module's environment block.
   const RUNTIME_PROVIDED = ["AWS_REGION"];
@@ -614,52 +614,48 @@ describe("the composer reads only environment it is given", () => {
 });
 
 describe("the handler and the renderers agree on what a digest is", () => {
-  // The renderers returned a flat message for one commit while the handler still read a
-  // parent and its replies. Everything typechecked, every unit test passed, and all three
-  // digests would have thrown at 06:30. Nothing else compares the two.
+  // The renderers once changed shape while the handler still read the old one.
+  // Everything typechecked, every unit test passed, and all three digests would have
+  // thrown at 06:30. Nothing else compares the two.
 
-  function digestFields(): string[] {
-    const body = /export interface Digest \{([\s\S]*?)\n\}/.exec(rendererSource)?.[1] ?? "";
+  function messageFields(): string[] {
+    const body = /export interface SlackMessage \{([\s\S]*?)\n\}/.exec(slackSource)?.[1] ?? "";
     return [...body.matchAll(/^\s{2}(\w+):/gm)].map((field) => field[1]).sort();
   }
 
   function fieldsTheHandlerReads(): string[] {
-    const reads = [...composerHandler.matchAll(/\bdigest\.(\w+)/g)].map((read) => read[1]);
+    const reads = [...composerHandler.matchAll(/\bmessage\.(\w+)/g)].map((read) => read[1]);
     return [...new Set(reads)].sort();
   }
 
   it("reads only fields the renderers return", () => {
-    const declared = digestFields();
+    const declared = messageFields();
     const read = fieldsTheHandlerReads();
 
-    expect(declared.length, `no Digest interface found in ${rendererPath}`).toBeGreaterThan(0);
+    expect(declared.length, `no SlackMessage interface found in ${slackPath}`).toBeGreaterThan(0);
     expect(
       read.length,
-      "the handler reads no digest fields, so this parse is broken",
+      "the handler reads no message fields, so this parse is broken",
     ).toBeGreaterThan(0);
     expect(read.filter((field) => !declared.includes(field))).toEqual([]);
   });
 
-  it("posts the flattened digest through a webhook, so the links survive without threads", () => {
+  it("posts the rendered message as it is, with nothing reshaped on the way out", () => {
     const webhookPosts = [...composerHandler.matchAll(/await post\(webhookUrl, ([^)]*\)?)\)/g)];
 
-    expect(webhookPosts.map((call) => call[1])).toEqual(["flatten(digest)"]);
+    expect(webhookPosts.map((call) => call[1])).toEqual(["message"]);
   });
 
   it("logs the text it delivered on every path, since the daily round reads it there", () => {
     // Only the undelivered path used to log the digest, so on any environment wired to
     // Slack the round had nothing to read and reported a quiet morning.
     const deliveries = [
-      ...composerHandler.matchAll(/JSON\.stringify\(\{\s*channel,\s*delivered:[^}]*\}/g),
+      ...composerHandler.matchAll(/JSON\.stringify\(\{\s*digest: digestName,\s*delivered:[^}]*\}/g),
     ];
 
-    expect(deliveries.length, "no delivery log lines found, so this parse is broken").toBe(3);
+    expect(deliveries.length, "no delivery log lines found, so this parse is broken").toBe(2);
     expect(deliveries.filter((line) => !line[0].includes("text:")).map((line) => line[0])).toEqual(
       [],
     );
-  });
-
-  it("reads every field the renderers return, so nothing is rendered and dropped", () => {
-    expect(fieldsTheHandlerReads()).toEqual(digestFields());
   });
 });

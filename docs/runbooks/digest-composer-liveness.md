@@ -46,7 +46,7 @@ aws lambda invoke --function-name <env>-digest-composer \
   --payload '{"digest":"observability"}' --cli-binary-format raw-in-base64-out /dev/stdout
 ```
 
-With the webhook variables set this posts to the channel; the digest it produces covers the last
+With the webhook variable set this posts to the channel; the digest it produces covers the last
 24 hours, not the days that were missed.
 
 ## Closing

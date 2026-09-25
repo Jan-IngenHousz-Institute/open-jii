@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { deltaGlyph, flatten, renderLevels, renderObservability } from "./render.js";
+import { deltaGlyph, renderLevels, renderObservability } from "./render.js";
 import type { CatalogMetric, MetricReading } from "./types.js";
 
 function reading(
@@ -61,9 +61,9 @@ describe("renderObservability", () => {
       options,
     );
 
-    expect(digest.parent.blocks).toHaveLength(1);
-    expect(digest.parent.blocks[0].type).toBe("context");
-    expect(digest.parent.text).toBe("Heartbeat · dev · nothing to act on · 1 signals checked");
+    expect(digest.blocks).toHaveLength(1);
+    expect(digest.blocks[0].type).toBe("context");
+    expect(digest.text).toBe("Heartbeat · dev · nothing to act on · 1 signals checked");
   });
 
   it("leads a row with the citable number, then the name, then the reading", () => {
@@ -81,26 +81,11 @@ describe("renderObservability", () => {
       clean,
       options,
     );
-    const body = json(digest.parent, "section");
+    const body = json(digest, "section");
 
     expect(body.indexOf("8")).toBeLessThan(body.indexOf("Pipeline lag"));
     expect(body.indexOf("Pipeline lag")).toBeLessThan(body.indexOf("2h 27m"));
     expect(body).toContain("above 2h");
-  });
-
-  it("keeps a metric's own runbook off the summary, since it belongs on its reply", () => {
-    const digest = renderObservability(
-      [
-        {
-          ...reading("ingest-lag", "Pipeline lag", 9, null, "docs/runbooks/ingest-lag.md"),
-          evaluation: { state: "anomaly", reason: "above 2h" },
-        },
-      ],
-      clean,
-      options,
-    );
-
-    expect(json(digest.parent, "actions")).not.toContain("docs/runbooks/ingest-lag.md");
   });
 
   it("puts critical anomalies above everything else", () => {
@@ -115,7 +100,7 @@ describe("renderObservability", () => {
       evaluation: { state: "anomaly" as const, reason: "nonzero" },
     };
 
-    const body = json(renderObservability([warning, critical], clean, options).parent, "section");
+    const body = json(renderObservability([warning, critical], clean, options), "section");
 
     expect(body.indexOf("Forwarding failures")).toBeLessThan(body.indexOf("Throttling"));
   });
@@ -126,7 +111,7 @@ describe("renderObservability", () => {
       evaluation: { state: "anomaly" as const, reason: "300% above the last 4 Tuesdays" },
     };
 
-    const body = json(renderObservability([unrated], clean, options).parent, "section");
+    const body = json(renderObservability([unrated], clean, options), "section");
 
     expect(body).toContain("FOR REVIEW");
     expect(body).not.toContain("OTHER");
@@ -144,7 +129,7 @@ describe("renderObservability", () => {
       options,
     );
 
-    expect(digest.parent.text).toContain("no data");
+    expect(digest.text).toContain("no data");
   });
 
   it("says a failed region is missing rather than healthy", () => {
@@ -154,8 +139,8 @@ describe("renderObservability", () => {
       options,
     );
 
-    expect(digest.parent.text).toContain("us-east-1");
-    expect(digest.parent.text).toContain("missing above, not healthy");
+    expect(digest.text).toContain("us-east-1");
+    expect(digest.text).toContain("missing above, not healthy");
   });
 
   it("names a signal that used to report and has gone quiet", () => {
@@ -165,8 +150,8 @@ describe("renderObservability", () => {
       options,
     );
 
-    expect(digest.parent.text).toContain("No datapoints for gone");
-    expect(digest.parent.text).toContain("Unresolved catalog placeholders for broken");
+    expect(digest.text).toContain("No datapoints for gone");
+    expect(digest.text).toContain("Unresolved catalog placeholders for broken");
   });
 });
 
@@ -180,9 +165,9 @@ describe("renderLevels", () => {
       options,
     );
 
-    expect(digest.parent.blocks[0].type).toBe("header");
-    expect(json(digest.parent, "section")).toContain("```");
-    expect(digest.parent.text).toContain("Measurements: 48.2k ▲ +21%");
+    expect(digest.blocks[0].type).toBe("header");
+    expect(json(digest, "section")).toContain("```");
+    expect(digest.text).toContain("Measurements: 48.2k ▲ +21%");
   });
 
   it("puts the biggest mover first and keeps the flat ones", () => {
@@ -195,7 +180,7 @@ describe("renderLevels", () => {
       "4w",
       options,
     );
-    const body = json(digest.parent, "section");
+    const body = json(digest, "section");
 
     expect(body.indexOf("Moved")).toBeLessThan(body.indexOf("Flat"));
     expect(body).toContain("Flat");
@@ -210,7 +195,7 @@ describe("renderLevels", () => {
       options,
     );
 
-    expect(digest.parent.text).toContain("No signals reporting yet.");
+    expect(digest.text).toContain("No signals reporting yet.");
   });
 
   it("says the list is incomplete when a region or a placeholder dropped a metric", () => {
@@ -222,8 +207,8 @@ describe("renderLevels", () => {
       options,
     );
 
-    expect(json(digest.parent, "context")).toContain("The list above is incomplete");
-    expect(digest.parent.text).toContain("eu-central-1");
+    expect(json(digest, "context")).toContain("The list above is incomplete");
+    expect(digest.text).toContain("eu-central-1");
   });
 });
 
@@ -240,8 +225,8 @@ describe("the report link", () => {
       reportUrl: "https://example.test/report.html",
     });
 
-    expect(json(without.parent, "actions")).not.toContain("Open the report");
-    expect(json(withReport.parent, "actions")).toContain("https://example.test/report.html");
+    expect(json(without, "actions")).not.toContain("Open the report");
+    expect(json(withReport, "actions")).toContain("https://example.test/report.html");
   });
 
   it("links the report even on a quiet morning, since the numbers are still there", () => {
@@ -250,11 +235,11 @@ describe("the report link", () => {
       reportUrl: "https://example.test/report.html",
     });
 
-    expect(json(digest.parent, "actions")).toContain("Open the report");
+    expect(json(digest, "actions")).toContain("Open the report");
   });
 });
 
-describe("threaded replies", () => {
+describe("each anomaly's detail", () => {
   const anomaly = (id: string, name: string, num: number, severity?: "critical" | "warning") => ({
     ...reading(id, name, 20, 0, `docs/runbooks/${id}.md`, {
       num,
@@ -264,96 +249,64 @@ describe("threaded replies", () => {
     evaluation: { state: "anomaly" as const, reason: "expected 0" },
   });
 
-  it("gives every anomaly its own reply, so the channel stays one table", () => {
-    const digest = renderObservability(
-      [anomaly("a", "A", 2, "critical"), anomaly("b", "B", 8, "warning")],
+  it("follows the summary in the same order, critical first", () => {
+    const message = renderObservability(
+      [anomaly("b", "B", 8, "warning"), anomaly("a", "A", 2, "critical")],
       clean,
       options,
     );
+    const details = json(message, "section");
 
-    expect(digest.replies).toHaveLength(2);
-    // Same order as the table: critical leads.
-    expect(digest.replies[0].text).toContain("A");
-    expect(digest.replies[1].text).toContain("B");
+    expect(details.indexOf("*2 · A*")).toBeLessThan(details.indexOf("*8 · B*"));
   });
 
-  it("carries the identifier, the runbook and the triage command on the reply", () => {
-    const digest = renderObservability(
-      [anomaly("ingest-lag", "Lag", 8, "critical")],
-      clean,
-      options,
-    );
-    const reply = digest.replies[0];
-
-    expect(json(reply, "section")).toContain("ingest-lag");
-    expect(json(reply, "actions")).toContain("https://example.test/docs/runbooks/ingest-lag.md");
-    expect(json(reply, "context")).toContain("claude /openjii-triage ingest-lag");
-  });
-
-  it("keeps a per-metric runbook off the summary, where it would crowd out the report", () => {
-    const digest = renderObservability(
+  it("carries the identifier, the runbook and the triage command", () => {
+    // The runbook and the triage command are what turn a reading into an action, so
+    // they travel with the summary rather than behind a link.
+    const message = renderObservability(
       [anomaly("ingest-lag", "Lag", 8, "critical")],
       clean,
       options,
     );
 
-    expect(json(digest.parent, "actions")).not.toContain("docs/runbooks/ingest-lag.md");
-  });
-
-  it("has no replies when nothing is wrong", () => {
-    const digest = renderObservability([], clean, options);
-
-    expect(digest.replies).toEqual([]);
-  });
-
-  it("keeps levels a single message, since a level has no detail to open", () => {
-    const digest = renderLevels(
-      [reading("m", "Measurements", 10)],
-      clean,
-      "Daily pulse",
-      "4w",
-      options,
-    );
-
-    expect(digest.replies).toEqual([]);
-  });
-});
-
-describe("a digest that cannot thread", () => {
-  const anomaly = (num: number) => ({
-    ...reading(`signal-${num}`, `Signal ${num}`, 20, 0, `docs/runbooks/signal-${num}.md`, {
-      num,
-      severity: "critical" as const,
-    }),
-    evaluation: { state: "anomaly" as const, reason: "expected 0" },
-  });
-
-  it("keeps each anomaly's runbook and triage command in the one message it can post", () => {
-    // A webhook cannot thread. Dropping the replies would leave a table with no way to
-    // act on it, which is less than the digest carried before it had replies at all.
-    const message = flatten(renderObservability([anomaly(8)], clean, options));
-
-    expect(json(message, "actions")).toContain("https://example.test/docs/runbooks/signal-8.md");
-    expect(json(message, "context")).toContain("claude /openjii-triage signal-8");
+    expect(json(message, "section")).toContain("`ingest-lag`");
+    expect(json(message, "actions")).toContain("https://example.test/docs/runbooks/ingest-lag.md");
+    expect(json(message, "context")).toContain("claude /openjii-triage ingest-lag");
   });
 
   it("stays inside Slack's block limit however bad the day, and says what it left out", () => {
-    const readings = Array.from({ length: 40 }, (_, index) => anomaly(index + 1));
-    const message = flatten(renderObservability(readings, clean, options));
+    const readings = Array.from({ length: 40 }, (_, index) =>
+      anomaly(`signal-${index + 1}`, `Signal ${index + 1}`, index + 1, "critical"),
+    );
+    const message = renderObservability(readings, clean, options);
 
     expect(message.blocks.length).toBeLessThanOrEqual(50);
     expect(json(message, "context")).toMatch(/\d+ more on the report\./);
   });
 
-  it("leaves a digest with nothing to thread exactly as it was", () => {
-    const digest = renderLevels(
-      [reading("m", "Measurements", 10)],
+  it("adds nothing under a quiet morning", () => {
+    const message = renderObservability([], clean, options);
+
+    expect(message.blocks.some((block) => block.type === "divider")).toBe(false);
+  });
+});
+
+describe("a level with no reading", () => {
+  it("is named rather than dropped, so a shrunken note cannot pass as complete", () => {
+    // Registrations vanished from a weekly note this way, and nothing said so.
+    const message = renderLevels(
+      [
+        reading("measurements", "Measurements", 48_200, 40_000),
+        reading("registrations", "Registrations", null),
+      ],
       clean,
-      "Daily pulse",
-      "4w",
+      "Week in numbers",
+      "last week",
       options,
     );
 
-    expect(flatten(digest)).toEqual(digest.parent);
+    expect(json(message, "context")).toContain("No reading for registrations.");
+    expect(json(message, "context")).toContain("The list above is incomplete");
+    expect(message.text).toContain("No reading for registrations.");
   });
 });

@@ -4,21 +4,6 @@ import type { LinkButton, SlackBlock, SlackMessage } from "./slack.js";
 import { actions, context, divider, header, section, table } from "./slack.js";
 import type { CatalogMetric, EvaluatedReading, MetricReading } from "./types.js";
 
-/**
- * A parent message and one reply per anomaly.
- *
- * The parent is the whole morning at a glance. Each reply carries one anomaly's
- * identifier, its runbook and its triage command, so the channel stays one table however
- * bad the day is and nobody scrolls past the first problem to reach the second.
- *
- * With no bot token there is nothing to thread under, and `flatten` puts the replies
- * inline instead.
- */
-export interface Digest {
-  parent: SlackMessage;
-  replies: SlackMessage[];
-}
-
 export interface RenderOptions {
   environment: string;
   runbookBaseUrl?: string;
@@ -106,8 +91,11 @@ function selfCheckLines({ configErrors, failedRegions }: SelfChecks): string[] {
   return lines;
 }
 
-/** One reply: what this anomaly is, and everything needed to act on it. */
-function replyFor(entry: EvaluatedReading, options: RenderOptions): SlackMessage {
+// Slack rejects a message of more than 50 blocks, and a rejected digest is no digest.
+const MAX_BLOCKS = 50;
+
+/** One anomaly's detail: what it is, and everything needed to act on it. */
+function detailFor(entry: EvaluatedReading, options: RenderOptions): SlackBlock[] {
   const { metric } = entry;
   const body = [
     `*${metric.num} · ${metric.name}*`,
@@ -123,14 +111,50 @@ function replyFor(entry: EvaluatedReading, options: RenderOptions): SlackMessage
   }
   blocks.push(context(`\`claude /openjii-triage ${metric.id}\``));
 
-  return { text: `${metric.num} ${metric.name}: ${readingOf(entry)}`, blocks };
+  return blocks;
+}
+
+/**
+ * Each anomaly's detail under the summary, most severe first, inside the block limit.
+ *
+ * The runbook and the triage command are the two things that turn a reading into an
+ * action, so they travel with the summary rather than behind a link. What does not fit
+ * is left to the report, and the message says how much.
+ */
+function detailsFor(
+  ordered: EvaluatedReading[],
+  summary: SlackBlock[],
+  options: RenderOptions,
+): SlackBlock[] {
+  // Room for the divider, and for the note that says some detail did not fit.
+  const budget = MAX_BLOCKS - summary.length - 2;
+  const inline: SlackBlock[] = [];
+  let shown = 0;
+
+  for (const entry of ordered) {
+    const detail = detailFor(entry, options);
+    if (inline.length + detail.length > budget) {
+      break;
+    }
+    inline.push(...detail);
+    shown += 1;
+  }
+
+  const hidden = ordered.length - shown;
+  const blocks = [divider(), ...inline];
+
+  if (hidden > 0) {
+    blocks.push(context(`${hidden} more on the report.`));
+  }
+
+  return blocks;
 }
 
 export function renderObservability(
   readings: EvaluatedReading[],
   checks: SelfChecks,
   options: RenderOptions,
-): Digest {
+): SlackMessage {
   const { environment } = options;
   const anomalies = readings.filter((entry) => entry.evaluation.state === "anomaly");
   const missing = readings.filter((entry) => entry.evaluation.state === "missing");
@@ -154,7 +178,7 @@ export function renderObservability(
       quietBlocks.push(actions(quietLinks));
     }
 
-    return { parent: { text, blocks: quietBlocks }, replies: [] };
+    return { text, blocks: quietBlocks };
   }
 
   const ordered = [...anomalies].sort(bySeverity);
@@ -163,7 +187,7 @@ export function renderObservability(
   blocks.push(header(title));
   lines.push(title);
 
-  // One table, grouped by severity. Detail and links live in the replies.
+  // One table, grouped by severity. Detail and links follow it, one block per anomaly.
   const rows: string[][] = [];
   let group: string | undefined;
 
@@ -199,11 +223,9 @@ export function renderObservability(
     blocks.push(actions(buttons));
   }
   lines.push(...notes);
+  blocks.push(...detailsFor(ordered, blocks, options));
 
-  return {
-    parent: { text: lines.join("\n"), blocks },
-    replies: ordered.map((entry) => replyFor(entry, options)),
-  };
+  return { text: lines.join("\n"), blocks };
 }
 
 export function renderLevels(
@@ -212,8 +234,9 @@ export function renderLevels(
   title: string,
   window: string,
   options: RenderOptions,
-): Digest {
+): SlackMessage {
   const reporting = readings.filter(isReporting);
+  const missing = readings.filter((entry) => !isReporting(entry));
   const heading = `${title} · ${options.environment}`;
   const blocks: SlackBlock[] = [header(heading)];
   const lines = [heading];
@@ -236,7 +259,12 @@ export function renderLevels(
     lines.push(...rows.map((row) => `${row[0]}: ${row[1]} ${row[2]}`.trimEnd()));
   }
 
+  // A signal with no reading is named, never dropped. Dropping it is how a whole line
+  // vanished from the weekly note without anyone noticing the note had shrunk.
   const notes = selfCheckLines(checks);
+  if (missing.length > 0) {
+    notes.push(`No reading for ${missing.map((entry) => entry.metric.id).join(", ")}.`);
+  }
   if (notes.length > 0) {
     blocks.push(context(`${notes.join(" ")} The list above is incomplete.`));
     lines.push(...notes);
@@ -247,45 +275,5 @@ export function renderLevels(
     blocks.push(actions(buttons));
   }
 
-  // A level has no detail to open, so there is nothing to thread under it.
-  return { parent: { text: lines.join("\n"), blocks }, replies: [] };
-}
-
-// Slack rejects a message of more than 50 blocks, and a rejected digest is no digest.
-const MAX_BLOCKS = 50;
-
-/**
- * The digest as one message, for a transport that cannot thread.
- *
- * A webhook returns no message timestamp, so replies have nothing to hang under. Dropping
- * them would lose each anomaly's runbook and triage command, which are the two things that
- * turn a reading into an action. They go inline under the summary instead, most severe
- * first, and whatever does not fit the block limit is left to the report.
- */
-export function flatten({ parent, replies }: Digest): SlackMessage {
-  if (replies.length === 0) {
-    return parent;
-  }
-
-  // Room for the divider, and for the note that says some detail did not fit.
-  const budget = MAX_BLOCKS - parent.blocks.length - 2;
-  const inline: SlackBlock[] = [];
-  let shown = 0;
-
-  for (const reply of replies) {
-    if (inline.length + reply.blocks.length > budget) {
-      break;
-    }
-    inline.push(...reply.blocks);
-    shown += 1;
-  }
-
-  const blocks = [...parent.blocks, divider(), ...inline];
-  const hidden = replies.length - shown;
-
-  if (hidden > 0) {
-    blocks.push(context(`${hidden} more on the report.`));
-  }
-
-  return { text: parent.text, blocks };
+  return { text: lines.join("\n"), blocks };
 }

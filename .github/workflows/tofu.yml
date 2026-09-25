@@ -81,17 +81,9 @@ jobs:
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
       TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
       TF_VAR_grafana_auth_service_token: ${{ secrets.GRAFANA_SERVICE_TOKEN }}
-      # Empty webhooks make the digest Lambda log what it would post, so the
-      # monitoring stack applies cleanly before the Slack channels exist.
-      TF_VAR_slack_heartbeat_webhook_url: ${{ secrets.SLACK_HEARTBEAT_WEBHOOK_URL }}
-      TF_VAR_slack_usage_webhook_url: ${{ secrets.SLACK_USAGE_WEBHOOK_URL }}
-      # Empty routes that severity to the existing channel, so the split lands inert.
+      # Empty routes critical alerts to the main channel. Production sets it to the
+      # channel a phone hears; dev never does.
       TF_VAR_slack_critical_webhook_url: ${{ secrets.SLACK_CRITICAL_WEBHOOK_URL }}
-      TF_VAR_slack_warning_webhook_url: ${{ secrets.SLACK_WARNING_WEBHOOK_URL }}
-      # Without a bot token the digests post as single messages, with no threaded replies.
-      TF_VAR_slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
-      TF_VAR_slack_heartbeat_channel_id: ${{ vars.SLACK_HEARTBEAT_CHANNEL_ID }}
-      TF_VAR_slack_usage_channel_id: ${{ vars.SLACK_USAGE_CHANNEL_ID }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
@@ -173,17 +165,9 @@ jobs:
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
       TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
       TF_VAR_grafana_auth_service_token: ${{ secrets.GRAFANA_SERVICE_TOKEN }}
-      # Empty webhooks make the digest Lambda log what it would post, so the
-      # monitoring stack applies cleanly before the Slack channels exist.
-      TF_VAR_slack_heartbeat_webhook_url: ${{ secrets.SLACK_HEARTBEAT_WEBHOOK_URL }}
-      TF_VAR_slack_usage_webhook_url: ${{ secrets.SLACK_USAGE_WEBHOOK_URL }}
-      # Empty routes that severity to the existing channel, so the split lands inert.
+      # Empty routes critical alerts to the main channel. Production sets it to the
+      # channel a phone hears; dev never does.
       TF_VAR_slack_critical_webhook_url: ${{ secrets.SLACK_CRITICAL_WEBHOOK_URL }}
-      TF_VAR_slack_warning_webhook_url: ${{ secrets.SLACK_WARNING_WEBHOOK_URL }}
-      # Without a bot token the digests post as single messages, with no threaded replies.
-      TF_VAR_slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
-      TF_VAR_slack_heartbeat_channel_id: ${{ vars.SLACK_HEARTBEAT_CHANNEL_ID }}
-      TF_VAR_slack_usage_channel_id: ${{ vars.SLACK_USAGE_CHANNEL_ID }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6

@@ -41,34 +41,13 @@ variable "databricks_host" {
 }
 
 variable "slack_webhook_url" {
-  description = "Slack webhook URL for Databricks job notifications"
+  description = "The Slack incoming webhook for this environment: Databricks job events, Grafana alerts and the heartbeat digests"
   type        = string
   sensitive   = true
-}
-
-variable "slack_heartbeat_webhook_url" {
-  description = "Slack incoming webhook for the daily observability digest; empty logs instead of posting"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "slack_usage_webhook_url" {
-  description = "Slack incoming webhook for the usage pulse and weekly note; empty logs instead of posting"
-  type        = string
-  sensitive   = true
-  default     = ""
 }
 
 variable "slack_critical_webhook_url" {
-  description = "Slack incoming webhook for critical alerts; empty keeps them on slack_webhook_url"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "slack_warning_webhook_url" {
-  description = "Slack incoming webhook for warning alerts; empty keeps them on slack_webhook_url"
+  description = "Slack incoming webhook for critical alerts only, a channel a phone hears; empty keeps them on slack_webhook_url"
   type        = string
   sensitive   = true
   default     = ""
@@ -261,23 +240,4 @@ variable "data_platform_sp_application_id" {
   description = "Application ID of the jii-data-platform deploy service principal (github-actions-jii-data-platform-sandbox-deploy). It runs the analyst gold pipelines in the sandbox workspace, which read this environment's centrum tables cross-catalog. Read-only; granted at catalog level in main.tf."
   type        = string
   default     = "122ea6e5-a082-45b5-9df6-ef5482868fdc"
-}
-
-variable "slack_bot_token" {
-  description = "Slack bot token for the digest composer; empty posts through the webhooks with no replies"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "slack_heartbeat_channel_id" {
-  description = "Channel the observability digest threads into; needs slack_bot_token"
-  type        = string
-  default     = ""
-}
-
-variable "slack_usage_channel_id" {
-  description = "Channel the usage digests thread into; needs slack_bot_token"
-  type        = string
-  default     = ""
 }
