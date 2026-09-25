@@ -1,17 +1,31 @@
+/** One top-level field of a VARIANT schema: its name and its Spark type DDL. */
+export interface VariantField {
+  name: string;
+  type: string;
+}
+
 /**
  * Parses Spark variant/struct DDL strings — the `OBJECT<...>` /
  * `STRUCT<...>` shape emitted by Databricks's `schema_of_variant_agg(...)`.
- * Currently surfaces top-level field names so the variant-flattening WHERE
- * router can tell flattened fields apart from base columns; further DDL
- * introspection can land here without adding more loose helpers.
+ * Surfaces the top-level fields so the variant builder can extract each one
+ * by path with its own type.
  */
 export class VariantSchema {
-  static topLevelFieldNames(schema: string): string[] {
+  static topLevelFields(schema: string): VariantField[] {
     const inner = VariantSchema.unwrap(schema);
     if (inner === null) return [];
     return VariantSchema.splitTopLevel(inner)
-      .map((field) => VariantSchema.extractName(field))
-      .filter((name) => name.length > 0);
+      .map((segment) => VariantSchema.parseField(segment))
+      .filter((field) => field.name.length > 0);
+  }
+
+  /** True for an `OBJECT<…>` / `STRUCT<…>` schema, empty ones included. */
+  static isObject(schema: string): boolean {
+    return VariantSchema.unwrap(schema) !== null;
+  }
+
+  static topLevelFieldNames(schema: string): string[] {
+    return VariantSchema.topLevelFields(schema).map((field) => field.name);
   }
 
   /** Strip the OBJECT<…> / STRUCT<…> envelope. Null when the input
@@ -57,15 +71,35 @@ export class VariantSchema {
     return segments;
   }
 
-  /** Pull the (un-backticked) name from a `name: TYPE` segment. */
-  private static extractName(segment: string): string {
+  /** Split a `name: TYPE` segment. A backticked name may contain `:` and
+   *  doubled backticks, which stand for one. */
+  private static parseField(segment: string): VariantField {
     const trimmed = segment.trim();
-    if (trimmed.length === 0) return "";
-    if (trimmed.startsWith("`")) {
-      const end = trimmed.indexOf("`", 1);
-      return end > 0 ? trimmed.slice(1, end) : trimmed.slice(1);
+    if (trimmed.length === 0) return { name: "", type: "" };
+
+    if (!trimmed.startsWith("`")) {
+      const colon = trimmed.indexOf(":");
+      return colon >= 0
+        ? { name: trimmed.slice(0, colon).trim(), type: trimmed.slice(colon + 1).trim() }
+        : { name: trimmed, type: "" };
     }
-    const colon = trimmed.indexOf(":");
-    return colon >= 0 ? trimmed.slice(0, colon).trim() : trimmed;
+
+    let end = 1;
+    while (end < trimmed.length) {
+      const isEscapedBacktick = trimmed[end] === "`" && trimmed[end + 1] === "`";
+      if (isEscapedBacktick) {
+        end += 2;
+        continue;
+      }
+      if (trimmed[end] === "`") break;
+      end++;
+    }
+    const name = trimmed.slice(1, end).replaceAll("``", "`");
+    const type = trimmed
+      .slice(end + 1)
+      .trim()
+      .replace(/^:/, "")
+      .trim();
+    return { name, type };
   }
 }

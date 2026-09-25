@@ -120,50 +120,130 @@ describe("QueryBuilder Base", () => {
       builder = new VariantQueryBuilder();
     });
 
-    it("should transform schema for from_json", () => {
-      const schema = "OBJECT<a: STRING, b: OBJECT<c: INT>>";
-      const transformed = builder.transformSchemaForFromJson(schema);
-      expect(transformed).toBe("STRUCT<a: STRING, b: STRUCT<c: INT>>");
-    });
-
-    it("should coerce VOID fields to STRING for from_json", () => {
-      const schema = "OBJECT<phi2: DOUBLE, messages: OBJECT<text: STRING>, dead: VOID>";
-      const transformed = builder.transformSchemaForFromJson(schema);
-      expect(transformed).toBe(
-        "STRUCT<phi2: DOUBLE, messages: STRUCT<text: STRING>, dead: STRING>",
+    it("turns object types into struct cast targets", () => {
+      expect(builder.variantCastType("OBJECT<a: STRING, b: OBJECT<c: INT>>")).toBe(
+        "STRUCT<a: STRING, b: STRUCT<c: INT>>",
       );
     });
 
-    it("should build variant query", () => {
-      const query = builder
-        .from("events")
-        .select(["id", "ts"])
-        .parseVariant("payload", "STRUCT<x:INT>", "data")
-        .where("ts > 0")
-        .orderBy("ts", "DESC")
-        .limit(10)
-        .build();
-
-      expect(query).toContain("SELECT `id`");
-      expect(query).toContain("`ts`");
-      expect(query).toContain("* EXCEPT (payload, data)");
-      expect(query).toContain("data.*");
-      expect(query).toContain("from_json(payload::string, 'STRUCT<x:INT>') as data");
-      expect(query).toContain("FROM events");
-      expect(query).toContain("WHERE ts > 0");
-      expect(query).toContain("ORDER BY `ts` DESC");
-      expect(query).toContain("LIMIT 10");
+    it("reads VOID fields, nested or whole, as STRING", () => {
+      expect(builder.variantCastType("ARRAY<OBJECT<text: STRING, dead: VOID>>")).toBe(
+        "ARRAY<STRUCT<text: STRING, dead: STRING>>",
+      );
+      expect(builder.variantCastType("VOID")).toBe("STRING");
     });
 
-    it("escapes column identifiers with spaces or reserved words", () => {
+    it("flattens every field by typed path in one SELECT", () => {
       const query = builder
         .from("events")
-        .select(["Ambient Temperature", "select"])
-        .parseVariant("payload", "STRUCT<x:INT>", "data")
+        .parseVariant("payload", "OBJECT<phi2: DECIMAL(3,3), trace: ARRAY<OBJECT<v: DOUBLE>>>")
+        .where("`experiment_id` = 'e-1'")
         .build();
 
-      expect(query).toContain("`Ambient Temperature`");
-      expect(query).toContain("`select`");
+      expect(query).toBe(
+        [
+          "SELECT * EXCEPT (`payload`), " +
+            "try_variant_get(`payload`, '$[\"phi2\"]', 'DECIMAL(3,3)') AS `phi2`, " +
+            "try_variant_get(`payload`, '$[\"trace\"]', 'ARRAY<STRUCT<v: DOUBLE>>') AS `trace`",
+          "FROM events",
+          "WHERE `experiment_id` = 'e-1'",
+        ].join("\n"),
+      );
+      expect(query).not.toContain("from_json");
+    });
+
+    it("projects chosen fields as expressions and base columns as identifiers", () => {
+      const query = builder
+        .from("events")
+        .parseVariant("payload", "OBJECT<`Ambient Temperature`: DOUBLE>")
+        .select(["select", "Ambient Temperature"])
+        .build();
+
+      expect(query).toContain(
+        "SELECT `select`, try_variant_get(`payload`, '$[\"Ambient Temperature\"]', 'DOUBLE') AS `Ambient Temperature`",
+      );
+    });
+
+    it("filters a flattened field by its expression in the same WHERE as base filters", () => {
+      const query = builder
+        .from("events")
+        .parseVariant("payload", "OBJECT<phi2: DOUBLE>")
+        .filter({ column: "phi2", operator: "greater_than", value: 0.5 })
+        .filter({ column: "device_name", operator: "equals", value: "d-1" })
+        .build();
+
+      expect(query).toContain(
+        "WHERE try_variant_get(`payload`, '$[\"phi2\"]', 'DOUBLE') > 0.5 AND `device_name` = 'd-1'",
+      );
+      expect(query.match(/WHERE/g)).toHaveLength(1);
+    });
+
+    it("orders by the output name of a projected field and by the expression otherwise", () => {
+      const projected = new VariantQueryBuilder()
+        .from("t")
+        .parseVariant("v", "OBJECT<x: INT>")
+        .select(["x"])
+        .distinct()
+        .orderBy("x", "DESC")
+        .build();
+      const unprojected = new VariantQueryBuilder()
+        .from("t")
+        .parseVariant("v", "OBJECT<x: INT>")
+        .select(["id"])
+        .orderBy("x")
+        .build();
+
+      expect(projected).toContain("ORDER BY `x` DESC");
+      expect(unprojected).toContain("ORDER BY try_variant_get(`v`, '$[\"x\"]', 'INT') ASC");
+    });
+
+    it("quotes awkward field names in the path and keeps dotted names one identifier", () => {
+      const query = builder
+        .from("t")
+        .parseVariant("v", "OBJECT<`it's`: INT, `a\"b`: INT, `c'd\"e`: INT, `dot.ted`: INT>")
+        .build();
+
+      expect(query).toContain("try_variant_get(`v`, '$[\"it\\'s\"]', 'INT') AS `it's`");
+      expect(query).toContain("try_variant_get(`v`, '$[\\'a\"b\\']', 'INT') AS `a\"b`");
+      expect(query).toContain(
+        "try_cast(element_at(try_cast(`v` AS MAP<STRING, VARIANT>), 'c\\'d\"e') AS INT) AS `c'd\"e`",
+      );
+      expect(query).toContain("AS `dot.ted`");
+    });
+
+    it("reads a VARIANT whose schema is no object whole, under its own name", () => {
+      const query = builder.from("t").parseVariant("v", "ARRAY<OBJECT<x: DOUBLE>>").build();
+
+      expect(query).toContain(
+        "SELECT * EXCEPT (`v`), try_variant_get(`v`, '$', 'ARRAY<STRUCT<x: DOUBLE>>') AS `v`",
+      );
+    });
+
+    it("contributes no columns for an empty object schema", () => {
+      const query = builder.from("t").parseVariant("v", "OBJECT<>").build();
+
+      expect(query).toBe("SELECT * EXCEPT (`v`)\nFROM t");
+    });
+
+    it("excludes the raw VARIANT and the requested columns", () => {
+      const query = builder
+        .from("t")
+        .parseVariant("v", "OBJECT<x: INT>")
+        .except(["secret"])
+        .build();
+
+      expect(query).toContain("SELECT * EXCEPT (`v`, `secret`)");
+    });
+
+    it("applies limit and offset", () => {
+      const query = builder
+        .from("t")
+        .parseVariant("v", "OBJECT<x: INT>")
+        .limit(5)
+        .offset(10)
+        .build();
+
+      expect(query).toContain("LIMIT 5\nOFFSET 10");
     });
 
     it("should throw if from missing", () => {
@@ -173,59 +253,6 @@ describe("QueryBuilder Base", () => {
     it("should throw if no variants", () => {
       builder.from("t");
       expect(() => builder.build()).toThrow("At least one VARIANT column is required");
-    });
-
-    it("should handle except columns", () => {
-      const query = builder.from("t").parseVariant("v", "STRUCT<x:INT>").except(["secret"]).build();
-
-      // checking logic for except clause generation
-      expect(query).toContain("EXCEPT (v, parsed_v, secret)");
-    });
-
-    it("should handle offset in variant query", () => {
-      const query = builder
-        .from("t")
-        .parseVariant("v", "STRUCT<x:INT>")
-        .limit(5)
-        .offset(10)
-        .build();
-
-      expect(query).toContain("LIMIT 5");
-      expect(query).toContain("OFFSET 10");
-    });
-  });
-
-  describe("VariantQueryBuilder.topLevelFieldNames", () => {
-    it("extracts simple comma-separated fields", () => {
-      expect(VariantQueryBuilder.topLevelFieldNames("OBJECT<a: INT, b: STRING>")).toEqual([
-        "a",
-        "b",
-      ]);
-    });
-
-    it("unwraps backtick-quoted names with spaces and special chars", () => {
-      expect(
-        VariantQueryBuilder.topLevelFieldNames(
-          "OBJECT<`Leaf Temperature`: DECIMAL(4,2), `Light Intensity (PAR)`: DECIMAL(23,3)>",
-        ),
-      ).toEqual(["Leaf Temperature", "Light Intensity (PAR)"]);
-    });
-
-    it("does not split inside nested STRUCTs / ARRAYs / DECIMALs", () => {
-      expect(
-        VariantQueryBuilder.topLevelFieldNames(
-          "OBJECT<a: DECIMAL(22,2), b: STRUCT<inner: INT, other: STRING>, c: ARRAY<DECIMAL(4,2)>>",
-        ),
-      ).toEqual(["a", "b", "c"]);
-    });
-
-    it("accepts STRUCT< ... > shape (post from_json transform)", () => {
-      expect(VariantQueryBuilder.topLevelFieldNames("STRUCT<x:INT,y:STRING>")).toEqual(["x", "y"]);
-    });
-
-    it("returns empty for malformed schemas", () => {
-      expect(VariantQueryBuilder.topLevelFieldNames("not a struct")).toEqual([]);
-      expect(VariantQueryBuilder.topLevelFieldNames("")).toEqual([]);
     });
   });
 });

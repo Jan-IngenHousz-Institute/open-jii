@@ -49,3 +49,24 @@ describe("VariantSchema.topLevelFieldNames", () => {
     expect(VariantSchema.topLevelFieldNames("OBJECT<a: INT,>")).toEqual(["a"]);
   });
 });
+
+describe("VariantSchema.topLevelFields", () => {
+  it("pairs each top-level name with its full type, nested types included", () => {
+    expect(
+      VariantSchema.topLevelFields(
+        "OBJECT<phi2: DECIMAL(3,3), trace: ARRAY<OBJECT<t: BIGINT, v: DECIMAL(22,2)>>, dead: VOID>",
+      ),
+    ).toEqual([
+      { name: "phi2", type: "DECIMAL(3,3)" },
+      { name: "trace", type: "ARRAY<OBJECT<t: BIGINT, v: DECIMAL(22,2)>>" },
+      { name: "dead", type: "VOID" },
+    ]);
+  });
+
+  it("keeps colons and doubled backticks inside a quoted name", () => {
+    expect(VariantSchema.topLevelFields("OBJECT<`ratio: a/b`: DOUBLE, `a``b`: STRING>")).toEqual([
+      { name: "ratio: a/b", type: "DOUBLE" },
+      { name: "a`b", type: "STRING" },
+    ]);
+  });
+});

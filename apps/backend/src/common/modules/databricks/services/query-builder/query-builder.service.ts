@@ -154,7 +154,7 @@ export class QueryBuilderService {
     }
 
     variants.forEach(({ columnName, schema }) => {
-      builder.parseVariant(columnName, schema, `parsed_${columnName}`);
+      builder.parseVariant(columnName, schema);
     });
 
     if (exceptColumns && exceptColumns.length > 0) {
@@ -168,9 +168,8 @@ export class QueryBuilderService {
       builder.where(clause);
     }
 
-    // Variant builder's `.filter()` knows about the parseVariant schemas
-    // it received above, so flattened-field filters land in the post-
-    // flatten WHERE while base-column filters stay at the inner level.
+    // A filter on a flattened field compares its extraction expression, so every filter shares
+    // the one WHERE with the base conditions.
     if (filters && filters.length > 0) {
       for (const filter of filters) builder.filter(filter);
     }
