@@ -20,6 +20,8 @@ import { TestHarness } from "../../../test/test-harness";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
 import type { ExperimentTableMetadata } from "../models/experiment-data.model";
 import type { ExperimentDto } from "../models/experiment.model";
+import { CACHE_PORT } from "../ports/cache.port";
+import type { CachePort } from "../ports/cache.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 import { ExperimentDataRepository } from "./experiment-data.repository";
@@ -1764,6 +1766,145 @@ describe("ExperimentDataRepository", () => {
 
       const result = await repository.getDistinctColumnValues(baseParams);
       assertFailure(result);
+    });
+  });
+
+  describe("getTableColumns", () => {
+    const experimentId = faker.string.uuid();
+    const params = { experimentId, tableName: "raw_data" };
+    const columns = [
+      { name: "time", type_name: "TIMESTAMP", type_text: "TIMESTAMP", position: 0 },
+      { name: "temp", type_name: "DOUBLE", type_text: "DOUBLE", position: 1 },
+    ];
+
+    function metadataAt(schemaRevision: string | null): ExperimentTableMetadata[] {
+      return [
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          displayName: null,
+          rowCount: 10,
+          latestRowAt: null,
+          schemaRevision,
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+        },
+      ];
+    }
+
+    beforeEach(() => {
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(
+        success("SELECT * FROM raw_data LIMIT 1"),
+      );
+    });
+
+    it("reads the columns once per schema revision", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(metadataAt("r1")),
+      );
+      const executeSpy = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(success({ columns, rows: [], totalRows: 0, truncated: false }));
+
+      const first = await repository.getTableColumns(params);
+      const second = await repository.getTableColumns(params);
+
+      assertSuccess(first);
+      assertSuccess(second);
+      expect(second.value).toEqual(columns);
+      expect(executeSpy).toHaveBeenCalledTimes(1);
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ tableName: "raw_data", limit: 1 }),
+      );
+    });
+
+    it("reads them again once the schema revision moves", async () => {
+      const metadataSpy = vi
+        .spyOn(databricksPort, "getExperimentTableMetadata")
+        .mockResolvedValue(success(metadataAt("r1")));
+      const executeSpy = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(success({ columns, rows: [], totalRows: 0, truncated: false }));
+
+      await repository.getTableColumns(params);
+      metadataSpy.mockResolvedValue(success(metadataAt("r2")));
+      await testApp.module.get<CachePort>(CACHE_PORT).invalidate(`table-metadata:${experimentId}`);
+      await repository.getTableColumns(params);
+
+      expect(executeSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not cache a failed read", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(metadataAt("r1")),
+      );
+      const error = AppError.internal("warehouse unavailable");
+      const executeSpy = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValueOnce(failure(error))
+        .mockResolvedValueOnce(success({ columns, rows: [], totalRows: 0, truncated: false }));
+
+      const first = await repository.getTableColumns(params);
+      const second = await repository.getTableColumns(params);
+
+      assertFailure(first);
+      expect(first.error).toBe(error);
+      assertSuccess(second);
+      expect(second.value).toEqual(columns);
+      expect(executeSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("describes a renamed payload field the way a data read does", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([
+          {
+            ...metadataAt("r1")[0],
+            identifier: "macro_123",
+            tableType: "macro",
+            macroSchema: "OBJECT<device: STRING, phi2: DOUBLE>",
+          },
+        ]),
+      );
+      vi.spyOn(databricksPort, "getExperimentTableColumns").mockResolvedValue(
+        success(["id", "device", "macro_id", "macro_output", "questions_data"]),
+      );
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [
+            {
+              name: "device",
+              type_name: "STRUCT",
+              type_text: "STRUCT<serial: STRING>",
+              position: 0,
+            },
+            { name: "device_output", type_name: "STRING", type_text: "STRING", position: 1 },
+          ],
+          rows: [],
+          totalRows: 0,
+          truncated: false,
+        }),
+      );
+
+      const result = await repository.getTableColumns({ experimentId, tableName: "macro_123" });
+
+      assertSuccess(result);
+      expect(result.value[1]).toEqual({
+        name: "device_output",
+        type_name: "STRING",
+        type_text: "STRING",
+        position: 1,
+        renamedFrom: { name: "device", source: "macro_output" },
+      });
+    });
+
+    it("returns notFound when the table is absent from metadata", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([]));
+
+      const result = await repository.getTableColumns(params);
+
+      assertFailure(result);
+      expect(result.error.code).toBe("NOT_FOUND");
     });
   });
 });

@@ -22,7 +22,7 @@ import {
 import { Button } from "@repo/ui/components/button";
 import { TooltipProvider } from "@repo/ui/components/tooltip";
 
-import { useExperimentData } from "../../../hooks/experiment/useExperimentData/useExperimentData";
+import { useColumnMetadata } from "../../../hooks/experiment/useColumnMetadata/useColumnMetadata";
 import { useExperimentTables } from "../../../hooks/experiment/useExperimentTables/useExperimentTables";
 import { DataFreshness } from "../../experiment-data/data-freshness";
 import type { ChartFormValues } from "../charts/chart-config";
@@ -56,16 +56,10 @@ export function VisualizationWorkspace({
   const watchedChartType = useWatch({ control: form.control, name: "chartType" });
 
   const {
-    tableMetadata,
+    columns: tableColumns,
     isLoading: isColumnsLoading,
     error: columnsError,
-  } = useExperimentData({
-    experimentId,
-    page: 1,
-    pageSize: 1,
-    tableName,
-    enabled: Boolean(tableName),
-  });
+  } = useColumnMetadata(experimentId, tableName);
 
   // One plottable column list (complex types stripped). Each chart's
   // data-panel applies per-role kind filtering on top via
@@ -79,13 +73,13 @@ export function VisualizationWorkspace({
   // contract doesn't explicitly accept them.
   const columns = useMemo(
     () =>
-      (tableMetadata?.rawColumns ?? []).filter(
+      tableColumns.filter(
         (col) =>
           isPlottableColumn(col.type_text) ||
           col.type_text === WellKnownColumnTypes.CONTRIBUTOR ||
           col.type_text === WellKnownColumnTypes.DEVICE,
       ),
-    [tableMetadata],
+    [tableColumns],
   );
 
   const handleTableChange = (newTable: string) => {

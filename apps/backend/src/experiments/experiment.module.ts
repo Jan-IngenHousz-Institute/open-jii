@@ -45,6 +45,7 @@ import { ListUploadsUseCase } from "./application/use-cases/experiment-data-uplo
 import { UploadDataUseCase } from "./application/use-cases/experiment-data-uploads/upload-data";
 import { GetDistinctColumnValuesUseCase } from "./application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "./application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
+import { GetExperimentTableColumnsUseCase } from "./application/use-cases/experiment-data/get-experiment-table-columns";
 import { GetExperimentTablesUseCase } from "./application/use-cases/experiment-data/get-experiment-tables";
 import { ApproveJoinRequestUseCase } from "./application/use-cases/experiment-join-requests/approve-join-request";
 import { CancelJoinRequestUseCase } from "./application/use-cases/experiment-join-requests/cancel-join-request";
@@ -220,6 +221,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     GetExperimentDataUseCase,
     GetExperimentTablesUseCase,
     GetDistinctColumnValuesUseCase,
+    GetExperimentTableColumnsUseCase,
     UploadDataUseCase,
     ListUploadsUseCase,
     InitiateExportUseCase,
