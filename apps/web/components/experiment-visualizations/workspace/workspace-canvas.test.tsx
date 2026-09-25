@@ -125,5 +125,43 @@ describe("WorkspaceCanvas", () => {
     await waitFor(() =>
       expect(screen.queryByText("workspace.canvas.loading")).not.toBeInTheDocument(),
     );
+    expect(screen.queryByText("charts.truncated")).not.toBeInTheDocument();
+  });
+
+  it("says the preview holds part of the data when its read was stopped short", async () => {
+    server.mount(contract.experiments.getExperimentData, {
+      body: [
+        createExperimentDataTable({
+          data: {
+            columns: [
+              { name: "time", type_name: "DOUBLE", type_text: "DOUBLE" },
+              { name: "temp", type_name: "DOUBLE", type_text: "DOUBLE" },
+            ],
+            rows: [
+              { time: 1, temp: 21 },
+              { time: 2, temp: 22 },
+            ],
+            totalRows: 553_000,
+            truncated: true,
+          },
+        }),
+      ],
+    });
+
+    render(
+      <Harness
+        formDefaults={defaults({
+          dataConfig: {
+            tableName: "readings",
+            dataSources: [
+              { tableName: "readings", columnName: "time", role: "x" },
+              { tableName: "readings", columnName: "temp", role: "y" },
+            ],
+          },
+        })}
+      />,
+    );
+
+    expect(await screen.findByText("charts.truncated")).toBeInTheDocument();
   });
 });

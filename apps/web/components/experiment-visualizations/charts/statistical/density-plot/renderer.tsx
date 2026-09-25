@@ -19,7 +19,11 @@ export function DensityPlotRenderer({
   const { t } = useTranslation("experimentVisualizations");
 
   // No `orderBy`: KDE is invariant to row order.
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData);
+  const { rows, isLoading, error, truncation } = useChartData(
+    visualization,
+    experimentId,
+    providedData,
+  );
   const chartConfig = narrowChartConfig(visualization);
   const dataSources = visualization.dataConfig.dataSources;
 
@@ -60,6 +64,7 @@ export function DensityPlotRenderer({
       isLoading={isLoading}
       error={error}
       hasRows={rows.length > 0}
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         <LineChart data={chartSeries} config={chartConfig} subplots={subplots} />

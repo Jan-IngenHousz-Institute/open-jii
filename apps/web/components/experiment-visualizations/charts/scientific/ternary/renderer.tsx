@@ -24,9 +24,14 @@ export function TernaryRenderer({
   const bColumn = dataSources.find((ds) => ds.role === "y")?.columnName;
   const cColumn = dataSources.find((ds) => ds.role === "z")?.columnName;
 
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData, {
-    enabled: Boolean(aColumn) && Boolean(bColumn) && Boolean(cColumn),
-  });
+  const { rows, isLoading, error, truncation } = useChartData(
+    visualization,
+    experimentId,
+    providedData,
+    {
+      enabled: Boolean(aColumn) && Boolean(bColumn) && Boolean(cColumn),
+    },
+  );
 
   const sum = chartConfig.ternarySum ?? 100;
 
@@ -67,6 +72,7 @@ export function TernaryRenderer({
       isLoading={isLoading}
       error={error}
       hasRows={hasRows}
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         <TernaryPlot

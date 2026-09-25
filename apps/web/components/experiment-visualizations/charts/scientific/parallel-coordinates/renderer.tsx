@@ -26,9 +26,14 @@ export function ParallelCoordinatesRenderer({
       .map((ds) => ds.columnName),
   ).size;
 
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData, {
-    enabled: distinctYCount >= 2,
-  });
+  const { rows, isLoading, error, truncation } = useChartData(
+    visualization,
+    experimentId,
+    providedData,
+    {
+      enabled: distinctYCount >= 2,
+    },
+  );
 
   // KEEP IN SYNC with the field reads in `transformParallelCoordinatesData`.
   const { series, axes } = useMemo(() => {
@@ -65,6 +70,7 @@ export function ParallelCoordinatesRenderer({
       isLoading={isLoading}
       error={error}
       hasRows={hasRows}
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         <ParallelCoordinates data={series} config={chartConfig} />

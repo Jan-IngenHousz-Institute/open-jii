@@ -19,7 +19,11 @@ export function Histogram2DRenderer({
   const { t } = useTranslation("experimentVisualizations");
 
   // No `orderBy`: Plotly's histogram2d trace is invariant to row order.
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData);
+  const { rows, isLoading, error, truncation } = useChartData(
+    visualization,
+    experimentId,
+    providedData,
+  );
   const chartConfig = narrowChartConfig(visualization);
   const dataSources = visualization.dataConfig.dataSources;
 
@@ -59,6 +63,7 @@ export function Histogram2DRenderer({
       isLoading={isLoading}
       error={error}
       hasRows={hasRows}
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         <Histogram2D

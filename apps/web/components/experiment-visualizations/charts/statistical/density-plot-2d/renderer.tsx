@@ -22,7 +22,11 @@ export function DensityPlot2DRenderer({
 
   // Order doesn't matter for either trace; scatter renders points
   // regardless of order, contour bins by frequency.
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData);
+  const { rows, isLoading, error, truncation } = useChartData(
+    visualization,
+    experimentId,
+    providedData,
+  );
   const chartConfig = narrowChartConfig(visualization);
   const dataSources = visualization.dataConfig.dataSources;
 
@@ -51,6 +55,7 @@ export function DensityPlot2DRenderer({
       isLoading={isLoading}
       error={error}
       hasRows={(pairs?.x.length ?? 0) > 0 && (pairs?.hasColumns ?? false)}
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         <DensityPlot2D

@@ -47,6 +47,26 @@ describe("useChartData", () => {
     await waitFor(() => expect(result.current.rows).toEqual(rows));
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
+    expect(result.current.truncation).toBeUndefined();
+  });
+
+  it("reports how much of the read the chart holds when the backend stopped it short", async () => {
+    const rows = [
+      { time: 1, temp: 21 },
+      { time: 2, temp: 22 },
+    ];
+    server.mount(contract.experiments.getExperimentData, {
+      body: [
+        createExperimentDataTable({
+          data: { columns: [], rows, totalRows: 553_000, truncated: true },
+        }),
+      ],
+    });
+
+    const { result } = renderHook(() => useChartData(buildViz(), "exp-1", undefined));
+
+    await waitFor(() => expect(result.current.rows).toEqual(rows));
+    expect(result.current.truncation).toEqual({ shown: 2, total: 553_000 });
   });
 
   it("falls back to an empty array when the API returns no data", async () => {

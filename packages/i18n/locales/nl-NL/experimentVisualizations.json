@@ -87,7 +87,8 @@
     },
     "title": "Grafiektitel",
     "preview": "Grafiek Voorvertoning",
-    "showLegend": "Legenda tonen"
+    "showLegend": "Legenda tonen",
+    "truncated": "{{shown}} van {{total}} rijen weergegeven. Voeg een filter toe om alle overeenkomende rijen te zien."
   },
   "configuration": {
     "columns": {

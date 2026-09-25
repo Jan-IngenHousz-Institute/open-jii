@@ -21,7 +21,11 @@ export function PieRenderer({
 
   // No `orderBy` for pie: slice ordering is decided by Plotly's `sort`
   // setting (largest-first by default), not row order.
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData);
+  const { rows, isLoading, error, truncation } = useChartData(
+    visualization,
+    experimentId,
+    providedData,
+  );
   const chartConfig = narrowChartConfig(visualization);
   const dataSources = visualization.dataConfig.dataSources;
   const aggregation = visualization.dataConfig.aggregation;
@@ -62,6 +66,7 @@ export function PieRenderer({
       isLoading={isLoading}
       error={error}
       hasRows={rows.length > 0 && canDraw}
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         <PieChart data={slices} config={chartConfig} />

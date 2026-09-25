@@ -1,5 +1,6 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
 
+import { DATA_QUERY_MAX_LIMIT } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isDecimalType, isNumericType } from "@repo/api/transforms/column-type-utils";
 
 import type {
@@ -105,6 +106,9 @@ export class ExperimentDataRepository {
    *   - `filters`/`columns` without `page`: all matching rows in one page
    *     (chart consumers that need the full series).
    *   - none of the above: plain paginated read using the cached row count.
+   *
+   * The two one-page reads stop at `limit`, or `DATA_QUERY_MAX_LIMIT` when it is omitted, and
+   * say when they stopped short.
    */
   async getTableData(params: {
     experimentId: string;
@@ -156,13 +160,14 @@ export class ExperimentDataRepository {
     const hasFilters = (filters?.length ?? 0) > 0;
     const hasColumns = Boolean(columns && columns.length > 0);
     const hasPaging = page !== undefined && pageSize !== undefined;
+    const ceiling = limit ?? DATA_QUERY_MAX_LIMIT;
 
     // When the experiment anonymizes contributors, the filter picker selects
     // pseudonyms; tag contributor id filters so the SQL compares the pseudonym
     // (recomputed in-query) instead of the raw id the client never receives.
     const effectiveFilters = this.pseudonymizeContributorFilters(experiment, filters);
 
-    // Aggregation summary: page/pageSize ignored, `limit` caps the result.
+    // Aggregation summary: page/pageSize ignored.
     if (hasAggregation) {
       read.mode = "aggregation";
       const queryResult = this.buildQuery(experimentId, shape, {
@@ -170,16 +175,25 @@ export class ExperimentDataRepository {
         aggregation,
         orderBy,
         orderDirection,
-        limit,
+        limit: ceiling + 1,
       });
       if (queryResult.isFailure()) {
         return queryResult;
+      }
+      const countSubqueryResult = this.buildQuery(experimentId, shape, {
+        filters: effectiveFilters,
+        aggregation,
+      });
+      if (countSubqueryResult.isFailure()) {
+        return countSubqueryResult;
       }
       return this.getFullTableData({
         tableName,
         experiment,
         shape,
         query: queryResult.value,
+        countSql: this.countSql(countSubqueryResult.value),
+        ceiling,
         read,
       });
     }
@@ -198,7 +212,7 @@ export class ExperimentDataRepository {
         if (countSubqueryResult.isFailure()) {
           return countSubqueryResult;
         }
-        const countSql = `SELECT COUNT(*) AS total FROM (${countSubqueryResult.value}) AS sub`;
+        const countSql = this.countSql(countSubqueryResult.value);
 
         const [[countResult, countMs], pageResult] = await Promise.all([
           this.measure(() => this.executeQuery(countSql)),
@@ -218,6 +232,9 @@ export class ExperimentDataRepository {
         if (pageResult.isFailure()) {
           return pageResult;
         }
+        if (pageResult.value.truncated) {
+          return this.pageTooLarge();
+        }
         this.logRead(read, pageResult.value);
 
         const totalRows = Number(countResult.value.rows[0]?.[0] ?? 0);
@@ -234,23 +251,32 @@ export class ExperimentDataRepository {
         ]);
       }
 
-      // Chart-style: all matching rows in one page, capped by `limit`.
+      // Chart-style: all matching rows in one page.
       read.mode = "filtered-all";
       const queryResult = this.buildQuery(experimentId, shape, {
         columns,
         filters: effectiveFilters,
         orderBy,
         orderDirection,
-        limit,
+        limit: ceiling + 1,
       });
       if (queryResult.isFailure()) {
         return queryResult;
+      }
+      const countSubqueryResult = this.buildQuery(experimentId, shape, {
+        columns,
+        filters: effectiveFilters,
+      });
+      if (countSubqueryResult.isFailure()) {
+        return countSubqueryResult;
       }
       return this.getFullTableData({
         tableName,
         experiment,
         shape,
         query: queryResult.value,
+        countSql: this.countSql(countSubqueryResult.value),
+        ceiling,
         read,
       });
     }
@@ -267,6 +293,9 @@ export class ExperimentDataRepository {
     });
     if (pageResult.isFailure()) {
       return pageResult;
+    }
+    if (pageResult.value.truncated) {
+      return this.pageTooLarge();
     }
     this.logRead(read, pageResult.value);
 
@@ -320,8 +349,9 @@ export class ExperimentDataRepository {
     }
 
     // Truncation is detected from the raw fetched count (query asked for
-    // limit + 1): null/empty filtering below must not influence it.
-    const truncated = dataResult.value.rows.length > limit;
+    // limit + 1): null/empty filtering below must not influence it. The
+    // warehouse can also cut a result at its byte limit.
+    const truncated = dataResult.value.rows.length > limit || dataResult.value.truncated;
 
     // SchemaData.rows is `(string | null)[][]`; single-column response means
     // each row is `[value]`. Drop nulls/blanks so the picker doesn't surface
@@ -620,36 +650,64 @@ export class ExperimentDataRepository {
     return dataResult;
   }
 
+  /**
+   * One page of every matching row, up to `ceiling`. The query asks for one row more than the
+   * ceiling, so an extra row means the read stopped short, as does a result the warehouse cut at
+   * its byte limit. Only then is the full count read.
+   */
   private async getFullTableData(params: {
     tableName: string;
     experiment: ExperimentDto;
     shape: TableShape;
     query: string;
+    countSql: string;
+    ceiling: number;
     read: ReadTrace;
   }): Promise<Result<TableDataDto[]>> {
-    const { tableName, experiment, shape, query, read } = params;
+    const { tableName, experiment, shape, query, countSql, ceiling, read } = params;
 
     const [dataResult, dataMs] = await this.measure(() => this.executeQuery(query));
     read.dataMs = dataMs;
     if (dataResult.isFailure()) {
       return dataResult;
     }
-    this.logRead(read, dataResult.value);
 
-    const totalRows = dataResult.value.totalRows;
+    const rows = dataResult.value.rows.slice(0, ceiling);
+    const truncated = dataResult.value.rows.length > ceiling || dataResult.value.truncated;
+
+    const totalResult = truncated ? await this.countRows(countSql, read) : success(rows.length);
+    if (totalResult.isFailure()) {
+      return totalResult;
+    }
+
+    const data: SchemaData = { ...dataResult.value, rows, totalRows: totalResult.value, truncated };
+    this.logRead(read, data);
 
     return success([
       {
         name: tableName,
         catalog_name: experiment.name,
         schema_name: this.databricksPort.CENTRUM_SCHEMA_NAME,
-        data: this.transformSchemaData(dataResult.value, experiment, shape),
+        data: this.transformSchemaData(data, experiment, shape),
         page: 1,
-        pageSize: totalRows,
-        totalRows,
+        pageSize: rows.length,
+        totalRows: data.totalRows,
         totalPages: 1,
       },
     ]);
+  }
+
+  private countSql(subquery: string): string {
+    return `SELECT COUNT(*) AS total FROM (${subquery}) AS sub`;
+  }
+
+  private async countRows(countSql: string, read: ReadTrace): Promise<Result<number>> {
+    const [countResult, countMs] = await this.measure(() => this.executeQuery(countSql));
+    read.countMs = countMs;
+    if (countResult.isFailure()) {
+      return countResult;
+    }
+    return success(Number(countResult.value.rows[0]?.[0] ?? 0));
   }
 
   /**
@@ -748,6 +806,16 @@ export class ExperimentDataRepository {
     });
     read.droppedRows = data.rows.length - rows.length;
     return { ...data, rows, totalRows: rows.length };
+  }
+
+  /** A page the warehouse cut at its byte limit would come back short, and paging on would skip rows. */
+  private pageTooLarge(): Result<TableDataDto[]> {
+    return failure(
+      AppError.badRequest(
+        "This page holds more data than one read can return. Choose a smaller page size.",
+        "PAGE_TOO_LARGE",
+      ),
+    );
   }
 
   private tablePage(params: {
