@@ -118,6 +118,17 @@ variable "policy_id" {
   default     = null
 }
 
+variable "aws_attributes" {
+  description = "Spot and on-demand placement for the pipeline cluster; null leaves the workspace defaults"
+  type = object({
+    availability           = string
+    first_on_demand        = number
+    zone_id                = string
+    spot_bid_price_percent = number
+  })
+  default = null
+}
+
 variable "log_level" {
   description = "Log level for the pipeline"
   type        = string

@@ -437,15 +437,18 @@ module "node_cluster_policy" {
       maxValue   = 8
       isOptional = true
     }
-    # The spot settings the workspace applied by default, pinned so they cannot drift:
-    # workers on spot, falling back to on-demand, behind an on-demand driver.
+    # The driver and the first worker on demand, the rest on spot falling back to on
+    # demand. With every worker on spot, one reclaim took them all and stopped every
+    # flow, bronze included; the on-demand worker keeps the flows running meanwhile.
+    # Matches the pipeline's own aws_attributes, since a policy's fixed values are not
+    # documented to reach pipeline clusters.
     "aws_attributes.availability" = {
       type  = "fixed"
       value = "SPOT_WITH_FALLBACK"
     }
     "aws_attributes.first_on_demand" = {
       type  = "fixed"
-      value = 1
+      value = 2
     }
     "aws_attributes.zone_id" = {
       type  = "fixed"
@@ -839,6 +842,12 @@ module "centrum_pipeline" {
   min_workers         = 2
   max_workers         = 6
   policy_id           = module.node_cluster_policy.policy_id
+  aws_attributes = {
+    availability           = "SPOT_WITH_FALLBACK"
+    first_on_demand        = 2
+    zone_id                = "auto"
+    spot_bid_price_percent = 100
+  }
 
   spark_conf = {
     # Streaming skips AQE, so shuffles run at one per worker core.
