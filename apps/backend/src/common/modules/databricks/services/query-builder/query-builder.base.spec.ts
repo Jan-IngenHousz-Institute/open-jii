@@ -30,7 +30,12 @@ describe("QueryBuilder Base", () => {
 
     it("should escape values in whereEquals", () => {
       const query = builder.from("t").whereEquals("name", "O'Connor").build();
-      expect(query).toBe("SELECT * FROM t WHERE `name` = 'O''Connor'");
+      expect(query).toBe("SELECT * FROM t WHERE `name` = 'O\\'Connor'");
+    });
+
+    it("should keep a backslash-quote value inside its literal", () => {
+      const query = builder.from("t").whereEquals("name", "\\' OR 1=1 --").build();
+      expect(query).toBe("SELECT * FROM t WHERE `name` = '\\\\\\' OR 1=1 --'");
     });
 
     it("should group by columns", () => {

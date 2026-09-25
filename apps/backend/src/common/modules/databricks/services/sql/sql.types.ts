@@ -1,3 +1,13 @@
+/**
+ * Value for a `:name` marker in the statement. The warehouse binds it, so it never becomes SQL
+ * text. An omitted `value` binds NULL.
+ */
+export interface StatementParameter {
+  name: string;
+  value?: string;
+  type?: "STRING" | "TIMESTAMP";
+}
+
 export interface ExecuteStatementRequest {
   statement: string;
   warehouse_id: string;
@@ -8,6 +18,7 @@ export interface ExecuteStatementRequest {
   format: string;
   byte_limit?: number;
   row_limit?: number;
+  parameters?: StatementParameter[];
 }
 
 export interface StatementResponse {

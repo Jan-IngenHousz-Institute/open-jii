@@ -10,7 +10,10 @@ import type {
   AggregationSpec,
   FilterCondition,
 } from "../../../common/modules/databricks/services/query-builder/query-builder.types";
-import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
+import type {
+  SchemaData,
+  StatementParameter,
+} from "../../../common/modules/databricks/services/sql/sql.types";
 import type { Result } from "../../../common/utils/fp-utils";
 import type { ExportFormat, ExportMetadata } from "../models/experiment-data-exports.model";
 import type { UploadMetadata } from "../models/experiment-data-uploads.model";
@@ -73,7 +76,11 @@ export interface DatabricksPort {
     offset?: number;
   }): Result<string>;
 
-  executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>>;
+  executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    parameters?: StatementParameter[],
+  ): Promise<Result<SchemaData>>;
 
   /** Upload to /Volumes/{catalog}/{schema}/data-imports/{experimentId}/{sourceType}/{dir}/{file}. */
   uploadExperimentData(

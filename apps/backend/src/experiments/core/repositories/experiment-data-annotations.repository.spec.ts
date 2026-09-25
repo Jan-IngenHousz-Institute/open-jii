@@ -85,6 +85,7 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
         databricksPort.CENTRUM_SCHEMA_NAME,
         expect.stringContaining("INSERT INTO experiment_annotations"),
+        expect.arrayContaining([{ name: "experiment_id", value: mockExperimentId }]),
       );
     });
 
@@ -135,7 +136,8 @@ describe("ExperimentDataAnnotationsRepository", () => {
       assertSuccess(result);
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
         databricksPort.CENTRUM_SCHEMA_NAME,
-        expect.stringContaining(macroTableAnnotation.tableName),
+        expect.stringContaining(":table_name_0"),
+        expect.arrayContaining([{ name: "table_name_0", value: macroTableAnnotation.tableName }]),
       );
     });
 
@@ -169,12 +171,10 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(result.error.message).toContain("Validation failed for annotation");
     });
 
-    it("should properly escape SQL injection characters", async () => {
+    it("should bind quotes, newlines and backslashes as parameter values", async () => {
       // Arrange
-      const annotationWithSpecialChars = {
-        ...createValidAnnotation(),
-        contentText: "Test with 'quotes' and \n newlines \\backslashes",
-      };
+      const contentText = "Test with 'quotes' and \n newlines \\backslashes";
+      const annotationWithSpecialChars = { ...createValidAnnotation(), contentText };
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
 
       // Act
@@ -185,13 +185,10 @@ describe("ExperimentDataAnnotationsRepository", () => {
       // Assert
       expect(result.isSuccess()).toBe(true);
 
-      const sqlCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
-      const sqlQuery = sqlCall[1];
+      const [, sqlQuery, parameters] = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
 
-      // Check that quotes are properly escaped
-      expect(sqlQuery).toContain("''quotes''");
-      expect(sqlQuery).toContain("\\n");
-      expect(sqlQuery).toContain("\\\\");
+      expect(sqlQuery).not.toContain("quotes");
+      expect(parameters).toContainEqual({ name: "content_text_0", value: contentText });
     });
 
     it("should handle databricks port failure", async () => {
@@ -245,15 +242,20 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
         databricksPort.CENTRUM_SCHEMA_NAME,
         expect.stringContaining("UPDATE experiment_annotations"),
+        expect.arrayContaining([
+          { name: "annotation_id", value: mockAnnotationId },
+          { name: "content_text", value: validUpdateData.contentText },
+          { name: "flag_type", value: validUpdateData.flagType },
+        ]),
       );
 
       const sqlCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
       const sqlQuery = sqlCall[1];
 
-      expect(sqlQuery).toContain(`WHERE id = '${mockAnnotationId}'`);
-      expect(sqlQuery).toContain("content_text =");
-      expect(sqlQuery).toContain("flag_type =");
-      expect(sqlQuery).toContain("updated_at =");
+      expect(sqlQuery).toContain("WHERE id = :annotation_id AND experiment_id = :experiment_id");
+      expect(sqlQuery).toContain("content_text = :content_text");
+      expect(sqlQuery).toContain("flag_type = :flag_type");
+      expect(sqlQuery).toContain("updated_at = :now");
     });
 
     it("should update only provided fields", async () => {
@@ -341,12 +343,16 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
         databricksPort.CENTRUM_SCHEMA_NAME,
         expect.stringContaining("DELETE FROM experiment_annotations"),
+        [
+          { name: "annotation_id", value: mockAnnotationId },
+          { name: "experiment_id", value: mockExperimentId },
+        ],
       );
 
       const sqlCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
       const sqlQuery = sqlCall[1];
 
-      expect(sqlQuery).toContain(`WHERE id = '${mockAnnotationId}'`);
+      expect(sqlQuery).toContain("WHERE id = :annotation_id AND experiment_id = :experiment_id");
       expect(sqlQuery).not.toContain("user_id =");
     });
 
@@ -409,17 +415,21 @@ describe("ExperimentDataAnnotationsRepository", () => {
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
         databricksPort.CENTRUM_SCHEMA_NAME,
         expect.stringContaining("DELETE FROM experiment_annotations"),
+        [
+          { name: "experiment_id", value: mockExperimentId },
+          { name: "table_name", value: mockTableName },
+          { name: "type", value: "comment" },
+          { name: "row_id_0", value: "test1" },
+          { name: "row_id_1", value: "test2" },
+        ],
       );
 
       const sqlCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
       const sqlQuery = sqlCall[1];
 
-      expect(sqlQuery).toContain(`table_name = '${mockTableName}'`);
-      expect(sqlQuery).toContain("row_id IN (");
-      rowIds.forEach((id) => {
-        expect(sqlQuery).toContain(`'${id}'`);
-      });
-      expect(sqlQuery).toContain(`type = 'comment'`);
+      expect(sqlQuery).toContain("table_name = :table_name");
+      expect(sqlQuery).toContain("row_id IN (:row_id_0, :row_id_1)");
+      expect(sqlQuery).toContain("type = :type");
       expect(sqlQuery).not.toContain("user_id =");
     });
 
@@ -475,12 +485,65 @@ describe("ExperimentDataAnnotationsRepository", () => {
       // Assert
       expect(result.isSuccess()).toBe(true);
 
-      const sqlCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
-      const sqlQuery = sqlCall[1];
+      const [, sqlQuery, parameters] = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
 
-      // SQL injection attempt should be properly escaped (single quotes escaped as double quotes)
-      expect(sqlQuery).toContain("''; DROP TABLE annotations; --'");
-      // The malicious string should not appear unescaped in the final query
+      expect(sqlQuery).not.toContain("DROP TABLE");
+      expect(parameters).toContainEqual({
+        name: "content_text_0",
+        value: "'; DROP TABLE annotations; --",
+      });
+    });
+
+    it("should keep a hostile row ID out of the INSERT text", async () => {
+      // Arrange
+      const rowId = "x', 'y') --";
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
+
+      // Act
+      const result = await repository.storeAnnotations(mockExperimentId, [
+        {
+          userId: mockUserId,
+          userName: "Test User",
+          tableName: mockTableName,
+          rowId,
+          type: "comment",
+          contentText: "test",
+          flagType: null,
+        },
+      ]);
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+
+      const [, sqlQuery, parameters] = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
+
+      expect(sqlQuery).not.toContain(rowId);
+      expect(parameters).toContainEqual({ name: "row_id_0", value: rowId });
+    });
+
+    it("should keep hostile row IDs out of the bulk DELETE text", async () => {
+      // Arrange
+      const rowIds = ["row1", "x') OR 1=1 --", "\\') OR (1=1"];
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(mockSchemaData));
+
+      // Act
+      const result = await repository.deleteAnnotationsBulk(
+        mockExperimentId,
+        mockTableName,
+        rowIds,
+        "comment",
+      );
+
+      // Assert
+      expect(result.isSuccess()).toBe(true);
+
+      const [, sqlQuery, parameters] = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
+
+      expect(sqlQuery).not.toContain("OR 1=1");
+      expect(sqlQuery).toContain("row_id IN (:row_id_0, :row_id_1, :row_id_2)");
+      expect(parameters).toEqual(
+        expect.arrayContaining(rowIds.map((value, i) => ({ name: `row_id_${i}`, value }))),
+      );
     });
 
     it("should validate table names and types to prevent injection", async () => {

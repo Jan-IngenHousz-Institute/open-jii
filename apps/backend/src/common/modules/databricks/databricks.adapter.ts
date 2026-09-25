@@ -58,7 +58,7 @@ import type {
 } from "./services/query-builder/query-builder.types";
 import { cellNumber, cellString, cellUtcIso } from "./services/sql/cell-values";
 import { DatabricksSqlService } from "./services/sql/sql.service";
-import type { SchemaData } from "./services/sql/sql.types";
+import type { SchemaData, StatementParameter } from "./services/sql/sql.types";
 
 @Injectable()
 export class DatabricksAdapter implements ExperimentDatabricksPort {
@@ -1695,13 +1695,17 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     }
   }
 
-  async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
+  async executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    parameters?: StatementParameter[],
+  ): Promise<Result<SchemaData>> {
     this.logger.debug({
       msg: "Executing SQL query",
       operation: "executeSqlQuery",
       schemaName,
     });
-    return this.sqlService.executeSqlQuery(schemaName, sqlStatement);
+    return this.sqlService.executeSqlQuery(schemaName, sqlStatement, parameters);
   }
 
   /**
