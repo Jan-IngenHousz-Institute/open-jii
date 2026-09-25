@@ -1,5 +1,5 @@
 import { createVisualization } from "@/test/factories";
-import { render, screen } from "@/test/test-utils";
+import { act, render, screen, userEvent } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
@@ -7,19 +7,29 @@ import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 import { lineDefaultConfig } from "../basic/line/defaults";
 import { CartesianRenderer } from "./cartesian-renderer";
 
+interface CartesianChartProps {
+  config: PlotlyChartConfig;
+  data: { x: unknown[] }[];
+  onRelayout?: (event: Record<string, unknown>) => void;
+}
+
 const { cartesianChart } = vi.hoisted(() => ({
-  cartesianChart: vi.fn((_props: { config: PlotlyChartConfig }) => null),
+  cartesianChart: vi.fn((_props: CartesianChartProps) => null),
 }));
 vi.mock("@/components/charts/cartesian-chart", () => ({
   CartesianChart: cartesianChart,
 }));
 
-function renderedConfig(): PlotlyChartConfig {
+function renderedProps(): CartesianChartProps {
   const call = cartesianChart.mock.calls.at(-1);
   if (!call) {
     throw new Error("CartesianChart was never rendered");
   }
-  return call[0].config;
+  return call[0];
+}
+
+function renderedConfig(): PlotlyChartConfig {
+  return renderedProps().config;
 }
 
 function buildViz(overrides: Parameters<typeof createVisualization>[0] = {}) {
@@ -84,6 +94,49 @@ describe("CartesianRenderer", () => {
         />,
       );
       expect(renderedConfig().useWebGL).toBe(true);
+    });
+  });
+
+  describe("screen resolution", () => {
+    const rows = Array.from({ length: 40_000 }, (_, i) => ({ time: i, load: Math.sin(i / 30) }));
+
+    function renderLongLine() {
+      render(
+        <CartesianRenderer
+          visualization={buildViz()}
+          experimentId="exp-1"
+          data={rows}
+          defaultTraceType="line"
+        />,
+      );
+    }
+
+    it("draws a long line at screen resolution and says so", () => {
+      renderLongLine();
+
+      expect(renderedProps().data[0].x.length).toBeLessThan(10_000);
+      expect(screen.getByText("charts.reduced")).toBeInTheDocument();
+    });
+
+    it("draws every point on request, and back", async () => {
+      renderLongLine();
+
+      await userEvent.click(screen.getByRole("button", { name: "charts.showAllPoints" }));
+      expect(renderedProps().data[0].x).toHaveLength(40_000);
+      expect(screen.getByText("charts.showingAllPoints")).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "charts.drawAtResolution" }));
+      expect(renderedProps().data[0].x.length).toBeLessThan(10_000);
+    });
+
+    it("redraws the zoomed range at full detail", () => {
+      renderLongLine();
+
+      act(() => renderedProps().onRelayout?.({ "xaxis.range[0]": 1_000, "xaxis.range[1]": 1_100 }));
+
+      const zoomed = renderedProps().data[0].x;
+      expect(zoomed[0]).toBe(999);
+      expect(zoomed).toHaveLength(103);
     });
   });
 

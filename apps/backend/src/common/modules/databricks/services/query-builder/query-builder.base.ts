@@ -2,11 +2,13 @@ import { buildAggregateExpression } from "./expressions/aggregation";
 import { buildCumsumExpression } from "./expressions/cumsum";
 import { buildFilterCondition } from "./expressions/filter";
 import { buildTimeBucketExpression } from "./expressions/time-bucket";
+import { buildWidthBucketExpression } from "./expressions/width-bucket";
 import type {
   AggregateExpression,
   FilterCondition,
   FilterValue,
   TimeBucketUnit,
+  WidthBucket,
 } from "./query-builder.types";
 import { FlattenedFields } from "./schema/flattened-fields";
 import type { FlattenedField, FlattenedSource } from "./schema/flattened-fields";
@@ -96,6 +98,14 @@ export abstract class BaseQueryBuilder {
 
   buildTimeBucketExpression(column: string, unit: TimeBucketUnit): { sql: string; alias: string } {
     return buildTimeBucketExpression(column, unit, this);
+  }
+
+  buildWidthBucketExpression(
+    column: string,
+    bucket: WidthBucket,
+    alias?: string,
+  ): { sql: string; alias: string } {
+    return buildWidthBucketExpression(column, bucket, this, alias);
   }
 
   buildAggregateExpression(agg: AggregateExpression): { sql: string; alias: string } {

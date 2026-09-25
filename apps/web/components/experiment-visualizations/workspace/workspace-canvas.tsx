@@ -14,9 +14,9 @@ import { useExperimentVisualizationData } from "../../../hooks/experiment/useExp
 import "../../../styles/plotly-chart.css";
 import type { ChartFormValues } from "../charts/chart-config";
 import { getChartTypeDef } from "../charts/chart-registry";
-import { ChartWithTruncationNotice } from "../charts/chart-with-truncation-notice";
 import { dataSourcesByRole } from "../charts/data/data-sources";
 import { truncationOf } from "../charts/hooks/use-chart-data";
+import { ProvidedChartRead } from "../charts/provided-read-context";
 
 interface WorkspaceCanvasProps {
   control: Control<ChartFormValues>;
@@ -154,13 +154,13 @@ export function WorkspaceCanvas({ control, experimentId, visualizationId }: Work
 
   return (
     <Card className="h-[clamp(420px,60vh,640px)] gap-0 overflow-hidden p-4">
-      <ChartWithTruncationNotice truncation={truncationOf(fetched)}>
+      <ProvidedChartRead truncation={truncationOf(fetched)}>
         <Renderer
           visualization={previewVisualization}
           experimentId={experimentId}
           data={fetched?.rows}
         />
-      </ChartWithTruncationNotice>
+      </ProvidedChartRead>
     </Card>
   );
 }

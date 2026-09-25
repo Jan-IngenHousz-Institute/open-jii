@@ -88,7 +88,11 @@
     "title": "Diagrammtitel",
     "preview": "Diagramm-Vorschau",
     "showLegend": "Legende anzeigen",
-    "truncated": "{{shown}} von {{total}} Zeilen werden angezeigt. Fügen Sie einen Filter hinzu, um alle passenden Zeilen zu sehen."
+    "truncated": "{{shown}} von {{total}} Zeilen werden angezeigt. Fügen Sie einen Filter hinzu, um alle passenden Zeilen zu sehen.",
+    "reduced": "In Bildschirmauflösung aus {{total}} Zeilen gezeichnet.",
+    "showingAllPoints": "Jeder Punkt wird angezeigt.",
+    "showAllPoints": "Jeden Punkt anzeigen",
+    "drawAtResolution": "In Bildschirmauflösung zeichnen"
   },
   "configuration": {
     "columns": {

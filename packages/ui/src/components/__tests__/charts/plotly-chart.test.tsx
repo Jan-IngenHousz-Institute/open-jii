@@ -1426,6 +1426,32 @@ describe("PlotlyChart container resizing", () => {
     globalThis.ResizeObserver = original;
   });
 
+  it("hands the graph's relayout events to onRelayout on every graph it initialises", () => {
+    const onRelayout = vi.fn();
+    render(<PlotlyChart data={[]} layout={{}} onRelayout={onRelayout} />);
+    const plotProps = mockPlotComponent.mock.calls.at(-1)?.[0];
+
+    // react-plotly would keep a stale binding across a remount's purge, so it never gets the prop.
+    expect(plotProps.onRelayout).toBeUndefined();
+
+    const graphWithListeners = () => {
+      const listeners = new Map<string, (event: unknown) => void>();
+      const graphDiv = Object.assign(document.createElement("div"), {
+        on: (name: string, listener: (event: unknown) => void) => listeners.set(name, listener),
+      });
+      return { graphDiv, listeners };
+    };
+    const first = graphWithListeners();
+    const remounted = graphWithListeners();
+    act(() => {
+      plotProps.onInitialized({ data: [], layout: {}, frames: null }, first.graphDiv);
+      plotProps.onInitialized({ data: [], layout: {}, frames: null }, remounted.graphDiv);
+    });
+
+    remounted.listeners.get("plotly_relayout")?.({ "xaxis.range[0]": 1, "xaxis.range[1]": 2 });
+    expect(onRelayout).toHaveBeenCalledWith({ "xaxis.range[0]": 1, "xaxis.range[1]": 2 });
+  });
+
   it("observes its own container, not just the window", () => {
     // react-plotly's useResizeHandler binds to `window` resize, so collapsing
     // the sidebar left every chart at its previous pixel width.

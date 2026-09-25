@@ -91,7 +91,11 @@
     "title": "Chart Title",
     "preview": "Chart Preview",
     "showLegend": "Show Legend",
-    "truncated": "Showing {{shown}} of {{total}} rows. Add a filter to see all matching rows."
+    "truncated": "Showing {{shown}} of {{total}} rows. Add a filter to see all matching rows.",
+    "reduced": "Drawn at screen resolution from {{total}} rows.",
+    "showingAllPoints": "Showing every point.",
+    "showAllPoints": "Show every point",
+    "drawAtResolution": "Draw at screen resolution"
   },
   "configuration": {
     "columns": {
