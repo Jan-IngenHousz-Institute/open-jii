@@ -53,6 +53,30 @@ describe("ChartFrame", () => {
     expect(screen.queryByText("errors.noData")).not.toBeInTheDocument();
   });
 
+  it("says the chart holds part of the data when the read was stopped short", () => {
+    render(
+      <ChartFrame
+        {...baseProps}
+        isLoading={false}
+        error={undefined}
+        truncation={{ shown: 100_000, total: 553_000 }}
+      >
+        <div>chart-body</div>
+      </ChartFrame>,
+    );
+    expect(screen.getByText("chart-body")).toBeInTheDocument();
+    expect(screen.getByText("charts.truncated")).toBeInTheDocument();
+  });
+
+  it("shows no truncation notice for a complete read", () => {
+    render(
+      <ChartFrame {...baseProps} isLoading={false} error={undefined}>
+        <div>chart-body</div>
+      </ChartFrame>,
+    );
+    expect(screen.queryByText("charts.truncated")).not.toBeInTheDocument();
+  });
+
   it("hides the configLink in the error card when the visualization id is the preview placeholder", () => {
     render(
       <ChartFrame

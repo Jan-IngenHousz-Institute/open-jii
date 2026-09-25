@@ -27,9 +27,14 @@ export function LollipopRenderer({
   const yColumn = yEntry?.source.columnName;
   const yRowKey = yEntry ? rowKeyForSource(yEntry.source, yEntry.index) : undefined;
 
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData, {
-    orderBy: xColumn,
-  });
+  const { rows, isLoading, error, truncation } = useChartData(
+    visualization,
+    experimentId,
+    providedData,
+    {
+      orderBy: xColumn,
+    },
+  );
 
   const chartConfig = narrowChartConfig(visualization);
   const orientation = chartConfig.orientation === "h" ? "h" : "v";
@@ -92,6 +97,7 @@ export function LollipopRenderer({
       isLoading={isLoading}
       error={error}
       hasRows={hasRows}
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         <LollipopChart

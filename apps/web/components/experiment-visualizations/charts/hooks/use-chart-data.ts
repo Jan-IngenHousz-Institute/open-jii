@@ -12,10 +12,23 @@ import type { OwnRead } from "../../../experiment-dashboards/dashboard-shared-re
 import { dataSourcesByRole, readColumnsOf } from "../data/data-sources";
 import { sortRowsByColumn } from "../data/row-order";
 
+/** How much of a read the chart holds when the backend stopped it short. */
+export interface ChartTruncation {
+  shown: number;
+  total: number;
+}
+
+export function truncationOf(
+  data: { rows: unknown[]; totalRows: number; truncated: boolean } | undefined,
+): ChartTruncation | undefined {
+  return data?.truncated ? { shown: data.rows.length, total: data.totalRows } : undefined;
+}
+
 export interface UseChartDataResult {
   rows: Record<string, unknown>[];
   isLoading: boolean;
   error: unknown;
+  truncation?: ChartTruncation;
 }
 
 // The data hook disables itself on an empty table name.
@@ -108,7 +121,12 @@ export function useChartData(
   if (aggregationError) {
     return { rows: [], isLoading: false, error: aggregationError };
   }
-  return { rows, isLoading: active.isLoading, error: active.error };
+  return {
+    rows,
+    isLoading: active.isLoading,
+    error: active.error,
+    truncation: truncationOf(active.data),
+  };
 }
 
 // Diagnostic code surfaced when cumsum is configured without a groupBy or

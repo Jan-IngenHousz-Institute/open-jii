@@ -87,7 +87,8 @@
     },
     "title": "Diagrammtitel",
     "preview": "Diagramm-Vorschau",
-    "showLegend": "Legende anzeigen"
+    "showLegend": "Legende anzeigen",
+    "truncated": "{{shown}} von {{total}} Zeilen werden angezeigt. Fügen Sie einen Filter hinzu, um alle passenden Zeilen zu sehen."
   },
   "configuration": {
     "columns": {

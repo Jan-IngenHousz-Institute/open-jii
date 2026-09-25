@@ -19,7 +19,11 @@ export function ContourRenderer({
 }: ChartRendererProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData);
+  const { rows, isLoading, error, truncation } = useChartData(
+    visualization,
+    experimentId,
+    providedData,
+  );
   const chartConfig = narrowChartConfig(visualization);
   const dataSources = visualization.dataConfig.dataSources;
 
@@ -73,6 +77,7 @@ export function ContourRenderer({
       isLoading={isLoading}
       error={error}
       hasRows={hasRows}
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         <ContourPlot data={series} config={chartConfig} />
