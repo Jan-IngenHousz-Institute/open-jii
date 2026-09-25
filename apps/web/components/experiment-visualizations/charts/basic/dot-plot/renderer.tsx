@@ -58,9 +58,14 @@ export function DotPlotRenderer({
   const colorColumn = dataSourcesByRole(visualization.dataConfig.dataSources, "color")[0]?.source
     .columnName;
 
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData, {
-    orderBy: xColumn,
-  });
+  const { rows, isLoading, error, truncation } = useChartData(
+    visualization,
+    experimentId,
+    providedData,
+    {
+      orderBy: xColumn,
+    },
+  );
 
   const chartConfig = narrowChartConfig(visualization);
   const orientation = chartConfig.orientation === "h" ? "h" : "v";
@@ -183,6 +188,7 @@ export function DotPlotRenderer({
       isLoading={isLoading}
       error={error}
       hasRows={rows.length > 0}
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         <DotPlot data={chartSeries} config={effectiveConfig} orientation={orientation} />

@@ -23,9 +23,14 @@ export function PolarRenderer({
   const xColumn = dataSources.find((ds) => ds.role === "x")?.columnName;
   const hasYPicks = dataSources.some((ds) => ds.role === "y" && ds.columnName.length > 0);
 
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData, {
-    enabled: Boolean(xColumn) && hasYPicks,
-  });
+  const { rows, isLoading, error, truncation } = useChartData(
+    visualization,
+    experimentId,
+    providedData,
+    {
+      enabled: Boolean(xColumn) && hasYPicks,
+    },
+  );
 
   // KEEP IN SYNC with the field reads in `transformPolarData`.
   const series = useMemo(() => {
@@ -69,6 +74,7 @@ export function PolarRenderer({
       isLoading={isLoading}
       error={error}
       hasRows={hasRows}
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         <PolarPlot

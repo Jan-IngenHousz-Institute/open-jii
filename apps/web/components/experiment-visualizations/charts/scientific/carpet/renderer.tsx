@@ -19,7 +19,11 @@ export function CarpetRenderer({
 }: ChartRendererProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData);
+  const { rows, isLoading, error, truncation } = useChartData(
+    visualization,
+    experimentId,
+    providedData,
+  );
   const chartConfig = narrowChartConfig(visualization);
   const dataSources = visualization.dataConfig.dataSources;
 
@@ -81,6 +85,7 @@ export function CarpetRenderer({
         Boolean(zColumn) &&
         carpetData.length > 0
       }
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         <CarpetPlot carpetData={carpetData} contourData={contourData} config={chartConfig} />

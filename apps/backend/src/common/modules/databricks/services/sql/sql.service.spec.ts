@@ -100,6 +100,146 @@ describe("DatabricksSqlService", () => {
       expect(result.value).toEqual(mockTableData);
     });
 
+    it("should follow the chunk links and return every row of a chunked result", async () => {
+      const columns = [{ name: "id", type_name: "STRING", type_text: "STRING", position: 0 }];
+
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
+        .reply(200, {
+          statement_id: "chunked",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: { column_count: 1, columns },
+            total_row_count: 5,
+            total_chunk_count: 3,
+            truncated: false,
+          },
+          result: {
+            data_array: [["1"], ["2"]],
+            chunk_index: 0,
+            row_count: 2,
+            row_offset: 0,
+            next_chunk_index: 1,
+            next_chunk_internal_link:
+              "/api/2.0/sql/statements/chunked/result/chunks/1?row_offset=2",
+          },
+        });
+
+      const chunkCalls = nock(databricksHost)
+        .matchHeader("authorization", `Bearer ${MOCK_ACCESS_TOKEN}`)
+        .get("/api/2.0/sql/statements/chunked/result/chunks/1?row_offset=2")
+        .reply(200, {
+          data_array: [["3"], ["4"]],
+          chunk_index: 1,
+          row_count: 2,
+          row_offset: 2,
+          next_chunk_index: 2,
+          next_chunk_internal_link: "/api/2.0/sql/statements/chunked/result/chunks/2?row_offset=4",
+        })
+        .get("/api/2.0/sql/statements/chunked/result/chunks/2?row_offset=4")
+        .reply(200, {
+          data_array: [["5"]],
+          chunk_index: 2,
+          row_count: 1,
+          row_offset: 4,
+        });
+
+      const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
+
+      assertSuccess(result);
+      expect(result.value.rows).toEqual([["1"], ["2"], ["3"], ["4"], ["5"]]);
+      expect(result.value.totalRows).toBe(5);
+      expect(chunkCalls.isDone()).toBe(true);
+    });
+
+    it("should stop reading chunks once the response deadline has passed", async () => {
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
+        .reply(200, {
+          statement_id: "slow",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 1,
+              columns: [{ name: "id", type_name: "STRING", type_text: "STRING", position: 0 }],
+            },
+            total_row_count: 4,
+          },
+          result: {
+            data_array: [["1"], ["2"]],
+            chunk_index: 0,
+            row_count: 2,
+            row_offset: 0,
+            next_chunk_internal_link: "/api/2.0/sql/statements/slow/result/chunks/1?row_offset=2",
+          },
+        });
+      const chunkCall = nock(databricksHost)
+        .get("/api/2.0/sql/statements/slow/result/chunks/1?row_offset=2")
+        .reply(200, { data_array: [["3"], ["4"]], chunk_index: 1, row_count: 2, row_offset: 2 });
+
+      // The statement starts at 0 and has used 56 s of the budget by the time its chunks are read.
+      const clock = vi.spyOn(performance, "now").mockReturnValueOnce(0).mockReturnValue(56_000);
+
+      const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
+
+      clock.mockRestore();
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(504);
+      expect(result.error.code).toBe("WAREHOUSE_TIMEOUT");
+      expect(chunkCall.isDone()).toBe(false);
+    });
+
+    it("should fail the read when a later chunk cannot be fetched", async () => {
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
+        .reply(200, {
+          statement_id: "chunked",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 1,
+              columns: [{ name: "id", type_name: "STRING", type_text: "STRING", position: 0 }],
+            },
+            total_row_count: 4,
+          },
+          result: {
+            data_array: [["1"], ["2"]],
+            chunk_index: 0,
+            row_count: 2,
+            row_offset: 0,
+            next_chunk_internal_link:
+              "/api/2.0/sql/statements/chunked/result/chunks/1?row_offset=2",
+          },
+        });
+
+      nock(databricksHost)
+        .get("/api/2.0/sql/statements/chunked/result/chunks/1?row_offset=2")
+        .reply(500, { message: "chunk unavailable" });
+
+      const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
+
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(500);
+    });
+
     it("should send statement parameters with the statement", async () => {
       const parameters: StatementParameter[] = [
         { name: "row_id", value: "\\') OR 1=1 --" },
@@ -181,6 +321,40 @@ describe("DatabricksSqlService", () => {
         }),
       );
       logSpy.mockRestore();
+    });
+
+    it("should cap the result at the inline byte limit and report the cut as truncated", async () => {
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      const statementCall = nock(databricksHost)
+        .post(
+          DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/",
+          (body: { disposition: string; byte_limit: number }) =>
+            body.disposition === "INLINE" && body.byte_limit === 26_214_400,
+        )
+        .reply(200, {
+          statement_id: "cut",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 1,
+              columns: [{ name: "n", type_name: "LONG", type_text: "BIGINT", position: 0 }],
+            },
+            total_row_count: 1,
+            truncated: true,
+          },
+          result: { data_array: [["1"]], chunk_index: 0, row_count: 1, row_offset: 0 },
+        });
+
+      const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
+
+      assertSuccess(result);
+      expect(statementCall.isDone()).toBe(true);
+      expect(result.value.truncated).toBe(true);
     });
 
     it("should handle SQL execution errors", async () => {

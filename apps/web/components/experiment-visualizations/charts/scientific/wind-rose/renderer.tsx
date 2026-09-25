@@ -23,9 +23,14 @@ export function WindRoseRenderer({
   const xColumn = dataSources.find((ds) => ds.role === "x")?.columnName;
   const yColumn = dataSources.find((ds) => ds.role === "y")?.columnName;
 
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData, {
-    enabled: Boolean(xColumn) && Boolean(yColumn),
-  });
+  const { rows, isLoading, error, truncation } = useChartData(
+    visualization,
+    experimentId,
+    providedData,
+    {
+      enabled: Boolean(xColumn) && Boolean(yColumn),
+    },
+  );
 
   const directionBins = (chartConfig.windRoseDirectionBins ?? 8) as number;
   const showLabels = chartConfig.windRoseShowDirectionLabels !== false;
@@ -61,6 +66,7 @@ export function WindRoseRenderer({
       isLoading={isLoading}
       error={error}
       hasRows={hasData}
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         <WindRose

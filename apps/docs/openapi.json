@@ -349,7 +349,8 @@
                           "type": "integer"
                         },
                         "truncated": {
-                          "type": "boolean"
+                          "type": "boolean",
+                          "description": "True when more rows matched than were returned; totalRows then counts them all"
                         }
                       },
                       "required": [
@@ -756,7 +757,8 @@
                                 "type": "integer"
                               },
                               "truncated": {
-                                "type": "boolean"
+                                "type": "boolean",
+                                "description": "True when more rows matched than were returned; totalRows then counts them all"
                               }
                             },
                             "required": [
@@ -1069,7 +1071,8 @@
                                     "type": "integer"
                                   },
                                   "truncated": {
-                                    "type": "boolean"
+                                    "type": "boolean",
+                                    "description": "True when more rows matched than were returned; totalRows then counts them all"
                                   }
                                 },
                                 "required": [
@@ -1426,7 +1429,8 @@
                           "type": "integer"
                         },
                         "truncated": {
-                          "type": "boolean"
+                          "type": "boolean",
+                          "description": "True when more rows matched than were returned; totalRows then counts them all"
                         }
                       },
                       "required": [
@@ -1805,7 +1809,8 @@
                           "type": "integer"
                         },
                         "truncated": {
-                          "type": "boolean"
+                          "type": "boolean",
+                          "description": "True when more rows matched than were returned; totalRows then counts them all"
                         }
                       },
                       "required": [
@@ -2138,7 +2143,8 @@
                               "type": "integer"
                             },
                             "truncated": {
-                              "type": "boolean"
+                              "type": "boolean",
+                              "description": "True when more rows matched than were returned; totalRows then counts them all"
                             }
                           },
                           "required": [
@@ -2566,7 +2572,7 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 100000,
-              "description": "Hard cap on returned rows for filtered/aggregated reads. Ignored when page/pageSize are used."
+              "description": "Hard cap on returned rows for filtered/aggregated reads, 100000 when omitted. Ignored when page/pageSize are used."
             },
             "allowEmptyValue": true,
             "allowReserved": true
@@ -2658,7 +2664,8 @@
                             "type": "integer"
                           },
                           "truncated": {
-                            "type": "boolean"
+                            "type": "boolean",
+                            "description": "True when more rows matched than were returned; totalRows then counts them all"
                           }
                         },
                         "required": [
@@ -7333,7 +7340,8 @@
                           "type": "integer"
                         },
                         "truncated": {
-                          "type": "boolean"
+                          "type": "boolean",
+                          "description": "True when more rows matched than were returned; totalRows then counts them all"
                         }
                       },
                       "required": [

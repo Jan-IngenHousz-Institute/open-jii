@@ -32,9 +32,14 @@ export function CartesianRenderer({
   const dataSources = visualization.dataConfig.dataSources;
   const xColumn = dataSources.find((ds) => ds.role === "x")?.columnName;
 
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData, {
-    orderBy: xColumn,
-  });
+  const { rows, isLoading, error, truncation } = useChartData(
+    visualization,
+    experimentId,
+    providedData,
+    {
+      orderBy: xColumn,
+    },
+  );
 
   const chartConfig = narrowChartConfig(visualization);
 
@@ -105,6 +110,7 @@ export function CartesianRenderer({
       isLoading={isLoading}
       error={error}
       hasRows={rows.length > 0}
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         <CartesianChart data={chartSeries} config={effectiveConfig} subplots={subplots} />
