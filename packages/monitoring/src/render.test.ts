@@ -281,7 +281,20 @@ describe("each anomaly's detail", () => {
     const message = renderObservability(readings, clean, options);
 
     expect(message.blocks.length).toBeLessThanOrEqual(50);
-    expect(json(message, "context")).toMatch(/\d+ more on the report\./);
+    expect(json(message, "context")).toMatch(/\d+ more: signal-\d+/);
+    expect(json(message, "context")).not.toContain("on the report");
+  });
+
+  it("points the overflow at the report only when there is one", () => {
+    const readings = Array.from({ length: 40 }, (_, index) =>
+      anomaly(`signal-${index + 1}`, `Signal ${index + 1}`, index + 1, "critical"),
+    );
+    const message = renderObservability(readings, clean, {
+      ...options,
+      reportUrl: "https://example.test/report",
+    });
+
+    expect(json(message, "context")).toMatch(/\d+ more on the report: signal-\d+/);
   });
 
   it("adds nothing under a quiet morning", () => {
