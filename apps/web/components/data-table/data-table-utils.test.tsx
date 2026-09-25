@@ -3,6 +3,7 @@ import type { HeaderGroup, Row } from "@tanstack/react-table";
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 
+import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import type { DataTableFeatures } from "./data-table-features";
@@ -187,6 +188,7 @@ describe("DataTableHeader", () => {
       header?: string | (() => React.ReactNode);
       size?: number;
       isPlaceholder?: boolean;
+      renamedFrom?: ExperimentDataColumn["renamedFrom"];
     }[],
   ) {
     return [
@@ -200,7 +202,7 @@ describe("DataTableHeader", () => {
             columnDef: {
               header: h.header ?? h.id,
               size: h.size ?? 150,
-              meta: h.type ? { type: h.type } : undefined,
+              meta: h.type ? { type: h.type, renamedFrom: h.renamedFrom } : undefined,
             },
           },
           isPlaceholder: h.isPlaceholder ?? false,
@@ -231,6 +233,26 @@ describe("DataTableHeader", () => {
     // ends up over the left edge of a column read up its right.
     expect(screen.getByText("value").parentElement).toHaveClass("justify-end");
     expect(screen.getByText("name").parentElement).toHaveClass("justify-between");
+  });
+
+  it("heads a renamed field with its own name and a source tag", () => {
+    const hg = makeHeaderGroup([
+      {
+        id: "device_output",
+        type: "STRING",
+        header: "device",
+        renamedFrom: { name: "device", source: "macro_output" },
+      },
+    ]);
+
+    render(
+      <table>
+        <DataTableHeader headerGroups={hg} />
+      </table>,
+    );
+
+    expect(screen.getByText("device")).toBeInTheDocument();
+    expect(screen.getByText("dataColumns.sourceMacroOutput")).toBeInTheDocument();
   });
 
   it("does not render placeholder headers", () => {

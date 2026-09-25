@@ -1001,6 +1001,145 @@ describe("ExperimentDataRepository", () => {
     });
   });
 
+  describe("table shape", () => {
+    const readParams = { experimentId: faker.string.uuid(), experiment: mockExperiment };
+    const macroTable: ExperimentTableMetadata = {
+      identifier: "macro_123",
+      tableType: "macro",
+      rowCount: 50,
+      latestRowAt: null,
+      schemaRevision: null,
+      macroSchema: "OBJECT<phi2: DOUBLE>",
+      questionsSchema: null,
+      customMetadataSchema: null,
+    };
+    const emptyData = { columns: [], rows: [], totalRows: 0, truncated: false };
+
+    it("runs an aggregation over the table with its payload flattened", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([macroTable]),
+      );
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(emptyData));
+      const aggregation = { groupBy: [{ column: "phi2" }], functions: [] };
+
+      const result = await repository.getTableData({
+        experimentId: faker.string.uuid(),
+        experiment: mockExperiment,
+        tableName: "macro_123",
+        aggregation,
+      });
+
+      assertSuccess(result);
+      expect(result.value[0].totalPages).toBe(1);
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          aggregation,
+          variants: [
+            { columnName: "macro_output", schema: "OBJECT<phi2: DOUBLE>", suffix: "output" },
+          ],
+          reservedColumns: VIEW_COLUMNS,
+        }),
+      );
+    });
+
+    it("passes on a query-builder failure for an aggregation and for a chart read", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([macroTable]),
+      );
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(
+        failure(AppError.badRequest("bad column", "INVALID_QUERY_INPUT")),
+      );
+      const params = {
+        experimentId: faker.string.uuid(),
+        experiment: mockExperiment,
+        tableName: "macro_123",
+      };
+
+      const aggregated = await repository.getTableData({
+        ...params,
+        aggregation: { groupBy: [{ column: "phi2" }], functions: [] },
+      });
+      const charted = await repository.getTableData({ ...params, columns: ["phi2"] });
+
+      assertFailure(aggregated);
+      assertFailure(charted);
+      expect(charted.error.code).toBe("INVALID_QUERY_INPUT");
+    });
+
+    it("flattens an upload table's rows and its custom metadata, each with its suffix", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([
+          {
+            identifier: "upload_1",
+            tableType: "upload",
+            rowCount: 5,
+            latestRowAt: null,
+            schemaRevision: null,
+            customMetadataSchema: "OBJECT<plot: STRING>",
+            uploadSchema: "OBJECT<id: STRING, leaf: DOUBLE>",
+          },
+        ]),
+      );
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(emptyData));
+
+      await repository.getTableData({ ...readParams, tableName: "upload_1" });
+
+      expect(databricksPort.getExperimentTableColumns).toHaveBeenCalledWith("upload", "upload_1");
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variants: [
+            { columnName: "custom_metadata", schema: "OBJECT<plot: STRING>", suffix: "metadata" },
+            {
+              columnName: "uploaded_data",
+              schema: "OBJECT<id: STRING, leaf: DOUBLE>",
+              suffix: "upload",
+            },
+          ],
+        }),
+      );
+    });
+
+    it("hides an upload table's payload when it has no schema, and looks up no columns", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([
+          {
+            identifier: "upload_1",
+            tableType: "upload",
+            rowCount: 5,
+            latestRowAt: null,
+            schemaRevision: null,
+          },
+        ]),
+      );
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT 1"));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(success(emptyData));
+
+      await repository.getTableData({ ...readParams, tableName: "upload_1" });
+
+      const [query] = vi.mocked(databricksPort.buildExperimentQuery).mock.calls[0];
+      expect(databricksPort.getExperimentTableColumns).not.toHaveBeenCalled();
+      expect(query.variants).toBeUndefined();
+      expect(query.exceptColumns).toContain("uploaded_data");
+      expect(query.exceptColumns).toContain("custom_metadata");
+    });
+
+    it("fails a read when the view's columns cannot be looked up", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([macroTable]),
+      );
+      vi.spyOn(databricksPort, "getExperimentTableColumns").mockResolvedValue(
+        failure(AppError.internal("warehouse unavailable")),
+      );
+
+      const result = await repository.getTableData({ ...readParams, tableName: "macro_123" });
+
+      assertFailure(result);
+      expect(result.error.message).toBe("warehouse unavailable");
+    });
+  });
+
   describe("edge cases and error paths", () => {
     const experimentId = faker.string.uuid();
 
