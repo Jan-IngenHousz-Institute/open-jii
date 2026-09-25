@@ -1,4 +1,3 @@
-import { createExperimentDataTable } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
@@ -8,21 +7,14 @@ import { contract } from "@repo/api/contract";
 import { useColumnMetadata } from "./useColumnMetadata";
 
 describe("useColumnMetadata", () => {
-  it("returns the columns from the underlying data fetch", async () => {
-    server.mount(contract.experiments.getExperimentData, {
-      body: [
-        createExperimentDataTable({
-          data: {
-            columns: [
-              { name: "time", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
-              { name: "temp", type_name: "DOUBLE", type_text: "DOUBLE" },
-            ],
-            rows: [],
-            totalRows: 0,
-            truncated: false,
-          },
-        }),
-      ],
+  it("returns the table's columns", async () => {
+    server.mount(contract.experiments.getExperimentTableColumns, {
+      body: {
+        columns: [
+          { name: "time", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+          { name: "temp", type_name: "DOUBLE", type_text: "DOUBLE" },
+        ],
+      },
     });
 
     const { result } = renderHook(() => useColumnMetadata("exp-1", "readings"));
@@ -42,7 +34,7 @@ describe("useColumnMetadata", () => {
   });
 
   it("falls back to an empty list on API error", async () => {
-    server.mount(contract.experiments.getExperimentData, { status: 500 });
+    server.mount(contract.experiments.getExperimentTableColumns, { status: 500 });
 
     const { result } = renderHook(() => useColumnMetadata("exp-1", "readings"));
 
@@ -51,9 +43,7 @@ describe("useColumnMetadata", () => {
   });
 
   it("reports isLoading=true before the request resolves", () => {
-    server.mount(contract.experiments.getExperimentData, {
-      body: [createExperimentDataTable()],
-    });
+    server.mount(contract.experiments.getExperimentTableColumns, { body: { columns: [] } });
 
     const { result } = renderHook(() => useColumnMetadata("exp-1", "readings"));
     expect(result.current.isLoading).toBe(true);

@@ -1,4 +1,4 @@
-import { createExperimentDataTable, createFilterWidget } from "@/test/factories";
+import { createFilterWidget } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
@@ -8,22 +8,14 @@ import { contract } from "@repo/api/contract";
 import { DashboardFiltersProvider } from "../../dashboard-filters-context";
 import { FilterWidgetView } from "./filter-widget-view";
 
-function mountColumns(tableName: string) {
-  server.mount(contract.experiments.getExperimentData, {
-    body: [
-      createExperimentDataTable({
-        name: tableName,
-        data: {
-          columns: [
-            { name: "device_id", type_name: "STRING", type_text: "STRING" },
-            { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" },
-          ],
-          rows: [],
-          totalRows: 0,
-          truncated: false,
-        },
-      }),
-    ],
+function mountColumns() {
+  server.mount(contract.experiments.getExperimentTableColumns, {
+    body: {
+      columns: [
+        { name: "device_id", type_name: "STRING", type_text: "STRING" },
+        { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" },
+      ],
+    },
   });
   server.mount(contract.experiments.getDistinctColumnValues, {
     body: { values: ["d1", "d2"], truncated: false },
@@ -44,7 +36,7 @@ describe("FilterWidgetView", () => {
   });
 
   it("renders the resolved column title and operator label when fully configured", async () => {
-    mountColumns("raw_data");
+    mountColumns();
     const widget = createFilterWidget({
       config: {
         showTitle: true,
@@ -67,7 +59,7 @@ describe("FilterWidgetView", () => {
   });
 
   it("hides the title row when showTitle is off", () => {
-    mountColumns("raw_data");
+    mountColumns();
     const widget = createFilterWidget({
       config: {
         showTitle: false,
@@ -87,7 +79,7 @@ describe("FilterWidgetView", () => {
   });
 
   it("surfaces the reset button only after the viewer overrides the saved value", async () => {
-    mountColumns("raw_data");
+    mountColumns();
     const widget = createFilterWidget({
       config: {
         showTitle: true,

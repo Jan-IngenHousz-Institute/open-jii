@@ -353,6 +353,42 @@ export class ExperimentDataRepository {
   }
 
   /**
+   * The columns a read of the table returns. Columns only arrive or leave with a new schema
+   * revision, so the answer is cached per revision and rows landing in the table do not re-run
+   * the statement.
+   */
+  async getTableColumns(params: {
+    experimentId: string;
+    tableName: string;
+  }): Promise<Result<SchemaDataDto["columns"]>> {
+    const { experimentId, tableName } = params;
+
+    const shapeResult = await this.tableShape(experimentId, tableName);
+    if (shapeResult.isFailure()) {
+      return shapeResult;
+    }
+
+    const shape = shapeResult.value;
+    const queryResult = this.buildQuery(experimentId, shape, { limit: 1 });
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
+
+    const revision = shape.metadata.schemaRevision ?? "";
+    const cacheKey = `table-columns:${experimentId}:${tableName}:${revision}`;
+    return tryCatch(async () => {
+      const columns = await this.cachePort.tryCache(cacheKey, async () => {
+        const dataResult = await this.executeQuery(queryResult.value);
+        if (dataResult.isFailure()) {
+          throw dataResult.error;
+        }
+        return this.describeColumns(dataResult.value.columns, shape);
+      });
+      return columns ?? [];
+    });
+  }
+
+  /**
    * Schemas, row count and newest row of every table in an experiment, as one
    * cached snapshot. Reads build their SQL from it and the tables listing
    * serves it, so a count the page has seen is the count its next read uses.
@@ -802,16 +838,24 @@ export class ExperimentDataRepository {
    * Convert schema data to DTO, tag the columns a name clash renamed, and route every row
    * through the contributor anonymiser; the single seat for that policy.
    */
+  /** A read's columns, each renamed payload field carrying its own name and where it came from. */
+  private describeColumns(
+    columns: SchemaData["columns"],
+    shape: TableShape,
+  ): SchemaDataDto["columns"] {
+    const renamed = this.renamedColumns(shape);
+    return columns.map((column) => {
+      const renamedFrom = renamed.get(column.name);
+      return renamedFrom === undefined ? column : { ...column, renamedFrom };
+    });
+  }
+
   private transformSchemaData(
     schemaData: SchemaData,
     experiment: ExperimentDto,
     shape: TableShape,
   ): SchemaDataDto {
-    const renamed = this.renamedColumns(shape);
-    const columns = schemaData.columns.map((column) => {
-      const renamedFrom = renamed.get(column.name);
-      return renamedFrom === undefined ? column : { ...column, renamedFrom };
-    });
+    const columns = this.describeColumns(schemaData.columns, shape);
 
     const rows = schemaData.rows.map((row) => {
       const dataRow: Record<string, string | null> = {};

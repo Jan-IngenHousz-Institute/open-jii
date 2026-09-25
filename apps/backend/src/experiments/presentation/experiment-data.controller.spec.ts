@@ -5,6 +5,7 @@ import { AppError, success, failure } from "../../common/utils/fp-utils";
 import { TestHarness } from "../../test/test-harness";
 import { GetDistinctColumnValuesUseCase } from "../application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
+import { GetExperimentTableColumnsUseCase } from "../application/use-cases/experiment-data/get-experiment-table-columns";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
 
 /* eslint-disable @typescript-eslint/unbound-method */
@@ -16,6 +17,7 @@ describe("ExperimentDataController", () => {
   let getExperimentDataUseCase: GetExperimentDataUseCase;
   let getExperimentTablesUseCase: GetExperimentTablesUseCase;
   let getDistinctColumnValuesUseCase: GetDistinctColumnValuesUseCase;
+  let getExperimentTableColumnsUseCase: GetExperimentTableColumnsUseCase;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -32,6 +34,7 @@ describe("ExperimentDataController", () => {
     getExperimentDataUseCase = testApp.module.get(GetExperimentDataUseCase);
     getExperimentTablesUseCase = testApp.module.get(GetExperimentTablesUseCase);
     getDistinctColumnValuesUseCase = testApp.module.get(GetDistinctColumnValuesUseCase);
+    getExperimentTableColumnsUseCase = testApp.module.get(GetExperimentTableColumnsUseCase);
   });
 
   afterEach(() => {
@@ -182,6 +185,38 @@ describe("ExperimentDataController", () => {
     });
   });
 
+  describe("getExperimentTableColumns", () => {
+    it("returns the columns on success", async () => {
+      const experimentId = readableExperimentId;
+      const body = { columns: [{ name: "time", type_name: "TIMESTAMP", type_text: "TIMESTAMP" }] };
+
+      vi.spyOn(getExperimentTableColumnsUseCase, "execute").mockResolvedValue(success(body));
+
+      const response = await testApp
+        .get(`/api/v1/experiments/${experimentId}/data/columns?tableName=raw_data`)
+        .withAuth(testUserId)
+        .expect(200);
+
+      expect(response.body).toEqual(body);
+      expect(getExperimentTableColumnsUseCase.execute).toHaveBeenCalledWith(
+        experimentId,
+        testUserId,
+        expect.objectContaining({ tableName: "raw_data" }),
+      );
+    });
+
+    it("maps a use-case failure to its HTTP status", async () => {
+      vi.spyOn(getExperimentTableColumnsUseCase, "execute").mockResolvedValue(
+        failure(AppError.notFound("Table 'raw_data' not found in experiment")),
+      );
+
+      await testApp
+        .get(`/api/v1/experiments/${readableExperimentId}/data/columns?tableName=raw_data`)
+        .withAuth(testUserId)
+        .expect(404);
+    });
+  });
+
   describe("authorization", () => {
     it.each([
       {
@@ -201,6 +236,13 @@ describe("ExperimentDataController", () => {
         request: (experimentId: string, userId: string) =>
           testApp
             .get(`/api/v1/experiments/${experimentId}/data/distinct?tableName=raw_data&column=site`)
+            .withAuth(userId),
+      },
+      {
+        name: "get table columns",
+        request: (experimentId: string, userId: string) =>
+          testApp
+            .get(`/api/v1/experiments/${experimentId}/data/columns?tableName=raw_data`)
             .withAuth(userId),
       },
     ])("requires read access to $name", async ({ request }) => {

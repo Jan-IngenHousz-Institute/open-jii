@@ -340,6 +340,16 @@ export const zExperimentDistinctValuesResponse = z.object({
   truncated: z.boolean().describe("True when the column has more values than `limit` returned"),
 });
 
+export const zExperimentTableColumnsQuery = z.object({
+  tableName: zExperimentTableNameInput.describe("Table whose columns to return"),
+});
+
+export const zExperimentTableColumnsResponse = z.object({
+  columns: z
+    .array(zExperimentDataColumn)
+    .describe("The columns a read of the table returns, in order"),
+});
+
 export const zExperimentDataTable = z.object({
   name: z.string().describe("Technical name of the table used for queries and operations"),
   catalog_name: z.string().describe("Catalog name"),
@@ -457,6 +467,8 @@ export const zExperimentTablesMetadataList = z.array(zExperimentTableMetadata);
 export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
 export type ExperimentDistinctValuesQuery = z.infer<typeof zExperimentDistinctValuesQuery>;
 export type ExperimentDistinctValuesResponse = z.infer<typeof zExperimentDistinctValuesResponse>;
+export type ExperimentTableColumnsQuery = z.infer<typeof zExperimentTableColumnsQuery>;
+export type ExperimentTableColumnsResponse = z.infer<typeof zExperimentTableColumnsResponse>;
 export type ExperimentDataTable = z.infer<typeof zExperimentDataTable>;
 export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
 export type ExperimentColumnInfo = z.infer<typeof zExperimentColumnInfo>;

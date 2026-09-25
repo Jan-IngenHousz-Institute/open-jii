@@ -2800,6 +2800,108 @@
         }
       }
     },
+    "/api/v1/experiments/{id}/data/columns": {
+      "get": {
+        "operationId": "experiments.getExperimentTableColumns",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the experiment"
+            }
+          },
+          {
+            "name": "tableName",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "raw_data",
+                    "device"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                }
+              ],
+              "description": "Table whose columns to return"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "type_name": {
+                            "type": "string"
+                          },
+                          "type_text": {
+                            "type": "string"
+                          },
+                          "renamedFrom": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "source": {
+                                "enum": [
+                                  "macro_output",
+                                  "questions_data",
+                                  "custom_metadata",
+                                  "uploaded_data"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "source"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "type_name",
+                          "type_text"
+                        ]
+                      },
+                      "description": "The columns a read of the table returns, in order"
+                    }
+                  },
+                  "required": [
+                    "columns"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/experiments/{id}/data/exports": {
       "post": {
         "operationId": "experiments.initiateExport",
