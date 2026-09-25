@@ -237,4 +237,56 @@ describe("ExperimentDataTable", () => {
 
     expect(screen.getByText("DeleteAnnotationsDialog for 1 (flag)")).toBeInTheDocument();
   });
+
+  describe("default window", () => {
+    it("opens a large time-sorted table on the 30 days up to its newest row", () => {
+      setupHook();
+      render(
+        <ExperimentDataTable
+          {...defaultProps}
+          tableRowCount={500_000}
+          latestRowAt="2026-09-25T12:00:00.000Z"
+        />,
+      );
+
+      expect(mockUseExperimentData).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          filters: [
+            {
+              column: "timestamp",
+              operator: "greater_than_or_equal",
+              value: "2026-08-26T12:00:00.000Z",
+            },
+          ],
+        }),
+      );
+    });
+
+    it("opens a small table, or one sorted by something else, unfiltered", () => {
+      setupHook();
+      render(
+        <ExperimentDataTable
+          {...defaultProps}
+          tableRowCount={100}
+          latestRowAt="2026-09-25T12:00:00Z"
+        />,
+      );
+      expect(mockUseExperimentData).toHaveBeenLastCalledWith(
+        expect.objectContaining({ filters: [] }),
+      );
+
+      render(
+        <ExperimentDataTable
+          {...defaultProps}
+          tableName="upload_table"
+          defaultSortColumn="uploaded_at"
+          tableRowCount={500_000}
+          latestRowAt="2026-09-25T12:00:00Z"
+        />,
+      );
+      expect(mockUseExperimentData).toHaveBeenLastCalledWith(
+        expect.objectContaining({ filters: [] }),
+      );
+    });
+  });
 });

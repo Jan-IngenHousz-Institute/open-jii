@@ -9,6 +9,7 @@ import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExper
 import { useLandedRowIds } from "@/hooks/useLandedRowIds";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { PaginationState, RowSelectionState } from "@tanstack/react-table";
+import { subDays } from "date-fns";
 import React, { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod";
@@ -18,6 +19,7 @@ import { DeleteAnnotationsDialog } from "~/components/experiment-data/annotation
 import { useUrlDataFilters } from "~/hooks/useUrlDataFilters";
 
 import type { ExperimentAnnotationType } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
 import { Form } from "@repo/ui/components/form";
 import { Skeleton } from "@repo/ui/components/skeleton";
@@ -30,6 +32,30 @@ function getSortColumnName(columnName: string, columnType?: string): string {
     return "user_name";
   }
   return columnName;
+}
+
+// Past this size, reading a whole time-sorted table page by page is what makes it slow.
+const DEFAULT_WINDOW_MIN_ROWS = 200_000;
+const DEFAULT_WINDOW_DAYS = 30;
+
+/**
+ * A large time-sorted table opens on the 30 days up to its newest row, as an ordinary filter the
+ * user can remove. Counting back from the newest row rather than today keeps a table whose
+ * experiment stopped measuring from opening empty.
+ */
+function defaultWindowFilters(table: {
+  defaultSortColumn?: string;
+  tableRowCount?: number;
+  latestRowAt?: string | null;
+}): ExperimentDataFilter[] {
+  const isLarge = (table.tableRowCount ?? 0) > DEFAULT_WINDOW_MIN_ROWS;
+  const isTimeSorted = table.defaultSortColumn === "timestamp";
+  if (!isLarge || !isTimeSorted || !table.latestRowAt) {
+    return [];
+  }
+
+  const from = subDays(new Date(table.latestRowAt), DEFAULT_WINDOW_DAYS);
+  return [{ column: "timestamp", operator: "greater_than_or_equal", value: from.toISOString() }];
 }
 
 const bulkSelectionFormSchema = z.object({
@@ -49,6 +75,8 @@ export function ExperimentDataTable({
   displayName,
   defaultSortColumn,
   errorColumn,
+  tableRowCount,
+  latestRowAt,
   canContribute = false,
 }: {
   experimentId: string;
@@ -57,6 +85,8 @@ export function ExperimentDataTable({
   displayName?: string;
   defaultSortColumn?: string;
   errorColumn?: string;
+  tableRowCount?: number;
+  latestRowAt?: string | null;
   /** Whether annotation controls are available. */
   canContribute?: boolean;
 }) {
@@ -66,7 +96,14 @@ export function ExperimentDataTable({
   const [sortColumn, setSortColumn] = useState<string | undefined>(defaultSortColumn);
   const [sortDirection, setSortDirection] = useState<"ASC" | "DESC">("DESC");
 
-  const { filters, setFilters, completeFilters: activeFilters } = useUrlDataFilters(tableName);
+  const {
+    filters,
+    setFilters,
+    completeFilters: activeFilters,
+  } = useUrlDataFilters(
+    tableName,
+    defaultWindowFilters({ defaultSortColumn, tableRowCount, latestRowAt }),
+  );
 
   const [addAnnotationDialogOpen, setAddAnnotationDialogOpen] = useState(false);
   const [addAnnotationRowIds, setAddAnnotationRowIds] = useState<string[]>([]);

@@ -23,6 +23,8 @@ import { ExperimentDataRepository } from "./experiment-data.repository";
 
 /* eslint-disable @typescript-eslint/unbound-method */
 
+type ExperimentQuery = Parameters<DatabricksPort["buildExperimentQuery"]>[0];
+
 describe("ExperimentDataRepository", () => {
   const testApp = TestHarness.App;
   let repository: ExperimentDataRepository;
@@ -1137,6 +1139,219 @@ describe("ExperimentDataRepository", () => {
 
       assertFailure(result);
       expect(result.error.message).toBe("warehouse unavailable");
+    });
+  });
+
+  describe("late payload pages", () => {
+    const largeMacroTable: ExperimentTableMetadata = {
+      identifier: "macro_123",
+      tableType: "macro",
+      displayName: null,
+      rowCount: 500_000,
+      latestRowAt: null,
+      schemaRevision: null,
+      macroSchema: "OBJECT<phi2: DOUBLE>",
+      questionsSchema: null,
+      customMetadataSchema: null,
+    };
+    const idColumn = { name: "id", type_name: "INT", type_text: "INT", position: 0 };
+    const phi2Column = { name: "phi2", type_name: "DOUBLE", type_text: "DOUBLE", position: 1 };
+    const table = (
+      columns: { name: string; type_name: string; type_text: string; position: number }[],
+      rows: (string | null)[][],
+    ) => ({ columns, rows, totalRows: rows.length, truncated: false });
+
+    /**
+     * Answers the id pick with `ids`, the lookup by id with `rows`, a COUNT with 9 and anything
+     * else with one full row, failing the statements `failOn` picks; returns every statement in
+     * the order it started.
+     */
+    const answer = (
+      ids: string[],
+      rows: (string | null)[][],
+      failOn: (sql: string) => boolean = () => false,
+    ) => {
+      const statements: string[] = [];
+      vi.spyOn(databricksPort, "executeSqlQuery").mockImplementation((_schema, sql) => {
+        statements.push(sql);
+        if (failOn(sql)) {
+          return Promise.resolve(failure(AppError.internal("warehouse unavailable")));
+        }
+        if (sql.startsWith("SELECT COUNT")) {
+          return Promise.resolve(success(table([idColumn], [["9"]])));
+        }
+        if (sql.includes("`id` IN (")) {
+          return Promise.resolve(success(table([idColumn, phi2Column], rows)));
+        }
+        if (sql.startsWith("SELECT `id`\n")) {
+          return Promise.resolve(
+            success(
+              table(
+                [idColumn],
+                ids.map((id) => [id]),
+              ),
+            ),
+          );
+        }
+        return Promise.resolve(success(table([idColumn, phi2Column], [["1", "0.5"]])));
+      });
+      return statements;
+    };
+
+    const readPage = (metadata: ExperimentTableMetadata, extra: object = {}) => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([metadata]));
+      return repository.getTableData({
+        ...{ experimentId: faker.string.uuid(), experiment: mockExperiment },
+        tableName: metadata.identifier,
+        page: 1,
+        pageSize: 3,
+        orderBy: "timestamp",
+        orderDirection: "DESC",
+        ...extra,
+      });
+    };
+
+    it("picks a large table's page by id, then reads only those rows, in the picked order", async () => {
+      const statements = answer(
+        ["3", "1", "2"],
+        [
+          ["1", "0.1"],
+          ["2", "0.2"],
+          ["3", "0.3"],
+        ],
+      );
+      const logSpy = vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
+
+      const result = await readPage(largeMacroTable);
+
+      assertSuccess(result);
+      expect(statements).toHaveLength(2);
+      expect(statements[0]).toMatch(/^SELECT `id`\n/);
+      expect(statements[0]).toContain("ORDER BY `timestamp` DESC");
+      expect(statements[0]).toContain("LIMIT 3");
+      expect(statements[1]).toContain("`id` IN ('3', '1', '2')");
+      expect(statements[1]).not.toContain("ORDER BY");
+      expect(statements[1]).not.toContain("LIMIT");
+      expect(result.value[0].data?.rows.map((row) => row.id)).toEqual(["3", "1", "2"]);
+      expect(result.value[0].totalRows).toBe(500_000);
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ mode: "page-late-payload", droppedRows: 0 }),
+      );
+    });
+
+    it("drops a row outside the page that shares an id, and keeps a page's repeated id", async () => {
+      answer(
+        ["7", "9", "9"],
+        [
+          ["7", "a"],
+          ["7", "b"],
+          ["9", "x"],
+          ["9", "y"],
+        ],
+      );
+      const logSpy = vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
+
+      const result = await readPage(largeMacroTable);
+
+      assertSuccess(result);
+      expect(result.value[0].data?.rows.map((row) => [row.id, row.phi2])).toEqual([
+        ["7", "a"],
+        ["9", "x"],
+        ["9", "y"],
+      ]);
+      expect(logSpy).toHaveBeenCalledWith(expect.objectContaining({ droppedRows: 1 }));
+    });
+
+    it("reads a page that picks no ids as one statement, so it keeps the table's columns", async () => {
+      const statements = answer([], []);
+
+      const result = await readPage(largeMacroTable);
+
+      assertSuccess(result);
+      expect(statements).toHaveLength(2);
+      expect(statements[1]).not.toContain("IN (");
+      expect(statements[1]).toContain("LIMIT 3");
+      expect(result.value[0].data?.columns.map((column) => column.name)).toEqual(["id", "phi2"]);
+    });
+
+    it("keeps one statement for a small table and for a projection without the row id", async () => {
+      const small = answer(["1"], [["1", "0.5"]]);
+      await readPage({ ...largeMacroTable, rowCount: 100 });
+      expect(small).toHaveLength(1);
+
+      const withoutId = answer(["1"], [["1", "0.5"]]);
+      await readPage(largeMacroTable, {
+        columns: ["phi2"],
+        filters: [{ column: "phi2", operator: "greater_than", value: 0.1 }],
+      });
+      expect(withoutId.some((sql) => sql.startsWith("SELECT `id`\n"))).toBe(false);
+    });
+
+    it("counts a filtered page alongside its id pick, then reads the rows", async () => {
+      const statements = answer(["3"], [["3", "0.3"]]);
+
+      const result = await readPage(largeMacroTable, {
+        filters: [{ column: "phi2", operator: "greater_than", value: 0.1 }],
+      });
+
+      assertSuccess(result);
+      expect(statements).toHaveLength(3);
+      expect(statements.slice(0, 2).some((sql) => sql.startsWith("SELECT COUNT"))).toBe(true);
+      expect(statements.slice(0, 2).some((sql) => sql.startsWith("SELECT `id`\n"))).toBe(true);
+      expect(statements[2]).toContain("`id` IN ('3')");
+      expect(statements[1]).toContain("> 0.1");
+      expect(statements[2]).not.toContain("> 0.1");
+      expect(result.value[0].totalRows).toBe(9);
+    });
+
+    it.each([
+      ["the count", (sql: string) => sql.startsWith("SELECT COUNT")],
+      ["the id pick", (sql: string) => sql.startsWith("SELECT `id`\n")],
+      ["the lookup by id", (sql: string) => sql.includes("`id` IN (")],
+    ])("fails a filtered page when %s fails", async (_step, failOn) => {
+      answer(["3"], [["3", "0.3"]], failOn);
+
+      const result = await readPage(largeMacroTable, {
+        filters: [{ column: "phi2", operator: "greater_than", value: 0.1 }],
+      });
+
+      assertFailure(result);
+      expect(result.error.message).toBe("warehouse unavailable");
+    });
+
+    it.each([
+      ["the id pick", (query: ExperimentQuery) => query.columns?.[0] === "id"],
+      ["the lookup by id", (query: ExperimentQuery) => query.filters?.[0]?.operator === "in"],
+      ["a small table's page", () => true],
+    ])("fails a page when building %s fails", async (step, failOn) => {
+      answer(["3"], [["3", "0.3"]]);
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockImplementation((query) => {
+        if (failOn(query)) {
+          return failure(AppError.badRequest("bad column", "INVALID_QUERY_INPUT"));
+        }
+        return success(query.columns?.[0] === "id" ? "SELECT `id`\nFROM t" : "SELECT * FROM t");
+      });
+      const table =
+        step === "a small table's page" ? { ...largeMacroTable, rowCount: 100 } : largeMacroTable;
+
+      const result = await readPage(table);
+
+      assertFailure(result);
+      expect(result.error.code).toBe("INVALID_QUERY_INPUT");
+    });
+
+    it("looks an upload row up by an id past 2^53 exactly", async () => {
+      const statements = answer(["9223361202566982180"], [["9223361202566982180", "0.5"]]);
+
+      await readPage({
+        ...largeMacroTable,
+        identifier: "upload_table_1",
+        tableType: "upload",
+        macroSchema: null,
+        uploadSchema: "OBJECT<phi2: DOUBLE>",
+      });
+
+      expect(statements[1]).toContain("`id` IN ('9223361202566982180')");
     });
   });
 
