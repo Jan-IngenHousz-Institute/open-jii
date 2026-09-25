@@ -81,11 +81,11 @@ describe("QueryBuilderService", () => {
         }),
       );
 
-      expect(sql).toContain("from_json(data::string");
-      expect(sql).toContain("STRUCT<id:INT>");
+      expect(sql).toContain("try_variant_get(`data`, '$[\"id\"]', 'INT') AS `id`");
+      expect(sql).not.toContain("from_json");
     });
 
-    it("escapes quotes in variant field names inside the schema literal", () => {
+    it("escapes quotes in variant field names inside the path literal", () => {
       const sql = unwrap(
         service.buildQuery({
           table: "events",
@@ -93,7 +93,7 @@ describe("QueryBuilderService", () => {
         }),
       );
 
-      expect(sql).toContain("from_json(data::string, 'STRUCT<`it\\'s`: INT>')");
+      expect(sql).toContain("try_variant_get(`data`, '$[\"it\\'s\"]', 'INT') AS `it's`");
     });
 
     it("should build variant query with exceptColumns", () => {
@@ -106,16 +106,11 @@ describe("QueryBuilderService", () => {
         }),
       );
 
-      expect(sql).toContain("from_json(payload::string");
-      expect(sql).toContain("STRUCT<msg:STRING>");
-      expect(sql).toContain("EXCEPT (payload, parsed_payload, raw_id, internal_flag)");
+      // An explicit projection names its columns, so there is no star to exclude from.
+      expect(sql).toBe("SELECT `id`, `timestamp`\nFROM events");
     });
 
-    it("applies user filters AFTER variant flattening (so flattened fields resolve)", () => {
-      // Regression: filtering on a variant-flattened field like
-      // `Leaf Temperature` previously failed with UNRESOLVED_COLUMN
-      // because the WHERE was inside the from_json subquery where only
-      // raw base columns are visible.
+    it("filters a flattened field by its extraction expression", () => {
       const sql = unwrap(
         service.buildQuery({
           table: "events",
@@ -127,22 +122,13 @@ describe("QueryBuilderService", () => {
         }),
       );
 
-      // Inner subquery (between `FROM (` and its closing `)`) carries the
-      // system-scope experiment_id condition; that one only references a
-      // base column and shrinks the row set fed into from_json.
-      expect(sql).toMatch(/FROM events\s+WHERE `experiment_id` = 'exp-1'/);
-      // The user filter on the flattened field sits in an outer WHERE,
-      // after the from_json subquery's closing paren; that's the only
-      // scope where `Leaf Temperature` is exposed as a column.
-      expect(sql).toMatch(/\)\s+WHERE `Leaf Temperature` > 20/);
+      expect(sql).toContain(
+        "WHERE `experiment_id` = 'exp-1' AND " +
+          "try_variant_get(`custom_metadata`, '$[\"Leaf Temperature\"]', 'DOUBLE') > 20",
+      );
     });
 
-    it("variant + flattened-field filter + aggregation: filter resolves inside aggregation wrapper", () => {
-      // Production failure mode: user filtered on a flattened field
-      // (`Leaf Temperature`) AND aggregated on another flattened field
-      // (`Ambient Temperature`) at once. The aggregation wraps the
-      // variant SQL, so the filter has to be inside the inner block at
-      // the post-flatten WHERE, not in the aggregation wrapper itself.
+    it("variant + flattened-field filter + aggregation: filter runs inside the aggregation wrapper", () => {
       const sql = unwrap(
         service.buildQuery({
           table: "events",
@@ -161,22 +147,18 @@ describe("QueryBuilderService", () => {
         }),
       );
 
-      // Inner: experiment_id at the from_json subquery, Leaf Temperature
-      // at the outer post-flatten WHERE, both before the aggregation.
-      expect(sql).toMatch(/FROM events\s+WHERE `experiment_id` = 'exp-1'/);
-      expect(sql).toMatch(/\)\s+WHERE `Leaf Temperature` > 50/);
+      // Inner: both conditions in the one WHERE, before the aggregation.
+      expect(sql).toContain(
+        "WHERE `experiment_id` = 'exp-1' AND " +
+          "try_variant_get(`custom_metadata`, '$[\"Leaf Temperature\"]', 'DOUBLE') > 50",
+      );
       // Aggregation wrapper: timestamp_minute alias + AVG(Ambient Temperature).
       expect(sql).toContain("date_trunc('MINUTE', `timestamp`) AS `timestamp_minute`");
       expect(sql).toContain("AVG(`Ambient Temperature`)");
       expect(sql).toContain("GROUP BY date_trunc('MINUTE', `timestamp`)");
     });
 
-    it("routes filters per column: base columns to inner WHERE, flattened to outer", () => {
-      // Two filters, one on a base column (`device_name`), one on a
-      // flattened variant field (`Leaf Temperature`). Optimal placement:
-      // base filter at level 1 (cheap, shrinks the row set fed into
-      // from_json) and flattened filter at level 3 wrapper (only level
-      // where the field exists as a column).
+    it("puts base-column and flattened-field filters in the same WHERE", () => {
       const sql = unwrap(
         service.buildQuery({
           table: "events",
@@ -194,10 +176,11 @@ describe("QueryBuilderService", () => {
         }),
       );
 
-      // Inner WHERE picks up both system-scope AND device_name (a base column).
-      expect(sql).toMatch(/FROM events\s+WHERE `experiment_id` = 'exp-1' AND `device_name` = 'D1'/);
-      // Flattened-field filter still at the outer WHERE.
-      expect(sql).toMatch(/\)\s+WHERE `Leaf Temperature` > 20/);
+      expect(sql).toContain(
+        "WHERE `experiment_id` = 'exp-1' AND `device_name` = 'D1' AND " +
+          "try_variant_get(`custom_metadata`, '$[\"Leaf Temperature\"]', 'DOUBLE') > 20",
+      );
+      expect(sql.match(/WHERE/g)).toHaveLength(1);
     });
   });
 

@@ -9,6 +9,7 @@ import type {
   TimeBucketUnit,
 } from "./query-builder.types";
 import { VariantSchema } from "./schema/variant-schema";
+import type { VariantField } from "./schema/variant-schema";
 
 export abstract class BaseQueryBuilder {
   protected isDistinct = false;
@@ -70,18 +71,21 @@ export abstract class BaseQueryBuilder {
     throw new Error(`Unsupported scalar filter value type: ${typeof value}`);
   }
 
+  /**
+   * SQL for a column a filter or ordering names. A plain column is its escaped identifier; the
+   * variant builder resolves a flattened field to the expression that extracts it.
+   */
+  columnExpression(column: string): string {
+    return this.escapeIdentifier(column);
+  }
+
   buildFilterCondition(filter: FilterCondition): string {
     return buildFilterCondition(filter, this);
   }
 
   /**
-   * Apply a single user filter to the WHERE clause. Default routes the
-   * compiled SQL into `where(...)`; subclasses with multi-level WHEREs
-   * (variant flattening) override to route flattened-field filters into
-   * the post-flatten level instead.
-   *
-   * Returning `this` keeps the fluent chain so callers can do
-   * `builder.filter(a).filter(b)` or loop over a list.
+   * Apply a single user filter to the WHERE clause. Returning `this` keeps the fluent chain so
+   * callers can do `builder.filter(a).filter(b)` or loop over a list.
    */
   filter(condition: FilterCondition): this {
     this.where(this.buildFilterCondition(condition));
@@ -111,24 +115,22 @@ export abstract class BaseQueryBuilder {
   }
 
   /**
-   * Transform a VARIANT schema string from schema_of_variant_agg() into one that from_json() accepts.
+   * Turn a field type from schema_of_variant_agg() into a type a VARIANT can be cast to.
    *
-   * - OBJECT< to STRUCT<: schema_of_variant_agg uses Spark's VARIANT DDL (OBJECT); from_json wants STRUCT.
-   * - VOID to STRING: schema_of_variant_agg emits VOID for fields that exist on the JSON but are
-   *   null across every aggregated row, and from_json rejects VOID inside a STRUCT. Coercing to
-   *   STRING is safe; those fields parse back as null.
+   * - OBJECT< to STRUCT<: schema_of_variant_agg uses Spark's VARIANT DDL (OBJECT); casts want STRUCT.
+   * - VOID to STRING: schema_of_variant_agg emits VOID for a field that is null in every aggregated
+   *   row and for the elements of an array that is empty in every row, and VOID is no cast target.
+   *   Those values read back as null or as an empty array.
    *
    * Example:
-   *   Input:  "OBJECT<phi2: DOUBLE, messages: OBJECT<text: STRING>, dead: VOID>"
-   *   Output: "STRUCT<phi2: DOUBLE, messages: STRUCT<text: STRING>, dead: STRING>"
+   *   Input:  "ARRAY<OBJECT<text: STRING, dead: VOID, none: ARRAY<VOID>>>"
+   *   Output: "ARRAY<STRUCT<text: STRING, dead: STRING, none: ARRAY<STRING>>>"
    */
-  transformSchemaForFromJson(variantSchema: string): string {
-    if (!variantSchema) {
-      return "";
-    }
-    // ": VOID" is unambiguous as a type token: DDL field identifiers can't contain
-    // ":" or spaces, so this only matches the type position, never a field name.
-    return variantSchema.replaceAll("OBJECT<", "STRUCT<").replaceAll(": VOID", ": STRING");
+  variantCastType(fieldType: string): string {
+    // VOID as a whole type token; a field named VOID is followed by `:` and stays.
+    return fieldType
+      .replaceAll("OBJECT<", "STRUCT<")
+      .replace(/(^|[<,:]\s*)VOID(?=\s*(?:[>,]|$))/g, "$1STRING");
   }
 }
 
@@ -249,29 +251,30 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
   }
 }
 
+interface VariantColumn {
+  column: string;
+  schema: string;
+  fields: VariantField[];
+}
+
+/**
+ * Reads VARIANT columns by typed path in a single SELECT. Each top-level field of a column's
+ * schema is its own `try_variant_get` expression, so a query evaluates only the fields it uses,
+ * and a value of another type reads as null instead of failing the query.
+ */
 export class VariantQueryBuilder extends BaseQueryBuilder {
-  private selectClause = "*";
+  private selectColumns?: string[];
   private fromClause = "";
-  private variantColumns: { column: string; schema: string; alias: string }[] = [];
+  private variantColumns: VariantColumn[] = [];
   private whereConditions: string[] = [];
-  /**
-   * WHERE conditions that must run *after* VARIANT flattening, i.e. they
-   * reference fields that only exist as columns once `parsed_*.*` has
-   * been spliced in. Kept separate from `whereConditions` (which run at
-   * the inner subquery level) so flattened-field filters resolve and
-   * base-column filters stay efficient.
-   */
-  private whereFlattenedConditions: string[] = [];
-  private orderByClause?: string;
+  private ordering?: { column: string; direction: "ASC" | "DESC" };
   private limitValue?: number;
   private offsetValue?: number;
   private exceptColumns: string[] = [];
 
   select(columns?: string[]): this {
     if (columns && columns.length > 0) {
-      // Backtick-escape every identifier so column names with spaces or
-      // reserved words work.
-      this.selectClause = columns.map((c) => this.escapeIdentifier(c)).join(",\n    ");
+      this.selectColumns = columns;
     }
     return this;
   }
@@ -281,54 +284,13 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
-  parseVariant(column: string, schema: string, alias?: string): this {
-    this.variantColumns.push({
-      column,
-      schema,
-      alias: alias ?? `parsed_${column}`,
-    });
+  parseVariant(column: string, schema: string): this {
+    this.variantColumns.push({ column, schema, fields: VariantSchema.topLevelFields(schema) });
     return this;
   }
 
-  /**
-   * Route a user filter to the right WHERE level based on whether the
-   * target column was flattened out of a variant schema:
-   *
-   *   - Flattened field (declared in any `parseVariant(...)` schema) →
-   *     post-flatten `whereFlattened(...)`. Bare identifiers don't
-   *     resolve pre-flatten.
-   *   - Base column → inner `where(...)`, which shrinks the row set
-   *     *before* `from_json` parses each row's struct. Compounds with
-   *     `experiment_id` for non-trivial wins on large macro tables.
-   *
-   * The set of flattened fields is derived once per call from the
-   * accumulated variant schemas, so callers don't have to compute it.
-   */
-  filter(condition: FilterCondition): this {
-    const sql = this.buildFilterCondition(condition);
-    if (this.flattenedFieldSet().has(condition.column)) {
-      this.whereFlattened(sql);
-    } else {
-      this.where(sql);
-    }
-    return this;
-  }
-
-  /** Top-level field names exposed by every `parsed_*.*` projection on
-   *  this builder. Owns its own variant schemas, so unlike the previous
-   *  service-side helper, no parameter threading is needed. */
-  private flattenedFieldSet(): Set<string> {
-    const fields = new Set<string>();
-    for (const v of this.variantColumns) {
-      for (const name of VariantQueryBuilder.topLevelFieldNames(v.schema)) {
-        fields.add(name);
-      }
-    }
-    return fields;
-  }
-
-  static topLevelFieldNames(schema: string): string[] {
-    return VariantSchema.topLevelFieldNames(schema);
+  columnExpression(column: string): string {
+    return this.fieldExpressions().get(column) ?? super.columnExpression(column);
   }
 
   where(condition: string): this {
@@ -336,27 +298,8 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
-  /**
-   * Add a WHERE condition evaluated *after* VARIANT flattening. Use this
-   * for filters that reference fields produced by `parsed_*.*`; they
-   * don't resolve at the inner level since the columns don't exist there
-   * yet. Base-column filters should still go through `where()` so they
-   * shrink the working set before flattening.
-   */
-  whereFlattened(condition: string): this {
-    this.whereFlattenedConditions.push(condition);
-    return this;
-  }
-
   orderBy(column: string, direction: "ASC" | "DESC" = "ASC"): this {
-    // Struct field paths (e.g. "contributor.name") escape per segment.
-    if (column.includes(".")) {
-      const parts = column.split(".");
-      const escapedParts = parts.map((part) => this.escapeIdentifier(part));
-      this.orderByClause = `${escapedParts.join(".")} ${direction}`;
-    } else {
-      this.orderByClause = `${this.escapeIdentifier(column)} ${direction}`;
-    }
+    this.ordering = { column, direction };
     return this;
   }
 
@@ -386,86 +329,109 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
       throw new Error("At least one VARIANT column is required");
     }
 
-    // Build WHERE, ORDER BY, LIMIT, OFFSET clauses. Two WHEREs: `where`
-    // applies before flattening (cheap, but only base columns resolve);
-    // `whereFlattened` applies after flattening (resolves `parsed_*.*`
-    // fields like `Leaf Temperature` that only exist post-flatten).
+    const selectKeyword = this.isDistinct ? "SELECT DISTINCT" : "SELECT";
+    const projection = this.selectColumns
+      ? this.selectColumns.map((column) => this.projectColumn(column)).join(", ")
+      : this.starProjection();
     const where =
       this.whereConditions.length > 0 ? `WHERE ${this.whereConditions.join(" AND ")}` : "";
-    const whereFlattened =
-      this.whereFlattenedConditions.length > 0
-        ? `WHERE ${this.whereFlattenedConditions.join(" AND ")}`
-        : "";
-    const order = this.orderByClause ? `ORDER BY ${this.orderByClause}` : "";
+    const order = this.ordering
+      ? `ORDER BY ${this.orderTarget(this.ordering.column)} ${this.ordering.direction}`
+      : "";
     const limitClause = this.limitValue ? `LIMIT ${this.limitValue}` : "";
     const offsetClause = this.offsetValue ? `OFFSET ${this.offsetValue}` : "";
 
-    // Columns to exclude from final result (raw VARIANTs, parsed aliases, and user-specified)
-    const allExceptColumns = [
-      ...this.variantColumns.flatMap((v) => [v.column, v.alias]),
-      ...this.exceptColumns,
-    ].join(", ");
+    return [
+      `${selectKeyword} ${projection}`,
+      `FROM ${this.fromClause}`,
+      where,
+      order,
+      limitClause,
+      offsetClause,
+    ]
+      .filter((clause) => clause.length > 0)
+      .join("\n");
+  }
 
-    const parsedColumns = this.variantColumns
-      .map((v) => {
-        const transformedSchema = this.transformSchemaForFromJson(v.schema);
-        return `from_json(${v.column}::string, ${this.escapeValue(transformedSchema)}) as ${v.alias}`;
-      })
-      .join(",\n          ");
+  /** Every base column but the raw VARIANTs, then every flattened field under its own name. A name
+   *  in two VARIANT columns is projected once, from the first, as fieldExpressions resolves it. */
+  private starProjection(): string {
+    const excluded = [...this.variantColumns.map(({ column }) => column), ...this.exceptColumns];
+    const projected = new Set<string>();
+    const fields = this.variantColumns.flatMap((variant) => {
+      if (!VariantSchema.isObject(variant.schema)) {
+        return [this.wholeColumn(variant)];
+      }
 
-    const expandedColumns = this.variantColumns.map((v) => `${v.alias}.*`).join(",\n        ");
+      const unprojected = variant.fields.filter((field) => !projected.has(field.name));
+      unprojected.forEach((field) => projected.add(field.name));
+      return unprojected.map(
+        (field) =>
+          `${this.fieldExpression(variant.column, field)} AS ${this.quoteName(field.name)}`,
+      );
+    });
+    const exceptList = excluded.map((column) => this.escapeIdentifier(column)).join(", ");
+    return [`* EXCEPT (${exceptList})`, ...fields].join(", ");
+  }
 
-    // Query structure:
-    //   Level 1 (innermost): base columns + from_json() to parse VARIANTs.
-    //     `where` runs here (against raw base columns, fast).
-    //   Level 2: `* EXCEPT (...), parsed_*.*`: flattens struct fields to
-    //     top-level columns.
-    //   Level 3 (only when `whereFlattened` has conditions): plain
-    //     `SELECT * FROM (level 2) WHERE …`. The wrapping is load-bearing:
-    //     SQL evaluates WHERE *before* the surrounding SELECT projection,
-    //     so a WHERE at level 2 only sees level 1's output columns
-    //     (base + struct), not the flattened fields. The extra SELECT
-    //     promotes the flattened fields into the FROM rowsource so the
-    //     WHERE can reference them by their bare name.
-    //   Level 4 (only when explicit `select` columns): final projection.
-    const flattenedView = `
-      SELECT
-        * EXCEPT (${allExceptColumns}),
-        ${expandedColumns}
-      FROM (
-        SELECT
-          *,
-          ${parsedColumns}
-        FROM ${this.fromClause}
-        ${where}
-      )
-    `.trim();
-    const filteredFlattened =
-      this.whereFlattenedConditions.length > 0
-        ? `SELECT * FROM (${flattenedView}) ${whereFlattened}`.trim()
-        : flattenedView;
+  /** A VARIANT whose schema is no object (an array, a scalar, all nulls) has no fields to
+   *  flatten, so it is read whole under its own name. */
+  private wholeColumn({ column, schema }: VariantColumn): string {
+    const castType = this.escapeValue(this.variantCastType(schema));
+    return `try_variant_get(${this.escapeIdentifier(column)}, '$', ${castType}) AS ${this.quoteName(column)}`;
+  }
 
-    // Wrap in an outer SELECT so DISTINCT dedups on the projected columns,
-    // not the raw VARIANT row.
-    if (this.selectClause !== "*") {
-      const selectKeyword = this.isDistinct ? "SELECT DISTINCT" : "SELECT";
-      return `
-        ${selectKeyword} ${this.selectClause}
-        FROM (
-          ${filteredFlattened}
-        )
-        ${order}
-        ${limitClause}
-        ${offsetClause}
-      `.trim();
+  private projectColumn(column: string): string {
+    const expression = this.fieldExpressions().get(column);
+    return expression === undefined
+      ? this.escapeIdentifier(column)
+      : `${expression} AS ${this.quoteName(column)}`;
+  }
+
+  /** A projected field sorts by its output name, which DISTINCT requires; any other column by
+   *  its expression. */
+  private orderTarget(column: string): string {
+    const isField = this.fieldExpressions().has(column);
+    const isProjected = this.selectColumns === undefined || this.selectColumns.includes(column);
+    return isField && isProjected ? this.quoteName(column) : this.columnExpression(column);
+  }
+
+  /** Field name to extraction SQL. A name in two VARIANT columns resolves to the first. */
+  private fieldExpressions(): Map<string, string> {
+    const expressions = new Map<string, string>();
+    for (const { column, fields } of this.variantColumns) {
+      for (const field of fields) {
+        if (!expressions.has(field.name)) {
+          expressions.set(field.name, this.fieldExpression(column, field));
+        }
+      }
+    }
+    return expressions;
+  }
+
+  /**
+   * The JSON path syntax has no escape character, so a name holding `"` takes the single-quoted
+   * form, and a name holding both quote kinds is looked up as a map key instead.
+   */
+  private fieldExpression(column: string, field: VariantField): string {
+    const source = this.escapeIdentifier(column);
+    const castType = this.variantCastType(field.type);
+
+    if (!field.name.includes('"')) {
+      const path = this.escapeValue(`$["${field.name}"]`);
+      return `try_variant_get(${source}, ${path}, ${this.escapeValue(castType)})`;
+    }
+    if (!field.name.includes("'")) {
+      const path = this.escapeValue(`$['${field.name}']`);
+      return `try_variant_get(${source}, ${path}, ${this.escapeValue(castType)})`;
     }
 
-    // Return flattened view with ordering/limiting
-    return `
-      ${filteredFlattened}
-      ${order}
-      ${limitClause}
-      ${offsetClause}
-    `.trim();
+    const value = `element_at(try_cast(${source} AS MAP<STRING, VARIANT>), ${this.escapeValue(field.name)})`;
+    return `try_cast(${value} AS ${castType})`;
+  }
+
+  /** One identifier, never split on dots: a field name may contain them. */
+  private quoteName(name: string): string {
+    return `\`${name.replaceAll("`", "``")}\``;
   }
 }
