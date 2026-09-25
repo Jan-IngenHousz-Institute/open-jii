@@ -3,7 +3,7 @@ import { isApiStatus } from "~/features/experiments/utils/api-error";
 import { orpc } from "~/shared/api/orpc";
 
 export function useResolveJoinCode(code: string | null | undefined) {
-  const { data, isLoading, isPaused, error, refetch, isRefetching } = useQuery(
+  const { data, isLoading, isPaused, error, errorUpdatedAt, refetch, isRefetching } = useQuery(
     orpc.experiments.resolveJoinCode.queryOptions({
       input: { code: code ?? "" },
       enabled: !!code,
@@ -25,6 +25,7 @@ export function useResolveJoinCode(code: string | null | undefined) {
     isLoading,
     isPaused,
     error,
+    errorUpdatedAt,
     refetch,
     isRefetching,
   };

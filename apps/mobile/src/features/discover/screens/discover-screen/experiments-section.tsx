@@ -27,6 +27,7 @@ export function ExperimentsSection({ search, enabled, onStatusChange }: Experime
 
   const {
     experiments,
+    totalCount,
     isLoading,
     isFetching,
     isPaused,
@@ -38,7 +39,7 @@ export function ExperimentsSection({ search, enabled, onStatusChange }: Experime
     hasNextPage,
   } = useDiscoverExperiments({ search, enabled });
 
-  const count = experiments?.length ?? 0;
+  const count = totalCount ?? experiments?.length ?? 0;
   useEffect(() => {
     onStatusChange({ count, isFetching });
   }, [count, isFetching, onStatusChange]);

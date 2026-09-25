@@ -1,8 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import type { Mock } from "vitest";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { JoinCodePreview } from "@repo/api/domains/experiment/join-codes/experiment-join-codes.schema";
 
@@ -14,6 +14,7 @@ interface ScreenState {
   isLoading: boolean;
   isPaused: boolean;
   error: unknown;
+  errorUpdatedAt: number;
   online: boolean | undefined;
   refetch: Mock<() => void>;
   redeem: Mock<
@@ -32,6 +33,7 @@ const state = vi.hoisted<ScreenState>(() => ({
   isLoading: false,
   isPaused: false,
   error: undefined,
+  errorUpdatedAt: 0,
   online: true,
   refetch: vi.fn<() => void>(),
   redeem: vi.fn(),
@@ -50,6 +52,7 @@ vi.mock("~/features/experiments/hooks/use-resolve-join-code", () => ({
     isLoading: state.isLoading,
     isPaused: state.isPaused,
     error: state.error,
+    errorUpdatedAt: state.errorUpdatedAt,
     refetch: state.refetch,
   }),
 }));
@@ -87,24 +90,26 @@ vi.mock("~/features/experiments/components/join-code-preview-card", () => ({
 }));
 vi.mock("~/shared/i18n", () => ({
   useTranslation: () => ({
-    t: (key: string) =>
+    t: (key: string, options?: Record<string, unknown>) =>
       ({
         "common:retry": "Retry",
         "experiments:joinCode.screenTitle": "Join experiment",
         "experiments:joinCode.notACode": "That's not a valid join code",
         "experiments:joinCode.enterDifferent": "Enter a different code",
         "experiments:joinCode.notFound": "This code isn't valid",
+        "experiments:joinCode.expired": "This code has expired or was revoked",
         "experiments:joinCode.tryAnother": "Try another code",
         "experiments:joinCode.archived": "This experiment is archived",
-        "experiments:joinCode.tooMany": "Too many attempts. Wait a minute and try again.",
+        "experiments:joinCode.tooMany": "Too many attempts. You can try again now.",
+        "experiments:joinCode.tooManyCountdown": `Too many attempts. Try again in ${String(options?.seconds)}s.`,
         "experiments:joinCode.offline": "You're offline. Connect to check this code.",
         "experiments:joinCode.loadFailed": "Could not check this code.",
       })[key] ?? key,
   }),
 }));
 
-function apiError(status: number, message = "") {
-  return Object.assign(new Error(message), { status });
+function apiError(status: number, message = "", code?: string) {
+  return Object.assign(new Error(message), { status, data: code ? { code } : undefined });
 }
 
 const PREVIEW: JoinCodePreview = {
@@ -126,11 +131,16 @@ beforeEach(() => {
   state.isLoading = false;
   state.isPaused = false;
   state.error = undefined;
+  state.errorUpdatedAt = 0;
   state.online = true;
   state.replaced = [];
   state.refetch.mockClear();
   state.redeem.mockReset();
   state.presentedEntrySheet.mockClear();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("JoinCodeScreen", () => {
@@ -152,8 +162,8 @@ describe("JoinCodeScreen", () => {
     expect(UNSAFE_queryAllByType(ActivityIndicator)).toHaveLength(1);
   });
 
-  it("prefers the server's own copy for a 404, which distinguishes unknown from expired", () => {
-    state.error = apiError(404, "This code has expired or was revoked");
+  it("says an expired or revoked code has expired, in its own words", () => {
+    state.error = apiError(404, "server copy", "JOIN_CODE_EXPIRED");
 
     render(<JoinCodeScreen />);
 
@@ -161,12 +171,21 @@ describe("JoinCodeScreen", () => {
     expect(screen.getByText("Try another code")).toBeTruthy();
   });
 
-  it("falls back to its own wording when a 404 carried no copy", () => {
-    state.error = apiError(404);
+  it("says a code that never existed isn't valid", () => {
+    state.error = apiError(404, "server copy", "JOIN_CODE_NOT_FOUND");
 
     render(<JoinCodeScreen />);
 
     expect(screen.getByText("This code isn't valid")).toBeTruthy();
+  });
+
+  it("never shows the server's English copy for a 404", () => {
+    state.error = apiError(404, "This code has expired or was revoked");
+
+    render(<JoinCodeScreen />);
+
+    expect(screen.getByText("This code isn't valid")).toBeTruthy();
+    expect(screen.queryByText("This code has expired or was revoked")).toBeNull();
   });
 
   it("explains a 403 as an archived experiment, and offers another code but no retry", () => {
@@ -183,16 +202,24 @@ describe("JoinCodeScreen", () => {
     expect(state.presentedEntrySheet).toHaveBeenCalledOnce();
   });
 
-  it("asks a throttled caller to wait, offering neither a retry nor another code", () => {
+  it("puts a throttled caller on the countdown, retrying the same code once it ends", () => {
+    vi.useFakeTimers();
     state.error = apiError(429);
+    state.errorUpdatedAt = Date.now();
 
     render(<JoinCodeScreen />);
 
-    expect(screen.getByText("Too many attempts. Wait a minute and try again.")).toBeTruthy();
-    expect(screen.queryByText("Retry")).toBeNull();
+    expect(screen.getByText("Too many attempts. Try again in 60s.")).toBeTruthy();
+    expect(screen.getByText("Retry")).toBeTruthy();
     // The throttle counts the caller, not the code, so another code is refused
     // just the same; offering one would only burn the wait.
     expect(screen.queryByText("Try another code")).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+    fireEvent.press(screen.getByText("Retry"));
+    expect(state.refetch).toHaveBeenCalledOnce();
   });
 
   it("shows the offline state with Retry on a paused cold load", () => {

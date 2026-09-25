@@ -95,9 +95,11 @@
     "joined": "You joined {{name}}",
     "alreadyMemberToast": "You're already in {{name}}",
     "tryAnother": "Try another code",
-    "tooMany": "Too many attempts. Wait a minute and try again.",
+    "tooMany": "Too many attempts. You can try again now.",
+    "tooManyCountdown": "Too many attempts. Try again in {{seconds}}s.",
     "archived": "This experiment is archived",
     "notFound": "This code isn't valid",
+    "expired": "This code has expired or was revoked",
     "offline": "You're offline. Connect to check this code.",
     "loadFailed": "Could not check this code.",
     "offlineHint": "You're offline. Reconnect to join."

@@ -129,7 +129,8 @@ visitor to the app. Both stay valid until the code expires or you end it.
 
 An experiment has **one** active code at a time.
 
-- **Regenerate** issues a new code and stops the old one.
+- **Regenerate** issues a new code and stops the old one. The confirmation asks
+  how long the new code should last, preset to the current code's lifetime.
 - **Revoke** stops the current code without issuing another.
 
 Either way, anyone who already joined keeps their access. Ending a code only

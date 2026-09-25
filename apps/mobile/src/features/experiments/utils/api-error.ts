@@ -8,3 +8,12 @@ export function isApiStatus(error: unknown, ...statuses: number[]): boolean {
   const { status } = error;
   return typeof status === "number" && statuses.includes(status);
 }
+
+/** The backend's own error code, which it sends on `data.code` alongside the status. */
+export function apiErrorCode(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null || !("data" in error)) return undefined;
+  const { data } = error;
+  if (typeof data !== "object" || data === null || !("code" in data)) return undefined;
+  const { code } = data;
+  return typeof code === "string" ? code : undefined;
+}

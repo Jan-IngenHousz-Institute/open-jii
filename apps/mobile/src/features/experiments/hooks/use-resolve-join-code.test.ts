@@ -91,6 +91,17 @@ describe("useResolveJoinCode", () => {
     expect(mockResolveJoinCode).toHaveBeenCalledTimes(1);
   });
 
+  it("dates the refusal, which the throttled screen counts its wait from", async () => {
+    mockResolveJoinCode.mockRejectedValue(apiError(429));
+    const before = Date.now();
+
+    const { result } = renderHook(() => useResolveJoinCode("KP7Q4WMX"), { wrapper });
+
+    await waitFor(() => expect(result.current.error).toBeTruthy());
+    expect(result.current.errorUpdatedAt).toBeGreaterThanOrEqual(before);
+    expect(result.current.errorUpdatedAt).toBeLessThanOrEqual(Date.now());
+  });
+
   it("retries a transient server failure", async () => {
     mockResolveJoinCode.mockRejectedValue(apiError(500));
 
