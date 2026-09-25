@@ -4,7 +4,10 @@ import { SafeParseReturnType, z } from "zod";
 
 import { ExperimentAnnotationRowsAffected } from "@repo/api/domains/experiment/data-annotations/experiment-data-annotations.schema";
 
-import type { SchemaData } from "../../../common/modules/databricks/services/sql/sql.types";
+import type {
+  SchemaData,
+  StatementParameter,
+} from "../../../common/modules/databricks/services/sql/sql.types";
 import { AppError, failure, Result, success } from "../../../common/utils/fp-utils";
 import {
   BaseAnnotation,
@@ -22,23 +25,6 @@ export class ExperimentDataAnnotationsRepository {
     @Inject(DATABRICKS_PORT)
     private readonly databricksPort: DatabricksPort,
   ) {}
-
-  /**
-   * Helper function to format string values for SQL with proper escaping
-   */
-  private formatSqlValue(value: string | null | undefined): string {
-    if (value === null || value === undefined) {
-      return "NULL";
-    }
-    // Escape single quotes and other potential SQL injection characters
-    const escaped = value
-      .replace(/'/g, "''")
-      .replace(/\\/g, "\\\\")
-      .replace(/\0/g, "\\0")
-      .replace(/\n/g, "\\n")
-      .replace(/\r/g, "\\r");
-    return `'${escaped}'`;
-  }
 
   // Zod validation schemas
   private readonly schemas = {
@@ -159,23 +145,24 @@ export class ExperimentDataAnnotationsRepository {
       annotationsWithIds.push(annotationWithId);
     }
 
-    // Build single INSERT query with multiple VALUES
-    const valuesClauses = annotationsWithIds.map(
-      (annotation) =>
-        `(
-          '${annotation.id}',
-          '${experimentId}',
-          '${annotation.userId}',
-          ${this.formatSqlValue(annotation.userName)},
-          ${this.formatSqlValue(annotation.tableName)},
-          '${annotation.rowId}',
-          '${annotation.type}',
-          ${this.formatSqlValue(annotation.contentText)},
-          ${this.formatSqlValue(annotation.flagType)},
-          '${now.toISOString()}',
-          '${now.toISOString()}'
-        )`,
-    );
+    const parameters: StatementParameter[] = [
+      { name: "experiment_id", value: experimentId },
+      { name: "now", value: now.toISOString(), type: "TIMESTAMP" },
+    ];
+
+    const valuesClauses = annotationsWithIds.map((annotation, i) => {
+      parameters.push(
+        { name: `id_${i}`, value: annotation.id },
+        { name: `user_id_${i}`, value: annotation.userId },
+        { name: `user_name_${i}`, value: annotation.userName ?? undefined },
+        { name: `table_name_${i}`, value: annotation.tableName },
+        { name: `row_id_${i}`, value: annotation.rowId },
+        { name: `type_${i}`, value: annotation.type },
+        { name: `content_text_${i}`, value: annotation.contentText ?? undefined },
+        { name: `flag_type_${i}`, value: annotation.flagType ?? undefined },
+      );
+      return `(:id_${i}, :experiment_id, :user_id_${i}, :user_name_${i}, :table_name_${i}, :row_id_${i}, :type_${i}, :content_text_${i}, :flag_type_${i}, :now, :now)`;
+    });
 
     const insertQuery = `
       INSERT INTO experiment_annotations (
@@ -196,6 +183,7 @@ export class ExperimentDataAnnotationsRepository {
     const insertResult = await this.databricksPort.executeSqlQuery(
       this.databricksPort.CENTRUM_SCHEMA_NAME,
       insertQuery,
+      parameters,
     );
     if (insertResult.isFailure()) {
       return failure(
@@ -232,25 +220,33 @@ export class ExperimentDataAnnotationsRepository {
     const now = new Date();
 
     const setClauses: string[] = [];
+    const parameters: StatementParameter[] = [
+      { name: "annotation_id", value: annotationId },
+      { name: "experiment_id", value: experimentId },
+      { name: "now", value: now.toISOString(), type: "TIMESTAMP" },
+    ];
 
     if (updateData.contentText !== undefined) {
-      setClauses.push(`content_text = ${this.formatSqlValue(updateData.contentText)}`);
+      setClauses.push("content_text = :content_text");
+      parameters.push({ name: "content_text", value: updateData.contentText ?? undefined });
     }
     if (updateData.flagType !== undefined) {
-      setClauses.push(`flag_type = ${this.formatSqlValue(updateData.flagType)}`);
+      setClauses.push("flag_type = :flag_type");
+      parameters.push({ name: "flag_type", value: updateData.flagType ?? undefined });
     }
 
-    setClauses.push(`updated_at = '${now.toISOString()}'`);
+    setClauses.push("updated_at = :now");
 
     const updateQuery = `
       UPDATE experiment_annotations
       SET ${setClauses.join(", ")}
-      WHERE id = '${annotationId}' AND experiment_id = '${experimentId}'
+      WHERE id = :annotation_id AND experiment_id = :experiment_id
     `;
 
     const updateResult = await this.databricksPort.executeSqlQuery(
       this.databricksPort.CENTRUM_SCHEMA_NAME,
       updateQuery,
+      parameters,
     );
     if (updateResult.isFailure()) {
       return failure(
@@ -281,12 +277,16 @@ export class ExperimentDataAnnotationsRepository {
 
     const deleteQuery = `
       DELETE FROM experiment_annotations
-      WHERE id = '${annotationId}' AND experiment_id = '${experimentId}'
+      WHERE id = :annotation_id AND experiment_id = :experiment_id
     `;
 
     const deleteResult = await this.databricksPort.executeSqlQuery(
       this.databricksPort.CENTRUM_SCHEMA_NAME,
       deleteQuery,
+      [
+        { name: "annotation_id", value: annotationId },
+        { name: "experiment_id", value: experimentId },
+      ],
     );
     if (deleteResult.isFailure()) {
       return failure(
@@ -318,19 +318,29 @@ export class ExperimentDataAnnotationsRepository {
       return success({ rowsAffected: 0 });
     }
 
-    const rowIdList = rowIds.map((id) => `'${id}'`).join(", ");
+    const rowIdParameters: StatementParameter[] = rowIds.map((id, i) => ({
+      name: `row_id_${i}`,
+      value: id,
+    }));
+    const rowIdMarkers = rowIdParameters.map(({ name }) => `:${name}`).join(", ");
 
     const deleteQuery = `
       DELETE FROM experiment_annotations
-      WHERE experiment_id = '${experimentId}'
-      AND table_name = ${this.formatSqlValue(tableName)}
-      AND type = ${this.formatSqlValue(type)}
-      AND row_id IN (${rowIdList})
+      WHERE experiment_id = :experiment_id
+      AND table_name = :table_name
+      AND type = :type
+      AND row_id IN (${rowIdMarkers})
     `;
 
     const deleteResult = await this.databricksPort.executeSqlQuery(
       this.databricksPort.CENTRUM_SCHEMA_NAME,
       deleteQuery,
+      [
+        { name: "experiment_id", value: experimentId },
+        { name: "table_name", value: tableName },
+        { name: "type", value: type },
+        ...rowIdParameters,
+      ],
     );
     if (deleteResult.isFailure()) {
       return failure(

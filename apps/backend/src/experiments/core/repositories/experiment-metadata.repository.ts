@@ -2,6 +2,7 @@ import { Injectable, Inject, Logger } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { z } from "zod";
 
+import type { StatementParameter } from "../../../common/modules/databricks/services/sql/sql.types";
 import { Result, failure, success, AppError } from "../../../common/utils/fp-utils";
 import type {
   ExperimentMetadataDto,
@@ -13,7 +14,7 @@ import type { DatabricksPort } from "../ports/databricks.port";
 
 /**
  * Repository for experiment metadata operations.
- * Uses inline SQL with manual escaping (same pattern as annotations repo).
+ * Values are bound as statement parameters, never written into the SQL text.
  *
  * Databricks table schema:
  *   metadata_id   STRING   (PK, UUID)
@@ -44,21 +45,6 @@ export class ExperimentMetadataRepository {
     uuid: (value: string) => this.schemas.uuid.safeParse(value),
   };
 
-  // --- SQL helpers (mirrors annotations repo) ---
-
-  private formatSqlValue(value: string | null | undefined): string {
-    if (value === null || value === undefined) {
-      return "NULL";
-    }
-    const escaped = value
-      .replace(/'/g, "''")
-      .replace(/\\/g, "\\\\")
-      .replace(/\0/g, "\\0")
-      .replace(/\n/g, "\\n")
-      .replace(/\r/g, "\\r");
-    return `'${escaped}'`;
-  }
-
   // --- Repository methods ---
 
   async findAllByExperimentId(experimentId: string): Promise<Result<ExperimentMetadataDto[]>> {
@@ -75,13 +61,14 @@ export class ExperimentMetadataRepository {
     const query = `
       SELECT metadata_id, experiment_id, metadata, created_by, created_at, updated_at
       FROM ${this.metadataTable}
-      WHERE experiment_id = ${this.formatSqlValue(experimentId)}
+      WHERE experiment_id = :experiment_id
       ORDER BY created_at DESC
     `;
 
     const result = await this.databricksPort.executeSqlQuery(
       this.databricksPort.CENTRUM_SCHEMA_NAME,
       query,
+      [{ name: "experiment_id", value: experimentId }],
     );
 
     if (result.isFailure()) {
@@ -119,19 +106,20 @@ export class ExperimentMetadataRepository {
     const insertQuery = `
       INSERT INTO ${this.metadataTable}
         (metadata_id, experiment_id, metadata, created_by, created_at, updated_at)
-      VALUES (
-        ${this.formatSqlValue(metadataId)},
-        ${this.formatSqlValue(experimentId)},
-        PARSE_JSON(${this.formatSqlValue(metadataJson)}),
-        ${this.formatSqlValue(userId)},
-        ${this.formatSqlValue(isoNow)},
-        ${this.formatSqlValue(isoNow)}
-      )
+      VALUES (:metadata_id, :experiment_id, PARSE_JSON(:metadata), :created_by, :now, :now)
     `;
+    const parameters: StatementParameter[] = [
+      { name: "metadata_id", value: metadataId },
+      { name: "experiment_id", value: experimentId },
+      { name: "metadata", value: metadataJson },
+      { name: "created_by", value: userId },
+      { name: "now", value: isoNow, type: "TIMESTAMP" },
+    ];
 
     const insertResult = await this.databricksPort.executeSqlQuery(
       this.databricksPort.CENTRUM_SCHEMA_NAME,
       insertQuery,
+      parameters,
     );
 
     if (insertResult.isFailure()) {
@@ -162,13 +150,17 @@ export class ExperimentMetadataRepository {
 
     const query = `
       DELETE FROM ${this.metadataTable}
-      WHERE metadata_id = ${this.formatSqlValue(metadataId)}
-        AND experiment_id = ${this.formatSqlValue(experimentId)}
+      WHERE metadata_id = :metadata_id
+        AND experiment_id = :experiment_id
     `;
 
     const result = await this.databricksPort.executeSqlQuery(
       this.databricksPort.CENTRUM_SCHEMA_NAME,
       query,
+      [
+        { name: "metadata_id", value: metadataId },
+        { name: "experiment_id", value: experimentId },
+      ],
     );
 
     if (result.isFailure()) {
@@ -191,12 +183,13 @@ export class ExperimentMetadataRepository {
 
     const query = `
       DELETE FROM ${this.metadataTable}
-      WHERE experiment_id = ${this.formatSqlValue(experimentId)}
+      WHERE experiment_id = :experiment_id
     `;
 
     const result = await this.databricksPort.executeSqlQuery(
       this.databricksPort.CENTRUM_SCHEMA_NAME,
       query,
+      [{ name: "experiment_id", value: experimentId }],
     );
 
     if (result.isFailure()) {
@@ -233,15 +226,22 @@ export class ExperimentMetadataRepository {
 
     const updateQuery = `
       UPDATE ${this.metadataTable}
-      SET metadata = PARSE_JSON(${this.formatSqlValue(metadataJson)}),
-          updated_at = ${this.formatSqlValue(isoNow)}
-      WHERE metadata_id = ${this.formatSqlValue(metadataId)}
-        AND experiment_id = ${this.formatSqlValue(experimentId)}
+      SET metadata = PARSE_JSON(:metadata),
+          updated_at = :now
+      WHERE metadata_id = :metadata_id
+        AND experiment_id = :experiment_id
     `;
+    const parameters: StatementParameter[] = [
+      { name: "metadata", value: metadataJson },
+      { name: "now", value: isoNow, type: "TIMESTAMP" },
+      { name: "metadata_id", value: metadataId },
+      { name: "experiment_id", value: experimentId },
+    ];
 
     const updateResult = await this.databricksPort.executeSqlQuery(
       this.databricksPort.CENTRUM_SCHEMA_NAME,
       updateQuery,
+      parameters,
     );
 
     if (updateResult.isFailure()) {

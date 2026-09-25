@@ -2,6 +2,7 @@ import { Injectable, Inject, Logger } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { z } from "zod";
 
+import type { StatementParameter } from "../../../common/modules/databricks/services/sql/sql.types";
 import { AppError, failure, Result, success } from "../../../common/utils/fp-utils";
 import {
   BaseTransferRequest,
@@ -18,23 +19,6 @@ export class ProjectTransferRequestsRepository {
     @Inject(DATABRICKS_PORT)
     private readonly databricksPort: DatabricksPort,
   ) {}
-
-  /**
-   * Helper function to format string values for SQL with proper escaping
-   */
-  private formatSqlValue(value: string | null | undefined): string {
-    if (value === null || value === undefined) {
-      return "NULL";
-    }
-    // Escape single quotes and other potential SQL injection characters
-    const escaped = value
-      .replace(/'/g, "''")
-      .replace(/\\/g, "\\\\")
-      .replace(/\0/g, "\\0")
-      .replace(/\n/g, "\\n")
-      .replace(/\r/g, "\\r");
-    return `'${escaped}'`;
-  }
 
   /**
    * Helper function to parse a Databricks result row into BaseTransferRequest
@@ -137,20 +121,31 @@ export class ProjectTransferRequestsRepository {
         status,
         requested_at
       ) VALUES (
-        '${requestId}',
-        '${request.userId}',
-        ${this.formatSqlValue(request.userEmail)},
-        ${this.formatSqlValue(request.sourcePlatform)},
-        ${this.formatSqlValue(request.projectIdOld)},
-        ${this.formatSqlValue(request.projectUrlOld)},
-        ${this.formatSqlValue(request.status)},
-        '${now.toISOString()}'
+        :request_id,
+        :user_id,
+        :user_email,
+        :source_platform,
+        :project_id_old,
+        :project_url_old,
+        :status,
+        :requested_at
       )
     `;
+    const parameters: StatementParameter[] = [
+      { name: "request_id", value: requestId },
+      { name: "user_id", value: request.userId },
+      { name: "user_email", value: request.userEmail },
+      { name: "source_platform", value: request.sourcePlatform },
+      { name: "project_id_old", value: request.projectIdOld },
+      { name: "project_url_old", value: request.projectUrlOld },
+      { name: "status", value: request.status },
+      { name: "requested_at", value: now.toISOString(), type: "TIMESTAMP" },
+    ];
 
     const insertResult = await this.databricksPort.executeSqlQuery(
       this.databricksPort.CENTRUM_SCHEMA_NAME,
       insertQuery,
+      parameters,
     );
     if (insertResult.isFailure()) {
       return failure(
@@ -182,7 +177,7 @@ export class ProjectTransferRequestsRepository {
     }
 
     // Build SELECT query
-    const whereClause = userId ? `WHERE user_id = ${this.formatSqlValue(userId)}` : "";
+    const whereClause = userId ? "WHERE user_id = :user_id" : "";
     const selectQuery = `
       SELECT 
         request_id,
@@ -201,6 +196,7 @@ export class ProjectTransferRequestsRepository {
     const selectResult = await this.databricksPort.executeSqlQuery(
       this.databricksPort.CENTRUM_SCHEMA_NAME,
       selectQuery,
+      userId ? [{ name: "user_id", value: userId }] : undefined,
     );
     if (selectResult.isFailure()) {
       return failure(
@@ -253,13 +249,17 @@ export class ProjectTransferRequestsRepository {
         status,
         requested_at
       FROM openjii_project_transfer_requests
-      WHERE user_id = ${this.formatSqlValue(userId)} AND project_id_old = ${this.formatSqlValue(projectIdOld)}      
+      WHERE user_id = :user_id AND project_id_old = :project_id_old
       LIMIT 1
     `;
 
     const selectResult = await this.databricksPort.executeSqlQuery(
       this.databricksPort.CENTRUM_SCHEMA_NAME,
       selectQuery,
+      [
+        { name: "user_id", value: userId },
+        { name: "project_id_old", value: projectIdOld },
+      ],
     );
     if (selectResult.isFailure()) {
       return failure(

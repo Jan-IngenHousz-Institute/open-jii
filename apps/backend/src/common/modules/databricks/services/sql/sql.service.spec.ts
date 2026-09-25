@@ -5,6 +5,7 @@ import { TestHarness } from "../../../../../test/test-harness";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksSqlService } from "./sql.service";
+import type { StatementParameter } from "./sql.types";
 
 // Constants for testing
 const MOCK_ACCESS_TOKEN = "mock-token";
@@ -97,6 +98,42 @@ describe("DatabricksSqlService", () => {
       expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
       expect(result.value).toEqual(mockTableData);
+    });
+
+    it("should send statement parameters with the statement", async () => {
+      const parameters: StatementParameter[] = [
+        { name: "row_id", value: "\\') OR 1=1 --" },
+        { name: "now", value: "2026-09-25T02:00:00.000Z", type: "TIMESTAMP" },
+      ];
+
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      const statementCall = nock(databricksHost)
+        .post(
+          DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/",
+          (body: { statement: string; parameters: unknown }) =>
+            body.statement === "DELETE FROM t WHERE row_id = :row_id AND ts < :now" &&
+            JSON.stringify(body.parameters) === JSON.stringify(parameters),
+        )
+        .reply(200, {
+          statement_id: "mock-statement-id",
+          status: { state: "SUCCEEDED" },
+          manifest: { schema: { column_count: 0, columns: [] }, total_row_count: 0 },
+          result: { row_count: 0 },
+        });
+
+      const result = await sqlService.executeSqlQuery(
+        schemaName,
+        "DELETE FROM t WHERE row_id = :row_id AND ts < :now",
+        parameters,
+      );
+
+      assertSuccess(result);
+      expect(statementCall.isDone()).toBe(true);
     });
 
     it("should poll for results when query is in RUNNING state initially", async () => {
