@@ -1,4 +1,5 @@
 import { SqlQueryBuilder } from "../query-builder.base";
+import type { FilterCondition } from "../query-builder.types";
 import { buildFilterCondition } from "./filter";
 
 describe("buildFilterCondition", () => {
@@ -50,7 +51,36 @@ describe("buildFilterCondition", () => {
   it("escapes single quotes in string values", () => {
     expect(
       buildFilterCondition({ column: "name", operator: "equals", value: "O'Connor" }, builder),
-    ).toBe("`name` = 'O''Connor'");
+    ).toBe("`name` = 'O\\'Connor'");
+  });
+
+  const literalOperators: FilterCondition["operator"][] = [
+    "equals",
+    "not_equals",
+    "greater_than",
+    "contains",
+  ];
+
+  it.each(literalOperators)(
+    "keeps a backslash-quote value inside its literal for %s",
+    (operator) => {
+      const sql = buildFilterCondition(
+        { column: "name", operator, value: "\\' OR 1=1 --" },
+        builder,
+      );
+
+      expect(sql).toContain("\\\\\\' OR 1=1 --");
+      expect(sql).not.toMatch(/[^\\]' OR 1=1/);
+    },
+  );
+
+  it("keeps backslash-quote values inside their literals in `in` lists", () => {
+    expect(
+      buildFilterCondition(
+        { column: "name", operator: "in", value: ["a", "\\') OR (1=1"] },
+        builder,
+      ),
+    ).toBe("`name` IN ('a', '\\\\\\') OR (1=1')");
   });
 
   it("splits dotted identifiers per segment (struct field paths)", () => {

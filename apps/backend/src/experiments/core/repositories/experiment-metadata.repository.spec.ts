@@ -120,7 +120,7 @@ describe("ExperimentMetadataRepository", () => {
       expect(result.value).toEqual([]);
     });
 
-    it("should use escaped experiment ID in the SQL query", async () => {
+    it("should bind the experiment ID as a statement parameter", async () => {
       vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
         success(buildMetadataSchemaData()),
       );
@@ -129,7 +129,8 @@ describe("ExperimentMetadataRepository", () => {
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
         databricksPort.CENTRUM_SCHEMA_NAME,
-        expect.stringContaining(mockExperimentId),
+        expect.stringContaining("WHERE experiment_id = :experiment_id"),
+        [{ name: "experiment_id", value: mockExperimentId }],
       );
     });
 
@@ -204,8 +205,10 @@ describe("ExperimentMetadataRepository", () => {
 
       const call = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
       expect(call[1]).toContain("DELETE FROM");
-      expect(call[1]).toContain(mockMetadataId);
-      expect(call[1]).toContain(mockExperimentId);
+      expect(call[2]).toEqual([
+        { name: "metadata_id", value: mockMetadataId },
+        { name: "experiment_id", value: mockExperimentId },
+      ]);
     });
 
     it("should reject invalid metadata ID", async () => {
@@ -250,8 +253,25 @@ describe("ExperimentMetadataRepository", () => {
       expect(result.value.metadata).toEqual(updateDto.metadata);
 
       const updateCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
-      expect(updateCall[1]).toContain(mockMetadataId);
-      expect(updateCall[1]).toContain(mockExperimentId);
+      expect(updateCall[1]).toContain("WHERE metadata_id = :metadata_id");
+      expect(updateCall[2]).toEqual(
+        expect.arrayContaining([
+          { name: "metadata", value: JSON.stringify(updateDto.metadata) },
+          { name: "metadata_id", value: mockMetadataId },
+          { name: "experiment_id", value: mockExperimentId },
+        ]),
+      );
+    });
+
+    it("should keep quotes in metadata values intact", async () => {
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValueOnce(success(emptySchemaData));
+      const metadata = { field: "farmer's plot \\ north" };
+
+      await repository.update(mockMetadataId, { metadata }, mockUserId, mockExperimentId);
+
+      const updateCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
+      expect(updateCall[1]).not.toContain("farmer");
+      expect(updateCall[2]).toContainEqual({ name: "metadata", value: JSON.stringify(metadata) });
     });
 
     it("should use PARSE_JSON in UPDATE query", async () => {
@@ -318,7 +338,7 @@ describe("ExperimentMetadataRepository", () => {
 
       const call = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
       expect(call[1]).toContain("DELETE FROM");
-      expect(call[1]).toContain(mockExperimentId);
+      expect(call[2]).toEqual([{ name: "experiment_id", value: mockExperimentId }]);
     });
 
     it("should reject invalid experiment ID", async () => {

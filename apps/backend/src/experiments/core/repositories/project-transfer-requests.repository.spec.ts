@@ -88,6 +88,10 @@ describe("ProjectTransferRequestsRepository", () => {
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
         databricksPort.CENTRUM_SCHEMA_NAME,
         expect.stringContaining("INSERT INTO openjii_project_transfer_requests"),
+        expect.arrayContaining([
+          { name: "user_id", value: mockUserId },
+          { name: "project_id_old", value: mockProjectIdOld },
+        ]),
       );
     });
 
@@ -140,7 +144,7 @@ describe("ProjectTransferRequestsRepository", () => {
       expect(result.error.message).toContain("Validation failed for transfer request");
     });
 
-    it("should properly escape SQL injection characters", async () => {
+    it("should bind quoted values as parameters", async () => {
       // Arrange
       const requestWithSpecialChars: CreateTransferRequestDto = {
         ...createValidTransferRequest(),
@@ -154,11 +158,10 @@ describe("ProjectTransferRequestsRepository", () => {
       // Assert
       expect(result.isSuccess()).toBe(true);
 
-      const sqlCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
-      const sqlQuery = sqlCall[1];
+      const [, sqlQuery, parameters] = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
 
-      // Check that quotes are properly escaped
-      expect(sqlQuery).toContain("test''project");
+      expect(sqlQuery).not.toContain("test'project");
+      expect(parameters).toContainEqual({ name: "project_id_old", value: "test'project\"id" });
     });
 
     it("should handle databricks port failure", async () => {
@@ -241,7 +244,8 @@ describe("ProjectTransferRequestsRepository", () => {
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
         databricksPort.CENTRUM_SCHEMA_NAME,
-        expect.stringContaining(`WHERE user_id = '${mockUserId}'`),
+        expect.stringContaining("WHERE user_id = :user_id"),
+        [{ name: "user_id", value: mockUserId }],
       );
     });
 
@@ -257,10 +261,10 @@ describe("ProjectTransferRequestsRepository", () => {
       assertSuccess(result);
       expect(result.value).toHaveLength(2);
 
-      const sqlCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
-      const sqlQuery = sqlCall[1];
+      const [, sqlQuery, parameters] = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
 
       expect(sqlQuery).not.toContain("WHERE user_id");
+      expect(parameters).toBeUndefined();
     });
 
     it("should return empty array when no transfer requests exist", async () => {
@@ -343,11 +347,16 @@ describe("ProjectTransferRequestsRepository", () => {
 
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
         databricksPort.CENTRUM_SCHEMA_NAME,
-        expect.stringContaining("WHERE user_id = "),
+        expect.stringContaining("WHERE user_id = :user_id AND project_id_old = :project_id_old"),
+        [
+          { name: "user_id", value: mockUserId },
+          { name: "project_id_old", value: mockProjectIdOld },
+        ],
       );
       expect(databricksPort.executeSqlQuery).toHaveBeenCalledWith(
         databricksPort.CENTRUM_SCHEMA_NAME,
         expect.stringContaining("LIMIT 1"),
+        expect.any(Array),
       );
     });
 
@@ -436,11 +445,13 @@ describe("ProjectTransferRequestsRepository", () => {
       // Assert
       expect(result.isSuccess()).toBe(true);
 
-      const sqlCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
-      const sqlQuery = sqlCall[1];
+      const [, sqlQuery, parameters] = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
 
-      // SQL injection attempt should be properly escaped (single quotes escaped as double quotes)
-      expect(sqlQuery).toContain("''; DROP TABLE openjii_project_transfer_requests; --'");
+      expect(sqlQuery).not.toContain("DROP TABLE");
+      expect(parameters).toContainEqual({
+        name: "project_id_old",
+        value: "'; DROP TABLE openjii_project_transfer_requests; --",
+      });
     });
 
     it("should validate project ID format to prevent injection", async () => {
@@ -481,13 +492,15 @@ describe("ProjectTransferRequestsRepository", () => {
       // Assert
       expect(result.isSuccess()).toBe(true);
 
-      const sqlCall = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
-      const sqlQuery = sqlCall[1];
+      const [, sqlQuery, parameters] = vi.mocked(databricksPort.executeSqlQuery).mock.calls[0];
 
-      // Check that special characters are properly escaped
-      expect(sqlQuery).toContain("\\n");
-      expect(sqlQuery).toContain("\\r");
-      expect(sqlQuery).toContain("''value");
+      expect(sqlQuery).not.toContain("Platform");
+      expect(parameters).toEqual(
+        expect.arrayContaining([
+          { name: "source_platform", value: "Test\nPlatform\r\n" },
+          { name: "project_url_old", value: "https://example.com/projects/test'value" },
+        ]),
+      );
     });
   });
 });

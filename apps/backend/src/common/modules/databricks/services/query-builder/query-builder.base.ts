@@ -41,9 +41,12 @@ export abstract class BaseQueryBuilder {
       .join(".");
   }
 
-  /** SQL string literal; doubles single quotes to prevent injection. */
+  /**
+   * SQL string literal. Databricks reads backslash escapes inside literals and joins adjacent
+   * literals, so a doubled quote would split the value; backslashes are escaped before quotes.
+   */
   escapeValue(value: string): string {
-    return `'${value.replace(/'/g, "''")}'`;
+    return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
   }
 
   /**
@@ -406,7 +409,7 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     const parsedColumns = this.variantColumns
       .map((v) => {
         const transformedSchema = this.transformSchemaForFromJson(v.schema);
-        return `from_json(${v.column}::string, '${transformedSchema}') as ${v.alias}`;
+        return `from_json(${v.column}::string, ${this.escapeValue(transformedSchema)}) as ${v.alias}`;
       })
       .join(",\n          ");
 

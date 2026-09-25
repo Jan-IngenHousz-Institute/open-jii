@@ -85,6 +85,17 @@ describe("QueryBuilderService", () => {
       expect(sql).toContain("STRUCT<id:INT>");
     });
 
+    it("escapes quotes in variant field names inside the schema literal", () => {
+      const sql = unwrap(
+        service.buildQuery({
+          table: "events",
+          variants: [{ columnName: "data", schema: "OBJECT<`it's`: INT>" }],
+        }),
+      );
+
+      expect(sql).toContain("from_json(data::string, 'STRUCT<`it\\'s`: INT>')");
+    });
+
     it("should build variant query with exceptColumns", () => {
       const sql = unwrap(
         service.buildQuery({
@@ -459,7 +470,7 @@ describe("QueryBuilderService", () => {
         }),
       );
 
-      expect(sql).toContain("`name` = 'O''Brien'");
+      expect(sql).toContain("`name` = 'O\\'Brien'");
     });
 
     it("supports COUNT(*) via column='*'", () => {
