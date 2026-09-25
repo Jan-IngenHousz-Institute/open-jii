@@ -147,6 +147,8 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           displayName={activeTable.displayName}
           pageSize={10}
           defaultSortColumn={activeTable.defaultSortColumn}
+          tableRowCount={activeTable.totalRows}
+          latestRowAt={activeTable.latestRowAt}
         />
       </div>
 

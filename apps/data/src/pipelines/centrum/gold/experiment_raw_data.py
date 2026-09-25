@@ -19,9 +19,10 @@ from openjii.timezones import usable_timezone
 
 @dlt.table(
     name=EXPERIMENT_RAW_DATA_TABLE,
-    # The enriched views read one experiment at a time through this table.
-    cluster_by=["experiment_id"],
-    comment="Gold layer: Per-experiment raw sample data partitioned by experiment_id with VARIANT sample",
+    # Reads take one experiment, newest rows first and often within a time window, so files
+    # cluster by experiment and then by time.
+    cluster_by=["experiment_id", "timestamp"],
+    comment="Gold layer: Per-experiment raw sample data clustered by experiment_id and timestamp with VARIANT sample",
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
@@ -29,7 +30,9 @@ from openjii.timezones import usable_timezone
         "delta.autoOptimize.autoCompact": "true",
         "delta.enableRowTracking": "true",
         "delta.enableChangeDataFeed": "true",
-        "delta.feature.variantType-preview": "supported"
+        "delta.feature.variantType-preview": "supported",
+        # Stores common payload fields as columns of their own, so reading one field skips the rest.
+        "delta.enableVariantShredding": "true",
     }
 )
 def experiment_raw_data():

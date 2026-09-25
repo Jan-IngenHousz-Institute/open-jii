@@ -12,8 +12,8 @@ from openjii.centrum import EXPERIMENT_UPLOADED_DATA_TABLE, RAW_UPLOADED_DATA_TA
 
 @dlt.table(
     name=EXPERIMENT_UPLOADED_DATA_TABLE,
-    # The enriched views read one experiment at a time through this table.
-    cluster_by=["experiment_id"],
+    # Reads take one upload table of one experiment, in upload order.
+    cluster_by=["experiment_id", "upload_table_id", "uploaded_at"],
     comment="Gold layer: User-uploaded tabular data with VARIANT row payloads. Peer of experiment_macro_data; anchored by stable upload_table_id.",
     table_properties={
         "quality": "gold",
@@ -23,6 +23,8 @@ from openjii.centrum import EXPERIMENT_UPLOADED_DATA_TABLE, RAW_UPLOADED_DATA_TA
         "delta.enableRowTracking": "true",
         "delta.enableChangeDataFeed": "true",
         "delta.feature.variantType-preview": "supported",
+        # Stores common payload fields as columns of their own, so reading one field skips the rest.
+        "delta.enableVariantShredding": "true",
     },
 )
 def experiment_uploaded_data():

@@ -32,8 +32,9 @@ from openjii.macros.runtime import (
 
 @dlt.table(
     name=EXPERIMENT_MACRO_DATA_TABLE,
-    # The enriched views read one experiment at a time through this table.
-    cluster_by=["experiment_id"],
+    # Reads take one macro's results in one experiment, newest first and often within a time
+    # window, so files cluster by experiment, then macro, then time.
+    cluster_by=["experiment_id", "macro_id", "timestamp"],
     comment="Gold layer: Unified macro processing with VARIANT column for flexible schema",
     table_properties={
         "quality": "gold",
@@ -42,7 +43,9 @@ from openjii.macros.runtime import (
         "delta.autoOptimize.autoCompact": "true",
         "delta.enableRowTracking": "true",
         "delta.enableChangeDataFeed": "true",
-        "delta.feature.variantType-preview": "supported"
+        "delta.feature.variantType-preview": "supported",
+        # Stores common payload fields as columns of their own, so reading one field skips the rest.
+        "delta.enableVariantShredding": "true",
     }
 )
 def experiment_macro_data():

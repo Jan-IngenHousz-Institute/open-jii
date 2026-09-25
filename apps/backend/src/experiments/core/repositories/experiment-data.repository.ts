@@ -29,7 +29,13 @@ import type { CachePort } from "../ports/cache.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 
-type ReadMode = "aggregation" | "filtered-page" | "filtered-all" | "page";
+type ReadMode =
+  | "aggregation"
+  | "filtered-page"
+  | "filtered-page-late-payload"
+  | "filtered-all"
+  | "page"
+  | "page-late-payload";
 
 interface ReadTrace {
   experimentId: string;
@@ -38,7 +44,30 @@ interface ReadTrace {
   startedAt: number;
   metadataMs: number;
   countMs?: number;
+  idsMs?: number;
+  dataMs?: number;
+  droppedRows?: number;
 }
+
+/** One page of a table: what it shows, how it is narrowed and sorted, and where it starts. */
+interface PageQuery {
+  columns?: string[];
+  filters?: FilterCondition[];
+  orderBy?: string;
+  orderDirection: "ASC" | "DESC";
+  limit: number;
+  offset: number;
+}
+
+/**
+ * Above this many rows a page is picked by id before its rows are read in full. The extra round
+ * trip costs a second or two, while a single statement extracts the payload of every row before
+ * its LIMIT, which costs more than that on tables of a few hundred thousand rows.
+ */
+const LATE_PAYLOAD_MIN_ROWS = 200_000;
+
+/** The row id every payload view carries. */
+const ROW_ID = "id";
 
 /** What a read of one table flattens and hides, and the names its base columns hold. */
 interface TableShape {
@@ -171,30 +200,25 @@ export class ExperimentDataRepository {
         }
         const countSql = `SELECT COUNT(*) AS total FROM (${countSubqueryResult.value}) AS sub`;
 
-        const dataQueryResult = this.buildQuery(experimentId, shape, {
-          columns,
-          filters: effectiveFilters,
-          orderBy,
-          orderDirection,
-          limit: pageSize,
-          offset,
-        });
-        if (dataQueryResult.isFailure()) {
-          return dataQueryResult;
-        }
-
-        const [[countResult, countMs], [dataResult, dataMs]] = await Promise.all([
+        const [[countResult, countMs], pageResult] = await Promise.all([
           this.measure(() => this.executeQuery(countSql)),
-          this.measure(() => this.executeQuery(dataQueryResult.value)),
+          this.pageData(experimentId, shape, read, {
+            columns,
+            filters: effectiveFilters,
+            orderBy,
+            orderDirection,
+            limit: pageSize,
+            offset,
+          }),
         ]);
         read.countMs = countMs;
         if (countResult.isFailure()) {
           return countResult;
         }
-        if (dataResult.isFailure()) {
-          return dataResult;
+        if (pageResult.isFailure()) {
+          return pageResult;
         }
-        this.logRead(read, dataMs, dataResult.value);
+        this.logRead(read, pageResult.value);
 
         const totalRows = Number(countResult.value.rows[0]?.[0] ?? 0);
         return success([
@@ -205,7 +229,7 @@ export class ExperimentDataRepository {
             page,
             pageSize,
             rowCount: totalRows,
-            data: dataResult.value,
+            data: pageResult.value,
           }),
         ]);
       }
@@ -235,26 +259,28 @@ export class ExperimentDataRepository {
     const usedPage = page ?? 1;
     const usedPageSize = pageSize ?? 5;
     const offset = (usedPage - 1) * usedPageSize;
-    const queryResult = this.buildQuery(experimentId, shape, {
+    const pageResult = await this.pageData(experimentId, shape, read, {
       orderBy,
       orderDirection,
       limit: usedPageSize,
       offset,
     });
-    if (queryResult.isFailure()) {
-      return queryResult;
+    if (pageResult.isFailure()) {
+      return pageResult;
     }
+    this.logRead(read, pageResult.value);
 
-    return this.getTableDataPage({
-      tableName,
-      experiment,
-      shape,
-      page: usedPage,
-      pageSize: usedPageSize,
-      rowCount: shape.metadata.rowCount,
-      query: queryResult.value,
-      read,
-    });
+    return success([
+      this.tablePage({
+        tableName,
+        experiment,
+        shape,
+        page: usedPage,
+        pageSize: usedPageSize,
+        rowCount: shape.metadata.rowCount,
+        data: pageResult.value,
+      }),
+    ]);
   }
 
   /**
@@ -604,10 +630,11 @@ export class ExperimentDataRepository {
     const { tableName, experiment, shape, query, read } = params;
 
     const [dataResult, dataMs] = await this.measure(() => this.executeQuery(query));
+    read.dataMs = dataMs;
     if (dataResult.isFailure()) {
       return dataResult;
     }
-    this.logRead(read, dataMs, dataResult.value);
+    this.logRead(read, dataResult.value);
 
     const totalRows = dataResult.value.totalRows;
 
@@ -625,35 +652,102 @@ export class ExperimentDataRepository {
     ]);
   }
 
-  private async getTableDataPage(params: {
-    tableName: string;
-    experiment: ExperimentDto;
-    shape: TableShape;
-    page: number;
-    pageSize: number;
-    rowCount: number;
-    query: string;
-    read: ReadTrace;
-  }): Promise<Result<TableDataDto[]>> {
-    const { tableName, experiment, shape, page, pageSize, rowCount, query, read } = params;
-
-    const [dataResult, dataMs] = await this.measure(() => this.executeQuery(query));
-    if (dataResult.isFailure()) {
-      return dataResult;
+  /**
+   * One page of rows. On a large table the page is first picked by row id over only the columns
+   * its filters and sort need, and just those rows are then read in full, because one statement
+   * would extract the payload of every row before its LIMIT. A page that picks no ids is read as
+   * one statement, so an empty page still carries the table's columns.
+   */
+  private async pageData(
+    experimentId: string,
+    shape: TableShape,
+    read: ReadTrace,
+    page: PageQuery,
+  ): Promise<Result<SchemaData>> {
+    if (!this.readsPayloadLate(shape, page.columns)) {
+      return this.singleStatementPage(experimentId, shape, read, page);
     }
-    this.logRead(read, dataMs, dataResult.value);
 
-    return success([
-      this.tablePage({
-        tableName,
-        experiment,
-        shape,
-        page,
-        pageSize,
-        rowCount,
-        data: dataResult.value,
-      }),
-    ]);
+    const idsQuery = this.buildQuery(experimentId, shape, { ...page, columns: [ROW_ID] });
+    if (idsQuery.isFailure()) {
+      return idsQuery;
+    }
+
+    const [idsResult, idsMs] = await this.measure(() => this.executeQuery(idsQuery.value));
+    read.idsMs = idsMs;
+    if (idsResult.isFailure()) {
+      return idsResult;
+    }
+
+    const ids = idsResult.value.rows.flatMap(([id]) => (id === null ? [] : [id]));
+    if (ids.length === 0) {
+      return this.singleStatementPage(experimentId, shape, read, page);
+    }
+
+    read.mode = read.mode === "filtered-page" ? "filtered-page-late-payload" : "page-late-payload";
+    // Ids go as strings: a quoted literal compares exactly against an INT or BIGINT id, and upload
+    // ids pass 2^53, which a JavaScript number cannot hold.
+    const rowsQuery = this.buildQuery(experimentId, shape, {
+      columns: page.columns,
+      filters: [{ column: ROW_ID, operator: "in", value: [...new Set(ids)] }],
+    });
+    if (rowsQuery.isFailure()) {
+      return rowsQuery;
+    }
+
+    const [rowsResult, dataMs] = await this.measure(() => this.executeQuery(rowsQuery.value));
+    read.dataMs = dataMs;
+    if (rowsResult.isFailure()) {
+      return rowsResult;
+    }
+
+    return success(this.orderByIds(ids, rowsResult.value, read));
+  }
+
+  private async singleStatementPage(
+    experimentId: string,
+    shape: TableShape,
+    read: ReadTrace,
+    page: PageQuery,
+  ): Promise<Result<SchemaData>> {
+    const queryResult = this.buildQuery(experimentId, shape, page);
+    if (queryResult.isFailure()) {
+      return queryResult;
+    }
+
+    const [dataResult, dataMs] = await this.measure(() => this.executeQuery(queryResult.value));
+    read.dataMs = dataMs;
+    return dataResult;
+  }
+
+  /** Only a large table with a payload gains from the second step, which matches rows by id. */
+  private readsPayloadLate(shape: TableShape, columns?: string[]): boolean {
+    const isLargeTable = shape.metadata.rowCount > LATE_PAYLOAD_MIN_ROWS;
+    const hasPayload = shape.variants.length > 0;
+    const carriesRowId = columns === undefined || columns.length === 0 || columns.includes(ROW_ID);
+    return isLargeTable && hasPayload && carriesRowId;
+  }
+
+  /**
+   * The page's rows in the order their ids were picked, one row per picked id. A row outside the
+   * page that shares an id comes back too; it is dropped and counted.
+   */
+  private orderByIds(ids: string[], data: SchemaData, read: ReadTrace): SchemaData {
+    const idIndex = data.columns.findIndex(({ name }) => name === ROW_ID);
+    const rowsById = new Map<string, SchemaData["rows"]>();
+    for (const row of data.rows) {
+      const id = row[idIndex];
+      if (id !== null) {
+        rowsById.set(id, [...(rowsById.get(id) ?? []), row]);
+      }
+    }
+
+    const rows = ids.flatMap((id) => {
+      const row = rowsById.get(id)?.shift();
+      return row === undefined ? [] : [row];
+    });
+    read.droppedRows = data.rows.length - rows.length;
+    return { ...data, rows, totalRows: rows.length };
   }
 
   private tablePage(params: {
@@ -685,7 +779,7 @@ export class ExperimentDataRepository {
   }
 
   /** One line per read with the warehouse phases split out, so a slow chart names its phase. */
-  private logRead(read: ReadTrace, dataMs: number, data: SchemaData): void {
+  private logRead(read: ReadTrace, data: SchemaData): void {
     this.logger.log({
       msg: "Experiment data read",
       operation: "getTableData",
@@ -694,7 +788,9 @@ export class ExperimentDataRepository {
       mode: read.mode,
       metadataMs: read.metadataMs,
       countMs: read.countMs,
-      dataMs,
+      idsMs: read.idsMs,
+      dataMs: read.dataMs,
+      droppedRows: read.droppedRows,
       totalMs: Math.round(performance.now() - read.startedAt),
       rows: data.rows.length,
       totalRows: data.totalRows,
