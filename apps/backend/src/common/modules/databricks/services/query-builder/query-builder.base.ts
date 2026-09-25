@@ -118,16 +118,19 @@ export abstract class BaseQueryBuilder {
    * Turn a field type from schema_of_variant_agg() into a type a VARIANT can be cast to.
    *
    * - OBJECT< to STRUCT<: schema_of_variant_agg uses Spark's VARIANT DDL (OBJECT); casts want STRUCT.
-   * - VOID to STRING: schema_of_variant_agg emits VOID for fields that exist on the JSON but are
-   *   null across every aggregated row, and VOID is no cast target. Those fields read back as null.
+   * - VOID to STRING: schema_of_variant_agg emits VOID for a field that is null in every aggregated
+   *   row and for the elements of an array that is empty in every row, and VOID is no cast target.
+   *   Those values read back as null or as an empty array.
    *
    * Example:
-   *   Input:  "ARRAY<OBJECT<text: STRING, dead: VOID>>"
-   *   Output: "ARRAY<STRUCT<text: STRING, dead: STRING>>"
+   *   Input:  "ARRAY<OBJECT<text: STRING, dead: VOID, none: ARRAY<VOID>>>"
+   *   Output: "ARRAY<STRUCT<text: STRING, dead: STRING, none: ARRAY<STRING>>>"
    */
   variantCastType(fieldType: string): string {
-    const struct = fieldType.replaceAll("OBJECT<", "STRUCT<");
-    return struct === "VOID" ? "STRING" : struct.replaceAll(": VOID", ": STRING");
+    // VOID as a whole type token; a field named VOID is followed by `:` and stays.
+    return fieldType
+      .replaceAll("OBJECT<", "STRUCT<")
+      .replace(/(^|[<,:]\s*)VOID(?=\s*(?:[>,]|$))/g, "$1STRING");
   }
 }
 
@@ -350,17 +353,23 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
       .join("\n");
   }
 
-  /** Every base column but the raw VARIANTs, then every flattened field under its own name. */
+  /** Every base column but the raw VARIANTs, then every flattened field under its own name. A name
+   *  in two VARIANT columns is projected once, from the first, as fieldExpressions resolves it. */
   private starProjection(): string {
     const excluded = [...this.variantColumns.map(({ column }) => column), ...this.exceptColumns];
-    const fields = this.variantColumns.flatMap((variant) =>
-      VariantSchema.isObject(variant.schema)
-        ? variant.fields.map(
-            (field) =>
-              `${this.fieldExpression(variant.column, field)} AS ${this.quoteName(field.name)}`,
-          )
-        : [this.wholeColumn(variant)],
-    );
+    const projected = new Set<string>();
+    const fields = this.variantColumns.flatMap((variant) => {
+      if (!VariantSchema.isObject(variant.schema)) {
+        return [this.wholeColumn(variant)];
+      }
+
+      const unprojected = variant.fields.filter((field) => !projected.has(field.name));
+      unprojected.forEach((field) => projected.add(field.name));
+      return unprojected.map(
+        (field) =>
+          `${this.fieldExpression(variant.column, field)} AS ${this.quoteName(field.name)}`,
+      );
+    });
     const exceptList = excluded.map((column) => this.escapeIdentifier(column)).join(", ");
     return [`* EXCEPT (${exceptList})`, ...fields].join(", ");
   }

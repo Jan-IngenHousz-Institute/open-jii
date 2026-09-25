@@ -131,6 +131,10 @@ describe("QueryBuilder Base", () => {
         "ARRAY<STRUCT<text: STRING, dead: STRING>>",
       );
       expect(builder.variantCastType("VOID")).toBe("STRING");
+      expect(builder.variantCastType("ARRAY<VOID>")).toBe("ARRAY<STRING>");
+      expect(builder.variantCastType("OBJECT<VOID: INT, e: ARRAY<VOID>>")).toBe(
+        "STRUCT<VOID: INT, e: ARRAY<STRING>>",
+      );
     });
 
     it("flattens every field by typed path in one SELECT", () => {
@@ -217,6 +221,24 @@ describe("QueryBuilder Base", () => {
       expect(query).toContain(
         "SELECT * EXCEPT (`v`), try_variant_get(`v`, '$', 'ARRAY<STRUCT<x: DOUBLE>>') AS `v`",
       );
+    });
+
+    it("projects a field in two VARIANT columns once, from the first", () => {
+      const query = builder
+        .from("t")
+        .parseVariant("a", "OBJECT<time: STRING, x: INT>")
+        .parseVariant("b", "OBJECT<time: STRING, y: INT>")
+        .orderBy("time")
+        .build();
+
+      expect(query).toContain(
+        "SELECT * EXCEPT (`a`, `b`), " +
+          "try_variant_get(`a`, '$[\"time\"]', 'STRING') AS `time`, " +
+          "try_variant_get(`a`, '$[\"x\"]', 'INT') AS `x`, " +
+          "try_variant_get(`b`, '$[\"y\"]', 'INT') AS `y`",
+      );
+      expect(query.match(/AS `time`/g)).toHaveLength(1);
+      expect(query).toContain("ORDER BY `time` ASC");
     });
 
     it("contributes no columns for an empty object schema", () => {
