@@ -11,6 +11,7 @@ const ORPC_CODE_BY_STATUS: Record<number, string> = {
   409: "CONFLICT",
   422: "UNPROCESSABLE_CONTENT",
   429: "TOO_MANY_REQUESTS",
+  504: "GATEWAY_TIMEOUT",
 };
 
 export function throwOrpcError(

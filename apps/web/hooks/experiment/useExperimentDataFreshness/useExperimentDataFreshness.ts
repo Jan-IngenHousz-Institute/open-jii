@@ -1,3 +1,4 @@
+import { useIsIdle } from "@/hooks/useIsIdle";
 import { orpc } from "@/lib/orpc";
 import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -26,10 +27,11 @@ function versionOf(table: ExperimentTableMetadata): string {
 }
 
 /**
- * Polls the experiment's table listing while the page is visible and refetches
- * a table's rows and charts only when its count, newest row or schema moves, so
- * an open page follows the pipeline without resetting what the user is doing.
- * `tableNames` picks whose newest data to report; omitted, the whole experiment.
+ * Polls the experiment's table listing while the page is visible and in use, and
+ * refetches a table's rows and charts only when its count, newest row or schema
+ * moves, so an open page follows the pipeline without resetting what the user is
+ * doing. `tableNames` picks whose newest data to report; omitted, the whole
+ * experiment.
  */
 export const useExperimentDataFreshness = (experimentId: string, tableNames?: string[]) => {
   const queryClient = useQueryClient();
@@ -37,6 +39,13 @@ export const useExperimentDataFreshness = (experimentId: string, tableNames?: st
   // What the page showed when paused, so the newest-row time matches the rows held still.
   const [heldTables, setHeldTables] = useState<ExperimentTableMetadata[] | undefined>();
   const [overdueAt, setOverdueAt] = useState(0);
+
+  // An unattended page stops polling and catches up on the next input, since
+  // re-enabling a query refetches stale data at once. A manual pause keeps the
+  // query enabled so waking the page does not fetch behind it.
+  const isIdle = useIsIdle();
+  const isIdlePaused = isIdle && !isPaused;
+  const isPolling = !isPaused && !isIdle;
 
   // A hidden tab stops polling: refetchIntervalInBackground stays off.
   const {
@@ -47,8 +56,9 @@ export const useExperimentDataFreshness = (experimentId: string, tableNames?: st
   } = useQuery(
     orpc.experiments.getExperimentTables.queryOptions({
       input: { id: experimentId },
-      refetchInterval: isPaused ? false : POLL_MS,
-      refetchOnWindowFocus: !isPaused,
+      enabled: !isIdlePaused,
+      refetchInterval: isPolling ? POLL_MS : false,
+      refetchOnWindowFocus: isPolling,
       staleTime: BACKEND_CACHE_MS,
     }),
   );
@@ -93,7 +103,7 @@ export const useExperimentDataFreshness = (experimentId: string, tableNames?: st
   }, [tables, dataUpdatedAt, isPaused, experimentId, queryClient]);
 
   useEffect(() => {
-    if (isPaused || dataUpdatedAt === 0) {
+    if (!isPolling || dataUpdatedAt === 0) {
       return;
     }
     const timer = setTimeout(
@@ -101,7 +111,7 @@ export const useExperimentDataFreshness = (experimentId: string, tableNames?: st
       dataUpdatedAt + BEHIND_AFTER_MS - Date.now(),
     );
     return () => clearTimeout(timer);
-  }, [dataUpdatedAt, isPaused]);
+  }, [dataUpdatedAt, isPolling]);
 
   const togglePaused = () => {
     // Resuming catches up at once rather than on the next interval.
@@ -113,9 +123,9 @@ export const useExperimentDataFreshness = (experimentId: string, tableNames?: st
   };
 
   const shownTables = isPaused ? (heldTables ?? tables) : tables;
-  const isBehind = !isPaused && dataUpdatedAt > 0 && overdueAt === dataUpdatedAt;
+  const isBehind = isPolling && dataUpdatedAt > 0 && overdueAt === dataUpdatedAt;
   const liveStatus: DataFreshnessStatus = isBehind ? "behind" : "live";
-  const status: DataFreshnessStatus = isPaused ? "paused" : liveStatus;
+  const status: DataFreshnessStatus = isPolling ? liveStatus : "paused";
 
   return {
     hasLoaded: tables !== undefined,
