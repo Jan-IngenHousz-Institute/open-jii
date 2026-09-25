@@ -246,6 +246,10 @@ export class AppError extends Error {
   ): AppError {
     return new AppError(message, code, StatusCodes.CONFLICT, details);
   }
+
+  static timeout(message = "Request timed out", code = "TIMEOUT", details?: unknown): AppError {
+    return new AppError(message, code, StatusCodes.GATEWAY_TIMEOUT, details);
+  }
 }
 
 /**

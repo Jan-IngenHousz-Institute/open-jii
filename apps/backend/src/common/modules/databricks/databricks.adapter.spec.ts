@@ -524,15 +524,14 @@ describe("DatabricksAdapter", () => {
         tableName: "device",
         tableType: "static",
         experimentId: "exp-123",
-        variants: [{ columnName: "data", schema: '{"field1":"int"}' }],
+        variants: [{ columnName: "data", schema: "OBJECT<field1: INT>" }],
       });
 
       assertSuccess(result);
       const query = result.value;
-      expect(query).toContain("SELECT");
-      expect(query).toContain("* EXCEPT (data, parsed_data)");
-      expect(query).toContain("parsed_data.*");
-      expect(query).toContain('from_json(data::string, \'{"field1":"int"}\') as parsed_data');
+      expect(query).toContain(
+        "SELECT * EXCEPT (`data`), try_variant_get(`data`, '$[\"field1\"]', 'INT') AS `field1`",
+      );
     });
 
     it("should handle all query options (limit, offset, orderBy)", () => {

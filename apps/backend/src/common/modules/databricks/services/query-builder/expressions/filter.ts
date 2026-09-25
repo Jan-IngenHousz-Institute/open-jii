@@ -78,7 +78,7 @@ export function buildFilterCondition(filter: FilterCondition, builder: BaseQuery
  * upper-hex of `sha2('<experimentId>:<id>', 256)`.
  */
 function contributorPseudonymColumn(filter: FilterCondition, builder: BaseQueryBuilder): string {
-  const col = builder.escapeIdentifier(filter.column);
+  const col = builder.columnExpression(filter.column);
   if (filter.contributorPseudonymSalt === undefined) {
     return col;
   }

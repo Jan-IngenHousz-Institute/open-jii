@@ -4,28 +4,28 @@ import { AxiosResponse } from "axios";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
 import { ErrorCodes } from "../../../../utils/error-codes";
-import {
-  Result,
-  AppError,
-  tryCatch,
-  failure,
-  success,
-  apiErrorMapper,
-} from "../../../../utils/fp-utils";
+import { Result, AppError, tryCatch, apiErrorMapper } from "../../../../utils/fp-utils";
 import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
-import { ExecuteStatementRequest, SchemaData, StatementResponse } from "./sql.types";
-
-interface PolledStatement {
-  response: StatementResponse;
-  attempts: number;
-}
+import {
+  ExecuteStatementRequest,
+  SchemaData,
+  StatementParameter,
+  StatementResponse,
+} from "./sql.types";
 
 @Injectable()
 export class DatabricksSqlService {
   private readonly logger = new Logger(DatabricksSqlService.name);
 
   public static readonly SQL_STATEMENTS_ENDPOINT = "/api/2.0/sql/statements";
+
+  /**
+   * How long the warehouse may take before it cancels the statement itself. CloudFront and the
+   * ALB drop the client at 60 s, so an answer later than this reaches nobody, and a statement
+   * left running only queues ahead of the reads that follow.
+   */
+  private static readonly WAIT_TIMEOUT = "50s";
 
   /**
    * Determine the appropriate AppError for a Databricks SQL statement failure.
@@ -50,7 +50,11 @@ export class DatabricksSqlService {
     private readonly configService: DatabricksConfigService,
   ) {}
 
-  async executeSqlQuery(schemaName: string, sqlStatement: string): Promise<Result<SchemaData>> {
+  async executeSqlQuery(
+    schemaName: string,
+    sqlStatement: string,
+    parameters?: StatementParameter[],
+  ): Promise<Result<SchemaData>> {
     return await tryCatch(
       async () => {
         const tokenResult = await this.authService.getAccessToken();
@@ -68,9 +72,11 @@ export class DatabricksSqlService {
           warehouse_id: this.configService.getWarehouseId(),
           schema: schemaName,
           catalog: this.configService.getCatalogName(),
-          wait_timeout: "50s", // Maximum supported wait time
+          wait_timeout: DatabricksSqlService.WAIT_TIMEOUT,
+          on_wait_timeout: "CANCEL",
           disposition: "INLINE",
           format: "JSON_ARRAY",
+          parameters,
         };
         const startedAt = performance.now();
 
@@ -88,34 +94,23 @@ export class DatabricksSqlService {
           );
 
           const statementResponse = response.data;
+          const { state, error } = statementResponse.status;
 
-          // Check if the statement is in a terminal state
-          if (statementResponse.status.state === "SUCCEEDED") {
-            return this.completeStatement(statementResponse, startedAt, 0);
-          } else if (["FAILED", "CANCELED", "CLOSED"].includes(statementResponse.status.state)) {
-            if (statementResponse.status.error) {
-              throw DatabricksSqlService.mapSqlStatementError(statementResponse.status.error);
-            }
-            throw AppError.internal(
-              `SQL statement execution ${statementResponse.status.state.toLowerCase()}`,
+          if (state === "SUCCEEDED") {
+            return this.completeStatement(statementResponse, startedAt);
+          }
+          // The deadline cancellation carries no error; any other cancellation says why.
+          const isDeadlineCancel = state === "CANCELED" && error === undefined;
+          if (isDeadlineCancel) {
+            throw AppError.timeout(
+              `The warehouse did not finish within ${DatabricksSqlService.WAIT_TIMEOUT}`,
+              "WAREHOUSE_TIMEOUT",
             );
           }
-
-          // For PENDING or RUNNING states, poll until completion
-          const pollResult = await this.pollStatementExecution(
-            token,
-            statementResponse.statement_id,
-          );
-
-          if (pollResult.isFailure()) {
-            throw pollResult.error;
+          if (error) {
+            throw DatabricksSqlService.mapSqlStatementError(error);
           }
-
-          return this.completeStatement(
-            pollResult.value.response,
-            startedAt,
-            pollResult.value.attempts,
-          );
+          throw AppError.internal(`SQL statement execution ${state.toLowerCase()}`);
         } catch (error) {
           throw error instanceof AppError
             ? error
@@ -140,73 +135,7 @@ export class DatabricksSqlService {
     );
   }
 
-  private async pollStatementExecution(
-    token: string,
-    statementId: string,
-  ): Promise<Result<PolledStatement>> {
-    const maxAttempts = 30; // Maximum polling attempts
-    const pollingIntervalMs = 1000; // 1 second between polls
-    const host = this.configService.getHost();
-
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const getUrl = `${host}${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/${statementId}`;
-
-      try {
-        const response: AxiosResponse<StatementResponse> = await this.httpService.axiosRef.get(
-          getUrl,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            timeout: DatabricksConfigService.DEFAULT_REQUEST_TIMEOUT,
-          },
-        );
-
-        const statementResponse = response.data;
-
-        // Check if the statement finished
-        if (statementResponse.status.state === "SUCCEEDED") {
-          return success({ response: statementResponse, attempts: attempt + 1 });
-        } else if (["FAILED", "CANCELED", "CLOSED"].includes(statementResponse.status.state)) {
-          if (statementResponse.status.error) {
-            return failure(
-              DatabricksSqlService.mapSqlStatementError(statementResponse.status.error),
-            );
-          }
-          return failure(
-            AppError.internal(
-              `SQL statement execution ${statementResponse.status.state.toLowerCase()}`,
-            ),
-          );
-        }
-
-        // Still running or pending, wait and retry
-        await new Promise((resolve) => setTimeout(resolve, pollingIntervalMs));
-      } catch (error) {
-        this.logger.error({
-          msg: "Error polling SQL statement execution",
-          errorCode: ErrorCodes.DATABRICKS_SQL_FAILED,
-          operation: "pollStatementExecution",
-          error,
-        });
-        return failure(
-          AppError.internal(`Databricks SQL polling failed: ${getAxiosErrorMessage(error)}`),
-        );
-      }
-    }
-
-    // If we've exhausted our polling attempts, return a timeout error
-    return failure(
-      AppError.internal("SQL statement execution timed out after multiple polling attempts"),
-    );
-  }
-
-  private completeStatement(
-    response: StatementResponse,
-    startedAt: number,
-    pollAttempts: number,
-  ): SchemaData {
+  private completeStatement(response: StatementResponse, startedAt: number): SchemaData {
     const data = this.formatExperimentDataResponse(response);
 
     this.logger.log({
@@ -214,7 +143,6 @@ export class DatabricksSqlService {
       operation: "executeSqlQuery",
       statementId: response.statement_id,
       durationMs: Math.round(performance.now() - startedAt),
-      pollAttempts,
       rowCount: data.totalRows,
       byteCount: response.manifest?.total_byte_count,
       chunkCount: response.manifest?.total_chunk_count,

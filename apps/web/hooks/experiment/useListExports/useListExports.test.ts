@@ -1,7 +1,7 @@
 import { createExportRecord } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { renderHook, waitFor } from "@/test/test-utils";
-import { describe, it, expect } from "vitest";
+import { act, renderHook, waitFor } from "@/test/test-utils";
+import { afterEach, describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
@@ -10,6 +10,29 @@ import { useListExports } from "./useListExports";
 describe("useListExports", () => {
   const experimentId = "test-experiment-id";
   const tableName = "raw_data";
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("polls while an export runs and stops once every export finished", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const running = createExportRecord({ experimentId, tableName, status: "running" });
+    const completed = createExportRecord({ ...running, status: "completed" });
+    const spy = server.mount(contract.experiments.listExports, {
+      body: () => ({ exports: [spy.callCount > 1 ? completed : running] }),
+    });
+
+    const { result } = renderHook(() => useListExports({ experimentId, tableName }));
+    await waitFor(() => expect(result.current.data?.exports[0]?.status).toBe("running"));
+
+    await act(() => vi.advanceTimersByTimeAsync(15_000));
+    await waitFor(() => expect(result.current.data?.exports[0]?.status).toBe("completed"));
+    const callsWhenFinished = spy.callCount;
+
+    await act(() => vi.advanceTimersByTimeAsync(60_000));
+    expect(spy.callCount).toBe(callsWhenFinished);
+  });
 
   it("fetches exports", async () => {
     const mockExports = [

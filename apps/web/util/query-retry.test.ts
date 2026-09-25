@@ -59,9 +59,10 @@ describe("shouldRetryQuery", () => {
       expect(shouldRetryQuery(0, error)).toBe(true);
     });
 
-    it("should retry on 504 Gateway Timeout", () => {
+    it("should NOT retry on 504 Gateway Timeout", () => {
       const error = { status: 504, message: "Gateway Timeout" };
-      expect(shouldRetryQuery(0, error)).toBe(true);
+      expect(shouldRetryQuery(0, error)).toBe(false);
+      expect(shouldRetryQuery(1, error)).toBe(false);
     });
   });
 
