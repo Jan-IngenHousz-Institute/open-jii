@@ -46,6 +46,16 @@ resource "databricks_pipeline" "this" {
       # Cluster policy if specified
       policy_id = var.policy_id
 
+      dynamic "aws_attributes" {
+        for_each = var.aws_attributes != null ? [var.aws_attributes] : []
+        content {
+          availability           = aws_attributes.value.availability
+          first_on_demand        = aws_attributes.value.first_on_demand
+          zone_id                = aws_attributes.value.zone_id
+          spot_bid_price_percent = aws_attributes.value.spot_bid_price_percent
+        }
+      }
+
       # Support for autoscaling
       dynamic "autoscale" {
         for_each = var.autoscale ? [1] : []
