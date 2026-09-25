@@ -223,22 +223,54 @@ describe("QueryBuilder Base", () => {
       );
     });
 
-    it("projects a field in two VARIANT columns once, from the first", () => {
+    it("renames a field an earlier VARIANT column holds with the later column's suffix", () => {
       const query = builder
         .from("t")
-        .parseVariant("a", "OBJECT<time: STRING, x: INT>")
-        .parseVariant("b", "OBJECT<time: STRING, y: INT>")
-        .orderBy("time")
+        .parseVariant("a", "OBJECT<time: STRING, x: INT>", "output")
+        .parseVariant("b", "OBJECT<time: STRING, y: INT>", "answer")
+        .orderBy("time_answer")
         .build();
 
       expect(query).toContain(
         "SELECT * EXCEPT (`a`, `b`), " +
           "try_variant_get(`a`, '$[\"time\"]', 'STRING') AS `time`, " +
           "try_variant_get(`a`, '$[\"x\"]', 'INT') AS `x`, " +
+          "try_variant_get(`b`, '$[\"time\"]', 'STRING') AS `time_answer`, " +
           "try_variant_get(`b`, '$[\"y\"]', 'INT') AS `y`",
       );
-      expect(query.match(/AS `time`/g)).toHaveLength(1);
-      expect(query).toContain("ORDER BY `time` ASC");
+      expect(query).toContain("ORDER BY `time_answer` ASC");
+    });
+
+    it("leaves a reserved base column its name and reads the clashing field under another", () => {
+      const reserved = () =>
+        new VariantQueryBuilder()
+          .from("t")
+          .reserve(["id", "device"])
+          .parseVariant("v", "OBJECT<Device: STRING, phi2: DOUBLE>", "output");
+
+      const star = reserved().build();
+      const byBase = reserved()
+        .select(["device"])
+        .filter({ column: "device.serial_number", operator: "equals", value: "d-1" })
+        .build();
+      const byField = reserved()
+        .select(["Device_output"])
+        .filter({ column: "Device_output", operator: "equals", value: "AmbitV003" })
+        .build();
+
+      expect(star).toContain(
+        "try_variant_get(`v`, '$[\"Device\"]', 'STRING') AS `Device_output`, " +
+          "try_variant_get(`v`, '$[\"phi2\"]', 'DOUBLE') AS `phi2`",
+      );
+      expect(star).not.toContain("AS `Device`");
+      expect(byBase).toContain("SELECT `device`");
+      expect(byBase).toContain("WHERE `device`.`serial_number` = 'd-1'");
+      expect(byField).toContain(
+        "SELECT try_variant_get(`v`, '$[\"Device\"]', 'STRING') AS `Device_output`",
+      );
+      expect(byField).toContain(
+        "WHERE try_variant_get(`v`, '$[\"Device\"]', 'STRING') = 'AmbitV003'",
+      );
     });
 
     it("contributes no columns for an empty object schema", () => {

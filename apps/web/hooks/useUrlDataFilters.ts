@@ -16,16 +16,32 @@ interface UseUrlDataFiltersResult {
   completeFilters: ExperimentDataFilter[];
 }
 
-/** URL-synced filter state, namespaced per table. */
-export function useUrlDataFilters(tableName: string): UseUrlDataFiltersResult {
+/**
+ * URL-synced filter state, namespaced per table. A table with `defaultFilters` opens on them when
+ * the URL says nothing; clearing them is written to the URL as an empty list, so they do not come
+ * back on reload.
+ */
+export function useUrlDataFilters(
+  tableName: string,
+  defaultFilters: ExperimentDataFilter[] = [],
+): UseUrlDataFiltersResult {
+  const hasDefaults = defaultFilters.length > 0;
   const [filters, setFilters] = useUrlState<ExperimentDataFilter[]>({
     key: `f_${tableName}`,
     serialize: (next) => {
       const complete = next.filter((f) => zExperimentDataFilter.safeParse(f).success);
-      return complete.length > 0 ? JSON.stringify(complete) : null;
+      if (complete.length > 0) {
+        return JSON.stringify(complete);
+      }
+      return hasDefaults ? "[]" : null;
     },
     parse: (raw) => {
-      if (!raw) return [];
+      if (raw === null) {
+        return defaultFilters;
+      }
+      if (!raw) {
+        return [];
+      }
       const result = zDataFilterArray.safeParse(safeJsonParse(raw));
       return result.success ? result.data : [];
     },

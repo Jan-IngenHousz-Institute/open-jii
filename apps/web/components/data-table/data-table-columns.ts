@@ -159,8 +159,8 @@ export function createTableColumns({
 
   const sortedColumns = preserveOrder ? dataColumns : sortColumnsForDisplay(dataColumns);
 
-  function getHeader(columnName: string) {
-    return columnName;
+  function getHeader(dataColumn: ExperimentDataColumn) {
+    return dataColumn.renamedFrom?.name ?? dataColumn.name;
   }
 
   function getRow(columnName: string, typeName: string, row: Row<DataTableFeatures, DataRow>) {
@@ -187,10 +187,11 @@ export function createTableColumns({
   sortedColumns.forEach((dataColumn) => {
     columns.push(
       columnHelper.accessor(dataColumn.name, {
-        header: getHeader(dataColumn.name),
+        header: getHeader(dataColumn),
         size: getColumnWidth(dataColumn.type_text, dataColumn.name),
         meta: {
           type: dataColumn.type_text,
+          renamedFrom: dataColumn.renamedFrom,
         },
         cell: ({ row }) => {
           return getRow(dataColumn.name, dataColumn.type_text, row);

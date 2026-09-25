@@ -136,6 +136,7 @@ export class QueryBuilderService {
       table,
       columns,
       variants = [],
+      reservedColumns = [],
       exceptColumns,
       whereClause,
       whereConditions,
@@ -147,14 +148,14 @@ export class QueryBuilderService {
       offset,
     } = params;
 
-    const builder = this.variantQuery().from(table).select(columns);
+    const builder = this.variantQuery().from(table).select(columns).reserve(reservedColumns);
 
     if (distinct) {
       builder.distinct();
     }
 
-    variants.forEach(({ columnName, schema }) => {
-      builder.parseVariant(columnName, schema);
+    variants.forEach(({ columnName, schema, suffix }) => {
+      builder.parseVariant(columnName, schema, suffix);
     });
 
     if (exceptColumns && exceptColumns.length > 0) {

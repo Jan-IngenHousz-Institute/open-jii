@@ -23,6 +23,16 @@ macro produced, and anything uploaded.
 Numeric columns can open a quick table chart. This is useful for checking a
 distribution while cleaning data; it is not a saved analysis.
 
+A table with more than 200,000 rows opens on its latest 30 days: the filter bar
+shows a `timestamp` filter starting 30 days before the newest measurement. It is
+an ordinary filter, so change the date or remove it to see older rows.
+
+A field from a macro, a question, custom metadata or an uploaded file can have
+the same name as a column the table already has, such as `device` or `id`. The
+table keeps both. The table's own column keeps the plain name, and the field
+appears beside it under its own name with a small tag saying where it came from.
+Hover the tag to see why. Filters and chart pickers show the same tag.
+
 ## New rows arrive on their own
 
 You do not need to reload the page to see new measurements. While the browser

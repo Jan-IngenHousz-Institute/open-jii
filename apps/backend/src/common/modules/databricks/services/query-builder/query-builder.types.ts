@@ -77,7 +77,10 @@ export interface AggregationSpec {
 export interface QueryParams {
   table: string;
   columns?: string[];
-  variants?: { columnName: string; schema: string }[];
+  variants?: { columnName: string; schema: string; suffix?: string }[];
+  // Names the base columns hold. A flattened field that clashes reads as
+  // `<name>_<suffix>` instead of shadowing one.
+  reservedColumns?: string[];
   exceptColumns?: string[];
   whereClause?: string;
   whereConditions?: [string, string][];

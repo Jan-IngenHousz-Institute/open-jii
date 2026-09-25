@@ -2,6 +2,7 @@
 
 import { ArrowLeft } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
+import { ColumnName } from "~/components/experiment-data/column-name";
 
 import type {
   ExperimentDataFilter,
@@ -67,7 +68,7 @@ export function AddFilterDraftEditor({
         onClick={onBack}
       >
         <ArrowLeft className="h-3 w-3" />
-        {column.name}
+        <ColumnName column={column} />
       </Button>
       <Select value={operator} onValueChange={handleOperatorChange}>
         <SelectTrigger className="h-9 w-full">

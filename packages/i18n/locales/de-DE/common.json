@@ -1346,6 +1346,14 @@
     "searchPlaceholder": "Spalten suchen…",
     "noColumnsLeft": "Keine Spalten mehr zum Hinzufügen."
   },
+  "dataColumns": {
+    "sourceMacroOutput": "Makro-Ausgabe",
+    "sourceQuestion": "Frage",
+    "sourceMetadata": "Metadaten",
+    "sourceUpload": "Hochgeladen",
+    "renamedTooltip": "Diese Tabelle hat eine eigene Spalte {{name}}, daher wird dieses Feld separat angezeigt.",
+    "renamedExportName": "In exportierten Dateien heißt es {{key}}."
+  },
   "dataFilters": {
     "placeholderSubstring": "Teilstring",
     "placeholderValue": "Wert",

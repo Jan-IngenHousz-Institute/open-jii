@@ -148,6 +148,9 @@ _TABLE_CONFIG = {
 
 _MACRO_EXCLUDE_COLS = ["raw_id", "macro_id", "macro_name", "macro_filename", "date"]
 
+# The suffixes the platform's data table gives the same clashes, so an export names them alike.
+_PAYLOAD_SUFFIXES = {"macro_output": "output", "questions_data": "answer"}
+
 
 def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="centrum"):
     """Load experiment data with proper variant parsing and column selection.
@@ -184,7 +187,7 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
     if table_type == "macro":
         df = df.filter(col("macro_id") == table_name)
 
-    expand_cols = []
+    parsed = []
     exclude_cols = ["experiment_id"]
 
     if table_type == "macro":
@@ -195,7 +198,7 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
             "parsed_macro_output",
             from_json(col("macro_output").cast("string"), macro_schema),
         )
-        expand_cols.append("parsed_macro_output.*")
+        parsed.append(("parsed_macro_output", _PAYLOAD_SUFFIXES["macro_output"]))
         exclude_cols.extend(["macro_output", "parsed_macro_output"])
 
     if table_type in ("macro", "raw_data") and questions_schema:
@@ -203,12 +206,77 @@ def load_experiment_table(experiment_id, table_name, catalog_name, schema_name="
             "parsed_questions_data",
             from_json(col("questions_data").cast("string"), questions_schema),
         )
-        expand_cols.append("parsed_questions_data.*")
+        parsed.append(("parsed_questions_data", _PAYLOAD_SUFFIXES["questions_data"]))
         exclude_cols.extend(["questions_data", "parsed_questions_data"])
 
-    if expand_cols:
-        df = df.select("*", *expand_cols)
+    return flatten_parsed_payloads(df, parsed, exclude_cols).orderBy(order_col)
 
-    df = df.drop(*[c for c in exclude_cols if c in df.columns])
 
-    return df.orderBy(order_col)
+def flatten_parsed_payloads(df, parsed, exclude_cols):
+    """Keep every column but ``exclude_cols`` and lift each parsed payload's fields to the top.
+
+    Fields are named by :func:`flattened_field_names`, so one named like a kept column, or like a
+    field of an earlier payload, is exported under a suffixed name instead of clashing with it.
+
+    Parameters
+    ----------
+    df : pyspark.sql.DataFrame
+    parsed : list[tuple[str, str]]
+        Parsed struct columns in order, each with the suffix its clashing fields take.
+    exclude_cols : list[str]
+        Columns left out of the result, the parsed structs and their raw sources among them.
+    """
+    from pyspark.sql.functions import col
+
+    kept = [name for name in df.columns if name not in exclude_cols]
+    sources = [(source, df.schema[source].dataType.fieldNames(), suffix) for source, suffix in parsed]
+    fields = [
+        col(source).getField(field).alias(key) for source, field, key in flattened_field_names(kept, sources)
+    ]
+    return df.select(*[col(name) for name in kept], *fields)
+
+
+def flattened_field_names(taken, sources):
+    """Name every field of the flattened payloads the way the platform's data table does.
+
+    A field keeps its own name unless a kept column or another field holds it, compared without
+    case because Spark resolves names that way. It then reads as ``<name>_<suffix>``, numbered
+    when that is held too. Fields that can keep their names claim them first, so a renamed field
+    never takes the name of one that did not clash.
+
+    Parameters
+    ----------
+    taken : list[str]
+        Column names the output keeps as they are.
+    sources : list[tuple[str, list[str], str]]
+        Each payload's column, its field names in order, and its suffix.
+
+    Returns
+    -------
+    list[tuple[str, str, str]]
+        (payload column, field name, output name), in payload and field order.
+    """
+    held = {name.lower() for name in taken}
+    fields = [(source, field, suffix) for source, names, suffix in sources for field in names]
+
+    kept = set()
+    for index, (_, field, _) in enumerate(fields):
+        if field.lower() not in held:
+            held.add(field.lower())
+            kept.add(index)
+
+    named = []
+    for index, (source, field, suffix) in enumerate(fields):
+        if index in kept:
+            named.append((source, field, field))
+            continue
+
+        candidate = f"{field}_{suffix}"
+        number = 2
+        while candidate.lower() in held:
+            candidate = f"{field}_{suffix}_{number}"
+            number += 1
+        held.add(candidate.lower())
+        named.append((source, field, candidate))
+
+    return named

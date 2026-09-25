@@ -8,6 +8,8 @@ import type {
   FilterValue,
   TimeBucketUnit,
 } from "./query-builder.types";
+import { FlattenedFields } from "./schema/flattened-fields";
+import type { FlattenedField, FlattenedSource } from "./schema/flattened-fields";
 import { VariantSchema } from "./schema/variant-schema";
 import type { VariantField } from "./schema/variant-schema";
 
@@ -251,12 +253,6 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
   }
 }
 
-interface VariantColumn {
-  column: string;
-  schema: string;
-  fields: VariantField[];
-}
-
 /**
  * Reads VARIANT columns by typed path in a single SELECT. Each top-level field of a column's
  * schema is its own `try_variant_get` expression, so a query evaluates only the fields it uses,
@@ -265,7 +261,8 @@ interface VariantColumn {
 export class VariantQueryBuilder extends BaseQueryBuilder {
   private selectColumns?: string[];
   private fromClause = "";
-  private variantColumns: VariantColumn[] = [];
+  private variantColumns: FlattenedSource[] = [];
+  private reservedColumns: string[] = [];
   private whereConditions: string[] = [];
   private ordering?: { column: string; direction: "ASC" | "DESC" };
   private limitValue?: number;
@@ -284,8 +281,14 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
-  parseVariant(column: string, schema: string): this {
-    this.variantColumns.push({ column, schema, fields: VariantSchema.topLevelFields(schema) });
+  parseVariant(column: string, schema: string, suffix = column): this {
+    this.variantColumns.push({ column, schema, suffix });
+    return this;
+  }
+
+  /** Names the base columns already hold, so a flattened field that clashes reads as another. */
+  reserve(columns: string[]): this {
+    this.reservedColumns.push(...columns);
     return this;
   }
 
@@ -353,30 +356,28 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
       .join("\n");
   }
 
-  /** Every base column but the raw VARIANTs, then every flattened field under its own name. A name
-   *  in two VARIANT columns is projected once, from the first, as fieldExpressions resolves it. */
+  /** Every base column but the raw VARIANTs, then every flattened field under the name it reads
+   *  as. */
   private starProjection(): string {
     const excluded = [...this.variantColumns.map(({ column }) => column), ...this.exceptColumns];
-    const projected = new Set<string>();
-    const fields = this.variantColumns.flatMap((variant) => {
-      if (!VariantSchema.isObject(variant.schema)) {
-        return [this.wholeColumn(variant)];
-      }
-
-      const unprojected = variant.fields.filter((field) => !projected.has(field.name));
-      unprojected.forEach((field) => projected.add(field.name));
-      return unprojected.map(
-        (field) =>
-          `${this.fieldExpression(variant.column, field)} AS ${this.quoteName(field.name)}`,
-      );
-    });
+    const flattened = this.flattenedFields();
+    const fields = this.variantColumns.flatMap((variant) =>
+      VariantSchema.isObject(variant.schema)
+        ? flattened
+            .filter(({ column }) => column === variant.column)
+            .map(
+              ({ key, field }) =>
+                `${this.fieldExpression(variant.column, field)} AS ${this.quoteName(key)}`,
+            )
+        : [this.wholeColumn(variant)],
+    );
     const exceptList = excluded.map((column) => this.escapeIdentifier(column)).join(", ");
     return [`* EXCEPT (${exceptList})`, ...fields].join(", ");
   }
 
   /** A VARIANT whose schema is no object (an array, a scalar, all nulls) has no fields to
    *  flatten, so it is read whole under its own name. */
-  private wholeColumn({ column, schema }: VariantColumn): string {
+  private wholeColumn({ column, schema }: FlattenedSource): string {
     const castType = this.escapeValue(this.variantCastType(schema));
     return `try_variant_get(${this.escapeIdentifier(column)}, '$', ${castType}) AS ${this.quoteName(column)}`;
   }
@@ -396,17 +397,18 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     return isField && isProjected ? this.quoteName(column) : this.columnExpression(column);
   }
 
-  /** Field name to extraction SQL. A name in two VARIANT columns resolves to the first. */
+  /** Output name to extraction SQL. */
   private fieldExpressions(): Map<string, string> {
-    const expressions = new Map<string, string>();
-    for (const { column, fields } of this.variantColumns) {
-      for (const field of fields) {
-        if (!expressions.has(field.name)) {
-          expressions.set(field.name, this.fieldExpression(column, field));
-        }
-      }
-    }
-    return expressions;
+    return new Map(
+      this.flattenedFields().map(({ key, column, field }) => [
+        key,
+        this.fieldExpression(column, field),
+      ]),
+    );
+  }
+
+  private flattenedFields(): FlattenedField[] {
+    return FlattenedFields.resolve(this.reservedColumns, this.variantColumns);
   }
 
   /**

@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { forwardRef } from "react";
+import { ColumnName } from "~/components/experiment-data/column-name";
 
 import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
@@ -36,6 +37,7 @@ export const FilterChipFace = forwardRef<HTMLDivElement, FilterChipFaceProps>(
     const opLabel = operators.find((o) => o.value === filter.operator)?.label ?? filter.operator;
     const isContributor = column?.type_text === WellKnownColumnTypes.CONTRIBUTOR;
     const displayColumn = parentColumnName(filter.column);
+    const columnLabel = column?.renamedFrom?.name ?? displayColumn;
 
     const handleRemove = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -60,7 +62,9 @@ export const FilterChipFace = forwardRef<HTMLDivElement, FilterChipFaceProps>(
             fullWidth ? "min-w-0 flex-1 justify-start" : "min-w-0",
           )}
         >
-          <span className="truncate font-medium">{displayColumn}</span>
+          <span className="min-w-0 font-medium">
+            <ColumnName column={{ name: displayColumn, renamedFrom: column?.renamedFrom }} />
+          </span>
           <span className="text-muted-foreground shrink-0">{opLabel}</span>
           <ChipValue
             filter={filter}
@@ -77,7 +81,7 @@ export const FilterChipFace = forwardRef<HTMLDivElement, FilterChipFaceProps>(
           size="icon-xs"
           onClick={handleRemove}
           className="text-muted-foreground hover:bg-muted/50 hover:text-destructive h-full w-6 shrink-0 rounded-l-none border-l"
-          aria-label={t("dataFilters.removeFilterOn", { name: displayColumn })}
+          aria-label={t("dataFilters.removeFilterOn", { name: columnLabel })}
         >
           <X className="h-3 w-3" />
         </Button>

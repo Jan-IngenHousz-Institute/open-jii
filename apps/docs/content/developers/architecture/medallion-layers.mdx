@@ -38,9 +38,11 @@ The schemas in `experiment_table_metadata` are merged from the `*_schemas` table
 
 Flexible result shapes use Databricks VARIANT values where the protocol or macro output cannot be represented by one rigid relational schema. Stable identifiers remain separate from display labels so renaming a macro does not change the table identity.
 
+The payload tables shred their VARIANT columns (`delta.enableVariantShredding`): fields that recur across rows are stored as columns of their own, so a read that needs one field skips the rest of the payload. Only files written after shredding was enabled are shredded, and `REORG TABLE ... APPLY (SHRED VARIANT)` rewrites the older ones. Every reader needs Databricks Runtime 17.3 or later.
+
 ## Enriched views
 
-The enriched data joins each measurement or macro result to its contributor, device, annotations and custom metadata. Annotations and custom metadata change after a measurement arrives, and every historical row has to show them as they are now. The joins are plain SQL views, defined in `apps/data/src/views/` and created by terraform: a view stores no data, so the join runs when someone reads, for the experiment they read, and an edit shows on the next read. The gold tables are clustered by `experiment_id` so that read touches only that experiment's files.
+The enriched data joins each measurement or macro result to its contributor, device, annotations and custom metadata. Annotations and custom metadata change after a measurement arrives, and every historical row has to show them as they are now. The joins are plain SQL views, defined in `apps/data/src/views/` and created by terraform: a view stores no data, so the join runs when someone reads, for the experiment they read, and an edit shows on the next read. The gold tables are clustered by `experiment_id` and then by the order reads take: `timestamp` for raw data, `macro_id` and then `timestamp` for macro results, and upload table and upload time for uploads. A read then touches only that experiment's files, and a time window skips the older ones. Changing the keys reclusters new files only; `OPTIMIZE ... FULL` rewrites the existing ones.
 
 Two more views add what cannot be stored incrementally. `experiment_table_metadata_view` adds each table's row count and an upload table's newest name to the schemas stored in `experiment_table_metadata`. `experiment_device_data_view` adds each device's measurement count per firmware to `experiment_device_data`, read from `clean_data` because gold carries no firmware.
 

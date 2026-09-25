@@ -1240,7 +1240,8 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     tableType: "static" | "macro" | "upload";
     experimentId: string;
     columns?: string[];
-    variants?: { columnName: string; schema: string }[];
+    variants?: { columnName: string; schema: string; suffix?: string }[];
+    reservedColumns?: string[];
     exceptColumns?: string[];
     filters?: FilterCondition[];
     aggregation?: AggregationSpec;
@@ -1250,72 +1251,62 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
     limit?: number;
     offset?: number;
   }): Result<string> {
-    const {
-      tableName,
-      tableType,
-      experimentId,
-      columns,
-      variants,
-      exceptColumns,
-      filters,
-      aggregation,
-      distinct,
-      orderBy,
-      orderDirection,
-      limit,
-      offset,
-    } = params;
+    const { tableName, tableType, experimentId, ...query } = params;
 
+    const tableResult = this.experimentTable(tableType, tableName);
+    if (tableResult.isFailure()) {
+      return tableResult;
+    }
+
+    // Macro and upload tables each share one physical table; `tableName` is then the macro_id or
+    // the stable upload_table_id passed by the caller.
+    const whereConditions: [string, string][] = [["experiment_id", experimentId]];
+    if (tableType === "macro") {
+      whereConditions.push(["macro_id", tableName]);
+    }
+    if (tableType === "upload") {
+      whereConditions.push(["upload_table_id", tableName]);
+    }
+
+    return this.queryBuilder.buildQuery({ ...query, table: tableResult.value, whereConditions });
+  }
+
+  /** Column names of the view an experiment table reads from, in its own order. */
+  async getExperimentTableColumns(
+    tableType: "static" | "macro" | "upload",
+    tableName: string,
+  ): Promise<Result<string[]>> {
+    const tableResult = this.experimentTable(tableType, tableName);
+    if (tableResult.isFailure()) {
+      return tableResult;
+    }
+
+    const described = await this.executeSqlQuery(
+      this.CENTRUM_SCHEMA_NAME,
+      `DESCRIBE TABLE ${tableResult.value}`,
+    );
+    if (described.isFailure()) {
+      return described;
+    }
+
+    // Partition and detail sections follow the columns, after a blank or `#` row.
+    const names = described.value.rows.map(([name]) => name ?? "");
+    const sectionEnd = names.findIndex((name) => name === "" || name.startsWith("#"));
+    return success(sectionEnd === -1 ? names : names.slice(0, sectionEnd));
+  }
+
+  private experimentTable(
+    tableType: "static" | "macro" | "upload",
+    tableName: string,
+  ): Result<string> {
     const catalog = this.configService.getCatalogName();
     const schema = this.configService.getCentrumSchemaName();
 
     if (tableType === "macro") {
-      // Macro tables share a single physical table, filtered by experiment_id and macro_id
-      const table = `${catalog}.${schema}.${this.MACRO_DATA_TABLE_NAME}`;
-      const whereConditions: [string, string][] = [
-        ["experiment_id", experimentId],
-        ["macro_id", tableName],
-      ];
-
-      return this.queryBuilder.buildQuery({
-        table,
-        columns,
-        variants,
-        exceptColumns,
-        whereConditions,
-        filters,
-        aggregation,
-        distinct,
-        orderBy,
-        orderDirection,
-        limit,
-        offset,
-      });
+      return success(`${catalog}.${schema}.${this.MACRO_DATA_TABLE_NAME}`);
     }
-
     if (tableType === "upload") {
-      // Upload tables: query the gold experiment_uploaded_data, filter by experiment_id AND
-      // upload_table_id. `tableName` here is the stable upload_table_id passed by the caller.
-      const table = `${catalog}.${schema}.${this.UPLOADED_DATA_TABLE_NAME}`;
-      const whereConditions: [string, string][] = [
-        ["experiment_id", experimentId],
-        ["upload_table_id", tableName],
-      ];
-
-      return this.queryBuilder.buildQuery({
-        table,
-        columns,
-        variants,
-        exceptColumns,
-        whereConditions,
-        filters,
-        aggregation,
-        distinct,
-        orderBy,
-        orderDirection,
-        limit,
-        offset,
-      });
+      return success(`${catalog}.${schema}.${this.UPLOADED_DATA_TABLE_NAME}`);
     }
 
     const staticTableMapping: Record<string, string> = {
@@ -1332,23 +1323,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
         ),
       );
     }
-    const table = `${catalog}.${schema}.${physicalTable}`;
-    const whereConditions: [string, string][] = [["experiment_id", experimentId]];
-
-    return this.queryBuilder.buildQuery({
-      table,
-      columns,
-      variants,
-      exceptColumns,
-      whereConditions,
-      filters,
-      aggregation,
-      distinct,
-      orderBy,
-      orderDirection,
-      limit,
-      offset,
-    });
+    return success(`${catalog}.${schema}.${physicalTable}`);
   }
 
   private metricsTable(tableName: string): string {

@@ -1,6 +1,14 @@
 import { ExperimentTableName } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
-type VariantColumn = "macro_output" | "questions_data" | "custom_metadata" | "uploaded_data";
+export type VariantColumn = "macro_output" | "questions_data" | "custom_metadata" | "uploaded_data";
+
+/** What a payload field reads as when the table already holds its name: `device_output`. */
+export const VARIANT_COLUMN_SUFFIX: Record<VariantColumn, string> = {
+  macro_output: "output",
+  questions_data: "answer",
+  custom_metadata: "metadata",
+  uploaded_data: "upload",
+};
 
 export type ExperimentTableType = "static" | "macro" | "upload";
 
@@ -75,6 +83,7 @@ export interface SchemaDataDto {
     name: string;
     type_name: string;
     type_text: string;
+    renamedFrom?: { name: string; source: VariantColumn };
   }[];
   rows: Record<string, string | null>[];
   totalRows: number;
