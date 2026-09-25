@@ -69,4 +69,9 @@ describe("reduceSeries", () => {
     expect(axisPosition("2026-09-25T12:00:00.000Z")).toBe(Date.UTC(2026, 8, 25, 12));
     expect(axisPosition("site-a")).toBeNaN();
   });
+
+  it("reads a numeric string, as the API sends every cell, as a number rather than a date", () => {
+    expect(axisPosition("12.5")).toBe(12.5);
+    expect(axisPosition("-3")).toBe(-3);
+  });
 });

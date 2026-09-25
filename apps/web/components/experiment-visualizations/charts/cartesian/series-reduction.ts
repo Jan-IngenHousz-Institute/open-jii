@@ -8,7 +8,11 @@ export const REDUCTION_BUCKETS = 2_000;
 
 export type AxisRange = readonly [number, number];
 
-/** Where a value sits on a line's x axis: epoch milliseconds for a date, NaN when it cannot. */
+/**
+ * Where a value sits on a line's x axis: a number as itself, a date as epoch milliseconds, NaN when
+ * it has neither. The API sends every cell as a string, so a numeric string is read as a number
+ * before it is tried as a date.
+ */
 export function axisPosition(value: string | number | Date | null): number {
   if (typeof value === "number") {
     return value;
@@ -17,7 +21,9 @@ export function axisPosition(value: string | number | Date | null): number {
     return value.getTime();
   }
   if (typeof value === "string") {
-    return Date.parse(value);
+    const asNumber = Number(value);
+    const isNumeric = value.trim() !== "" && Number.isFinite(asNumber);
+    return isNumeric ? asNumber : Date.parse(value);
   }
   return Number.NaN;
 }

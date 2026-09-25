@@ -117,6 +117,63 @@ describe("useZoomRead", () => {
     expect(result.current.total).toBe(500);
   });
 
+  it("buckets a numeric axis from its true extent", async () => {
+    const spy = server.mount(contract.experiments.getExperimentData, {
+      body: (call: SpyCall) =>
+        aggregationOf(call)?.groupBy ? table([]) : table([{ x_from: "0.5", x_to: "100.5" }]),
+    });
+
+    renderHook(() => useZoomRead({ ...INPUT, xColumn: "depth", scale: "number" }));
+
+    await waitFor(() =>
+      expect(spy.calls.some((call) => aggregationOf(call)?.groupBy !== undefined)).toBe(true),
+    );
+    const bucketCall = spy.calls.find((call) => aggregationOf(call)?.groupBy !== undefined);
+    if (!bucketCall) {
+      throw new Error("No bucket read was made");
+    }
+    expect(aggregationOf(bucketCall)?.groupBy?.[0]?.widthBucket).toEqual({
+      origin: 0.5,
+      width: 100 / 2_000,
+      scale: "number",
+    });
+  });
+
+  it("waits for a new window's counts before reading its rows whole", async () => {
+    const narrow: [number, number] = [
+      Date.parse("2026-09-25T01:00:00Z"),
+      Date.parse("2026-09-25T02:00:00Z"),
+    ];
+    const wide: [number, number] = [Date.parse(DAY_START), Date.parse(DAY_END)];
+    const wideStart = new Date(wide[0]).toISOString();
+    const isWide = (call: SpyCall) => String(call.query.filters).includes(wideStart);
+
+    const spy = server.mount(contract.experiments.getExperimentData, {
+      delay: 50,
+      body: (call: SpyCall) => {
+        const aggregation = aggregationOf(call);
+        if (aggregation?.groupBy) {
+          return answer(isWide(call) ? [150_000, 100_000] : [300, 200])(call);
+        }
+        return answer([])(call);
+      },
+    });
+
+    const { result, rerender } = renderHook(
+      (window: [number, number]) => useZoomRead({ ...INPUT, window }),
+      { initialProps: narrow },
+    );
+    await waitFor(() => expect(result.current.isBucketed).toBe(false));
+    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+
+    rerender(wide);
+    await waitFor(() => expect(result.current.total).toBe(250_000));
+
+    const wideRowReads = spy.calls.filter((call) => !call.query.aggregation && isWide(call));
+    expect(wideRowReads).toHaveLength(0);
+    expect(result.current.isBucketed).toBe(true);
+  });
+
   it("reads nothing while disabled", () => {
     const spy = server.mount(contract.experiments.getExperimentData, { body: answer([1]) });
 

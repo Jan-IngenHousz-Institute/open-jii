@@ -96,7 +96,10 @@ export function useZoomRead(input: ZoomReadInput): ZoomRead {
 
   const bucketRows = buckets.data?.[0]?.data?.rows;
   const total = bucketRows?.reduce((sum, row) => sum + Number(row.rows), 0);
-  const fitsOneRead = total !== undefined && total <= DATA_QUERY_MAX_LIMIT;
+  // While a new window's counts are loading, the previous window's stand in for the drawing, but
+  // they say nothing about whether the new window fits in one read.
+  const fitsOneRead =
+    !buckets.isPlaceholderData && total !== undefined && total <= DATA_QUERY_MAX_LIMIT;
 
   const windowRead = useExperimentVisualizationData(
     experimentId,
