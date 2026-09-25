@@ -113,6 +113,39 @@ describe("useDiscoverExperiments", () => {
     expect(mockListExperiments).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
   });
 
+  it("reports the envelope's total rather than the rows loaded so far", async () => {
+    const rows = Array.from({ length: 20 }, (_, i) => row(`e${i}`));
+    mockListExperiments.mockResolvedValue({
+      items: rows,
+      page: 1,
+      pageSize: 20,
+      totalPages: 2,
+      totalCount: 37,
+    });
+
+    const { result } = renderHook(() => useDiscoverExperiments(), { wrapper });
+
+    await waitFor(() => expect(result.current.experiments).toHaveLength(20));
+    expect(result.current.totalCount).toBe(37);
+  });
+
+  it("counts the rows themselves when the response is not paginated", async () => {
+    mockListExperiments.mockResolvedValue([row("e1"), row("e2")]);
+
+    const { result } = renderHook(() => useDiscoverExperiments(), { wrapper });
+
+    await waitFor(() => expect(result.current.experiments).toHaveLength(2));
+    expect(result.current.totalCount).toBe(2);
+  });
+
+  it("has no total until a response arrives", () => {
+    mockListExperiments.mockReturnValue(new Promise(() => undefined));
+
+    const { result } = renderHook(() => useDiscoverExperiments(), { wrapper });
+
+    expect(result.current.totalCount).toBeUndefined();
+  });
+
   it("asks for the next page only while the envelope says there is one", async () => {
     mockListExperiments.mockResolvedValue(page([row("e1")], 1, 1));
 

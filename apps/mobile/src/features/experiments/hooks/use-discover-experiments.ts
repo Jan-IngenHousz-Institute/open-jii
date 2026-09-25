@@ -59,10 +59,17 @@ export function useDiscoverExperiments({
     }),
   );
 
+  // `undefined` until a response arrives, which is not `[]`: a cold offline
+  // start pauses with no data, no error and `isLoading: false`.
+  const experiments = data?.pages.flatMap((page) => (isPaginatedList(page) ? page.items : page));
+  const lastPage = data?.pages.at(-1);
+
   return {
-    // `undefined` until a response arrives, which is not `[]`: a cold offline
-    // start pauses with no data, no error and `isLoading: false`.
-    experiments: data?.pages.flatMap((page) => (isPaginatedList(page) ? page.items : page)),
+    experiments,
+    totalCount:
+      lastPage !== undefined && isPaginatedList(lastPage)
+        ? lastPage.totalCount
+        : experiments?.length,
     isLoading,
     isFetching,
     isPaused,

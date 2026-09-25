@@ -5,10 +5,13 @@ import type { RedeemJoinCodeResponse } from "@repo/api/domains/experiment/join-c
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { isLivingUser, lockUserAccount } from "../../../../sharing/core/resource-staffing";
 import { insertJoinGrant } from "../../../core/join-grant";
 import { ExperimentJoinCodeRepository } from "../../../core/repositories/experiment-join-code.repository";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
 import { joinCodeNotFound, joinCodeRefusal } from "./join-code-validity";
+
+const ACCOUNT_UNAVAILABLE_MESSAGE = "This account is not available to join experiments";
 
 @Injectable()
 export class RedeemJoinCodeUseCase {
@@ -25,7 +28,10 @@ export class RedeemJoinCodeUseCase {
    * connection, so any query awaited against the root handle from inside the
    * transaction would wait on the connection the transaction itself is holding.
    *
-   * Lock order is experiment row, code row, join request, grant — the same order
+   * Lock order is the redeemer's user row, experiment row, code row, join request,
+   * grant. The user row comes first, as every grant write takes it: account deletion
+   * holds it exclusively while it sweeps grants, so a redemption either commits in
+   * time for the sweep or waits and sees the account closed. The rest is the order
    * create and revoke take. Taking the code row first instead deadlocks against
    * them: they hold the experiment row and reach for the code row, and a redemption
    * holding the code row would be reaching back the other way. Approval claims its
@@ -63,6 +69,10 @@ export class RedeemJoinCodeUseCase {
         throw joinCodeNotFound();
       }
 
+      if (!(await lockUserAccount(tx, userId))) {
+        throw AppError.forbidden(ACCOUNT_UNAVAILABLE_MESSAGE);
+      }
+
       // Shared, not exclusive: archiving updates this row, so an in-flight archive
       // blocks here until it commits and the refusal below then sees `archived`,
       // while thirty students redeeming at once still pass through together.
@@ -98,6 +108,10 @@ export class RedeemJoinCodeUseCase {
       );
       if (decision.allow) {
         return { experimentId: experiment.id, outcome: "already_member" as const };
+      }
+
+      if (!(await isLivingUser(tx, userId))) {
+        throw AppError.forbidden(ACCOUNT_UNAVAILABLE_MESSAGE);
       }
 
       // The user's own pending request is moot now that they are in. Conditional on

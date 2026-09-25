@@ -8,7 +8,10 @@ import { formatShortDate } from "@/util/date";
 import { KeyRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import type { JoinCodeExpiry } from "@repo/api/domains/experiment/join-codes/experiment-join-codes.schema";
+import type {
+  ExperimentJoinCode,
+  JoinCodeExpiry,
+} from "@repo/api/domains/experiment/join-codes/experiment-join-codes.schema";
 import { formatJoinCode } from "@repo/api/domains/experiment/join-codes/experiment-join-codes.schema";
 import { useTranslation } from "@repo/i18n";
 import {
@@ -58,6 +61,17 @@ const MAX_TIMEOUT_MS = 2_147_483_647;
 const DIALOG_QR_SIZE = 256;
 
 type PendingConfirmation = "regenerate" | "revoke";
+
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const PRESET_BY_DAYS: Partial<Record<number, JoinCodeExpiry>> = { 1: "1d", 7: "7d", 30: "30d" };
+
+/** The preset a code was created with, as far as its two timestamps can tell. */
+function lifetimePreset({ expiresAt, createdAt }: ExperimentJoinCode): JoinCodeExpiry {
+  if (expiresAt === null) return "never";
+  const days = Math.round((Date.parse(expiresAt) - Date.parse(createdAt)) / MILLISECONDS_PER_DAY);
+  return PRESET_BY_DAYS[days] ?? "7d";
+}
 
 /**
  * Whether the deadline has passed, re-rendering when it does. `dataUpdatedAt` keeps
@@ -320,7 +334,14 @@ function JoinCodeDialogBody({ experimentId }: { experimentId: string }) {
         <Button variant="outline" onClick={() => void copy(landingUrl)}>
           {t("joinCode.copyLink")}
         </Button>
-        <Button variant="outline" disabled={isMutating} onClick={() => setConfirming("regenerate")}>
+        <Button
+          variant="outline"
+          disabled={isMutating}
+          onClick={() => {
+            setExpiresIn(lifetimePreset(joinCode));
+            setConfirming("regenerate");
+          }}
+        >
           {t("joinCode.regenerate")}
         </Button>
         {/* The danger colour belongs on the confirm, not on a button sitting in
@@ -346,6 +367,7 @@ function JoinCodeDialogBody({ experimentId }: { experimentId: string }) {
             <AlertDialogTitle>{t("joinCode.confirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>{t("joinCode.confirmBody")}</AlertDialogDescription>
           </AlertDialogHeader>
+          {confirming === "regenerate" ? expirySelect : null}
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction

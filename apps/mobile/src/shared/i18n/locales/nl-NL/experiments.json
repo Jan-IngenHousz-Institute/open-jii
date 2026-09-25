@@ -95,9 +95,11 @@
     "joined": "Je neemt nu deel aan {{name}}",
     "alreadyMemberToast": "Je neemt al deel aan {{name}}",
     "tryAnother": "Probeer een andere code",
-    "tooMany": "Te veel pogingen. Wacht een minuut en probeer het opnieuw.",
+    "tooMany": "Te veel pogingen. Je kunt het nu opnieuw proberen.",
+    "tooManyCountdown": "Te veel pogingen. Probeer het over {{seconds}}s opnieuw.",
     "archived": "Dit experiment is gearchiveerd",
     "notFound": "Deze code is niet geldig",
+    "expired": "Deze code is verlopen of ingetrokken",
     "offline": "Je bent offline. Maak verbinding om deze code te controleren.",
     "loadFailed": "Kon deze code niet controleren.",
     "offlineHint": "Je bent offline. Maak opnieuw verbinding om deel te nemen."

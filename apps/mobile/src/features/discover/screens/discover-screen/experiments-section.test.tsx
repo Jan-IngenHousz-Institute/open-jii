@@ -10,6 +10,7 @@ import { ExperimentsSection } from "./experiments-section";
 
 interface DiscoverState {
   experiments: ExperimentListItem[] | undefined;
+  totalCount: number | undefined;
   isLoading: boolean;
   isFetching: boolean;
   isPaused: boolean;
@@ -23,6 +24,7 @@ interface DiscoverState {
 
 const state = vi.hoisted<DiscoverState>(() => ({
   experiments: [],
+  totalCount: undefined,
   isLoading: false,
   isFetching: false,
   isPaused: false,
@@ -89,6 +91,7 @@ function renderSection(props: Partial<React.ComponentProps<typeof ExperimentsSec
 
 beforeEach(() => {
   state.experiments = [entry()];
+  state.totalCount = undefined;
   state.isLoading = false;
   state.isFetching = false;
   state.isPaused = false;
@@ -249,6 +252,18 @@ describe("ExperimentsSection", () => {
     renderSection({ onStatusChange });
 
     expect(onStatusChange).toHaveBeenCalledWith({ count: 2, isFetching: true });
+  });
+
+  it("reports the whole result set, not just the pages loaded so far", () => {
+    const onStatusChange = vi.fn();
+    state.experiments = Array.from({ length: 20 }, (_, i) => entry({ id: `exp-${i}` }));
+    state.totalCount = 37;
+    state.hasNextPage = true;
+
+    renderSection({ onStatusChange });
+
+    expect(onStatusChange).toHaveBeenCalledWith({ count: 37, isFetching: false });
+    expect(onStatusChange).not.toHaveBeenCalledWith(expect.objectContaining({ count: 20 }));
   });
 
   it("reports zero while nothing has come back yet", () => {

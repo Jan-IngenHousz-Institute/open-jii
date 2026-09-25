@@ -18,9 +18,9 @@ const ACTIVE_CODE = {
   id: "11111111-1111-1111-1111-111111111111",
   experimentId: EXPERIMENT_ID,
   code: "KP7Q4WMX",
-  expiresAt: "2026-09-25T00:00:00.000Z",
+  expiresAt: "2036-09-25T00:00:00.000Z",
   redemptionCount: 0,
-  createdAt: "2026-09-18T00:00:00.000Z",
+  createdAt: "2036-09-18T00:00:00.000Z",
   createdBy: null,
 };
 
@@ -256,6 +256,76 @@ describe("ExperimentJoinCodeDialog", () => {
     await user.click(within(dialog).getByRole("button", { name: "joinCode.regenerate" }));
 
     await waitFor(() => expect(create.body).toMatchObject({ expiresIn: "7d" }));
+  });
+
+  it("regenerates a code that never expired as one that never expires, and says so", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.experiments.getJoinCode, {
+      body: { joinCode: { ...ACTIVE_CODE, expiresAt: null } },
+    });
+    const create = server.mount(contract.experiments.createJoinCode, { body: ACTIVE_CODE });
+
+    renderCard();
+
+    await user.click(await screen.findByRole("button", { name: "joinCode.regenerate" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByRole("combobox", { name: "joinCode.expiresIn" })).toHaveTextContent(
+      "joinCode.expiry.never",
+    );
+
+    await user.click(within(dialog).getByRole("button", { name: "joinCode.regenerate" }));
+
+    await waitFor(() => expect(create.body).toMatchObject({ expiresIn: "never" }));
+  });
+
+  it("prefills the lifetime the current code was created with", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.experiments.getJoinCode, {
+      body: {
+        joinCode: {
+          ...ACTIVE_CODE,
+          createdAt: "2026-09-01T00:00:00.000Z",
+          expiresAt: "2026-10-01T00:00:00.050Z",
+        },
+      },
+    });
+
+    renderCard();
+
+    await user.click(await screen.findByRole("button", { name: "joinCode.regenerate" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByRole("combobox", { name: "joinCode.expiresIn" })).toHaveTextContent(
+      "joinCode.expiry.30d",
+    );
+  });
+
+  it("regenerates with the expiry changed in the confirmation", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    server.mount(contract.experiments.getJoinCode, {
+      body: { joinCode: { ...ACTIVE_CODE, expiresAt: null } },
+    });
+    const create = server.mount(contract.experiments.createJoinCode, { body: ACTIVE_CODE });
+
+    renderCard();
+
+    await user.click(await screen.findByRole("button", { name: "joinCode.regenerate" }));
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("combobox", { name: "joinCode.expiresIn" }));
+    await user.click(await screen.findByRole("option", { name: "joinCode.expiry.1d" }));
+    await user.click(within(dialog).getByRole("button", { name: "joinCode.regenerate" }));
+
+    await waitFor(() => expect(create.body).toMatchObject({ expiresIn: "1d" }));
+  });
+
+  it("shows no expiry select when confirming a revoke", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.experiments.getJoinCode, { body: { joinCode: ACTIVE_CODE } });
+
+    renderCard();
+
+    await user.click(await screen.findByRole("button", { name: "joinCode.revoke" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).queryByRole("combobox")).not.toBeInTheDocument();
   });
 
   it("confirms before revoking", async () => {

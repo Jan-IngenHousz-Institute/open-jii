@@ -17,6 +17,7 @@ import { AuthorizationService } from "../../../../authorization/authorization.se
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { UserRepository } from "../../../../users/core/repositories/user.repository";
 import { ExperimentJoinCodeRepository } from "../../../core/repositories/experiment-join-code.repository";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
 import { CreateJoinCodeUseCase } from "./create-join-code";
@@ -147,6 +148,7 @@ describe("join code concurrency", () => {
   async function redeemWhileBlocked(
     target: { experimentId: string; code: string },
     mutate: (tx: Transaction) => Promise<void>,
+    whileQueued?: (observer: DatabaseInstance) => Promise<void>,
   ) {
     const observer = createSecondaryDatabase();
     try {
@@ -187,6 +189,7 @@ describe("join code concurrency", () => {
       let waitError: Error | undefined;
       try {
         await waitUntilBlocked(observer.database, pid);
+        await whileQueued?.(observer.database);
       } catch (error) {
         waitError = error instanceof Error ? error : new Error(String(error));
       }
@@ -410,6 +413,69 @@ describe("join code concurrency", () => {
       grants: 0,
       counted: 0,
     });
+  });
+
+  it("refuses a redemption by an account that has already been deleted", async () => {
+    const { experiment, code } = await seedCode();
+    assertSuccess(await testApp.module.get(UserRepository).delete(studentId));
+
+    const redeemed = await redeemUseCase.execute(code.code, studentId);
+
+    expect(await outcomeOf(redeemed, experiment.id, code.id, "message")).toEqual({
+      refusal: "This account is not available to join experiments",
+      grants: 0,
+      counted: 0,
+    });
+  });
+
+  it("lets an account deletion sweep the grant of a redemption it had to wait for", async () => {
+    const { experiment, code } = await seedCode();
+    const deleter = createSecondaryDatabase();
+    try {
+      const [{ pid: deleterPid }] = await deleter.database.execute<{ pid: number }>(
+        sql`SELECT pg_backend_pid() AS pid`,
+      );
+      let deleting: ReturnType<UserRepository["delete"]> | undefined;
+      let deletionWaited = false;
+
+      const redeemed = await redeemWhileBlocked(
+        { experimentId: experiment.id, code: code.code },
+        () => Promise.resolve(),
+        async (observer) => {
+          // The redemption is queued on the experiment row, past the point where it
+          // claims the account. A deletion started now has to wait for it to commit.
+          const deletion = { settled: false };
+          deleting = new UserRepository(deleter.database).delete(studentId).finally(() => {
+            deletion.settled = true;
+          });
+          const deadline = Date.now() + 5000;
+          while (!deletion.settled && Date.now() < deadline) {
+            const rows = await observer.execute<{ waitEventType: string | null }>(
+              sql`SELECT wait_event_type AS "waitEventType" FROM pg_stat_activity WHERE pid = ${deleterPid}`,
+            );
+            if (rows.length > 0 && rows[0].waitEventType === "Lock") {
+              deletionWaited = true;
+              return;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 25));
+          }
+        },
+      );
+      if (!deleting) {
+        throw new Error("The deletion never started");
+      }
+
+      assertSuccess(redeemed);
+      assertSuccess(await deleting);
+      // Waiting is the proof of ordering: a deletion that ran straight through
+      // finished its sweep before the redemption wrote anything.
+      expect({
+        deletionWaited,
+        grants: (await grantsFor(experiment.id, studentId)).length,
+      }).toEqual({ deletionWaited: true, grants: 0 });
+    } finally {
+      await deleter.close();
+    }
   });
 
   it("leaves one active code when two organizers create at the same moment", async () => {
