@@ -1,6 +1,6 @@
 import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
-import { AxiosResponse } from "axios";
+import { AxiosResponse, isAxiosError } from "axios";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
 import { ErrorCodes } from "../../../../utils/error-codes";
@@ -33,6 +33,12 @@ export class DatabricksSqlService {
    * as a BAD_REQUEST; with one the warehouse returns what fits and marks it truncated.
    */
   private static readonly INLINE_BYTE_LIMIT = 26_214_400;
+
+  /**
+   * The edge drops the client 60 s after its request started, a little before this statement did,
+   * so reading the rest of a result stops here: a later answer reaches nobody.
+   */
+  private static readonly READ_DEADLINE_MS = 55_000;
 
   /**
    * Determine the appropriate AppError for a Databricks SQL statement failure.
@@ -109,6 +115,7 @@ export class DatabricksSqlService {
               host,
               token,
               statementResponse.result?.next_chunk_internal_link,
+              startedAt,
             );
             return this.completeStatement(statementResponse, remainingRows, startedAt);
           }
@@ -156,23 +163,41 @@ export class DatabricksSqlService {
     host: string,
     token: string,
     firstLink: string | undefined,
+    startedAt: number,
   ): Promise<(string | null)[][]> {
     const chunks: (string | null)[][][] = [];
     let link = firstLink;
 
     while (link !== undefined) {
-      const response: AxiosResponse<ResultChunk> = await this.httpService.axiosRef.get(
-        `${host}${link}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 60000,
-        },
-      );
-      chunks.push(response.data.data_array ?? []);
-      link = response.data.next_chunk_internal_link;
+      const remainingMs = DatabricksSqlService.READ_DEADLINE_MS - (performance.now() - startedAt);
+      const chunk = await this.fetchChunk(`${host}${link}`, token, remainingMs);
+      chunks.push(chunk.data_array ?? []);
+      link = chunk.next_chunk_internal_link;
     }
 
     return chunks.flat();
+  }
+
+  private async fetchChunk(url: string, token: string, remainingMs: number): Promise<ResultChunk> {
+    const deadlineError = AppError.timeout(
+      "The warehouse result could not be read before the response deadline",
+      "WAREHOUSE_TIMEOUT",
+    );
+    if (remainingMs <= 0) {
+      throw deadlineError;
+    }
+
+    try {
+      const response: AxiosResponse<ResultChunk> = await this.httpService.axiosRef.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: remainingMs,
+      });
+      return response.data;
+    } catch (error) {
+      const isTimeout =
+        isAxiosError(error) && (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT");
+      throw isTimeout ? deadlineError : error;
+    }
   }
 
   private completeStatement(

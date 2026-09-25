@@ -232,6 +232,9 @@ export class ExperimentDataRepository {
         if (pageResult.isFailure()) {
           return pageResult;
         }
+        if (pageResult.value.truncated) {
+          return this.pageTooLarge();
+        }
         this.logRead(read, pageResult.value);
 
         const totalRows = Number(countResult.value.rows[0]?.[0] ?? 0);
@@ -291,6 +294,9 @@ export class ExperimentDataRepository {
     if (pageResult.isFailure()) {
       return pageResult;
     }
+    if (pageResult.value.truncated) {
+      return this.pageTooLarge();
+    }
     this.logRead(read, pageResult.value);
 
     return success([
@@ -343,8 +349,9 @@ export class ExperimentDataRepository {
     }
 
     // Truncation is detected from the raw fetched count (query asked for
-    // limit + 1): null/empty filtering below must not influence it.
-    const truncated = dataResult.value.rows.length > limit;
+    // limit + 1): null/empty filtering below must not influence it. The
+    // warehouse can also cut a result at its byte limit.
+    const truncated = dataResult.value.rows.length > limit || dataResult.value.truncated;
 
     // SchemaData.rows is `(string | null)[][]`; single-column response means
     // each row is `[value]`. Drop nulls/blanks so the picker doesn't surface
@@ -799,6 +806,16 @@ export class ExperimentDataRepository {
     });
     read.droppedRows = data.rows.length - rows.length;
     return { ...data, rows, totalRows: rows.length };
+  }
+
+  /** A page the warehouse cut at its byte limit would come back short, and paging on would skip rows. */
+  private pageTooLarge(): Result<TableDataDto[]> {
+    return failure(
+      AppError.badRequest(
+        "This page holds more data than one read can return. Choose a smaller page size.",
+        "PAGE_TOO_LARGE",
+      ),
+    );
   }
 
   private tablePage(params: {

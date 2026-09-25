@@ -158,6 +158,49 @@ describe("DatabricksSqlService", () => {
       expect(chunkCalls.isDone()).toBe(true);
     });
 
+    it("should stop reading chunks once the response deadline has passed", async () => {
+      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
+        access_token: MOCK_ACCESS_TOKEN,
+        expires_in: MOCK_EXPIRES_IN,
+        token_type: "Bearer",
+      });
+
+      nock(databricksHost)
+        .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
+        .reply(200, {
+          statement_id: "slow",
+          status: { state: "SUCCEEDED" },
+          manifest: {
+            schema: {
+              column_count: 1,
+              columns: [{ name: "id", type_name: "STRING", type_text: "STRING", position: 0 }],
+            },
+            total_row_count: 4,
+          },
+          result: {
+            data_array: [["1"], ["2"]],
+            chunk_index: 0,
+            row_count: 2,
+            row_offset: 0,
+            next_chunk_internal_link: "/api/2.0/sql/statements/slow/result/chunks/1?row_offset=2",
+          },
+        });
+      const chunkCall = nock(databricksHost)
+        .get("/api/2.0/sql/statements/slow/result/chunks/1?row_offset=2")
+        .reply(200, { data_array: [["3"], ["4"]], chunk_index: 1, row_count: 2, row_offset: 2 });
+
+      // The statement starts at 0 and has used 56 s of the budget by the time its chunks are read.
+      const clock = vi.spyOn(performance, "now").mockReturnValueOnce(0).mockReturnValue(56_000);
+
+      const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
+
+      clock.mockRestore();
+      assertFailure(result);
+      expect(result.error.statusCode).toBe(504);
+      expect(result.error.code).toBe("WAREHOUSE_TIMEOUT");
+      expect(chunkCall.isDone()).toBe(false);
+    });
+
     it("should fail the read when a later chunk cannot be fetched", async () => {
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,

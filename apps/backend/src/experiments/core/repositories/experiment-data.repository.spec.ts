@@ -719,6 +719,17 @@ describe("ExperimentDataRepository", () => {
         });
       });
 
+      it("refuses a page the warehouse cut at its byte limit rather than return it short", async () => {
+        vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+          success({ columns, rows: [["1"]], totalRows: 1, truncated: true }),
+        );
+
+        const result = await repository.getTableData({ ...baseParams, page: 1, pageSize: 50 });
+
+        assertFailure(result);
+        expect(result.error.code).toBe("PAGE_TOO_LARGE");
+      });
+
       it("reads no count when every match fits under the ceiling", async () => {
         const executeSpy = answer([["1"], ["2"]], 2);
 
@@ -1664,6 +1675,19 @@ describe("ExperimentDataRepository", () => {
 
       assertSuccess(result);
       expect(result.value).toEqual({ values: [42, 3.5], truncated: false });
+    });
+
+    it("flags values the warehouse cut at its byte limit", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({ ...mockRows(["a"]), truncated: true }),
+      );
+
+      const result = await repository.getDistinctColumnValues(baseParams);
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ values: ["a"], truncated: true });
     });
 
     it("flags truncation and trims to the requested limit", async () => {
