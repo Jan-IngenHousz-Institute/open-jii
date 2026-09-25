@@ -184,12 +184,29 @@ export const zExperimentTimeBucketUnit = z.enum([
   "year",
 ]);
 
+export const zExperimentWidthBucket = z.object({
+  origin: z
+    .number()
+    .finite()
+    .describe("Where bucket 0 starts, in epoch milliseconds on a time axis"),
+  width: z.number().finite().positive().describe("Bucket width, in milliseconds on a time axis"),
+  scale: z.enum(["time", "number"]).describe("Whether the column is a timestamp or a number"),
+});
+
 // A grouping key. When `timeBucket` is set, the column is bucketed via
 // `date_trunc(unit, column)`; the resulting alias is `${column}_${unit}`.
-export const zExperimentGroupByItem = z.object({
-  column: z.string().min(1, "Group-by column is required"),
-  timeBucket: zExperimentTimeBucketUnit.optional(),
-});
+// `widthBucket` groups into equal-width buckets and projects the bucket
+// index as `${column}_bucket`.
+export const zExperimentGroupByItem = z
+  .object({
+    column: z.string().min(1, "Group-by column is required"),
+    timeBucket: zExperimentTimeBucketUnit.optional(),
+    widthBucket: zExperimentWidthBucket.optional(),
+  })
+  .refine(
+    (item) => item.timeBucket === undefined || item.widthBucket === undefined,
+    "A group-by column takes a calendar bucket or a width bucket, not both",
+  );
 
 // `column: "*"` is allowed only with `count` and `cumsum`: `count(*)` is
 // the row-count form, and `cumsum(*)` is cumulative row count (running

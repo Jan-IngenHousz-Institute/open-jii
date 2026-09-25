@@ -10838,6 +10838,33 @@
                                         "year"
                                       ],
                                       "type": "string"
+                                    },
+                                    "widthBucket": {
+                                      "type": "object",
+                                      "properties": {
+                                        "origin": {
+                                          "type": "number",
+                                          "description": "Where bucket 0 starts, in epoch milliseconds on a time axis"
+                                        },
+                                        "width": {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "description": "Bucket width, in milliseconds on a time axis"
+                                        },
+                                        "scale": {
+                                          "enum": [
+                                            "time",
+                                            "number"
+                                          ],
+                                          "type": "string",
+                                          "description": "Whether the column is a timestamp or a number"
+                                        }
+                                      },
+                                      "required": [
+                                        "origin",
+                                        "width",
+                                        "scale"
+                                      ]
                                     }
                                   },
                                   "required": [
@@ -11164,6 +11191,33 @@
                                     "year"
                                   ],
                                   "type": "string"
+                                },
+                                "widthBucket": {
+                                  "type": "object",
+                                  "properties": {
+                                    "origin": {
+                                      "type": "number",
+                                      "description": "Where bucket 0 starts, in epoch milliseconds on a time axis"
+                                    },
+                                    "width": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Bucket width, in milliseconds on a time axis"
+                                    },
+                                    "scale": {
+                                      "enum": [
+                                        "time",
+                                        "number"
+                                      ],
+                                      "type": "string",
+                                      "description": "Whether the column is a timestamp or a number"
+                                    }
+                                  },
+                                  "required": [
+                                    "origin",
+                                    "width",
+                                    "scale"
+                                  ]
                                 }
                               },
                               "required": [
@@ -11468,6 +11522,33 @@
                                       "year"
                                     ],
                                     "type": "string"
+                                  },
+                                  "widthBucket": {
+                                    "type": "object",
+                                    "properties": {
+                                      "origin": {
+                                        "type": "number",
+                                        "description": "Where bucket 0 starts, in epoch milliseconds on a time axis"
+                                      },
+                                      "width": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "description": "Bucket width, in milliseconds on a time axis"
+                                      },
+                                      "scale": {
+                                        "enum": [
+                                          "time",
+                                          "number"
+                                        ],
+                                        "type": "string",
+                                        "description": "Whether the column is a timestamp or a number"
+                                      }
+                                    },
+                                    "required": [
+                                      "origin",
+                                      "width",
+                                      "scale"
+                                    ]
                                   }
                                 },
                                 "required": [
@@ -11821,6 +11902,33 @@
                                       "year"
                                     ],
                                     "type": "string"
+                                  },
+                                  "widthBucket": {
+                                    "type": "object",
+                                    "properties": {
+                                      "origin": {
+                                        "type": "number",
+                                        "description": "Where bucket 0 starts, in epoch milliseconds on a time axis"
+                                      },
+                                      "width": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "description": "Bucket width, in milliseconds on a time axis"
+                                      },
+                                      "scale": {
+                                        "enum": [
+                                          "time",
+                                          "number"
+                                        ],
+                                        "type": "string",
+                                        "description": "Whether the column is a timestamp or a number"
+                                      }
+                                    },
+                                    "required": [
+                                      "origin",
+                                      "width",
+                                      "scale"
+                                    ]
                                   }
                                 },
                                 "required": [
@@ -12156,6 +12264,33 @@
                                     "year"
                                   ],
                                   "type": "string"
+                                },
+                                "widthBucket": {
+                                  "type": "object",
+                                  "properties": {
+                                    "origin": {
+                                      "type": "number",
+                                      "description": "Where bucket 0 starts, in epoch milliseconds on a time axis"
+                                    },
+                                    "width": {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "description": "Bucket width, in milliseconds on a time axis"
+                                    },
+                                    "scale": {
+                                      "enum": [
+                                        "time",
+                                        "number"
+                                      ],
+                                      "type": "string",
+                                      "description": "Whether the column is a timestamp or a number"
+                                    }
+                                  },
+                                  "required": [
+                                    "origin",
+                                    "width",
+                                    "scale"
+                                  ]
                                 }
                               },
                               "required": [
@@ -12460,6 +12595,33 @@
                                       "year"
                                     ],
                                     "type": "string"
+                                  },
+                                  "widthBucket": {
+                                    "type": "object",
+                                    "properties": {
+                                      "origin": {
+                                        "type": "number",
+                                        "description": "Where bucket 0 starts, in epoch milliseconds on a time axis"
+                                      },
+                                      "width": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "description": "Bucket width, in milliseconds on a time axis"
+                                      },
+                                      "scale": {
+                                        "enum": [
+                                          "time",
+                                          "number"
+                                        ],
+                                        "type": "string",
+                                        "description": "Whether the column is a timestamp or a number"
+                                      }
+                                    },
+                                    "required": [
+                                      "origin",
+                                      "width",
+                                      "scale"
+                                    ]
                                   }
                                 },
                                 "required": [

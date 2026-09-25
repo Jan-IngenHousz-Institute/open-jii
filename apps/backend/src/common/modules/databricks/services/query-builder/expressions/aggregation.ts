@@ -94,7 +94,9 @@ export function wrapWithAggregation(
     for (const item of opts.aggregation.groupBy ?? []) {
       const expr = item.timeBucket
         ? builder.buildTimeBucketExpression(item.column, item.timeBucket)
-        : { sql: builder.escapeIdentifier(item.column), alias: item.alias ?? item.column };
+        : item.widthBucket
+          ? builder.buildWidthBucketExpression(item.column, item.widthBucket, item.alias)
+          : { sql: builder.escapeIdentifier(item.column), alias: item.alias ?? item.column };
 
       selectClauses.push(`${expr.sql} AS ${builder.escapeIdentifier(expr.alias)}`);
       groupByClauses.push(expr.sql);

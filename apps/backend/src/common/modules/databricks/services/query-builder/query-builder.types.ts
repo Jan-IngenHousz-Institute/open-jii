@@ -41,9 +41,17 @@ export type AggregateFunction =
 
 export type TimeBucketUnit = "minute" | "hour" | "day" | "week" | "month" | "quarter" | "year";
 
+/** Equal-width buckets along a time axis (in milliseconds) or a numeric one. */
+export interface WidthBucket {
+  origin: number;
+  width: number;
+  scale: "time" | "number";
+}
+
 export interface GroupByExpression {
   column: string;
   timeBucket?: TimeBucketUnit;
+  widthBucket?: WidthBucket;
   // Required for struct paths: a dotted alias is not a valid SQL identifier.
   alias?: string;
 }

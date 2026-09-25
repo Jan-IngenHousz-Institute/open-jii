@@ -1,6 +1,15 @@
 "use client";
 
-import type { Layout, Config, PlotData, Data, PlotMarker, ColorScale, Font } from "plotly.js";
+import type {
+  Layout,
+  Config,
+  PlotData,
+  Data,
+  PlotMarker,
+  ColorScale,
+  Font,
+  PlotlyHTMLElement,
+} from "plotly.js";
 import React, { useEffect, useRef, useState, Suspense, lazy } from "react";
 import type { PlotParams } from "react-plotly.js";
 
@@ -324,7 +333,7 @@ const validatePlotlyData = (data: Data[] | undefined): PlotData[] => {
  * with WebGL context management and dimension validation
  */
 export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
-  ({ className, loading, error, data, layout, config, ...plotProps }, ref) => {
+  ({ className, loading, error, data, layout, config, onRelayout, ...plotProps }, ref) => {
     const isClient = useIsClient();
     const [isWebGLEnabled, setIsWebGLEnabled] = useState(true);
     const [isContextAvailable, setIsContextAvailable] = useState(false);
@@ -408,10 +417,21 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       };
     }, []);
 
+    // react-plotly binds an event prop once per instance and does not notice when a remount's
+    // purge drops it (React's strict and offscreen remounts reuse the instance), so the relayout
+    // listener is attached here each time a graph is initialised.
+    const onRelayoutRef = useRef(onRelayout);
+    useEffect(() => {
+      onRelayoutRef.current = onRelayout;
+    }, [onRelayout]);
+
     const { onInitialized, onPurge, onWebGlContextLost } = plotProps;
     const handleInitialized = React.useCallback<NonNullable<PlotParams["onInitialized"]>>(
       (figure, graphDiv) => {
         graphDivRef.current = graphDiv;
+        if (isPlotlyElement(graphDiv)) {
+          graphDiv.on("plotly_relayout", (event) => onRelayoutRef.current?.(event));
+        }
         onInitialized?.(figure, graphDiv);
       },
       [onInitialized],
@@ -657,6 +677,12 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
 );
 
 PlotlyChart.displayName = "PlotlyChart";
+
+function isPlotlyElement(
+  element: Readonly<HTMLElement>,
+): element is Readonly<HTMLElement> & PlotlyHTMLElement {
+  return "on" in element && typeof element.on === "function";
+}
 
 // Export WebGLContextManager for testing
 export { WebGLContextManager };

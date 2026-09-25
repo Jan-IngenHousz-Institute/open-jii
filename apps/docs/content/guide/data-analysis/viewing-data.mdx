@@ -68,11 +68,19 @@ The current interface supports many chart families, but a chart is only as sound
 as its data configuration. Check units, missing values, grouping, contributor
 anonymization, and the protocol version before interpreting a pattern.
 
-A chart reads at most 100,000 rows, and tables with very wide rows can stop it
-sooner. When the data holds more, a line under the chart says how much it shows,
-for example _Showing 100,000 of 553,000 rows_. Add a filter to the visualization
-or to the dashboard until every matching row fits, or export the table to work
-with all of it.
+A line or area chart over time or a number draws a long series at screen
+resolution: for every pixel column it keeps the first, last, lowest and highest
+value, so a peak or a gap never disappears from view. Zooming in redraws the
+visible range in more detail, down to single rows. When a series is longer than
+one read, the chart draws the whole table this way instead of its first rows. A
+line under the chart says when it is drawn at screen resolution, and _Show every
+point_ draws every row the chart read instead.
+
+Other charts, and stacked, faceted or aggregated ones, read at most 100,000 rows,
+and tables with very wide rows can stop them sooner. When the data holds more, a
+line under the chart says how much it shows, for example _Showing 100,000 of
+553,000 rows_. Add a filter to the visualization or to the dashboard until every
+matching row fits, or export the table to work with all of it.
 
 <Callout type="warn">
   Cross-experiment comparison and easy bulk exploration of raw fluorescence traces are known
