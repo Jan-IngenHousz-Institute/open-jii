@@ -117,6 +117,17 @@ describe("useUrlDataFilters", () => {
     expect(mockedReplace.mock.calls.at(-1)?.[0]).toContain(`f_raw_data=${encodeFilters(defaults)}`);
   });
 
+  it("treats a filter param that is present but empty as no filters, even with defaults", () => {
+    setSearchParams("f_raw_data=");
+    const defaults: ExperimentDataFilter[] = [
+      { column: "timestamp", operator: "greater_than_or_equal", value: "2026-08-26T00:00:00.000Z" },
+    ];
+
+    const { result } = renderHook(() => useUrlDataFilters("raw_data", defaults));
+
+    expect(result.current.completeFilters).toEqual([]);
+  });
+
   it("keeps cleared defaults cleared across a reload", () => {
     const defaults: ExperimentDataFilter[] = [
       { column: "timestamp", operator: "greater_than_or_equal", value: "2026-08-26T00:00:00.000Z" },

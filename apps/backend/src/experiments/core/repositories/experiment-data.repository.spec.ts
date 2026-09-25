@@ -23,6 +23,8 @@ import { ExperimentDataRepository } from "./experiment-data.repository";
 
 /* eslint-disable @typescript-eslint/unbound-method */
 
+type ExperimentQuery = Parameters<DatabricksPort["buildExperimentQuery"]>[0];
+
 describe("ExperimentDataRepository", () => {
   const testApp = TestHarness.App;
   let repository: ExperimentDataRepository;
@@ -1161,12 +1163,20 @@ describe("ExperimentDataRepository", () => {
 
     /**
      * Answers the id pick with `ids`, the lookup by id with `rows`, a COUNT with 9 and anything
-     * else with one full row; returns every statement in the order it started.
+     * else with one full row, failing the statements `failOn` picks; returns every statement in
+     * the order it started.
      */
-    const answer = (ids: string[], rows: (string | null)[][]) => {
+    const answer = (
+      ids: string[],
+      rows: (string | null)[][],
+      failOn: (sql: string) => boolean = () => false,
+    ) => {
       const statements: string[] = [];
       vi.spyOn(databricksPort, "executeSqlQuery").mockImplementation((_schema, sql) => {
         statements.push(sql);
+        if (failOn(sql)) {
+          return Promise.resolve(failure(AppError.internal("warehouse unavailable")));
+        }
         if (sql.startsWith("SELECT COUNT")) {
           return Promise.resolve(success(table([idColumn], [["9"]])));
         }
@@ -1292,6 +1302,42 @@ describe("ExperimentDataRepository", () => {
       expect(statements[1]).toContain("> 0.1");
       expect(statements[2]).not.toContain("> 0.1");
       expect(result.value[0].totalRows).toBe(9);
+    });
+
+    it.each([
+      ["the count", (sql: string) => sql.startsWith("SELECT COUNT")],
+      ["the id pick", (sql: string) => sql.startsWith("SELECT `id`\n")],
+      ["the lookup by id", (sql: string) => sql.includes("`id` IN (")],
+    ])("fails a filtered page when %s fails", async (_step, failOn) => {
+      answer(["3"], [["3", "0.3"]], failOn);
+
+      const result = await readPage(largeMacroTable, {
+        filters: [{ column: "phi2", operator: "greater_than", value: 0.1 }],
+      });
+
+      assertFailure(result);
+      expect(result.error.message).toBe("warehouse unavailable");
+    });
+
+    it.each([
+      ["the id pick", (query: ExperimentQuery) => query.columns?.[0] === "id"],
+      ["the lookup by id", (query: ExperimentQuery) => query.filters?.[0]?.operator === "in"],
+      ["a small table's page", () => true],
+    ])("fails a page when building %s fails", async (step, failOn) => {
+      answer(["3"], [["3", "0.3"]]);
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockImplementation((query) => {
+        if (failOn(query)) {
+          return failure(AppError.badRequest("bad column", "INVALID_QUERY_INPUT"));
+        }
+        return success(query.columns?.[0] === "id" ? "SELECT `id`\nFROM t" : "SELECT * FROM t");
+      });
+      const table =
+        step === "a small table's page" ? { ...largeMacroTable, rowCount: 100 } : largeMacroTable;
+
+      const result = await readPage(table);
+
+      assertFailure(result);
+      expect(result.error.code).toBe("INVALID_QUERY_INPUT");
     });
 
     it("looks an upload row up by an id past 2^53 exactly", async () => {
