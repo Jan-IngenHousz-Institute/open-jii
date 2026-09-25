@@ -1,7 +1,7 @@
 import { deviationPercent } from "./baseline.js";
 import { formatValue } from "./format.js";
 import type { LinkButton, SlackBlock, SlackMessage } from "./slack.js";
-import { actions, context, divider, header, section, table } from "./slack.js";
+import { actions, context, divider, header, section, tableSections } from "./slack.js";
 import type { CatalogMetric, EvaluatedReading, MetricReading } from "./types.js";
 
 export interface RenderOptions {
@@ -140,11 +140,17 @@ function detailsFor(
     shown += 1;
   }
 
-  const hidden = ordered.length - shown;
   const blocks = [divider(), ...inline];
+  const hidden = ordered.slice(shown);
 
-  if (hidden > 0) {
-    blocks.push(context(`${hidden} more on the report.`));
+  // The ones that did not fit are still named, so nothing is only findable elsewhere.
+  if (hidden.length > 0) {
+    const where = options.reportUrl ? " on the report" : "";
+    blocks.push(
+      context(
+        `${hidden.length} more${where}: ${hidden.map((entry) => entry.metric.id).join(", ")}`,
+      ),
+    );
   }
 
   return blocks;
@@ -213,7 +219,7 @@ export function renderObservability(
     lines.push(`${entry.metric.num} ${entry.metric.name}: ${readingOf(entry)}${reason}`);
   }
 
-  blocks.push(section(table(rows)));
+  blocks.push(...tableSections(rows));
 
   const footer = [`${readings.length} signals read`, ...notes];
   blocks.push(context(footer.join(" · ")));
@@ -254,7 +260,7 @@ export function renderLevels(
       deltaGlyph(entry.value, entry.baseline, window).replace(` vs ${window}`, "").trim(),
     ]);
 
-    blocks.push(section(table(rows)));
+    blocks.push(...tableSections(rows));
     blocks.push(context(`Change is against ${window}.`));
     lines.push(...rows.map((row) => `${row[0]}: ${row[1]} ${row[2]}`.trimEnd()));
   }

@@ -2,7 +2,7 @@
 
 Lambda that composes the platform heartbeat digests from `docs/monitoring/metrics-catalog.yaml` and posts them to Slack. Three EventBridge schedules invoke it with `{ "digest": "observability" | "pulse" | "weekly" }`.
 
-- Observability (06:30 UTC daily): exception report on the environment's Slack webhook. One line on normal days saying nothing is wrong; anomalies render with value vs expectation, runbook link, triage command, and a context blob. Self-check lines report signals that went silent or failed placeholder resolution.
+- Observability (06:30 UTC daily): exception report on the environment's Slack webhook. One line on normal days saying nothing is wrong; anomalies render as a severity-grouped table with each one's runbook and triage command under it. Self-check lines report signals that went silent or failed placeholder resolution.
 - Pulse (06:35 UTC daily) and weekly (Mon 07:00 UTC): usage levels on the same webhook, each number with a 4-week same-weekday (daily) or week-over-week (weekly) delta.
 
 With an empty webhook variable the Lambda logs the rendered digest instead of posting, so it deploys safely before the Slack channel exists.
