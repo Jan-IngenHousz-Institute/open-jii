@@ -271,6 +271,62 @@ describe("ExperimentDataRepository", () => {
       expect(result.value[0].data?.rows).toEqual([{ id: "1" }, { id: "2" }, { id: "3" }]);
     });
 
+    it("runs an identical read once while it is in flight, and again once it finished", async () => {
+      const mockMetadata: ExperimentTableMetadata[] = [
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          displayName: null,
+          rowCount: 100,
+          latestRowAt: null,
+          schemaRevision: null,
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+        },
+      ];
+      const rows = {
+        columns: [{ name: "id", type_name: "string", type_text: "string", position: 0 }],
+        rows: [["1"]],
+        totalRows: 1,
+        truncated: false,
+      };
+      const settle: (() => void)[] = [];
+
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(mockMetadata),
+      );
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(
+        success("SELECT id FROM raw_data"),
+      );
+      const executeSpy = vi.spyOn(databricksPort, "executeSqlQuery").mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            settle.push(() => resolve(success(rows)));
+          }),
+      );
+      executeSpy.mockClear();
+
+      const chartRead = { ...baseParams, columns: ["id"] };
+      const first = repository.getTableData(chartRead);
+      const second = repository.getTableData(chartRead);
+
+      await vi.waitFor(() => expect(settle).toHaveLength(1));
+      settle.forEach((resolve) => resolve());
+
+      const [firstResult, secondResult] = await Promise.all([first, second]);
+      assertSuccess(firstResult);
+      assertSuccess(secondResult);
+      expect(secondResult.value[0].data?.rows).toEqual([{ id: "1" }]);
+      expect(executeSpy).toHaveBeenCalledTimes(1);
+
+      const third = repository.getTableData(chartRead);
+      await vi.waitFor(() => expect(settle).toHaveLength(2));
+      settle.slice(1).forEach((resolve) => resolve());
+      assertSuccess(await third);
+      expect(executeSpy).toHaveBeenCalledTimes(2);
+    });
+
     it("serves the table metadata from the cache on the next read", async () => {
       const mockMetadata: ExperimentTableMetadata[] = [
         {

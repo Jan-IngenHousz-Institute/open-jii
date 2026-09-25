@@ -32,8 +32,8 @@ import { ScopedMetricsController } from "./presentation/scoped-metrics.controlle
     },
     {
       provide: CACHE_PORT,
-      // TTL matches the pipeline cadence: a shorter one would re-query the
-      // warehouse for data that cannot have changed yet.
+      // Public figures may be an hour old: every load can wake the warehouse,
+      // and nobody reading them needs them fresher than that.
       useFactory: (cache: Cache) =>
         // A cold warehouse answers in tens of seconds and stops again between
         // refreshes, so a figure stays servable for hours while the next load
@@ -41,7 +41,7 @@ import { ScopedMetricsController } from "./presentation/scoped-metrics.controlle
         // rather than for the warehouse.
         new CacheAdapter(cache, {
           prefix: "metrics:",
-          ttlMs: 10 * 60 * 1000,
+          ttlMs: 60 * 60 * 1000,
           staleMs: 6 * 60 * 60 * 1000,
           waitMs: 4000,
         }),

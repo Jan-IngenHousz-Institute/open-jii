@@ -129,6 +129,7 @@ describe("orpc-fp", () => {
           code: "INTERNAL_SERVER_ERROR",
           status: StatusCodes.INTERNAL_SERVER_ERROR,
         },
+        { error: AppError.timeout(), code: "GATEWAY_TIMEOUT", status: StatusCodes.GATEWAY_TIMEOUT },
       ];
 
       for (const { error, code, status } of cases) {

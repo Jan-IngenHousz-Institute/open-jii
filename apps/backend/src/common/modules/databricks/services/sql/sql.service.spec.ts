@@ -136,87 +136,46 @@ describe("DatabricksSqlService", () => {
       expect(statementCall.isDone()).toBe(true);
     });
 
-    it("should poll for results when query is in RUNNING state initially", async () => {
-      const mockTableData = {
-        columns: [
-          { name: "column1", type_name: "string", type_text: "string", position: 0 },
-          { name: "column2", type_name: "number", type_text: "number", position: 1 },
-        ],
-        rows: [
-          ["value1", "1"],
-          ["value2", "2"],
-        ],
-        totalRows: 2,
-        truncated: false,
-      };
-
+    it("should ask the warehouse to cancel a statement it cannot finish within 50 s", async () => {
       const statementId = "mock-statement-id";
 
-      // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,
         expires_in: MOCK_EXPIRES_IN,
         token_type: "Bearer",
       });
 
-      // Mock initial SQL statement submission with RUNNING status
-      nock(databricksHost)
-        .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
-        .reply(200, {
-          statement_id: statementId,
-          status: { state: "RUNNING" },
-        });
-
-      // Mock polling requests
-      // First poll still running
-      nock(databricksHost)
-        .get(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/${statementId}`)
-        .reply(200, {
-          statement_id: statementId,
-          status: { state: "RUNNING" },
-        });
-
-      // Second poll succeeded
-      nock(databricksHost)
-        .get(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/${statementId}`)
+      const statementCall = nock(databricksHost)
+        .post(
+          DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/",
+          (body: { wait_timeout: string; on_wait_timeout: string }) =>
+            body.wait_timeout === "50s" && body.on_wait_timeout === "CANCEL",
+        )
         .reply(200, {
           statement_id: statementId,
           status: { state: "SUCCEEDED" },
           manifest: {
             schema: {
-              column_count: mockTableData.columns.length,
-              columns: mockTableData.columns.map((col, i) => ({
-                ...col,
-                position: i,
-              })),
+              column_count: 1,
+              columns: [{ name: "n", type_name: "LONG", type_text: "BIGINT", position: 0 }],
             },
-            total_row_count: mockTableData.totalRows,
-            truncated: mockTableData.truncated,
+            total_row_count: 1,
+            truncated: false,
           },
-          result: {
-            data_array: mockTableData.rows,
-            chunk_index: 0,
-            row_count: mockTableData.rows.length,
-            row_offset: 0,
-          },
+          result: { data_array: [["1"]], chunk_index: 0, row_count: 1, row_offset: 0 },
         });
 
       const logSpy = vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
 
-      // Execute SQL query
       const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
 
-      // Assert result is success
-      expect(result.isSuccess()).toBe(true);
       assertSuccess(result);
-      expect(result.value).toEqual(mockTableData);
-
+      expect(statementCall.isDone()).toBe(true);
       expect(logSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           msg: "Warehouse statement completed",
           statementId,
-          pollAttempts: 2,
-          rowCount: 2,
+          rowCount: 1,
           truncated: false,
           durationMs: expect.any(Number) as number,
         }),
@@ -320,46 +279,6 @@ describe("DatabricksSqlService", () => {
       expect(result.error.message).toContain("TABLE_OR_VIEW_NOT_FOUND");
     });
 
-    it("should return 400 for BAD_REQUEST error during polling", async () => {
-      const statementId = "mock-statement-id";
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock initial SQL statement submission with RUNNING status
-      nock(databricksHost)
-        .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
-        .reply(200, {
-          statement_id: statementId,
-          status: { state: "RUNNING" },
-        });
-
-      // Mock polling returning FAILED with BAD_REQUEST error
-      nock(databricksHost)
-        .get(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/${statementId}`)
-        .reply(200, {
-          statement_id: statementId,
-          status: {
-            state: "FAILED",
-            error: {
-              message: "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column `bad_col` cannot be resolved.",
-              error_code: "BAD_REQUEST",
-            },
-          },
-        });
-
-      const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
-
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.statusCode).toBe(400);
-      expect(result.error.code).toBe("INVALID_SQL_QUERY");
-    });
-
     it("should return 400 for INVALID_PARAMETER_VALUE error from Databricks", async () => {
       // Mock token request
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
@@ -442,15 +361,14 @@ describe("DatabricksSqlService", () => {
       expect(result.error.message).toContain("Databricks SQL query execution");
     });
 
-    it("should handle CANCELED state without error details", async () => {
-      // Mock token request
+    it("should report a statement the warehouse cancelled at the deadline as a 504", async () => {
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,
         expires_in: MOCK_EXPIRES_IN,
         token_type: "Bearer",
       });
 
-      // Mock SQL statement execution returning CANCELED without an error object
+      // The warehouse answers a wait_timeout cancellation with no error object.
       nock(databricksHost)
         .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
         .reply(200, {
@@ -460,108 +378,33 @@ describe("DatabricksSqlService", () => {
 
       const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
 
-      expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toContain("SQL statement execution canceled");
+      expect(result.error.statusCode).toBe(504);
+      expect(result.error.code).toBe("WAREHOUSE_TIMEOUT");
     });
 
-    it("should handle FAILED state during polling", async () => {
-      const statementId = "mock-statement-id";
-
-      // Mock token request
+    it("should report a cancellation that says why as a failure, not a timeout", async () => {
       nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
         access_token: MOCK_ACCESS_TOKEN,
         expires_in: MOCK_EXPIRES_IN,
         token_type: "Bearer",
       });
 
-      // Mock initial SQL statement submission with RUNNING status
       nock(databricksHost)
         .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
         .reply(200, {
-          statement_id: statementId,
-          status: { state: "RUNNING" },
-        });
-
-      // Mock polling returning FAILED with error
-      nock(databricksHost)
-        .get(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/${statementId}`)
-        .reply(200, {
-          statement_id: statementId,
+          statement_id: "mock-statement-id",
           status: {
-            state: "FAILED",
-            error: { message: "Query timed out" },
+            state: "CANCELED",
+            error: { message: "The warehouse was stopped", error_code: "CANCELLED" },
           },
         });
 
       const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
 
-      expect(result.isSuccess()).toBe(false);
       assertFailure(result);
-      expect(result.error.message).toContain("SQL statement execution failed");
-    });
-
-    it("should handle CANCELED state during polling without error details", async () => {
-      const statementId = "mock-statement-id";
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock initial SQL statement submission with RUNNING status
-      nock(databricksHost)
-        .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
-        .reply(200, {
-          statement_id: statementId,
-          status: { state: "RUNNING" },
-        });
-
-      // Mock polling returning CANCELED without error
-      nock(databricksHost)
-        .get(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/${statementId}`)
-        .reply(200, {
-          statement_id: statementId,
-          status: { state: "CANCELED" },
-        });
-
-      const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
-
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toContain("SQL statement execution canceled");
-    });
-
-    it("should handle HTTP error during polling", async () => {
-      const statementId = "mock-statement-id";
-
-      // Mock token request
-      nock(databricksHost).post(DatabricksAuthService.TOKEN_ENDPOINT).reply(200, {
-        access_token: MOCK_ACCESS_TOKEN,
-        expires_in: MOCK_EXPIRES_IN,
-        token_type: "Bearer",
-      });
-
-      // Mock initial SQL statement submission with RUNNING status
-      nock(databricksHost)
-        .post(DatabricksSqlService.SQL_STATEMENTS_ENDPOINT + "/")
-        .reply(200, {
-          statement_id: statementId,
-          status: { state: "RUNNING" },
-        });
-
-      // Mock polling with HTTP error
-      nock(databricksHost)
-        .get(`${DatabricksSqlService.SQL_STATEMENTS_ENDPOINT}/${statementId}`)
-        .reply(500, { message: "Internal server error" });
-
-      const result = await sqlService.executeSqlQuery(schemaName, sqlStatement);
-
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toContain("Databricks SQL polling failed");
+      expect(result.error.statusCode).toBe(500);
+      expect(result.error.message).toContain("The warehouse was stopped");
     });
 
     it("should handle missing manifest in SUCCEEDED response", async () => {
