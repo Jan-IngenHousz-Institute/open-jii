@@ -58,7 +58,9 @@ export const zExperimentData = z.object({
   columns: z.array(zExperimentDataColumn),
   rows: z.array(z.record(z.string(), z.unknown().nullable())),
   totalRows: z.number().int(),
-  truncated: z.boolean(),
+  truncated: z
+    .boolean()
+    .describe("True when more rows matched than were returned; totalRows then counts them all"),
 });
 
 export type ExperimentData = z.infer<typeof zExperimentData>;
@@ -182,12 +184,29 @@ export const zExperimentTimeBucketUnit = z.enum([
   "year",
 ]);
 
+export const zExperimentWidthBucket = z.object({
+  origin: z
+    .number()
+    .finite()
+    .describe("Where bucket 0 starts, in epoch milliseconds on a time axis"),
+  width: z.number().finite().positive().describe("Bucket width, in milliseconds on a time axis"),
+  scale: z.enum(["time", "number"]).describe("Whether the column is a timestamp or a number"),
+});
+
 // A grouping key. When `timeBucket` is set, the column is bucketed via
 // `date_trunc(unit, column)`; the resulting alias is `${column}_${unit}`.
-export const zExperimentGroupByItem = z.object({
-  column: z.string().min(1, "Group-by column is required"),
-  timeBucket: zExperimentTimeBucketUnit.optional(),
-});
+// `widthBucket` groups into equal-width buckets and projects the bucket
+// index as `${column}_bucket`.
+export const zExperimentGroupByItem = z
+  .object({
+    column: z.string().min(1, "Group-by column is required"),
+    timeBucket: zExperimentTimeBucketUnit.optional(),
+    widthBucket: zExperimentWidthBucket.optional(),
+  })
+  .refine(
+    (item) => item.timeBucket === undefined || item.widthBucket === undefined,
+    "A group-by column takes a calendar bucket or a width bucket, not both",
+  );
 
 // `column: "*"` is allowed only with `count` and `cumsum`: `count(*)` is
 // the row-count form, and `cumsum(*)` is cumulative row count (running
@@ -255,9 +274,10 @@ export type ExperimentAggregationFunction = z.infer<typeof zExperimentAggregatio
 export type ExperimentAggregationItem = z.infer<typeof zExperimentAggregationItem>;
 export type ExperimentDataAggregation = z.infer<typeof zExperimentDataAggregation>;
 
-// Hard ceiling on rows returned when filtering/aggregating. The page-based
-// pagination path uses pageSize instead; this only kicks in for the
-// "non-paginated" branches (specific columns, filtered, or aggregated).
+// Hard ceiling on rows returned when filtering/aggregating, and the default when
+// the caller sets no `limit`. The page-based pagination path uses pageSize
+// instead; this only kicks in for the "non-paginated" branches (specific
+// columns, filtered, or aggregated).
 export const DATA_QUERY_MAX_LIMIT = 100_000;
 
 // Helper: parse a JSON-encoded query string and validate against the inner
@@ -309,7 +329,7 @@ export const zExperimentDataQuery = z.object({
     .max(DATA_QUERY_MAX_LIMIT)
     .optional()
     .describe(
-      "Hard cap on returned rows for filtered/aggregated reads. Ignored when page/pageSize are used.",
+      `Hard cap on returned rows for filtered/aggregated reads, ${DATA_QUERY_MAX_LIMIT} when omitted. Ignored when page/pageSize are used.`,
     ),
 });
 
@@ -338,6 +358,16 @@ export const zExperimentDistinctValuesResponse = z.object({
     .array(z.union([z.string(), z.number()]))
     .describe("Distinct non-null values, sorted ascending"),
   truncated: z.boolean().describe("True when the column has more values than `limit` returned"),
+});
+
+export const zExperimentTableColumnsQuery = z.object({
+  tableName: zExperimentTableNameInput.describe("Table whose columns to return"),
+});
+
+export const zExperimentTableColumnsResponse = z.object({
+  columns: z
+    .array(zExperimentDataColumn)
+    .describe("The columns a read of the table returns, in order"),
 });
 
 export const zExperimentDataTable = z.object({
@@ -457,6 +487,8 @@ export const zExperimentTablesMetadataList = z.array(zExperimentTableMetadata);
 export type ExperimentDataQuery = z.infer<typeof zExperimentDataQuery>;
 export type ExperimentDistinctValuesQuery = z.infer<typeof zExperimentDistinctValuesQuery>;
 export type ExperimentDistinctValuesResponse = z.infer<typeof zExperimentDistinctValuesResponse>;
+export type ExperimentTableColumnsQuery = z.infer<typeof zExperimentTableColumnsQuery>;
+export type ExperimentTableColumnsResponse = z.infer<typeof zExperimentTableColumnsResponse>;
 export type ExperimentDataTable = z.infer<typeof zExperimentDataTable>;
 export type ExperimentDataResponse = z.infer<typeof zExperimentDataResponse>;
 export type ExperimentColumnInfo = z.infer<typeof zExperimentColumnInfo>;

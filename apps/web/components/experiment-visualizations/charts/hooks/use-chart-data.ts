@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 import { useExperimentVisualizationData } from "../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
@@ -11,11 +12,27 @@ import { useDashboardSharedRead } from "../../../experiment-dashboards/dashboard
 import type { OwnRead } from "../../../experiment-dashboards/dashboard-shared-reads-context";
 import { dataSourcesByRole, readColumnsOf } from "../data/data-sources";
 import { sortRowsByColumn } from "../data/row-order";
+import { useProvidedReadTruncation } from "../provided-read-context";
+
+/** How much of a read the chart holds when the backend stopped it short. */
+export interface ChartTruncation {
+  shown: number;
+  total: number;
+}
+
+export function truncationOf(
+  data: { rows: unknown[]; totalRows: number; truncated: boolean } | undefined,
+): ChartTruncation | undefined {
+  return data?.truncated ? { shown: data.rows.length, total: data.totalRows } : undefined;
+}
 
 export interface UseChartDataResult {
   rows: Record<string, unknown>[];
   isLoading: boolean;
   error: unknown;
+  truncation?: ChartTruncation;
+  /** The filters the read applied, the chart's own and a dashboard's together. */
+  filters?: ExperimentDataFilter[];
 }
 
 // The data hook disables itself on an empty table name.
@@ -41,6 +58,7 @@ export function useChartData(
 
   // AND-merge dashboard filter widgets; empty outside a dashboard.
   const dashboardFilters = useDashboardFiltersForTable(dataConfig.tableName);
+  const providedTruncation = useProvidedReadTruncation();
   const mergedFilters =
     dashboardFilters.length > 0
       ? [...(dataConfig.filters ?? []), ...dashboardFilters]
@@ -103,12 +121,24 @@ export function useChartData(
   }, [active.data, ownOrderColumn]);
 
   if (providedData) {
-    return { rows: providedData, isLoading: false, error: undefined };
+    return {
+      rows: providedData,
+      isLoading: false,
+      error: undefined,
+      truncation: providedTruncation,
+      filters: mergedFilters,
+    };
   }
   if (aggregationError) {
     return { rows: [], isLoading: false, error: aggregationError };
   }
-  return { rows, isLoading: active.isLoading, error: active.error };
+  return {
+    rows,
+    isLoading: active.isLoading,
+    error: active.error,
+    truncation: truncationOf(active.data),
+    filters: mergedFilters,
+  };
 }
 
 // Diagnostic code surfaced when cumsum is configured without a groupBy or

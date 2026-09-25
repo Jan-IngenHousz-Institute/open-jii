@@ -29,17 +29,27 @@ function dataKey(tableName: string) {
   });
 }
 
+function columnsKey(tableName: string) {
+  return orpc.experiments.getExperimentTableColumns.queryKey({
+    input: { id: "exp-1", tableName },
+  });
+}
+
 describe("useExperimentDataFreshness", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it("refetches only the tables whose count or newest row moved", async () => {
+  it("refetches only the tables whose count or newest row moved, and leaves their columns", async () => {
     const queryClient = createTestQueryClient();
     // Nothing observes the seeded reads, so keep them past the test client's gcTime of 0.
     queryClient.setQueryDefaults(orpc.experiments.getExperimentData.key(), { gcTime: Infinity });
+    queryClient.setQueryDefaults(orpc.experiments.getExperimentTableColumns.key(), {
+      gcTime: Infinity,
+    });
     queryClient.setQueryData(dataKey("raw_data"), []);
     queryClient.setQueryData(dataKey("macro-1"), []);
+    queryClient.setQueryData(columnsKey("raw_data"), { columns: [] });
     const moved = { ...RAW, totalRows: 11, latestRowAt: "2026-09-22T10:08:00.000Z" };
     const spy = server.mount(contract.experiments.getExperimentTables, {
       body: () => (spy.callCount > 1 ? [moved, MACRO] : [RAW, MACRO]),
@@ -56,12 +66,17 @@ describe("useExperimentDataFreshness", () => {
       expect(queryClient.getQueryState(dataKey("raw_data"))?.isInvalidated).toBe(true),
     );
     expect(queryClient.getQueryState(dataKey("macro-1"))?.isInvalidated).toBe(false);
+    expect(queryClient.getQueryState(columnsKey("raw_data"))?.isInvalidated).toBe(false);
   });
 
-  it("refetches a table whose schema changed after its rows did", async () => {
+  it("refetches a table and its columns when its schema changed after its rows did", async () => {
     const queryClient = createTestQueryClient();
     queryClient.setQueryDefaults(orpc.experiments.getExperimentData.key(), { gcTime: Infinity });
+    queryClient.setQueryDefaults(orpc.experiments.getExperimentTableColumns.key(), {
+      gcTime: Infinity,
+    });
     queryClient.setQueryData(dataKey("raw_data"), []);
+    queryClient.setQueryData(columnsKey("raw_data"), { columns: [] });
     const widened = { ...RAW, schemaRevision: "schema-2" };
     const spy = server.mount(contract.experiments.getExperimentTables, {
       body: () => (spy.callCount > 1 ? [widened] : [RAW]),
@@ -77,6 +92,7 @@ describe("useExperimentDataFreshness", () => {
     await waitFor(() =>
       expect(queryClient.getQueryState(dataKey("raw_data"))?.isInvalidated).toBe(true),
     );
+    expect(queryClient.getQueryState(columnsKey("raw_data"))?.isInvalidated).toBe(true);
   });
 
   it("retries rows whose refresh failed on the next poll, though nothing moved", async () => {

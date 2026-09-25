@@ -87,7 +87,12 @@
     },
     "title": "Grafiektitel",
     "preview": "Grafiek Voorvertoning",
-    "showLegend": "Legenda tonen"
+    "showLegend": "Legenda tonen",
+    "truncated": "{{shown}} van {{total}} rijen weergegeven. Voeg een filter toe om alle overeenkomende rijen te zien.",
+    "reduced": "Getekend op schermresolutie uit {{total}} rijen.",
+    "showingAllPoints": "Elk punt wordt getoond.",
+    "showAllPoints": "Toon elk punt",
+    "drawAtResolution": "Teken op schermresolutie"
   },
   "configuration": {
     "columns": {

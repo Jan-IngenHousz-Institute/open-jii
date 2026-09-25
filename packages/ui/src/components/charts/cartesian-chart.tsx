@@ -1,6 +1,6 @@
 "use client";
 
-import type { Layout, PlotData } from "plotly.js";
+import type { Layout, PlotData, PlotRelayoutEvent } from "plotly.js";
 import React, { useMemo } from "react";
 
 import { cn } from "../../lib/utils";
@@ -160,6 +160,10 @@ export interface CartesianChartProps extends BaseChartProps {
    * When absent, the chart renders as a single canvas (existing path).
    */
   subplots?: FacetGridConfig;
+  /** While this stays the same, a redraw keeps the user's zoom and pan. */
+  uirevision?: string;
+  /** Called when the user zooms, pans or resets the view, with the layout keys that changed. */
+  onRelayout?: (event: Readonly<Record<string, unknown>>) => void;
 }
 
 /**
@@ -175,6 +179,8 @@ export function CartesianChart({
   loading,
   error,
   subplots,
+  uirevision,
+  onRelayout,
   ...eventHandlers
 }: CartesianChartProps) {
   // Faceted charts pass their grid so the sizing tier compares against
@@ -295,11 +301,20 @@ export function CartesianChart({
     // `layout.shapes` / `layout.annotations` without conflict.
     applyReferenceLines(next, config.referenceLines, { cells: subplots?.cells });
 
+    if (uirevision !== undefined) {
+      next.uirevision = uirevision;
+    }
+
     return next;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- themeVersion is a cache key.
-  }, [config, sizing, data, axisScan, subplots, themeVersion]);
+  }, [config, sizing, data, axisScan, subplots, uirevision, themeVersion]);
 
   const plotConfig = useMemo(() => createPlotlyConfig(config, sizing), [config, sizing]);
+  const handleRelayout = React.useCallback(
+    (event: Readonly<PlotRelayoutEvent>) => onRelayout?.({ ...event }),
+    [onRelayout],
+  );
+
   return (
     <div ref={containerRef} className={cn("flex h-full w-full flex-col", className)}>
       <PlotlyChart
@@ -308,6 +323,7 @@ export function CartesianChart({
         config={plotConfig}
         loading={loading}
         error={error}
+        onRelayout={onRelayout ? handleRelayout : undefined}
         {...eventHandlers}
       />
     </div>

@@ -9,12 +9,18 @@ import type { ExperimentVisualization } from "@repo/api/domains/experiment/visua
 import { useTranslation } from "@repo/i18n";
 import { Trans } from "@repo/i18n/client";
 
+import type { ChartResolution } from "./chart-resolution-notice";
+import { ChartWithReadNotice } from "./chart-with-read-notice";
+import type { ChartTruncation } from "./hooks/use-chart-data";
+
 interface ChartFrameProps {
   visualization: ExperimentVisualization;
   experimentId: string;
   isLoading: boolean;
   error: unknown;
   hasRows: boolean;
+  truncation?: ChartTruncation;
+  resolution?: ChartResolution;
   children: ReactNode;
 }
 
@@ -25,6 +31,8 @@ export function ChartFrame({
   isLoading,
   error,
   hasRows,
+  truncation,
+  resolution,
   children,
 }: ChartFrameProps) {
   const { t } = useTranslation("experimentVisualizations");
@@ -82,7 +90,11 @@ export function ChartFrame({
     );
   }
 
-  return <>{children}</>;
+  return (
+    <ChartWithReadNotice truncation={truncation} resolution={resolution}>
+      {children}
+    </ChartWithReadNotice>
+  );
 }
 
 export function ChartConfigError({ message }: { message: string }) {

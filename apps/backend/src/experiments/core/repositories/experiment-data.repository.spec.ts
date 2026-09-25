@@ -4,7 +4,10 @@ import { Logger } from "@nestjs/common";
 import type { Cache } from "cache-manager";
 import { expect } from "vitest";
 
-import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import {
+  DATA_QUERY_MAX_LIMIT,
+  WellKnownColumnTypes,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import {
   AppError,
@@ -17,6 +20,8 @@ import { TestHarness } from "../../../test/test-harness";
 import { ContributorAnonymizerService } from "../../application/services/contributor-anonymizer.service";
 import type { ExperimentTableMetadata } from "../models/experiment-data.model";
 import type { ExperimentDto } from "../models/experiment.model";
+import { CACHE_PORT } from "../ports/cache.port";
+import type { CachePort } from "../ports/cache.port";
 import { DATABRICKS_PORT } from "../ports/databricks.port";
 import type { DatabricksPort } from "../ports/databricks.port";
 import { ExperimentDataRepository } from "./experiment-data.repository";
@@ -635,8 +640,142 @@ describe("ExperimentDataRepository", () => {
         exceptColumns: ["experiment_id", "custom_metadata"],
         orderBy: undefined,
         orderDirection: "ASC",
-        limit: undefined,
+        limit: DATA_QUERY_MAX_LIMIT + 1,
         offset: undefined,
+      });
+    });
+
+    describe("one-page reads stop at a ceiling", () => {
+      const metadata: ExperimentTableMetadata[] = [
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          displayName: null,
+          rowCount: 100,
+          latestRowAt: null,
+          schemaRevision: null,
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+        },
+      ];
+      const columns = [{ name: "id", type_name: "string", type_text: "string", position: 0 }];
+
+      function answer(rows: string[][], total: number) {
+        return vi
+          .spyOn(databricksPort, "executeSqlQuery")
+          .mockImplementation((_schema, sql) =>
+            Promise.resolve(
+              success(
+                sql.startsWith("SELECT COUNT")
+                  ? { columns, rows: [[String(total)]], totalRows: 1, truncated: false }
+                  : { columns, rows, totalRows: rows.length, truncated: false },
+              ),
+            ),
+          );
+      }
+
+      beforeEach(() => {
+        vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+        vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(
+          success("SELECT id FROM raw_data"),
+        );
+      });
+
+      it("returns the rows up to the ceiling, flags the rest and counts every match", async () => {
+        const executeSpy = answer([["1"], ["2"], ["3"]], 7);
+
+        const result = await repository.getTableData({ ...baseParams, columns: ["id"], limit: 2 });
+
+        assertSuccess(result);
+        expect(result.value[0]).toMatchObject({ pageSize: 2, totalRows: 7, totalPages: 1 });
+        expect(result.value[0].data).toMatchObject({
+          rows: [{ id: "1" }, { id: "2" }],
+          totalRows: 7,
+          truncated: true,
+        });
+        expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+          expect.objectContaining({ columns: ["id"], limit: 3 }),
+        );
+        expect(executeSpy).toHaveBeenCalledTimes(2);
+      });
+
+      it("flags a read the warehouse cut at its byte limit and counts every match", async () => {
+        vi.spyOn(databricksPort, "executeSqlQuery").mockImplementation((_schema, sql) =>
+          Promise.resolve(
+            success(
+              sql.startsWith("SELECT COUNT")
+                ? { columns, rows: [["9"]], totalRows: 1, truncated: false }
+                : { columns, rows: [["1"], ["2"]], totalRows: 2, truncated: true },
+            ),
+          ),
+        );
+
+        const result = await repository.getTableData({ ...baseParams, columns: ["id"] });
+
+        assertSuccess(result);
+        expect(result.value[0].data).toMatchObject({
+          rows: [{ id: "1" }, { id: "2" }],
+          totalRows: 9,
+          truncated: true,
+        });
+      });
+
+      it("refuses a page the warehouse cut at its byte limit rather than return it short", async () => {
+        vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+          success({ columns, rows: [["1"]], totalRows: 1, truncated: true }),
+        );
+
+        const result = await repository.getTableData({ ...baseParams, page: 1, pageSize: 50 });
+
+        assertFailure(result);
+        expect(result.error.code).toBe("PAGE_TOO_LARGE");
+      });
+
+      it("reads no count when every match fits under the ceiling", async () => {
+        const executeSpy = answer([["1"], ["2"]], 2);
+
+        const result = await repository.getTableData({ ...baseParams, columns: ["id"], limit: 2 });
+
+        assertSuccess(result);
+        expect(result.value[0].data).toMatchObject({ totalRows: 2, truncated: false });
+        expect(executeSpy).toHaveBeenCalledTimes(1);
+      });
+
+      it("applies the same ceiling to aggregated reads", async () => {
+        answer([["a"], ["b"]], 5);
+
+        const result = await repository.getTableData({
+          ...baseParams,
+          aggregation: { groupBy: [{ column: "id" }] },
+          limit: 1,
+        });
+
+        assertSuccess(result);
+        expect(result.value[0].data).toMatchObject({
+          rows: [{ id: "a" }],
+          totalRows: 5,
+          truncated: true,
+        });
+        expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+          expect.objectContaining({ aggregation: { groupBy: [{ column: "id" }] }, limit: 2 }),
+        );
+      });
+
+      it("fails the read when the count behind a truncated read fails", async () => {
+        const error = AppError.internal("count failed");
+        vi.spyOn(databricksPort, "executeSqlQuery").mockImplementation((_schema, sql) =>
+          Promise.resolve(
+            sql.startsWith("SELECT COUNT")
+              ? failure(error)
+              : success({ columns, rows: [["1"], ["2"]], totalRows: 2, truncated: false }),
+          ),
+        );
+
+        const result = await repository.getTableData({ ...baseParams, columns: ["id"], limit: 1 });
+
+        assertFailure(result);
+        expect(result.error).toBe(error);
       });
     });
 
@@ -1540,6 +1679,19 @@ describe("ExperimentDataRepository", () => {
       expect(result.value).toEqual({ values: [42, 3.5], truncated: false });
     });
 
+    it("flags values the warehouse cut at its byte limit", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({ ...mockRows(["a"]), truncated: true }),
+      );
+
+      const result = await repository.getDistinctColumnValues(baseParams);
+
+      assertSuccess(result);
+      expect(result.value).toEqual({ values: ["a"], truncated: true });
+    });
+
     it("flags truncation and trims to the requested limit", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success(metadata));
       vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
@@ -1614,6 +1766,145 @@ describe("ExperimentDataRepository", () => {
 
       const result = await repository.getDistinctColumnValues(baseParams);
       assertFailure(result);
+    });
+  });
+
+  describe("getTableColumns", () => {
+    const experimentId = faker.string.uuid();
+    const params = { experimentId, tableName: "raw_data" };
+    const columns = [
+      { name: "time", type_name: "TIMESTAMP", type_text: "TIMESTAMP", position: 0 },
+      { name: "temp", type_name: "DOUBLE", type_text: "DOUBLE", position: 1 },
+    ];
+
+    function metadataAt(schemaRevision: string | null): ExperimentTableMetadata[] {
+      return [
+        {
+          identifier: "raw_data",
+          tableType: "static",
+          displayName: null,
+          rowCount: 10,
+          latestRowAt: null,
+          schemaRevision,
+          macroSchema: null,
+          questionsSchema: null,
+          customMetadataSchema: null,
+        },
+      ];
+    }
+
+    beforeEach(() => {
+      vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(
+        success("SELECT * FROM raw_data LIMIT 1"),
+      );
+    });
+
+    it("reads the columns once per schema revision", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(metadataAt("r1")),
+      );
+      const executeSpy = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(success({ columns, rows: [], totalRows: 0, truncated: false }));
+
+      const first = await repository.getTableColumns(params);
+      const second = await repository.getTableColumns(params);
+
+      assertSuccess(first);
+      assertSuccess(second);
+      expect(second.value).toEqual(columns);
+      expect(executeSpy).toHaveBeenCalledTimes(1);
+      expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ tableName: "raw_data", limit: 1 }),
+      );
+    });
+
+    it("reads them again once the schema revision moves", async () => {
+      const metadataSpy = vi
+        .spyOn(databricksPort, "getExperimentTableMetadata")
+        .mockResolvedValue(success(metadataAt("r1")));
+      const executeSpy = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValue(success({ columns, rows: [], totalRows: 0, truncated: false }));
+
+      await repository.getTableColumns(params);
+      metadataSpy.mockResolvedValue(success(metadataAt("r2")));
+      await testApp.module.get<CachePort>(CACHE_PORT).invalidate(`table-metadata:${experimentId}`);
+      await repository.getTableColumns(params);
+
+      expect(executeSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not cache a failed read", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success(metadataAt("r1")),
+      );
+      const error = AppError.internal("warehouse unavailable");
+      const executeSpy = vi
+        .spyOn(databricksPort, "executeSqlQuery")
+        .mockResolvedValueOnce(failure(error))
+        .mockResolvedValueOnce(success({ columns, rows: [], totalRows: 0, truncated: false }));
+
+      const first = await repository.getTableColumns(params);
+      const second = await repository.getTableColumns(params);
+
+      assertFailure(first);
+      expect(first.error).toBe(error);
+      assertSuccess(second);
+      expect(second.value).toEqual(columns);
+      expect(executeSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it("describes a renamed payload field the way a data read does", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+        success([
+          {
+            ...metadataAt("r1")[0],
+            identifier: "macro_123",
+            tableType: "macro",
+            macroSchema: "OBJECT<device: STRING, phi2: DOUBLE>",
+          },
+        ]),
+      );
+      vi.spyOn(databricksPort, "getExperimentTableColumns").mockResolvedValue(
+        success(["id", "device", "macro_id", "macro_output", "questions_data"]),
+      );
+      vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+        success({
+          columns: [
+            {
+              name: "device",
+              type_name: "STRUCT",
+              type_text: "STRUCT<serial: STRING>",
+              position: 0,
+            },
+            { name: "device_output", type_name: "STRING", type_text: "STRING", position: 1 },
+          ],
+          rows: [],
+          totalRows: 0,
+          truncated: false,
+        }),
+      );
+
+      const result = await repository.getTableColumns({ experimentId, tableName: "macro_123" });
+
+      assertSuccess(result);
+      expect(result.value[1]).toEqual({
+        name: "device_output",
+        type_name: "STRING",
+        type_text: "STRING",
+        position: 1,
+        renamedFrom: { name: "device", source: "macro_output" },
+      });
+    });
+
+    it("returns notFound when the table is absent from metadata", async () => {
+      vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([]));
+
+      const result = await repository.getTableColumns(params);
+
+      assertFailure(result);
+      expect(result.error.code).toBe("NOT_FOUND");
     });
   });
 });

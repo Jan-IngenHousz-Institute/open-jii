@@ -53,12 +53,18 @@ export interface StatementResponse {
       byte_count?: number;
     }[];
   };
-  result?: {
-    data_array?: (string | null)[][];
-    chunk_index: number;
-    row_count: number;
-    row_offset: number;
-  };
+  result?: ResultChunk;
+}
+
+/** One chunk of an INLINE result. The statement response carries the first. */
+export interface ResultChunk {
+  data_array?: (string | null)[][];
+  chunk_index: number;
+  row_count: number;
+  row_offset: number;
+  next_chunk_index?: number;
+  /** Path to the next chunk, joined to the workspace host. Absent on the last chunk. */
+  next_chunk_internal_link?: string;
 }
 
 export interface SchemaData {

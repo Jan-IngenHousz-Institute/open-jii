@@ -26,9 +26,14 @@ export function SPCRenderer({
 
   // Order matters: SPC reads as a process *walk* over X, so fetched
   // rows need to be ordered by the chosen X column.
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData, {
-    orderBy: xColumn || undefined,
-  });
+  const { rows, isLoading, error, truncation } = useChartData(
+    visualization,
+    experimentId,
+    providedData,
+    {
+      orderBy: xColumn || undefined,
+    },
+  );
 
   const chartConfig = narrowChartConfig(visualization);
 
@@ -133,6 +138,7 @@ export function SPCRenderer({
       isLoading={isLoading}
       error={error}
       hasRows={hasRows}
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         <SPCChart

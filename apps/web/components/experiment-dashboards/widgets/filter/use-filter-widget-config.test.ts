@@ -1,4 +1,4 @@
-import { createExperimentDataTable, createFilterWidget } from "@/test/factories";
+import { createFilterWidget } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
@@ -7,22 +7,14 @@ import { contract } from "@repo/api/contract";
 
 import { useFilterWidgetConfig } from "./use-filter-widget-config";
 
-function mountColumns(tableName: string) {
-  server.mount(contract.experiments.getExperimentData, {
-    body: [
-      createExperimentDataTable({
-        name: tableName,
-        data: {
-          columns: [
-            { name: "device_id", type_name: "STRING", type_text: "STRING" },
-            { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" },
-          ],
-          rows: [],
-          totalRows: 0,
-          truncated: false,
-        },
-      }),
-    ],
+function mountColumns() {
+  server.mount(contract.experiments.getExperimentTableColumns, {
+    body: {
+      columns: [
+        { name: "device_id", type_name: "STRING", type_text: "STRING" },
+        { name: "value", type_name: "DOUBLE", type_text: "DOUBLE" },
+      ],
+    },
   });
 }
 
@@ -43,7 +35,7 @@ describe("useFilterWidgetConfig", () => {
   });
 
   it("flags isConfigured once tableName, column, and operator are present", () => {
-    mountColumns("raw_data");
+    mountColumns();
     const widget = createFilterWidget({
       config: {
         showTitle: true,
@@ -59,7 +51,7 @@ describe("useFilterWidgetConfig", () => {
   });
 
   it("resolves the column from metadata using the parent name of a struct path", async () => {
-    mountColumns("raw_data");
+    mountColumns();
     const widget = createFilterWidget({
       config: {
         showTitle: true,
@@ -76,7 +68,7 @@ describe("useFilterWidgetConfig", () => {
   });
 
   it("looks up the operator label from the kind-aware operator set", async () => {
-    mountColumns("raw_data");
+    mountColumns();
     const widget = createFilterWidget({
       config: {
         showTitle: true,
@@ -92,7 +84,7 @@ describe("useFilterWidgetConfig", () => {
   });
 
   it("falls back to parentColumn for displayTitle when no title is configured", () => {
-    mountColumns("raw_data");
+    mountColumns();
     const widget = createFilterWidget({
       config: {
         showTitle: true,
@@ -107,7 +99,7 @@ describe("useFilterWidgetConfig", () => {
   });
 
   it("uses the explicit title when configured", () => {
-    mountColumns("raw_data");
+    mountColumns();
     const widget = createFilterWidget({
       config: {
         showTitle: true,

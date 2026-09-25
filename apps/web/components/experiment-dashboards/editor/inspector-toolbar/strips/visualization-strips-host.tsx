@@ -1,6 +1,6 @@
 "use client";
 
-import { useExperimentData } from "@/hooks/experiment/useExperimentData/useExperimentData";
+import { useColumnMetadata } from "@/hooks/experiment/useColumnMetadata/useColumnMetadata";
 import { useExperimentTables } from "@/hooks/experiment/useExperimentTables/useExperimentTables";
 import { useExperimentVisualization } from "@/hooks/experiment/useExperimentVisualization/useExperimentVisualization";
 import { Loader2 } from "lucide-react";
@@ -124,19 +124,13 @@ function SectionBody({ form, experimentId, tableName, section }: SectionBodyProp
     error: tablesError,
   } = useExperimentTables(experimentId);
   const {
-    tableMetadata,
+    columns: tableColumns,
     isLoading: isColumnsLoading,
     error: columnsError,
-  } = useExperimentData({
-    experimentId,
-    page: 1,
-    pageSize: 1,
-    tableName,
-    enabled: Boolean(tableName),
-  });
+  } = useColumnMetadata(experimentId, tableName);
   const columns = useMemo(
-    () => (tableMetadata?.rawColumns ?? []).filter((col) => isPlottableColumn(col.type_text)),
-    [tableMetadata],
+    () => tableColumns.filter((col) => isPlottableColumn(col.type_text)),
+    [tableColumns],
   );
 
   const handleTableChange = (newTable: string) => {

@@ -19,7 +19,11 @@ export function HistogramRenderer({
   const { t } = useTranslation("experimentVisualizations");
 
   // No orderBy: bins are order-independent, so skip the alias handshake.
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData);
+  const { rows, isLoading, error, truncation } = useChartData(
+    visualization,
+    experimentId,
+    providedData,
+  );
   const chartConfig = narrowChartConfig(visualization);
   const dataSources = visualization.dataConfig.dataSources;
   const orientation = chartConfig.histogramOrientation === "h" ? "h" : "v";
@@ -62,6 +66,7 @@ export function HistogramRenderer({
       isLoading={isLoading}
       error={error}
       hasRows={rows.length > 0}
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         <Histogram

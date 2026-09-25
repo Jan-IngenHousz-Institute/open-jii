@@ -1,4 +1,4 @@
-import { createExperimentDataTable, createFilterWidget } from "@/test/factories";
+import { createFilterWidget } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderWithForm, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
@@ -8,19 +8,11 @@ import { contract } from "@repo/api/contract";
 import type { DashboardFormValues } from "../../dashboard-form-shell";
 import { FilterWidgetEditor } from "./filter-widget-editor";
 
-function mountColumns(tableName: string) {
-  server.mount(contract.experiments.getExperimentData, {
-    body: [
-      createExperimentDataTable({
-        name: tableName,
-        data: {
-          columns: [{ name: "value", type_name: "DOUBLE", type_text: "DOUBLE" }],
-          rows: [],
-          totalRows: 0,
-          truncated: false,
-        },
-      }),
-    ],
+function mountColumns() {
+  server.mount(contract.experiments.getExperimentTableColumns, {
+    body: {
+      columns: [{ name: "value", type_name: "DOUBLE", type_text: "DOUBLE" }],
+    },
   });
 }
 
@@ -56,7 +48,7 @@ describe("FilterWidgetEditor", () => {
   });
 
   it("renders the default value input once the widget is fully configured", async () => {
-    mountColumns("raw_data");
+    mountColumns();
     const widget = createFilterWidget({
       config: {
         showTitle: true,
@@ -73,7 +65,7 @@ describe("FilterWidgetEditor", () => {
   });
 
   it("writes edits through to the form's widget.config.defaultValue", async () => {
-    mountColumns("raw_data");
+    mountColumns();
     const widget = createFilterWidget({
       config: {
         showTitle: true,
@@ -96,7 +88,7 @@ describe("FilterWidgetEditor", () => {
   });
 
   it("renders the title and operator label once configured", () => {
-    mountColumns("raw_data");
+    mountColumns();
     const widget = createFilterWidget({
       config: {
         showTitle: true,

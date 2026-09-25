@@ -9,6 +9,7 @@ import { CanAccess } from "../../authorization/can-access.decorator";
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
 import { GetDistinctColumnValuesUseCase } from "../application/use-cases/experiment-data/get-distinct-column-values";
 import { GetExperimentDataUseCase } from "../application/use-cases/experiment-data/get-experiment-data/get-experiment-data";
+import { GetExperimentTableColumnsUseCase } from "../application/use-cases/experiment-data/get-experiment-table-columns";
 import { GetExperimentTablesUseCase } from "../application/use-cases/experiment-data/get-experiment-tables";
 
 @Controller()
@@ -19,6 +20,7 @@ export class ExperimentDataController {
     private readonly getExperimentDataUseCase: GetExperimentDataUseCase,
     private readonly getExperimentTablesUseCase: GetExperimentTablesUseCase,
     private readonly getDistinctColumnValuesUseCase: GetDistinctColumnValuesUseCase,
+    private readonly getExperimentTableColumnsUseCase: GetExperimentTableColumnsUseCase,
   ) {}
 
   @CanAccess({ resource: "experiment", action: "read" })
@@ -57,5 +59,24 @@ export class ExperimentDataController {
       }
       return throwOrpcFailure(result, this.logger);
     });
+  }
+
+  @CanAccess({ resource: "experiment", action: "read" })
+  @Implement(experimentDataContract.getExperimentTableColumns)
+  getExperimentTableColumns(@Session() session: UserSession) {
+    return implement(experimentDataContract.getExperimentTableColumns).handler(
+      async ({ input }) => {
+        const { id, ...query } = input;
+        const result = await this.getExperimentTableColumnsUseCase.execute(
+          id,
+          session.user.id,
+          query,
+        );
+        if (result.isSuccess()) {
+          return result.value;
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
   }
 }

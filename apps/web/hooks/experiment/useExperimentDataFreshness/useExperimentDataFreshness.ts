@@ -29,9 +29,9 @@ function versionOf(table: ExperimentTableMetadata): string {
 /**
  * Polls the experiment's table listing while the page is visible and in use, and
  * refetches a table's rows and charts only when its count, newest row or schema
- * moves, so an open page follows the pipeline without resetting what the user is
- * doing. `tableNames` picks whose newest data to report; omitted, the whole
- * experiment.
+ * moves, and its columns only when its schema does, so an open page follows the
+ * pipeline without resetting what the user is doing. `tableNames` picks whose
+ * newest data to report; omitted, the whole experiment.
  */
 export const useExperimentDataFreshness = (experimentId: string, tableNames?: string[]) => {
   const queryClient = useQueryClient();
@@ -70,19 +70,20 @@ export const useExperimentDataFreshness = (experimentId: string, tableNames?: st
       queryKey: orpc.experiments.getExperimentData.key({ input: { id: experimentId } }),
     }) > 0;
 
-  const versions = useRef<Map<string, string> | null>(null);
+  const seen = useRef<Map<string, ExperimentTableMetadata> | null>(null);
   useEffect(() => {
     if (!tables || isPaused) {
       return;
     }
-    const previous = versions.current;
-    versions.current = new Map(tables.map((table) => [table.identifier, versionOf(table)]));
+    const previous = seen.current;
+    seen.current = new Map(tables.map((table) => [table.identifier, table]));
     if (previous === null) {
       return;
     }
 
     for (const table of tables) {
-      if (previous.get(table.identifier) === versionOf(table)) {
+      const before = previous.get(table.identifier);
+      if (before !== undefined && versionOf(before) === versionOf(table)) {
         continue;
       }
       void queryClient.invalidateQueries({
@@ -90,6 +91,15 @@ export const useExperimentDataFreshness = (experimentId: string, tableNames?: st
           input: { id: experimentId, tableName: table.identifier },
         }),
       });
+
+      const hasNewSchema = before?.schemaRevision !== table.schemaRevision;
+      if (hasNewSchema) {
+        void queryClient.invalidateQueries({
+          queryKey: orpc.experiments.getExperimentTableColumns.key({
+            input: { id: experimentId, tableName: table.identifier },
+          }),
+        });
+      }
     }
 
     // A version counts as seen once polled, so rows whose refresh failed are

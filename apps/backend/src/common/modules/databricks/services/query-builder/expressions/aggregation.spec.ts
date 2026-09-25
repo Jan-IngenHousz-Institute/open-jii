@@ -128,6 +128,24 @@ describe("wrapWithAggregation", () => {
     expect(sql).toContain("GROUP BY date_trunc('HOUR', `ts`)");
   });
 
+  it("width-bucketed groupBy projects the bucket index alongside min and max", () => {
+    const sql = wrapWithAggregation("SELECT * FROM t", {
+      aggregation: {
+        groupBy: [
+          { column: "ts", widthBucket: { origin: 1000, width: 500, scale: "time" } },
+          { column: "device_id" },
+        ],
+        functions: [
+          { column: "value", function: "min", alias: "value_min" },
+          { column: "value", function: "max", alias: "value_max" },
+        ],
+      },
+    });
+    expect(sql).toContain("FLOOR((UNIX_MILLIS(`ts`) - 1000) / 500) AS `ts_bucket`");
+    expect(sql).toContain("MIN(`value`) AS `value_min`, MAX(`value`) AS `value_max`");
+    expect(sql).toContain("GROUP BY FLOOR((UNIX_MILLIS(`ts`) - 1000) / 500), `device_id`");
+  });
+
   it("window-only path: preserves raw rows with SELECT *, <window>", () => {
     const sql = wrapWithAggregation("SELECT * FROM t", {
       aggregation: {

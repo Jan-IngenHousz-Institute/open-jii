@@ -1,10 +1,11 @@
 import { createExperimentDataTable, createVisualization } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { renderHook, waitFor } from "@/test/test-utils";
+import { render, renderHook, screen, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
+import { ProvidedChartRead } from "../provided-read-context";
 import { CUMSUM_NEEDS_X_COLUMN, useChartData } from "./use-chart-data";
 
 function buildViz(columns: string[] = ["time", "temp"]) {
@@ -31,6 +32,21 @@ describe("useChartData", () => {
     expect(result.current).toEqual({ rows: provided, isLoading: false, error: undefined });
   });
 
+  it("reports the truncation of a read handed over ready-made", () => {
+    function TruncationProbe() {
+      const { truncation } = useChartData(buildViz(), "exp-1", [{ time: 1, temp: 21 }]);
+      return <span>{truncation ? `${truncation.shown} of ${truncation.total}` : "whole"}</span>;
+    }
+
+    render(
+      <ProvidedChartRead truncation={{ shown: 1, total: 9 }}>
+        <TruncationProbe />
+      </ProvidedChartRead>,
+    );
+
+    expect(screen.getByText("1 of 9")).toBeInTheDocument();
+  });
+
   it("returns the fetched rows when no providedData is supplied", async () => {
     const rows = [
       { time: 1, temp: 21 },
@@ -47,6 +63,26 @@ describe("useChartData", () => {
     await waitFor(() => expect(result.current.rows).toEqual(rows));
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
+    expect(result.current.truncation).toBeUndefined();
+  });
+
+  it("reports how much of the read the chart holds when the backend stopped it short", async () => {
+    const rows = [
+      { time: 1, temp: 21 },
+      { time: 2, temp: 22 },
+    ];
+    server.mount(contract.experiments.getExperimentData, {
+      body: [
+        createExperimentDataTable({
+          data: { columns: [], rows, totalRows: 553_000, truncated: true },
+        }),
+      ],
+    });
+
+    const { result } = renderHook(() => useChartData(buildViz(), "exp-1", undefined));
+
+    await waitFor(() => expect(result.current.rows).toEqual(rows));
+    expect(result.current.truncation).toEqual({ shown: 2, total: 553_000 });
   });
 
   it("falls back to an empty array when the API returns no data", async () => {

@@ -1,6 +1,6 @@
 import { HttpService } from "@nestjs/axios";
 import { Injectable, Logger } from "@nestjs/common";
-import { AxiosResponse } from "axios";
+import { AxiosResponse, isAxiosError } from "axios";
 
 import { getAxiosErrorMessage } from "../../../../utils/axios-error";
 import { ErrorCodes } from "../../../../utils/error-codes";
@@ -9,6 +9,7 @@ import { DatabricksAuthService } from "../auth/auth.service";
 import { DatabricksConfigService } from "../config/config.service";
 import {
   ExecuteStatementRequest,
+  ResultChunk,
   SchemaData,
   StatementParameter,
   StatementResponse,
@@ -26,6 +27,18 @@ export class DatabricksSqlService {
    * left running only queues ahead of the reads that follow.
    */
   private static readonly WAIT_TIMEOUT = "50s";
+
+  /**
+   * The most an INLINE result may hold. Without a byte limit a larger result fails the statement
+   * as a BAD_REQUEST; with one the warehouse returns what fits and marks it truncated.
+   */
+  private static readonly INLINE_BYTE_LIMIT = 26_214_400;
+
+  /**
+   * The edge drops the client 60 s after its request started, a little before this statement did,
+   * so reading the rest of a result stops here: a later answer reaches nobody.
+   */
+  private static readonly READ_DEADLINE_MS = 55_000;
 
   /**
    * Determine the appropriate AppError for a Databricks SQL statement failure.
@@ -76,6 +89,7 @@ export class DatabricksSqlService {
           on_wait_timeout: "CANCEL",
           disposition: "INLINE",
           format: "JSON_ARRAY",
+          byte_limit: DatabricksSqlService.INLINE_BYTE_LIMIT,
           parameters,
         };
         const startedAt = performance.now();
@@ -97,7 +111,13 @@ export class DatabricksSqlService {
           const { state, error } = statementResponse.status;
 
           if (state === "SUCCEEDED") {
-            return this.completeStatement(statementResponse, startedAt);
+            const remainingRows = await this.fetchRemainingChunks(
+              host,
+              token,
+              statementResponse.result?.next_chunk_internal_link,
+              startedAt,
+            );
+            return this.completeStatement(statementResponse, remainingRows, startedAt);
           }
           // The deadline cancellation carries no error; any other cancellation says why.
           const isDeadlineCancel = state === "CANCELED" && error === undefined;
@@ -135,8 +155,57 @@ export class DatabricksSqlService {
     );
   }
 
-  private completeStatement(response: StatementResponse, startedAt: number): SchemaData {
-    const data = this.formatExperimentDataResponse(response);
+  /**
+   * An INLINE result arrives in chunks and the statement response holds only the first. Each
+   * chunk links to the next, and the last one has no link.
+   */
+  private async fetchRemainingChunks(
+    host: string,
+    token: string,
+    firstLink: string | undefined,
+    startedAt: number,
+  ): Promise<(string | null)[][]> {
+    const chunks: (string | null)[][][] = [];
+    let link = firstLink;
+
+    while (link !== undefined) {
+      const remainingMs = DatabricksSqlService.READ_DEADLINE_MS - (performance.now() - startedAt);
+      const chunk = await this.fetchChunk(`${host}${link}`, token, remainingMs);
+      chunks.push(chunk.data_array ?? []);
+      link = chunk.next_chunk_internal_link;
+    }
+
+    return chunks.flat();
+  }
+
+  private async fetchChunk(url: string, token: string, remainingMs: number): Promise<ResultChunk> {
+    const deadlineError = AppError.timeout(
+      "The warehouse result could not be read before the response deadline",
+      "WAREHOUSE_TIMEOUT",
+    );
+    if (remainingMs <= 0) {
+      throw deadlineError;
+    }
+
+    try {
+      const response: AxiosResponse<ResultChunk> = await this.httpService.axiosRef.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: remainingMs,
+      });
+      return response.data;
+    } catch (error) {
+      const isTimeout =
+        isAxiosError(error) && (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT");
+      throw isTimeout ? deadlineError : error;
+    }
+  }
+
+  private completeStatement(
+    response: StatementResponse,
+    remainingRows: (string | null)[][],
+    startedAt: number,
+  ): SchemaData {
+    const data = this.formatExperimentDataResponse(response, remainingRows);
 
     this.logger.log({
       msg: "Warehouse statement completed",
@@ -152,7 +221,10 @@ export class DatabricksSqlService {
     return data;
   }
 
-  private formatExperimentDataResponse(response: StatementResponse): SchemaData {
+  private formatExperimentDataResponse(
+    response: StatementResponse,
+    remainingRows: (string | null)[][],
+  ): SchemaData {
     if (!response.manifest || !response.result) {
       throw AppError.internal("Invalid SQL statement response: missing manifest or result data");
     }
@@ -173,10 +245,12 @@ export class DatabricksSqlService {
       position: column.position,
     }));
 
+    const rows = (response.result.data_array ?? []).concat(remainingRows);
+
     return {
       columns,
-      rows: response.result.data_array ?? [],
-      totalRows: response.manifest.total_row_count ?? response.result.row_count,
+      rows,
+      totalRows: response.manifest.total_row_count ?? rows.length,
       truncated: response.manifest.truncated ?? false,
     };
   }

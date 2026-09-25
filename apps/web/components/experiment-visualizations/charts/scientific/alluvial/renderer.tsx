@@ -24,9 +24,14 @@ export function AlluvialRenderer({
     (ds) => ds.role === "groupBy" && ds.columnName.length > 0,
   ).length;
 
-  const { rows, isLoading, error } = useChartData(visualization, experimentId, providedData, {
-    enabled: stageCount >= 2,
-  });
+  const { rows, isLoading, error, truncation } = useChartData(
+    visualization,
+    experimentId,
+    providedData,
+    {
+      enabled: stageCount >= 2,
+    },
+  );
 
   // KEEP IN SYNC with the field reads in `transformAlluvialData`.
   const series = useMemo(() => {
@@ -60,6 +65,7 @@ export function AlluvialRenderer({
       isLoading={isLoading}
       error={error}
       hasRows={hasRows}
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         <Alluvial data={series} config={chartConfig} />

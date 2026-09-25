@@ -49,7 +49,7 @@ export function CorrelationMatrixRenderer({
   // Fewer than 2 distinct picks means no pairs and the renderer shows
   // the empty-state. Without `enabled: false` the hook would still
   // fetch raw rows for the picked columns (noise that never gets used).
-  const { rows, isLoading, error } = useChartData(
+  const { rows, isLoading, error, truncation } = useChartData(
     visualizationForFetch,
     experimentId,
     providedData,
@@ -81,6 +81,7 @@ export function CorrelationMatrixRenderer({
       isLoading={isLoading}
       error={error}
       hasRows={rows.length > 0 && matrix !== null}
+      truncation={truncation}
     >
       <div className="flex h-full w-full flex-col">
         {matrix && (
