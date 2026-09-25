@@ -1041,7 +1041,7 @@ module "metrics_pipeline_scheduler" {
   max_concurrent_runs           = 1
   use_serverless                = true
   continuous                    = false
-  serverless_performance_target = "STANDARD"
+  serverless_performance_target = "PERFORMANCE_OPTIMIZED"
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
@@ -1107,7 +1107,7 @@ module "metrics_heartbeat_export" {
   max_concurrent_runs           = 1
   use_serverless                = true
   continuous                    = false
-  serverless_performance_target = "STANDARD"
+  serverless_performance_target = "PERFORMANCE_OPTIMIZED"
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
