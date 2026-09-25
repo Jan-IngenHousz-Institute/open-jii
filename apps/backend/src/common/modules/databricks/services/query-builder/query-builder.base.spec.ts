@@ -38,6 +38,10 @@ describe("QueryBuilder Base", () => {
       expect(query).toBe("SELECT * FROM t WHERE `name` = '\\\\\\' OR 1=1 --'");
     });
 
+    it("escapes backslashes before apostrophes in string values", () => {
+      expect(builder.escapeValue(String.raw`a\' OR 1=1 -- `)).toBe(String.raw`'a\\\' OR 1=1 -- '`);
+    });
+
     it("should group by columns", () => {
       const query = builder.from("t").groupBy(["c1", "c2"]).build();
       expect(query).toBe("SELECT * FROM t GROUP BY `c1`, `c2`");
@@ -153,6 +157,15 @@ describe("QueryBuilder Base", () => {
       expect(query).toContain("WHERE ts > 0");
       expect(query).toContain("ORDER BY `ts` DESC");
       expect(query).toContain("LIMIT 10");
+    });
+
+    it("escapes apostrophes in variant schema string literals", () => {
+      const query = builder
+        .from("events")
+        .parseVariant("payload", "STRUCT<`Fm'`:DOUBLE>", "data")
+        .build();
+
+      expect(query).toContain("from_json(payload::string, 'STRUCT<`Fm\\'`:DOUBLE>') as data");
     });
 
     it("escapes column identifiers with spaces or reserved words", () => {

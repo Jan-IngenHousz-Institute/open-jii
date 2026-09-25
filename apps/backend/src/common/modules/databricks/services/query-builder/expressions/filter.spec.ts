@@ -83,6 +83,18 @@ describe("buildFilterCondition", () => {
     ).toBe("`name` IN ('a', '\\\\\\') OR (1=1')");
   });
 
+  it("escapes apostrophes for contains, in, and between filters", () => {
+    expect(
+      buildFilterCondition({ column: "name", operator: "contains", value: "O'Brien" }, builder),
+    ).toBe("`name` LIKE " + String.raw`'%O\'Brien%'`);
+    expect(
+      buildFilterCondition({ column: "name", operator: "in", value: ["O'Brien"] }, builder),
+    ).toBe("`name` IN (" + String.raw`'O\'Brien'` + ")");
+    expect(
+      buildFilterCondition({ column: "name", operator: "between", value: ["A'", "B'"] }, builder),
+    ).toBe("`name` BETWEEN " + String.raw`'A\'' AND 'B\''`);
+  });
+
   it("splits dotted identifiers per segment (struct field paths)", () => {
     expect(
       buildFilterCondition({ column: "contributor.id", operator: "equals", value: "u-1" }, builder),
