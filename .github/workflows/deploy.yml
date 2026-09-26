@@ -50,7 +50,9 @@ jobs:
       # Whether each deploy job is wanted for this run. A skipped job publishes
       # no outputs, so a child cannot otherwise tell "not needed" from "skipped
       # because its own parent failed".
-      infrastructure_needed: ${{ (github.event_name == 'workflow_dispatch' && inputs.deploy_infrastructure) || (github.event_name != 'workflow_dispatch' && steps.infra.outputs.changed == 'true') }}
+      # Dev infrastructure changes only from main, so it always matches main. App deploys
+      # from a branch still run, because a parent that is not needed does not stop them.
+      infrastructure_needed: ${{ (inputs.environment != 'dev' || github.ref == 'refs/heads/main') && ((github.event_name == 'workflow_dispatch' && inputs.deploy_infrastructure) || (github.event_name != 'workflow_dispatch' && steps.infra.outputs.changed == 'true')) }}
       migrations_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'migration') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), '@repo/database')) }}
       backend_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'backend') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'backend')) }}
       frontend_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'web') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'web')) }}

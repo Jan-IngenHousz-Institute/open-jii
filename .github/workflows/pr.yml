@@ -523,18 +523,20 @@ jobs:
         uses: ./.github/actions/tofu/tofu-scan
 
   tofu:
-    name: OpenTofu (Plan)
+    name: OpenTofu (Plan) (${{ matrix.environment }})
     needs: detect
     runs-on: ubuntu-latest
     if: github.actor != 'dependabot[bot]' && needs.detect.outputs.has_infrastructure_changes == 'true'
     strategy:
       matrix:
-        environment: [dev, prod]
+        include:
+          - environment: dev
+            github_environment: dev
+          # Holds the read-only plan role; `prod` itself admits only main and release branches.
+          - environment: prod
+            github_environment: prod-plan
       fail-fast: false
-    environment: ${{ matrix.environment }}
-    concurrency:
-      group: opentofu-${{ matrix.environment }}
-      cancel-in-progress: false
+    environment: ${{ matrix.github_environment }}
     permissions:
       id-token: write
       contents: read
@@ -594,3 +596,5 @@ jobs:
 
       - name: OpenTofu Plan
         uses: ./.github/actions/tofu/tofu-plan
+        with:
+          lock: false
