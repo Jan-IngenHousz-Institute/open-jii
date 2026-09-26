@@ -143,6 +143,7 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
                   name: col.name,
                   type_name: col.type_name,
                   type_text: col.type_text,
+                  renamedFrom: col.renamedFrom,
                 })),
               )
             : undefined,
