@@ -46,6 +46,12 @@ Admission settings can change while retaining the existing source, flow, table a
 
 On dev, verify a completed batch and an interrupted batch resume without missing or duplicated committed rows. Watch batch duration, commit gaps, maximum task rows, backlog growth and backend errors before promoting to production. A shorter commit gap is insufficient if the backlog keeps growing. Watch the backend WAF rate-rule blocked-request metric and macro errors containing `Chunk failed` and `403`; a WAF rejection becomes a failed result without retry. Restore the previous settings to roll back; the same pending-batch constraint applies.
 
+## Reading a driver's memory
+
+Both classic pipelines deliver their driver and worker logs to the `pipeline-logs` volume in the `centrum` schema, in a folder per pipeline and then per cluster. Without delivery, a driver's logs are gone when its cluster ends.
+
+The driver's `stdout` carries the JVM's GC log. Each full collection logs `Pause Full ... A->B`, where `B` is the heap still in use afterwards. If `B` climbs for hours, the driver is keeping memory. Once it reaches the old generation's size, the driver spends most of its time collecting, and the pipeline's event log reports `gc_pressure`. Setting `JAVA_TOOL_OPTIONS=-Xlog:gc+classhisto=trace` in the cluster's environment variables adds a class histogram at every full collection, which shows what that memory is. Each histogram lengthens its collection, so remove the setting once it has answered the question.
+
 ## Where the numbers come from
 
 A node costs its DBU rate times the price per DBU, plus the EC2 price, per hour.

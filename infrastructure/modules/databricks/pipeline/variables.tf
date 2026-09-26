@@ -68,6 +68,18 @@ variable "spark_conf" {
   default     = {}
 }
 
+variable "spark_env_vars" {
+  description = "Environment variables for the pipeline cluster's driver and workers"
+  type        = map(string)
+  default     = {}
+}
+
+variable "cluster_log_volume_path" {
+  description = "Unity Catalog volume path the cluster delivers its driver and worker logs to; null keeps them only on the cluster, where they go when it ends"
+  type        = string
+  default     = null
+}
+
 variable "autoscale" {
   description = "Whether to enable autoscaling for the pipeline cluster"
   type        = bool

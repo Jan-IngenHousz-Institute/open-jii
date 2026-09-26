@@ -10,5 +10,5 @@ output "volume_name" {
 
 output "volume_path" {
   description = "The fully qualified volume path in /Volumes format"
-  value       = "/Volumes/${var.catalog_name}/${var.schema_name}/${var.volume_name}"
+  value       = "/Volumes/${databricks_volume.this.catalog_name}/${databricks_volume.this.schema_name}/${databricks_volume.this.name}"
 }
