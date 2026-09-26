@@ -42,6 +42,12 @@ variable "github_environments" {
   type        = list(string)
 }
 
+variable "allowed_refs" {
+  description = "Git refs whose runs may assume the role, wildcards allowed. Null allows any ref the environments admit."
+  type        = list(string)
+  default     = null
+}
+
 variable "plan_role_github_environment" {
   description = "GitHub environment whose jobs may assume the read-only plan role. Null creates no plan role."
   type        = string

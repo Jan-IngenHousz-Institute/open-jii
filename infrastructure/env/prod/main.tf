@@ -21,6 +21,7 @@ module "iam_oidc" {
 
   environment         = var.environment
   github_environments = [var.environment, "${var.environment}-infra"]
+  allowed_refs        = ["refs/heads/main", "refs/heads/release/*"]
 }
 
 module "cloudwatch" {

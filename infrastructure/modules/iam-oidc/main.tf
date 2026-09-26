@@ -18,14 +18,22 @@ resource "aws_iam_role" "oidc_role" {
           Federated = aws_iam_openid_connect_provider.github.arn
         },
         Action = "sts:AssumeRoleWithWebIdentity",
-        Condition = {
-          "StringEquals" : {
-            "token.actions.githubusercontent.com:aud" : "sts.amazonaws.com",
-            "token.actions.githubusercontent.com:sub" : [
-              for env in var.github_environments : "repo:${var.repository}:environment:${env}"
-            ]
+        Condition = merge(
+          {
+            "StringEquals" : {
+              "token.actions.githubusercontent.com:aud" : "sts.amazonaws.com",
+              "token.actions.githubusercontent.com:sub" : [
+                for env in var.github_environments : "repo:${var.repository}:environment:${env}"
+              ]
+            }
+          },
+          # Holds even if an environment's branch policy is later loosened on GitHub.
+          var.allowed_refs == null ? {} : {
+            "StringLike" : {
+              "token.actions.githubusercontent.com:ref" : var.allowed_refs
+            }
           }
-        }
+        )
       }
     ]
   })
@@ -1158,6 +1166,7 @@ resource "aws_iam_role_policy_attachment" "plan_role_read_only" {
 }
 
 # Refreshing a secret version reads its value, which ReadOnlyAccess leaves out.
+# Only the secrets Terraform writes, so not the database master password.
 resource "aws_iam_role_policy" "plan_role_secret_values" {
   count = length(aws_iam_role.plan_role)
 
@@ -1170,7 +1179,7 @@ resource "aws_iam_role_policy" "plan_role_secret_values" {
       {
         Effect   = "Allow"
         Action   = ["secretsmanager:GetSecretValue"]
-        Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:*"
+        Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:openjii-*"
       }
     ]
   })
