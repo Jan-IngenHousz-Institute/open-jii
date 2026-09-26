@@ -11,18 +11,18 @@ reporting, the platform is fine and only the reporting is broken.
 
 ## Work the chain in order
 
-The collector is the `export_platform_heartbeat` task on `Metrics-Pipeline-Scheduler-<ENV>`. Each
-link fails differently, so check them in the order the data flows.
+The collector is the `export_platform_heartbeat` task on its own job,
+`Metrics-Heartbeat-Export-<ENV>`, scheduled every 30 minutes and independent of the metrics
+pipeline scheduler. Each link fails differently, so check them in the order the data flows.
 
-**1. Did the job run at all?** Open the scheduler job's run history. A paused schedule or a deleted
-job is the most common cause and the least interesting: resume it. Note that
-`max_concurrent_runs = 1` means a wedged run blocks the next one, so a single hung update can look
-like a stopped schedule.
+**1. Did the job run at all?** Open the export job's run history. A paused schedule or a deleted
+job is the most common cause and the least interesting: resume it. `max_concurrent_runs = 1` means
+a wedged run blocks the next one, so a single hung run can look like a stopped schedule.
 
-**2. Did the task run, given the pipeline task failed?** It should have: the export runs under
-`run_if = ALL_DONE` precisely so a pipeline failure does not suppress the heartbeat. If the pipeline
-task failed and the export did not run, that configuration has regressed and is worth fixing before
-anything else, because it collapses two independent failures into one signal.
+**2. Did the run fail?** The job posts its own failure notification to Slack, so a run that ran and
+threw should already be in the channel. Open the failed run's task output; the collectors are
+guarded per table, so one missing table costs its own lines and names itself rather than failing
+the run. A run that fails outright is usually the external location or the wheel.
 
 **3. Did the task write an object?**
 

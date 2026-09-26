@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { actions, context, divider, header, image, section, table } from "./slack.js";
+import type { SlackBlock } from "./slack.js";
+import {
+  actions,
+  context,
+  divider,
+  header,
+  image,
+  section,
+  table,
+  tableSections,
+} from "./slack.js";
 
 describe("blocks", () => {
   it("truncates a header, because Slack drops the message rather than the text", () => {
@@ -62,5 +72,37 @@ describe("table", () => {
 
   it("returns nothing for no rows, so a caller can omit the block", () => {
     expect(table([])).toBe("");
+  });
+});
+
+describe("tableSections", () => {
+  it("splits a long table so no section passes Slack's text limit, keeping the columns aligned", () => {
+    const rows = Array.from({ length: 120 }, (_, index) => [
+      `  ${index + 1}`,
+      `Signal number ${index + 1} with a fairly long name`,
+      "2h 27m",
+      "312% above the last 4 Tuesdays",
+    ]);
+
+    const sections = tableSections(rows);
+
+    expect(sections.length).toBeGreaterThan(1);
+    for (const block of sections) {
+      expect(JSON.stringify(block).length).toBeLessThanOrEqual(3000);
+    }
+    // The second line of the code block is the first data row.
+    const secondLine = (block: SlackBlock) => JSON.stringify(block).split("\\n")[1] ?? "";
+    expect(secondLine(sections[0]).indexOf("2h 27m")).toBe(
+      secondLine(sections[1]).indexOf("2h 27m"),
+    );
+  });
+
+  it("is one section for a short table", () => {
+    expect(
+      tableSections([
+        ["a", "b"],
+        ["c", "d"],
+      ]),
+    ).toHaveLength(1);
   });
 });
