@@ -7,7 +7,6 @@ import { DatabricksAuthService } from "./services/auth/auth.service";
 import { DatabricksConfigService } from "./services/config/config.service";
 import { DatabricksFilesService } from "./services/files/files.service";
 import { DatabricksJobsService } from "./services/jobs/jobs.service";
-import { QueryBuilderService } from "./services/query-builder/query-builder.service";
 import { DatabricksSqlService } from "./services/sql/sql.service";
 
 // Constants for testing
@@ -2686,17 +2685,6 @@ describe("DatabricksAdapter", () => {
     });
 
     it("reads device counts from the configured serving view, newest report first", async () => {
-      const configService = testApp.module.get(DatabricksConfigService);
-      vi.spyOn(configService, "getDeviceDataTableName").mockReturnValue(
-        "experiment_device_data_view",
-      );
-      const adapter = new DatabricksAdapter(
-        testApp.module.get(DatabricksJobsService),
-        testApp.module.get(QueryBuilderService),
-        testApp.module.get(DatabricksSqlService),
-        testApp.module.get(DatabricksFilesService),
-        configService,
-      );
       const captured: CapturedStatement = {};
       mockGroupSql(
         [
@@ -2723,7 +2711,7 @@ describe("DatabricksAdapter", () => {
         captured,
       );
 
-      const result = await adapter.getExperimentDeviceStats(
+      const result = await databricksAdapter.getExperimentDeviceStats(
         "11111111-1111-4111-8111-111111111111",
         2000,
       );
@@ -2750,7 +2738,7 @@ describe("DatabricksAdapter", () => {
         },
       ]);
       expect(captured.statement?.match(/\bFROM\s+(\S+)/i)?.[1]).toBe(
-        `${adapter.CATALOG_NAME}.${adapter.CENTRUM_SCHEMA_NAME}.experiment_device_data_view`,
+        `${databricksAdapter.CATALOG_NAME}.${databricksAdapter.CENTRUM_SCHEMA_NAME}.${databricksAdapter.DEVICE_DATA_TABLE_NAME}`,
       );
       expect(captured.statement).toContain(
         "WHERE `experiment_id` = '11111111-1111-4111-8111-111111111111'",

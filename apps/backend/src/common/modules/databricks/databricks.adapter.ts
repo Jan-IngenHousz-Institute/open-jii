@@ -604,7 +604,7 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
 
   /**
    * The configured device serving view adds measurement counts to the latest
-   * device attributes. The underlying gold table no longer has those counts.
+   * device attributes.
    */
   async getExperimentDeviceStats(
     experimentId: string,
