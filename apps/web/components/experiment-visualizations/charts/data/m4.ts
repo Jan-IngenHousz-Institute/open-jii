@@ -69,6 +69,14 @@ export function m4Indices(
   return [...picked].sort((a, b) => a - b);
 }
 
+/** How many points fall inside `range`; every point when `xs` does not ascend. */
+export function countInRange(xs: readonly number[], range: readonly [number, number]): number {
+  if (!isAscending(xs)) {
+    return xs.length;
+  }
+  return upperBound(xs, range[1]) - lowerBound(xs, range[0]);
+}
+
 function isAscending(xs: readonly number[]): boolean {
   for (let i = 1; i < xs.length; i++) {
     if (!(xs[i] >= xs[i - 1])) {

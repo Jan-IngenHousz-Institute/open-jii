@@ -74,7 +74,10 @@ value, so a peak or a gap never disappears from view. Zooming in redraws the
 visible range in more detail, down to single rows. When a series is longer than
 one read, the chart draws the whole table this way instead of its first rows. A
 line under the chart says when it is drawn at screen resolution, and _Show every
-point_ draws every row the chart read instead.
+point_ draws every row the chart read instead. A line styled with markers draws
+them only while its visible range holds at most 2,000 points, so a long series
+shows as a clean line. The markers return as you zoom in, or everywhere with
+_Show every point_.
 
 Other charts, and stacked, faceted or aggregated ones, read at most 100,000 rows,
 and tables with very wide rows can stop them sooner. When the data holds more, a

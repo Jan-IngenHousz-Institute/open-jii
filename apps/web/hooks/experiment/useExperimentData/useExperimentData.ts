@@ -1,3 +1,4 @@
+import { shouldRetryQuery } from "@/util/query-retry";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import {
@@ -34,6 +35,8 @@ export interface UseExperimentDataParams {
    * table size).
    */
   filters?: ExperimentDataFilter[];
+  /** Read only these columns, when set, instead of every column the table has. */
+  columns?: string[];
   formatFunction?: DataRenderFunction;
   onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
   onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
@@ -79,6 +82,7 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
     orderBy,
     orderDirection,
     filters,
+    columns,
     formatFunction,
     onAddAnnotation,
     onDeleteAnnotations,
@@ -107,12 +111,14 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
         orderBy,
         orderDirection,
         filters: filtersJson,
+        columns: columns && columns.length > 0 ? columns.join(",") : undefined,
       },
       staleTime: STALE_TIME,
       enabled,
       // The experiment's freshness line refreshes changed tables and honours its pause.
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
+      retry: shouldRetryQuery,
     }),
   );
 
@@ -143,6 +149,7 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
                   name: col.name,
                   type_name: col.type_name,
                   type_text: col.type_text,
+                  renamedFrom: col.renamedFrom,
                 })),
               )
             : undefined,

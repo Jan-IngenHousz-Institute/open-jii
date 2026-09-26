@@ -1,3 +1,5 @@
+import type { MetricUnit } from "./format.js";
+
 export type MetricFamily = "observability" | "usage";
 
 export type MetricSlot = "alert" | "exception" | "pulse" | "weekly" | "dashboard" | "s3";
@@ -7,6 +9,8 @@ export type SignalKind = "cloudwatch" | "logs_insights" | "posthog";
 
 export interface MetricSignal {
   kind?: SignalKind;
+  /** What the number is, so the digest can render it as a duration, a size or a rate. */
+  unit?: MetricUnit;
   namespace?: string;
   metric?: string;
   search?: string;
@@ -26,6 +30,12 @@ export interface MetricBaseline {
   anomaly?: "any-nonzero";
   anomaly_pct?: number;
   nodata?: "alert";
+  /**
+   * Replaces the fields above in the named environment. One catalog still serves every
+   * environment, but a number that is right for a continuous consumer is wrong for a
+   * scheduled one, and a threshold nothing can stay under is not a threshold.
+   */
+  per_environment?: Record<string, Omit<MetricBaseline, "per_environment">>;
 }
 
 /**
@@ -65,6 +75,10 @@ export interface MetricReading {
   value: number | null;
   baseline: number | null;
   historyCount: number;
+}
+
+export interface EvaluatedReading extends MetricReading {
+  evaluation: Evaluation;
 }
 
 export type EvaluationState = "ok" | "anomaly" | "missing" | "no-data";

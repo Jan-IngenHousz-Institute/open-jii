@@ -42,9 +42,19 @@ resource "databricks_pipeline" "this" {
       node_type_id        = var.node_type_id != null ? var.node_type_id : data.databricks_node_type.smallest[0].id
       driver_node_type_id = var.driver_node_type_id
       spark_conf          = var.spark_conf
+      spark_env_vars      = var.spark_env_vars
 
       # Cluster policy if specified
       policy_id = var.policy_id
+
+      dynamic "cluster_log_conf" {
+        for_each = var.cluster_log_volume_path != null ? [var.cluster_log_volume_path] : []
+        content {
+          volumes {
+            destination = cluster_log_conf.value
+          }
+        }
+      }
 
       dynamic "aws_attributes" {
         for_each = var.aws_attributes != null ? [var.aws_attributes] : []

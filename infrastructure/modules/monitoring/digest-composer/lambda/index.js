@@ -7,7 +7,13 @@ const path = require("node:path");
 const https = require("node:https");
 const { CloudWatchClient, GetMetricDataCommand } = require("@aws-sdk/client-cloudwatch");
 
-const { activeSignals, buildQuery, parseCatalog, partitionByConfig } = require("./lib/catalog.js");
+const {
+  activeSignals,
+  buildQuery,
+  parseCatalog,
+  partitionByConfig,
+  resolveForEnvironment,
+} = require("./lib/catalog.js");
 const { averageBaseline, evaluate } = require("./lib/baseline.js");
 const { renderLevels, renderObservability } = require("./lib/render.js");
 const {
@@ -161,56 +167,93 @@ async function collectWeekly(metrics, now, failedRegions) {
   }));
 }
 
-function postToSlack(webhookUrl, text) {
-  const payload = JSON.stringify({ text });
+// Which dashboard each digest reports into. Terraform builds the uid from the same two
+// parts, and catalog-consistency.test.ts fails if the panels and the digest drift apart.
+const REPORT_DASHBOARDS = {
+  observability: "overnight-health",
+  pulse: "daily-pulse",
+  weekly: "week-in-numbers",
+};
+
+/**
+ * A link to this run's report, opened at the window the digest read.
+ *
+ * The link needs a Grafana login. A snapshot would not, but it would also bake the
+ * rendered datapoints and series names into a permanent public URL, which is the wrong
+ * trade for a platform that keeps device and experiment identifiers out of CloudWatch.
+ */
+function reportUrlFor(digest, timeWindow, environment) {
+  const endpoint = process.env.GRAFANA_ENDPOINT;
+  if (!endpoint) {
+    return undefined;
+  }
+
+  const uid = `${environment}-heartbeat-${REPORT_DASHBOARDS[digest]}`;
+  const window = `from=${timeWindow.start.getTime()}&to=${timeWindow.end.getTime()}`;
+  return `${endpoint.replace(/\/$/, "")}/d/${uid}?${window}`;
+}
+
+function post(url, body, headers = {}) {
+  const payload = JSON.stringify(body);
 
   return new Promise((resolve, reject) => {
-    const request = https.request(webhookUrl, {
+    const request = https.request(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) },
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(payload),
+        ...headers,
+      },
     });
+
     request.on("response", (response) => {
-      response.resume();
-      if (response.statusCode && response.statusCode < 300) {
-        resolve();
-      } else {
-        reject(new Error(`Slack webhook returned ${response.statusCode}`));
-      }
+      let raw = "";
+      response.setEncoding("utf8");
+      response.on("data", (chunk) => {
+        raw += chunk;
+      });
+      response.on("end", () => {
+        if (response.statusCode && response.statusCode < 300) {
+          resolve(raw);
+        } else {
+          reject(new Error(`Slack returned ${response.statusCode}`));
+        }
+      });
     });
-    // Node sets no socket timeout, so a hung webhook would otherwise burn the whole
+
+    // Node sets no socket timeout, so a hung Slack would otherwise burn the whole
     // Lambda timeout and lose the log line that says what went wrong.
     request.setTimeout(10_000, () => {
-      request.destroy(new Error("Slack webhook timed out after 10s"));
+      request.destroy(new Error("Slack timed out after 10s"));
     });
     request.on("error", reject);
     request.end(payload);
   });
 }
 
-async function deliver(channel, text) {
-  const webhookUrl = {
-    heartbeat: process.env.HEARTBEAT_WEBHOOK_URL,
-    usage: process.env.USAGE_WEBHOOK_URL,
-  }[channel];
+// Every path logs the text it posted: the daily round reads the digest from this log.
+async function deliver(digestName, message) {
+  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
 
   if (!webhookUrl) {
-    console.log(JSON.stringify({ channel, delivered: false, text }));
+    console.log(JSON.stringify({ digest: digestName, delivered: false, text: message.text }));
     return;
   }
 
-  await postToSlack(webhookUrl, text);
-  console.log(JSON.stringify({ channel, delivered: true }));
+  await post(webhookUrl, message);
+  console.log(JSON.stringify({ digest: digestName, delivered: true, text: message.text }));
 }
 
 exports.handler = async (event) => {
-  const digest = event?.digest;
+  const digestName = event?.digest;
   const options = {
     environment: process.env.ENVIRONMENT ?? "unknown",
     runbookBaseUrl: process.env.RUNBOOK_BASE_URL,
   };
   const now = Date.now();
 
-  const { usable, configErrors } = partitionByConfig(activeSignals(loadCatalog()), process.env);
+  const selected = resolveForEnvironment(activeSignals(loadCatalog()), options.environment);
+  const { usable, configErrors } = partitionByConfig(selected, process.env);
   if (configErrors.length > 0) {
     console.warn(JSON.stringify({ configErrors }));
   }
@@ -218,7 +261,7 @@ exports.handler = async (event) => {
   const failedRegions = new Set();
   const selfChecks = () => ({ configErrors, failedRegions: [...failedRegions] });
 
-  if (digest === "observability") {
+  if (digestName === "observability") {
     const metrics = usable.filter(
       (metric) =>
         metric.family === "observability" &&
@@ -229,30 +272,45 @@ exports.handler = async (event) => {
       evaluation: evaluate(reading),
     }));
 
-    await deliver("heartbeat", renderObservability(readings, selfChecks(), options));
+    const reportUrl = reportUrlFor(digestName, dailyWindows(now).current, options.environment);
+
+    await deliver(
+      digestName,
+      renderObservability(readings, selfChecks(), { ...options, reportUrl }),
+    );
     return;
   }
 
-  if (digest === "pulse") {
+  if (digestName === "pulse") {
     const metrics = usable.filter(
       (metric) => metric.family === "usage" && metric.slots.includes("pulse"),
     );
     const readings = await collectDaily(metrics, now, failedRegions);
 
-    await deliver("usage", renderLevels(readings, selfChecks(), "Daily pulse", "4w", options));
-    return;
-  }
-
-  if (digest === "weekly") {
-    const metrics = usable.filter((metric) => metric.slots.includes("weekly"));
-    const readings = await collectWeekly(metrics, now, failedRegions);
+    const reportUrl = reportUrlFor(digestName, dailyWindows(now).current, options.environment);
 
     await deliver(
-      "usage",
-      renderLevels(readings, selfChecks(), "Week in numbers", "last week", options),
+      digestName,
+      renderLevels(readings, selfChecks(), "Daily pulse", "4w", { ...options, reportUrl }),
     );
     return;
   }
 
-  throw new Error(`Unknown digest type: ${JSON.stringify(digest)}`);
+  if (digestName === "weekly") {
+    const metrics = usable.filter((metric) => metric.slots.includes("weekly"));
+    const readings = await collectWeekly(metrics, now, failedRegions);
+
+    const reportUrl = reportUrlFor(digestName, weeklyWindows(now).current, options.environment);
+
+    await deliver(
+      digestName,
+      renderLevels(readings, selfChecks(), "Week in numbers", "last week", {
+        ...options,
+        reportUrl,
+      }),
+    );
+    return;
+  }
+
+  throw new Error(`Unknown digest type: ${JSON.stringify(digestName)}`);
 };
