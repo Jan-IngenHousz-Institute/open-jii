@@ -874,6 +874,14 @@ module "centrum_pipeline" {
     "spark.driver.memory" = "12g"
   }
 
+  # A class histogram in the GC log at every full collection, to find what the driver's
+  # heap keeps growing with. The environment variable adds the option without touching
+  # Databricks' own driver JVM options. Diagnostic: remove once the growth is explained.
+  spark_env_vars = {
+    JAVA_TOOL_OPTIONS = "-Xlog:gc+classhisto=trace"
+  }
+  cluster_log_volume_path = "${module.pipeline_logs_volume.volume_path}/centrum"
+
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
   }
@@ -944,6 +952,7 @@ module "macro_execution_pipeline" {
     # and the driver swapped. The heap holds 2 to 4 GB between collections.
     "spark.driver.memory" = "5g"
   }
+  cluster_log_volume_path = "${module.pipeline_logs_volume.volume_path}/macro"
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
@@ -1373,6 +1382,28 @@ module "data_legacy_volume" {
   schema_name  = "centrum"
   volume_name  = "data-legacy"
   comment      = "Managed volume for experiment legacy data"
+
+  grants = {
+    node_service_principal = {
+      principal  = module.node_service_principal.service_principal_application_id
+      privileges = ["READ_VOLUME", "WRITE_VOLUME"]
+    }
+  }
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [databricks_grants.centrum_schema]
+}
+
+module "pipeline_logs_volume" {
+  source = "../../modules/databricks/volume"
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  volume_name  = "pipeline-logs"
+  comment      = "Driver and worker logs of the classic pipeline clusters, which are otherwise lost when a cluster ends"
 
   grants = {
     node_service_principal = {
