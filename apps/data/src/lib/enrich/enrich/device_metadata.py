@@ -6,12 +6,15 @@ the platform device registry (uuid, serial, owner, status) from the openJII
 backend API, mirroring user_metadata.add_user_column.
 """
 
+import logging
 from typing import Any
 
 import pandas as pd
 from pyspark.sql.types import StringType, StructField, StructType
 
-from .backend_client import BackendClient
+from .backend_client import BackendClient, BackendIntegrationError
+
+logger = logging.getLogger(__name__)
 
 # device struct: STRUCT<id, serial_number, owner, status, device_type>
 device_schema = StructType(
@@ -32,8 +35,13 @@ def _fetch_device_registry(
         return {}
     try:
         return backend_client.get_device_registry(thing_names)
-    except Exception as e:
-        print(f"Error fetching device registry: {e!s}")
+    except BackendIntegrationError:
+        # Registry enrichment shares the production ingestion update. Keep it
+        # nonfatal until it is decoupled, but make degraded family data visible.
+        logger.exception(
+            "Device registry enrichment failed for %d client IDs; device metadata and family totals may be incomplete",
+            len(thing_names),
+        )
         return {}
 
 
@@ -41,9 +49,10 @@ def add_device_registry(df, environment: str, dbutils):
     """
     Add a `device` struct resolved from the trusted client_id.
 
-    Mirrors add_user_column: fetches the registry once per Spark batch, keyed by
-    client_id (== Thing name for X.509 devices). Cognito/mobile client ids and
-    NULLs match no registry row and resolve to a NULL struct.
+    Fetches the registry in bounded requests per Spark batch, keyed by client_id
+    (== Thing name for X.509 devices). Cognito/mobile client ids and NULLs match
+    no registry row and resolve to a NULL struct. Persistent lookup errors log
+    degraded metadata without failing the shared ingestion update.
 
     Args:
         df: PySpark DataFrame with a 'client_id' column

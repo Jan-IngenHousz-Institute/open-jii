@@ -23,6 +23,10 @@ from openjii.centrum.runtime import ENVIRONMENT
         "delta.enableChangeDataFeed": "true",
     }
 )
+@dlt.expect(
+    "registered_ambyte_metadata",
+    "client_id IS NULL OR NOT startswith(client_id, 'ambyte_') OR device.device_type IS NOT NULL",
+)
 def experiment_devices():
     """Devices observed per experiment, resolved against the registry via the
     broker-authenticated client_id (== Thing name for X.509 devices). Cognito
