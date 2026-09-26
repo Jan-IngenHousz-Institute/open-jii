@@ -1,0 +1,25 @@
+name: Prod Plan
+
+# Pull requests no longer plan prod, so every infrastructure change merged to
+# main is planned against prod here. Nothing is applied.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infrastructure/**"
+      - ".github/workflows/tofu.yml"
+      - ".github/actions/tofu/**"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  plan-prod:
+    name: Plan prod
+    uses: ./.github/workflows/tofu.yml
+    with:
+      environment: prod
+      plan_only: true
+      tofu_version: "1.9.0"
+    secrets: inherit

@@ -1,5 +1,10 @@
 name: "OpenTofu Plan"
 description: "Runs OpenTofu plan"
+inputs:
+  lock:
+    description: "Hold the state lock while planning. A plan that is never applied does not need it."
+    required: false
+    default: "true"
 runs:
   using: "composite"
   steps:
@@ -14,6 +19,8 @@ runs:
     - name: OpenTofu Plan
       shell: bash
       working-directory: infrastructure/env/${{ env.RESOLVED_ENV }}
+      env:
+        LOCK: ${{ inputs.lock }}
       run: |
         exec 2>&1
-        tofu plan
+        tofu plan -lock="$LOCK"

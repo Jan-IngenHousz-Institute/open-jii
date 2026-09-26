@@ -37,11 +37,10 @@ module "iam_oidc" {
   source     = "../../modules/iam-oidc"
   role_name  = "GithubActionsDeployAccess"
   repository = "Jan-IngenHousz-Institute/open-jii"
-  branch     = "main"
   aws_region = var.aws_region
 
-  environment        = var.environment
-  github_environment = var.environment
+  environment         = var.environment
+  github_environments = [var.environment]
 }
 
 module "cloudwatch" {

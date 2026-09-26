@@ -514,19 +514,14 @@ jobs:
     needs: detect
     runs-on: ubuntu-latest
     if: github.actor != 'dependabot[bot]' && needs.detect.outputs.has_infrastructure_changes == 'true'
-    strategy:
-      matrix:
-        environment: [dev, prod]
-      fail-fast: false
-    environment: ${{ matrix.environment }}
-    concurrency:
-      group: opentofu-${{ matrix.environment }}
-      cancel-in-progress: false
+    # Prod is planned after merge by prod-plan.yml: a PR runs its branch's own
+    # workflow, so nothing a PR can reach may hold prod credentials.
+    environment: dev
     permissions:
       id-token: write
       contents: read
     env:
-      environment: ${{ matrix.environment }}
+      environment: dev
       TF_VAR_databricks_account_id: ${{ secrets.DATABRICKS_ACCOUNT_ID }}
       TF_VAR_databricks_client_id: ${{ secrets.DATABRICKS_CLIENT_ID }}
       TF_VAR_databricks_client_secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
@@ -577,3 +572,5 @@ jobs:
 
       - name: OpenTofu Plan
         uses: ./.github/actions/tofu/tofu-plan
+        with:
+          lock: false

@@ -19,16 +19,11 @@ resource "aws_iam_role" "oidc_role" {
         },
         Action = "sts:AssumeRoleWithWebIdentity",
         Condition = {
-          "StringLike" : {
-            "token.actions.githubusercontent.com:sub" : [
-              "repo:${var.repository}:ref:refs/heads/${var.branch}",
-              "repo:${var.repository}:pull_request",
-              "repo:${var.repository}:environment:${var.github_environment}",
-              "repo:${var.repository}:environment:pr"
-            ]
-          },
           "StringEquals" : {
-            "token.actions.githubusercontent.com:aud" : "sts.amazonaws.com"
+            "token.actions.githubusercontent.com:aud" : "sts.amazonaws.com",
+            "token.actions.githubusercontent.com:sub" : [
+              for env in var.github_environments : "repo:${var.repository}:environment:${env}"
+            ]
           }
         }
       }
@@ -1127,4 +1122,56 @@ resource "aws_iam_role_policy_attachment" "oidc_role_policy_attachments" {
 
   role       = aws_iam_role.oidc_role.name
   policy_arn = aws_iam_policy.oidc_role_policies[each.key].arn
+}
+
+# Pull request plans run code from any branch, so this role can read but never change anything.
+resource "aws_iam_role" "plan_role" {
+  count = var.plan_role_github_environment == null ? 0 : 1
+
+  name = var.plan_role_name
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.github.arn
+        },
+        Action = "sts:AssumeRoleWithWebIdentity",
+        Condition = {
+          "StringEquals" : {
+            "token.actions.githubusercontent.com:aud" : "sts.amazonaws.com",
+            "token.actions.githubusercontent.com:sub" : "repo:${var.repository}:environment:${var.plan_role_github_environment}"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "plan_role_read_only" {
+  count = length(aws_iam_role.plan_role)
+
+  role       = aws_iam_role.plan_role[0].name
+  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
+}
+
+# Refreshing a secret version reads its value, which ReadOnlyAccess leaves out.
+resource "aws_iam_role_policy" "plan_role_secret_values" {
+  count = length(aws_iam_role.plan_role)
+
+  name = "${var.plan_role_name}SecretValues"
+  role = aws_iam_role.plan_role[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue"]
+        Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:*"
+      }
+    ]
+  })
 }

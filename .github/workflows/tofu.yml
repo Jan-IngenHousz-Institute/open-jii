@@ -20,6 +20,11 @@ on:
         required: false
         type: string
         default: ""
+      plan_only:
+        description: "Plan without the approval gate or apply"
+        required: false
+        type: boolean
+        default: false
 
   workflow_call:
     inputs:
@@ -37,9 +42,16 @@ on:
         required: false
         type: string
         default: "1.9.0"
+      plan_only:
+        description: "Plan without the approval gate or apply"
+        required: false
+        type: boolean
+        default: false
 
+# A group holds one pending run and replaces it when another queues, so a
+# plan-only run must never share a group with a deploy waiting to apply.
 concurrency:
-  group: opentofu-${{ inputs.environment }}
+  group: opentofu-${{ inputs.environment }}${{ inputs.plan_only && '-plan' || '' }}
   cancel-in-progress: false
 
 jobs:
@@ -105,10 +117,13 @@ jobs:
 
       - name: OpenTofu Plan
         uses: ./.github/actions/tofu/tofu-plan
+        with:
+          lock: ${{ !inputs.plan_only }}
 
   approval_gate:
     name: Approval Gate
     needs: plan
+    if: ${{ !inputs.plan_only }}
     runs-on: ubuntu-latest
     environment: approval-gate
     permissions:
