@@ -54,11 +54,16 @@ describe("readColumnsFor", () => {
     expect(readColumnsFor([], "time", "error")).toBeUndefined();
   });
 
-  it("adds the sort and error columns to the selection once", () => {
-    expect(readColumnsFor(["a", "time"], "time", "error")).toEqual(["a", "time", "error"]);
+  it("adds the sort, error and row id columns to the selection once", () => {
+    expect(readColumnsFor(["a", "time", "id"], "time", "error")).toEqual([
+      "a",
+      "time",
+      "id",
+      "error",
+    ]);
   });
 
   it("skips a sort or error column the table does not have", () => {
-    expect(readColumnsFor(["a"], undefined, undefined)).toEqual(["a"]);
+    expect(readColumnsFor(["a"], undefined, undefined)).toEqual(["a", "id"]);
   });
 });

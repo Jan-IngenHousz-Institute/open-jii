@@ -68,7 +68,15 @@ export function LoadedTableView({
     setPage(1);
   }, [tableName, pageSize, filtersKey]);
 
-  const pageQuery = {
+  // Reading only the shown columns spares the warehouse extracting every payload field. A column
+  // the table no longer has fails that read, and from then on the widget reads every column rather
+  // than paying for the failure again on each page.
+  const [isProjectionRejected, setIsProjectionRejected] = useState(false);
+  const readColumns = isProjectionRejected
+    ? undefined
+    : readColumnsFor(selectedColumns, sortColumn, tableMeta?.errorColumn);
+
+  const { tableMetadata, tableRows, isLoading, error } = useExperimentData({
     experimentId,
     page,
     pageSize,
@@ -78,17 +86,13 @@ export function LoadedTableView({
     formatFunction: formatValue,
     errorColumn: tableMeta?.errorColumn,
     filters: mergedFilters,
-  };
+    columns: readColumns,
+  });
 
-  // Reading only the shown columns spares the warehouse extracting every payload field. A column
-  // the table no longer has fails that read, and the widget then reads them all.
-  const readColumns = readColumnsFor(selectedColumns, sortColumn, tableMeta?.errorColumn);
-  const shownColumnsRead = useExperimentData({ ...pageQuery, columns: readColumns });
-  const isProjectionRejected = readColumns !== undefined && isBadRequest(shownColumnsRead.error);
-  const everyColumnRead = useExperimentData({ ...pageQuery, enabled: isProjectionRejected });
-  const { tableMetadata, tableRows, isLoading, error } = isProjectionRejected
-    ? everyColumnRead
-    : shownColumnsRead;
+  const isRejectingProjection = readColumns !== undefined && isBadRequest(error);
+  if (isRejectingProjection) {
+    setIsProjectionRejected(true);
+  }
 
   // Stable ref: while loading `tableRows` is undefined, and a fresh `[]` each
   // render makes react-table's autoReset re-fire forever (microtask loop).

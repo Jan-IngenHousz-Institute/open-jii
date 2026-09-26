@@ -27,8 +27,8 @@ interface CartesianRendererProps extends ChartRendererProps {
   supportsSize?: boolean;
 }
 
-// Above this many markers SVG starts to jank and WebGL earns its context.
-const WEBGL_MARKER_THRESHOLD = 5000;
+// Above this many markers or error bars SVG starts to jank and WebGL earns its context.
+const WEBGL_POINT_MARK_THRESHOLD = 5000;
 
 const NO_ZOOM_READ: ZoomReadPlan = {
   xColumn: "",
@@ -148,14 +148,14 @@ export function CartesianRenderer({
   };
 
   // Each gl chart holds scarce browser contexts, so only charts drawing many
-  // markers earn them: SVG makes an element per marker, but a line is one path
-  // however long it is. Nothing in the UI sets `useWebGL` and every chart
-  // type's defaults store `false`, so only an explicit `true` counts as a choice.
-  const markerCount = reduction.series.reduce(
-    (sum, s) => sum + (drawsMarkers(s) ? s.y.length : 0),
+  // markers or error bars earn them: SVG makes an element for each, but a line
+  // is one path however long it is. Nothing in the UI sets `useWebGL` and every
+  // chart type's defaults store `false`, so only an explicit `true` counts as a choice.
+  const pointMarkCount = reduction.series.reduce(
+    (sum, s) => sum + (drawsPointMarks(s) ? s.y.length : 0),
     0,
   );
-  const isLargeChart = markerCount > WEBGL_MARKER_THRESHOLD;
+  const isLargeChart = pointMarkCount > WEBGL_POINT_MARK_THRESHOLD;
 
   const effectiveConfig: PlotlyChartConfig = useMemo(
     () => ({
@@ -189,10 +189,19 @@ export function CartesianRenderer({
   );
 }
 
-/** Scatter series draw markers unless told otherwise; lines and areas only when asked. */
-function drawsMarkers(series: CartesianSeries): boolean {
+/**
+ * Whether a series draws a mark per point that WebGL would spare: markers, which scatter series draw
+ * unless told otherwise and lines only when asked, or error bars. Bars are never drawn on WebGL.
+ */
+function drawsPointMarks(series: CartesianSeries): boolean {
+  if (series.traceType === "bar") {
+    return false;
+  }
   const mode = series.mode ?? (series.traceType === "scatter" ? "markers" : "lines");
-  return mode.includes("markers");
+  const hasErrorBars = [series.error_x, series.error_y].some(
+    (bar) => bar !== undefined && bar.visible !== false,
+  );
+  return mode.includes("markers") || hasErrorBars;
 }
 
 /** A series follows its own axis's zoom, or on a grid sharing its x axis, any cell's. */

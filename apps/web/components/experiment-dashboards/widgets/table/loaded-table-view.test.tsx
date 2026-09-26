@@ -140,10 +140,10 @@ describe("LoadedTableView", () => {
     );
     await waitFor(() => expect(screen.getByText("7")).toBeInTheDocument());
     expect(screen.getByRole("columnheader", { name: /value/i })).toBeInTheDocument();
-    expect(spy.calls.map((call) => call.query.columns)).toEqual(["value"]);
+    expect(spy.calls.map((call) => call.query.columns)).toEqual(["value,id"]);
   });
 
-  it("reads every column when the API rejects the selected ones", async () => {
+  it("reads every column once the API rejects the selected ones, and keeps doing so", async () => {
     server.mount(contract.experiments.getExperimentTables, {
       body: [createExperimentTable({ identifier: "raw_data" })],
     });
@@ -151,7 +151,7 @@ describe("LoadedTableView", () => {
       status: 400,
       body: { message: "Unknown column" },
     });
-    render(
+    const { rerender } = render(
       <LoadedTableView
         tableName="raw_data"
         pageSize={25}
@@ -159,9 +159,18 @@ describe("LoadedTableView", () => {
         selectedColumns={["gone"]}
       />,
     );
-
     await waitFor(() => expect(spy.calls).toHaveLength(2));
-    expect(spy.calls.map((call) => call.query.columns)).toEqual(["gone", undefined]);
+
+    rerender(
+      <LoadedTableView
+        tableName="raw_data"
+        pageSize={50}
+        experimentId="exp-1"
+        selectedColumns={["gone"]}
+      />,
+    );
+    await waitFor(() => expect(spy.calls).toHaveLength(3));
+    expect(spy.calls.map((call) => call.query.columns)).toEqual(["gone,id", undefined, undefined]);
   });
 
   it("survives a re-render while data is still loading (no autoReset loop)", async () => {

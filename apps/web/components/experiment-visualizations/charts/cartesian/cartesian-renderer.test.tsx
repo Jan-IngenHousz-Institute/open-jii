@@ -83,6 +83,32 @@ describe("CartesianRenderer", () => {
       expect(renderedConfig().useWebGL).toBe(false);
     });
 
+    it("escalates a long line with error bars, which SVG draws one by one", () => {
+      const viz = buildViz({
+        dataConfig: {
+          tableName: "readings",
+          dataSources: [
+            { tableName: "readings", columnName: "time", role: "x" },
+            { tableName: "readings", columnName: "load", role: "y", errorColumn: "spread" },
+          ],
+        },
+      });
+      const rows = Array.from({ length: 40_000 }, (_, i) => ({
+        time: i,
+        load: Math.sin(i),
+        spread: 1,
+      }));
+      render(
+        <CartesianRenderer
+          visualization={viz}
+          experimentId="exp-1"
+          data={rows}
+          defaultTraceType="line"
+        />,
+      );
+      expect(renderedConfig().useWebGL).toBe(true);
+    });
+
     it("leaves a small chart on SVG", () => {
       render(
         <CartesianRenderer
