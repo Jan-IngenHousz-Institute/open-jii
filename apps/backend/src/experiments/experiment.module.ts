@@ -168,10 +168,15 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     {
       provide: CACHE_PORT,
       // Table metadata is read before every warehouse statement and polled by
-      // open experiment pages. Fifteen seconds spares most round trips while
-      // a poll still sees new rows within one interval.
+      // open experiment pages. Past fifteen seconds the last snapshot is
+      // served while a fresh one loads behind it, so a poll sees new rows one
+      // interval later, but no read waits seconds on the metadata statement.
       useFactory: (cache: Cache) =>
-        new CacheAdapter(cache, { prefix: "experiment:", ttlMs: 15 * 1000 }),
+        new CacheAdapter(cache, {
+          prefix: "experiment:",
+          ttlMs: 15 * 1000,
+          staleMs: 10 * 60 * 1000,
+        }),
       inject: [CACHE_MANAGER],
     },
     {

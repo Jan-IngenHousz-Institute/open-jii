@@ -3,7 +3,7 @@ import type { AccessorKeyColumnDef } from "@tanstack/react-table";
 import { describe, expect, it } from "vitest";
 import type { DataRow } from "~/components/data-table/data-table-columns";
 
-import { projectAndOrderColumns } from "./loaded-table-columns";
+import { projectAndOrderColumns, readColumnsFor } from "./loaded-table-columns";
 
 function col(
   name: string,
@@ -45,5 +45,25 @@ describe("projectAndOrderColumns", () => {
   it("treats undefined metadata columns as an empty array", () => {
     expect(projectAndOrderColumns(undefined, undefined)).toEqual([]);
     expect(projectAndOrderColumns(undefined, ["a"])).toEqual([]);
+  });
+});
+
+describe("readColumnsFor", () => {
+  it("reads every column when no selection is given", () => {
+    expect(readColumnsFor(undefined, "time", "error")).toBeUndefined();
+    expect(readColumnsFor([], "time", "error")).toBeUndefined();
+  });
+
+  it("adds the sort, error and row id columns to the selection once", () => {
+    expect(readColumnsFor(["a", "time", "id"], "time", "error")).toEqual([
+      "a",
+      "time",
+      "id",
+      "error",
+    ]);
+  });
+
+  it("skips a sort or error column the table does not have", () => {
+    expect(readColumnsFor(["a"], undefined, undefined)).toEqual(["a", "id"]);
   });
 });

@@ -1,10 +1,19 @@
 import type { CartesianSeries } from "@repo/ui/components/charts/cartesian-chart";
 import type { ErrorBarConfig } from "@repo/ui/components/charts/types";
 
-import { m4Indices } from "../data/m4";
+import { countInRange, m4Indices } from "../data/m4";
 
-/** One bucket per pixel column on plots up to this many pixels wide. */
+/** Buckets a chart's lines share: one per pixel column on plots up to this many pixels wide. */
 export const REDUCTION_BUCKETS = 2_000;
+
+/** Fewest buckets one line gets, however many lines share the chart. */
+const MIN_BUCKETS_PER_LINE = 200;
+
+/**
+ * Most points a chart's lines draw with markers. Past it the markers overlap into a smear, and on
+ * SVG each one is its own element, so the lines are drawn alone.
+ */
+export const MARKER_POINT_LIMIT = 2_000;
 
 export type AxisRange = readonly [number, number];
 
@@ -49,37 +58,54 @@ export function rangeEdgePosition(value: unknown): number {
 
 /**
  * Line and area series thinned to what the visible range can show, with every per-point array kept
- * in step. Their markers come from the chart's style, never per point, so only data arrays need
- * thinning. Stacked areas stay whole: they stack by index, so thinning each on its own would pair
- * the wrong points.
+ * in step. The chart's lines share one bucket budget, so ten lines draw no more than one would. Their
+ * markers come from the chart's style, never per point, so only data arrays need thinning, and they
+ * are dropped while the lines show more points than markers can mark. Dropping them counts as a
+ * reduction, so the chart still offers its own style back. Stacked areas stay whole: they stack by
+ * index, so thinning each on its own would pair the wrong points.
  */
 export function reduceSeries(
   series: CartesianSeries[],
   positions: readonly number[][],
   rangeFor: (series: CartesianSeries) => AxisRange | undefined,
 ): { series: CartesianSeries[]; isReduced: boolean } {
-  let isReduced = false;
+  const isLine = (one: CartesianSeries) => one.traceType === "line" || one.traceType === "area";
+  const reducibleLines = series.filter((one) => isLine(one) && !one.stackgroup).length;
+  const bucketsPerLine = Math.max(
+    MIN_BUCKETS_PER_LINE,
+    Math.floor(REDUCTION_BUCKETS / Math.max(1, reducibleLines)),
+  );
+
+  let visibleLinePoints = 0;
 
   const reduced = series.map((one, index) => {
+    if (!isLine(one)) {
+      return one;
+    }
     const xs = positions[index] ?? [];
-    const isLine = one.traceType === "line" || one.traceType === "area";
-    const isReducible = isLine && !one.stackgroup && xs.length > 4 * REDUCTION_BUCKETS;
-    if (!isReducible) {
-      return one;
-    }
-
     const range = rangeFor(one) ?? [xs[0], xs[xs.length - 1]];
-    const ys = one.y.map((y) => (typeof y === "number" ? y : null));
-    const picked = m4Indices(xs, ys, range, REDUCTION_BUCKETS);
-    if (picked.length === xs.length) {
+    const isReducible = !one.stackgroup && xs.length > 4 * bucketsPerLine;
+    if (!isReducible) {
+      visibleLinePoints += countInRange(xs, range);
       return one;
     }
 
-    isReduced = true;
-    return pickPoints(one, picked);
+    const ys = one.y.map((y) => (typeof y === "number" ? y : null));
+    const picked = m4Indices(xs, ys, range, bucketsPerLine);
+    visibleLinePoints += picked.length;
+    return picked.length === xs.length ? one : pickPoints(one, picked);
   });
 
-  return { series: reduced, isReduced };
+  const isThinned = reduced.some((one, index) => one !== series[index]);
+  const hasMarkedLines = reduced.some((one) => isLine(one) && one.mode === "lines+markers");
+  const isDroppingMarkers = hasMarkedLines && visibleLinePoints > MARKER_POINT_LIMIT;
+  const drawn = isDroppingMarkers
+    ? reduced.map((one) =>
+        isLine(one) && one.mode === "lines+markers" ? { ...one, mode: "lines" as const } : one,
+      )
+    : reduced;
+
+  return { series: drawn, isReduced: isThinned || isDroppingMarkers };
 }
 
 function pickPoints(series: CartesianSeries, picked: number[]): CartesianSeries {
