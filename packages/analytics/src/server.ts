@@ -7,7 +7,11 @@ import type { PostHogServerConfig } from "./posthog-config";
  * This is a minimal interface to avoid direct dependency on posthog-node
  */
 interface PostHogServerClient {
-  isFeatureEnabled(flagKey: string, distinctId: string): Promise<boolean | undefined>;
+  isFeatureEnabled(
+    flagKey: string,
+    distinctId: string,
+    options?: { personProperties?: Record<string, string> },
+  ): Promise<boolean | undefined>;
   shutdown(): Promise<void>;
 }
 
@@ -52,11 +56,13 @@ export function getPostHogServerClient(): PostHogServerClient | null {
  * Check if a feature flag is enabled server-side
  * @param flagKey - The feature flag key to check
  * @param distinctId - User identifier (defaults to 'anonymous')
+ * @param personProperties - Evaluated as the person's properties, over what PostHog has stored
  * @returns Whether the flag is enabled (falls back to default on error)
  */
 export async function isFeatureFlagEnabled(
   flagKey: FeatureFlagKey,
   distinctId = "anonymous",
+  personProperties?: Record<string, string>,
 ): Promise<boolean> {
   try {
     const client = getPostHogServerClient();
@@ -66,7 +72,7 @@ export async function isFeatureFlagEnabled(
       return FEATURE_FLAG_DEFAULTS[flagKey];
     }
 
-    const isEnabled = await client.isFeatureEnabled(flagKey, distinctId);
+    const isEnabled = await client.isFeatureEnabled(flagKey, distinctId, { personProperties });
     return isEnabled ?? FEATURE_FLAG_DEFAULTS[flagKey];
   } catch (error) {
     console.error(`[PostHog] Error checking feature flag ${flagKey}:`, error);

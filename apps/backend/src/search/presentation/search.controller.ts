@@ -26,7 +26,7 @@ export class SearchController {
     return implement(searchContract.globalSearch).handler(async ({ input }) => {
       const isCalibrationEnabled = await this.analyticsPort.isFeatureFlagEnabled(
         FEATURE_FLAGS.CALIBRATION,
-        session.user.email || session.user.id,
+        session.user,
       );
 
       const result = await this.globalSearchUseCase.execute(

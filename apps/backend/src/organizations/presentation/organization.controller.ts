@@ -104,7 +104,7 @@ export class OrganizationController {
       const result = await this.listOrganizationResourcesUseCase.execute(input.id, session.user.id);
       const isCalibrationEnabled = await this.analyticsPort.isFeatureFlagEnabled(
         FEATURE_FLAGS.CALIBRATION,
-        session.user.email || session.user.id,
+        session.user,
       );
 
       // Calibration is flagged off for most people, and a row would open a page that is

@@ -1,12 +1,12 @@
 import { render, screen } from "@/test/test-utils";
 import { notFound } from "next/navigation";
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import * as posthogServer from "~/lib/posthog-server";
 
 import Layout from "../[locale]/layout";
 
 vi.mock("~/lib/posthog-server", () => ({
-  isFeatureFlagEnabled: vi.fn().mockResolvedValue(true),
+  isFeatureFlagEnabledForViewer: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock("@repo/cms/contentful", () => ({
@@ -30,17 +30,32 @@ vi.mock("../../components/alerts-bar", () => ({
 }));
 
 describe("LocaleLayout", () => {
-  it("renders children within providers", async () => {
+  afterEach(() => {
+    vi.mocked(posthogServer.isFeatureFlagEnabledForViewer).mockResolvedValue(true);
+  });
+
+  it("renders the default locale without checking the multi-language flag", async () => {
     const ui = await Layout({
       children: <div>Content</div>,
       params: Promise.resolve({ locale: "en-US" }),
     });
     render(ui);
     expect(screen.getByText("Content")).toBeInTheDocument();
+    expect(posthogServer.isFeatureFlagEnabledForViewer).not.toHaveBeenCalled();
+  });
+
+  it("renders another locale when multi-language is enabled for the viewer", async () => {
+    const ui = await Layout({
+      children: <div>Content</div>,
+      params: Promise.resolve({ locale: "de-DE" }),
+    });
+    render(ui);
+    expect(screen.getByText("Content")).toBeInTheDocument();
+    expect(posthogServer.isFeatureFlagEnabledForViewer).toHaveBeenCalledWith("multi-language");
   });
 
   it("calls notFound for non-default locale when multi-language is disabled", async () => {
-    vi.mocked(posthogServer.isFeatureFlagEnabled).mockResolvedValue(false);
+    vi.mocked(posthogServer.isFeatureFlagEnabledForViewer).mockResolvedValue(false);
     await Layout({
       children: <div />,
       params: Promise.resolve({ locale: "de-DE" }),

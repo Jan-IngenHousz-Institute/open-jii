@@ -166,7 +166,7 @@ export class ExperimentController {
     return implement(experimentContract.deleteExperiment).handler(async ({ input }) => {
       const isDeletionEnabled = await this.analyticsPort.isFeatureFlagEnabled(
         FEATURE_FLAGS.EXPERIMENT_DELETION,
-        session.user.email || session.user.id,
+        session.user,
       );
 
       if (!isDeletionEnabled) {
