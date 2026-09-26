@@ -23,6 +23,25 @@ const heartbeatConstants = readFileSync(
   "utf8",
 );
 
+// Named so a failure says where to look. The rules live in terraform and the entries live
+// in yaml, so a mismatch is otherwise a hunt through two languages.
+const grafanaRulesPath = "infrastructure/modules/grafana/dashboard/main.tf";
+const grafanaRules = readFileSync(join(repoRoot, grafanaRulesPath), "utf8");
+
+// The digests and the dashboards they link are written in two languages against one
+// catalog, so the drift between them is only visible from here.
+const heartbeatDashboardsPath = "infrastructure/modules/grafana/dashboard/heartbeat.tf";
+const heartbeatDashboards = readFileSync(join(repoRoot, heartbeatDashboardsPath), "utf8");
+const composerHandler = readFileSync(
+  join(repoRoot, "infrastructure/modules/monitoring/digest-composer/lambda/index.js"),
+  "utf8",
+);
+
+// The handler is plain JavaScript outside the package, so nothing typechecks it against
+// the renderers it calls. This file is the only thing that can.
+const slackPath = "packages/monitoring/src/slack.ts";
+const slackSource = readFileSync(join(repoRoot, slackPath), "utf8");
+
 const metrics = parseCatalog(catalogSource);
 const passes = parsePasses(catalogSource);
 
@@ -30,6 +49,10 @@ const KNOWN_FAMILIES = ["observability", "usage"];
 const KNOWN_SLOTS = ["alert", "exception", "pulse", "weekly", "dashboard", "s3"];
 const KNOWN_SOURCES = ["aws", "dbx", "pg", "posthog", "gh", "composer"];
 const KNOWN_STATS = ["Sum", "Maximum", "Minimum", "Average", "SampleCount"];
+const KNOWN_SEVERITIES = ["critical", "warning"];
+// Anything else falls back to a bare count in the digest, which is how an iterator age
+// came to read as "8.8M".
+const KNOWN_UNITS = ["milliseconds", "seconds", "minutes", "bytes", "percent"];
 const DIGEST_SLOTS = ["exception", "alert", "pulse", "weekly"];
 
 // Only these signal fields are passed through placeholder resolution; a placeholder
@@ -63,6 +86,27 @@ function composerEnvironmentKeys(): Set<string> {
   // containing an interpolation's braces does not truncate it.
   const body = blocks[1].split(/\n\s*}\s*\n/)[0];
   return new Set([...body.matchAll(/^\s+([A-Z][A-Z0-9_]*)\s+=/gm)].map(([, key]) => key));
+}
+
+interface AlertRule {
+  metricId: string;
+  severity: string;
+}
+
+/** Every Grafana rule that claims a catalog entry, with the severity it routes on. */
+function alertRules(): AlertRule[] {
+  const rules: AlertRule[] = [];
+
+  for (const [, body] of grafanaRules.matchAll(/labels = \{([^}]*)\}/g)) {
+    const id = /metric_id\s*=\s*"([^"]+)"/.exec(body);
+    if (id === null) {
+      continue;
+    }
+    const severity = /severity\s*=\s*"([^"]+)"/.exec(body);
+    rules.push({ metricId: id[1], severity: severity === null ? "" : severity[1] });
+  }
+
+  return rules;
 }
 
 function digestEvaluated(metric: CatalogMetric): boolean {
@@ -170,6 +214,19 @@ describe("catalog vocabulary", () => {
     expect(badStat.map((m) => m.id)).toEqual([]);
   });
 
+  it("uses only severities the routing and the ordering understand", () => {
+    // A severity the renderer does not know sorts with the unranked rather than above
+    // critical, and the notification policy has no branch for it, so it would neither
+    // lead the digest nor reach a pager.
+    const offenders = metrics.filter((m) => m.severity && !KNOWN_SEVERITIES.includes(m.severity));
+    expect(offenders.map((m) => m.id)).toEqual([]);
+  });
+
+  it("uses only units the formatter can render", () => {
+    const offenders = metrics.filter((m) => m.signal?.unit && !KNOWN_UNITS.includes(m.signal.unit));
+    expect(offenders.map((m) => m.id)).toEqual([]);
+  });
+
   it("names every entry, since the digest prints the name", () => {
     expect(metrics.filter((m) => !m.name).map((m) => m.id)).toEqual([]);
   });
@@ -244,6 +301,19 @@ describe("active entries", () => {
         (!m.baseline || isInertForDigest(m.baseline)),
     );
     expect(offenders.map((m) => m.id)).toEqual([]);
+  });
+
+  it("keeps every per-environment override as actionable as the rule it replaces", () => {
+    // resolveForEnvironment swaps the whole baseline, so an override written as
+    // { max: 7200000 } loses the method and evaluates to ok forever in that environment
+    // while looking configured. A threshold nobody can cross is the bug this catches.
+    const offenders = metrics.flatMap((metric) =>
+      Object.entries(metric.baseline?.per_environment ?? {})
+        .filter(([, override]) => isInertForDigest(override))
+        .map(([environment]) => `${metric.id} in ${environment}`),
+    );
+
+    expect(offenders).toEqual([]);
   });
 
   it("are all queryable once the composer's environment is fully populated", () => {
@@ -325,5 +395,267 @@ describe("signals", () => {
       .flatMap((m) => placeholdersIn(m.signal).map((name) => ({ id: m.id, name })))
       .filter(({ name }) => !provided.has(name));
     expect(unprovided).toEqual([]);
+  });
+});
+
+describe("catalog and grafana rules cannot drift", () => {
+  // The catalog is what the digest reads and the runbooks cite; the rules are what wakes
+  // someone. Nothing else compares them, and they are edited months apart.
+
+  it("gives every active alert entry a rule that claims it", () => {
+    const claimed = new Set(alertRules().map((rule) => rule.metricId));
+    const unwatched = metrics
+      .filter((m) => m.active && m.slots.includes("alert"))
+      .filter((m) => !claimed.has(m.id));
+
+    expect(
+      unwatched.map((m) => m.id),
+      `active alert entries with no rule in ${grafanaRulesPath}`,
+    ).toEqual([]);
+  });
+
+  it("points every rule at an entry that actually carries an alert slot", () => {
+    // A metric_id that resolves to nothing, or to a dashboard-only entry, means the rule
+    // links to a runbook and a severity the catalog never agreed to.
+    const byId = new Map(metrics.map((m) => [m.id, m]));
+    const orphans = alertRules().filter(
+      (rule) => !byId.get(rule.metricId)?.slots.includes("alert"),
+    );
+
+    expect(
+      orphans.map((rule) => rule.metricId),
+      `metric_id labels in ${grafanaRulesPath} with no alert-slot entry`,
+    ).toEqual([]);
+  });
+
+  it("agrees on severity, since that is what decides the destination", () => {
+    const byId = new Map(metrics.map((m) => [m.id, m]));
+    const mismatched = alertRules()
+      .filter((rule) => byId.has(rule.metricId))
+      .filter((rule) => rule.severity !== byId.get(rule.metricId)?.severity)
+      .map((rule) => ({
+        metricId: rule.metricId,
+        rule: rule.severity,
+        catalog: byId.get(rule.metricId)?.severity,
+      }));
+
+    expect(
+      mismatched,
+      `severity disagreements between the catalog and ${grafanaRulesPath}`,
+    ).toEqual([]);
+  });
+
+  it("finds a non-trivial number of rules, so a broken parse cannot pass silently", () => {
+    // Every assertion above is vacuously true if the regex stops matching.
+    expect(alertRules().length).toBeGreaterThan(5);
+  });
+});
+
+describe("the digests and their reports cannot drift", () => {
+  // Every digest links one Grafana dashboard, and the link is worth nothing if the panels
+  // are not the entries the digest just read. Both sides filter the same catalog, but one
+  // filters in JavaScript and the other in HCL, so only a test compares them.
+
+  interface Membership {
+    family: string | null;
+    slots: string[];
+  }
+
+  function membershipOf(expression: string): Membership {
+    const family = /(?:metric|m)\.family\s*===?\s*"([a-z]+)"/.exec(expression);
+    const slots = [
+      ...expression.matchAll(/(?:\.slots\.includes|contains\(m\.slots,)\s*\(?\s*"([a-z]+)"/g),
+    ];
+
+    return { family: family?.[1] ?? null, slots: slots.map((match) => match[1]).sort() };
+  }
+
+  function digestMemberships(): Record<string, Membership> {
+    const blocks = [
+      ...composerHandler.matchAll(
+        /if \(digestName === "(\w+)"\) \{\s*const metrics = ([\s\S]*?)\);\s*\n\s*const readings/g,
+      ),
+    ];
+
+    return Object.fromEntries(blocks.map((block) => [block[1], membershipOf(block[2])]));
+  }
+
+  function reportMemberships(): Record<string, Membership> {
+    const blocks = [...heartbeatDashboards.matchAll(/"([a-z-]+)" = \{([\s\S]*?)\n {4}\}/g)];
+
+    return Object.fromEntries(blocks.map((block) => [block[1], membershipOf(block[2])]));
+  }
+
+  function dashboardsByDigest(): Record<string, string> {
+    const block = /const REPORT_DASHBOARDS = \{([\s\S]*?)\};/.exec(composerHandler)?.[1] ?? "";
+    const pairs = [...block.matchAll(/(\w+):\s*"([a-z-]+)"/g)];
+
+    return Object.fromEntries(pairs.map((pair) => [pair[1], pair[2]]));
+  }
+
+  it("gives every digest a report, and every report a digest", () => {
+    const linked = dashboardsByDigest();
+
+    expect(Object.keys(linked).sort()).toEqual(Object.keys(digestMemberships()).sort());
+    expect(Object.values(linked).sort()).toEqual(Object.keys(reportMemberships()).sort());
+  });
+
+  it("puts the entries the digest read on the report it links", () => {
+    const reports = reportMemberships();
+    const linked = dashboardsByDigest();
+
+    const disagreements = Object.entries(digestMemberships())
+      .map(([digest, digestFilter]) => ({
+        digest,
+        digestFilter,
+        report: linked[digest],
+        reportFilter: reports[linked[digest] ?? ""],
+      }))
+      .filter((pair) => JSON.stringify(pair.digestFilter) !== JSON.stringify(pair.reportFilter));
+
+    expect(
+      disagreements,
+      `digests and ${heartbeatDashboardsPath} select different catalog entries`,
+    ).toEqual([]);
+  });
+
+  it("resolves a placeholder on the report wherever the digest resolves one", () => {
+    // The panels substitute through one map. A name the composer carries and that map
+    // omits fails the plan, but a name only the report carries is a silent extra, and
+    // the pair drifting is how a panel ends up querying a literal ${SOMETHING} forever.
+    const block =
+      /heartbeat_placeholders = \{([\s\S]*?)\n {2}\}/.exec(heartbeatDashboards)?.[1] ?? "";
+    const onReports = new Set([...block.matchAll(/^\s*([A-Z0-9_]+)\s*=/gm)].map((line) => line[1]));
+
+    const used = new Set(metrics.flatMap((m) => placeholdersIn(m.signal)));
+    const missing = [...used].filter((name) => !onReports.has(name));
+    const unused = [...onReports].filter((name) => !composerEnvironmentKeys().has(name));
+
+    expect(
+      missing.sort(),
+      `placeholders the catalog uses and ${heartbeatDashboardsPath} omits`,
+    ).toEqual([]);
+    expect(
+      unused.sort(),
+      `placeholders in ${heartbeatDashboardsPath} the composer never sets`,
+    ).toEqual([]);
+  });
+
+  it("builds the same dashboard uid on both sides, since a wrong one is a dead link", () => {
+    const fromTerraform = /uid\s*=\s*"([^"]+)"/
+      .exec(heartbeatDashboards)?.[1]
+      ?.replace("${var.environment}", "ENV")
+      .replace("${each.key}", "REPORT");
+    const fromHandler = /const uid = `([^`]+)`/
+      .exec(composerHandler)?.[1]
+      ?.replace("${environment}", "ENV")
+      .replace("${REPORT_DASHBOARDS[digest]}", "REPORT");
+
+    expect(fromTerraform).toBe("ENV-heartbeat-REPORT");
+    expect(fromHandler).toBe(fromTerraform);
+  });
+
+  it("selects a non-trivial set on each report, so a broken parse cannot pass silently", () => {
+    const reports = reportMemberships();
+    expect(Object.keys(reports)).toHaveLength(3);
+
+    const live = metrics.filter((m) => m.active && m.signal);
+    const empty = Object.entries(reports).filter(
+      ([, filter]) =>
+        live.filter(
+          (m) =>
+            (filter.family === null || m.family === filter.family) &&
+            m.slots.some((slot) => filter.slots.includes(slot)),
+        ).length === 0,
+    );
+
+    expect(empty.map(([report]) => report)).toEqual([]);
+  });
+});
+
+describe("the composer reads only environment it is given", () => {
+  // Three variables were once read by the handler and set by nothing, so the feature
+  // behind them was dead on arrival and nothing said so.
+
+  // Supplied by the Lambda runtime rather than by the module's environment block.
+  const RUNTIME_PROVIDED = ["AWS_REGION"];
+
+  it("has terraform set every variable the handler reads", () => {
+    const read = [...composerHandler.matchAll(/process\.env\.([A-Z0-9_]+)/g)].map((use) => use[1]);
+    const provided = composerEnvironmentKeys();
+    const unset = [...new Set(read)]
+      .filter((name) => !provided.has(name))
+      .filter((name) => !RUNTIME_PROVIDED.includes(name))
+      .sort();
+
+    expect(
+      read.length,
+      "the handler reads no environment, so this parse is broken",
+    ).toBeGreaterThan(0);
+    expect(unset, "environment the composer reads and its terraform never sets").toEqual([]);
+  });
+
+  it("has something read every variable terraform sets", () => {
+    // An environment variable nothing reads is either a leftover or a wire that was
+    // never finished, and both read as configuration that works. A placeholder is read
+    // by name out of the catalog rather than by the handler, so it counts too.
+    const read = new Set(
+      [...composerHandler.matchAll(/process\.env\.([A-Z0-9_]+)/g)].map((use) => use[1]),
+    );
+    const resolved = new Set(metrics.flatMap((m) => placeholdersIn(m.signal)));
+    const unread = [...composerEnvironmentKeys()]
+      .filter((name) => !read.has(name) && !resolved.has(name))
+      .sort();
+
+    expect(unread, "environment the composer's terraform sets and the handler never reads").toEqual(
+      [],
+    );
+  });
+});
+
+describe("the handler and the renderers agree on what a digest is", () => {
+  // The renderers once changed shape while the handler still read the old one.
+  // Everything typechecked, every unit test passed, and all three digests would have
+  // thrown at 06:30. Nothing else compares the two.
+
+  function messageFields(): string[] {
+    const body = /export interface SlackMessage \{([\s\S]*?)\n\}/.exec(slackSource)?.[1] ?? "";
+    return [...body.matchAll(/^\s{2}(\w+):/gm)].map((field) => field[1]).sort();
+  }
+
+  function fieldsTheHandlerReads(): string[] {
+    const reads = [...composerHandler.matchAll(/\bmessage\.(\w+)/g)].map((read) => read[1]);
+    return [...new Set(reads)].sort();
+  }
+
+  it("reads only fields the renderers return", () => {
+    const declared = messageFields();
+    const read = fieldsTheHandlerReads();
+
+    expect(declared.length, `no SlackMessage interface found in ${slackPath}`).toBeGreaterThan(0);
+    expect(
+      read.length,
+      "the handler reads no message fields, so this parse is broken",
+    ).toBeGreaterThan(0);
+    expect(read.filter((field) => !declared.includes(field))).toEqual([]);
+  });
+
+  it("posts the rendered message as it is, with nothing reshaped on the way out", () => {
+    const webhookPosts = [...composerHandler.matchAll(/await post\(webhookUrl, ([^)]*\)?)\)/g)];
+
+    expect(webhookPosts.map((call) => call[1])).toEqual(["message"]);
+  });
+
+  it("logs the text it delivered on every path, since the daily round reads it there", () => {
+    // Only the undelivered path used to log the digest, so on any environment wired to
+    // Slack the round had nothing to read and reported a quiet morning.
+    const deliveries = [
+      ...composerHandler.matchAll(/JSON\.stringify\(\{\s*digest: digestName,\s*delivered:[^}]*\}/g),
+    ];
+
+    expect(deliveries.length, "no delivery log lines found, so this parse is broken").toBe(2);
+    expect(deliveries.filter((line) => !line[0].includes("text:")).map((line) => line[0])).toEqual(
+      [],
+    );
   });
 });

@@ -1,3 +1,4 @@
+import { formatValue } from "./format.js";
 import type { Evaluation, MetricReading } from "./types.js";
 
 /** Absent datapoints for a counter mean zero events, not a broken signal. */
@@ -54,7 +55,7 @@ export function evaluate({ metric, value, baseline, historyCount }: MetricReadin
 
   if (rule.method === "threshold" && rule.max !== undefined) {
     return value > rule.max
-      ? { state: "anomaly", reason: `above threshold ${rule.max}` }
+      ? { state: "anomaly", reason: `above ${formatValue(rule.max, metric.signal?.unit)}` }
       : { state: "ok" };
   }
 

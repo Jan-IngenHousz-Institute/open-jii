@@ -34,6 +34,9 @@ passes:
   - date: 2026-09-14
     range: [64, 64]
     note: gold materialization age split out of 10
+  - date: 2026-09-22
+    range: [65, 66]
+    note: the digest's own two lambdas, so the reporter's silence is itself reportable
 
 metrics:
   # Ingest path
@@ -132,13 +135,21 @@ metrics:
     phase: P1
     active: true
     slots: [alert, dashboard]
-    severity: critical
+    severity: warning
     signal:
       namespace: AWS/Kinesis
       metric: GetRecords.IteratorAgeMilliseconds
       stat: Maximum
+      unit: milliseconds
       dimensions: { StreamName: "${KINESIS_STREAM_NAME}" }
-    baseline: { method: threshold, max: 600000 }
+    # Prod's consumer runs continuously, so ten minutes of lag is a fault there. Dev's
+    # runs on a schedule and sits near 2.8M ms, where 600000 was under the reading in
+    # 315 of the last 316 hours.
+    baseline:
+      method: threshold
+      max: 600000
+      per_environment:
+        dev: { method: threshold, max: 7200000 }
     runbook: docs/runbooks/ingest-lag.md
     notes: The single best pipeline-lag alarm. Consumer down => age climbs while ingest looks healthy.
 
@@ -166,12 +177,9 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    # Stays inactive until the export task that publishes CollectorHeartbeat lands.
-    # An absence rule against a producer that does not exist yet alarms on its first
-    # run and never stops, which is the failure this metric exists to detect.
-    active: false
+    active: true
     slots: [alert, dashboard]
-    severity: critical
+    severity: warning
     signal:
       namespace: OpenJII/Data
       metric: CollectorHeartbeat
@@ -190,13 +198,13 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    # Inactive until the heartbeat export task that publishes this lands.
-    active: false
+    active: true
     slots: [exception, dashboard]
     signal:
       namespace: OpenJII/Data
       metric: GoldMaterializationAgeMinutes
       stat: Maximum
+      unit: minutes
       dimensions: { Environment: "${ENVIRONMENT}" }
     baseline: { method: same-weekday-4w, anomaly_pct: 100 }
     runbook: docs/runbooks/gold-materialization-age.md
@@ -223,13 +231,13 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    # Inactive until the heartbeat export task that publishes this lands.
-    active: false
+    active: true
     slots: [exception, dashboard]
     signal:
       namespace: OpenJII/Data
       metric: IngestBadPayloadRate
       stat: Maximum
+      unit: percent
       dimensions: { Environment: "${ENVIRONMENT}" }
     baseline: { method: same-weekday-4w, anomaly_pct: 100 }
     notes: >
@@ -244,8 +252,7 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    # Inactive until the heartbeat export task that publishes this lands.
-    active: false
+    active: true
     slots: [exception]
     signal:
       namespace: OpenJII/Data
@@ -287,7 +294,7 @@ metrics:
     phase: P1
     active: true
     slots: [alert, dashboard]
-    severity: critical
+    severity: warning
     signal:
       namespace: AWS/ApplicationELB
       metric: HTTPCode_Target_5XX_Count
@@ -309,6 +316,7 @@ metrics:
       namespace: AWS/ApplicationELB
       metric: TargetResponseTime
       stat: p95
+      unit: seconds
       dimensions: { LoadBalancer: "${ALB_ARN_SUFFIX}" }
     baseline: { method: same-weekday-4w, anomaly_pct: 100 }
 
@@ -365,7 +373,7 @@ metrics:
 
   - num: 23
     id: sandbox-errors
-    name: Macro sandbox errors/throttles
+    name: Sandbox errors/throttles (macro and calibration)
     family: observability
     source: aws
     phase: P1
@@ -393,6 +401,7 @@ metrics:
       namespace: AWS/CloudFront
       metric: 5xxErrorRate
       stat: Average
+      unit: percent
       dimensions: { DistributionId: "${CLOUDFRONT_DISTRIBUTION_ID}", Region: Global }
     baseline: { method: threshold, max: 5 }
     runbook: docs/runbooks/cloudfront-errors.md
@@ -406,7 +415,7 @@ metrics:
     phase: P1
     active: true
     slots: [alert, dashboard]
-    severity: critical
+    severity: warning
     signal:
       namespace: AWS/Lambda
       metric: Errors
@@ -455,6 +464,7 @@ metrics:
       namespace: AWS/RDS
       metric: VolumeBytesUsed
       stat: Maximum
+      unit: bytes
       dimensions: { DBClusterIdentifier: "${DB_CLUSTER_IDENTIFIER}" }
     baseline: { method: wow, anomaly_pct: 25 }
 
@@ -507,8 +517,7 @@ metrics:
     family: usage
     source: dbx
     phase: P2
-    # Inactive until the heartbeat export task that publishes this lands.
-    active: false
+    active: true
     # Pulse only: Maximum over a seven-day window would report the peak day as if it
     # were the week, so the weekly note has no honest way to render a 24h gauge.
     slots: [pulse]
@@ -529,8 +538,7 @@ metrics:
     family: usage
     source: dbx
     phase: P2
-    # Inactive until the heartbeat export task that publishes this lands.
-    active: false
+    active: true
     slots: [pulse]
     signal:
       namespace: OpenJII/Usage
@@ -617,14 +625,14 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    # Inactive until the heartbeat export task that publishes this lands.
-    active: false
+    active: true
     slots: [alert, dashboard]
-    severity: critical
+    severity: warning
     signal:
       namespace: OpenJII/Data
       metric: MetricsPipelineAgeMinutes
       stat: Maximum
+      unit: minutes
       dimensions: { Environment: "${ENVIRONMENT}" }
     baseline: { method: threshold, max: 60 }
     runbook: docs/runbooks/metrics-mv-freshness.md
@@ -736,8 +744,7 @@ metrics:
     family: observability
     source: dbx
     phase: P2
-    # Inactive until the heartbeat export task that publishes this lands.
-    active: false
+    active: true
     slots: [exception, s3]
     signal:
       namespace: OpenJII/Data
@@ -869,3 +876,31 @@ metrics:
     active: false
     slots: [weekly, exception, s3]
     notes: Capture-timestamp vs upload-time; offline-first fails silently as data marooned on phones.
+
+  # Self-health. The digest reports on the platform; these two report on the digest.
+  # Both inactive and signal-less on purpose: liveness is absence, and a baseline rule
+  # has no "min", so an active entry here would evaluate to ok forever and read as
+  # covered. The Grafana rules carry these ids and are where the watching happens.
+  - num: 65
+    id: digest-composer-liveness
+    name: Digest composer stopped running
+    family: observability
+    source: aws
+    phase: P1
+    active: false
+    slots: [alert]
+    severity: warning
+    runbook: docs/runbooks/digest-composer-liveness.md
+    notes: A lambda that never runs publishes no metric, so absence is the only signal. Watched by the Grafana rule labelled with this id, not by the digest, which cannot report its own silence.
+
+  - num: 66
+    id: metrics-forwarder-errors
+    name: Metrics forwarder failing to publish
+    family: observability
+    source: aws
+    phase: P1
+    active: false
+    slots: [alert]
+    severity: warning
+    runbook: docs/runbooks/metrics-forwarder-errors.md
+    notes: Errors only and never liveness, because the forwarder is S3 event driven, so a quiet day is indistinguishable from a dead function and a liveness rule would fire forever.

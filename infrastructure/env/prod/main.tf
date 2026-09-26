@@ -1028,7 +1028,7 @@ module "metrics_pipeline_scheduler" {
   max_concurrent_runs           = 1
   use_serverless                = true
   continuous                    = false
-  serverless_performance_target = "STANDARD"
+  serverless_performance_target = "PERFORMANCE_OPTIMIZED"
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
@@ -1040,46 +1040,11 @@ module "metrics_pipeline_scheduler" {
     retry_on_timeout          = true
   }
 
-  # The heartbeat export runs as a second task so it observes the refresh it
-  # reports on. The deploy applies terraform just before syncing notebooks, so a
-  # merge that lands both can fail this task for one cycle.
-  environments = [
-    {
-      environment_key = "heartbeat"
-      spec = {
-        environment_version = "4"
-        dependencies = [
-          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
-        ]
-      }
-    }
-  ]
-
   tasks = [
     {
       key         = "trigger_metrics_pipeline"
       task_type   = "pipeline"
       pipeline_id = module.metrics_pipeline.pipeline_id
-    },
-    {
-      key           = "export_platform_heartbeat"
-      task_type     = "notebook"
-      compute_type  = "serverless"
-      notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/metrics_heartbeat_task"
-      depends_on    = "trigger_metrics_pipeline"
-      # ALL_DONE so a failed refresh still produces a heartbeat file: the
-      # dead-man must mean "the collector is gone", not "the pipeline failed".
-      run_if = "ALL_DONE"
-
-      parameters = {
-        "CATALOG_NAME"   = module.databricks_catalog.catalog_name
-        "CENTRAL_SCHEMA" = "centrum"
-        "METRICS_SCHEMA" = "metrics"
-        # Lowercase, unlike the other jobs: this value becomes the CloudWatch
-        # Environment dimension, which the catalog and composer query as-is.
-        "ENVIRONMENT"        = var.environment
-        "HEARTBEAT_LOCATION" = "s3://${module.heartbeat_metrics_s3.bucket_id}"
-      }
     }
   ]
 
@@ -1102,7 +1067,96 @@ module "metrics_pipeline_scheduler" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.metrics_pipeline, module.heartbeat_external_location]
+  depends_on = [module.metrics_pipeline]
+}
+
+# The heartbeat export runs on its own schedule rather than as a second task on the
+# metrics scheduler.
+#
+# Measured on dev: the pipeline task takes 575s and the export adds 421s, of which 216s
+# is serverless environment setup. Together that is 997s against a 900s schedule, so
+# every other run was skipped for maximum concurrent runs and each skip raised a job
+# failure notification.
+#
+# Decoupling also makes the dead-man honest. As a dependent task the export could not
+# write when the parent run was skipped, so collector silence and scheduler skew were
+# indistinguishable. Standing alone, its absence means the collector is gone.
+module "metrics_heartbeat_export" {
+  source = "../../modules/databricks/job"
+
+  name        = "Metrics-Heartbeat-Export-PROD"
+  description = "Exports lakehouse observability and usage signals for the platform heartbeat"
+
+  # Every 30 minutes. These are slow-moving counts and one cycle sits well inside the
+  # dead-man window.
+  schedule = "0 0/30 * * * ?"
+
+  max_concurrent_runs           = 1
+  use_serverless                = true
+  continuous                    = false
+  serverless_performance_target = "PERFORMANCE_OPTIMIZED"
+
+  run_as = {
+    service_principal_name = module.node_service_principal.service_principal_application_id
+  }
+
+  task_retry_config = {
+    retries                   = 1
+    min_retry_interval_millis = 60000
+    retry_on_timeout          = true
+  }
+
+  environments = [
+    {
+      environment_key = "heartbeat"
+      spec = {
+        environment_version = "4"
+        dependencies = [
+          "/Workspace/Shared/.bundle/open-jii/${var.environment}/artifacts/.internal/openjii-0.1.0-py3-none-any.whl"
+        ]
+      }
+    }
+  ]
+
+  tasks = [
+    {
+      key           = "export_platform_heartbeat"
+      task_type     = "notebook"
+      compute_type  = "serverless"
+      notebook_path = "/Workspace/Shared/.bundle/open-jii/prod/notebooks/src/tasks/metrics_heartbeat_task"
+
+      parameters = {
+        "CATALOG_NAME"   = module.databricks_catalog.catalog_name
+        "CENTRAL_SCHEMA" = "centrum"
+        "METRICS_SCHEMA" = "metrics"
+        # Lowercase, unlike the other jobs: this value becomes the CloudWatch
+        # Environment dimension, which the catalog and composer query as-is.
+        "ENVIRONMENT"        = var.environment
+        "HEARTBEAT_LOCATION" = "s3://${module.heartbeat_metrics_s3.bucket_id}"
+      }
+    }
+  ]
+
+  # The export is the monitoring producer, so its own failures have to reach someone.
+  # The dead-man covers silence; this covers a run that ran and threw.
+  webhook_notifications = {
+    on_failure = [
+      module.slack_notification_destination.notification_destination_id
+    ]
+  }
+
+  permissions = [
+    {
+      principal_application_id = module.node_service_principal.service_principal_application_id
+      permission_level         = "CAN_MANAGE_RUN"
+    }
+  ]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+
+  depends_on = [module.heartbeat_external_location]
 }
 
 module "centrum_backup_job" {
@@ -2852,7 +2906,12 @@ module "grafana_dashboard" {
   load_balancer_arn          = module.backend_alb.alb_arn
   ecs_cluster_name           = module.backend_ecs.ecs_cluster_name
   slack_webhook_url          = var.slack_webhook_url
-  db_cluster_identifier      = "open-jii-${var.environment}-db-cluster"
+
+  # Passed in rather than interpolated: a rule watching a misspelled function is NoData
+  # forever, which is either permanently firing or permanently silent.
+  digest_composer_function_name   = module.digest_composer.function_name
+  metrics_forwarder_function_name = module.metrics_forwarder.function_name
+  db_cluster_identifier           = "open-jii-${var.environment}-db-cluster"
 
   # IoT and Kinesis monitoring
   kinesis_stream_name = module.kinesis.kinesis_stream_name
@@ -2960,13 +3019,18 @@ module "digest_composer" {
   alb_arn                    = module.backend_alb.alb_arn
   cloudfront_distribution_id = module.opennext.cloudfront_distribution_id
   server_function_name       = module.opennext.server_function_name
-  macro_function_names       = values(module.macro_sandbox.function_names)
-  db_cluster_identifier      = "open-jii-${var.environment}-db-cluster"
+  macro_function_names = concat(
+    values(module.macro_sandbox.function_names),
+    [module.calibration_sandbox.function_name],
+  )
+  db_cluster_identifier = "open-jii-${var.environment}-db-cluster"
 
-  # Empty webhooks make the Lambda log the rendered digest instead of posting, so this
-  # applies cleanly before the Slack channels exist.
-  heartbeat_webhook_url = var.slack_heartbeat_webhook_url
-  usage_webhook_url     = var.slack_usage_webhook_url
+  # Each digest links its own report, which is a dashboard generated from the same
+  # catalog entries the digest read.
+  grafana_endpoint = module.managed_grafana_workspace.amg_url
+
+  # The digests land beside every other alert, on the environment's one webhook.
+  slack_webhook_url = var.slack_webhook_url
 }
 
 module "aws_inspector" {

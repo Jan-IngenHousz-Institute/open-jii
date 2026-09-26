@@ -81,10 +81,6 @@ jobs:
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
       TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
       TF_VAR_grafana_auth_service_token: ${{ secrets.GRAFANA_SERVICE_TOKEN }}
-      # Empty webhooks make the digest Lambda log what it would post, so the
-      # monitoring stack applies cleanly before the Slack channels exist.
-      TF_VAR_slack_heartbeat_webhook_url: ${{ secrets.SLACK_HEARTBEAT_WEBHOOK_URL }}
-      TF_VAR_slack_usage_webhook_url: ${{ secrets.SLACK_USAGE_WEBHOOK_URL }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
@@ -166,10 +162,6 @@ jobs:
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
       TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
       TF_VAR_grafana_auth_service_token: ${{ secrets.GRAFANA_SERVICE_TOKEN }}
-      # Empty webhooks make the digest Lambda log what it would post, so the
-      # monitoring stack applies cleanly before the Slack channels exist.
-      TF_VAR_slack_heartbeat_webhook_url: ${{ secrets.SLACK_HEARTBEAT_WEBHOOK_URL }}
-      TF_VAR_slack_usage_webhook_url: ${{ secrets.SLACK_USAGE_WEBHOOK_URL }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6

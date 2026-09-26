@@ -48,7 +48,7 @@ everything, which is a payload-shape problem rather than a delivery one.
 ## Verifying the fix without waiting for a schedule
 
 Drop a hand-written object into the prefix and watch the forwarder log. That exercises the
-notification, the Lambda and the IAM condition in one step, without waiting fifteen minutes for the
+notification, the Lambda and the IAM condition in one step, without waiting half an hour for the
 next scheduled run.
 
 ## Closing

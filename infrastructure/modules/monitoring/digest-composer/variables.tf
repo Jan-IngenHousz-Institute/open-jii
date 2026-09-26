@@ -29,7 +29,7 @@ variable "server_function_name" {
 }
 
 variable "macro_function_names" {
-  description = "Macro sandbox Lambda function names"
+  description = "Sandbox Lambda function names the errors signal covers, macro and calibration"
   type        = list(string)
 }
 
@@ -38,15 +38,8 @@ variable "db_cluster_identifier" {
   type        = string
 }
 
-variable "heartbeat_webhook_url" {
-  description = "Slack incoming webhook the observability digest posts to; empty logs the digest instead"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "usage_webhook_url" {
-  description = "Slack incoming webhook the usage digests post to; empty logs the digest instead"
+variable "slack_webhook_url" {
+  description = "Slack incoming webhook every digest posts to; empty logs the digest instead"
   type        = string
   sensitive   = true
   default     = ""
@@ -63,3 +56,10 @@ variable "log_retention_days" {
   type        = number
   default     = 7
 }
+
+variable "grafana_endpoint" {
+  description = "Grafana workspace URL, so a digest can link the report for its run; empty omits the link"
+  type        = string
+  default     = ""
+}
+

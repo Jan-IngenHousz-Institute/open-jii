@@ -88,9 +88,9 @@ resource "aws_lambda_function" "digest_composer" {
       SERVER_FUNCTION_NAME       = var.server_function_name
       MACRO_FUNCTION_FILTER      = local.macro_function_filter
       DB_CLUSTER_IDENTIFIER      = var.db_cluster_identifier
-      HEARTBEAT_WEBHOOK_URL      = var.heartbeat_webhook_url
-      USAGE_WEBHOOK_URL          = var.usage_webhook_url
+      SLACK_WEBHOOK_URL          = var.slack_webhook_url
       RUNBOOK_BASE_URL           = var.runbook_base_url
+      GRAFANA_ENDPOINT           = var.grafana_endpoint
     }
   }
 

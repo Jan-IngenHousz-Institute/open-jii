@@ -35,23 +35,9 @@ variable "databricks_host" {
 }
 
 variable "slack_webhook_url" {
-  description = "Slack webhook URL for Databricks job notifications"
+  description = "The Slack incoming webhook for this environment: Databricks job events, Grafana alerts and the heartbeat digests"
   type        = string
   sensitive   = true
-}
-
-variable "slack_heartbeat_webhook_url" {
-  description = "Slack incoming webhook for the daily observability digest; empty logs instead of posting"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "slack_usage_webhook_url" {
-  description = "Slack incoming webhook for the usage pulse and weekly note; empty logs instead of posting"
-  type        = string
-  sensitive   = true
-  default     = ""
 }
 
 variable "slack_channel" {
