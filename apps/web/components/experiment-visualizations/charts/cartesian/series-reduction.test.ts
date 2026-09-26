@@ -90,23 +90,31 @@ describe("reduceSeries", () => {
     expect(drawn).toBeLessThanOrEqual(10 * (4 * 200 + 2));
   });
 
-  it("drops the markers once the lines show more points than markers can mark", () => {
+  it("drops the markers once the lines show more points than markers can mark, and says so", () => {
     const x = Array.from({ length: MARKER_POINT_LIMIT + 500 }, (_, i) => i);
     const series = [lineSeries({ x, y: x, mode: "lines+markers", error_y: undefined })];
 
-    const { series: reduced } = reduceSeries(series, positionsOf(series), () => undefined);
+    const { series: reduced, isReduced } = reduceSeries(
+      series,
+      positionsOf(series),
+      () => undefined,
+    );
 
     expect(reduced[0].mode).toBe("lines");
     expect(reduced[0].x).toHaveLength(x.length);
+    expect(isReduced).toBe(true);
   });
 
   it("keeps the markers once a zoom narrows the view to few enough points", () => {
     const x = Array.from({ length: MARKER_POINT_LIMIT + 500 }, (_, i) => i);
     const series = [lineSeries({ x, y: x, mode: "lines+markers", error_y: undefined })];
 
-    const { series: reduced } = reduceSeries(series, positionsOf(series), () => [100, 600]);
+    const { series: reduced, isReduced } = reduceSeries(series, positionsOf(series), () => [
+      100, 600,
+    ]);
 
     expect(reduced[0].mode).toBe("lines+markers");
+    expect(isReduced).toBe(false);
   });
 
   it("leaves a scatter's markers alone however many there are", () => {

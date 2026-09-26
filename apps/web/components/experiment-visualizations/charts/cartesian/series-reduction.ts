@@ -60,8 +60,9 @@ export function rangeEdgePosition(value: unknown): number {
  * Line and area series thinned to what the visible range can show, with every per-point array kept
  * in step. The chart's lines share one bucket budget, so ten lines draw no more than one would. Their
  * markers come from the chart's style, never per point, so only data arrays need thinning, and they
- * are dropped while the lines show more points than markers can mark. Stacked areas stay whole: they
- * stack by index, so thinning each on its own would pair the wrong points.
+ * are dropped while the lines show more points than markers can mark. Dropping them counts as a
+ * reduction, so the chart still offers its own style back. Stacked areas stay whole: they stack by
+ * index, so thinning each on its own would pair the wrong points.
  */
 export function reduceSeries(
   series: CartesianSeries[],
@@ -75,7 +76,6 @@ export function reduceSeries(
     Math.floor(REDUCTION_BUCKETS / Math.max(1, reducibleLines)),
   );
 
-  let isReduced = false;
   let visibleLinePoints = 0;
 
   const reduced = series.map((one, index) => {
@@ -93,22 +93,19 @@ export function reduceSeries(
     const ys = one.y.map((y) => (typeof y === "number" ? y : null));
     const picked = m4Indices(xs, ys, range, bucketsPerLine);
     visibleLinePoints += picked.length;
-    if (picked.length === xs.length) {
-      return one;
-    }
-
-    isReduced = true;
-    return pickPoints(one, picked);
+    return picked.length === xs.length ? one : pickPoints(one, picked);
   });
 
-  const hasRoomForMarkers = visibleLinePoints <= MARKER_POINT_LIMIT;
-  const drawn = hasRoomForMarkers
-    ? reduced
-    : reduced.map((one) =>
+  const isThinned = reduced.some((one, index) => one !== series[index]);
+  const hasMarkedLines = reduced.some((one) => isLine(one) && one.mode === "lines+markers");
+  const isDroppingMarkers = hasMarkedLines && visibleLinePoints > MARKER_POINT_LIMIT;
+  const drawn = isDroppingMarkers
+    ? reduced.map((one) =>
         isLine(one) && one.mode === "lines+markers" ? { ...one, mode: "lines" as const } : one,
-      );
+      )
+    : reduced;
 
-  return { series: drawn, isReduced };
+  return { series: drawn, isReduced: isThinned || isDroppingMarkers };
 }
 
 function pickPoints(series: CartesianSeries, picked: number[]): CartesianSeries {
