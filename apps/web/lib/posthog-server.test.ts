@@ -7,6 +7,7 @@ import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
 
 import {
   isFeatureFlagEnabled,
+  isFeatureFlagEnabledForUser,
   isFeatureFlagEnabledForViewer,
   shutdownPostHog,
 } from "./posthog-server";
@@ -266,6 +267,30 @@ describe("posthog-server", () => {
         FEATURE_FLAGS.MULTI_LANGUAGE,
         "ana@example.com",
         { personProperties: { email: "ana@example.com", organization_ids: "" } },
+      );
+    });
+  });
+
+  describe("isFeatureFlagEnabledForUser", () => {
+    afterEach(() => {
+      listMyOrganizations.mockReset();
+    });
+
+    it("should evaluate the given user without reading the session again", async () => {
+      listMyOrganizations.mockResolvedValue([createMyOrganization({ id: "org-qa" })]);
+      mockPostHogInstance.isFeatureEnabled.mockResolvedValue(true);
+
+      const result = await isFeatureFlagEnabledForUser(FEATURE_FLAGS.CALIBRATION, {
+        id: "user-ana",
+        email: "ana@example.com",
+      });
+
+      expect(result).toBe(true);
+      expect(auth).not.toHaveBeenCalled();
+      expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
+        FEATURE_FLAGS.CALIBRATION,
+        "ana@example.com",
+        { personProperties: { email: "ana@example.com", organization_ids: "org-qa" } },
       );
     });
   });

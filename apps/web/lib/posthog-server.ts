@@ -6,7 +6,7 @@ import { cache } from "react";
 import { auth } from "~/app/actions/auth";
 import { env } from "~/env";
 
-import type { FeatureFlagKey } from "@repo/analytics";
+import type { FeatureFlagKey, FlagUser } from "@repo/analytics";
 import { flagPersonProperties } from "@repo/analytics";
 import {
   initializePostHogServer,
@@ -62,8 +62,23 @@ const fetchMyOrganizationIds = cache(async () => {
 });
 
 /**
- * Check a feature flag as the requesting user: signed in, as the same person the browser and the
- * backend evaluate, with their email and organization memberships; otherwise anonymously
+ * Check a feature flag for the signed-in user making this request, as the same person the browser
+ * and the backend evaluate, with their email and organization memberships
+ */
+export async function isFeatureFlagEnabledForUser(
+  flagKey: FeatureFlagKey,
+  user: FlagUser,
+): Promise<boolean> {
+  const organizationIds = await fetchMyOrganizationIds();
+  return isFeatureFlagEnabled(
+    flagKey,
+    user.email || user.id,
+    flagPersonProperties({ email: user.email, organizationIds }),
+  );
+}
+
+/**
+ * Check a feature flag for whoever is making this request, anonymously when nobody is signed in
  */
 export async function isFeatureFlagEnabledForViewer(flagKey: FeatureFlagKey): Promise<boolean> {
   const session = await auth();
@@ -71,13 +86,7 @@ export async function isFeatureFlagEnabledForViewer(flagKey: FeatureFlagKey): Pr
     return isFeatureFlagEnabled(flagKey);
   }
 
-  const { id, email } = session.user;
-  const organizationIds = await fetchMyOrganizationIds();
-  return isFeatureFlagEnabled(
-    flagKey,
-    email || id,
-    flagPersonProperties({ email, organizationIds }),
-  );
+  return isFeatureFlagEnabledForUser(flagKey, session.user);
 }
 
 /**
