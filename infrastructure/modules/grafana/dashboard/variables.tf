@@ -93,3 +93,20 @@ variable "route53_health_check_id" {
   default     = ""
 }
 
+variable "ingest_lag_threshold_ms" {
+  description = "Iterator age that counts as a stall. Dev's consumer is scheduled rather than continuous, so its normal lag is hours and its tolerance is raised in the env."
+  type        = number
+  default     = 600000
+}
+
+variable "digest_composer_function_name" {
+  description = "Composer Lambda to watch. Empty leaves the self-health rules out entirely."
+  type        = string
+  default     = ""
+}
+
+variable "metrics_forwarder_function_name" {
+  description = "Forwarder Lambda to watch. Empty leaves the self-health rules out entirely."
+  type        = string
+  default     = ""
+}

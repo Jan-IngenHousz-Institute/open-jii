@@ -43,6 +43,27 @@ export function activeSignals(metrics: CatalogMetric[]): CatalogMetric[] {
   return metrics.filter((metric) => metric.active && metric.signal);
 }
 
+/**
+ * Folds an entry's per-environment baseline down to the one this digest should evaluate,
+ * so nothing downstream has to know which environment it is running in.
+ *
+ * Measured in dev: the ingest consumer runs on a schedule, so its iterator age sits near
+ * 2.8M ms and the shared 600000 threshold was above the reading in 315 of 316 hours. An
+ * alert or a digest line that is always on is one nobody reads.
+ */
+export function resolveForEnvironment(
+  metrics: CatalogMetric[],
+  environment: string,
+): CatalogMetric[] {
+  return metrics.map((metric) => {
+    const override = metric.baseline?.per_environment?.[environment];
+    if (override === undefined) {
+      return metric;
+    }
+    return { ...metric, baseline: override };
+  });
+}
+
 export function buildQuery(
   metric: CatalogMetric,
   index: number,
