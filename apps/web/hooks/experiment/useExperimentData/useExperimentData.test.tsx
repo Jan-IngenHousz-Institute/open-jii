@@ -4,7 +4,10 @@ import { renderHook, waitFor } from "@/test/test-utils";
 import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import type { ExperimentData } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import type {
+  ExperimentData,
+  ExperimentDataColumn,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type { ExperimentDataResponse } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { useExperimentData } from "./useExperimentData";
@@ -93,6 +96,45 @@ describe("useExperimentData", () => {
     );
     expect(result.current.tableRows).toEqual(mockExperimentData.rows);
     expect(result.current.error).toBeNull();
+  });
+
+  it("keeps a renamed field's own name and source in the columns the table and pickers read", async () => {
+    const renamedFrom: ExperimentDataColumn["renamedFrom"] = {
+      name: "device",
+      source: "macro_output",
+    };
+    mountData([
+      createExperimentDataTable({
+        name: "test_table",
+        data: {
+          ...mockExperimentData,
+          columns: [
+            ...mockExperimentData.columns,
+            { name: "device_output", type_name: "STRING", type_text: "STRING", renamedFrom },
+          ],
+        },
+      }),
+    ]);
+
+    const { result } = renderHook(() =>
+      useExperimentData({
+        experimentId: "experiment-123",
+        page: 1,
+        pageSize: 20,
+        tableName: "test_table",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.tableMetadata?.rawColumns).toContainEqual({
+      name: "device_output",
+      type_name: "STRING",
+      type_text: "STRING",
+      renamedFrom,
+    });
   });
 
   it("should start in loading state before data arrives", async () => {

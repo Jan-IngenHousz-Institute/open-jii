@@ -38,7 +38,7 @@ The schemas in `experiment_table_metadata` are merged from the `*_schemas` table
 
 Flexible result shapes use Databricks VARIANT values where the protocol or macro output cannot be represented by one rigid relational schema. Stable identifiers remain separate from display labels so renaming a macro does not change the table identity.
 
-The payload tables shred their VARIANT columns (`delta.enableVariantShredding`): fields that recur across rows are stored as columns of their own, so a read that needs one field skips the rest of the payload. Only files written after shredding was enabled are shredded, and `REORG TABLE ... APPLY (SHRED VARIANT)` rewrites the older ones. Every reader needs Databricks Runtime 17.3 or later.
+The payload tables shred their VARIANT columns (`delta.enableVariantShredding`): fields that recur across rows are stored as columns of their own, so a read that needs one field skips the rest of the payload. Only files written after shredding was enabled are shredded. `REORG TABLE ... APPLY (SHRED VARIANT)`, which would rewrite the older ones, is refused on pipeline streaming tables, so those files keep their original layout until something else rewrites them. Every reader needs Databricks Runtime 17.3 or later.
 
 ## Enriched views
 
