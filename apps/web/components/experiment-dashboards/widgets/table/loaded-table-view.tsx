@@ -19,7 +19,7 @@ import { Table, TableBody } from "@repo/ui/components/table";
 
 import { useDashboardFiltersForTable } from "../../dashboard-filters-context";
 import { WidgetEmptyState } from "../shell/widget-empty-state";
-import { projectAndOrderColumns } from "./loaded-table-columns";
+import { projectAndOrderColumns, readColumnsFor } from "./loaded-table-columns";
 import { SkeletonTableHeader } from "./skeleton-table-header";
 import { TablePaginationFooter } from "./table-pagination-footer";
 import { useTableSort } from "./use-table-sort";
@@ -32,6 +32,11 @@ export interface LoadedTableViewProps {
   experimentId: string;
   selectedColumns?: string[];
   widgetFilters?: ExperimentDataFilter[];
+}
+
+/** A read the API refused as malformed, as it does when a column no longer exists. */
+function isBadRequest(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "status" in error && error.status === 400;
 }
 
 export function LoadedTableView({
@@ -63,6 +68,14 @@ export function LoadedTableView({
     setPage(1);
   }, [tableName, pageSize, filtersKey]);
 
+  // Reading only the shown columns spares the warehouse extracting every payload field. A column
+  // the table no longer has fails that read, and from then on the widget reads every column rather
+  // than paying for the failure again on each page.
+  const [isProjectionRejected, setIsProjectionRejected] = useState(false);
+  const readColumns = isProjectionRejected
+    ? undefined
+    : readColumnsFor(selectedColumns, sortColumn, tableMeta?.errorColumn);
+
   const { tableMetadata, tableRows, isLoading, error } = useExperimentData({
     experimentId,
     page,
@@ -73,7 +86,13 @@ export function LoadedTableView({
     formatFunction: formatValue,
     errorColumn: tableMeta?.errorColumn,
     filters: mergedFilters,
+    columns: readColumns,
   });
+
+  const isRejectingProjection = readColumns !== undefined && isBadRequest(error);
+  if (isRejectingProjection) {
+    setIsProjectionRejected(true);
+  }
 
   // Stable ref: while loading `tableRows` is undefined, and a fresh `[]` each
   // render makes react-table's autoReset re-fire forever (microtask loop).

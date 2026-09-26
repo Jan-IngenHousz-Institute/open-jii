@@ -28,6 +28,17 @@ describe("LazyWidget", () => {
     expect(screen.getByTestId("content")).toBeInTheDocument();
   });
 
+  it("starts loading a screen before the card scrolls in", () => {
+    const { rootMargins } = stubIntersectionObserver();
+
+    render(
+      <LazyWidget>
+        <div data-testid="content" />
+      </LazyWidget>,
+    );
+    expect(rootMargins()).toEqual(["100% 0px"]);
+  });
+
   it("renders straight away where IntersectionObserver is unavailable", () => {
     vi.stubGlobal("IntersectionObserver", undefined);
 

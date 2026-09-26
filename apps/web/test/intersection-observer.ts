@@ -5,6 +5,7 @@ type IntersectionCallback = (entries: { isIntersecting: boolean }[]) => void;
 
 interface StubbedObserver {
   callback: IntersectionCallback;
+  options: IntersectionObserverInit | undefined;
   active: boolean;
 }
 
@@ -20,8 +21,8 @@ export function stubIntersectionObserver() {
     "IntersectionObserver",
     class {
       private readonly entry: StubbedObserver;
-      constructor(callback: IntersectionCallback) {
-        this.entry = { callback, active: true };
+      constructor(callback: IntersectionCallback, options?: IntersectionObserverInit) {
+        this.entry = { callback, options, active: true };
         observers.push(this.entry);
       }
       observe = vi.fn();
@@ -40,5 +41,9 @@ export function stubIntersectionObserver() {
       }
     });
   };
-  return { intersect, activeObservers: () => observers.filter((o) => o.active).length };
+  return {
+    intersect,
+    activeObservers: () => observers.filter((o) => o.active).length,
+    rootMargins: () => observers.map((o) => o.options?.rootMargin),
+  };
 }

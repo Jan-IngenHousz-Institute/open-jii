@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { m4Indices } from "./m4";
+import { countInRange, m4Indices } from "./m4";
 
 function series(length: number, y: (i: number) => number | null) {
   const xs = Array.from({ length }, (_, i) => i);
@@ -54,5 +54,15 @@ describe("m4Indices", () => {
     const ys = xs.map(() => 1);
 
     expect(m4Indices(xs, ys, [0, 200], 2)).toHaveLength(xs.length);
+  });
+});
+
+describe("countInRange", () => {
+  it("counts the points inside the range, edges included", () => {
+    expect(countInRange([1, 2, 3, 4, 5], [2, 4])).toBe(3);
+  });
+
+  it("counts every point when the positions do not ascend", () => {
+    expect(countInRange([3, 1, 2], [0, 1])).toBe(3);
   });
 });

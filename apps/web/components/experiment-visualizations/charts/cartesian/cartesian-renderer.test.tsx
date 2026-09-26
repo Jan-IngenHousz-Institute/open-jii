@@ -9,7 +9,7 @@ import { CartesianRenderer } from "./cartesian-renderer";
 
 interface CartesianChartProps {
   config: PlotlyChartConfig;
-  data: { x: unknown[] }[];
+  data: { x: unknown[]; mode?: string }[];
   onRelayout?: (event: Record<string, unknown>) => void;
 }
 
@@ -59,12 +59,50 @@ describe("CartesianRenderer", () => {
     const rowsOf = (count: number) =>
       Array.from({ length: count }, (_, i) => ({ time: i, load: i % 97 }));
 
-    it("escalates a chart past the point threshold to WebGL", () => {
+    it("escalates a chart drawing more markers than SVG handles to WebGL", () => {
+      render(
+        <CartesianRenderer
+          visualization={buildViz({ chartType: "scatter" })}
+          experimentId="exp-1"
+          data={rowsOf(5001)}
+          defaultTraceType="scatter"
+        />,
+      );
+      expect(renderedConfig().useWebGL).toBe(true);
+    });
+
+    it("keeps a long line on SVG, where it is one path however long", () => {
       render(
         <CartesianRenderer
           visualization={buildViz()}
           experimentId="exp-1"
-          data={rowsOf(5001)}
+          data={rowsOf(40_000)}
+          defaultTraceType="line"
+        />,
+      );
+      expect(renderedConfig().useWebGL).toBe(false);
+    });
+
+    it("escalates a long line with error bars, which SVG draws one by one", () => {
+      const viz = buildViz({
+        dataConfig: {
+          tableName: "readings",
+          dataSources: [
+            { tableName: "readings", columnName: "time", role: "x" },
+            { tableName: "readings", columnName: "load", role: "y", errorColumn: "spread" },
+          ],
+        },
+      });
+      const rows = Array.from({ length: 40_000 }, (_, i) => ({
+        time: i,
+        load: Math.sin(i),
+        spread: 1,
+      }));
+      render(
+        <CartesianRenderer
+          visualization={viz}
+          experimentId="exp-1"
+          data={rows}
           defaultTraceType="line"
         />,
       );
@@ -127,6 +165,23 @@ describe("CartesianRenderer", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "charts.drawAtResolution" }));
       expect(renderedProps().data[0].x.length).toBeLessThan(10_000);
+    });
+
+    it("hides the markers of a densely marked line and offers them back", async () => {
+      const viz = buildViz({ config: { ...lineDefaultConfig(), mode: "lines+markers" } });
+      render(
+        <CartesianRenderer
+          visualization={viz}
+          experimentId="exp-1"
+          data={rows.slice(0, 2_500)}
+          defaultTraceType="line"
+        />,
+      );
+      expect(renderedProps().data[0].mode).toBe("lines");
+      expect(screen.getByText("charts.reduced")).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "charts.showAllPoints" }));
+      expect(renderedProps().data[0].mode).toBe("lines+markers");
     });
 
     it("redraws the zoomed range at full detail", () => {

@@ -29,6 +29,25 @@ export function projectAndOrderColumns(
     });
 }
 
+/** The API reads a large table's page in two steps, matched by this column, only when it is read. */
+const ROW_ID = "id";
+
+/**
+ * The columns a page of the widget reads: the ones it shows, plus the columns it sorts by and flags
+ * errors with, and the row id. Nothing selected means every column.
+ */
+export function readColumnsFor(
+  selectedColumns: string[] | undefined,
+  sortColumn: string | undefined,
+  errorColumn: string | undefined,
+): string[] | undefined {
+  if (!selectedColumns || selectedColumns.length === 0) {
+    return undefined;
+  }
+  const needed = [...selectedColumns, sortColumn, errorColumn, ROW_ID];
+  return [...new Set(needed.filter((name): name is string => Boolean(name)))];
+}
+
 function capColumnWidths(columns: SizedColumn[]): SizedColumn[] {
   return columns.map((col) => ({
     ...col,
