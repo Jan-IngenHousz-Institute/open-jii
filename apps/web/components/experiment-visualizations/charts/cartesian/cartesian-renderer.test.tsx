@@ -59,16 +59,28 @@ describe("CartesianRenderer", () => {
     const rowsOf = (count: number) =>
       Array.from({ length: count }, (_, i) => ({ time: i, load: i % 97 }));
 
-    it("escalates a chart past the point threshold to WebGL", () => {
+    it("escalates a chart drawing more markers than SVG handles to WebGL", () => {
+      render(
+        <CartesianRenderer
+          visualization={buildViz({ chartType: "scatter" })}
+          experimentId="exp-1"
+          data={rowsOf(5001)}
+          defaultTraceType="scatter"
+        />,
+      );
+      expect(renderedConfig().useWebGL).toBe(true);
+    });
+
+    it("keeps a long line on SVG, where it is one path however long", () => {
       render(
         <CartesianRenderer
           visualization={buildViz()}
           experimentId="exp-1"
-          data={rowsOf(5001)}
+          data={rowsOf(40_000)}
           defaultTraceType="line"
         />,
       );
-      expect(renderedConfig().useWebGL).toBe(true);
+      expect(renderedConfig().useWebGL).toBe(false);
     });
 
     it("leaves a small chart on SVG", () => {

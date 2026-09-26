@@ -4,8 +4,9 @@ import type { ReactNode } from "react";
 
 import { useInView } from "@repo/ui/hooks/use-in-view";
 
-// Far enough ahead that a widget is usually ready by the time it scrolls in.
-const ROOT_MARGIN = "200px";
+// A screen ahead, since a widget's read and first draw take seconds; any less and it scrolls in
+// blank. Reads are shared per table, so loading early costs few extra statements.
+const ROOT_MARGIN = "100% 0px";
 
 // Fallback for callers with no grid row height to derive one from.
 const DEFAULT_INTRINSIC_HEIGHT = 400;

@@ -27,8 +27,8 @@ interface CartesianRendererProps extends ChartRendererProps {
   supportsSize?: boolean;
 }
 
-// Above this total point count SVG starts to jank and WebGL earns its context.
-const WEBGL_POINT_THRESHOLD = 5000;
+// Above this many markers SVG starts to jank and WebGL earns its context.
+const WEBGL_MARKER_THRESHOLD = 5000;
 
 const NO_ZOOM_READ: ZoomReadPlan = {
   xColumn: "",
@@ -147,11 +147,15 @@ export function CartesianRenderer({
     onToggle: toggleShowingAll,
   };
 
-  // Each gl chart holds scarce browser contexts, so only genuinely large ones
-  // earn them. Nothing in the UI sets `useWebGL` and every chart type's
-  // defaults store `false`, so only an explicit `true` counts as a choice.
-  const totalPoints = reduction.series.reduce((sum, s) => sum + s.y.length, 0);
-  const isLargeChart = totalPoints > WEBGL_POINT_THRESHOLD;
+  // Each gl chart holds scarce browser contexts, so only charts drawing many
+  // markers earn them: SVG makes an element per marker, but a line is one path
+  // however long it is. Nothing in the UI sets `useWebGL` and every chart
+  // type's defaults store `false`, so only an explicit `true` counts as a choice.
+  const markerCount = reduction.series.reduce(
+    (sum, s) => sum + (drawsMarkers(s) ? s.y.length : 0),
+    0,
+  );
+  const isLargeChart = markerCount > WEBGL_MARKER_THRESHOLD;
 
   const effectiveConfig: PlotlyChartConfig = useMemo(
     () => ({
@@ -183,6 +187,12 @@ export function CartesianRenderer({
       </div>
     </ChartFrame>
   );
+}
+
+/** Scatter series draw markers unless told otherwise; lines and areas only when asked. */
+function drawsMarkers(series: CartesianSeries): boolean {
+  const mode = series.mode ?? (series.traceType === "scatter" ? "markers" : "lines");
+  return mode.includes("markers");
 }
 
 /** A series follows its own axis's zoom, or on a grid sharing its x axis, any cell's. */

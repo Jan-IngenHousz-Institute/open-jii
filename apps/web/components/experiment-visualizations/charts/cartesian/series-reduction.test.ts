@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import type { CartesianSeries } from "@repo/ui/components/charts/cartesian-chart";
 
-import { axisPosition, REDUCTION_BUCKETS, reduceSeries } from "./series-reduction";
+import {
+  axisPosition,
+  MARKER_POINT_LIMIT,
+  REDUCTION_BUCKETS,
+  reduceSeries,
+} from "./series-reduction";
 
 const LENGTH = 4 * REDUCTION_BUCKETS * 3;
 
@@ -63,6 +68,56 @@ describe("reduceSeries", () => {
 
     expect(isReduced).toBe(false);
     expect(reduced).toEqual(series);
+  });
+
+  it("shares one bucket budget across a chart's lines, so ten lines draw no more than one", () => {
+    const series = Array.from({ length: 10 }, () =>
+      lineSeries({
+        x: Array.from({ length: 5_900 }, (_, i) => i),
+        y: Array.from({ length: 5_900 }, (_, i) => Math.sin(i)),
+        error_y: undefined,
+      }),
+    );
+
+    const { series: reduced, isReduced } = reduceSeries(
+      series,
+      positionsOf(series),
+      () => undefined,
+    );
+
+    expect(isReduced).toBe(true);
+    const drawn = reduced.reduce((sum, one) => sum + one.x.length, 0);
+    expect(drawn).toBeLessThanOrEqual(10 * (4 * 200 + 2));
+  });
+
+  it("drops the markers once the lines show more points than markers can mark", () => {
+    const x = Array.from({ length: MARKER_POINT_LIMIT + 500 }, (_, i) => i);
+    const series = [lineSeries({ x, y: x, mode: "lines+markers", error_y: undefined })];
+
+    const { series: reduced } = reduceSeries(series, positionsOf(series), () => undefined);
+
+    expect(reduced[0].mode).toBe("lines");
+    expect(reduced[0].x).toHaveLength(x.length);
+  });
+
+  it("keeps the markers once a zoom narrows the view to few enough points", () => {
+    const x = Array.from({ length: MARKER_POINT_LIMIT + 500 }, (_, i) => i);
+    const series = [lineSeries({ x, y: x, mode: "lines+markers", error_y: undefined })];
+
+    const { series: reduced } = reduceSeries(series, positionsOf(series), () => [100, 600]);
+
+    expect(reduced[0].mode).toBe("lines+markers");
+  });
+
+  it("leaves a scatter's markers alone however many there are", () => {
+    const x = Array.from({ length: MARKER_POINT_LIMIT * 3 }, (_, i) => i);
+    const series = [
+      lineSeries({ traceType: "scatter", x, y: x, mode: "markers", error_y: undefined }),
+    ];
+
+    const { series: reduced } = reduceSeries(series, positionsOf(series), () => undefined);
+
+    expect(reduced[0].mode).toBe("markers");
   });
 
   it("orders ISO timestamps by their time", () => {

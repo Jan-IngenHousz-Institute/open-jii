@@ -29,6 +29,22 @@ export function projectAndOrderColumns(
     });
 }
 
+/**
+ * The columns a page of the widget reads: the ones it shows, plus the columns it sorts by and flags
+ * errors with. Nothing selected means every column.
+ */
+export function readColumnsFor(
+  selectedColumns: string[] | undefined,
+  sortColumn: string | undefined,
+  errorColumn: string | undefined,
+): string[] | undefined {
+  if (!selectedColumns || selectedColumns.length === 0) {
+    return undefined;
+  }
+  const needed = [...selectedColumns, sortColumn, errorColumn];
+  return [...new Set(needed.filter((name): name is string => Boolean(name)))];
+}
+
 function capColumnWidths(columns: SizedColumn[]): SizedColumn[] {
   return columns.map((col) => ({
     ...col,
