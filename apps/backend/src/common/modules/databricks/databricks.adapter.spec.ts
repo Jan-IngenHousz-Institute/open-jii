@@ -2684,7 +2684,7 @@ describe("DatabricksAdapter", () => {
       expect(captured.statement).toContain("clean_data");
     });
 
-    it("maps the gold device rows for one experiment, newest report first", async () => {
+    it("reads device counts from the configured serving view, newest report first", async () => {
       const captured: CapturedStatement = {};
       mockGroupSql(
         [
@@ -2737,7 +2737,12 @@ describe("DatabricksAdapter", () => {
           lastReportedAt: "2026-08-17T09:00:00.000Z",
         },
       ]);
-      expect(captured.statement).toContain("experiment_device_data");
+      expect(captured.statement?.match(/\bFROM\s+(\S+)/i)?.[1]).toBe(
+        `${databricksAdapter.CATALOG_NAME}.${databricksAdapter.CENTRUM_SCHEMA_NAME}.${databricksAdapter.DEVICE_DATA_TABLE_NAME}`,
+      );
+      expect(captured.statement).toContain(
+        "WHERE `experiment_id` = '11111111-1111-4111-8111-111111111111'",
+      );
       expect(captured.statement).toContain("ORDER BY `processed_timestamp` DESC");
       expect(captured.statement).toContain("LIMIT 2000");
     });

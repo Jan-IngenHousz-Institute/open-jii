@@ -603,17 +603,15 @@ export class DatabricksAdapter implements ExperimentDatabricksPort {
   }
 
   /**
-   * The gold device table for one experiment: what each device reported about
-   * itself, per firmware version it ran. This is the same source the Devices
-   * tab's metadata came from, so the figures stay identical to what the data
-   * browser showed.
+   * The configured device serving view adds measurement counts to the latest
+   * device attributes.
    */
   async getExperimentDeviceStats(
     experimentId: string,
     limit: number,
   ): Promise<Result<ExperimentDeviceStatsRow[]>> {
     const result = await this.runMonitoringQuery({
-      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.experiment_device_data`,
+      table: `${this.CATALOG_NAME}.${this.CENTRUM_SCHEMA_NAME}.${this.DEVICE_DATA_TABLE_NAME}`,
       columns: [
         "client_id",
         "device_name",
