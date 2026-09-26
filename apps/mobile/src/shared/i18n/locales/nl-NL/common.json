@@ -19,5 +19,22 @@
   "notFoundTitle": "Dit scherm bestaat niet.",
   "notFoundCta": "Ga naar het startscherm!",
   "modalTitle": "Modaal",
-  "modalExample": "Dit is een voorbeeldmodaal. Je kunt het bewerken in app/modal.tsx."
+  "modalExample": "Dit is een voorbeeldmodaal. Je kunt het bewerken in app/modal.tsx.",
+  "qrScanner": {
+    "alignPrompt": "Plaats een QR-code binnen het kader",
+    "matchNote": "De QR-code moet exact overeenkomen met een van de beschikbare opties."
+  },
+  "cameraPermission": {
+    "deniedTitle": "Toestemming uitgeschakeld",
+    "requiredTitle": "Cameratoegang vereist",
+    "deniedMessage": "Cameratoegang is permanent geweigerd. Open de instellingen op je toestel om dit voor openJII in te schakelen.",
+    "requiredMessage": "openJII heeft toegang tot je camera nodig om QR-codes te scannen.",
+    "grant": "Toestemming geven",
+    "openSettings": "Instellingen openen"
+  },
+  "membership": {
+    "member": "Lid geworden",
+    "requested": "Aangevraagd",
+    "private": "Privé"
+  }
 }

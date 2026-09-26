@@ -1,0 +1,20 @@
+{
+  "title": "Ontdekken",
+  "tabs": {
+    "experiments": "Experimenten",
+    "organizations": "Organisaties"
+  },
+  "search": {
+    "placeholder": "Experimenten en organisaties zoeken",
+    "noResults": "Geen experiment past bij je zoekopdracht",
+    "clear": "Zoekopdracht wissen"
+  },
+  "haveCode": "Heb je een deelnamecode?",
+  "haveCodeHint": "Voer hem in of scan de QR-code van je organisator",
+  "empty": "Nog geen openbare experimenten",
+  "loading": "Experimenten laden…",
+  "loadFailed": "Experimenten konden niet worden geladen.",
+  "offline": "Je bent offline. Maak verbinding om experimenten te vinden.",
+  "collaborators_one": "{{count}} deelnemer",
+  "collaborators_other": "{{count}} deelnemers"
+}

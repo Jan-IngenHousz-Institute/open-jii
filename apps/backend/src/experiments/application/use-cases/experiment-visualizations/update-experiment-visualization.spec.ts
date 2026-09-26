@@ -81,6 +81,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: false,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -166,6 +167,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: false,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -220,6 +222,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: false,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -281,6 +284,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           hasArchiveAccess: false,
           isAdmin: false,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -341,6 +345,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: true,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -401,6 +406,7 @@ describe("UpdateExperimentVisualizationUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: false,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 

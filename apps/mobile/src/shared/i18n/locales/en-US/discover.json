@@ -1,0 +1,20 @@
+{
+  "title": "Discover",
+  "tabs": {
+    "experiments": "Experiments",
+    "organizations": "Organizations"
+  },
+  "search": {
+    "placeholder": "Search experiments and organizations",
+    "noResults": "No experiments match",
+    "clear": "Clear search"
+  },
+  "haveCode": "Have a join code?",
+  "haveCodeHint": "Enter it or scan the QR from your organizer",
+  "empty": "No public experiments yet",
+  "loading": "Loading experiments…",
+  "loadFailed": "Could not load experiments.",
+  "offline": "You're offline. Connect to find experiments.",
+  "collaborators_one": "{{count}} collaborator",
+  "collaborators_other": "{{count}} collaborators"
+}

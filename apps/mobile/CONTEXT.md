@@ -130,6 +130,22 @@ The requester's ask to enter a public organization, with an optional message. Cr
 
 ---
 
+## Experiments
+
+### Join code
+
+An organizer-issued bearer code for one public experiment, shown as `XXXX-XXXX` and also printed as a QR. Redeeming it grants Can view — the tier that lets someone measure — with no approval step. One code is active per experiment at a time; it expires on the organizer's chosen preset, or when they revoke or regenerate it. Anyone who already joined keeps their access.
+
+### Experiment membership status
+
+`none | pending_request | member`, carried on experiment list rows and on the access read. `member` means the caller can contribute, not merely read. It is the only source of the caller's join state: no local pending flag, no optimistic flip after joining.
+
+### Discover directory
+
+The paginated `scope: "all"` listing of experiments: everything the caller can read, own experiments first when browsing and by relevance when searching. Searched and paged server-side, never filtered locally.
+
+---
+
 ## Architecture conventions
 
 ### Boundaries

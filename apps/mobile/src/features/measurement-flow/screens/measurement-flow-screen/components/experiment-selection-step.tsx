@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { Search, X } from "lucide-react-native";
 import React, { useMemo } from "react";
 import {
@@ -15,6 +16,7 @@ import { useExperiments } from "~/features/experiments/hooks/use-experiments";
 import { usePrecachedExperimentData } from "~/features/experiments/hooks/use-precached-experiment-data";
 import { useRecentExperimentActivity } from "~/features/experiments/hooks/use-recent-experiment-activity";
 import { useExperimentSelectionStore } from "~/features/experiments/stores/use-experiment-selection-store";
+import { isApiStatus } from "~/features/experiments/utils/api-error";
 import { useExperimentsFlowMeta } from "~/features/measurement-flow/hooks/use-experiments-flow-meta";
 import { useLoadExperimentFlow } from "~/features/measurement-flow/hooks/use-load-experiment-flow";
 import { useFlowAnswersStore } from "~/features/measurement-flow/stores/use-flow-answers-store";
@@ -33,11 +35,12 @@ import { OfflineModeIndicator } from "./offline-mode-indicator";
 export function ExperimentSelectionStep() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
-  const { t } = useTranslation("measurementFlow");
-  const { experiments, isLoading, error, refetch, isRefetching } = useExperiments();
+  const { t } = useTranslation(["measurementFlow", "experiments"]);
+  const { experiments, rows, isLoading, isPaused, error, refetch, isRefetching } = useExperiments();
   const { selectedExperimentId, setSelectedExperimentId } = useExperimentSelectionStore();
   const setExperimentId = useMeasurementFlowStore((s) => s.setExperimentId);
-  const { isReady: experimentFlowReady } = useLoadExperimentFlow(selectedExperimentId);
+  const { isReady: experimentFlowReady, error: flowError } =
+    useLoadExperimentFlow(selectedExperimentId);
   const { clearHistory } = useFlowAnswersStore();
   const { data: precachedData } = usePrecachedExperimentData(selectedExperimentId);
   const { data: connectedDevice } = useConnectedDevice();
@@ -66,6 +69,10 @@ export function ExperimentSelectionStep() {
     );
   }, [sorted, search]);
 
+  // `experiments.length === 0` is also true while the first fetch is paused
+  // offline, so the prompt gates on an actual loaded-empty response instead.
+  const hasNoExperiments = rows?.length === 0 && !isPaused && !error;
+
   const selectedExperiment = experiments.find((e) => e.value === selectedExperimentId);
   const selectedMeta = selectedExperimentId ? flowMeta[selectedExperimentId] : undefined;
   const requiresDevice = !!selectedMeta?.requiresDevice;
@@ -84,10 +91,7 @@ export function ExperimentSelectionStep() {
         <View className="px-4 pb-2 pt-4">
           <View className="flex-row items-start justify-between">
             <View className="flex-1 pr-3">
-              <Text
-                className="text-on-surface"
-                style={{ fontFamily: "Poppins-Bold", fontSize: 22, lineHeight: 26 }}
-              >
+              <Text className="text-on-surface font-poppins-bold text-[22px] leading-[26px]">
                 {t("experimentSelection.heroTitle")}
               </Text>
             </View>
@@ -138,6 +142,20 @@ export function ExperimentSelectionStep() {
             data={filtered}
             keyExtractor={(item) => item.value}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 0 }}
+            ListEmptyComponent={
+              hasNoExperiments ? (
+                <View className="items-center gap-3 py-10">
+                  <Text className="text-muted-body text-center">
+                    {t("measurementFlow:picker.emptyTitle")}
+                  </Text>
+                  <Button
+                    title={t("measurementFlow:picker.emptyAction")}
+                    onPress={() => router.push("/discover")}
+                    variant="light"
+                  />
+                </View>
+              ) : null
+            }
             refreshControl={
               <RefreshControl
                 refreshing={isRefetching}
@@ -183,6 +201,15 @@ export function ExperimentSelectionStep() {
             actionLabel={t("experimentSelection.deviceBannerAction")}
             onAction={() => useDeviceSheetStore.getState().open()}
           />
+        ) : null}
+        {selectedExperimentId && flowError ? (
+          <Text className="text-error text-center text-[12.5px]">
+            {/* A public experiment can pin a private workbook: the read is
+                refused even though the experiment itself is readable. */}
+            {isApiStatus(flowError, 403)
+              ? t("experiments:detail.workbookNotShared")
+              : t("measurementFlow:flowStates.error")}
+          </Text>
         ) : null}
         <Button
           title={

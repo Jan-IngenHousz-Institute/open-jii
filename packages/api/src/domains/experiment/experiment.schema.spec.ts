@@ -113,8 +113,29 @@ describe("Experiment Schema", () => {
     });
 
     it("zExperimentList valid array", () => {
-      const list = [{ ...baseExperiment }, { ...baseExperiment, id: uuidC, name: "Exp 2" }];
+      const list = [
+        { ...baseExperiment, membershipStatus: "none" },
+        { ...baseExperiment, id: uuidC, name: "Exp 2", membershipStatus: "member" },
+      ];
       expect(zExperimentList.parse(list)).toEqual(list);
+    });
+
+    it("zExperimentList rejects a row without membershipStatus", () => {
+      // Required, not optional: a row that dropped the field would render as `none`
+      // and tell a member they are not one.
+      expect(() => zExperimentList.parse([baseExperiment])).toThrow();
+    });
+
+    it("zExperimentList rejects an unknown membershipStatus", () => {
+      expect(() =>
+        zExperimentList.parse([{ ...baseExperiment, membershipStatus: "pending" }]),
+      ).toThrow();
+    });
+
+    it("zExperiment does not carry membershipStatus", () => {
+      // Deliberate: create/update/transfer build this DTO with no caller in hand.
+      const withStatus = { ...baseExperiment, membershipStatus: "member" };
+      expect(zExperiment.parse(withStatus)).toEqual(baseExperiment);
     });
 
     it("zErrorResponse valid", () => {
@@ -151,8 +172,42 @@ describe("Experiment Schema", () => {
           canLeave: false,
           canTransfer: false,
         },
+        membershipStatus: "none",
       };
       expect(zExperimentAccess.parse(access)).toEqual(access);
+    });
+
+    it("zExperimentAccess rejects a payload without membershipStatus", () => {
+      const { membershipStatus: _dropped, ...withoutStatus } = {
+        experiment: {
+          id: uuidA,
+          name: "E1",
+          organizationId: null,
+          description: null,
+          status: "active",
+          visibility: "public",
+          embargoUntil: isoTime,
+          anonymizeContributors: false,
+          workbookId: null,
+          workbookVersionId: null,
+          createdBy: uuidB,
+          createdAt: isoTime,
+          updatedAt: isoTime2,
+        },
+        hasAccess: true,
+        isAdmin: false,
+        capabilities: {
+          canContribute: false,
+          canUpdate: false,
+          canManage: false,
+          canShare: false,
+          canLeave: false,
+          canTransfer: false,
+        },
+        membershipStatus: "none",
+      };
+
+      expect(() => zExperimentAccess.parse(withoutStatus)).toThrow();
     });
   });
 

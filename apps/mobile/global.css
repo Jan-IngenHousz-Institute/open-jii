@@ -157,4 +157,9 @@
   --color-warning: var(--warning);
   --color-error: var(--error);
   --color-info: var(--info);
+
+  /* Loaded by useFonts in src/app/_layout.tsx; registering them here is what
+     lets a heading say font-poppins-bold instead of an inline fontFamily. */
+  --font-poppins-bold: "Poppins-Bold";
+  --font-overpass-bold: "Overpass-Bold";
 }

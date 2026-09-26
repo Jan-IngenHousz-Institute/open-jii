@@ -6,6 +6,7 @@ import { initReactI18next } from "react-i18next";
 import authEn from "./locales/en-US/auth.json";
 import commonEn from "./locales/en-US/common.json";
 import connectionEn from "./locales/en-US/connection.json";
+import discoverEn from "./locales/en-US/discover.json";
 import experimentsEn from "./locales/en-US/experiments.json";
 import forceUpdateEn from "./locales/en-US/force-update.json";
 import homeEn from "./locales/en-US/home.json";
@@ -17,6 +18,7 @@ import whatsNewEn from "./locales/en-US/whats-new.json";
 import authNl from "./locales/nl-NL/auth.json";
 import commonNl from "./locales/nl-NL/common.json";
 import connectionNl from "./locales/nl-NL/connection.json";
+import discoverNl from "./locales/nl-NL/discover.json";
 import experimentsNl from "./locales/nl-NL/experiments.json";
 import forceUpdateNl from "./locales/nl-NL/force-update.json";
 import homeNl from "./locales/nl-NL/home.json";
@@ -45,6 +47,7 @@ const bundledResources = {
     forceUpdate: forceUpdateEn,
     whatsNew: whatsNewEn,
     organizations: organizationsEn,
+    discover: discoverEn,
   },
   "nl-NL": {
     common: commonNl,
@@ -58,6 +61,7 @@ const bundledResources = {
     forceUpdate: forceUpdateNl,
     whatsNew: whatsNewNl,
     organizations: organizationsNl,
+    discover: discoverNl,
   },
 } as const;
 

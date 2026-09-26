@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import type { ResourceCapabilities } from "@repo/api/domains/authorization/capabilities.schema";
+import type { ExperimentMembershipStatus } from "@repo/api/domains/experiment/experiment.schema";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { resolveResourceCapabilities } from "../../../../authorization/resource-capabilities";
@@ -13,6 +14,7 @@ export interface ExperimentAccessDto {
   hasAccess: boolean;
   isAdmin: boolean;
   capabilities: ResourceCapabilities;
+  membershipStatus: ExperimentMembershipStatus;
 }
 
 @Injectable()
@@ -39,7 +41,15 @@ export class GetExperimentAccessUseCase {
     const accessCheckResult = await this.experimentRepository.checkAccess(id, userId);
 
     return accessCheckResult.chain(
-      async ({ experiment, isAdmin }: { experiment: ExperimentDto | null; isAdmin: boolean }) => {
+      async ({
+        experiment,
+        isAdmin,
+        membershipStatus,
+      }: {
+        experiment: ExperimentDto | null;
+        isAdmin: boolean;
+        membershipStatus: ExperimentMembershipStatus;
+      }) => {
         if (!experiment) {
           this.logger.warn({
             msg: "Experiment not found",
@@ -72,6 +82,7 @@ export class GetExperimentAccessUseCase {
           hasAccess: true,
           isAdmin,
           capabilities,
+          membershipStatus,
         };
 
         return success(accessInfo);

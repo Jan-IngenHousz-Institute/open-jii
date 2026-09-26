@@ -67,6 +67,7 @@ describe("GetExperimentAccessUseCase", () => {
           canShare: expect.any(Boolean) as boolean,
           canUpdate: expect.any(Boolean) as boolean,
         }) as unknown,
+        membershipStatus: "member",
       });
     });
 
@@ -103,6 +104,7 @@ describe("GetExperimentAccessUseCase", () => {
           canShare: expect.any(Boolean) as boolean,
           canUpdate: expect.any(Boolean) as boolean,
         }) as unknown,
+        membershipStatus: "member",
       });
     });
 
@@ -136,6 +138,7 @@ describe("GetExperimentAccessUseCase", () => {
           canShare: expect.any(Boolean) as boolean,
           canUpdate: expect.any(Boolean) as boolean,
         }) as unknown,
+        membershipStatus: "member",
       });
     });
 
@@ -169,6 +172,7 @@ describe("GetExperimentAccessUseCase", () => {
           canShare: expect.any(Boolean) as boolean,
           canUpdate: expect.any(Boolean) as boolean,
         }) as unknown,
+        membershipStatus: "member",
       });
     });
 
@@ -205,6 +209,7 @@ describe("GetExperimentAccessUseCase", () => {
           canShare: expect.any(Boolean) as boolean,
           canUpdate: expect.any(Boolean) as boolean,
         }) as unknown,
+        membershipStatus: "none",
       });
     });
 

@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { Building2, ExternalLink, HelpCircle, SlidersHorizontal } from "lucide-react-native";
+import { Compass, ExternalLink, HelpCircle, SlidersHorizontal } from "lucide-react-native";
 import React from "react";
 import { Linking, Text, View } from "react-native";
 import { colors } from "~/shared/constants/colors";
@@ -37,11 +37,11 @@ export function ProfileAccountCard({ onOpenAppSettings }: ProfileAccountCardProp
       </Text>
       <Card padded={false}>
         <RowItem
-          icon={<Building2 size={18} color={colors.jii.darkGreen} />}
+          icon={<Compass size={18} color={colors.jii.darkGreen} />}
           iconBackgroundClassName="bg-jii-mint"
-          title={t("profile:account.organizations")}
-          subtitle={t("profile:account.organizationsSub")}
-          onPress={() => router.push("/organizations")}
+          title={t("profile:account.discover")}
+          subtitle={t("profile:account.discoverSub")}
+          onPress={() => router.push("/discover")}
         />
         <RowItem
           icon={<SlidersHorizontal size={18} color={colors.jii.darkGreen} />}

@@ -483,6 +483,35 @@ export const experimentJoinRequests = pgTable(
   ],
 );
 
+// Experiment Join Codes Table
+export const experimentJoinCodes = pgTable(
+  "experiment_join_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    experimentId: uuid("experiment_id")
+      .references(() => experiments.id, { onDelete: "cascade" })
+      .notNull(),
+    // Normalized 8-glyph value, no hyphen. Plaintext on purpose: the organizer
+    // re-displays it, so a hash would break the product.
+    code: varchar("code", { length: 8 }).notNull(),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    expiresAt: timestamp("expires_at"),
+    revokedAt: timestamp("revoked_at"),
+    redemptionCount: integer("redemption_count").default(0).notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    // Unique across every row, revoked ones included: a code printed for a past
+    // event must never resolve to a different experiment later.
+    uniqueIndex("experiment_join_codes_code_uniq").on(table.code),
+    // At most one live code per experiment; revoked rows are kept for the audit.
+    uniqueIndex("experiment_join_codes_active_uniq")
+      .on(table.experimentId)
+      .where(sql`${table.revokedAt} IS NULL`),
+    index("experiment_join_codes_experiment_idx").on(table.experimentId),
+  ],
+);
+
 // Organization Join Requests Table
 export const organizationJoinRequests = pgTable(
   "organization_join_requests",

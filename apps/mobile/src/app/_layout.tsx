@@ -81,8 +81,10 @@ function RootLayoutNav({ onReadyChange }: { onReadyChange?: (ready: boolean) => 
           name="measurement-flow"
           options={{ headerShown: false, gestureEnabled: false }}
         />
-        <Stack.Screen name="organizations/index" options={{ headerShown: true }} />
         <Stack.Screen name="organizations/[id]" options={{ headerShown: true }} />
+        <Stack.Screen name="discover/index" options={{ headerShown: true }} />
+        <Stack.Screen name="discover/[id]" options={{ headerShown: true }} />
+        <Stack.Screen name="join/[code]" options={{ headerShown: true }} />
       </Stack.Protected>
       <Stack.Protected guard={!isSignedIn}>
         <Stack.Screen name="(auth)/login" options={{ headerShown: false, animation: "none" }} />

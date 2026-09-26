@@ -12,6 +12,7 @@ import { isOnline } from "~/shared/device/is-online";
 import { i18n } from "~/shared/i18n";
 import { createLogger } from "~/shared/observability/logger";
 import { shouldPersistQuery } from "~/shared/ui/persist-query-filter";
+import { queryDefaultOptions } from "~/shared/ui/query-defaults";
 
 const log = createLogger("query-client");
 
@@ -50,18 +51,6 @@ function startConnectivityWatcher() {
   const id = setInterval(() => void checkOnline(), CHECK_INTERVAL);
   return () => clearInterval(id);
 }
-
-const defaultOptions = {
-  queries: {
-    staleTime: 0,
-    gcTime: Infinity,
-    networkMode: "offlineFirst" as const,
-    refetchOnMount: false,
-    refetchOnReconnect: true,
-    refetchOnWindowFocus: false,
-    retry: 1,
-  },
-};
 
 // New key so the fixed build never reads the old unbounded blob (that read is
 // the importArray OOM). retry sheds the oldest query if a write fails.
@@ -107,7 +96,7 @@ export function ConfiguredQueryClientProvider({ children }) {
 
     queryClientRef.current = new QueryClient({
       queryCache,
-      defaultOptions,
+      defaultOptions: queryDefaultOptions,
     });
   }
 
@@ -124,7 +113,10 @@ export function ConfiguredQueryClientProvider({ children }) {
         // previous builds silently persisted none of the oRPC queries.
         // v5: listExperiments moved from the deprecated filter=member input
         // to scope=related, changing its persisted oRPC query key.
-        buster: "v5-experiments-related-scope",
+        // v6: related rows gained membershipStatus, so the stored row shape
+        // changed; the filter also stopped admitting any other listExperiments
+        // input, so a previously persisted paged blob must not be read back.
+        buster: "v6-experiments-membership-status",
         dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
       }}
     >
