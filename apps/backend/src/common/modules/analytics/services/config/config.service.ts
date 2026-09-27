@@ -27,6 +27,7 @@ export class AnalyticsConfigService {
     return {
       posthogKey: this.configService.getOrThrow("analytics.posthogKey"),
       posthogHost: this.configService.getOrThrow("analytics.posthogHost"),
+      environment: this.configService.get<string>("analytics.environment"),
     };
   }
 
@@ -69,6 +70,13 @@ export class AnalyticsConfigService {
   }
 
   /**
+   * The environment every reported error is tagged with; a run without ENVIRONMENT_PREFIX is local
+   */
+  get environment(): string {
+    return this.config.environment ?? "local";
+  }
+
+  /**
    * Checks if PostHog is configured with a valid API key
    */
   isConfigured(): boolean {
@@ -83,6 +91,7 @@ export class AnalyticsConfigService {
    * Gets PostHog server configuration
    */
   getPostHogServerConfig() {
-    return createPostHogServerConfig(this.config.posthogHost);
+    // Crashes outside a request never reach the exception filter.
+    return createPostHogServerConfig(this.config.posthogHost, { enableExceptionAutocapture: true });
   }
 }

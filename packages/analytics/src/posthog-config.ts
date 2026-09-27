@@ -17,6 +17,9 @@ export interface PostHogConfig {
   [key: string]: unknown;
 }
 
+/** The `service` property every app puts on its events, so one project can tell them apart. */
+export type PostHogService = "web" | "backend" | "mobile";
+
 /**
  * PostHog configuration interface for environment variables
  */
@@ -55,6 +58,8 @@ export interface PostHogServerConfig {
   host: string;
   flushAt?: number; // Batch events before sending
   flushInterval?: number; // Flush interval in milliseconds
+  // Reports an uncaught exception, flushes, then exits as Node would have.
+  enableExceptionAutocapture?: boolean;
 }
 
 /**
@@ -68,5 +73,6 @@ export function createPostHogServerConfig(
     host,
     flushAt: options?.flushAt ?? 20,
     flushInterval: options?.flushInterval ?? 10000,
+    enableExceptionAutocapture: options?.enableExceptionAutocapture ?? false,
   };
 }

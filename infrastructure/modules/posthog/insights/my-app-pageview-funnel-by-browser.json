@@ -1,0 +1,47 @@
+{
+  "kind": "InsightVizNode",
+  "source": {
+    "breakdownFilter": {
+      "breakdown": "$browser",
+      "breakdown_type": "event"
+    },
+    "dateRange": {
+      "date_from": "-7d",
+      "explicitDate": false
+    },
+    "filterTestAccounts": false,
+    "funnelsFilter": {
+      "breakdownAttributionType": "first_touch",
+      "exclusions": [],
+      "funnelOrderType": "ordered",
+      "funnelStepReference": "total",
+      "funnelVizType": "steps",
+      "funnelWindowInterval": 14,
+      "funnelWindowIntervalUnit": "day",
+      "layout": "horizontal"
+    },
+    "interval": "day",
+    "kind": "FunnelsQuery",
+    "properties": [],
+    "series": [
+      {
+        "custom_name": "First page view",
+        "event": "$pageview",
+        "kind": "EventsNode",
+        "name": "$pageview"
+      },
+      {
+        "custom_name": "Second page view",
+        "event": "$pageview",
+        "kind": "EventsNode",
+        "name": "$pageview"
+      },
+      {
+        "custom_name": "Third page view",
+        "event": "$pageview",
+        "kind": "EventsNode",
+        "name": "$pageview"
+      }
+    ]
+  }
+}

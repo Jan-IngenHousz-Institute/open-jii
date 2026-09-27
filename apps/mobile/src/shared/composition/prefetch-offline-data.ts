@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { orpc } from "~/shared/api/orpc";
 import { createLogger } from "~/shared/observability/logger";
+import { trackProductEvent } from "~/shared/observability/product-events";
 
 import { listItems } from "@repo/api/shared/listing";
 
@@ -29,10 +30,15 @@ export async function prefetchOfflineData(
       // Only a fully-successful run counts as "recent"; a partial run stays
       // eligible for an immediate retry on the next reconnect/foreground.
       if (failures === 0) lastRunAt = Date.now();
+      trackProductEvent("offline_data:prefetch_finish", {
+        status: failures === 0 ? "ok" : "partial",
+        failures,
+      });
     } catch (err) {
       log.error("Failed to prefetch offline data", {
         err: err instanceof Error ? err.message : String(err),
       });
+      trackProductEvent("offline_data:prefetch_finish", { status: "failed", failures: 0 });
     } finally {
       inFlight = null;
     }

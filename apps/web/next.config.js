@@ -53,6 +53,9 @@ const nextConfig = {
 
   // Externalize posthog-node for server-side only
   serverExternalPackages: ["posthog-node"],
+
+  // For PostHog error tracking; the deploy uploads them and removes them before publishing assets.
+  productionBrowserSourceMaps: true,
 };
 
 export default nextConfig;

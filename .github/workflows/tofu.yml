@@ -81,6 +81,7 @@ jobs:
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
       TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
       TF_VAR_grafana_auth_service_token: ${{ secrets.GRAFANA_SERVICE_TOKEN }}
+      TF_VAR_posthog_tofu_api_key: ${{ secrets.POSTHOG_TOFU_API_KEY }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
@@ -162,6 +163,7 @@ jobs:
       TF_VAR_kinesis_credential_id: ${{ secrets.KINESIS_CREDENTIAL_ID }}
       TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
       TF_VAR_grafana_auth_service_token: ${{ secrets.GRAFANA_SERVICE_TOKEN }}
+      TF_VAR_posthog_tofu_api_key: ${{ secrets.POSTHOG_TOFU_API_KEY }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6

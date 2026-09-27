@@ -53,6 +53,23 @@ describe("orpc-fp", () => {
       expect(warnSpy).not.toHaveBeenCalled();
     });
 
+    it("keeps what it logged on the error for the report, without sending it to the client", () => {
+      const error = AppError.internal("Server error", "SERVER_ERROR", { detail: "test" });
+
+      const thrown = captureOrpcError(() =>
+        throwOrpcError(error, logger, "getExperimentData", "ExperimentDataController"),
+      );
+
+      expect(thrown.cause).toEqual({
+        msg: "Server error",
+        errorCode: "SERVER_ERROR",
+        operation: "getExperimentData",
+        context: "ExperimentDataController",
+        details: { detail: "test" },
+      });
+      expect(JSON.stringify(thrown.toJSON())).not.toContain("getExperimentData");
+    });
+
     it("maps a client error to the matching ORPCError code and logs at warn level", () => {
       const error = AppError.badRequest("Bad request", "BAD_REQUEST", { detail: "test" });
 

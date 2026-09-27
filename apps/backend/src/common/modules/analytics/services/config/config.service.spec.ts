@@ -50,6 +50,7 @@ describe("AnalyticsConfigService", () => {
           if (key === "analytics.posthogHost") return "https://eu.i.posthog.com";
           throw new Error(`Unknown config key: ${key}`);
         }),
+        get: vi.fn(() => undefined),
       } as unknown as ConfigService;
 
       const testService = new AnalyticsConfigService(mockConfigService);
@@ -63,6 +64,7 @@ describe("AnalyticsConfigService", () => {
           if (key === "analytics.posthogHost") return "https://eu.i.posthog.com";
           throw new Error(`Unknown config key: ${key}`);
         }),
+        get: vi.fn(() => undefined),
       } as unknown as ConfigService;
 
       const testService = new AnalyticsConfigService(mockConfigService);
@@ -87,6 +89,7 @@ describe("AnalyticsConfigService", () => {
           if (key === "analytics.posthogHost") return "not-a-url";
           throw new Error(`Unknown config key: ${key}`);
         }),
+        get: vi.fn(() => undefined),
       } as unknown as ConfigService;
 
       expect(() => {

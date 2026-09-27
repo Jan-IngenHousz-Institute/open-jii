@@ -1,0 +1,35 @@
+{
+  "kind": "InsightVizNode",
+  "source": {
+    "breakdownFilter": {
+      "breakdown": "$referring_domain",
+      "breakdown_type": "event"
+    },
+    "dateRange": {
+      "date_from": "-14d",
+      "explicitDate": false
+    },
+    "filterTestAccounts": false,
+    "interval": "day",
+    "kind": "TrendsQuery",
+    "properties": [],
+    "series": [
+      {
+        "event": "$pageview",
+        "kind": "EventsNode",
+        "math": "dau",
+        "name": "$pageview"
+      }
+    ],
+    "trendsFilter": {
+      "aggregationAxisFormat": "numeric",
+      "display": "ActionsBarValue",
+      "showAlertThresholdLines": false,
+      "showLegend": false,
+      "showPercentStackView": false,
+      "showValuesOnSeries": false,
+      "smoothingIntervals": 1,
+      "yAxisScaleType": "linear"
+    }
+  }
+}

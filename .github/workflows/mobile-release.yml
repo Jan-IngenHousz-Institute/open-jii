@@ -126,6 +126,23 @@ jobs:
             --message "mobile-v${{ steps.version.outputs.version }}" \
             --non-interactive
 
+      # PostHog maps this update's minified stack traces back to source with these maps. A PostHog
+      # outage or a missing key must not block a release, so the step never fails the job.
+      - name: Upload OTA Source Maps to PostHog
+        if: steps.decide.outputs.mode == 'ota'
+        continue-on-error: true
+        working-directory: apps/mobile
+        env:
+          POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_CLI_API_KEY }}
+          POSTHOG_CLI_PROJECT_ID: "80726"
+          POSTHOG_CLI_HOST: https://eu.posthog.com
+        run: |
+          if [[ -z "${POSTHOG_CLI_API_KEY}" ]]; then
+            echo "POSTHOG_CLI_API_KEY is not set; skipping the source map upload"
+            exit 0
+          fi
+          pnpm dlx @posthog/cli@0.18.7 hermes upload --directory dist
+
       - name: Job summary
         env:
           RESOLVED_NOTES: ${{ steps.release-notes.outputs.notes }}

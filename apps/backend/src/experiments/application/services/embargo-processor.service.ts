@@ -1,14 +1,20 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
 import { ErrorCodes } from "../../../common/utils/error-codes";
+import { ANALYTICS_PORT } from "../../core/ports/analytics.port";
+import type { AnalyticsPort } from "../../core/ports/analytics.port";
 import { ExperimentRepository } from "../../core/repositories/experiment.repository";
 
 @Injectable()
 export class EmbargoProcessorService {
   private readonly logger = new Logger(EmbargoProcessorService.name);
 
-  constructor(private readonly experimentRepository: ExperimentRepository) {}
+  constructor(
+    private readonly experimentRepository: ExperimentRepository,
+    @Inject(ANALYTICS_PORT)
+    private readonly analyticsPort: AnalyticsPort,
+  ) {}
 
   /**
    * Runs every day at midnight UTC to process expired embargoes
@@ -34,6 +40,7 @@ export class EmbargoProcessorService {
           operation: "processExpiredEmbargoes",
           error: expiredExperimentsResult.error,
         });
+        this.reportFailure(expiredExperimentsResult.error, { stage: "find" });
         return;
       }
 
@@ -57,6 +64,7 @@ export class EmbargoProcessorService {
       // Process each expired experiment
       let successCount = 0;
       let failureCount = 0;
+      let firstFailure: unknown = null;
 
       for (const experiment of experiments) {
         const updateResult = await this.experimentRepository.update(experiment.id, {
@@ -73,6 +81,7 @@ export class EmbargoProcessorService {
           });
         } else {
           failureCount++;
+          firstFailure ??= updateResult.error;
           this.logger.error({
             msg: "Failed to update experiment embargo",
             errorCode: ErrorCodes.EMBARGO_PROCESSING_FAILED,
@@ -90,6 +99,11 @@ export class EmbargoProcessorService {
         successCount,
         failureCount,
       });
+
+      // One report per run, so a table-wide failure is one alert rather than one per experiment.
+      if (firstFailure !== null) {
+        this.reportFailure(firstFailure, { stage: "update", failure_count: failureCount });
+      }
     } catch (error) {
       this.logger.error({
         msg: "Unexpected error during embargo processing",
@@ -97,7 +111,17 @@ export class EmbargoProcessorService {
         operation: "processExpiredEmbargoes",
         error,
       });
+      this.reportFailure(error, { stage: "unexpected" });
     }
+  }
+
+  private reportFailure(error: unknown, properties: Record<string, unknown>): void {
+    this.analyticsPort.reportError(error, {
+      ...properties,
+      operation: "processExpiredEmbargoes",
+      error_code: ErrorCodes.EMBARGO_PROCESSING_FAILED,
+      $exception_fingerprint: `embargo:${String(properties.stage)}`,
+    });
   }
 
   /**

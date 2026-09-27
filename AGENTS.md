@@ -45,6 +45,8 @@ The platform UI is auth-gated, so a real check needs Postgres and the backend, n
 - `pnpm linear:auth` stores your Linear key in the owner-only `tooling/devkit/.env`;
   `pnpm linear:query` and the other `linear:*` commands read it in process, so the key never enters
   a shell. `tooling/devkit/README.md` has the one-time setup a person follows.
+- `pnpm posthog:auth` does the same for a PostHog key; `pnpm posthog:query` runs HogQL and
+  `pnpm posthog:issues` lists, shows and triages error-tracking issues.
 
 Copy `apps/backend/.env.example` to `apps/backend/.env` before first boot. It is generated and
 boot-tested, and its comments mark the variables where a plausible dummy value is **worse** than

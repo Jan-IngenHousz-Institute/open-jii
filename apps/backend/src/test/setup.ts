@@ -1,6 +1,8 @@
 import { config } from "dotenv";
 import { resolve } from "path";
 
+import type * as AnalyticsServer from "@repo/analytics/server";
+
 // Setup environment variables for tests FIRST before any other imports
 config({ path: resolve(__dirname, "../../.env.test") });
 
@@ -43,8 +45,9 @@ vi.mock("@repo/transactional/render/project-transfer-complete", () => ({
 }));
 
 // Mock analytics server
-vi.mock("@repo/analytics/server", () => ({
+vi.mock("@repo/analytics/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof AnalyticsServer>()),
   initializePostHogServer: vi.fn(),
-  getPostHogServerClient: vi.fn(),
+  getPostHogServerClient: vi.fn(() => null),
   shutdownPostHog: vi.fn(),
 }));

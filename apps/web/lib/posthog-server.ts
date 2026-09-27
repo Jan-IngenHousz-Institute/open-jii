@@ -6,8 +6,10 @@ import { env } from "~/env";
 
 import type { FeatureFlagKey } from "@repo/analytics";
 import {
+  getPostHogServerClient,
   initializePostHogServer,
   isFeatureFlagEnabled as isFeatureFlagEnabledBase,
+  reportException,
   shutdownPostHog as shutdownPostHogBase,
 } from "@repo/analytics/server";
 
@@ -42,6 +44,23 @@ export async function isFeatureFlagEnabled(
 ): Promise<boolean> {
   await ensureInitialized();
   return isFeatureFlagEnabledBase(flagKey, distinctId);
+}
+
+/**
+ * Report a server-side error to PostHog error tracking. Sent before resolving, since the Lambda
+ * that renders the page is frozen once it responds.
+ */
+export async function reportServerError(
+  error: unknown,
+  properties: Record<string, unknown>,
+): Promise<void> {
+  await ensureInitialized();
+  await reportException(getPostHogServerClient(), error, {
+    service: "web",
+    environment: env.NEXT_PUBLIC_ENVIRONMENT,
+    properties,
+    immediate: true,
+  });
 }
 
 /**

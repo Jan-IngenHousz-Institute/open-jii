@@ -6,6 +6,7 @@ import { z } from "zod";
 export const analyticsConfigSchema = z.object({
   posthogKey: z.string().optional(),
   posthogHost: z.string().url(),
+  environment: z.string().optional(),
 });
 
 export type AnalyticsConfig = z.infer<typeof analyticsConfigSchema>;

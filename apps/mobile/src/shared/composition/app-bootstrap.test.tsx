@@ -18,6 +18,9 @@ vi.mock("~/shared/db/measurements-backfill", () => ({
 vi.mock("~/features/recent-measurements/services/outbox-to-query-cache-bridge", () => ({
   mountOutboxBridge: () => () => undefined,
 }));
+vi.mock("./upload-analytics", () => ({
+  mountUploadAnalytics: () => () => undefined,
+}));
 vi.mock("~/features/connection/services/connection-lifecycle", () => ({
   mountConnectionLifecycle: () => () => undefined,
 }));

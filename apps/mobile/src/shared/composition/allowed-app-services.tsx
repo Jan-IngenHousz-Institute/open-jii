@@ -7,6 +7,7 @@ import { TimeSyncProvider } from "~/shared/ui/time-sync-provider";
 
 import { AppBootstrap } from "./app-bootstrap";
 import { OfflineDataSync } from "./offline-data-sync";
+import { PostHogSession } from "./posthog-session";
 
 // App services that must NOT start while the force-update gate blocks the
 // app: analytics, OTA prompts, time sync, the outbox/connection wiring, and
@@ -16,6 +17,7 @@ export function AllowedAppServices({ children }: { children: ReactNode }) {
 
   return (
     <PostHogProvider>
+      <PostHogSession />
       <TimeSyncProvider>
         <AppBootstrap />
         <OfflineDataSync />

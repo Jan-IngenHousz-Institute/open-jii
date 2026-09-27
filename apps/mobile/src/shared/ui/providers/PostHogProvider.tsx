@@ -26,7 +26,7 @@ export function PostHogProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       // A misconfigured build must not crash the app, but a failed init must
       // be loud: the previous silent catch hid weeks of missing telemetry.
-      log.error("posthog init failed", { err: (err as Error)?.message });
+      log.error("posthog init failed", { err: err instanceof Error ? err.message : String(err) });
     }
   }, [envLoaded]);
 

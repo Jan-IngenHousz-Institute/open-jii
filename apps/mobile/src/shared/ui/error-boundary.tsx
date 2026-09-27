@@ -21,8 +21,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
+    // The boundary catches the error, so nothing else reports it; the Error keeps its real stack.
     log.error("render error", {
-      message: error.message,
+      err: error,
       stack: error.stack,
       componentStack: info.componentStack,
     });
@@ -91,6 +92,8 @@ export function installGlobalErrorHandlers() {
         isFatal,
         message: error?.message,
         stack: error?.stack,
+        // PostHog's own uncaught-exception capture reports it; the log line keeps the context.
+        report: false,
       });
       previous(error, isFatal);
     });
@@ -116,6 +119,8 @@ export function installGlobalErrorHandlers() {
         id,
         message: e?.message ?? String(error),
         stack: e?.stack,
+        // PostHog's own unhandled-rejection capture reports it.
+        report: false,
       });
     },
     onHandled: (id) => {

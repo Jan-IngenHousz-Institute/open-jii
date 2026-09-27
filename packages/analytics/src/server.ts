@@ -1,13 +1,31 @@
 import type { FeatureFlagKey } from "./feature-flags";
 import { FEATURE_FLAG_DEFAULTS } from "./feature-flags";
-import type { PostHogServerConfig } from "./posthog-config";
+import type { PostHogServerConfig, PostHogService } from "./posthog-config";
 
 /**
  * PostHog server client interface
  * This is a minimal interface to avoid direct dependency on posthog-node
  */
-interface PostHogServerClient {
+export interface PostHogServerClient {
   isFeatureEnabled(flagKey: string, distinctId: string): Promise<boolean | undefined>;
+  captureException(
+    error: unknown,
+    distinctId?: string,
+    additionalProperties?: Record<string, unknown>,
+  ): void;
+  // Sends before resolving, for serverless code that is frozen once it responds.
+  captureExceptionImmediate(
+    error: unknown,
+    distinctId?: string,
+    additionalProperties?: Record<string, unknown>,
+  ): Promise<void>;
+  // Everything captured while `fn` runs, across awaits, inherits this distinct id.
+  withContext<T>(
+    data: { distinctId?: string; properties?: Record<string, unknown> },
+    fn: () => T,
+    options?: { fresh?: boolean },
+  ): T;
+  getContext(): { distinctId?: string } | undefined;
   shutdown(): Promise<void>;
 }
 
@@ -71,6 +89,52 @@ export async function isFeatureFlagEnabled(
   } catch (error) {
     console.error(`[PostHog] Error checking feature flag ${flagKey}:`, error);
     return FEATURE_FLAG_DEFAULTS[flagKey];
+  }
+}
+
+export interface ExceptionReport {
+  service: PostHogService;
+  environment: string;
+  distinctId?: string;
+  properties?: Record<string, unknown>;
+  // For code frozen once it responds, such as a Lambda, which cannot wait for a batched flush.
+  immediate?: boolean;
+}
+
+/**
+ * Sends a server error to PostHog error tracking, tagged with the service and environment it came
+ * from. It never throws, so a PostHog outage cannot change the response the error belongs to.
+ */
+export async function reportException(
+  client: PostHogServerClient | null,
+  error: unknown,
+  report: ExceptionReport,
+): Promise<void> {
+  if (client === null) {
+    return;
+  }
+
+  // Counted per user when the user is known, but never creates or updates a person.
+  const properties = {
+    ...report.properties,
+    environment: report.environment,
+    service: report.service,
+    $process_person_profile: false,
+  };
+
+  try {
+    // Without a user, posthog-node would give every report a fresh id and count each as another
+    // user, so errors nobody is signed in for share one id per service.
+    const distinctId =
+      report.distinctId ?? client.getContext()?.distinctId ?? `${report.service}-server`;
+
+    if (report.immediate) {
+      await client.captureExceptionImmediate(error, distinctId, properties);
+    } else {
+      client.captureException(error, distinctId, properties);
+    }
+  } catch (failure) {
+    console.error("[PostHog] Could not report an error:", failure);
   }
 }
 

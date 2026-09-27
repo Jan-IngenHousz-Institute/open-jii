@@ -33,6 +33,10 @@ export interface SettledItem {
   status: SettledStatus;
   /** Why it failed, so a live list can explain a row without re-reading it. */
   reason?: string;
+  /** Which transport carried it, when the attempt got that far. */
+  route?: "mqtt" | "s3";
+  /** Whether a failure was final at once or only after every retry. */
+  stage?: "terminal" | "retries_exhausted";
 }
 
 export interface OutboxSnapshot {
@@ -147,7 +151,7 @@ class OutboxImpl implements Outbox {
         const kind = errorKind(err);
         log.error("worker exhausted retries - marking failed", { id, kind, err: err.message });
         getTrace(id)?.end("error", { err: err.message, kind, closed_by: "retry_exhausted" });
-        this.scheduleSettled({ id, status: "failed", reason: kind });
+        this.scheduleSettled({ id, status: "failed", reason: kind, stage: "retries_exhausted" });
         void this.markFailedAfterExhaustion(id, kind);
       },
       onSettled: (id) => {
@@ -397,7 +401,7 @@ class OutboxImpl implements Outbox {
           err: (dbErr as Error)?.message,
         });
       }
-      this.scheduleSettled({ id, status: "failed", reason: kind });
+      this.scheduleSettled({ id, status: "failed", reason: kind, route, stage: "terminal" });
       trace?.event("marked_failed", { kind });
       trace?.end("error", { err: (err as Error)?.message, kind });
       return;
@@ -417,7 +421,7 @@ class OutboxImpl implements Outbox {
       });
       trace?.event("mark_successful_failed", { err: (dbErr as Error)?.message });
     }
-    this.scheduleSettled({ id, status: "successful" });
+    this.scheduleSettled({ id, status: "successful", route });
     log.debug("publish ok", { id });
     trace?.end("ok");
   }

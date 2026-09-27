@@ -6,23 +6,23 @@ import { useEffect } from "react";
 import { useSession } from "@repo/auth/client";
 
 /**
- * Hook to identify the current user with PostHog analytics
- * Automatically identifies users when they log in and resets when they log out
+ * Names the signed-in user by id, as the phone app does, so one researcher is one person; the email
+ * stays as a property because flag cohorts and the internal-user filter match on it.
  */
 export function usePostHogAuth() {
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
 
   useEffect(() => {
-    if (session?.user.email) {
-      posthog.identify(session.user.email, {
-        email: session.user.email,
-        name: session.user.name,
-      });
-    } else if (session === null) {
-      // Session is null means unauthenticated (undefined means loading)
+    if (isPending) {
+      return;
+    }
+
+    if (session) {
+      posthog.identify(session.user.id, { email: session.user.email });
+    } else {
       posthog.reset();
     }
-  }, [session]);
+  }, [session, isPending]);
 }
 
 /**

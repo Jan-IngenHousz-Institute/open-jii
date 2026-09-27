@@ -1,12 +1,13 @@
-import { Logger, Module } from "@nestjs/common";
+import { Module } from "@nestjs/common";
 import type { MiddlewareConsumer, NestModule } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { APP_GUARD } from "@nestjs/core";
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { ORPCError, ORPCModule } from "@orpc/nest";
 import { experimental_RethrowHandlerPlugin as RethrowHandlerPlugin } from "@orpc/server/plugins";
 import { AuthGuard, AuthModule as BetterAuthModule } from "@thallesp/nestjs-better-auth";
+import { randomUUID } from "crypto";
 import { LoggerModule } from "nestjs-pino";
 
 import { pinoConfig } from "@repo/analytics";
@@ -23,7 +24,9 @@ import mailchimpConfig from "./common/config/mailchimp.config";
 import { DatabaseModule } from "./common/database/database.module";
 import { CompressionMiddleware } from "./common/middleware/compression.middleware";
 import { AnalyticsModule } from "./common/modules/analytics/analytics.module";
-import { createOrpcErrorLoggingInterceptor } from "./common/utils/orpc-error-logging";
+import { ErrorContextInterceptor } from "./common/modules/analytics/services/errors/error-context.interceptor";
+import { ErrorReportingFilter } from "./common/modules/analytics/services/errors/error-reporting.filter";
+import { OrpcErrorInterceptor } from "./common/modules/analytics/services/errors/orpc-error.interceptor";
 import { ExperimentModule } from "./experiments/experiment.module";
 import { HealthModule } from "./health/health.module";
 import { IotModule } from "./iot/iot.module";
@@ -37,8 +40,6 @@ import { SharingModule } from "./sharing/sharing.module";
 import { UserModule } from "./users/user.module";
 import { VisibilityModule } from "./visibility/visibility.module";
 import { WorkbookModule } from "./workbooks/workbook.module";
-
-const orpcLogger = new Logger("ORPC");
 
 @Module({
   imports: [
@@ -59,14 +60,24 @@ const orpcLogger = new Logger("ORPC");
         ...pinoConfig,
         name: "backend",
         autoLogging: false,
+        // The load balancer's trace id when there is one, so a request is one id across tasks, its
+        // log lines and its error report.
+        genReqId: (request) => {
+          const traceId = request.headers["x-amzn-trace-id"];
+          return typeof traceId === "string" ? traceId : randomUUID();
+        },
       },
     }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
     BetterAuthModule.forRoot({ auth }),
-    ORPCModule.forRoot({
-      interceptors: [createOrpcErrorLoggingInterceptor(orpcLogger)],
-      plugins: [new RethrowHandlerPlugin({ filter: (error) => !(error instanceof ORPCError) })],
+    ORPCModule.forRootAsync({
+      imports: [AnalyticsModule],
+      inject: [OrpcErrorInterceptor],
+      useFactory: (errors: OrpcErrorInterceptor) => ({
+        interceptors: [errors.intercept],
+        plugins: [new RethrowHandlerPlugin({ filter: (error) => !(error instanceof ORPCError) })],
+      }),
     }),
     AnalyticsModule,
     AuthorizationModule,
@@ -89,6 +100,14 @@ const orpcLogger = new Logger("ORPC");
     {
       provide: APP_GUARD,
       useClass: AuthGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ErrorContextInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: ErrorReportingFilter,
     },
   ],
 })

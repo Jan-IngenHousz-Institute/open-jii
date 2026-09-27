@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { reportServerError } from "./posthog-server";
+
 /**
  * Wraps a CMS-backed `generateMetadata` so a Contentful outage degrades to the
  * root layout's fallback metadata instead of throwing.
@@ -14,6 +16,8 @@ export async function safeMetadata(build: () => Promise<Metadata>): Promise<Meta
     return await build();
   } catch (error) {
     console.error("generateMetadata failed; falling back to default metadata:", error);
+    // The fallback hides the failure from every error hook, so it is reported here.
+    await reportServerError(error, { operation: "generateMetadata" });
     return {};
   }
 }

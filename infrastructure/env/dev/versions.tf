@@ -15,6 +15,11 @@ terraform {
       source  = "grafana/grafana"
       version = ">= 4.2.1"
     }
+
+    posthog = {
+      source  = "posthog/posthog"
+      version = ">= 1.0.21"
+    }
   }
 }
 
@@ -50,4 +55,11 @@ provider "grafana" {
   alias = "amg"
   url   = module.managed_grafana_workspace.amg_url
   auth  = var.grafana_auth_service_token
+}
+
+# The one openJII project, which every environment shares; posthog.tf says why it is applied here.
+provider "posthog" {
+  host       = "https://eu.posthog.com"
+  project_id = "80726"
+  api_key    = var.posthog_tofu_api_key
 }

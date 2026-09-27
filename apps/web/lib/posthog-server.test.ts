@@ -3,19 +3,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
 
-import { isFeatureFlagEnabled, shutdownPostHog } from "./posthog-server";
+import { isFeatureFlagEnabled, reportServerError, shutdownPostHog } from "./posthog-server";
 
 // Mock the env module
 vi.mock("~/env", () => ({
   env: {
     NEXT_PUBLIC_POSTHOG_KEY: "phc_test_key_123",
     NEXT_PUBLIC_POSTHOG_HOST: "https://eu.i.posthog.com",
+    NEXT_PUBLIC_ENVIRONMENT: "dev",
   },
 }));
 
 // Mock posthog-node - create mock instance outside so it's consistent
 const mockPostHogInstance = {
   isFeatureEnabled: vi.fn(),
+  captureExceptionImmediate: vi.fn(),
+  getContext: vi.fn(),
   shutdown: vi.fn(),
 };
 
@@ -192,6 +195,28 @@ describe("posthog-server", () => {
     });
   });
 
+  describe("reportServerError", () => {
+    it("sends the error before resolving, tagged with the environment and no person", async () => {
+      const error = new Error("render failed");
+
+      await reportServerError(error, { route: "/[locale]/platform" });
+
+      expect(mockPostHogInstance.captureExceptionImmediate).toHaveBeenCalledWith(error, "web-server", {
+        route: "/[locale]/platform",
+        environment: "dev",
+        service: "web",
+        $process_person_profile: false,
+      });
+    });
+
+    it("never throws, so reporting cannot fail the request it describes", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+      mockPostHogInstance.captureExceptionImmediate.mockRejectedValueOnce(new Error("offline"));
+
+      await expect(reportServerError(new Error("boom"), {})).resolves.toBeUndefined();
+    });
+  });
+
   describe("PostHog client initialization", () => {
     it("should initialize PostHog with correct config", async () => {
       mockPostHogInstance.isFeatureEnabled.mockResolvedValue(true);
@@ -202,6 +227,7 @@ describe("posthog-server", () => {
         host: "https://eu.i.posthog.com",
         flushAt: 20,
         flushInterval: 10000,
+        enableExceptionAutocapture: false,
       });
     });
   });

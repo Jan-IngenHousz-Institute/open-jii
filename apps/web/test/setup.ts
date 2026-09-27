@@ -303,10 +303,24 @@ vi.mock("@repo/auth/client", () => ({
   useSession: vi.fn(() => ({ data: null, isPending: false })),
 }));
 
+// No test reaches PostHog: a page whose metadata fails reports the error server-side.
+vi.mock("posthog-node", () => ({
+  PostHog: vi.fn(function () {
+    return {
+      isFeatureEnabled: vi.fn(),
+      captureException: vi.fn(),
+      captureExceptionImmediate: vi.fn(),
+      getContext: vi.fn(),
+      shutdown: vi.fn(),
+    };
+  }),
+}));
+
 vi.mock("posthog-js", () => ({
   default: {
     init: vi.fn(),
     capture: vi.fn(),
+    captureException: vi.fn(),
     identify: vi.fn(),
     reset: vi.fn(),
     opt_in_capturing: vi.fn(),
