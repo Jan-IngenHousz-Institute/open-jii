@@ -61,7 +61,7 @@ describe("posthog-server", () => {
       expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.MULTI_LANGUAGE,
         "anonymous",
-        { personProperties: undefined },
+        { personProperties: undefined, sendFeatureFlagEvents: false },
       );
     });
 
@@ -81,7 +81,7 @@ describe("posthog-server", () => {
       expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.MULTI_LANGUAGE,
         "user123",
-        { personProperties: undefined },
+        { personProperties: undefined, sendFeatureFlagEvents: false },
       );
     });
 
@@ -267,7 +267,7 @@ describe("posthog-server", () => {
       expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.MULTI_LANGUAGE,
         "anonymous",
-        { personProperties: undefined },
+        { personProperties: undefined, sendFeatureFlagEvents: false },
       );
       expect(listMyOrganizations).not.toHaveBeenCalled();
     });
@@ -288,7 +288,10 @@ describe("posthog-server", () => {
       expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.MULTI_LANGUAGE,
         "ana@example.com",
-        { personProperties: { email: "ana@example.com", organization_ids: "org-qa,org-lab" } },
+        {
+          personProperties: { email: "ana@example.com", organization_ids: "org-qa,org-lab" },
+          sendFeatureFlagEvents: false,
+        },
       );
     });
 
@@ -312,7 +315,10 @@ describe("posthog-server", () => {
       expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.MULTI_LANGUAGE,
         "ana@example.com",
-        { personProperties: { email: "ana@example.com", organization_ids: "" } },
+        {
+          personProperties: { email: "ana@example.com", organization_ids: "" },
+          sendFeatureFlagEvents: false,
+        },
       );
     });
   });
@@ -336,7 +342,10 @@ describe("posthog-server", () => {
       expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.CALIBRATION,
         "ana@example.com",
-        { personProperties: { email: "ana@example.com", organization_ids: "org-qa" } },
+        {
+          personProperties: { email: "ana@example.com", organization_ids: "org-qa" },
+          sendFeatureFlagEvents: false,
+        },
       );
     });
   });

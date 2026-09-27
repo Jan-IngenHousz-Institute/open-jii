@@ -130,7 +130,12 @@ export class FlagsService implements OnModuleInit, OnModuleDestroy {
         return FEATURE_FLAG_DEFAULTS[flagKey];
       }
 
-      const isEnabled = await client.isFeatureEnabled(flagKey, distinctId, { personProperties });
+      // Unless told otherwise, posthog-node records a $feature_flag_called event under the
+      // distinct id, which creates the person before the user has consented.
+      const isEnabled = await client.isFeatureEnabled(flagKey, distinctId, {
+        personProperties,
+        sendFeatureFlagEvents: false,
+      });
       const result = isEnabled ?? FEATURE_FLAG_DEFAULTS[flagKey];
 
       this.logger.debug(

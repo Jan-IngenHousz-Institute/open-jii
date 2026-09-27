@@ -38,14 +38,15 @@ export interface FlagUser {
 
 /**
  * Person properties sent with every flag evaluation for a signed-in user. PostHog evaluates with
- * them without storing them, so a condition on the email or an organization matches even before
- * the user has a PostHog person. "is any of" never matches a multi-valued property, so the
- * organization ids are one comma-joined string matched with "contains"; uuids are fixed length,
- * so one cannot match inside another.
+ * them without storing them, so a condition on an organization matches even before the user has a
+ * PostHog person. "is any of" never matches a multi-valued property, so the organization ids are
+ * one comma-joined string matched with "contains"; uuids are fixed length, so one cannot match
+ * inside another. Without an email, only the organizations go.
  */
-export function flagPersonProperties(user: { email: string; organizationIds: readonly string[] }): {
-  email: string;
-  organization_ids: string;
-} {
-  return { email: user.email, organization_ids: user.organizationIds.join(",") };
+export function flagPersonProperties(user: {
+  email?: string;
+  organizationIds: readonly string[];
+}): { email: string; organization_ids: string } | { organization_ids: string } {
+  const organization_ids = user.organizationIds.join(",");
+  return user.email ? { email: user.email, organization_ids } : { organization_ids };
 }

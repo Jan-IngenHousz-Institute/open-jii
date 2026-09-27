@@ -12,9 +12,10 @@ import { useMyOrganizations } from "./organization/useMyOrganizations/useMyOrgan
 /**
  * Keeps PostHog in step with the signed-in user. It names them by id, as the phone app does, so one
  * researcher is one person, and keeps the email as a property because flag cohorts and the
- * internal-user filter match on it. Every flag evaluation carries their email and organization
- * memberships, so a flag can target either whatever they chose on the cookie banner; identifying
- * them, which creates their PostHog person, waits for consent.
+ * internal-user filter match on it. Every flag evaluation carries their organization memberships,
+ * so a flag can target an organization whatever they chose on the cookie banner. Their email goes
+ * to PostHog only once they accept analytics cookies, which is also when they are identified and
+ * their PostHog person is created.
  */
 export function usePostHogAuth() {
   const { data: session, isPending } = useSession();
@@ -52,22 +53,24 @@ export function usePostHogAuth() {
     }
   }, [id, email, hasConsented]);
 
-  // Both cookie-banner choices reset PostHog, so any consent change re-applies the overrides.
-  // A failed membership fetch still sends the email rather than holding every flag back.
+  // Rejecting cookies resets PostHog, which drops the overrides, so every consent change
+  // re-applies them. A failed membership fetch still sends what is known rather than holding every
+  // flag back.
   useEffect(() => {
     if (!email || isOrganizationsPending) {
       return;
     }
 
+    const hasAccepted = consent === "accepted";
     const properties = flagPersonProperties({
-      email,
+      email: hasAccepted ? email : undefined,
       organizationIds: organizations?.map(({ id }) => id) ?? [],
     });
     posthog.setPersonPropertiesForFlags(properties, true);
     hasFlagOverrides.current = true;
 
     // Stored on the person, so PostHog's release-condition picker can offer the properties.
-    if (consent === "accepted") {
+    if (hasAccepted) {
       posthog.setPersonProperties(properties);
     }
   }, [email, organizations, isOrganizationsPending, consent]);

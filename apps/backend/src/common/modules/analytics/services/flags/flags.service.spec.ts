@@ -167,7 +167,7 @@ describe("FlagsService", () => {
       expect(mockClient.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
         "anonymous",
-        { personProperties: undefined },
+        { personProperties: undefined, sendFeatureFlagEvents: false },
       );
     });
 
@@ -197,7 +197,7 @@ describe("FlagsService", () => {
       expect(mockClient.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING,
         "user-123",
-        { personProperties: undefined },
+        { personProperties: undefined, sendFeatureFlagEvents: false },
       );
     });
 
@@ -215,7 +215,7 @@ describe("FlagsService", () => {
       expect(mockClient.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.EXPERIMENT_DELETION,
         "props-user",
-        { personProperties: { organization_ids: "org-a,org-b" } },
+        { personProperties: { organization_ids: "org-a,org-b" }, sendFeatureFlagEvents: false },
       );
     });
 

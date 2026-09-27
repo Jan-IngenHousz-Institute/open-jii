@@ -13,6 +13,7 @@ import { usePostHogAuth } from "./usePostHogAuth";
 
 const session = createSession({ user: { id: "user-ana", email: "ana@example.com", name: "Ana" } });
 const flagProperties = { email: "ana@example.com", organization_ids: "org-qa,org-lab" };
+const membershipProperties = { organization_ids: "org-qa,org-lab" };
 
 // jsdom serves http, where the Secure consent cookie cannot be stored, so read it as an https
 // browser would and let setConsentStatus announce the change.
@@ -45,13 +46,13 @@ describe("usePostHogAuth", () => {
     storedConsent?.mockRestore();
   });
 
-  it("gives flag evaluations the email and memberships without identifying before consent", async () => {
+  it("gives flag evaluations the memberships, without the email or identifying, before consent", async () => {
     mockSession(session);
 
     renderHook(() => usePostHogAuth());
 
     await waitFor(() => {
-      expect(posthog.setPersonPropertiesForFlags).toHaveBeenCalledWith(flagProperties, true);
+      expect(posthog.setPersonPropertiesForFlags).toHaveBeenCalledWith(membershipProperties, true);
     });
     expect(posthog.identify).not.toHaveBeenCalled();
     expect(posthog.setPersonProperties).not.toHaveBeenCalled();
@@ -91,11 +92,39 @@ describe("usePostHogAuth", () => {
     await waitFor(() => {
       expect(posthog.setPersonPropertiesForFlags).toHaveBeenCalledTimes(2);
     });
+    expect(posthog.setPersonPropertiesForFlags).toHaveBeenLastCalledWith(
+      membershipProperties,
+      true,
+    );
     expect(posthog.identify).not.toHaveBeenCalled();
     expect(posthog.setPersonProperties).not.toHaveBeenCalled();
   });
 
-  it("still sends the email when the memberships cannot be loaded", async () => {
+  it("re-applies the flag properties after the banner's decline resets PostHog", async () => {
+    mockSession(session);
+    renderHook(() => usePostHogAuth());
+    await waitFor(() => {
+      expect(posthog.setPersonPropertiesForFlags).toHaveBeenCalledOnce();
+    });
+
+    storedConsent = storeConsent("rejected");
+    act(() => {
+      setConsentStatus("rejected");
+      posthog.opt_out_capturing();
+      posthog.reset();
+    });
+
+    await waitFor(() => {
+      expect(posthog.setPersonPropertiesForFlags).toHaveBeenCalledTimes(2);
+    });
+    const [lastApplied] = vi
+      .mocked(posthog.setPersonPropertiesForFlags)
+      .mock.invocationCallOrder.slice(-1);
+    const [lastReset] = vi.mocked(posthog.reset).mock.invocationCallOrder.slice(-1);
+    expect(lastApplied).toBeGreaterThan(lastReset);
+  });
+
+  it("still evaluates flags when the memberships cannot be loaded", async () => {
     server.mount(contract.organizations.listMyOrganizations, { status: 500 });
     mockSession(session);
 
@@ -103,7 +132,7 @@ describe("usePostHogAuth", () => {
 
     await waitFor(() => {
       expect(posthog.setPersonPropertiesForFlags).toHaveBeenCalledWith(
-        { email: "ana@example.com", organization_ids: "" },
+        { organization_ids: "" },
         true,
       );
     });

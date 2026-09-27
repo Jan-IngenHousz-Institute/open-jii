@@ -10,7 +10,7 @@ export interface PostHogServerClient {
   isFeatureEnabled(
     flagKey: string,
     distinctId: string,
-    options?: { personProperties?: Record<string, string> },
+    options?: { personProperties?: Record<string, string>; sendFeatureFlagEvents?: boolean },
   ): Promise<boolean | undefined>;
   captureException(
     error: unknown,
@@ -90,7 +90,12 @@ export async function isFeatureFlagEnabled(
       return FEATURE_FLAG_DEFAULTS[flagKey];
     }
 
-    const isEnabled = await client.isFeatureEnabled(flagKey, distinctId, { personProperties });
+    // Unless told otherwise, posthog-node records a $feature_flag_called event under the distinct
+    // id, which creates the person before the user has consented.
+    const isEnabled = await client.isFeatureEnabled(flagKey, distinctId, {
+      personProperties,
+      sendFeatureFlagEvents: false,
+    });
     return isEnabled ?? FEATURE_FLAG_DEFAULTS[flagKey];
   } catch (error) {
     console.error(`[PostHog] Error checking feature flag ${flagKey}:`, error);

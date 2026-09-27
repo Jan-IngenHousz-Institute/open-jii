@@ -76,10 +76,12 @@ posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, config);
 
 ## Targeting an organisation
 
-Every flag evaluation for a signed-in user carries their `email` and `organization_ids`, the ids of
-every organisation they belong to, comma-joined (`flagPersonProperties`). PostHog evaluates with
-them without storing them, so they apply before the user accepts analytics cookies. To turn a flag
-on for an organisation's members:
+Every flag evaluation for a signed-in user carries `organization_ids`, the ids of every organisation
+they belong to, comma-joined (`flagPersonProperties`). PostHog evaluates with it without storing it,
+so organisation targeting applies before the user accepts analytics cookies. The browser adds the
+user's `email` only once they accept, and only then are the properties also stored on their PostHog
+person; backend checks always send the email. Evaluations record no `$feature_flag_called` events,
+so checking a flag never creates a person. To turn a flag on for an organisation's members:
 
 1. In openJII, open the organisation and copy its id from the address bar:
    `/platform/organizations/<id>`.
