@@ -39,6 +39,17 @@ describe("createPostHogClient", () => {
     );
   });
 
+  it("sends the key to PostHog's own host only", async () => {
+    const request = vi.fn<typeof fetch>().mockResolvedValue(respond(200, { results: [] }));
+    const client = createPostHogClient({ apiKey: "k", request });
+
+    await expect(
+      client.get("https://eu.posthog.com.attacker.example/api/projects/80726/"),
+    ).rejects.toThrow("Refusing to send the PostHog key");
+
+    expect(request).not.toHaveBeenCalled();
+  });
+
   it("explains a refused key without echoing it", async () => {
     const client = createPostHogClient({
       apiKey: "phx_secret",

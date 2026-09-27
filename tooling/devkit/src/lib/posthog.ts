@@ -50,11 +50,16 @@ export function createPostHogClient(options: PostHogClientOptions): PostHogClien
   const request = options.request ?? fetch;
   const projectId = options.projectId ?? posthogProjectId;
   const host = options.host ?? posthogHost;
+  const origin = new URL(host).origin;
 
   async function send(path: string, init: { method: string; body?: unknown }): Promise<unknown> {
-    // Pagination hands back absolute URLs; anything else is a path on the same host.
-    const url = path.startsWith(host) ? path : `${host}${path}`;
-    const response = await request(url, {
+    // Pagination hands back absolute URLs; anything else is a path on the same host. Either way the
+    // key goes to that host only, which a prefix check would not ensure.
+    const url = new URL(path, host);
+    if (url.origin !== origin) {
+      throw new Error(`Refusing to send the PostHog key to ${url.origin}, which is not ${origin}`);
+    }
+    const response = await request(url.toString(), {
       method: init.method,
       headers: { "content-type": "application/json", authorization: `Bearer ${options.apiKey}` },
       body: init.body === undefined ? undefined : JSON.stringify(init.body),

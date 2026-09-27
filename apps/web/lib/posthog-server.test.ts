@@ -201,12 +201,16 @@ describe("posthog-server", () => {
 
       await reportServerError(error, { route: "/[locale]/platform" });
 
-      expect(mockPostHogInstance.captureExceptionImmediate).toHaveBeenCalledWith(error, "web-server", {
-        route: "/[locale]/platform",
-        environment: "dev",
-        service: "web",
-        $process_person_profile: false,
-      });
+      expect(mockPostHogInstance.captureExceptionImmediate).toHaveBeenCalledWith(
+        error,
+        "web-server",
+        {
+          route: "/[locale]/platform",
+          environment: "dev",
+          service: "web",
+          $process_person_profile: false,
+        },
+      );
     });
 
     it("never throws, so reporting cannot fail the request it describes", async () => {
