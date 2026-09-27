@@ -43,8 +43,10 @@ The web server and the backend report their own errors whatever a visitor chose 
 banner, as operational telemetry: a report never creates or updates a PostHog person. It carries
 the signed-in user's id when there is one, and otherwise a fixed id per service (`web-server`,
 `backend-server`). It carries where the error happened, never what the user sent: an `AppError`'s
-details stay in the backend's own log. Browser errors are sent only once a visitor accepts
-analytics cookies.
+details stay in the backend's own log. Browser errors reach PostHog only once a visitor accepts
+analytics cookies: before that the browser sends them cookieless, and the project drops cookieless
+events while its server hashing is off (`cookieless_server_hash_mode` in
+`infrastructure/modules/posthog`).
 
 ### Client-side PostHog
 

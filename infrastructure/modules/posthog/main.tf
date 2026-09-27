@@ -27,9 +27,10 @@ module "project_settings" {
   capture_performance    = true
   heatmaps               = true
   session_recording      = true
-  # Visitors who decline cookies are counted with a daily-salted server hash instead, which web's
-  # `cookieless_mode: "on_reject"` needs; 0 drops those events.
-  cookieless_server_hash_mode = 1
+  # Off, so the project drops the cookieless events web sends (`cookieless_mode: "on_reject"`) for
+  # visitors who have not accepted analytics cookies, which the cookie banner offers as their
+  # choice. 1 would count those visitors by a daily-salted hash instead.
+  cookieless_server_hash_mode = 0
   app_urls                    = ["https://dev.openjii.org", "https://openjii.org", "http://localhost:3000"]
 
   # "Filter out internal and test users" keeps an event only when every filter holds, so usage
