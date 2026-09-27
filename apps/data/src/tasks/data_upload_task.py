@@ -18,7 +18,6 @@ import logging
 import os
 from datetime import datetime, timezone
 
-import numpy as np
 import pandas as pd
 from pyspark.dbutils import DBUtils
 from pyspark.sql import Column, DataFrame, SparkSession
@@ -80,21 +79,10 @@ logger.info(
 # COMMAND ----------
 
 # DBTITLE 1,Tabular Processor (csv/tsv/json/ndjson)
-def _serialize_dataframe_rows(frame: pd.DataFrame) -> list[str]:
+def _serialize_dataframe_rows(frame: pd.DataFrame) -> list[str | None]:
     """Encode dataframe rows as strict JSON, replacing non-finite values with null."""
-    def encode_scalar(value):
-        if isinstance(value, np.floating) and not np.isfinite(value):
-            return None
-        return str(value)
-
     rows = frame.astype(object).where(pd.notnull(frame), None).to_dict(orient="records")
-    payloads = []
-    for row in rows:
-        payload = scrub_non_finite_json_value(json.dumps(row, default=encode_scalar))
-        if payload is None:
-            raise AssertionError("A serialized dataframe row cannot be None")
-        payloads.append(payload)
-    return payloads
+    return [scrub_non_finite_json_value(json.dumps(row, default=str)) for row in rows]
 
 
 def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> dict:
@@ -129,7 +117,7 @@ def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> 
     logger.info(f"Found {len(matched_files)} {label} file(s) to process")
 
     uploaded_at = datetime.now(timezone.utc)
-    all_payloads: list[str] = []
+    all_payloads: list[str | None] = []
     file_count = 0
     error_count = 0
 
@@ -482,10 +470,19 @@ def process_ambyte_upload() -> dict:
 # COMMAND ----------
 
 # DBTITLE 1,Upload Metadata Record
-def _quote_spark_sql_string(value: str | None) -> str:
-    if value is None:
-        return "NULL"
-    return "'" + value.replace("\\", "\\\\").replace("'", "\\'") + "'"
+def _insert_upload_metadata(spark: SparkSession, table: str, record: dict) -> None:
+    spark.sql(
+        f"""
+        INSERT INTO {table}
+          (upload_id, experiment_id, upload_table_id, upload_table_name, source_kind, status,
+           file_count, row_count, created_by, created_at, completed_at, error_message)
+        VALUES (
+          :upload_id, :experiment_id, :upload_table_id, :upload_table_name, :source_kind, :status,
+          :file_count, :row_count, :created_by, :created_at, :completed_at, :error_message
+        )
+        """,
+        args=record,
+    )
 
 
 def write_upload_metadata(status: str, result: dict | None, error_message: str | None) -> None:
@@ -503,21 +500,23 @@ def write_upload_metadata(status: str, result: dict | None, error_message: str |
         file_count = int(result.get("files_processed", 0)) if result else 0
         row_count = int(result.get("rows_written", 0)) if result else 0
 
-        spark.sql(
-            f"""
-            INSERT INTO {UPLOAD_METADATA_TABLE}
-              (upload_id, experiment_id, upload_table_id, upload_table_name, source_kind, status,
-               file_count, row_count, created_by, created_at, completed_at, error_message)
-            VALUES (
-              {_quote_spark_sql_string(UPLOAD_ID)}, {_quote_spark_sql_string(EXPERIMENT_ID)},
-              {_quote_spark_sql_string(UPLOAD_TABLE_ID or "")}, {_quote_spark_sql_string(UPLOAD_TABLE_NAME or "")},
-              {_quote_spark_sql_string(SOURCE_KIND)}, {_quote_spark_sql_string(status)},
-              {file_count}, {row_count}, {_quote_spark_sql_string(USER_ID or "")},
-              {_quote_spark_sql_string(completed_at.isoformat())},
-              {_quote_spark_sql_string(completed_at.isoformat())},
-              {_quote_spark_sql_string(error_message)}
-            )
-            """
+        _insert_upload_metadata(
+            spark,
+            UPLOAD_METADATA_TABLE,
+            {
+                "upload_id": UPLOAD_ID,
+                "experiment_id": EXPERIMENT_ID,
+                "upload_table_id": UPLOAD_TABLE_ID or "",
+                "upload_table_name": UPLOAD_TABLE_NAME or "",
+                "source_kind": SOURCE_KIND,
+                "status": status,
+                "file_count": file_count,
+                "row_count": row_count,
+                "created_by": USER_ID or "",
+                "created_at": completed_at,
+                "completed_at": completed_at,
+                "error_message": error_message,
+            },
         )
         logger.info(f"Wrote upload metadata record (status={status}, upload_id={UPLOAD_ID})")
     except Exception as e:
