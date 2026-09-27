@@ -236,4 +236,5 @@ module "opennext" {
 - **ISR Support:** Full support for Next.js Incremental Static Regeneration with proper revalidation handling
 - **Custom Domains:** Support for custom domains with automatic SSL certificate integration
 - **Monitoring:** CloudWatch logging is enabled for all Lambda functions with configurable retention periods
+- **CloudFront additional metrics:** origin latency and error rates by status code are published only while the distribution's additional metrics are on. They were switched on by hand for dev and prod, outside this module, and the Platform dashboard's latency charts read them; a new environment needs them switched on too
 - **Security:** All resources follow AWS security best practices with least-privilege IAM policies

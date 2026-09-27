@@ -419,18 +419,6 @@ resource "aws_cloudfront_cache_policy" "image_cache_policy" {
   }
 }
 
-# CloudFront publishes origin latency and error rates by status code only with additional metrics,
-# which are billed per distribution.
-resource "aws_cloudfront_monitoring_subscription" "distribution" {
-  distribution_id = aws_cloudfront_distribution.distribution.id
-
-  monitoring_subscription {
-    realtime_metrics_subscription_config {
-      realtime_metrics_subscription_status = "Enabled"
-    }
-  }
-}
-
 # Origin Request Policy for PostHog passthrough
 # Forwards query strings, content-type, and cookies but NOT the Host header
 # so CloudFront uses the origin domain (eu.i.posthog.com) as Host

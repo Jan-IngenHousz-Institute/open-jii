@@ -1126,7 +1126,7 @@
         {
           "type": "timeseries",
           "title": "Origin latency",
-          "description": "Time from CloudFront receiving a request to the origin starting its response, for requests the cache could not answer.",
+          "description": "Time from CloudFront receiving a request to the origin starting its response, for requests the cache could not answer. CloudFront publishes it only while the distribution's additional metrics are on, as they are for dev and prod; without them this reads No data.",
           "datasource": {
             "type": "cloudwatch",
             "uid": "${datasource_uid}"
