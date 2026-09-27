@@ -16,7 +16,8 @@ export type MetricArea =
   | "lakehouse"
   | "sandboxes"
   | "usage"
-  | "platform";
+  | "platform"
+  | "errors";
 
 /** Where a signal is read from. Absent means CloudWatch. */
 export type SignalKind = "cloudwatch" | "logs_insights" | "posthog";
@@ -36,7 +37,11 @@ export interface MetricSignal {
    * latest value. The weekly report compares its last two periods.
    */
   period?: number;
-  /** logs_insights: the group to query and the query itself. */
+  /**
+   * logs_insights: the group to query and the query itself. posthog: a HogQL query returning one
+   * count over `${EXCEPTIONS_SCOPE}`, which the dashboards resolve to one environment, the report's
+   * time range and open issues.
+   */
   logGroup?: string;
   query?: string;
   /** logs_insights and posthog: which field of the result row carries the value. */

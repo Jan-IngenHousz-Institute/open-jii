@@ -1,6 +1,6 @@
 ---
 name: openjii-triage
-description: Investigate a platform heartbeat alert or report anomaly by metric id. Use when a report panel, a Grafana alert, or a runbook points at a metric such as ingest-lag, dlt-heartbeat, or stale-experiments, and you need evidence and a likely cause rather than a guess.
+description: Investigate a platform heartbeat alert or report anomaly by metric id, or an error-tracking issue by its PostHog issue id. Use when a report panel, a Grafana alert, or a runbook points at a metric such as ingest-lag, dlt-heartbeat, or stale-experiments, or when a PostHog error alert or the daily round names an issue, and you need evidence and a likely cause rather than a guess.
 ---
 
 # Triage a heartbeat metric
@@ -11,6 +11,9 @@ from the report adds the environment and the report's time window after the id; 
 
 Your output is a diagnosis someone can act on: what is happening, since when, the most likely cause,
 the evidence you actually pulled, and the next step. Never present an unverified guess as a finding.
+
+A UUID instead of a metric id is a PostHog error-tracking issue, from a Slack alert or the daily
+round. Skip to "An error-tracking issue" below, then carry on with steps 4 and 5.
 
 ## 1. Ground yourself in the catalog, not memory
 
@@ -53,6 +56,24 @@ the prefix for the incident window, read the newest object, and look for the `de
 
 For pipeline state, the Databricks jobs and pipelines APIs give run history and the failure message;
 the centrum pipeline's own event log carries the underlying error.
+
+## An error-tracking issue
+
+The devkit reads PostHog with your own key (`tooling/devkit/README.md` has the setup).
+`pnpm posthog:issues show <id>` gives the issue's status, events, users, first and last seen, and
+the latest exception with its stack. Source maps make web stacks readable; a minified web frame
+means that deploy's upload failed.
+
+Then ask PostHog the questions the metric triage asks CloudWatch, with `pnpm posthog:query --query
+'<HogQL>'` over `events WHERE event = '$exception' AND issue_id = '<id>'`: when it started, whether
+it is one environment or both (`properties.environment`), one app version or all
+(`properties.$app_version` on mobile), one route or many. Backend reports carry `route`,
+`http_method` and `error_code`, and the backend logs its server errors too, so CloudWatch holds the
+lines around one. Web errors from visitors who accepted cookies can link to a session replay on the
+issue's page.
+
+Then correlate as step 4 says: an issue that began with a release or a deploy is that change until
+shown otherwise.
 
 ## 4. Correlate before concluding
 

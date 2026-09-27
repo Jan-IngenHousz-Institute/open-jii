@@ -63,6 +63,19 @@ variable "payload_samples_log_group_name" {
   type        = string
 }
 
+variable "posthog_project_id" {
+  description = "PostHog project the daily report's errors section reads"
+  type        = string
+}
+
+# Set only once the Infinity plugin is installed in the workspace; until then nothing reads PostHog.
+variable "posthog_grafana_api_key" {
+  description = "Read-only PostHog personal API key the daily report queries error tracking with"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "db_cluster_identifier" {
   description = "The identifier of the Aurora DB cluster to monitor"
   type        = string

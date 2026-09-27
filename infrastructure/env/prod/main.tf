@@ -2934,6 +2934,7 @@ module "grafana_dashboard" {
   load_balancer_arn              = module.backend_alb.alb_arn
   ecs_cluster_name               = module.backend_ecs.ecs_cluster_name
   slack_webhook_url              = var.slack_webhook_url
+  posthog_project_id             = "80726"
   kinesis_shard_count            = module.kinesis.shard_count
   payload_samples_log_group_name = module.iot_core.payload_samples_log_group_name
   storage_buckets = {
@@ -2941,6 +2942,7 @@ module "grafana_dashboard" {
     "Large payloads"       = module.large_iot_s3.bucket_id
     "Databricks workspace" = "open-jii-databricks-root-bucket-${var.environment}"
   }
+  posthog_grafana_api_key = var.posthog_grafana_api_key
 
   # Passed in rather than interpolated: a rule watching a misspelled function is NoData
   # forever, which is either permanently firing or permanently silent.

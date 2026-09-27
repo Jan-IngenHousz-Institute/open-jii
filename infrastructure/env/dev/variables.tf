@@ -224,6 +224,13 @@ variable "posthog_tofu_api_key" {
   sensitive   = true
 }
 
+variable "posthog_grafana_api_key" {
+  description = "Read-only PostHog personal API key the daily report queries error tracking with; empty until the Infinity plugin is installed"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "data_platform_sp_application_id" {
   description = "Application ID of the jii-data-platform deploy service principal (github-actions-jii-data-platform-sandbox-deploy). It runs the analyst gold pipelines in the sandbox workspace, which read this environment's centrum tables cross-catalog. Read-only; granted at catalog level in main.tf."
   type        = string

@@ -10,8 +10,10 @@ resource "aws_grafana_workspace" "this" {
   account_access_type      = "CURRENT_ACCOUNT"
   authentication_providers = ["AWS_SSO"] # or ["SAML"], or ["AWS_SSO","SAML"]
   permission_type          = "SERVICE_MANAGED"
-  grafana_version          = "10.4"
-  role_arn                 = aws_iam_role.assume.arn
+  # Infinity, which the daily report reads PostHog through, needs 10.4.8 or later; AMG offers no 10.4
+  # patch past 10.4.7. The provider upgrades in place, and there is no way back.
+  grafana_version = "12.4"
+  role_arn        = aws_iam_role.assume.arn
 
   data_sources = ["CLOUDWATCH"]
 
@@ -19,8 +21,9 @@ resource "aws_grafana_workspace" "this" {
     unifiedAlerting = {
       enabled = true
     },
+    # Lets an admin install the Infinity plugin, which the daily report reads PostHog through.
     "plugins" = {
-      "pluginAdminEnabled" = false
+      "pluginAdminEnabled" = true
     }
   })
 

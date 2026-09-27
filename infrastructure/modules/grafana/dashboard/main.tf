@@ -99,6 +99,25 @@ resource "grafana_data_source" "cloudwatch_logs_source" {
   })
 }
 
+# PostHog through the Infinity plugin, for the errors it groups into issues. The key is
+# read-only and only ever sent to PostHog.
+resource "grafana_data_source" "posthog" {
+  count = var.posthog_grafana_api_key == "" ? 0 : 1
+
+  provider = grafana.amg
+  type     = "yesoreyeram-infinity-datasource"
+  name     = "posthog"
+
+  json_data_encoded = jsonencode({
+    auth_method  = "bearerToken"
+    allowedHosts = ["https://eu.posthog.com"]
+  })
+
+  secure_json_data_encoded = jsonencode({
+    bearerToken = var.posthog_grafana_api_key
+  })
+}
+
 resource "grafana_folder" "folder" {
   provider = grafana.amg
   title    = "${var.environment} Dashboards"

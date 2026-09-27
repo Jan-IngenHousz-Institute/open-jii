@@ -88,6 +88,7 @@ locals {
         { title = "Weekly report", type = "link", icon = "dashboard", url = "/d/${local.heartbeat_weekly_uid}", tooltip = "", targetBlank = false, asDropdown = false, includeVars = false, keepTime = false, tags = [] },
       ],
       [for other in local.flow_order : local.flow_header_links[other] if other != key],
+      local.heartbeat_errors_header_links,
     )
   }
 
@@ -747,7 +748,7 @@ locals {
       {
         key     = "errors"
         chart   = local.flow_platform_chart_panels.errors
-        caption = "**Work back from the furthest hop that fails**, since each hop fails when the one it calls does.\n\n- **Most spikes start at a deploy:** compare with [Delivery](/d/${local.flow_uids.delivery}) and roll back first. [Runbook](${local.flow_runbooks}/backend-5xx.md)\n- **Every endpoint, database-shaped errors:** one slow query holds its whole task, which keeps a single database connection.\n- **Only data pages:** the Databricks SQL warehouse, not the API."
+        caption = "**Work back from the furthest hop that fails**, since each hop fails when the one it calls does.\n\n- **Most spikes start at a deploy:** compare with [Delivery](/d/${local.flow_uids.delivery}) and roll back first. [Runbook](${local.flow_runbooks}/backend-5xx.md)\n- **Every endpoint, database-shaped errors:** one slow query holds its whole task, which keeps a single database connection.\n- **Only data pages:** the Databricks SQL warehouse, not the API.${local.heartbeat_errors_shown ? "\n\nEach exception, grouped with its stack trace, is in the [error inbox](/d/${local.heartbeat_errors_uid})." : ""}"
         details = [
           { panel = "311", hop = "site" },
           { panel = "316", hop = "page" },

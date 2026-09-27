@@ -1,6 +1,6 @@
 ---
 name: openjii-daily-round
-description: Run the daily round over the platform heartbeat. Use once a day, or after time away, to find out whether the platform needs a person before anybody reports a problem. Reads Grafana's alert state and the two report dashboards, says what changed since the last round, and hands off to openjii-triage for anything that needs digging.
+description: Run the daily round over the platform heartbeat. Use once a day, or after time away, to find out whether the platform needs a person before anybody reports a problem. Reads Grafana's alert state, the two report dashboards and PostHog's open error issues, says what changed since the last round, and hands off to openjii-triage for anything that needs digging.
 ---
 
 # The daily round
@@ -15,14 +15,15 @@ anything needs a human. Everything else is supporting detail.
 
 ## What you are reading
 
-Grafana is the only surface. Alerts fire and resolve there and post to the one Slack channel through
-Grafana's own notification. The two report dashboards, generated from
+Grafana carries the alerts and the numbers; errors live in PostHog (step 4). Alerts fire and resolve
+in Grafana and post to the one Slack channel through Grafana's own notification. The two report dashboards, generated from
 `docs/monitoring/metrics-catalog.yaml`, are where the numbers live:
 
 | Dashboard uid            | Reads                                                                | Default window |
 | ------------------------ | -------------------------------------------------------------------- | -------------- |
-| `<env>-heartbeat-daily`  | what is firing, the data path, every rule-backed signal, then levels | 24 hours       |
+| `<env>-heartbeat-daily`  | what is firing, errors, the data path, rule-backed signals, levels   | 24 hours       |
 | `<env>-heartbeat-weekly` | usage, data path and platform against the week before, 90-day trends | 7 days         |
+| `<env>-heartbeat-errors` | the error inbox: every open issue with exceptions, by service        | 7 days         |
 
 Every alert rule claims a catalogue entry, and every such entry is a row on the daily report's board,
 ordered Web, API and database, Ingest, Lakehouse, Sandboxes. Entries without a rule are the level
@@ -107,7 +108,32 @@ tiles have no limit: say only what moved out of its usual range, and say it as a
 fault. Dev's ingest consumer runs on a weekday schedule, so its lag is hours by design; check
 the environment before calling anything an incident.
 
-## 4. For anything that needs a person
+## 4. Read the errors
+
+Errors that point at bugs live in PostHog's error tracking, grouped into issues, and its alerts post
+new, reopened and spiking issues to the same Slack channel. The daily report's Errors section, right
+under what is firing, lists the issues with exceptions over its time range, new ones first, and each
+row opens the issue in PostHog or starts triage on it. The error inbox, `<env>-heartbeat-errors`,
+holds the same issues over a week, with where each happened and in which app version. The devkit reads the same with your own
+PostHog key, for a gap the report's window does not cover (`tooling/devkit/README.md` has the setup):
+
+```bash
+pnpm posthog:issues list --days 1    # --days covers the gap since the last round
+pnpm posthog:issues show <issue-id>  # first and last seen, and the latest stack
+```
+
+`list` writes `.claude/posthog/issues-review.json`: every open issue with events in the window, with
+its service (`web`, `backend`, `mobile`), environment, app version, events, users and link. Read prod
+first. An issue needs a person when it is new since the last round and reaches users on a released
+build, or when an old one comes back or spikes. Mobile events from a developer's Metro build carry
+`build: development`; those are ours, not researchers'.
+
+Propose each issue that needs a person as a bug or as noise. A bug gets a ticket drafted with
+`openjii-ticket-refine`, filed only on the person's word. Noise is set to `suppress` in the review
+file; `pnpm posthog:issues apply` prints what it would change, and only `--confirm`, on the person's
+word, writes to PostHog. For anything unclear, hand the issue id to `/openjii-triage`.
+
+## 5. For anything that needs a person
 
 Do not hand over a pointer. Pull the evidence first, then hand over a conclusion.
 
@@ -118,10 +144,11 @@ deep dive rather than guessing here.
 Most incidents are somebody's deploy. Check whether the onset lines up with a merge to `main` before
 reaching for anything more exotic.
 
-## 5. Report
+## 6. Report
 
 Open with one of: nothing needs a person, something needs a person, or the round could not be
-completed. Then the changes from step 2, then the evidence for anything in the second category.
+completed. Then the changes from step 2, the errors from step 4, then the evidence for anything in
+the second category.
 
 Say plainly what you could not check and why. A round that reads confidently past a firing
 dead-man is worse than no round, because it converts an unknown into a false all-clear.

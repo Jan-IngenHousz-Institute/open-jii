@@ -56,6 +56,9 @@ passes:
     range: [81, 93]
     note: the data path from device to macro results, how much flows and how long each hop takes
   - date: 2026-09-27
+    range: [94, 94]
+    note: exceptions from PostHog error tracking, for the daily report's errors section
+  - date: 2026-09-27
     range: [95, 95]
     note: the whole trip, from the IoT broker receiving a message to its row readable through the API
   - date: 2026-09-27
@@ -1425,6 +1428,25 @@ metrics:
       stat: p95
       unit: milliseconds
     notes: p95 of one sandbox invocation, across the macro languages and calibration.
+
+  - num: 94
+    id: exceptions
+    name: Exceptions
+    family: observability
+    area: errors
+    source: posthog
+    phase: P1
+    active: true
+    slots: [exception]
+    runbook: docs/runbooks/exceptions.md
+    signal:
+      kind: posthog
+      # The same scope as the issue tables: this environment, the report's time range, open issues.
+      query: SELECT count() FROM events WHERE ${EXCEPTIONS_SCOPE}
+    notes: >-
+      Exceptions of open issues that the web app, its server, the backend and the phone app
+      reported, as PostHog grouped them. PostHog alerts on new, reopened and spiking issues itself,
+      so no Grafana rule watches this.
 
   - num: 95
     id: broker-to-api-latency

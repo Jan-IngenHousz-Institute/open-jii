@@ -27,6 +27,9 @@ const grafanaRules = readFileSync(join(repoRoot, grafanaRulesPath), "utf8");
 const heartbeatDashboardsPath = "infrastructure/modules/grafana/dashboard/heartbeat.tf";
 const heartbeatDashboards = readFileSync(join(repoRoot, heartbeatDashboardsPath), "utf8");
 
+const errorDashboardsPath = "infrastructure/modules/grafana/dashboard/errors.tf";
+const errorDashboards = readFileSync(join(repoRoot, errorDashboardsPath), "utf8");
+
 const metrics = parseCatalog(catalogSource);
 const passes = parsePasses(catalogSource);
 
@@ -43,6 +46,7 @@ const KNOWN_AREAS = [
   "sandboxes",
   "usage",
   "platform",
+  "errors",
 ];
 const KNOWN_SOURCES = ["aws", "dbx", "pg", "posthog", "gh", "composer"];
 const KNOWN_STATS = ["Sum", "Maximum", "Minimum", "Average", "SampleCount"];
@@ -52,7 +56,7 @@ const KNOWN_UNITS = ["milliseconds", "seconds", "minutes", "bytes", "percent", "
 
 // Only these signal fields go through placeholder resolution on the dashboards; a
 // placeholder anywhere else reaches CloudWatch as a literal and matches nothing forever.
-const RESOLVED_FIELDS = ["search", "dimensions"];
+const RESOLVED_FIELDS = ["search", "dimensions", "query"];
 
 function numsIssuedByPasses(): Set<number> {
   const issued = new Set<number>();
@@ -186,7 +190,11 @@ describe("catalog vocabulary", () => {
     const badSlot = metrics.filter((m) => m.slots.some((s) => !KNOWN_SLOTS.includes(s)));
     const badArea = metrics.filter((m) => m.area && !KNOWN_AREAS.includes(m.area));
     const badSource = metrics.filter((m) => !KNOWN_SOURCES.includes(m.source));
-    const badStat = metrics.filter((m) => m.signal && !isKnownStat(m.signal.stat));
+    // A statistic is CloudWatch's; a PostHog query returns its own number.
+    const badStat = metrics.filter(
+      (m) =>
+        m.signal && (m.signal.kind ?? "cloudwatch") === "cloudwatch" && !isKnownStat(m.signal.stat),
+    );
 
     expect(badFamily.map((m) => m.id)).toEqual([]);
     expect(badSlot.map((m) => m.id)).toEqual([]);
@@ -254,6 +262,39 @@ describe("active entries", () => {
   it("carry a signal, since an active entry is charted", () => {
     const offenders = metrics.filter((m) => m.active && !m.signal && m.source !== "composer");
     expect(offenders.map((m) => m.id)).toEqual([]);
+  });
+});
+
+describe("PostHog signals", () => {
+  const posthog = metrics.filter((m) => m.signal?.kind === "posthog");
+
+  it("are there, so a broken filter cannot pass silently", () => {
+    expect(posthog.length).toBeGreaterThan(0);
+  });
+
+  it("read one environment over the report's time range, through the tables' own scope", () => {
+    // One PostHog project serves every environment, and a tile that ignores the picker or
+    // counts other issues than the table beside it would disagree with it.
+    const offenders = posthog.filter((m) => !m.signal?.query?.includes("${EXCEPTIONS_SCOPE}"));
+    expect(offenders.map((m) => m.id)).toEqual([]);
+
+    const scope = /heartbeat_exception_scope = "([^"]*)"/.exec(errorDashboards)?.[1] ?? "";
+    const environment =
+      /heartbeat_exception_environment = \(([\s\S]*?)\n {2}\)/.exec(errorDashboards)?.[1] ?? "";
+    expect(scope, errorDashboardsPath).toContain("$${__from");
+    expect(scope, errorDashboardsPath).toContain("$${__to");
+    expect(environment, errorDashboardsPath).toContain(
+      "properties.environment = '${var.environment}'",
+    );
+  });
+
+  it("carry no alert slot, since PostHog alerts on issues itself", () => {
+    // A Grafana rule over PostHog's query API would share its three concurrent queries.
+    expect(posthog.filter((m) => m.slots.includes("alert")).map((m) => m.id)).toEqual([]);
+  });
+
+  it("sit in the errors section, the only one that reads PostHog", () => {
+    expect(posthog.filter((m) => m.area !== "errors").map((m) => m.id)).toEqual([]);
   });
 });
 
@@ -516,6 +557,9 @@ describe("the report dashboards", () => {
     ...(
       /heartbeat_daily_areas = \[([\s\S]*?)\n {2}\]/.exec(heartbeatDashboards)?.[1] ?? ""
     ).matchAll(/key = "([a-z-]+)"/g),
+    ...(/heartbeat_errors_areas = \[([^\]]*)\]/.exec(heartbeatDashboards)?.[1] ?? "").matchAll(
+      /"([a-z-]+)"/g,
+    ),
   ].map((match) => match[1]);
   // Each weekly section names the areas it gathers.
   const weeklyAreas = [
@@ -648,8 +692,10 @@ describe("the report dashboards", () => {
         ([, flow]) => flow,
       );
 
+      // Errors span every service, so their tile opens PostHog's issues instead.
       const unlinked = onReport("daily").filter(
         (m) =>
+          (m.signal?.kind ?? "cloudwatch") === "cloudwatch" &&
           !keysOf(byArea, 4).includes(m.area ?? "") &&
           !keysOf(byNamespace, 4).includes(m.signal?.namespace ?? ""),
       );

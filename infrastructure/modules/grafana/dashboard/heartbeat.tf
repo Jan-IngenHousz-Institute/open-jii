@@ -10,9 +10,10 @@
 locals {
   heartbeat_catalog = yamldecode(file("${path.module}/../../../../docs/monitoring/metrics-catalog.yaml"))
 
+  # CloudWatch signals. PostHog's are the errors section's, below.
   heartbeat_live = [
     for metric in local.heartbeat_catalog.metrics :
-    metric if try(metric.active, false) && try(metric.signal, null) != null
+    metric if try(metric.active, false) && try(metric.signal, null) != null && try(metric.signal.kind, "cloudwatch") == "cloudwatch"
   ]
 
   heartbeat_daily = [
@@ -51,6 +52,18 @@ locals {
   # The data path's own section: volume entries share one chart, latency entries another,
   # and path entries are the tiles beneath them.
   heartbeat_path_areas = ["volume", "latency", "path"]
+
+  # Errors come from PostHog error tracking and sit right beneath what is firing: an issue table
+  # and a tile per entry. Only once the Infinity data source exists, since without it they
+  # would query nothing.
+  heartbeat_errors_areas = ["errors"]
+  heartbeat_errors = [
+    for metric in local.heartbeat_catalog.metrics : metric
+    if try(metric.active, false) && try(metric.signal.kind, "") == "posthog" && contains(local.heartbeat_errors_areas, try(metric.area, ""))
+  ]
+  heartbeat_errors_shown  = length(grafana_data_source.posthog) > 0 && length(local.heartbeat_errors) > 0
+  heartbeat_errors_panels = max(8, 4 * length(local.heartbeat_errors))
+  heartbeat_errors_height = local.heartbeat_errors_shown ? 1 + local.heartbeat_errors_panels : 0
 
   # Usage is what stakeholders open the report for, so it leads. A weekly section gathers entries
   # from one or more areas, so the data path's own areas sit here as one section.
@@ -214,13 +227,13 @@ locals {
   }
 
   heartbeat_triage_prompts = {
-    for m in local.heartbeat_live : m.id => replace(replace(replace(
+    for m in concat(local.heartbeat_live, local.heartbeat_errors) : m.id => replace(replace(replace(
       urlencode("/openjii-triage ${m.id} on ${var.environment} between __FROM__ and __TO__"),
     "+", "%20"), "__FROM__", "$${__from:date:iso}"), "__TO__", "$${__to:date:iso}")
   }
 
   heartbeat_runbook_links = {
-    for m in local.heartbeat_live : m.id => [
+    for m in concat(local.heartbeat_live, local.heartbeat_errors) : m.id => [
       for path in compact([try(m.runbook, "")]) : { title = "Runbook", url = "${var.runbook_base_url}/${path}", targetBlank = true }
     ]
   }
@@ -232,7 +245,7 @@ locals {
 
   # Custom schemes open in place; a new tab would stay blank. Usage numbers have nothing to triage.
   heartbeat_triage_links = {
-    for m in local.heartbeat_live : m.id => [
+    for m in concat(local.heartbeat_live, local.heartbeat_errors) : m.id => [
       for link in [
         { title = "Triage in VS Code", url = "vscode://anthropic.claude-code/open?prompt=${local.heartbeat_triage_prompts[m.id]}", targetBlank = false },
         { title = "Triage in terminal", url = "claude-cli://open?repo=${local.heartbeat_repository}&q=${local.heartbeat_triage_prompts[m.id]}", targetBlank = false },
@@ -391,7 +404,7 @@ locals {
     })
   }
 
-  # Daily layout: what is firing, the data path, a board of every
+  # Daily layout: what is firing, the errors PostHog grouped, the data path, a board of every
   # rule-backed signal over the day, the levels without a limit, then every chart in one
   # collapsed row the board and tiles link into.
   # Panel ids below 100 are entry nums and 100 to 199 their tiles, so the rest sit above.
@@ -444,7 +457,8 @@ locals {
     )
   }
 
-  heartbeat_path_top     = local.heartbeat_alert_height
+  heartbeat_errors_top   = local.heartbeat_alert_height
+  heartbeat_path_top     = local.heartbeat_errors_top + local.heartbeat_errors_height
   heartbeat_path_height  = 1 + 10 + 3 * ceil(length(local.heartbeat_path_tiles) / 6)
   heartbeat_board_top    = local.heartbeat_path_top + local.heartbeat_path_height
   heartbeat_board_height = 3 + ceil(length(local.heartbeat_watched) * 0.7)
@@ -553,13 +567,59 @@ locals {
     ]
   }
 
+  heartbeat_error_tiles = [
+    for j, m in local.heartbeat_errors : {
+      id            = 100 + m.num
+      type          = "stat"
+      title         = m.name
+      description   = "Every exception reported over the time range, across all issues. Investigate with /openjii-triage ${m.id}, or one issue from the table."
+      pluginVersion = "10.4.1"
+      datasource    = local.heartbeat_posthog_datasource
+      gridPos       = { h = local.heartbeat_errors_panels / length(local.heartbeat_errors), w = 6, x = 18, y = local.heartbeat_errors_top + 1 + j * local.heartbeat_errors_panels / length(local.heartbeat_errors) }
+      fieldConfig = {
+        defaults = {
+          noValue    = "0"
+          unit       = "short"
+          color      = { mode = "thresholds" }
+          thresholds = { mode = "absolute", steps = [{ color = "text", value = null }] }
+          links      = concat([local.heartbeat_error_inbox_link, local.heartbeat_error_tracking_link], local.heartbeat_runbook_links[m.id], local.heartbeat_triage_links[m.id])
+        }
+        overrides = []
+      }
+      options = {
+        colorMode         = "value"
+        graphMode         = "none"
+        justifyMode       = "center"
+        orientation       = "auto"
+        textMode          = "value"
+        text              = { titleSize = 13, valueSize = 34 }
+        wideLayout        = true
+        showPercentChange = false
+        reduceOptions     = { calcs = ["lastNotNull"], fields = "", values = false }
+      }
+      targets = [merge(local.heartbeat_posthog_target, {
+        url_options = merge(local.heartbeat_posthog_request, {
+          data = jsonencode({ query = { kind = "HogQLQuery", query = templatestring(m.signal.query, local.heartbeat_placeholders) } })
+        })
+        columns = [{ selector = "0", text = "Exceptions", type = "number" }]
+      })]
+    }
+  ]
+
   heartbeat_daily_panels = concat(
     [local.heartbeat_alert_list],
     [merge(local.flow_caption, {
       id      = 910
       gridPos = { h = local.heartbeat_alert_height, w = 8, x = 16, y = 0 }
-      options = { mode = "markdown", content = "**The round, top to bottom.** Anything firing has already posted to Slack, and its rule links its runbook. Beneath: the data pipeline, the board of every rule (red is a five-minute reading past its limit) and the levels without one.\n\nHand anything odd to `/openjii-triage <id>`, or run the whole round from the header's Daily round in VS Code." }
+      options = { mode = "markdown", content = "**The round, top to bottom.** Anything firing has already posted to Slack, and its rule links its runbook. Beneath: the errors PostHog grouped, the data pipeline, the board of every rule (red is a five-minute reading past its limit) and the levels without one.\n\nHand anything odd to `/openjii-triage <id>`, or run the whole round from the header's Daily round in VS Code." }
     })],
+    [
+      for panel in concat(
+        [{ id = 230, type = "row", title = "Errors", collapsed = false, panels = [], gridPos = { h = 1, w = 24, x = 0, y = local.heartbeat_errors_top } }],
+        [merge(local.heartbeat_error_tables.daily, { id = 906, gridPos = { h = local.heartbeat_errors_panels, w = 18, x = 0, y = local.heartbeat_errors_top + 1 } })],
+        local.heartbeat_error_tiles,
+      ) : panel if local.heartbeat_errors_shown
+    ],
     [{
       id        = 240
       type      = "row"
@@ -721,6 +781,7 @@ locals {
   # fails the plan instead of rendering a panel that queries a literal forever.
   heartbeat_placeholders = {
     ENVIRONMENT                     = var.environment
+    EXCEPTIONS_SCOPE                = "${local.heartbeat_exception_scope} AND ${local.heartbeat_open_issues_filter}"
     KINESIS_STREAM_NAME             = var.kinesis_stream_name
     ALB_ARN_SUFFIX                  = local.alb_arn_suffix_heartbeat
     CLOUDFRONT_DISTRIBUTION_ID      = var.cloudfront_distribution_id
@@ -764,6 +825,7 @@ resource "grafana_dashboard" "heartbeat_daily" {
         { title = "Runbooks", type = "link", icon = "doc", url = "${replace(var.runbook_base_url, "blob/", "tree/")}/docs/runbooks", tooltip = "", targetBlank = true, asDropdown = false, includeVars = false, keepTime = false, tags = [] },
         { title = "Daily round in VS Code", type = "link", icon = "external link", url = "vscode://anthropic.claude-code/open?prompt=${urlencode("/openjii-daily-round")}%20${var.environment}", tooltip = "Opens Claude Code in the focused VS Code window with the round pre-filled", targetBlank = false, asDropdown = false, includeVars = false, keepTime = false, tags = [] },
       ],
+      local.heartbeat_errors_header_links,
     )
     panels = local.heartbeat_daily_panels
   }))
@@ -783,6 +845,7 @@ resource "grafana_dashboard" "heartbeat_weekly" {
     links = concat(
       [{ title = "Daily report", type = "link", icon = "dashboard", url = "/d/${local.heartbeat_daily_uid}", tooltip = "", targetBlank = false, asDropdown = false, includeVars = false, keepTime = false, tags = [] }],
       [for key in local.flow_order : local.flow_header_links[key]],
+      local.heartbeat_errors_header_links,
     )
     panels = local.heartbeat_weekly_panels
   }))
