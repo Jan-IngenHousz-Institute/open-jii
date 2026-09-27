@@ -35,7 +35,7 @@ variable "databricks_host" {
 }
 
 variable "slack_webhook_url" {
-  description = "The Slack incoming webhook for this environment: Databricks job events, Grafana alerts and the heartbeat digests"
+  description = "The Slack incoming webhook for this environment: Databricks job events, Grafana alerts, and PostHog's error alerts for every environment"
   type        = string
   sensitive   = true
 }

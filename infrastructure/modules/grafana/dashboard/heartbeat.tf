@@ -171,6 +171,12 @@ locals {
     })
   }
 
+  # Entries queried one series at a time rather than through their catalogue search, which
+  # forgets a series that has not published for two weeks.
+  heartbeat_named_series = {
+    dora = { total = local.flow_dora_totals.attempts, series = local.flow_dora_series.attempts }
+  }
+
   # Grafana fills ${__from} and ${__to} when a link is clicked, so encoded text carries
   # tokens and gets the variables back afterwards. Spaces go as %20, which every handler reads.
   heartbeat_repository = regex("github\\.com/([^/]+/[^/]+)", var.runbook_base_url)[0]
@@ -327,9 +333,10 @@ locals {
     }
   }
 
-  # The latest value against the oldest in range. A rolling seven-day counter read daily
-  # over seven days compares with a week ago; a signal counted per week compares its
-  # last two weeks.
+  # The latest value against the oldest in range. A level, such as a rolling seven-day counter,
+  # reads its latest half hour, the heartbeat export's cadence, so the tile is its current value
+  # against a week ago rather than a day's peak; a signal counted per week compares its last two
+  # weeks.
   heartbeat_weekly_tiles = {
     for m in local.heartbeat_weekly : m.id => {
       id               = 100 + m.num
@@ -342,7 +349,7 @@ locals {
       description = (
         local.heartbeat_facts[m.id].period != null
         ? "The latest week against the week before."
-        : "The last seven days against the seven days before."
+        : "The latest reading against a week ago."
       )
       # No data link: Grafana 10.4 leaves the percent change off a clickable value.
       fieldConfig = {
@@ -366,9 +373,10 @@ locals {
         showPercentChange = !contains(["percent", "percentunit"], local.heartbeat_facts[m.id].unit)
         reduceOptions     = { calcs = ["lastNotNull"], fields = "", values = false }
       }
-      targets = [merge(local.heartbeat_weekly_readings[m.id], {
-        period = tostring(coalesce(local.heartbeat_facts[m.id].period, 86400))
-      })]
+      targets = [
+        for target in try(local.heartbeat_named_series[m.id].total, [local.heartbeat_weekly_readings[m.id]]) :
+        merge(target, { period = tostring(coalesce(local.heartbeat_facts[m.id].period, 1800)) })
+      ]
     }
   }
 
@@ -376,9 +384,10 @@ locals {
     for m in local.heartbeat_weekly : m.id => merge(local.heartbeat_charts[m.id], {
       links    = concat(local.heartbeat_flow_links[m.id], local.heartbeat_charts[m.id].links)
       timeFrom = "90d"
-      targets = [merge(local.heartbeat_queries[m.id], {
-        period = tostring(coalesce(local.heartbeat_facts[m.id].period, 86400))
-      })]
+      targets = [
+        for target in try(local.heartbeat_named_series[m.id].series, [local.heartbeat_queries[m.id]]) :
+        merge(target, { period = tostring(coalesce(local.heartbeat_facts[m.id].period, 86400)) })
+      ]
     })
   }
 

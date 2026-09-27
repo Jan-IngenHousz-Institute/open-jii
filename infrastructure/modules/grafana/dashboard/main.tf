@@ -60,6 +60,7 @@ locals {
     server_function_name               = var.server_function_name
     db_cluster_identifier              = var.db_cluster_identifier
     kinesis_stream_name                = var.kinesis_stream_name
+    kinesis_shard_count                = var.kinesis_shard_count
     ecs_log_group_name                 = var.ecs_log_group_name
     iot_log_group_name                 = var.iot_log_group_name
     account_id                         = data.aws_caller_identity.current.account_id

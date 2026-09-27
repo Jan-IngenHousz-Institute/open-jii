@@ -826,7 +826,7 @@
               "dimensions": {
                 "StreamName": "${kinesis_stream_name}"
               },
-              "expression": "2 * IF(m0, 1, 1)",
+              "expression": "${2 * kinesis_shard_count} * IF(m0, 1, 1)",
               "id": "e1",
               "label": "Read limit",
               "matchExact": true,

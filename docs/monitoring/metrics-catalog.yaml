@@ -58,6 +58,9 @@ passes:
   - date: 2026-09-27
     range: [95, 95]
     note: the whole trip, from the IoT broker receiving a message to its row readable through the API
+  - date: 2026-09-27
+    range: [96, 96]
+    note: the heartbeat export's failed collectors, so a broken one is told from a quiet one
 
 metrics:
   # Ingest path
@@ -888,7 +891,10 @@ metrics:
       stat: Sum
       period: 604800
     baseline: { method: wow }
-    notes: Published by .github/actions/publish-dora-metrics with Service+Environment dimensions.
+    notes: >-
+      Published by .github/actions/publish-dora-metrics with Service+Environment dimensions. The
+      dashboards query each service by name rather than through this search, which forgets a
+      service that has not deployed for two weeks.
 
   - num: 39
     id: cost-snapshot
@@ -1322,7 +1328,7 @@ metrics:
       stat: Maximum
       unit: seconds
       dimensions: { Environment: "${ENVIRONMENT}" }
-    notes: p95 of a row's commit in the experiment tables to its macro result's commit, matched by row id over a two-hour lookback.
+    notes: p95 of a row's commit in the experiment tables to its macro result's commit. The source row is found by its commit version, however old, so results recovered after an outage still count.
 
   - num: 88
     id: macro-backlog
@@ -1338,7 +1344,7 @@ metrics:
       metric: MacroBacklogRows
       stat: Maximum
       dimensions: { Environment: "${ENVIRONMENT}" }
-    notes: Rows processed in the last twelve hours that need macros and have waited more than fifteen minutes for them.
+    notes: Rows that need macros and have waited more than fifteen minutes without any result, however long ago they arrived. A failed macro still writes a result row, so this is zero in steady state.
 
   - num: 89
     id: ingest-idle
@@ -1440,3 +1446,23 @@ metrics:
       The slowest twentieth per half hour of the whole trip: the IoT broker receiving a message to
       its row committing in the experiment table the API reads. Only rows that came through the
       broker; imports and large payloads through S3 never pass it.
+
+  - num: 96
+    id: collector-failures
+    name: Collectors failing
+    family: observability
+    area: lakehouse
+    source: dbx
+    phase: P2
+    active: true
+    slots: [exception]
+    signal:
+      namespace: OpenJII/Data
+      metric: CollectorFailures
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/collector-failures.md
+    notes: >-
+      How many of the heartbeat export's collectors raised on its latest run. Their series read No
+      data either way, and this tells a broken collector from a quiet table.

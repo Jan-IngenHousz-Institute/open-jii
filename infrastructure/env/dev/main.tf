@@ -2040,6 +2040,13 @@ module "opennext_waf" {
   }
 }
 
+# Adopts the web distribution's additional metrics, which were switched on by hand, so the first
+# apply changes nothing. Once that apply has run, this block is a no-op and can be deleted.
+import {
+  to = module.opennext.module.cloudfront.aws_cloudfront_monitoring_subscription.distribution
+  id = "E3K6NF2RKOFQPG"
+}
+
 # OpenNext Next.js Application Infrastructure
 module "opennext" {
   source = "../../modules/opennext"

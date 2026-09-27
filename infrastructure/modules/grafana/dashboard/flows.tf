@@ -334,30 +334,69 @@ locals {
     }]
   })]
 
-  # The GitHub action publishes each deploy under its service, so a search reads every service
-  # without listing them.
-  flow_dora_search = "SEARCH('{DORA/Metrics,Environment,Service} MetricName=\"%s\" AND Environment=\"${var.environment}\"', '%s')"
+  # Every service the deploy workflows publish under, each queried by name. SEARCH only finds a
+  # series that published in the last two weeks, so a service quiet for longer, and an old failure
+  # of a busy one, would drop out of a longer range.
+  flow_dora_services = [
+    "backend",
+    "calibration-sandbox",
+    "database",
+    "databricks",
+    "docs",
+    "macro-sandbox-javascript",
+    "macro-sandbox-python",
+    "macro-sandbox-r",
+    "web",
+  ]
 
   flow_dora_query = {
     region           = var.aws_region
     namespace        = "DORA/Metrics"
     queryMode        = "Metrics"
     metricQueryType  = 0
-    metricEditorMode = 1
+    metricEditorMode = 0
     metricName       = ""
     statistic        = "Sum"
-    matchExact       = false
+    matchExact       = true
     dimensions       = {}
+    expression       = ""
     label            = ""
     hide             = false
   }
 
+  # One series per service for each measure, labelled with the service.
+  flow_dora_series = {
+    for key, measure in {
+      attempts  = { metric = "DeploymentFrequency", stat = "Sum" }
+      successes = { metric = "DeploymentSuccess", stat = "Sum" }
+      failures  = { metric = "DeploymentFailed", stat = "Sum" }
+      lead      = { metric = "LeadTime", stat = "Average" }
+      lead_sum  = { metric = "LeadTime", stat = "Sum" }
+      lead_n    = { metric = "LeadTime", stat = "SampleCount" }
+      } : key => [
+      for i, service in local.flow_dora_services : merge(local.flow_dora_query, {
+        refId      = "${key}${i}"
+        id         = "${key}${i}"
+        metricName = measure.metric
+        statistic  = measure.stat
+        dimensions = { Environment = var.environment, Service = service }
+        label      = service
+      })
+    ]
+  }
+
+  # A measure summed over every service, its inputs hidden. A service with nothing published
+  # counts zero rather than blanking the sum.
   flow_dora_totals = {
-    attempts  = format("SUM(FILL(%s, 0))", format(local.flow_dora_search, "DeploymentFrequency", "Sum"))
-    successes = format("SUM(FILL(%s, 0))", format(local.flow_dora_search, "DeploymentSuccess", "Sum"))
-    failures  = format("SUM(FILL(%s, 0))", format(local.flow_dora_search, "DeploymentFailed", "Sum"))
-    lead_sum  = format("SUM(%s)", format(local.flow_dora_search, "LeadTime", "Sum"))
-    lead_n    = format("SUM(%s)", format(local.flow_dora_search, "LeadTime", "SampleCount"))
+    for key, series in local.flow_dora_series : key => concat(
+      [for target in series : merge(target, { hide = true })],
+      [merge(local.flow_dora_query, {
+        refId            = key
+        id               = key
+        metricEditorMode = 1
+        expression       = "SUM([${join(", ", [for target in series : "FILL(${target.id}, 0)"])}])"
+      })],
+    )
   }
 
   # The latest week against the week before, as on the weekly report. Grafana 10.4 colours
@@ -371,7 +410,7 @@ locals {
       red_from    = null
       no_value    = "0"
       change      = true
-      targets     = [merge(local.flow_dora_query, { refId = "A", id = "a", expression = local.flow_dora_totals.attempts })]
+      targets     = local.flow_dora_totals.attempts
     },
     {
       title       = "Successful"
@@ -380,7 +419,7 @@ locals {
       red_from    = null
       no_value    = "0"
       change      = true
-      targets     = [merge(local.flow_dora_query, { refId = "A", id = "a", expression = local.flow_dora_totals.successes })]
+      targets     = local.flow_dora_totals.successes
     },
     {
       title       = "Failed"
@@ -389,7 +428,7 @@ locals {
       red_from    = 1
       no_value    = "0"
       change      = false
-      targets     = [merge(local.flow_dora_query, { refId = "A", id = "a", expression = local.flow_dora_totals.failures })]
+      targets     = local.flow_dora_totals.failures
     },
     {
       title       = "Failed deploy rate"
@@ -398,11 +437,10 @@ locals {
       red_from    = null
       no_value    = "No deploys"
       change      = false
-      targets = [
-        merge(local.flow_dora_query, { refId = "attempts", id = "attempts", expression = local.flow_dora_totals.attempts, hide = true }),
-        merge(local.flow_dora_query, { refId = "failures", id = "failures", expression = local.flow_dora_totals.failures, hide = true }),
-        merge(local.flow_dora_query, { refId = "rate", id = "rate", expression = "100 * failures / attempts" }),
-      ]
+      targets = concat(
+        [for target in concat(local.flow_dora_totals.attempts, local.flow_dora_totals.failures) : merge(target, { hide = true })],
+        [merge(local.flow_dora_query, { refId = "rate", id = "rate", metricEditorMode = 1, expression = "100 * failures / attempts" })],
+      )
     },
     {
       title       = "Lead time"
@@ -411,20 +449,19 @@ locals {
       red_from    = null
       no_value    = "No deploys"
       change      = false
-      targets = [
-        merge(local.flow_dora_query, { refId = "total", id = "total", expression = local.flow_dora_totals.lead_sum, hide = true }),
-        merge(local.flow_dora_query, { refId = "count", id = "count", expression = local.flow_dora_totals.lead_n, hide = true }),
-        merge(local.flow_dora_query, { refId = "lead", id = "lead", expression = "total / count" }),
-      ]
+      targets = concat(
+        [for target in concat(local.flow_dora_totals.lead_sum, local.flow_dora_totals.lead_n) : merge(target, { hide = true })],
+        [merge(local.flow_dora_query, { refId = "mean", id = "mean", metricEditorMode = 1, expression = "lead_sum / lead_n" })],
+      )
     },
   ]
   flow_delivery_tile_widths = [5, 5, 5, 5, 4]
 
   flow_delivery_services = [
-    { title = "Deploys by service", metric = "DeploymentFrequency", stat = "Sum", calc = "sum", unit = "short", colour = "blue" },
-    { title = "Lead time by service", metric = "LeadTime", stat = "Average", calc = "mean", unit = "ms", colour = "purple" },
-    { title = "Successful by service", metric = "DeploymentSuccess", stat = "Sum", calc = "sum", unit = "short", colour = "green" },
-    { title = "Failed by service", metric = "DeploymentFailed", stat = "Sum", calc = "sum", unit = "short", colour = "red" },
+    { title = "Deploys by service", series = "attempts", calc = "sum", unit = "short", colour = "blue" },
+    { title = "Lead time by service", series = "lead", calc = "mean", unit = "ms", colour = "purple" },
+    { title = "Successful by service", series = "successes", calc = "sum", unit = "short", colour = "green" },
+    { title = "Failed by service", series = "failures", calc = "sum", unit = "short", colour = "red" },
   ]
 
   flow_delivery_panels = concat(
@@ -473,12 +510,12 @@ locals {
     [merge(local.flow_caption, {
       id      = 9
       gridPos = { h = 8, w = 6, x = 0, y = 6 }
-      options = { mode = "markdown", content = "**Failed deploy rate** is deploy runs that failed, not DORA's change failure rate, which counts deploys that broke production and which these numbers cannot see.\n\nEvery deploy workflow reports through the `publish-dora-metrics` action, so a service that deployed and is missing here has a workflow that skips it.\n\nA failed run's reason is in [GitHub Actions](https://github.com/${local.heartbeat_repository}/actions)." }
+      options = { mode = "markdown", content = "**Failed deploy rate** is deploy runs that failed, not DORA's change failure rate, which counts deploys that broke production and which these numbers cannot see.\n\nEvery deploy workflow reports through the `publish-dora-metrics` action, and each service is queried by name, so a new one shows here once it is added to `flow_dora_services` in the dashboard module.\n\nA failed run's reason is in [GitHub Actions](https://github.com/${local.heartbeat_repository}/actions)." }
     })],
     [
       for i, chart in [
-        { title = "Deploys by service", description = "Deploy attempts per day, stacked by service.", metric = "DeploymentFrequency", stat = "Sum", unit = "short", bars = true },
-        { title = "Lead time by service", description = "Each service's average time from commit to production on the days it deployed.", metric = "LeadTime", stat = "Average", unit = "ms", bars = false },
+        { title = "Deploys by service", description = "Deploy attempts per day, stacked by service.", series = "attempts", unit = "short", bars = true },
+        { title = "Lead time by service", description = "Each service's average time from commit to production on the days it deployed.", series = "lead", unit = "ms", bars = false },
         ] : {
         id          = 11 + i
         type        = "timeseries"
@@ -505,14 +542,7 @@ locals {
           legend  = { displayMode = "list", placement = "bottom", showLegend = true }
           tooltip = { mode = "multi", sort = "desc" }
         }
-        targets = [merge(local.flow_dora_query, {
-          refId      = "A"
-          id         = "a"
-          statistic  = chart.stat
-          expression = format(local.flow_dora_search, chart.metric, chart.stat)
-          label      = "$${PROP('Dim.Service')}"
-          period     = "86400"
-        })]
+        targets = [for target in local.flow_dora_series[chart.series] : merge(target, { period = "86400" })]
       }
     ],
     [merge(local.flow_row, { id = 20, title = "By service", gridPos = { h = 1, w = 24, x = 0, y = 14 } })],
@@ -549,14 +579,7 @@ locals {
         # Reduced before drawing, so each bar scales against the other services' totals rather
         # than its own daily values.
         transformations = [{ id = "reduce", options = { reducers = [gauge.calc], mode = "reduceFields", includeTimeField = false } }]
-        targets = [merge(local.flow_dora_query, {
-          refId      = "A"
-          id         = "a"
-          statistic  = gauge.stat
-          expression = format(local.flow_dora_search, gauge.metric, gauge.stat)
-          label      = "$${PROP('Dim.Service')}"
-          period     = "86400"
-        })]
+        targets         = [for target in local.flow_dora_series[gauge.series] : merge(target, { period = "86400" })]
       }
     ],
   )
