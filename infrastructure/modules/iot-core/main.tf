@@ -429,6 +429,52 @@ resource "aws_iot_topic_rule" "iot_rules" {
   }
 }
 
+# A random share of each channel's messages, kept a few days, so the Data pipeline dashboard can show
+# what devices send. Apart from ingest: nothing here reaches Kinesis or the archive.
+resource "aws_cloudwatch_log_group" "payload_samples" {
+  name              = "/openjii/${var.environment}/iot-payload-samples"
+  retention_in_days = var.payload_sample_retention_days
+}
+
+resource "aws_iam_role" "iot_payload_samples" {
+  name = "open_jii_${var.environment}_iot_payload_samples_role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "iot.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "iot_payload_samples" {
+  name = "open_jii_${var.environment}_iot_payload_samples_policy"
+  role = aws_iam_role.iot_payload_samples.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
+      Resource = "${aws_cloudwatch_log_group.payload_samples.arn}:*"
+    }]
+  })
+}
+
+resource "aws_iot_topic_rule" "payload_samples" {
+  for_each = local.ingest_channels
+
+  name        = "${local.iot_rule_names[each.key]}_sample"
+  enabled     = var.payload_sample_percent > 0
+  sql         = "SELECT topic() as topic, clientid() as client_id, * FROM '${local.iot_topic_filters[each.key]}' WHERE rand() < ${var.payload_sample_percent / 100}"
+  sql_version = "2016-03-23"
+
+  cloudwatch_logs {
+    log_group_name = aws_cloudwatch_log_group.payload_samples.name
+    role_arn       = aws_iam_role.iot_payload_samples.arn
+  }
+}
+
 # --------------------------------------------------
 # Device connectivity: lifecycle events + fleet index
 # --------------------------------------------------

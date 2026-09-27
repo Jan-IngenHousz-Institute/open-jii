@@ -109,3 +109,15 @@ variable "enable_firmware_jobs" {
   type        = bool
   default     = false
 }
+
+variable "payload_sample_percent" {
+  description = "Share of ingest messages, in percent, copied to the payload samples log group for the Data pipeline dashboard; 0 turns the copy off"
+  type        = number
+  default     = 10
+}
+
+variable "payload_sample_retention_days" {
+  description = "Days the payload samples are kept"
+  type        = number
+  default     = 3
+}

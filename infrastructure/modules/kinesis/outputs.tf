@@ -3,6 +3,11 @@ output "kinesis_stream_arn" {
   value       = aws_kinesis_stream.this.arn
 }
 
+output "shard_count" {
+  description = "Shards of the stream, which set its write and read limits"
+  value       = aws_kinesis_stream.this.shard_count
+}
+
 output "kinesis_stream_name" {
   description = "The name of the Kinesis Data Stream"
   value       = aws_kinesis_stream.this.name

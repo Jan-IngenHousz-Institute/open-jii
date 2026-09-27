@@ -3,13 +3,13 @@
 The file is NDJSON. Lines carrying a "metric" key become CloudWatch datapoints;
 lines carrying a "detail" key stay in S3, which is what keeps per-experiment
 cardinality out of CloudWatch. The openjii-triage skill and whoever is holding an
-incident read them there; the digest does not read them yet.
+incident read them there.
 """
 
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from .constants import HEARTBEAT_KEY_PREFIX, MAX_DETAIL_ROWS
 
@@ -57,6 +57,43 @@ def heartbeat_key(observed_at: datetime) -> str:
     """Date-partitioned object key; one object per run."""
     stamp = observed_at.astimezone(timezone.utc)
     return f"{HEARTBEAT_KEY_PREFIX}/{stamp:%Y/%m/%d}/{stamp:%H%M%S}.json"
+
+
+def previous_bucket(now: datetime, minutes: int) -> tuple[datetime, datetime]:
+    """The last complete bucket of `minutes` before `now`, as [start, end).
+
+    Counting a closed bucket per run, rather than a trailing window, means the
+    counts add up over a day without overlap as long as each bucket is counted
+    once.
+    """
+    stamp = _as_utc(now).replace(second=0, microsecond=0)
+    end = stamp - timedelta(minutes=stamp.minute % minutes)
+    return end - timedelta(minutes=minutes), end
+
+
+def hop(
+    rows_metric: str,
+    latency_metric: str,
+    rows: int,
+    p95_seconds: float | None,
+    bucket_start: datetime,
+    namespace: str,
+    environment: str,
+) -> list[dict]:
+    """One stage of the data path for one bucket: how many rows passed and, when
+    any did, how long the slowest twentieth took.
+
+    Both are stamped at the bucket's start, so a chart lines the stages up. A
+    quiet bucket reports zero rows and no latency rather than a latency of zero.
+    """
+    points = [observation(rows_metric, rows, namespace, bucket_start, environment, "Count")]
+    if rows > 0 and p95_seconds is not None:
+        points.append(
+            observation(
+                latency_metric, round(p95_seconds, 1), namespace, bucket_start, environment, "Seconds"
+            )
+        )
+    return points
 
 
 def minutes_since(earlier: datetime | None, now: datetime) -> float | None:

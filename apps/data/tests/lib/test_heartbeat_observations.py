@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
+from itertools import pairwise
 
 import openjii.heartbeat as heartbeat
 from openjii.heartbeat import (
@@ -12,8 +13,10 @@ from openjii.heartbeat import (
     USAGE_NAMESPACE,
     detail,
     heartbeat_key,
+    hop,
     minutes_since,
     observation,
+    previous_bucket,
     to_ndjson,
 )
 
@@ -37,6 +40,19 @@ def test_metric_names_are_the_literals_the_catalog_binds():
     assert heartbeat.INGEST_BAD_PAYLOAD_RATE_METRIC == "IngestBadPayloadRate"
     assert heartbeat.MEASUREMENTS_24H_METRIC == "Measurements24h"
     assert heartbeat.ACTIVE_DEVICES_30D_METRIC == "ActiveDevices30d"
+    assert heartbeat.MEASUREMENTS_7D_METRIC == "Measurements7d"
+    assert heartbeat.ACTIVE_DEVICES_7D_METRIC == "ActiveDevices7d"
+    assert heartbeat.ACTIVE_EXPERIMENTS_7D_METRIC == "ActiveExperiments7d"
+    assert heartbeat.ACTIVE_CONTRIBUTORS_7D_METRIC == "ActiveContributors7d"
+    assert heartbeat.INGESTED_ROWS_METRIC == "IngestedRows"
+    assert heartbeat.EXPERIMENT_ROWS_METRIC == "ExperimentRows"
+    assert heartbeat.MACRO_RESULT_ROWS_METRIC == "MacroResultRows"
+    assert heartbeat.INGEST_LATENCY_METRIC == "IngestLatencyP95Seconds"
+    assert heartbeat.EXPERIMENT_LATENCY_METRIC == "ExperimentLatencyP95Seconds"
+    assert heartbeat.MACRO_LATENCY_METRIC == "MacroLatencyP95Seconds"
+    assert heartbeat.MACRO_BACKLOG_METRIC == "MacroBacklogRows"
+    assert heartbeat.INGEST_IDLE_METRIC == "IngestIdleMinutes"
+    assert heartbeat.MACRO_IDLE_METRIC == "MacroIdleMinutes"
 
 
 def test_to_ndjson_serializes_the_datetimes_a_roster_row_carries():
@@ -67,6 +83,19 @@ def test_every_metric_and_detail_name_is_exported():
         "INGEST_BAD_PAYLOAD_RATE_METRIC",
         "MEASUREMENTS_24H_METRIC",
         "ACTIVE_DEVICES_30D_METRIC",
+        "MEASUREMENTS_7D_METRIC",
+        "ACTIVE_DEVICES_7D_METRIC",
+        "ACTIVE_EXPERIMENTS_7D_METRIC",
+        "ACTIVE_CONTRIBUTORS_7D_METRIC",
+        "INGESTED_ROWS_METRIC",
+        "EXPERIMENT_ROWS_METRIC",
+        "MACRO_RESULT_ROWS_METRIC",
+        "INGEST_LATENCY_METRIC",
+        "EXPERIMENT_LATENCY_METRIC",
+        "MACRO_LATENCY_METRIC",
+        "MACRO_BACKLOG_METRIC",
+        "INGEST_IDLE_METRIC",
+        "MACRO_IDLE_METRIC",
         "STALE_EXPERIMENTS_DETAIL",
         "SILENT_DEVICES_DETAIL",
     ):
@@ -147,3 +176,46 @@ def test_minutes_since_rounds_and_passes_through_missing_source():
     assert minutes_since(NOW - timedelta(seconds=90), NOW) == 1.5
     assert minutes_since(NOW - timedelta(seconds=30), NOW) == 0.5
     assert minutes_since(None, NOW) is None
+
+
+def test_previous_bucket_is_the_last_closed_half_hour():
+    start, end = previous_bucket(datetime(2026, 9, 26, 17, 31, 42, tzinfo=timezone.utc), 30)
+
+    assert (start, end) == (
+        datetime(2026, 9, 26, 17, 0, tzinfo=timezone.utc),
+        datetime(2026, 9, 26, 17, 30, tzinfo=timezone.utc),
+    )
+
+
+def test_previous_bucket_on_the_boundary_is_the_half_hour_just_closed():
+    start, end = previous_bucket(datetime(2026, 9, 26, 18, 0, 0, tzinfo=timezone.utc), 30)
+
+    assert (start, end) == (
+        datetime(2026, 9, 26, 17, 30, tzinfo=timezone.utc),
+        datetime(2026, 9, 26, 18, 0, tzinfo=timezone.utc),
+    )
+
+
+def test_consecutive_runs_count_adjacent_buckets_without_overlap():
+    # Runs every half hour, a minute or two late, must tile the day exactly once.
+    runs = [datetime(2026, 9, 26, 0, 1, tzinfo=timezone.utc) + timedelta(minutes=30 * i) for i in range(48)]
+    buckets = [previous_bucket(run, 30) for run in runs]
+
+    assert all(earlier[1] == later[0] for earlier, later in pairwise(buckets))
+
+
+def test_hop_reports_rows_and_latency_at_the_bucket_start():
+    start = datetime(2026, 9, 26, 17, 0, tzinfo=timezone.utc)
+    points = hop("IngestedRows", "IngestLatencyP95Seconds", 86, 3.76575, start, DATA_NAMESPACE, "dev")
+
+    assert [(p["metric"], p["value"], p["unit"], p["timestamp"]) for p in points] == [
+        ("IngestedRows", 86, "Count", "2026-09-26T17:00:00Z"),
+        ("IngestLatencyP95Seconds", 3.8, "Seconds", "2026-09-26T17:00:00Z"),
+    ]
+
+
+def test_hop_in_a_quiet_bucket_reports_zero_rows_and_no_latency():
+    start = datetime(2026, 9, 26, 17, 0, tzinfo=timezone.utc)
+    points = hop("IngestedRows", "IngestLatencyP95Seconds", 0, None, start, DATA_NAMESPACE, "dev")
+
+    assert [(p["metric"], p["value"]) for p in points] == [("IngestedRows", 0)]

@@ -7,7 +7,12 @@
 import dlt
 from pyspark.sql import functions as F
 
-from openjii.metrics import ACTIVITY_WINDOW_DAYS, ACTIVITY_WINDOWS_TABLE, within_plausible_range
+from openjii.metrics import (
+    ACTIVITY_WINDOW_DAYS,
+    ACTIVITY_WINDOWS_TABLE,
+    WEEKLY_WINDOW_DAYS,
+    within_plausible_range,
+)
 from openjii.metrics.runtime import SILVER_TABLE, centrum_table
 
 # COMMAND ----------
@@ -15,7 +20,7 @@ from openjii.metrics.runtime import SILVER_TABLE, centrum_table
 
 @dlt.table(
     name=ACTIVITY_WINDOWS_TABLE,
-    comment="Public metrics: one row of rolling 24h and 30d activity counters.",
+    comment="Public metrics: one row of rolling 24h, 7d and 30d activity counters.",
     table_properties={
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
@@ -28,6 +33,7 @@ def activity_windows():
     now = F.current_timestamp()
 
     in_24h = F.col("timestamp") >= now - F.expr("INTERVAL 24 HOURS")
+    in_week = F.col("timestamp") >= now - F.expr(f"INTERVAL {WEEKLY_WINDOW_DAYS} DAYS")
     in_window = F.col("timestamp") >= now - F.expr(f"INTERVAL {ACTIVITY_WINDOW_DAYS} DAYS")
 
     return (
@@ -35,6 +41,10 @@ def activity_windows():
         .filter(within_plausible_range(F.col("timestamp"), now))
         .agg(
             F.count(F.when(in_24h, True)).alias("measurements_24h"),
+            F.count(F.when(in_week, True)).alias("measurements_7d"),
+            F.countDistinct(F.when(in_week, F.col("experiment_id"))).alias("experiments_7d"),
+            F.countDistinct(F.when(in_week, F.col("user_id"))).alias("contributors_7d"),
+            F.countDistinct(F.when(in_week, F.col("device_id"))).alias("devices_7d"),
             F.count(F.when(in_window, True)).alias("measurements_30d"),
             F.countDistinct(F.when(in_window, F.col("experiment_id"))).alias("experiments_30d"),
             F.countDistinct(F.when(in_window, F.col("user_id"))).alias("contributors_30d"),

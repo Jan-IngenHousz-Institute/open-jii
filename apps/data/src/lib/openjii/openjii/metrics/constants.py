@@ -119,6 +119,9 @@ PARAMETER_LABELS = {
 
 ACTIVITY_WINDOW_DAYS = 30
 
+# The heartbeat's weekly report reads the same counters over a week.
+WEEKLY_WINDOW_DAYS = 7
+
 # Parameters get a wider window than activity does. Which instrument is in
 # the field varies month to month, and a 30-day view described whichever
 # family happened to be collecting rather than the platform.

@@ -34,6 +34,7 @@ from .constants import (
     RESOURCE_TYPE_WORKBOOK_VERSION,
     SENSOR_PARAMETER_ALLOWLIST,
     UNATTRIBUTED_FAMILY,
+    WEEKLY_WINDOW_DAYS,
 )
 from .timestamps import within_plausible_range
 
@@ -66,5 +67,6 @@ __all__ = [
     "RESOURCE_TYPE_WORKBOOK_VERSION",
     "SENSOR_PARAMETER_ALLOWLIST",
     "UNATTRIBUTED_FAMILY",
+    "WEEKLY_WINDOW_DAYS",
     "within_plausible_range",
 ]
