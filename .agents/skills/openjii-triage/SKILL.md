@@ -1,12 +1,13 @@
 ---
 name: openjii-triage
-description: Investigate a platform heartbeat alert or digest anomaly by metric id. Use when a digest line, a Grafana alert, or a runbook points at a metric such as ingest-lag, dlt-heartbeat, or stale-experiments, and you need evidence and a likely cause rather than a guess.
+description: Investigate a platform heartbeat alert or report anomaly by metric id. Use when a report panel, a Grafana alert, or a runbook points at a metric such as ingest-lag, dlt-heartbeat, or stale-experiments, and you need evidence and a likely cause rather than a guess.
 ---
 
 # Triage a heartbeat metric
 
-Read `AGENTS.md` first. Invoked as `/openjii-triage <metric-id>`, the id being the one the digest
-printed (`ingest-lag`, `stale-experiments`, ...).
+Read `AGENTS.md` first. Invoked as `/openjii-triage <metric-id>`, the id being the alert's `metric_id`
+label or the one a daily report chart or tile names (`ingest-lag`, `stale-experiments`, ...). A link
+from the report adds the environment and the report's time window after the id; start there.
 
 Your output is a diagnosis someone can act on: what is happening, since when, the most likely cause,
 the evidence you actually pulled, and the next step. Never present an unverified guess as a finding.
@@ -23,7 +24,7 @@ is your hypothesis list: confirm or eliminate them, don't restate them.
 
 Two entry fields change what you should do:
 
-- `active: false` means the composer does not consume it. It does not mean the data is absent:
+- `active: false` means no report dashboard charts it. It does not mean the data is absent:
   some inactive entries have live producers (AWS vitals, PostHog captures) and only lack a rule.
   Read the entry's notes and runbook for which it is, and query the source when one exists.
 - `source:` tells you where evidence lives: `aws` in CloudWatch, `dbx` in the heartbeat files,

@@ -1,7 +1,7 @@
 # metrics-forwarder-errors
 
 **The forwarder is failing to turn heartbeat files into CloudWatch datapoints.** The files are still
-in S3, so nothing is lost yet, but every lakehouse signal in the digest goes quiet until this is
+in S3, so nothing is lost yet, but every lakehouse tile on the daily report goes quiet until this is
 fixed, and quiet is not the same as healthy.
 
 This watches errors and not liveness. The function is S3 event driven, so a day with no heartbeat

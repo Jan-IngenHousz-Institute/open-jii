@@ -50,8 +50,8 @@ export interface ParseResult {
 /**
  * Parse the NDJSON heartbeat file. Lines carrying a "metric" key become CloudWatch
  * datapoints; "detail" roster lines stay in S3, which is what keeps per-experiment
- * cardinality out of CloudWatch. Their reader today is the openjii-triage skill and
- * whoever is holding an incident; the digest does not read them yet.
+ * cardinality out of CloudWatch. Their readers are the openjii-triage skill and
+ * whoever is holding an incident.
  */
 export function parseObservations(body: string): ParseResult {
   const observations: ForwarderDatum[] = [];

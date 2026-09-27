@@ -94,7 +94,7 @@ jobs:
     env:
       DO_NOT_TRACK: 1
       TURBO_TELEMETRY_DISABLED: 1
-      BUNDLE_DIRS: "infrastructure/modules/monitoring/digest-composer/lambda infrastructure/modules/monitoring/metrics-forwarder/lambda infrastructure/modules/grafana/metrics-publisher/lambda"
+      BUNDLE_DIRS: "infrastructure/modules/monitoring/metrics-forwarder/lambda infrastructure/modules/grafana/metrics-publisher/lambda"
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6

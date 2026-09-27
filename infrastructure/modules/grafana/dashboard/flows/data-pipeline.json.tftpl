@@ -1,0 +1,1982 @@
+{
+  "sections": [
+    {
+      "key": "devices",
+      "panels": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource_uid}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "text",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short",
+              "color": {
+                "mode": "thresholds"
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 12,
+            "x": 0,
+            "y": 1
+          },
+          "id": 501,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "center",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "sum"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "textMode": "value",
+            "wideLayout": true,
+            "text": {
+              "titleSize": 13,
+              "valueSize": 28
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "dimensions": {
+                "Protocol": "MQTT"
+              },
+              "expression": "",
+              "id": "",
+              "label": "",
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Connect.Success",
+              "metricQueryType": 0,
+              "namespace": "AWS/IoT",
+              "period": "3600",
+              "queryMode": "Metrics",
+              "refId": "A",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            }
+          ],
+          "title": "Successful connections",
+          "type": "stat",
+          "description": "Total over the time range."
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource_uid}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "text",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short",
+              "color": {
+                "mode": "thresholds"
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 12,
+            "x": 12,
+            "y": 1
+          },
+          "id": 502,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "center",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "sum"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showPercentChange": false,
+            "textMode": "value_and_name",
+            "wideLayout": true,
+            "text": {
+              "titleSize": 13,
+              "valueSize": 28
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "dimensions": {
+                "Protocol": "HTTP"
+              },
+              "expression": "",
+              "id": "",
+              "label": "HTTP",
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "PublishIn.Success",
+              "metricQueryType": 0,
+              "namespace": "AWS/IoT",
+              "period": "3600",
+              "queryMode": "Metrics",
+              "refId": "A",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            },
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "dimensions": {
+                "Protocol": "MQTT"
+              },
+              "expression": "",
+              "id": "",
+              "label": "MQTT",
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "PublishIn.Success",
+              "metricQueryType": 0,
+              "namespace": "AWS/IoT",
+              "period": "3600",
+              "queryMode": "Metrics",
+              "refId": "B",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            }
+          ],
+          "title": "Messages published",
+          "type": "stat",
+          "description": "Total over the time range."
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource_uid}"
+          },
+          "description": "Messages published over time",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "bars",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "normal",
+                  "group": "A"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 5
+          },
+          "id": 503,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "dimensions": {
+                "Protocol": "MQTT"
+              },
+              "expression": "",
+              "id": "",
+              "label": "Published",
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "PublishIn.Success",
+              "metricQueryType": 0,
+              "namespace": "AWS/IoT",
+              "period": "3600",
+              "queryMode": "Metrics",
+              "refId": "A",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            }
+          ],
+          "title": "Messages published",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource_uid}"
+          },
+          "description": "Connection successes and errors",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "bars",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "mode": "normal",
+                  "group": "A"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byFrameRefID",
+                  "options": "B"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 5
+          },
+          "id": 504,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "dimensions": {
+                "Protocol": "MQTT"
+              },
+              "expression": "",
+              "id": "",
+              "label": "Successful",
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Connect.Success",
+              "metricQueryType": 0,
+              "namespace": "AWS/IoT",
+              "period": "3600",
+              "queryMode": "Metrics",
+              "refId": "A",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            },
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "dimensions": {
+                "Protocol": "MQTT"
+              },
+              "expression": "",
+              "id": "",
+              "label": "Client errors",
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Connect.ClientError",
+              "metricQueryType": 0,
+              "namespace": "AWS/IoT",
+              "period": "3600",
+              "queryMode": "Metrics",
+              "refId": "B",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            }
+          ],
+          "title": "Connections",
+          "type": "timeseries"
+        }
+      ]
+    },
+    {
+      "key": "stream",
+      "panels": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource_uid}"
+          },
+          "description": "Age of the oldest record read from the stream (indicates consumer lag)",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 8,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 60000
+                  },
+                  {
+                    "color": "red",
+                    "value": 300000
+                  }
+                ]
+              },
+              "unit": "ms"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 1
+          },
+          "id": 506,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "dimensions": {
+                "StreamName": "${kinesis_stream_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "Iterator Age",
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "GetRecords.IteratorAgeMilliseconds",
+              "metricQueryType": 0,
+              "namespace": "AWS/Kinesis",
+              "period": "60",
+              "queryMode": "Metrics",
+              "refId": "A",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Maximum"
+            }
+          ],
+          "title": "Consumer lag",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource_uid}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 8,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "ms"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 1
+          },
+          "id": 507,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "dimensions": {
+                "StreamName": "${kinesis_stream_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "Read latency",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "GetRecords.Latency",
+              "metricQueryType": 0,
+              "namespace": "AWS/Kinesis",
+              "period": "",
+              "queryMode": "Metrics",
+              "refId": "A",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Average"
+            }
+          ],
+          "title": "Read latency",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource_uid}"
+          },
+          "description": "GetRecords throughput in MiB/second",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 8,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "MiBs"
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Read limit"
+                },
+                "properties": [
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash",
+                      "dash": [
+                        10,
+                        10
+                      ]
+                    }
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "color",
+                    "value": {
+                      "mode": "fixed",
+                      "fixedColor": "red"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 9
+          },
+          "id": 508,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "dimensions": {
+                "StreamName": "${kinesis_stream_name}"
+              },
+              "expression": "m0/1024/1024/PERIOD(m0)",
+              "id": "e0",
+              "label": "Read",
+              "matchExact": true,
+              "metricEditorMode": 1,
+              "metricQueryType": 0,
+              "period": "60",
+              "queryMode": "Metrics",
+              "refId": "e0",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            },
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "dimensions": {
+                "StreamName": "${kinesis_stream_name}"
+              },
+              "expression": "",
+              "hide": true,
+              "id": "m0",
+              "label": "",
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "GetRecords.Bytes",
+              "metricQueryType": 0,
+              "namespace": "AWS/Kinesis",
+              "period": "60",
+              "queryMode": "Metrics",
+              "refId": "m0",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            },
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "dimensions": {
+                "StreamName": "${kinesis_stream_name}"
+              },
+              "expression": "2 * IF(m0, 1, 1)",
+              "id": "e1",
+              "label": "Read limit",
+              "matchExact": true,
+              "metricEditorMode": 1,
+              "metricQueryType": 0,
+              "period": "60",
+              "queryMode": "Metrics",
+              "refId": "e1",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            }
+          ],
+          "title": "Read throughput against its limit",
+          "type": "timeseries"
+        },
+        {
+          "type": "timeseries",
+          "title": "Records in and out",
+          "description": "Records written to the stream against records its consumer read, per minute. Reads falling behind writes is lag building.",
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource_uid}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "fillOpacity": 8,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "pointSize": 4,
+                "axisBorderShow": false
+              },
+              "color": {
+                "mode": "palette-classic"
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "refId": "A",
+              "id": "a",
+              "region": "${aws_region}",
+              "queryMode": "Metrics",
+              "metricQueryType": 0,
+              "metricEditorMode": 0,
+              "namespace": "AWS/Kinesis",
+              "metricName": "IncomingRecords",
+              "statistic": "Sum",
+              "period": "60",
+              "dimensions": {
+                "StreamName": "${kinesis_stream_name}"
+              },
+              "matchExact": true,
+              "expression": "",
+              "label": "Written"
+            },
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "refId": "B",
+              "id": "b",
+              "region": "${aws_region}",
+              "queryMode": "Metrics",
+              "metricQueryType": 0,
+              "metricEditorMode": 0,
+              "namespace": "AWS/Kinesis",
+              "metricName": "GetRecords.Records",
+              "statistic": "Sum",
+              "period": "60",
+              "dimensions": {
+                "StreamName": "${kinesis_stream_name}"
+              },
+              "matchExact": true,
+              "expression": "",
+              "label": "Read"
+            }
+          ],
+          "id": 509,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 9
+          }
+        }
+      ]
+    },
+    {
+      "key": "macros",
+      "panels": [
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource_uid}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 8,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 1
+          },
+          "id": 511,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "dimensions": {
+                "FunctionName": "${macro_sandbox_python_function_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "Python Invocations",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Invocations",
+              "metricQueryType": 0,
+              "namespace": "AWS/Lambda",
+              "period": "300",
+              "queryMode": "Metrics",
+              "refId": "A",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            },
+            {
+              "dimensions": {
+                "FunctionName": "${macro_sandbox_js_function_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "JS Invocations",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Invocations",
+              "metricQueryType": 0,
+              "namespace": "AWS/Lambda",
+              "period": "300",
+              "queryMode": "Metrics",
+              "refId": "B",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            },
+            {
+              "dimensions": {
+                "FunctionName": "${macro_sandbox_r_function_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "R Invocations",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Invocations",
+              "metricQueryType": 0,
+              "namespace": "AWS/Lambda",
+              "period": "300",
+              "queryMode": "Metrics",
+              "refId": "C",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            }
+          ],
+          "title": "Invocations by language",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource_uid}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 8,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 1
+          },
+          "id": 512,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "dimensions": {
+                "FunctionName": "${macro_sandbox_python_function_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "Python Errors",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Errors",
+              "metricQueryType": 0,
+              "namespace": "AWS/Lambda",
+              "period": "300",
+              "queryMode": "Metrics",
+              "refId": "A",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            },
+            {
+              "dimensions": {
+                "FunctionName": "${macro_sandbox_js_function_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "JS Errors",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Errors",
+              "metricQueryType": 0,
+              "namespace": "AWS/Lambda",
+              "period": "300",
+              "queryMode": "Metrics",
+              "refId": "B",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            },
+            {
+              "dimensions": {
+                "FunctionName": "${macro_sandbox_r_function_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "R Errors",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Errors",
+              "metricQueryType": 0,
+              "namespace": "AWS/Lambda",
+              "period": "300",
+              "queryMode": "Metrics",
+              "refId": "C",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            },
+            {
+              "dimensions": {
+                "FunctionName": "${macro_sandbox_python_function_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "Python Throttles",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Throttles",
+              "metricQueryType": 0,
+              "namespace": "AWS/Lambda",
+              "period": "300",
+              "queryMode": "Metrics",
+              "refId": "D",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            },
+            {
+              "dimensions": {
+                "FunctionName": "${macro_sandbox_js_function_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "JS Throttles",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Throttles",
+              "metricQueryType": 0,
+              "namespace": "AWS/Lambda",
+              "period": "300",
+              "queryMode": "Metrics",
+              "refId": "E",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            },
+            {
+              "dimensions": {
+                "FunctionName": "${macro_sandbox_r_function_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "R Throttles",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Throttles",
+              "metricQueryType": 0,
+              "namespace": "AWS/Lambda",
+              "period": "300",
+              "queryMode": "Metrics",
+              "refId": "F",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            }
+          ],
+          "title": "Errors and throttles",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource_uid}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 8,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "ms"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 9
+          },
+          "id": 513,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "dimensions": {
+                "FunctionName": "${macro_sandbox_python_function_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "Python p50",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Duration",
+              "metricQueryType": 0,
+              "namespace": "AWS/Lambda",
+              "period": "300",
+              "queryMode": "Metrics",
+              "refId": "A",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "p50"
+            },
+            {
+              "dimensions": {
+                "FunctionName": "${macro_sandbox_python_function_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "Python p99",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Duration",
+              "metricQueryType": 0,
+              "namespace": "AWS/Lambda",
+              "period": "300",
+              "queryMode": "Metrics",
+              "refId": "B",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "p99"
+            },
+            {
+              "dimensions": {
+                "FunctionName": "${macro_sandbox_js_function_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "JS p50",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Duration",
+              "metricQueryType": 0,
+              "namespace": "AWS/Lambda",
+              "period": "300",
+              "queryMode": "Metrics",
+              "refId": "C",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "p50"
+            },
+            {
+              "dimensions": {
+                "FunctionName": "${macro_sandbox_js_function_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "JS p99",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Duration",
+              "metricQueryType": 0,
+              "namespace": "AWS/Lambda",
+              "period": "300",
+              "queryMode": "Metrics",
+              "refId": "D",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "p99"
+            },
+            {
+              "dimensions": {
+                "FunctionName": "${macro_sandbox_r_function_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "R p50",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Duration",
+              "metricQueryType": 0,
+              "namespace": "AWS/Lambda",
+              "period": "300",
+              "queryMode": "Metrics",
+              "refId": "E",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "p50"
+            },
+            {
+              "dimensions": {
+                "FunctionName": "${macro_sandbox_r_function_name}"
+              },
+              "expression": "",
+              "id": "",
+              "label": "R p99",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "Duration",
+              "metricQueryType": 0,
+              "namespace": "AWS/Lambda",
+              "period": "300",
+              "queryMode": "Metrics",
+              "refId": "F",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "p99"
+            }
+          ],
+          "title": "Run time by language",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "cloudwatch",
+            "uid": "${datasource_uid}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 8,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 2,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "area"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 50
+                  },
+                  {
+                    "color": "red",
+                    "value": 100
+                  }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 9
+          },
+          "id": 514,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${datasource_uid}"
+              },
+              "dimensions": {},
+              "expression": "",
+              "id": "",
+              "label": "Rejected packets",
+              "logGroups": [],
+              "matchExact": true,
+              "metricEditorMode": 0,
+              "metricName": "MacroSandboxRejectedTraffic-${environment}",
+              "metricQueryType": 0,
+              "namespace": "OpenJII/MacroSandbox",
+              "period": "300",
+              "queryMode": "Metrics",
+              "refId": "A",
+              "region": "${aws_region}",
+              "sqlExpression": "",
+              "statistic": "Sum"
+            }
+          ],
+          "title": "Blocked connections",
+          "type": "timeseries"
+        }
+      ]
+    },
+    {
+      "key": "logs",
+      "panels": [
+        {
+          "id": 515,
+          "type": "row",
+          "title": "IoT logs",
+          "collapsed": true,
+          "panels": [
+            {
+              "datasource": {
+                "type": "cloudwatch",
+                "uid": "${logs_datasource_uid}"
+              },
+              "description": "The latest IoT Core events, newest first: connections, publishes and the rules that forward them. Click a trace to see every event of that message. [View in CloudWatch Logs](https://${aws_region}.console.aws.amazon.com/cloudwatch/home?region=${aws_region}#logsV2:log-groups/log-group/${iot_log_group_name})",
+              "gridPos": {
+                "h": 14,
+                "w": 24,
+                "x": 0,
+                "y": 1
+              },
+              "id": 516,
+              "timeFrom": "24h",
+              "options": {
+                "sortBy": [
+                  {
+                    "displayName": "Time",
+                    "desc": true
+                  }
+                ],
+                "showHeader": true,
+                "cellHeight": "sm",
+                "footer": {
+                  "show": false,
+                  "reducer": [
+                    "sum"
+                  ],
+                  "countRows": false,
+                  "fields": ""
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "noValue": "-",
+                  "custom": {
+                    "align": "auto",
+                    "cellOptions": {
+                      "type": "auto"
+                    },
+                    "inspect": true
+                  }
+                },
+                "overrides": [
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "@timestamp"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Time"
+                      },
+                      {
+                        "id": "custom.width",
+                        "value": 170
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "level"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Level"
+                      },
+                      {
+                        "id": "custom.width",
+                        "value": 64
+                      },
+                      {
+                        "id": "custom.cellOptions",
+                        "value": {
+                          "type": "color-text"
+                        }
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "type": "value",
+                            "options": {
+                              "DEBUG": {
+                                "text": "debug",
+                                "color": "text",
+                                "index": 0
+                              },
+                              "INFO": {
+                                "text": "info",
+                                "color": "text",
+                                "index": 1
+                              },
+                              "WARN": {
+                                "text": "warn",
+                                "color": "orange",
+                                "index": 2
+                              },
+                              "ERROR": {
+                                "text": "error",
+                                "color": "red",
+                                "index": 3
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "event"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Event"
+                      },
+                      {
+                        "id": "custom.width",
+                        "value": 130
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "status"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Status"
+                      },
+                      {
+                        "id": "custom.width",
+                        "value": 80
+                      },
+                      {
+                        "id": "custom.cellOptions",
+                        "value": {
+                          "type": "color-text"
+                        }
+                      },
+                      {
+                        "id": "mappings",
+                        "value": [
+                          {
+                            "type": "value",
+                            "options": {
+                              "Success": {
+                                "text": "Success",
+                                "color": "text",
+                                "index": 0
+                              },
+                              "Failure": {
+                                "text": "Failure",
+                                "color": "red",
+                                "index": 1
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "device"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Device"
+                      },
+                      {
+                        "id": "custom.width",
+                        "value": 200
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "experiment"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Experiment"
+                      },
+                      {
+                        "id": "custom.width",
+                        "value": 290
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "family"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Family"
+                      },
+                      {
+                        "id": "custom.width",
+                        "value": 80
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "rule"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Rule"
+                      },
+                      {
+                        "id": "custom.width",
+                        "value": 260
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "reason"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Reason"
+                      },
+                      {
+                        "id": "custom.width",
+                        "value": 160
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "details"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Details"
+                      },
+                      {
+                        "id": "custom.minWidth",
+                        "value": 200
+                      }
+                    ]
+                  },
+                  {
+                    "matcher": {
+                      "id": "byName",
+                      "options": "trace"
+                    },
+                    "properties": [
+                      {
+                        "id": "displayName",
+                        "value": "Trace"
+                      },
+                      {
+                        "id": "custom.width",
+                        "value": 110
+                      },
+                      {
+                        "id": "links",
+                        "value": [
+                          {
+                            "title": "Every event of this message",
+                            "url": "${iot_trace_logs_url}",
+                            "targetBlank": true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "targets": [
+                {
+                  "datasource": {
+                    "type": "cloudwatch",
+                    "uid": "${logs_datasource_uid}"
+                  },
+                  "expression": "fields @timestamp, logLevel as level, eventType as event, status, clientId as device, replace(ruleName, \"open_jii_${environment}_iot_rule_\", \"\") as rule, reason, details, traceId as trace\n| parse topicName \"experiment/data_ingest/v1/*/*/*/*\" as experiment, family, family_version, sensor\n| sort @timestamp desc\n| limit 500",
+                  "id": "",
+                  "logGroups": [
+                    {
+                      "accountId": "${account_id}",
+                      "arn": "arn:aws:logs:${aws_region}:${account_id}:log-group:${iot_log_group_name}:*",
+                      "name": "${iot_log_group_name}"
+                    }
+                  ],
+                  "queryMode": "Logs",
+                  "refId": "A",
+                  "region": "${aws_region}",
+                  "statsGroups": []
+                }
+              ],
+              "transformations": [
+                {
+                  "id": "organize",
+                  "options": {
+                    "indexByName": {
+                      "@timestamp": 0,
+                      "Time": 0,
+                      "level": 1,
+                      "event": 2,
+                      "status": 3,
+                      "device": 4,
+                      "experiment": 5,
+                      "family": 6,
+                      "rule": 7,
+                      "reason": 8,
+                      "details": 9,
+                      "trace": 10
+                    },
+                    "excludeByName": {
+                      "family_version": true,
+                      "sensor": true
+                    }
+                  }
+                }
+              ],
+              "title": "IoT Core connection and event logs",
+              "type": "table"
+            }
+          ],
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          }
+        }
+      ]
+    }
+  ]
+}

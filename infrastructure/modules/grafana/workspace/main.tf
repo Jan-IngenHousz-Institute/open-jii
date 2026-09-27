@@ -10,8 +10,10 @@ resource "aws_grafana_workspace" "this" {
   account_access_type      = "CURRENT_ACCOUNT"
   authentication_providers = ["AWS_SSO"] # or ["SAML"], or ["AWS_SSO","SAML"]
   permission_type          = "SERVICE_MANAGED"
-  grafana_version          = "10.4"
-  role_arn                 = aws_iam_role.assume.arn
+  # The heartbeat dashboards are built and checked on 12.4. The provider upgrades in place, and there
+  # is no way back.
+  grafana_version = "12.4"
+  role_arn        = aws_iam_role.assume.arn
 
   data_sources = ["CLOUDWATCH"]
 

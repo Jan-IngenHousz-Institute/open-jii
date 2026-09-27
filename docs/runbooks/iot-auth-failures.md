@@ -34,7 +34,7 @@ Repeat for `Connect.ClientError` and `Connect.ServerError`.
 
 A sharp step usually maps to a batch of devices rather than to one. The registry knows which:
 devices whose certificate was rotated recently, or is near expiry, are the population most likely
-to be failing. Check `cert-expiry-horizon` in the same digest. Note that a rotation never changes a
+to be failing. Check `cert-expiry-horizon` in the same alert list. Note that a rotation never changes a
 device's status; a half-completed one leaves the row `active` with a new certificate the hardware
 may never have received, so query for devices whose certificate changed in the window rather than
 for a status.

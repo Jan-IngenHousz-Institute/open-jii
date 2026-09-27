@@ -18,7 +18,7 @@ aws cloudwatch get-metric-statistics --region us-east-1 \
   --period 300 --statistics Average
 ```
 
-Then check `opennext-lambda-errors` in the same digest. If it is firing too, the origin is the cause
+Then check `opennext-lambda-errors` in the same alert list. If it is firing too, the origin is the cause
 and that runbook is the one to work. If the Lambda is clean while CloudFront is not, the failure is
 at the edge: a distribution config change, an origin that CloudFront cannot reach, or a cache
 behaviour pointing somewhere wrong.

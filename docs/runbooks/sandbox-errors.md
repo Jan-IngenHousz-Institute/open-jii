@@ -11,7 +11,7 @@ the platform broke or one user is iterating.
 aws logs tail /aws/lambda/macro-sandbox-<runtime>-<env> --since 1h --filter-pattern "ERROR"
 ```
 
-The runtimes are separate functions, so start with whichever the digest named. Errors concentrated
+The runtimes are separate functions, so start with whichever the alert named. Errors concentrated
 on a single macro id are a user writing code, and the correct response is nothing. Errors spread
 across many macro ids are the platform, and that is worth working.
 
@@ -21,9 +21,8 @@ across many macro ids are the platform, and that is worth working.
 macro in one language while other languages are fine, that is the image.
 
 **Concurrency exhaustion.** The pipeline executes macros in batches during enrichment, which can
-saturate reserved concurrency and cause throttles rather than errors. The digest watches Errors
-only, so check the function's Throttles metric yourself; a throttled batch is invisible here and
-has a different fix.
+saturate reserved concurrency and cause throttles rather than errors. This alert watches Errors
+only; throttles have their own rule and their own tile on the daily report, and a different fix.
 
 **A data-shape change.** A macro that worked yesterday and fails today on unchanged code means its
 input changed. That points at the pipeline, not the sandbox, and it usually affects every macro

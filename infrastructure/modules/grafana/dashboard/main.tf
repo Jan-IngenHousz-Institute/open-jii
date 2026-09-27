@@ -15,9 +15,38 @@ terraform {
 data "aws_caller_identity" "current" {}
 
 locals {
-  dashboard_json_file = file("${path.module}/dashboard.json.tftpl")
+  # Explore on one log group, filtered to the lines that share one id: a backend request's, or an
+  # IoT message's trace. __ID__ is where each link puts the id its row carries.
+  log_explore_urls = {
+    for key, group in {
+      backend = { name = var.ecs_log_group_name, field = "req.id" }
+      iot     = { name = var.iot_log_group_name, field = "traceId" }
+      } : key => replace(replace(
+        "/explore?schemaVersion=1&orgId=1&panes=${urlencode(jsonencode({
+          logs = {
+            datasource = grafana_data_source.cloudwatch_logs_source.uid
+            range      = { from = "__FROM__", to = "__TO__" }
+            queries = [{
+              refId       = "A"
+              datasource  = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_logs_source.uid }
+              queryMode   = "Logs"
+              region      = var.aws_region
+              statsGroups = []
+              expression  = "fields @timestamp, @message | filter ${group.field} = \"__ID__\" | sort @timestamp asc"
+              logGroups = [{
+                accountId = data.aws_caller_identity.current.account_id
+                arn       = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:${group.name}:*"
+                name      = group.name
+              }]
+            }]
+          }
+        }))}",
+    "__FROM__", "$${__from}"), "__TO__", "$${__to}")
+  }
 
   dashboard_vars = {
+    backend_request_logs_url           = replace(local.log_explore_urls.backend, "__ID__", "$${__data.fields.request}")
+    iot_trace_logs_url                 = replace(local.log_explore_urls.iot, "__ID__", "$${__data.fields.trace}")
     datasource_uid                     = grafana_data_source.cloudwatch_source.uid
     logs_datasource_uid                = grafana_data_source.cloudwatch_logs_source.uid
     project                            = var.project
@@ -38,6 +67,7 @@ locals {
     macro_sandbox_js_function_name     = lookup(var.macro_sandbox_function_names, "js", "")
     macro_sandbox_r_function_name      = lookup(var.macro_sandbox_function_names, "r", "")
     calibration_sandbox_function_name  = var.calibration_sandbox_function_name
+    route53_health_check_id            = var.route53_health_check_id
   }
 }
 
@@ -72,44 +102,6 @@ resource "grafana_folder" "folder" {
   provider = grafana.amg
   title    = "${var.environment} Dashboards"
   uid      = "${var.environment}-dashboards"
-}
-
-resource "grafana_dashboard" "dashboard" {
-  provider  = grafana.amg
-  folder    = grafana_folder.folder.id
-  overwrite = true
-
-  config_json = templatefile("${path.module}/dashboard.json.tftpl", local.dashboard_vars)
-}
-
-resource "grafana_dashboard" "registrations_dashboard" {
-  provider  = grafana.amg
-  folder    = grafana_folder.folder.id
-  overwrite = true
-
-  config_json = templatefile("${path.module}/registrations_dashboard.json.tftpl", {
-    datasource_uid = grafana_data_source.cloudwatch_source.uid
-    environment    = var.environment
-    aws_region     = var.aws_region
-    project        = var.project
-  })
-}
-
-
-resource "grafana_dashboard" "dora_dashboard" {
-  provider  = grafana.amg
-  folder    = grafana_folder.folder.id
-  overwrite = true
-
-  config_json = templatefile("${path.module}/dora.json.tftpl",
-    {
-      datasource_uid = grafana_data_source.cloudwatch_source.uid
-      project        = var.project
-      environment    = var.environment
-      aws_region     = var.aws_region
-      account_id     = data.aws_caller_identity.current.account_id
-    }
-  )
 }
 
 ### Alerting rules 
@@ -204,12 +196,16 @@ EOT
     for            = "5m"
 
     annotations = {
-      description = "Backend ECS service CPU usage is above 80%"
-      summary     = "High CPU usage on backend service"
+      description      = "Backend ECS service CPU usage is above 80%"
+      summary          = "High CPU usage on backend service"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/api-cpu.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["api-cpu"]
     }
     labels = {
-      severity = "warning"
-      service  = "backend"
+      metric_id = "api-cpu"
+      severity  = "warning"
+      service   = "backend"
     }
   }
 
@@ -277,12 +273,16 @@ EOT
     for            = "2m"
 
     annotations = {
-      description = "Unhealthy targets detected in backend service"
-      summary     = "Backend service has unhealthy targets"
+      description      = "Unhealthy targets detected in backend service"
+      summary          = "Backend service has unhealthy targets"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/api-hosts-unhealthy.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["api-hosts-unhealthy"]
     }
     labels = {
-      severity = "critical"
-      service  = "backend"
+      metric_id = "api-hosts-unhealthy"
+      severity  = "critical"
+      service   = "backend"
     }
   }
 
@@ -356,8 +356,11 @@ EOT
     for            = "5m"
 
     annotations = {
-      description = "Backend is returning 5xx errors"
-      summary     = "5xx errors detected on backend service"
+      description      = "Backend is returning 5xx errors"
+      summary          = "5xx errors detected on backend service"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/backend-5xx.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["backend-5xx"]
     }
     labels = {
       metric_id = "backend-5xx"
@@ -444,8 +447,11 @@ resource "grafana_rule_group" "cloudfront_errors" {
     for            = "1m"
 
     annotations = {
-      description = "CloudFront 5xx error rate is above 5% — origin may be down"
-      summary     = "Site may be down: high 5xx rate on CloudFront"
+      description      = "CloudFront 5xx error rate is above 5%, so the origin may be down"
+      summary          = "Site may be down: high 5xx rate on CloudFront"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/cloudfront-errors.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["cloudfront-errors"]
     }
     labels = {
       metric_id = "cloudfront-errors"
@@ -532,12 +538,16 @@ resource "grafana_rule_group" "site_availability" {
     for            = "1m"
 
     annotations = {
-      description = "Route53 health check reports the site is unreachable"
-      summary     = "Site is down: active health check failing"
+      description      = "Route53 health check reports the site is unreachable"
+      summary          = "Site is down: active health check failing"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/site-up.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["site-up"]
     }
     labels = {
-      severity = "critical"
-      service  = "frontend"
+      metric_id = "site-up"
+      severity  = "critical"
+      service   = "frontend"
     }
   }
 }
@@ -614,8 +624,11 @@ EOT
     for            = "1m"
 
     annotations = {
-      description = "Server Lambda has more than 5 errors in the last 5 minutes — site may be down"
-      summary     = "Site may be down: Server Lambda errors detected"
+      description      = "Server Lambda has more than 5 errors in the last 5 minutes, so the site may be down"
+      summary          = "Site may be down: Server Lambda errors detected"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/opennext-lambda-errors.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["opennext-lambda-errors"]
     }
     labels = {
       metric_id = "opennext-lambda-errors"
@@ -689,12 +702,16 @@ EOT
     for            = "5m"
 
     annotations = {
-      description = "Lambda function is being throttled"
-      summary     = "Lambda throttling detected"
+      description      = "Lambda function is being throttled"
+      summary          = "Lambda throttling detected"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/web-server-throttles.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["web-server-throttles"]
     }
     labels = {
-      severity = "warning"
-      service  = "lambda"
+      metric_id = "web-server-throttles"
+      severity  = "warning"
+      service   = "lambda"
     }
   }
 }
@@ -769,12 +786,16 @@ EOT
     for            = "5m"
 
     annotations = {
-      description = "Database CPU usage is above 80% "
-      summary     = "High CPU usage on database cluster"
+      description      = "Database CPU usage is above 80% "
+      summary          = "High CPU usage on database cluster"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/database-cpu.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["database-cpu"]
     }
     labels = {
-      severity = "warning"
-      service  = "database"
+      metric_id = "database-cpu"
+      severity  = "warning"
+      service   = "database"
     }
   }
 
@@ -848,12 +869,16 @@ EOT
     for            = "5m"
 
     annotations = {
-      description = "Database has high number of active connections (threshold: 80)"
-      summary     = "High number of database connections"
+      description      = "Database has high number of active connections (threshold: 80)"
+      summary          = "High number of database connections"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/database-connections.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["database-connections"]
     }
     labels = {
-      severity = "warning"
-      service  = "database"
+      metric_id = "database-connections"
+      severity  = "warning"
+      service   = "database"
     }
   }
 }
@@ -936,8 +961,11 @@ EOT
       for            = "5m"
 
       annotations = {
-        description = "Macro sandbox ${rule.key} Lambda has more than 10 errors in the last 5 minutes"
-        summary     = "Macro sandbox ${rule.key} error rate high"
+        description      = "Macro sandbox ${rule.key} Lambda has more than 10 errors in the last 5 minutes"
+        summary          = "Macro sandbox ${rule.key} error rate high"
+        runbook_url      = "${var.runbook_base_url}/docs/runbooks/sandbox-errors.md"
+        __dashboardUid__ = local.heartbeat_daily_uid
+        __panelId__      = local.heartbeat_panel_ids["sandbox-errors"]
       }
       labels = {
         metric_id = "sandbox-errors"
@@ -1015,12 +1043,16 @@ EOT
       for            = "5m"
 
       annotations = {
-        description = "Macro sandbox ${rule.key} Lambda is being throttled"
-        summary     = "Macro sandbox ${rule.key} throttling detected"
+        description      = "Macro sandbox ${rule.key} Lambda is being throttled"
+        summary          = "Macro sandbox ${rule.key} throttling detected"
+        runbook_url      = "${var.runbook_base_url}/docs/runbooks/sandbox-throttles.md"
+        __dashboardUid__ = local.heartbeat_daily_uid
+        __panelId__      = local.heartbeat_panel_ids["sandbox-throttles"]
       }
       labels = {
-        severity = "warning"
-        service  = "macro-sandbox"
+        metric_id = "sandbox-throttles"
+        severity  = "warning"
+        service   = "macro-sandbox"
       }
     }
   }
@@ -1088,13 +1120,17 @@ EOT
     for            = "5m"
 
     annotations = {
-      description = "High rejected traffic from macro-sandbox isolated subnets — potential escape attempt"
-      summary     = "Macro sandbox rejected VPC traffic anomaly"
+      description      = "High rejected traffic from macro-sandbox isolated subnets — potential escape attempt"
+      summary          = "Macro sandbox rejected VPC traffic anomaly"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/sandbox-blocked-connections.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["sandbox-blocked-connections"]
     }
     labels = {
-      severity = "warning"
-      service  = "macro-sandbox"
-      category = "security"
+      metric_id = "sandbox-blocked-connections"
+      severity  = "warning"
+      service   = "macro-sandbox"
+      category  = "security"
     }
   }
 }
@@ -1181,8 +1217,11 @@ EOT
     for            = "1m"
 
     annotations = {
-      description = "Calibration sandbox Lambda has failed in the last 5 minutes"
-      summary     = "Calibration sandbox errors"
+      description      = "Calibration sandbox Lambda has failed in the last 5 minutes"
+      summary          = "Calibration sandbox errors"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/sandbox-errors.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["sandbox-errors"]
     }
     labels = {
       metric_id = "sandbox-errors"
@@ -1257,12 +1296,16 @@ EOT
     for            = "1m"
 
     annotations = {
-      description = "Calibration sandbox Lambda is being throttled, so a bench session cannot compute its coefficients"
-      summary     = "Calibration sandbox throttling detected"
+      description      = "Calibration sandbox Lambda is being throttled, so a bench session cannot compute its coefficients"
+      summary          = "Calibration sandbox throttling detected"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/sandbox-throttles.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["sandbox-throttles"]
     }
     labels = {
-      severity = "warning"
-      service  = "calibration-sandbox"
+      metric_id = "sandbox-throttles"
+      severity  = "warning"
+      service   = "calibration-sandbox"
     }
   }
 
@@ -1329,13 +1372,17 @@ EOT
     for            = "5m"
 
     annotations = {
-      description = "High rejected traffic from calibration-sandbox isolated subnets, a possible escape attempt"
-      summary     = "Calibration sandbox rejected VPC traffic anomaly"
+      description      = "High rejected traffic from calibration-sandbox isolated subnets, a possible escape attempt"
+      summary          = "Calibration sandbox rejected VPC traffic anomaly"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/sandbox-blocked-connections.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["sandbox-blocked-connections"]
     }
     labels = {
-      severity = "warning"
-      service  = "calibration-sandbox"
-      category = "security"
+      metric_id = "sandbox-blocked-connections"
+      severity  = "warning"
+      service   = "calibration-sandbox"
+      category  = "security"
     }
   }
 }
@@ -1347,7 +1394,7 @@ EOT
 # cover the catalog's ingest entries 2, 8 and 9.
 #
 # Thresholds here are deliberately not the catalog's. The catalog answers "was yesterday
-# unusual" over 24h for the digest; these answer "is it broken right now" over minutes.
+# unusual" over 24h for the daily report; these answer "is it broken right now" over minutes.
 # The drift test pairs the two on identity and severity, never on numbers.
 resource "grafana_rule_group" "ingest_path" {
   provider         = grafana.amg
@@ -1361,7 +1408,7 @@ resource "grafana_rule_group" "ingest_path" {
   # The catalog alarms on any nonzero, which is right for a morning report. Compiled here
   # verbatim it would page on a single retryable failure, because a trailing sum stays
   # above zero for every evaluation the failure remains in window. So this fires on
-  # sustained loss and the digest still names every single failure the next morning.
+  # sustained loss and the daily report's tile still counts every single failure.
   rule {
     name      = "Ingest Forwarding Failures"
     condition = "C"
@@ -1434,8 +1481,11 @@ resource "grafana_rule_group" "ingest_path" {
     for            = "5m"
 
     annotations = {
-      description = "IoT rule actions are failing to forward accepted messages; this loses data rather than delaying it. Runbook: docs/runbooks/ingest-forwarding-failures.md"
-      summary     = "Ingest forwarding failures on the IoT rule engine"
+      description      = "IoT rule actions are failing to forward accepted messages; this loses data rather than delaying it."
+      summary          = "Ingest forwarding failures on the IoT rule engine"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/ingest-forwarding-failures.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["ingest-forwarding-failures"]
     }
     labels = {
       severity  = "critical"
@@ -1522,8 +1572,11 @@ resource "grafana_rule_group" "ingest_path" {
     for            = "15m"
 
     annotations = {
-      description = "Kinesis iterator age is above the environment's tolerance: the consumer is not keeping up or is not running. Runbook: docs/runbooks/ingest-lag.md"
-      summary     = "Ingest lag climbing on the data ingest stream"
+      description      = "Kinesis iterator age is above the environment's tolerance: the consumer is not keeping up or is not running."
+      summary          = "Ingest lag climbing on the data ingest stream"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/ingest-lag.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["ingest-lag"]
     }
     labels = {
       severity  = "warning"
@@ -1603,8 +1656,11 @@ resource "grafana_rule_group" "ingest_path" {
     for            = "10m"
 
     annotations = {
-      description = "Writes into the ingest stream are being rejected for exceeding provisioned throughput; what the rule cannot place is dropped. Runbook: docs/runbooks/kinesis-write-throttling.md"
-      summary     = "Kinesis write throttling on the data ingest stream"
+      description      = "Writes into the ingest stream are being rejected for exceeding provisioned throughput; what the rule cannot place is dropped."
+      summary          = "Kinesis write throttling on the data ingest stream"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/kinesis-write-throttling.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["kinesis-write-throttling"]
     }
     labels = {
       severity  = "warning"
@@ -1616,106 +1672,16 @@ resource "grafana_rule_group" "ingest_path" {
 
 # Monitoring Self Health
 #
-# Nothing watched the watchers: a composer that throws every morning produces no digest
-# and no complaint, because the digest is the only thing that would have complained.
-#
-# Split into two groups on purpose. These rules watch for a signal that is present and
-# wrong, so they are safe from the moment they apply. The liveness group below watches
-# for a signal that is absent, which fires until its producer has run once.
+# The forwarder is what carries lakehouse signals into CloudWatch. If it throws, every
+# lakehouse panel and rule goes quiet at once, and nothing else would say so.
 resource "grafana_rule_group" "monitoring_self_health" {
-  count = var.digest_composer_function_name != "" && var.metrics_forwarder_function_name != "" ? 1 : 0
+  count = var.metrics_forwarder_function_name != "" ? 1 : 0
 
   provider         = grafana.amg
   name             = "Monitoring Self Health"
   folder_uid       = grafana_folder.folder.uid
   interval_seconds = 300
 
-  # Catalog entry 65, the "ran and threw" half. Liveness below is the "never ran" half,
-  # and the same runbook opens by telling them apart.
-  rule {
-    name      = "Digest Composer Errors"
-    condition = "C"
-
-    data {
-      ref_id         = "A"
-      query_type     = ""
-      datasource_uid = grafana_data_source.cloudwatch_source.uid
-
-      model = jsonencode({
-        refId      = "A"
-        region     = var.aws_region
-        namespace  = "AWS/Lambda"
-        metricName = "Errors"
-        statistic  = "Sum"
-        dimensions = {
-          FunctionName = var.digest_composer_function_name
-        }
-      })
-
-      relative_time_range {
-        from = 3600
-        to   = 0
-      }
-    }
-
-    data {
-      ref_id         = "B"
-      query_type     = ""
-      datasource_uid = "__expr__"
-
-      model = jsonencode({
-        expression = "A"
-        type       = "reduce"
-        reducer    = "sum"
-        refId      = "B"
-        settings = {
-          mode             = "replaceNN"
-          replaceWithValue = 0
-        }
-      })
-
-      relative_time_range {
-        from = 0
-        to   = 0
-      }
-    }
-
-    data {
-      ref_id         = "C"
-      query_type     = ""
-      datasource_uid = "__expr__"
-
-      model = jsonencode({
-        expression = "$B > 0"
-        type       = "math"
-        refId      = "C"
-      })
-
-      relative_time_range {
-        from = 0
-        to   = 0
-      }
-    }
-
-    # The composer runs three times a day, so no Errors datapoint is the normal state
-    # for most of the hour rather than a fault.
-    no_data_state  = "OK"
-    exec_err_state = "OK"
-    for            = "1m"
-
-    annotations = {
-      description = "The digest composer threw. No digest was delivered for that run. Runbook: docs/runbooks/digest-composer-liveness.md"
-      summary     = "Digest composer is failing"
-    }
-    labels = {
-      severity  = "warning"
-      service   = "monitoring"
-      metric_id = "digest-composer-liveness"
-    }
-  }
-
-  # Catalog entry 66. Errors only, never liveness: the forwarder is S3 event driven, so
-  # a quiet day has no invocations at all and a liveness rule would fire through it.
   rule {
     name      = "Metrics Forwarder Errors"
     condition = "C"
@@ -1786,8 +1752,11 @@ resource "grafana_rule_group" "monitoring_self_health" {
     for            = "5m"
 
     annotations = {
-      description = "The metrics forwarder threw. Heartbeat files are still in S3, but every lakehouse signal in the digest goes quiet until this clears. Runbook: docs/runbooks/metrics-forwarder-errors.md"
-      summary     = "Metrics forwarder is failing to publish"
+      description      = "The metrics forwarder threw. Heartbeat files are still in S3, but every lakehouse tile on the daily report goes quiet until this clears."
+      summary          = "Metrics forwarder is failing to publish"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/metrics-forwarder-errors.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["metrics-forwarder-errors"]
     }
     labels = {
       severity  = "warning"
@@ -1797,113 +1766,8 @@ resource "grafana_rule_group" "monitoring_self_health" {
   }
 }
 
-# Absence-based rules.
-#
-# A Lambda that has never run publishes no Invocations at all, so on a fresh environment
-# this fires until the first scheduled digest. That reading is correct rather than false:
-# the composer genuinely is not running yet, and it clears itself at 06:30. Holding it
-# behind a flag instead would mean the dead-man is off by default, which is the one
-# outcome this rule exists to prevent.
-resource "grafana_rule_group" "monitoring_liveness" {
-  count = var.digest_composer_function_name != "" ? 1 : 0
-
-  provider         = grafana.amg
-  name             = "Monitoring Liveness"
-  folder_uid       = grafana_folder.folder.uid
-  interval_seconds = 300
-
-  # Catalog entry 65, the "never ran" half.
-  rule {
-    name      = "Digest Composer Stopped Running"
-    condition = "C"
-
-    data {
-      ref_id         = "A"
-      query_type     = ""
-      datasource_uid = grafana_data_source.cloudwatch_source.uid
-
-      model = jsonencode({
-        refId      = "A"
-        region     = var.aws_region
-        namespace  = "AWS/Lambda"
-        metricName = "Invocations"
-        statistic  = "Sum"
-        dimensions = {
-          FunctionName = var.digest_composer_function_name
-        }
-      })
-
-      # 26 hours: the daily digests are the shortest cadence, so a window just over a
-      # day always spans at least two expected runs and a single missed one is not
-      # enough to fire.
-      relative_time_range {
-        from = 93600
-        to   = 0
-      }
-    }
-
-    data {
-      ref_id         = "B"
-      query_type     = ""
-      datasource_uid = "__expr__"
-
-      model = jsonencode({
-        expression = "A"
-        type       = "reduce"
-        reducer    = "sum"
-        refId      = "B"
-        settings = {
-          mode             = "replaceNN"
-          replaceWithValue = 0
-        }
-      })
-
-      relative_time_range {
-        from = 0
-        to   = 0
-      }
-    }
-
-    data {
-      ref_id         = "C"
-      query_type     = ""
-      datasource_uid = "__expr__"
-
-      model = jsonencode({
-        expression = "$B < 1"
-        type       = "math"
-        refId      = "C"
-      })
-
-      relative_time_range {
-        from = 0
-        to   = 0
-      }
-    }
-
-    # Absence is the entire signal here, so NoData has to mean firing. exec_err is
-    # evaluated per evaluation rather than over the window, which is why `for` is long
-    # enough that a single CloudWatch blip cannot page.
-    no_data_state  = "Alerting"
-    exec_err_state = "Alerting"
-    for            = "30m"
-
-    annotations = {
-      description = "The digest composer has not run for over a day. While this is true, nothing is watching the platform on a schedule. Runbook: docs/runbooks/digest-composer-liveness.md"
-      summary     = "Digest composer stopped running"
-    }
-    labels = {
-      severity  = "warning"
-      service   = "monitoring"
-      metric_id = "digest-composer-liveness"
-    }
-
-  }
-}
-
-# The lakehouse export's dead-man. Separate from the group above because it watches a
-# Databricks job rather than a Lambda, so tying it to a function name would drop it
-# silently the moment that name were empty.
+# The lakehouse export's dead-man. It watches a Databricks job rather than a Lambda, so
+# it is not tied to a function name that could be empty.
 resource "grafana_rule_group" "collector_liveness" {
   provider         = grafana.amg
   name             = "Collector Liveness"
@@ -1933,10 +1797,8 @@ resource "grafana_rule_group" "collector_liveness" {
         }
       })
 
-      # Seventy-five minutes covers two export cycles plus margin, so a single
-      # missed run is not enough to fire.
       relative_time_range {
-        from = 4500
+        from = local.heartbeat_dead_man_window_minutes * 60
         to   = 0
       }
     }
@@ -1985,8 +1847,11 @@ resource "grafana_rule_group" "collector_liveness" {
     for            = "15m"
 
     annotations = {
-      description = "The lakehouse heartbeat export has stopped publishing. Every dbx signal in the digest is now absent rather than healthy. Runbook: docs/runbooks/dlt-heartbeat.md"
-      summary     = "Heartbeat collector stopped reporting"
+      description      = "The lakehouse heartbeat export has stopped publishing. Every lakehouse tile on the daily report is now absent rather than healthy."
+      summary          = "Heartbeat collector stopped reporting"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/dlt-heartbeat.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["dlt-heartbeat"]
     }
     labels = {
       metric_id = "dlt-heartbeat"
@@ -2078,8 +1943,11 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     for            = "15m"
 
     annotations = {
-      description = "The public metrics tables have not been recomputed for over an hour, so every number on the public page is at least that stale. Runbook: docs/runbooks/metrics-mv-freshness.md"
-      summary     = "Metrics tables are stale"
+      description      = "The public metrics tables have not been recomputed for over an hour, so every number on the public page is at least that stale."
+      summary          = "Metrics tables are stale"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/metrics-mv-freshness.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["metrics-mv-freshness"]
     }
     labels = {
       metric_id = "metrics-mv-freshness"

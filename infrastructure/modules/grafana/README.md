@@ -35,10 +35,11 @@ Dashboard Visualization
 
 #### DORA Metrics (DevOps Performance)
 
-- **Deployment Frequency**: How often deployments succeed (24h/7d)
+- **Deployment Frequency**: Deploy attempts per week and per service
 - **Lead Time**: Time from commit to production deployment
-- **Change Failure Rate**: Percentage of deployments that fail
-- **Deployment Success Rate**: Percentage of successful deployments
+- **Failed Deploy Rate**: Share of deploy runs that failed. DORA's change failure rate counts
+  deploys that broke production, which these metrics cannot see.
+- **Deployment Success Count**: Successful deploys per week and per service
 
 ### Alert Rules
 
@@ -89,10 +90,13 @@ Alerts are routed to Slack via webhook with severity-based policies:
 - `web` - Next.js frontend (Lambda/CloudFront)
 - `docs` - Documentation site (S3/CloudFront)
 - `database` - Migration deployments
+- `databricks` - Lakehouse pipelines and jobs
+- `macro-sandbox-python`, `macro-sandbox-javascript`, `macro-sandbox-r` - Macro sandboxes
+- `calibration-sandbox` - Calibration sandbox
 
 ## Metrics Publisher
 
-A Lambda that runs every Monday at 06:00 UTC, queries Aurora for user registration counts, and publishes `TotalUsers` and `WeeklyNewUsers` metrics to CloudWatch under the `OpenJII/UserRegistrations` namespace. These metrics power the user registrations dashboard in Grafana.
+A Lambda that runs every Monday at 06:00 UTC, queries Aurora for user registration counts, and publishes `TotalUsers` and `WeeklyNewUsers` metrics to CloudWatch under the `OpenJII/UserRegistrations` namespace. The weekly heartbeat report shows them as Researchers and New researchers.
 
 The Lambda is deployed from a committed `lambda/function.zip` that contains `index.js` and `node_modules`. The zip is committed to git so CI never needs to install dependencies.
 
@@ -287,7 +291,15 @@ Tokens automatically rotate every ~15 days via GitHub Actions:
 
 ### Updating Dashboards
 
-1. Edit `dashboard/dashboard.json.tftpl`
+The two heartbeat reports come from `dashboard/heartbeat.tf` and the metrics catalogue. The
+Platform, Data pipeline and Delivery dashboards come from `dashboard/flows.tf`. Platform and Data
+pipeline have a section per question (traffic or volume, errors, latency, saturation or
+freshness): the question's chart, what to check first when it looks wrong, then each hop's panels
+from `dashboard/flows/*.json.tftpl` in the order a request or a measurement travels, in the hop's
+colour. Throughput and storage is laid out in `dashboard/throughput.tf`.
+
+1. Edit the section's panels in `dashboard/flows/<dashboard>.json.tftpl`, or the generated
+   panels in `dashboard/flows.tf`
 2. Apply changes:
    ```bash
    cd infrastructure/env/dev
@@ -308,13 +320,8 @@ Tokens automatically rotate every ~15 days via GitHub Actions:
        environment: dev
    ```
 
-2. **Add panel** to `dashboard/dashboard.json.tftpl`:
-
-   - Query CloudWatch namespace `DORA/Metrics`
-   - Use dimensions: Service, Environment
-   - Set `matchExact: false` for wildcard queries
-
-3. Apply dashboard changes
+2. The Delivery dashboard reads every service under `DORA/Metrics` with a search on the
+   `Service` and `Environment` dimensions, so a new service appears without a panel change.
 
 ## Troubleshooting
 
