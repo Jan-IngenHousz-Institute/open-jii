@@ -35,6 +35,19 @@ Some shapes recur:
 - **One issue, many events, one user.** A single browser or phone stuck in a loop. It is still a
   bug, but it reaches one person.
 
+## When the section is missing
+
+The Errors section, the error inbox and Grafana's PostHog data source exist only while the
+environment's `POSTHOG_GRAFANA_API_KEY` secret holds a read-only PostHog personal key. An apply
+without it removes all three, so a daily report with no Errors section is a missing key, not a
+quiet day. Grafana reads PostHog through the Infinity plugin, and until an AMG admin installs it the
+panels say the plugin is missing. To bring the section back:
+
+1. Install Infinity in the workspace, under Administration, Plugins and data, Plugins, if it is not
+   there.
+2. Set the secret in the environment's GitHub environment, then rerun that environment's latest
+   OpenTofu apply.
+
 ## Closing
 
 A bug gets a ticket, drafted with `openjii-ticket-refine`, and the issue stays open until the fix

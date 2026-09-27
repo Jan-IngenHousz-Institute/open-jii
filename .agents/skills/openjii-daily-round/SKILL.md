@@ -114,7 +114,10 @@ Errors that point at bugs live in PostHog's error tracking, grouped into issues,
 new, reopened and spiking issues to the same Slack channel. The daily report's Errors section, right
 under what is firing, lists the issues with exceptions over its time range, new ones first, and each
 row opens the issue in PostHog or starts triage on it. The error inbox, `<env>-heartbeat-errors`,
-holds the same issues over a week, with where each happened and in which app version. The devkit reads the same with your own
+holds the same issues over a week, with where each happened and in which app version. A daily report
+with no Errors section, or panels saying the plugin is missing, means Grafana cannot read PostHog;
+report that as a finding rather than as no errors, with `docs/runbooks/exceptions.md` for the fix.
+The devkit reads the same with your own
 PostHog key, for a gap the report's window does not cover (`tooling/devkit/README.md` has the setup):
 
 ```bash

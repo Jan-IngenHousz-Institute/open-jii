@@ -40,10 +40,12 @@ locals {
   )
 
   # Exceptions from this environment over the dashboard's time range; the inbox also by service.
+  # Grafana 12 takes a service from the URL even outside the variable's options, so it is
+  # percent-encoded: the five names pass unchanged and anything else stays inside its quotes.
   heartbeat_exception_scope = "event = '$exception' AND ${local.heartbeat_exception_environment} AND timestamp >= toDateTime('$${__from:date:iso}') AND timestamp < toDateTime('$${__to:date:iso}')"
   heartbeat_error_scopes = {
     daily = local.heartbeat_exception_scope
-    inbox = "${local.heartbeat_exception_scope} AND ('$${service}' = 'all' OR coalesce(properties.service, 'untagged') = '$${service}')"
+    inbox = "${local.heartbeat_exception_scope} AND ('$${service:percentencode}' = 'all' OR coalesce(properties.service, 'untagged') = '$${service:percentencode}')"
   }
 
   # The numbers count what the tables list: exceptions of issues still open.
@@ -330,15 +332,16 @@ resource "grafana_dashboard" "heartbeat_errors" {
     time        = { from = "now-7d", to = "now" }
     templating = {
       list = [{
-        name       = "service"
-        label      = "Service"
-        type       = "custom"
-        query      = "all,web,backend,mobile,untagged"
-        current    = { text = "all", value = "all" }
-        options    = [for value in ["all", "web", "backend", "mobile", "untagged"] : { text = value, value = value, selected = value == "all" }]
-        multi      = false
-        includeAll = false
-        hide       = 0
+        name             = "service"
+        label            = "Service"
+        type             = "custom"
+        query            = "all,web,backend,mobile,untagged"
+        current          = { text = "all", value = "all" }
+        options          = [for value in ["all", "web", "backend", "mobile", "untagged"] : { text = value, value = value, selected = value == "all" }]
+        multi            = false
+        includeAll       = false
+        allowCustomValue = false
+        hide             = 0
       }]
     }
     links = concat(
