@@ -640,7 +640,8 @@ metrics:
       Minutes since computed_at on the public metrics tables, read from the tables
       themselves rather than from run state, so an update that succeeded and wrote nothing
       still reads as stale. The scheduler runs every fifteen minutes, so an hour means
-      several consecutive updates did not land. Publicly visible, hence critical.
+      several consecutive updates did not land. Publicly visible, but a stale number is not a
+      down site or lost data, so a warning: someone today, not someone now.
 
   # Client-side observability (PostHog)
   - num: 42
