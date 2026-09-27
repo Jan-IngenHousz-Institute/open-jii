@@ -153,7 +153,13 @@ describe("environment manifest", () => {
     ).flat();
     const missing = new Map<string, string[]>();
     for (const file of files) {
-      for (const key of envReads(await readFile(file, "utf8"))) {
+      const source = await readFile(file, "utf8");
+      // Parsing is the slow part, and only a file that names `process` can read the environment.
+      if (!source.includes("process")) {
+        continue;
+      }
+
+      for (const key of envReads(source)) {
         if (!envByKey.has(key) && !sdkOnlyEnv.has(key)) {
           missing.set(key, [...(missing.get(key) ?? []), relative(root, file)]);
         }
