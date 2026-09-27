@@ -235,6 +235,8 @@ module "iot_core" {
 
   firmware_bucket_arn  = module.firmware_s3.bucket_arn
   enable_firmware_jobs = true
+
+  payload_sample_percent = 10
 }
 
 module "firmware_rollout_role" {

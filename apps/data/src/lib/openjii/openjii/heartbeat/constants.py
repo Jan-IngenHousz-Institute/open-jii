@@ -10,6 +10,11 @@ USAGE_NAMESPACE = "OpenJII/Usage"
 # Emitted on every run purely so its absence can alarm; carries no threshold
 COLLECTOR_HEARTBEAT_METRIC = "CollectorHeartbeat"
 
+# How many collectors raised this run. Their series read No data either way, and this tells a
+# broken collector from a quiet one; the roster names each with its error.
+COLLECTOR_FAILURES_METRIC = "CollectorFailures"
+FAILED_COLLECTORS_DETAIL = "failed_collectors"
+
 # Minutes since gold last materialized. Deviation-based rather than fixed
 # threshold: the centrum pipeline runs on different schedules per environment
 GOLD_AGE_METRIC = "GoldMaterializationAgeMinutes"
@@ -49,10 +54,7 @@ MACRO_BACKLOG_METRIC = "MacroBacklogRows"
 INGEST_IDLE_METRIC = "IngestIdleMinutes"
 MACRO_IDLE_METRIC = "MacroIdleMinutes"
 
-# How long a half-hour bucket is, and how long before it a gold row may have
-# committed and still be matched to a macro result committed inside it.
 PATH_BUCKET_MINUTES = 30
-PATH_MACRO_LOOKBACK_MINUTES = 120
 
 STALE_EXPERIMENTS_DETAIL = "stale_experiments"
 SILENT_DEVICES_DETAIL = "silent_devices"
@@ -63,3 +65,6 @@ HEARTBEAT_KEY_PREFIX = "heartbeat"
 # Rosters ride along in the same file for whoever is triaging; cap them so a
 # fleet-wide outage cannot write an unbounded object
 MAX_DETAIL_ROWS = 50
+
+# A Spark error runs to pages; its opening names the table and the cause.
+MAX_ERROR_CHARS = 500

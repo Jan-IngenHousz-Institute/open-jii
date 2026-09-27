@@ -17,8 +17,10 @@ from openjii.heartbeat import (
     minutes_since,
     observation,
     previous_bucket,
+    run_collectors,
     to_ndjson,
 )
+from openjii.heartbeat.constants import MAX_ERROR_CHARS
 
 NOW = datetime(2026, 8, 16, 6, 15, 0, tzinfo=timezone.utc)
 
@@ -33,6 +35,7 @@ def test_metric_names_are_the_literals_the_catalog_binds():
     # Each is hard-coded independently in docs/monitoring/metrics-catalog.yaml. A rename
     # here leaves every Python test green while the series the rules watch goes dark.
     assert heartbeat.COLLECTOR_HEARTBEAT_METRIC == "CollectorHeartbeat"
+    assert heartbeat.COLLECTOR_FAILURES_METRIC == "CollectorFailures"
     assert heartbeat.GOLD_AGE_METRIC == "GoldMaterializationAgeMinutes"
     assert heartbeat.METRICS_AGE_METRIC == "MetricsPipelineAgeMinutes"
     assert heartbeat.STALE_EXPERIMENTS_METRIC == "StaleExperimentsCount"
@@ -50,6 +53,7 @@ def test_metric_names_are_the_literals_the_catalog_binds():
     assert heartbeat.INGEST_LATENCY_METRIC == "IngestLatencyP95Seconds"
     assert heartbeat.EXPERIMENT_LATENCY_METRIC == "ExperimentLatencyP95Seconds"
     assert heartbeat.MACRO_LATENCY_METRIC == "MacroLatencyP95Seconds"
+    assert heartbeat.BROKER_TO_API_LATENCY_METRIC == "BrokerToApiP95Seconds"
     assert heartbeat.MACRO_BACKLOG_METRIC == "MacroBacklogRows"
     assert heartbeat.INGEST_IDLE_METRIC == "IngestIdleMinutes"
     assert heartbeat.MACRO_IDLE_METRIC == "MacroIdleMinutes"
@@ -76,6 +80,7 @@ def test_minutes_since_accepts_the_naive_datetimes_spark_returns():
 def test_every_metric_and_detail_name_is_exported():
     for name in (
         "COLLECTOR_HEARTBEAT_METRIC",
+        "COLLECTOR_FAILURES_METRIC",
         "GOLD_AGE_METRIC",
         "METRICS_AGE_METRIC",
         "STALE_EXPERIMENTS_METRIC",
@@ -93,11 +98,13 @@ def test_every_metric_and_detail_name_is_exported():
         "INGEST_LATENCY_METRIC",
         "EXPERIMENT_LATENCY_METRIC",
         "MACRO_LATENCY_METRIC",
+        "BROKER_TO_API_LATENCY_METRIC",
         "MACRO_BACKLOG_METRIC",
         "INGEST_IDLE_METRIC",
         "MACRO_IDLE_METRIC",
         "STALE_EXPERIMENTS_DETAIL",
         "SILENT_DEVICES_DETAIL",
+        "FAILED_COLLECTORS_DETAIL",
     ):
         assert name in heartbeat.__all__
 
@@ -219,3 +226,57 @@ def test_hop_in_a_quiet_bucket_reports_zero_rows_and_no_latency():
     points = hop("IngestedRows", "IngestLatencyP95Seconds", 0, None, start, DATA_NAMESPACE, "dev")
 
     assert [(p["metric"], p["value"]) for p in points] == [("IngestedRows", 0)]
+
+
+def test_a_failing_collector_costs_only_its_own_lines_and_is_counted_and_named():
+    def ingest(now: datetime) -> list[dict]:
+        return [observation("IngestedRows", 86, DATA_NAMESPACE, now, "dev", "Count")]
+
+    def experiment_rows(now: datetime) -> list[dict]:
+        raise RuntimeError("[UNRESOLVED_COLUMN] arrival_timestamp cannot be resolved")
+
+    def macro_results(now: datetime) -> list[dict]:
+        return [observation("MacroResultRows", 80, DATA_NAMESPACE, now, "dev", "Count")]
+
+    logged = []
+    records = run_collectors(
+        [("ingest", ingest), ("experiment_rows", experiment_rows), ("macro_results", macro_results)],
+        NOW,
+        "dev",
+        lambda message, level: logged.append((level, message)),
+    )
+
+    assert [(r["metric"], r["value"]) for r in records if "metric" in r] == [
+        ("IngestedRows", 86),
+        ("MacroResultRows", 80),
+        ("CollectorFailures", 1),
+    ]
+    roster = records[-1]
+    assert roster["detail"] == "failed_collectors"
+    assert roster["rows"] == [
+        {
+            "collector": "experiment_rows",
+            "error": "RuntimeError: [UNRESOLVED_COLUMN] arrival_timestamp cannot be resolved",
+        }
+    ]
+    assert logged == [
+        ("WARN", "experiment_rows failed: [UNRESOLVED_COLUMN] arrival_timestamp cannot be resolved")
+    ]
+
+
+def test_a_clean_run_reports_zero_failures_so_the_series_never_goes_quiet():
+    records = run_collectors([("quiet", lambda now: [])], NOW, "dev", lambda message, level: None)
+
+    assert records[0]["metric"] == "CollectorFailures"
+    assert records[0]["value"] == 0
+    assert records[0]["namespace"] == DATA_NAMESPACE
+    assert records[1]["rows"] == []
+
+
+def test_a_failure_keeps_only_the_opening_of_a_long_spark_error():
+    def failing(now: datetime) -> list[dict]:
+        raise RuntimeError("x" * 5000)
+
+    records = run_collectors([("failing", failing)], NOW, "dev", lambda message, level: None)
+
+    assert len(records[-1]["rows"][0]["error"]) == MAX_ERROR_CHARS

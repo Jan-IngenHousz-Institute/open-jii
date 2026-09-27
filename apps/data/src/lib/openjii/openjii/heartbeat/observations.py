@@ -9,9 +9,17 @@ incident read them there.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
-from .constants import HEARTBEAT_KEY_PREFIX, MAX_DETAIL_ROWS
+from .constants import (
+    COLLECTOR_FAILURES_METRIC,
+    DATA_NAMESPACE,
+    FAILED_COLLECTORS_DETAIL,
+    HEARTBEAT_KEY_PREFIX,
+    MAX_DETAIL_ROWS,
+    MAX_ERROR_CHARS,
+)
 
 
 def observation(
@@ -101,6 +109,38 @@ def minutes_since(earlier: datetime | None, now: datetime) -> float | None:
     if earlier is None:
         return None
     return round((now - _as_utc(earlier)).total_seconds() / 60, 1)
+
+
+def run_collectors(
+    collectors: list[tuple[str, Callable[[datetime], list[dict]]]],
+    now: datetime,
+    environment: str,
+    log: Callable[[str, str], None],
+) -> list[dict]:
+    """Every collector's lines, then how many collectors raised and which.
+
+    A collector that raises (a table not built yet, a schema change, a transient
+    read failure) forfeits its own lines and nothing else, so the file still
+    lands and the dead-man stays quiet.
+    """
+    records: list[dict] = []
+    failures: list[dict] = []
+
+    for name, collector in collectors:
+        try:
+            records.extend(collector(now))
+        except Exception as error:
+            log(f"{name} failed: {error}", "WARN")
+            failures.append(
+                {"collector": name, "error": f"{type(error).__name__}: {error}"[:MAX_ERROR_CHARS]}
+            )
+
+    records.append(
+        observation(COLLECTOR_FAILURES_METRIC, len(failures), DATA_NAMESPACE, now, environment, "Count")
+    )
+    records.append(detail(FAILED_COLLECTORS_DETAIL, failures))
+
+    return records
 
 
 def _isoformat(value: datetime) -> str:
