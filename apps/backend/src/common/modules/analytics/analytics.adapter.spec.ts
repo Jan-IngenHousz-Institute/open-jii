@@ -119,6 +119,24 @@ describe("AnalyticsAdapter", () => {
       });
     });
 
+    it("should drop the oldest cached memberships once the cache is full", async () => {
+      const lookupSpy = vi
+        .spyOn(authorizationService, "listMemberOrganizationIds")
+        .mockResolvedValue([]);
+      vi.spyOn(flagsService, "isFeatureFlagEnabled").mockResolvedValue(false);
+      const userIds = Array.from({ length: 5_001 }, (_, i) => `cache-evict-${i}`);
+
+      for (const id of userIds) {
+        await adapter.isFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION, { id, email: "" });
+      }
+      await adapter.isFeatureFlagEnabled(FEATURE_FLAGS.MACRO_DELETION, {
+        id: "cache-evict-0",
+        email: "",
+      });
+
+      expect(lookupSpy).toHaveBeenCalledTimes(5_002);
+    });
+
     it("should skip the membership lookup while PostHog is not configured", async () => {
       const userId = await testApp.createTestUser({});
       vi.spyOn(flagsService, "isInitialized").mockReturnValue(false);

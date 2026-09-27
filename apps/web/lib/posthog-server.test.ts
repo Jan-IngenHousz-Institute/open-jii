@@ -7,7 +7,7 @@ import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
 
 import {
   isFeatureFlagEnabled,
-  isFeatureFlagEnabledForUser,
+  isFeatureFlagEnabledForSession,
   isFeatureFlagEnabledForViewer,
   reportServerError,
   shutdownPostHog,
@@ -323,19 +323,19 @@ describe("posthog-server", () => {
     });
   });
 
-  describe("isFeatureFlagEnabledForUser", () => {
+  describe("isFeatureFlagEnabledForSession", () => {
     afterEach(() => {
       listMyOrganizations.mockReset();
     });
 
-    it("should evaluate the given user without reading the session again", async () => {
+    it("should evaluate the given session without reading it again", async () => {
       listMyOrganizations.mockResolvedValue([createMyOrganization({ id: "org-qa" })]);
       mockPostHogInstance.isFeatureEnabled.mockResolvedValue(true);
 
-      const result = await isFeatureFlagEnabledForUser(FEATURE_FLAGS.CALIBRATION, {
-        id: "user-ana",
-        email: "ana@example.com",
-      });
+      const result = await isFeatureFlagEnabledForSession(
+        FEATURE_FLAGS.CALIBRATION,
+        createSession({ user: { id: "user-ana", email: "ana@example.com" } }),
+      );
 
       expect(result).toBe(true);
       expect(auth).not.toHaveBeenCalled();

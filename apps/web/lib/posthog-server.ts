@@ -6,7 +6,7 @@ import { cache } from "react";
 import { auth } from "~/app/actions/auth";
 import { env } from "~/env";
 
-import type { FeatureFlagKey, FlagUser } from "@repo/analytics";
+import type { FeatureFlagKey } from "@repo/analytics";
 import { flagPersonProperties } from "@repo/analytics";
 import {
   getPostHogServerClient,
@@ -15,6 +15,7 @@ import {
   reportException,
   shutdownPostHog as shutdownPostHogBase,
 } from "@repo/analytics/server";
+import type { Session } from "@repo/auth/types";
 
 import { POSTHOG_SERVER_CONFIG } from "./posthog-config";
 import { createServerOrpcClient } from "./server-orpc";
@@ -90,18 +91,20 @@ const fetchMyOrganizationIds = cache(async () => {
 });
 
 /**
- * Check a feature flag for the signed-in user making this request, as the same person the browser
- * and the backend evaluate, with their email and organization memberships
+ * Check a feature flag for this request's signed-in session, as the same person the browser and the
+ * backend evaluate. The memberships are read with the request's own cookie, so pass only the
+ * session this request resolved.
  */
-export async function isFeatureFlagEnabledForUser(
+export async function isFeatureFlagEnabledForSession(
   flagKey: FeatureFlagKey,
-  user: FlagUser,
+  session: NonNullable<Session>,
 ): Promise<boolean> {
+  const { id, email } = session.user;
   const organizationIds = await fetchMyOrganizationIds();
   return isFeatureFlagEnabled(
     flagKey,
-    user.email || user.id,
-    flagPersonProperties({ email: user.email, organizationIds }),
+    email || id,
+    flagPersonProperties({ email, organizationIds }),
   );
 }
 
@@ -114,7 +117,7 @@ export async function isFeatureFlagEnabledForViewer(flagKey: FeatureFlagKey): Pr
     return isFeatureFlagEnabled(flagKey);
   }
 
-  return isFeatureFlagEnabledForUser(flagKey, session.user);
+  return isFeatureFlagEnabledForSession(flagKey, session);
 }
 
 /**

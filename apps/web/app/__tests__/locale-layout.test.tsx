@@ -1,5 +1,6 @@
 import { render, screen } from "@/test/test-utils";
-import { notFound } from "next/navigation";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import * as posthogServer from "~/lib/posthog-server";
 
@@ -54,12 +55,20 @@ describe("LocaleLayout", () => {
     expect(posthogServer.isFeatureFlagEnabledForViewer).toHaveBeenCalledWith("multi-language");
   });
 
-  it("calls notFound for non-default locale when multi-language is disabled", async () => {
+  it("sends the viewer to the same page in the default locale when multi-language is off", async () => {
     vi.mocked(posthogServer.isFeatureFlagEnabledForViewer).mockResolvedValue(false);
+    vi.mocked(headers).mockResolvedValueOnce(
+      new Headers({
+        "x-current-path": "/de-DE/login",
+        "x-current-search": "?callbackUrl=%2Fde-DE%2Fplatform",
+      }),
+    );
+
     await Layout({
       children: <div />,
       params: Promise.resolve({ locale: "de-DE" }),
     }).catch(() => undefined);
-    expect(notFound).toHaveBeenCalled();
+
+    expect(redirect).toHaveBeenCalledWith("/en-US/login?callbackUrl=%2Fde-DE%2Fplatform");
   });
 });

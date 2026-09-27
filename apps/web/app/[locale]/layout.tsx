@@ -1,6 +1,6 @@
 import { TranslationsProvider } from "@/components/translations-provider";
-import { draftMode } from "next/headers";
-import { notFound } from "next/navigation";
+import { draftMode, headers } from "next/headers";
+import { notFound, redirect } from "next/navigation";
 import React from "react";
 import type { ReactNode } from "react";
 import { isFeatureFlagEnabledForViewer } from "~/lib/posthog-server";
@@ -22,6 +22,16 @@ interface LocaleLayoutProps {
 
 const allowedOriginList = ["https://app.contentful.com", "https://app.eu.contentful.com"];
 
+async function defaultLocalePath(locale: string): Promise<string> {
+  const requestHeaders = await headers();
+  const currentPath = requestHeaders.get("x-current-path") ?? "";
+  const search = requestHeaders.get("x-current-search") ?? "";
+
+  const localePrefix = `/${locale}`;
+  const rest = currentPath.startsWith(localePrefix) ? currentPath.slice(localePrefix.length) : "";
+  return `/${defaultLocale}${rest}${search}`;
+}
+
 export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
   const { locale } = await params;
 
@@ -31,10 +41,12 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
 
   const { isEnabled: preview } = await draftMode();
 
-  // Only another locale needs the flag, so default-locale pages skip the session lookup.
+  // Only another locale needs the flag, so default-locale pages skip the session lookup. Without it
+  // the viewer gets the same page in the default locale, so a signed-out member of a targeted
+  // organization still reaches login rather than a 404.
   const isOtherLocale = locale !== defaultLocale;
   if (isOtherLocale && !(await isFeatureFlagEnabledForViewer(FEATURE_FLAGS.MULTI_LANGUAGE))) {
-    notFound();
+    redirect(await defaultLocalePath(locale));
   }
 
   const { resources } = await initTranslations({

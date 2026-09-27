@@ -92,6 +92,12 @@ so checking a flag never creates a person. To turn a flag on for an organisation
 Members get the flag on their next page load, and backend checks follow within a minute. Adding
 someone to the organisation in openJII puts them in the rollout.
 
+Until a user accepts analytics cookies, the browser evaluates flags under a cookieless id and
+without their email, while the web server and the backend use the email. Only `organization_ids`
+conditions and plain 0% or 100% rollouts give both sides the same answer for them. A condition on
+`email`, or a rollout between 1% and 99%, can show an action in the browser that the backend then
+refuses, or hide one it would allow.
+
 ## Available Feature Flags
 
 - `MULTI_LANGUAGE`: Enable multi-language support

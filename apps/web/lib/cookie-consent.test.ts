@@ -1,8 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { setConsentStatus, subscribeToConsentStatus } from "./cookie-consent";
+import { getConsentStatus, setConsentStatus, subscribeToConsentStatus } from "./cookie-consent";
 
 describe("subscribeToConsentStatus", () => {
+  afterEach(() => {
+    document.cookie = "jii_cookie_consent=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+  });
+
   it("tells subscribers about a choice", () => {
     const onChange = vi.fn();
     const unsubscribe = subscribeToConsentStatus(onChange);
@@ -13,15 +17,19 @@ describe("subscribeToConsentStatus", () => {
     unsubscribe();
   });
 
-  it("tells subscribers about a choice made in another tab", async () => {
-    const onChange = vi.fn();
-    const unsubscribe = subscribeToConsentStatus(onChange);
+  it("lets a subscriber read a choice made in another tab", async () => {
+    const seen: string[] = [];
+    const unsubscribe = subscribeToConsentStatus(() => {
+      seen.push(getConsentStatus());
+    });
     const otherTab = new BroadcastChannel("jii-cookie-consent");
 
+    // The tabs share the cookie; the other tab writes it, then announces the change.
+    document.cookie = "jii_cookie_consent=rejected; path=/";
     otherTab.postMessage("rejected");
 
     await vi.waitFor(() => {
-      expect(onChange).toHaveBeenCalled();
+      expect(seen).toEqual(["rejected"]);
     });
     otherTab.close();
     unsubscribe();
