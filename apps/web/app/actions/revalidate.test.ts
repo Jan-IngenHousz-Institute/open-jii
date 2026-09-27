@@ -8,8 +8,8 @@ vi.unmock("~/app/actions/revalidate");
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 describe("revalidateAuth", () => {
-  it("calls revalidatePath with the platform layout", async () => {
+  it("revalidates from the locale layout down, which decides the viewer's language", async () => {
     await revalidateAuth();
-    expect(revalidatePath).toHaveBeenCalledWith("/[locale]/platform", "layout");
+    expect(revalidatePath).toHaveBeenCalledWith("/[locale]", "layout");
   });
 });
