@@ -62,7 +62,8 @@ export function useLoginFlow() {
       if (!result?.error) prefetch();
     },
     onError: (error) => {
-      log.error("Email OTP verify error", { err: error?.message });
+      // A wrong or expired code is the user's to fix, not a bug to report.
+      log.error("Email OTP verify error", { err: error?.message, report: false });
       toast.error(t("errors.verifyFailed"));
     },
   });

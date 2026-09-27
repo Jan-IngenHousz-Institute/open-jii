@@ -79,6 +79,20 @@ describe("AnalyticsConfigService", () => {
       expect(config.host).toBeDefined();
       expect(typeof config.host).toBe("string");
     });
+
+    it("tags a crash posthog-node captures outside a request as the backend's", () => {
+      const tag = service.getPostHogServerConfig().before_send;
+
+      expect(tag?.({ event: "$exception", properties: {} })).toEqual({
+        event: "$exception",
+        distinctId: "backend-server",
+        properties: {
+          environment: service.environment,
+          service: "backend",
+          $process_person_profile: false,
+        },
+      });
+    });
   });
 
   describe("config validation", () => {

@@ -68,7 +68,7 @@ export function createPostHogClient(options: PostHogClientOptions): PostHogClien
     if (response.status === 401 || response.status === 403) {
       throw new Error(
         `PostHog refused the key (${response.status}). It may lack a scope or have been rotated; ` +
-          "mint a new one and run pbpaste | pnpm posthog:auth in the main checkout",
+          "mint a new one and pipe it into pnpm posthog:auth in the main checkout (pbpaste on macOS)",
       );
     }
     if (!response.ok) throw new Error(`PostHog returned ${response.status}: ${text.slice(0, 500)}`);

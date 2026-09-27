@@ -25,9 +25,14 @@ the way `modules/opennext` composes its parts:
 
 ## Changing things
 
-- **A feature flag:** edit `flags.json`. A release or a rollback is a pull request, and a toggle
-  made in the PostHog UI shows as drift on the next plan. A test in `packages/analytics` holds its
-  keys equal to the ones the code checks, so a flag cannot be renamed on one side only.
+- **A feature flag:** edit `flags.json`. A release or a rollback is a pull request. A test in
+  `packages/analytics` holds its keys equal to the ones the code checks, so a flag cannot be
+  renamed on one side only. Two rules follow from applying on merge:
+  - A toggle made in the PostHog UI, during an incident say, is reverted by the next merge to main,
+    since the dev apply applies drift rather than only reporting it. Follow it with a pull request
+    that makes the same change in `flags.json`.
+  - A change goes live on merge while prod may still run the previous release. Change a flag's
+    rollout only once every running release behaves correctly under both of its values.
 - **A dashboard or insight:** `dashboards.json` lists them and their tiles, and each insight's query
   is its own file in `insights/`. To bring over a change made in the UI, copy the insight's query
   JSON into that file. The API adds a `version` to each query it serves that PostHog does not
@@ -37,7 +42,8 @@ the way `modules/opennext` composes its parts:
 - **Error alerts:** the `error_alert` modules post new, reopened and spiking issues to dev's Slack
   webhook, for every environment, since issue events do not say which one they came from. Set
   `error_alerts_enabled = false` while a deploy that newly reports errors opens its first burst of
-  issues, then triage and turn it back on.
+  issues, then triage with `pnpm posthog:issues list` and turn it back on. The dev root has it off
+  for the first apply.
 
 ## What stays in PostHog
 
@@ -52,3 +58,7 @@ Everything else in the project is here. What is not:
 OpenTofu reads a personal API key from `TF_VAR_posthog_tofu_api_key`, which the workflows fill
 from the `POSTHOG_TOFU_API_KEY` secret of the dev GitHub environment. It needs write access to the
 project's settings, feature flags, actions, insights, dashboards and hog functions.
+
+The provider refreshes these objects on every dev plan, so a PostHog outage or a revoked key fails
+the whole dev apply, AWS included. A key belongs to the person who minted it: when they leave or it
+is rotated, mint a new one with the same scopes and replace the secret before the next merge.

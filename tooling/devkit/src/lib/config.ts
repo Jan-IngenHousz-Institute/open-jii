@@ -105,7 +105,7 @@ export async function requireDevkitKey(
     ...(mainRoot === null ? [] : [devkitEnvPath(mainRoot)]),
   ];
   throw new Error(
-    `No ${key.service} key found. Looked at ${looked.join(", ")}. Run: pbpaste | pnpm ${key.authCommand}`,
+    `No ${key.service} key found. Looked at ${looked.join(", ")}. Run: pnpm ${key.authCommand} with the key on stdin, for example pbpaste | pnpm ${key.authCommand} on macOS`,
   );
 }
 

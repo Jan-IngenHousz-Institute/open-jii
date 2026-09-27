@@ -37,6 +37,15 @@ await initializePostHogServer(process.env.POSTHOG_KEY, {
 const isEnabled = await isFeatureFlagEnabled(FEATURE_FLAGS.PROTOCOL_VALIDATION_AS_WARNING, userId);
 ```
 
+### Server-side error reports and consent
+
+The web server and the backend report their own errors whatever a visitor chose on the cookie
+banner, as operational telemetry: a report never creates or updates a PostHog person. It carries
+the signed-in user's id when there is one, and otherwise a fixed id per service (`web-server`,
+`backend-server`). It carries where the error happened, never what the user sent: an `AppError`'s
+details stay in the backend's own log. Browser errors are sent only once a visitor accepts
+analytics cookies.
+
 ### Client-side PostHog
 
 ```typescript

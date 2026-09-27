@@ -51,6 +51,13 @@ export function createPostHogClientConfig(
   };
 }
 
+/** The part of a posthog-node event that a `before_send` reads and changes. */
+export interface ServerEvent {
+  event: string;
+  distinctId?: string;
+  properties?: Record<string, unknown>;
+}
+
 /**
  * PostHog server configuration for Node.js
  */
@@ -60,6 +67,8 @@ export interface PostHogServerConfig {
   flushInterval?: number; // Flush interval in milliseconds
   // Reports an uncaught exception, flushes, then exits as Node would have.
   enableExceptionAutocapture?: boolean;
+  // Adjusts, or drops by returning null, each event before it is queued.
+  before_send?: (event: ServerEvent | null) => ServerEvent | null;
 }
 
 /**
@@ -74,5 +83,6 @@ export function createPostHogServerConfig(
     flushAt: options?.flushAt ?? 20,
     flushInterval: options?.flushInterval ?? 10000,
     enableExceptionAutocapture: options?.enableExceptionAutocapture ?? false,
+    before_send: options?.before_send,
   };
 }

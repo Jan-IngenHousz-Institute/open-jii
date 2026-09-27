@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
 import { createPostHogServerConfig } from "@repo/analytics";
+import { tagUnreportedExceptions } from "@repo/analytics/server";
 
 import { ErrorCodes } from "../../../../utils/error-codes";
 import { AnalyticsConfig, analyticsConfigSchema } from "./config.types";
@@ -91,7 +92,10 @@ export class AnalyticsConfigService {
    * Gets PostHog server configuration
    */
   getPostHogServerConfig() {
-    // Crashes outside a request never reach the exception filter.
-    return createPostHogServerConfig(this.config.posthogHost, { enableExceptionAutocapture: true });
+    // Crashes outside a request never reach the exception filter, so they are tagged on their way out.
+    return createPostHogServerConfig(this.config.posthogHost, {
+      enableExceptionAutocapture: true,
+      before_send: tagUnreportedExceptions("backend", this.environment),
+    });
   }
 }

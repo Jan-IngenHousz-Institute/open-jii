@@ -1,6 +1,6 @@
 import type { FeatureFlagKey } from "./feature-flags";
 import { FEATURE_FLAG_DEFAULTS } from "./feature-flags";
-import type { PostHogServerConfig, PostHogService } from "./posthog-config";
+import type { PostHogServerConfig, PostHogService, ServerEvent } from "./posthog-config";
 
 /**
  * PostHog server client interface
@@ -136,6 +136,28 @@ export async function reportException(
   } catch (failure) {
     console.error("[PostHog] Could not report an error:", failure);
   }
+}
+
+/**
+ * Tags an exception posthog-node captured by itself, such as a crash outside any request, the way
+ * `reportException` tags the ones it sends: with its environment and service, under the service's
+ * own id, and without creating a person.
+ */
+export function tagUnreportedExceptions(
+  service: PostHogService,
+  environment: string,
+): (event: ServerEvent | null) => ServerEvent | null {
+  return (event) => {
+    if (event?.event !== "$exception" || event.properties?.service !== undefined) {
+      return event;
+    }
+
+    return {
+      ...event,
+      distinctId: `${service}-server`,
+      properties: { ...event.properties, environment, service, $process_person_profile: false },
+    };
+  };
 }
 
 /**

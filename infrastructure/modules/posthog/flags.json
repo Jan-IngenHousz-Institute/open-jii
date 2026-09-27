@@ -1,6 +1,6 @@
 {
   "iot-devices": {
-    "name": "IoT device registry & X.509 certificates (devices pages + API). 0% rollout = hidden for everyone; to release, edit the release condition to an email cohort/list.",
+    "name": "IoT device registry & X.509 certificates (devices pages + API). 0% rollout = hidden for everyone; to release, change its release condition in flags.json.",
     "active": true,
     "continuity": false,
     "tags": [],

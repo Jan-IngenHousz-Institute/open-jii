@@ -22,12 +22,14 @@ locals {
 module "project_settings" {
   source = "./posthog-project-settings"
 
-  autocapture_exceptions      = true
-  autocapture_web_vitals      = true
-  capture_performance         = true
-  heatmaps                    = true
-  session_recording           = true
-  cookieless_server_hash_mode = 0
+  autocapture_exceptions = true
+  autocapture_web_vitals = true
+  capture_performance    = true
+  heatmaps               = true
+  session_recording      = true
+  # Visitors who decline cookies are counted with a daily-salted server hash instead, which web's
+  # `cookieless_mode: "on_reject"` needs; 0 drops those events.
+  cookieless_server_hash_mode = 1
   app_urls                    = ["https://dev.openjii.org", "https://openjii.org", "http://localhost:3000"]
 
   # "Filter out internal and test users" keeps an event only when every filter holds, so usage

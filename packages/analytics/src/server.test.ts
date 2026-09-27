@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PostHogServerClient } from "./server";
-import { reportException } from "./server";
+import { reportException, tagUnreportedExceptions } from "./server";
 
 const client = {
   isFeatureEnabled: vi.fn(),
@@ -91,5 +91,37 @@ describe("reportException", () => {
       }),
     ).resolves.toBeUndefined();
     expect(logged).toHaveBeenCalled();
+  });
+});
+
+describe("tagUnreportedExceptions", () => {
+  const tag = tagUnreportedExceptions("backend", "dev");
+
+  it("tags an exception posthog-node captured by itself, under the service's id and with no person", () => {
+    expect(
+      tag({
+        event: "$exception",
+        distinctId: "0199c0de-random",
+        properties: { $exception_list: [] },
+      }),
+    ).toEqual({
+      event: "$exception",
+      distinctId: "backend-server",
+      properties: {
+        $exception_list: [],
+        environment: "dev",
+        service: "backend",
+        $process_person_profile: false,
+      },
+    });
+  });
+
+  it("leaves an exception reportException already tagged, and every other event, as it is", () => {
+    const reported = { event: "$exception", distinctId: "user-1", properties: { service: "web" } };
+    const other = { event: "$feature_flag_called", distinctId: "user-1" };
+
+    expect(tag(reported)).toBe(reported);
+    expect(tag(other)).toBe(other);
+    expect(tag(null)).toBeNull();
   });
 });

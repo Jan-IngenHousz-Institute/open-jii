@@ -219,6 +219,22 @@ describe("posthog-server", () => {
 
       await expect(reportServerError(new Error("boom"), {})).resolves.toBeUndefined();
     });
+
+    it("reports a repeating failure once a minute, and a different one at once", async () => {
+      vi.useFakeTimers();
+      try {
+        await reportServerError(new Error("CMS unreachable"), {});
+        await reportServerError(new Error("CMS unreachable"), {});
+        await reportServerError(new Error("session lookup failed"), {});
+        expect(mockPostHogInstance.captureExceptionImmediate).toHaveBeenCalledTimes(2);
+
+        vi.advanceTimersByTime(60_000);
+        await reportServerError(new Error("CMS unreachable"), {});
+        expect(mockPostHogInstance.captureExceptionImmediate).toHaveBeenCalledTimes(3);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   describe("PostHog client initialization", () => {

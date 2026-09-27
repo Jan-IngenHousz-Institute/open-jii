@@ -90,7 +90,7 @@ describe("OrpcErrorInterceptor", () => {
     });
   });
 
-  it("reports what throwOrpcError logged, so the report says what the log line says", async () => {
+  it("reports where throwOrpcError logged from, but keeps its details in the log", async () => {
     const failure = new ORPCError("INTERNAL_SERVER_ERROR", {
       status: 500,
       message: "Failed to execute SQL query",
@@ -113,8 +113,8 @@ describe("OrpcErrorInterceptor", () => {
     expect(reporter.reports[0]?.properties).toMatchObject({
       operation: "getExperimentData",
       context: "ExperimentDataController",
-      details: '{"statementId":"01ef"}',
     });
+    expect(reporter.reports[0]?.properties).not.toHaveProperty("details");
   });
 
   it("leaves 4xx errors alone, since the caller made the mistake", async () => {

@@ -55,7 +55,8 @@ export class OrpcErrorInterceptor {
       : undefined;
   }
 
-  // What `throwOrpcError` logged, so the report says what the log line says.
+  // Where `throwOrpcError` logged from, so the report leads to the log line. Its details stay in the
+  // log, since they can carry what a user sent.
   private loggedFieldsOf(cause: unknown): Record<string, unknown> {
     if (typeof cause !== "object" || cause === null || !("errorCode" in cause)) {
       return {};
@@ -64,7 +65,6 @@ export class OrpcErrorInterceptor {
     return {
       ...("operation" in cause ? { operation: cause.operation } : {}),
       ...("context" in cause ? { context: cause.context } : {}),
-      ...("details" in cause ? { details: JSON.stringify(cause.details).slice(0, 2000) } : {}),
     };
   }
 

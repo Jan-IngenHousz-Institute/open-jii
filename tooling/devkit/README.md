@@ -76,7 +76,8 @@ Settings, Personal API keys, restricted to the openJII project, with Query read 
 read and write. Then pipe it in the same way:
 
 ```bash
-pbpaste | pnpm posthog:auth
+pbpaste | pnpm posthog:auth                        # macOS
+xclip -selection clipboard -o | pnpm posthog:auth  # Linux, with xclip installed
 ```
 
 It lands beside the Linear key in `tooling/devkit/.env` and is found the same way.

@@ -31,7 +31,9 @@ async function verifyKey(key: string): Promise<string[]> {
 export async function authenticate(deps: PostHogAuthDependencies): Promise<void> {
   const key = deps.readInput().trim();
   if (key.length === 0) {
-    throw new Error("No key received on stdin. Paste it in: pbpaste | pnpm posthog:auth");
+    throw new Error(
+      "No key received on stdin. Pipe it in, for example pbpaste | pnpm posthog:auth on macOS",
+    );
   }
   if (/\s/.test(key)) throw new Error("The input contains whitespace; paste only the key");
 
@@ -46,7 +48,7 @@ export async function authenticate(deps: PostHogAuthDependencies): Promise<void>
 async function run(): Promise<number> {
   if (process.stdin.isTTY) {
     throw new Error(
-      "The key is read from stdin so it never lands on a command line: pbpaste | pnpm posthog:auth",
+      "The key is read from stdin so it never lands on a command line: pipe it in, for example pbpaste | pnpm posthog:auth on macOS",
     );
   }
   const root = repositoryRoot();
