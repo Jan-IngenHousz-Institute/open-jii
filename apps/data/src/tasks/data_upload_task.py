@@ -20,11 +20,23 @@ from datetime import datetime, timezone
 
 import pandas as pd
 from pyspark.dbutils import DBUtils
-from pyspark.sql import SparkSession
+from pyspark.sql import Column, DataFrame, SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql.types import LongType, StringType, StructField, StructType, TimestampType
+from pyspark.sql.types import (
+    ArrayType,
+    DataType,
+    DoubleType,
+    FloatType,
+    LongType,
+    MapType,
+    StringType,
+    StructField,
+    StructType,
+    TimestampType,
+)
 
 from ambyte import find_byte_folders, load_files_per_byte, process_trace_files
+from openjii.json_scrub import scrub_non_finite_json_value
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -67,6 +79,12 @@ logger.info(
 # COMMAND ----------
 
 # DBTITLE 1,Tabular Processor (csv/tsv/json/ndjson)
+def _serialize_dataframe_rows(frame: pd.DataFrame) -> list[str | None]:
+    """Encode dataframe rows as strict JSON, replacing non-finite values with null."""
+    rows = frame.astype(object).where(pd.notnull(frame), None).to_dict(orient="records")
+    return [scrub_non_finite_json_value(json.dumps(row, default=str)) for row in rows]
+
+
 def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> dict:
     """Shared pipeline for tabular uploads: pandas parse → JSON-encode rows → write parquet.
 
@@ -99,7 +117,7 @@ def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> 
     logger.info(f"Found {len(matched_files)} {label} file(s) to process")
 
     uploaded_at = datetime.now(timezone.utc)
-    all_rows: list[dict] = []
+    all_payloads: list[str | None] = []
     file_count = 0
     error_count = 0
 
@@ -108,17 +126,15 @@ def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> 
             # pandas reads UC volumes via the /Volumes FUSE path; strip the dbfs:
             # scheme dbutils.fs.ls prepends. /dbfs only mounts DBFS, not volumes.
             local_path = path[len("dbfs:") :] if path.startswith("dbfs:") else path
-            df = parser(local_path)
-            df = df.where(pd.notnull(df), None)
-            rows = df.to_dict(orient="records")
-            logger.info(f"Parsed {os.path.basename(path)}: {len(rows)} rows")
-            all_rows.extend(rows)
+            payloads = _serialize_dataframe_rows(parser(local_path))
+            logger.info(f"Parsed {os.path.basename(path)}: {len(payloads)} rows")
+            all_payloads.extend(payloads)
             file_count += 1
         except Exception as e:
             logger.error(f"Error parsing {path}: {e}")
             error_count += 1
 
-    if not all_rows:
+    if not all_payloads:
         raise Exception(f"No rows parsed from {file_count} files ({error_count} errors)")
 
     records = [
@@ -129,10 +145,10 @@ def _process_tabular_upload(label: str, extensions: tuple[str, ...], parser) -> 
             "upload_id": UPLOAD_ID,
             "created_by": USER_ID,
             "uploaded_at": uploaded_at,
-            "uploaded_data": json.dumps(row, default=str),
+            "uploaded_data": payload,
             "row_index": i,
         }
-        for i, row in enumerate(all_rows)
+        for i, payload in enumerate(all_payloads)
     ]
 
     schema = StructType([
@@ -172,6 +188,35 @@ def process_csv_upload() -> dict:
 
 def process_tsv_upload() -> dict:
     return _process_tabular_upload("tsv", (".tsv",), lambda p: pd.read_csv(p, sep="\t"))
+
+
+def _serialize_parquet_rows(frame: DataFrame) -> DataFrame:
+    """Encode Spark rows with non-finite floats replaced by null at every nesting level."""
+    def normalize(value: Column, data_type: DataType) -> Column:
+        if isinstance(data_type, (FloatType, DoubleType)):
+            return F.when(
+                F.isnan(value) | (value == float("inf")) | (value == float("-inf")),
+                F.lit(None).cast(data_type),
+            ).otherwise(value)
+        if isinstance(data_type, ArrayType):
+            return F.transform(value, lambda item: normalize(item, data_type.elementType))
+        if isinstance(data_type, MapType):
+            return F.transform_values(value, lambda key, item: normalize(item, data_type.valueType))
+        if isinstance(data_type, StructType):
+            fields = [
+                normalize(value.getField(field.name), field.dataType).alias(field.name)
+                for field in data_type.fields
+            ]
+            return F.when(value.isNotNull(), F.struct(*fields))
+        return value
+
+    columns = [
+        normalize(F.col("`" + field.name.replace("`", "``") + "`"), field.dataType).alias(field.name)
+        for field in frame.schema.fields
+    ]
+    return frame.select(
+        F.to_json(F.struct(*columns), options={"ignoreNullFields": "false"}).alias("uploaded_data")
+    )
 
 
 def process_parquet_upload() -> dict:
@@ -214,9 +259,7 @@ def process_parquet_upload() -> dict:
         try:
             # Spark reads UC volumes via /Volumes; strip the dbfs: scheme dbutils adds.
             spark_path = path[len("dbfs:") :] if path.startswith("dbfs:") else path
-            row_json = spark.read.parquet(spark_path).select(
-                F.to_json(F.struct("*")).alias("uploaded_data")
-            )
+            row_json = _serialize_parquet_rows(spark.read.parquet(spark_path))
             combined = row_json if combined is None else combined.unionByName(row_json)
             file_count += 1
         except Exception as e:
@@ -377,8 +420,7 @@ def process_ambyte_upload() -> dict:
         raise Exception(f"All ambyte processing failed ({error_count} errors)")
 
     combined_df = pd.concat(combined_dataframes, ignore_index=True)
-    combined_df = combined_df.where(pd.notnull(combined_df), None)
-    rows = combined_df.to_dict(orient="records")
+    payloads = _serialize_dataframe_rows(combined_df)
 
     uploaded_at = datetime.now(timezone.utc)
     records = [
@@ -389,10 +431,10 @@ def process_ambyte_upload() -> dict:
             "upload_id": UPLOAD_ID,
             "created_by": USER_ID,
             "uploaded_at": uploaded_at,
-            "uploaded_data": json.dumps(row, default=str),
+            "uploaded_data": payload,
             "row_index": i,
         }
-        for i, row in enumerate(rows)
+        for i, payload in enumerate(payloads)
     ]
 
     schema = StructType([
@@ -428,6 +470,21 @@ def process_ambyte_upload() -> dict:
 # COMMAND ----------
 
 # DBTITLE 1,Upload Metadata Record
+def _insert_upload_metadata(spark: SparkSession, table: str, record: dict) -> None:
+    spark.sql(
+        f"""
+        INSERT INTO {table}
+          (upload_id, experiment_id, upload_table_id, upload_table_name, source_kind, status,
+           file_count, row_count, created_by, created_at, completed_at, error_message)
+        VALUES (
+          :upload_id, :experiment_id, :upload_table_id, :upload_table_name, :source_kind, :status,
+          :file_count, :row_count, :created_by, :created_at, :completed_at, :error_message
+        )
+        """,
+        args=record,
+    )
+
+
 def write_upload_metadata(status: str, result: dict | None, error_message: str | None) -> None:
     """Append a completion record into experiment_upload_metadata.
 
@@ -438,32 +495,28 @@ def write_upload_metadata(status: str, result: dict | None, error_message: str |
     if not UPLOAD_ID:
         return
 
-    # Belt-and-suspenders SQL-literal quoting: the backend zod schema already
-    # restricts upload_table_name to [A-Za-z0-9_] and UUIDs are fixed-shape,
-    # but widgets can be set out-of-band (Databricks UI / manual run-now).
-    def quote(value: str | None) -> str:
-        if value is None:
-            return "NULL"
-        return "'" + value.replace("'", "''") + "'"
-
     try:
         completed_at = datetime.now(timezone.utc)
         file_count = int(result.get("files_processed", 0)) if result else 0
         row_count = int(result.get("rows_written", 0)) if result else 0
 
-        spark.sql(
-            f"""
-            INSERT INTO {UPLOAD_METADATA_TABLE}
-              (upload_id, experiment_id, upload_table_id, upload_table_name, source_kind, status,
-               file_count, row_count, created_by, created_at, completed_at, error_message)
-            VALUES (
-              {quote(UPLOAD_ID)}, {quote(EXPERIMENT_ID)},
-              {quote(UPLOAD_TABLE_ID or "")}, {quote(UPLOAD_TABLE_NAME or "")},
-              {quote(SOURCE_KIND)}, {quote(status)},
-              {file_count}, {row_count}, {quote(USER_ID or "")},
-              {quote(completed_at.isoformat())}, {quote(completed_at.isoformat())}, {quote(error_message)}
-            )
-            """
+        _insert_upload_metadata(
+            spark,
+            UPLOAD_METADATA_TABLE,
+            {
+                "upload_id": UPLOAD_ID,
+                "experiment_id": EXPERIMENT_ID,
+                "upload_table_id": UPLOAD_TABLE_ID or "",
+                "upload_table_name": UPLOAD_TABLE_NAME or "",
+                "source_kind": SOURCE_KIND,
+                "status": status,
+                "file_count": file_count,
+                "row_count": row_count,
+                "created_by": USER_ID or "",
+                "created_at": completed_at,
+                "completed_at": completed_at,
+                "error_message": error_message,
+            },
         )
         logger.info(f"Wrote upload metadata record (status={status}, upload_id={UPLOAD_ID})")
     except Exception as e:

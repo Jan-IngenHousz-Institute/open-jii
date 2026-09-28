@@ -38,6 +38,10 @@ describe("QueryBuilder Base", () => {
       expect(query).toBe("SELECT * FROM t WHERE `name` = '\\\\\\' OR 1=1 --'");
     });
 
+    it("escapes backslashes before apostrophes in string values", () => {
+      expect(builder.escapeValue(String.raw`a\' OR 1=1 -- `)).toBe(String.raw`'a\\\' OR 1=1 -- '`);
+    });
+
     it("should group by columns", () => {
       const query = builder.from("t").groupBy(["c1", "c2"]).build();
       expect(query).toBe("SELECT * FROM t GROUP BY `c1`, `c2`");

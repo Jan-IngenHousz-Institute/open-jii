@@ -14,6 +14,7 @@ from pyspark.sql.types import (
     TimestampType,
 )
 
+from openjii import scrub_non_finite_json
 from openjii.centrum import RAW_UPLOADED_DATA_TABLE
 from openjii.centrum.runtime import CATALOG_NAME
 
@@ -59,5 +60,7 @@ def raw_uploaded_data():
         .option("ignoreMissingFiles", "true")
         .schema(uploaded_data_schema)
         .load(uploaded_path)
-        .withColumn("uploaded_data", F.expr("try_parse_json(uploaded_data)"))
+        .withColumn("uploaded_data_scrubbed", scrub_non_finite_json(F.col("uploaded_data")))
+        .withColumn("uploaded_data", F.expr("try_parse_json(uploaded_data_scrubbed)"))
+        .drop("uploaded_data_scrubbed")
     )
