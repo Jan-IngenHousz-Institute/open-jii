@@ -557,6 +557,7 @@ jobs:
       TF_VAR_dev_nameservers: ${{ secrets.DEV_NAMESERVERS }}
       TF_VAR_grafana_auth_service_token: ${{ secrets.GRAFANA_SERVICE_TOKEN }}
       TF_VAR_posthog_tofu_api_key: ${{ secrets.POSTHOG_TOFU_API_KEY }}
+      TF_VAR_posthog_grafana_api_key: ${{ secrets.POSTHOG_GRAFANA_API_KEY }}
 
     steps:
       - name: Checkout Repository
