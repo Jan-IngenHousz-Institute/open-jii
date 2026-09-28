@@ -174,6 +174,37 @@ describe("Protocol Schema", () => {
     it("rejects non-string search", () => {
       expect(() => zProtocolFilterQuery.parse({ search: 123 })).toThrow();
     });
+
+    it("accepts one or two allowed sort fields", () => {
+      const sort = [
+        { field: "macros", direction: "desc" },
+        { field: "name", direction: "asc" },
+      ];
+      expect(zProtocolFilterQuery.parse({ sort }).sort).toEqual(sort);
+    });
+
+    it("rejects duplicate, unsupported, and third sort fields", () => {
+      expect(
+        zProtocolFilterQuery.safeParse({
+          sort: [
+            { field: "name", direction: "asc" },
+            { field: "name", direction: "desc" },
+          ],
+        }).success,
+      ).toBe(false);
+      expect(
+        zProtocolFilterQuery.safeParse({ sort: [{ field: "activity", direction: "asc" }] }).success,
+      ).toBe(false);
+      expect(
+        zProtocolFilterQuery.safeParse({
+          sort: [
+            { field: "name", direction: "asc" },
+            { field: "family", direction: "asc" },
+            { field: "updated", direction: "asc" },
+          ],
+        }).success,
+      ).toBe(false);
+    });
   });
 
   describe("zProtocolIdPathParam", () => {

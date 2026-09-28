@@ -37,6 +37,14 @@ async function generate() {
       "sort[0][field]=members&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc",
     ],
     [
+      "/api/v1/protocols",
+      "sort[0][field]=macros&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc",
+    ],
+    [
+      "/api/v1/macros",
+      "sort[0][field]=protocols&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc",
+    ],
+    [
       "/api/v1/workbooks",
       "sort[0][field]=usedBy&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc",
     ],

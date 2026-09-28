@@ -162,6 +162,30 @@ describe("ProtocolController - read and update endpoints", () => {
     expect(response.body.totalCount).toBeGreaterThan(0);
   });
 
+  it("listProtocols applies an explicit sort from the query string", async () => {
+    await testApp.createProtocol({ name: "Alpha sorted", createdBy: testUserId });
+    await testApp.createProtocol({ name: "Zulu sorted", createdBy: testUserId });
+
+    const response: SuperTestResponse<{ items: { name: string }[] }> = await testApp
+      .get(testApp.resolveOrpcPath(contract.protocols.listProtocols))
+      .query({ page: 1, "sort[0][field]": "name", "sort[0][direction]": "desc" })
+      .withAuth(testUserId)
+      .expect(StatusCodes.OK);
+
+    expect(response.body.items.map((protocol) => protocol.name)).toEqual([
+      "Zulu sorted",
+      "Alpha sorted",
+    ]);
+  });
+
+  it("listProtocols rejects a sort field outside the allowlist", async () => {
+    await testApp
+      .get(testApp.resolveOrpcPath(contract.protocols.listProtocols))
+      .query({ page: 1, "sort[0][field]": "activity", "sort[0][direction]": "asc" })
+      .withAuth(testUserId)
+      .expect(StatusCodes.BAD_REQUEST);
+  });
+
   it("listProtocols paginated returns 500 when the paginated use case fails", async () => {
     vi.spyOn(testApp.module.get(ListProtocolsUseCase), "executePaginated").mockResolvedValue(
       failure(AppError.internal("Database error")),

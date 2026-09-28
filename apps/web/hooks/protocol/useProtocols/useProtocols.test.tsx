@@ -124,4 +124,25 @@ describe("useProtocols", () => {
 
     expect(spy.calls[spy.calls.length - 1]?.query?.search).toBeUndefined();
   });
+
+  it("sends sorting and resets to the first page when sorting changes", async () => {
+    const spy = server.mount(contract.protocols.listProtocols, {
+      body: envelope([], 1, 3),
+    });
+
+    const { result } = renderHook(() => useProtocols());
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    act(() => result.current.setPage(2));
+    act(() => result.current.toggleSort("macros", false));
+
+    expect(result.current.page).toBe(1);
+    await waitFor(() => {
+      expect(spy.calls.at(-1)?.query).toMatchObject({
+        page: "1",
+        "sort[0][field]": "macros",
+        "sort[0][direction]": "asc",
+      });
+    });
+  });
 });

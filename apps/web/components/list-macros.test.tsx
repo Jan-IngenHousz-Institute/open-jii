@@ -89,4 +89,30 @@ describe("ListMacros", () => {
       expect(spy.calls[spy.calls.length - 1]?.query?.page).toBe("2");
     });
   });
+
+  it("sorts by name, adds a secondary field, and resets", async () => {
+    const spy = server.mount(contract.macros.listMacros, {
+      body: envelope([createMacro({ id: "1", name: "First" })]),
+    });
+    const user = userEvent.setup();
+    render(<ListMacros />);
+
+    await screen.findByRole("link", { name: "First" });
+    expect(screen.queryByRole("button", { name: "common.resetSorting" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /macros.columns.activity:/ })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /macros.columns.name:/ }));
+    await waitFor(() => expect(spy.calls.at(-1)?.query["sort[0][field]"]).toBe("name"));
+
+    await user.keyboard("{Shift>}");
+    await user.click(screen.getByRole("button", { name: /macros.columns.language:/ }));
+    await user.keyboard("{/Shift}");
+    expect(
+      screen.getByRole("button", { name: /macros.columns.language:.*common.sortSecondary/ }),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(spy.calls.at(-1)?.query["sort[1][field]"]).toBe("language"));
+
+    await user.click(screen.getByRole("button", { name: "common.resetSorting" }));
+    await waitFor(() => expect(spy.calls.at(-1)?.query.sort).toBeUndefined());
+  });
 });
