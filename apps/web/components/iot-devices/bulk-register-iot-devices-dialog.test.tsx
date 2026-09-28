@@ -274,4 +274,17 @@ describe("BulkRegisterIotDevicesDialog", () => {
     // Textarea content and preview cell both carry the serial.
     expect(screen.getAllByText("S-9")).toHaveLength(2);
   });
+
+  it("opens the file picker from the import button", async () => {
+    const user = userEvent.setup();
+    mountBase();
+
+    render(<BulkRegisterIotDevicesDialog open onOpenChange={vi.fn()} />);
+
+    const picker = screen.getByLabelText<HTMLInputElement>("iot.devices.bulkDialog.importFile");
+    const click = vi.spyOn(picker, "click");
+    await user.click(screen.getByRole("button", { name: "iot.devices.bulkDialog.importFile" }));
+
+    expect(click).toHaveBeenCalledOnce();
+  });
 });

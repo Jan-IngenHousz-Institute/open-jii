@@ -16,6 +16,7 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -279,118 +280,15 @@ export function BulkRegisterIotDevicesDialog({
           </>
         ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="deviceType"
-                disabled={isPending}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("iot.devices.dialog.typeLabel")}</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={isPending}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("iot.devices.dialog.typePlaceholder")} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {zRegisterableDeviceType.options.map((value) => (
-                          <SelectItem key={value} value={value}>
-                            {getSensorFamilyLabel(value)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="serials"
-                disabled={isPending}
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex items-center justify-between">
-                      <FormLabel>{t("iot.devices.bulkDialog.serialsLabel")}</FormLabel>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <FileUp className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-                        {t("iot.devices.bulkDialog.importFile")}
-                      </Button>
-                      {/* A hidden file picker driven by the button above, never
-                          rendered visibly — the styled `Input` has nothing to
-                          contribute to an element with `display: none`. */}
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".csv,.txt,text/plain,text/csv"
-                        className="hidden"
-                        aria-label={t("iot.devices.bulkDialog.importFile")}
-                        onChange={handleFilePicked}
-                      />
-                    </div>
-                    <FormControl>
-                      <Textarea
-                        rows={5}
-                        placeholder={t("iot.devices.bulkDialog.serialsPlaceholder")}
-                        className="font-mono"
-                        onDrop={handleDrop}
-                        {...field}
-                      />
-                    </FormControl>
-                    {renderSummary()}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {batch.rows.length > 0 && <BulkRegisterPreview batch={batch} />}
-
-              <FormField
-                control={form.control}
-                name="groupMode"
-                disabled={isPending}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("iot.devices.bulkDialog.groupLabel")}</FormLabel>
-                    <FormControl>
-                      <RadioGroup
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        className="flex flex-wrap gap-4"
-                      >
-                        <label className="flex cursor-pointer items-center gap-2 text-sm">
-                          <RadioGroupItem value="none" />
-                          {t("iot.devices.bulkDialog.groupNone")}
-                        </label>
-                        <label className="flex cursor-pointer items-center gap-2 text-sm">
-                          <RadioGroupItem value="existing" />
-                          {t("iot.devices.bulkDialog.groupExisting")}
-                        </label>
-                        <label className="flex cursor-pointer items-center gap-2 text-sm">
-                          <RadioGroupItem value="new" />
-                          {t("iot.devices.bulkDialog.groupNew")}
-                        </label>
-                      </RadioGroup>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              {groupMode === "existing" && (
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-col gap-4">
+              <DialogBody className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="groupId"
+                  name="deviceType"
                   disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
+                      <FormLabel>{t("iot.devices.dialog.typeLabel")}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
@@ -398,15 +296,13 @@ export function BulkRegisterIotDevicesDialog({
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue
-                              placeholder={t("iot.devices.bulkDialog.groupSelectPlaceholder")}
-                            />
+                            <SelectValue placeholder={t("iot.devices.dialog.typePlaceholder")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {(groups ?? []).map((group) => (
-                            <SelectItem key={group.id} value={group.id}>
-                              {group.name}
+                          {zRegisterableDeviceType.options.map((value) => (
+                            <SelectItem key={value} value={value}>
+                              {getSensorFamilyLabel(value)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -415,27 +311,137 @@ export function BulkRegisterIotDevicesDialog({
                     </FormItem>
                   )}
                 />
-              )}
 
-              {groupMode === "new" && (
                 <FormField
                   control={form.control}
-                  name="groupName"
+                  name="serials"
                   disabled={isPending}
                   render={({ field }) => (
                     <FormItem>
+                      <div className="flex items-center justify-between">
+                        <FormLabel>{t("iot.devices.bulkDialog.serialsLabel")}</FormLabel>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <FileUp className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                          {t("iot.devices.bulkDialog.importFile")}
+                        </Button>
+                        {/* A hidden file picker driven by the button above, never
+                          rendered visibly — the styled `Input` has nothing to
+                          contribute to an element with `display: none`. */}
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".csv,.txt,text/plain,text/csv"
+                          className="hidden"
+                          aria-label={t("iot.devices.bulkDialog.importFile")}
+                          onChange={handleFilePicked}
+                        />
+                      </div>
                       <FormControl>
-                        <Input
-                          placeholder={t("iot.devices.bulkDialog.groupNamePlaceholder")}
+                        <Textarea
+                          rows={5}
+                          placeholder={t("iot.devices.bulkDialog.serialsPlaceholder")}
+                          className="font-mono"
+                          onDrop={handleDrop}
                           {...field}
                         />
                       </FormControl>
+                      {renderSummary()}
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              )}
 
+                {batch.rows.length > 0 && <BulkRegisterPreview batch={batch} />}
+
+                <FormField
+                  control={form.control}
+                  name="groupMode"
+                  disabled={isPending}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("iot.devices.bulkDialog.groupLabel")}</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          className="flex flex-wrap gap-4"
+                        >
+                          <label className="flex cursor-pointer items-center gap-2 text-sm">
+                            <RadioGroupItem value="none" />
+                            {t("iot.devices.bulkDialog.groupNone")}
+                          </label>
+                          <label className="flex cursor-pointer items-center gap-2 text-sm">
+                            <RadioGroupItem value="existing" />
+                            {t("iot.devices.bulkDialog.groupExisting")}
+                          </label>
+                          <label className="flex cursor-pointer items-center gap-2 text-sm">
+                            <RadioGroupItem value="new" />
+                            {t("iot.devices.bulkDialog.groupNew")}
+                          </label>
+                        </RadioGroup>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                {groupMode === "existing" && (
+                  <FormField
+                    control={form.control}
+                    name="groupId"
+                    disabled={isPending}
+                    render={({ field }) => (
+                      <FormItem>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={isPending}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue
+                                placeholder={t("iot.devices.bulkDialog.groupSelectPlaceholder")}
+                              />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {(groups ?? []).map((group) => (
+                              <SelectItem key={group.id} value={group.id}>
+                                {group.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {groupMode === "new" && (
+                  <FormField
+                    control={form.control}
+                    name="groupName"
+                    disabled={isPending}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            placeholder={t("iot.devices.bulkDialog.groupNamePlaceholder")}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </DialogBody>
               <DialogFooter>
                 <Button
                   type="button"

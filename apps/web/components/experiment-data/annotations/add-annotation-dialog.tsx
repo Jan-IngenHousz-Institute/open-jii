@@ -14,6 +14,7 @@ import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
   DialogClose,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -124,7 +125,7 @@ export function AddAnnotationDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-3xl">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex min-h-0 flex-col gap-4">
             <DialogHeader>
               <DialogTitle>
                 {t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.title`)}
@@ -133,7 +134,7 @@ export function AddAnnotationDialog({
                 {t(`experimentDataAnnotations.${type}Dialog${bulkSuffix}.description`, { count })}
               </DialogDescription>
             </DialogHeader>
-            <div className="mb-4 grid gap-4">
+            <DialogBody className="grid gap-4">
               {form.watch("type") === "flag" && (
                 <FormField
                   control={form.control}
@@ -191,7 +192,7 @@ export function AddAnnotationDialog({
                   </FormItem>
                 )}
               />
-            </div>
+            </DialogBody>
             <DialogFooter>
               <DialogClose asChild>
                 <Button type="button" variant="outline">

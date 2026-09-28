@@ -14,6 +14,7 @@ import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -154,7 +155,7 @@ export function WorkbookUpgradeDialog({
             <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
           </div>
         ) : (
-          <div className="max-h-[55vh] space-y-4 overflow-y-auto pr-1">
+          <DialogBody className="space-y-4">
             {/* Compatibility verdict */}
             <section>
               {verdict == null ? (
@@ -249,7 +250,7 @@ export function WorkbookUpgradeDialog({
                 </div>
               </section>
             ) : null}
-          </div>
+          </DialogBody>
         )}
 
         <DialogFooter>

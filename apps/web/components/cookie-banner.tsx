@@ -8,6 +8,7 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -91,7 +92,7 @@ export function CookieBanner() {
             <DialogDescription>{t("cookieBanner.dialogDescription")}</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <DialogBody className="space-y-4">
             <div className="border-border flex items-center justify-between rounded-md border p-4">
               <div className="flex-1">
                 <h4 className="text-foreground font-medium">{t("cookieBanner.essentialTitle")}</h4>
@@ -113,7 +114,7 @@ export function CookieBanner() {
               </div>
               <Switch checked={analyticsEnabled} onCheckedChange={setAnalyticsEnabled} />
             </div>
-          </div>
+          </DialogBody>
 
           <DialogFooter>
             <Button onClick={handleSavePreferences}>{t("cookieBanner.saveClose")}</Button>

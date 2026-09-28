@@ -8,7 +8,13 @@ import type {
   WorkbookCell,
 } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@repo/ui/components/dialog";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@repo/ui/components/dialog";
 import { Input } from "@repo/ui/components/input";
 import { Switch } from "@repo/ui/components/switch";
 import { Textarea } from "@repo/ui/components/textarea";
@@ -179,8 +185,8 @@ export function QuestionCellComponent({
   return (
     <>
       <Dialog open={isAnswering} onOpenChange={(open) => !open && handleCancelAnswer()}>
-        <DialogContent className="border-border gap-0 overflow-hidden rounded-xl p-0 sm:max-w-md">
-          <div className="from-primary to-primary/80 bg-gradient-to-br px-6 py-5">
+        <DialogContent className="border-border gap-0 rounded-xl p-0 sm:max-w-md">
+          <div className="from-primary to-primary/80 shrink-0 rounded-t-xl bg-gradient-to-br px-6 py-5">
             <div className="flex items-start gap-3">
               <div className="bg-primary-foreground/15 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full">
                 {question.kind === "yes_no" && (
@@ -207,7 +213,7 @@ export function QuestionCellComponent({
             </div>
           </div>
 
-          <div className="px-6 py-5">
+          <DialogBody className="m-0 px-6 py-5">
             {question.kind === "yes_no" && (
               <div className="flex gap-3">
                 <Button
@@ -295,9 +301,9 @@ export function QuestionCellComponent({
                 ))}
               </div>
             )}
-          </div>
+          </DialogBody>
 
-          <div className="border-border bg-muted flex items-center justify-end gap-2 border-t px-6 py-3">
+          <div className="border-border bg-muted flex shrink-0 items-center justify-end gap-2 rounded-b-xl border-t px-6 py-3">
             <Button
               variant="ghost"
               size="sm"
