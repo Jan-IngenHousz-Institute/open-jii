@@ -72,7 +72,7 @@ export function createOverviewTableSorting<T extends OverviewTableSortItem>(
 ): OverviewTableSorting {
   return {
     state: sort.map(({ field, direction }) => ({ id: field, desc: direction === "desc" })),
-    onToggle: (field, multi) => toggleSort(field as T["field"], multi),
+    onToggle: (field, multi) => toggleSort(field, multi),
     labels,
   };
 }
