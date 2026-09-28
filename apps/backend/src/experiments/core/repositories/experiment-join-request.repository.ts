@@ -11,7 +11,7 @@ import {
   STAFFING_GRANT_ROLES,
   users,
 } from "@repo/database";
-import type { DatabaseInstance } from "@repo/database";
+import type { DatabaseInstance, DbOrTx } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
 import {
@@ -21,13 +21,11 @@ import {
   getAnonymizedAvatarUrl,
 } from "../../../common/utils/profile-anonymization";
 import { findOwningOrgOwnerIds } from "../../../sharing/core/resource-staffing";
+import { insertJoinGrant } from "../join-grant";
 import type {
   ExperimentJoinRequestDto,
   JoinRequestStatus,
 } from "../models/experiment-join-request.model";
-
-/** Same role the sharing UI writes for "Can view". */
-const JOIN_APPROVAL_GRANT_ROLE = "viewer";
 
 export type ApproveJoinRequestOutcome =
   | { outcome: "approved"; request: ExperimentJoinRequestDto }
@@ -171,17 +169,14 @@ export class ExperimentJoinRequestRepository {
           return false;
         }
 
-        await tx
-          .insert(resourceGrants)
-          .values({
-            resourceType: "experiment",
-            resourceId: experimentId,
-            granteeType: "user",
-            granteeId: requesterUserId,
-            role: JOIN_APPROVAL_GRANT_ROLE,
-            createdBy: decidedBy,
-          })
-          .onConflictDoNothing();
+        // Return value ignored on purpose: an approval is decided by its claim on
+        // the request above, not by whether the grant row was new. Someone already
+        // holding a tier is still approved.
+        await insertJoinGrant(tx, {
+          experimentId,
+          userId: requesterUserId,
+          createdBy: decidedBy,
+        });
 
         return true;
       });
@@ -200,6 +195,33 @@ export class ExperimentJoinRequestRepository {
 
       return { outcome: "approved", request: result[0] };
     });
+  }
+
+  /**
+   * Close the user's pending request on `tx`, because the caller just gave them the
+   * access they were waiting for by another route. Runs on the caller's transaction:
+   * the backend pool holds one connection, so a root-handle write awaited inside an
+   * open transaction would wait on the connection that transaction is holding.
+   *
+   * Conditional on `pending`, so an approval that committed in between is never
+   * overwritten. Affecting no rows is the normal case.
+   */
+  async cancelPendingForUser(
+    tx: DbOrTx,
+    experimentId: string,
+    userId: string,
+    decidedBy: string,
+  ): Promise<void> {
+    await tx
+      .update(experimentJoinRequests)
+      .set({ status: "cancelled", decidedBy, decidedAt: new Date() })
+      .where(
+        and(
+          eq(experimentJoinRequests.experimentId, experimentId),
+          eq(experimentJoinRequests.userId, userId),
+          eq(experimentJoinRequests.status, "pending"),
+        ),
+      );
   }
 
   async markDecided(

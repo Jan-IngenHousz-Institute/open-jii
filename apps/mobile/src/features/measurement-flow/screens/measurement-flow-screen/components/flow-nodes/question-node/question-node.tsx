@@ -9,8 +9,8 @@ import { FlowNode } from "~/shared/measurements/flow-node";
 import { Checkbox } from "~/shared/ui/Checkbox";
 import { Input } from "~/shared/ui/Input";
 import { useThemeColors } from "~/shared/ui/hooks/use-theme-colors";
+import { QRScannerModal } from "~/shared/ui/qr-scanner/qr-scanner-modal";
 
-import { QRScannerModal } from "../qr-scanner-modal";
 import { AutoProceededSummary } from "./auto-proceeded-summary";
 import { MultipleChoiceQuestion } from "./question-types/multiple-choice-question";
 import { NumberQuestion } from "./question-types/number-question";

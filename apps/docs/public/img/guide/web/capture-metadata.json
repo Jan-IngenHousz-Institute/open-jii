@@ -625,6 +625,28 @@
         "Both blocker sections rendered together before the frame was taken; the resource row offers no transfer candidate because nobody else holds a grant on it, which is the honest state for this scenario and is what makes the empty-state hint visible.",
         "The disabled 'Transfer admin rights' and 'Delete Account' buttons render at close to full saturation and do not read as disabled. Reported separately; unchanged."
       ]
+    },
+    {
+      "asset": "join-code-card.webp",
+      "sha256": "d9eeddca1ab3c5df13c9c905da7f9d4824b561b6ad7c1bf9288eeaf877f33fca",
+      "script": "apps/e2e/docs-media/shots.ts",
+      "environment": "localhost (seeded local stack)",
+      "route": "/en-US/platform/experiments/<experiment-id>/collaborators",
+      "captured_at": "2026-09-22T00:00:00+00:00",
+      "viewport": {
+        "width": 1920,
+        "height": 1200
+      },
+      "color_scheme": "light",
+      "locale": "en-US",
+      "review_status": "approved",
+      "reviewed_at": "2026-09-22T00:00:00+00:00",
+      "reviewer": "vladstoe",
+      "review_notes": "Organizer join-code dialog on the seeded [Seed] Field Trial 2025 experiment as seed@openjii.local: the Join code button beside Invite with its count badge, and the open dialog with fake code DV4V-CMG3, a projector-sized QR, Expires Sep 29 2026 · 0 joined, the four actions on one row and the public-workbook sentence. No real names or emails. Encoded from the tool raw frame with cwebp because this machine's ffmpeg lacks libwebp.",
+      "redactions": [],
+      "live_checks_observed": [
+        "Dialog rendered from the local backend with the join-code routes present."
+      ]
     }
   ]
 }

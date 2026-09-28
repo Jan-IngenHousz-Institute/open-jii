@@ -1,5 +1,4 @@
 import { Module } from "@nestjs/common";
-import { ThrottlerModule } from "@nestjs/throttler";
 
 import { MailchimpAdapter } from "../common/modules/mailchimp/mailchimp.adapter";
 import { MailchimpModule } from "../common/modules/mailchimp/mailchimp.module";
@@ -9,7 +8,7 @@ import { NewsletterThrottlerGuard } from "./presentation/newsletter-throttler.gu
 import { NewsletterController } from "./presentation/newsletter.controller";
 
 @Module({
-  imports: [MailchimpModule, ThrottlerModule.forRoot([{ ttl: 60_000, limit: 5 }])],
+  imports: [MailchimpModule],
   controllers: [NewsletterController, NewsletterSubscribeController],
   providers: [
     NewsletterThrottlerGuard,

@@ -6,7 +6,7 @@ import { extractTextFromHTML } from "~/shared/utils/extract-text-from-html";
 import { listItems } from "@repo/api/shared/listing";
 
 export function useExperiments() {
-  const { data, isLoading, error, refetch, isRefetching } = useQuery(
+  const { data, isLoading, isPaused, error, refetch, isRefetching } = useQuery(
     orpc.experiments.listExperiments.queryOptions({
       input: { scope: "related" },
       // Explicit: prefer the persisted cache when offline so the picker
@@ -22,6 +22,11 @@ export function useExperiments() {
     }),
   );
 
+  // `undefined` until a response exists, which is not the same as `[]`: a cold
+  // offline start pauses with no data, no error and `isLoading: false`, and the
+  // picker prompt and the Home card both have to tell those two apart.
+  const rows = data === undefined ? undefined : listItems(data);
+
   const options = listItems(data).map((item) => ({
     value: item.id,
     label: item.name,
@@ -31,5 +36,5 @@ export function useExperiments() {
     fullDescription: item.description,
   }));
 
-  return { experiments: options, isLoading, error, refetch, isRefetching };
+  return { experiments: options, rows, isLoading, isPaused, error, refetch, isRefetching };
 }

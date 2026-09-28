@@ -31,9 +31,11 @@
     "reconnectSub": "Tap to reconnect your last device"
   },
   "organizations": {
-    "joinTitle": "Join your organization",
-    "joinSubtitle": "Find your school or lab and request access",
     "pendingTitle": "Request pending"
+  },
+  "discover": {
+    "joinTitle": "Find something to join",
+    "joinSubtitle": "Public experiments and organizations, or enter a join code"
   },
   "recent": {
     "sectionTitle": "Recent measurements",

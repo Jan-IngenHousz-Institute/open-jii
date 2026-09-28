@@ -84,6 +84,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: false,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -133,6 +134,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: true,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -169,6 +171,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: false,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -194,6 +197,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: false,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -226,6 +230,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: false,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -253,6 +258,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasArchiveAccess: false,
           isAdmin: false,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -282,6 +288,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: true,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -323,6 +330,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: false,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 
@@ -357,6 +365,7 @@ describe("UpdateExperimentDashboardUseCase", () => {
           hasArchiveAccess: true,
           isAdmin: false,
           canContribute: true,
+          membershipStatus: "member" as const,
         }),
       );
 

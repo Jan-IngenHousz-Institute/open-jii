@@ -107,6 +107,7 @@ export function createExperiment(overrides: Partial<ExperimentListItem> = {}): E
     organizationId: null,
     ownerFirstName: "John",
     ownerLastName: "Doe",
+    membershipStatus: "none",
     ...overrides,
   };
 }
@@ -143,6 +144,7 @@ export function createExperimentAccess(
   return {
     experiment: createExperiment(experimentOverrides),
     hasAccess: true,
+    membershipStatus: "none",
     isAdmin: false,
     capabilities: {
       canContribute: false,

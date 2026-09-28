@@ -2,8 +2,8 @@ import React from "react";
 import { ScrollView, View } from "react-native";
 import { HomeContinueCard } from "~/features/home/components/home-continue-card";
 import { HomeDeviceCard } from "~/features/home/components/home-device-card";
+import { HomeDiscoverCard } from "~/features/home/components/home-discover-card";
 import { HomeGreeting } from "~/features/home/components/home-greeting";
-import { HomeOrganizationsCard } from "~/features/home/components/home-organizations-card";
 import { HomePrimaryCta } from "~/features/home/components/home-primary-cta";
 import { HomeRecentMeasurements } from "~/features/home/components/home-recent-measurements";
 import { HomeWhatsNewCard } from "~/features/home/components/home-whats-new-card";
@@ -19,10 +19,10 @@ export function HomeScreen() {
       <HomeContinueCard />
       <HomePrimaryCta />
       <HomeDeviceCard />
-      <HomeOrganizationsCard />
+      <HomeDiscoverCard />
       <HomeWhatsNewCard />
       <HomeRecentMeasurements />
-      <View style={{ height: 24 }} />
+      <View className="h-6" />
     </ScrollView>
   );
 }

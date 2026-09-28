@@ -60,6 +60,8 @@ export const selectExperimentSchema = createSelectSchema(experiments)
     /** Display name of the owning organization; `null` for a personal workspace. */
     organizationName: z.string().nullish(),
     ownerLastName: z.string().nullable().optional(),
+    /** Selected by the listing and the access read, absent from the plain column reads. */
+    membersCount: z.number().int().optional(),
   });
 
 // Define the types

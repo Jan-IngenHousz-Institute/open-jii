@@ -20,11 +20,6 @@
     "government_agency": "Government agency",
     "university": "University"
   },
-  "membership": {
-    "member": "Joined",
-    "requested": "Requested",
-    "private": "Private"
-  },
   "role": {
     "owner": "Owner",
     "admin": "Admin",

@@ -9,8 +9,8 @@ function query(queryKey: readonly unknown[], status = "success", data: unknown =
 
 // The shape @orpc/tanstack-query's generateOperationKey produces:
 // [path, { input, type }] with `path` an array of segments.
-function orpcKey(path: string[], input?: unknown): readonly unknown[] {
-  return [path, { ...(input !== undefined ? { input } : {}), type: "query" }];
+function orpcKey(path: string[], input?: unknown, type = "query"): readonly unknown[] {
+  return [path, { ...(input !== undefined ? { input } : {}), type }];
 }
 
 describe("shouldPersistQuery", () => {
@@ -72,6 +72,65 @@ describe("shouldPersistQuery", () => {
     expect(shouldPersistQuery(query(["all-devices"]))).toBe(false);
     expect(shouldPersistQuery(query(["measurement-result", {}, {}]))).toBe(false);
     expect(shouldPersistQuery(query(["macro", "m1"]))).toBe(false);
+  });
+
+  describe("listExperiments is admitted by input, not by operation", () => {
+    it("persists the unpaged related list the picker and Home read", () => {
+      expect(
+        shouldPersistQuery(
+          query(orpcKey(["experiments", "listExperiments"], { scope: "related" })),
+        ),
+      ).toBe(true);
+    });
+
+    it("rejects a paged discovery key: maxAge and gcTime are both infinite here", () => {
+      expect(
+        shouldPersistQuery(
+          query(
+            orpcKey(["experiments", "listExperiments"], {
+              scope: "all",
+              page: 1,
+              pageSize: 20,
+              search: "canopy",
+            }),
+          ),
+        ),
+      ).toBe(false);
+    });
+
+    it("rejects a paged key whatever the shape the infinite query gives it", () => {
+      expect(
+        shouldPersistQuery(
+          query(
+            orpcKey(
+              ["experiments", "listExperiments"],
+              { scope: "all", page: 1, pageSize: 20, search: undefined },
+              "infinite",
+            ),
+          ),
+        ),
+      ).toBe(false);
+    });
+
+    it("rejects the unpaged all-scope list too: only related is offline-critical", () => {
+      expect(
+        shouldPersistQuery(query(orpcKey(["experiments", "listExperiments"], { scope: "all" }))),
+      ).toBe(false);
+    });
+
+    it("rejects a listExperiments key with no input at all", () => {
+      expect(shouldPersistQuery(query(orpcKey(["experiments", "listExperiments"])))).toBe(false);
+    });
+
+    it("ignores an undefined sibling that oRPC leaves on the related input", () => {
+      expect(
+        shouldPersistQuery(
+          query(
+            orpcKey(["experiments", "listExperiments"], { scope: "related", search: undefined }),
+          ),
+        ),
+      ).toBe(true);
+    });
   });
 
   it("ignores key roots that are neither strings nor string arrays", () => {
