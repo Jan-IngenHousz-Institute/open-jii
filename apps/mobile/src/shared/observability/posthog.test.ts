@@ -30,6 +30,20 @@ function exception(...types: string[]) {
   };
 }
 
+function beforeSendHooks(options: unknown): ((event: unknown) => unknown)[] {
+  if (
+    typeof options !== "object" ||
+    options === null ||
+    !("before_send" in options) ||
+    !Array.isArray(options.before_send)
+  ) {
+    throw new Error("the client was built without before_send hooks");
+  }
+  return options.before_send.filter(
+    (hook): hook is (event: unknown) => unknown => typeof hook === "function",
+  );
+}
+
 beforeEach(() => {
   vi.stubGlobal("__DEV__", false);
   constructed.length = 0;
@@ -68,15 +82,8 @@ describe("tagEnvironment", () => {
       a: 1,
       environment: "dev",
       service: "mobile",
-      build: "release",
     });
     expect(second?.properties).toMatchObject({ environment: "prod", service: "mobile" });
-  });
-
-  it("marks events from a development build, so triage can set them aside", () => {
-    vi.stubGlobal("__DEV__", true);
-
-    expect(tagEnvironment({ event: "x" })?.properties).toMatchObject({ build: "development" });
   });
 });
 
@@ -85,6 +92,18 @@ describe("getPostHogClient", () => {
     getPostHogClient();
 
     expect(constructed[0]).toMatchObject({ before_send: [dropSdkNoise, tagEnvironment] });
+  });
+
+  it("sends nothing from a development build", () => {
+    vi.stubGlobal("__DEV__", true);
+    getPostHogClient();
+
+    const hooks = beforeSendHooks(constructed[0]);
+    const survivors = [exception("TypeError"), { event: "$screen" }].map((event) =>
+      hooks.reduce<unknown>((kept, hook) => (kept === null ? null : hook(kept)), event),
+    );
+
+    expect(survivors).toEqual([null, null]);
   });
 
   it("reports error log lines through the log sink rather than console autocapture", () => {

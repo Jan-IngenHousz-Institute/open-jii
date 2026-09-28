@@ -62,8 +62,6 @@ export function tagEnvironment(event: CaptureEvent): CaptureEvent {
       ...event.properties,
       environment: getEnvName(),
       service: "mobile",
-      // Metro builds on a developer's machine, kept apart from what researchers run.
-      build: isDevelopmentBuild() ? "development" : "release",
     },
   };
 }
@@ -75,7 +73,9 @@ export function getPostHogClient(): PostHog {
 
   client = new PostHog(POSTHOG_API_KEY, {
     host: POSTHOG_HOST,
-    before_send: [dropSdkNoise, tagEnvironment],
+    // A Metro build on a developer's machine sends nothing, since every environment shares one
+    // PostHog project.
+    before_send: isDevelopmentBuild() ? [() => null] : [dropSdkNoise, tagEnvironment],
     // Error log lines reach PostHog through the log sink below, with their real Error, so
     // console autocapture would only report them a second time.
     errorTracking: {

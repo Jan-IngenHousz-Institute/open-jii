@@ -3,6 +3,7 @@ export type { FeatureFlagKey } from "./feature-flags";
 export {
   createPostHogClientConfig,
   createPostHogServerConfig,
+  dropEveryEvent,
   type PostHogConfig,
   type PostHogEnvConfig,
   type PostHogServerConfig,
