@@ -49,6 +49,17 @@ describe("ListMacros", () => {
     expect(screen.getByRole("button", { name: "pagination.next" })).toBeDisabled();
   });
 
+  it("filters macros by the selected language", async () => {
+    const spy = server.mount(contract.macros.listMacros, { body: envelope([]) });
+    const user = userEvent.setup();
+    render(<ListMacros />);
+
+    await user.click(screen.getByRole("combobox"));
+    await user.click(await screen.findByRole("option", { name: "Python" }));
+
+    await waitFor(() => expect(spy.calls.at(-1)?.query.language).toBe("python"));
+  });
+
   it("sends search query to the API", async () => {
     const spy = server.mount(contract.macros.listMacros, { body: envelope([]) });
     const user = userEvent.setup();
