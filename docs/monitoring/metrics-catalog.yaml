@@ -1368,9 +1368,18 @@ metrics:
       stat: Maximum
       unit: minutes
       dimensions: { Environment: "${ENVIRONMENT}" }
-    baseline: { method: threshold, max: 60 }
+    # Dev's devices publish in bursts, so an idle hour there is usually just quiet: its board
+    # turns red after a day. The rule also needs records waiting, so it fires at an hour in both.
+    baseline:
+      method: threshold
+      max: 60
+      per_environment:
+        dev: { method: threshold, max: 1440 }
     runbook: docs/runbooks/ingest-idle.md
-    notes: Minutes since bronze last wrote. Bronze only writes when data arrives, so it is a stall only beside messages still arriving, which is what its rule checks against the stream's incoming records.
+    notes: >-
+      Minutes since bronze last wrote. Bronze only writes when data arrives, so it is a stall only
+      beside records still waiting, which is what its rule checks against the stream's incoming
+      records.
 
   - num: 90
     id: macro-idle

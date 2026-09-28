@@ -1,14 +1,15 @@
 # ingest-idle
 
-**Messages are reaching the ingest stream, but bronze has written nothing for over an hour.** The
+**Records are waiting on the ingest stream, but bronze has written nothing for over an hour.** The
 consumer, the `Centrum-DLT-Pipeline-<ENV>` pipeline reading Kinesis into `raw_data`, has stopped or
 is running without writing. Nothing is lost yet: Kinesis keeps records for 24 hours, and bronze
 catches up once it writes again. Everything downstream (experiments, macros, the API) is behind by
 the idle time on the daily report.
 
 The heartbeat export measures the idle time every half hour, so the reading can be up to 35 minutes
-old. The rule also needs records to have arrived in the last 30 minutes, so a quiet stream never
-fires it.
+old. The rule counts only records that arrived 45 to 60 minutes ago, after bronze's last write and
+before the reading, so a quiet stream never fires it and neither does a burst after a quiet spell.
+In dev, where devices publish in bursts, the board row turns red only after a day idle.
 
 ## Stopped, or running without writing
 

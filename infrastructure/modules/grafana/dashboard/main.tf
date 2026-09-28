@@ -326,8 +326,6 @@ EOT
         metricEditorMode = 0
         metricQueryType  = 0
         queryMode        = "Metrics"
-        id               = "m1"
-        expression       = "FILL(m1, 0)"
         dimensions = {
           LoadBalancer = [local.dashboard_vars.load_balancer_dimension]
         }
@@ -598,10 +596,6 @@ resource "grafana_rule_group" "lambda_health" {
         dimensions = {
           FunctionName = var.server_function_name
         }
-        metricEditorMode = 0
-        metricQueryType  = 0
-        expression       = "FILL(m1, 0)"
-        id               = "m1"
       })
 
       relative_time_range {
@@ -678,10 +672,6 @@ EOT
         dimensions = {
           FunctionName = var.server_function_name
         }
-        metricEditorMode = 0
-        metricQueryType  = 0
-        expression       = "FILL(m1, 0)"
-        id               = "m1"
       })
 
       relative_time_range {
@@ -939,10 +929,6 @@ resource "grafana_rule_group" "macro_sandbox_health" {
           dimensions = {
             FunctionName = rule.value
           }
-          metricEditorMode = 0
-          metricQueryType  = 0
-          expression       = "FILL(m1, 0)"
-          id               = "m1"
         })
 
         relative_time_range {
@@ -1023,10 +1009,6 @@ EOT
           dimensions = {
             FunctionName = rule.value
           }
-          metricEditorMode = 0
-          metricQueryType  = 0
-          expression       = "FILL(m1, 0)"
-          id               = "m1"
         })
 
         relative_time_range {
@@ -1096,16 +1078,12 @@ EOT
       datasource_uid = grafana_data_source.cloudwatch_source.uid
 
       model = jsonencode({
-        refId            = "A"
-        region           = var.aws_region
-        namespace        = "OpenJII/MacroSandbox"
-        metricName       = "MacroSandboxRejectedTraffic-${var.environment}"
-        statistic        = "Sum"
-        period           = "300"
-        metricEditorMode = 0
-        metricQueryType  = 0
-        expression       = "FILL(m1, 0)"
-        id               = "m1"
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/MacroSandbox"
+        metricName = "MacroSandboxRejectedTraffic-${var.environment}"
+        statistic  = "Sum"
+        period     = "300"
       })
 
       relative_time_range {
@@ -1198,10 +1176,6 @@ resource "grafana_rule_group" "calibration_sandbox_health" {
         dimensions = {
           FunctionName = var.calibration_sandbox_function_name
         }
-        metricEditorMode = 0
-        metricQueryType  = 0
-        expression       = "FILL(m1, 0)"
-        id               = "m1"
       })
 
       relative_time_range {
@@ -1282,10 +1256,6 @@ EOT
         dimensions = {
           FunctionName = var.calibration_sandbox_function_name
         }
-        metricEditorMode = 0
-        metricQueryType  = 0
-        expression       = "FILL(m1, 0)"
-        id               = "m1"
       })
 
       relative_time_range {
@@ -1354,16 +1324,12 @@ EOT
       datasource_uid = grafana_data_source.cloudwatch_source.uid
 
       model = jsonencode({
-        refId            = "A"
-        region           = var.aws_region
-        namespace        = "OpenJII/CalibrationSandbox"
-        metricName       = "CalibrationSandboxRejectedTraffic-${var.environment}"
-        statistic        = "Sum"
-        period           = "300"
-        metricEditorMode = 0
-        metricQueryType  = 0
-        expression       = "FILL(m1, 0)"
-        id               = "m1"
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/CalibrationSandbox"
+        metricName = "CalibrationSandboxRejectedTraffic-${var.environment}"
+        statistic  = "Sum"
+        period     = "300"
       })
 
       relative_time_range {
@@ -1705,11 +1671,15 @@ resource "grafana_rule_group" "ingest_path" {
     }
   }
 
-  # Catalog entry 89. Messages reaching the stream while bronze has written nothing for an
+  # Catalog entry 89. Records waiting on the stream while bronze has written nothing for an
   # hour: the consumer died or runs without writing. Kinesis keeps records for 24 hours, so
   # this is data held up rather than lost. It also covers a consumer that died entirely,
-  # which Ingest Lag reads as no data. The export measures idle time every half hour, hence
-  # the 75-minute window on the last reading.
+  # which Ingest Lag reads as no data.
+  #
+  # The export measures idle time every half hour, so a reading can be 35 minutes old. Only
+  # records that arrived 45 to 60 minutes ago count: they came after bronze's last write (the
+  # reading says over 60 minutes ago) and at least five minutes before the reading, so bronze
+  # had time to take them. Newer records would fire it on a stale reading after a quiet spell.
   rule {
     name      = "Ingest Stalled"
     condition = "E"
@@ -1731,7 +1701,7 @@ resource "grafana_rule_group" "ingest_path" {
       })
 
       relative_time_range {
-        from = 4500
+        from = 2400
         to   = 0
       }
     }
@@ -1772,8 +1742,8 @@ resource "grafana_rule_group" "ingest_path" {
       })
 
       relative_time_range {
-        from = 1800
-        to   = 0
+        from = 3600
+        to   = 2700
       }
     }
     data {
@@ -1818,8 +1788,8 @@ resource "grafana_rule_group" "ingest_path" {
     for            = "10m"
 
     annotations = {
-      description      = "Messages are reaching the ingest stream but bronze has written nothing for over an hour; measurements are held up in Kinesis, which keeps them 24 hours."
-      summary          = "Ingest stalled: messages arriving, bronze not writing"
+      description      = "Records have been waiting on the ingest stream while bronze has written nothing for over an hour; measurements are held up in Kinesis, which keeps them 24 hours."
+      summary          = "Ingest stalled: records waiting, bronze not writing"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/ingest-idle.md"
       __dashboardUid__ = local.heartbeat_daily_uid
       __panelId__      = local.heartbeat_panel_ids["ingest-idle"]

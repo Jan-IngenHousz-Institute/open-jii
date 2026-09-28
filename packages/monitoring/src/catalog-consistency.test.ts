@@ -380,8 +380,10 @@ describe("catalog and grafana rules cannot drift", () => {
 
   /** Each rule's literal condition, `$B > 5` or `$B < 1`, with the entry it claims. */
   function ruleConditions(): { metricId: string; operator: string; threshold: number }[] {
+    // The first comparison is the entry's own number, even where a rule adds a condition on
+    // another query ("$B > 60 && $D > 0").
     const matches = grafanaRules.matchAll(
-      /expression\s*=\s*"\$B\s*([<>])\s*([^"]+)"[\s\S]*?metric_id\s*=\s*"([^"]+)"/g,
+      /expression\s*=\s*"\$B\s*([<>])\s*([^"\s&|]+)[^"]*"[\s\S]*?metric_id\s*=\s*"([^"]+)"/g,
     );
 
     return [...matches]
@@ -512,16 +514,19 @@ describe("catalog and grafana rules cannot drift", () => {
     expect(alertRules().length).toBeGreaterThan(5);
   });
 
-  it("keeps a rule query that fills gaps with FILL in builder mode", () => {
-    // Outside builder mode Grafana sends FILL(m1, 0) as a math query on itself, CloudWatch
-    // refuses the circular reference, and the rule reads no data forever without an error.
-    const queries = [...grafanaRules.matchAll(/model = jsonencode\(\{([\s\S]*?)\n\s*\}\)/g)].map(
-      ([, body]) => body,
-    );
-    const filled = queries.filter((body) => body.includes('"FILL('));
+  it("sends a CloudWatch query's expression only in code mode", () => {
+    // Builder mode ignores an expression, and without a mode Grafana sends it as a math query
+    // over the metric's own id, which CloudWatch refuses: the rule then reads no data forever,
+    // without an error. FILL(m1, 0) on twelve rules did exactly that.
+    const cloudWatchQueries = [
+      ...grafanaRules.matchAll(/model = jsonencode\(\{([\s\S]*?)\n\s*\}\)/g),
+    ]
+      .map(([, body]) => body)
+      .filter((body) => /namespace\s*=/.test(body));
+    const withExpression = cloudWatchQueries.filter((body) => /\bexpression\s*=/.test(body));
 
-    expect(filled.length).toBeGreaterThan(5);
-    expect(filled.filter((body) => !/metricEditorMode\s*=\s*0/.test(body))).toEqual([]);
+    expect(cloudWatchQueries.length).toBeGreaterThan(5);
+    expect(withExpression.filter((body) => !/metricEditorMode\s*=\s*1/.test(body))).toEqual([]);
   });
 });
 
