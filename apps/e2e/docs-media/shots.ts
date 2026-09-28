@@ -35,7 +35,7 @@ export interface Shot {
 const settle = (page: Page, ms = 900) => page.waitForTimeout(ms);
 
 async function sortNameAscending(page: Page): Promise<void> {
-  await page.getByRole("button", { name: /^Name: unsorted$/ }).click();
+  await page.locator('button[aria-label="Name: unsorted"]').click();
   await page.locator('th[aria-sort="ascending"]').first().waitFor();
 }
 
