@@ -4,6 +4,7 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -52,15 +53,15 @@ export function BulkAddOptionsDialog({
           <DialogDescription>{t("questionCard.bulkAdd.description")}</DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
+        <DialogBody>
           <Textarea
             value={bulkText}
             onChange={(e) => setBulkText(e.target.value)}
             placeholder={t("questionCard.bulkAdd.placeholder")}
-            className="min-h-[300px] w-full"
+            className="max-h-[50dvh] min-h-[min(300px,30dvh)] w-full"
           />
           <p className="text-muted-foreground mt-2 text-xs">{t("questionCard.bulkAdd.hint")}</p>
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={handleCancel}>
