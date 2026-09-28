@@ -43,7 +43,7 @@
     "plotly.js": "^3.5.1",
     "qrcode.react": "4.2.0",
     "quill": "^2.0.3",
-    "radix-ui": "^1.4.3",
+    "radix-ui": "^1.6.7",
     "react-day-picker": "8.10.1",
     "react-dropzone": "^14.4.1",
     "react-hook-form": "catalog:",
