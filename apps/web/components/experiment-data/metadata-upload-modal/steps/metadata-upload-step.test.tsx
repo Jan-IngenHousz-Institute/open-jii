@@ -236,6 +236,16 @@ describe("MetadataUploadStep", () => {
   });
 
   describe("file import", () => {
+    it("opens the file picker when Upload File is clicked", () => {
+      renderStep();
+      goToEditView();
+      const openPicker = vi.spyOn(getFileInput(), "click").mockImplementation(() => undefined);
+
+      fireEvent.click(getButton("uploadModal.metadata.uploadFile"));
+
+      expect(openPicker).toHaveBeenCalledTimes(1);
+    });
+
     it("imports data from a file via file input", async () => {
       mockParseFile.mockResolvedValue(sampleData);
       renderStep();
