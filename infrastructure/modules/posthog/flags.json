@@ -1,0 +1,59 @@
+{
+  "iot-devices": {
+    "name": "IoT device registry & X.509 certificates (devices pages + API). 0% rollout = hidden for everyone; to release, change its release condition in flags.json.",
+    "active": true,
+    "continuity": false,
+    "tags": [],
+    "filters": {
+      "early_exit": false,
+      "groups": [
+        {
+          "properties": [{ "key": "id", "type": "cohort", "value": 182121, "operator": "in" }],
+          "rollout_percentage": 100
+        }
+      ]
+    }
+  },
+  "workbook-deletion": {
+    "name": "",
+    "active": true,
+    "continuity": false,
+    "tags": [],
+    "filters": { "groups": [{ "rollout_percentage": 0 }] }
+  },
+  "macro-deletion": {
+    "name": "Macro deletion",
+    "active": false,
+    "continuity": false,
+    "tags": ["backend", "feature"],
+    "filters": { "groups": [{ "rollout_percentage": 100 }] }
+  },
+  "experiment-deletion": {
+    "name": "Experiment Deletion",
+    "active": false,
+    "continuity": false,
+    "tags": ["backend", "experiment"],
+    "filters": { "groups": [{ "rollout_percentage": 100 }] }
+  },
+  "protocol-deletion": {
+    "name": "Protocol Deletion",
+    "active": false,
+    "continuity": false,
+    "tags": ["backend", "security"],
+    "filters": { "groups": [{ "rollout_percentage": 100 }] }
+  },
+  "protocol-validation-as-warning": {
+    "name": "",
+    "active": true,
+    "continuity": true,
+    "tags": [],
+    "filters": { "groups": [{ "rollout_percentage": 100 }] }
+  },
+  "multi-language": {
+    "name": "",
+    "active": true,
+    "continuity": false,
+    "tags": [],
+    "filters": { "groups": [{ "rollout_percentage": 0 }] }
+  }
+}

@@ -27,6 +27,8 @@ const sdkOnlyEnv = new Set([
   "AWS_SECRET_ACCESS_KEY",
   "AWS_PROFILE",
   "AWS_EC2_METADATA_DISABLED",
+  // Set by Next.js per runtime; nobody configures it.
+  "NEXT_RUNTIME",
 ]);
 
 async function sourceFiles(directory: string): Promise<string[]> {
@@ -118,7 +120,7 @@ describe("environment manifest", () => {
   });
 
   it("contains every in-scope application environment read", async () => {
-    expect(envManifest).toHaveLength(84);
+    expect(envManifest).toHaveLength(85);
     expect(envByKey.size).toBe(envManifest.length);
     expect(
       envReads("const url = `https://host/${process.env.URL_KEY}`; // process.env.NOPE"),
@@ -151,7 +153,13 @@ describe("environment manifest", () => {
     ).flat();
     const missing = new Map<string, string[]>();
     for (const file of files) {
-      for (const key of envReads(await readFile(file, "utf8"))) {
+      const source = await readFile(file, "utf8");
+      // Parsing is the slow part, and only a file that names `process` can read the environment.
+      if (!source.includes("process")) {
+        continue;
+      }
+
+      for (const key of envReads(source)) {
         if (!envByKey.has(key) && !sdkOnlyEnv.has(key)) {
           missing.set(key, [...(missing.get(key) ?? []), relative(root, file)]);
         }

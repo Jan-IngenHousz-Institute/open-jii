@@ -21,6 +21,7 @@ describe("checkMermaid", () => {
     await expect(checkMermaid([])).resolves.toEqual([]);
   });
 
+  // The first diagram loads jsdom and mermaid, which takes seconds on a busy CI runner.
   it("names the diagram that mermaid refuses, with the position and nothing else", async () => {
     const findings = await checkMermaid([
       { index: 1, source: valid },
@@ -31,5 +32,5 @@ describe("checkMermaid", () => {
     expect(findings[0]?.rule).toBe("mermaid");
     expect(findings[0]?.detail).toMatch(/^diagram 2: Parse error/);
     expect(findings[0]?.detail).not.toContain("\n");
-  });
+  }, 30_000);
 });

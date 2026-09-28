@@ -1,9 +1,6 @@
-import { mkdtemp, readFile, stat } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
-import { authenticate, upsertEnvFile } from "./linear-auth.js";
+import { authenticate } from "./linear-auth.js";
 import type { AuthDependencies } from "./linear-auth.js";
 
 function deps(overrides: Partial<AuthDependencies> = {}) {
@@ -51,18 +48,5 @@ describe("authenticate", () => {
 
     await expect(authenticate(d.value)).rejects.toThrow("401");
     expect(d.storeFile).not.toHaveBeenCalled();
-  });
-});
-
-describe("upsertEnvFile", () => {
-  it("replaces the key line, keeps other lines, and sets owner-only mode", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "devkit-auth-"));
-    const path = join(dir, ".claude", ".env");
-
-    await upsertEnvFile(path, "first");
-    await upsertEnvFile(path, "second");
-
-    expect(await readFile(path, "utf8")).toBe("LINEAR_API_KEY=second\n");
-    expect((await stat(path)).mode & 0o777).toBe(0o600);
   });
 });

@@ -214,7 +214,9 @@ async function captureThreePoints() {
   }
 }
 
-describe("CalibrationWizard", () => {
+// Each test drives a whole procedure through the wizard, about a second locally and several times
+// that while CI runs every package's suite at once.
+describe("CalibrationWizard", { timeout: 20_000 }, () => {
   beforeEach(() => {
     server.mount(contract.iot.listCalibrationDefinitions, {
       body: [createCalibrationDefinitionSummary({ id: DEFINITION_ID, family: "minipar" })],

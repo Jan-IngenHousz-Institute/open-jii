@@ -1,0 +1,25 @@
+{
+  "kind": "InsightVizNode",
+  "source": {
+    "dateRange": {
+      "date_from": "-30d",
+      "explicitDate": false
+    },
+    "filterTestAccounts": true,
+    "interval": "week",
+    "kind": "LifecycleQuery",
+    "lifecycleFilter": {
+      "showLegend": false,
+      "showValuesOnSeries": true,
+      "toggledLifecycles": ["new", "returning"]
+    },
+    "properties": [],
+    "series": [
+      {
+        "event": "$pageview",
+        "kind": "EventsNode",
+        "name": "$pageview"
+      }
+    ]
+  }
+}

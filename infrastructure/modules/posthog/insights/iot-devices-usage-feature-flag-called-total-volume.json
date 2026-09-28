@@ -1,0 +1,49 @@
+{
+  "kind": "InsightVizNode",
+  "source": {
+    "breakdownFilter": {
+      "breakdown": "$feature_flag_response",
+      "breakdown_type": "event"
+    },
+    "dateRange": {
+      "date_from": "-30d",
+      "explicitDate": false
+    },
+    "filterTestAccounts": false,
+    "interval": "day",
+    "kind": "TrendsQuery",
+    "properties": {
+      "type": "AND",
+      "values": [
+        {
+          "type": "AND",
+          "values": [
+            {
+              "key": "$feature_flag",
+              "operator": "exact",
+              "type": "event",
+              "value": "iot-devices"
+            }
+          ]
+        }
+      ]
+    },
+    "series": [
+      {
+        "event": "$feature_flag_called",
+        "kind": "EventsNode",
+        "name": "$feature_flag_called"
+      }
+    ],
+    "trendsFilter": {
+      "aggregationAxisFormat": "numeric",
+      "display": "ActionsLineGraph",
+      "showAlertThresholdLines": false,
+      "showLegend": false,
+      "showPercentStackView": false,
+      "showValuesOnSeries": false,
+      "smoothingIntervals": 1,
+      "yAxisScaleType": "linear"
+    }
+  }
+}

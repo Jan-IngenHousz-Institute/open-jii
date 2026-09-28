@@ -43,6 +43,7 @@ runs:
         echo "NEXT_PUBLIC_POSTHOG_KEY=${POSTHOG_KEY}" >> $GITHUB_ENV
         echo "NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com" >> $GITHUB_ENV
         echo "NEXT_PUBLIC_POSTHOG_UI_HOST=https://eu.posthog.com" >> $GITHUB_ENV
+        echo "NEXT_PUBLIC_ENVIRONMENT=${ENVIRONMENT}" >> $GITHUB_ENV
 
     - name: Build Next.js Application
       shell: bash

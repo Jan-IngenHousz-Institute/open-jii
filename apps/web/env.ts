@@ -8,6 +8,8 @@ const envSchema = z.object({
   NEXT_PUBLIC_ENABLE_DEVTOOLS: z.enum(["true", "false"]).default("true"),
   // Allows ?mockDevices=1 to offer fake IoT devices outside dev builds (e2e).
   NEXT_PUBLIC_ENABLE_MOCK_DEVICES: z.enum(["true", "false"]).default("false"),
+  // Dev and prod builds are both production builds, so NODE_ENV cannot tell them apart.
+  NEXT_PUBLIC_ENVIRONMENT: z.enum(["local", "dev", "prod"]).default("local"),
   // PostHog configuration - Optional for development
   NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
   NEXT_PUBLIC_POSTHOG_HOST: z.string().url().optional().default("https://eu.i.posthog.com"),
@@ -40,6 +42,7 @@ const parseEnv = () => {
       CONTENTFUL_SPACE_ENVIRONMENT: process.env.CONTENTFUL_SPACE_ENVIRONMENT,
       NEXT_PUBLIC_ENABLE_DEVTOOLS: process.env.NEXT_PUBLIC_ENABLE_DEVTOOLS,
       NEXT_PUBLIC_ENABLE_MOCK_DEVICES: process.env.NEXT_PUBLIC_ENABLE_MOCK_DEVICES,
+      NEXT_PUBLIC_ENVIRONMENT: process.env.NEXT_PUBLIC_ENVIRONMENT,
     };
 
     return envSchema.parse(rawEnv);

@@ -18,6 +18,9 @@ Run them from the repo root through the aliases in the root `package.json`.
 | `pnpm linear:view`                        | Creates a project's shared ticket view and its document |
 | `pnpm linear:taxonomy`                    | Plans and applies the `OJD` label taxonomy              |
 | `pnpm linear:apply`                       | Applies a reviewed per-ticket change file in batches    |
+| `pnpm posthog:auth`                       | Stores your PostHog key in `tooling/devkit/.env`        |
+| `pnpm posthog:query`                      | Runs one HogQL query against the openJII project        |
+| `pnpm posthog:issues`                     | Lists, shows and triages open error-tracking issues     |
 | `pnpm --filter @repo/devkit env:generate` | Regenerates the `.env.example` files from the manifest  |
 
 ## Linear access
@@ -64,6 +67,31 @@ did what. Linear itself only ever sees the key's owner.
 
 What to write into a ticket, which labels exist, and the skills that do the writing are in
 `AGENTS.md` and `docs/agents/`.
+
+## PostHog access
+
+Optional, for maintainers who triage errors. PostHog's error tracking holds every exception the
+web app, the phone app and the backend report, grouped into issues. Mint a personal API key under
+Settings, Personal API keys, restricted to the openJII project, with Query read and Error tracking
+read and write. Then pipe it in the same way:
+
+```bash
+pbpaste | pnpm posthog:auth                        # macOS
+xclip -selection clipboard -o | pnpm posthog:auth  # Linux, with xclip installed
+```
+
+It lands beside the Linear key in `tooling/devkit/.env` and is found the same way.
+
+- `pnpm posthog:query --query '<hogql>'` (or `--file <path.sql>`, `--output <file>`) runs one
+  HogQL query against the project.
+- `pnpm posthog:issues list` writes every open issue, with its service, environment, app version,
+  events and users over the last 90 days (`--days N`), to `.claude/posthog/issues-review.json`.
+  Set each entry's `decision` to `keep`, `resolve`, `suppress` or `ticket`.
+- `pnpm posthog:issues show <issue-id>` prints one issue with its latest exception and top frames,
+  and nothing about the person who hit it.
+- `pnpm posthog:issues apply` prints what the review file would change; `--confirm` applies the
+  status changes. Tickets are only listed, for the ticket skills to write. Every status change is
+  appended to `.claude/posthog-writes.log`.
 
 ## Writing tickets from a draft
 

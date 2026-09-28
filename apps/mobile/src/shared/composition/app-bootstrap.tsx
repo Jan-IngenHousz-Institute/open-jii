@@ -10,6 +10,7 @@ import { backfillDerivedColumns } from "~/shared/db/measurements-backfill";
 import { createLogger } from "~/shared/observability/logger";
 
 import { getOutbox } from "./upload";
+import { mountUploadAnalytics } from "./upload-analytics";
 
 const log = createLogger("app-bootstrap");
 
@@ -29,10 +30,12 @@ export function AppBootstrap() {
 
   useEffect(() => {
     const unmountBridge = mountOutboxBridge({ outbox: getOutbox(), queryClient });
+    const unmountAnalytics = mountUploadAnalytics(getOutbox());
     const unmountLifecycle = mountConnectionLifecycle({ queryClient });
     const unmountGuard = installFlowRehydrationGuard();
     return () => {
       unmountBridge();
+      unmountAnalytics();
       unmountLifecycle();
       unmountGuard();
     };

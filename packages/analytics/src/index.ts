@@ -6,5 +6,6 @@ export {
   type PostHogConfig,
   type PostHogEnvConfig,
   type PostHogServerConfig,
+  type PostHogService,
 } from "./posthog-config";
 export { logger, pinoConfig } from "./logger";

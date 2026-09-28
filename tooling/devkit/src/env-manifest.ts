@@ -112,6 +112,7 @@ export const envManifest: readonly EnvVar[] = [
   env("NEXT_PUBLIC_POSTHOG_KEY", set, "phc_0000", web),
   env("NEXT_PUBLIC_POSTHOG_HOST", set, "https://eu.i.posthog.com", web),
   env("NEXT_PUBLIC_POSTHOG_UI_HOST", set, "https://eu.posthog.com", web),
+  env("NEXT_PUBLIC_ENVIRONMENT", set, "local", web),
 
   env("LOG_LEVEL", set, "info", backend),
   env("PORT", set, "3020", backend),

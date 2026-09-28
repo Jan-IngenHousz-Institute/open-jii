@@ -2,6 +2,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MeasurementContent } from "~/shared/measurements/flow-node";
+import { trackProductEvent } from "~/shared/observability/product-events";
 import type { Device } from "~/shared/types/device";
 
 import { useMeasurementCapture } from "./use-measurement-capture";
@@ -103,6 +104,7 @@ vi.mock("~/shared/observability/logger", () => ({
   createLogger: () => ({ warn: mocks.logWarn, error: mocks.logError }),
 }));
 vi.mock("sonner-native", () => ({ toast: { error: mocks.toastError } }));
+vi.mock("~/shared/observability/product-events", () => ({ trackProductEvent: vi.fn() }));
 vi.mock("@repo/api/transforms/command-payload", () => ({
   resolveInlineCommand: mocks.resolveInlineCommand,
 }));
@@ -179,6 +181,10 @@ describe("useMeasurementCapture", () => {
     expect(mocks.resetScan).toHaveBeenCalledOnce();
     expect(mocks.playSound).toHaveBeenCalledOnce();
     expect(mocks.flowState.nextStep).toHaveBeenCalledOnce();
+    expect(trackProductEvent).toHaveBeenCalledWith("measurement:scan_complete", {
+      devices: 2,
+      dispatch: false,
+    });
   });
 
   it("does not dispatch a non-array protocol document to the scanner", async () => {
@@ -313,6 +319,9 @@ describe("useMeasurementCapture", () => {
       "measurementFlow:measurementNode.toast.notConnected",
     );
     expect(mocks.refetchConnectedDevices).not.toHaveBeenCalled();
+    expect(trackProductEvent).toHaveBeenCalledWith("measurement:scan_block", {
+      reason: "no_device",
+    });
   });
 
   it("turns an unexpected scan rejection into the coherent scan error", async () => {
@@ -322,6 +331,10 @@ describe("useMeasurementCapture", () => {
     await act(async () => result.current.startScan());
 
     expect(mocks.logError).toHaveBeenCalledWith("scan error", { err: "executor exploded" });
+    expect(trackProductEvent).toHaveBeenCalledWith(
+      "measurement:scan_fail",
+      expect.objectContaining({ reason: "scan_error" }),
+    );
     expect(mocks.toastError).toHaveBeenCalledWith(
       "measurementFlow:measurementNode.toast.scanError",
     );

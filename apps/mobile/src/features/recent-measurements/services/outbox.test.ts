@@ -255,7 +255,9 @@ describe("Outbox", () => {
 
       expect(mockMarkAsFailed).not.toHaveBeenCalled();
       expect(settled).toHaveBeenCalledTimes(1);
-      expect(settled.mock.calls[0][0]).toEqual([{ id: "db-1", status: "successful" }]);
+      expect(settled.mock.calls[0][0]).toEqual([
+        { id: "db-1", status: "successful", route: "mqtt" },
+      ]);
       expect(outbox.isProcessing("db-1")).toBe(false);
     });
   });
@@ -352,7 +354,7 @@ describe("Outbox", () => {
       expect(mockMarkAsSuccessful).not.toHaveBeenCalled();
       expect(settled).toHaveBeenCalledTimes(1);
       expect(settled.mock.calls[0][0]).toEqual([
-        { id: "ex-1", status: "failed", reason: "Disconnected" },
+        { id: "ex-1", status: "failed", reason: "Disconnected", stage: "retries_exhausted" },
       ]);
       expect(outbox.isProcessing("ex-1")).toBe(false);
     });
@@ -625,7 +627,7 @@ describe("Outbox", () => {
 
       expect(settled).toHaveBeenCalledTimes(1);
       expect(settled.mock.calls[0][0]).toEqual([
-        { id: "f1", status: "failed", reason: "CredentialError" },
+        { id: "f1", status: "failed", reason: "CredentialError", route: "mqtt", stage: "terminal" },
       ]);
     });
 

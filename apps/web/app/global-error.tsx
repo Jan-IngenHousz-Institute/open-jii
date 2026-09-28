@@ -1,5 +1,6 @@
 "use client";
 
+import posthog from "posthog-js";
 import { useEffect } from "react";
 import { MaintenancePage } from "~/components/maintenance-page";
 
@@ -15,6 +16,7 @@ import "./globals.css";
 export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
   useEffect(() => {
     console.error("Unhandled application error:", error);
+    posthog.captureException(error, { boundary: "global", digest: error.digest });
   }, [error]);
 
   return (

@@ -24,6 +24,9 @@
     "linear:view": "tsx src/commands/linear-view.ts",
     "lint": "eslint",
     "login": "tsx src/commands/login.ts",
+    "posthog:auth": "tsx src/commands/posthog-auth.ts",
+    "posthog:issues": "tsx src/commands/posthog-issues.ts",
+    "posthog:query": "tsx src/commands/posthog-query.ts",
     "release:cms": "tsx src/commands/release-cms.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

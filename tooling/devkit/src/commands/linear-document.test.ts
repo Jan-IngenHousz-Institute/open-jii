@@ -65,6 +65,7 @@ describe("parseArgs", () => {
 });
 
 describe("checkDocument", () => {
+  // The first diagram loads jsdom and mermaid, which takes seconds on a busy CI runner.
   it("flags dashes and a broken diagram, and passes clean prose with a valid one", async () => {
     await expect(checkDocument(good)).resolves.toEqual([]);
 
@@ -72,7 +73,7 @@ describe("checkDocument", () => {
       'A body — with a dash.\n\n```mermaid\nflowchart LR\n  A["x] --> B\n```\n',
     );
     expect(findings.map((f) => f.rule)).toEqual(["dash", "mermaid"]);
-  });
+  }, 30_000);
 });
 
 describe("publishDocument", () => {

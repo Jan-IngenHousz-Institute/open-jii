@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 
+import { reportServerError } from "./posthog-server";
 import { safeMetadata } from "./safe-metadata";
+
+vi.mock("./posthog-server", () => ({ reportServerError: vi.fn() }));
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -17,5 +20,8 @@ describe("safeMetadata", () => {
     const result = await safeMetadata(() => Promise.reject(new Error("Contentful 401")));
     expect(result).toEqual({});
     expect(warn).toHaveBeenCalled();
+    expect(reportServerError).toHaveBeenCalledWith(expect.any(Error), {
+      operation: "generateMetadata",
+    });
   });
 });

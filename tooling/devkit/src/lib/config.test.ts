@@ -86,7 +86,7 @@ describe("requireLinearApiKey", () => {
     const worktree = await linkedWorktree(main, "feature");
 
     await expect(requireLinearApiKey(worktree, {})).rejects.toThrow(
-      `Looked at LINEAR_API_KEY in the shell, ${worktree}/tooling/devkit/.env, ${main}/tooling/devkit/.env. Run: pbpaste | pnpm linear:auth`,
+      `Looked at LINEAR_API_KEY in the shell, ${worktree}/tooling/devkit/.env, ${main}/tooling/devkit/.env. Run: pnpm linear:auth with the key on stdin, for example pbpaste | pnpm linear:auth on macOS`,
     );
   });
 });

@@ -34,6 +34,8 @@ export function throwOrpcError(
   throw new ORPCError(ORPC_CODE_BY_STATUS[error.statusCode] ?? "INTERNAL_SERVER_ERROR", {
     status: error.statusCode,
     message: error.message,
+    // What was logged rides along for the error report. oRPC never sends a cause to the client.
+    cause: logObject,
     data: {
       code: error.code,
       ...(process.env.NODE_ENV !== "production" && error.details ? { details: error.details } : {}),

@@ -5,6 +5,7 @@ import { vi } from "vitest";
 
 import { success, failure, AppError } from "../../../common/utils/fp-utils";
 import type { ExperimentDto } from "../../core/models/experiment.model";
+import { ANALYTICS_PORT } from "../../core/ports/analytics.port";
 import { ExperimentRepository } from "../../core/repositories/experiment.repository";
 import { EmbargoProcessorService } from "./embargo-processor.service";
 
@@ -14,6 +15,7 @@ describe("EmbargoProcessorService", () => {
     findExpiredEmbargoes: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
   };
+  let reportError: ReturnType<typeof vi.fn>;
   let loggerSpy: ReturnType<typeof vi.spyOn>;
   let errorSpy: ReturnType<typeof vi.spyOn>;
 
@@ -34,6 +36,7 @@ describe("EmbargoProcessorService", () => {
       findExpiredEmbargoes: vi.fn(),
       update: vi.fn(),
     };
+    reportError = vi.fn();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -41,6 +44,10 @@ describe("EmbargoProcessorService", () => {
         {
           provide: ExperimentRepository,
           useValue: mockExperimentRepository,
+        },
+        {
+          provide: ANALYTICS_PORT,
+          useValue: { isFeatureFlagEnabled: vi.fn(), reportError },
         },
       ],
     }).compile();
@@ -76,6 +83,7 @@ describe("EmbargoProcessorService", () => {
         visibility: "public",
       });
       expect(loggerSpy).toHaveBeenCalled();
+      expect(reportError).not.toHaveBeenCalled();
     });
 
     it("should handle no expired embargoes", async () => {
@@ -103,6 +111,10 @@ describe("EmbargoProcessorService", () => {
       expect(mockExperimentRepository.findExpiredEmbargoes).toHaveBeenCalledTimes(1);
       expect(mockExperimentRepository.update).not.toHaveBeenCalled();
       expect(errorSpy).toHaveBeenCalled();
+      expect(reportError).toHaveBeenCalledWith(
+        error,
+        expect.objectContaining({ stage: "find", $exception_fingerprint: "embargo:find" }),
+      );
     });
 
     it("should handle update failures for individual experiments", async () => {
@@ -146,6 +158,11 @@ describe("EmbargoProcessorService", () => {
       expect(mockExperimentRepository.findExpiredEmbargoes).toHaveBeenCalledTimes(1);
       expect(mockExperimentRepository.update).toHaveBeenCalledTimes(2);
       expect(loggerSpy).toHaveBeenCalled();
+      expect(reportError).toHaveBeenCalledTimes(1);
+      expect(reportError).toHaveBeenCalledWith(
+        updateError,
+        expect.objectContaining({ stage: "update", failure_count: 1 }),
+      );
     });
 
     it("should handle unexpected errors during processing", async () => {
@@ -158,6 +175,10 @@ describe("EmbargoProcessorService", () => {
 
       // Assert
       expect(errorSpy).toHaveBeenCalled();
+      expect(reportError).toHaveBeenCalledWith(
+        unexpectedError,
+        expect.objectContaining({ stage: "unexpected" }),
+      );
     });
   });
 

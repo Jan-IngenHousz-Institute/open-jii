@@ -1,10 +1,12 @@
+import type { BeforeSendFn } from "posthog-js";
+
 import {
   FEATURE_FLAGS,
   FEATURE_FLAG_DEFAULTS,
   createPostHogClientConfig,
   createPostHogServerConfig,
 } from "@repo/analytics";
-import type { FeatureFlagKey } from "@repo/analytics";
+import type { FeatureFlagKey, PostHogService } from "@repo/analytics";
 
 import { env } from "../env";
 
@@ -14,6 +16,21 @@ import { env } from "../env";
 export { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS };
 export type { FeatureFlagKey };
 
+const service: PostHogService = "web";
+
+// One PostHog project serves dev and prod, so every event names the environment it came from.
+export const tagEnvironment: BeforeSendFn = (event) =>
+  event === null
+    ? null
+    : {
+        ...event,
+        properties: {
+          ...event.properties,
+          environment: env.NEXT_PUBLIC_ENVIRONMENT,
+          service,
+        },
+      };
+
 /**
  * PostHog client configuration for browser
  * Uses reverse proxy at /ingest to avoid ad blockers
@@ -22,8 +39,8 @@ export const POSTHOG_CLIENT_CONFIG = createPostHogClientConfig(
   "/ingest",
   env.NEXT_PUBLIC_POSTHOG_UI_HOST,
   {
-    // Add any web-specific overrides here if needed
     debug: false,
+    before_send: tagEnvironment,
   },
 );
 

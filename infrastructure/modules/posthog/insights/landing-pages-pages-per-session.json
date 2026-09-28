@@ -1,0 +1,44 @@
+{
+  "kind": "InsightVizNode",
+  "source": {
+    "breakdownFilter": {
+      "breakdown_type": "event"
+    },
+    "compareFilter": {
+      "compare": false
+    },
+    "dateRange": {
+      "date_from": "-30d",
+      "explicitDate": false
+    },
+    "filterTestAccounts": true,
+    "interval": "day",
+    "kind": "TrendsQuery",
+    "properties": [],
+    "series": [
+      {
+        "event": "$pageview",
+        "kind": "EventsNode",
+        "math": "total",
+        "name": "$pageview"
+      },
+      {
+        "event": "$pageview",
+        "kind": "EventsNode",
+        "math": "unique_session",
+        "name": "$pageview"
+      }
+    ],
+    "trendsFilter": {
+      "aggregationAxisFormat": "numeric",
+      "display": "ActionsAreaGraph",
+      "formula": "A/B",
+      "showAlertThresholdLines": false,
+      "showLegend": false,
+      "showPercentStackView": false,
+      "showValuesOnSeries": true,
+      "smoothingIntervals": 1,
+      "yAxisScaleType": "linear"
+    }
+  }
+}

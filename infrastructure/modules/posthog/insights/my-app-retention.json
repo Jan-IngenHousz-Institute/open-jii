@@ -1,0 +1,25 @@
+{
+  "kind": "InsightVizNode",
+  "source": {
+    "dateRange": {
+      "date_from": "-7d",
+      "explicitDate": false
+    },
+    "filterTestAccounts": false,
+    "kind": "RetentionQuery",
+    "properties": [],
+    "retentionFilter": {
+      "period": "Week",
+      "retentionType": "retention_first_time",
+      "returningEntity": {
+        "id": "$pageview",
+        "type": "events"
+      },
+      "targetEntity": {
+        "id": "$pageview",
+        "type": "events"
+      },
+      "totalIntervals": 11
+    }
+  }
+}

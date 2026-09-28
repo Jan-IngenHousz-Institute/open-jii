@@ -66,6 +66,31 @@ jobs:
           web-base-origin: ${{ vars.WEB_BASE_ORIGIN }}
           posthog-key: ${{ secrets.POSTHOG_KEY }}
 
+      # PostHog maps minified browser stack traces back to source with these. Injecting marks each
+      # chunk with an id, so it runs before the assets are published. A PostHog outage or a missing
+      # key must not block a deploy, so the step never fails the job.
+      - name: Upload Browser Source Maps to PostHog
+        continue-on-error: true
+        env:
+          POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_CLI_API_KEY }}
+          POSTHOG_CLI_PROJECT_ID: "80726"
+          POSTHOG_CLI_HOST: https://eu.posthog.com
+          RELEASE_VERSION: ${{ steps.get-sha.outputs.sha }}
+        run: |
+          if [[ -z "${POSTHOG_CLI_API_KEY}" ]]; then
+            echo "POSTHOG_CLI_API_KEY is not set; skipping the source map upload"
+            exit 0
+          fi
+          pnpm dlx @posthog/cli@0.18.7 sourcemap process \
+            --directory apps/web/.open-next/assets/_next/static \
+            --release-name openjii-web \
+            --release-version "${RELEASE_VERSION}" \
+            --delete-after
+
+      # Source maps stay out of the public bucket whether or not the upload ran.
+      - name: Remove Source Maps from the Public Assets
+        run: find apps/web/.open-next/assets -name '*.map' -type f -delete
+
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v6
         with:

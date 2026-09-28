@@ -50,6 +50,7 @@ describe("AnalyticsConfigService", () => {
           if (key === "analytics.posthogHost") return "https://eu.i.posthog.com";
           throw new Error(`Unknown config key: ${key}`);
         }),
+        get: vi.fn(() => undefined),
       } as unknown as ConfigService;
 
       const testService = new AnalyticsConfigService(mockConfigService);
@@ -63,6 +64,7 @@ describe("AnalyticsConfigService", () => {
           if (key === "analytics.posthogHost") return "https://eu.i.posthog.com";
           throw new Error(`Unknown config key: ${key}`);
         }),
+        get: vi.fn(() => undefined),
       } as unknown as ConfigService;
 
       const testService = new AnalyticsConfigService(mockConfigService);
@@ -77,6 +79,20 @@ describe("AnalyticsConfigService", () => {
       expect(config.host).toBeDefined();
       expect(typeof config.host).toBe("string");
     });
+
+    it("tags a crash posthog-node captures outside a request as the backend's", () => {
+      const tag = service.getPostHogServerConfig().before_send;
+
+      expect(tag?.({ event: "$exception", properties: {} })).toEqual({
+        event: "$exception",
+        distinctId: "backend-server",
+        properties: {
+          environment: service.environment,
+          service: "backend",
+          $process_person_profile: false,
+        },
+      });
+    });
   });
 
   describe("config validation", () => {
@@ -87,6 +103,7 @@ describe("AnalyticsConfigService", () => {
           if (key === "analytics.posthogHost") return "not-a-url";
           throw new Error(`Unknown config key: ${key}`);
         }),
+        get: vi.fn(() => undefined),
       } as unknown as ConfigService;
 
       expect(() => {

@@ -18,4 +18,10 @@ export interface AnalyticsPort {
    * @returns Whether the flag is enabled
    */
   isFeatureFlagEnabled(flagKey: FeatureFlagKey, distinctId?: string): Promise<boolean>;
+
+  /**
+   * Report an error that points at a bug to error tracking, for work outside a request
+   * @param properties - What identifies the failure, such as the operation and error code
+   */
+  reportError(error: unknown, properties: Record<string, unknown>): void;
 }

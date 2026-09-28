@@ -191,6 +191,15 @@ gh workflow run mobile-promote.yml track=beta        →  beta AAB + OTA       (
 gh workflow run mobile-promote.yml track=production  →  production AAB + OTA (Stage 4)
 ```
 
+### Crash reports and source maps
+
+A release build or an update uploads its Hermes source maps and native symbols to PostHog, so
+crash stacks read as code. EAS builds need three variables in both its `preview` and `production`
+environments: `POSTHOG_CLI_API_KEY` (secret), `POSTHOG_CLI_PROJECT_ID` (`80726`) and
+`POSTHOG_CLI_HOST` (`https://eu.posthog.com`). Without the key, a build skips the upload and is
+otherwise unchanged. With it, a failed upload fails the build, since PostHog's Gradle step has no
+way to carry on; if PostHog is down when a store build is due, clear the key in EAS for that build.
+
 ---
 
 ## 🗄️ Local Database (Drizzle + Expo SQLite)

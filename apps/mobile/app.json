@@ -59,6 +59,12 @@
           "alwaysUsageDescription": "openJII uses Bluetooth to connect to nearby measurement devices."
         }
       ],
+      [
+        "./plugins/with-posthog-uploads",
+        {
+          "uploadNativeSymbols": true
+        }
+      ],
       "expo-router",
       "expo-font",
       "expo-web-browser",

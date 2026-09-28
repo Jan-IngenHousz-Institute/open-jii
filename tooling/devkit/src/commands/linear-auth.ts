@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
-import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
 
-import { devkitEnvPath, repositoryRoot } from "../lib/config.js";
+import { devkitEnvPath, linearKey, repositoryRoot } from "../lib/config.js";
+import { upsertEnvFile } from "../lib/env-file.js";
 import { createLinearClient } from "../lib/linear.js";
 
 export interface Identity {
@@ -26,28 +25,6 @@ async function verifyKey(key: string): Promise<Identity> {
   const client = createLinearClient({ apiKey: key });
   const result = await client.query<ViewerResult>("{ viewer { name } teams { nodes { key } } }");
   return { name: result.viewer.name, teams: result.teams.nodes.map((team) => team.key) };
-}
-
-function isMissingFile(error: unknown): boolean {
-  return error instanceof Error && "code" in error && error.code === "ENOENT";
-}
-
-// Owner-only, and other lines in the file survive.
-export async function upsertEnvFile(path: string, key: string): Promise<void> {
-  let existing = "";
-  try {
-    existing = await readFile(path, "utf8");
-  } catch (error) {
-    if (!isMissingFile(error)) throw error;
-  }
-  const kept = existing
-    .split("\n")
-    .filter((line) => !line.startsWith("LINEAR_API_KEY=") && line.trim() !== "");
-  const content = `${[...kept, `LINEAR_API_KEY=${key}`].join("\n")}\n`;
-
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, content, { mode: 0o600 });
-  await chmod(path, 0o600);
 }
 
 export async function authenticate(deps: AuthDependencies): Promise<void> {
@@ -76,7 +53,7 @@ async function run(): Promise<number> {
   await authenticate({
     readInput: () => readFileSync(0, "utf8"),
     verify: verifyKey,
-    storeFile: (key) => upsertEnvFile(devkitEnvPath(root), key),
+    storeFile: (key) => upsertEnvFile(devkitEnvPath(root), linearKey.variable, key),
     write: (text) => {
       process.stdout.write(text);
     },

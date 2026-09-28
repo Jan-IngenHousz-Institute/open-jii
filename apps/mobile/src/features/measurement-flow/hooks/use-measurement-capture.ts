@@ -19,6 +19,7 @@ import { playSound } from "~/features/measurement-flow/utils/play-sound";
 import { useTranslation } from "~/shared/i18n";
 import type { FlowNode, MeasurementContent } from "~/shared/measurements/flow-node";
 import { createLogger } from "~/shared/observability/logger";
+import { trackProductEvent } from "~/shared/observability/product-events";
 import type { Device } from "~/shared/types/device";
 
 import { resolveInlineCommand } from "@repo/api/transforms/command-payload";
@@ -145,6 +146,10 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
       (a, b) => orderOf(a.device.id) - orderOf(b.device.id),
     );
     successesRef.current = [];
+    trackProductEvent("measurement:scan_complete", {
+      devices: ordered.length,
+      dispatch: Boolean(activePlan),
+    });
     setScanResults(
       ordered.map(({ device, result }) => {
         // Read after the scan so an identity handshake that finished while the
@@ -210,6 +215,7 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
     isStartingRef.current = true;
     try {
       if (devices.length === 0) {
+        trackProductEvent("measurement:scan_block", { reason: "no_device" });
         toast.error(t("measurementFlow:measurementNode.toast.notConnected"));
         return;
       }
@@ -217,10 +223,12 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
       // so the current node's own protocol guards only apply to broadcast.
       if (!activePlan) {
         if (!content.protocolId) {
+          trackProductEvent("measurement:scan_block", { reason: "no_protocol" });
           toast.error(t("measurementFlow:measurementNode.toast.noProtocol"));
           return;
         }
         if (!runnableProtocol) {
+          trackProductEvent("measurement:scan_block", { reason: "protocol_unavailable" });
           toast.error(t("measurementFlow:measurementNode.toast.protocolUnavailable"));
           return;
         }
@@ -231,6 +239,7 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
       const { data: liveDevices } = await refetchConnectedDevices();
       if (!liveDevices || liveDevices.length === 0) {
         log.warn("scan blocked: no device connected");
+        trackProductEvent("measurement:scan_block", { reason: "device_disconnected" });
         toast.error(t("measurementFlow:measurementNode.toast.deviceDisconnected"));
         return;
       }
@@ -272,11 +281,23 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
           if (kind === "disconnected") {
             log.error("scan error: device disconnected", {
               err: round.failures[0].error.message,
+              // A device dropping mid-scan happens in the field; it is not a bug to pick up.
+              report: false,
+            });
+            trackProductEvent("measurement:scan_fail", {
+              reason: "disconnected",
+              devices: pendingDevices.length,
+              dispatch: Boolean(activePlan),
             });
             toast.error(t("measurementFlow:measurementNode.toast.deviceDisconnected"));
             return;
           }
           log.error("scan error", { err: round.failures[0].error.message });
+          trackProductEvent("measurement:scan_fail", {
+            reason: "scan_error",
+            devices: pendingDevices.length,
+            dispatch: Boolean(activePlan),
+          });
           toast.error(t("measurementFlow:measurementNode.toast.scanError"));
           return;
         }
@@ -287,6 +308,11 @@ export function useMeasurementCapture(content: MeasurementContent, nodeId?: stri
         // continue-with-successful / retry-failed.
       } catch (error) {
         log.error("scan error", { err: (error as Error)?.message });
+        trackProductEvent("measurement:scan_fail", {
+          reason: "scan_error",
+          devices: pendingDevices.length,
+          dispatch: Boolean(activePlan),
+        });
         toast.error(t("measurementFlow:measurementNode.toast.scanError"));
       }
     } finally {
