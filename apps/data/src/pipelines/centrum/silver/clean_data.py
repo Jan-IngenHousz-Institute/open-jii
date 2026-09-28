@@ -111,6 +111,9 @@ def clean_data():
         .withColumn("timezone", F.col("parsed_data.timezone"))
         .withColumn("timestamp", F.col("parsed_data.timestamp"))
         .withColumn("processed_timestamp", F.current_timestamp())
+        # When the message reached AWS: Kinesis records it milliseconds after the IoT broker
+        # received it. Carried to the experiment table so the heartbeat can time broker to API.
+        .withColumn("arrival_timestamp", F.col("kinesis_arrival_time"))
         .withColumn("date", F.to_date("timestamp"))
         .withColumn("hour", F.hour("timestamp"))
         .withColumn(
@@ -243,6 +246,7 @@ def clean_data():
         "hour",
         "ingest_latency_ms",
         "processed_timestamp",
+        "arrival_timestamp",
         "skip_macro_processing"
     )
 
@@ -253,6 +257,8 @@ def clean_data():
         imported_df
         .withColumn("id", F.col("id").cast("long"))
         .withColumn("processed_timestamp", F.current_timestamp())
+        # Imports never pass the IoT broker.
+        .withColumn("arrival_timestamp", F.lit(None).cast("timestamp"))
         .withColumn("date", F.to_date("timestamp"))
         .withColumn("hour", F.hour("timestamp"))
         .withColumn("ingest_latency_ms", F.lit(None).cast("long"))
@@ -332,6 +338,7 @@ def clean_data():
             "hour",
             "ingest_latency_ms",
             "processed_timestamp",
+            "arrival_timestamp",
             "skip_macro_processing"
         )
     )
@@ -372,6 +379,8 @@ def clean_data_large_iot():
         .withColumn("questions", F.coalesce(F.col("questions"), F.array()))
         .withColumn("annotations", F.coalesce(F.col("annotations"), F.array()))
         .withColumn("processed_timestamp", F.current_timestamp())
+        # Large payloads go straight to S3, never through the IoT broker.
+        .withColumn("arrival_timestamp", F.lit(None).cast("timestamp"))
         .withColumn("date", F.to_date("timestamp"))
         .withColumn("hour", F.hour("timestamp"))
         .withColumn(
@@ -447,6 +456,7 @@ def clean_data_large_iot():
             "hour",
             "ingest_latency_ms",
             "processed_timestamp",
+            "arrival_timestamp",
             "skip_macro_processing"
         )
     )

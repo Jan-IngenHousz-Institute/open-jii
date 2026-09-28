@@ -171,6 +171,7 @@ def experiment_raw_data():
             "output_data",
             "date",
             "processed_timestamp",
+            "arrival_timestamp",
             "skip_macro_processing"
         )
         .transform(lambda df: apply_inline_repairs(df, EXPERIMENT_RAW_DATA_TABLE))

@@ -48,3 +48,8 @@ output "jobs_presign_role_arn" {
   description = "ARN of the role AWS IoT Jobs assumes to presign firmware objects (null when enable_firmware_jobs is false)"
   value       = var.enable_firmware_jobs ? aws_iam_role.jobs_presign[0].arn : null
 }
+
+output "payload_samples_log_group_name" {
+  description = "Log group holding the sampled ingest messages"
+  value       = aws_cloudwatch_log_group.payload_samples.name
+}

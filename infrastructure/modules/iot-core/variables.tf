@@ -109,3 +109,15 @@ variable "enable_firmware_jobs" {
   type        = bool
   default     = false
 }
+
+variable "payload_sample_percent" {
+  description = "Share of ingest messages, in percent, copied to the payload samples log group for the Data pipeline dashboard. Off by default, since CloudWatch bills the ingestion per GB and that grows with the fleet"
+  type        = number
+  default     = 0
+}
+
+variable "payload_sample_retention_days" {
+  description = "Days the payload samples are kept"
+  type        = number
+  default     = 3
+}
