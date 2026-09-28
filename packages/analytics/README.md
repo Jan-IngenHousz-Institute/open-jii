@@ -50,8 +50,8 @@ events while its server hashing is off (`cookieless_server_hash_mode` in
 
 Only deployed builds send anything. On a developer's machine the backend (`NODE_ENV` other than
 `production`), the web app (`NEXT_PUBLIC_ENVIRONMENT=local`) and a Metro phone build still read
-feature flags, but their `before_send` is `dropEveryEvent`, since every environment shares one
-PostHog project.
+feature flags, but their `before_send` drops every event (`dropEveryEvent` here), since every
+environment shares one PostHog project.
 
 ### Client-side PostHog
 
