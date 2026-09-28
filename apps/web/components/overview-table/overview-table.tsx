@@ -176,7 +176,7 @@ export function OverviewTable<T extends RowData>({
                     {header.isPlaceholder ? null : sorting && header.column.getCanSort() ? (
                       <button
                         type="button"
-                        className="hover:text-foreground inline-flex items-center gap-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
+                        className="hover:text-foreground inline-flex items-center gap-1 text-left uppercase focus-visible:outline-2 focus-visible:outline-offset-2"
                         aria-label={`${meta.label ?? header.column.id}: ${sorting.labels[header.column.getIsSorted() || "unsorted"]}${header.column.getSortIndex() > 0 ? `, ${sorting.labels.secondary}` : ""}`}
                         onClick={(event) => sorting.onToggle(header.column.id, event.shiftKey)}
                       >
