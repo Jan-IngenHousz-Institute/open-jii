@@ -1,15 +1,29 @@
-import type { MetricUnit } from "./format.js";
+/** Units a signal may declare. The report dashboards map each to a Grafana unit id. */
+export type MetricUnit = "milliseconds" | "seconds" | "minutes" | "bytes" | "percent" | "ratio";
 
 export type MetricFamily = "observability" | "usage";
 
-export type MetricSlot = "alert" | "exception" | "pulse" | "weekly" | "dashboard" | "s3";
+export type MetricSlot = "alert" | "exception" | "weekly" | "dashboard" | "s3";
 
-/** How the composer fetches a signal. Absent means CloudWatch, the original and only kind. */
+/** The row of its report an entry sits in. */
+export type MetricArea =
+  | "volume"
+  | "latency"
+  | "path"
+  | "web"
+  | "api"
+  | "ingest"
+  | "lakehouse"
+  | "sandboxes"
+  | "usage"
+  | "platform";
+
+/** Where a signal is read from. Absent means CloudWatch. */
 export type SignalKind = "cloudwatch" | "logs_insights" | "posthog";
 
 export interface MetricSignal {
   kind?: SignalKind;
-  /** What the number is, so the digest can render it as a duration, a size or a rate. */
+  /** What the number is, so a panel can render it as a duration, a size or a rate. */
   unit?: MetricUnit;
   namespace?: string;
   metric?: string;
@@ -17,6 +31,11 @@ export interface MetricSignal {
   stat?: string;
   region?: string;
   dimensions?: Record<string, string>;
+  /**
+   * CloudWatch period in seconds, for a signal counted per period rather than read as its
+   * latest value. The weekly report compares its last two periods.
+   */
+  period?: number;
   /** logs_insights: the group to query and the query itself. */
   logGroup?: string;
   query?: string;
@@ -27,6 +46,8 @@ export interface MetricSignal {
 export interface MetricBaseline {
   method?: "threshold" | "same-weekday-4w" | "wow";
   max?: number;
+  /** A floor the value must not drop below, for a status that reads 1 when healthy. */
+  min?: number;
   anomaly?: "any-nonzero";
   anomaly_pct?: number;
   nodata?: "alert";
@@ -40,8 +61,8 @@ export interface MetricBaseline {
 
 /**
  * A cross-cutting view over observability entries. A performance signal is a level most
- * days and an exception on regression, so it is both families at once; a lens keeps it out
- * of the exception digest without re-partitioning what family means.
+ * days and an exception on regression, so it is both families at once; a lens marks it
+ * without re-partitioning what family means.
  */
 export type MetricLens = "performance";
 
@@ -58,6 +79,7 @@ export interface CatalogMetric {
   id: string;
   name: string;
   family: MetricFamily;
+  area?: MetricArea;
   lens?: MetricLens;
   source: string;
   phase: string;

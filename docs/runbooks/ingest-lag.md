@@ -9,7 +9,7 @@ and no amount of catching up recovers it.
 
 ## First, decide whether this is the cause or a symptom
 
-Check `ingest-forwarding-failures` and `kinesis-write-throttling` in the same digest. If either is
+Check `ingest-forwarding-failures` and `kinesis-write-throttling` in the same alert list. If either is
 also firing, fix that first: this metric will recover on its own once the producer side is healthy.
 
 ## Confirm the shape

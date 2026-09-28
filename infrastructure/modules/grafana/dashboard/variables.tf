@@ -48,6 +48,21 @@ variable "slack_webhook_url" {
   type        = string
 }
 
+variable "kinesis_shard_count" {
+  description = "Shards of the ingest stream, which set the limits the Throughput and storage dashboard draws"
+  type        = number
+}
+
+variable "storage_buckets" {
+  description = "S3 buckets the Throughput and storage dashboard sizes, by what they hold"
+  type        = map(string)
+}
+
+variable "payload_samples_log_group_name" {
+  description = "Log group the IoT rule copies a share of ingest messages to, for the Data pipeline dashboard"
+  type        = string
+}
+
 variable "db_cluster_identifier" {
   description = "The identifier of the Aurora DB cluster to monitor"
   type        = string
@@ -99,14 +114,20 @@ variable "ingest_lag_threshold_ms" {
   default     = 600000
 }
 
-variable "digest_composer_function_name" {
-  description = "Composer Lambda to watch. Empty leaves the self-health rules out entirely."
+variable "metrics_forwarder_function_name" {
+  description = "Forwarder Lambda to watch. Empty leaves the self-health rules out entirely."
   type        = string
   default     = ""
 }
 
-variable "metrics_forwarder_function_name" {
-  description = "Forwarder Lambda to watch. Empty leaves the self-health rules out entirely."
+variable "runbook_base_url" {
+  description = "Where the repository's runbooks are read, so an alert's runbook_url opens the file"
+  type        = string
+  default     = "https://github.com/Jan-IngenHousz-Institute/open-jii/blob/main"
+}
+
+variable "aws_access_portal_url" {
+  description = "IAM Identity Center access portal URL. When set, the reports' console links go through it into this environment's account; empty links straight to the console."
   type        = string
   default     = ""
 }

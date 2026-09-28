@@ -22,10 +22,10 @@ reports the true total separately from the rows shown so a truncated list still 
 scale. Both the count and the roster cover only experiments that received data in the last thirty
 days: an experiment that ended months ago is also "stale" in `experiment_status`, and counting
 those would bury the one that stopped this morning. The `openjii-triage` skill reads the same file;
-the digest itself does not, so the count in Slack is the whole of what the digest knows.
+the daily report does not, so its tile carries the count and nothing else.
 
 **Many experiments at once** means the ingest path, not the experiments. Check
-`ingest-forwarding-failures`, `ingest-lag` and `kinesis-write-throttling` in the same digest and work
+`ingest-forwarding-failures`, `ingest-lag` and `kinesis-write-throttling` in the same alert list and work
 whichever is firing. This metric will clear on its own.
 
 **One or a few** means those devices. Field hardware goes quiet for ordinary reasons: battery,

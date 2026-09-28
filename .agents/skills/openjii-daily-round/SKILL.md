@@ -1,6 +1,6 @@
 ---
 name: openjii-daily-round
-description: Run the daily round over the platform heartbeat. Use once a day, or after time away, to find out whether the platform needs a person before anybody reports a problem. Reads the digests and the alert state, says what changed since the last round, and hands off to openjii-triage for anything that needs digging.
+description: Run the daily round over the platform heartbeat. Use once a day, or after time away, to find out whether the platform needs a person before anybody reports a problem. Reads Grafana's alert state and the two report dashboards, says what changed since the last round, and hands off to openjii-triage for anything that needs digging.
 ---
 
 # The daily round
@@ -8,79 +8,106 @@ description: Run the daily round over the platform heartbeat. Use once a day, or
 Read `AGENTS.md` first. This is the standing counterpart to `openjii-triage`: the round tells you
 whether anything needs attention, triage works out why. Same vocabulary, same catalog, same runbooks.
 
-Run it once a day, whenever suits. The digests land at fixed times but the round does not have to,
-and after a few days away you run it once over the whole gap rather than once per day missed.
+Run it once a day, whenever suits. After a few days away you run it once over the whole gap.
 
 Your output is a verdict a person can act on in under a minute on a quiet day. Lead with whether
 anything needs a human. Everything else is supporting detail.
 
 ## What you are reading
 
-Three EventBridge schedules invoke `<env>-digest-composer`, which posts to Slack and logs what it
-posted. The Slack channels are the intended surface, but the Lambda log is the one you can read
-without leaving the terminal, and it carries the same text:
+Grafana is the only surface. Alerts fire and resolve there and post to the one Slack channel through
+Grafana's own notification. The two report dashboards, generated from
+`docs/monitoring/metrics-catalog.yaml`, are where the numbers live:
+
+| Dashboard uid            | Reads                                                                | Default window |
+| ------------------------ | -------------------------------------------------------------------- | -------------- |
+| `<env>-heartbeat-daily`  | what is firing, the data path, every rule-backed signal, then levels | 24 hours       |
+| `<env>-heartbeat-weekly` | usage, data path and platform against the week before, 90-day trends | 7 days         |
+
+Every alert rule claims a catalogue entry, and every such entry is a row on the daily report's board,
+ordered Web, API and database, Ingest, Lakehouse, Sandboxes. Entries without a rule are the level
+tiles beneath it. An entry's chart has its `num` as panel id, so `?viewPanel=<num>` opens it, with
+the rule's firing and clearing marked on it.
+
+For a closer look, three dashboards follow a thing through the platform hop by hop, and every
+report signal links to the one it sits on:
+
+| Dashboard uid         | Follows                                                                        |
+| --------------------- | ------------------------------------------------------------------------------ |
+| `<env>-platform`      | a researcher's request: site, page server, API, database, calibration sandbox  |
+| `<env>-data-pipeline` | a device's measurement: IoT Core, the Kinesis stream, lakehouse, macro sandbox |
+| `<env>-delivery`      | deploys per service: how often, how many failed, lead time                     |
+
+`<env>-throughput-storage` sits beside them: the ingest stream's throughput against its limits,
+and every store's size and growth.
+
+The workspace API needs a service account token. Mint one against the workspace with the AWS CLI
+and keep it in your shell for the session, never in a file in the repository:
 
 ```bash
-aws logs tail /aws/lambda/<env>-digest-composer --since 30h --format short
+WORKSPACE=$(aws grafana list-workspaces --profile openjii-<env> --region eu-central-1 \
+  --query 'workspaces[0].id' --output text)
+ENDPOINT=https://$(aws grafana describe-workspace --profile openjii-<env> --region eu-central-1 \
+  --workspace-id "$WORKSPACE" --query 'workspace.endpoint' --output text)
 ```
 
-Widen `--since` to cover the whole gap when you have been away.
+The token itself comes from a service account in that workspace (`aws grafana
+create-workspace-service-account-token`); ask for one if you have none. Then:
 
-Each delivery logs one JSON object carrying `text`, the summary exactly as it was posted, with
-one line per anomaly led by its catalog number. `delivered` is `true` when it posted to Slack and
-`false` when no webhook is configured and the digest was only logged, which is normal in an
-environment that has not been wired to Slack.
+```bash
+# Every rule, with its current state and how long it has been in it.
+curl -s -H "Authorization: Bearer $GRAFANA_TOKEN" "$ENDPOINT/api/prometheus/grafana/api/v1/rules" \
+  | jq -r '.data.groups[] | .name as $g | .rules[] | "\(.state)\t\($g)\t\(.name)\t\(.labels.metric_id // "-")"'
 
-`docs/monitoring/metrics-catalog.yaml` is the source of truth for what every line means. Do not
-infer a metric's meaning from its name in the digest; look the id up.
+# Only what is firing right now, with when it started.
+curl -s -H "Authorization: Bearer $GRAFANA_TOKEN" "$ENDPOINT/api/alertmanager/grafana/api/v2/alerts" \
+  | jq -r '.[] | "\(.labels.alertname)\t\(.labels.severity)\t\(.startsAt)\t\(.annotations.summary // "")"'
+```
 
-## 1. Did the round even happen
+`docs/monitoring/metrics-catalog.yaml` is the source of truth for what every rule and panel means.
+Do not infer a metric's meaning from its name; look the id up.
 
-Before reading any numbers, confirm the reporter ran. A digest that was never composed looks exactly
-like a day with nothing wrong.
+## 1. Is the reporting itself alive
 
-Expect the observability digest and the pulse daily, and the weekly note on Monday. If the composer
-did not run, that is the finding, and `docs/runbooks/digest-composer-liveness.md` is the procedure.
-Say so and stop; there are no numbers to report.
+Before reading any state, confirm the signals are arriving. The `Heartbeat Collector Dead-Man` and
+`Metrics Forwarder Errors` rules cover the lakehouse path; if either is firing, every lakehouse
+panel is stale and nothing else about them is trustworthy. `docs/runbooks/dlt-heartbeat.md` and
+`docs/runbooks/metrics-forwarder-errors.md` are the procedures. A rule in the `Error` or `NoData`
+state that should have data is the same finding: say so and treat its signal as unknown.
 
-## 2. Read the self-check lines before the anomalies
+## 2. Name what changed, not what is
 
-The digest reports on its own blind spots, and those lines outrank the content:
+The point of a round is the delta. Compare the alert list against the previous round, and say
+which of these each firing rule is:
 
-- **`could not read <region>`** means CloudWatch queries failed. The metrics that region covers are
-  missing from the digest, not healthy. Anything you say about them is unfounded.
-- **`unresolved catalog placeholders`** means an entry was dropped before it was ever queried.
-- **`no datapoints for <ids>`** means a series that used to report has stopped. For a gauge that is
-  usually the producer dying; for a counter it is normal.
+- **New**: firing now, not at the last round. This is what deserves attention first.
+- **Continuing**: firing at the last round too. Say how many days it has now run, because a
+  continuing alert nobody has acted on is a decision, not a finding.
+- **Cleared**: was firing, is not. Worth one line, because it tells you whether something was
+  transient or whether someone fixed it.
 
-A digest with self-check lines is a partial digest. Report it as partial.
+A rule that fired and resolved between rounds shows in Slack's history but not in the current
+state; a scan of the channel since the last round is part of the round.
 
-## 3. Name what changed, not what is
+## 3. Read the daily report
 
-The point of a round is the delta. Compare the latest digest against the one from the previous
-round, and say which of these each anomaly is:
+Open `<env>-heartbeat-daily` at the last 24 hours. Start with the data path. "How much flows"
+counts each stage per half hour, from device publishes to macro results; stages that stop
+tracking each other mean data is held up or lost between them. "How long each hop takes" gives
+each hop's p95. A hop that climbs through the day while volume holds steady is the pipeline
+degrading, as the September Centrum heap leak did. "Since last ingest" only means a stall while
+publishes keep arriving.
 
-- **New**: an anomaly that was not there at the last round. This is what deserves attention first.
-- **Continuing**: the same anomaly as last time. Say how many days it has now run, because a
-  continuing anomaly nobody has acted on is a decision, not a finding.
-- **Cleared**: an anomaly from the last round is gone. Worth one line, because it tells you whether
-  something was transient or whether someone fixed it.
+Then the board. Muted green is within the limit the signal's rule enforces, red is a five-minute
+reading past it, and a gap is no data. The
+tooltip gives the stretch and its duration. Rules hold for minutes before firing, so red whose rule
+never fired was a brief breach: open its chart, say when it happened and what the shape was, and
+move on unless it repeats. A gap on a signal that should report is a finding in itself. The level
+tiles have no limit: say only what moved out of its usual range, and say it as a level, not as a
+fault. Dev's ingest consumer runs on a weekday schedule, so its lag is hours by design; check
+the environment before calling anything an incident.
 
-A level that moved inside its normal band is not a change. The pulse prints a delta against the
-four-week same-weekday baseline precisely so you do not have to judge that by eye.
-
-## 4. Check what the digest cannot see
-
-The digest is a daily exception report. Two things sit outside it:
-
-- **Firing Grafana alerts.** These are the minute-scale signals, and one can fire and resolve
-  entirely between digests. The rules carry a `metric_id` label matching the catalog, so a firing
-  alert names its own entry and runbook.
-- **Thresholds that differ per environment.** Dev's ingest consumer runs on a schedule, so its
-  normal lag is hours. A lag anomaly in dev is usually the schedule, not a fault. Check the
-  environment before calling it an incident.
-
-## 5. For anything that needs a person
+## 4. For anything that needs a person
 
 Do not hand over a pointer. Pull the evidence first, then hand over a conclusion.
 
@@ -91,10 +118,10 @@ deep dive rather than guessing here.
 Most incidents are somebody's deploy. Check whether the onset lines up with a merge to `main` before
 reaching for anything more exotic.
 
-## 6. Report
+## 5. Report
 
 Open with one of: nothing needs a person, something needs a person, or the round could not be
-completed. Then the changes from step 3, then the evidence for anything in the second category.
+completed. Then the changes from step 2, then the evidence for anything in the second category.
 
-Say plainly what you could not check and why. A round that reads confidently past a self-check line
-is worse than no round, because it converts an unknown into a false all-clear.
+Say plainly what you could not check and why. A round that reads confidently past a firing
+dead-man is worse than no round, because it converts an unknown into a false all-clear.

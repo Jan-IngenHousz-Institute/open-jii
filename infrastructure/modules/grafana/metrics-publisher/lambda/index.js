@@ -42,7 +42,7 @@ exports.handler = async () => {
     //
     // The window is exactly one ISO week, so an ungrouped count returns one row even
     // when nobody signed up. That zero is the point: without it a quiet week and a
-    // publisher that never ran are both absence, and the digest cannot tell them apart.
+    // publisher that never ran are both absence, and no reader can tell them apart.
     const [{ signups }] = await sql`
       SELECT COUNT(*)::int AS signups
       FROM users
@@ -60,9 +60,8 @@ exports.handler = async () => {
     const dimensions = [{ Name: "Environment", Value: environment }];
 
     // Stamped at publish time, not at the start of the week being reported. A
-    // backdated point falls outside the digest's trailing window, which reads as a
-    // week with no signups rather than as last week's count. This is why the weekly
-    // digest is scheduled after this job rather than before it.
+    // backdated point falls outside a trailing seven-day window, which reads as a
+    // week with no signups rather than as last week's count.
     const publishedAt = new Date();
 
     const [{ total }] = await sql`

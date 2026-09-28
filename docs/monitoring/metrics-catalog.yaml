@@ -1,24 +1,30 @@
 # Platform heartbeat metrics catalog.
-# Single source of truth for the digest composer, Grafana panel inventory,
-# runbooks, and the openjii-triage skill. Numbering is append-only; see `passes` below.
+# Single source of truth for the Grafana report dashboards, the Grafana alert rules, the
+# runbooks, and the openjii-triage and openjii-daily-round skills. Numbering is
+# append-only; see `passes` below.
 #
 # Field notes:
 # - family: observability (issues) | usage (levels)
 # - source: aws (native CloudWatch) | dbx (Databricks heartbeat job) | pg (metrics-publisher)
-#           | posthog | gh (GitHub Actions) | composer (built-in)
+#           | posthog | gh (GitHub Actions) | composer (retired)
 # - phase: roadmap phase in which the signal starts existing (P1..P5)
-# - active: the composer consumes it today; inactive entries are excluded silently
-#           (active entries with no datapoints trigger the digest self-check instead)
-# - slots: alert | exception | pulse | weekly | dashboard | s3
-# - severity: critical | warning (alert slot only; routing per notification policy)
-# - signal.dimensions values support ${ENV_PLACEHOLDER} resolution from composer env
-# - baseline: same-weekday-4w compares the last 24h window to the same window 7/14/21/28
-#   days back; wow compares full weeks
-# - WHERE BASELINE RULES APPLY: only the daily observability digest evaluates them, i.e.
-#   metrics with family: observability AND an exception or alert slot. The pulse and the
-#   weekly note render levels, using the baseline for the displayed delta only. An
-#   anomaly_pct on a pulse-only or weekly-only metric is therefore inert today and is
-#   kept as intent for the per-environment Grafana rules (P2b).
+# - active: the entry is charted on a report dashboard today; inactive entries are
+#           documentation until their producer publishes
+# - slots: alert | exception | weekly | dashboard | s3. An observability entry with
+#   exception or alert is on the daily report; weekly puts an entry on the weekly
+#   report; alert additionally means a Grafana rule carries the entry's id
+# - area: where on its report an entry sits. Daily data path: volume (the how-much chart) |
+#   latency (the how-long chart) | path (the tiles beneath them). Daily rows: web | api |
+#   ingest | lakehouse | sandboxes. Weekly: usage (people and data) | platform
+# - name: what the report shows, in the words of whoever reads it
+# - severity: critical | warning (alert slot only; critical only repeats faster)
+# - signal.dimensions values support ${ENV_PLACEHOLDER} resolution on the dashboards
+# - signal.period: CloudWatch period in seconds, for a signal counted per period. The
+#   weekly report compares its last two periods instead of reading the latest value
+# - baseline: for an entry with an alert rule, the limit that rule enforces. A max (a count's
+#   is per five minutes, like its rule), any-nonzero, or a min floor colours the entry's row on
+#   the daily report's board and is drawn on its chart. The rest is intent for a rule that does
+#   not exist yet
 
 version: 1
 
@@ -37,6 +43,24 @@ passes:
   - date: 2026-09-22
     range: [65, 66]
     note: the digest's own two lambdas, so the reporter's silence is itself reportable
+  - date: 2026-09-26
+    range: [67, 70]
+    note: rolling 7-day usage counters, the weekly report's headline numbers
+  - date: 2026-09-26
+    range: [71, 78]
+    note: the signals of alert rules that had no entry, so every rule has a place on the daily report
+  - date: 2026-09-26
+    range: [79, 80]
+    note: site uptime and registered researchers, for the weekly report
+  - date: 2026-09-26
+    range: [81, 93]
+    note: the data path from device to macro results, how much flows and how long each hop takes
+  - date: 2026-09-27
+    range: [95, 95]
+    note: the whole trip, from the IoT broker receiving a message to its row readable through the API
+  - date: 2026-09-27
+    range: [96, 96]
+    note: the heartbeat export's failed collectors, so a broken one is told from a quiet one
 
 metrics:
   # Ingest path
@@ -47,13 +71,14 @@ metrics:
     source: dbx
     phase: P3
     active: false
-    slots: [pulse, dashboard]
+    slots: [weekly, dashboard]
     notes: Fleet-indexing / device_last_activity based; sudden-drop alerting revisited post-P3.
 
   - num: 2 # merged with 3 in the pass
     id: ingest-forwarding-failures
-    name: IoT rule invocation / forwarding failures
+    name: Measurements lost
     family: observability
+    area: ingest
     source: aws
     phase: P1
     active: true
@@ -70,8 +95,9 @@ metrics:
 
   - num: 4
     id: iot-auth-failures
-    name: IoT auth/connect failures
+    name: Connection failures
     family: observability
+    area: ingest
     source: aws
     phase: P1
     active: true
@@ -109,12 +135,13 @@ metrics:
 
   - num: 7
     id: kinesis-incoming
-    name: Kinesis incoming records/bytes
+    name: Messages received
     family: usage
+    area: platform
     source: aws
     phase: P1
     active: true
-    slots: [pulse, dashboard]
+    slots: [dashboard]
     signal:
       namespace: AWS/Kinesis
       metric: IncomingRecords
@@ -122,15 +149,16 @@ metrics:
       dimensions: { StreamName: "${KINESIS_STREAM_NAME}" }
     baseline: { method: same-weekday-4w, anomaly_pct: 50 }
     notes: >
-      Top-line ingest pulse. The digest shows it as a level with a delta; the
-      anomaly_pct is inert until an ingest-collapse rule lands in P2b, which is
-      where "producers stopped publishing" should alarm (iterator age only
-      catches a stalled consumer).
+      Top-line ingest volume on the Data pipeline dashboard; the reports count device publishes (81) instead. The anomaly_pct is
+      inert until an ingest-collapse rule lands in P2b, which is where "producers
+      stopped publishing" should alarm (iterator age only catches a stalled
+      consumer).
 
   - num: 8
     id: ingest-lag
-    name: Kinesis iterator age (pipeline lag)
+    name: Ingest lag
     family: observability
+    area: ingest
     source: aws
     phase: P1
     active: true
@@ -155,8 +183,9 @@ metrics:
 
   - num: 9
     id: kinesis-write-throttling
-    name: Kinesis write throttling
+    name: Ingest writes throttled
     family: observability
+    area: ingest
     source: aws
     phase: P1
     active: true
@@ -173,8 +202,9 @@ metrics:
   # Lakehouse
   - num: 10
     id: dlt-heartbeat
-    name: Heartbeat collector dead-man
+    name: Collector running
     family: observability
+    area: lakehouse
     source: dbx
     phase: P2
     active: true
@@ -189,13 +219,14 @@ metrics:
     runbook: docs/runbooks/dlt-heartbeat.md
     notes: >
       Value is always 1; only its absence carries meaning, so the absence rule is the
-      whole metric: the composer renders it as an anomaly, and the Grafana NoData rule
-      does the same once it lands. Deliberately has no threshold.
+      whole metric: the dead-man rule fires on NoData, and the daily tile reads Stopped
+      over the same window. Deliberately has no threshold.
 
   - num: 64
     id: gold-materialization-age
-    name: Gold materialization age
+    name: Gold tables age
     family: observability
+    area: lakehouse
     source: dbx
     phase: P2
     active: true
@@ -224,11 +255,13 @@ metrics:
     phase: P2
     active: false
     slots: [weekly, dashboard]
+    notes: Superseded by 82 to 84, which count rows per stage every half hour.
 
   - num: 12
     id: ingest-bad-payload-rate
-    name: Ingest bad-payload rate
+    name: Malformed payloads
     family: observability
+    area: ingest
     source: dbx
     phase: P2
     active: true
@@ -248,8 +281,9 @@ metrics:
 
   - num: 13
     id: stale-experiments
-    name: Active experiments with bound devices gone stale
+    name: Experiments gone quiet
     family: observability
+    area: lakehouse
     source: dbx
     phase: P2
     active: true
@@ -286,10 +320,51 @@ metrics:
     slots: [weekly, dashboard]
 
   # Serving path
+  - num: 71
+    id: site-up
+    name: Site up
+    family: observability
+    area: web
+    source: aws
+    phase: P1
+    active: true
+    slots: [alert, dashboard]
+    severity: critical
+    signal:
+      region: us-east-1
+      namespace: AWS/Route53
+      metric: HealthCheckStatus
+      stat: Minimum
+      dimensions: { HealthCheckId: "${HEALTH_CHECK_ID}" }
+    baseline: { method: threshold, min: 1 }
+    runbook: docs/runbooks/site-up.md
+    notes: Route 53's health check on the public site, 1 while it answers and 0 while it does not.
+
+  - num: 79
+    id: site-uptime
+    name: Site uptime
+    family: observability
+    area: platform
+    source: aws
+    phase: P1
+    active: true
+    slots: [weekly]
+    signal:
+      region: us-east-1
+      namespace: AWS/Route53
+      metric: HealthCheckStatus
+      stat: Average
+      unit: ratio
+      dimensions: { HealthCheckId: "${HEALTH_CHECK_ID}" }
+      period: 604800
+    baseline: { method: wow }
+    notes: The share of the week the site's health check passed; the same check as 71, averaged.
+
   - num: 16
     id: backend-5xx
-    name: Backend 5xx rate
+    name: API errors
     family: observability
+    area: api
     source: aws
     phase: P1
     active: true
@@ -300,14 +375,15 @@ metrics:
       metric: HTTPCode_Target_5XX_Count
       stat: Sum
       dimensions: { LoadBalancer: "${ALB_ARN_SUFFIX}" }
-    baseline: { method: same-weekday-4w, anomaly_pct: 100 }
+    baseline: { method: threshold, max: 5 }
     runbook: docs/runbooks/backend-5xx.md
-    notes: Grafana rule pre-exists; catalog entry aligns severity + digest visibility.
+    notes: The Grafana rule predates the catalog; the entry records its severity and limit.
 
   - num: 17
     id: backend-latency
-    name: Backend latency p95/p99
+    name: API response time
     family: observability
+    area: api
     source: aws
     phase: P1
     active: true
@@ -320,6 +396,80 @@ metrics:
       dimensions: { LoadBalancer: "${ALB_ARN_SUFFIX}" }
     baseline: { method: same-weekday-4w, anomaly_pct: 100 }
 
+  - num: 72
+    id: api-hosts-unhealthy
+    name: Unhealthy API hosts
+    family: observability
+    area: api
+    source: aws
+    phase: P1
+    active: true
+    slots: [alert, dashboard]
+    severity: critical
+    signal:
+      namespace: AWS/ApplicationELB
+      metric: UnHealthyHostCount
+      stat: Maximum
+      dimensions: { TargetGroup: "${TARGET_GROUP_DIMENSION}", LoadBalancer: "${ALB_ARN_SUFFIX}" }
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/api-hosts-unhealthy.md
+
+  - num: 73
+    id: api-cpu
+    name: API CPU
+    family: observability
+    area: api
+    source: aws
+    phase: P1
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: AWS/ECS
+      metric: CPUUtilization
+      stat: Average
+      unit: percent
+      dimensions: { ClusterName: "${ECS_CLUSTER_NAME}", ServiceName: "${ECS_SERVICE_NAME}" }
+    baseline: { method: threshold, max: 80 }
+    runbook: docs/runbooks/api-cpu.md
+
+  - num: 74
+    id: database-cpu
+    name: Database CPU
+    family: observability
+    area: api
+    source: aws
+    phase: P1
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: AWS/RDS
+      metric: CPUUtilization
+      stat: Average
+      unit: percent
+      dimensions: { DBClusterIdentifier: "${DB_CLUSTER_IDENTIFIER}" }
+    baseline: { method: threshold, max: 80 }
+    runbook: docs/runbooks/database-cpu.md
+
+  - num: 75
+    id: database-connections
+    name: Database connections
+    family: observability
+    area: api
+    source: aws
+    phase: P1
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: AWS/RDS
+      metric: DatabaseConnections
+      stat: Average
+      dimensions: { DBClusterIdentifier: "${DB_CLUSTER_IDENTIFIER}" }
+    baseline: { method: threshold, max: 80 }
+    runbook: docs/runbooks/database-connections.md
+
   - num: 18
     id: backend-4xx-split
     name: 4xx split auth vs client
@@ -328,7 +478,7 @@ metrics:
     phase: P1
     active: false
     slots: [dashboard]
-    notes: Dashboard-only; composer never reads it.
+    notes: Dashboard-only; neither report reads it.
 
   - num: 19
     id: webhook-failures
@@ -373,8 +523,9 @@ metrics:
 
   - num: 23
     id: sandbox-errors
-    name: Sandbox errors/throttles (macro and calibration)
+    name: Sandbox errors
     family: observability
+    area: sandboxes
     source: aws
     phase: P1
     active: true
@@ -384,13 +535,52 @@ metrics:
       namespace: AWS/Lambda
       search: SEARCH('{AWS/Lambda,FunctionName} MetricName="Errors" AND (${MACRO_FUNCTION_FILTER})', 'Sum')
       stat: Sum
-    baseline: { method: same-weekday-4w, anomaly_pct: 200 }
+    baseline: { method: threshold, max: 10 }
     runbook: docs/runbooks/sandbox-errors.md
+    notes: The macro rules fire above ten errors in five minutes and the calibration rule on any, so the board's summed row uses ten and calibration's own firing shows on the chart.
+
+  - num: 77
+    id: sandbox-throttles
+    name: Sandbox throttles
+    family: observability
+    area: sandboxes
+    source: aws
+    phase: P1
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: AWS/Lambda
+      search: SEARCH('{AWS/Lambda,FunctionName} MetricName="Throttles" AND (${MACRO_FUNCTION_FILTER})', 'Sum')
+      stat: Sum
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/sandbox-throttles.md
+
+  - num: 78
+    id: sandbox-blocked-connections
+    name: Blocked connections
+    family: observability
+    area: sandboxes
+    source: aws
+    phase: P1
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: OpenJII/MacroSandbox
+      search: SEARCH('{OpenJII/MacroSandbox} MetricName="MacroSandboxRejectedTraffic-${ENVIRONMENT}"', 'Sum')
+      stat: Sum
+    baseline: { method: threshold, max: 100 }
+    runbook: docs/runbooks/sandbox-blocked-connections.md
+    notes: >
+      Connections the sandboxes' network refused, counted from REJECT lines in their shared VPC flow
+      log. The calibration sandbox's metric counts the same lines, so only the macro one is summed.
 
   - num: 24
     id: cloudfront-errors
-    name: CloudFront errors / cache hit
+    name: Site error rate
     family: observability
+    area: web
     source: aws
     phase: P1
     active: true
@@ -409,8 +599,9 @@ metrics:
 
   - num: 25
     id: opennext-lambda-errors
-    name: OpenNext server Lambda errors/duration
+    name: Web server errors
     family: observability
+    area: web
     source: aws
     phase: P1
     active: true
@@ -421,8 +612,26 @@ metrics:
       metric: Errors
       stat: Sum
       dimensions: { FunctionName: "${SERVER_FUNCTION_NAME}" }
-    baseline: { method: same-weekday-4w, anomaly_pct: 200 }
+    baseline: { method: threshold, max: 5 }
     runbook: docs/runbooks/opennext-lambda-errors.md
+
+  - num: 76
+    id: web-server-throttles
+    name: Web server throttles
+    family: observability
+    area: web
+    source: aws
+    phase: P1
+    active: true
+    slots: [alert, dashboard]
+    severity: warning
+    signal:
+      namespace: AWS/Lambda
+      metric: Throttles
+      stat: Sum
+      dimensions: { FunctionName: "${SERVER_FUNCTION_NAME}" }
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/web-server-throttles.md
 
   - num: 26
     id: web-vitals
@@ -454,8 +663,9 @@ metrics:
 
   - num: 29
     id: aurora-storage-growth
-    name: Aurora storage growth
+    name: Database storage
     family: observability
+    area: platform
     source: aws
     phase: P1
     active: true
@@ -469,15 +679,82 @@ metrics:
     baseline: { method: wow, anomaly_pct: 25 }
 
   # Usage counts
+  # Weekly report headline. Rolling 7-day counters from activity_windows, so the value a
+  # week ago is last week's figure and the change between the two is week over week.
+  - num: 67
+    id: measurements-7d
+    name: Measurements
+    family: usage
+    area: usage
+    source: dbx
+    phase: P2
+    active: true
+    slots: [weekly]
+    signal:
+      namespace: OpenJII/Usage
+      metric: Measurements7d
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: wow }
+
+  - num: 68
+    id: active-devices-7d
+    name: Active devices
+    family: usage
+    area: usage
+    source: dbx
+    phase: P2
+    active: true
+    slots: [weekly]
+    signal:
+      namespace: OpenJII/Usage
+      metric: ActiveDevices7d
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: wow }
+
+  - num: 69
+    id: active-experiments-7d
+    name: Active experiments
+    family: usage
+    area: usage
+    source: dbx
+    phase: P2
+    active: true
+    slots: [weekly]
+    signal:
+      namespace: OpenJII/Usage
+      metric: ActiveExperiments7d
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: wow }
+    notes: Experiments that received at least one measurement in the last seven days.
+
+  - num: 70
+    id: active-researchers-7d
+    name: Active researchers
+    family: usage
+    area: usage
+    source: dbx
+    phase: P2
+    active: true
+    slots: [weekly]
+    signal:
+      namespace: OpenJII/Usage
+      metric: ActiveContributors7d
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: wow }
+    notes: Distinct people who uploaded at least one measurement in the last seven days.
+
   - num: 30
     id: registrations
-    name: New registrations
+    name: New researchers
     family: usage
+    area: usage
     source: pg
     phase: P1
     active: true
-    # Weekly only: the publisher emits one datapoint per week, so a pulse slot would
-    # render 0 on six days in seven. It joins the pulse when the publisher goes daily.
     slots: [weekly]
     signal:
       namespace: OpenJII/UserRegistrations
@@ -486,11 +763,31 @@ metrics:
       # Sum would turn a week the publisher failed into "0 signups" instead of silence.
       stat: Maximum
       dimensions: { Environment: "${ENVIRONMENT}" }
+      # One datapoint a week, so it is read a week at a time.
+      period: 604800
     baseline: { method: wow }
     notes: >
       Weekly granularity until the metrics-publisher promotion adds daily counts. Stamped
       at publish time (Monday 06:00 UTC), one hour before the weekly note's window closes,
       so the trailing seven-day window always contains it.
+
+  - num: 80
+    id: registered-researchers
+    name: Researchers
+    family: usage
+    area: usage
+    source: pg
+    phase: P1
+    active: true
+    slots: [weekly]
+    signal:
+      namespace: OpenJII/UserRegistrations
+      metric: TotalUsers
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+      period: 604800
+    baseline: { method: wow }
+    notes: Everyone registered, published beside the week's new researchers.
 
   - num: 31
     id: active-users
@@ -499,7 +796,7 @@ metrics:
     source: posthog
     phase: P3
     active: false
-    slots: [pulse, weekly]
+    slots: [weekly]
     notes: Internal-users cohort (44) excluded before this reports anything.
 
   - num: 32
@@ -520,7 +817,7 @@ metrics:
     active: true
     # Pulse only: Maximum over a seven-day window would report the peak day as if it
     # were the week, so the weekly note has no honest way to render a 24h gauge.
-    slots: [pulse]
+    slots: [dashboard]
     signal:
       namespace: OpenJII/Usage
       metric: Measurements24h
@@ -539,7 +836,7 @@ metrics:
     source: dbx
     phase: P2
     active: true
-    slots: [pulse]
+    slots: [dashboard]
     signal:
       namespace: OpenJII/Usage
       metric: ActiveDevices30d
@@ -581,8 +878,9 @@ metrics:
 
   - num: 38
     id: dora
-    name: DORA metrics
+    name: Deploys
     family: usage
+    area: platform
     source: gh
     phase: P1
     active: true
@@ -591,8 +889,12 @@ metrics:
       namespace: DORA/Metrics
       search: SEARCH('{DORA/Metrics,Environment,Service} MetricName="DeploymentFrequency" AND Environment="${ENVIRONMENT}"', 'Sum')
       stat: Sum
+      period: 604800
     baseline: { method: wow }
-    notes: Published by .github/actions/publish-dora-metrics with Service+Environment dimensions.
+    notes: >-
+      Published by .github/actions/publish-dora-metrics with Service+Environment dimensions. The
+      dashboards query each service by name rather than through this search, which forgets a
+      service that has not deployed for two weeks.
 
   - num: 39
     id: cost-snapshot
@@ -610,19 +912,18 @@ metrics:
     family: observability
     source: composer
     phase: P1
-    active: true
-    slots: [exception]
+    active: false
+    slots: []
     notes: >
-      Built into the composer. An active metric with no datapoints takes one of three
-      routes: a nodata rule makes it an anomaly, prior history makes it a self-check
-      line, and neither makes it a silent no-data because a metric that has never
-      reported cannot be distinguished from one whose producer is not built yet.
+      Retired 2026-09-26 with the digest composer. Its job, saying when a signal that used
+      to report has gone quiet, is a Grafana NoData rule per signal now.
 
   # Public metrics pipeline (post-landing)
   - num: 41
     id: metrics-mv-freshness
-    name: Public metrics staleness
+    name: Public numbers age
     family: observability
+    area: lakehouse
     source: dbx
     phase: P2
     active: true
@@ -741,8 +1042,9 @@ metrics:
 
   - num: 51
     id: silent-devices
-    name: Silent devices
+    name: Devices gone quiet
     family: observability
+    area: lakehouse
     source: dbx
     phase: P2
     active: true
@@ -878,10 +1180,8 @@ metrics:
     slots: [weekly, exception, s3]
     notes: Capture-timestamp vs upload-time; offline-first fails silently as data marooned on phones.
 
-  # Self-health. The digest reports on the platform; these two report on the digest.
-  # Both inactive and signal-less on purpose: liveness is absence, and a baseline rule
-  # has no "min", so an active entry here would evaluate to ok forever and read as
-  # covered. The Grafana rules carry these ids and are where the watching happens.
+  # Self-health: the forwarder carries every lakehouse signal into CloudWatch, so its own
+  # failure has to reach someone.
   - num: 65
     id: digest-composer-liveness
     name: Digest composer stopped running
@@ -889,19 +1189,280 @@ metrics:
     source: aws
     phase: P1
     active: false
-    slots: [alert]
-    severity: warning
-    runbook: docs/runbooks/digest-composer-liveness.md
-    notes: A lambda that never runs publishes no metric, so absence is the only signal. Watched by the Grafana rule labelled with this id, not by the digest, which cannot report its own silence.
+    slots: []
+    notes: Retired 2026-09-26 with the digest composer.
 
   - num: 66
     id: metrics-forwarder-errors
-    name: Metrics forwarder failing to publish
+    name: Forwarder errors
     family: observability
+    area: lakehouse
     source: aws
     phase: P1
-    active: false
+    active: true
     slots: [alert]
     severity: warning
+    signal:
+      namespace: AWS/Lambda
+      metric: Errors
+      stat: Sum
+      dimensions: { FunctionName: "${METRICS_FORWARDER_FUNCTION_NAME}" }
+    baseline: { method: threshold, max: 0 }
     runbook: docs/runbooks/metrics-forwarder-errors.md
     notes: Errors only and never liveness, because the forwarder is S3 event driven, so a quiet day is indistinguishable from a dead function and a liveness rule would fire forever.
+
+  # The data path, device to macro results: how much flows through each stage and how long
+  # each hop takes, per half hour, with the path's own health beneath.
+  - num: 81
+    id: published-by-devices
+    name: Published by devices
+    family: observability
+    area: volume
+    source: aws
+    phase: P1
+    active: true
+    slots: [exception, weekly]
+    signal:
+      namespace: AWS/IoT
+      search: SEARCH('{AWS/IoT,Protocol} MetricName="PublishIn.Success"', 'Sum')
+      stat: Sum
+      period: 604800
+    notes: Every MQTT publish IoT Core accepted, measurements and device events alike. The start of the path.
+
+  - num: 82
+    id: ingested-rows
+    name: Ingested
+    family: observability
+    area: volume
+    source: dbx
+    phase: P2
+    active: true
+    slots: [exception]
+    signal:
+      namespace: OpenJII/Data
+      metric: IngestedRows
+      stat: Sum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: Rows the pipeline wrote to bronze from Kinesis, counted per closed half hour.
+
+  - num: 83
+    id: experiment-rows
+    name: Into experiments
+    family: observability
+    area: volume
+    source: dbx
+    phase: P2
+    active: true
+    slots: [exception, weekly]
+    signal:
+      namespace: OpenJII/Data
+      metric: ExperimentRows
+      stat: Sum
+      period: 604800
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: Rows committed to the experiment tables (gold), counted per closed half hour.
+
+  - num: 84
+    id: macro-result-rows
+    name: Macro results
+    family: observability
+    area: volume
+    source: dbx
+    phase: P2
+    active: true
+    slots: [exception, weekly]
+    signal:
+      namespace: OpenJII/Data
+      metric: MacroResultRows
+      stat: Sum
+      period: 604800
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: Macro results committed, counted per closed half hour.
+
+  - num: 85
+    id: ingest-latency
+    name: Arrival to lakehouse
+    family: observability
+    area: latency
+    source: dbx
+    phase: P2
+    active: true
+    slots: [exception]
+    signal:
+      namespace: OpenJII/Data
+      metric: IngestLatencyP95Seconds
+      stat: Maximum
+      unit: seconds
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: p95 of Kinesis arrival to the bronze write, per row, per half hour.
+
+  - num: 86
+    id: experiment-latency
+    name: Lakehouse to experiments
+    family: observability
+    area: latency
+    source: dbx
+    phase: P2
+    active: true
+    slots: [exception]
+    signal:
+      namespace: OpenJII/Data
+      metric: ExperimentLatencyP95Seconds
+      stat: Maximum
+      unit: seconds
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: p95 of a batch's processing time to its commit in the experiment tables. Rose from 6 s to 92 s during the September Centrum heap leak.
+
+  - num: 87
+    id: macro-latency
+    name: Experiments to macro results
+    family: observability
+    area: latency
+    source: dbx
+    phase: P2
+    active: true
+    slots: [exception]
+    signal:
+      namespace: OpenJII/Data
+      metric: MacroLatencyP95Seconds
+      stat: Maximum
+      unit: seconds
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: p95 of a row's commit in the experiment tables to its macro result's commit. The source row is found by its commit version, however old, so results recovered after an outage still count.
+
+  - num: 88
+    id: macro-backlog
+    name: Macro backlog
+    family: observability
+    area: path
+    source: dbx
+    phase: P2
+    active: true
+    slots: [exception]
+    signal:
+      namespace: OpenJII/Data
+      metric: MacroBacklogRows
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: Rows that need macros and have waited more than fifteen minutes without any result, however long ago they arrived. A failed macro still writes a result row, so this is zero in steady state.
+
+  - num: 89
+    id: ingest-idle
+    name: Since last ingest
+    family: observability
+    area: path
+    source: dbx
+    phase: P2
+    active: true
+    slots: [exception]
+    signal:
+      namespace: OpenJII/Data
+      metric: IngestIdleMinutes
+      stat: Maximum
+      unit: minutes
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: Minutes since bronze last wrote. Bronze only writes when data arrives, so it is a stall only beside messages still arriving.
+
+  - num: 90
+    id: macro-idle
+    name: Since last macro
+    family: observability
+    area: path
+    source: dbx
+    phase: P2
+    active: true
+    slots: [exception]
+    signal:
+      namespace: OpenJII/Data
+      metric: MacroIdleMinutes
+      stat: Maximum
+      unit: minutes
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    notes: Minutes since a macro result was last written.
+
+  - num: 91
+    id: rejected-publishes
+    name: Refused publishes
+    family: observability
+    area: path
+    source: aws
+    phase: P1
+    active: true
+    slots: [exception]
+    signal:
+      namespace: AWS/IoT
+      search: SEARCH('{AWS/IoT,Protocol} MetricName="PublishIn.AuthError" OR MetricName="PublishIn.ClientError" OR MetricName="PublishIn.ServerError" OR MetricName="PublishIn.Throttle"', 'Sum')
+      stat: Sum
+    notes: Publishes IoT Core refused, including payloads over its size limit.
+
+  - num: 92
+    id: rule-parse-errors
+    name: Parse errors
+    family: observability
+    area: path
+    source: aws
+    phase: P1
+    active: true
+    slots: [exception]
+    signal:
+      namespace: AWS/IoT
+      search: SEARCH('{AWS/IoT,RuleName} MetricName="ParseError"', 'Sum')
+      stat: Sum
+    notes: Messages an ingest rule could not parse, which it therefore never forwarded.
+
+  - num: 93
+    id: macro-run-time
+    name: Macro run time
+    family: observability
+    area: path
+    source: aws
+    phase: P1
+    active: true
+    slots: [exception]
+    signal:
+      namespace: AWS/Lambda
+      search: SEARCH('{AWS/Lambda,FunctionName} MetricName="Duration" AND (${MACRO_FUNCTION_FILTER})', 'p95')
+      stat: p95
+      unit: milliseconds
+    notes: p95 of one sandbox invocation, across the macro languages and calibration.
+
+  - num: 95
+    id: broker-to-api-latency
+    name: Broker to API
+    family: observability
+    area: latency
+    source: dbx
+    phase: P1
+    active: true
+    slots: [exception]
+    signal:
+      namespace: OpenJII/Data
+      metric: BrokerToApiP95Seconds
+      stat: Maximum
+      dimensions:
+        Environment: ${ENVIRONMENT}
+      unit: seconds
+    notes: >-
+      The slowest twentieth per half hour of the whole trip: the IoT broker receiving a message to
+      its row committing in the experiment table the API reads. Only rows that came through the
+      broker; imports and large payloads through S3 never pass it.
+
+  - num: 96
+    id: collector-failures
+    name: Collectors failing
+    family: observability
+    area: lakehouse
+    source: dbx
+    phase: P2
+    active: true
+    slots: [exception]
+    signal:
+      namespace: OpenJII/Data
+      metric: CollectorFailures
+      stat: Maximum
+      dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/collector-failures.md
+    notes: >-
+      How many of the heartbeat export's collectors raised on its latest run. Their series read No
+      data either way, and this tells a broken collector from a quiet table.

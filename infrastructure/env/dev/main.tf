@@ -1154,7 +1154,7 @@ module "metrics_heartbeat_export" {
         "CENTRAL_SCHEMA" = "centrum"
         "METRICS_SCHEMA" = "metrics"
         # Lowercase, unlike the other jobs: this value becomes the CloudWatch
-        # Environment dimension, which the catalog and composer query as-is.
+        # Environment dimension, which the catalog and Grafana query as-is.
         "ENVIRONMENT"        = var.environment
         "HEARTBEAT_LOCATION" = "s3://${module.heartbeat_metrics_s3.bucket_id}"
       }
@@ -2160,7 +2160,6 @@ module "migration_runner_ecs" {
   log_group_name     = "/aws/ecs/db-migration-runner-${var.environment}"
   log_retention_days = 30
 
-
   # Secrets configuration
   secrets = [
     {
@@ -2901,17 +2900,23 @@ module "grafana_dashboard" {
   environment = var.environment
 
   # Required attributes
-  server_function_name       = module.opennext.server_function_name
-  ecs_service_name           = module.backend_ecs.ecs_service_name
-  cloudfront_distribution_id = module.opennext.cloudfront_distribution_id
-  target_group_arn           = module.backend_alb.target_group_arn
-  load_balancer_arn          = module.backend_alb.alb_arn
-  ecs_cluster_name           = module.backend_ecs.ecs_cluster_name
-  slack_webhook_url          = var.slack_webhook_url
+  server_function_name           = module.opennext.server_function_name
+  ecs_service_name               = module.backend_ecs.ecs_service_name
+  cloudfront_distribution_id     = module.opennext.cloudfront_distribution_id
+  target_group_arn               = module.backend_alb.target_group_arn
+  load_balancer_arn              = module.backend_alb.alb_arn
+  ecs_cluster_name               = module.backend_ecs.ecs_cluster_name
+  slack_webhook_url              = var.slack_webhook_url
+  kinesis_shard_count            = module.kinesis.shard_count
+  payload_samples_log_group_name = module.iot_core.payload_samples_log_group_name
+  storage_buckets = {
+    "Raw payload archive"  = module.iot_raw_archive_s3.bucket_id
+    "Large payloads"       = module.large_iot_s3.bucket_id
+    "Databricks workspace" = "open-jii-databricks-root-bucket-${var.environment}"
+  }
 
   # Passed in rather than interpolated: a rule watching a misspelled function is NoData
   # forever, which is either permanently firing or permanently silent.
-  digest_composer_function_name   = module.digest_composer.function_name
   metrics_forwarder_function_name = module.metrics_forwarder.function_name
   db_cluster_identifier           = "open-jii-${var.environment}-db-cluster"
 
@@ -3014,30 +3019,6 @@ module "heartbeat_external_location" {
   }
 
   depends_on = [module.storage_credential]
-}
-
-module "digest_composer" {
-  source = "../../modules/monitoring/digest-composer"
-
-  aws_region  = var.aws_region
-  environment = var.environment
-
-  kinesis_stream_name        = module.kinesis.kinesis_stream_name
-  alb_arn                    = module.backend_alb.alb_arn
-  cloudfront_distribution_id = module.opennext.cloudfront_distribution_id
-  server_function_name       = module.opennext.server_function_name
-  macro_function_names = concat(
-    values(module.macro_sandbox.function_names),
-    [module.calibration_sandbox.function_name],
-  )
-  db_cluster_identifier = "open-jii-${var.environment}-db-cluster"
-
-  # Each digest links its own report, which is a dashboard generated from the same
-  # catalog entries the digest read.
-  grafana_endpoint = module.managed_grafana_workspace.amg_url
-
-  # The digests land beside every other alert, on the environment's one webhook.
-  slack_webhook_url = var.slack_webhook_url
 }
 
 module "aws_inspector" {
