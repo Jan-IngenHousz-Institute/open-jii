@@ -18,7 +18,7 @@ import { MATCHABLE_MEASUREMENT_COLUMNS } from "@repo/api/domains/experiment/meta
 import type { ExperimentMetadata } from "@repo/api/domains/experiment/metadata/experiment-metadata.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
-import { DialogFooter } from "@repo/ui/components/dialog";
+import { DialogBody, DialogFooter } from "@repo/ui/components/dialog";
 import { Input } from "@repo/ui/components/input";
 import { Label } from "@repo/ui/components/label";
 import {
@@ -210,20 +210,22 @@ export function MetadataEditView({
       onSubmit={(e) => {
         void handleSubmit(onSubmit)(e);
       }}
-      className="flex min-w-0 flex-col gap-4 pt-4"
+      className="flex min-h-0 min-w-0 flex-col gap-4 pt-4"
     >
       {!hasData ? (
-        <ImportDropZone
-          isDragging={isDragging}
-          isPasting={isPasting}
-          onUploadClick={() => fileInputRef.current?.click()}
-          onPasteClick={() => void handlePaste()}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-        />
+        <DialogBody>
+          <ImportDropZone
+            isDragging={isDragging}
+            isPasting={isPasting}
+            onUploadClick={() => fileInputRef.current?.click()}
+            onPasteClick={() => void handlePaste()}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+          />
+        </DialogBody>
       ) : (
-        <div className="min-w-0 space-y-4">
+        <DialogBody className="min-w-0 space-y-4">
           <div className="grid gap-2">
             <Label htmlFor="metadata-name">
               {t("uploadModal.metadata.nameLabel", { defaultValue: "Name" })}
@@ -293,7 +295,7 @@ export function MetadataEditView({
             <p className="text-destructive text-xs">{errors.identifierColumnId.message}</p>
           )}
 
-          <div className="grid gap-2">
+          <div className="relative grid gap-2">
             <Label htmlFor="metadata-match-target">
               {t("uploadModal.metadata.matchTargetLabel", {
                 defaultValue: "Match target",
@@ -358,7 +360,7 @@ export function MetadataEditView({
               <p className="text-destructive text-xs">{errors.experimentQuestionId.message}</p>
             )}
           </div>
-        </div>
+        </DialogBody>
       )}
 
       {/* A hidden file picker driven by the import button, never rendered

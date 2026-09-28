@@ -1,5 +1,5 @@
 import type * as ParseMetadataImport from "@/components/metadata-table/utils/parse-metadata-import";
-import { act, fireEvent, render, screen, waitFor } from "@/test/test-utils";
+import { act, fireEvent, render, screen, waitFor, within } from "@/test/test-utils";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -100,6 +100,9 @@ vi.mock("@repo/ui/components/button", () => ({
 }));
 
 vi.mock("@repo/ui/components/dialog", () => ({
+  DialogBody: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-body">{children}</div>
+  ),
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
@@ -452,6 +455,16 @@ describe("MetadataUploadStep", () => {
     it("explains how to choose the identifier column once data is imported", async () => {
       await loadData();
       expect(screen.getByText("uploadModal.metadata.identifierHint")).toBeInTheDocument();
+    });
+
+    it("keeps Save outside the scrolling body so it stays in view", async () => {
+      await loadData();
+      const body = screen.getByTestId("dialog-body");
+
+      expect(within(body).getByTestId("metadata-name")).toBeInTheDocument();
+      expect(within(body).getByTestId("metadata-table")).toBeInTheDocument();
+      expect(within(body).queryByText("uploadModal.metadata.saveMetadata")).not.toBeInTheDocument();
+      expect(getSaveButton()).toBeInTheDocument();
     });
 
     it("does not show the identifier hint on the empty drop zone", () => {
