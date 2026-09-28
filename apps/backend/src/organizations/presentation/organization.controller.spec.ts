@@ -115,6 +115,96 @@ describe("OrganizationController", () => {
       ]);
     });
 
+    it("applies an explicit sort instead of ownership ranking", async () => {
+      const owned = await testApp.createOrganization("Zulu Owned Lab", { visibility: "public" });
+      await testApp.addOrganizationMember(owned, ownerId, "owner");
+      await testApp.createOrganization("Alpha Public Lab", { visibility: "public" });
+
+      const response: SuperTestResponse<OrganizationDirectory> = await testApp
+        .get(path())
+        .query({ "sort[0][field]": "name", "sort[0][direction]": "asc" })
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.organizations.map((organization) => organization.name)).toEqual([
+        "Alpha Public Lab",
+        "Zulu Owned Lab",
+      ]);
+    });
+
+    it("sorts every directory field in both directions", async () => {
+      const alpha = await testApp.createOrganization("Alpha Lab", { visibility: "public" });
+      const bravo = await testApp.createOrganization("Bravo Lab", { visibility: "public" });
+      const charlie = await testApp.createOrganization("Charlie Lab", { visibility: "public" });
+
+      for (const organizationId of [alpha, bravo, charlie]) {
+        await testApp.addOrganizationMember(organizationId, ownerId, "owner");
+      }
+      await testApp.addOrganizationMember(bravo, memberId, "member");
+      await testApp.addOrganizationMember(charlie, memberId, "member");
+      await testApp.addOrganizationMember(charlie, outsiderId, "member");
+
+      await testApp.createWorkbook({
+        name: "Bravo resource",
+        createdBy: ownerId,
+        organizationId: bravo,
+        visibility: "public",
+      });
+      await testApp.createWorkbook({
+        name: "Charlie resource one",
+        createdBy: ownerId,
+        organizationId: charlie,
+        visibility: "public",
+      });
+      await testApp.createWorkbook({
+        name: "Charlie resource two",
+        createdBy: ownerId,
+        organizationId: charlie,
+        visibility: "public",
+      });
+
+      const repository = testApp.module.get(OrganizationRepository);
+      const expected = {
+        name: [alpha, bravo, charlie],
+        members: [alpha, bravo, charlie],
+        resources: [alpha, bravo, charlie],
+      } as const;
+
+      for (const field of ["name", "members", "resources"] as const) {
+        const ascending = await repository.listDirectory(ownerId, {
+          sort: [{ field, direction: "asc" }],
+        });
+        const descending = await repository.listDirectory(ownerId, {
+          sort: [{ field, direction: "desc" }],
+        });
+        assertSuccess(ascending);
+        assertSuccess(descending);
+
+        expect(ascending.value.organizations.map((organization) => organization.id)).toEqual(
+          expected[field],
+        );
+        expect(descending.value.organizations.map((organization) => organization.id)).toEqual(
+          [...expected[field]].reverse(),
+        );
+      }
+    });
+
+    it("uses the ID tie-breaker when count values are equal", async () => {
+      const first = await testApp.createOrganization("First Lab", { visibility: "public" });
+      const second = await testApp.createOrganization("Second Lab", { visibility: "public" });
+      await testApp.addOrganizationMember(first, ownerId, "owner");
+      await testApp.addOrganizationMember(second, ownerId, "owner");
+
+      const repository = testApp.module.get(OrganizationRepository);
+      const result = await repository.listDirectory(ownerId, {
+        sort: [{ field: "resources", direction: "asc" }],
+      });
+      assertSuccess(result);
+
+      const ids = result.value.organizations.map((organization) => organization.id);
+      expect(ids).toEqual([first, second].sort());
+    });
+
     it("reports a pending request so the CTA can render 'Requested'", async () => {
       const publicOrg = await seedPublicOrg();
       await testApp.addOrganizationJoinRequest(publicOrg, outsiderId);

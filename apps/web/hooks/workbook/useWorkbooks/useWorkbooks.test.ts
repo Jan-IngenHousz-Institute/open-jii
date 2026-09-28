@@ -67,6 +67,27 @@ describe("useWorkbooks", () => {
     expect(result.current.page).toBe(1);
   });
 
+  it("sends sorting and resets to the first page when sorting changes", async () => {
+    const spy = server.mount(contract.workbooks.listWorkbooks, {
+      body: envelope([], 1, 3),
+    });
+
+    const { result } = renderHook(() => useWorkbooks());
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    act(() => result.current.setPage(2));
+    act(() => result.current.toggleSort("usedBy", false));
+
+    expect(result.current.page).toBe(1);
+    await waitFor(() => {
+      expect(spy.calls.at(-1)?.query).toMatchObject({
+        page: "1",
+        "sort[0][field]": "usedBy",
+        "sort[0][direction]": "asc",
+      });
+    });
+  });
+
   it("clamps the page when the result set shrinks below it", async () => {
     const spy = server.mount(contract.workbooks.listWorkbooks, {
       body: envelope([], 1, 2),

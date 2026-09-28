@@ -188,6 +188,22 @@ describe("<ListOrganizations />", () => {
     expect(screen.getByRole("button", { name: "pagination.next" })).toBeDisabled();
   });
 
+  it("sorts the directory through the API before browser pagination", async () => {
+    mockSession({ id: "user-1" });
+    const spy = mountDirectory([
+      createOrganizationDirectoryEntry({ id: "org-a", name: "Alpha" }),
+      createOrganizationDirectoryEntry({ id: "org-b", name: "Bravo" }),
+    ]);
+    const user = userEvent.setup();
+    render(<ListOrganizations />);
+
+    await screen.findByText("Alpha");
+    await user.click(screen.getByRole("button", { name: /organizations.fields.name:/ }));
+    await waitFor(() => expect(spy.calls.at(-1)?.query["sort[0][field]"]).toBe("name"));
+    expect(spy.calls.at(-1)?.query["sort[0][direction]"]).toBe("asc");
+    expect(screen.getByRole("button", { name: "common.resetSorting" })).toBeInTheDocument();
+  });
+
   // jsdom cannot measure text, so the width itself was set from a browser
   // measurement: the placeholder needs 151px and w-56 left only 146px.
   it("gives the search box room for its own placeholder", () => {

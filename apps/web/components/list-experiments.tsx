@@ -3,7 +3,10 @@
 import { OverviewToolbar } from "@/components/overview-toolbar";
 import { ListPagination } from "~/components/list-pagination";
 import { getExperimentColumns } from "~/components/overview-table/experiment-columns";
-import { OverviewTable } from "~/components/overview-table/overview-table";
+import {
+  createOverviewTableSorting,
+  OverviewTable,
+} from "~/components/overview-table/overview-table";
 import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
 import { useLocale } from "~/hooks/useLocale";
 
@@ -53,7 +56,7 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
         filters={
           sort.length ? (
             <Button variant="outline" size="sm" onClick={() => setSort([])}>
-              {t("resetSorting")}
+              {t("common.resetSorting")}
             </Button>
           ) : undefined
         }
@@ -66,16 +69,12 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
       >
         <OverviewTable
           columns={getExperimentColumns(t, locale)}
-          sorting={{
-            state: sort.map(({ field, direction }) => ({ id: field, desc: direction === "desc" })),
-            onToggle: (field, multi) => toggleSort(field as (typeof sort)[number]["field"], multi),
-            labels: {
-              unsorted: t("sortUnsorted"),
-              asc: t("sortAscending"),
-              desc: t("sortDescending"),
-              secondary: t("sortSecondary"),
-            },
-          }}
+          sorting={createOverviewTableSorting(sort, toggleSort, {
+            unsorted: t("common.sortUnsorted"),
+            asc: t("common.sortAscending"),
+            desc: t("common.sortDescending"),
+            secondary: t("common.sortSecondary"),
+          })}
           items={data?.items}
           isLoading={isLoading}
           error={error}

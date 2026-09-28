@@ -10,7 +10,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { getExperimentColumns } from "./experiment-columns";
 import { getMacroColumns } from "./macro-columns";
 import { getOrganizationColumns } from "./organization-columns";
-import { OverviewTable } from "./overview-table";
+import { createOverviewTableSorting, OverviewTable } from "./overview-table";
 import type { OverviewTableColumn } from "./overview-table";
 import { getProtocolColumns } from "./protocol-columns";
 import { getWorkbookColumns } from "./workbook-columns";
@@ -126,6 +126,35 @@ describe("OverviewTable", () => {
     for (const cell of table.querySelectorAll("tbody td")) {
       expect(cell).toHaveClass("min-w-0", "overflow-hidden");
     }
+  });
+});
+
+describe("createOverviewTableSorting", () => {
+  it("maps server sort criteria to table state and forwards field toggles", () => {
+    const toggleSort = vi.fn();
+    const labels = {
+      unsorted: "Unsorted",
+      asc: "Ascending",
+      desc: "Descending",
+      secondary: "Secondary sort",
+    };
+    const sorting = createOverviewTableSorting(
+      [
+        { field: "usedBy", direction: "desc" },
+        { field: "name", direction: "asc" },
+      ],
+      toggleSort,
+      labels,
+    );
+
+    expect(sorting.state).toEqual([
+      { id: "usedBy", desc: true },
+      { id: "name", desc: false },
+    ]);
+    expect(sorting.labels).toBe(labels);
+
+    sorting.onToggle("name", true);
+    expect(toggleSort).toHaveBeenCalledWith("name", true);
   });
 });
 

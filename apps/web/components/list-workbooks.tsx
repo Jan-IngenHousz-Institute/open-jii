@@ -9,7 +9,10 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { ListPagination } from "~/components/list-pagination";
 import { OrganizationPicker } from "~/components/organizations/organization-picker";
-import { OverviewTable } from "~/components/overview-table/overview-table";
+import {
+  createOverviewTableSorting,
+  OverviewTable,
+} from "~/components/overview-table/overview-table";
 import { getWorkbookColumns } from "~/components/overview-table/workbook-columns";
 import { useWorkbooks } from "~/hooks/workbook/useWorkbooks/useWorkbooks";
 
@@ -47,6 +50,9 @@ export function ListWorkbooks() {
     setSearch,
     page,
     setPage,
+    sort,
+    setSort,
+    toggleSort,
   } = useWorkbooks({});
   const { t } = useTranslation(["workbook", "common"]);
   const router = useRouter();
@@ -90,6 +96,13 @@ export function ListWorkbooks() {
             className="w-full md:w-[220px]"
           />
         }
+        filters={
+          sort.length ? (
+            <Button variant="outline" size="sm" onClick={() => setSort([])}>
+              {t("common.resetSorting")}
+            </Button>
+          ) : undefined
+        }
       />
 
       <div
@@ -99,6 +112,12 @@ export function ListWorkbooks() {
       >
         <OverviewTable
           columns={getWorkbookColumns(t, locale)}
+          sorting={createOverviewTableSorting(sort, toggleSort, {
+            unsorted: t("common.sortUnsorted"),
+            asc: t("common.sortAscending"),
+            desc: t("common.sortDescending"),
+            secondary: t("common.sortSecondary"),
+          })}
           items={workbooks?.items}
           isLoading={isLoading}
           error={error}

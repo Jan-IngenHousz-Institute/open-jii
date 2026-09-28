@@ -201,7 +201,7 @@ describe("ListExperiments", () => {
     render(<ListExperiments />);
 
     await screen.findByRole("link", { name: "Exp 1" });
-    expect(screen.queryByRole("button", { name: "resetSorting" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "common.resetSorting" })).toBeNull();
     await user.click(screen.getByRole("button", { name: /columns.name:/ }));
     await waitFor(() => expect(spy.calls.at(-1)?.query["sort[0][field]"]).toBe("name"));
     expect(screen.getByRole("button", { name: /columns.name:/ }).closest("th")).toHaveAttribute(
@@ -212,13 +212,13 @@ describe("ListExperiments", () => {
     await user.click(screen.getByRole("button", { name: /columns.status:/ }));
     await user.keyboard("{/Shift}");
     expect(
-      screen.getByRole("button", { name: /columns.status:.*sortSecondary/ }),
+      screen.getByRole("button", { name: /columns.status:.*common.sortSecondary/ }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /columns.status:/ }).closest("th"),
     ).not.toHaveAttribute("aria-sort");
 
-    await user.click(screen.getByRole("button", { name: "resetSorting" }));
+    await user.click(screen.getByRole("button", { name: "common.resetSorting" }));
     await waitFor(() => expect(spy.calls.at(-1)?.query.sort).toBeUndefined());
   });
 
@@ -237,7 +237,7 @@ describe("ListExperiments", () => {
       "sort[0][field]": "updated",
       "sort[0][direction]": "desc",
     });
-    expect(screen.getByRole("button", { name: "resetSorting" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "common.resetSorting" })).toBeInTheDocument();
   });
 
   it("hides pagination when the collection is empty", async () => {

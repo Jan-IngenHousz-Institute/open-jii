@@ -1,6 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import type { OrganizationDirectory } from "@repo/api/domains/organization/organization.schema";
+import type {
+  OrganizationDirectory,
+  OrganizationSort,
+} from "@repo/api/domains/organization/organization.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 
 import { Result } from "../../../../common/utils/fp-utils";
@@ -29,7 +32,7 @@ export class ListOrganizationsUseCase {
 
   async execute(
     userId: string,
-    params: { search?: string; scope?: ResourceScope },
+    params: { search?: string; scope?: ResourceScope; sort?: OrganizationSort },
   ): Promise<Result<OrganizationDirectory>> {
     this.logger.log({
       msg: "Listing the organization directory",

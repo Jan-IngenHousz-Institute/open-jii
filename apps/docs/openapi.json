@@ -29549,6 +29549,46 @@
             },
             "allowEmptyValue": true,
             "allowReserved": true
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "field": {
+                    "enum": [
+                      "name",
+                      "members",
+                      "resources"
+                    ],
+                    "type": "string"
+                  },
+                  "direction": {
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "field",
+                  "direction"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 2,
+              "description": "Up to two ordered sort criteria"
+            },
+            "style": "deepObject",
+            "explode": true,
+            "allowEmptyValue": true,
+            "allowReserved": true,
+            "description": "Up to two ordered sort criteria. Encode as sort[0][field]=name&sort[0][direction]=asc (and sort[1] for a secondary criterion).",
+            "example": "sort[0][field]=members&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc"
           }
         ],
         "responses": {
@@ -36315,6 +36355,47 @@
             },
             "allowEmptyValue": true,
             "allowReserved": true
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "field": {
+                    "enum": [
+                      "name",
+                      "usedBy",
+                      "user",
+                      "updated"
+                    ],
+                    "type": "string"
+                  },
+                  "direction": {
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "field",
+                  "direction"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 2,
+              "description": "Up to two ordered sort criteria"
+            },
+            "style": "deepObject",
+            "explode": true,
+            "allowEmptyValue": true,
+            "allowReserved": true,
+            "description": "Up to two ordered sort criteria. Encode as sort[0][field]=name&sort[0][direction]=asc (and sort[1] for a secondary criterion).",
+            "example": "sort[0][field]=usedBy&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc"
           },
           {
             "name": "page",

@@ -2,6 +2,7 @@ import { ANONYMOUS_PRINCIPAL, withPrincipal } from "@/hooks/principal-query-key"
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 
+import type { OrganizationSort } from "@repo/api/domains/organization/organization.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 import { useSession } from "@repo/auth/client";
 
@@ -14,7 +15,7 @@ import { useSession } from "@repo/auth/client";
  * Unpaged: the endpoint returns every match.
  */
 export const useOrganizations = (
-  params: { search?: string; scope?: ResourceScope } = {},
+  params: { search?: string; scope?: ResourceScope; sort?: OrganizationSort } = {},
   options?: { enabled?: boolean },
 ) => {
   const { data: session, isPending: isSessionPending } = useSession();
@@ -25,6 +26,7 @@ export const useOrganizations = (
     // An empty box is "no filter", not a search for the empty string.
     search: search === "" ? undefined : search,
     scope: params.scope,
+    sort: params.sort?.length ? params.sort : undefined,
   };
 
   return useQuery(

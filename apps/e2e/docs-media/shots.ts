@@ -34,6 +34,11 @@ export interface Shot {
 
 const settle = (page: Page, ms = 900) => page.waitForTimeout(ms);
 
+async function sortNameAscending(page: Page): Promise<void> {
+  await page.locator('button[aria-label="Name: unsorted"]').click();
+  await page.locator('th[aria-sort="ascending"]').first().waitFor();
+}
+
 /** Clicks a control by accessible name whether it renders as a link or a button. */
 async function activate(page: Page, name: RegExp): Promise<void> {
   await page.getByRole("button", { name }).or(page.getByRole("link", { name })).first().click();
@@ -107,7 +112,8 @@ export const SHOTS: readonly Shot[] = [
     publish: "img/guide/web/experiments-list.webp",
     frame: "desktop",
     route: "/platform/experiments",
-    scope: "Experiments overview: search, contextual header actions, bordered fixed-layout table",
+    prepare: sortNameAscending,
+    scope: "Experiments overview with the Name column sorted ascending",
   },
   {
     slug: "create-experiment-entry",
@@ -121,7 +127,16 @@ export const SHOTS: readonly Shot[] = [
     publish: "img/guide/web/organizations-list.webp",
     frame: "desktop",
     route: "/platform/organizations",
-    scope: "Ownership-ranked Organizations overview with member and resource counts",
+    prepare: sortNameAscending,
+    scope: "Organizations overview with the Name column sorted ascending",
+  },
+  {
+    slug: "workbooks-list",
+    publish: "img/guide/web/workbooks-list.webp",
+    frame: "desktop",
+    route: "/platform/workbooks",
+    prepare: sortNameAscending,
+    scope: "Workbooks overview with the Name column sorted ascending",
   },
   {
     slug: "report-issue",

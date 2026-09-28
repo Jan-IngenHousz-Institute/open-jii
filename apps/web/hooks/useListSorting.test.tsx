@@ -25,7 +25,7 @@ describe("useListSorting", () => {
     expect(replace.mock.calls.at(-1)?.[0]).not.toContain("sort=");
   });
 
-  it("adds a second, toggles it in place, then replaces the oldest on a third", () => {
+  it("adds a second and toggles or removes it in place", () => {
     const { result } = renderHook(() => useListSorting(zExperimentSort));
     act(() => result.current.toggleSort("name", false));
     act(() => result.current.toggleSort("status", true));
@@ -37,8 +37,18 @@ describe("useListSorting", () => {
     ]);
     act(() => result.current.toggleSort("name", true));
     expect(result.current.sort).toEqual([{ field: "status", direction: "asc" }]);
+  });
+
+  it("replaces the oldest criterion when shift-clicking a third field", () => {
+    const { result } = renderHook(() => useListSorting(zExperimentSort));
+    act(() => result.current.toggleSort("name", false));
+    act(() => result.current.toggleSort("status", true));
     act(() => result.current.toggleSort("owner", true));
-    expect(result.current.sort.map((item) => item.field)).toEqual(["status", "owner"]);
+
+    expect(result.current.sort).toEqual([
+      { field: "status", direction: "asc" },
+      { field: "owner", direction: "asc" },
+    ]);
   });
 
   it("starts empty when the URL has no sort or malformed sort JSON", () => {

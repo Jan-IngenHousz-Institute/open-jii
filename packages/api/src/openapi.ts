@@ -27,17 +27,29 @@ async function generate() {
   // oRPC represents nested query objects as deepObject parameters, while the
   // HTTP adapter accepts the indexed bracket form used by the clients. Keep
   // that wire format explicit in the published document for generated clients.
-  const experimentList = openApiDocument.paths?.["/api/v1/experiments"] as
-    | { get?: { parameters?: Record<string, unknown>[] } }
-    | undefined;
-  const sortParameter = experimentList?.get?.parameters?.find(
-    (parameter) => parameter.name === "sort",
-  );
-  if (sortParameter) {
-    sortParameter.description =
-      "Up to two ordered sort criteria. Encode as sort[0][field]=name&sort[0][direction]=asc (and sort[1] for a secondary criterion).";
-    sortParameter.example =
-      "sort[0][field]=updated&sort[0][direction]=desc&sort[1][field]=owner&sort[1][direction]=asc";
+  for (const [path, example] of [
+    [
+      "/api/v1/experiments",
+      "sort[0][field]=updated&sort[0][direction]=desc&sort[1][field]=owner&sort[1][direction]=asc",
+    ],
+    [
+      "/api/v1/organizations",
+      "sort[0][field]=members&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc",
+    ],
+    [
+      "/api/v1/workbooks",
+      "sort[0][field]=usedBy&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc",
+    ],
+  ] as const) {
+    const list = openApiDocument.paths?.[path] as
+      | { get?: { parameters?: Record<string, unknown>[] } }
+      | undefined;
+    const sortParameter = list?.get?.parameters?.find((parameter) => parameter.name === "sort");
+    if (sortParameter) {
+      sortParameter.description =
+        "Up to two ordered sort criteria. Encode as sort[0][field]=name&sort[0][direction]=asc (and sort[1] for a secondary criterion).";
+      sortParameter.example = example;
+    }
   }
 
   const outputDir = path.resolve(__dirname, "../dist");

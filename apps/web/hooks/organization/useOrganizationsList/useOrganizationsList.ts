@@ -6,7 +6,10 @@ import { useSearchPending } from "@/hooks/useSearchPending";
 import { useUrlState } from "@/hooks/useUrlState";
 import { useEffect, useState } from "react";
 
+import { zOrganizationSort } from "@repo/api/domains/organization/organization.schema";
 import type { OrganizationVisibility } from "@repo/api/domains/organization/organization.schema";
+
+import { useListSorting } from "../../useListSorting";
 
 /** One organization row, whichever slice of the listing produced it. */
 export interface OrganizationListItem {
@@ -35,6 +38,7 @@ export function useOrganizationsList() {
   });
   const [page, setPage] = useState(1);
   const [debouncedSearch] = useDebounce(search);
+  const { sort, setSort, toggleSort } = useListSorting(zOrganizationSort);
 
   const setSearch = (value: string) => {
     setSearchState(value);
@@ -44,6 +48,7 @@ export function useOrganizationsList() {
   const directory = useOrganizations({
     search: debouncedSearch,
     scope: "all",
+    sort,
   });
   const isSearchPending = useSearchPending({
     search,
@@ -92,5 +97,14 @@ export function useOrganizationsList() {
     page: currentPage,
     totalPages,
     setPage,
+    sort,
+    setSort: (next: typeof sort) => {
+      setSort(next);
+      setPage(1);
+    },
+    toggleSort: (field: (typeof sort)[number]["field"], multi: boolean) => {
+      toggleSort(field, multi);
+      setPage(1);
+    },
   };
 }

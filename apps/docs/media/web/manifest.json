@@ -21,7 +21,8 @@
       "Next.js and TanStack Query development overlays are suppressed by the capture tool; a production build renders none of them.",
       "The sign-out toast on the last-used-badge shot is closed through its own control rather than hidden with CSS.",
       "The dashboard and shell frames include CMS blog cards, one of whose artwork is a screenshot of the pre-refresh dashboard. That is Contentful content and out of scope here.",
-      "experiment-devices (captured 2026-09-03): the roster comes from a local experiment whose id mirrors a dev-lakehouse experiment with published Ambyte data, so the measurement counts are real dev data; device names are local labels and the client ids are dev gateway MAC addresses, not personal data. The iot-devices flag is pinned in the browser by the capture tool (see featureFlags in shots.ts); the backend evaluated the real flag."
+      "experiment-devices (captured 2026-09-03): the roster comes from a local experiment whose id mirrors a dev-lakehouse experiment with published Ambyte data, so the measurement counts are real dev data; device names are local labels and the client ids are dev gateway MAC addresses, not personal data. The iot-devices flag is pinned in the browser by the capture tool (see featureFlags in shots.ts); the backend evaluated the real flag.",
+      "experiments-list, organizations-list and workbooks-list were recaptured on 2026-09-28 at 1920x1200 from the local stack with the seeded development identity; each shows Name sorted ascending. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp. The Experiments shot includes the current data-processing status banner."
     ]
   },
   "assets": [
@@ -42,10 +43,10 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 135970,
-      "sha256": "6f275d76c879e44f848090a76ff2b9f81325e1b68d57008b73025c24c54d4109",
+      "bytes": 68106,
+      "sha256": "9227c0ebc9cbbdeffa4e266d0f7be55237068fd5bc6375200c4879dbd9578414",
       "disposition": "published",
-      "scope": "Experiments overview: search, contextual header actions, bordered fixed-layout table"
+      "scope": "Experiments overview with the Name column sorted ascending"
     },
     {
       "path": "/img/guide/web/create-experiment-entry.webp",
@@ -70,15 +71,26 @@
       "scope": "Details step of the four-step create-experiment wizard"
     },
     {
+      "path": "/img/guide/web/workbooks-list.webp",
+      "slug": "workbooks-list",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 42660,
+      "sha256": "43ed37756f9dd2b856af33fd29f2018d5d62bcce05d4a56c13196d3394a5cd59",
+      "disposition": "published",
+      "scope": "Workbooks overview with the Name column sorted ascending"
+    },
+    {
       "path": "/img/guide/web/organizations-list.webp",
       "slug": "organizations-list",
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 69790,
-      "sha256": "5e47bc069f7c6d70ef3d3cfa69c7d9db18870e0a2b2b88c8327b2fd57f912ae3",
+      "bytes": 37152,
+      "sha256": "6799b7cc2a6184e08f89cc0a1403d9ca14277d0f441f73c339f0cc1ba6820b8c",
       "disposition": "published",
-      "scope": "Ownership-ranked Organizations overview with member and resource counts"
+      "scope": "Organizations overview with the Name column sorted ascending"
     },
     {
       "path": "/img/guide/web/organization-create-visibility.webp",

@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 
 import { ORGANIZATION_TYPE_SEARCH_ALIASES } from "@repo/api/domains/organization/organization.schema";
+import type { OrganizationSort } from "@repo/api/domains/organization/organization.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 import {
   and,
@@ -383,7 +384,7 @@ export class OrganizationRepository {
    */
   async listDirectory(
     userId: string,
-    params: { search?: string; scope?: ResourceScope },
+    params: { search?: string; scope?: ResourceScope; sort?: OrganizationSort },
   ): Promise<Result<{ organizations: OrganizationDirectoryEntryDto[] }>> {
     return tryCatch(async () => {
       const isMember = this.membershipExists(userId);
@@ -410,6 +411,23 @@ export class OrganizationRepository {
         params.scope === "related" ? isMember : undefined,
       );
 
+      const sortFields = {
+        name: organizations.name,
+        members: memberCountSql(),
+        resources: resourceCountSql(this.database, userId),
+      };
+      const orderBy = params.sort?.length
+        ? [
+            ...params.sort.map(
+              ({ field, direction }) =>
+                sql`${direction === "asc" ? asc(sortFields[field]) : desc(sortFields[field])} nulls last`,
+            ),
+            asc(organizations.id),
+          ]
+        : params.search
+          ? [desc(score), asc(organizations.id)]
+          : [desc(ownershipTier), asc(organizations.name), asc(organizations.id)];
+
       const rows = await this.database
         .select({
           id: organizations.id,
@@ -432,14 +450,7 @@ export class OrganizationRepository {
         })
         .from(organizations)
         .where(where)
-        // The unified product surface replaces separate "mine" and "all" views:
-        // ownership therefore leads the browse order. Search already folds the same
-        // tier into its relevance score. Stable tie-breakers keep both modes predictable.
-        .orderBy(
-          ...(params.search
-            ? [desc(score), asc(organizations.id)]
-            : [desc(ownershipTier), asc(organizations.name), asc(organizations.id)]),
-        );
+        .orderBy(...orderBy);
 
       return { organizations: rows };
     });

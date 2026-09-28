@@ -44,10 +44,36 @@ interface OverviewTableProps<T extends RowData> {
   getRowHref: (item: T) => string;
   emptyMessage: string;
   emptyHelpPath?: string;
-  sorting?: {
-    state: SortingState;
-    onToggle: (field: string, multi: boolean) => void;
-    labels: { unsorted: string; asc: string; desc: string; secondary: string };
+  sorting?: OverviewTableSorting;
+}
+
+export interface OverviewTableSortItem {
+  field: string;
+  direction: "asc" | "desc";
+}
+
+export interface OverviewTableSortLabels {
+  unsorted: string;
+  asc: string;
+  desc: string;
+  secondary: string;
+}
+
+export interface OverviewTableSorting {
+  state: SortingState;
+  onToggle: (field: string, multi: boolean) => void;
+  labels: OverviewTableSortLabels;
+}
+
+export function createOverviewTableSorting<T extends OverviewTableSortItem>(
+  sort: readonly T[],
+  toggleSort: (field: T["field"], multi: boolean) => void,
+  labels: OverviewTableSortLabels,
+): OverviewTableSorting {
+  return {
+    state: sort.map(({ field, direction }) => ({ id: field, desc: direction === "desc" })),
+    onToggle: (field, multi) => toggleSort(field, multi),
+    labels,
   };
 }
 
@@ -176,7 +202,7 @@ export function OverviewTable<T extends RowData>({
                     {header.isPlaceholder ? null : sorting && header.column.getCanSort() ? (
                       <button
                         type="button"
-                        className="hover:text-foreground inline-flex items-center gap-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2"
+                        className="hover:text-foreground inline-flex items-center gap-1 text-left uppercase focus-visible:outline-2 focus-visible:outline-offset-2"
                         aria-label={`${meta.label ?? header.column.id}: ${sorting.labels[header.column.getIsSorted() || "unsorted"]}${header.column.getSortIndex() > 0 ? `, ${sorting.labels.secondary}` : ""}`}
                         onClick={(event) => sorting.onToggle(header.column.id, event.shiftKey)}
                       >

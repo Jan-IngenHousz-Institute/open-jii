@@ -139,6 +139,11 @@ async function preparePage(page: Page, theme: Options["theme"], freeze: boolean)
   await page.addStyleTag({ content: DEV_CHROME_CSS });
   if (freeze) await page.addStyleTag({ content: STILLNESS_CSS });
   await dismissCookieBanner(page);
+  const passkeyPromptDismissal = page.getByRole("button", { name: "Not now" });
+  if (await passkeyPromptDismissal.isVisible().catch(() => false)) {
+    await passkeyPromptDismissal.click();
+    await passkeyPromptDismissal.waitFor({ state: "hidden" });
+  }
   await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
   await page.waitForTimeout(400);
 }
