@@ -1,4 +1,4 @@
-import { eq, macros, protocolMacros } from "@repo/database";
+import { eq, macros, protocolMacros, sql } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -98,6 +98,18 @@ describe("MacroRepository explicit sorting", () => {
         `${field} descending`,
       ).toEqual([...expected[field]].reverse());
     }
+  });
+
+  it("can use an index for the protocol-count sort lookup", async () => {
+    const plan = await testApp.database.transaction(async (transaction) => {
+      await transaction.execute(sql`SET LOCAL enable_seqscan = off`);
+      return transaction.execute(sql`
+        EXPLAIN (FORMAT JSON)
+        SELECT count(*) FROM protocol_macros WHERE macro_id = ${crypto.randomUUID()}::uuid
+      `);
+    });
+
+    expect(JSON.stringify(plan)).toContain("protocol_macros_macro_id_idx");
   });
 
   it("applies a secondary sort within ties of the first", async () => {
