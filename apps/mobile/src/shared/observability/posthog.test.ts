@@ -104,6 +104,17 @@ describe("getPostHogClient", () => {
     );
 
     expect(survivors).toEqual([null, null]);
+    expect(constructed[0]).toMatchObject({
+      errorTracking: { autocapture: { nativeCrashes: false } },
+    });
+  });
+
+  it("reports native crashes from a release build", () => {
+    getPostHogClient();
+
+    expect(constructed[0]).toMatchObject({
+      errorTracking: { autocapture: { nativeCrashes: true } },
+    });
   });
 
   it("reports error log lines through the log sink rather than console autocapture", () => {

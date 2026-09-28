@@ -84,8 +84,9 @@ export function getPostHogClient(): PostHog {
         unhandledRejections: true,
         console: [],
         // Crashes in native code, such as the USB serial and Bluetooth modules, through
-        // @posthog/react-native-plugin.
-        nativeCrashes: true,
+        // @posthog/react-native-plugin. The native SDK sends these itself, past before_send, so a
+        // development build leaves them off.
+        nativeCrashes: !isDevelopmentBuild(),
       },
     },
     logs: { serviceName: "mobile" },
