@@ -40,9 +40,9 @@ export class AnalyticsAdapter implements AnalyticsPort {
    * @returns Whether the flag is enabled
    */
   async isFeatureFlagEnabled(flagKey: FeatureFlagKey, user: FlagUser): Promise<boolean> {
-    // Matches the web client's identity once the user accepts cookies. Before that the browser
-    // evaluates cookieless and without the email, so only 0% and 100% rollouts and organization
-    // conditions agree between the two.
+    // The same person the web server checks. The browser identifies users by id once they accept
+    // cookies and evaluates cookieless before that, so only 0% and 100% rollouts and organization
+    // conditions always agree between the browser and the servers.
     const distinctId = user.email || user.id;
 
     // Unconfigured, FlagsService answers every flag with its default, so the lookup would be wasted.

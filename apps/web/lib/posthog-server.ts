@@ -91,9 +91,9 @@ const fetchMyOrganizationIds = cache(async () => {
 });
 
 /**
- * Check a feature flag for this request's signed-in session, as the same person the browser and the
- * backend evaluate. The memberships are read with the request's own cookie, so pass only the
- * session this request resolved.
+ * Check a feature flag for this request's signed-in session, as the same person the backend
+ * evaluates. The memberships are read with the request's own cookie, so pass only the session this
+ * request resolved.
  */
 export async function isFeatureFlagEnabledForSession(
   flagKey: FeatureFlagKey,

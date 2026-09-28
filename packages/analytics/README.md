@@ -80,23 +80,29 @@ Every flag evaluation for a signed-in user carries `organization_ids`, the ids o
 they belong to, comma-joined (`flagPersonProperties`). PostHog evaluates with it without storing it,
 so organisation targeting applies before the user accepts analytics cookies. The browser adds the
 user's `email` only once they accept, and only then are the properties also stored on their PostHog
-person; backend checks always send the email. Evaluations record no `$feature_flag_called` events,
-so checking a flag never creates a person. To turn a flag on for an organisation's members:
+person; server checks always send the email. Evaluations record no `$feature_flag_called` events,
+so checking a flag never creates a person.
+
+Flags are code in `infrastructure/modules/posthog/flags.json`, so a rollout change is a pull request
+(see that module's README). To turn a flag on for an organisation's members:
 
 1. In openJII, open the organisation and copy its id from the address bar:
    `/platform/organizations/<id>`.
-2. In PostHog, open the flag and add a release condition set: person property `organization_ids`,
-   operator "contains", the id as the value, rollout 100%. "is any of" never matches this property.
-3. Condition sets are OR'd, so each further organisation gets its own set.
+2. In `flags.json`, add a group to the flag's `filters.groups`:
+   `{ "properties": [{ "key": "organization_ids", "type": "person", "value": "<id>", "operator": "icontains" }], "rollout_percentage": 100 }`.
+   `icontains` is PostHog's "contains"; `exact` ("is any of") never matches this property.
+3. Groups are OR'd, so each further organisation gets its own group.
 
-Members get the flag on their next page load, and backend checks follow within a minute. Adding
-someone to the organisation in openJII puts them in the rollout.
+The change goes live when its pull request merges. Members then get the flag on their next page
+load, and backend checks follow within a minute. Adding someone to the organisation in openJII puts
+them in the rollout.
 
-Until a user accepts analytics cookies, the browser evaluates flags under a cookieless id and
-without their email, while the web server and the backend use the email. Only `organization_ids`
-conditions and plain 0% or 100% rollouts give both sides the same answer for them. A condition on
-`email`, or a rollout between 1% and 99%, can show an action in the browser that the backend then
-refuses, or hide one it would allow.
+The browser identifies a user by id once they accept analytics cookies and evaluates under a
+cookieless id before that, while the web server and the backend evaluate under their email. Only
+`organization_ids` conditions and plain 0% or 100% rollouts give the browser and the servers the
+same answer. A rollout between 1% and 99% can show an action in the browser that the backend then
+refuses, or hide one it would allow, and so can a condition on `email` until the user accepts
+cookies.
 
 ## Available Feature Flags
 
