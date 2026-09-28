@@ -28,7 +28,7 @@ export function MetadataUploadModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px]">
+      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-[700px]">
         <DialogHeader>
           <DialogTitle>{t("uploadModal.metadata.title")}</DialogTitle>
           <DialogDescription>{t("uploadModal.metadata.description")}</DialogDescription>

@@ -273,6 +273,9 @@ export function MetadataEditView({
             </div>
           )}
 
+          <p className="text-muted-foreground text-xs">
+            {t("uploadModal.metadata.identifierHint")}
+          </p>
           <div className="overflow-x-auto">
             <MetadataTable
               columns={columns}

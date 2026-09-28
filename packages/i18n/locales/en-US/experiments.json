@@ -417,6 +417,7 @@
       "rowCount_other": "{{count}} rows imported",
       "replaceData": "Replace Data",
       "clearData": "Clear Data",
+      "identifierHint": "To choose the identifier column, open the ⋯ menu in its header and select \"Set as identifier\". Its values are matched against the match target below.",
       "columnsTruncated_one": "{{columns}} and {{count}} more",
       "columnsTruncated_other": "{{columns}} and {{count}} more",
       "saveMetadata": "Save Metadata",
