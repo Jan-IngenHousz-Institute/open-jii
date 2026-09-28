@@ -2,7 +2,10 @@
 
 import { ListPagination } from "@/components/list-pagination";
 import { getOrganizationColumns } from "@/components/overview-table/organization-columns";
-import { OverviewTable } from "@/components/overview-table/overview-table";
+import {
+  createOverviewTableSorting,
+  OverviewTable,
+} from "@/components/overview-table/overview-table";
 import { OverviewToolbar } from "@/components/overview-toolbar";
 import { useOrganizationsList } from "@/hooks/organization/useOrganizationsList/useOrganizationsList";
 import { useLocale } from "@/hooks/useLocale";
@@ -72,16 +75,12 @@ export function ListOrganizations() {
       >
         <OverviewTable
           columns={getOrganizationColumns(t)}
-          sorting={{
-            state: sort.map(({ field, direction }) => ({ id: field, desc: direction === "desc" })),
-            onToggle: (field, multi) => toggleSort(field as (typeof sort)[number]["field"], multi),
-            labels: {
-              unsorted: t("common.sortUnsorted"),
-              asc: t("common.sortAscending"),
-              desc: t("common.sortDescending"),
-              secondary: t("common.sortSecondary"),
-            },
-          }}
+          sorting={createOverviewTableSorting(sort, toggleSort, {
+            unsorted: t("common.sortUnsorted"),
+            asc: t("common.sortAscending"),
+            desc: t("common.sortDescending"),
+            secondary: t("common.sortSecondary"),
+          })}
           items={isError ? undefined : organizations}
           isLoading={isPending}
           error={error}

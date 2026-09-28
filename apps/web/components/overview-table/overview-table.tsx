@@ -44,10 +44,36 @@ interface OverviewTableProps<T extends RowData> {
   getRowHref: (item: T) => string;
   emptyMessage: string;
   emptyHelpPath?: string;
-  sorting?: {
-    state: SortingState;
-    onToggle: (field: string, multi: boolean) => void;
-    labels: { unsorted: string; asc: string; desc: string; secondary: string };
+  sorting?: OverviewTableSorting;
+}
+
+export interface OverviewTableSortItem {
+  field: string;
+  direction: "asc" | "desc";
+}
+
+export interface OverviewTableSortLabels {
+  unsorted: string;
+  asc: string;
+  desc: string;
+  secondary: string;
+}
+
+export interface OverviewTableSorting {
+  state: SortingState;
+  onToggle: (field: string, multi: boolean) => void;
+  labels: OverviewTableSortLabels;
+}
+
+export function createOverviewTableSorting<T extends OverviewTableSortItem>(
+  sort: readonly T[],
+  toggleSort: (field: T["field"], multi: boolean) => void,
+  labels: OverviewTableSortLabels,
+): OverviewTableSorting {
+  return {
+    state: sort.map(({ field, direction }) => ({ id: field, desc: direction === "desc" })),
+    onToggle: (field, multi) => toggleSort(field as T["field"], multi),
+    labels,
   };
 }
 

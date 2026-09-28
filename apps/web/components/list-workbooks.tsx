@@ -9,7 +9,10 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { ListPagination } from "~/components/list-pagination";
 import { OrganizationPicker } from "~/components/organizations/organization-picker";
-import { OverviewTable } from "~/components/overview-table/overview-table";
+import {
+  createOverviewTableSorting,
+  OverviewTable,
+} from "~/components/overview-table/overview-table";
 import { getWorkbookColumns } from "~/components/overview-table/workbook-columns";
 import { useWorkbooks } from "~/hooks/workbook/useWorkbooks/useWorkbooks";
 
@@ -109,16 +112,12 @@ export function ListWorkbooks() {
       >
         <OverviewTable
           columns={getWorkbookColumns(t, locale)}
-          sorting={{
-            state: sort.map(({ field, direction }) => ({ id: field, desc: direction === "desc" })),
-            onToggle: (field, multi) => toggleSort(field as (typeof sort)[number]["field"], multi),
-            labels: {
-              unsorted: t("common.sortUnsorted"),
-              asc: t("common.sortAscending"),
-              desc: t("common.sortDescending"),
-              secondary: t("common.sortSecondary"),
-            },
-          }}
+          sorting={createOverviewTableSorting(sort, toggleSort, {
+            unsorted: t("common.sortUnsorted"),
+            asc: t("common.sortAscending"),
+            desc: t("common.sortDescending"),
+            secondary: t("common.sortSecondary"),
+          })}
           items={workbooks?.items}
           isLoading={isLoading}
           error={error}
