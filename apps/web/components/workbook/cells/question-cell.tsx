@@ -185,8 +185,8 @@ export function QuestionCellComponent({
   return (
     <>
       <Dialog open={isAnswering} onOpenChange={(open) => !open && handleCancelAnswer()}>
-        <DialogContent className="border-border gap-0 overflow-hidden rounded-xl p-0 sm:max-w-md">
-          <div className="from-primary to-primary/80 shrink-0 bg-gradient-to-br px-6 py-5">
+        <DialogContent className="border-border gap-0 rounded-xl p-0 sm:max-w-md">
+          <div className="from-primary to-primary/80 shrink-0 rounded-t-xl bg-gradient-to-br px-6 py-5">
             <div className="flex items-start gap-3">
               <div className="bg-primary-foreground/15 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full">
                 {question.kind === "yes_no" && (
@@ -303,7 +303,7 @@ export function QuestionCellComponent({
             )}
           </DialogBody>
 
-          <div className="border-border bg-muted flex shrink-0 items-center justify-end gap-2 border-t px-6 py-3">
+          <div className="border-border bg-muted flex shrink-0 items-center justify-end gap-2 rounded-b-xl border-t px-6 py-3">
             <Button
               variant="ghost"
               size="sm"

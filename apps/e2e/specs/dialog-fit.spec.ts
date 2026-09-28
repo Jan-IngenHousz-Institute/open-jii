@@ -120,6 +120,7 @@ for (const screen of screens) {
       const lastOption = dialog.getByRole("button", { name: "Plot 60", exact: true });
       await lastOption.scrollIntoViewIfNeeded();
       await lastOption.click();
+      await expect(dialog.getByRole("button", { name: "Submit" })).toBeInViewport({ ratio: 1 });
       await expect(dialog.getByRole("button", { name: "Submit" })).toBeEnabled();
       await dialog.getByRole("button", { name: "Cancel" }).click();
       await expect(dialog).not.toBeVisible();
