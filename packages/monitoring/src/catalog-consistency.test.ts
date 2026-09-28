@@ -511,6 +511,18 @@ describe("catalog and grafana rules cannot drift", () => {
     // Every assertion above is vacuously true if the regex stops matching.
     expect(alertRules().length).toBeGreaterThan(5);
   });
+
+  it("keeps a rule query that fills gaps with FILL in builder mode", () => {
+    // Outside builder mode Grafana sends FILL(m1, 0) as a math query on itself, CloudWatch
+    // refuses the circular reference, and the rule reads no data forever without an error.
+    const queries = [...grafanaRules.matchAll(/model = jsonencode\(\{([\s\S]*?)\n\s*\}\)/g)].map(
+      ([, body]) => body,
+    );
+    const filled = queries.filter((body) => body.includes('"FILL('));
+
+    expect(filled.length).toBeGreaterThan(5);
+    expect(filled.filter((body) => !/metricEditorMode\s*=\s*0/.test(body))).toEqual([]);
+  });
 });
 
 describe("the report dashboards", () => {

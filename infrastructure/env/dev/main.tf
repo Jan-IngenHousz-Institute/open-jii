@@ -2923,9 +2923,9 @@ module "grafana_dashboard" {
   metrics_forwarder_function_name = module.metrics_forwarder.function_name
   db_cluster_identifier           = "open-jii-${var.environment}-db-cluster"
 
-  # Measured over 14 days on this stream: the median iterator age is 2.8M ms and the
-  # catalog's 600000 would have fired in 315 of 316 hours, because dev's consumer runs
-  # on a schedule rather than continuously. Two hours fired in 3 of those 316.
+  # Measured over 14 days on this stream while dev's consumer ran on a schedule: the median
+  # iterator age was 2.8M ms and 600000 would have fired in 315 of 316 hours. Continuous since
+  # 23 Sep, it still peaked at 156 minutes in the five days after, so two hours stays.
   ingest_lag_threshold_ms = 7200000
 
   # IoT and Kinesis monitoring

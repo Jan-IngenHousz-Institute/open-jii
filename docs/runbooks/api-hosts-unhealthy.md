@@ -23,6 +23,15 @@ aws ecs describe-tasks --cluster <cluster> --tasks <task-arn> \
   --query 'tasks[0].[stoppedReason,containers[0].exitCode,containers[0].reason]'
 ```
 
+Then ask the load balancer which target it took out and why. The target group's name is the middle
+part of the `TargetGroup` dimension on the same chart (`targetgroup/<name>/<id>`):
+
+```bash
+aws elbv2 describe-target-health --target-group-arn "$(aws elbv2 describe-target-groups \
+  --names <target-group> --query 'TargetGroups[0].TargetGroupArn' --output text)" \
+  --query 'TargetHealthDescriptions[].[Target.Id,TargetHealth.State,TargetHealth.Reason]'
+```
+
 ## Likely causes, most common first
 
 - **A deploy whose tasks do not start.** The deployment circuit breaker rolls a failing deploy

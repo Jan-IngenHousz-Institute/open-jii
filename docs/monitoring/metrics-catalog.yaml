@@ -173,9 +173,9 @@ metrics:
       stat: Maximum
       unit: milliseconds
       dimensions: { StreamName: "${KINESIS_STREAM_NAME}" }
-    # Prod's consumer runs continuously, so ten minutes of lag is a fault there. Dev's
-    # runs on a schedule and sits near 2.8M ms, where 600000 was under the reading in
-    # 315 of the last 316 hours.
+    # Ten minutes of lag is a fault in prod. Dev's consumer ran on a schedule until 23 Sep,
+    # when its lag sat near 2.8M ms; continuous since, it still peaked at 156 minutes in the
+    # five days after, so dev keeps two hours.
     baseline:
       method: threshold
       max: 600000
@@ -245,8 +245,8 @@ metrics:
     notes: >
       Minutes since gold last materialized, from max(status_updated_at) in
       experiment_status. Split out of 10 during implementation: a fixed
-      threshold cannot serve both environments because the centrum pipeline runs
-      on a weekday-daytime schedule in dev and continuously in prod, so this
+      threshold could not serve both environments while the centrum pipeline ran
+      on a weekday-daytime schedule in dev (until 23 Sep; continuous since), so this
       compares against its own 4-week pattern instead. A hard prod-only
       staleness rule belongs in the per-environment Grafana rules (P2b).
 
@@ -301,7 +301,7 @@ metrics:
     notes: >
       User-facing symptom of any upstream ingest failure; count only, roster in
       the heartbeat S3 detail. Deviation-based rather than "any stale is an
-      alert" so dev's scheduled pipeline does not flag nightly; the strict
+      alert" so dev's pipeline, scheduled until 23 Sep, did not flag nightly; the strict
       prod rule belongs in the per-environment Grafana rules (P2b).
 
   - num: 14
@@ -1341,12 +1341,15 @@ metrics:
     source: dbx
     phase: P2
     active: true
-    slots: [exception]
+    slots: [alert]
+    severity: warning
     signal:
       namespace: OpenJII/Data
       metric: MacroBacklogRows
       stat: Maximum
       dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline: { method: threshold, max: 0 }
+    runbook: docs/runbooks/macro-backlog.md
     notes: Rows that need macros and have waited more than fifteen minutes without any result, however long ago they arrived. A failed macro still writes a result row, so this is zero in steady state.
 
   - num: 89
@@ -1357,14 +1360,17 @@ metrics:
     source: dbx
     phase: P2
     active: true
-    slots: [exception]
+    slots: [alert]
+    severity: warning
     signal:
       namespace: OpenJII/Data
       metric: IngestIdleMinutes
       stat: Maximum
       unit: minutes
       dimensions: { Environment: "${ENVIRONMENT}" }
-    notes: Minutes since bronze last wrote. Bronze only writes when data arrives, so it is a stall only beside messages still arriving.
+    baseline: { method: threshold, max: 60 }
+    runbook: docs/runbooks/ingest-idle.md
+    notes: Minutes since bronze last wrote. Bronze only writes when data arrives, so it is a stall only beside messages still arriving, which is what its rule checks against the stream's incoming records.
 
   - num: 90
     id: macro-idle
@@ -1391,12 +1397,18 @@ metrics:
     source: aws
     phase: P1
     active: true
-    slots: [exception]
+    slots: [alert]
+    severity: warning
     signal:
       namespace: AWS/IoT
       search: SEARCH('{AWS/IoT,Protocol} MetricName="PublishIn.AuthError" OR MetricName="PublishIn.ClientError" OR MetricName="PublishIn.ServerError" OR MetricName="PublishIn.Throttle"', 'Sum')
       stat: Sum
-    notes: Publishes IoT Core refused, including payloads over its size limit.
+    baseline: { method: threshold, max: 100 }
+    runbook: docs/runbooks/rejected-publishes.md
+    notes: >-
+      Publishes IoT Core refused, including payloads over its size limit. Prod refuses a few every
+      hour (a median of 13 auth errors and 2 client errors an hour over 14 days to 28 Sep), so the
+      limit is a burst: auth errors reached 143,798 in one hour on 18 Sep.
 
   - num: 92
     id: rule-parse-errors
@@ -1477,7 +1489,8 @@ metrics:
     source: dbx
     phase: P2
     active: true
-    slots: [exception]
+    slots: [alert]
+    severity: warning
     signal:
       namespace: OpenJII/Data
       metric: CollectorFailures
