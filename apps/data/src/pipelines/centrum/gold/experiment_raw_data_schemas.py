@@ -22,6 +22,9 @@ from openjii.variant_schema import variant_schema_key
     comment="Gold layer: one questions_data sample per (experiment_id, normalised schema).",
     table_properties={
         "quality": "gold",
+        # Auto compaction runs inside the pipeline after writes; predictive
+        # optimization compacts these tables asynchronously instead.
+        "delta.autoOptimize.autoCompact": "false",
         "pipelines.autoOptimize.managed": "true",
         "delta.feature.variantType-preview": "supported",
     },

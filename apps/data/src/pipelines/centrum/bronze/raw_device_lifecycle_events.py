@@ -20,7 +20,9 @@ from pyspark.sql import functions as F
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
+        # Auto compaction runs inside the pipeline after writes; predictive
+        # optimization compacts these tables asynchronously instead.
+        "delta.autoOptimize.autoCompact": "false",
     },
 )
 def raw_device_lifecycle_events():
