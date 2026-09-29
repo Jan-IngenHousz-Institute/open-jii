@@ -19,7 +19,7 @@ from openjii.centrum import EXPERIMENT_UPLOADED_DATA_TABLE, RAW_UPLOADED_DATA_TA
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
+        "delta.autoOptimize.autoCompact": "false",
         "delta.enableRowTracking": "true",
         "delta.enableChangeDataFeed": "true",
         "delta.feature.variantType-preview": "supported",

@@ -9,7 +9,7 @@ description: "Why Centrum and the macro pipeline run on the node types, editions
 
 **Date:** 2026-09-23  
 **Status:** Accepted  
-**Amended:** 2026-09-24, larger drivers, and streaming shuffles sized to the workers.
+**Amended:** 2026-09-24, larger drivers, and streaming shuffles sized to the workers. 2026-09-29, auto compaction off on every Centrum table.
 
 ## Context
 
@@ -28,7 +28,7 @@ Each pipeline has its own cluster policy, which pins these types.
 - **Drivers get four cores.** On two, the Spark driver often misses its startup timeout, and clusters took over ten minutes to start or never did.
 - **Centrum's driver gets 32 GB.** On 16 GB it ran in swap, and its garbage collections froze every flow for seconds at a time.
 - **Streaming shuffles match the workers' cores.** Stateful streaming operators skip adaptive execution, so the default of 200 partitions turned a few rows into 200 tasks per trigger.
-- **Auto compaction is off on bronze and silver.** It always plans at 200 partitions and held up ingestion. Predictive optimization compacts these tables asynchronously instead.
+- **Auto compaction is off on every Centrum table.** It always plans at 200 partitions and held up ingestion, and it adds work after every write on a driver that runs for days. Predictive optimization compacts these tables asynchronously instead.
 - **Macro workers are the cheapest cores spot rarely reclaims.** The work waits on HTTP, so faster cores buy nothing.
 - **The macro pipeline runs on CORE,** since it uses neither AUTO CDC nor expectations.
 - **Both environments run in production mode,** which restarts and retries after recoverable failures.

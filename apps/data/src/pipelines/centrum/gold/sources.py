@@ -17,6 +17,7 @@ from openjii.centrum.runtime import CATALOG_NAME
     comment="Gold layer: DLT-tracked mirror of the experiment_metadata table for incremental refresh support.",
     table_properties={
         "quality": "gold",
+        "delta.autoOptimize.autoCompact": "false",
         "delta.enableRowTracking": "true",
         "delta.enableChangeDataFeed": "true",
         "delta.feature.variantType-preview": "supported",

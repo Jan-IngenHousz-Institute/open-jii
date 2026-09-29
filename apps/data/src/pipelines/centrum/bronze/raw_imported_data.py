@@ -25,7 +25,7 @@ from openjii.centrum.runtime import CATALOG_NAME
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true"
+        "delta.autoOptimize.autoCompact": "false"
     },
     partition_cols=["experiment_id"]
 )

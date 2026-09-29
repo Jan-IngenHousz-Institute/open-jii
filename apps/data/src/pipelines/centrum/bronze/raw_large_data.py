@@ -19,7 +19,7 @@ from openjii.centrum.runtime import LARGE_IOT_S3_PATH
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true"
+        "delta.autoOptimize.autoCompact": "false"
     },
     partition_cols=["experiment_id"]
 )

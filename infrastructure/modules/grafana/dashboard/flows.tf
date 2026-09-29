@@ -291,9 +291,12 @@ locals {
       id          = 907
       type        = "table"
       title       = "Sampled payloads"
-      description = "A random share of the messages devices published, newest first, with each one's size and the start of its content. The IoT rule sets the share; samples are kept a few days."
+      description = "A random share of the messages devices published, newest first, with each one's size and the start of its content. The IoT rule sets the share, and prod copies none unless its root sets `payload_sample_percent`. Samples are kept three days."
       datasource  = { type = "cloudwatch", uid = grafana_data_source.cloudwatch_logs_source.uid }
-      gridPos     = { h = 14, w = 24, x = 0, y = 1 }
+      # The samples' retention. CloudWatch refuses a query that ends before the log group existed or
+      # past its retention, so the panel does not follow the dashboard's range.
+      timeFrom = "3d"
+      gridPos  = { h = 14, w = 24, x = 0, y = 1 }
       fieldConfig = {
         defaults = { noValue = "-", custom = { align = "auto", cellOptions = { type = "auto" }, inspect = true } }
         overrides = [

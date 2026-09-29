@@ -20,7 +20,7 @@ from openjii.centrum import EXPERIMENT_STATUS_TABLE, LATEST_EXPERIMENT_ACTIVITY_
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true"
+        "delta.autoOptimize.autoCompact": "false"
     }
 )
 def experiment_status():

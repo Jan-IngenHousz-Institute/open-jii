@@ -5,7 +5,9 @@ to the device, so the device believes the measurement was taken. Rule actions ar
 number of times and then dropped, which makes this the one ingest metric where data is genuinely
 lost rather than delayed.
 
-Any nonzero value alarms. There is no healthy rate of forwarding failure.
+There is no healthy rate of forwarding failure, and the daily report counts every one. The alert waits
+for more than five on one rule action within fifteen minutes, held for five, so a single failure
+that a retry delivered does not page anyone.
 
 ## What is failing
 

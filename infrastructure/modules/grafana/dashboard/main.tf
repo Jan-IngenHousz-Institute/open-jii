@@ -326,8 +326,6 @@ EOT
         metricEditorMode = 0
         metricQueryType  = 0
         queryMode        = "Metrics"
-        id               = "m1"
-        expression       = "FILL(m1, 0)"
         dimensions = {
           LoadBalancer = [local.dashboard_vars.load_balancer_dimension]
         }
@@ -414,6 +412,7 @@ resource "grafana_rule_group" "cloudfront_errors" {
         statistic  = "Average"
         dimensions = {
           DistributionId = var.cloudfront_distribution_id
+          Region         = "Global"
         }
       })
 
@@ -597,8 +596,6 @@ resource "grafana_rule_group" "lambda_health" {
         dimensions = {
           FunctionName = var.server_function_name
         }
-        expression = "FILL(m1, 0)"
-        id         = "m1"
       })
 
       relative_time_range {
@@ -675,8 +672,6 @@ EOT
         dimensions = {
           FunctionName = var.server_function_name
         }
-        expression = "FILL(m1, 0)"
-        id         = "m1"
       })
 
       relative_time_range {
@@ -934,8 +929,6 @@ resource "grafana_rule_group" "macro_sandbox_health" {
           dimensions = {
             FunctionName = rule.value
           }
-          expression = "FILL(m1, 0)"
-          id         = "m1"
         })
 
         relative_time_range {
@@ -1016,8 +1009,6 @@ EOT
           dimensions = {
             FunctionName = rule.value
           }
-          expression = "FILL(m1, 0)"
-          id         = "m1"
         })
 
         relative_time_range {
@@ -1093,8 +1084,6 @@ EOT
         metricName = "MacroSandboxRejectedTraffic-${var.environment}"
         statistic  = "Sum"
         period     = "300"
-        expression = "FILL(m1, 0)"
-        id         = "m1"
       })
 
       relative_time_range {
@@ -1187,8 +1176,6 @@ resource "grafana_rule_group" "calibration_sandbox_health" {
         dimensions = {
           FunctionName = var.calibration_sandbox_function_name
         }
-        expression = "FILL(m1, 0)"
-        id         = "m1"
       })
 
       relative_time_range {
@@ -1269,8 +1256,6 @@ EOT
         dimensions = {
           FunctionName = var.calibration_sandbox_function_name
         }
-        expression = "FILL(m1, 0)"
-        id         = "m1"
       })
 
       relative_time_range {
@@ -1345,8 +1330,6 @@ EOT
         metricName = "CalibrationSandboxRejectedTraffic-${var.environment}"
         statistic  = "Sum"
         period     = "300"
-        expression = "FILL(m1, 0)"
-        id         = "m1"
       })
 
       relative_time_range {
@@ -1584,9 +1567,8 @@ resource "grafana_rule_group" "ingest_path" {
     }
 
     # A consumer that dies completely stops publishing this metric, so absence is the
-    # one case this rule cannot see. OK rather than Alerting because the alternative
-    # fires through every idle night on a scheduled pipeline. The gap is recorded in
-    # the runbook; the ingest-collapse signal is what closes it.
+    # one case this rule cannot see. Ingest Stalled, which reads bronze beside the
+    # stream's incoming records, is what notices that consumer.
     no_data_state  = "OK"
     exec_err_state = "OK"
     for            = "15m"
@@ -1686,6 +1668,222 @@ resource "grafana_rule_group" "ingest_path" {
       severity  = "warning"
       service   = "ingest"
       metric_id = "kinesis-write-throttling"
+    }
+  }
+
+  # Catalog entry 89. Records waiting on the stream while bronze has written nothing for an
+  # hour: the consumer died or runs without writing. Kinesis keeps records for 24 hours, so
+  # this is data held up rather than lost. It also covers a consumer that died entirely,
+  # which Ingest Lag reads as no data.
+  #
+  # The export measures idle time every half hour, so a reading can be 35 minutes old. Only
+  # records that arrived 45 to 60 minutes ago count: they came after bronze's last write (the
+  # reading says over 60 minutes ago) and at least five minutes before the reading, so bronze
+  # had time to take them. Newer records would fire it on a stale reading after a quiet spell.
+  rule {
+    name      = "Ingest Stalled"
+    condition = "E"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Data"
+        metricName = "IngestIdleMinutes"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+      })
+
+      relative_time_range {
+        from = 2400
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "C"
+        region     = var.aws_region
+        namespace  = "AWS/Kinesis"
+        metricName = "IncomingRecords"
+        statistic  = "Sum"
+        dimensions = {
+          StreamName = var.kinesis_stream_name
+        }
+      })
+
+      relative_time_range {
+        from = 3600
+        to   = 2700
+      }
+    }
+    data {
+      ref_id         = "D"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "C"
+        type       = "reduce"
+        reducer    = "sum"
+        refId      = "D"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "E"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 60 && $D > 0"
+        type       = "math"
+        refId      = "E"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "10m"
+
+    annotations = {
+      description      = "Records have been waiting on the ingest stream while bronze has written nothing for over an hour; measurements are held up in Kinesis, which keeps them 24 hours."
+      summary          = "Ingest stalled: records waiting, bronze not writing"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/ingest-idle.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["ingest-idle"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "ingest"
+      metric_id = "ingest-idle"
+    }
+  }
+
+  # Catalog entry 91. IoT Core refusing publishes outright: a device not allowed on its topic,
+  # or a message over a broker limit such as 128 KiB. The sender is never told. Prod refuses a
+  # few every hour, so this fires on a burst (100 in five minutes), like the auth storm of
+  # 16 to 19 September, and the daily trickle stays a level on the report.
+  rule {
+    name      = "Refused Publish Burst"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId            = "A"
+        region           = var.aws_region
+        namespace        = "AWS/IoT"
+        queryMode        = "Metrics"
+        metricQueryType  = 0
+        metricEditorMode = 1
+        statistic        = "Sum"
+        period           = "300"
+        id               = "refused"
+        expression       = "SUM(SEARCH('{AWS/IoT,Protocol} MetricName=\"PublishIn.AuthError\" OR MetricName=\"PublishIn.ClientError\" OR MetricName=\"PublishIn.ServerError\" OR MetricName=\"PublishIn.Throttle\"', 'Sum', 300))"
+      })
+
+      relative_time_range {
+        from = 600
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "max"
+        refId      = "B"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 100"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "10m"
+
+    annotations = {
+      description      = "IoT Core has refused more than 100 publishes in five minutes; those messages never reached the platform and their senders were not told why."
+      summary          = "Burst of publishes refused by IoT Core"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/rejected-publishes.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["rejected-publishes"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "ingest"
+      metric_id = "rejected-publishes"
     }
   }
 }
@@ -1879,6 +2077,87 @@ resource "grafana_rule_group" "collector_liveness" {
       service   = "monitoring"
     }
   }
+
+  # Catalog entry 96. A collector that raised costs only its own series, which then read No
+  # data. One failed run is usually transient, so this waits for two in a row.
+  rule {
+    name      = "Heartbeat Collector Failing"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Data"
+        metricName = "CollectorFailures"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+      })
+
+      relative_time_range {
+        from = 4500
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "40m"
+
+    annotations = {
+      description      = "At least one heartbeat collector has failed on two runs in a row, so its series on the daily report read No data rather than healthy."
+      summary          = "Heartbeat collectors failing"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/collector-failures.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["collector-failures"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "monitoring"
+      metric_id = "collector-failures"
+    }
+  }
 }
 
 # Lakehouse Freshness
@@ -1973,6 +2252,88 @@ resource "grafana_rule_group" "lakehouse_freshness" {
       metric_id = "metrics-mv-freshness"
       severity  = "warning"
       service   = "lakehouse"
+    }
+  }
+
+  # Catalog entry 88. Rows that need macros and have had no result for 15 minutes. A failed
+  # macro still writes a result row, so anything above zero for an hour is results not being
+  # produced: the macro pipeline stopped, or the sandboxes are not answering.
+  rule {
+    name      = "Macro Backlog"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Data"
+        metricName = "MacroBacklogRows"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+      })
+
+      relative_time_range {
+        from = 4500
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 0"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "60m"
+
+    annotations = {
+      description      = "Rows that need macros have waited over an hour without any result, so researchers see measurements without their computed values."
+      summary          = "Macro results are not being produced"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/macro-backlog.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["macro-backlog"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "lakehouse"
+      metric_id = "macro-backlog"
     }
   }
 }
