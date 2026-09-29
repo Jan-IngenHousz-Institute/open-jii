@@ -1,5 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
+import type { MacroSort } from "@repo/api/domains/macro/macro.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 import {
   and,
@@ -13,6 +14,7 @@ import {
   macros,
   or,
   profiles,
+  protocolMacros,
   sql,
   getTableColumns,
   ensurePersonalOrganization,
@@ -54,10 +56,17 @@ export interface MacroFilter {
   userId?: string;
   /** Narrow to one owning organization (the org profile's resources showcase). */
   organizationId?: string;
+  sort?: MacroSort;
 }
 
 // All macro columns except the internal full-text `search_vector` (never returned to clients).
 const { searchVector: _macroSearchVector, ...macroColumns } = getTableColumns(macros);
+
+// Number of protocols a macro is compatible with. The list chips load lazily,
+// so sorting by the count needs it computed in SQL.
+function protocolCountSql() {
+  return sql<number>`(select count(*)::int from ${protocolMacros} where ${protocolMacros.macroId} = ${macros.id})`;
+}
 
 /** A listing row plus its relevance score, which global search merges on across types. */
 export type MacroSearchRow = MacroDto & { score: number };
@@ -192,11 +201,25 @@ export class MacroRepository {
           )
         : sql<number>`0::int`;
 
+      const sortFields = {
+        name: macros.name,
+        language: languageText,
+        protocols: protocolCountSql(),
+        updated: macros.updatedAt,
+      };
       // Browse keeps tiers strict, with the curated `sortOrder` surviving as a
-      // within-tier tiebreak. Both orderings end on `id` so paging is stable.
-      const orderBy = search
-        ? [desc(score), asc(macros.id)]
-        : [desc(tier), asc(macros.sortOrder), asc(macros.name), asc(macros.id)];
+      // within-tier tiebreak. Every ordering ends on `id` so paging is stable.
+      const orderBy = filter?.sort?.length
+        ? [
+            ...filter.sort.map(
+              ({ field, direction }) =>
+                sql`${direction === "asc" ? asc(sortFields[field]) : desc(sortFields[field])} nulls last`,
+            ),
+            asc(macros.id),
+          ]
+        : search
+          ? [desc(score), asc(macros.id)]
+          : [desc(tier), asc(macros.sortOrder), asc(macros.name), asc(macros.id)];
 
       const where = conditions.length > 0 ? and(...conditions) : undefined;
 

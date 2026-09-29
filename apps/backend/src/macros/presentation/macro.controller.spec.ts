@@ -265,6 +265,41 @@ describe("MacroController", () => {
       expect(response.body).toMatchObject({ page: 1, pageSize: 10, items: [] });
     });
 
+    it("passes an explicit sort from the query string to the use case", async () => {
+      const spy = vi.spyOn(listMacrosUseCase, "executePaginated");
+
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.macros.listMacros))
+        .query({
+          page: 1,
+          "sort[0][field]": "protocols",
+          "sort[0][direction]": "desc",
+          "sort[1][field]": "name",
+          "sort[1][direction]": "asc",
+        })
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(spy).toHaveBeenCalledWith(
+        1,
+        expect.any(Number),
+        expect.objectContaining({
+          sort: [
+            { field: "protocols", direction: "desc" },
+            { field: "name", direction: "asc" },
+          ],
+        }),
+      );
+    });
+
+    it("rejects a sort field outside the allowlist", async () => {
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.macros.listMacros))
+        .query({ page: 1, "sort[0][field]": "activity", "sort[0][direction]": "asc" })
+        .withAuth(testUserId)
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
     it("returns 500 when the paginated use case fails", async () => {
       vi.spyOn(listMacrosUseCase, "executePaginated").mockResolvedValue(
         failure(AppError.internal("Database error")),

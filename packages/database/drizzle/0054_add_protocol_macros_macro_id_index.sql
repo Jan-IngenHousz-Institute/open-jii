@@ -1,0 +1,1 @@
+CREATE INDEX "protocol_macros_macro_id_idx" ON "protocol_macros" USING btree ("macro_id");

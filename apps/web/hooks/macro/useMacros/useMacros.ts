@@ -2,10 +2,12 @@ import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
+import { zMacroSort } from "@repo/api/domains/macro/macro.schema";
 import type { MacroLanguage } from "@repo/api/domains/macro/macro.schema";
 import { isPaginatedList } from "@repo/api/shared/listing";
 
 import { useDebounce } from "../../useDebounce";
+import { useListSorting } from "../../useListSorting";
 import { useSearchPending } from "../../useSearchPending";
 
 export function useMacros({
@@ -19,6 +21,7 @@ export function useMacros({
   const [debouncedSearch] = useDebounce(search, 300);
   const [language, setLanguageState] = useState<MacroLanguage | undefined>(initialLanguage);
   const [page, setPage] = useState(1);
+  const { sort, setSort, toggleSort } = useListSorting(zMacroSort);
 
   const setSearch = (value: string) => {
     setSearchState(value);
@@ -36,6 +39,7 @@ export function useMacros({
         search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
         language,
         page,
+        sort: sort.length ? sort : undefined,
       },
       placeholderData: (prev) => prev,
     }),
@@ -71,5 +75,14 @@ export function useMacros({
     setLanguage,
     page,
     setPage,
+    sort,
+    setSort: (next: typeof sort) => {
+      setSort(next);
+      setPage(1);
+    },
+    toggleSort: (field: (typeof sort)[number]["field"], multi: boolean) => {
+      toggleSort(field, multi);
+      setPage(1);
+    },
   };
 }

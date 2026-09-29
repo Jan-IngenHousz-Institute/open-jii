@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import type { ResourceSeries } from "@repo/api/domains/metrics/metrics.schema";
-import { ProtocolFilter } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolFilter, ProtocolSort } from "@repo/api/domains/protocol/protocol.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 
 import { Result, success } from "../../../../common/utils/fp-utils";
@@ -22,8 +22,9 @@ export class ListProtocolsUseCase {
     search?: ProtocolFilter,
     scope?: ResourceScope,
     userId?: string,
+    sort?: ProtocolSort,
   ): Promise<Result<ProtocolDto[]>> {
-    return this.protocolRepository.findAll(search, scope, userId);
+    return this.protocolRepository.findAll(search, scope, userId, undefined, undefined, sort);
   }
 
   async executePaginated(
@@ -32,8 +33,17 @@ export class ListProtocolsUseCase {
     search?: ProtocolFilter,
     scope?: ResourceScope,
     userId?: string,
+    sort?: ProtocolSort,
   ): Promise<Result<{ items: ProtocolWithActivity[]; totalCount: number }>> {
-    const paged = await this.protocolRepository.findPage(page, pageSize, search, scope, userId);
+    const paged = await this.protocolRepository.findPage(
+      page,
+      pageSize,
+      search,
+      scope,
+      userId,
+      undefined,
+      sort,
+    );
     if (paged.isFailure()) {
       return paged;
     }
