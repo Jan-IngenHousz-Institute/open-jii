@@ -11,8 +11,10 @@ Every exception carries `environment` and `service`:
 
 - `web`: the browser, from visitors who accepted cookies, and the page server, for everyone.
 - `backend`: server errors only (5xx), counted against the signed-in user when there is one.
-- `mobile`: uncaught errors and error log lines. A developer's Metro build carries
-  `build: development`, so those are ours, not researchers'.
+- `mobile`: uncaught errors and error log lines.
+
+Only deployed builds report. A backend, web app or Metro phone build on a developer's machine
+sends PostHog nothing, so every issue here comes from dev, prod or an installed app.
 
 ## New, returning, or noise
 

@@ -7,6 +7,7 @@ export const analyticsConfigSchema = z.object({
   posthogKey: z.string().optional(),
   posthogHost: z.string().url(),
   environment: z.string().optional(),
+  deployed: z.boolean(),
 });
 
 export type AnalyticsConfig = z.infer<typeof analyticsConfigSchema>;

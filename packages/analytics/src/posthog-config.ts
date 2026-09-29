@@ -51,6 +51,14 @@ export function createPostHogClientConfig(
   };
 }
 
+/**
+ * A `before_send` for a build that runs on a developer's machine: flags still load, but no event,
+ * error or replay leaves it, since every environment shares one PostHog project.
+ */
+export function dropEveryEvent(): null {
+  return null;
+}
+
 /** The part of a posthog-node event that a `before_send` reads and changes. */
 export interface ServerEvent {
   event: string;

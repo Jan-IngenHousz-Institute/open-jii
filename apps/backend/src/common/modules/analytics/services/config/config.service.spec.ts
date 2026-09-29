@@ -1,7 +1,15 @@
-import type { ConfigService } from "@nestjs/config";
+import { ConfigService } from "@nestjs/config";
 
 import { TestHarness } from "../../../../../test/test-harness";
 import { AnalyticsConfigService } from "./config.service";
+
+function serviceWith(analytics: { environment: string; deployed: boolean }) {
+  return new AnalyticsConfigService(
+    new ConfigService({
+      analytics: { posthogKey: "phc_test", posthogHost: "https://eu.i.posthog.com", ...analytics },
+    }),
+  );
+}
 
 describe("AnalyticsConfigService", () => {
   const testApp = TestHarness.App;
@@ -81,17 +89,27 @@ describe("AnalyticsConfigService", () => {
     });
 
     it("tags a crash posthog-node captures outside a request as the backend's", () => {
-      const tag = service.getPostHogServerConfig().before_send;
+      const deployed = serviceWith({ environment: "dev", deployed: true });
+      const tag = deployed.getPostHogServerConfig().before_send;
 
       expect(tag?.({ event: "$exception", properties: {} })).toEqual({
         event: "$exception",
         distinctId: "backend-server",
         properties: {
-          environment: service.environment,
+          environment: "dev",
           service: "backend",
           $process_person_profile: false,
         },
       });
+    });
+
+    it("sends nothing from a local run, whatever environment it names", () => {
+      const local = serviceWith({ environment: "dev", deployed: false });
+      const send = local.getPostHogServerConfig().before_send;
+
+      expect(local.isDeployed).toBe(false);
+      expect(send?.({ event: "$exception", properties: {} })).toBeNull();
+      expect(send?.({ event: "$pageview", properties: {} })).toBeNull();
     });
   });
 
