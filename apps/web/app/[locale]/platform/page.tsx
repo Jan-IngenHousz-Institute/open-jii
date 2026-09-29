@@ -22,6 +22,7 @@ export async function generateMetadata({ params }: PlatformPageProps): Promise<M
   return { title: t("title") };
 }
 
+/** Renders the localized dashboard with personal experiments, public updates, and blog posts. */
 export default async function PlatformDashboard({ params }: PlatformPageProps) {
   const { locale } = await params;
   const { t } = await initTranslations({

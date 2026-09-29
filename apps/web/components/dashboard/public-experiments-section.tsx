@@ -20,6 +20,10 @@ const STALE_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 const placeholderClassName =
   "border-border text-muted-foreground flex min-h-32 flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-4 text-center";
 
+/**
+ * Shows up to six public experiments, newest update first, with loading, error, and empty states.
+ * Adds a notice when the most recent update is more than 30 days old.
+ */
 export function PublicExperimentsSection() {
   const { t } = useTranslation();
   const locale = useLocale();

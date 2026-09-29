@@ -29,6 +29,7 @@ interface ExperimentOverviewCardProps {
   showUpdatedLabel?: boolean;
 }
 
+/** Renders a linked experiment summary with badges, owner, member count, and an optionally labeled update date. */
 export function ExperimentOverviewCard({
   experiment,
   href,
