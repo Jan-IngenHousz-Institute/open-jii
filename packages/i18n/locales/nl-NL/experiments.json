@@ -272,6 +272,9 @@
       "uploadFiles": "Bestanden uploaden",
       "uploading": "Uploaden..."
     },
+    "metadata": {
+      "identifierHint": "Om de identificatiekolom in te stellen, opent u het ⋯-menu in de kolomkop en kiest u \"Set as identifier\". De waarden van deze kolom worden vergeleken met het koppeldoel dat u hieronder selecteert."
+    },
     "uploading": {
       "title": "Gegevens uploaden",
       "description": "Een ogenblik geduld terwijl we uw sensorgegevens verwerken..."
