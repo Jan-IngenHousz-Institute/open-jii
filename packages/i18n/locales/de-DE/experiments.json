@@ -353,6 +353,9 @@
       "uploadFiles": "Dateien hochladen",
       "uploading": "Wird hochgeladen..."
     },
+    "metadata": {
+      "identifierHint": "Um die Identifikationsspalte festzulegen, öffnen Sie das ⋯-Menü im Spaltenkopf und wählen Sie \"Set as identifier\". Die Werte dieser Spalte werden mit dem unten ausgewählten Abgleichsziel verglichen."
+    },
     "uploading": {
       "title": "Daten werden hochgeladen",
       "description": "Bitte warten Sie, während wir Ihre Sensordaten verarbeiten..."

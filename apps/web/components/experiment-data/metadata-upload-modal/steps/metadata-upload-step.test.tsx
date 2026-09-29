@@ -1,4 +1,5 @@
-import { act, fireEvent, render, screen, waitFor } from "@/test/test-utils";
+import type * as ParseMetadataImport from "@/components/metadata-table/utils/parse-metadata-import";
+import { act, fireEvent, render, screen, waitFor, within } from "@/test/test-utils";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,7 +17,7 @@ let mockExistingMetadata: unknown[] = [];
 
 vi.mock("@/components/metadata-table/metadata-table", () => ({
   MetadataTable: (props: {
-    columns: unknown[];
+    columns: { id: string; name: string }[];
     rows: unknown[];
     identifierColumnId: string | null;
     onUpdateCell: (rowId: string, columnId: string, value: string | number | null) => void;
@@ -27,6 +28,11 @@ vi.mock("@/components/metadata-table/metadata-table", () => ({
   }) => (
     <div data-testid="metadata-table">
       <span data-testid="table-col-count">{props.columns.length}</span>
+      {props.columns.map((col) => (
+        <span key={col.id} data-testid="table-col-name">
+          {col.name}
+        </span>
+      ))}
       <span data-testid="table-row-count">{props.rows.length}</span>
       <button
         data-testid="update-cell"
@@ -94,6 +100,9 @@ vi.mock("@repo/ui/components/button", () => ({
 }));
 
 vi.mock("@repo/ui/components/dialog", () => ({
+  DialogBody: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="dialog-body">{children}</div>
+  ),
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
@@ -227,6 +236,16 @@ describe("MetadataUploadStep", () => {
   });
 
   describe("file import", () => {
+    it("opens the file picker when Upload File is clicked", () => {
+      renderStep();
+      goToEditView();
+      const openPicker = vi.spyOn(getFileInput(), "click").mockImplementation(() => undefined);
+
+      fireEvent.click(getButton("uploadModal.metadata.uploadFile"));
+
+      expect(openPicker).toHaveBeenCalledTimes(1);
+    });
+
     it("imports data from a file via file input", async () => {
       mockParseFile.mockResolvedValue(sampleData);
       renderStep();
@@ -441,6 +460,55 @@ describe("MetadataUploadStep", () => {
     it("handles identifier column setting", async () => {
       await loadData();
       fireEvent.click(screen.getByTestId("set-identifier"));
+    });
+
+    it("explains how to choose the identifier column once data is imported", async () => {
+      await loadData();
+      expect(screen.getByText("uploadModal.metadata.identifierHint")).toBeInTheDocument();
+    });
+
+    it("keeps Save outside the scrolling body so it stays in view", async () => {
+      await loadData();
+      const body = screen.getByTestId("dialog-body");
+
+      expect(within(body).getByTestId("metadata-name")).toBeInTheDocument();
+      expect(within(body).getByTestId("metadata-table")).toBeInTheDocument();
+      expect(within(body).queryByText("uploadModal.metadata.saveMetadata")).not.toBeInTheDocument();
+      expect(getSaveButton()).toBeInTheDocument();
+    });
+
+    it("does not show the identifier hint on the empty drop zone", () => {
+      renderStep();
+      goToEditView();
+      expect(screen.getByText("uploadModal.metadata.importPrompt")).toBeInTheDocument();
+      expect(screen.queryByText("uploadModal.metadata.identifierHint")).not.toBeInTheDocument();
+    });
+
+    it("imports a header with a space as an underscored name that passes validation", async () => {
+      const { parseClipboardText } = await vi.importActual<typeof ParseMetadataImport>(
+        "@/components/metadata-table/utils/parse-metadata-import",
+      );
+      mockParseClipboard.mockResolvedValue(parseClipboardText("QR code,Plot\nA1,101\nB2,102"));
+      renderStep();
+      goToEditView();
+      fireEvent.click(getButton("uploadModal.metadata.pasteClipboard"));
+      await screen.findByTestId("metadata-table");
+
+      expect(screen.getAllByTestId("table-col-name").map((el) => el.textContent)).toEqual([
+        "QR_code",
+        "Plot",
+      ]);
+
+      fireEvent.change(screen.getByTestId("metadata-name"), { target: { value: "Plot map" } });
+      // No identifier or match target is chosen, so validation fails client-side
+      // and the column-name rules have run by the time the required errors show.
+      fireEvent.click(getSaveButton());
+      await screen.findByText("Identifier column is required");
+
+      expect(document.body.textContent).not.toContain(
+        "Column names can only contain letters, digits, and underscores",
+      );
+      expect(mockMutateAsync).not.toHaveBeenCalled();
     });
   });
 
