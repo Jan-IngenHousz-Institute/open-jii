@@ -105,8 +105,8 @@ tooltip gives the stretch and its duration. Rules hold for minutes before firing
 never fired was a brief breach: open its chart, say when it happened and what the shape was, and
 move on unless it repeats. A gap on a signal that should report is a finding in itself. The level
 tiles have no limit: say only what moved out of its usual range, and say it as a level, not as a
-fault. Dev's ingest consumer runs on a weekday schedule, so its lag is hours by design; check
-the environment before calling anything an incident.
+fault. Dev's pipelines have run continuously since 23 September, yet its ingest lag still peaks above
+two hours now and then; check the environment before calling anything an incident.
 
 ## 4. Read the errors
 

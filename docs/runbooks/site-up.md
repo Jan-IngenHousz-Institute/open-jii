@@ -15,11 +15,20 @@ redirect passes. That failure belongs to `pageview-collapse`.
 ## Confirm it from outside
 
 ```bash
-curl -sS -o /dev/null -w '%{http_code} %{time_total}s\n' https://openjii.org/
+curl -sS -o /dev/null -w '%{http_code} %{time_total}s\n' https://<base domain>/
 ```
 
-A redirect here while the check fails means the checkers see something you do not; look at the AWS
-Health Dashboard for Route 53 and CloudFront. A 5xx or a timeout means the site is down for you too.
+Then read what each Route 53 checker saw. The health check id is the dimension on this entry's chart
+in the daily report:
+
+```bash
+aws route53 get-health-check-status --health-check-id <health-check-id> \
+  --query 'HealthCheckObservations[].[Region,StatusReport.Status]' --output text
+```
+
+A redirect from curl while the checkers report failures means they see something you do not; look
+at the AWS Health Dashboard for Route 53 and CloudFront. Failures from only some regions point at
+the edge rather than the site. A 5xx or a timeout means the site is down for you too.
 
 ## Likely causes, most common first
 

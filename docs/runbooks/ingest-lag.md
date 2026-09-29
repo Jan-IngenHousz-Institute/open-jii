@@ -4,8 +4,8 @@
 up or is not running.** Nothing is lost while the age stays under the stream's 24h retention, but
 gold tables, experiment freshness and every dashboard built on them fall behind by the age shown.
 
-Severity is critical because the gap grows on its own. At 24h, data starts being dropped by Kinesis
-and no amount of catching up recovers it.
+It is a warning rather than critical because nothing is lost yet, but the gap grows on its own. At
+24h, data starts being dropped by Kinesis and no amount of catching up recovers it.
 
 ## First, decide whether this is the cause or a symptom
 
@@ -36,8 +36,9 @@ read the most recent update.
 - **Update failed.** The event log carries the error. A `CLUSTER_LAUNCH_FAILURE` on spot capacity is
   the most common and is not a code problem: retry, and if it recurs, the pipeline needs on-demand
   compute rather than another retry.
-- **No update in progress and none scheduled.** Someone paused the pipeline or its scheduler job,
-  often during unrelated maintenance. Resume it.
+- **No update in progress.** The pipeline runs continuously in both environments, so a stopped
+  pipeline was stopped by someone, often during unrelated maintenance, or by a deploy whose new
+  update failed to start. Start it.
 - **Update running but making no progress.** Look at the flow-level progress in the event log. A
   single wedged flow holds the whole update.
 
