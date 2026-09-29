@@ -1,0 +1,99 @@
+{
+  "title": "Meldingen",
+  "markAllRead": "Alles als gelezen markeren",
+  "seeAll": "Alle meldingen bekijken",
+  "settings": "Meldingsinstellingen",
+  "unreadCount": "{{count}} ongelezen",
+  "someone": "Iemand",
+  "empty": {
+    "title": "Je bent helemaal bij",
+    "description": "Verzoeken, wijzigingen in je toegang en afgeronde taken verschijnen hier.",
+    "unread": "Geen ongelezen meldingen. Kies Alle om eerdere te zien."
+  },
+  "loadError": "Je meldingen konden niet worden geladen.",
+  "retry": "Opnieuw proberen",
+  "filters": {
+    "all": "Alle",
+    "unread": "Ongelezen",
+    "allCategories": "Alle categorieën"
+  },
+  "groups": {
+    "today": "Vandaag",
+    "yesterday": "Gisteren",
+    "earlier": "Eerder"
+  },
+  "categories": {
+    "requests_and_invitations": {
+      "label": "Verzoeken en uitnodigingen",
+      "description": "Iemand wil lid worden van je experiment of organisatie, of nodigt je uit voor een organisatie."
+    },
+    "membership_and_access": {
+      "label": "Lidmaatschap en toegang",
+      "description": "Er is besloten over een verzoek van jou, je toegang of rol verandert, of mensen komen bij of vertrekken uit wat jij beheert."
+    },
+    "experiments_and_resources": {
+      "label": "Experimenten en resources",
+      "description": "Iets waaraan je werkt wordt openbaar, verwijderd, verplaatst of krijgt een nieuwe workbookversie."
+    },
+    "devices_and_calibration": {
+      "label": "Apparaten en kalibratie",
+      "description": "Een kalibratierun wacht op jouw goedkeuring, of een run die je startte is goedgekeurd of afgewezen."
+    },
+    "project_transfers": {
+      "label": "Projectoverdrachten",
+      "description": "Je overdracht van een PhotosynQ-project is ontvangen of afgerond."
+    },
+    "data_jobs": {
+      "label": "Data-exports en uploads",
+      "description": "Een export of upload die je hebt gestart is klaar of mislukt."
+    },
+    "account_security": {
+      "label": "Accountbeveiliging",
+      "description": "Iemand voegt een API-sleutel of een passkey toe aan je account."
+    }
+  },
+  "types": {
+    "experiment_join_request_received": "{{actor}} wil lid worden van {{experimentName}}",
+    "experiment_join_request_approved": "Je verzoek om lid te worden van {{experimentName}} is goedgekeurd",
+    "experiment_join_request_rejected": "Je verzoek om lid te worden van {{experimentName}} is afgewezen",
+    "organization_join_request_received": "{{actor}} wil lid worden van {{organizationName}}",
+    "organization_join_request_approved": "Je verzoek om lid te worden van {{organizationName}} is goedgekeurd",
+    "organization_join_request_rejected": "Je verzoek om lid te worden van {{organizationName}} is afgewezen",
+    "organization_invitation_received": "{{actor}} heeft je uitgenodigd voor {{organizationName}}",
+    "resource_access_granted": "{{actor}} heeft je toegang gegeven tot {{resourceName}}",
+    "resource_access_changed": "{{actor}} heeft je toegang tot {{resourceName}} gewijzigd",
+    "resource_access_revoked": "{{actor}} heeft je toegang tot {{resourceName}} ingetrokken",
+    "project_transfer_requested": "Je overdrachtsverzoek voor PhotosynQ-project {{projectId}} is ontvangen",
+    "project_transfer_completed": "{{experimentName}} is overgezet vanuit PhotosynQ",
+    "data_export_completed": "Je {{format}}-export van {{experimentName}} is klaar",
+    "data_export_failed": "Je export van {{experimentName}} is mislukt",
+    "data_upload_completed": "Je upload naar {{experimentName}} is klaar om te bevragen",
+    "data_upload_failed": "Je upload van {{fileName}} naar {{experimentName}} is mislukt",
+    "organization_invitation_accepted": "{{actor}} heeft je uitnodiging voor {{organizationName}} geaccepteerd",
+    "organization_role_changed": "{{actor}} heeft je {{role}} gemaakt in {{organizationName}}",
+    "organization_membership_removed": "{{actor}} heeft je verwijderd uit {{organizationName}}",
+    "experiment_invitation_accepted": "{{actor}} heeft je uitnodiging voor {{experimentName}} geaccepteerd",
+    "experiment_joined_with_code": "{{actor}} is lid geworden van {{experimentName}} met een deelcode",
+    "resource_member_left": "{{actor}} heeft {{resourceName}} verlaten",
+    "experiment_made_public": "{{experimentName}} is nu openbaar omdat het embargo is afgelopen",
+    "resource_deleted": "{{actor}} heeft {{resourceName}} verwijderd",
+    "resource_moved_organization": "{{actor}} heeft {{resourceName}} verplaatst naar {{organizationName}}",
+    "workbook_version_published": "Versie {{version}} van {{workbookName}} is beschikbaar voor {{experimentName}}",
+    "calibration_run_awaiting_approval": "Een {{definitionName}}-kalibratie van {{deviceName}} wacht op goedkeuring",
+    "calibration_run_approved": "{{actor}} heeft de {{definitionName}}-kalibratie van {{deviceName}} goedgekeurd",
+    "calibration_run_rejected": "{{actor}} heeft de {{definitionName}}-kalibratie van {{deviceName}} afgewezen",
+    "api_key_created": "Er is een nieuwe API-sleutel aan je account toegevoegd: {{keyName}}",
+    "passkey_added": "Er is een nieuwe passkey aan je account toegevoegd: {{passkeyName}}"
+  },
+  "preferences": {
+    "title": "E-mailmeldingen",
+    "description": "Kies welke meldingen je ook per e-mail krijgt. In openJII zie je ze altijd.",
+    "emailLabel": "E-mail voor {{category}}",
+    "loading": "Je meldingsinstellingen worden geladen",
+    "error": "Je meldingsinstellingen konden niet worden geladen.",
+    "updateError": "Die wijziging is niet opgeslagen. Probeer het opnieuw.",
+    "essentialNote": "Inlogcodes komen altijd aan, wat je hier ook kiest.",
+    "newsletterNote": "De nieuwsbrief heeft een eigen instelling onder Algemeen.",
+    "locked": "Altijd aan"
+  }
+}

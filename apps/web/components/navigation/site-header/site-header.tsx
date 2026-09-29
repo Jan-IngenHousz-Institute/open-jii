@@ -70,6 +70,11 @@ function sectionCandidates(locale: string): SectionCandidate[] {
       titleKey: "transferRequest.title",
       namespace: "common",
     },
+    {
+      url: `/${locale}/platform/notifications`,
+      titleKey: "title",
+      namespace: "notifications",
+    },
   );
   return candidates;
 }

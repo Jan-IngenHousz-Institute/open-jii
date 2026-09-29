@@ -551,6 +551,54 @@ export const auditLogs = pgTable("audit_logs", {
   details: jsonb("details"),
 });
 
+// One row per recipient per event. `type` and `resource_type` are text, validated by
+// the registry in @repo/api, so a new notification type needs no migration. `params`
+// holds display values captured at the time, so a row still reads correctly after
+// its subject is renamed or deleted.
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    recipientId: uuid("recipient_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    type: text("type").notNull(),
+    actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
+    // Polymorphic like resource_grants, so the id carries no FK.
+    resourceType: text("resource_type"),
+    resourceId: uuid("resource_id"),
+    params: jsonb("params").$type<Record<string, string>>().default({}).notNull(),
+    // Set by producers whose events can arrive twice, such as webhook retries.
+    dedupeKey: text("dedupe_key"),
+    readAt: timestamp("read_at"),
+    ...timestamps,
+  },
+  (table) => [
+    index("notifications_recipient_created_idx").on(table.recipientId, table.createdAt.desc()),
+    index("notifications_recipient_unread_idx")
+      .on(table.recipientId)
+      .where(sql`${table.readAt} IS NULL`),
+    uniqueIndex("notifications_recipient_dedupe_uniq")
+      .on(table.recipientId, table.dedupeKey)
+      .where(sql`${table.dedupeKey} IS NOT NULL`),
+  ],
+);
+
+// A missing row means the category default from NOTIFICATION_CATEGORIES applies.
+export const notificationPreferences = pgTable(
+  "notification_preferences",
+  {
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    category: text("category").notNull(),
+    channel: text("channel").notNull(),
+    enabled: boolean("enabled").notNull(),
+    ...timestamps,
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.category, table.channel] })],
+);
+
 // Protocols Table
 export const protocols = pgTable(
   "protocols",

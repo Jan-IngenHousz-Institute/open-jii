@@ -1,0 +1,99 @@
+{
+  "title": "Notifications",
+  "markAllRead": "Mark all read",
+  "seeAll": "See all notifications",
+  "settings": "Notification settings",
+  "unreadCount": "{{count}} unread",
+  "someone": "Someone",
+  "empty": {
+    "title": "You're all caught up",
+    "description": "Requests, changes to your access and finished jobs show up here.",
+    "unread": "No unread notifications. Switch to All to see earlier ones."
+  },
+  "loadError": "Your notifications could not be loaded.",
+  "retry": "Try again",
+  "filters": {
+    "all": "All",
+    "unread": "Unread",
+    "allCategories": "All categories"
+  },
+  "groups": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "earlier": "Earlier"
+  },
+  "categories": {
+    "requests_and_invitations": {
+      "label": "Requests and invitations",
+      "description": "Someone asks to join your experiment or organization, or invites you to an organization."
+    },
+    "membership_and_access": {
+      "label": "Membership and access",
+      "description": "A request of yours is decided, your access or role changes, or people join or leave what you run."
+    },
+    "experiments_and_resources": {
+      "label": "Experiments and resources",
+      "description": "Something you work on is made public, deleted, moved, or has a new workbook version."
+    },
+    "devices_and_calibration": {
+      "label": "Devices and calibration",
+      "description": "A calibration run waits for your approval, or a run you started is approved or rejected."
+    },
+    "project_transfers": {
+      "label": "Project transfers",
+      "description": "Your PhotosynQ project transfer is received or completed."
+    },
+    "data_jobs": {
+      "label": "Data exports and uploads",
+      "description": "An export or upload you started finishes or fails."
+    },
+    "account_security": {
+      "label": "Account security",
+      "description": "Someone adds an API key or a passkey to your account."
+    }
+  },
+  "types": {
+    "experiment_join_request_received": "{{actor}} asked to join {{experimentName}}",
+    "experiment_join_request_approved": "Your request to join {{experimentName}} was approved",
+    "experiment_join_request_rejected": "Your request to join {{experimentName}} was declined",
+    "organization_join_request_received": "{{actor}} asked to join {{organizationName}}",
+    "organization_join_request_approved": "Your request to join {{organizationName}} was approved",
+    "organization_join_request_rejected": "Your request to join {{organizationName}} was declined",
+    "organization_invitation_received": "{{actor}} invited you to join {{organizationName}}",
+    "resource_access_granted": "{{actor}} gave you access to {{resourceName}}",
+    "resource_access_changed": "{{actor}} changed your access to {{resourceName}}",
+    "resource_access_revoked": "{{actor}} removed your access to {{resourceName}}",
+    "project_transfer_requested": "Your transfer request for PhotosynQ project {{projectId}} was received",
+    "project_transfer_completed": "{{experimentName}} was transferred from PhotosynQ",
+    "data_export_completed": "Your {{format}} export of {{experimentName}} is ready",
+    "data_export_failed": "Your export of {{experimentName}} failed",
+    "data_upload_completed": "Your upload to {{experimentName}} is ready to query",
+    "data_upload_failed": "Your upload of {{fileName}} to {{experimentName}} failed",
+    "organization_invitation_accepted": "{{actor}} accepted your invitation to {{organizationName}}",
+    "organization_role_changed": "{{actor}} made you {{role}} in {{organizationName}}",
+    "organization_membership_removed": "{{actor}} removed you from {{organizationName}}",
+    "experiment_invitation_accepted": "{{actor}} accepted your invitation to {{experimentName}}",
+    "experiment_joined_with_code": "{{actor}} joined {{experimentName}} with a join code",
+    "resource_member_left": "{{actor}} left {{resourceName}}",
+    "experiment_made_public": "{{experimentName}} is now public because its embargo ended",
+    "resource_deleted": "{{actor}} deleted {{resourceName}}",
+    "resource_moved_organization": "{{actor}} moved {{resourceName}} to {{organizationName}}",
+    "workbook_version_published": "Version {{version}} of {{workbookName}} is available for {{experimentName}}",
+    "calibration_run_awaiting_approval": "A {{definitionName}} calibration of {{deviceName}} is waiting for approval",
+    "calibration_run_approved": "{{actor}} approved the {{definitionName}} calibration of {{deviceName}}",
+    "calibration_run_rejected": "{{actor}} rejected the {{definitionName}} calibration of {{deviceName}}",
+    "api_key_created": "A new API key, {{keyName}}, was added to your account",
+    "passkey_added": "A new passkey, {{passkeyName}}, was added to your account"
+  },
+  "preferences": {
+    "title": "Email notifications",
+    "description": "Choose which notifications also reach you by email. You always see them in openJII.",
+    "emailLabel": "Email {{category}}",
+    "loading": "Loading your notification settings",
+    "error": "Your notification settings could not be loaded.",
+    "updateError": "That change was not saved. Try again.",
+    "essentialNote": "Sign-in codes always arrive, whatever you choose here.",
+    "newsletterNote": "The newsletter has its own setting under General.",
+    "locked": "Always on"
+  }
+}

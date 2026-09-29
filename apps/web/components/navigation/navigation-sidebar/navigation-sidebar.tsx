@@ -1,8 +1,8 @@
 "use client";
 
-import { ActivityPopover } from "@/components/activity/activity-popover";
 import { CommandKHint } from "@/components/command/kbd";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { NotificationsPopover } from "@/components/notifications/notifications-popover";
 import { COMMAND_PALETTE_OPEN_EVENT } from "@/components/shortcuts/shortcuts-root";
 import { WhatsNewFooterItem } from "@/components/whats-new/whats-new-footer-item";
 import { Search } from "lucide-react";
@@ -181,12 +181,12 @@ export function AppSidebar({
         </SidebarGroup>
 
         {/* Secondary utilities, pinned to the bottom of the scroll area like
-            dashboard-01's NavSecondary: activity hub and release notes. */}
+            dashboard-01's NavSecondary: notifications and release notes. */}
         <SidebarGroup className="mt-auto p-0">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <ActivityPopover variant="row" />
+                <NotificationsPopover />
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <WhatsNewFooterItem entries={releaseNotes} onOpen={() => setOpenMobile(false)} />

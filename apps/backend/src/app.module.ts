@@ -33,6 +33,7 @@ import { IotModule } from "./iot/iot.module";
 import { MacroModule } from "./macros/macro.module";
 import { MetricsModule } from "./metrics/metrics.module";
 import { NewsletterModule } from "./newsletter/newsletter.module";
+import { NotificationModule } from "./notifications/notification.module";
 import { OrganizationModule } from "./organizations/organization.module";
 import { ProtocolModule } from "./protocols/protocol.module";
 import { SearchModule } from "./search/search.module";
@@ -88,6 +89,7 @@ import { WorkbookModule } from "./workbooks/workbook.module";
     MacroModule,
     MetricsModule,
     NewsletterModule,
+    NotificationModule,
     OrganizationModule,
     ProtocolModule,
     SearchModule,
