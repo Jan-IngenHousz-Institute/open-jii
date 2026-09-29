@@ -97,4 +97,30 @@ describe("ListProtocols", () => {
     await user.click(screen.getByRole("button", { name: "errors.tryAgain" }));
     await waitFor(() => expect(spy.callCount).toBeGreaterThan(1));
   });
+
+  it("sorts by name, adds a secondary field, and resets", async () => {
+    const spy = server.mount(contract.protocols.listProtocols, {
+      body: envelope([createProtocol({ id: "1", name: "First" })]),
+    });
+    const user = userEvent.setup();
+    render(<ListProtocols />);
+
+    await screen.findByRole("link", { name: "First" });
+    expect(screen.queryByRole("button", { name: "common.resetSorting" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /protocols.columns.activity:/ })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /protocols.columns.name:/ }));
+    await waitFor(() => expect(spy.calls.at(-1)?.query["sort[0][field]"]).toBe("name"));
+
+    await user.keyboard("{Shift>}");
+    await user.click(screen.getByRole("button", { name: /protocols.columns.family:/ }));
+    await user.keyboard("{/Shift}");
+    expect(
+      screen.getByRole("button", { name: /protocols.columns.family:.*common.sortSecondary/ }),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(spy.calls.at(-1)?.query["sort[1][field]"]).toBe("family"));
+
+    await user.click(screen.getByRole("button", { name: "common.resetSorting" }));
+    await waitFor(() => expect(spy.calls.at(-1)?.query.sort).toBeUndefined());
+  });
 });

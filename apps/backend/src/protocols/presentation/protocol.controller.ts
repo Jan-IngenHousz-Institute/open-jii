@@ -136,6 +136,7 @@ export class ProtocolController {
           input.search,
           scope,
           session.user.id,
+          input.sort,
         );
         if (paged.isSuccess()) {
           return toPage(paged.value, input.page, pageSize, formatDatesList);
@@ -143,7 +144,12 @@ export class ProtocolController {
         return throwOrpcFailure(paged, this.logger);
       }
 
-      const result = await this.listProtocolsUseCase.execute(input.search, scope, session.user.id);
+      const result = await this.listProtocolsUseCase.execute(
+        input.search,
+        scope,
+        session.user.id,
+        input.sort,
+      );
 
       if (result.isSuccess()) {
         // The list contract deliberately treats code as unknown so large protocol

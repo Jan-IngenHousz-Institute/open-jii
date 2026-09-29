@@ -21,6 +21,7 @@ export function getMacroColumns(
   return [
     {
       header: t("macros.columns.name"),
+      sortId: "name",
       cell: (macro, href) => (
         <>
           <div className="flex min-w-0 items-center gap-2">
@@ -56,6 +57,7 @@ export function getMacroColumns(
     },
     {
       header: t("macros.columns.language"),
+      sortId: "language",
       className: "hidden w-32 sm:table-cell",
       cell: (macro) => (
         <StatusBadge tone={getMacroLanguageBadgeTone(macro.language)}>
@@ -65,6 +67,7 @@ export function getMacroColumns(
     },
     {
       header: t("macros.columns.protocols"),
+      sortId: "protocols",
       className: "hidden w-56 xl:table-cell",
       cell: (macro) => <CompatibleProtocolsCell macroId={macro.id} />,
     },
@@ -78,6 +81,7 @@ export function getMacroColumns(
     },
     {
       header: t("macros.columns.updated"),
+      sortId: "updated",
       className: "hidden w-40 lg:table-cell",
       cell: (macro) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>

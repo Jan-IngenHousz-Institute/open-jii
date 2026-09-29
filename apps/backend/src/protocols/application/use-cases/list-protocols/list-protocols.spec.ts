@@ -96,6 +96,22 @@ describe("ListProtocolsUseCase", () => {
     expect(protocols.every((p) => p.name !== protocol2.name)).toBe(true);
   });
 
+  it("forwards an explicit sort to both listings", async () => {
+    const sort = [{ field: "macros", direction: "desc" }] as const;
+    const findAll = vi.spyOn(protocolRepository, "findAll");
+    const findPage = vi.spyOn(protocolRepository, "findPage");
+
+    assertSuccess(await useCase.execute(undefined, "all", testUserId, [...sort]));
+    assertSuccess(await useCase.executePaginated(1, 10, undefined, "all", testUserId, [...sort]));
+
+    expect(findAll).toHaveBeenCalledWith(undefined, "all", testUserId, undefined, undefined, [
+      ...sort,
+    ]);
+    expect(findPage).toHaveBeenCalledWith(1, 10, undefined, "all", testUserId, undefined, [
+      ...sort,
+    ]);
+  });
+
   it("should handle repository failures", async () => {
     // Arrange
     // Mock repository to fail

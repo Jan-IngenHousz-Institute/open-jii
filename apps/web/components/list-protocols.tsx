@@ -3,8 +3,12 @@
 import { OverviewToolbar } from "@/components/overview-toolbar";
 import React from "react";
 import { ListPagination } from "~/components/list-pagination";
-import { OverviewTable } from "~/components/overview-table/overview-table";
+import {
+  createOverviewTableSorting,
+  OverviewTable,
+} from "~/components/overview-table/overview-table";
 import { getProtocolColumns } from "~/components/overview-table/protocol-columns";
+import { ResetSortingButton } from "~/components/overview-table/reset-sorting-button";
 import { useProtocols } from "~/hooks/protocol/useProtocols/useProtocols";
 import { useLocale } from "~/hooks/useLocale";
 
@@ -24,6 +28,9 @@ export function ListProtocols() {
     setSearch,
     page,
     setPage,
+    sort,
+    setSort,
+    toggleSort,
   } = useProtocols();
   const { t } = useTranslation("common");
   const locale = useLocale();
@@ -43,6 +50,7 @@ export function ListProtocols() {
             className="w-full md:w-[220px]"
           />
         }
+        filters={<ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />}
       />
 
       <div
@@ -52,6 +60,12 @@ export function ListProtocols() {
       >
         <OverviewTable
           columns={getProtocolColumns(t, locale)}
+          sorting={createOverviewTableSorting(sort, toggleSort, {
+            unsorted: t("common.sortUnsorted"),
+            asc: t("common.sortAscending"),
+            desc: t("common.sortDescending"),
+            secondary: t("common.sortSecondary"),
+          })}
           items={data?.items}
           isLoading={isLoading}
           error={error}

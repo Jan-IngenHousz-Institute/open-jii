@@ -75,6 +75,7 @@ export class MacroController {
         language: input.language,
         scope: resolveListScope(input),
         userId: session.user.id,
+        sort: input.sort,
       };
 
       if (input.page !== undefined) {

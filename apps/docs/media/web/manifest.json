@@ -23,7 +23,8 @@
       "The dashboard and shell frames include CMS blog cards, one of whose artwork is a screenshot of the pre-refresh dashboard. That is Contentful content and out of scope here.",
       "experiment-devices (captured 2026-09-03): the roster comes from a local experiment whose id mirrors a dev-lakehouse experiment with published Ambyte data, so the measurement counts are real dev data; device names are local labels and the client ids are dev gateway MAC addresses, not personal data. The iot-devices flag is pinned in the browser by the capture tool (see featureFlags in shots.ts); the backend evaluated the real flag.",
       "experiments-list, organizations-list and workbooks-list were recaptured on 2026-09-28 at 1920x1200 from the local stack with the seeded development identity; each shows Name sorted ascending. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp. The Experiments shot includes the current data-processing status banner.",
-      "dashboard recaptured on 2026-09-29 at 1920x1200 with the seeded development identity. Reviewed the full frame: it shows seeded experiments and user only, with no credentials, precise locations or dev overlays. The community measurement banner and CMS blog cards are visible; one blog image is the pre-refresh dashboard. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp."
+      "dashboard recaptured on 2026-09-29 at 1920x1200 with the seeded development identity. Reviewed the full frame: it shows seeded experiments and user only, with no credentials, precise locations or dev overlays. The community measurement banner and CMS blog cards are visible; one blog image is the pre-refresh dashboard. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
+      "protocols-list and macros-list were recaptured on 2026-09-28 at 1920x1200 from the local stack with the seeded development identity; each shows Name sorted ascending. Frames were reviewed at full size and show only seeded protocol/macro names. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp. Both captures include the current data-processing status banner."
     ]
   },
   "assets": [
@@ -235,6 +236,28 @@
       "sha256": "7ad7cdf75c3d1a9e50edc102857a7b80de5c7f9ed9bf709200c08103a57abdc7",
       "disposition": "published",
       "scope": "The searchable protocol picker filtered by name, with creators and sensor-family badges"
+    },
+    {
+      "path": "/img/guide/web/protocols-list.webp",
+      "slug": "protocols-list",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 104048,
+      "sha256": "940a9bec0bfae30b7b4dd12ab4c8ff4d642101838a1b342189fed879570a9b59",
+      "disposition": "published",
+      "scope": "Protocols overview with the Name column sorted ascending"
+    },
+    {
+      "path": "/img/guide/web/macros-list.webp",
+      "slug": "macros-list",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 94348,
+      "sha256": "813d8f6062bbb78591217510f089b44ad3ee81454ec836c53410b7e2b772b73e",
+      "disposition": "published",
+      "scope": "Macros overview with the Name column sorted ascending"
     },
     {
       "path": "/img/chrome-refresh/sidebar-peek.webp",
