@@ -27,8 +27,6 @@ from openjii.centrum.runtime import CATALOG_NAME
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        # Auto compaction runs inside the pipeline after writes; predictive
-        # optimization compacts these tables asynchronously instead.
         "delta.autoOptimize.autoCompact": "false",
         "delta.feature.variantType-preview": "supported",
     },

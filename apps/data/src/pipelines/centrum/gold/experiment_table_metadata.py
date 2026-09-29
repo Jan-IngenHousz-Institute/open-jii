@@ -28,8 +28,6 @@ from openjii.variant_schema import merged_variant_schema
     comment="Gold layer: VARIANT schemas per experiment table, merged from one sample per distinct schema.",
     table_properties={
         "quality": "gold",
-        # Auto compaction runs inside the pipeline after writes; predictive
-        # optimization compacts these tables asynchronously instead.
         "delta.autoOptimize.autoCompact": "false",
         "pipelines.autoOptimize.managed": "true",
         "delta.feature.variantType-preview": "supported",

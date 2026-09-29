@@ -17,8 +17,6 @@ from openjii.centrum.runtime import CATALOG_NAME
     comment="Gold layer: DLT-tracked mirror of the experiment_metadata table for incremental refresh support.",
     table_properties={
         "quality": "gold",
-        # Auto compaction runs inside the pipeline after writes; predictive
-        # optimization compacts these tables asynchronously instead.
         "delta.autoOptimize.autoCompact": "false",
         "delta.enableRowTracking": "true",
         "delta.enableChangeDataFeed": "true",

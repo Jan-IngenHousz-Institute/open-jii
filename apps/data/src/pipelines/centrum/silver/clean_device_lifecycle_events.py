@@ -26,8 +26,6 @@ from pyspark.sql import functions as F
         "quality": "silver",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        # Auto compaction runs inside the pipeline after writes; predictive
-        # optimization compacts these tables asynchronously instead.
         "delta.autoOptimize.autoCompact": "false",
     },
 )
