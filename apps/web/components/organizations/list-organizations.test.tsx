@@ -202,6 +202,9 @@ describe("<ListOrganizations />", () => {
     await waitFor(() => expect(spy.calls.at(-1)?.query["sort[0][field]"]).toBe("name"));
     expect(spy.calls.at(-1)?.query["sort[0][direction]"]).toBe("asc");
     expect(screen.getByRole("button", { name: "common.resetSorting" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "common.resetSorting" }));
+    await waitFor(() => expect(spy.calls.at(-1)?.query.sort).toBeUndefined());
   });
 
   // jsdom cannot measure text, so the width itself was set from a browser

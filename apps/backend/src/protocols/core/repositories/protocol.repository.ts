@@ -1,6 +1,6 @@
 import { Injectable, Inject } from "@nestjs/common";
 
-import { ProtocolFilter } from "@repo/api/domains/protocol/protocol.schema";
+import type { ProtocolFilter, ProtocolSort } from "@repo/api/domains/protocol/protocol.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 import {
   and,
@@ -12,6 +12,7 @@ import {
   isNull,
   inArray,
   or,
+  protocolMacros,
   protocols,
   users,
   sql,
@@ -44,6 +45,12 @@ import { CreateProtocolDto, UpdateProtocolDto, ProtocolDto } from "../models/pro
 
 // All protocol columns except the internal full-text `search_vector` (never returned to clients).
 const { searchVector: _protocolSearchVector, ...protocolColumns } = getTableColumns(protocols);
+
+// Number of macros compatible with a protocol. The list chips load lazily,
+// so sorting by the count needs it computed in SQL.
+function macroCountSql() {
+  return sql<number>`(select count(*)::int from ${protocolMacros} where ${protocolMacros.protocolId} = ${protocols.id})`;
+}
 
 /** A listing row plus its relevance score, which global search merges on across types. */
 export type ProtocolSearchRow = ProtocolDto & { score: number };
@@ -103,6 +110,7 @@ export class ProtocolRepository {
     scope?: ResourceScope,
     userId?: string,
     organizationId?: string,
+    sort?: ProtocolSort,
   ) {
     {
       const conditions: (SQL | undefined)[] = [];
@@ -169,11 +177,25 @@ export class ProtocolRepository {
           )
         : sql<number>`0::int`;
 
+      const sortFields = {
+        name: protocols.name,
+        family: familyText,
+        macros: macroCountSql(),
+        updated: protocols.updatedAt,
+      };
       // Browse keeps tiers strict, with the curated `sortOrder` surviving as a
-      // within-tier tiebreak. Both orderings end on `id` so paging is stable.
-      const orderBy = search
-        ? [desc(score), asc(protocols.id)]
-        : [desc(tier), asc(protocols.sortOrder), asc(protocols.name), asc(protocols.id)];
+      // within-tier tiebreak. Every ordering ends on `id` so paging is stable.
+      const orderBy = sort?.length
+        ? [
+            ...sort.map(
+              ({ field, direction }) =>
+                sql`${direction === "asc" ? asc(sortFields[field]) : desc(sortFields[field])} nulls last`,
+            ),
+            asc(protocols.id),
+          ]
+        : search
+          ? [desc(score), asc(protocols.id)]
+          : [desc(tier), asc(protocols.sortOrder), asc(protocols.name), asc(protocols.id)];
 
       const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -200,9 +222,16 @@ export class ProtocolRepository {
     userId?: string,
     limit?: number,
     organizationId?: string,
+    sort?: ProtocolSort,
   ): Promise<Result<ProtocolSearchRow[]>> {
     return tryCatch(async () => {
-      const { where, orderBy, score } = this.buildListing(search, scope, userId, organizationId);
+      const { where, orderBy, score } = this.buildListing(
+        search,
+        scope,
+        userId,
+        organizationId,
+        sort,
+      );
 
       let query = this.baseQuery(score);
       if (where) {
@@ -225,9 +254,16 @@ export class ProtocolRepository {
     scope?: ResourceScope,
     userId?: string,
     organizationId?: string,
+    sort?: ProtocolSort,
   ): Promise<Result<{ items: ProtocolSearchRow[]; totalCount: number }>> {
     return tryCatch(async () => {
-      const { where, orderBy, score } = this.buildListing(search, scope, userId, organizationId);
+      const { where, orderBy, score } = this.buildListing(
+        search,
+        scope,
+        userId,
+        organizationId,
+        sort,
+      );
 
       let rows = this.baseQuery(score);
       let total = this.database

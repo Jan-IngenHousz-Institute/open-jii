@@ -8,4 +8,6 @@ export default registerAs("analytics", () => ({
   posthogHost: process.env.POSTHOG_HOST,
   // dev or prod on the deployed service; one PostHog project serves both.
   environment: process.env.ENVIRONMENT_PREFIX,
+  // The container sets NODE_ENV=production; a local run does not, whatever its prefix says.
+  deployed: process.env.NODE_ENV === "production",
 }));

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
+import { zListSort, zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zResourceSeries } from "../metrics/metrics.schema";
 import { zVisibility } from "../visibility/visibility.schema";
@@ -83,6 +83,9 @@ export const zProtocolDetail = zProtocol.extend({
   capabilities: zResourceCapabilities,
 });
 
+export const zProtocolSort = zListSort(z.enum(["name", "family", "macros", "updated"]));
+export type ProtocolSort = z.infer<typeof zProtocolSort>;
+
 // Query parameters
 export const zProtocolFilterQuery = z
   .object({
@@ -90,6 +93,7 @@ export const zProtocolFilterQuery = z
     /** @deprecated Alias for `scope: "related"`, removed once web and mobile have migrated. */
     filter: z.enum(["my"]).optional().describe("Deprecated alias for scope=related"),
     scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
+    sort: zProtocolSort.optional().describe("Up to two ordered sort criteria"),
   })
   .merge(zPaginationQuery);
 

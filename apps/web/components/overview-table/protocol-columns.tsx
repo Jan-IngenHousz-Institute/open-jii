@@ -21,6 +21,7 @@ export function getProtocolColumns(
   return [
     {
       header: t("protocols.columns.name"),
+      sortId: "name",
       cell: (protocol, href) => (
         <>
           <div className="flex min-w-0 items-center gap-2">
@@ -56,6 +57,7 @@ export function getProtocolColumns(
     },
     {
       header: t("protocols.columns.family"),
+      sortId: "family",
       className: "hidden w-36 sm:table-cell",
       cell: (protocol) => (
         <StatusBadge tone={getSensorFamilyBadgeTone(protocol.family)} className="capitalize">
@@ -65,6 +67,7 @@ export function getProtocolColumns(
     },
     {
       header: t("protocols.columns.macros"),
+      sortId: "macros",
       className: "hidden w-56 xl:table-cell",
       cell: (protocol) => <CompatibleMacrosCell protocolId={protocol.id} />,
     },
@@ -78,6 +81,7 @@ export function getProtocolColumns(
     },
     {
       header: t("protocols.columns.updated"),
+      sortId: "updated",
       className: "hidden w-40 lg:table-cell",
       cell: (protocol) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>

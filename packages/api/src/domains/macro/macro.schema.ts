@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
+import { zListSort, zPaginated, zPaginationQuery, zResourceScope } from "../../shared/listing";
 import { zResourceCapabilities } from "../authorization/capabilities.schema";
 import { zResourceSeries } from "../metrics/metrics.schema";
 import { zVisibility } from "../visibility/visibility.schema";
@@ -63,6 +63,9 @@ export const zMacroDetail = zMacro.extend({
   capabilities: zResourceCapabilities,
 });
 
+export const zMacroSort = zListSort(z.enum(["name", "language", "protocols", "updated"]));
+export type MacroSort = z.infer<typeof zMacroSort>;
+
 // Query parameters
 export const zMacroFilterQuery = z
   .object({
@@ -71,6 +74,7 @@ export const zMacroFilterQuery = z
     /** @deprecated Alias for `scope: "related"`, removed once web and mobile have migrated. */
     filter: z.enum(["my"]).optional().describe("Deprecated alias for scope=related"),
     scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
+    sort: zMacroSort.optional().describe("Up to two ordered sort criteria"),
   })
   .merge(zPaginationQuery);
 
