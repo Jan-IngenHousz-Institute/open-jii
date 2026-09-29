@@ -7,11 +7,11 @@ import {
   createOverviewTableSorting,
   OverviewTable,
 } from "~/components/overview-table/overview-table";
+import { ResetSortingButton } from "~/components/overview-table/reset-sorting-button";
 import { useExperiments } from "~/hooks/experiment/useExperiments/useExperiments";
 import { useLocale } from "~/hooks/useLocale";
 
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components/button";
 import { SearchInput } from "@repo/ui/components/search-input";
 
 interface ListExperimentsProps {
@@ -53,13 +53,7 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
             className="w-full md:w-56"
           />
         }
-        filters={
-          sort.length ? (
-            <Button variant="outline" size="sm" onClick={() => setSort([])}>
-              {t("common.resetSorting")}
-            </Button>
-          ) : undefined
-        }
+        filters={<ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />}
       />
 
       <div
