@@ -634,7 +634,10 @@ export const protocolMacros = pgTable(
       .default(sql`(now() AT TIME ZONE 'UTC')`)
       .notNull(),
   },
-  (table) => [primaryKey({ columns: [table.protocolId, table.macroId] })],
+  (table) => [
+    primaryKey({ columns: [table.protocolId, table.macroId] }),
+    index("protocol_macros_macro_id_idx").on(table.macroId),
+  ],
 );
 
 // Flows Table - stores a single graph JSON per experiment (1:1)

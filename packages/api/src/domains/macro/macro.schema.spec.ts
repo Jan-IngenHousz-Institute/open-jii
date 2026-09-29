@@ -181,6 +181,37 @@ describe("Macro Schema", () => {
     it("rejects invalid language", () => {
       expect(() => zMacroFilterQuery.parse({ language: "java" })).toThrow();
     });
+
+    it("accepts one or two allowed sort fields", () => {
+      const sort = [
+        { field: "protocols", direction: "desc" },
+        { field: "name", direction: "asc" },
+      ];
+      expect(zMacroFilterQuery.parse({ sort }).sort).toEqual(sort);
+    });
+
+    it("rejects duplicate, unsupported, and third sort fields", () => {
+      expect(
+        zMacroFilterQuery.safeParse({
+          sort: [
+            { field: "name", direction: "asc" },
+            { field: "name", direction: "desc" },
+          ],
+        }).success,
+      ).toBe(false);
+      expect(
+        zMacroFilterQuery.safeParse({ sort: [{ field: "activity", direction: "asc" }] }).success,
+      ).toBe(false);
+      expect(
+        zMacroFilterQuery.safeParse({
+          sort: [
+            { field: "name", direction: "asc" },
+            { field: "language", direction: "asc" },
+            { field: "updated", direction: "asc" },
+          ],
+        }).success,
+      ).toBe(false);
+    });
   });
 
   describe("zMacroIdPathParam", () => {

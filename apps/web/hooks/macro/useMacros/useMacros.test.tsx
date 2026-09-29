@@ -111,4 +111,25 @@ describe("useMacros", () => {
     });
     expect(spy.calls[spy.calls.length - 1]?.query?.page).toBe("2");
   });
+
+  it("sends sorting and resets to the first page when sorting changes", async () => {
+    const spy = server.mount(contract.macros.listMacros, {
+      body: envelope([], 1, 3),
+    });
+
+    const { result } = renderHook(() => useMacros());
+    await waitFor(() => expect(result.current.data).toBeDefined());
+
+    act(() => result.current.setPage(2));
+    act(() => result.current.toggleSort("protocols", false));
+
+    expect(result.current.page).toBe(1);
+    await waitFor(() => {
+      expect(spy.calls.at(-1)?.query).toMatchObject({
+        page: "1",
+        "sort[0][field]": "protocols",
+        "sort[0][direction]": "asc",
+      });
+    });
+  });
 });
