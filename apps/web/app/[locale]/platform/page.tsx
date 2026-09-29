@@ -1,6 +1,7 @@
 import { DashboardBanner } from "@/components/dashboard/dashboard-banner";
 import { DashboardSection } from "@/components/dashboard/dashboard-section";
 import { MilestoneBanner } from "@/components/dashboard/milestone-banner";
+import { PublicExperimentsSection } from "@/components/dashboard/public-experiments-section";
 import { ResearchActivityPanel } from "@/components/dashboard/research-activity-panel";
 import { UserExperimentsSection } from "@/components/dashboard/user-experiments-section";
 import { PageContainer } from "@/components/page-container";
@@ -61,7 +62,17 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
         <UserExperimentsSection />
       </DashboardSection>
 
-      {/* Second Row - Recent Blog Posts */}
+      {/* Recently updated public experiments */}
+      <DashboardSection
+        title={t("dashboard.recentPublicExperiments")}
+        seeAllLabel={t("dashboard.seeAll")}
+        seeAllHref="/platform/experiments?visibility=public"
+        locale={locale}
+      >
+        <PublicExperimentsSection />
+      </DashboardSection>
+
+      {/* Recent Blog Posts */}
       <DashboardSection
         title={t("dashboard.recentArticles")}
         seeAllLabel={t("dashboard.seeAll")}

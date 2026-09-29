@@ -85,6 +85,9 @@ export class UpdateExperimentLocationsUseCase {
         );
       }
 
+      const touched = await this.experimentRepository.touch(experimentId);
+      if (touched.isFailure()) return touched;
+
       this.logger.log({
         msg: "Experiment locations updated successfully",
         operation: "updateExperimentLocations",

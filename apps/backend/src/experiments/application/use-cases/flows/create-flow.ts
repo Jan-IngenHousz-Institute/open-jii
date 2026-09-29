@@ -38,7 +38,10 @@ export class CreateFlowUseCase {
         if (flow) {
           return failure(AppError.badRequest("Flow already exists for this experiment"));
         }
-        return this.flowRepository.create(experimentId, graph);
+        const written = await this.flowRepository.create(experimentId, graph);
+        if (written.isFailure()) return written;
+        const touched = await this.experimentRepository.touch(experimentId);
+        return touched.map(() => written.value);
       });
     });
   }

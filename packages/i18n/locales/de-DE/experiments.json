@@ -191,6 +191,7 @@
   "experimentId": "Experiment-ID",
   "created": "Erstellt",
   "updated": "Aktualisiert",
+  "updatedOn": "Aktualisiert am {{date}}",
   "descriptionTitle": "Beschreibung",
   "details": {
     "location": {

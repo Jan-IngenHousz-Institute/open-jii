@@ -454,6 +454,7 @@ export const zExperimentFilterQuery = z
     filter: z.enum(["member"]).optional().describe("Deprecated alias for scope=related"),
     scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
     status: zExperimentStatus.optional().describe("Filter experiments by their status"),
+    visibility: zExperimentVisibility.optional().describe("Filter experiments by their visibility"),
     search: z.string().optional().describe("Search term for experiment name"),
     sort: zExperimentSort.optional().describe("Up to two ordered sort criteria"),
   })

@@ -92,6 +92,9 @@ export class AddExperimentLocationsUseCase {
         );
       }
 
+      const touched = await this.experimentRepository.touch(experimentId);
+      if (touched.isFailure()) return touched;
+
       this.logger.log({
         msg: "Successfully added locations to experiment",
         operation: "addExperimentLocations",
