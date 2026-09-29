@@ -20,7 +20,7 @@ from pyspark.sql import functions as F
         "quality": "bronze",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
+        "delta.autoOptimize.autoCompact": "false",
     },
 )
 def raw_device_lifecycle_events():

@@ -26,7 +26,7 @@ from pyspark.sql import functions as F
         "quality": "silver",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
+        "delta.autoOptimize.autoCompact": "false",
     },
 )
 @dlt.expect_all_or_drop(

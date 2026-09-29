@@ -18,7 +18,7 @@ from openjii.centrum.runtime import ENVIRONMENT
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
+        "delta.autoOptimize.autoCompact": "false",
         "delta.enableRowTracking": "true",
         "delta.enableChangeDataFeed": "true",
     }
