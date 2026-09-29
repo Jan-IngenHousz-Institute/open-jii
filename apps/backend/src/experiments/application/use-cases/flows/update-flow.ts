@@ -39,8 +39,17 @@ export class UpdateFlowUseCase {
         }
         const written = await this.flowRepository.update(experimentId, graph);
         if (written.isFailure()) return written;
+        // The flow is already saved; a missed bump only affects list ordering.
         const touched = await this.experimentRepository.touch(experimentId);
-        return touched.map(() => written.value);
+        if (touched.isFailure()) {
+          this.logger.warn({
+            msg: "Failed to mark experiment as updated",
+            operation: "updateFlow",
+            experimentId,
+            error: touched.error.message,
+          });
+        }
+        return written;
       });
     });
   }

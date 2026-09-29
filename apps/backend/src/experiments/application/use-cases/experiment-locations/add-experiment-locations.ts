@@ -92,8 +92,16 @@ export class AddExperimentLocationsUseCase {
         );
       }
 
+      // The locations are already saved; a missed bump only affects list ordering.
       const touched = await this.experimentRepository.touch(experimentId);
-      if (touched.isFailure()) return touched;
+      if (touched.isFailure()) {
+        this.logger.warn({
+          msg: "Failed to mark experiment as updated",
+          operation: "addExperimentLocations",
+          experimentId,
+          error: touched.error.message,
+        });
+      }
 
       this.logger.log({
         msg: "Successfully added locations to experiment",

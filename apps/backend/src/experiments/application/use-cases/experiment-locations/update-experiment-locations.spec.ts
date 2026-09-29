@@ -357,4 +357,23 @@ describe("UpdateExperimentLocationsUseCase", () => {
     assertSuccess(result);
     expect((await readUpdatedAt(experiment.id)).getTime()).toBeGreaterThan(staleDate.getTime());
   });
+
+  it("still saves the locations when marking the experiment as updated fails", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Touch Fails Locations Experiment",
+      userId: testUserId,
+    });
+    vi.spyOn(testApp.module.get(ExperimentRepository), "touch").mockResolvedValue(
+      failure(AppError.internal("Database connection failed")),
+    );
+
+    const result = await useCase.execute(
+      experiment.id,
+      [{ experimentId: experiment.id, name: "Field B", latitude: 52.2, longitude: 5.2 }],
+      testUserId,
+    );
+
+    assertSuccess(result);
+    expect(result.value).toHaveLength(1);
+  });
 });

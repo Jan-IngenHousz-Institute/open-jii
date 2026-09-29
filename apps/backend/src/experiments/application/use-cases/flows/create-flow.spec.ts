@@ -1,7 +1,8 @@
 import { experiments as experimentsTable, eq } from "@repo/database";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { CreateFlowUseCase } from "./create-flow";
 
 describe("CreateFlowUseCase", () => {
@@ -108,5 +109,21 @@ describe("CreateFlowUseCase", () => {
 
     assertSuccess(result);
     expect((await readUpdatedAt(experiment.id)).getTime()).toBeGreaterThan(staleDate.getTime());
+  });
+
+  it("still creates the flow when marking the experiment as updated fails", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Touch Fails", userId: ownerId });
+    vi.spyOn(testApp.module.get(ExperimentRepository), "touch").mockResolvedValue(
+      failure(AppError.internal("Database connection failed")),
+    );
+
+    const result = await useCase.execute(
+      experiment.id,
+      ownerId,
+      testApp.sampleFlowGraph({ questionKind: "multi_choice" }),
+    );
+
+    assertSuccess(result);
+    expect(result.value.experimentId).toBe(experiment.id);
   });
 });

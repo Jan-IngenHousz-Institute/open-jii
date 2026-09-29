@@ -4,6 +4,7 @@ import { assertFailure, assertSuccess, failure, AppError } from "../../../../com
 import { TestHarness } from "../../../../test/test-harness";
 import type { CreateLocationDto } from "../../../core/models/experiment-locations.model";
 import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { AddExperimentLocationsUseCase } from "./add-experiment-locations";
 
 describe("AddExperimentLocationsUseCase", () => {
@@ -224,5 +225,24 @@ describe("AddExperimentLocationsUseCase", () => {
 
     assertSuccess(result);
     expect((await readUpdatedAt(experiment.id)).getTime()).toBeGreaterThan(staleDate.getTime());
+  });
+
+  it("still saves the locations when marking the experiment as updated fails", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Touch Fails Locations Experiment",
+      userId: testUserId,
+    });
+    vi.spyOn(testApp.module.get(ExperimentRepository), "touch").mockResolvedValue(
+      failure(AppError.internal("Database connection failed")),
+    );
+
+    const result = await useCase.execute(
+      experiment.id,
+      [{ experimentId: experiment.id, name: "Field B", latitude: 52.2, longitude: 5.2 }],
+      testUserId,
+    );
+
+    assertSuccess(result);
+    expect(result.value).toHaveLength(1);
   });
 });
