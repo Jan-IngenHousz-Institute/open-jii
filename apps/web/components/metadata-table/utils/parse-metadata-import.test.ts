@@ -142,6 +142,23 @@ describe("parseDelimitedText", () => {
     });
   });
 
+  describe("header whitespace", () => {
+    it("replaces spaces in a header with an underscore and keeps the row values", () => {
+      const result = parseDelimitedText("QR code,Plot\nA1,101\nB2,102");
+
+      expect(result.columns.map((c) => c.name)).toEqual(["QR_code", "Plot"]);
+      expect(result.rows.map((r) => r.col_0)).toEqual(["A1", "B2"]);
+      expect(result.rows.map((r) => r.col_1)).toEqual([101, 102]);
+    });
+
+    it("collapses whitespace runs and trims leading and trailing whitespace", () => {
+      const result = parseDelimitedText("ID, plot  number ,genotype \tname\n1,101,T1", ",");
+
+      expect(result.columns.map((c) => c.name)).toEqual(["ID", "plot_number", "genotype_name"]);
+      expect(result.rows[0]).toMatchObject({ col_0: 1, col_1: 101, col_2: "T1" });
+    });
+  });
+
   describe("real-world data", () => {
     it("should parse semicolon-delimited experiment metadata", () => {
       const text = `ID;LOCATION;PLOT;REP;Density;Genotype;Harvest moment;Plot
@@ -159,7 +176,7 @@ describe("parseDelimitedText", () => {
         "REP",
         "Density",
         "Genotype",
-        "Harvest moment",
+        "Harvest_moment",
         "Plot",
       ]);
       expect(result.rows).toHaveLength(3);
@@ -954,6 +971,55 @@ describe("parseFile", () => {
       // Should skip first row (title) and use second as header
       expect(result.columns.map((c) => c.name)).toEqual(["ID", "Name"]);
       expect(result.rows).toHaveLength(1);
+
+      vi.doUnmock("exceljs");
+    });
+
+    it("should replace spaces in Excel headers, including filler column names", async () => {
+      const mockRows = [
+        [{ value: "QR code" }, { value: "Plot  number" }],
+        [{ value: "A1" }, { value: 101 }, { value: "extra" }],
+      ];
+      const mockSheet = {
+        rowCount: 2,
+        eachRow: (
+          cb: (row: {
+            eachCell: (
+              opts: { includeEmpty: boolean },
+              cb: (cell: { value: unknown }) => void,
+            ) => void;
+          }) => void,
+        ) => {
+          mockRows.forEach((cells) => {
+            cb({
+              eachCell: (
+                _opts: { includeEmpty: boolean },
+                cb2: (cell: { value: unknown }) => void,
+              ) => {
+                cells.forEach((cell) => cb2(cell));
+              },
+            });
+          });
+        },
+      };
+
+      const mockWorkbook = {
+        worksheets: [mockSheet],
+        xlsx: { load: vi.fn().mockResolvedValue(undefined) },
+      };
+
+      vi.doMock("exceljs", () => ({
+        Workbook: vi.fn(function () {
+          return mockWorkbook;
+        }),
+      }));
+
+      const { parseFile: parseFileFresh } = await import("./parse-metadata-import");
+      const file = createTestFile("test.xlsx");
+      const result = await parseFileFresh(file);
+
+      expect(result.columns.map((c) => c.name)).toEqual(["QR_code", "Plot_number", "Column_3"]);
+      expect(result.rows[0]).toMatchObject({ col_0: "A1", col_1: 101, col_2: "extra" });
 
       vi.doUnmock("exceljs");
     });

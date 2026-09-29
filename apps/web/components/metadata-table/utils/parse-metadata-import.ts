@@ -36,7 +36,7 @@ function buildMetadata(
 
   const columns: MetadataColumn[] = headers.map((name, i) => ({
     id: `col_${i}`,
-    name: name.trim(),
+    name: name.trim().replace(/\s+/g, "_"),
     type: "string" as const,
   }));
 
