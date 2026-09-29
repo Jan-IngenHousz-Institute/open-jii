@@ -5,6 +5,7 @@ import {
   FEATURE_FLAG_DEFAULTS,
   createPostHogClientConfig,
   createPostHogServerConfig,
+  dropEveryEvent,
 } from "@repo/analytics";
 import type { FeatureFlagKey, PostHogService } from "@repo/analytics";
 
@@ -17,6 +18,9 @@ export { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS };
 export type { FeatureFlagKey };
 
 const service: PostHogService = "web";
+
+// A build on a developer's machine still loads flags, but sends PostHog nothing.
+export const isDeployedBuild = env.NEXT_PUBLIC_ENVIRONMENT !== "local";
 
 // One PostHog project serves dev and prod, so every event names the environment it came from.
 export const tagEnvironment: BeforeSendFn = (event) =>
@@ -40,7 +44,7 @@ export const POSTHOG_CLIENT_CONFIG = createPostHogClientConfig(
   env.NEXT_PUBLIC_POSTHOG_UI_HOST,
   {
     debug: false,
-    before_send: tagEnvironment,
+    before_send: isDeployedBuild ? tagEnvironment : dropEveryEvent,
   },
 );
 
@@ -50,4 +54,5 @@ export const POSTHOG_CLIENT_CONFIG = createPostHogClientConfig(
 export const POSTHOG_SERVER_CONFIG = createPostHogServerConfig(env.NEXT_PUBLIC_POSTHOG_HOST, {
   flushAt: 20,
   flushInterval: 10000,
+  before_send: isDeployedBuild ? undefined : dropEveryEvent,
 });

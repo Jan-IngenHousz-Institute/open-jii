@@ -19,6 +19,7 @@ from openjii.variant_schema import variant_schema_key
     comment="Gold layer: one uploaded_data sample per (experiment_id, upload_table_id, normalised schema).",
     table_properties={
         "quality": "gold",
+        "delta.autoOptimize.autoCompact": "false",
         "pipelines.autoOptimize.managed": "true",
         "delta.feature.variantType-preview": "supported",
     },

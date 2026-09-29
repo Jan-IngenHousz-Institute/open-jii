@@ -28,6 +28,7 @@ from openjii.variant_schema import merged_variant_schema
     comment="Gold layer: VARIANT schemas per experiment table, merged from one sample per distinct schema.",
     table_properties={
         "quality": "gold",
+        "delta.autoOptimize.autoCompact": "false",
         "pipelines.autoOptimize.managed": "true",
         "delta.feature.variantType-preview": "supported",
     }

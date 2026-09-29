@@ -20,7 +20,7 @@ from openjii.centrum import DEVICE_LAST_ACTIVITY_TABLE, LATEST_DEVICE_DATA_TABLE
         "quality": "gold",
         "pipelines.autoOptimize.managed": "true",
         "delta.autoOptimize.optimizeWrite": "true",
-        "delta.autoOptimize.autoCompact": "true",
+        "delta.autoOptimize.autoCompact": "false",
     },
 )
 def device_last_activity():

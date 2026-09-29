@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
-import { createPostHogServerConfig } from "@repo/analytics";
+import { createPostHogServerConfig, dropEveryEvent } from "@repo/analytics";
 import { tagUnreportedExceptions } from "@repo/analytics/server";
 
 import { ErrorCodes } from "../../../../utils/error-codes";
@@ -29,6 +29,7 @@ export class AnalyticsConfigService {
       posthogKey: this.configService.getOrThrow("analytics.posthogKey"),
       posthogHost: this.configService.getOrThrow("analytics.posthogHost"),
       environment: this.configService.get<string>("analytics.environment"),
+      deployed: this.configService.get<boolean>("analytics.deployed") ?? false,
     };
   }
 
@@ -78,6 +79,14 @@ export class AnalyticsConfigService {
   }
 
   /**
+   * Whether this process runs as the deployed service. A local run still evaluates flags but sends
+   * PostHog nothing, since every environment shares one project.
+   */
+  get isDeployed(): boolean {
+    return this.config.deployed;
+  }
+
+  /**
    * Checks if PostHog is configured with a valid API key
    */
   isConfigured(): boolean {
@@ -95,7 +104,9 @@ export class AnalyticsConfigService {
     // Crashes outside a request never reach the exception filter, so they are tagged on their way out.
     return createPostHogServerConfig(this.config.posthogHost, {
       enableExceptionAutocapture: true,
-      before_send: tagUnreportedExceptions("backend", this.environment),
+      before_send: this.isDeployed
+        ? tagUnreportedExceptions("backend", this.environment)
+        : dropEveryEvent,
     });
   }
 }

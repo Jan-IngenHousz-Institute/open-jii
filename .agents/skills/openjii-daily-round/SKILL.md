@@ -128,8 +128,8 @@ pnpm posthog:issues show <issue-id>  # first and last seen, and the latest stack
 `list` writes `.claude/posthog/issues-review.json`: every open issue with events in the window, with
 its service (`web`, `backend`, `mobile`), environment, app version, events, users and link. Read prod
 first. An issue needs a person when it is new since the last round and reaches users on a released
-build, or when an old one comes back or spikes. Mobile events from a developer's Metro build carry
-`build: development`; those are ours, not researchers'.
+build, or when an old one comes back or spikes. Builds on a developer's machine send PostHog
+nothing, so every event comes from dev, prod or an installed app.
 
 Propose each issue that needs a person as a bug or as noise. A bug gets a ticket drafted with
 `openjii-ticket-refine`, filed only on the person's word. Noise is set to `suppress` in the review
