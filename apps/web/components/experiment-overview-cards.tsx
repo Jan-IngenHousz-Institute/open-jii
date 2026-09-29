@@ -7,6 +7,10 @@ import React from "react";
 import type { ExperimentListItem } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
+/**
+ * Renders experiment cards with aligned badge rows and links to active or archived experiment details.
+ * Handles loading and empty states and optionally labels each card's update date.
+ */
 export function ExperimentOverviewCards({
   experiments,
   archived = false,
