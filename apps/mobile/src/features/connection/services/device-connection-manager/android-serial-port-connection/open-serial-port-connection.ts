@@ -72,7 +72,15 @@ export async function openSerialPortConnection(deviceId: number) {
   });
 
   const emitter = new Emitter<SerialPortEvents>();
-  emitter.on("destroy", () => usbSerialPort.close());
+  // Both the registry and the executor's transport emit destroy for the same
+  // handle, and the native close is by deviceId: a second close would shut a
+  // newer port opened for this device since. Close once per handle.
+  let closed = false;
+  emitter.on("destroy", () => {
+    if (closed) return;
+    closed = true;
+    return usbSerialPort.close();
+  });
 
   usbSerialPort.onReceived((event) => {
     emitter
