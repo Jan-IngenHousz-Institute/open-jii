@@ -1,3 +1,5 @@
+import { experiments as experimentsTable, eq } from "@repo/database";
+
 import { assertFailure, assertSuccess, failure, AppError } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import type { CreateLocationDto } from "../../../core/models/experiment-locations.model";
@@ -189,5 +191,38 @@ describe("AddExperimentLocationsUseCase", () => {
     assertFailure(result);
     expect(result.error.message).toContain("Failed to create locations");
     expect(result.error.message).toContain("Database connection failed");
+  });
+
+  const staleDate = new Date("2020-01-01T00:00:00Z");
+
+  const markStale = (experimentId: string) =>
+    testApp.database
+      .update(experimentsTable)
+      .set({ updatedAt: staleDate })
+      .where(eq(experimentsTable.id, experimentId));
+
+  const readUpdatedAt = async (experimentId: string) => {
+    const [row] = await testApp.database
+      .select({ updatedAt: experimentsTable.updatedAt })
+      .from(experimentsTable)
+      .where(eq(experimentsTable.id, experimentId));
+    return row.updatedAt;
+  };
+
+  it("marks the experiment as updated", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Touched Locations Experiment",
+      userId: testUserId,
+    });
+    await markStale(experiment.id);
+
+    const result = await useCase.execute(
+      experiment.id,
+      [{ experimentId: experiment.id, name: "Field A", latitude: 52.1, longitude: 5.1 }],
+      testUserId,
+    );
+
+    assertSuccess(result);
+    expect((await readUpdatedAt(experiment.id)).getTime()).toBeGreaterThan(staleDate.getTime());
   });
 });

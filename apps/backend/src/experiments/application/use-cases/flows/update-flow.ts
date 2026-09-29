@@ -37,7 +37,10 @@ export class UpdateFlowUseCase {
         if (!flow) {
           return failure(AppError.notFound("Flow not found"));
         }
-        return this.flowRepository.update(experimentId, graph);
+        const written = await this.flowRepository.update(experimentId, graph);
+        if (written.isFailure()) return written;
+        const touched = await this.experimentRepository.touch(experimentId);
+        return touched.map(() => written.value);
       });
     });
   }

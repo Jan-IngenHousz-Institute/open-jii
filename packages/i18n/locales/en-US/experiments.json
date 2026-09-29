@@ -221,6 +221,7 @@
   "createdBy": "Created By",
   "created": "Created",
   "updated": "Updated",
+  "updatedOn": "Updated {{date}}",
   "descriptionTitle": "Description",
   "and": "and",
   "save": "Save",

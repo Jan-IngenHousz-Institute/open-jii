@@ -909,7 +909,12 @@
     "statistics": "Statistiken",
     "quickActions": "Schnellaktionen",
     "noBlogPosts": "Keine Blogbeiträge vorhanden",
-    "errorLoadingBlogPosts": "Fehler beim Laden der Blogbeiträge"
+    "errorLoadingBlogPosts": "Fehler beim Laden der Blogbeiträge",
+    "recentPublicExperiments": "Kürzlich aktualisierte öffentliche Experimente",
+    "noPublicExperiments": "Noch keine öffentlichen Experimente.",
+    "publicExperimentsLoadFailed": "Öffentliche Experimente konnten nicht geladen werden.",
+    "publicExperimentsStale": "Seit dem {{date}} wurde kein öffentliches Experiment aktualisiert.",
+    "browsePublicExperiments": "Öffentliche Experimente durchsuchen"
   },
   "auth": {
     "login": "Anmelden",

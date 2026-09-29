@@ -79,6 +79,7 @@ export class ExperimentController {
           input.status,
           input.search,
           input.sort,
+          input.visibility,
         );
         if (paged.isSuccess()) {
           return toPage(paged.value, input.page, pageSize, formatDatesList);
@@ -92,6 +93,7 @@ export class ExperimentController {
         input.status,
         input.search,
         input.sort,
+        input.visibility,
       );
       if (result.isSuccess()) {
         return formatDatesList(result.value);
