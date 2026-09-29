@@ -6,12 +6,12 @@ import {
   createOverviewTableSorting,
   OverviewTable,
 } from "@/components/overview-table/overview-table";
+import { ResetSortingButton } from "@/components/overview-table/reset-sorting-button";
 import { OverviewToolbar } from "@/components/overview-toolbar";
 import { useOrganizationsList } from "@/hooks/organization/useOrganizationsList/useOrganizationsList";
 import { useLocale } from "@/hooks/useLocale";
 
 import { useTranslation } from "@repo/i18n";
-import { Button } from "@repo/ui/components/button";
 import { SearchInput } from "@repo/ui/components/search-input";
 
 import { organizationPath } from "./organization-routes";
@@ -59,13 +59,7 @@ export function ListOrganizations() {
             className="w-full md:w-64"
           />
         }
-        filters={
-          sort.length ? (
-            <Button variant="outline" size="sm" onClick={() => setSort([])}>
-              {t("common.resetSorting")}
-            </Button>
-          ) : undefined
-        }
+        filters={<ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />}
       />
 
       <div

@@ -4,7 +4,11 @@ import { OverviewToolbar } from "@/components/overview-toolbar";
 import React from "react";
 import { ListPagination } from "~/components/list-pagination";
 import { getMacroColumns } from "~/components/overview-table/macro-columns";
-import { OverviewTable } from "~/components/overview-table/overview-table";
+import {
+  createOverviewTableSorting,
+  OverviewTable,
+} from "~/components/overview-table/overview-table";
+import { ResetSortingButton } from "~/components/overview-table/reset-sorting-button";
 import { useMacros } from "~/hooks/macro/useMacros/useMacros";
 import { useLocale } from "~/hooks/useLocale";
 
@@ -34,6 +38,9 @@ export function ListMacros() {
     setLanguage,
     page,
     setPage,
+    sort,
+    setSort,
+    toggleSort,
   } = useMacros();
   const { t } = useTranslation(["macro", "common"]);
   const locale = useLocale();
@@ -54,22 +61,25 @@ export function ListMacros() {
           />
         }
         filters={
-          <Select
-            value={language ?? "all"}
-            onValueChange={(value: string) =>
-              setLanguage(value === "all" ? undefined : (value as MacroLanguage))
-            }
-          >
-            <SelectTrigger className="w-full md:w-[150px]">
-              <SelectValue placeholder={t("macros.filterByLanguage")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("macros.allLanguages")}</SelectItem>
-              <SelectItem value="python">Python</SelectItem>
-              <SelectItem value="r">R</SelectItem>
-              <SelectItem value="javascript">JavaScript</SelectItem>
-            </SelectContent>
-          </Select>
+          <>
+            <Select
+              value={language ?? "all"}
+              onValueChange={(value: string) =>
+                setLanguage(value === "all" ? undefined : (value as MacroLanguage))
+              }
+            >
+              <SelectTrigger className="w-full md:w-[150px]">
+                <SelectValue placeholder={t("macros.filterByLanguage")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("macros.allLanguages")}</SelectItem>
+                <SelectItem value="python">Python</SelectItem>
+                <SelectItem value="r">R</SelectItem>
+                <SelectItem value="javascript">JavaScript</SelectItem>
+              </SelectContent>
+            </Select>
+            <ResetSortingButton active={sort.length > 0} onReset={() => setSort([])} />
+          </>
         }
       />
 
@@ -80,6 +90,12 @@ export function ListMacros() {
       >
         <OverviewTable
           columns={getMacroColumns(t, locale)}
+          sorting={createOverviewTableSorting(sort, toggleSort, {
+            unsorted: t("common.sortUnsorted"),
+            asc: t("common.sortAscending"),
+            desc: t("common.sortDescending"),
+            secondary: t("common.sortSecondary"),
+          })}
           items={macros?.items}
           isLoading={isLoading}
           error={error}

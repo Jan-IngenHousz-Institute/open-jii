@@ -139,6 +139,22 @@ export const SHOTS: readonly Shot[] = [
     scope: "Workbooks overview with the Name column sorted ascending",
   },
   {
+    slug: "protocols-list",
+    publish: "img/guide/web/protocols-list.webp",
+    frame: "desktop",
+    route: "/platform/protocols",
+    prepare: sortNameAscending,
+    scope: "Protocols overview with the Name column sorted ascending",
+  },
+  {
+    slug: "macros-list",
+    publish: "img/guide/web/macros-list.webp",
+    frame: "desktop",
+    route: "/platform/macros",
+    prepare: sortNameAscending,
+    scope: "Macros overview with the Name column sorted ascending",
+  },
+  {
     slug: "report-issue",
     publish: "img/guide/web/report-issue.webp",
     frame: "desktop",
