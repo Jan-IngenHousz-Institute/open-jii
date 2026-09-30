@@ -39,7 +39,7 @@ patchedDependencies:
   "@better-auth/expo@1.6.23": patches/@better-auth__expo@1.6.23.patch
 
 catalog:
-  axios: 1.18.1
+  axios: 1.20.0
   typescript: 6.0.3
   zod: 3.25.76
   eslint: 9.39.4
@@ -53,7 +53,7 @@ catalog:
   nodemailer: 10.0.12
   posthog-js: 1.422.5
   posthog-node: 5.51.4
-  next: 16.3.4
+  next: 16.3.7
 
 catalogs:
   orpc:
