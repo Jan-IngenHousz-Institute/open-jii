@@ -254,8 +254,8 @@ describe("ExperimentJoinRequestRepository", () => {
     });
   });
 
-  describe("listAdminEmails", () => {
-    it("returns all admin emails for an experiment", async () => {
+  describe("listAdminIds", () => {
+    it("returns every admin of an experiment and nobody else", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Admins experiment",
         userId: adminUserId,
@@ -274,10 +274,10 @@ describe("ExperimentJoinRequestRepository", () => {
       });
       await testApp.addExperimentCollaborator(experiment.id, nonAdminId);
 
-      const result = await repository.listAdminEmails(experiment.id);
+      const result = await repository.listAdminIds(experiment.id);
       assertSuccess(result);
-      expect(result.value).toEqual(expect.arrayContaining(["second-admin@example.com"]));
-      expect(result.value).not.toContain("regular@example.com");
+      expect(result.value).toEqual(expect.arrayContaining([secondAdminId]));
+      expect(result.value).not.toContain(nonAdminId);
     });
 
     it("notifies the owning org's owner, who holds no grant", async () => {
@@ -291,14 +291,14 @@ describe("ExperimentJoinRequestRepository", () => {
         visibility: "public",
       });
 
-      const result = await repository.listAdminEmails(experiment.id);
+      const result = await repository.listAdminIds(experiment.id);
       assertSuccess(result);
       // Sourced from grants alone this would be empty and every join request on a
       // personal-workspace experiment would notify nobody.
-      expect(result.value).toEqual(["sole-owner@example.com"]);
+      expect(result.value).toEqual([soleOwner]);
     });
 
-    it("mails an owner who also holds an admin grant exactly once", async () => {
+    it("lists an owner who also holds an admin grant exactly once", async () => {
       const soleOwner = await testApp.createTestUser({
         email: "double-counted@example.com",
         name: "Owner And Grantee",
@@ -310,9 +310,9 @@ describe("ExperimentJoinRequestRepository", () => {
       });
       await testApp.addExperimentAdmin(experiment.id, soleOwner);
 
-      const result = await repository.listAdminEmails(experiment.id);
+      const result = await repository.listAdminIds(experiment.id);
       assertSuccess(result);
-      expect(result.value).toEqual(["double-counted@example.com"]);
+      expect(result.value).toEqual([soleOwner]);
     });
 
     it("leaves out an owner whose account has been closed", async () => {
@@ -329,11 +329,11 @@ describe("ExperimentJoinRequestRepository", () => {
         .set({ deletedAt: new Date() })
         .where(eq(profiles.userId, gone));
 
-      const result = await repository.listAdminEmails(experiment.id);
+      const result = await repository.listAdminIds(experiment.id);
       assertSuccess(result);
-      // A closed account's mailbox is scrubbed; the admin grant holder is who is
-      // left to decide the request.
-      expect(result.value).toEqual(["keeper@example.com"]);
+      // A closed account decides nothing; the admin grant holder is who is left
+      // to decide the request.
+      expect(result.value).toEqual([keeper]);
     });
   });
 });

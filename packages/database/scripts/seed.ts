@@ -8,6 +8,7 @@ import { seedExperiments } from "./seed/experiment.seed";
 import { seedFlows } from "./seed/flow.seed";
 import { seedDevices } from "./seed/iot-device.seed";
 import { seedMacros } from "./seed/macro.seed";
+import { seedNotifications } from "./seed/notification.seed";
 import { seedProtocolMacroLinks } from "./seed/protocol-macro.seed";
 import { seedProtocols } from "./seed/protocol.seed";
 import { seedUser } from "./seed/user.seed";
@@ -39,6 +40,8 @@ async function main() {
   await seedDeviceGroups(user, personalOrganizationId, createdDevices);
 
   await seedCalibrations(user, personalOrganizationId, createdDevices);
+
+  await seedNotifications(user, createdExperiments);
 
   console.log("Seed complete!");
 }

@@ -1,11 +1,10 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import type { ExperimentJoinRequestDto } from "../../../core/models/experiment-join-request.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
-import { EMAIL_PORT } from "../../../core/ports/email.port";
-import type { EmailPort } from "../../../core/ports/email.port";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
@@ -16,7 +15,7 @@ export class RequestJoinExperimentUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly joinRequestRepository: ExperimentJoinRequestRepository,
-    @Inject(EMAIL_PORT) private readonly emailPort: EmailPort,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   async execute(
@@ -91,7 +90,7 @@ export class RequestJoinExperimentUseCase {
         }
 
         const joinRequest = createResult.value;
-        await this.notifyAdmins(experiment, joinRequest);
+        await this.notifyAdmins(experiment, joinRequest, userId);
 
         return success({ joinRequest, created: true });
       },
@@ -101,39 +100,36 @@ export class RequestJoinExperimentUseCase {
   private async notifyAdmins(
     experiment: ExperimentDto,
     joinRequest: ExperimentJoinRequestDto,
+    userId: string,
   ): Promise<void> {
-    const adminEmailsResult = await this.joinRequestRepository.listAdminEmails(experiment.id);
-    if (adminEmailsResult.isFailure()) {
+    const adminIdsResult = await this.joinRequestRepository.listAdminIds(experiment.id);
+    if (adminIdsResult.isFailure()) {
       this.logger.error({
-        msg: "Failed to look up admin emails for join request notification",
+        msg: "Failed to look up the admins to notify about a join request",
         errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
         operation: "request-join-experiment",
         experimentId: experiment.id,
+        error: adminIdsResult.error,
       });
       return;
     }
 
-    const requesterName = `${joinRequest.user.firstName} ${joinRequest.user.lastName}`;
+    const dispatched = await this.notifications.dispatch({
+      type: "experiment_join_request_received",
+      recipientIds: adminIdsResult.value,
+      actorId: userId,
+      resource: { type: "experiment", id: experiment.id },
+      params: { experimentName: experiment.name, message: joinRequest.message ?? undefined },
+    });
 
-    for (const adminEmail of adminEmailsResult.value) {
-      if (!adminEmail) continue;
-      const emailResult = await this.emailPort.sendJoinRequestSubmittedNotification(
-        experiment.id,
-        experiment.name,
-        requesterName,
-        adminEmail,
-        joinRequest.message ?? undefined,
-      );
-
-      if (emailResult.isFailure()) {
-        this.logger.error({
-          msg: "Failed to send join request notification to admin, request was still created",
-          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-          operation: "request-join-experiment",
-          experimentId: experiment.id,
-          adminEmail,
-        });
-      }
+    if (dispatched.isFailure()) {
+      this.logger.error({
+        msg: "Failed to notify admins of a join request, the request was still created",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "request-join-experiment",
+        experimentId: experiment.id,
+        error: dispatched.error,
+      });
     }
   }
 }

@@ -1,9 +1,9 @@
 ---
 title: "A tour of the platform"
-description: "Find your way around the openJII web platform: the sidebar, command palette, keyboard shortcuts, and activity feed."
+description: "Find your way around the openJII web platform: the sidebar, command palette, keyboard shortcuts, and notifications."
 ---
 
-{/* verified: code@87b43c8e4 2026-08-28 */}
+{/* verified: code@ba536e58f 2026-09-30 */}
 
 Once you are signed in, everything in openJII lives inside one consistent shell.
 This page is a quick visual tour of that shell so you know where to look before
@@ -15,7 +15,7 @@ The left sidebar is your main navigation: experiments, protocols, macros,
 workbooks, organizations, and devices. You can collapse it to get more room for your data; when
 collapsed, hovering the left edge peeks it back open, and the button in the compact
 page header reopens it permanently. Near the bottom, **What's New** lists recent platform
-releases, **Activity** tracks long-running tasks, and **Documentation** opens this
+releases, the bell holds your **Notifications**, and **Documentation** opens this
 site. Your profile menu, the light/dark theme toggle, and the language selector sit
 in the footer.
 See <PlatformLink path="/releases">openJII Releases</PlatformLink> for the full history.
@@ -40,13 +40,25 @@ what is available on the page you are on.
 
 ![Keyboard shortcut cheatsheet](/img/chrome-refresh/cheatsheet.webp)
 
-## Activity
+## Notifications
 
-Open **Activity** near the bottom of the sidebar to track long-running tasks,
-such as data exports and sensor-data uploads. You can start one and keep working
-while it completes.
+The bell near the bottom of the sidebar is where the platform tells you something
+happened: somebody asked to join one of your experiments, or a request you made was
+approved or declined. A dot on the bell means you have something unread, or an
+organization invitation still waiting for an answer.
 
-![Activity feed open from the sidebar](/img/chrome-refresh/activity-bell.webp)
+Opening a notification marks it read and takes you to what it is about. A join
+request opens that experiment's Collaborators page, where you approve or decline it;
+an approval opens the experiment you were let into. A declined request links nowhere,
+since there is nothing left to open.
+
+**Mark all read** clears the dot and nothing else — a join request you have not
+decided is still pending and still in the list. The bell shows the ten most
+recent; **See all notifications** opens the full history. Press <kbd>G</kbd>
+followed by <kbd>N</kbd> to open the bell from anywhere.
+
+Data exports and uploads do not appear here. Follow an export on the experiment's own
+data page, where its export list keeps the status.
 
 ## Platform activity
 

@@ -292,17 +292,6 @@
       "scope": "Keyboard shortcut cheatsheet"
     },
     {
-      "path": "/img/chrome-refresh/activity-bell.webp",
-      "slug": "activity-bell",
-      "kind": "screenshot",
-      "frame": "desktop",
-      "dimensions": "1920x1200",
-      "bytes": 176466,
-      "sha256": "ef7f60e30fadf631583d921263f8abd9cdc829366085ee9a3a90dc38f409dce5",
-      "disposition": "published",
-      "scope": "Activity feed opened from the sidebar"
-    },
-    {
       "path": "/img/workbooks/ux-sidebar.webp",
       "slug": "ux-sidebar",
       "kind": "screenshot",
@@ -433,6 +422,7 @@
     "TIER 3 - workbook-demo.webm, versioning-demo.webm, multi-device-demo.webm: still pre-refresh, still off-frame (1366x900 and 1600x1000). versioning-demo depends on the version-history blocker above; multi-device-demo needs physical hardware.",
     "TIER 5 - data-first-measurement.png, charts-filters.png, ambyte-data.png, export-dialog.png, metadata-import.png: every lakehouse-backed surface is deliberately unreachable on the local stack, and the two dialogs open from a populated Data tab.",
     "TIER 6 - quick-start-web.webm: its middle beat is the populated Data tab, so it inherits the tier 5 blocker.",
-    "TIER 7 - /img/mobile/*: the phone UI is untouched by this redesign and re-recording needs a physical device."
+    "TIER 7 - /img/mobile/*: the phone UI is untouched by this redesign and re-recording needs a physical device.",
+    "TIER 1 - notifications-bell.webp: the Activity feed it replaces no longer exists, and the notification bell that took its place has not been captured yet. The shot is defined in shots.ts; the still publishes on the next capture run, which also drops activity-bell.webp."
   ]
 }

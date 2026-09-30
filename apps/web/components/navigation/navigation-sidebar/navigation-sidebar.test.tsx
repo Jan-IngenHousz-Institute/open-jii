@@ -122,7 +122,7 @@ describe("AppSidebar", () => {
     const { container } = renderSidebar();
 
     // Secondary navigation rows near the bottom of the scroll area.
-    expect(screen.getByRole("button", { name: /Activity/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "title" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "whatsNew.navLabel" })).toBeInTheDocument();
 
     // Branded docs entry opening in a new tab.
@@ -163,7 +163,7 @@ describe("AppSidebar", () => {
     renderSidebar();
 
     const rows = [
-      screen.getByRole("button", { name: /Activity/i }),
+      screen.getByRole("button", { name: "title" }),
       screen.getByRole("button", { name: "whatsNew.navLabel" }),
       screen.getByRole("link", { name: /navigation.documentation/i }),
     ];

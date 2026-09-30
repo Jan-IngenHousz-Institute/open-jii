@@ -2,6 +2,9 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
+import { eq, notifications } from "@repo/database";
+
+import { EmailAdapter } from "../../../../common/modules/email/services/email.adapter";
 import {
   assertFailure,
   assertSuccess,
@@ -9,9 +12,8 @@ import {
   success,
   AppError,
 } from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import { TestHarness } from "../../../../test/test-harness";
-import type { EmailPort } from "../../../core/ports/email.port";
-import { EMAIL_PORT } from "../../../core/ports/email.port";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
 import { RejectJoinRequestUseCase } from "./reject-join-request";
 
@@ -19,9 +21,12 @@ describe("RejectJoinRequestUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: RejectJoinRequestUseCase;
   let joinRequestRepository: ExperimentJoinRequestRepository;
-  let emailPort: EmailPort;
+  let emailAdapter: EmailAdapter;
   let adminUserId: string;
   let requesterUserId: string;
+
+  const notificationsFor = (userId: string) =>
+    testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
 
   beforeAll(async () => {
     await testApp.setup();
@@ -36,8 +41,8 @@ describe("RejectJoinRequestUseCase", () => {
     });
     useCase = testApp.module.get(RejectJoinRequestUseCase);
     joinRequestRepository = testApp.module.get(ExperimentJoinRequestRepository);
-    emailPort = testApp.module.get(EMAIL_PORT);
-    vi.spyOn(emailPort, "sendJoinRequestRejectedNotification").mockResolvedValue(
+    emailAdapter = testApp.module.get(EmailAdapter);
+    vi.spyOn(emailAdapter, "sendJoinRequestRejectedNotification").mockResolvedValue(
       success(undefined),
     );
   });
@@ -127,8 +132,9 @@ describe("RejectJoinRequestUseCase", () => {
     assertFailure(result);
     expect(result.error.statusCode).toBe(StatusCodes.CONFLICT);
     expect(result.error.message).toContain("already has access");
-    // No confusing rejection email to someone who now has access.
-    expect(emailPort.sendJoinRequestRejectedNotification).not.toHaveBeenCalled();
+    // Nothing reaches someone who now has access: no row and no rejection email.
+    expect(emailAdapter.sendJoinRequestRejectedNotification).not.toHaveBeenCalled();
+    expect(await notificationsFor(requesterUserId)).toHaveLength(0);
     const reread = await joinRequestRepository.findById(request.id);
     assertSuccess(reread);
     expect(reread.value?.status).toBe("cancelled");
@@ -161,14 +167,24 @@ describe("RejectJoinRequestUseCase", () => {
     expect(result.error.message).toContain("Failed to reject join request");
   });
 
-  it("rejects the request and sends the rejection email", async () => {
+  it("rejects the request and notifies the requester", async () => {
     const { experiment, request } = await seedPendingRequest();
 
     const result = await useCase.execute(experiment.id, request.id, adminUserId);
 
     assertSuccess(result);
     expect(result.value.status).toBe("rejected");
-    expect(emailPort.sendJoinRequestRejectedNotification).toHaveBeenCalledWith(
+
+    const [row] = await notificationsFor(requesterUserId);
+    expect(row).toMatchObject({
+      type: "experiment_join_request_rejected",
+      actorId: adminUserId,
+      resourceType: "experiment",
+      resourceId: experiment.id,
+      params: { experimentName: experiment.name },
+    });
+
+    expect(emailAdapter.sendJoinRequestRejectedNotification).toHaveBeenCalledWith(
       experiment.id,
       experiment.name,
       "requester@example.com",
@@ -177,8 +193,20 @@ describe("RejectJoinRequestUseCase", () => {
 
   it("still rejects successfully when the rejection email fails to send", async () => {
     const { experiment, request } = await seedPendingRequest();
-    vi.spyOn(emailPort, "sendJoinRequestRejectedNotification").mockResolvedValue(
+    vi.spyOn(emailAdapter, "sendJoinRequestRejectedNotification").mockResolvedValue(
       failure(AppError.internal("smtp down")),
+    );
+
+    const result = await useCase.execute(experiment.id, request.id, adminUserId);
+
+    assertSuccess(result);
+    expect(result.value.status).toBe("rejected");
+  });
+
+  it("still rejects successfully when the notification cannot be dispatched", async () => {
+    const { experiment, request } = await seedPendingRequest();
+    vi.spyOn(testApp.module.get(NotificationDispatchService), "dispatch").mockResolvedValue(
+      failure(AppError.internal("notifications unavailable")),
     );
 
     const result = await useCase.execute(experiment.id, request.id, adminUserId);
