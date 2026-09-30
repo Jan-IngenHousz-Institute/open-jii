@@ -8,10 +8,10 @@ import type { Device } from "~/shared/types/device";
 import { useAutoReconnect } from "./use-auto-reconnect";
 import { useDeviceSheetActions } from "./use-device-sheet-actions";
 
-// Android numbers the replugged device 2002 again, so the remembered record
-// and the device on the bus share an id.
+// Different ids, so a racing reconnect can't just join the sheet's connect and
+// the tests exercise useAutoReconnect's own in-flight guard.
 const remembered: Device = { id: "2002", type: "usb", name: "MultispeQ #2002" };
-const plugged: Device = { id: "2002", type: "usb", name: "1a86:55d4 #2002" };
+const plugged: Device = { id: "2003", type: "usb", name: "1a86:55d4 #2003" };
 
 const mocks = vi.hoisted(() => ({
   appStateListeners: [] as ((state: string) => void)[],
