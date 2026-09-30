@@ -1,19 +1,15 @@
 /**
- * Reconnecting a USB device while its previous executor is still registered.
- *
- * Everything below the native boundary is real: the serial registry, the
- * permission gate, the serial transport, IdentifiedCommandExecutor with the
- * @repo/iot identification, and the executor store. The fake native module
- * mirrors UsbSerialportForAndroidModule: ports keyed by deviceId, open()
- * resolving early for an open id, and close(deviceId) closing whichever port
- * currently holds that id.
+ * The fake native module mirrors UsbSerialportForAndroidModule: ports keyed by
+ * deviceId, open() resolving early for an open id, and close(deviceId) closing
+ * whichever port currently holds that id.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useScannerCommandExecutorStore } from "~/features/connection/stores/use-scanner-command-executor-store";
 import type { Device } from "~/shared/types/device";
 
-import { connectToDevice } from "./device-connection";
-import { closeAllSerialPorts } from "./serial-port-connection";
+import { connectToDevice } from "../device-connection";
+import { closeAllSerialPorts } from "../serial-port-connection";
+import { openSerialPortConnection } from "./open-serial-port-connection";
 
 const native = vi.hoisted(() => {
   interface RxEvent {
@@ -105,6 +101,29 @@ vi.mock("react-native-usb-serialport-for-android", () => ({
 }));
 vi.mock("react-native-bluetooth-classic", () => ({ default: {} }));
 
+describe("openSerialPortConnection", () => {
+  beforeEach(() => {
+    native.ports.clear();
+    Object.assign(native.calls, { open: 0, portsCreated: 0, closes: 0 });
+  });
+
+  it("closes the native port once per handle, even when the handle is destroyed twice", async () => {
+    const old = await openSerialPortConnection(2002);
+    await old.emit("destroy");
+    const fresh = await openSerialPortConnection(2002);
+
+    // The registry and the old executor's transport both destroy the old handle.
+    await old.emit("destroy");
+
+    expect(native.calls.closes).toBe(1);
+    expect(native.ports.has(2002)).toBe(true);
+    await fresh.emit("destroy");
+  });
+});
+
+// Everything below the native boundary is real here: the serial registry, the
+// permission gate, the serial transport, IdentifiedCommandExecutor with the
+// @repo/iot identification, and the executor store.
 const device: Device = { id: "2002", type: "usb", name: "303a:1001 #2002" };
 const store = useScannerCommandExecutorStore;
 
