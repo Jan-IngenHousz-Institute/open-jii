@@ -5,6 +5,8 @@ import type {
 } from "~/features/connection/services/device-command-executor";
 import type { Device } from "~/shared/types/device";
 
+import type { DeviceIdentity } from "@repo/iot";
+
 import { useScannerCommandExecutorStore } from "./use-scanner-command-executor-store";
 
 // Replace the executor factory so the store never touches react-native or BT.
@@ -434,6 +436,29 @@ describe("useScannerCommandExecutorStore", () => {
           raw: {},
         });
       });
+    });
+
+    it("drops a replaced executor's late identity instead of labelling its successor", async () => {
+      let resolveStale: (identity: DeviceIdentity) => void = () => undefined;
+      const stale = createControllableExecutor();
+      stale.getIdentity = () =>
+        new Promise<DeviceIdentity>((resolve) => {
+          resolveStale = resolve;
+        });
+      createDeviceCommandExecutor.mockResolvedValueOnce(stale);
+      await useScannerCommandExecutorStore.getState().addDevice(USB_DEVICE_A);
+
+      const fresh = createControllableExecutor();
+      fresh.getIdentity = () => new Promise<DeviceIdentity>(() => undefined);
+      createDeviceCommandExecutor.mockResolvedValueOnce(fresh);
+      await useScannerCommandExecutorStore.getState().addDevice(USB_DEVICE_A);
+
+      resolveStale({ family: "multispeq", name: "Old probe", raw: {} });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const entry = useScannerCommandExecutorStore.getState().executors.get("usb-a");
+      expect(entry?.executor).toBe(fresh);
+      expect(entry?.identity).toBeUndefined();
     });
 
     it("keeps the device connected with neutral fallback data when identity fails", async () => {

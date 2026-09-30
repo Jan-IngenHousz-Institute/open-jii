@@ -47,6 +47,30 @@ export function useConnectedDevice() {
   return useConnectedDevicesQuery((devices) => devices[0] ?? null);
 }
 
+// Connects in flight across every useConnectToDevice instance: the device
+// sheet and useAutoReconnect each hold their own, so per-instance state can't
+// see the other's connect. Two connects to one USB deviceId share a single
+// native port, and replacing the first executor closes it under the second.
+const connectsInFlight = new Map<string, Promise<void>>();
+
+/** True while any useConnectToDevice instance is still connecting a device. */
+export function isConnectInFlight(): boolean {
+  return connectsInFlight.size > 0;
+}
+
+// Android reuses USB deviceIds (the first device after a replug is often
+// 1002/2002 again), so a remembered record can name a different device than
+// the one now at that id. Take the name from the live list instead.
+async function withLiveUsbName(device: Device): Promise<Device> {
+  if (device.type !== "usb") return device;
+  try {
+    const live = (await listSerialPortDevices()).find((d) => d.deviceId.toString() === device.id);
+    return live ? serialDeviceToDevice(live) : device;
+  } catch {
+    return device;
+  }
+}
+
 export function useConnectToDevice() {
   const client = useQueryClient();
   const [connectingDeviceId, setConnectingDeviceId] = useState<string>();
@@ -56,8 +80,12 @@ export function useConnectToDevice() {
   return {
     connectingDeviceId,
     async connectToDevice(device: Device) {
-      setConnectingDeviceId(device.id);
-      try {
+      // Join a connect already running for this device instead of starting a second one.
+      const inFlight = connectsInFlight.get(device.id);
+      if (inFlight) return inFlight;
+
+      const run = (async () => {
+        let connectedDevice = device;
         if (device.type === "bluetooth-classic") {
           // Transport exclusivity: Bluetooth replaces all USB/mock devices.
           await closeAllSerialPorts();
@@ -73,14 +101,22 @@ export function useConnectToDevice() {
             await disconnectFromDevice(bluetoothDevice);
             await removeDevice(bluetoothDevice.id);
           }
-          await connectToDevice(device);
-          await addDevice(device);
+          connectedDevice = await withLiveUsbName(device);
+          await connectToDevice(connectedDevice);
+          await addDevice(connectedDevice);
         }
         // Remember this device so the measurement flow can offer an inline
         // reconnect button if the connection is lost during a session.
-        setLastConnectedDevice(device);
+        setLastConnectedDevice(connectedDevice);
         await client.invalidateQueries({ queryKey: connectionKeys.connectedDevices });
+      })();
+
+      connectsInFlight.set(device.id, run);
+      setConnectingDeviceId(device.id);
+      try {
+        await run;
       } finally {
+        connectsInFlight.delete(device.id);
         setConnectingDeviceId(undefined);
       }
     },
