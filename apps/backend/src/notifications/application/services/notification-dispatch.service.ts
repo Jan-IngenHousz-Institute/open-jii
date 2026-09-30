@@ -135,7 +135,7 @@ export class NotificationDispatchService {
         recipientEmail,
         actorName,
         resource,
-        params,
+        params: parsed.data as NotificationParams<T>,
       });
 
       if (sent.isFailure()) {
