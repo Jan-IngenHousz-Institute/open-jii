@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   addDevice: vi.fn(),
   setLastConnectedDevice: vi.fn(),
   serialDevices: [] as { deviceId: number; vendorId: number; productId: number }[],
+  serialListError: undefined as Error | undefined,
 }));
 
 vi.mock("react-native-bluetooth-classic", () => ({
@@ -19,7 +20,12 @@ vi.mock("react-native-bluetooth-classic", () => ({
 }));
 vi.mock(
   "~/features/connection/services/device-connection-manager/android-serial-port-connection/open-serial-port-connection",
-  () => ({ listSerialPortDevices: () => Promise.resolve(mocks.serialDevices) }),
+  () => ({
+    listSerialPortDevices: () =>
+      mocks.serialListError
+        ? Promise.reject(mocks.serialListError)
+        : Promise.resolve(mocks.serialDevices),
+  }),
 );
 vi.mock("~/features/connection/services/device-connection-manager/serial-port-connection", () => ({
   closeAllSerialPorts: () => Promise.resolve(),
@@ -73,6 +79,7 @@ describe("useConnectToDevice", () => {
     mocks.addDevice.mockReset().mockResolvedValue(undefined);
     mocks.setLastConnectedDevice.mockReset();
     mocks.serialDevices = [];
+    mocks.serialListError = undefined;
   });
 
   it("joins a connect already in flight for the same device from another instance", async () => {
@@ -136,5 +143,19 @@ describe("useConnectToDevice", () => {
     });
 
     expect(mocks.transportConnect).toHaveBeenCalledWith(device);
+  });
+
+  it("keeps the given record when the USB list cannot be read", async () => {
+    mocks.serialListError = new Error("USB service unavailable");
+    mocks.transportConnect.mockResolvedValue(undefined);
+    const device: Device = { id: "2002", type: "usb", name: "1a86:55d4 #2002" };
+    const { result } = renderConnectHook();
+
+    await act(async () => {
+      await result.current.connectToDevice(device);
+    });
+
+    expect(mocks.transportConnect).toHaveBeenCalledWith(device);
+    expect(mocks.addDevice).toHaveBeenCalledWith(device);
   });
 });
