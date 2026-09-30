@@ -30,11 +30,11 @@ _GOLD = {
           ('e2', CAST(NULL AS VARIANT), TIMESTAMP'2026-09-22 11:00:00')
         AS t(experiment_id, questions_data, processed_timestamp)
     """,
-    "experiment_device_data": """
+    "experiment_device_keys": """
         SELECT * FROM VALUES
-          ('e1', 'd1'),
-          ('e1', 'd2')
-        AS t(experiment_id, device_id)
+          ('e1', 'd1', 'fw1'),
+          ('e1', 'd2', CAST(NULL AS STRING))
+        AS t(experiment_id, device_id, device_firmware)
     """,
     "experiment_uploaded_data": """
         SELECT * FROM VALUES

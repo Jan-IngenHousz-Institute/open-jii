@@ -15,7 +15,7 @@ tables_now AS (
   UNION ALL
   SELECT experiment_id, 'static', 'device', CAST(NULL AS STRING), count(*),
     CAST(NULL AS TIMESTAMP)
-  FROM ${catalog}.centrum.experiment_device_data
+  FROM ${catalog}.centrum.experiment_device_keys
   GROUP BY experiment_id
   UNION ALL
   SELECT experiment_id, 'macro', macro_id, CAST(NULL AS STRING), count(*),
