@@ -362,7 +362,7 @@ resource "aws_cloudwatch_event_rule" "warmer" {
   count               = var.enable_lambda_warming ? 1 : 0
   name                = "${local.name_prefix}-warmer"
   description         = "Trigger Lambda warmer function"
-  schedule_expression = "rate(8 hours)"
+  schedule_expression = "rate(5 minutes)"
   tags                = local.common_tags
 }
 
