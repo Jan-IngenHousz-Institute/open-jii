@@ -147,7 +147,11 @@ export const useScannerCommandExecutorStore = create<ScannerCommandExecutorStore
   const captureIdentity = (deviceId: string, executor: DeviceCommandExecutor) => {
     executor
       .getIdentity()
-      .then((identity) => patchEntry(deviceId, { identity }))
+      .then((identity) => {
+        // A replaced executor's late identity must not label its successor.
+        if (get().executors.get(deviceId)?.executor !== executor) return;
+        patchEntry(deviceId, { identity });
+      })
       .catch((e) => log.warn("identity handshake failed", { err: (e as Error)?.message }));
   };
 
