@@ -1,5 +1,6 @@
 import * as Application from "expo-application";
 import * as ExpoDevice from "expo-device";
+import { Platform } from "react-native";
 
 /**
  * The publishing phone, as opposed to the `device_*` fields which describe the
@@ -20,10 +21,13 @@ export interface ClientMetadata {
  * envelope never carries a placeholder that reads like a real reading.
  */
 export function getClientMetadata(): ClientMetadata {
+  // Expo's Android osName comes from BASE_OS, which can be a build fingerprint.
+  const osName = Platform.OS === "android" ? "Android" : ExpoDevice.osName;
+
   return {
     ...(ExpoDevice.modelName ? { client_model: ExpoDevice.modelName } : {}),
     ...(ExpoDevice.manufacturer ? { client_manufacturer: ExpoDevice.manufacturer } : {}),
-    ...(ExpoDevice.osName ? { client_os: ExpoDevice.osName } : {}),
+    ...(osName ? { client_os: osName } : {}),
     ...(ExpoDevice.osVersion ? { client_os_version: ExpoDevice.osVersion } : {}),
     ...(Application.nativeApplicationVersion
       ? { client_app_version: Application.nativeApplicationVersion }
