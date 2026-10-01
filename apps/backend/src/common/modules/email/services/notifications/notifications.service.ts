@@ -101,12 +101,12 @@ export class NotificationsService {
     });
 
     const rejected: (string | Mail.Address)[] = result.rejected;
-    const pending: (string | Mail.Address)[] = result.pending;
+    const pending: (string | Mail.Address)[] = result.pending ?? [];
     const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
 
     if (failed.length > 0) {
       const failedAddresses = failed.map((address) =>
-        typeof address === "object" && "address" in address ? address.address : address,
+        typeof address === "object" ? address.address : address,
       );
       throw new Error(`Email (${failedAddresses.join(", ")}) could not be sent`);
     }
@@ -306,7 +306,7 @@ export class NotificationsService {
 
         // Handle rejected and pending addresses
         const rejected: (string | Mail.Address)[] = result.rejected;
-        const pending: (string | Mail.Address)[] = result.pending;
+        const pending: (string | Mail.Address)[] = result.pending ?? [];
         const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
 
         const isAddress = (addr: string | Mail.Address): addr is Mail.Address => {
@@ -383,7 +383,7 @@ export class NotificationsService {
 
         // Handle rejected and pending addresses
         const rejected: (string | Mail.Address)[] = result.rejected;
-        const pending: (string | Mail.Address)[] = result.pending;
+        const pending: (string | Mail.Address)[] = result.pending ?? [];
         const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
 
         const isAddress = (addr: string | Mail.Address): addr is Mail.Address => {
@@ -456,7 +456,7 @@ export class NotificationsService {
 
         // Handle rejected and pending addresses
         const rejected: (string | Mail.Address)[] = result.rejected;
-        const pending: (string | Mail.Address)[] = result.pending;
+        const pending: (string | Mail.Address)[] = result.pending ?? [];
         const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
 
         const isAddress = (addr: string | Mail.Address): addr is Mail.Address => {
@@ -536,7 +536,7 @@ export class NotificationsService {
         });
 
         const rejected: (string | Mail.Address)[] = result.rejected;
-        const pending: (string | Mail.Address)[] = result.pending;
+        const pending: (string | Mail.Address)[] = result.pending ?? [];
         const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
 
         const isAddress = (addr: string | Mail.Address): addr is Mail.Address => {
@@ -610,7 +610,7 @@ export class NotificationsService {
         });
 
         const rejected: (string | Mail.Address)[] = result.rejected;
-        const pending: (string | Mail.Address)[] = result.pending;
+        const pending: (string | Mail.Address)[] = result.pending ?? [];
         const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
 
         const isAddress = (addr: string | Mail.Address): addr is Mail.Address => {
