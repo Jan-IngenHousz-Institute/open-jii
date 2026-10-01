@@ -1,28 +1,79 @@
 "use client";
 
 import posthog from "posthog-js";
-import { useEffect } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 
+import { flagPersonProperties } from "@repo/analytics";
 import { useSession } from "@repo/auth/client";
 
+import { getConsentStatus, subscribeToConsentStatus } from "../lib/cookie-consent";
+import { useMyOrganizations } from "./organization/useMyOrganizations/useMyOrganizations";
+
 /**
- * Names the signed-in user by id, as the phone app does, so one researcher is one person; the email
- * stays as a property because flag cohorts and the internal-user filter match on it.
+ * Keeps PostHog in step with the signed-in user. It names them by id, as the phone app does, so one
+ * researcher is one person, and keeps the email as a property because flag cohorts and the
+ * internal-user filter match on it. Every flag evaluation carries their organization memberships,
+ * so a flag can target an organization whatever they chose on the cookie banner. Their email goes
+ * to PostHog only once they accept analytics cookies, which is also when they are identified and
+ * their PostHog person is created.
  */
 export function usePostHogAuth() {
   const { data: session, isPending } = useSession();
+  const { data: organizations, isPending: isOrganizationsPending } = useMyOrganizations();
+  const consent = useSyncExternalStore(
+    subscribeToConsentStatus,
+    getConsentStatus,
+    getConsentStatus,
+  );
+
+  // Flag overrides live in memory before consent, so PostHog's own state cannot say whether
+  // the tab still carries a user who has since signed out.
+  const hasFlagOverrides = useRef(false);
+
+  const id = session?.user.id;
+  const email = session?.user.email;
+  const isSignedOut = !isPending && !session;
+  const hasConsented = consent === "accepted";
 
   useEffect(() => {
-    if (isPending) {
+    if (!isSignedOut) {
       return;
     }
 
-    if (session) {
-      posthog.identify(session.user.id, { email: session.user.email });
-    } else {
+    const isIdentified = posthog.get_property("$user_state") === "identified";
+    if (isIdentified || hasFlagOverrides.current) {
       posthog.reset();
+      hasFlagOverrides.current = false;
     }
-  }, [session, isPending]);
+  }, [isSignedOut]);
+
+  useEffect(() => {
+    if (id && hasConsented) {
+      posthog.identify(id, { email });
+    }
+  }, [id, email, hasConsented]);
+
+  // Rejecting cookies resets PostHog, which drops the overrides, so every consent change
+  // re-applies them. A failed membership fetch still sends what is known rather than holding every
+  // flag back.
+  useEffect(() => {
+    if (!email || isOrganizationsPending) {
+      return;
+    }
+
+    const hasAccepted = consent === "accepted";
+    const properties = flagPersonProperties({
+      email: hasAccepted ? email : undefined,
+      organizationIds: organizations?.map(({ id }) => id) ?? [],
+    });
+    posthog.setPersonPropertiesForFlags(properties, true);
+    hasFlagOverrides.current = true;
+
+    // Stored on the person, so PostHog's release-condition picker can offer the properties.
+    if (hasAccepted) {
+      posthog.setPersonProperties(properties);
+    }
+  }, [email, organizations, isOrganizationsPending, consent]);
 }
 
 /**

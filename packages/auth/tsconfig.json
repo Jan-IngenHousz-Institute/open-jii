@@ -9,7 +9,8 @@
     "declarationMap": false,
     "strict": true,
     "esModuleInterop": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "types": ["node"]
   },
   "include": ["src/**/*"]
 }

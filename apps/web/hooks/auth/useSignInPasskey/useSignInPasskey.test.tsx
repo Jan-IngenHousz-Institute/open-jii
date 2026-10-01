@@ -1,5 +1,6 @@
 import { createTestQueryClient, renderHook } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
+import { revalidateAuth } from "~/app/actions/revalidate";
 
 import { authClient } from "@repo/auth/client";
 
@@ -18,6 +19,7 @@ describe("useSignInPasskey", () => {
     expect(authClient.signIn.passkey).toHaveBeenCalledWith(undefined);
     expect(data).toBeNull();
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["auth"] });
+    expect(revalidateAuth).toHaveBeenCalled();
   });
 
   it("passes autoFill through for conditional UI", async () => {

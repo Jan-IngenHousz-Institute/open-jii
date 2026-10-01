@@ -3,66 +3,31 @@
 # no outbound HTTP, no IAM creds, restricted builtins.
 # Verify with the ghcr trivy DB (mirror.gcr.io lags): --db-repository ghcr.io/aquasecurity/trivy-db:2
 
-# openssl-fips-provider-latest / openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2.
-# AWS names 3.5.8-1.amzn2023.0.1 as the fix but has not published it to the
-# AL2023 repos, so upgrading in the Dockerfile is a no-op ("Nothing to do").
-# Every id is a server-side TLS/DTLS/QUIC/CMP or CMS path: the sandbox runs no
-# such server, and macro code cannot reach OpenSSL because the builtins
-# allowlist has no __import__.
-# purls pin each suppression to the detected copy, so the 3.5.8 base re-fails
-# the scan instead of inheriting these.
 vulnerabilities:
-  - id: CVE-2026-14457
+  # AL2023 packages in the 2023.12.20260914 base. AWS names the fixed builds,
+  # but the repos do not carry them yet, so upgrading in the Dockerfile is a
+  # no-op ("Nothing to do").
+  - id: CVE-2026-78367
     purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
-    statement: "RPK server signature selection derefs a missing certificate. No TLS server."
+      - "pkg:rpm/amazon/rpm@4.16.1.3-29.amzn2023.0.7"
+      - "pkg:rpm/amazon/rpm-libs@4.16.1.3-29.amzn2023.0.7"
+    statement: "rpmbuild tar-spec macro injection. No rpm operations at runtime."
     expired_at: 2026-11-05
-  - id: CVE-2026-18798
+  - id: CVE-2026-84233
     purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
-    statement: "QUIC INITIAL packet double free. No QUIC server."
+      - "pkg:rpm/amazon/rpm@4.16.1.3-29.amzn2023.0.7"
+      - "pkg:rpm/amazon/rpm-libs@4.16.1.3-29.amzn2023.0.7"
+    statement: "rpmuncompress macro expansion on crafted filenames. No rpm operations at runtime."
     expired_at: 2026-11-05
-  - id: CVE-2026-54874
+  - id: CVE-2026-80230
     purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
-    statement: "DTLS future-epoch record buffering memory use. No DTLS."
+      - "pkg:rpm/amazon/curl-minimal@8.21.0-5.amzn2023.0.1"
+      - "pkg:rpm/amazon/libcurl-minimal@8.21.0-5.amzn2023.0.1"
+    statement: "curl public key pinning bypass. The sandbox makes no outbound TLS connections."
     expired_at: 2026-11-05
-  - id: CVE-2026-63072
+  - id: CVE-2026-89161
     purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
-    statement: "CMS key unwrapping heap overflow. No CMS decryption."
-    expired_at: 2026-11-05
-  - id: CVE-2026-63073
-    purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
-    statement: "CMP sender DN format string. No CMP client or server."
-    expired_at: 2026-11-05
-  - id: CVE-2026-63074
-    purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
-    statement: "CMP ExtraCerts cache growth. No CMP client or server."
-    expired_at: 2026-11-05
-  - id: CVE-2026-63075
-    purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
-    statement: "QUIC ACK-only packet retention memory exhaustion. No QUIC server."
-    expired_at: 2026-11-05
-  - id: CVE-2026-63076
-    purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
-    statement: "CMP server protectionAlg invalid pointer deref. No CMP server."
-    expired_at: 2026-11-05
-  - id: CVE-2026-75803
-    purls:
-      - "pkg:rpm/amazon/openssl-fips-provider-latest@3.5.7-2.amzn2023.0.2"
-      - "pkg:rpm/amazon/openssl-snapsafe-libs@3.5.7-2.amzn2023.0.2"
-    statement: "ChaCha20-Poly1305 and AES-OCB empty-AAD decryption. No AEAD decryption."
+      - "pkg:rpm/amazon/pcre2@10.40-1.amzn2023.0.3"
+      - "pkg:rpm/amazon/pcre2-syntax@10.40-1.amzn2023.0.3"
+    statement: "PCRE2 JIT memory corruption. Neither the runtime nor macro code uses PCRE2."
     expired_at: 2026-11-05

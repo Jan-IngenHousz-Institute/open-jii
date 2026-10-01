@@ -271,6 +271,19 @@ export class AuthorizationService {
   }
 
   /**
+   * Every organization the user belongs to, in any role, including their personal one. Ordered,
+   * so the same memberships always produce the same flag cache key.
+   */
+  async listMemberOrganizationIds(userId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ organizationId: organizationMembers.organizationId })
+      .from(organizationMembers)
+      .where(eq(organizationMembers.userId, userId))
+      .orderBy(organizationMembers.organizationId);
+    return rows.map((row) => row.organizationId);
+  }
+
+  /**
    * Whether the user has the standing to move a resource out of `organizationId`
    * — the organization side of the transfer gate, on top of `can(manage)`. Pass
    * the owning org an access decision was resolved against, never a fresh read.
