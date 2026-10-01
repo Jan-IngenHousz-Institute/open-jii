@@ -715,9 +715,13 @@ describe("ProtocolCellComponent", () => {
           code: [{ measurement: "light" }],
         }),
       });
-      server.mount(contract.protocols.updateProtocol, {
+      let releaseSave: () => void = () => undefined;
+      const saveGate = new Promise<void>((resolve) => {
+        releaseSave = resolve;
+      });
+      const updateSpy = server.mount(contract.protocols.updateProtocol, {
         body: createProtocol({ id: "p1", name: "Fluorescence" }),
-        delay: 100,
+        unblock: saveGate,
       });
       const onUpdate = vi.fn();
 
@@ -731,6 +735,7 @@ describe("ProtocolCellComponent", () => {
       await user.clear(input);
       await user.type(input, "Fluorescence");
       await user.click(screen.getByLabelText("cells.renameSave"));
+      await waitFor(() => expect(updateSpy.called).toBe(true));
 
       // A collapse toggle lands while the rename save is still in flight.
       rerender(
@@ -740,6 +745,7 @@ describe("ProtocolCellComponent", () => {
           onDelete={vi.fn()}
         />,
       );
+      releaseSave();
 
       await waitFor(() => expect(onUpdate).toHaveBeenCalled());
       const updated = onUpdate.mock.lastCall?.[0] as ProtocolCell;
