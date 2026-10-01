@@ -18,7 +18,7 @@ Dashboard Visualization
 
 ### Infrastructure Components
 
-1. **Workspace Module** (`workspace/`) - AMG workspace with service account
+1. **Workspace Module** (`workspace/`) - AMG workspace and the daily round's Viewer service account
 2. **Dashboard Module** (`dashboard/`) - Pre-configured monitoring dashboards
 3. **Metrics Publisher** (`metrics-publisher/`) - Weekly Lambda that publishes user registration stats to CloudWatch
 4. **Token Rotation** (`TOKEN_ROTATION.md`) - Automated token management
@@ -190,6 +190,14 @@ aws grafana create-workspace-service-account-token \
 ```
 
 Add the token to GitHub Secrets as `GRAFANA_SERVICE_TOKEN` in the dev environment.
+
+### The daily round's account
+
+The workspace module creates `daily-round`, a Viewer service account the daily round reads Grafana
+with. OpenTofu holds the account and never a token: each developer mints their own with the AWS CLI
+and pipes it into `pnpm grafana:auth <env>`, which stores it in `tooling/devkit/.env`.
+`tooling/devkit/README.md` has the commands. The `Admin_SA` account behind the CI token rotation is
+separate and lives outside OpenTofu.
 
 ### Access Grafana Dashboard
 
