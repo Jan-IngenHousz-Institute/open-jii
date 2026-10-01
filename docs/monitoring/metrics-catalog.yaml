@@ -942,14 +942,15 @@ metrics:
       stat: Maximum
       unit: minutes
       dimensions: { Environment: "${ENVIRONMENT}" }
-    baseline: { method: threshold, max: 60 }
+    baseline: { method: threshold, max: 90 }
     runbook: docs/runbooks/metrics-mv-freshness.md
     notes: >
       Minutes since computed_at on the public metrics tables, read from the tables
       themselves rather than from run state, so an update that succeeded and wrote nothing
-      still reads as stale. The scheduler runs every fifteen minutes, so an hour means
-      several consecutive updates did not land. Publicly visible, but a stale number is not a
-      down site or lost data, so a warning: someone today, not someone now.
+      still reads as stale. The scheduler runs hourly, as often as the backend reads the
+      figures, so 90 minutes means the last update did not land. Publicly visible, but a
+      stale number is not a down site or lost data, so a warning: someone today, not
+      someone now.
 
   # Client-side observability (PostHog)
   - num: 42

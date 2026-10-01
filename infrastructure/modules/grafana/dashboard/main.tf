@@ -2221,8 +2221,8 @@ resource "grafana_rule_group" "lakehouse_freshness" {
   folder_uid       = grafana_folder.folder.uid
   interval_seconds = 300
 
-  # Catalog entry 41. Measured at 12 minutes against a 60 minute threshold, so the
-  # headroom is four scheduler cycles.
+  # Catalog entry 41. The scheduler runs hourly and an update takes minutes, so past 90
+  # minutes the last update did not land.
   rule {
     name      = "Metrics Tables Stale"
     condition = "C"
@@ -2276,7 +2276,7 @@ resource "grafana_rule_group" "lakehouse_freshness" {
       datasource_uid = "__expr__"
 
       model = jsonencode({
-        expression = "$B > 60"
+        expression = "$B > 90"
         type       = "math"
         refId      = "C"
       })
@@ -2292,7 +2292,7 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     for            = "15m"
 
     annotations = {
-      description      = "The public metrics tables have not been recomputed for over an hour, so every number on the public page is at least that stale."
+      description      = "The public metrics tables have not been recomputed for over 90 minutes, so every number on the public page is at least that stale."
       summary          = "Metrics tables are stale"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/metrics-mv-freshness.md"
       __dashboardUid__ = local.heartbeat_daily_uid
