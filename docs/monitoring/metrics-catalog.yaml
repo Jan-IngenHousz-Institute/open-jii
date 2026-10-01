@@ -67,6 +67,9 @@ passes:
   - date: 2026-10-01
     range: [97, 97]
     note: the memory each pipeline driver keeps, which warned of the September stall hours ahead
+  - date: 2026-10-01
+    range: [98, 98]
+    note: Databricks spend per component, so a cost change shows the week it happens
 
 metrics:
   # Ingest path
@@ -1543,3 +1546,23 @@ metrics:
       How full each classic pipeline driver's old generation is after its latest full collection,
       read from the GC log in the pipeline-logs volume, per Pipeline. During the September leak
       Centrum's climbed from 38% to 80% in about 16 hours, then to 100% in about 11 more, and stalled.
+
+  - num: 98
+    id: databricks-cost
+    name: Databricks cost
+    family: usage
+    area: platform
+    source: dbx
+    phase: P2
+    active: true
+    slots: [weekly]
+    signal:
+      namespace: OpenJII/Usage
+      search: SEARCH('{OpenJII/Usage,Component,Environment} MetricName="DatabricksCost7dUsd" AND Environment="${ENVIRONMENT}"', 'Maximum')
+      stat: Maximum
+      unit: usd
+    baseline: { method: wow }
+    notes: >-
+      Spend over the last seven complete days at list price, from system.billing.usage, per Component:
+      each classic and metrics pipeline and the SQL warehouse by the id it bills under, job runs
+      together, and the rest of the workspace as other. The dashboards query each component by name.

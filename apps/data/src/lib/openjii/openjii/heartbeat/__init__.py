@@ -9,6 +9,7 @@ from .constants import (
     COLLECTOR_FAILURES_METRIC,
     COLLECTOR_HEARTBEAT_METRIC,
     DATA_NAMESPACE,
+    DATABRICKS_COST_7D_METRIC,
     DRIVER_OLD_GEN_METRIC,
     EXPERIMENT_LATENCY_METRIC,
     EXPERIMENT_ROWS_METRIC,
@@ -34,6 +35,7 @@ from .constants import (
     STALE_EXPERIMENTS_METRIC,
     USAGE_NAMESPACE,
 )
+from .costs import cost_by_component_sql, cost_components
 from .driver_heap import FullCollection, latest_full_collection
 from .observations import (
     detail,
@@ -54,6 +56,7 @@ __all__ = [
     "BROKER_TO_API_LATENCY_METRIC",
     "COLLECTOR_FAILURES_METRIC",
     "COLLECTOR_HEARTBEAT_METRIC",
+    "DATABRICKS_COST_7D_METRIC",
     "DATA_NAMESPACE",
     "DRIVER_OLD_GEN_METRIC",
     "EXPERIMENT_LATENCY_METRIC",
@@ -80,6 +83,8 @@ __all__ = [
     "STALE_EXPERIMENTS_METRIC",
     "USAGE_NAMESPACE",
     "FullCollection",
+    "cost_by_component_sql",
+    "cost_components",
     "detail",
     "heartbeat_key",
     "hop",
