@@ -1684,7 +1684,7 @@ module "serving_views" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.experiment_annotations_table, module.experiment_custom_metadata_table]
+  depends_on = [module.experiment_annotations_table, module.experiment_custom_metadata_table, module.status_views]
 }
 
 module "data_export_job" {

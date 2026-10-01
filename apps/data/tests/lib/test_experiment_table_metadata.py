@@ -36,6 +36,12 @@ _GOLD = {
           ('e1', 'd2', CAST(NULL AS STRING))
         AS t(experiment_id, device_id, device_firmware)
     """,
+    "experiment_device_data": """
+        SELECT * FROM VALUES
+          ('e1', 'd1', 'fw1'),
+          ('e1', 'd2', CAST(NULL AS STRING))
+        AS t(experiment_id, device_id, device_firmware)
+    """,
     "experiment_uploaded_data": """
         SELECT * FROM VALUES
           ('e1', 't1', 'Soil v1', TIMESTAMP'2026-09-20 09:00:00', parse_json('{"ph": 6.5}')),
