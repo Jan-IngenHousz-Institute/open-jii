@@ -47,10 +47,19 @@ aws cloudwatch list-metrics --namespace AWS/IoT --metric-name Failure \
 
 ## Recovering the lost window
 
-Messages dropped by a failed rule action are not replayable from IoT Core. What survives is whatever
-the other action captured: if Firehose kept archiving while Kinesis failed, the raw objects for the
-window are in `open-jii-<env>-iot-raw-archive`. No pipeline reads that archive, so replay is a
-manual job of re-publishing those objects into the stream, not a switch to flip. Establish which
+IoT Core does not keep a message a rule action dropped, but the rule's error action does. Every
+message either action failed to deliver lands in the `open-jii-iot-raw-archive-<env>` bucket under
+`iot-rule-errors/<yyyy>/<MM>/<dd>/`, one object per message:
+
+```bash
+aws s3 ls s3://open-jii-iot-raw-archive-<env>/iot-rule-errors/$(date -u +%Y/%m/%d)/
+```
+
+Each object names the rule, topic and client, lists every failed action under `failures` with its
+error, and carries the device's original payload in `base64OriginalPayload`. A message whose Kinesis
+action failed while Firehose succeeded is also in the raw archive under `raw-iot/`, but only these
+objects say which messages the pipeline missed. No pipeline reads either prefix, so replay is a
+manual job of re-publishing those payloads into the stream, not a switch to flip. Establish which
 action failed before telling anyone the data is gone, because half the time it is not.
 
 ## Closing
