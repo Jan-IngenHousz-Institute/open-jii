@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { revalidateAuth } from "~/app/actions/revalidate";
 
 import { authClient } from "@repo/auth/client";
 
@@ -24,6 +25,7 @@ export function useSignInPasskey() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["auth"] });
+      await revalidateAuth();
     },
   });
 }

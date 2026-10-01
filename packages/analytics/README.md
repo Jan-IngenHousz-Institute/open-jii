@@ -74,6 +74,36 @@ const config = createPostHogClientConfig(
 posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, config);
 ```
 
+## Targeting an organisation
+
+Every flag evaluation for a signed-in user carries `organization_ids`, the ids of every organisation
+they belong to, comma-joined (`flagPersonProperties`). PostHog evaluates with it without storing it,
+so organisation targeting applies before the user accepts analytics cookies. The browser adds the
+user's `email` only once they accept, and only then are the properties also stored on their PostHog
+person; server checks always send the email. Evaluations record no `$feature_flag_called` events,
+so checking a flag never creates a person.
+
+Flags are code in `infrastructure/modules/posthog/flags.json`, so a rollout change is a pull request
+(see that module's README). To turn a flag on for an organisation's members:
+
+1. In openJII, open the organisation and copy its id from the address bar:
+   `/platform/organizations/<id>`.
+2. In `flags.json`, add a group to the flag's `filters.groups`:
+   `{ "properties": [{ "key": "organization_ids", "type": "person", "value": "<id>", "operator": "icontains" }], "rollout_percentage": 100 }`.
+   `icontains` is PostHog's "contains"; `exact` ("is any of") never matches this property.
+3. Groups are OR'd, so each further organisation gets its own group.
+
+The change goes live when its pull request merges. Members then get the flag on their next page
+load, and backend checks follow within a minute. Adding someone to the organisation in openJII puts
+them in the rollout.
+
+The browser identifies a user by id once they accept analytics cookies and evaluates under a
+cookieless id before that, while the web server and the backend evaluate under their email. Only
+`organization_ids` conditions and plain 0% or 100% rollouts give the browser and the servers the
+same answer. A rollout between 1% and 99% can show an action in the browser that the backend then
+refuses, or hide one it would allow, and so can a condition on `email` until the user accepts
+cookies.
+
 ## Available Feature Flags
 
 - `MULTI_LANGUAGE`: Enable multi-language support

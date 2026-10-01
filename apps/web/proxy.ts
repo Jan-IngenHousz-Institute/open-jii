@@ -43,6 +43,7 @@ export function proxy(request: NextRequest) {
   // Add current path header and continue
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-current-path", request.nextUrl.pathname);
+  requestHeaders.set("x-current-search", request.nextUrl.search);
   return NextResponse.next({
     request: { headers: requestHeaders },
   });

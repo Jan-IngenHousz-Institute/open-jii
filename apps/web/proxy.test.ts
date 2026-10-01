@@ -21,4 +21,15 @@ describe("locale proxy", () => {
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe("https://openjii.org/en-US/about?source=e2e");
   });
+
+  it("passes a localized route's path and query on to the page", () => {
+    const response = proxy(
+      new NextRequest("https://openjii.org/de-DE/login?callbackUrl=%2Fplatform"),
+    );
+
+    expect(response.headers.get("x-middleware-request-x-current-path")).toBe("/de-DE/login");
+    expect(response.headers.get("x-middleware-request-x-current-search")).toBe(
+      "?callbackUrl=%2Fplatform",
+    );
+  });
 });
