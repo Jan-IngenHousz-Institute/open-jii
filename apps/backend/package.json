@@ -77,7 +77,6 @@
     "@types/compression": "^1.8.1",
     "@types/express": "^5.0.6",
     "@types/node": "catalog:",
-    "@types/nodemailer": "catalog:",
     "@types/supertest": "^6.0.3",
     "@vitest/coverage-v8": "catalog:testing",
     "aws-sdk-client-mock": "^4.1.0",

@@ -54,7 +54,6 @@
     "@repo/vitest-config": "workspace:*",
     "@types/express": "^5.0.6",
     "@types/node": "catalog:",
-    "@types/nodemailer": "catalog:",
     "@vitest/coverage-v8": "catalog:testing",
     "eslint": "catalog:",
     "typescript": "catalog:",
