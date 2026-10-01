@@ -73,6 +73,8 @@ module "kinesis" {
   source      = "../../modules/kinesis"
   stream_name = "open-jii-${var.environment}-data-ingest-stream"
 
+  shard_count = 3
+
   retention_period_hours = 72
 
   workspace_kinesis_credential_id = var.kinesis_credential_id
