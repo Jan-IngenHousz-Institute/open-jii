@@ -1029,9 +1029,9 @@ module "metrics_pipeline_scheduler" {
   name        = "Metrics-Pipeline-Scheduler-PROD"
   description = "Triggers the public metrics pipeline refresh"
 
-  # Schedule: every 15 minutes
+  # Schedule: hourly, which is how often the backend reads the figures
   # Format: "seconds minutes hours day-of-month month day-of-week"
-  schedule = "0 0/15 * * * ?"
+  schedule = "0 0 * * * ?"
 
   max_concurrent_runs           = 1
   use_serverless                = true

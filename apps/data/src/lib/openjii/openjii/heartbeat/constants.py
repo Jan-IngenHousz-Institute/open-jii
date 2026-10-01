@@ -20,7 +20,7 @@ FAILED_COLLECTORS_DETAIL = "failed_collectors"
 GOLD_AGE_METRIC = "GoldMaterializationAgeMinutes"
 
 # Minutes since the public metrics tables were last computed. A fixed
-# threshold works here: the scheduler runs every fifteen minutes everywhere.
+# threshold works here: the scheduler runs hourly everywhere.
 METRICS_AGE_METRIC = "MetricsPipelineAgeMinutes"
 
 STALE_EXPERIMENTS_METRIC = "StaleExperimentsCount"
