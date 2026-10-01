@@ -1152,6 +1152,7 @@ module "metrics_heartbeat_export" {
         "ENVIRONMENT"        = var.environment
         "HEARTBEAT_LOCATION" = "s3://${module.heartbeat_metrics_s3.bucket_id}"
         "PIPELINE_LOGS_PATH" = module.pipeline_logs_volume.volume_path
+        "COST_COMPONENTS"    = jsonencode(local.databricks_cost_components)
       }
     }
   ]
@@ -1176,6 +1177,30 @@ module "metrics_heartbeat_export" {
   }
 
   depends_on = [module.heartbeat_external_location]
+}
+
+locals {
+  databricks_cost_components = {
+    centrum   = { dlt_pipeline_id = module.centrum_pipeline.pipeline_id }
+    macro     = { dlt_pipeline_id = module.macro_execution_pipeline.pipeline_id }
+    metrics   = { dlt_pipeline_id = module.metrics_pipeline.pipeline_id }
+    warehouse = { warehouse_id = var.backend_databricks_warehouse_id }
+  }
+}
+
+# Singular, so other principals' grants on the system catalog stay.
+resource "databricks_grant" "node_system_catalog" {
+  provider   = databricks.workspace
+  catalog    = "system"
+  principal  = module.node_service_principal.service_principal_application_id
+  privileges = ["USE_CATALOG"]
+}
+
+resource "databricks_grant" "node_system_billing" {
+  provider   = databricks.workspace
+  schema     = "system.billing"
+  principal  = module.node_service_principal.service_principal_application_id
+  privileges = ["USE_SCHEMA", "SELECT"]
 }
 
 module "centrum_backup_job" {
@@ -2930,6 +2955,7 @@ module "grafana_dashboard" {
   slack_webhook_url              = var.slack_webhook_url
   posthog_project_id             = "80726"
   kinesis_shard_count            = module.kinesis.shard_count
+  databricks_cost_components     = concat(keys(local.databricks_cost_components), ["jobs", "other"])
   payload_samples_log_group_name = module.iot_core.payload_samples_log_group_name
   storage_buckets = {
     "Raw payload archive"  = module.iot_raw_archive_s3.bucket_id

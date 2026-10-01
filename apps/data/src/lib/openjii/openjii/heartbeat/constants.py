@@ -37,6 +37,8 @@ MEASUREMENTS_7D_METRIC = "Measurements7d"
 ACTIVE_DEVICES_7D_METRIC = "ActiveDevices7d"
 ACTIVE_EXPERIMENTS_7D_METRIC = "ActiveExperiments7d"
 ACTIVE_CONTRIBUTORS_7D_METRIC = "ActiveContributors7d"
+# Databricks spend at list price, per platform component.
+DATABRICKS_COST_7D_METRIC = "DatabricksCost7dUsd"
 
 # The data path, one half hour at a time: rows through each stage, how long
 # each hop took at p95, what is waiting for macros, and how long since each

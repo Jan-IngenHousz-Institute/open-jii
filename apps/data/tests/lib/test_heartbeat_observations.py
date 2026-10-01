@@ -58,6 +58,7 @@ def test_metric_names_are_the_literals_the_catalog_binds():
     assert heartbeat.INGEST_IDLE_METRIC == "IngestIdleMinutes"
     assert heartbeat.MACRO_IDLE_METRIC == "MacroIdleMinutes"
     assert heartbeat.DRIVER_OLD_GEN_METRIC == "DriverOldGenAfterFullGcPercent"
+    assert heartbeat.DATABRICKS_COST_7D_METRIC == "DatabricksCost7dUsd"
 
 
 def test_to_ndjson_serializes_the_datetimes_a_roster_row_carries():
@@ -104,6 +105,7 @@ def test_every_metric_and_detail_name_is_exported():
         "INGEST_IDLE_METRIC",
         "MACRO_IDLE_METRIC",
         "DRIVER_OLD_GEN_METRIC",
+        "DATABRICKS_COST_7D_METRIC",
         "STALE_EXPERIMENTS_DETAIL",
         "SILENT_DEVICES_DETAIL",
         "FAILED_COLLECTORS_DETAIL",

@@ -52,7 +52,7 @@ const KNOWN_SOURCES = ["aws", "dbx", "pg", "posthog", "gh", "composer"];
 const KNOWN_STATS = ["Sum", "Maximum", "Minimum", "Average", "SampleCount"];
 const KNOWN_SEVERITIES = ["critical", "warning"];
 // The report dashboards map these to Grafana unit ids; anything else charts as a bare number.
-const KNOWN_UNITS = ["milliseconds", "seconds", "minutes", "bytes", "percent", "ratio"];
+const KNOWN_UNITS = ["milliseconds", "seconds", "minutes", "bytes", "percent", "ratio", "usd"];
 
 // Only these signal fields go through placeholder resolution on the dashboards; a
 // placeholder anywhere else reaches CloudWatch as a literal and matches nothing forever.

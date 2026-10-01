@@ -26,6 +26,7 @@ from openjii.heartbeat import (
     BROKER_TO_API_LATENCY_METRIC,
     COLLECTOR_HEARTBEAT_METRIC,
     DATA_NAMESPACE,
+    DATABRICKS_COST_7D_METRIC,
     DRIVER_OLD_GEN_METRIC,
     EXPERIMENT_LATENCY_METRIC,
     EXPERIMENT_ROWS_METRIC,
@@ -48,6 +49,8 @@ from openjii.heartbeat import (
     STALE_EXPERIMENTS_DETAIL,
     STALE_EXPERIMENTS_METRIC,
     USAGE_NAMESPACE,
+    cost_by_component_sql,
+    cost_components,
     detail,
     heartbeat_key,
     hop,
@@ -72,7 +75,15 @@ spark = SparkSession.builder.getOrCreate()
 # Registered before they are read so a hand run in the workspace shows them.
 # An empty value fails loudly: a defaulted environment would label datapoints
 # with the wrong one, which is worse than no datapoints.
-WIDGETS = ("CATALOG_NAME", "CENTRAL_SCHEMA", "METRICS_SCHEMA", "ENVIRONMENT", "HEARTBEAT_LOCATION", "PIPELINE_LOGS_PATH")
+WIDGETS = (
+    "CATALOG_NAME",
+    "CENTRAL_SCHEMA",
+    "METRICS_SCHEMA",
+    "ENVIRONMENT",
+    "HEARTBEAT_LOCATION",
+    "PIPELINE_LOGS_PATH",
+    "COST_COMPONENTS",
+)
 for name in WIDGETS:
     dbutils.widgets.text(name, "")
 
@@ -90,6 +101,7 @@ METRICS_SCHEMA = required_widget("METRICS_SCHEMA")
 ENVIRONMENT = required_widget("ENVIRONMENT")
 HEARTBEAT_LOCATION = required_widget("HEARTBEAT_LOCATION")
 PIPELINE_LOGS_PATH = required_widget("PIPELINE_LOGS_PATH")
+COST_COMPONENTS = json.loads(required_widget("COST_COMPONENTS"))
 
 EXPERIMENT_STATUS = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.experiment_status"
 ACTIVITY_WINDOWS = f"{CATALOG_NAME}.{METRICS_SCHEMA}.{ACTIVITY_WINDOWS_TABLE}"
@@ -415,6 +427,25 @@ def collect_driver_heap(now: datetime) -> list[dict]:
     return records
 
 
+def collect_databricks_cost(now: datetime) -> list[dict]:
+    """Databricks spend at list price over the last seven complete days, per
+    component, zero for one that spent nothing so its series never goes quiet."""
+    spend = {row["component"]: row["usd"] for row in spark.sql(cost_by_component_sql(COST_COMPONENTS)).collect()}
+
+    return [
+        observation(
+            DATABRICKS_COST_7D_METRIC,
+            float(spend.get(component, 0)),
+            USAGE_NAMESPACE,
+            now,
+            ENVIRONMENT,
+            "None",
+            {"Component": component},
+        )
+        for component in cost_components(COST_COMPONENTS)
+    ]
+
+
 # COMMAND ----------
 
 # DBTITLE 1,Write the heartbeat file
@@ -436,6 +467,7 @@ collectors = [
     ("macro_backlog", collect_macro_backlog),
     ("path_idle", collect_path_idle),
     ("driver_heap", collect_driver_heap),
+    ("databricks_cost", collect_databricks_cost),
 ]
 records.extend(run_collectors(collectors, now, ENVIRONMENT, log))
 

@@ -53,6 +53,11 @@ variable "kinesis_shard_count" {
   type        = number
 }
 
+variable "databricks_cost_components" {
+  description = "Components the heartbeat export prices Databricks spend under, which the weekly report sums and charts"
+  type        = list(string)
+}
+
 variable "storage_buckets" {
   description = "S3 buckets the Throughput and storage dashboard sizes, by what they hold"
   type        = map(string)
