@@ -36,7 +36,9 @@ the way `modules/opennext` composes its parts:
 - **A dashboard or insight:** `dashboards.json` lists them and their tiles, and each insight's query
   is its own file in `insights/`. To bring over a change made in the UI, copy the insight's query
   JSON into that file. The API adds a `version` to each query it serves that PostHog does not
-  store, so leave it out.
+  store, so leave it out. A tile's layout holds only `x`, `y`, `w` and `h` for each breakpoint:
+  PostHog keeps nothing else of a layout written through its API, so the `i`, `minW` and `minH`
+  the UI adds come back missing and fail the apply.
 - **Transformations:** the GeoIP transformation PostHog set up with the project is the `geoip`
   module in `main.tf`, its code in `transformations/`.
 - **Error alerts:** the `error_alert` modules post new, reopened and spiking issues to dev's Slack
