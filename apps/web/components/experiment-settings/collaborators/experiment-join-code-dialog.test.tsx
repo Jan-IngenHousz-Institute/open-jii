@@ -284,8 +284,8 @@ describe("ExperimentJoinCodeDialog", () => {
       body: {
         joinCode: {
           ...ACTIVE_CODE,
-          createdAt: "2026-09-01T00:00:00.000Z",
-          expiresAt: "2026-10-01T00:00:00.050Z",
+          createdAt: "2036-09-01T00:00:00.000Z",
+          expiresAt: "2036-10-01T00:00:00.050Z",
         },
       },
     });

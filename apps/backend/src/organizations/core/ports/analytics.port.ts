@@ -1,4 +1,4 @@
-import type { FeatureFlagKey } from "@repo/analytics";
+import type { FeatureFlagKey, FlagUser } from "@repo/analytics";
 
 /**
  * Injection token for the Analytics port
@@ -14,8 +14,8 @@ export interface AnalyticsPort {
   /**
    * Check if a feature flag is enabled
    * @param flagKey - The feature flag key to check
-   * @param distinctId - Optional user identifier
+   * @param user - The signed-in user the flag is evaluated for
    * @returns Whether the flag is enabled
    */
-  isFeatureFlagEnabled(flagKey: FeatureFlagKey, distinctId?: string): Promise<boolean>;
+  isFeatureFlagEnabled(flagKey: FeatureFlagKey, user: FlagUser): Promise<boolean>;
 }

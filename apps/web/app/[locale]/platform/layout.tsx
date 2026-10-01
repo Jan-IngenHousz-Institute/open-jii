@@ -16,7 +16,7 @@ import { redirect } from "next/navigation";
 import type React from "react";
 import { Suspense } from "react";
 import { auth } from "~/app/actions/auth";
-import { isFeatureFlagEnabled } from "~/lib/posthog-server";
+import { isFeatureFlagEnabledForSession } from "~/lib/posthog-server";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { SidebarEdgePeek, SidebarInset, SidebarProvider } from "@repo/ui/components/sidebar";
@@ -58,12 +58,11 @@ export default async function AppLayout({
     redirect(`/${locale}/register?callbackUrl=${callbackUrl}`);
   }
 
-  const releaseNotes = await fetchWebReleaseNotes(locale);
-  // The same distinct id the backend checks, so one PostHog rule decides both sides.
-  const isCalibrationEnabled = await isFeatureFlagEnabled(
-    FEATURE_FLAGS.CALIBRATION,
-    session.user.email || session.user.id,
-  );
+  // The same person and memberships the backend checks, so one PostHog rule decides both sides.
+  const [releaseNotes, isCalibrationEnabled] = await Promise.all([
+    fetchWebReleaseNotes(locale),
+    isFeatureFlagEnabledForSession(FEATURE_FLAGS.CALIBRATION, session),
+  ]);
 
   return (
     <SidebarProvider defaultWidth={232}>

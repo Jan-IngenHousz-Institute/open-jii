@@ -176,7 +176,7 @@ export class IotCalibrationController {
   private async requireCalibration(session: UserSession, operation: string): Promise<void> {
     const isEnabled = await this.analyticsPort.isFeatureFlagEnabled(
       FEATURE_FLAGS.CALIBRATION,
-      session.user.email || session.user.id,
+      session.user,
     );
 
     if (!isEnabled) {
