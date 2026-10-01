@@ -364,13 +364,14 @@ describe("signals", () => {
     const catalogued = metrics.filter(
       (m) => m.signal?.namespace && ALLOWED_NAMESPACES.has(m.signal.namespace),
     );
+    // A series published per extra dimension is read through a SEARCH that names it.
+    const metricOf = (m: CatalogMetric) =>
+      m.signal?.metric ?? /MetricName="([^"]+)"/.exec(m.signal?.search ?? "")?.[1] ?? "";
 
-    expect(catalogued.filter((m) => !emitted.has(m.signal?.metric ?? "")).map((m) => m.id)).toEqual(
+    expect(catalogued.filter((m) => !emitted.has(metricOf(m))).map((m) => m.id)).toEqual([]);
+    expect([...emitted].filter((name) => !catalogued.some((m) => metricOf(m) === name))).toEqual(
       [],
     );
-    expect(
-      [...emitted].filter((name) => !catalogued.some((m) => m.signal?.metric === name)),
-    ).toEqual([]);
   });
 });
 

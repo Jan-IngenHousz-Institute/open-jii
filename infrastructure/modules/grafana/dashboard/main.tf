@@ -2162,9 +2162,10 @@ resource "grafana_rule_group" "collector_liveness" {
 
 # Lakehouse Freshness
 #
-# The public metrics tables are rewritten on every scheduler cycle, so their age is how
-# stale the numbers on the public page are. Value-based rather than absence-based, so it
-# needs no gate: dlt-heartbeat is what notices the producer stopping altogether.
+# Whether what the lakehouse serves is current: the public metrics tables, the experiment
+# tables, the macro results, and the pipeline drivers that keep them so. Value-based rather
+# than absence-based, so it needs no gate: dlt-heartbeat is what notices the producer
+# stopping altogether.
 resource "grafana_rule_group" "lakehouse_freshness" {
   provider         = grafana.amg
   name             = "Lakehouse Freshness"
@@ -2334,6 +2335,171 @@ resource "grafana_rule_group" "lakehouse_freshness" {
       severity  = "warning"
       service   = "lakehouse"
       metric_id = "macro-backlog"
+    }
+  }
+
+  # Catalog entry 86. The collector publishes one p95 per closed half hour, stamped at its
+  # start, so the newest point is up to an hour old. It takes two slow half hours in a row:
+  # one on its own is not yet a pipeline falling behind.
+  rule {
+    name      = "Experiment Latency"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Data"
+        metricName = "ExperimentLatencyP95Seconds"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+      })
+
+      relative_time_range {
+        from = 4500
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > ${var.experiment_latency_threshold_seconds}"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "45m"
+
+    annotations = {
+      description      = "New measurements take longer than the environment's tolerance to reach the experiment tables, so researchers see their data late. The centrum pipeline is falling behind."
+      summary          = "Experiment tables are slow to update"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/experiment-latency.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["experiment-latency"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "lakehouse"
+      metric_id = "experiment-latency"
+    }
+  }
+
+  # Catalog entry 97. Published per pipeline, so matchExact false with only the environment
+  # covers every driver and each series alerts on its own. A point is a full collection in
+  # the last hour; a driver without one is under no pressure.
+  rule {
+    name      = "Pipeline Driver Memory"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Data"
+        metricName = "DriverOldGenAfterFullGcPercent"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+        matchExact = false
+      })
+
+      relative_time_range {
+        from = 3600
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 80"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "60m"
+
+    annotations = {
+      description      = "A pipeline driver's old generation is still over 80% full after a full collection. At 100% the driver collects continuously and every flow in the pipeline stalls."
+      summary          = "Pipeline driver is running out of memory"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/driver-heap.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["driver-heap"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "lakehouse"
+      metric_id = "driver-heap"
     }
   }
 }

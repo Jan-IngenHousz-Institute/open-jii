@@ -57,6 +57,7 @@ def test_metric_names_are_the_literals_the_catalog_binds():
     assert heartbeat.MACRO_BACKLOG_METRIC == "MacroBacklogRows"
     assert heartbeat.INGEST_IDLE_METRIC == "IngestIdleMinutes"
     assert heartbeat.MACRO_IDLE_METRIC == "MacroIdleMinutes"
+    assert heartbeat.DRIVER_OLD_GEN_METRIC == "DriverOldGenAfterFullGcPercent"
 
 
 def test_to_ndjson_serializes_the_datetimes_a_roster_row_carries():
@@ -102,6 +103,7 @@ def test_every_metric_and_detail_name_is_exported():
         "MACRO_BACKLOG_METRIC",
         "INGEST_IDLE_METRIC",
         "MACRO_IDLE_METRIC",
+        "DRIVER_OLD_GEN_METRIC",
         "STALE_EXPERIMENTS_DETAIL",
         "SILENT_DEVICES_DETAIL",
         "FAILED_COLLECTORS_DETAIL",
@@ -119,6 +121,12 @@ def test_observation_carries_environment_dimension_and_zulu_timestamp():
     # dev and prod must never share a datapoint series
     assert record["dimensions"] == {"Environment": "dev"}
     assert record["timestamp"] == "2026-08-16T06:15:00Z"
+
+
+def test_observation_adds_its_own_dimensions_to_the_environment():
+    record = observation("M", 1, DATA_NAMESPACE, NOW, "dev", "Percent", {"Pipeline": "centrum"})
+
+    assert record["dimensions"] == {"Environment": "dev", "Pipeline": "centrum"}
 
 
 def test_observation_treats_naive_timestamps_as_utc():

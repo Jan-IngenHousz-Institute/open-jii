@@ -1141,6 +1141,7 @@ module "metrics_heartbeat_export" {
         # Environment dimension, which the catalog and Grafana query as-is.
         "ENVIRONMENT"        = var.environment
         "HEARTBEAT_LOCATION" = "s3://${module.heartbeat_metrics_s3.bucket_id}"
+        "PIPELINE_LOGS_PATH" = module.pipeline_logs_volume.volume_path
       }
     }
   ]

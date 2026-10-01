@@ -9,6 +9,7 @@ from .constants import (
     COLLECTOR_FAILURES_METRIC,
     COLLECTOR_HEARTBEAT_METRIC,
     DATA_NAMESPACE,
+    DRIVER_OLD_GEN_METRIC,
     EXPERIMENT_LATENCY_METRIC,
     EXPERIMENT_ROWS_METRIC,
     FAILED_COLLECTORS_DETAIL,
@@ -33,6 +34,7 @@ from .constants import (
     STALE_EXPERIMENTS_METRIC,
     USAGE_NAMESPACE,
 )
+from .driver_heap import FullCollection, latest_full_collection
 from .observations import (
     detail,
     heartbeat_key,
@@ -53,6 +55,7 @@ __all__ = [
     "COLLECTOR_FAILURES_METRIC",
     "COLLECTOR_HEARTBEAT_METRIC",
     "DATA_NAMESPACE",
+    "DRIVER_OLD_GEN_METRIC",
     "EXPERIMENT_LATENCY_METRIC",
     "EXPERIMENT_ROWS_METRIC",
     "FAILED_COLLECTORS_DETAIL",
@@ -76,9 +79,11 @@ __all__ = [
     "STALE_EXPERIMENTS_DETAIL",
     "STALE_EXPERIMENTS_METRIC",
     "USAGE_NAMESPACE",
+    "FullCollection",
     "detail",
     "heartbeat_key",
     "hop",
+    "latest_full_collection",
     "minutes_since",
     "observation",
     "previous_bucket",

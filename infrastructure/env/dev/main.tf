@@ -1157,6 +1157,7 @@ module "metrics_heartbeat_export" {
         # Environment dimension, which the catalog and Grafana query as-is.
         "ENVIRONMENT"        = var.environment
         "HEARTBEAT_LOCATION" = "s3://${module.heartbeat_metrics_s3.bucket_id}"
+        "PIPELINE_LOGS_PATH" = module.pipeline_logs_volume.volume_path
       }
     }
   ]
@@ -2927,6 +2928,8 @@ module "grafana_dashboard" {
   # iterator age was 2.8M ms and 600000 would have fired in 315 of 316 hours. Continuous since
   # 23 Sep, it still peaked at 156 minutes in the five days after, so two hours stays.
   ingest_lag_threshold_ms = 7200000
+
+  experiment_latency_threshold_seconds = 120
 
   # IoT and Kinesis monitoring
   kinesis_stream_name = module.kinesis.kinesis_stream_name
