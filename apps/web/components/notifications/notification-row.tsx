@@ -140,9 +140,10 @@ export function NotificationRow({ notification, onOpen }: NotificationRowProps) 
   const Icon = TYPE_ICON[notification.type];
   const path = TYPE_PATH[notification.type](notification.resource);
   const isUnread = notification.readAt === null;
+  // `replace` keeps stored params apart from i18next's own options, so a future param
+  // named `count` or `context` interpolates instead of changing how `t` behaves.
   const message = t(`types.${notification.type}`, {
-    ...notification.params,
-    actor: notification.actor?.name ?? t("someone"),
+    replace: { ...notification.params, actor: notification.actor?.name ?? t("someone") },
   });
 
   const handleOpen = () => onOpen(notification);

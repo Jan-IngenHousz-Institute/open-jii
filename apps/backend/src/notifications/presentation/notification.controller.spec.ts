@@ -252,6 +252,21 @@ describe("NotificationController", () => {
         .send({ category: "account_security", channel: "email", enabled: false })
         .expect(StatusCodes.BAD_REQUEST);
     });
+
+    it("accepts turning a locked category on, which changes nothing", async () => {
+      const response: SuperTestResponse<NotificationPreferences> = await testApp
+        .put(testApp.resolveOrpcPath(contract.notifications.updateNotificationPreference))
+        .withAuth(recipientId)
+        .send({ category: "account_security", channel: "email", enabled: true })
+        .expect(StatusCodes.OK);
+
+      expect(response.body.preferences).toContainEqual({
+        category: "account_security",
+        channel: "email",
+        enabled: true,
+        locked: true,
+      });
+    });
   });
 
   describe("unknown types", () => {

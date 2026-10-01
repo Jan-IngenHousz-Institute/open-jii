@@ -38,6 +38,9 @@ export function NotificationsPopover() {
 
   const unreadCount = unread.data?.count ?? 0;
   const hasUnread = unreadCount > 0;
+  // The count and the list are separate reads; an unread row on screen keeps Mark all
+  // read usable even while the count is behind, as the page does.
+  const listedUnread = preview.data?.items.some((item) => item.readAt === null) ?? false;
   // An invitation is neither read nor unread, it is unanswered, so it lights the dot
   // on its own until it is gone from the server's list.
   const hasInvitations = (invitations.data ?? []).length > 0;
@@ -103,7 +106,7 @@ export function NotificationsPopover() {
             variant="ghost"
             size="xs"
             onClick={handleMarkAllRead}
-            disabled={!hasUnread || markAllRead.isPending}
+            disabled={!(hasUnread || listedUnread) || markAllRead.isPending}
             className="text-muted-foreground hover:text-foreground font-normal"
           >
             {t("markAllRead")}

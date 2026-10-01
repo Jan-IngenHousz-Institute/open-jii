@@ -45,6 +45,20 @@ describe("<NotificationsPopover />", () => {
     expect(screen.queryByTestId("bell-indicator")).not.toBeInTheDocument();
   });
 
+  it("offers Mark all read against the rows on screen while the count is behind", async () => {
+    server.mount(contract.notifications.getUnreadNotificationCount, { body: { count: 0 } });
+    server.mount(contract.notifications.listNotifications, {
+      body: page([createNotification({ readAt: null })]),
+    });
+    const user = userEvent.setup();
+    render(<NotificationsPopover />);
+
+    await user.click(screen.getByRole("button", { name: /title/ }));
+    await screen.findByText("types.experiment_join_request_received");
+
+    expect(screen.getByRole("button", { name: "markAllRead" })).toBeEnabled();
+  });
+
   it("lists the latest notifications when opened", async () => {
     server.mount(contract.notifications.getUnreadNotificationCount, { body: { count: 1 } });
     const listRequest = server.mount(contract.notifications.listNotifications, {

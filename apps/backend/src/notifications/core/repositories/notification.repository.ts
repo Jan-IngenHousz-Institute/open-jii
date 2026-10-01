@@ -232,6 +232,26 @@ export class NotificationRepository {
     );
   }
 
+  /** The saved choices of several people for one category and channel; a missing row means the default applies. */
+  async findPreferencesForUsers(
+    userIds: string[],
+    category: NotificationCategory,
+    channel: NotificationChannel,
+  ): Promise<Result<NotificationPreferenceRowDto[]>> {
+    return tryCatch(() =>
+      this.database
+        .select()
+        .from(notificationPreferences)
+        .where(
+          and(
+            inArray(notificationPreferences.userId, userIds),
+            eq(notificationPreferences.category, category),
+            eq(notificationPreferences.channel, channel),
+          ),
+        ),
+    );
+  }
+
   async upsertPreference(
     userId: string,
     category: NotificationCategory,

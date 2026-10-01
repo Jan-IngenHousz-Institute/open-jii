@@ -11,6 +11,7 @@ import { ErrorCodes } from "../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../common/utils/fp-utils";
 import { NotificationRepository } from "../../core/repositories/notification.repository";
 import { NotificationEmailService } from "./notification-email.service";
+import { NotificationPreferencesService } from "./notification-preferences.service";
 
 export interface DispatchInput<T extends NotificationType> {
   type: T;
@@ -34,6 +35,7 @@ export class NotificationDispatchService {
   constructor(
     private readonly notificationRepository: NotificationRepository,
     private readonly notificationEmail: NotificationEmailService,
+    private readonly notificationPreferences: NotificationPreferencesService,
   ) {}
 
   async dispatch<T extends NotificationType>(
@@ -104,6 +106,28 @@ export class NotificationDispatchService {
       return success({ created: created.length, emailed: 0 });
     }
 
+    // A `preference` type emails only those with the category switched on, saved or by
+    // default; `always` ignores the switch. Rows are already in, so a failed lookup
+    // costs the emails of this event and nothing else.
+    let emailEnabled: Set<string> | null = null;
+    if (definition.channels.email === "preference") {
+      const enabled = await this.notificationPreferences.emailEnabledFor(
+        created.map((row) => row.recipientId),
+        definition.category,
+      );
+      if (enabled.isFailure()) {
+        this.logger.error({
+          msg: "Failed to read notification preferences, rows were still stored",
+          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+          operation: "dispatch-notification",
+          type: input.type,
+          error: enabled.error,
+        });
+        return success({ created: created.length, emailed: 0 });
+      }
+      emailEnabled = enabled.value;
+    }
+
     const usersResult = await this.notificationRepository.findUsers([
       ...new Set([...created.map((row) => row.recipientId), ...(actorId ? [actorId] : [])]),
     ]);
@@ -126,6 +150,9 @@ export class NotificationDispatchService {
     let emailed = 0;
 
     for (const row of created) {
+      if (emailEnabled && !emailEnabled.has(row.recipientId)) {
+        continue;
+      }
       const recipientEmail = byId.get(row.recipientId)?.email;
       if (!recipientEmail) {
         continue;

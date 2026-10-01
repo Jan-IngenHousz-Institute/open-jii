@@ -168,6 +168,77 @@ describe("NotificationDispatchService", () => {
     expect(send).not.toHaveBeenCalled();
   });
 
+  it("stores the row and sends nothing to someone who switched the category's email off", async () => {
+    const saved = await repository.upsertPreference(
+      recipientId,
+      "requests_and_invitations",
+      "email",
+      false,
+    );
+    assertSuccess(saved);
+
+    const result = await dispatch.dispatch({
+      type: "experiment_join_request_received",
+      recipientIds: [recipientId],
+      actorId,
+      resource: experiment,
+      params: { experimentName: "Photosynthesis" },
+    });
+
+    assertSuccess(result);
+    expect(result.value).toEqual({ created: 1, emailed: 0 });
+    expect(sendSubmitted).not.toHaveBeenCalled();
+  });
+
+  it("applies the category default when nobody saved a choice", async () => {
+    // Data jobs are off by default; pretend the type has an email so only the
+    // default can hold it back, then a saved opt-in lets it through.
+    vi.spyOn(notificationEmail, "hasEmail").mockReturnValue(true);
+    const send = vi.spyOn(notificationEmail, "send").mockResolvedValue(success(undefined));
+
+    const offByDefault = await dispatch.dispatch({
+      type: "data_export_completed",
+      recipientIds: [recipientId],
+      resource: experiment,
+      params: { experimentName: "Photosynthesis", format: "CSV" },
+    });
+    assertSuccess(offByDefault);
+    expect(offByDefault.value.emailed).toBe(0);
+    expect(send).not.toHaveBeenCalled();
+
+    assertSuccess(await repository.upsertPreference(recipientId, "data_jobs", "email", true));
+
+    const optedIn = await dispatch.dispatch({
+      type: "data_export_completed",
+      recipientIds: [recipientId],
+      resource: experiment,
+      params: { experimentName: "Photosynthesis", format: "CSV" },
+      dedupeKey: "second-export",
+    });
+    assertSuccess(optedIn);
+    expect(optedIn.value.emailed).toBe(1);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores a saved opt-out for a type that always emails", async () => {
+    vi.spyOn(notificationEmail, "hasEmail").mockReturnValue(true);
+    const send = vi.spyOn(notificationEmail, "send").mockResolvedValue(success(undefined));
+    // The use case refuses this write; the repository does not, which is the point.
+    assertSuccess(
+      await repository.upsertPreference(recipientId, "account_security", "email", false),
+    );
+
+    const result = await dispatch.dispatch({
+      type: "api_key_created",
+      recipientIds: [recipientId],
+      params: { keyName: "Field laptop" },
+    });
+
+    assertSuccess(result);
+    expect(result.value.emailed).toBe(1);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
   it("stores the row and sends nothing for a type with no email entry yet", async () => {
     // `data_export_completed` is on the `preference` policy, so only the missing
     // entry keeps its email from going out.

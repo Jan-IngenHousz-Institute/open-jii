@@ -300,7 +300,7 @@
       "bytes": 172228,
       "sha256": "5517e1631bdd0357c7995285efd0f41def993705b82b1650395c3a6e27d70aef",
       "disposition": "published",
-      "scope": "Notification bell opened from the sidebar, with unread rows"
+      "scope": "Notification bell opened from the sidebar"
     },
     {
       "path": "/img/workbooks/ux-sidebar.webp",

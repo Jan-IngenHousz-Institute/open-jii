@@ -32,7 +32,12 @@ export class UpdateNotificationPreferenceUseCase {
       enabled: preference.enabled,
     });
 
-    if (NOTIFICATION_CATEGORIES[preference.category][preference.channel].locked) {
+    // A locked category can only be turned off by nobody; turning it on is a no-op,
+    // not a refusal.
+    if (
+      !preference.enabled &&
+      NOTIFICATION_CATEGORIES[preference.category][preference.channel].locked
+    ) {
       return failure(
         AppError.badRequest(
           `${preference.category} cannot be turned off for ${preference.channel}`,
