@@ -15,7 +15,8 @@
 
 # DBTITLE 1,Imports and configuration
 import json
-from datetime import datetime, timezone
+import os
+from datetime import datetime, timedelta, timezone
 
 from openjii.heartbeat import (
     ACTIVE_CONTRIBUTORS_7D_METRIC,
@@ -25,6 +26,7 @@ from openjii.heartbeat import (
     BROKER_TO_API_LATENCY_METRIC,
     COLLECTOR_HEARTBEAT_METRIC,
     DATA_NAMESPACE,
+    DRIVER_OLD_GEN_METRIC,
     EXPERIMENT_LATENCY_METRIC,
     EXPERIMENT_ROWS_METRIC,
     GOLD_AGE_METRIC,
@@ -49,6 +51,7 @@ from openjii.heartbeat import (
     detail,
     heartbeat_key,
     hop,
+    latest_full_collection,
     minutes_since,
     observation,
     previous_bucket,
@@ -69,7 +72,7 @@ spark = SparkSession.builder.getOrCreate()
 # Registered before they are read so a hand run in the workspace shows them.
 # An empty value fails loudly: a defaulted environment would label datapoints
 # with the wrong one, which is worse than no datapoints.
-WIDGETS = ("CATALOG_NAME", "CENTRAL_SCHEMA", "METRICS_SCHEMA", "ENVIRONMENT", "HEARTBEAT_LOCATION")
+WIDGETS = ("CATALOG_NAME", "CENTRAL_SCHEMA", "METRICS_SCHEMA", "ENVIRONMENT", "HEARTBEAT_LOCATION", "PIPELINE_LOGS_PATH")
 for name in WIDGETS:
     dbutils.widgets.text(name, "")
 
@@ -86,6 +89,7 @@ CENTRAL_SCHEMA = required_widget("CENTRAL_SCHEMA")
 METRICS_SCHEMA = required_widget("METRICS_SCHEMA")
 ENVIRONMENT = required_widget("ENVIRONMENT")
 HEARTBEAT_LOCATION = required_widget("HEARTBEAT_LOCATION")
+PIPELINE_LOGS_PATH = required_widget("PIPELINE_LOGS_PATH")
 
 EXPERIMENT_STATUS = f"{CATALOG_NAME}.{CENTRAL_SCHEMA}.experiment_status"
 ACTIVITY_WINDOWS = f"{CATALOG_NAME}.{METRICS_SCHEMA}.{ACTIVITY_WINDOWS_TABLE}"
@@ -102,6 +106,10 @@ HISTORY_DEPTH = 1000
 
 # A row processed this recently is in flight to its macros, not waiting.
 MACRO_IN_FLIGHT_MINUTES = 15
+
+# A driver with no full collection this recent is under no memory pressure, or has stopped.
+# CloudWatch also refuses datapoints older than two weeks, which a stopped pipeline's log would be.
+DRIVER_GC_MAX_AGE = timedelta(hours=1)
 
 
 # Databricks captures driver stdout; the logging module is often swallowed in jobs
@@ -384,6 +392,29 @@ def collect_path_idle(now: datetime) -> list[dict]:
     return records
 
 
+def collect_driver_heap(now: datetime) -> list[dict]:
+    """How full each classic pipeline's driver left its old generation at its
+    latest full collection, stamped when that collection ran."""
+    records = []
+    for pipeline in sorted(os.listdir(PIPELINE_LOGS_PATH)):
+        collection = latest_full_collection(os.path.join(PIPELINE_LOGS_PATH, pipeline))
+        if collection is None or now - collection.at > DRIVER_GC_MAX_AGE:
+            continue
+        records.append(
+            observation(
+                DRIVER_OLD_GEN_METRIC,
+                collection.old_gen_percent,
+                DATA_NAMESPACE,
+                collection.at,
+                ENVIRONMENT,
+                "Percent",
+                {"Pipeline": pipeline},
+            )
+        )
+
+    return records
+
+
 # COMMAND ----------
 
 # DBTITLE 1,Write the heartbeat file
@@ -404,6 +435,7 @@ collectors = [
     ("macro_results", collect_macro_results),
     ("macro_backlog", collect_macro_backlog),
     ("path_idle", collect_path_idle),
+    ("driver_heap", collect_driver_heap),
 ]
 records.extend(run_collectors(collectors, now, ENVIRONMENT, log))
 

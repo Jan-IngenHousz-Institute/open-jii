@@ -64,6 +64,9 @@ passes:
   - date: 2026-09-27
     range: [96, 96]
     note: the heartbeat export's failed collectors, so a broken one is told from a quiet one
+  - date: 2026-10-01
+    range: [97, 97]
+    note: the memory each pipeline driver keeps, which warned of the September stall hours ahead
 
 metrics:
   # Ingest path
@@ -1312,13 +1315,20 @@ metrics:
     source: dbx
     phase: P2
     active: true
-    slots: [exception]
+    slots: [alert, exception]
+    severity: warning
     signal:
       namespace: OpenJII/Data
       metric: ExperimentLatencyP95Seconds
       stat: Maximum
       unit: seconds
       dimensions: { Environment: "${ENVIRONMENT}" }
+    baseline:
+      method: threshold
+      max: 60
+      per_environment:
+        dev: { method: threshold, max: 120 }
+    runbook: docs/runbooks/experiment-latency.md
     notes: p95 of a batch's processing time to its commit in the experiment tables. Rose from 6 s to 92 s during the September Centrum heap leak.
 
   - num: 87
@@ -1515,3 +1525,25 @@ metrics:
     notes: >-
       How many of the heartbeat export's collectors raised on its latest run. Their series read No
       data either way, and this tells a broken collector from a quiet table.
+
+  - num: 97
+    id: driver-heap
+    name: Pipeline driver memory kept
+    family: observability
+    area: lakehouse
+    source: dbx
+    phase: P2
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: OpenJII/Data
+      search: SEARCH('{OpenJII/Data,Environment,Pipeline} MetricName="DriverOldGenAfterFullGcPercent" AND Environment="${ENVIRONMENT}"', 'Maximum')
+      stat: Maximum
+      unit: percent
+    baseline: { method: threshold, max: 80 }
+    runbook: docs/runbooks/driver-heap.md
+    notes: >-
+      How full each classic pipeline driver's old generation is after its latest full collection,
+      read from the GC log in the pipeline-logs volume, per Pipeline. During the September leak
+      Centrum's climbed from 38% to 80% in about 16 hours, then to 100% in about 11 more, and stalled.

@@ -56,6 +56,10 @@ MACRO_IDLE_METRIC = "MacroIdleMinutes"
 
 PATH_BUCKET_MINUTES = 30
 
+# How full a classic pipeline driver's old generation is right after a full collection, per
+# pipeline. What a full collection cannot free is memory the driver still holds.
+DRIVER_OLD_GEN_METRIC = "DriverOldGenAfterFullGcPercent"
+
 STALE_EXPERIMENTS_DETAIL = "stale_experiments"
 SILENT_DEVICES_DETAIL = "silent_devices"
 

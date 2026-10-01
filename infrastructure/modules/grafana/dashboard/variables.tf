@@ -127,6 +127,12 @@ variable "ingest_lag_threshold_ms" {
   default     = 600000
 }
 
+variable "experiment_latency_threshold_seconds" {
+  description = "p95 seconds from silver to the experiment tables, per half hour, that counts as falling behind. Dev's runs higher on normal days, so its tolerance is raised in the env."
+  type        = number
+  default     = 60
+}
+
 variable "metrics_forwarder_function_name" {
   description = "Forwarder Lambda to watch. Empty leaves the self-health rules out entirely."
   type        = string
