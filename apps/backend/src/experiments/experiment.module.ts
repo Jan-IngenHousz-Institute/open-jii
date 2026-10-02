@@ -16,6 +16,7 @@ import { EmailModule } from "../common/modules/email/services/email.module";
 import { CreateMacroUseCase } from "../macros/application/use-cases/create-macro/create-macro";
 import { MacroModule } from "../macros/macro.module";
 import { MetricsModule } from "../metrics/metrics.module";
+import { NotificationModule } from "../notifications/notification.module";
 import { CreateProtocolUseCase } from "../protocols/application/use-cases/create-protocol/create-protocol";
 import { ProtocolRepository } from "../protocols/core/repositories/protocol.repository";
 import { SharingModule } from "../sharing/sharing.module";
@@ -134,6 +135,7 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     AwsModule,
     EmailModule,
     AnalyticsModule,
+    NotificationModule,
     UserModule,
     MacroModule,
     WorkbookModule,

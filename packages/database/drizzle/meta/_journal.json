@@ -386,6 +386,13 @@
       "when": 1790606876592,
       "tag": "0054_add_protocol_macros_macro_id_index",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1790763435029,
+      "tag": "0055_notifications",
+      "breakpoints": true
     }
   ]
 }

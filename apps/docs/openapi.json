@@ -29562,6 +29562,507 @@
         }
       }
     },
+    "/api/v1/notifications": {
+      "get": {
+        "operationId": "notifications.listNotifications",
+        "parameters": [
+          {
+            "name": "readState",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "all",
+                "unread"
+              ],
+              "type": "string",
+              "description": "Defaults to all"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "requests_and_invitations",
+                "membership_and_access",
+                "experiments_and_resources",
+                "devices_and_calibration",
+                "project_transfers",
+                "data_jobs",
+                "account_security"
+              ],
+              "type": "string"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "1-based page number"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Rows per page"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "type": {
+                            "enum": [
+                              "experiment_join_request_received",
+                              "organization_join_request_received",
+                              "organization_invitation_received",
+                              "experiment_join_request_approved",
+                              "experiment_join_request_rejected",
+                              "organization_join_request_approved",
+                              "organization_join_request_rejected",
+                              "organization_invitation_accepted",
+                              "organization_role_changed",
+                              "organization_membership_removed",
+                              "experiment_invitation_accepted",
+                              "experiment_joined_with_code",
+                              "resource_member_left",
+                              "resource_access_granted",
+                              "resource_access_changed",
+                              "resource_access_revoked",
+                              "experiment_made_public",
+                              "resource_deleted",
+                              "resource_moved_organization",
+                              "workbook_version_published",
+                              "calibration_run_awaiting_approval",
+                              "calibration_run_approved",
+                              "calibration_run_rejected",
+                              "project_transfer_requested",
+                              "project_transfer_completed",
+                              "data_export_completed",
+                              "data_export_failed",
+                              "data_upload_completed",
+                              "data_upload_failed",
+                              "api_key_created",
+                              "passkey_added"
+                            ],
+                            "type": "string"
+                          },
+                          "category": {
+                            "enum": [
+                              "requests_and_invitations",
+                              "membership_and_access",
+                              "experiments_and_resources",
+                              "devices_and_calibration",
+                              "project_transfers",
+                              "data_jobs",
+                              "account_security"
+                            ],
+                            "type": "string"
+                          },
+                          "actor": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "resource": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "enum": [
+                                      "experiment",
+                                      "macro",
+                                      "protocol",
+                                      "workbook",
+                                      "device",
+                                      "device_group",
+                                      "calibration_definition",
+                                      "organization"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "id"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "params": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "description": "Display values captured when the event happened, such as the experiment name"
+                          },
+                          "readAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "type",
+                          "category",
+                          "actor",
+                          "resource",
+                          "params",
+                          "readAt",
+                          "createdAt"
+                        ]
+                      }
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "pageSize": {
+                      "type": "integer"
+                    },
+                    "totalPages": {
+                      "type": "integer"
+                    },
+                    "totalCount": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "page",
+                    "pageSize",
+                    "totalPages",
+                    "totalCount"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/unread-count": {
+      "get": {
+        "operationId": "notifications.getUnreadNotificationCount",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "count"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/read": {
+      "post": {
+        "operationId": "notifications.markNotificationsRead",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "minItems": 1,
+                    "maxItems": 100
+                  }
+                },
+                "required": [
+                  "ids"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "updated": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "updated"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/read-all": {
+      "post": {
+        "operationId": "notifications.markAllNotificationsRead",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "updated": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "updated"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/preferences": {
+      "get": {
+        "operationId": "notifications.getNotificationPreferences",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "preferences": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "category": {
+                            "enum": [
+                              "requests_and_invitations",
+                              "membership_and_access",
+                              "experiments_and_resources",
+                              "devices_and_calibration",
+                              "project_transfers",
+                              "data_jobs",
+                              "account_security"
+                            ],
+                            "type": "string"
+                          },
+                          "channel": {
+                            "enum": [
+                              "email"
+                            ],
+                            "type": "string"
+                          },
+                          "enabled": {
+                            "type": "boolean"
+                          },
+                          "locked": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "category",
+                          "channel",
+                          "enabled",
+                          "locked"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "preferences"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "notifications.updateNotificationPreference",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "enum": [
+                      "requests_and_invitations",
+                      "membership_and_access",
+                      "experiments_and_resources",
+                      "devices_and_calibration",
+                      "project_transfers",
+                      "data_jobs",
+                      "account_security"
+                    ],
+                    "type": "string"
+                  },
+                  "channel": {
+                    "enum": [
+                      "email"
+                    ],
+                    "type": "string"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "category",
+                  "channel",
+                  "enabled"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "preferences": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "category": {
+                            "enum": [
+                              "requests_and_invitations",
+                              "membership_and_access",
+                              "experiments_and_resources",
+                              "devices_and_calibration",
+                              "project_transfers",
+                              "data_jobs",
+                              "account_security"
+                            ],
+                            "type": "string"
+                          },
+                          "channel": {
+                            "enum": [
+                              "email"
+                            ],
+                            "type": "string"
+                          },
+                          "enabled": {
+                            "type": "boolean"
+                          },
+                          "locked": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "category",
+                          "channel",
+                          "enabled",
+                          "locked"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "preferences"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/organizations": {
       "get": {
         "operationId": "organizations.listOrganizations",

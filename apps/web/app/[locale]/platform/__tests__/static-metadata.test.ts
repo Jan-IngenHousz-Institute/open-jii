@@ -18,6 +18,7 @@ import { generateMetadata as generateNewExperimentMetadata } from "../experiment
 import { generateMetadata as generateExperimentsMetadata } from "../experiments/page";
 import { generateMetadata as generateNewMacroMetadata } from "../macros/new/page";
 import { generateMetadata as generateMacrosMetadata } from "../macros/page";
+import { generateMetadata as generateNotificationsMetadata } from "../notifications/page";
 import { generateMetadata as generateNewOrganizationMetadata } from "../organizations/new/page";
 import { generateMetadata as generateOrganizationsMetadata } from "../organizations/page";
 import { generateMetadata as generatePlatformMetadata } from "../page";
@@ -163,8 +164,8 @@ function ownsTitleMetadata(source: string): boolean {
 describe("platform metadata ownership inventory", () => {
   const pageRoutes = findPageRoutes(platformDirectory).sort();
 
-  it("covers all 64 current page routes", () => {
-    expect(pageRoutes).toHaveLength(64);
+  it("covers all 65 current page routes", () => {
+    expect(pageRoutes).toHaveLength(65);
   });
 
   it.each(pageRoutes)("gives %s title ownership or a documented redirect exception", (route) => {
@@ -242,6 +243,7 @@ const { translations } = vi.hoisted(() => ({
       "iot:iot.calibration.library.title": "Calibrations",
       "macro:macros.newMacro": "New Macro",
       "macro:macros.title": "Macros",
+      "notifications:title": "Notifications",
       "common:organizations.createAction": "Create organization",
       "common:organizations.title": "Organizations",
       "workbook:workbooks.title": "Workbooks",
@@ -263,6 +265,7 @@ const { translations } = vi.hoisted(() => ({
       "iot:iot.calibration.library.title": "Kalibrierungen",
       "macro:macros.newMacro": "Neues Makro",
       "macro:macros.title": "Makros",
+      "notifications:title": "Benachrichtigungen",
       "common:organizations.createAction": "Organisation erstellen",
       "common:organizations.title": "Organisationen",
       "workbook:workbooks.title": "Arbeitsmappen",
@@ -304,6 +307,7 @@ const routes = [
   ["workbooks", generateWorkbooksMetadata],
   ["transferRequest", generateTransferRequestMetadata],
   ["transferHistory", generateTransferHistoryMetadata],
+  ["notifications", generateNotificationsMetadata],
   ["organizations", generateOrganizationsMetadata],
   ["newOrganization", generateNewOrganizationMetadata],
 ] as const;
@@ -330,6 +334,7 @@ const expectedTitles: Record<
     workbooks: "Workbooks",
     transferRequest: "Request Project Transfer",
     transferHistory: "Your Transfer Requests",
+    notifications: "Notifications",
     organizations: "Organizations",
     newOrganization: "Create organization",
   },
@@ -351,6 +356,7 @@ const expectedTitles: Record<
     workbooks: "Arbeitsmappen",
     transferRequest: "Projekttransfer beantragen",
     transferHistory: "Ihre Transferanfragen",
+    notifications: "Benachrichtigungen",
     organizations: "Organisationen",
     newOrganization: "Organisation erstellen",
   },

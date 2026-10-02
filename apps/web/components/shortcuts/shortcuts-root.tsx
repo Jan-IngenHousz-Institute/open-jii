@@ -1,6 +1,6 @@
 "use client";
 
-import { NOTIFICATION_BELL_OPEN_EVENT } from "@/components/activity/activity-popover";
+import { NOTIFICATION_BELL_OPEN_EVENT } from "@/components/notifications/notifications-popover";
 import { WHATS_NEW_OPEN_EVENT } from "@/components/whats-new/whats-new-shared";
 import { modifierLabel } from "@/lib/platform";
 import { useHotkey, useHotkeySequence } from "@tanstack/react-hotkeys";

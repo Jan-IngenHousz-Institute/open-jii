@@ -1,14 +1,11 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
-import { describeAccess } from "../../../../common/utils/access-wording";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
-import { UserRepository } from "../../../../users/core/repositories/user.repository";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import type { ExperimentJoinRequestDto } from "../../../core/models/experiment-join-request.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
-import { EMAIL_PORT } from "../../../core/ports/email.port";
-import type { EmailPort } from "../../../core/ports/email.port";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
@@ -20,8 +17,7 @@ export class ApproveJoinRequestUseCase {
     private readonly authz: AuthorizationService,
     private readonly experimentRepository: ExperimentRepository,
     private readonly joinRequestRepository: ExperimentJoinRequestRepository,
-    private readonly userRepository: UserRepository,
-    @Inject(EMAIL_PORT) private readonly emailPort: EmailPort,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   async execute(
@@ -104,31 +100,24 @@ export class ApproveJoinRequestUseCase {
 
       const approved = approveResult.value.request;
 
-      // Send the same membership-change email used by direct invites/adds
-      if (approved.user.email) {
-        const actorProfileResult = await this.userRepository.findUserProfile(currentUserId);
-        const actor =
-          actorProfileResult.isSuccess() && actorProfileResult.value
-            ? `${actorProfileResult.value.firstName} ${actorProfileResult.value.lastName}`
-            : "An openJII admin";
+      // Tells the requester and sends the same membership-change email a direct add does.
+      const dispatched = await this.notifications.dispatch({
+        type: "experiment_join_request_approved",
+        recipientIds: [approved.user.id],
+        actorId: currentUserId,
+        resource: { type: "experiment", id: experimentId },
+        params: { experimentName: experiment.name },
+      });
 
-        const emailResult = await this.emailPort.sendAddedUserNotification(
+      if (dispatched.isFailure()) {
+        this.logger.error({
+          msg: "Failed to notify the requester of the approval, the request was still approved",
+          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+          operation: "approve-join-request",
           experimentId,
-          experiment.name,
-          actor,
-          describeAccess({ tier: "viewer" }),
-          approved.user.email,
-        );
-        if (emailResult.isFailure()) {
-          this.logger.error({
-            msg: "Failed to send membership-change email after approval",
-            errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-            operation: "approve-join-request",
-            experimentId,
-            requestId,
-            email: approved.user.email,
-          });
-        }
+          requestId,
+          error: dispatched.error,
+        });
       }
 
       return success(approved);

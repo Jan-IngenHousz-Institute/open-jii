@@ -55,6 +55,7 @@ describe("orpc contract surface", () => {
       "macros",
       "metrics",
       "newsletter",
+      "notifications",
       "organizations",
       "protocols",
       "search",

@@ -307,14 +307,16 @@ export const SHOTS: readonly Shot[] = [
     scope: "Keyboard shortcut cheatsheet",
   },
   {
-    slug: "activity-bell",
-    publish: "img/chrome-refresh/activity-bell.webp",
+    slug: "notifications-bell",
+    publish: "img/chrome-refresh/notifications-bell.webp",
     frame: "desktop",
     route: "/platform",
     async prepare(page) {
-      await activate(page, /^activity$/i);
+      // The bell's accessible name carries the unread count, so the match cannot
+      // be anchored at the end: seeded notifications are what make it worth a shot.
+      await activate(page, /^notifications\b/i);
     },
-    scope: "Activity feed opened from the sidebar",
+    scope: "Notification bell opened from the sidebar",
   },
   {
     slug: "login-signup",

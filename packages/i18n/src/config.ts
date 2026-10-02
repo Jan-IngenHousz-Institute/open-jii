@@ -36,6 +36,7 @@ export const namespaces = [
   "iot",
   "newsletter",
   "publicMetrics",
+  "notifications",
 ] as const;
 
 export type Namespace = (typeof namespaces)[number];

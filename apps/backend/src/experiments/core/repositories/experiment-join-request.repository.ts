@@ -255,9 +255,9 @@ export class ExperimentJoinRequestRepository {
    * Who can decide a join request: admin/owner grant holders plus the owning org's
    * living owners. The owners are usually the only ones — a creator holds no grant,
    * so grants alone would notify nobody on a personal-workspace experiment.
-   * Team/org grants are excluded: no individual mailbox behind them.
+   * Team/org grants are excluded: no individual person behind them.
    */
-  async listAdminEmails(experimentId: string): Promise<Result<string[]>> {
+  async listAdminIds(experimentId: string): Promise<Result<string[]>> {
     return tryCatch(async () => {
       const [granted, ownerIds] = await Promise.all([
         this.database
@@ -274,18 +274,8 @@ export class ExperimentJoinRequestRepository {
         findOwningOrgOwnerIds(this.database, "experiment", experimentId),
       ]);
 
-      // An owner who also holds an admin grant is in both sets — mail them once.
-      const recipientIds = [...new Set([...granted.map((row) => row.userId), ...ownerIds])];
-      if (recipientIds.length === 0) {
-        return [];
-      }
-
-      const rows = await this.database
-        .select({ email: users.email })
-        .from(users)
-        .where(inArray(users.id, recipientIds));
-
-      return rows.map((row) => row.email);
+      // An owner who also holds an admin grant is in both sets — notify them once.
+      return [...new Set([...granted.map((row) => row.userId), ...ownerIds])];
     });
   }
 }
