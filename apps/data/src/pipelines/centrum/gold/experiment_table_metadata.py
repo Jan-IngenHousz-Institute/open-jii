@@ -11,7 +11,7 @@ import dlt
 from pyspark.sql import functions as F
 
 from openjii.centrum import (
-    EXPERIMENT_DEVICE_DATA_TABLE,
+    EXPERIMENT_DEVICE_KEYS_TABLE,
     EXPERIMENT_MACRO_DATA_SCHEMAS_TABLE,
     EXPERIMENT_RAW_DATA_SCHEMAS_TABLE,
     EXPERIMENT_TABLE_METADATA,
@@ -78,7 +78,7 @@ def experiment_table_metadata():
     )
 
     device_metadata = (
-        dlt.read(EXPERIMENT_DEVICE_DATA_TABLE)
+        dlt.read(EXPERIMENT_DEVICE_KEYS_TABLE)
         .select("experiment_id")
         .distinct()
         .select(

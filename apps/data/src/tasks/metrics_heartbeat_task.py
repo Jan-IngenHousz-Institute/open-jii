@@ -123,8 +123,8 @@ def usage_point(metric: str, value: float, now: datetime) -> dict:
 def collect_experiment_status(now: datetime) -> list[dict]:
     """Gold materialization age and the stale-experiment roster.
 
-    experiment_status only recomputes when the centrum pipeline runs, so the
-    newest status_updated_at doubles as "when gold last materialized".
+    experiment_status is a view over gold, so its newest latest_processed_timestamp
+    is when gold last received a row.
 
     experiment_status marks every experiment that ever finished as stale, so
     the count and roster are limited to experiments that received data inside
@@ -137,7 +137,7 @@ def collect_experiment_status(now: datetime) -> list[dict]:
         SELECT
             COUNT(*) AS experiments,
             COUNT_IF(status = 'stale' AND {in_window}) AS stale,
-            MAX(status_updated_at) AS last_materialized
+            MAX(latest_processed_timestamp) AS last_materialized
         FROM {EXPERIMENT_STATUS}
     """).first()
 
