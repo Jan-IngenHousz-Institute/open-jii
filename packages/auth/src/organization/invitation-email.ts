@@ -1,5 +1,5 @@
 import { sendOrganizationInvitationEmail } from "../email/invitationEmail";
-import { hasAccountForEmail } from "./guards";
+import { findProfileDisplayName, hasAccountForEmail } from "./guards";
 
 /**
  * What Better Auth hands `sendInvitationEmail`, narrowed to the parts this needs.
@@ -10,7 +10,7 @@ interface InvitationEmailData {
   email: string;
   role: string;
   organization: { name: string };
-  inviter: { user: { name?: string | null; email: string } };
+  inviter: { user: { id: string; name?: string | null; email: string } };
 }
 
 /**
@@ -41,6 +41,14 @@ export async function sendInvitationEmailUnlessAccountExists(
 
   if (await hasAccountForEmail(data.email)) return;
 
+  // The inviter's profile name, as the bell and the backend's copy of this email
+  // show it; Better Auth's `users.name` only as a last resort for an account that
+  // has not completed its profile.
+  const inviterName =
+    (await findProfileDisplayName(data.inviter.user.id)) ??
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- an account that never set a name carries `""`, which `??` would keep.
+    (data.inviter.user.name || data.inviter.user.email);
+
   const clientUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
   // The account tab that lists every invitation waiting for the address the
   // recipient signs in with — not a per-invitation route. The id would add
@@ -52,8 +60,7 @@ export async function sendInvitationEmailUnlessAccountExists(
     to: data.email,
     inviteUrl,
     organizationName: data.organization.name,
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- an account that never set a name carries `""`, which `??` would keep.
-    inviterName: data.inviter.user.name || data.inviter.user.email,
+    inviterName,
     role: data.role,
     emailServer,
     emailFrom,
