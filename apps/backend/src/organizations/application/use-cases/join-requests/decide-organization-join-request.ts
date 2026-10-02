@@ -1,12 +1,11 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import { ORGANIZATION_FULL_MESSAGE } from "../../../core/admit-member";
 import type { OrganizationJoinRequestDto } from "../../../core/models/organization-join-request.model";
 import { canManageMembership, canViewOrganization } from "../../../core/organization-access";
-import { ORGANIZATION_EMAIL_PORT } from "../../../core/ports/email.port";
-import type { OrganizationEmailPort } from "../../../core/ports/email.port";
 import { OrganizationJoinRequestRepository } from "../../../core/repositories/organization-join-request.repository";
 import { OrganizationRepository } from "../../../core/repositories/organization.repository";
 
@@ -25,7 +24,7 @@ export class DecideOrganizationJoinRequestUseCase {
   constructor(
     private readonly organizationRepository: OrganizationRepository,
     private readonly joinRequestRepository: OrganizationJoinRequestRepository,
-    @Inject(ORGANIZATION_EMAIL_PORT) private readonly emailPort: OrganizationEmailPort,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   async execute(
@@ -110,7 +109,7 @@ export class DecideOrganizationJoinRequestUseCase {
     }
 
     const approved = approveResult.value.request;
-    await this.notifyRequester(organizationId, approved, "approve");
+    await this.notifyRequester(organizationId, approved, "approve", currentUserId);
     return success(approved);
   }
 
@@ -140,7 +139,7 @@ export class DecideOrganizationJoinRequestUseCase {
       return failure(AppError.conflict("Join request is no longer pending", ErrorCodes.CONFLICT));
     }
 
-    await this.notifyRequester(organizationId, rejectResult.value, "reject");
+    await this.notifyRequester(organizationId, rejectResult.value, "reject", currentUserId);
     return success(rejectResult.value);
   }
 
@@ -149,17 +148,16 @@ export class DecideOrganizationJoinRequestUseCase {
     organizationId: string,
     request: OrganizationJoinRequestDto,
     decision: JoinRequestDecision,
+    deciderId: string,
   ): Promise<void> {
-    if (!request.user.email) return;
-
-    // No viewer: this reads the name to compose an email and discards the count.
+    // No viewer: this reads the name for the notification and discards the count.
     const profileResult = await this.organizationRepository.findProfileFields(
       organizationId,
       undefined,
     );
     if (profileResult.isFailure() || !profileResult.value) {
       this.logger.error({
-        msg: "Failed to load the organization for a join request decision email",
+        msg: "Failed to load the organization for a join request decision notification",
         errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
         operation: "decide-organization-join-request",
         organizationId,
@@ -167,28 +165,25 @@ export class DecideOrganizationJoinRequestUseCase {
       return;
     }
 
-    const organizationName = profileResult.value.name;
-    const emailResult =
-      decision === "approve"
-        ? await this.emailPort.sendOrganizationJoinRequestApprovedNotification(
-            organizationId,
-            organizationName,
-            request.user.email,
-          )
-        : await this.emailPort.sendOrganizationJoinRequestRejectedNotification(
-            organizationId,
-            organizationName,
-            request.user.email,
-          );
+    const dispatched = await this.notifications.dispatch({
+      type:
+        decision === "approve"
+          ? "organization_join_request_approved"
+          : "organization_join_request_rejected",
+      recipientIds: [request.user.id],
+      actorId: deciderId,
+      resource: { type: "organization", id: organizationId },
+      params: { organizationName: profileResult.value.name },
+    });
 
-    if (emailResult.isFailure()) {
+    if (dispatched.isFailure()) {
       this.logger.error({
-        msg: "Failed to send a join request decision email, the decision still stands",
+        msg: "Failed to notify the requester, the decision still stands",
         errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
         operation: "decide-organization-join-request",
         organizationId,
         requestId: request.id,
-        email: request.user.email,
+        error: dispatched.error,
       });
     }
   }

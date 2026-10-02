@@ -1,11 +1,10 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import type { OrganizationJoinRequestDto } from "../../../core/models/organization-join-request.model";
 import { isOrganizationMember, isPersonalWorkspace } from "../../../core/organization-access";
-import { ORGANIZATION_EMAIL_PORT } from "../../../core/ports/email.port";
-import type { OrganizationEmailPort } from "../../../core/ports/email.port";
 import { OrganizationJoinRequestRepository } from "../../../core/repositories/organization-join-request.repository";
 import { OrganizationRepository } from "../../../core/repositories/organization.repository";
 
@@ -21,7 +20,7 @@ export class RequestJoinOrganizationUseCase {
   constructor(
     private readonly organizationRepository: OrganizationRepository,
     private readonly joinRequestRepository: OrganizationJoinRequestRepository,
-    @Inject(ORGANIZATION_EMAIL_PORT) private readonly emailPort: OrganizationEmailPort,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   async execute(
@@ -140,13 +139,13 @@ export class RequestJoinOrganizationUseCase {
     organizationId: string,
     joinRequest: OrganizationJoinRequestDto,
   ): Promise<void> {
-    const [profileResult, emailsResult] = await Promise.all([
-      // Name only, for the notification email; see the note on the decide path.
+    const [profileResult, deciderIdsResult] = await Promise.all([
+      // Name only, for the notification copy; see the note on the decide path.
       this.organizationRepository.findProfileFields(organizationId, undefined),
-      this.organizationRepository.listDeciderEmails(organizationId),
+      this.organizationRepository.listDeciderIds(organizationId),
     ]);
 
-    if (profileResult.isFailure() || !profileResult.value || emailsResult.isFailure()) {
+    if (profileResult.isFailure() || !profileResult.value || deciderIdsResult.isFailure()) {
       this.logger.error({
         msg: "Failed to look up join request notification recipients",
         errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
@@ -156,27 +155,25 @@ export class RequestJoinOrganizationUseCase {
       return;
     }
 
-    const organizationName = profileResult.value.name;
-    const requesterName = `${joinRequest.user.firstName} ${joinRequest.user.lastName}`;
+    const dispatched = await this.notifications.dispatch({
+      type: "organization_join_request_received",
+      recipientIds: deciderIdsResult.value,
+      actorId: joinRequest.user.id,
+      resource: { type: "organization", id: organizationId },
+      params: {
+        organizationName: profileResult.value.name,
+        message: joinRequest.message ?? undefined,
+      },
+    });
 
-    for (const recipientEmail of emailsResult.value) {
-      const emailResult = await this.emailPort.sendOrganizationJoinRequestSubmittedNotification(
+    if (dispatched.isFailure()) {
+      this.logger.error({
+        msg: "Failed to notify the deciders, the join request was still created",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "request-join-organization",
         organizationId,
-        organizationName,
-        requesterName,
-        recipientEmail,
-        joinRequest.message ?? undefined,
-      );
-
-      if (emailResult.isFailure()) {
-        this.logger.error({
-          msg: "Failed to notify a decider, the join request was still created",
-          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-          operation: "request-join-organization",
-          organizationId,
-          email: recipientEmail,
-        });
-      }
+        error: dispatched.error,
+      });
     }
   }
 }

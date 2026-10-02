@@ -5,7 +5,6 @@ import { useMarkAllNotificationsRead } from "@/hooks/notifications/useMarkAllNot
 import { useMarkNotificationsRead } from "@/hooks/notifications/useMarkNotificationsRead/useMarkNotificationsRead";
 import { useNotifications } from "@/hooks/notifications/useNotifications/useNotifications";
 import { useUnreadNotificationCount } from "@/hooks/notifications/useUnreadNotificationCount/useUnreadNotificationCount";
-import { useMyOrganizationInvitations } from "@/hooks/organization/useMyOrganizationInvitations/useMyOrganizationInvitations";
 import { useLocale } from "@/hooks/useLocale";
 import { Bell } from "lucide-react";
 import Link from "next/link";
@@ -18,7 +17,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/pop
 import { useIsMobile } from "@repo/ui/hooks/use-mobile";
 
 import { NotificationFeed } from "./notification-feed";
-import { NotificationInvitationsSection } from "./notification-invitations-section";
 
 const NOTIFICATION_BELL_OPEN_EVENT = "openjii:open-notification-bell";
 const PREVIEW_SIZE = 10;
@@ -31,7 +29,6 @@ export function NotificationsPopover() {
   const [open, setOpen] = React.useState(false);
 
   const unread = useUnreadNotificationCount();
-  const invitations = useMyOrganizationInvitations();
   const preview = useNotifications({ page: 1, pageSize: PREVIEW_SIZE }, { enabled: open });
   const markRead = useMarkNotificationsRead();
   const markAllRead = useMarkAllNotificationsRead();
@@ -41,9 +38,6 @@ export function NotificationsPopover() {
   // The count and the list are separate reads; an unread row on screen keeps Mark all
   // read usable even while the count is behind, as the page does.
   const listedUnread = preview.data?.items.some((item) => item.readAt === null) ?? false;
-  // An invitation is neither read nor unread, it is unanswered, so it lights the dot
-  // on its own until it is gone from the server's list.
-  const hasInvitations = (invitations.data ?? []).length > 0;
   const label = t("title");
 
   React.useEffect(() => {
@@ -82,7 +76,7 @@ export function NotificationsPopover() {
         >
           <Bell className="size-4 shrink-0" />
           <span className="flex-1 truncate text-left">{label}</span>
-          {(hasUnread || hasInvitations) && (
+          {hasUnread && (
             <span
               aria-hidden="true"
               data-testid="bell-indicator"
@@ -98,7 +92,6 @@ export function NotificationsPopover() {
         collisionPadding={8}
         className="w-[380px] max-w-[calc(100vw-1rem)] p-0"
       >
-        <NotificationInvitationsSection onNavigate={closePopover} />
         <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
           <h3 className="text-sm font-semibold">{label}</h3>
           <Button
