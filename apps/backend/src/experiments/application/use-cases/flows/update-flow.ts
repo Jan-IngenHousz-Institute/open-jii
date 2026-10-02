@@ -37,7 +37,19 @@ export class UpdateFlowUseCase {
         if (!flow) {
           return failure(AppError.notFound("Flow not found"));
         }
-        return this.flowRepository.update(experimentId, graph);
+        const written = await this.flowRepository.update(experimentId, graph);
+        if (written.isFailure()) return written;
+        // The flow is already saved; a missed bump only affects list ordering.
+        const touched = await this.experimentRepository.touch(experimentId);
+        if (touched.isFailure()) {
+          this.logger.warn({
+            msg: "Failed to mark experiment as updated",
+            operation: "updateFlow",
+            experimentId,
+            error: touched.error.message,
+          });
+        }
+        return written;
       });
     });
   }

@@ -188,6 +188,7 @@
   "experimentId": "Experiment-ID",
   "created": "Gemaakt",
   "updated": "Bijgewerkt",
+  "updatedOn": "Bijgewerkt {{date}}",
   "descriptionTitle": "Beschrijving",
   "details": {
     "location": {

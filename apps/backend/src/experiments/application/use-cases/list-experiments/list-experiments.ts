@@ -1,7 +1,10 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
-import type { ExperimentSort } from "@repo/api/domains/experiment/experiment.schema";
+import type {
+  ExperimentSort,
+  ExperimentVisibility,
+} from "@repo/api/domains/experiment/experiment.schema";
 import type { ResourceSeries } from "@repo/api/domains/metrics/metrics.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 
@@ -27,6 +30,7 @@ export class ListExperimentsUseCase {
     status?: ExperimentStatus,
     search?: string,
     sort?: ExperimentSort,
+    visibility?: ExperimentVisibility,
   ): Promise<Result<ExperimentSearchRow[]>> {
     this.logger.log({
       msg: "Listing experiments",
@@ -34,6 +38,7 @@ export class ListExperimentsUseCase {
       userId,
       scope,
       status,
+      visibility,
       search,
     });
 
@@ -43,7 +48,7 @@ export class ListExperimentsUseCase {
       status,
       search,
       undefined,
-      undefined,
+      { visibility },
       sort,
     );
 
@@ -78,6 +83,7 @@ export class ListExperimentsUseCase {
     status?: ExperimentStatus,
     search?: string,
     sort?: ExperimentSort,
+    visibility?: ExperimentVisibility,
   ): Promise<Result<{ items: ExperimentWithActivity[]; totalCount: number }>> {
     this.logger.log({
       msg: "Listing experiments",
@@ -87,6 +93,7 @@ export class ListExperimentsUseCase {
       pageSize,
       scope,
       status,
+      visibility,
       search,
       sort,
     });
@@ -98,7 +105,7 @@ export class ListExperimentsUseCase {
       scope,
       status,
       search,
-      undefined,
+      { visibility },
       sort,
     );
     if (paged.isFailure()) {
