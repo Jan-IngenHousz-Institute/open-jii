@@ -8,6 +8,7 @@ import { MailchimpAdapter } from "../common/modules/mailchimp/mailchimp.adapter"
 import { MailchimpModule } from "../common/modules/mailchimp/mailchimp.module";
 import { ExperimentModule } from "../experiments/experiment.module";
 import { NEWSLETTER_PORT } from "../newsletter/core/ports/newsletter.port";
+import { NotificationModule } from "../notifications/notification.module";
 import { AcceptPendingInvitationsUseCase } from "./application/use-cases/accept-pending-invitations/accept-pending-invitations";
 import { CreateInvitationUseCase } from "./application/use-cases/create-invitation/create-invitation";
 import { CreateUserProfileUseCase } from "./application/use-cases/create-user-profile/create-user-profile";
@@ -33,7 +34,13 @@ import { UserController } from "./presentation/user.controller";
 import { WhatsNewController } from "./presentation/whats-new.controller";
 
 @Module({
-  imports: [DatabricksModule, EmailModule, MailchimpModule, forwardRef(() => ExperimentModule)],
+  imports: [
+    DatabricksModule,
+    EmailModule,
+    MailchimpModule,
+    NotificationModule,
+    forwardRef(() => ExperimentModule),
+  ],
   controllers: [UserController, UserWebhookController, InvitationController, WhatsNewController],
   providers: [
     // Repositories

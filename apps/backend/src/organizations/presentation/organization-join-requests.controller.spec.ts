@@ -10,16 +10,17 @@ import type {
 import {
   and,
   eq,
+  notifications,
   organizationJoinRequests,
   organizationMembers,
   organizations,
 } from "@repo/database";
 
+import { EmailAdapter } from "../../common/modules/email/services/email.adapter";
 import { AppError, failure, success } from "../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../notifications/application/services/notification-dispatch.service";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
-import { ORGANIZATION_EMAIL_PORT } from "../core/ports/email.port";
-import type { OrganizationEmailPort } from "../core/ports/email.port";
 import { OrganizationRepository } from "../core/repositories/organization.repository";
 
 describe("OrganizationJoinRequestsController", () => {
@@ -28,7 +29,12 @@ describe("OrganizationJoinRequestsController", () => {
   let adminId: string;
   let plainMemberId: string;
   let requesterId: string;
-  let emailPort: OrganizationEmailPort;
+  let emailAdapter: EmailAdapter;
+
+  const rowsFor = (userId: string) =>
+    testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
+
+  const allRows = () => testApp.database.select().from(notifications);
 
   beforeAll(async () => {
     await testApp.setup();
@@ -47,17 +53,24 @@ describe("OrganizationJoinRequestsController", () => {
       name: "Rita Requester",
     });
 
-    emailPort = testApp.module.get(ORGANIZATION_EMAIL_PORT);
-    vi.spyOn(emailPort, "sendOrganizationJoinRequestSubmittedNotification").mockResolvedValue(
+    emailAdapter = testApp.module.get(EmailAdapter);
+    vi.spyOn(emailAdapter, "sendOrganizationJoinRequestSubmittedNotification").mockResolvedValue(
       success(undefined),
     );
-    vi.spyOn(emailPort, "sendOrganizationJoinRequestApprovedNotification").mockResolvedValue(
+    vi.spyOn(emailAdapter, "sendOrganizationJoinRequestApprovedNotification").mockResolvedValue(
       success(undefined),
     );
-    vi.spyOn(emailPort, "sendOrganizationJoinRequestRejectedNotification").mockResolvedValue(
+    vi.spyOn(emailAdapter, "sendOrganizationJoinRequestRejectedNotification").mockResolvedValue(
       success(undefined),
     );
   });
+
+  /** Makes the next dispatch fail, so a caller sees whether the action still stands. */
+  function breakDispatch() {
+    vi.spyOn(testApp.module.get(NotificationDispatchService), "dispatch").mockResolvedValue(
+      failure(AppError.internal("notifications unavailable")),
+    );
+  }
 
   afterEach(() => {
     testApp.afterEach();
@@ -88,7 +101,7 @@ describe("OrganizationJoinRequestsController", () => {
     });
 
   describe("createOrganizationJoinRequest", () => {
-    it("creates a pending request on a public organization and emails the deciders", async () => {
+    it("creates a pending request on a public organization and notifies the deciders", async () => {
       const organizationId = await seedOrg("public");
 
       const response: SuperTestResponse<OrganizationJoinRequest> = await testApp
@@ -104,11 +117,26 @@ describe("OrganizationJoinRequestsController", () => {
       });
       expect(response.body.user.id).toBe(requesterId);
 
+      // Owners and admins decide, so they are who hears; a plain member does not,
+      // and neither does the requester who caused it.
+      for (const decider of [ownerId, adminId]) {
+        expect(await rowsFor(decider)).toMatchObject([
+          {
+            type: "organization_join_request_received",
+            actorId: requesterId,
+            resourceType: "organization",
+            resourceId: organizationId,
+            params: { organizationName: "Photosynthesis Lab", message: "I would like to help" },
+          },
+        ]);
+      }
+      expect(await rowsFor(plainMemberId)).toEqual([]);
+      expect(await rowsFor(requesterId)).toEqual([]);
+
       const recipients = vi
-        .mocked(emailPort.sendOrganizationJoinRequestSubmittedNotification)
+        .mocked(emailAdapter.sendOrganizationJoinRequestSubmittedNotification)
         .mock.calls.map((call) => call[3])
         .sort();
-      // Owners and admins decide, so they are who hears; a plain member does not.
       expect(recipients).toEqual(["admin@example.com", "owner@example.com"]);
     });
 
@@ -128,9 +156,25 @@ describe("OrganizationJoinRequestsController", () => {
         .expect(StatusCodes.CREATED);
 
       expect(second.body.id).toBe(first.body.id);
+      // Only the submit that created the request told anybody: one row per decider.
+      expect(await allRows()).toHaveLength(2);
       expect(
-        vi.mocked(emailPort.sendOrganizationJoinRequestSubmittedNotification).mock.calls,
+        vi.mocked(emailAdapter.sendOrganizationJoinRequestSubmittedNotification).mock.calls,
       ).toHaveLength(2);
+    });
+
+    it("still creates the request when the notification cannot be dispatched", async () => {
+      const organizationId = await seedOrg("public");
+      breakDispatch();
+
+      const response: SuperTestResponse<OrganizationJoinRequest> = await testApp
+        .post(createPath(organizationId))
+        .withAuth(requesterId)
+        .send({})
+        .expect(StatusCodes.CREATED);
+
+      expect(response.body.status).toBe("pending");
+      expect(await allRows()).toEqual([]);
     });
 
     it("404s a private organization rather than admitting it exists", async () => {
@@ -309,7 +353,7 @@ describe("OrganizationJoinRequestsController", () => {
         );
     }
 
-    it("approve admits the requester as a plain member and emails them", async () => {
+    it("approve admits the requester as a plain member and notifies them", async () => {
       const organizationId = await seedOrg("public");
       const requestId = await seedPendingRequest(organizationId);
 
@@ -322,7 +366,18 @@ describe("OrganizationJoinRequestsController", () => {
       expect(response.body.status).toBe("approved");
       expect(response.body.decidedBy).toBe(adminId);
       expect(await membershipRows(organizationId, requesterId)).toEqual([{ role: "member" }]);
-      expect(emailPort.sendOrganizationJoinRequestApprovedNotification).toHaveBeenCalledWith(
+      expect(await rowsFor(requesterId)).toMatchObject([
+        {
+          type: "organization_join_request_approved",
+          actorId: adminId,
+          resourceType: "organization",
+          resourceId: organizationId,
+          params: { organizationName: "Photosynthesis Lab" },
+        },
+      ]);
+      // The decider acted, so nothing is told back to them.
+      expect(await rowsFor(adminId)).toEqual([]);
+      expect(emailAdapter.sendOrganizationJoinRequestApprovedNotification).toHaveBeenCalledWith(
         organizationId,
         "Photosynthesis Lab",
         "requester@example.com",
@@ -334,13 +389,19 @@ describe("OrganizationJoinRequestsController", () => {
       const requestId = await seedPendingRequest(organizationId);
       await testApp.addOrganizationMember(organizationId, requesterId, "admin");
 
-      await testApp
+      const response: SuperTestResponse<OrganizationJoinRequest> = await testApp
         .patch(decidePath(organizationId, requestId))
         .withAuth(ownerId)
         .send({ decision: "approve" })
         .expect(StatusCodes.OK);
 
+      expect(response.body.status).toBe("approved");
       expect(await membershipRows(organizationId, requesterId)).toEqual([{ role: "admin" }]);
+      // They are told their request was approved for a membership they already had,
+      // which is the behaviour the email had before dispatch.
+      expect(await rowsFor(requesterId)).toMatchObject([
+        { type: "organization_join_request_approved" },
+      ]);
     });
 
     it("reject flips the status without admitting anybody", async () => {
@@ -355,10 +416,41 @@ describe("OrganizationJoinRequestsController", () => {
 
       expect(response.body.status).toBe("rejected");
       expect(await membershipRows(organizationId, requesterId)).toEqual([]);
-      expect(emailPort.sendOrganizationJoinRequestRejectedNotification).toHaveBeenCalled();
+      expect(await rowsFor(requesterId)).toMatchObject([
+        {
+          type: "organization_join_request_rejected",
+          actorId: ownerId,
+          resourceType: "organization",
+          resourceId: organizationId,
+          params: { organizationName: "Photosynthesis Lab" },
+        },
+      ]);
+      expect(emailAdapter.sendOrganizationJoinRequestRejectedNotification).toHaveBeenCalled();
     });
 
-    it("409s a request that is no longer pending", async () => {
+    it("notifies a requester who has no address, without an email", async () => {
+      const organizationId = await seedOrg("public");
+      // No profile row: the anonymized read gives no address, which is what the
+      // dropped `if (!request.user.email) return` used to swallow the row for.
+      const unonboarded = await testApp.createTestUser({
+        email: "unonboarded@example.com",
+        createProfile: false,
+      });
+      const requestId = await seedPendingRequest(organizationId, unonboarded);
+
+      await testApp
+        .patch(decidePath(organizationId, requestId))
+        .withAuth(ownerId)
+        .send({ decision: "approve" })
+        .expect(StatusCodes.OK);
+
+      expect(await rowsFor(unonboarded)).toMatchObject([
+        { type: "organization_join_request_approved" },
+      ]);
+      expect(emailAdapter.sendOrganizationJoinRequestApprovedNotification).not.toHaveBeenCalled();
+    });
+
+    it("409s a request that is no longer pending, telling nobody twice", async () => {
       const organizationId = await seedOrg("public");
       const requestId = await seedPendingRequest(organizationId);
 
@@ -373,6 +465,8 @@ describe("OrganizationJoinRequestsController", () => {
         .withAuth(ownerId)
         .send({ decision: "approve" })
         .expect(StatusCodes.CONFLICT);
+
+      expect(await allRows()).toHaveLength(1);
     });
 
     it("403s a plain member", async () => {
@@ -384,6 +478,8 @@ describe("OrganizationJoinRequestsController", () => {
         .withAuth(plainMemberId)
         .send({ decision: "approve" })
         .expect(StatusCodes.FORBIDDEN);
+
+      expect(await allRows()).toEqual([]);
     });
 
     it("404s a request belonging to another organization", async () => {
@@ -397,12 +493,14 @@ describe("OrganizationJoinRequestsController", () => {
         .withAuth(ownerId)
         .send({ decision: "approve" })
         .expect(StatusCodes.NOT_FOUND);
+
+      expect(await allRows()).toEqual([]);
     });
 
     it("still decides when the notification email fails", async () => {
       const organizationId = await seedOrg("public");
       const requestId = await seedPendingRequest(organizationId);
-      vi.mocked(emailPort.sendOrganizationJoinRequestApprovedNotification).mockResolvedValue(
+      vi.mocked(emailAdapter.sendOrganizationJoinRequestApprovedNotification).mockResolvedValue(
         failure(AppError.internal("smtp down")),
       );
 
@@ -414,6 +512,24 @@ describe("OrganizationJoinRequestsController", () => {
 
       expect(response.body.status).toBe("approved");
       expect(await membershipRows(organizationId, requesterId)).toEqual([{ role: "member" }]);
+      // The row is in before the email leaves, so a refused mail server loses nothing.
+      expect(await rowsFor(requesterId)).toHaveLength(1);
+    });
+
+    it("still decides when the notification cannot be dispatched", async () => {
+      const organizationId = await seedOrg("public");
+      const requestId = await seedPendingRequest(organizationId);
+      breakDispatch();
+
+      const response: SuperTestResponse<OrganizationJoinRequest> = await testApp
+        .patch(decidePath(organizationId, requestId))
+        .withAuth(ownerId)
+        .send({ decision: "approve" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body.status).toBe("approved");
+      expect(await membershipRows(organizationId, requesterId)).toEqual([{ role: "member" }]);
+      expect(await allRows()).toEqual([]);
     });
   });
 

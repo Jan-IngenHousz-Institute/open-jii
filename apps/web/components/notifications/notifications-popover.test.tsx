@@ -1,9 +1,10 @@
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { Notification } from "@repo/api/domains/notification/notification.schema";
+import { authClient, useSession } from "@repo/auth/client";
 
 import { NOTIFICATION_BELL_OPEN_EVENT, NotificationsPopover } from "./notifications-popover";
 
@@ -26,6 +27,18 @@ function page(items: Notification[]) {
 }
 
 describe("<NotificationsPopover />", () => {
+  // Files share a module registry here, so the two account mocks go back to their
+  // defaults rather than following the suite into the next file.
+  afterEach(() => {
+    vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+      typeof useSession
+    >);
+    vi.mocked(authClient.organization.listUserInvitations).mockResolvedValue({
+      data: [],
+      error: null,
+    });
+  });
+
   it("lights the indicator while something is unread", async () => {
     server.mount(contract.notifications.getUnreadNotificationCount, { body: { count: 2 } });
 
@@ -43,6 +56,42 @@ describe("<NotificationsPopover />", () => {
 
     await waitFor(() => expect(countRequest.called).toBe(true));
     expect(screen.queryByTestId("bell-indicator")).not.toBeInTheDocument();
+  });
+
+  /**
+   * A pending invitation no longer lights the bell on its own: it arrives as an
+   * ordinary notification row, so the dot follows the unread count and nothing else.
+   */
+  it("shows no indicator for a pending invitation once everything is read", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      data: { user: { id: "user-a" } },
+      isPending: false,
+    } as ReturnType<typeof useSession>);
+    vi.mocked(authClient.organization.listUserInvitations).mockResolvedValue({
+      data: [
+        {
+          id: "invitation-1",
+          email: "ada@example.com",
+          role: "member",
+          organizationId: "org-1",
+          organizationName: "Helix Lab",
+          inviterId: "user-9",
+          status: "pending",
+          expiresAt: new Date(Date.now() + 3_600_000),
+          createdAt: new Date("2026-08-01T00:00:00.000Z"),
+        },
+      ],
+      error: null,
+    } as Awaited<ReturnType<typeof authClient.organization.listUserInvitations>>);
+    const countRequest = server.mount(contract.notifications.getUnreadNotificationCount, {
+      body: { count: 0 },
+    });
+
+    render(<NotificationsPopover />);
+
+    await waitFor(() => expect(countRequest.called).toBe(true));
+    expect(screen.queryByTestId("bell-indicator")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("bell-invitations")).not.toBeInTheDocument();
   });
 
   it("offers Mark all read against the rows on screen while the count is behind", async () => {
