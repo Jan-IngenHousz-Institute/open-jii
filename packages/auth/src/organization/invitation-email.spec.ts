@@ -10,30 +10,40 @@ vi.mock("../email/invitationEmail", () => ({
 }));
 
 /**
- * Only `db` is replaced: `users` and `sql` stay real, so the lookup under test is
- * the one that runs in production — down to the `lower()` comparison — and only the
- * rows it comes back with are ours to choose.
+ * Only `db` is replaced: the tables and `sql` stay real, so the lookups under test
+ * are the ones that run in production — down to the `lower()` comparison — and only
+ * the rows they come back with are ours to choose. Each table answers from its own
+ * list, keyed on what `from()` was handed.
  */
 const accounts: { id: string }[] = [];
-vi.mock("@repo/database", async (importOriginal) => ({
-  ...(await importOriginal<typeof Database>()),
-  db: {
-    select: () => ({
-      from: () => ({ where: () => ({ limit: () => Promise.resolve(accounts) }) }),
-    }),
-  },
-}));
+const inviterProfiles: { firstName: string; lastName: string; activated: boolean }[] = [];
+vi.mock("@repo/database", async (importOriginal) => {
+  const actual = await importOriginal<typeof Database>();
+  const rowsFor = (table: unknown) => (table === actual.profiles ? inviterProfiles : accounts);
+  return {
+    ...actual,
+    db: {
+      select: () => ({
+        from: (table: unknown) => ({
+          where: () => ({ limit: () => Promise.resolve(rowsFor(table)) }),
+        }),
+      }),
+    },
+  };
+});
 
 const INVITE = {
   email: "invitee@example.com",
   role: "admin",
   organization: { name: "Photosynthesis Lab" },
-  inviter: { user: { name: "Vlad Stoenescu", email: "vlad@example.com" } },
+  inviter: { user: { id: "inviter-1", name: "Vlad Stoenescu", email: "vlad@example.com" } },
 };
 
 describe("who sends the organization invitation email", () => {
   beforeEach(() => {
     accounts.length = 0;
+    inviterProfiles.length = 0;
+    inviterProfiles.push({ firstName: "Vlad", lastName: "Stoe git", activated: true });
     vi.mocked(sendOrganizationInvitationEmail).mockClear();
     vi.stubEnv("AUTH_EMAIL_SERVER", "smtp://localhost:1025");
     vi.stubEnv("AUTH_EMAIL_FROM", "noreply@openjii.test");
@@ -52,7 +62,8 @@ describe("who sends the organization invitation email", () => {
       // The account tab, not a per-invitation route.
       inviteUrl: "https://openjii.test/platform/account/invitations",
       organizationName: "Photosynthesis Lab",
-      inviterName: "Vlad Stoenescu",
+      // The profile name, as the bell shows it — not Better Auth's `users.name`.
+      inviterName: "Vlad Stoe git",
       role: "admin",
       emailServer: "smtp://localhost:1025",
       emailFrom: "noreply@openjii.test",
@@ -72,10 +83,33 @@ describe("who sends the organization invitation email", () => {
     expect(sendOrganizationInvitationEmail).not.toHaveBeenCalled();
   });
 
-  it("falls back to the inviter's address when they have no name", async () => {
+  it("names a deactivated inviter the way the backend anonymises them", async () => {
+    inviterProfiles.length = 0;
+    inviterProfiles.push({ firstName: "Vlad", lastName: "Stoe git", activated: false });
+
+    await sendInvitationEmailUnlessAccountExists(INVITE);
+
+    expect(sendOrganizationInvitationEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ inviterName: "Unknown User" }),
+    );
+  });
+
+  it("falls back to the account name when the inviter has no profile yet", async () => {
+    inviterProfiles.length = 0;
+
+    await sendInvitationEmailUnlessAccountExists(INVITE);
+
+    expect(sendOrganizationInvitationEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ inviterName: "Vlad Stoenescu" }),
+    );
+  });
+
+  it("falls back to the inviter's address when they have neither", async () => {
+    inviterProfiles.length = 0;
+
     await sendInvitationEmailUnlessAccountExists({
       ...INVITE,
-      inviter: { user: { name: "", email: "vlad@example.com" } },
+      inviter: { user: { id: "inviter-1", name: "", email: "vlad@example.com" } },
     });
 
     expect(sendOrganizationInvitationEmail).toHaveBeenCalledWith(

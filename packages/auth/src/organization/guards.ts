@@ -7,6 +7,7 @@ import {
   isPersonalOrgSlug,
   organizationMembers,
   organizations,
+  profiles,
   sql,
   users,
 } from "@repo/database";
@@ -100,6 +101,30 @@ export async function hasAccountForEmail(email: string): Promise<boolean> {
     .where(sql`lower(${users.email}) = lower(${email})`)
     .limit(1);
   return rows.length > 0;
+}
+
+/**
+ * The name the platform shows for a user: first and last name from their profile,
+ * the same source the notification bell and the backend's emails read. Better Auth
+ * only knows `users.name`, which an OAuth provider fills in and nobody edits, so an
+ * email built from it can disagree with every other place the person's name appears.
+ *
+ * A deactivated profile reads "Unknown User", as the backend anonymises it. `null`
+ * when the user has no profile row yet, so the caller can fall back.
+ */
+export async function findProfileDisplayName(userId: string): Promise<string | null> {
+  const rows = await db
+    .select({
+      firstName: profiles.firstName,
+      lastName: profiles.lastName,
+      activated: profiles.activated,
+    })
+    .from(profiles)
+    .where(eq(profiles.userId, userId))
+    .limit(1);
+  if (rows.length === 0) return null;
+  const [profile] = rows;
+  return profile.activated ? `${profile.firstName} ${profile.lastName}` : "Unknown User";
 }
 
 /** The caller's stored role in an organization, or `null` when they are not a member. */
