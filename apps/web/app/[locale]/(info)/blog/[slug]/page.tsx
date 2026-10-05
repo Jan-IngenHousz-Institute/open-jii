@@ -59,6 +59,11 @@ export function generateMetadata({ params }: BlogPageProps): Promise<Metadata> {
   });
 }
 
+// None at build time, which has no CMS access: each page renders on its first visit and is then cached.
+export function generateStaticParams() {
+  return [];
+}
+
 export default async function Page({ params }: BlogPageProps) {
   const { locale, slug } = await params;
   const { isEnabled: preview } = await draftMode();

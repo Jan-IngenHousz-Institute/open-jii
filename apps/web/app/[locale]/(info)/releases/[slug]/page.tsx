@@ -55,6 +55,11 @@ export function generateMetadata({ params }: ReleaseDetailPageProps): Promise<Me
 }
 
 /** Public per-note permalink (openjii.org/releases/[slug]). */
+// None at build time, which has no CMS access: each page renders on its first visit and is then cached.
+export function generateStaticParams() {
+  return [];
+}
+
 export default async function ReleaseDetailPage({ params }: ReleaseDetailPageProps) {
   const { locale, slug } = await params;
   const { isEnabled: preview } = await draftMode();

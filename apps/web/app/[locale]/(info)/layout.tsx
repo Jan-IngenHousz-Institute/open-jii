@@ -18,6 +18,14 @@ interface InfoLayoutProps {
   params: Promise<{ locale: string }>;
 }
 
+// Regenerated at most this often; matches the alerts bar's 300 s cache. A literal, as Next requires.
+export const revalidate = 300;
+
+// None at build time, which has no CMS access: each page renders on its first visit and is then cached.
+export function generateStaticParams() {
+  return [];
+}
+
 export default async function InfoGroupLayout({ children, params }: InfoLayoutProps) {
   const { isEnabled: preview } = await draftMode();
   const { locale } = await params;
