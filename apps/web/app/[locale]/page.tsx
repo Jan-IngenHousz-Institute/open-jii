@@ -5,7 +5,6 @@ import { TranslationBundles } from "@/components/translation-bundles";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { Suspense, cache } from "react";
-import { auth } from "~/app/actions/auth";
 import { getContentfulClients } from "~/lib/contentful";
 import { safeMetadata } from "~/lib/safe-metadata";
 
@@ -69,14 +68,13 @@ const HOME_NAMESPACES: Namespace[] = ["newsletter", "publicMetrics"];
 
 export default async function Home({ params }: HomePageProps) {
   const { locale } = await params;
-  const session = await auth();
   const { isEnabled: preview } = await draftMode();
   const { hero, mission, features, partners, footer } = await getHomeData(locale, preview);
   const bundles = await loadNamespaceBundles(locale, HOME_NAMESPACES);
 
   return (
     <TranslationBundles resources={bundles}>
-      <UnifiedNavbar locale={locale} session={session} isHomePage={true} />
+      <UnifiedNavbar locale={locale} isHomePage={true} />
       <main className="flex min-h-screen flex-col items-center">
         {/* Hero Section */}
         <HomeHeroComponent heroData={hero} preview={preview} locale={locale} />

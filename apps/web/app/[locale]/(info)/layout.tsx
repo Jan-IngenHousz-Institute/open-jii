@@ -3,7 +3,6 @@ import { NewsletterSubscribeForm } from "@/components/newsletter/newsletter-subs
 import { TranslationBundles } from "@/components/translation-bundles";
 import { draftMode } from "next/headers";
 import React from "react";
-import { auth } from "~/app/actions/auth";
 import { getContentfulClients } from "~/lib/contentful";
 
 import { HomeFooter } from "@repo/cms";
@@ -22,7 +21,6 @@ interface InfoLayoutProps {
 export default async function InfoGroupLayout({ children, params }: InfoLayoutProps) {
   const { isEnabled: preview } = await draftMode();
   const { locale } = await params;
-  const session = await auth();
   const bundles = await loadNamespaceBundles(locale, INFO_NAMESPACES);
 
   let footerData: FooterFieldsFragment | undefined;
@@ -37,7 +35,7 @@ export default async function InfoGroupLayout({ children, params }: InfoLayoutPr
 
   return (
     <TranslationBundles resources={bundles}>
-      <UnifiedNavbar locale={locale} session={session} />
+      <UnifiedNavbar locale={locale} />
       <div className="mx-auto flex w-full max-w-7xl justify-center">
         <main className="flex min-h-screen w-full flex-col px-2">{children}</main>
       </div>
