@@ -23,18 +23,18 @@ const INVITATION = {
 /** Defaults to an invitee with an account, and the organization they were invited to. */
 function useCaseWith(overrides: { invitee?: unknown; organization?: unknown } = {}) {
   const findIdByEmail = vi.fn().mockResolvedValue(overrides.invitee ?? success("invitee-1"));
-  const findProfileFields = vi
+  const findName = vi
     .fn()
-    .mockResolvedValue(overrides.organization ?? success({ name: "Photosynthesis Lab" }));
+    .mockResolvedValue(overrides.organization ?? success("Photosynthesis Lab"));
   const dispatch = vi.fn().mockResolvedValue(success({ created: 1, emailed: 1 }));
 
   const useCase = new NotifyOrganizationInviteeUseCase(
     { findIdByEmail } as unknown as UserRepository,
-    { findProfileFields } as unknown as OrganizationRepository,
+    { findName } as unknown as OrganizationRepository,
     { dispatch } as unknown as NotificationDispatchService,
   );
 
-  return { useCase, findIdByEmail, findProfileFields, dispatch };
+  return { useCase, findIdByEmail, findName, dispatch };
 }
 
 describe("NotifyOrganizationInviteeUseCase", () => {
@@ -58,13 +58,13 @@ describe("NotifyOrganizationInviteeUseCase", () => {
   it("tells nobody when the invitee has no account yet", async () => {
     // Better Auth has already emailed them; dispatch addresses user ids, and there
     // is no id to address. They hear about it when they first sign in.
-    const { useCase, dispatch, findProfileFields } = useCaseWith({
+    const { useCase, dispatch, findName } = useCaseWith({
       invitee: success(null),
     });
 
     assertSuccess(await useCase.execute(INVITATION));
 
-    expect(findProfileFields).not.toHaveBeenCalled();
+    expect(findName).not.toHaveBeenCalled();
     expect(dispatch).not.toHaveBeenCalled();
   });
 

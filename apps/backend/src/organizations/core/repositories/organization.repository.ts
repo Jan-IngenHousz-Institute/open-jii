@@ -319,6 +319,19 @@ export class OrganizationRepository {
     });
   }
 
+  /** The name alone, for notification copy; `findProfileFields` also counts members and resources. */
+  async findName(organizationId: string): Promise<Result<string | null>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select({ name: organizations.name })
+        .from(organizations)
+        .where(eq(organizations.id, organizationId))
+        .limit(1);
+
+      return rows[0]?.name ?? null;
+    });
+  }
+
   async findProfileFields(
     organizationId: string,
     viewerUserId: string | undefined,

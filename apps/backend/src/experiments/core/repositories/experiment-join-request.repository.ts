@@ -8,6 +8,7 @@ import {
   inArray,
   profiles,
   resourceGrants,
+  sql,
   STAFFING_GRANT_ROLES,
   users,
 } from "@repo/database";
@@ -255,7 +256,8 @@ export class ExperimentJoinRequestRepository {
    * Who can decide a join request: admin/owner grant holders plus the owning org's
    * living owners. The owners are usually the only ones — a creator holds no grant,
    * so grants alone would notify nobody on a personal-workspace experiment.
-   * Team/org grants are excluded: no individual person behind them.
+   * Team/org grants are excluded: no individual person behind them. Deactivated and
+   * closed accounts are excluded too, as the organization deciders are.
    */
   async listAdminIds(experimentId: string): Promise<Result<string[]>> {
     return tryCatch(async () => {
@@ -275,7 +277,22 @@ export class ExperimentJoinRequestRepository {
       ]);
 
       // An owner who also holds an admin grant is in both sets — notify them once.
-      return [...new Set([...granted.map((row) => row.userId), ...ownerIds])];
+      const candidates = [...new Set([...granted.map((row) => row.userId), ...ownerIds])];
+      if (candidates.length === 0) return [];
+
+      const living = await this.database
+        .select({ id: users.id })
+        .from(users)
+        .leftJoin(profiles, eq(profiles.userId, users.id))
+        .where(
+          and(
+            inArray(users.id, candidates),
+            sql`(${profiles.activated} IS NULL OR ${profiles.activated} = true)`,
+            sql`${profiles.deletedAt} IS NULL`,
+          ),
+        );
+
+      return living.map((row) => row.id);
     });
   }
 }

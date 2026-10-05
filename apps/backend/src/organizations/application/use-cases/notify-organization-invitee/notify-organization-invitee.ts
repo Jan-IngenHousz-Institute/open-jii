@@ -46,11 +46,8 @@ export class NotifyOrganizationInviteeUseCase {
     const inviteeId = inviteeResult.value;
     if (!inviteeId) return success(undefined);
 
-    // Name only, for the notification copy; the same read the join-request
-    // notifications use.
-    const organizationResult = await this.organizationRepository.findProfileFields(
+    const organizationResult = await this.organizationRepository.findName(
       invitation.organizationId,
-      undefined,
     );
     if (organizationResult.isFailure()) {
       this.logger.error({
@@ -65,15 +62,15 @@ export class NotifyOrganizationInviteeUseCase {
 
     // `organizationName` is a required string in the params schema, so a vanished
     // organization has to stop here rather than fail validation further down.
-    const organization = organizationResult.value;
-    if (!organization) return success(undefined);
+    const organizationName = organizationResult.value;
+    if (organizationName === null) return success(undefined);
 
     const dispatched = await this.notifications.dispatch({
       type: "organization_invitation_received",
       recipientIds: [inviteeId],
       actorId: invitation.inviterId,
       resource: { type: "organization", id: invitation.organizationId },
-      params: { organizationName: organization.name, role: invitation.role },
+      params: { organizationName, role: invitation.role },
       // Both producers key on the invitation id, so somebody who hears at invite
       // time hears nothing again when they next sign in.
       dedupeKey: `organization_invitation_received:${invitation.id}`,
