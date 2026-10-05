@@ -319,6 +319,19 @@ export class OrganizationRepository {
     });
   }
 
+  /** The name alone, for notification copy; `findProfileFields` also counts members and resources. */
+  async findName(organizationId: string): Promise<Result<string | null>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select({ name: organizations.name })
+        .from(organizations)
+        .where(eq(organizations.id, organizationId))
+        .limit(1);
+
+      return rows[0]?.name ?? null;
+    });
+  }
+
   async findProfileFields(
     organizationId: string,
     viewerUserId: string | undefined,
@@ -792,14 +805,13 @@ export class OrganizationRepository {
   }
 
   /**
-   * Email addresses of the people who decide join requests: the organization's
-   * owners and admins. Deactivated and closed accounts are excluded — there is
-   * nobody behind those mailboxes.
+   * The people who decide join requests: the organization's owners and admins.
+   * Deactivated and closed accounts are excluded — there is nobody behind them.
    */
-  async listDeciderEmails(organizationId: string): Promise<Result<string[]>> {
+  async listDeciderIds(organizationId: string): Promise<Result<string[]>> {
     return tryCatch(async () => {
       const rows = await this.database
-        .select({ email: users.email })
+        .select({ id: users.id })
         .from(organizationMembers)
         .innerJoin(users, eq(users.id, organizationMembers.userId))
         .leftJoin(profiles, eq(profiles.userId, users.id))
@@ -813,7 +825,7 @@ export class OrganizationRepository {
         )
         .orderBy(desc(organizationMembers.createdAt));
 
-      return rows.map((row) => row.email).filter((email): email is string => Boolean(email));
+      return rows.map((row) => row.id);
     });
   }
 }

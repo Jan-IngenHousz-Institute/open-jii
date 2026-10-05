@@ -1,7 +1,9 @@
+import { Logger } from "@nestjs/common";
 import type { AuthHookContext } from "@thallesp/nestjs-better-auth";
 
 import { success, failure, AppError } from "../../../common/utils/fp-utils";
 import type { AcceptPendingInvitationsUseCase } from "../../application/use-cases/accept-pending-invitations/accept-pending-invitations";
+import type { NotifyPendingOrganizationInvitationsUseCase } from "../../application/use-cases/notify-pending-organization-invitations/notify-pending-organization-invitations";
 import type { UserRepository } from "../../core/repositories/user.repository";
 import { UserAuthHook } from "./user-auth.hook";
 
@@ -29,6 +31,7 @@ describe("UserAuthHook", () => {
   let hook: UserAuthHook;
   let mockUseCase: { execute: ReturnType<typeof vi.fn> };
   let mockUserRepository: { update: ReturnType<typeof vi.fn> };
+  let mockNotifyUseCase: { execute: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockUseCase = {
@@ -37,10 +40,14 @@ describe("UserAuthHook", () => {
     mockUserRepository = {
       update: vi.fn().mockResolvedValue(success([])),
     };
+    mockNotifyUseCase = {
+      execute: vi.fn().mockResolvedValue(success(0)),
+    };
 
     hook = new UserAuthHook(
       mockUseCase as unknown as AcceptPendingInvitationsUseCase,
       mockUserRepository as unknown as UserRepository,
+      mockNotifyUseCase as unknown as NotifyPendingOrganizationInvitationsUseCase,
     );
   });
 
@@ -239,6 +246,50 @@ describe("UserAuthHook", () => {
       await hook.handleEmailSignIn(ctx);
 
       expect(mockUseCase.execute).toHaveBeenCalledWith("new-user", "invited@example.com");
+    });
+  });
+
+  describe("notifyPendingOrganizationInvitations (via handlers)", () => {
+    it.each([
+      ["handleEmailSignIn"],
+      ["handleEmailOtpSignIn"],
+      ["handleSocialSignIn"],
+      ["handleOAuthCallback"],
+      ["handleGenericOAuthCallback"],
+      ["handleOtpVerify"],
+    ] as const)("runs on %s, the same paths the acceptance runs on", async (handler) => {
+      await hook[handler](createMockContext());
+
+      expect(mockNotifyUseCase.execute).toHaveBeenCalledExactlyOnceWith(
+        "user-123",
+        "test@example.com",
+      );
+    });
+
+    it("does not look for invitations without a signed-in user", async () => {
+      await hook.handleEmailSignIn(createMockContext({ userId: null }));
+      await hook.handleEmailSignIn(createMockContext({ email: null }));
+
+      expect(mockNotifyUseCase.execute).not.toHaveBeenCalled();
+    });
+
+    it("signs the user in anyway when the use case reports a failure", async () => {
+      mockNotifyUseCase.execute.mockResolvedValue(
+        failure(AppError.internal("notifications unavailable")),
+      );
+
+      await expect(hook.handleEmailSignIn(createMockContext())).resolves.toBeUndefined();
+    });
+
+    it("swallows a thrown fault rather than failing a sign-in that succeeded", async () => {
+      mockNotifyUseCase.execute.mockRejectedValue(new Error("connection terminated"));
+      const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+
+      await expect(hook.handleEmailSignIn(createMockContext())).resolves.toBeUndefined();
+
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({ operation: "organization-invitation-catch-up" }),
+      );
     });
   });
 });

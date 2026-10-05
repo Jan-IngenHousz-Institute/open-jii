@@ -5,7 +5,6 @@ import { organization as organizationPlugin } from "better-auth/plugins";
 import { ORGANIZATION_MEMBERSHIP_LIMIT } from "@repo/database";
 
 import { ac, roles } from "../access";
-import { sendOrganizationInvitationEmail } from "../email/invitationEmail";
 import {
   assertCanListInvitations,
   assertCanReadOrganization,
@@ -17,6 +16,7 @@ import {
   findOrganizationSlug,
   resolveCreateVisibility,
 } from "./guards";
+import { sendInvitationEmailUnlessAccountExists } from "./invitation-email";
 import {
   assertOrganizationIsDeletable,
   assertOrganizationOwnsNoResources,
@@ -27,8 +27,9 @@ import {
 
 // Re-exported so the raced-delete refusal is reachable on its own.
 export { rethrowAsOrganizationInUse } from "./lifecycle";
-
-const clientUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+// Re-exported so the backend can check its own invitee lookup against the predicate
+// this plugin splits the invitation email on; the two must always answer alike.
+export { hasAccountForEmail } from "./guards";
 
 /** The read paths this plugin re-authorizes. Matched by exact equality. */
 const LIST_INVITATIONS_PATH = "/organization/list-invitations";
@@ -97,29 +98,9 @@ export const openJiiOrganization = () => {
         },
       },
     },
-    async sendInvitationEmail({ email, role, organization, inviter }) {
-      const emailServer = process.env.AUTH_EMAIL_SERVER;
-      const emailFrom = process.env.AUTH_EMAIL_FROM;
-      if (!emailServer || !emailFrom) return;
-
-      // The account tab that lists every invitation waiting for the address the
-      // recipient signs in with — not a per-invitation route. The id would add
-      // nothing: whoever follows this link sees this invitation among their own, and
-      // an id belonging to somebody else's address could only ever be refused.
-      const { href: inviteUrl } = new URL("/platform/account/invitations", clientUrl);
-
-      await sendOrganizationInvitationEmail({
-        to: email,
-        inviteUrl,
-        organizationName: organization.name,
-        inviterName: inviter.user.name || inviter.user.email,
-        role,
-        emailServer,
-        emailFrom,
-        senderName: "openJII",
-        baseUrl: clientUrl,
-      });
-    },
+    // Only an invitee with no openJII account is emailed from here; the backend
+    // emails the rest from notification dispatch. See the module for the split.
+    sendInvitationEmail: sendInvitationEmailUnlessAccountExists,
     organizationHooks: {
       beforeCreateOrganization({ organization }) {
         if (typeof organization.slug === "string") assertSlugAllowed(organization.slug);
