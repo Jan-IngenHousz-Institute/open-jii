@@ -1,7 +1,11 @@
 import { OpenAPILink } from "@orpc/openapi-client/fetch";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createServerOrpcClient } from "./server-orpc";
+import {
+  createAnonymousServerOrpcClient,
+  createOrpcClientWithCookie,
+  createServerOrpcClient,
+} from "./server-orpc";
 
 interface CapturedLinkOptions {
   url: string;
@@ -103,5 +107,31 @@ describe("createServerOrpcClient auth boundary", () => {
       }
       spy.mockRestore();
     }
+  });
+});
+
+describe("cookie-scoped clients", () => {
+  beforeEach(() => {
+    linkConstructions.length = 0;
+    cookieStore.value = "session=secret-token";
+    vi.clearAllMocks();
+  });
+
+  it("sends exactly the cookie it was given, without reading the request", async () => {
+    const { cookies } = await import("next/headers");
+
+    createOrpcClientWithCookie("session=from-proxy");
+
+    expect(latestHeaders()).toEqual({ cookie: "session=from-proxy" });
+    expect(cookies).not.toHaveBeenCalled();
+  });
+
+  it("builds an anonymous client that never carries the request's session", async () => {
+    const { cookies } = await import("next/headers");
+
+    createAnonymousServerOrpcClient();
+
+    expect(latestHeaders()).toEqual({});
+    expect(cookies).not.toHaveBeenCalled();
   });
 });

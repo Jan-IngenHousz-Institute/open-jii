@@ -27,8 +27,34 @@ function handleI18nRouting(request: NextRequest) {
   return null;
 }
 
+/**
+ * Another locale is a feature only some viewers have. It is decided here, before
+ * any page renders, so the pages read nothing from the request and can be cached.
+ * A viewer without it gets the same page in the default locale, so a signed-out
+ * member of a targeted organization still reaches login rather than a 404.
+ */
+async function handleLocaleAccess(request: NextRequest) {
+  const { pathname, search, origin } = request.nextUrl;
+  const locale = pathname.split("/")[1] ?? "";
+  if (locale === defaultLocale) {
+    return null;
+  }
+
+  // Loaded only here, so a default-locale request never pays for PostHog.
+  const [{ isFeatureFlagEnabledForRequest }, { FEATURE_FLAGS }] = await Promise.all([
+    import("~/lib/posthog-server"),
+    import("@repo/analytics"),
+  ]);
+  if (await isFeatureFlagEnabledForRequest(FEATURE_FLAGS.MULTI_LANGUAGE, request.headers)) {
+    return null;
+  }
+
+  const rest = pathname.slice(locale.length + 1);
+  return NextResponse.redirect(new URL(`/${defaultLocale}${rest}${search}`, origin));
+}
+
 // Proxy function that handles i18n routing
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const normalizedPathname = request.nextUrl.pathname.replace(/\/+$/, "");
   if (localeIndependentRoutes.has(normalizedPathname)) {
     return NextResponse.next();
@@ -40,10 +66,14 @@ export function proxy(request: NextRequest) {
     return i18nResponse;
   }
 
+  const localeResponse = await handleLocaleAccess(request);
+  if (localeResponse) {
+    return localeResponse;
+  }
+
   // Add current path header and continue
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-current-path", request.nextUrl.pathname);
-  requestHeaders.set("x-current-search", request.nextUrl.search);
   return NextResponse.next({
     request: { headers: requestHeaders },
   });

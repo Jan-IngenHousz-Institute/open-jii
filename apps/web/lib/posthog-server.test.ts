@@ -4,11 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { auth } from "~/app/actions/auth";
 
 import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
+import { authClient } from "@repo/auth/client";
 
 import {
   isFeatureFlagEnabled,
   isFeatureFlagEnabledForSession,
-  isFeatureFlagEnabledForViewer,
+  isFeatureFlagEnabledForRequest,
   reportServerError,
   shutdownPostHog,
 } from "./posthog-server";
@@ -38,8 +39,11 @@ vi.mock("posthog-node", () => ({
 
 const listMyOrganizations = vi.hoisted(() => vi.fn());
 
+const cookieClient = vi.hoisted(() => vi.fn());
+
 vi.mock("./server-orpc", () => ({
   createServerOrpcClient: vi.fn(() => ({ organizations: { listMyOrganizations } })),
+  createOrpcClientWithCookie: cookieClient,
 }));
 
 describe("posthog-server", () => {
@@ -253,16 +257,22 @@ describe("posthog-server", () => {
     });
   });
 
-  describe("isFeatureFlagEnabledForViewer", () => {
+  describe("isFeatureFlagEnabledForRequest", () => {
+    const requestHeaders = new Headers({ cookie: "session=abc" });
+
+    beforeEach(() => {
+      cookieClient.mockReturnValue({ organizations: { listMyOrganizations } });
+    });
+
     afterEach(() => {
-      vi.mocked(auth).mockResolvedValue(null);
+      vi.mocked(authClient.getSession).mockResolvedValue({ data: null, error: null });
       listMyOrganizations.mockReset();
     });
 
     it("should evaluate a signed-out visitor anonymously", async () => {
       mockPostHogInstance.isFeatureEnabled.mockResolvedValue(false);
 
-      await isFeatureFlagEnabledForViewer(FEATURE_FLAGS.MULTI_LANGUAGE);
+      await isFeatureFlagEnabledForRequest(FEATURE_FLAGS.MULTI_LANGUAGE, requestHeaders);
 
       expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.MULTI_LANGUAGE,
@@ -272,19 +282,28 @@ describe("posthog-server", () => {
       expect(listMyOrganizations).not.toHaveBeenCalled();
     });
 
-    it("should evaluate a signed-in user with their email and memberships", async () => {
-      vi.mocked(auth).mockResolvedValue(
-        createSession({ user: { id: "user-ana", email: "ana@example.com" } }),
-      );
+    it("should read the session and memberships from the request's own cookie", async () => {
+      vi.mocked(authClient.getSession).mockResolvedValue({
+        data: createSession({ user: { id: "user-ana", email: "ana@example.com" } }),
+        error: null,
+      });
       listMyOrganizations.mockResolvedValue([
         createMyOrganization({ id: "org-qa" }),
         createMyOrganization({ id: "org-lab" }),
       ]);
       mockPostHogInstance.isFeatureEnabled.mockResolvedValue(true);
 
-      const result = await isFeatureFlagEnabledForViewer(FEATURE_FLAGS.MULTI_LANGUAGE);
+      const result = await isFeatureFlagEnabledForRequest(
+        FEATURE_FLAGS.MULTI_LANGUAGE,
+        requestHeaders,
+      );
 
       expect(result).toBe(true);
+      expect(authClient.getSession).toHaveBeenCalledWith({
+        fetchOptions: { headers: requestHeaders },
+      });
+      expect(cookieClient).toHaveBeenCalledWith("session=abc");
+      expect(auth).not.toHaveBeenCalled();
       expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.MULTI_LANGUAGE,
         "ana@example.com",
@@ -295,30 +314,18 @@ describe("posthog-server", () => {
       );
     });
 
-    it("should still evaluate the user when their memberships cannot be read", async () => {
-      vi.mocked(auth).mockResolvedValue(
-        createSession({ user: { id: "user-ana", email: "ana@example.com" } }),
-      );
-      const error = new Error("backend unavailable");
-      listMyOrganizations.mockRejectedValue(error);
-      mockPostHogInstance.isFeatureEnabled.mockResolvedValue(false);
+    it("should treat a session it cannot read as signed out", async () => {
+      vi.mocked(authClient.getSession).mockRejectedValue(new Error("backend unavailable"));
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      mockPostHogInstance.isFeatureEnabled.mockResolvedValue(false);
 
-      await isFeatureFlagEnabledForViewer(FEATURE_FLAGS.MULTI_LANGUAGE);
+      await isFeatureFlagEnabledForRequest(FEATURE_FLAGS.MULTI_LANGUAGE, requestHeaders);
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "[PostHog] Failed to load memberships for flag evaluation:",
-        error,
-      );
       consoleErrorSpy.mockRestore();
-
       expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledWith(
         FEATURE_FLAGS.MULTI_LANGUAGE,
-        "ana@example.com",
-        {
-          personProperties: { email: "ana@example.com", organization_ids: "" },
-          sendFeatureFlagEvents: false,
-        },
+        "anonymous",
+        { personProperties: undefined, sendFeatureFlagEvents: false },
       );
     });
   });
