@@ -1,9 +1,8 @@
+import { usePrincipal } from "@/components/auth/principal-context";
 import { withPrincipal } from "@/hooks/principal-query-key";
 import { orpc } from "@/lib/orpc";
 import { shouldRetryQuery } from "@/util/query-retry";
 import { useQuery } from "@tanstack/react-query";
-
-import { useSession } from "@repo/auth/client";
 
 /**
  * What stands between the organization and deletion, counted across every owned
@@ -18,8 +17,7 @@ export const useOrganizationDeletionBlockers = (
   organizationId: string,
   options?: { enabled?: boolean },
 ) => {
-  const { data: session, isPending: isSessionPending } = useSession();
-  const userId = session?.user.id;
+  const { userId, isPending: isSessionPending } = usePrincipal();
   const input = { id: organizationId };
 
   return useQuery(

@@ -1,10 +1,10 @@
+import { usePrincipal } from "@/components/auth/principal-context";
 import { ANONYMOUS_PRINCIPAL, withPrincipal } from "@/hooks/principal-query-key";
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 
 import type { OrganizationSort } from "@repo/api/domains/organization/organization.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
-import { useSession } from "@repo/auth/client";
 
 /**
  * The organization directory: public organizations plus the caller's own private
@@ -18,8 +18,7 @@ export const useOrganizations = (
   params: { search?: string; scope?: ResourceScope; sort?: OrganizationSort } = {},
   options?: { enabled?: boolean },
 ) => {
-  const { data: session, isPending: isSessionPending } = useSession();
-  const userId = session?.user.id;
+  const { userId, isPending: isSessionPending } = usePrincipal();
   const principal = userId ?? ANONYMOUS_PRINCIPAL;
   const search = params.search?.trim();
   const input = {

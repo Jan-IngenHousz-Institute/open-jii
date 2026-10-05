@@ -1,9 +1,8 @@
+import { usePrincipal } from "@/components/auth/principal-context";
 import { withPrincipal } from "@/hooks/principal-query-key";
 import { orpc } from "@/lib/orpc";
 import { shouldRetryQuery } from "@/util/query-retry";
 import { useQuery } from "@tanstack/react-query";
-
-import { useSession } from "@repo/auth/client";
 
 /** Cache key for an experiment-access response, scoped to the asking principal. */
 export function experimentAccessQueryKey(userId: string | undefined, experimentId: string) {
@@ -21,12 +20,12 @@ export function experimentAccessQueryKey(userId: string | undefined, experimentI
  * Query's `isLoading` is false while disabled, which would flash not-found first.
  */
 export const useExperimentAccess = (experimentId: string) => {
-  const { data: session, isPending: isSessionPending } = useSession();
+  const { userId, isPending: isSessionPending } = usePrincipal();
 
   const query = useQuery(
     orpc.experiments.getExperimentAccess.queryOptions({
       input: { id: experimentId },
-      queryKey: experimentAccessQueryKey(session?.user.id, experimentId),
+      queryKey: experimentAccessQueryKey(userId, experimentId),
       retry: shouldRetryQuery,
       enabled: !isSessionPending,
     }),

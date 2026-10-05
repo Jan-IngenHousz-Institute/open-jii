@@ -1,11 +1,12 @@
 "use client";
 
+import { usePrincipal } from "@/components/auth/principal-context";
 import { unwrapAuthResult } from "@/hooks/organization/auth-organization-result";
 import { myOrganizationInvitationsQueryKey } from "@/hooks/organization/organization-cache";
 import { useQuery } from "@tanstack/react-query";
 import { liveInvitations } from "~/components/organizations/organization-invitation-state";
 
-import { authClient, useSession } from "@repo/auth/client";
+import { authClient } from "@repo/auth/client";
 
 /**
  * Every invitation waiting for the signed-in account, whichever organization sent
@@ -22,8 +23,7 @@ import { authClient, useSession } from "@repo/auth/client";
  * Callers must render that as an error rather than as an empty list.
  */
 export const useMyOrganizationInvitations = (options?: { enabled?: boolean }) => {
-  const { data: session, isPending: isSessionPending } = useSession();
-  const userId = session?.user.id;
+  const { userId, isPending: isSessionPending } = usePrincipal();
 
   return useQuery({
     queryKey: myOrganizationInvitationsQueryKey(userId),

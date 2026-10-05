@@ -1,8 +1,7 @@
+import { usePrincipal } from "@/components/auth/principal-context";
 import { ANONYMOUS_PRINCIPAL, withPrincipal } from "@/hooks/principal-query-key";
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
-
-import { useSession } from "@repo/auth/client";
 
 import { useDebounce } from "./useDebounce";
 
@@ -18,8 +17,7 @@ const DEFAULT_LIMIT = 20;
  * loading state. Previous results are kept while the next query loads to avoid flicker.
  */
 export function useGlobalSearch(query: string, limit = DEFAULT_LIMIT) {
-  const { data: session, isPending: isSessionPending } = useSession();
-  const userId = session?.user.id;
+  const { userId, isPending: isSessionPending } = usePrincipal();
   const principal = userId ?? ANONYMOUS_PRINCIPAL;
   const trimmed = query.trim();
   const [debouncedQuery, isDebounced] = useDebounce(trimmed, SEARCH_DEBOUNCE_MS);

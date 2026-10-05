@@ -1,11 +1,12 @@
 "use client";
 
+import { usePrincipal } from "@/components/auth/principal-context";
 import { unwrapAuthResult } from "@/hooks/organization/auth-organization-result";
 import { ORGANIZATION_AUTH_QUERY_KEY } from "@/hooks/organization/organization-cache";
 import { withPrincipal } from "@/hooks/principal-query-key";
 import { useQuery } from "@tanstack/react-query";
 
-import { authClient, useSession } from "@repo/auth/client";
+import { authClient } from "@repo/auth/client";
 
 /**
  * The organization's Better Auth membership rows, read for one thing the roster
@@ -21,8 +22,7 @@ export const useOrganizationMemberRows = (
   organizationId: string,
   options?: { enabled?: boolean },
 ) => {
-  const { data: session, isPending: isSessionPending } = useSession();
-  const userId = session?.user.id;
+  const { userId, isPending: isSessionPending } = usePrincipal();
 
   return useQuery({
     queryKey: withPrincipal(

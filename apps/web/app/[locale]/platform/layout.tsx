@@ -1,5 +1,6 @@
 import { ActivityProvider } from "@/components/activity/activity-context";
 import { PasskeyCreatePrompt } from "@/components/auth/passkey-create-prompt";
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import { CalibrationFlagProvider } from "@/components/calibrations/calibration-flag-context";
 import { CommandPalette } from "@/components/command/command-palette";
 import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
@@ -73,35 +74,37 @@ export default async function AppLayout({
 
   return (
     <TranslationBundles resources={bundles}>
-      <SidebarProvider defaultWidth={232}>
-        <CalibrationFlagProvider isEnabled={isCalibrationEnabled}>
-          <ActivityProvider>
-            <NavigationSidebarWrapper
-              locale={locale}
-              releaseNotes={releaseNotes}
-              user={{ id: session.user.id, email: session.user.email }}
-              isCalibrationEnabled={isCalibrationEnabled}
-            />
-            <SidebarEdgePeek />
-            <SidebarInset>
-              <PlatformHeaderProvider>
-                <SiteHeaderWrapper locale={locale} />
-                <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 py-4 md:px-6 md:py-6">
-                  <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
-                    <Suspense>{children}</Suspense>
-                  </PageContainer>
-                </div>
-              </PlatformHeaderProvider>
-            </SidebarInset>
-            <ShortcutsRoot locale={locale} />
-            <CommandPalette locale={locale} />
-            <Toaster />
-            <ShortcutHint />
-            <PasskeyCreatePrompt userId={session.user.id} sessionId={session.session.id} />
-            <WhatsNewSheet entries={releaseNotes} />
-          </ActivityProvider>
-        </CalibrationFlagProvider>
-      </SidebarProvider>
+      <PrincipalProvider userId={session.user.id}>
+        <SidebarProvider defaultWidth={232}>
+          <CalibrationFlagProvider isEnabled={isCalibrationEnabled}>
+            <ActivityProvider>
+              <NavigationSidebarWrapper
+                locale={locale}
+                releaseNotes={releaseNotes}
+                user={{ id: session.user.id, email: session.user.email }}
+                isCalibrationEnabled={isCalibrationEnabled}
+              />
+              <SidebarEdgePeek />
+              <SidebarInset>
+                <PlatformHeaderProvider>
+                  <SiteHeaderWrapper locale={locale} />
+                  <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 py-4 md:px-6 md:py-6">
+                    <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
+                      <Suspense>{children}</Suspense>
+                    </PageContainer>
+                  </div>
+                </PlatformHeaderProvider>
+              </SidebarInset>
+              <ShortcutsRoot locale={locale} />
+              <CommandPalette locale={locale} />
+              <Toaster />
+              <ShortcutHint />
+              <PasskeyCreatePrompt userId={session.user.id} sessionId={session.session.id} />
+              <WhatsNewSheet entries={releaseNotes} />
+            </ActivityProvider>
+          </CalibrationFlagProvider>
+        </SidebarProvider>
+      </PrincipalProvider>
     </TranslationBundles>
   );
 }

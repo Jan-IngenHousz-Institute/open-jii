@@ -1,10 +1,10 @@
+import { usePrincipal } from "@/components/auth/principal-context";
 import { collaboratorsQueryKey } from "@/hooks/sharing/sharing-query-keys";
 import { orpc } from "@/lib/orpc";
 import { shouldRetryQuery } from "@/util/query-retry";
 import { useQuery } from "@tanstack/react-query";
 
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
-import { useSession } from "@repo/auth/client";
 
 /**
  * The share-gated endpoint doubles as the surface's capability probe, and 4xx
@@ -16,8 +16,7 @@ export const useResourceCollaborators = (
   resourceId: string,
   options?: { enabled?: boolean },
 ) => {
-  const { data: session, isPending: isSessionPending } = useSession();
-  const userId = session?.user.id;
+  const { userId, isPending: isSessionPending } = usePrincipal();
 
   return useQuery(
     orpc.sharing.listGrants.queryOptions({

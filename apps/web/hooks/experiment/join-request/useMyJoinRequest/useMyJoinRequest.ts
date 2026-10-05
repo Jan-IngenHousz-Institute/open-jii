@@ -1,8 +1,7 @@
+import { usePrincipal } from "@/components/auth/principal-context";
 import { withPrincipal } from "@/hooks/principal-query-key";
 import { getOrpcError, orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
-
-import { useSession } from "@repo/auth/client";
 
 /** Cache key for the current user's pending request, scoped to that user. */
 export function myJoinRequestQueryKey(userId: string | undefined, experimentId: string) {
@@ -20,11 +19,11 @@ export function myJoinRequestQueryKey(userId: string | undefined, experimentId: 
  * `error` is treated as "no request" by consumers rather than surfaced.
  */
 export const useMyJoinRequest = (experimentId: string, enabled = true) => {
-  const { data: session, isPending: isSessionPending } = useSession();
+  const { userId, isPending: isSessionPending } = usePrincipal();
   const query = useQuery(
     orpc.experiments.getMyJoinRequest.queryOptions({
       input: { id: experimentId },
-      queryKey: myJoinRequestQueryKey(session?.user.id, experimentId),
+      queryKey: myJoinRequestQueryKey(userId, experimentId),
       enabled: !!experimentId && enabled && !isSessionPending,
       retry(failureCount, error) {
         if (getOrpcError(error)?.status === 404) {

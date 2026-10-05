@@ -1,10 +1,10 @@
+import { usePrincipal } from "@/components/auth/principal-context";
 import { withPrincipal } from "@/hooks/principal-query-key";
 import { orpc } from "@/lib/orpc";
 import { shouldRetryQuery } from "@/util/query-retry";
 import { useQuery } from "@tanstack/react-query";
 
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
-import { useSession } from "@repo/auth/client";
 
 /**
  * Teams the grantee picker may offer: those of the resource's owning organization.
@@ -16,8 +16,7 @@ export const useGranteeTeams = (
   resourceId: string,
   options?: { enabled?: boolean },
 ) => {
-  const { data: session, isPending: isSessionPending } = useSession();
-  const userId = session?.user.id;
+  const { userId, isPending: isSessionPending } = usePrincipal();
   const input = { resourceType, id: resourceId };
 
   return useQuery(
