@@ -3640,8 +3640,8 @@ packages:
   '@fast-csv/parse@4.3.6':
     resolution: {integrity: sha512-uRsLYksqpbDmWaSmzvJcuApSEe38+6NQZBUsuAyMZKqHxH0g1wcJgsKUvN3WC8tewaqFjBMMGrkHmC+T7k8LvA==}
 
-  '@fastify/busboy@3.2.0':
-    resolution: {integrity: sha512-m9FVDXU3GT2ITSe0UaMA5rU3QkfC/UXtCU8y0gSN/GugTqtVldOBWIB5V6V3sbmenVZUIpU6f+mPEO2+m5iTaA==}
+  '@fastify/busboy@3.2.2':
+    resolution: {integrity: sha512-yXSS27qPExaXeuLvMRMXOLtpipzfQYNjG3FkunDWKGfMYjKuhFXko9CVzqxm8jcF+lmtS9Fd89QNdh9XDjnbNg==}
 
   '@floating-ui/core@1.7.5':
     resolution: {integrity: sha512-1Ih4WTWyw0+lKyFMcBHGbb5U5FtuHJuujoyyr5zTaWS5EYMeT6Jb2AuDeftsCsEuchO+mM2ij5+q9crhydzLhQ==}
@@ -7872,62 +7872,73 @@ packages:
     resolution: {integrity: sha512-9rpIP7IeybjyvWUf6WnU24h1qo+JdxIHr1o3yb06HoE8tM3S/Jh5RrUw9aw5P9BKSIvSPbLyVlItX7PcD3o5bQ==}
     cpu: [arm64]
     os: [darwin]
+    deprecated: yuku-analyzer runs on yuku-core since 0.14
 
   '@yuku-analyzer/binding-darwin-x64@0.6.12':
     resolution: {integrity: sha512-ELLhNT4FGnqY8yh0W3cSs9rGMSeUyhib1aYD84RupjlfsrDTrQRoDhWu01Dv6xCfYgASYaj1Abntk91A7njNag==}
     cpu: [x64]
     os: [darwin]
+    deprecated: yuku-analyzer runs on yuku-core since 0.14
 
   '@yuku-analyzer/binding-freebsd-x64@0.6.12':
     resolution: {integrity: sha512-s76XocUMlK9liTyipALFb2K64ku35u/wg238A0NW8U5CUDsuIe/8tu5TzdLjJAGxnd0IV+gBneDt9cJJzLeFRQ==}
     cpu: [x64]
     os: [freebsd]
+    deprecated: yuku-analyzer runs on yuku-core since 0.14
 
   '@yuku-analyzer/binding-linux-arm-gnu@0.6.12':
     resolution: {integrity: sha512-hm8Tq0umop3RGu6dOMF61q69tYn1bDp1CeYD5ZjuGFQJclp0moVtjzY4z0bzusicKeZ9+k5LRroR0p5HWC2hDw==}
     cpu: [arm]
     os: [linux]
     libc: [glibc]
+    deprecated: yuku-analyzer runs on yuku-core since 0.14
 
   '@yuku-analyzer/binding-linux-arm-musl@0.6.12':
     resolution: {integrity: sha512-CxtPKLddogHAB3ZHVWaUl+U8jx0pdriTSbQ1K/orlDqU0GDhg8LuIRyUscP7r2/62fGGMzkc119fE71I4Nl1Fg==}
     cpu: [arm]
     os: [linux]
     libc: [musl]
+    deprecated: yuku-analyzer runs on yuku-core since 0.14
 
   '@yuku-analyzer/binding-linux-arm64-gnu@0.6.12':
     resolution: {integrity: sha512-EOyLcpAmF5qAVDKmKvV7xt8oBGeWQ92CqFI4s7h7TRlrF6TfGRrh8PwawGn92gFploNLAYj/1Z9Q1gVvwGgG9g==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
+    deprecated: yuku-analyzer runs on yuku-core since 0.14
 
   '@yuku-analyzer/binding-linux-arm64-musl@0.6.12':
     resolution: {integrity: sha512-T3eCYy6bMnVRMQEYAbDcpj08/XM93dBTtnn/DDocJN21RARe+KCzWKeL26J3yd3bOW3WVjVLq09BfdpAGB0buQ==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
+    deprecated: yuku-analyzer runs on yuku-core since 0.14
 
   '@yuku-analyzer/binding-linux-x64-gnu@0.6.12':
     resolution: {integrity: sha512-1Y+noIuvnDugIVsoIr5NduZqX7KuFTzICSkvG8RW3OKK9URVeTOicKK217i44ABZSSZJ7A0E7vzifapx0c9VDw==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
+    deprecated: yuku-analyzer runs on yuku-core since 0.14
 
   '@yuku-analyzer/binding-linux-x64-musl@0.6.12':
     resolution: {integrity: sha512-woN/GuG95Fd6bp+ZQfmiFrZnoA2hdu3vfVSc89A8LElnYpzFaJM81sOZp8f3tVOVUJxbt7KAUiCLwSy34MJKqA==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
+    deprecated: yuku-analyzer runs on yuku-core since 0.14
 
   '@yuku-analyzer/binding-win32-arm64@0.6.12':
     resolution: {integrity: sha512-8OVFnKbK+lgsL6MqILPLpzlsa00K4KiKsdbHH94hpGcrqaz1jv+k0Y7ujSaoYTWw5Bb7Lr9GJ3L1n1hT2sXoYA==}
     cpu: [arm64]
     os: [win32]
+    deprecated: yuku-analyzer runs on yuku-core since 0.14
 
   '@yuku-analyzer/binding-win32-x64@0.6.12':
     resolution: {integrity: sha512-3w8w1Xc5njwgbGTcn3JfDxWuQnFvtSll1D8gBlk4U8CI5v7ibKOMIdABucCXH8WtsRREG0ME5Vn0i422eX3zLQ==}
     cpu: [x64]
     os: [win32]
+    deprecated: yuku-analyzer runs on yuku-core since 0.14
 
   '@yuku-toolchain/types@0.6.11':
     resolution: {integrity: sha512-i1JYFNJaKNCgyJ/nVoR8GK7wvlXF+ShYzFHBauWcvg8IoiXInK7pVziHcgNz/MWLPNr/Mb/CtmXccrJMkKqSHQ==}
@@ -11366,8 +11377,8 @@ packages:
   htmlparser2@8.0.2:
     resolution: {integrity: sha512-GYdjWKDkbRLkZ5geuHs5NY1puJ+PXwP7+fHPRz06Eirsb9ugf6d8kkXav6ADhcODhFFPMIXyxkxSuMf3D6NCFA==}
 
-  http-cache-semantics@4.2.0:
-    resolution: {integrity: sha512-dTxcvPXqPvXBQpq5dUr6mEMJX4oIEFv6bwom3FDwKRDsuIjjJGANqhBuoAn9c1RQJIdAKav33ED65E2ys+87QQ==}
+  http-cache-semantics@4.3.0:
+    resolution: {integrity: sha512-M5t5LlJpS1UHMjvwRQVdFHvPISGeLAxNcrWuJkeGh0KxsqCHZ1O3NXZU/8x7cD0BDcGW8kapxMKTvwlqrNkHkA==}
 
   http-errors@2.0.1:
     resolution: {integrity: sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==}
@@ -13604,8 +13615,8 @@ packages:
     resolution: {integrity: sha512-c5CgUJq6H2k6MJz72Ak1F5sN9n9wlSlJyEnwvpm9/y3WB4E3pHBDT2c6PEiS1vyJvq2bUxUAIu0EGf8Cx4Ic7Q==}
     engines: {node: '>= 4'}
 
-  piscina@4.9.3:
-    resolution: {integrity: sha512-3e3ka9QCE8RJ5I9uszdAADZnkcYi21cqmF3gxox3u884N72qpFHCsIVhHt8cEQ9t3Auq/NqoiCEuhxlxxQuDWA==}
+  piscina@4.9.4:
+    resolution: {integrity: sha512-RyBDr2VheQ8ZfH3N8SzQZHztqVyOtadTwLnUYof6gdj5161/eu2wNhCbGl5GHnNKDpnkicJYpKtL2J+y/gk6XA==}
 
   pkg-conf@2.1.0:
     resolution: {integrity: sha512-C+VUP+8jis7EsQZIhDYmS5qlNtjv2yP4SNtjXK9AP1ZcTRlnSfuumaTnRfYZnYgUUYVIKqL0fRvmUGDV2fmp6g==}
@@ -14010,8 +14021,8 @@ packages:
     resolution: {integrity: sha512-DEvV2ZF2r2/63V+tK8hQvrR2ZGn10srHbXviTlcv7Kpzw8jWiNTqbVgjO3IY8RxrrOUF8VPMQQFysYYYv0YZxw==}
     engines: {node: '>=6'}
 
-  probe-image-size@7.3.0:
-    resolution: {integrity: sha512-7CaDeBwiAbh6ohXsvLbAZhO7wzsZAmaevfxe39qvCwRh8LyaZfDlBGGLU1CCTgrTLtCOdwBBhjOrIHaIIimHfQ==}
+  probe-image-size@7.4.0:
+    resolution: {integrity: sha512-cdEprVtZxV+awMde9X+4jILBFYh4CARxVrQaMl4wY4YcPWbul9jntXrIW95NInBDyJwcVUP3U0T6yukN8rMBaQ==}
 
   proc-log@4.2.0:
     resolution: {integrity: sha512-g8+OnU/L2v+wyiVK+D5fA34J7EH8jZ8DDlvwhRCMxmMj7UCBvxiO1mGeN+36JXIKF4zevU4kRBd8lVgG9vLelA==}
@@ -18711,7 +18722,7 @@ snapshots:
       lodash.isundefined: 3.0.1
       lodash.uniq: 4.5.0
 
-  '@fastify/busboy@3.2.0': {}
+  '@fastify/busboy@3.2.2': {}
 
   '@floating-ui/core@1.7.5':
     dependencies:
@@ -22482,7 +22493,7 @@ snapshots:
       '@xhmikosr/bin-wrapper': 14.4.0(supports-color@8.1.1)
       commander: 8.3.0
       minimatch: 9.0.9
-      piscina: 4.9.3
+      piscina: 4.9.4
       semver: 7.8.5
       slash: 3.0.0
       source-map: 0.7.6
@@ -23544,7 +23555,7 @@ snapshots:
 
   '@whatwg-node/node-fetch@0.8.6':
     dependencies:
-      '@fastify/busboy': 3.2.0
+      '@fastify/busboy': 3.2.2
       '@whatwg-node/disposablestack': 0.0.6
       '@whatwg-node/promise-helpers': 1.3.2
       tslib: 2.8.1
@@ -24478,7 +24489,7 @@ snapshots:
     dependencies:
       '@types/http-cache-semantics': 4.2.0
       get-stream: 9.0.1
-      http-cache-semantics: 4.2.0
+      http-cache-semantics: 4.3.0
       keyv: 5.6.0
       mimic-response: 4.0.0
       normalize-url: 8.1.1
@@ -27846,7 +27857,7 @@ snapshots:
       domutils: 3.2.2
       entities: 4.5.0
 
-  http-cache-semantics@4.2.0: {}
+  http-cache-semantics@4.3.0: {}
 
   http-errors@2.0.1:
     dependencies:
@@ -30422,7 +30433,7 @@ snapshots:
     dependencies:
       node-modules-regexp: 1.0.0
 
-  piscina@4.9.3:
+  piscina@4.9.4:
     optionalDependencies:
       '@napi-rs/nice': 1.1.1
 
@@ -30487,7 +30498,7 @@ snapshots:
       parse-svg-path: 0.1.2
       point-in-polygon: 1.1.0
       polybooljs: 1.2.2
-      probe-image-size: 7.3.0(supports-color@8.1.1)
+      probe-image-size: 7.4.0(supports-color@8.1.1)
       regl-error2d: 2.0.12
       regl-line2d: 3.1.3
       regl-scatter2d: 3.4.0
@@ -30809,7 +30820,7 @@ snapshots:
 
   prismjs@1.30.0: {}
 
-  probe-image-size@7.3.0(supports-color@8.1.1):
+  probe-image-size@7.4.0(supports-color@8.1.1):
     dependencies:
       lodash.merge: 4.6.2
       needle: 2.9.1(supports-color@8.1.1)

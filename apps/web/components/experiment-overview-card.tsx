@@ -26,17 +26,21 @@ interface ExperimentOverviewCardProps {
   locale: string;
   /** Set by the grid, so titles line up across cards whose badges differ. */
   reserveBadgeRow: boolean;
+  showUpdatedLabel?: boolean;
 }
 
+/** Renders a linked experiment summary with badges, owner, member count, and an optionally labeled update date. */
 export function ExperimentOverviewCard({
   experiment,
   href,
   locale,
   reserveBadgeRow,
+  showUpdatedLabel = false,
 }: ExperimentOverviewCardProps) {
   const { t } = useTranslation("experiments");
 
   const owner = ownerName(experiment);
+  const updated = formatShortDate(experiment.updatedAt, locale);
   const members = experiment.membersCount ?? 0;
 
   const renderBadges = () => (
@@ -73,7 +77,7 @@ export function ExperimentOverviewCard({
           </span>
         ) : null}
         <span className="tabular-nums" title={t("columns.updated")}>
-          {formatShortDate(experiment.updatedAt, locale)}
+          {showUpdatedLabel ? t("updatedOn", { date: updated }) : updated}
         </span>
       </span>
     </span>

@@ -8,6 +8,7 @@ import { MailchimpAdapter } from "../common/modules/mailchimp/mailchimp.adapter"
 import { MailchimpModule } from "../common/modules/mailchimp/mailchimp.module";
 import { ExperimentModule } from "../experiments/experiment.module";
 import { NEWSLETTER_PORT } from "../newsletter/core/ports/newsletter.port";
+import { NotificationModule } from "../notifications/notification.module";
 import { AcceptPendingInvitationsUseCase } from "./application/use-cases/accept-pending-invitations/accept-pending-invitations";
 import { CreateInvitationUseCase } from "./application/use-cases/create-invitation/create-invitation";
 import { CreateUserProfileUseCase } from "./application/use-cases/create-user-profile/create-user-profile";
@@ -19,6 +20,7 @@ import { GetUserUseCase } from "./application/use-cases/get-user/get-user";
 import { GetUsersMetadataUseCase } from "./application/use-cases/get-users-metadata/get-users-metadata";
 import { GetWhatsNewSeenUseCase } from "./application/use-cases/get-whats-new-seen/get-whats-new-seen";
 import { MarkWhatsNewSeenUseCase } from "./application/use-cases/mark-whats-new-seen/mark-whats-new-seen";
+import { NotifyPendingOrganizationInvitationsUseCase } from "./application/use-cases/notify-pending-organization-invitations/notify-pending-organization-invitations";
 import { RevokeInvitationUseCase } from "./application/use-cases/revoke-invitation/revoke-invitation";
 import { SearchUsersUseCase } from "./application/use-cases/search-users/search-users";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
@@ -33,7 +35,13 @@ import { UserController } from "./presentation/user.controller";
 import { WhatsNewController } from "./presentation/whats-new.controller";
 
 @Module({
-  imports: [DatabricksModule, EmailModule, MailchimpModule, forwardRef(() => ExperimentModule)],
+  imports: [
+    DatabricksModule,
+    EmailModule,
+    MailchimpModule,
+    NotificationModule,
+    forwardRef(() => ExperimentModule),
+  ],
   controllers: [UserController, UserWebhookController, InvitationController, WhatsNewController],
   providers: [
     // Repositories
@@ -65,6 +73,7 @@ import { WhatsNewController } from "./presentation/whats-new.controller";
     GetWhatsNewSeenUseCase,
     MarkWhatsNewSeenUseCase,
     AcceptPendingInvitationsUseCase,
+    NotifyPendingOrganizationInvitationsUseCase,
     CreateInvitationUseCase,
     GetInvitationsUseCase,
     RevokeInvitationUseCase,

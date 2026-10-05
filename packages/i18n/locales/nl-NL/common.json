@@ -909,7 +909,12 @@
     "statistics": "Statistieken",
     "quickActions": "Snelle acties",
     "noBlogPosts": null,
-    "errorLoadingBlogPosts": null
+    "errorLoadingBlogPosts": null,
+    "recentPublicExperiments": "Recent bijgewerkte openbare experimenten",
+    "noPublicExperiments": "Nog geen openbare experimenten.",
+    "publicExperimentsLoadFailed": "Openbare experimenten konden niet worden geladen.",
+    "publicExperimentsStale": "Er is sinds {{date}} geen openbaar experiment bijgewerkt.",
+    "browsePublicExperiments": "Openbare experimenten bekijken"
   },
   "auth": {
     "login": "Inloggen",
