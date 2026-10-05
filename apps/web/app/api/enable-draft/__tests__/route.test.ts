@@ -28,6 +28,14 @@ vi.mock("~/env", () => ({
   },
 }));
 
+const contentfulConfigMock = vi.hoisted(() => ({ previewSecret: "s3cret" }));
+
+vi.mock("~/lib/contentful", () => ({
+  contentfulConfig: Promise.resolve(contentfulConfigMock),
+}));
+
+const SECRET = "x-contentful-preview-secret=s3cret";
+
 function createMockRequest(url: string): NextRequest {
   return { url } as unknown as NextRequest;
 }
@@ -36,10 +44,11 @@ describe("GET /api/enable-draft", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getMock.mockReturnValue({ value: "bypass-token-value" });
+    contentfulConfigMock.previewSecret = "s3cret";
   });
 
   it("returns 400 when path is missing in production", async () => {
-    const request = createMockRequest("https://example.com/api/enable-draft?path=");
+    const request = createMockRequest(`https://example.com/api/enable-draft?path=&${SECRET}`);
 
     const response = await GET(request);
 
@@ -47,8 +56,56 @@ describe("GET /api/enable-draft", () => {
     expect((response as Response).status).toBe(400);
   });
 
-  it("enables draft mode and redirects in production", async () => {
+  it("returns 401 without the preview secret", async () => {
     const request = createMockRequest("https://example.com/api/enable-draft?path=%2Fen-US%2Fabout");
+
+    const response = await GET(request);
+
+    expect((response as Response).status).toBe(401);
+    expect(enableMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 for a wrong preview secret", async () => {
+    const request = createMockRequest(
+      "https://example.com/api/enable-draft?path=%2Fen-US%2Fabout&x-contentful-preview-secret=guess",
+    );
+
+    const response = await GET(request);
+
+    expect((response as Response).status).toBe(401);
+    expect(enableMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when no preview secret is configured", async () => {
+    contentfulConfigMock.previewSecret = "";
+    const request = createMockRequest(
+      "https://example.com/api/enable-draft?path=%2Fen-US%2Fabout&x-contentful-preview-secret=",
+    );
+
+    const response = await GET(request);
+
+    expect((response as Response).status).toBe(401);
+    expect(enableMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["an absolute URL", "https%3A%2F%2Fevil.example%2F"],
+    ["a protocol-relative URL", "%2F%2Fevil.example%2F"],
+  ])("returns 400 when path is %s", async (_label, path) => {
+    const request = createMockRequest(
+      `https://example.com/api/enable-draft?path=${path}&${SECRET}`,
+    );
+
+    const response = await GET(request);
+
+    expect((response as Response).status).toBe(400);
+    expect(enableMock).not.toHaveBeenCalled();
+  });
+
+  it("enables draft mode and redirects in production", async () => {
+    const request = createMockRequest(
+      `https://example.com/api/enable-draft?path=%2Fen-US%2Fabout&${SECRET}`,
+    );
 
     await expect(GET(request)).rejects.toThrow("NEXT_REDIRECT");
 
@@ -66,7 +123,7 @@ describe("GET /api/enable-draft", () => {
 
   it("appends bypass token query params when provided", async () => {
     const request = createMockRequest(
-      "https://example.com/api/enable-draft?path=%2Fen-US%2Fabout&x-vercel-protection-bypass=my-token",
+      `https://example.com/api/enable-draft?path=%2Fen-US%2Fabout&x-vercel-protection-bypass=my-token&${SECRET}`,
     );
 
     await expect(GET(request)).rejects.toThrow("NEXT_REDIRECT");
@@ -85,7 +142,9 @@ describe("GET /api/enable-draft", () => {
   it("throws when __prerender_bypass cookie is missing", async () => {
     getMock.mockReturnValue(undefined);
 
-    const request = createMockRequest("https://example.com/api/enable-draft?path=%2Fen-US%2Fabout");
+    const request = createMockRequest(
+      `https://example.com/api/enable-draft?path=%2Fen-US%2Fabout&${SECRET}`,
+    );
 
     await expect(GET(request)).rejects.toThrow("Missing '__prerender_bypass' cookie");
   });
@@ -109,6 +168,19 @@ describe("GET /api/enable-draft", () => {
 
       expect(enableMock).toHaveBeenCalled();
       expect(redirectMock).toHaveBeenCalled();
+    });
+
+    it("still refuses to redirect off the site", async () => {
+      const { GET: devGET } = await import("../route");
+
+      const request = createMockRequest(
+        "https://example.com/api/enable-draft?path=https%3A%2F%2Fevil.example%2F",
+      );
+
+      const response = await devGET(request);
+
+      expect((response as Response).status).toBe(400);
+      expect(enableMock).not.toHaveBeenCalled();
     });
   });
 });
