@@ -904,7 +904,7 @@
     "reportBugButton": null,
     "recentExperiments": "Recente experimenten",
     "recentArticles": null,
-    "yourExperiments": null,
+    "yourExperiments": "Je recente experimenten",
     "seeAll": null,
     "statistics": "Statistieken",
     "quickActions": "Snelle acties",
@@ -914,7 +914,21 @@
     "noPublicExperiments": "Nog geen openbare experimenten.",
     "publicExperimentsLoadFailed": "Openbare experimenten konden niet worden geladen.",
     "publicExperimentsStale": "Er is sinds {{date}} geen openbaar experiment bijgewerkt.",
-    "browsePublicExperiments": "Openbare experimenten bekijken"
+    "browsePublicExperiments": "Openbare experimenten bekijken",
+    "firstWork": {
+      "create": {
+        "title": "Maak een experiment",
+        "description": "Zet je eigen experiment op en begin met meten."
+      },
+      "join": {
+        "title": "Word lid van een organisatie",
+        "description": "Werk met de gedeelde experimenten en apparaten van je lab."
+      },
+      "browse": {
+        "title": "Bekijk openbaar onderzoek",
+        "description": "Bekijk echte experimenten die anderen hebben gepubliceerd."
+      }
+    }
   },
   "auth": {
     "login": "Inloggen",
