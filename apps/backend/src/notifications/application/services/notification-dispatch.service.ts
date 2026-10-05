@@ -21,6 +21,11 @@ export interface DispatchInput<T extends NotificationType> {
   params: NotificationParams<T>;
   /** Set it when the same event can arrive twice; a repeat then writes no second row. */
   dedupeKey?: string;
+  /**
+   * "The email for this event already went out another way." The rows are still
+   * written; only the email step is skipped, whatever the type's channel rule says.
+   */
+  suppressEmail?: boolean;
 }
 
 /**
@@ -100,6 +105,7 @@ export class NotificationDispatchService {
 
     if (
       created.length === 0 ||
+      input.suppressEmail === true ||
       definition.channels.email === "never" ||
       !this.notificationEmail.hasEmail(input.type)
     ) {

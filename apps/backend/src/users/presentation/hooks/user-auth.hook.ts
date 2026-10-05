@@ -5,6 +5,7 @@ import { APIError, getSessionFromCtx } from "better-auth/api";
 import z from "zod";
 
 import { AcceptPendingInvitationsUseCase } from "../../application/use-cases/accept-pending-invitations/accept-pending-invitations";
+import { NotifyPendingOrganizationInvitationsUseCase } from "../../application/use-cases/notify-pending-organization-invitations/notify-pending-organization-invitations";
 import { UserRepository } from "../../core/repositories/user.repository";
 
 @Hook()
@@ -15,6 +16,7 @@ export class UserAuthHook {
   constructor(
     private readonly acceptInvitationUseCase: AcceptPendingInvitationsUseCase,
     private readonly userRepository: UserRepository,
+    private readonly notifyPendingInvitationsUseCase: NotifyPendingOrganizationInvitationsUseCase,
   ) {}
 
   @BeforeHook("/sign-in/email-otp")
@@ -45,16 +47,19 @@ export class UserAuthHook {
   @AfterHook("/sign-in/email")
   async handleEmailSignIn(ctx: AuthHookContext) {
     await this.acceptInvitationsForNewUser(ctx);
+    await this.notifyPendingOrganizationInvitations(ctx);
   }
 
   @AfterHook("/sign-in/email-otp")
   async handleEmailOtpSignIn(ctx: AuthHookContext) {
     await this.acceptInvitationsForNewUser(ctx);
+    await this.notifyPendingOrganizationInvitations(ctx);
   }
 
   @AfterHook("/sign-in/social")
   async handleSocialSignIn(ctx: AuthHookContext) {
     await this.acceptInvitationsForNewUser(ctx);
+    await this.notifyPendingOrganizationInvitations(ctx);
   }
 
   /**
@@ -66,16 +71,19 @@ export class UserAuthHook {
   @AfterHook("/callback/:id")
   async handleOAuthCallback(ctx: AuthHookContext) {
     await this.acceptInvitationsForNewUser(ctx);
+    await this.notifyPendingOrganizationInvitations(ctx);
   }
 
   @AfterHook("/oauth2/callback/:providerId")
   async handleGenericOAuthCallback(ctx: AuthHookContext) {
     await this.acceptInvitationsForNewUser(ctx);
+    await this.notifyPendingOrganizationInvitations(ctx);
   }
 
   @AfterHook("/email-otp/verify-email")
   async handleOtpVerify(ctx: AuthHookContext) {
     await this.acceptInvitationsForNewUser(ctx);
+    await this.notifyPendingOrganizationInvitations(ctx);
   }
 
   /* v8 ignore next 3 */
@@ -111,6 +119,25 @@ export class UserAuthHook {
       this.logger.warn({
         msg: "Failed to process pending invitations after auth",
         operation: "invitation-auth-hook",
+        error,
+      });
+    }
+  }
+
+  /**
+   * Guarded like the acceptance above it: a fault while catching up on organization
+   * invitations must not fail a sign-in that has already succeeded.
+   */
+  private async notifyPendingOrganizationInvitations(ctx: AuthHookContext) {
+    try {
+      const user = ctx.context.newSession?.user;
+      if (!user?.id || !user.email) return;
+
+      await this.notifyPendingInvitationsUseCase.execute(user.id, user.email);
+    } catch (error) {
+      this.logger.warn({
+        msg: "Failed to catch up on pending organization invitations, the sign-in stands",
+        operation: "organization-invitation-catch-up",
         error,
       });
     }

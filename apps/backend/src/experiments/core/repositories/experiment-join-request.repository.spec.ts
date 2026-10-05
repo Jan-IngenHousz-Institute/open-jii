@@ -335,5 +335,24 @@ describe("ExperimentJoinRequestRepository", () => {
       // to decide the request.
       expect(result.value).toEqual([keeper]);
     });
+
+    it("leaves out a deactivated admin, as organization deciders are left out", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Dormant admin experiment",
+        userId: adminUserId,
+        visibility: "public",
+      });
+      const dormant = await testApp.createTestUser({
+        email: "dormant@example.com",
+        name: "Dormant Admin",
+        activated: false,
+      });
+      await testApp.addExperimentAdmin(experiment.id, dormant);
+
+      const result = await repository.listAdminIds(experiment.id);
+      assertSuccess(result);
+      expect(result.value).toContain(adminUserId);
+      expect(result.value).not.toContain(dormant);
+    });
   });
 });

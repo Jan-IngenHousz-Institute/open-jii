@@ -397,4 +397,29 @@ describe("EmailAdapter", () => {
       );
     });
   });
+
+  describe("sendOrganizationInvitationNotification", () => {
+    it("delegates to NotificationsService with every argument in order", async () => {
+      const notificationSpy = vi
+        .spyOn(notificationsService, "sendOrganizationInvitationNotification")
+        .mockResolvedValue(success(undefined));
+
+      const result = await adapter.sendOrganizationInvitationNotification(
+        "org-123",
+        "Photosynthesis Lab",
+        "Ada Lovelace",
+        "member",
+        "invitee@example.com",
+      );
+
+      assertSuccess(result);
+      expect(notificationSpy).toHaveBeenCalledExactlyOnceWith(
+        "org-123",
+        "Photosynthesis Lab",
+        "Ada Lovelace",
+        "member",
+        "invitee@example.com",
+      );
+    });
+  });
 });
