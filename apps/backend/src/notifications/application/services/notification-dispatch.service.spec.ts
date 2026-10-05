@@ -239,6 +239,40 @@ describe("NotificationDispatchService", () => {
     expect(send).toHaveBeenCalledTimes(1);
   });
 
+  it("stores the row and sends nothing when the caller suppresses the email", async () => {
+    // What the sign-in catch-up needs: the type emails by preference and has an
+    // entry, so only `suppressEmail` can hold the email back — Better Auth already
+    // sent it when the invitation was created.
+    const emailAdapter = testApp.module.get(EmailAdapter);
+    const sendInvitation = vi
+      .spyOn(emailAdapter, "sendOrganizationInvitationNotification")
+      .mockResolvedValue(success(undefined));
+
+    const invite = (suppressEmail: boolean, dedupeKey: string) =>
+      dispatch.dispatch({
+        type: "organization_invitation_received",
+        recipientIds: [recipientId],
+        actorId,
+        resource: { type: "organization", id: crypto.randomUUID() },
+        params: { organizationName: "Photosynthesis Lab", role: "member" },
+        dedupeKey,
+        suppressEmail,
+      });
+
+    const suppressed = await invite(true, "suppressed");
+    assertSuccess(suppressed);
+    expect(suppressed.value).toEqual({ created: 1, emailed: 0 });
+    expect(await rowsFor(recipientId)).toHaveLength(1);
+    expect(sendInvitation).not.toHaveBeenCalled();
+
+    // The control: the same dispatch without the flag does email, so the flag is
+    // what held it back rather than anything else about this type.
+    const plain = await invite(false, "not-suppressed");
+    assertSuccess(plain);
+    expect(plain.value).toEqual({ created: 1, emailed: 1 });
+    expect(sendInvitation).toHaveBeenCalledTimes(1);
+  });
+
   it("stores the row and sends nothing for a type with no email entry yet", async () => {
     // `data_export_completed` is on the `preference` policy, so only the missing
     // entry keeps its email from going out.

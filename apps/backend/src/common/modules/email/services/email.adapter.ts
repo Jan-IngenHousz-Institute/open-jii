@@ -1,13 +1,12 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { EmailPort as ExperimentsEmailPort } from "../../../../experiments/core/ports/email.port";
-import { OrganizationEmailPort } from "../../../../organizations/core/ports/email.port";
 import { EmailPort as UsersEmailPort } from "../../../../users/core/ports/email.port";
 import { Result } from "../../../utils/fp-utils";
 import { NotificationsService } from "./notifications/notifications.service";
 
 @Injectable()
-export class EmailAdapter implements ExperimentsEmailPort, UsersEmailPort, OrganizationEmailPort {
+export class EmailAdapter implements ExperimentsEmailPort, UsersEmailPort {
   private readonly logger = new Logger(EmailAdapter.name);
 
   constructor(private readonly notificationService: NotificationsService) {}
@@ -121,6 +120,29 @@ export class EmailAdapter implements ExperimentsEmailPort, UsersEmailPort, Organ
       experimentId,
       experimentName,
       requesterEmail,
+    );
+  }
+
+  async sendOrganizationInvitationNotification(
+    organizationId: string,
+    organizationName: string,
+    inviterName: string,
+    role: string,
+    recipientEmail: string,
+  ): Promise<Result<void>> {
+    this.logger.log({
+      msg: "Sending organization invitation notification",
+      operation: "sendOrganizationInvitationNotification",
+      organizationId,
+      email: recipientEmail,
+    });
+
+    return this.notificationService.sendOrganizationInvitationNotification(
+      organizationId,
+      organizationName,
+      inviterName,
+      role,
+      recipientEmail,
     );
   }
 

@@ -28,6 +28,7 @@ describe("NotificationsService", () => {
   let mockRenderProjectTransferComplete: MockInstance;
   let mockRenderJoinRequestSubmittedEmail: MockInstance;
   let mockRenderJoinRequestRejectedEmail: MockInstance;
+  let mockRenderOrganizationInvitationEmail: MockInstance;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -70,6 +71,13 @@ describe("NotificationsService", () => {
     mockRenderJoinRequestRejectedEmail = spyOnProtected(
       service,
       "renderJoinRequestRejectedEmail",
+    ).mockResolvedValue({
+      html: MOCK_HTML_CONTENT,
+      text: MOCK_TEXT_CONTENT,
+    });
+    mockRenderOrganizationInvitationEmail = spyOnProtected(
+      service,
+      "renderOrganizationInvitationEmail",
     ).mockResolvedValue({
       html: MOCK_HTML_CONTENT,
       text: MOCK_TEXT_CONTENT,
@@ -1138,6 +1146,68 @@ describe("NotificationsService", () => {
       );
 
       expect(result.isSuccess()).toBe(false);
+      assertFailure(result);
+      expect(result.error.message).toContain("Failed to send email: SMTP connection failed");
+    });
+  });
+
+  describe("sendOrganizationInvitationNotification", () => {
+    const MOCK_ORGANIZATION_ID = "org-123";
+    const MOCK_ORGANIZATION_NAME = "Photosynthesis Lab";
+    const MOCK_INVITEE_EMAIL = "invitee@example.com";
+
+    it("renders the shared invitation template with the account tab as the link", async () => {
+      const mockSendMail = vi.fn().mockReturnValue({
+        messageId: "test-message-id",
+        accepted: [MOCK_INVITEE_EMAIL],
+        rejected: [],
+        pending: [],
+      });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+
+      const result = await service.sendOrganizationInvitationNotification(
+        MOCK_ORGANIZATION_ID,
+        MOCK_ORGANIZATION_NAME,
+        MOCK_ACTOR,
+        "admin",
+        MOCK_INVITEE_EMAIL,
+      );
+
+      assertSuccess(result);
+      // The same template and destination `packages/auth` uses for an invitee with
+      // no account, so the two halves of the split read identically.
+      expect(mockRenderOrganizationInvitationEmail).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        organizationName: MOCK_ORGANIZATION_NAME,
+        inviteUrl: "http://localhost:3000/platform/account/invitations",
+        inviterName: MOCK_ACTOR,
+        role: "admin",
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        to: MOCK_INVITEE_EMAIL,
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: `You've been invited to join ${MOCK_ORGANIZATION_NAME}`,
+        html: MOCK_HTML_CONTENT,
+        text: MOCK_TEXT_CONTENT,
+      });
+    });
+
+    it("reports a failed send as a failure rather than throwing", async () => {
+      mockCreateTransport.mockReturnValue({
+        sendMail: vi.fn().mockImplementation(() => {
+          throw new Error("SMTP connection failed");
+        }),
+      });
+
+      const result = await service.sendOrganizationInvitationNotification(
+        MOCK_ORGANIZATION_ID,
+        MOCK_ORGANIZATION_NAME,
+        MOCK_ACTOR,
+        "member",
+        MOCK_INVITEE_EMAIL,
+      );
+
       assertFailure(result);
       expect(result.error.message).toContain("Failed to send email: SMTP connection failed");
     });

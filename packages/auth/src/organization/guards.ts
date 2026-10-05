@@ -1,6 +1,16 @@
 import { APIError } from "better-auth/api";
 
-import { and, db, eq, isPersonalOrgSlug, organizationMembers, organizations } from "@repo/database";
+import {
+  and,
+  db,
+  eq,
+  isPersonalOrgSlug,
+  organizationMembers,
+  organizations,
+  profiles,
+  sql,
+  users,
+} from "@repo/database";
 
 import {
   ORG_ROLE_MESSAGE,
@@ -70,6 +80,51 @@ export function assertNotPersonalOrganization(slug: string | null, what: string)
       message: `Personal workspaces have no ${what}.`,
     });
   }
+}
+
+/**
+ * Whether an openJII account already exists for an address. This is the one predicate
+ * that splits who sends an organization invitation email: Better Auth sends it here
+ * for an address with no account, and the backend sends it from notification dispatch
+ * for one with an account, so that a saved "Requests and invitations" preference can
+ * govern it. The backend applies the same predicate, written out a second time because
+ * the auth plugin cannot call backend code — if the two ever disagree, somebody is
+ * emailed twice or not at all.
+ *
+ * Compared lowercased: Better Auth lowercases the invitation email, but an account
+ * created through an OAuth provider may carry mixed case.
+ */
+export async function hasAccountForEmail(email: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(sql`lower(${users.email}) = lower(${email})`)
+    .limit(1);
+  return rows.length > 0;
+}
+
+/**
+ * The name the platform shows for a user: first and last name from their profile,
+ * the same source the notification bell and the backend's emails read. Better Auth
+ * only knows `users.name`, which an OAuth provider fills in and nobody edits, so an
+ * email built from it can disagree with every other place the person's name appears.
+ *
+ * A deactivated profile reads "Unknown User", as the backend anonymises it. `null`
+ * when the user has no profile row yet, so the caller can fall back.
+ */
+export async function findProfileDisplayName(userId: string): Promise<string | null> {
+  const rows = await db
+    .select({
+      firstName: profiles.firstName,
+      lastName: profiles.lastName,
+      activated: profiles.activated,
+    })
+    .from(profiles)
+    .where(eq(profiles.userId, userId))
+    .limit(1);
+  if (rows.length === 0) return null;
+  const [profile] = rows;
+  return profile.activated ? `${profile.firstName} ${profile.lastName}` : "Unknown User";
 }
 
 /** The caller's stored role in an organization, or `null` when they are not a member. */

@@ -75,6 +75,45 @@ const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
         recipientEmail,
       ),
   ),
+  // Only an invitee who already has an account reaches here; `packages/auth` emails
+  // the rest itself, from the same template. See `hasAccountForEmail`.
+  organization_invitation_received: aboutResource(
+    (organizationId, email, { params, actorName, recipientEmail }) =>
+      email.sendOrganizationInvitationNotification(
+        organizationId,
+        params.organizationName,
+        actorName ?? "Someone",
+        params.role,
+        recipientEmail,
+      ),
+  ),
+  organization_join_request_received: aboutResource(
+    (organizationId, email, { params, actorName, recipientEmail }) =>
+      email.sendOrganizationJoinRequestSubmittedNotification(
+        organizationId,
+        params.organizationName,
+        actorName ?? "Someone",
+        recipientEmail,
+        params.message,
+      ),
+  ),
+  organization_join_request_approved: aboutResource(
+    (organizationId, email, { params, recipientEmail }) =>
+      email.sendOrganizationJoinRequestApprovedNotification(
+        organizationId,
+        params.organizationName,
+        recipientEmail,
+      ),
+  ),
+  // Deliberately neutral: no reason, no decider name, though the row carries one.
+  organization_join_request_rejected: aboutResource(
+    (organizationId, email, { params, recipientEmail }) =>
+      email.sendOrganizationJoinRequestRejectedNotification(
+        organizationId,
+        params.organizationName,
+        recipientEmail,
+      ),
+  ),
 };
 
 /** Turns a stored notification into the email its type sends. */

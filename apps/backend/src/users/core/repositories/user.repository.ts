@@ -12,6 +12,7 @@ import {
   ilike,
   inArray,
   deviceGroups,
+  gt,
   iotDevices,
   macros,
   profiles,
@@ -25,6 +26,7 @@ import {
   experiments,
   experimentMembers,
   notExists,
+  notifications,
   organizationInvitations,
   organizationJoinRequests,
   organizationMembers,
@@ -68,6 +70,7 @@ import {
   UserProfileMetadata,
   SoleAdminResource,
   SoleOwnedOrganization,
+  PendingOrganizationInvitation,
 } from "../models/user.model";
 
 /**
@@ -109,6 +112,68 @@ export class UserRepository {
 
       return result.length > 0 ? result[0] : null;
     });
+  }
+
+  /**
+   * The user id behind an address, compared lowercased (OAuth accounts may carry mixed
+   * case). Must agree with `hasAccountForEmail` in `packages/auth`: together they decide
+   * who sends the organization invitation email.
+   */
+  async findIdByEmail(email: string): Promise<Result<string | null>> {
+    return tryCatch(async () => {
+      const rows = await this.database
+        .select({ id: users.id })
+        .from(users)
+        .where(sql`lower(${users.email}) = lower(${email})`)
+        .limit(1);
+
+      return rows[0]?.id ?? null;
+    });
+  }
+
+  /**
+   * Pending, unexpired organization invitations for an address, compared lowercased, that
+   * the user has no notification row for yet. Runs on every sign-in, so already-notified
+   * invitations are filtered here rather than by a no-op insert each. Lives here rather
+   * than in `OrganizationRepository` because `UserModule` cannot import organizations.
+   */
+  async findPendingOrganizationInvitationsToNotify(
+    userId: string,
+    email: string,
+  ): Promise<Result<PendingOrganizationInvitation[]>> {
+    return tryCatch(() =>
+      this.database
+        .select({
+          id: organizationInvitations.id,
+          organizationId: organizationInvitations.organizationId,
+          inviterId: organizationInvitations.inviterId,
+          role: organizationInvitations.role,
+          organizationName: organizations.name,
+        })
+        .from(organizationInvitations)
+        .innerJoin(organizations, eq(organizations.id, organizationInvitations.organizationId))
+        .where(
+          and(
+            sql`lower(${organizationInvitations.email}) = lower(${email})`,
+            eq(organizationInvitations.status, "pending"),
+            gt(organizationInvitations.expiresAt, new Date()),
+            notExists(
+              this.database
+                .select({ one: sql`1` })
+                .from(notifications)
+                .where(
+                  and(
+                    eq(notifications.recipientId, userId),
+                    eq(
+                      notifications.dedupeKey,
+                      sql`'organization_invitation_received:' || ${organizationInvitations.id}`,
+                    ),
+                  ),
+                ),
+            ),
+          ),
+        ),
+    );
   }
 
   async findUsersByIds(userIds: string[]): Promise<Result<UserProfileMetadata[]>> {
