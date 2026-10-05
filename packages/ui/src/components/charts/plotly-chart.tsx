@@ -15,6 +15,8 @@ import type { PlotParams } from "react-plotly.js";
 
 import { cn } from "../../lib/utils";
 import { PlotlyErrorBoundary } from "./plotly-error-boundary";
+import { loadPlotlyRuntime, pendingTraceTypes } from "./plotly-loader";
+import { PlotlyTraceGate } from "./plotly-trace-gate";
 import { withBrandedPngExport } from "./png-export";
 
 // Type definitions for better type safety
@@ -39,7 +41,7 @@ interface SafeConfig extends Partial<Config> {
   toImageButtonOptions?: ToImageButtonOptions;
 }
 
-// The WebGL traces the bundle registers; see `plotly-runtime`. Both are
+// The WebGL traces the runtime can load; see `plotly-runtime`. Both are
 // regl-backed and draw into the graph div's shared gl canvases.
 type WebGLTraceType = "scattergl" | "parcoords";
 
@@ -67,18 +69,17 @@ type StandardTraceType = "scatter" | "bar" | "line" | "area" | "pie" | "box" | "
 
 type PlotlyTraceType = WebGLTraceType | StandardTraceType | string;
 
-// Plotly touches `window` on import, so it only loads on the client, and only
-// once a chart is actually rendered.
-const loadRuntime = () => import("./plotly-runtime");
-const Plot = lazy(() => loadRuntime().then((runtime) => ({ default: runtime.Plot })));
+const Plot = lazy(() => loadPlotlyRuntime().then((runtime) => ({ default: runtime.Plot })));
 
 /**
  * Starts the Plotly download before any chart has data to draw, so it overlaps
- * the data wait instead of following it. The import is cached, so this only
- * moves the download forward.
+ * the data wait instead of following it. Trace types warm their families too.
+ * The imports are cached, so this only moves the downloads forward.
  */
-export function preloadPlotly(): void {
-  void loadRuntime();
+export function preloadPlotly(traceTypes: Iterable<string> = []): void {
+  void loadPlotlyRuntime();
+  // A warm-up has nobody to tell; the chart that needs the family reports a failure.
+  pendingTraceTypes(traceTypes)?.catch(() => undefined);
 }
 
 // h-full, not h-96: Plotly is lazy-loaded, and a fixed 384px fallback inside a
@@ -378,7 +379,7 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
           return;
         }
         resizeIsPendingRef.current = false;
-        void loadRuntime().then(({ Plotly }) => Plotly.Plots.resize(graphDiv));
+        void loadPlotlyRuntime().then(({ Plotly }) => Plotly.Plots.resize(graphDiv));
       };
 
       let frame = 0;
@@ -488,6 +489,18 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       });
       return downgraded ? traces : safeData;
     }, [safeData, usesWebGL]);
+
+    // What is drawn, not what was asked for: a chart on its SVG twin waits for no WebGL chunk.
+    const renderTypes = React.useMemo(
+      () => renderData.map((trace: PlotData) => trace.type ?? "scatter"),
+      [renderData],
+    );
+
+    // A chart on its SVG twin can switch to WebGL later, so the families it
+    // asked for are fetched now rather than at the switch.
+    useEffect(() => {
+      preloadPlotly(safeData.map((trace: PlotData) => trace.type ?? "scatter"));
+    }, [safeData]);
 
     // Past the browser's budget a context is taken away rather than refused,
     // which leaves Plotly drawing into a dead scene: the plot keeps its axes and
@@ -655,30 +668,32 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
       >
         <PlotlyErrorBoundary onError={handleLoadError}>
           <Suspense fallback={<PlotLoadingComponent />}>
-            <Plot
-              key={plotKey}
-              data={renderData}
-              layout={safeLayout}
-              config={safeConfig}
-              {...plotProps}
-              style={{
-                width: "100%",
-                height: "100%",
-                ...plotProps.style,
-              }}
-              onError={(error: PlotlyErrorEvent) => {
-                console.error("Plotly chart error:", error);
-                setLocalError(`Rendering error: ${error.message || "Unknown error"}`);
+            <PlotlyTraceGate types={renderTypes}>
+              <Plot
+                key={plotKey}
+                data={renderData}
+                layout={safeLayout}
+                config={safeConfig}
+                {...plotProps}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  ...plotProps.style,
+                }}
+                onError={(error: PlotlyErrorEvent) => {
+                  console.error("Plotly chart error:", error);
+                  setLocalError(`Rendering error: ${error.message || "Unknown error"}`);
 
-                // If it's a WebGL error, try fallback
-                if (error.message?.includes("gl-") || error.message?.includes("WebGL")) {
-                  setIsWebGLEnabled(false);
-                }
-              }}
-              onInitialized={handleInitialized}
-              onPurge={handlePurge}
-              onWebGlContextLost={handleWebGlContextLost}
-            />
+                  // If it's a WebGL error, try fallback
+                  if (error.message?.includes("gl-") || error.message?.includes("WebGL")) {
+                    setIsWebGLEnabled(false);
+                  }
+                }}
+                onInitialized={handleInitialized}
+                onPurge={handlePurge}
+                onWebGlContextLost={handleWebGlContextLost}
+              />
+            </PlotlyTraceGate>
           </Suspense>
         </PlotlyErrorBoundary>
       </div>

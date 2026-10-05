@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-const loadRuntime = vi.hoisted(() => vi.fn(() => ({ Plot: () => null, Plotly: {} })));
+const registerTraceTypes = vi.hoisted(() => vi.fn(() => Promise.resolve()));
+const loadRuntime = vi.hoisted(() =>
+  vi.fn(() => ({ Plot: () => null, Plotly: {}, registerTraceTypes })),
+);
 
 vi.mock("../../charts/plotly-runtime", loadRuntime);
 
@@ -12,5 +15,15 @@ describe("preloadPlotly", () => {
     preloadPlotly();
 
     await vi.waitFor(() => expect(loadRuntime).toHaveBeenCalledTimes(1));
+  });
+
+  it("warms the families it is given and skips the ones core already has", async () => {
+    const { preloadPlotly } = await import("../../charts/plotly-chart");
+
+    preloadPlotly(["bar", "scatter"]);
+    preloadPlotly(["box", "bar"]);
+
+    await vi.waitFor(() => expect(registerTraceTypes).toHaveBeenCalledTimes(1));
+    expect(registerTraceTypes).toHaveBeenCalledWith(["box"]);
   });
 });
