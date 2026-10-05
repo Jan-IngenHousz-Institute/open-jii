@@ -27,8 +27,8 @@ import * as schema from "@repo/database/schema";
 
 import { EmailAdapter } from "../common/modules/email/services/email.adapter";
 import { success } from "../common/utils/fp-utils";
-import { NotificationDispatchService } from "../notifications/application/services/notification-dispatch.service";
 import { TestHarness } from "../test/test-harness";
+import { NotifyOrganizationInviteeUseCase } from "./application/use-cases/notify-organization-invitee/notify-organization-invitee";
 import { OrganizationAuthHook } from "./presentation/hooks/organization-auth.hook";
 
 /**
@@ -1084,7 +1084,7 @@ describe("organization plugin configuration and protection hooks", () => {
         returnedToHook.length = 0;
         inviteHook = new OrganizationAuthHook(
           testApp.database,
-          testApp.module.get(NotificationDispatchService),
+          testApp.module.get(NotifyOrganizationInviteeUseCase),
         );
       });
 

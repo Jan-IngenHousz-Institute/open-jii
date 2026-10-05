@@ -20,6 +20,7 @@ import { GetUserUseCase } from "./application/use-cases/get-user/get-user";
 import { GetUsersMetadataUseCase } from "./application/use-cases/get-users-metadata/get-users-metadata";
 import { GetWhatsNewSeenUseCase } from "./application/use-cases/get-whats-new-seen/get-whats-new-seen";
 import { MarkWhatsNewSeenUseCase } from "./application/use-cases/mark-whats-new-seen/mark-whats-new-seen";
+import { NotifyPendingOrganizationInvitationsUseCase } from "./application/use-cases/notify-pending-organization-invitations/notify-pending-organization-invitations";
 import { RevokeInvitationUseCase } from "./application/use-cases/revoke-invitation/revoke-invitation";
 import { SearchUsersUseCase } from "./application/use-cases/search-users/search-users";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
@@ -72,6 +73,7 @@ import { WhatsNewController } from "./presentation/whats-new.controller";
     GetWhatsNewSeenUseCase,
     MarkWhatsNewSeenUseCase,
     AcceptPendingInvitationsUseCase,
+    NotifyPendingOrganizationInvitationsUseCase,
     CreateInvitationUseCase,
     GetInvitationsUseCase,
     RevokeInvitationUseCase,

@@ -1,15 +1,11 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { AfterHook, BeforeHook, Hook } from "@thallesp/nestjs-better-auth";
 import type { AuthHookContext } from "@thallesp/nestjs-better-auth";
 import { APIError, getSessionFromCtx } from "better-auth/api";
 import z from "zod";
 
-import { and, eq, gt, organizationInvitations, organizations, sql } from "@repo/database";
-import type { DatabaseInstance } from "@repo/database";
-
-import { ErrorCodes } from "../../../common/utils/error-codes";
-import { NotificationDispatchService } from "../../../notifications/application/services/notification-dispatch.service";
 import { AcceptPendingInvitationsUseCase } from "../../application/use-cases/accept-pending-invitations/accept-pending-invitations";
+import { NotifyPendingOrganizationInvitationsUseCase } from "../../application/use-cases/notify-pending-organization-invitations/notify-pending-organization-invitations";
 import { UserRepository } from "../../core/repositories/user.repository";
 
 @Hook()
@@ -20,8 +16,7 @@ export class UserAuthHook {
   constructor(
     private readonly acceptInvitationUseCase: AcceptPendingInvitationsUseCase,
     private readonly userRepository: UserRepository,
-    @Inject("DATABASE") private readonly database: DatabaseInstance,
-    private readonly notifications: NotificationDispatchService,
+    private readonly notifyPendingInvitationsUseCase: NotifyPendingOrganizationInvitationsUseCase,
   ) {}
 
   @BeforeHook("/sign-in/email-otp")
@@ -130,72 +125,15 @@ export class UserAuthHook {
   }
 
   /**
-   * Somebody invited to an organization before they had an account got no notification
-   * at invite time — there was no account to address one to, and `packages/auth` emailed
-   * them instead. This writes the row on their first sign-in, so their bell is not dark
-   * for an invitation that is waiting for them.
-   *
-   * Keyed on the invitation id, the same key the invite-time hook uses, so an invitee
-   * who already heard hears nothing again however often they sign in. `suppressEmail`
-   * because the invitation email went out at invite time, by the other half of the
-   * split.
-   *
-   * Guarded like the acceptance above it: a fault in here must not fail a sign-in that
-   * has already succeeded.
+   * Guarded like the acceptance above it: a fault while catching up on organization
+   * invitations must not fail a sign-in that has already succeeded.
    */
   private async notifyPendingOrganizationInvitations(ctx: AuthHookContext) {
     try {
       const user = ctx.context.newSession?.user;
       if (!user?.id || !user.email) return;
 
-      const pending = await this.database
-        .select({
-          id: organizationInvitations.id,
-          organizationId: organizationInvitations.organizationId,
-          inviterId: organizationInvitations.inviterId,
-          role: organizationInvitations.role,
-          organizationName: organizations.name,
-        })
-        .from(organizationInvitations)
-        .innerJoin(organizations, eq(organizations.id, organizationInvitations.organizationId))
-        .where(
-          and(
-            // Lowercased on both sides, as everywhere else: Better Auth stores the
-            // address as the inviter typed it, and an account created through an OAuth
-            // provider may carry mixed case.
-            sql`lower(${organizationInvitations.email}) = lower(${user.email})`,
-            eq(organizationInvitations.status, "pending"),
-            // A lapsed invitation is already dead to every other reader, so there is
-            // nothing to tell anybody about.
-            gt(organizationInvitations.expiresAt, new Date()),
-          ),
-        );
-
-      for (const invitation of pending) {
-        const dispatched = await this.notifications.dispatch({
-          type: "organization_invitation_received",
-          recipientIds: [user.id],
-          actorId: invitation.inviterId,
-          resource: { type: "organization", id: invitation.organizationId },
-          params: {
-            organizationName: invitation.organizationName,
-            // A role-less invitation is a member invitation everywhere else.
-            role: invitation.role ?? "member",
-          },
-          dedupeKey: `organization_invitation_received:${invitation.id}`,
-          suppressEmail: true,
-        });
-
-        if (dispatched.isFailure()) {
-          this.logger.error({
-            msg: "Failed to notify a signing-in user of a pending organization invitation",
-            errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-            operation: "organization-invitation-catch-up",
-            invitationId: invitation.id,
-            error: dispatched.error,
-          });
-        }
-      }
+      await this.notifyPendingInvitationsUseCase.execute(user.id, user.email);
     } catch (error) {
       this.logger.warn({
         msg: "Failed to catch up on pending organization invitations, the sign-in stands",

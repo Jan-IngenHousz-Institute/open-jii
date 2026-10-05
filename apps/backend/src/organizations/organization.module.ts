@@ -8,6 +8,7 @@ import { MacroModule } from "../macros/macro.module";
 import { NotificationModule } from "../notifications/notification.module";
 import { ProtocolModule } from "../protocols/protocol.module";
 import { SharingModule } from "../sharing/sharing.module";
+import { UserModule } from "../users/user.module";
 import { WorkbookModule } from "../workbooks/workbook.module";
 import { GetOrganizationDeletionBlockersUseCase } from "./application/use-cases/get-organization-deletion-blockers/get-organization-deletion-blockers";
 import { GetOrganizationUseCase } from "./application/use-cases/get-organization/get-organization";
@@ -22,6 +23,7 @@ import { ListOrganizationResourcesUseCase } from "./application/use-cases/list-o
 import { ListOrganizationTeamGrantsUseCase } from "./application/use-cases/list-organization-team-grants/list-organization-team-grants";
 import { ListOrganizationTeamsUseCase } from "./application/use-cases/list-organization-teams/list-organization-teams";
 import { ListOrganizationsUseCase } from "./application/use-cases/list-organizations/list-organizations";
+import { NotifyOrganizationInviteeUseCase } from "./application/use-cases/notify-organization-invitee/notify-organization-invitee";
 import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { OrganizationJoinRequestRepository } from "./core/repositories/organization-join-request.repository";
 import { OrganizationRepository } from "./core/repositories/organization.repository";
@@ -50,6 +52,7 @@ import { OrganizationController } from "./presentation/organization.controller";
     WorkbookModule,
     IotModule,
     SharingModule,
+    UserModule,
   ],
   controllers: [OrganizationController, OrganizationJoinRequestsController],
   providers: [
@@ -72,6 +75,7 @@ import { OrganizationController } from "./presentation/organization.controller";
     ListOrganizationJoinRequestsUseCase,
     CancelMyOrganizationJoinRequestUseCase,
     DecideOrganizationJoinRequestUseCase,
+    NotifyOrganizationInviteeUseCase,
     OrganizationAuthHook,
   ],
   // Global search composes the directory read, on the same visibility boundary the

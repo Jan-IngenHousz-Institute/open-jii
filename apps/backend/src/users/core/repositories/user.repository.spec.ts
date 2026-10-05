@@ -189,6 +189,119 @@ describe("UserRepository", () => {
     });
   });
 
+  describe("findIdByEmail", () => {
+    it("finds an account whose address differs only in case", async () => {
+      // What an OAuth sign-up leaves behind, against the lowercased address Better
+      // Auth stores on the invitation.
+      const userId = await testApp.createTestUser({ email: "Invitee@Example.com" });
+
+      const result = await repository.findIdByEmail("invitee@example.com");
+
+      assertSuccess(result);
+      expect(result.value).toBe(userId);
+    });
+
+    it("returns null for an address with no account", async () => {
+      const result = await repository.findIdByEmail("nobody@example.com");
+
+      assertSuccess(result);
+      expect(result.value).toBeNull();
+    });
+  });
+
+  describe("findPendingOrganizationInvitationsByEmail", () => {
+    const INVITEE_EMAIL = "Invitee@Example.com";
+    let inviterId: string;
+    let organizationId: string;
+
+    beforeEach(async () => {
+      inviterId = await testApp.createTestUser({ name: "Ivy Inviter" });
+      organizationId = await testApp.createOrganization("Photosynthesis Lab");
+    });
+
+    const seedInvitation = (options: { expiresAt?: Date; status?: string } = {}) =>
+      testApp.addOrganizationInvitation({
+        organizationId,
+        email: INVITEE_EMAIL,
+        inviterId,
+        ...options,
+      });
+
+    it("returns every waiting invitation with its organization name", async () => {
+      const first = await seedInvitation();
+      const secondOrganizationId = await testApp.createOrganization("Canopy Lab");
+      const second = await testApp.addOrganizationInvitation({
+        organizationId: secondOrganizationId,
+        email: INVITEE_EMAIL,
+        inviterId,
+        role: "admin",
+      });
+
+      const result = await repository.findPendingOrganizationInvitationsByEmail(INVITEE_EMAIL);
+
+      assertSuccess(result);
+      expect(result.value).toEqual(
+        expect.arrayContaining([
+          {
+            id: first.id,
+            organizationId,
+            inviterId,
+            role: "member",
+            organizationName: "Photosynthesis Lab",
+          },
+          {
+            id: second.id,
+            organizationId: secondOrganizationId,
+            inviterId,
+            role: "admin",
+            organizationName: "Canopy Lab",
+          },
+        ]),
+      );
+      expect(result.value).toHaveLength(2);
+    });
+
+    it("matches an address that differs only in case", async () => {
+      const seeded = await seedInvitation();
+
+      // Better Auth lowercases the invitation address; the account may carry any case.
+      const result = await repository.findPendingOrganizationInvitationsByEmail(
+        INVITEE_EMAIL.toUpperCase(),
+      );
+
+      assertSuccess(result);
+      expect(result.value.map(({ id }) => id)).toEqual([seeded.id]);
+    });
+
+    it("leaves out a lapsed invitation", async () => {
+      await seedInvitation({ expiresAt: new Date(Date.now() - 1000) });
+
+      const result = await repository.findPendingOrganizationInvitationsByEmail(INVITEE_EMAIL);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([]);
+    });
+
+    it("leaves out a cancelled invitation", async () => {
+      await seedInvitation({ status: "canceled" });
+
+      const result = await repository.findPendingOrganizationInvitationsByEmail(INVITEE_EMAIL);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([]);
+    });
+
+    it("leaves out somebody else's invitation", async () => {
+      await seedInvitation();
+
+      const result =
+        await repository.findPendingOrganizationInvitationsByEmail("stranger@example.com");
+
+      assertSuccess(result);
+      expect(result.value).toEqual([]);
+    });
+  });
+
   describe("search", () => {
     it("should search users without any query parameters", async () => {
       // Arrange
