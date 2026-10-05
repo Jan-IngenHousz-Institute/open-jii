@@ -1,7 +1,8 @@
-import { flows } from "@repo/database";
+import { experiments as experimentsTable, eq, flows } from "@repo/database";
 
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { UpdateFlowUseCase } from "./update-flow";
 
 describe("UpdateFlowUseCase", () => {
@@ -94,5 +95,56 @@ describe("UpdateFlowUseCase", () => {
     assertFailure(result);
     expect(result.error.statusCode).toBe(403);
     expect(result.error.message).toContain("Cannot modify an archived experiment");
+  });
+
+  const staleDate = new Date("2020-01-01T00:00:00Z");
+
+  const markStale = (experimentId: string) =>
+    testApp.database
+      .update(experimentsTable)
+      .set({ updatedAt: staleDate })
+      .where(eq(experimentsTable.id, experimentId));
+
+  const readUpdatedAt = async (experimentId: string) => {
+    const [row] = await testApp.database
+      .select({ updatedAt: experimentsTable.updatedAt })
+      .from(experimentsTable)
+      .where(eq(experimentsTable.id, experimentId));
+    return row.updatedAt;
+  };
+
+  it("marks the experiment as updated", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Touched Exp", userId: ownerId });
+    await testApp.database.insert(flows).values({
+      experimentId: experiment.id,
+      graph: testApp.sampleFlowGraph({ questionKind: "multi_choice" }),
+    });
+    await markStale(experiment.id);
+
+    const result = await useCase.execute(
+      experiment.id,
+      ownerId,
+      testApp.sampleFlowGraph({ questionKind: "multi_choice" }),
+    );
+
+    assertSuccess(result);
+    expect((await readUpdatedAt(experiment.id)).getTime()).toBeGreaterThan(staleDate.getTime());
+  });
+
+  it("still updates the flow when marking the experiment as updated fails", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "Touch Fails", userId: ownerId });
+    await testApp.database.insert(flows).values({
+      experimentId: experiment.id,
+      graph: testApp.sampleFlowGraph({ questionKind: "multi_choice" }),
+    });
+    vi.spyOn(testApp.module.get(ExperimentRepository), "touch").mockResolvedValue(
+      failure(AppError.internal("Database connection failed")),
+    );
+    const graph = testApp.sampleFlowGraph({ questionKind: "multi_choice" });
+
+    const result = await useCase.execute(experiment.id, ownerId, graph);
+
+    assertSuccess(result);
+    expect(result.value.graph).toEqual(graph);
   });
 });

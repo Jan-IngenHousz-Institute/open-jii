@@ -11,17 +11,16 @@ import type {
 import type { ErrorResponse } from "@repo/api/shared/errors";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
+import { EmailAdapter } from "../../common/modules/email/services/email.adapter";
 import { success } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
-import type { EmailPort } from "../core/ports/email.port";
-import { EMAIL_PORT } from "../core/ports/email.port";
 
 describe("ExperimentJoinRequestsController", () => {
   const testApp = TestHarness.App;
   let adminUserId: string;
   let requesterUserId: string;
-  let emailPort: EmailPort;
+  let emailAdapter: EmailAdapter;
 
   beforeAll(async () => {
     await testApp.setup();
@@ -34,15 +33,15 @@ describe("ExperimentJoinRequestsController", () => {
       email: "requester@example.com",
       name: "Joe Requester",
     });
-    emailPort = testApp.module.get(EMAIL_PORT);
-    // Default: every email port call resolves successfully
-    vi.spyOn(emailPort, "sendJoinRequestSubmittedNotification").mockResolvedValue(
+    emailAdapter = testApp.module.get(EmailAdapter);
+    // Default: every notification email resolves successfully
+    vi.spyOn(emailAdapter, "sendJoinRequestSubmittedNotification").mockResolvedValue(
       success(undefined),
     );
-    vi.spyOn(emailPort, "sendJoinRequestRejectedNotification").mockResolvedValue(
+    vi.spyOn(emailAdapter, "sendJoinRequestRejectedNotification").mockResolvedValue(
       success(undefined),
     );
-    vi.spyOn(emailPort, "sendAddedUserNotification").mockResolvedValue(success(undefined));
+    vi.spyOn(emailAdapter, "sendAddedUserNotification").mockResolvedValue(success(undefined));
   });
 
   afterEach(() => {
@@ -78,7 +77,7 @@ describe("ExperimentJoinRequestsController", () => {
       });
       expect(response.body.user.id).toBe(requesterUserId);
 
-      expect(emailPort.sendJoinRequestSubmittedNotification).toHaveBeenCalledWith(
+      expect(emailAdapter.sendJoinRequestSubmittedNotification).toHaveBeenCalledWith(
         experiment.id,
         experiment.name,
         expect.any(String),
@@ -218,7 +217,7 @@ describe("ExperimentJoinRequestsController", () => {
       );
 
       // Standard membership-change email fires
-      expect(emailPort.sendAddedUserNotification).toHaveBeenCalledWith(
+      expect(emailAdapter.sendAddedUserNotification).toHaveBeenCalledWith(
         experiment.id,
         experiment.name,
         expect.any(String),
@@ -270,7 +269,7 @@ describe("ExperimentJoinRequestsController", () => {
         .expect(StatusCodes.CREATED);
 
       await testApp.addExperimentCollaborator(experiment.id, requesterUserId);
-      vi.mocked(emailPort).sendAddedUserNotification.mockClear();
+      vi.mocked(emailAdapter).sendAddedUserNotification.mockClear();
 
       const approvePath = testApp.resolveOrpcPath(contract.experiments.approveJoinRequest, {
         id: experiment.id,
@@ -289,7 +288,7 @@ describe("ExperimentJoinRequestsController", () => {
         id: experiment.id,
       });
       await testApp.get(mePath).withAuth(requesterUserId).expect(StatusCodes.NOT_FOUND);
-      expect(vi.mocked(emailPort).sendAddedUserNotification.mock.calls).toHaveLength(0);
+      expect(vi.mocked(emailAdapter).sendAddedUserNotification.mock.calls).toHaveLength(0);
     });
   });
 
@@ -323,7 +322,7 @@ describe("ExperimentJoinRequestsController", () => {
 
       expect(rejectResponse.body.status).toBe("rejected");
 
-      expect(emailPort.sendJoinRequestRejectedNotification).toHaveBeenCalledWith(
+      expect(emailAdapter.sendJoinRequestRejectedNotification).toHaveBeenCalledWith(
         experiment.id,
         experiment.name,
         "requester@example.com",
@@ -347,7 +346,7 @@ describe("ExperimentJoinRequestsController", () => {
         .expect(StatusCodes.CREATED);
 
       await testApp.addExperimentCollaborator(experiment.id, requesterUserId);
-      vi.mocked(emailPort).sendJoinRequestRejectedNotification.mockClear();
+      vi.mocked(emailAdapter).sendJoinRequestRejectedNotification.mockClear();
 
       const rejectPath = testApp.resolveOrpcPath(contract.experiments.rejectJoinRequest, {
         id: experiment.id,
@@ -366,7 +365,9 @@ describe("ExperimentJoinRequestsController", () => {
         id: experiment.id,
       });
       await testApp.get(mePath).withAuth(requesterUserId).expect(StatusCodes.NOT_FOUND);
-      expect(vi.mocked(emailPort).sendJoinRequestRejectedNotification.mock.calls).toHaveLength(0);
+      expect(vi.mocked(emailAdapter).sendJoinRequestRejectedNotification.mock.calls).toHaveLength(
+        0,
+      );
     });
   });
 

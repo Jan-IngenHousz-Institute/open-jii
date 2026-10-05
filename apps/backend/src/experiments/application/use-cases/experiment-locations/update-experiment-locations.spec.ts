@@ -1,3 +1,5 @@
+import { experiments as experimentsTable, eq } from "@repo/database";
+
 import {
   assertFailure,
   assertSuccess,
@@ -321,5 +323,57 @@ describe("UpdateExperimentLocationsUseCase", () => {
     assertFailure(result);
     expect(result.error.message).toContain("Failed to update locations");
     expect(result.error.message).toContain("Database transaction failed");
+  });
+
+  const staleDate = new Date("2020-01-01T00:00:00Z");
+
+  const markStale = (experimentId: string) =>
+    testApp.database
+      .update(experimentsTable)
+      .set({ updatedAt: staleDate })
+      .where(eq(experimentsTable.id, experimentId));
+
+  const readUpdatedAt = async (experimentId: string) => {
+    const [row] = await testApp.database
+      .select({ updatedAt: experimentsTable.updatedAt })
+      .from(experimentsTable)
+      .where(eq(experimentsTable.id, experimentId));
+    return row.updatedAt;
+  };
+
+  it("marks the experiment as updated", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Touched Locations Experiment",
+      userId: testUserId,
+    });
+    await markStale(experiment.id);
+
+    const result = await useCase.execute(
+      experiment.id,
+      [{ experimentId: experiment.id, name: "Field A", latitude: 52.1, longitude: 5.1 }],
+      testUserId,
+    );
+
+    assertSuccess(result);
+    expect((await readUpdatedAt(experiment.id)).getTime()).toBeGreaterThan(staleDate.getTime());
+  });
+
+  it("still saves the locations when marking the experiment as updated fails", async () => {
+    const { experiment } = await testApp.createExperiment({
+      name: "Touch Fails Locations Experiment",
+      userId: testUserId,
+    });
+    vi.spyOn(testApp.module.get(ExperimentRepository), "touch").mockResolvedValue(
+      failure(AppError.internal("Database connection failed")),
+    );
+
+    const result = await useCase.execute(
+      experiment.id,
+      [{ experimentId: experiment.id, name: "Field B", latitude: 52.2, longitude: 5.2 }],
+      testUserId,
+    );
+
+    assertSuccess(result);
+    expect(result.value).toHaveLength(1);
   });
 });

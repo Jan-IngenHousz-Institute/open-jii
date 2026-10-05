@@ -1,12 +1,11 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import type { ExperimentJoinRequestDto } from "../../../core/models/experiment-join-request.model";
 import { ExperimentDto } from "../../../core/models/experiment.model";
-import { EMAIL_PORT } from "../../../core/ports/email.port";
-import type { EmailPort } from "../../../core/ports/email.port";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 
@@ -18,7 +17,7 @@ export class RejectJoinRequestUseCase {
     private readonly authz: AuthorizationService,
     private readonly experimentRepository: ExperimentRepository,
     private readonly joinRequestRepository: ExperimentJoinRequestRepository,
-    @Inject(EMAIL_PORT) private readonly emailPort: EmailPort,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   async execute(
@@ -97,22 +96,24 @@ export class RejectJoinRequestUseCase {
       }
 
       const rejected = rejectResult.value;
-      if (rejected.user.email) {
-        const emailResult = await this.emailPort.sendJoinRequestRejectedNotification(
+
+      const dispatched = await this.notifications.dispatch({
+        type: "experiment_join_request_rejected",
+        recipientIds: [rejected.user.id],
+        actorId: currentUserId,
+        resource: { type: "experiment", id: experimentId },
+        params: { experimentName: experiment.name },
+      });
+
+      if (dispatched.isFailure()) {
+        this.logger.error({
+          msg: "Failed to notify the requester of the rejection, the request was still rejected",
+          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+          operation: "reject-join-request",
           experimentId,
-          experiment.name,
-          rejected.user.email,
-        );
-        if (emailResult.isFailure()) {
-          this.logger.error({
-            msg: "Failed to send rejection email; request was still rejected",
-            errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-            operation: "reject-join-request",
-            experimentId,
-            requestId,
-            email: rejected.user.email,
-          });
-        }
+          requestId,
+          error: dispatched.error,
+        });
       }
 
       return success(rejected);

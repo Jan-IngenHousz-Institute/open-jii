@@ -23,6 +23,7 @@ import { iotContract } from "./domains/iot/iot.contract";
 import { macroContract } from "./domains/macro/macro.contract";
 import { metricsContract } from "./domains/metrics/metrics.contract";
 import { newsletterContract } from "./domains/newsletter/newsletter.contract";
+import { notificationContract } from "./domains/notification/notification.contract";
 import { organizationJoinRequestsContract } from "./domains/organization/join-requests/organization-join-requests.contract";
 import { organizationContract } from "./domains/organization/organization.contract";
 import { protocolContract } from "./domains/protocol/protocol.contract";
@@ -67,6 +68,7 @@ export const contract = {
   macros: macroContract,
   metrics: metricsContract,
   newsletter: newsletterContract,
+  notifications: notificationContract,
   organizations: { ...organizationContract, ...organizationJoinRequestsContract },
   protocols: protocolContract,
   search: searchContract,

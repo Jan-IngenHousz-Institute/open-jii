@@ -10,23 +10,6 @@ export const EMAIL_PORT = Symbol("EMAIL_PORT");
  */
 export interface EmailPort {
   /**
-   * Sends a notification email when a user is added to an experiment
-   *
-   * @param experimentId - The ID of the experiment
-   * @param experimentName - The name of the experiment
-   * @param actor - The user who added the new member
-   * @param role - The role assigned to the new member
-   * @param email - The email address of the new member
-   */
-  sendAddedUserNotification(
-    experimentId: string,
-    experimentName: string,
-    actor: string,
-    role: string,
-    email: string,
-  ): Promise<Result<void>>;
-
-  /**
    * Sends a confirmation email when a user submits a project transfer request
    *
    * @param email - The email address to send the confirmation to
@@ -50,25 +33,5 @@ export interface EmailPort {
     email: string,
     experimentId: string,
     experimentName: string,
-  ): Promise<Result<void>>;
-
-  /**
-   * Sends a notification email to an experiment admin when a user submits a join request.
-   */
-  sendJoinRequestSubmittedNotification(
-    experimentId: string,
-    experimentName: string,
-    requesterName: string,
-    adminEmail: string,
-    message?: string,
-  ): Promise<Result<void>>;
-
-  /**
-   * Sends a neutral rejection email to a user whose join request was rejected.
-   */
-  sendJoinRequestRejectedNotification(
-    experimentId: string,
-    experimentName: string,
-    requesterEmail: string,
   ): Promise<Result<void>>;
 }

@@ -2,9 +2,10 @@
 import { faker } from "@faker-js/faker";
 import { StatusCodes } from "http-status-codes";
 
-import { and, eq, experimentJoinRequests, resourceGrants } from "@repo/database";
+import { and, eq, experimentJoinRequests, notifications, resourceGrants } from "@repo/database";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
+import { EmailAdapter } from "../../../../common/modules/email/services/email.adapter";
 import {
   assertFailure,
   assertSuccess,
@@ -12,10 +13,8 @@ import {
   success,
   AppError,
 } from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import { TestHarness } from "../../../../test/test-harness";
-import { UserRepository } from "../../../../users/core/repositories/user.repository";
-import type { EmailPort } from "../../../core/ports/email.port";
-import { EMAIL_PORT } from "../../../core/ports/email.port";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
 import { ApproveJoinRequestUseCase } from "./approve-join-request";
 
@@ -23,11 +22,13 @@ describe("ApproveJoinRequestUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: ApproveJoinRequestUseCase;
   let joinRequestRepository: ExperimentJoinRequestRepository;
-  let userRepository: UserRepository;
-  let emailPort: EmailPort;
+  let emailAdapter: EmailAdapter;
   let authz: AuthorizationService;
   let adminUserId: string;
   let requesterUserId: string;
+
+  const notificationsFor = (userId: string) =>
+    testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
 
   beforeAll(async () => {
     await testApp.setup();
@@ -42,10 +43,9 @@ describe("ApproveJoinRequestUseCase", () => {
     });
     useCase = testApp.module.get(ApproveJoinRequestUseCase);
     joinRequestRepository = testApp.module.get(ExperimentJoinRequestRepository);
-    userRepository = testApp.module.get(UserRepository);
-    emailPort = testApp.module.get(EMAIL_PORT);
+    emailAdapter = testApp.module.get(EmailAdapter);
     authz = testApp.module.get(AuthorizationService);
-    vi.spyOn(emailPort, "sendAddedUserNotification").mockResolvedValue(success(undefined));
+    vi.spyOn(emailAdapter, "sendAddedUserNotification").mockResolvedValue(success(undefined));
   });
 
   afterEach(() => {
@@ -150,8 +150,9 @@ describe("ApproveJoinRequestUseCase", () => {
     assertFailure(result);
     expect(result.error.statusCode).toBe(StatusCodes.CONFLICT);
     expect(result.error.message).toContain("already has access");
-    // No duplicate membership email.
-    expect(emailPort.sendAddedUserNotification).not.toHaveBeenCalled();
+    // A moot request notifies nobody.
+    expect(emailAdapter.sendAddedUserNotification).not.toHaveBeenCalled();
+    expect(await notificationsFor(requesterUserId)).toHaveLength(0);
     // The stale request was closed (cancelled).
     const reread = await joinRequestRepository.findById(request.id);
     assertSuccess(reread);
@@ -185,7 +186,7 @@ describe("ApproveJoinRequestUseCase", () => {
     expect(result.error.message).toContain("Failed to approve join request");
   });
 
-  it("approves the request, records the decider, and sends the membership email", async () => {
+  it("approves the request, records the decider, and notifies the requester", async () => {
     const { experiment, request } = await seedPendingRequest();
 
     const result = await useCase.execute(experiment.id, request.id, adminUserId);
@@ -193,7 +194,17 @@ describe("ApproveJoinRequestUseCase", () => {
     assertSuccess(result);
     expect(result.value.status).toBe("approved");
     expect(result.value.decidedBy).toBe(adminUserId);
-    expect(emailPort.sendAddedUserNotification).toHaveBeenCalledWith(
+
+    const [row] = await notificationsFor(requesterUserId);
+    expect(row).toMatchObject({
+      type: "experiment_join_request_approved",
+      actorId: adminUserId,
+      resourceType: "experiment",
+      resourceId: experiment.id,
+      params: { experimentName: experiment.name },
+    });
+
+    expect(emailAdapter.sendAddedUserNotification).toHaveBeenCalledWith(
       experiment.id,
       experiment.name,
       "Adam Admin",
@@ -267,7 +278,8 @@ describe("ApproveJoinRequestUseCase", () => {
     }
     expect(refused[0].error.statusCode).toBe(StatusCodes.CONFLICT);
     expect(refused[0].error.message).toContain("no longer pending");
-    expect(emailPort.sendAddedUserNotification).toHaveBeenCalledTimes(1);
+    expect(emailAdapter.sendAddedUserNotification).toHaveBeenCalledTimes(1);
+    expect(await notificationsFor(requesterUserId)).toHaveLength(1);
 
     const decisions = await testApp.database
       .select({
@@ -281,28 +293,22 @@ describe("ApproveJoinRequestUseCase", () => {
     expect([adminUserId, secondAdminUserId]).toContain(decisions[0].decidedBy);
   });
 
-  it("falls back to a generic actor name when the approver profile lookup fails", async () => {
+  it("still approves successfully when the membership email fails to send", async () => {
     const { experiment, request } = await seedPendingRequest();
-    vi.spyOn(userRepository, "findUserProfile").mockResolvedValue(
-      failure(AppError.internal("boom")),
+    vi.spyOn(emailAdapter, "sendAddedUserNotification").mockResolvedValue(
+      failure(AppError.internal("smtp down")),
     );
 
     const result = await useCase.execute(experiment.id, request.id, adminUserId);
 
     assertSuccess(result);
-    expect(emailPort.sendAddedUserNotification).toHaveBeenCalledWith(
-      experiment.id,
-      experiment.name,
-      "An openJII admin",
-      "a contributor who can view and add data",
-      "requester@example.com",
-    );
+    expect(result.value.status).toBe("approved");
   });
 
-  it("still approves successfully when the membership email fails to send", async () => {
+  it("still approves successfully when the notification cannot be dispatched", async () => {
     const { experiment, request } = await seedPendingRequest();
-    vi.spyOn(emailPort, "sendAddedUserNotification").mockResolvedValue(
-      failure(AppError.internal("smtp down")),
+    vi.spyOn(testApp.module.get(NotificationDispatchService), "dispatch").mockResolvedValue(
+      failure(AppError.internal("notifications unavailable")),
     );
 
     const result = await useCase.execute(experiment.id, request.id, adminUserId);
