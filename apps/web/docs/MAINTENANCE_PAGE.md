@@ -45,6 +45,22 @@ the UI used by all of the boundaries above.
 Authenticated `/platform/**` pages do not read from Contentful, so a Contentful
 outage does not affect them.
 
+### Cached public pages
+
+The public pages are rendered once and regenerated at most every 300 seconds
+(`revalidate` in their routes), and CloudFront serves the stored copy in between.
+That changes how an outage shows:
+
+- **While a page is cached**, a failed regeneration keeps the last good copy in
+  service. Visitors keep seeing real content through the outage.
+- **With nothing cached yet**, right after a deploy, a page whose render fails
+  answers a plain 500, not the maintenance page: a failed static render produces
+  no page for the error boundaries to show. A failed render is never cached, so
+  the page recovers on the first request after Contentful does.
+- **A degraded render is cached like any other.** If the footer or the alerts bar
+  could not be read when a page regenerated, that page stays without them until
+  the next regeneration, at most 300 seconds later.
+
 ## Mobile app
 
 The mobile app (`apps/mobile`) reads from Contentful in two places, and both
