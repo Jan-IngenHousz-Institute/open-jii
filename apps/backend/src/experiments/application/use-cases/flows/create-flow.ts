@@ -38,7 +38,19 @@ export class CreateFlowUseCase {
         if (flow) {
           return failure(AppError.badRequest("Flow already exists for this experiment"));
         }
-        return this.flowRepository.create(experimentId, graph);
+        const written = await this.flowRepository.create(experimentId, graph);
+        if (written.isFailure()) return written;
+        // The flow is already saved; a missed bump only affects list ordering.
+        const touched = await this.experimentRepository.touch(experimentId);
+        if (touched.isFailure()) {
+          this.logger.warn({
+            msg: "Failed to mark experiment as updated",
+            operation: "createFlow",
+            experimentId,
+            error: touched.error.message,
+          });
+        }
+        return written;
       });
     });
   }

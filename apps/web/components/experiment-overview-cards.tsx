@@ -7,14 +7,21 @@ import React from "react";
 import type { ExperimentListItem } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n";
 
+/**
+ * Renders experiment cards with aligned badge rows and links to active or archived experiment details.
+ * Handles loading and empty states and optionally labels each card's update date.
+ */
 export function ExperimentOverviewCards({
   experiments,
   archived = false,
   showGetStartedHelp = false,
+  showUpdatedLabel = false,
 }: {
   experiments: ExperimentListItem[] | undefined;
   archived?: boolean;
   showGetStartedHelp?: boolean;
+  /** Prefix each card's date with "Updated", for places without a column header to say so. */
+  showUpdatedLabel?: boolean;
 }) {
   const { t } = useTranslation("experiments");
   const locale = useLocale();
@@ -38,6 +45,7 @@ export function ExperimentOverviewCards({
           href={`/${locale}/platform/${segment}/${experiment.id}`}
           locale={locale}
           reserveBadgeRow={reserveBadgeRow}
+          showUpdatedLabel={showUpdatedLabel}
         />
       ))}
     </ResourceCardGrid>

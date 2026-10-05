@@ -403,6 +403,27 @@ describe("ExperimentController", () => {
       expect(response.body[0].status).toBe("active");
     });
 
+    it("should filter experiments by visibility", async () => {
+      const { experiment: publicExperiment } = await testApp.createExperiment({
+        name: "Public Experiment",
+        userId: testUserId,
+        visibility: "public",
+      });
+      await testApp.createExperiment({
+        name: "Private Experiment",
+        userId: testUserId,
+        visibility: "private",
+      });
+
+      const response: SuperTestResponse<ExperimentList> = await testApp
+        .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
+        .withAuth(testUserId)
+        .query({ visibility: "public" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body.map((experiment) => experiment.id)).toEqual([publicExperiment.id]);
+    });
+
     it("should combine filter and status parameters", async () => {
       // Create an active experiment owned by test user
       const { experiment: myActive } = await testApp.createExperiment({
