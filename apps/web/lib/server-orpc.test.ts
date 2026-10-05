@@ -58,18 +58,15 @@ describe("createServerOrpcClient auth boundary", () => {
     vi.clearAllMocks();
   });
 
-  it("forwards the exact incoming cookies as the only cookie header, tagged with the app source", async () => {
+  it("forwards the exact incoming cookies as the only header", async () => {
     cookieStore.value = "session=secret-token; theme=dark";
 
     await createServerOrpcClient();
 
     expect(OpenAPILink).toHaveBeenCalledTimes(1);
     const headers = latestHeaders();
-    // Exactly the app-source tag plus the verbatim incoming cookie: nothing more.
-    expect(headers).toEqual({
-      "x-app-source": "orpc",
-      cookie: "session=secret-token; theme=dark",
-    });
+    // Exactly the verbatim incoming cookie: nothing more.
+    expect(headers).toEqual({ cookie: "session=secret-token; theme=dark" });
     // The cookie value is not smuggled into the request URL either.
     expect(latestOptions().url).not.toContain("secret-token");
   });
@@ -80,8 +77,7 @@ describe("createServerOrpcClient auth boundary", () => {
     await createServerOrpcClient();
 
     const headers = latestHeaders();
-    expect(headers).toEqual({ "x-app-source": "orpc" });
-    expect(headers).not.toHaveProperty("cookie");
+    expect(headers).toEqual({});
   });
 
   it("builds a fresh link per call and never logs the cookie value (no persistent cache)", async () => {

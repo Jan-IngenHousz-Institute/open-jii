@@ -20,10 +20,7 @@ export async function createServerOrpcClient(): Promise<ContractRouterClient<typ
   const cookieHeader = (await cookies()).toString();
   const link = new OpenAPILink(contract, {
     url: env.NEXT_PUBLIC_API_URL,
-    headers: () => ({
-      "x-app-source": "orpc",
-      ...(cookieHeader ? { cookie: cookieHeader } : {}),
-    }),
+    headers: () => (cookieHeader ? { cookie: cookieHeader } : {}),
   });
   return createORPCClient(link);
 }
