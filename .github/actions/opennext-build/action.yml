@@ -85,3 +85,11 @@ runs:
           exit 1
         fi
         echo "  [ok] no pnpm virtual store in server bundle"
+
+        # OpenNext logs a failed sharp install and carries on; Next then serves every image unoptimized
+        SHARP_ARM64="apps/web/.open-next/image-optimization-function/node_modules/@img/sharp-linux-arm64"
+        if [[ ! -d "$SHARP_ARM64" ]]; then
+          echo "::error::Image optimization bundle has no linux-arm64 sharp (${SHARP_ARM64}); the arm64 image Lambda could not resize anything"
+          exit 1
+        fi
+        echo "  [ok] linux-arm64 sharp in image optimization bundle"
