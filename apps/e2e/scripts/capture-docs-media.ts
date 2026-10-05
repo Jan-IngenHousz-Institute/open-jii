@@ -21,9 +21,16 @@ import { dismissCookieBanner, locale } from "../helpers.js";
 
 const baseUrl = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 const authFile = path.join(import.meta.dirname, "..", ".auth", "seed.json");
+const newcomerAuthFile = path.join(import.meta.dirname, "..", ".auth", "newcomer.json");
 const stagingDirectory =
   process.env.OPENJII_CAPTURE_STAGING_DIR ??
   path.join(import.meta.dirname, "../../docs/.capture/web");
+
+function storageStateForShot(shot: Shot): string | undefined {
+  if (shot.anonymous) return undefined;
+  if (shot.session === "newcomer") return newcomerAuthFile;
+  return authFile;
+}
 
 /**
  * Development-only overlays that are not part of the product. Suppressing them
@@ -233,7 +240,7 @@ try {
       colorScheme: options.theme,
       deviceScaleFactor: frame.deviceScaleFactor,
       // Unauthenticated surfaces must not carry a session.
-      storageState: shot.anonymous ? undefined : authFile,
+      storageState: storageStateForShot(shot),
       recordVideo: shot.perform ? { dir: stagingDirectory, size: frame.viewport } : undefined,
       reducedMotion: "reduce",
       viewport: frame.viewport,

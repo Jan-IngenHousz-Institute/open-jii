@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -13,19 +14,20 @@ import {
 } from "../helpers.js";
 
 const authFile = path.join(import.meta.dirname, "..", ".auth", "seed.json");
+const newcomerAuthFile = path.join(import.meta.dirname, "..", ".auth", "newcomer.json");
 
-setup("authenticate as the seed user", async ({ page }) => {
-  await fs.mkdir(path.dirname(authFile), { recursive: true });
+async function authenticate(page: Page, email: string, outputFile: string) {
+  await fs.mkdir(path.dirname(outputFile), { recursive: true });
   await page.goto(`/${locale}/login`, { waitUntil: "domcontentloaded" });
   await dismissCookieBanner(page);
 
   const emailInput = page.getByPlaceholder("Enter your email...");
-  await emailInput.fill(seedEmail);
-  await expect(emailInput).toHaveValue(seedEmail);
+  await emailInput.fill(email);
+  await expect(emailInput).toHaveValue(email);
 
-  const previousOtp = await readLatestSignInOtp(databaseUrl, seedEmail).catch(() => null);
+  const previousOtp = await readLatestSignInOtp(databaseUrl, email).catch(() => null);
   await page.getByRole("button", { name: "Continue with Email" }).click();
-  const otp = await waitForFreshOtp(databaseUrl, seedEmail, previousOtp);
+  const otp = await waitForFreshOtp(databaseUrl, email, previousOtp);
 
   const codeInput = page.locator('input[autocomplete="one-time-code"]');
   await expect(codeInput).toBeVisible({ timeout: 10_000 });
@@ -39,5 +41,13 @@ setup("authenticate as the seed user", async ({ page }) => {
     .catch(() => false);
   if (passkeyPromptAppeared) await passkeyDismiss.click();
 
-  await page.context().storageState({ path: authFile });
+  await page.context().storageState({ path: outputFile });
+}
+
+setup("authenticate as the seed user", async ({ page }) => {
+  await authenticate(page, seedEmail, authFile);
+});
+
+setup("authenticate as the newcomer", async ({ page }) => {
+  await authenticate(page, "newcomer@openjii.local", newcomerAuthFile);
 });

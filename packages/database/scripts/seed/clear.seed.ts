@@ -20,14 +20,20 @@ import {
   resourceGrants,
   workbooks,
 } from "../../src/schema";
-import { SEED_EMAIL, SEED_PREFIX, SEED_EXPERIMENT_IDS, CONTRIBUTOR_SEEDS } from "./constants";
+import {
+  NEWCOMER_EMAIL,
+  SEED_EMAIL,
+  SEED_PREFIX,
+  SEED_EXPERIMENT_IDS,
+  CONTRIBUTOR_SEEDS,
+} from "./constants";
 
 export async function clearSeedData() {
   // User + profile (seed user)
   const seedUsers = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.email, SEED_EMAIL));
+    .where(inArray(users.email, [SEED_EMAIL, NEWCOMER_EMAIL]));
 
   // Contributor users keyed by fixed UUIDs. We can't filter by email
   // pattern since the silver pipeline picks the contributor UUIDs, not us.
@@ -132,8 +138,9 @@ export async function clearSeedData() {
   }
 
   if (seedUsers.length > 0) {
-    await db.delete(profiles).where(eq(profiles.userId, seedUsers[0].id));
-    await db.delete(users).where(eq(users.id, seedUsers[0].id));
+    const seedUserIds = seedUsers.map((user) => user.id);
+    await db.delete(profiles).where(inArray(profiles.userId, seedUserIds));
+    await db.delete(users).where(inArray(users.id, seedUserIds));
   }
   await db.delete(profiles).where(inArray(profiles.userId, contributorIds));
   await db.delete(users).where(inArray(users.id, contributorIds));
