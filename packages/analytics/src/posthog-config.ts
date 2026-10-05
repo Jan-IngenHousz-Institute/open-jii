@@ -13,6 +13,7 @@ export interface PostHogConfig {
   capture_pageview?: boolean;
   capture_pageleave?: boolean;
   capture_exceptions?: boolean;
+  capture_dead_clicks?: boolean;
   debug?: boolean;
   [key: string]: unknown;
 }
@@ -46,6 +47,9 @@ export function createPostHogClientConfig(
     capture_pageview: true,
     capture_pageleave: true,
     capture_exceptions: true,
+    // Off in code: a project setting would turn it on, and its observer runs on every click
+    // whether or not the visitor accepted analytics.
+    capture_dead_clicks: false,
     debug: false, // Set to true for debugging PostHog issues
     ...options,
   };
