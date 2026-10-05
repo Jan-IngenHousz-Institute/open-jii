@@ -487,6 +487,20 @@
             "allowReserved": true
           },
           {
+            "name": "visibility",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "private",
+                "public"
+              ],
+              "type": "string",
+              "description": "Filter experiments by their visibility"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
             "name": "search",
             "in": "query",
             "schema": {

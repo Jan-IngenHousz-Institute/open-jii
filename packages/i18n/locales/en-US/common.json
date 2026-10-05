@@ -909,7 +909,12 @@
     "statistics": "Statistics",
     "quickActions": "Quick Actions",
     "noBlogPosts": "No blog posts available",
-    "errorLoadingBlogPosts": "Error loading blog posts"
+    "errorLoadingBlogPosts": "Error loading blog posts",
+    "recentPublicExperiments": "Recently updated public experiments",
+    "noPublicExperiments": "No public experiments yet.",
+    "publicExperimentsLoadFailed": "Could not load public experiments.",
+    "publicExperimentsStale": "No public experiment has been updated since {{date}}.",
+    "browsePublicExperiments": "Browse public experiments"
   },
   "auth": {
     "login": "Sign in",

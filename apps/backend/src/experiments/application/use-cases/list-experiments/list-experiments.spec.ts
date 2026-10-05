@@ -1,3 +1,5 @@
+import { experiments as experimentsTable, eq } from "@repo/database";
+
 import { assertSuccess } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { ListExperimentsUseCase } from "./list-experiments";
@@ -279,5 +281,79 @@ describe("ListExperimentsUseCase", () => {
           e.status === "archived" || e.name === "My Unrelated" || e.name === "Other Experiment",
       ),
     ).toBe(false);
+  });
+
+  it("should return only public experiments when filtered by visibility", async () => {
+    const otherUserId = await testApp.createTestUser({ email: "public-owner@example.com" });
+    const { experiment: ownPublic } = await testApp.createExperiment({
+      name: "Own Public",
+      userId: testUserId,
+      visibility: "public",
+    });
+    await testApp.createExperiment({
+      name: "Own Private",
+      userId: testUserId,
+      visibility: "private",
+    });
+    const { experiment: otherPublic } = await testApp.createExperiment({
+      name: "Other Public",
+      userId: otherUserId,
+      visibility: "public",
+    });
+    await testApp.createExperiment({
+      name: "Other Public Archived",
+      userId: otherUserId,
+      visibility: "public",
+      status: "archived",
+    });
+
+    const result = await useCase.execute(
+      testUserId,
+      "all",
+      undefined,
+      undefined,
+      undefined,
+      "public",
+    );
+
+    assertSuccess(result);
+    expect(result.value.map((e) => e.id).sort()).toEqual([ownPublic.id, otherPublic.id].sort());
+  });
+
+  it("should page public experiments by most recent update", async () => {
+    const otherUserId = await testApp.createTestUser({ email: "recent-owner@example.com" });
+    const created = [];
+    for (const [index, day] of ["2026-01-01", "2026-03-01", "2026-02-01"].entries()) {
+      const { experiment } = await testApp.createExperiment({
+        name: `Public ${index}`,
+        userId: otherUserId,
+        visibility: "public",
+      });
+      await testApp.database
+        .update(experimentsTable)
+        .set({ updatedAt: new Date(`${day}T00:00:00Z`) })
+        .where(eq(experimentsTable.id, experiment.id));
+      created.push(experiment);
+    }
+    await testApp.createExperiment({
+      name: "Private Newest",
+      userId: testUserId,
+      visibility: "private",
+    });
+
+    const result = await useCase.executePaginated(
+      testUserId,
+      1,
+      2,
+      "all",
+      undefined,
+      undefined,
+      [{ field: "updated", direction: "desc" }],
+      "public",
+    );
+
+    assertSuccess(result);
+    expect(result.value.totalCount).toBe(3);
+    expect(result.value.items.map((e) => e.id)).toEqual([created[1].id, created[2].id]);
   });
 });

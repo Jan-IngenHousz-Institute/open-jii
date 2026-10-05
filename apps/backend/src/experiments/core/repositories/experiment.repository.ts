@@ -5,6 +5,7 @@ import { ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema
 import type {
   ExperimentMembershipStatus,
   ExperimentSort,
+  ExperimentVisibility,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ResourceScope } from "@repo/api/shared/listing";
 import {
@@ -290,10 +291,11 @@ export class ExperimentRepository {
     options?: {
       organizationId?: string;
       includeArchived?: boolean;
+      visibility?: ExperimentVisibility;
     },
     sort?: ExperimentSort,
   ) {
-    const { organizationId, includeArchived = false } = options ?? {};
+    const { organizationId, includeArchived = false, visibility } = options ?? {};
 
     // What the caller may do with the row, not merely whether they can see it. Both
     // arms are uncorrelated on the caller's side, so Postgres hash-builds them once
@@ -394,6 +396,10 @@ export class ExperimentRepository {
 
       if (status) {
         conditions.push(eq(experiments.status, status));
+      }
+
+      if (visibility) {
+        conditions.push(eq(experiments.visibility, visibility));
       }
 
       // Cross-table fields matched at query time (can't live in the generated search_vector):
@@ -514,6 +520,7 @@ export class ExperimentRepository {
     options?: {
       organizationId?: string;
       includeArchived?: boolean;
+      visibility?: ExperimentVisibility;
     },
     sort?: ExperimentSort,
   ): Promise<Result<ExperimentSearchRow[]>> {
@@ -557,6 +564,7 @@ export class ExperimentRepository {
     options?: {
       organizationId?: string;
       includeArchived?: boolean;
+      visibility?: ExperimentVisibility;
     },
     sort?: ExperimentSort,
   ): Promise<Result<{ items: ExperimentSearchRow[]; totalCount: number }>> {
@@ -641,6 +649,16 @@ export class ExperimentRepository {
         .where(eq(experiments.id, id))
         .returning(experimentColumns),
     );
+  }
+
+  /** Locations and the flow live in their own tables, so editing them bumps `updated_at` here. */
+  async touch(id: string): Promise<Result<void>> {
+    return tryCatch(async () => {
+      await this.database
+        .update(experiments)
+        .set({ updatedAt: sql`(now() AT TIME ZONE 'UTC')` })
+        .where(eq(experiments.id, id));
+    });
   }
 
   async delete(id: string): Promise<Result<void>> {

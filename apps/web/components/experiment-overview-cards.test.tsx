@@ -49,6 +49,15 @@ describe("ExperimentOverviewCards", () => {
     expect(screen.queryByText("resourceVisibility.publicStatus")).not.toBeInTheDocument();
   });
 
+  it("labels the date as the last update only when asked", () => {
+    const exp = createExperiment();
+    const { rerender } = render(<ExperimentOverviewCards experiments={[exp]} />);
+    expect(screen.queryByText(/updatedOn/)).not.toBeInTheDocument();
+
+    rerender(<ExperimentOverviewCards experiments={[exp]} showUpdatedLabel />);
+    expect(screen.getByText(/updatedOn/)).toBeInTheDocument();
+  });
+
   it("links to the correct experiment page", () => {
     render(<ExperimentOverviewCards experiments={[createExperiment({ id: "abc-123" })]} />);
     expect(screen.getByRole("link")).toHaveAttribute("href", "/en-US/platform/experiments/abc-123");
