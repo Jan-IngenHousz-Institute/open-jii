@@ -36,14 +36,15 @@ const INVITE = {
   email: "invitee@example.com",
   role: "admin",
   organization: { name: "Photosynthesis Lab" },
-  inviter: { user: { id: "inviter-1", name: "Vlad Stoenescu", email: "vlad@example.com" } },
+  inviter: { user: { id: "inviter-1", name: "Ada Lovelace", email: "ada@example.com" } },
 };
 
 describe("who sends the organization invitation email", () => {
   beforeEach(() => {
     accounts.length = 0;
     inviterProfiles.length = 0;
-    inviterProfiles.push({ firstName: "Vlad", lastName: "Stoe git", activated: true });
+    // Deliberately not the account name above, so the test can tell which one was used.
+    inviterProfiles.push({ firstName: "Ada", lastName: "Byron", activated: true });
     vi.mocked(sendOrganizationInvitationEmail).mockClear();
     vi.stubEnv("AUTH_EMAIL_SERVER", "smtp://localhost:1025");
     vi.stubEnv("AUTH_EMAIL_FROM", "noreply@openjii.test");
@@ -63,7 +64,7 @@ describe("who sends the organization invitation email", () => {
       inviteUrl: "https://openjii.test/platform/account/invitations",
       organizationName: "Photosynthesis Lab",
       // The profile name, as the bell shows it — not Better Auth's `users.name`.
-      inviterName: "Vlad Stoe git",
+      inviterName: "Ada Byron",
       role: "admin",
       emailServer: "smtp://localhost:1025",
       emailFrom: "noreply@openjii.test",
@@ -85,7 +86,7 @@ describe("who sends the organization invitation email", () => {
 
   it("names a deactivated inviter the way the backend anonymises them", async () => {
     inviterProfiles.length = 0;
-    inviterProfiles.push({ firstName: "Vlad", lastName: "Stoe git", activated: false });
+    inviterProfiles.push({ firstName: "Ada", lastName: "Byron", activated: false });
 
     await sendInvitationEmailUnlessAccountExists(INVITE);
 
@@ -100,7 +101,7 @@ describe("who sends the organization invitation email", () => {
     await sendInvitationEmailUnlessAccountExists(INVITE);
 
     expect(sendOrganizationInvitationEmail).toHaveBeenCalledWith(
-      expect.objectContaining({ inviterName: "Vlad Stoenescu" }),
+      expect.objectContaining({ inviterName: "Ada Lovelace" }),
     );
   });
 
@@ -109,11 +110,11 @@ describe("who sends the organization invitation email", () => {
 
     await sendInvitationEmailUnlessAccountExists({
       ...INVITE,
-      inviter: { user: { id: "inviter-1", name: "", email: "vlad@example.com" } },
+      inviter: { user: { id: "inviter-1", name: "", email: "ada@example.com" } },
     });
 
     expect(sendOrganizationInvitationEmail).toHaveBeenCalledWith(
-      expect.objectContaining({ inviterName: "vlad@example.com" }),
+      expect.objectContaining({ inviterName: "ada@example.com" }),
     );
   });
 

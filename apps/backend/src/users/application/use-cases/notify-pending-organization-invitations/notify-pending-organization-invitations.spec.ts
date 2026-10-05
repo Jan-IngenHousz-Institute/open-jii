@@ -29,20 +29,20 @@ const invitation = (
 
 /** The repository decides which invitations are waiting; this stubs its answer. */
 function useCaseWith(pending: unknown) {
-  const findPendingOrganizationInvitationsByEmail = vi.fn().mockResolvedValue(pending);
+  const findPendingOrganizationInvitationsToNotify = vi.fn().mockResolvedValue(pending);
   const dispatch = vi.fn().mockResolvedValue(success({ created: 1, emailed: 0 }));
 
   const useCase = new NotifyPendingOrganizationInvitationsUseCase(
-    { findPendingOrganizationInvitationsByEmail } as unknown as UserRepository,
+    { findPendingOrganizationInvitationsToNotify } as unknown as UserRepository,
     { dispatch } as unknown as NotificationDispatchService,
   );
 
-  return { useCase, findPendingOrganizationInvitationsByEmail, dispatch };
+  return { useCase, findPendingOrganizationInvitationsToNotify, dispatch };
 }
 
 describe("NotifyPendingOrganizationInvitationsUseCase", () => {
   it("writes one notification per pending invitation, and no email", async () => {
-    const { useCase, findPendingOrganizationInvitationsByEmail, dispatch } = useCaseWith(
+    const { useCase, findPendingOrganizationInvitationsToNotify, dispatch } = useCaseWith(
       success([
         invitation(),
         invitation({
@@ -59,7 +59,8 @@ describe("NotifyPendingOrganizationInvitationsUseCase", () => {
 
     assertSuccess(result);
     expect(result.value).toBe(2);
-    expect(findPendingOrganizationInvitationsByEmail).toHaveBeenCalledExactlyOnceWith(
+    expect(findPendingOrganizationInvitationsToNotify).toHaveBeenCalledExactlyOnceWith(
+      "user-123",
       "test@example.com",
     );
     expect(dispatch).toHaveBeenNthCalledWith(1, {

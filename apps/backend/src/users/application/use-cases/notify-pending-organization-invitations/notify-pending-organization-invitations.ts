@@ -21,8 +21,10 @@ export class NotifyPendingOrganizationInvitationsUseCase {
 
   /** How many invitations were notified about, so a caller can log what it did. */
   async execute(userId: string, email: string): Promise<Result<number>> {
-    const pendingResult =
-      await this.userRepository.findPendingOrganizationInvitationsByEmail(email);
+    const pendingResult = await this.userRepository.findPendingOrganizationInvitationsToNotify(
+      userId,
+      email,
+    );
 
     if (pendingResult.isFailure()) {
       this.logger.error({

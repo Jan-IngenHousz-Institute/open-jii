@@ -26,6 +26,7 @@ import {
   experiments,
   experimentMembers,
   notExists,
+  notifications,
   organizationInvitations,
   organizationJoinRequests,
   organizationMembers,
@@ -131,11 +132,13 @@ export class UserRepository {
   }
 
   /**
-   * Pending, unexpired organization invitations for an address, compared lowercased.
-   * Lives here rather than in `OrganizationRepository` because `UserModule` cannot import
-   * organizations without a cycle, and the sign-in catch-up is its only caller.
+   * Pending, unexpired organization invitations for an address, compared lowercased, that
+   * the user has no notification row for yet. Runs on every sign-in, so already-notified
+   * invitations are filtered here rather than by a no-op insert each. Lives here rather
+   * than in `OrganizationRepository` because `UserModule` cannot import organizations.
    */
-  async findPendingOrganizationInvitationsByEmail(
+  async findPendingOrganizationInvitationsToNotify(
+    userId: string,
     email: string,
   ): Promise<Result<PendingOrganizationInvitation[]>> {
     return tryCatch(() =>
@@ -154,6 +157,20 @@ export class UserRepository {
             sql`lower(${organizationInvitations.email}) = lower(${email})`,
             eq(organizationInvitations.status, "pending"),
             gt(organizationInvitations.expiresAt, new Date()),
+            notExists(
+              this.database
+                .select({ one: sql`1` })
+                .from(notifications)
+                .where(
+                  and(
+                    eq(notifications.recipientId, userId),
+                    eq(
+                      notifications.dedupeKey,
+                      sql`'organization_invitation_received:' || ${organizationInvitations.id}`,
+                    ),
+                  ),
+                ),
+            ),
           ),
         ),
     );
