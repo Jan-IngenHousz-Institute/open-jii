@@ -1,38 +1,24 @@
-"use client";
+import { DevicesLayoutShell } from "@/components/iot-devices/devices-layout-shell";
+import { TranslationBundles } from "@/components/translation-bundles";
+import type { ReactNode } from "react";
 
-import { DevicesRegisterProvider } from "@/components/iot-devices/devices-register-context";
-import { PageContainer } from "@/components/page-container";
-import { useLocale } from "@/hooks/useLocale";
-import { usePathname } from "next/navigation";
+import type { Namespace } from "@repo/i18n";
+import { loadNamespaceBundles } from "@repo/i18n/server";
 
-export default function DevicesLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <DevicesRegisterProvider>
-      <DevicesLayoutInner>{children}</DevicesLayoutInner>
-    </DevicesRegisterProvider>
-  );
+const DEVICE_NAMESPACES: Namespace[] = ["iot", "experiments"];
+
+interface DevicesLayoutProps {
+  children: ReactNode;
+  params: Promise<{ locale: string }>;
 }
 
-function DevicesLayoutInner({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const locale = useLocale();
-
-  const base = `/${locale}/platform/devices`;
-  // Any deeper segment (/devices/<deviceId>) is an individual device detail,
-  // which renders without the section header (it provides its own back link).
-  const isDetail = pathname !== base && pathname !== `${base}/`;
-
-  if (isDetail) {
-    return (
-      <PageContainer width="fluid" className="space-y-6">
-        {children}
-      </PageContainer>
-    );
-  }
+export default async function DevicesLayout({ children, params }: DevicesLayoutProps) {
+  const { locale } = await params;
+  const bundles = await loadNamespaceBundles(locale, DEVICE_NAMESPACES);
 
   return (
-    <PageContainer width="fluid" className="space-y-6">
-      {children}
-    </PageContainer>
+    <TranslationBundles resources={bundles}>
+      <DevicesLayoutShell>{children}</DevicesLayoutShell>
+    </TranslationBundles>
   );
 }

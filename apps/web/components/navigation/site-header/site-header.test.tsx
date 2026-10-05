@@ -7,6 +7,12 @@ import { SidebarProvider } from "@repo/ui/components/sidebar";
 
 import { PlatformHeaderDetail, PlatformHeaderProvider } from "./platform-header-context";
 import { SiteHeader } from "./site-header";
+import { headerLabelKey, headerLabels } from "./site-header-labels";
+
+// Each label reads as its key, the way the global i18n mock renders `t`.
+const labels = Object.fromEntries(
+  headerLabels("en").map(({ key, namespace }) => [headerLabelKey(key, namespace), key]),
+);
 
 function renderHeader(
   pathname: string,
@@ -18,7 +24,7 @@ function renderHeader(
     <CalibrationFlagProvider isEnabled={isCalibrationEnabled}>
       <SidebarProvider>
         <PlatformHeaderProvider>
-          <SiteHeader locale="en" />
+          <SiteHeader locale="en" labels={labels} />
           {detail && <PlatformHeaderDetail {...detail} />}
         </PlatformHeaderProvider>
       </SidebarProvider>

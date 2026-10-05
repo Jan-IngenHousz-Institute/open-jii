@@ -5,13 +5,10 @@ import { Archive, ArrowRightLeft, ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Separator } from "@repo/ui/components/separator";
 import { SidebarTrigger } from "@repo/ui/components/sidebar";
 
-import { mainNavigation, userNavigation } from "../navigation-config";
-import type { NavLink } from "../navigation-config";
 import { usePlatformHeaderDetail } from "./platform-header-context";
 import {
   OPEN_CALIBRATION_CREATE_EVENT,
@@ -20,72 +17,15 @@ import {
   OPEN_WORKBOOK_CREATE_EVENT,
 } from "./platform-header-events";
 import type { PlatformHeaderEvent } from "./platform-header-events";
-
-interface SectionCandidate {
-  url: string;
-  titleKey: string;
-  namespace?: string;
-  exact?: boolean;
-}
-
-/**
- * One label per sidebar destination: the top-level rows, the library children
- * (protocols/macros), and account. The header shows the section, not the page:
- * detail routes keep their section label rather than fetching a resource name.
- */
-function sectionCandidates(locale: string): SectionCandidate[] {
-  const candidates: SectionCandidate[] = [];
-  const entries: NavLink[] = Object.values(mainNavigation);
-  for (const nav of entries) {
-    if (nav.navigable === false && nav.children && nav.children.length > 0) {
-      for (const child of nav.children) {
-        candidates.push({
-          url: child.url(locale),
-          titleKey: child.titleKey,
-          namespace: child.namespace,
-        });
-      }
-    } else {
-      candidates.push({
-        url: nav.url(locale),
-        titleKey: nav.titleKey,
-        namespace: nav.namespace,
-        exact: nav === mainNavigation.dashboard,
-      });
-    }
-  }
-  candidates.push({
-    url: userNavigation.account.url(locale),
-    titleKey: userNavigation.account.titleKey,
-    namespace: userNavigation.account.namespace,
-  });
-  candidates.push(
-    {
-      url: `/${locale}/platform/experiments-archive`,
-      titleKey: "experiments.archiveTitle",
-      namespace: "common",
-    },
-    {
-      url: `/${locale}/platform/transfer-request`,
-      titleKey: "transferRequest.title",
-      namespace: "common",
-    },
-    {
-      url: `/${locale}/platform/notifications`,
-      titleKey: "title",
-      namespace: "notifications",
-    },
-  );
-  return candidates;
-}
+import { headerLabelKey, sectionCandidates } from "./site-header-labels";
 
 /**
  * Compact shell header: clickable section/entity breadcrumbs on the left and
  * route-wide quick/create actions on the right. Search and filters stay beside
  * the collection they operate on instead of competing with page navigation.
  */
-export function SiteHeader({ locale }: { locale: string }) {
-  const { t } = useTranslation();
+export function SiteHeader({ locale, labels }: { locale: string; labels: Record<string, string> }) {
+  const translate: Translate = (key, namespace) => labels[headerLabelKey(key, namespace)] ?? key;
   const pathname = usePathname();
   const detailBreadcrumb = usePlatformHeaderDetail();
 
@@ -94,9 +34,9 @@ export function SiteHeader({ locale }: { locale: string }) {
       pathname === candidate.url || (!candidate.exact && pathname.startsWith(candidate.url + "/")),
   );
   const best = matches.sort((a, b) => b.url.length - a.url.length).at(0);
-  const label = best ? t(best.titleKey, { ns: best.namespace }) : null;
+  const label = best ? translate(best.titleKey, best.namespace) : null;
   const isCalibrationEnabled = useIsCalibrationEnabled();
-  const actions = overviewActions(pathname, locale, t, isCalibrationEnabled);
+  const actions = overviewActions(pathname, locale, translate, isCalibrationEnabled);
 
   return (
     <header
@@ -108,7 +48,10 @@ export function SiteHeader({ locale }: { locale: string }) {
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="h-4" />
       {label && best && (
-        <nav aria-label={t("navigation.breadcrumbs")} className="flex min-w-0 items-center gap-1">
+        <nav
+          aria-label={translate("navigation.breadcrumbs")}
+          className="flex min-w-0 items-center gap-1"
+        >
           {detailBreadcrumb ? (
             <Link
               href={best.url}
@@ -148,7 +91,7 @@ export function SiteHeader({ locale }: { locale: string }) {
   );
 }
 
-type Translate = (key: string, options?: Record<string, unknown>) => string;
+type Translate = (key: string, namespace?: string) => string;
 
 function dispatch(name: PlatformHeaderEvent) {
   window.dispatchEvent(new Event(name));
@@ -181,7 +124,7 @@ function overviewActions(
   isCalibrationEnabled: boolean,
 ) {
   if (pathname === `/${locale}/platform/experiments`) {
-    const archiveLabel = t("experiments.viewArchived", { ns: "experiments" });
+    const archiveLabel = t("experiments.viewArchived", "experiments");
     const transferLabel = t("transferRequest.title");
     return (
       <>
@@ -201,7 +144,7 @@ function overviewActions(
         </Button>
         <CreateAction
           href={`/${locale}/platform/experiments/new`}
-          label={t("experiments.create", { ns: "experiments" })}
+          label={t("experiments.create", "experiments")}
         />
       </>
     );
@@ -215,10 +158,7 @@ function overviewActions(
 
   if (pathname === `/${locale}/platform/macros`) {
     return (
-      <CreateAction
-        href={`/${locale}/platform/macros/new`}
-        label={t("macros.create", { ns: "macro" })}
-      />
+      <CreateAction href={`/${locale}/platform/macros/new`} label={t("macros.create", "macro")} />
     );
   }
 
@@ -226,7 +166,7 @@ function overviewActions(
     return (
       <EventCreateAction
         event={OPEN_WORKBOOK_CREATE_EVENT}
-        label={t("workbooks.create", { ns: "workbook" })}
+        label={t("workbooks.create", "workbook")}
       />
     );
   }
@@ -236,7 +176,7 @@ function overviewActions(
     return (
       <EventCreateAction
         event={OPEN_CALIBRATION_CREATE_EVENT}
-        label={t("iot.calibration.library.create", { ns: "iot" })}
+        label={t("iot.calibration.library.create", "iot")}
       />
     );
   }
@@ -257,15 +197,15 @@ function overviewActions(
           variant="outline"
           size="sm"
           className="hidden md:inline-flex"
-          aria-label={t("iot.devices.bulkDialog.open", { ns: "iot" })}
+          aria-label={t("iot.devices.bulkDialog.open", "iot")}
           onClick={() => dispatch(OPEN_DEVICE_BULK_REGISTER_EVENT)}
         >
           <Plus className="size-4" aria-hidden />
-          {t("iot.devices.bulkDialog.open", { ns: "iot" })}
+          {t("iot.devices.bulkDialog.open", "iot")}
         </Button>
         <EventCreateAction
           event={OPEN_DEVICE_REGISTER_EVENT}
-          label={t("iot.devices.register", { ns: "iot" })}
+          label={t("iot.devices.register", "iot")}
         />
       </>
     );

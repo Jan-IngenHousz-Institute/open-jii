@@ -188,7 +188,8 @@ vi.mock("@repo/i18n/server", () => {
     i18n: { t: (key: string) => key },
     resources: {},
   });
-  return { default: initTranslations, initTranslations };
+  const loadNamespaceBundles = vi.fn().mockResolvedValue({});
+  return { default: initTranslations, initTranslations, loadNamespaceBundles };
 });
 
 vi.mock("next/navigation", () => ({

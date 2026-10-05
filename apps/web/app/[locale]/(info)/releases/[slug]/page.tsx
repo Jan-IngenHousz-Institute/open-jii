@@ -1,4 +1,3 @@
-import { TranslationsProvider } from "@/components/translations-provider";
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
@@ -59,7 +58,7 @@ export function generateMetadata({ params }: ReleaseDetailPageProps): Promise<Me
 export default async function ReleaseDetailPage({ params }: ReleaseDetailPageProps) {
   const { locale, slug } = await params;
   const { isEnabled: preview } = await draftMode();
-  const { t, resources } = await initTranslations({ locale, namespaces: ["navigation"] });
+  const { t } = await initTranslations({ locale, namespaces: ["navigation"] });
   const [entry, all] = await Promise.all([
     getReleaseNoteBySlug(locale, slug, preview),
     getAllReleaseNotes(locale, preview),
@@ -79,7 +78,7 @@ export default async function ReleaseDetailPage({ params }: ReleaseDetailPagePro
     currentIndex >= 0 && currentIndex < all.length - 1 ? toNeighbor(all[currentIndex + 1]) : null;
 
   return (
-    <TranslationsProvider locale={locale} namespaces={["navigation"]} resources={resources}>
+    <>
       <div className="py-16 md:py-20">
         <Container className="max-w-4xl">
           <Link
@@ -99,6 +98,6 @@ export default async function ReleaseDetailPage({ params }: ReleaseDetailPagePro
           />
         </Container>
       </div>
-    </TranslationsProvider>
+    </>
   );
 }

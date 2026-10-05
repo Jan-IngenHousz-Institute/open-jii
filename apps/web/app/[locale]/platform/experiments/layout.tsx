@@ -1,24 +1,26 @@
 import { TranslationBundles } from "@/components/translation-bundles";
-import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import type { Namespace } from "@repo/i18n";
 import { loadNamespaceBundles } from "@repo/i18n/server";
 
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-};
+const EXPERIMENT_NAMESPACES: Namespace[] = [
+  "experiments",
+  "experimentData",
+  "experimentVisualizations",
+  "experimentDashboards",
+  "workbook",
+  "publicMetrics",
+];
 
-const AUTH_NAMESPACES: Namespace[] = ["account"];
-
-interface AuthLayoutProps {
+interface ExperimentsLayoutProps {
   children: ReactNode;
   params: Promise<{ locale: string }>;
 }
 
-export default async function AuthLayout({ children, params }: AuthLayoutProps) {
+export default async function ExperimentsLayout({ children, params }: ExperimentsLayoutProps) {
   const { locale } = await params;
-  const bundles = await loadNamespaceBundles(locale, AUTH_NAMESPACES);
+  const bundles = await loadNamespaceBundles(locale, EXPERIMENT_NAMESPACES);
 
   return <TranslationBundles resources={bundles}>{children}</TranslationBundles>;
 }

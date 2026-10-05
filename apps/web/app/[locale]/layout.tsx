@@ -7,13 +7,18 @@ import { isFeatureFlagEnabledForViewer } from "~/lib/posthog-server";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { ContentfulPreviewProvider } from "@repo/cms/contentful";
-import { defaultLocale, isKnownLocale, namespaces } from "@repo/i18n";
+import { defaultLocale, isKnownLocale } from "@repo/i18n";
+import type { Namespace } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
 import { AlertsBar } from "../../components/alerts-bar";
 import { PostHogIdentifier } from "../../hooks/usePostHogAuth";
 import { QueryProvider } from "../../providers/QueryProvider";
 import "../globals.css";
+
+// What every page shows, including the cookie banner outside any provider. Route
+// segments add the rest through `TranslationsSegment`.
+const PAGE_NAMESPACES: Namespace[] = ["common"];
 
 interface LocaleLayoutProps {
   children: ReactNode;
@@ -49,10 +54,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
     redirect(await defaultLocalePath(locale));
   }
 
-  const { resources } = await initTranslations({
-    locale,
-    namespaces: [...namespaces],
-  });
+  const { resources } = await initTranslations({ locale, namespaces: PAGE_NAMESPACES });
 
   return (
     <div className="bg-background flex h-full min-h-screen flex-col antialiased">
@@ -62,7 +64,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
         enableLiveUpdates={preview}
         targetOrigin={allowedOriginList}
       >
-        <TranslationsProvider locale={locale} namespaces={[...namespaces]} resources={resources}>
+        <TranslationsProvider locale={locale} namespaces={PAGE_NAMESPACES} resources={resources}>
           <AlertsBar locale={locale} preview={preview} />
           <QueryProvider>
             <PostHogIdentifier />

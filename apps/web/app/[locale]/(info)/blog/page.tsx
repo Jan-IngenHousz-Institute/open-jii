@@ -1,4 +1,3 @@
-import { TranslationsProvider } from "@/components/translations-provider";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import Link from "next/link";
@@ -64,7 +63,7 @@ export function generateMetadata({ params }: LandingPageProps): Promise<Metadata
 export default async function Page({ params }: LandingPageProps) {
   const { locale } = await params;
   const { isEnabled: preview } = await draftMode();
-  const { t, resources } = await initTranslations({ locale });
+  const { t } = await initTranslations({ locale });
 
   const { page, posts } = await getBlogData(locale, preview);
 
@@ -87,7 +86,7 @@ export default async function Page({ params }: LandingPageProps) {
   }
 
   return (
-    <TranslationsProvider locale={locale} resources={resources}>
+    <>
       <div className="from-primary/40 via-background to-background relative isolate min-h-screen overflow-hidden bg-gradient-to-br">
         {/* Background skew block */}
         <div
@@ -114,6 +113,6 @@ export default async function Page({ params }: LandingPageProps) {
           </Container>
         </div>
       </div>
-    </TranslationsProvider>
+    </>
   );
 }

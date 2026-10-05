@@ -1,6 +1,7 @@
 import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
 import { NewsletterSubscribeForm } from "@/components/newsletter/newsletter-subscribe-form";
 import { PublicMetricsPanel } from "@/components/public-metrics/public-metrics-panel";
+import { TranslationBundles } from "@/components/translation-bundles";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { Suspense, cache } from "react";
@@ -23,6 +24,8 @@ import type {
   FooterFieldsFragment,
   LandingMetadataFieldsFragment,
 } from "@repo/cms/lib/__generated/sdk";
+import type { Namespace } from "@repo/i18n";
+import { loadNamespaceBundles } from "@repo/i18n/server";
 
 interface HomePageProps {
   params: Promise<{ locale: string }>;
@@ -62,14 +65,17 @@ export function generateMetadata({ params }: HomePageProps): Promise<Metadata> {
   });
 }
 
+const HOME_NAMESPACES: Namespace[] = ["newsletter", "publicMetrics"];
+
 export default async function Home({ params }: HomePageProps) {
   const { locale } = await params;
   const session = await auth();
   const { isEnabled: preview } = await draftMode();
   const { hero, mission, features, partners, footer } = await getHomeData(locale, preview);
+  const bundles = await loadNamespaceBundles(locale, HOME_NAMESPACES);
 
   return (
-    <>
+    <TranslationBundles resources={bundles}>
       <UnifiedNavbar locale={locale} session={session} isHomePage={true} />
       <main className="flex min-h-screen flex-col items-center">
         {/* Hero Section */}
@@ -97,6 +103,6 @@ export default async function Home({ params }: HomePageProps) {
           newsletterSlot={<NewsletterSubscribeForm />}
         />
       </main>
-    </>
+    </TranslationBundles>
   );
 }
