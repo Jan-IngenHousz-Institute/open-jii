@@ -814,20 +814,14 @@ module "centrum_pipeline" {
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/silver/clean_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/silver/clean_device_lifecycle_events",
     # gold
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/device_last_activity",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_status",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_raw_data",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_device_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_devices",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_uploaded_data",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_table_metadata",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_contributors",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/bridge_experiment_contributor",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/bridge_experiment_device",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/latest_experiment_activity",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/latest_device_data",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/latest_device_event",
-    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/latest_experiment_device",
+    "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_device_keys",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_raw_data_schemas",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/experiment_uploaded_data_schemas",
     "/Workspace/Shared/.bundle/open-jii/dev/notebooks/src/pipelines/centrum/gold/sources",
@@ -1643,7 +1637,32 @@ module "enriched_views" {
   depends_on = [module.experiment_annotations_table, module.experiment_custom_metadata_table]
 }
 
-# Read-time counts on top of pipeline tables that keep the plain names.
+# The device and experiment status, computed when someone reads, under the names of
+# the pipeline tables they replaced. No flow keeps them, so nothing in centrum merges.
+module "status_views" {
+  source = "../../modules/databricks/sql-table"
+  for_each = toset([
+    "device_last_activity",
+    "experiment_status",
+    "experiment_device_data",
+  ])
+
+  catalog_name = module.databricks_catalog.catalog_name
+  schema_name  = "centrum"
+  name         = each.key
+  table_type   = "VIEW"
+  view_definition = templatefile(
+    "${path.root}/../../../apps/data/src/views/${each.key}.sql",
+    { catalog = module.databricks_catalog.catalog_name },
+  )
+  warehouse_id = var.backend_databricks_warehouse_id
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
+# Read-time counts under the names the backend reads.
 module "serving_views" {
   source = "../../modules/databricks/sql-table"
   for_each = toset([
@@ -1665,7 +1684,7 @@ module "serving_views" {
     databricks.workspace = databricks.workspace
   }
 
-  depends_on = [module.experiment_annotations_table, module.experiment_custom_metadata_table]
+  depends_on = [module.experiment_annotations_table, module.experiment_custom_metadata_table, module.status_views]
 }
 
 module "data_export_job" {

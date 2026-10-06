@@ -1,8 +1,8 @@
 # gold-materialization-age
 
-**Gold has not rematerialized for noticeably longer than usual.** The value is minutes since the
-newest `status_updated_at` in `centrum.experiment_status`, which only advances when the centrum
-pipeline completes an update, so it is a proxy for "when did the lakehouse last finish work".
+**Gold has not received a row for noticeably longer than usual.** The value is minutes since the
+newest `latest_processed_timestamp` in `centrum.experiment_status`, a view over
+`experiment_raw_data`, so it is "when did the lakehouse last write a measurement to gold".
 
 This is deviation-based rather than a fixed threshold, deliberately: how often gold rematerializes
 depends on each environment's load and trigger interval, so any absolute number that is meaningful
@@ -27,10 +27,10 @@ time of day_, not merely large.
 
 ## When the pipeline looks healthy
 
-If centrum has been completing updates normally, suspect the metric's own input rather than the
-pipeline. `experiment_status` is a gold table; if it stopped being written while the rest of the
-pipeline succeeded, the flow that produces it is the thing to inspect, and the symptom would be
-`status_updated_at` frozen while other gold tables advance.
+If centrum is running normally, check whether data is arriving at all: `ingest-idle` and the
+bronze row counts show that. Gold only receives rows when devices send them, so a quiet fleet
+raises this age on its own. If bronze and silver advance while `experiment_raw_data` does not,
+the gold flow is the thing to inspect.
 
 ## Closing
 
