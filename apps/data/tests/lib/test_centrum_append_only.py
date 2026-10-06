@@ -9,6 +9,7 @@ anything, so only this check notices.
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 import pytest
@@ -21,6 +22,7 @@ _MERGING_CALLS = {
     "create_auto_cdc_from_snapshot_flow",
     "merge",
 }
+_MERGE_STATEMENT = re.compile(r"\s*MERGE\s+INTO\b", re.IGNORECASE)
 
 
 def _called_name(call: ast.Call) -> str | None:
@@ -42,7 +44,7 @@ def _runs_merge_statement(call: ast.Call) -> bool:
     return (
         isinstance(statement, ast.Constant)
         and isinstance(statement.value, str)
-        and statement.value.lstrip().upper().startswith("MERGE INTO")
+        and _MERGE_STATEMENT.match(statement.value) is not None
     )
 
 
@@ -69,6 +71,8 @@ def _merging_calls(source: str) -> set[str]:
         ("create_auto_cdc_flow(target='t')", {"create_auto_cdc_flow"}),
         ("spark.sql('  merge into t USING s ON t.id = s.id')", {"sql(MERGE INTO)"}),
         ("spark.sql(f'MERGE INTO {table} USING s ON true')", {"sql(MERGE INTO)"}),
+        ("spark.sql('MERGE\\nINTO t USING s ON true')", {"sql(MERGE INTO)"}),
+        ("spark.sql('MERGE  INTO t USING s ON true')", {"sql(MERGE INTO)"}),
         ("spark.sql('SELECT 1')", set()),
         ("'''MERGE INTO t and apply_changes()'''  # dlt.merge()", set()),
     ],
