@@ -356,6 +356,7 @@ vi.mock("@repo/ui/hooks/use-toast", () => ({
 }));
 
 vi.mock("~/lib/contentful", () => ({
+  buildTimeLocaleParams: vi.fn().mockResolvedValue([]),
   getContentfulClients: vi.fn().mockResolvedValue({
     client: {},
     previewClient: {},

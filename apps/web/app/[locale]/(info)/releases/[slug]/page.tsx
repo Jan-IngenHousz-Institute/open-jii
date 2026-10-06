@@ -54,12 +54,18 @@ export function generateMetadata({ params }: ReleaseDetailPageProps): Promise<Me
   });
 }
 
-/** Public per-note permalink (openjii.org/releases/[slug]). */
-// None at build time, which has no CMS access: each page renders on its first visit and is then cached.
-export function generateStaticParams() {
-  return [];
+// The layout builds a locale ahead only when the build can read the CMS; without one, Next still
+// calls this, with no locale. A note published later renders on its first visit.
+export async function generateStaticParams({ params }: { params: { locale?: string } }) {
+  if (!params.locale) {
+    return [];
+  }
+
+  const notes = await getAllReleaseNotes(params.locale, false);
+  return notes.flatMap((note) => (note.slug ? [{ slug: note.slug }] : []));
 }
 
+/** Public per-note permalink (openjii.org/releases/[slug]). */
 export default async function ReleaseDetailPage({ params }: ReleaseDetailPageProps) {
   const { locale, slug } = await params;
   const { isEnabled: preview } = await draftMode();

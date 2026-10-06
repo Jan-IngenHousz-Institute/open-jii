@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getContentfulClients } from "~/lib/contentful";
 
-import Page, { generateMetadata } from "./page";
+import Page, { generateMetadata, generateStaticParams } from "./page";
 
 const mockBlogDetail = vi.fn();
+const mockSitemapPages = vi.fn();
 
 vi.mock("@repo/cms/article", () => ({
   ArticleHero: ({ article }: { article?: { title?: string } }) => (
@@ -44,7 +45,7 @@ describe("BlogDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getContentfulClients).mockResolvedValue({
-      client: { pageBlogDetail: mockBlogDetail },
+      client: { pageBlogDetail: mockBlogDetail, sitemapPages: mockSitemapPages },
       previewClient: { pageBlogDetail: mockBlogDetail },
     } as never);
     mockBlogDetail.mockResolvedValue(defaultResult);
@@ -60,6 +61,22 @@ describe("BlogDetailPage", () => {
       canonical: "/en-US/blog/test-post",
       languages: { "en-US": "/en-US/blog/test-post" },
     });
+  });
+
+  it("builds every published post ahead in the locale its layout builds", async () => {
+    mockSitemapPages.mockResolvedValue({
+      pageBlogPostCollection: { items: [{ slug: "first" }, null, { slug: "second" }] },
+    });
+
+    const params = await generateStaticParams({ params: { locale: "en-US" } });
+
+    expect(mockSitemapPages).toHaveBeenCalledWith({ locale: "en-US" });
+    expect(params).toEqual([{ slug: "first" }, { slug: "second" }]);
+  });
+
+  it("builds no post ahead when the layout built no locale", async () => {
+    await expect(generateStaticParams({ params: {} })).resolves.toEqual([]);
+    expect(mockSitemapPages).not.toHaveBeenCalled();
   });
 
   it("calls notFound when blog post does not exist", async () => {

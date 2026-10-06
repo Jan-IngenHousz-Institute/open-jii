@@ -5,7 +5,7 @@ import { TranslationBundles } from "@/components/translation-bundles";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { Suspense, cache } from "react";
-import { getContentfulClients } from "~/lib/contentful";
+import { buildTimeLocaleParams, getContentfulClients } from "~/lib/contentful";
 import { safeMetadata } from "~/lib/safe-metadata";
 
 import {
@@ -69,10 +69,7 @@ const HOME_NAMESPACES: Namespace[] = ["newsletter", "publicMetrics"];
 // Regenerated at most this often; matches the alerts bar's 300 s cache. A literal, as Next requires.
 export const revalidate = 300;
 
-// None at build time, which has no CMS access: each page renders on its first visit and is then cached.
-export function generateStaticParams() {
-  return [];
-}
+export const generateStaticParams = buildTimeLocaleParams;
 
 export default async function Home({ params }: HomePageProps) {
   const { locale } = await params;

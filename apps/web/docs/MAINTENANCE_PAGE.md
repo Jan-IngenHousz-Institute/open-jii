@@ -53,13 +53,22 @@ That changes how an outage shows:
 
 - **While a page is cached**, a failed regeneration keeps the last good copy in
   service. Visitors keep seeing real content through the outage.
-- **With nothing cached yet**, right after a deploy, a page whose render fails
-  answers a plain 500, not the maintenance page: a failed static render produces
-  no page for the error boundaries to show. A failed render is never cached, so
-  the page recovers on the first request after Contentful does.
+- **Every deploy starts with its pages cached.** Each build has its own cache, so
+  the deploy build renders the default-locale pages, every blog post and every
+  release note ahead, reading published content with the delivery token. If
+  Contentful cannot be read then, the build fails and the running deploy keeps
+  serving its cached pages; re-run the deploy once Contentful is back.
+- **A page with nothing cached yet** answers a plain 500 when its render fails,
+  not the maintenance page: a failed static render produces no page for the
+  error boundaries to show. That leaves a post or note published since the last
+  deploy, and the locales other than the default. A failed render is never
+  cached, so such a page recovers on the first request after Contentful does.
 - **A degraded render is cached like any other.** If the footer or the alerts bar
   could not be read when a page regenerated, that page stays without them until
   the next regeneration, at most 300 seconds later.
+
+A build without Contentful credentials, such as the pull request check or a local
+`next build`, renders none of these ahead; each renders on its first visit.
 
 ## Mobile app
 

@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: JoinLandingPageProps): Promis
 // Regenerated at most this often; matches the alerts bar's 300 s cache. A literal, as Next requires.
 export const revalidate = 300;
 
-// None at build time, which has no CMS access: each page renders on its first visit and is then cached.
+// No code is known at build time: each renders on its first visit and is then cached.
 export function generateStaticParams() {
   return [];
 }

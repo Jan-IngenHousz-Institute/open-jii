@@ -8,6 +8,7 @@ const { mockPageHome } = vi.hoisted(() => ({
   mockPageHome: vi.fn(),
 }));
 vi.mock("~/lib/contentful", () => ({
+  buildTimeLocaleParams: () => Promise.resolve([]),
   getContentfulClients: () =>
     Promise.resolve({
       client: { pageHome: mockPageHome },

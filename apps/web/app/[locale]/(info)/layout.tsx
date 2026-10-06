@@ -3,7 +3,7 @@ import { NewsletterSubscribeForm } from "@/components/newsletter/newsletter-subs
 import { TranslationBundles } from "@/components/translation-bundles";
 import { draftMode } from "next/headers";
 import React from "react";
-import { getContentfulClients } from "~/lib/contentful";
+import { buildTimeLocaleParams, getContentfulClients } from "~/lib/contentful";
 
 import { HomeFooter } from "@repo/cms";
 import type { FooterFieldsFragment } from "@repo/cms/lib/__generated/sdk";
@@ -21,10 +21,7 @@ interface InfoLayoutProps {
 // Regenerated at most this often; matches the alerts bar's 300 s cache. A literal, as Next requires.
 export const revalidate = 300;
 
-// None at build time, which has no CMS access: each page renders on its first visit and is then cached.
-export function generateStaticParams() {
-  return [];
-}
+export const generateStaticParams = buildTimeLocaleParams;
 
 export default async function InfoGroupLayout({ children, params }: InfoLayoutProps) {
   const { isEnabled: preview } = await draftMode();
