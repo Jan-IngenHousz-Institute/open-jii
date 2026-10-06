@@ -7,6 +7,12 @@ import { useTranslation } from "@repo/i18n";
 
 import { FirstWorkCard } from "./first-work-card";
 
+const FIRST_WORK = [
+  { key: "create", path: "/platform/experiments/new", icon: FlaskConical },
+  { key: "join", path: "/platform/organizations", icon: Building2 },
+  { key: "browse", path: "/platform/experiments?visibility=public&focus=search", icon: Globe },
+] as const;
+
 /** Where a researcher with no experiments of their own can start. */
 export function FirstWorkCards() {
   const { t } = useTranslation();
@@ -14,24 +20,15 @@ export function FirstWorkCards() {
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      <FirstWorkCard
-        href={`/${locale}/platform/experiments/new`}
-        icon={FlaskConical}
-        title={t("dashboard.firstWork.create.title")}
-        description={t("dashboard.firstWork.create.description")}
-      />
-      <FirstWorkCard
-        href={`/${locale}/platform/organizations`}
-        icon={Building2}
-        title={t("dashboard.firstWork.join.title")}
-        description={t("dashboard.firstWork.join.description")}
-      />
-      <FirstWorkCard
-        href={`/${locale}/platform/experiments?visibility=public&focus=search`}
-        icon={Globe}
-        title={t("dashboard.firstWork.browse.title")}
-        description={t("dashboard.firstWork.browse.description")}
-      />
+      {FIRST_WORK.map(({ key, path, icon }) => (
+        <FirstWorkCard
+          key={key}
+          href={`/${locale}${path}`}
+          icon={icon}
+          title={t(`dashboard.firstWork.${key}.title`)}
+          description={t(`dashboard.firstWork.${key}.description`)}
+        />
+      ))}
     </div>
   );
 }
