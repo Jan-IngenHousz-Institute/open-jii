@@ -29,6 +29,7 @@ export function truncationOf(
 export interface UseChartDataResult {
   rows: Record<string, unknown>[];
   isLoading: boolean;
+  isRefreshing: boolean;
   error: unknown;
   truncation?: ChartTruncation;
   /** The filters the read applied, the chart's own and a dashboard's together. */
@@ -124,17 +125,19 @@ export function useChartData(
     return {
       rows: providedData,
       isLoading: false,
+      isRefreshing: false,
       error: undefined,
       truncation: providedTruncation,
       filters: mergedFilters,
     };
   }
   if (aggregationError) {
-    return { rows: [], isLoading: false, error: aggregationError };
+    return { rows: [], isLoading: false, isRefreshing: false, error: aggregationError };
   }
   return {
     rows,
     isLoading: active.isLoading,
+    isRefreshing: active.isRefreshing,
     error: active.error,
     truncation: truncationOf(active.data),
     filters: mergedFilters,

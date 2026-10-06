@@ -54,7 +54,7 @@ export function CartesianRenderer({
   const { columns } = useColumnMetadata(experimentId, visualization.dataConfig.tableName);
   const colorColumnType = columns.find((c) => c.name === colorColumn)?.type_text;
 
-  const { rows, isLoading, error, truncation, filters } = useChartData(
+  const { rows, isLoading, isRefreshing, error, truncation, filters } = useChartData(
     visualization,
     experimentId,
     providedData,
@@ -178,6 +178,7 @@ export function CartesianRenderer({
       visualization={visualization}
       experimentId={experimentId}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
       error={error}
       hasRows={rows.length > 0}
       truncation={isDrawingZoomRead ? undefined : truncation}

@@ -177,7 +177,10 @@ export const useExperimentVisualizationData = (
       : dataConfig.orderBy;
   const effectiveOrderDirection = effectiveOrderBy ? dataConfig.orderDirection : undefined;
 
-  const { data, isLoading, error } = useQuery(
+  // Which columns a read returns, as opposed to which rows: a new filter or order keeps it.
+  const readShape = [experimentId, dataConfig.tableName, columnsCsv, aggregationJson].join("|");
+
+  const { data, isLoading, isPlaceholderData, error } = useQuery(
     orpc.experiments.getExperimentData.queryOptions({
       input: {
         id: experimentId,
@@ -188,6 +191,13 @@ export const useExperimentVisualizationData = (
         orderBy: effectiveOrderBy,
         orderDirection: effectiveOrderDirection,
       },
+      meta: { readShape },
+      // A new filter is a new cache key. Without this the chart drops to its loading state and
+      // Plotly rebuilds it from scratch when the rows land; the previous rows stay drawn instead.
+      // Held only while the read's columns are unchanged, so a chart never draws columns it did
+      // not ask for.
+      placeholderData: (previous, previousQuery) =>
+        previousQuery?.meta?.readShape === readShape ? previous : undefined,
       staleTime: STALE_TIME,
       enabled: enabled && Boolean(dataConfig.tableName) && canQuery,
       refetchOnWindowFocus: false,
@@ -243,6 +253,7 @@ export const useExperimentVisualizationData = (
         }
       : undefined,
     isLoading,
+    isRefreshing: isPlaceholderData,
     error,
   };
 };

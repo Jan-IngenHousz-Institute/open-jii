@@ -58,7 +58,7 @@ export function DotPlotRenderer({
   const colorColumn = dataSourcesByRole(visualization.dataConfig.dataSources, "color")[0]?.source
     .columnName;
 
-  const { rows, isLoading, error, truncation } = useChartData(
+  const { rows, isLoading, isRefreshing, error, truncation } = useChartData(
     visualization,
     experimentId,
     providedData,
@@ -186,6 +186,7 @@ export function DotPlotRenderer({
       visualization={visualization}
       experimentId={experimentId}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
       error={error}
       hasRows={rows.length > 0}
       truncation={truncation}

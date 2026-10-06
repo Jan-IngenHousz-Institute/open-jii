@@ -26,7 +26,7 @@ export function SPCRenderer({
 
   // Order matters: SPC reads as a process *walk* over X, so fetched
   // rows need to be ordered by the chosen X column.
-  const { rows, isLoading, error, truncation } = useChartData(
+  const { rows, isLoading, isRefreshing, error, truncation } = useChartData(
     visualization,
     experimentId,
     providedData,
@@ -136,6 +136,7 @@ export function SPCRenderer({
       visualization={visualization}
       experimentId={experimentId}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
       error={error}
       hasRows={hasRows}
       truncation={truncation}

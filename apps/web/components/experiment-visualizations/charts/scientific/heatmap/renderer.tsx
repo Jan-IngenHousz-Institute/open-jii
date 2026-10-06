@@ -19,7 +19,7 @@ export function HeatmapRenderer({
 }: ChartRendererProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  const { rows, isLoading, error, truncation } = useChartData(
+  const { rows, isLoading, isRefreshing, error, truncation } = useChartData(
     visualization,
     experimentId,
     providedData,
@@ -73,6 +73,7 @@ export function HeatmapRenderer({
       visualization={visualization}
       experimentId={experimentId}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
       error={error}
       hasRows={hasRows}
       truncation={truncation}
