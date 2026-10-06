@@ -13,7 +13,7 @@ import type { Extension } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { EditorView } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useIsDarkTheme } from "~/hooks/useIsDarkTheme";
 
 export type CodeLanguage = "json" | "javascript" | "python" | "r" | "markdown" | "yaml" | "text";
@@ -199,12 +199,14 @@ export function CodeEditor({
 }: CodeEditorProps) {
   const isDark = useIsDarkTheme();
 
-  const handleChange = useCallback(
-    (val: string) => {
-      onChange?.(val);
-    },
-    [onChange],
-  );
+  // CodeMirror reconfigures the whole editor, forcing a layout, whenever `onChange` or
+  // `basicSetup` changes identity, so both stay the same object across renders.
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  const handleChange = useCallback((val: string) => {
+    onChangeRef.current?.(val);
+  }, []);
 
   const extensions = useMemo(() => {
     const exts: Extension[] = [getLanguageExtension(language), EditorView.lineWrapping, baseTheme];
@@ -246,8 +248,45 @@ export function CodeEditor({
     [hasLinting, onCreateEditor],
   );
 
-  const tabSize =
-    basicSetupOverrides?.tabSize ?? (language === "python" || language === "r" ? 4 : 2);
+  const {
+    lineNumbers = true,
+    highlightActiveLineGutter = !readOnly,
+    highlightActiveLine = !readOnly,
+    foldGutter = true,
+    bracketMatching = true,
+    closeBrackets = !readOnly,
+    autocompletion = false,
+    indentOnInput = true,
+    syntaxHighlighting = true,
+    tabSize = language === "python" || language === "r" ? 4 : 2,
+  } = basicSetupOverrides ?? {};
+
+  const basicSetup = useMemo(
+    () => ({
+      lineNumbers,
+      highlightActiveLineGutter,
+      highlightActiveLine,
+      foldGutter,
+      bracketMatching,
+      closeBrackets,
+      autocompletion,
+      indentOnInput,
+      syntaxHighlighting,
+      tabSize,
+    }),
+    [
+      lineNumbers,
+      highlightActiveLineGutter,
+      highlightActiveLine,
+      foldGutter,
+      bracketMatching,
+      closeBrackets,
+      autocompletion,
+      indentOnInput,
+      syntaxHighlighting,
+      tabSize,
+    ],
+  );
 
   return (
     <CodeMirror
@@ -265,18 +304,7 @@ export function CodeEditor({
       minHeight={minHeight}
       maxHeight={maxHeight}
       extensions={extensions}
-      basicSetup={{
-        lineNumbers: basicSetupOverrides?.lineNumbers ?? true,
-        highlightActiveLineGutter: basicSetupOverrides?.highlightActiveLineGutter ?? !readOnly,
-        highlightActiveLine: basicSetupOverrides?.highlightActiveLine ?? !readOnly,
-        foldGutter: basicSetupOverrides?.foldGutter ?? true,
-        bracketMatching: basicSetupOverrides?.bracketMatching ?? true,
-        closeBrackets: basicSetupOverrides?.closeBrackets ?? !readOnly,
-        autocompletion: basicSetupOverrides?.autocompletion ?? false,
-        indentOnInput: basicSetupOverrides?.indentOnInput ?? true,
-        syntaxHighlighting: basicSetupOverrides?.syntaxHighlighting ?? true,
-        tabSize,
-      }}
+      basicSetup={basicSetup}
     />
   );
 }
