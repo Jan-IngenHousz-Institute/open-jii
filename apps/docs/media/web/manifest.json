@@ -38,7 +38,7 @@
       "bytes": 153202,
       "sha256": "271ad93c3a30622d88d5fe27619bf8850c23ce1d068e6fc0f2fd6bc71d0dfc32",
       "disposition": "published",
-      "scope": "Authenticated dashboard: welcome card, recent experiments, recently updated public experiments and compact contextual header"
+      "scope": "Authenticated dashboard: welcome card, recently opened experiments, recently updated public experiments and compact contextual header"
     },
     {
       "path": "/img/guide/web/dashboard-first-work.webp",
@@ -49,7 +49,7 @@
       "bytes": 179194,
       "sha256": "3da4c35298147a0935dbd7018886663150bdb9475f8fe199496da35216fac3eb",
       "disposition": "published",
-      "scope": "Dashboard empty state with the three first-work cards in the recent experiments row"
+      "scope": "Dashboard empty state with the three first-work cards in the recently opened experiments row"
     },
     {
       "path": "/img/guide/web/experiments-list.webp",

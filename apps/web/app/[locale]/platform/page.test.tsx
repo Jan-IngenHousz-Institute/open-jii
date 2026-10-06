@@ -25,7 +25,9 @@ describe("PlatformDashboard", () => {
   it("lets the shell own the dashboard heading and renders both dashboard sections", async () => {
     render(await Page({ params: Promise.resolve({ locale: "en-US" }) }));
     expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
-    expect(screen.getByRole("region", { name: /dashboard.yourExperiments/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: /dashboard.recentlyOpenedExperiments/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /dashboard.recentArticles/i })).toBeInTheDocument();
     expect(screen.getByText("Experiments")).toBeInTheDocument();
     expect(screen.getByText("Blog Posts")).toBeInTheDocument();
@@ -38,7 +40,7 @@ describe("PlatformDashboard", () => {
       .map((region) => region.getAttribute("aria-label"))
       .filter((name) => name?.startsWith("dashboard."));
     expect(names).toEqual([
-      "dashboard.yourExperiments",
+      "dashboard.recentlyOpenedExperiments",
       "dashboard.recentPublicExperiments",
       "dashboard.recentArticles",
     ]);

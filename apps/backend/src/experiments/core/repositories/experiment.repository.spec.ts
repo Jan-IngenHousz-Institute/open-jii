@@ -2096,4 +2096,204 @@ describe("ExperimentRepository", () => {
       });
     });
   });
+
+  describe("findRecentlyOpened", () => {
+    const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000);
+
+    async function visit(experimentId: string, minutes: number, userId = testUserId) {
+      await testApp.addResourceVisit({
+        userId,
+        resourceId: experimentId,
+        visitedAt: minutesAgo(minutes),
+      });
+    }
+
+    it("returns the caller's visits, most recently opened first, up to the limit", async () => {
+      const { experiment: oldest } = await testApp.createExperiment({
+        name: "Oldest",
+        userId: testUserId,
+      });
+      const { experiment: newest } = await testApp.createExperiment({
+        name: "Newest",
+        userId: testUserId,
+      });
+      const { experiment: middle } = await testApp.createExperiment({
+        name: "Middle",
+        userId: testUserId,
+      });
+      await testApp.createExperiment({ name: "Never opened", userId: testUserId });
+      await visit(oldest.id, 30);
+      await visit(newest.id, 1);
+      await visit(middle.id, 10);
+
+      const result = await repository.findRecentlyOpened(testUserId, 2, "related");
+
+      assertSuccess(result);
+      expect(result.value.map((row) => row.name)).toEqual(["Newest", "Middle"]);
+      expect(result.value[0].openedAt).toBeInstanceOf(Date);
+    });
+
+    it("ignores another user's visits", async () => {
+      const otherUserId = await testApp.createTestUser({});
+      const { experiment } = await testApp.createExperiment({
+        name: "Mine",
+        userId: testUserId,
+      });
+      await visit(experiment.id, 1, otherUserId);
+
+      const result = await repository.findRecentlyOpened(testUserId, 3, "related");
+
+      assertSuccess(result);
+      expect(result.value).toEqual([]);
+    });
+
+    it("keeps a public experiment the caller has no role on out of the related scope", async () => {
+      const otherUserId = await testApp.createTestUser({});
+      const { experiment } = await testApp.createExperiment({
+        name: "Someone else's public work",
+        userId: otherUserId,
+        visibility: "public",
+      });
+      await visit(experiment.id, 1);
+
+      const related = await repository.findRecentlyOpened(testUserId, 3, "related");
+      const all = await repository.findRecentlyOpened(testUserId, 3, "all");
+
+      assertSuccess(related);
+      assertSuccess(all);
+      expect(related.value).toEqual([]);
+      expect(all.value).toEqual([expect.objectContaining({ id: experiment.id, callerRole: null })]);
+    });
+
+    it("drops an experiment once the caller can no longer open it", async () => {
+      const otherUserId = await testApp.createTestUser({});
+      const { experiment } = await testApp.createExperiment({
+        name: "Shared, then revoked",
+        userId: otherUserId,
+      });
+      const grant = await testApp.addExperimentCollaborator(experiment.id, testUserId);
+      await visit(experiment.id, 1);
+      await testApp.removeResourceGrant(grant.id);
+
+      const result = await repository.findRecentlyOpened(testUserId, 3, "all");
+
+      assertSuccess(result);
+      expect(result.value).toEqual([]);
+    });
+
+    it("leaves archived experiments out", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Finished",
+        userId: testUserId,
+        status: "archived",
+      });
+      await visit(experiment.id, 1);
+
+      const result = await repository.findRecentlyOpened(testUserId, 3, "related");
+
+      assertSuccess(result);
+      expect(result.value).toEqual([]);
+    });
+
+    describe("callerRole", () => {
+      let ownerId: string;
+
+      beforeEach(async () => {
+        ownerId = await testApp.createTestUser({});
+      });
+
+      async function roleOn(experimentId: string) {
+        await visit(experimentId, 1);
+        const result = await repository.findRecentlyOpened(testUserId, 3, "all");
+        assertSuccess(result);
+        return result.value.find((row) => row.id === experimentId)?.callerRole;
+      }
+
+      it("is owner on an experiment in the caller's personal organization", async () => {
+        const { experiment } = await testApp.createExperiment({
+          name: "Own work",
+          userId: testUserId,
+        });
+
+        expect(await roleOn(experiment.id)).toBe("owner");
+      });
+
+      it("is admin for an admin grant", async () => {
+        const { experiment } = await testApp.createExperiment({ name: "Shared", userId: ownerId });
+        await testApp.addExperimentAdmin(experiment.id, testUserId);
+
+        expect(await roleOn(experiment.id)).toBe("admin");
+      });
+
+      it("is member for a viewer grant", async () => {
+        const { experiment } = await testApp.createExperiment({ name: "Shared", userId: ownerId });
+        await testApp.addExperimentCollaborator(experiment.id, testUserId);
+
+        expect(await roleOn(experiment.id)).toBe("member");
+      });
+
+      it("is member for a viewer grant reached through a team", async () => {
+        const organizationId = await testApp.createOrganization();
+        await testApp.addOrganizationMember(organizationId, ownerId, "owner");
+        const teamId = await testApp.createTeam(organizationId);
+        await testApp.addTeamMember(teamId, testUserId);
+        const { experiment } = await testApp.createExperiment({
+          name: "Team work",
+          userId: ownerId,
+          organizationId,
+        });
+        await testApp.addResourceGrant({
+          resourceType: "experiment",
+          resourceId: experiment.id,
+          granteeType: "team",
+          granteeId: teamId,
+          role: "viewer",
+        });
+
+        expect(await roleOn(experiment.id)).toBe("member");
+      });
+
+      it("follows the caller's role in the owning organization", async () => {
+        const organizationId = await testApp.createOrganization();
+        await testApp.addOrganizationMember(organizationId, ownerId, "owner");
+        await testApp.addOrganizationMember(organizationId, testUserId, "admin");
+        const { experiment } = await testApp.createExperiment({
+          name: "Lab work",
+          userId: ownerId,
+          organizationId,
+        });
+
+        expect(await roleOn(experiment.id)).toBe("admin");
+      });
+
+      it("takes the strongest role when several reach the caller", async () => {
+        const organizationId = await testApp.createOrganization();
+        await testApp.addOrganizationMember(organizationId, ownerId, "owner");
+        await testApp.addOrganizationMember(organizationId, testUserId, "member");
+        const { experiment } = await testApp.createExperiment({
+          name: "Lab work",
+          userId: ownerId,
+          organizationId,
+        });
+        await testApp.addExperimentAdmin(experiment.id, testUserId);
+
+        expect(await roleOn(experiment.id)).toBe("admin");
+      });
+
+      it("does not make a creator an owner without a role", async () => {
+        const organizationId = await testApp.createOrganization(undefined, {
+          visibility: "public",
+        });
+        await testApp.addOrganizationMember(organizationId, ownerId, "owner");
+        const { experiment } = await testApp.createExperiment({
+          name: "Created, then left",
+          userId: testUserId,
+          organizationId,
+          visibility: "public",
+        });
+
+        expect(await roleOn(experiment.id)).toBeNull();
+      });
+    });
+  });
 });

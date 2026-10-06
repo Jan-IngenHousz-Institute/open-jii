@@ -192,6 +192,7 @@
   "created": "Erstellt",
   "updated": "Aktualisiert",
   "updatedOn": "Aktualisiert am {{date}}",
+  "openedOn": "Geöffnet {{when}}",
   "descriptionTitle": "Beschreibung",
   "details": {
     "location": {

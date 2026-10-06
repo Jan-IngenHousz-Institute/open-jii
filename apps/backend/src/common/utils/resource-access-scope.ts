@@ -226,6 +226,51 @@ export function resourceTierExpression(params: {
   END)`;
 }
 
+/** The names {@link resourceRoleExpression} reports, strongest first. */
+export type ResourceRoleName = "owner" | "admin" | "member";
+
+/**
+ * The strongest role that reaches the caller on each row, by name: the owning
+ * organization's role and every grant (direct, team, org) are read, and only the
+ * stored role decides it. Authorship is not a role, so a creator without one gets
+ * null, as does anyone reaching the row only because it is public. `owner` and
+ * `admin` carry the same control; the name is reported because it is what they were
+ * given.
+ */
+export function resourceRoleExpression(params: {
+  database: DatabaseInstance;
+  resourceType: ResourceType;
+  resourceIdColumn: AnyColumn;
+  organizationIdColumn: AnyColumn;
+  userId: string | undefined;
+}): SQL<ResourceRoleName | null> {
+  const { userId } = params;
+  if (!userId) {
+    return sql<null>`null::text`;
+  }
+
+  const holds = (grant: readonly string[], owningOrg: readonly string[]) => {
+    const parts = resourceRelationshipParts({
+      ...params,
+      userId,
+      roleFilters: { grant, owningOrg },
+    });
+    return or(
+      parts.userGrantExists,
+      parts.teamGrantExists,
+      parts.orgGrantExists,
+      parts.owningOrgMemberExists,
+    );
+  };
+
+  return sql<ResourceRoleName | null>`(CASE
+    WHEN ${holds(["owner"], ["owner"])} THEN 'owner'
+    WHEN ${holds(["admin"], ["admin"])} THEN 'admin'
+    WHEN ${holds(["viewer"], ["member"])} THEN 'member'
+    ELSE NULL
+  END)`;
+}
+
 /**
  * Build the list-scoping predicate for an org-owned, shareable resource, matching
  * `can()`'s read precedence: a row is visible when it is public, the caller is a

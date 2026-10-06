@@ -469,6 +469,68 @@ describe("ExperimentController", () => {
     });
   });
 
+  describe("listRecentlyOpenedExperiments", () => {
+    const path = () => testApp.resolveOrpcPath(contract.experiments.listRecentlyOpenedExperiments);
+
+    it("returns visited related experiments with when they were opened and the caller's role", async () => {
+      const { experiment: older } = await testApp.createExperiment({
+        name: "Older",
+        userId: testUserId,
+      });
+      const { experiment: newer } = await testApp.createExperiment({
+        name: "Newer",
+        userId: testUserId,
+      });
+      await testApp.addResourceVisit({
+        userId: testUserId,
+        resourceId: older.id,
+        visitedAt: new Date(Date.now() - 60 * 60_000),
+      });
+      await testApp.addResourceVisit({ userId: testUserId, resourceId: newer.id });
+
+      const response = await testApp
+        .get(path())
+        .withAuth(testUserId)
+        .query({ scope: "related" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual([
+        expect.objectContaining({
+          id: newer.id,
+          callerRole: "owner",
+          openedAt: expect.any(String) as string,
+        }),
+        expect.objectContaining({ id: older.id }),
+      ]);
+    });
+
+    it("returns three by default", async () => {
+      for (let index = 0; index < 4; index++) {
+        const { experiment } = await testApp.createExperiment({
+          name: `Visited ${index}`,
+          userId: testUserId,
+        });
+        await testApp.addResourceVisit({ userId: testUserId, resourceId: experiment.id });
+      }
+
+      const response = await testApp.get(path()).withAuth(testUserId).expect(StatusCodes.OK);
+
+      expect(response.body).toHaveLength(3);
+    });
+
+    it("rejects a limit above the maximum", async () => {
+      await testApp
+        .get(path())
+        .withAuth(testUserId)
+        .query({ limit: 21 })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("returns 401 without a session", async () => {
+      await testApp.get(path()).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+
   describe("getExperiment", () => {
     it("should return an experiment by ID", async () => {
       const { experiment } = await testApp.createExperiment({

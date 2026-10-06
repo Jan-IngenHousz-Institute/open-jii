@@ -18,6 +18,7 @@ import {
   iotDevices,
   organizations,
   resourceGrants,
+  resourceVisits,
   workbooks,
 } from "../../src/schema";
 import {
@@ -74,6 +75,15 @@ export async function clearSeedData() {
         and(
           eq(resourceGrants.resourceType, "experiment"),
           inArray(resourceGrants.resourceId, seedExpIds),
+        ),
+      );
+    // Visits are polymorphic too, and anyone may have opened a seed experiment.
+    await db
+      .delete(resourceVisits)
+      .where(
+        and(
+          eq(resourceVisits.resourceType, "experiment"),
+          inArray(resourceVisits.resourceId, seedExpIds),
         ),
       );
     // Experiments cascade-delete: flows, experimentDevices

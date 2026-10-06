@@ -12,6 +12,7 @@ import { seedNotifications } from "./seed/notification.seed";
 import { seedProtocolMacroLinks } from "./seed/protocol-macro.seed";
 import { seedProtocols } from "./seed/protocol.seed";
 import { seedNewcomer, seedUser } from "./seed/user.seed";
+import { seedVisits } from "./seed/visit.seed";
 import { seedWorkbooks } from "./seed/workbook.seed";
 
 /**
@@ -43,6 +44,7 @@ async function main() {
   await seedCalibrations(user, personalOrganizationId, createdDevices);
 
   await seedNotifications(user, createdExperiments);
+  await seedVisits(user, createdExperiments);
 
   console.log("Seed complete!");
 }

@@ -870,6 +870,27 @@ export const resourceGrants = pgTable(
   ],
 );
 
+// When a user last opened a resource, one row per user and resource. Written for
+// every open, so reads decide which of them still matter to the user.
+export const resourceVisits = pgTable(
+  "resource_visits",
+  {
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    resourceType: resourceTypeEnum("resource_type").notNull(),
+    // Polymorphic like resource_grants, so the id carries no FK.
+    resourceId: uuid("resource_id").notNull(),
+    visitedAt: timestamp("visited_at")
+      .default(sql`(now() AT TIME ZONE 'UTC')`)
+      .notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.resourceType, t.resourceId] }),
+    index("resource_visits_user_visited_idx").on(t.userId, t.visitedAt.desc()),
+  ],
+);
+
 export const experimentDashboards = pgTable(
   "experiment_dashboards",
   {
