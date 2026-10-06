@@ -152,10 +152,7 @@ export function ColorDimensionShelf({
                   <FormLabel className="text-xs font-medium">
                     {t("workspace.shelves.colorMode")}
                   </FormLabel>
-                  <Select
-                    value={field.value ?? "continuous"}
-                    onValueChange={(v) => field.onChange(v)}
-                  >
+                  <Select value={field.value ?? colorMode} onValueChange={(v) => field.onChange(v)}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue />

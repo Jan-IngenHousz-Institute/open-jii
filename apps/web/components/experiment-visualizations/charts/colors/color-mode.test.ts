@@ -27,7 +27,7 @@ describe("withResolvedColorMode", () => {
   });
 
   // The scatter default used to fill the gap with "continuous", which drew a
-  // text colour column in black. The transform decides from the values.
+  // text colour column in black. The renderer decides from the column type.
   it("keeps the mode unset for a chart type with a continuous default", () => {
     const result = withResolvedColorMode(scatterDefaults, {}, dataConfig(["x", "y", "color"]));
 

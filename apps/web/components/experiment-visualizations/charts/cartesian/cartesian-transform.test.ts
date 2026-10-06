@@ -346,8 +346,8 @@ describe("transformCartesianData", () => {
     expect(result.chartSeries.map((s) => s.name)).toEqual(["A", "B"]);
   });
 
-  // Scatter and bubble are the only types that opt into continuous colour, and
-  // an unset colorMode must keep meaning "continuous" for them on numbers.
+  // Scatter and bubble are the only types that opt into continuous colour. With
+  // no colorMode and no known column type, they keep the continuous default.
   it("keeps a single continuous-colour trace when the chart supports it", () => {
     const rows = [
       { x: 1, v: 10, temp: 5 },
