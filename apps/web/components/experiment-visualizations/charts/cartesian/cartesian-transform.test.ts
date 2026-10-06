@@ -347,7 +347,7 @@ describe("transformCartesianData", () => {
   });
 
   // Scatter and bubble are the only types that opt into continuous colour, and
-  // an unset colorMode must keep meaning "continuous" for them.
+  // an unset colorMode must keep meaning "continuous" for them on numbers.
   it("keeps a single continuous-colour trace when the chart supports it", () => {
     const rows = [
       { x: 1, v: 10, temp: 5 },
@@ -362,5 +362,76 @@ describe("transformCartesianData", () => {
 
     expect(result.chartSeries).toHaveLength(1);
     expect(result.chartSeries[0].y).toEqual([10, 20]);
+  });
+
+  // Charts saved through the API may omit colorMode. The continuous builder
+  // turned "WT" into NaN, which Plotly draws black, under one trace named
+  // after the Y column.
+  it("colours a text column by category when colorMode is unset", () => {
+    const rows = [
+      { x: 1, v: 10, genotype: "WT" },
+      { x: 2, v: 20, genotype: "mutant" },
+      { x: 3, v: 30, genotype: "WT" },
+    ];
+    const sources = [ds("x", "x"), ds("y", "v"), ds("color", "genotype")];
+
+    const result = transformCartesianData(rows, sources, baseConfig, {
+      ...baseOptions,
+      supportsContinuousColor: true,
+      colorColumnType: "STRING",
+    });
+
+    expect(result.chartSeries.find((s) => s.name === "WT")?.y).toEqual([10, 30]);
+    expect(result.chartSeries.find((s) => s.name === "mutant")?.y).toEqual([20]);
+  });
+
+  // Plot numbers stored as text are labels, whatever their values look like.
+  it("colours a text column of numbers by category", () => {
+    const rows = [
+      { x: 1, v: 10, plot: "1" },
+      { x: 2, v: 20, plot: "160" },
+    ];
+    const sources = [ds("x", "x"), ds("y", "v"), ds("color", "plot")];
+
+    const result = transformCartesianData(rows, sources, baseConfig, {
+      ...baseOptions,
+      supportsContinuousColor: true,
+      colorColumnType: "STRING",
+    });
+
+    expect(result.chartSeries).toHaveLength(2);
+  });
+
+  it("keeps continuous colour for a numeric column when colorMode is unset", () => {
+    const rows = [
+      { x: 1, v: 10, temp: "23.7" },
+      { x: 2, v: 20, temp: "36.3" },
+    ];
+    const sources = [ds("x", "x"), ds("y", "v"), ds("color", "temp")];
+
+    const result = transformCartesianData(rows, sources, baseConfig, {
+      ...baseOptions,
+      supportsContinuousColor: true,
+      colorColumnType: "DOUBLE",
+    });
+
+    expect(result.chartSeries).toHaveLength(1);
+  });
+
+  it("honours an explicit continuous colorMode", () => {
+    const rows = [
+      { x: 1, v: 10, genotype: "WT" },
+      { x: 2, v: 20, genotype: "mutant" },
+    ];
+    const sources = [ds("x", "x"), ds("y", "v"), ds("color", "genotype")];
+
+    const result = transformCartesianData(
+      rows,
+      sources,
+      { ...baseConfig, colorMode: "continuous" },
+      { ...baseOptions, supportsContinuousColor: true, colorColumnType: "STRING" },
+    );
+
+    expect(result.chartSeries).toHaveLength(1);
   });
 });
