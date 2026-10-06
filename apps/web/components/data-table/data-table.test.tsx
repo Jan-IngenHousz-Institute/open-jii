@@ -223,6 +223,24 @@ describe("DataTable", () => {
     expect(first.className).not.toContain("animate-row-landed");
   });
 
+  it("keeps its cells mounted when a selection changes, though the caller passes it inline", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <DataTable columns={COLUMNS} rows={ROWS} selection={{ state: {}, onChange }} />,
+    );
+    const value = screen.getByText("0.68");
+
+    rerender(
+      <DataTable
+        columns={COLUMNS}
+        rows={ROWS}
+        selection={{ state: { "row-1": true }, onChange }}
+      />,
+    );
+
+    expect(screen.getByText("0.68")).toBe(value);
+  });
+
   it("toggles selection through the header and the row checkboxes", async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();

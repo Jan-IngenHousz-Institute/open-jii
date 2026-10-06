@@ -152,26 +152,33 @@ export function DataTable({
     [columns, preserveColumnOrder],
   );
 
+  // A new column definition remounts every cell in the table, so the columns depend on what the
+  // cells use rather than on the `selection` and `cellHandlers` objects, which callers pass inline.
+  const hasSelection = selection !== undefined;
+  const onAddAnnotation = cellHandlers?.onAddAnnotation;
+  const onDeleteAnnotations = cellHandlers?.onDeleteAnnotations;
+
   const tableColumns = useMemo(() => {
     const dataColumns = createTableColumns({
       columns,
       formatFunction: formatValue,
-      onAddAnnotation: cellHandlers?.onAddAnnotation,
-      onDeleteAnnotations: cellHandlers?.onDeleteAnnotations,
+      onAddAnnotation,
+      onDeleteAnnotations,
       onToggleCellExpansion: toggleCellExpansion,
       isCellExpanded,
       errorColumn,
       preserveOrder: preserveColumnOrder,
     });
 
-    return selection === undefined ? dataColumns : [selectionColumn(), ...dataColumns];
+    return hasSelection ? [selectionColumn(), ...dataColumns] : dataColumns;
   }, [
     columns,
-    cellHandlers,
+    onAddAnnotation,
+    onDeleteAnnotations,
     toggleCellExpansion,
     isCellExpanded,
     errorColumn,
-    selection,
+    hasSelection,
     preserveColumnOrder,
   ]);
 
