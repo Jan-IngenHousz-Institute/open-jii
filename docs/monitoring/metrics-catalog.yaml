@@ -243,8 +243,9 @@ metrics:
     baseline: { method: same-weekday-4w, anomaly_pct: 100 }
     runbook: docs/runbooks/gold-materialization-age.md
     notes: >
-      Minutes since gold last materialized, from max(status_updated_at) in
-      experiment_status. Split out of 10 during implementation: a fixed
+      Minutes since gold last received a row, from max(latest_processed_timestamp)
+      in experiment_status, a view over gold since 30 Sep (before that, the
+      refresh time of a table). Split out of 10 during implementation: a fixed
       threshold could not serve both environments while the centrum pipeline ran
       on a weekday-daytime schedule in dev (until 23 Sep; continuous since), so this
       compares against its own 4-week pattern instead. A hard prod-only

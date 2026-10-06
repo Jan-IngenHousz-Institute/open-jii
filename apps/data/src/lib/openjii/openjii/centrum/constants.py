@@ -12,9 +12,7 @@ BRONZE_TABLE_DEFAULT = "raw_data"
 SILVER_TABLE_DEFAULT = "clean_data"
 
 # Gold layer
-EXPERIMENT_STATUS_TABLE = "experiment_status"
 EXPERIMENT_RAW_DATA_TABLE = "experiment_raw_data"
-EXPERIMENT_DEVICE_DATA_TABLE = "experiment_device_data"
 EXPERIMENT_MACRO_DATA_TABLE = "experiment_macro_data"
 
 EXPERIMENT_CONTRIBUTORS_TABLE = "experiment_contributors"
@@ -22,18 +20,11 @@ EXPERIMENT_DEVICES_TABLE = "experiment_devices"
 EXPERIMENT_TABLE_METADATA = "experiment_table_metadata"
 EXPERIMENT_UPLOADED_DATA_TABLE = "experiment_uploaded_data"
 
-# Distinct key pairs, split out so each aggregate is the top node of its own
-# table, which is what a streaming-table conversion needs. Many-to-many pairs,
+# Distinct keys, appended by a streaming dropDuplicates. Many-to-many pairs,
 # hence bridge rather than dim.
 BRIDGE_EXPERIMENT_CONTRIBUTOR_TABLE = "bridge_experiment_contributor"
 BRIDGE_EXPERIMENT_DEVICE_TABLE = "bridge_experiment_device"
-
-# The newest row per key, kept by AUTO CDC, so the tables above them never
-# aggregate all of silver.
-LATEST_EXPERIMENT_ACTIVITY_TABLE = "latest_experiment_activity"
-LATEST_EXPERIMENT_DEVICE_TABLE = "latest_experiment_device"
-LATEST_DEVICE_DATA_TABLE = "latest_device_data"
-LATEST_DEVICE_EVENT_TABLE = "latest_device_event"
+EXPERIMENT_DEVICE_KEYS_TABLE = "experiment_device_keys"
 
 # One sample per distinct schema of a VARIANT column, so the metadata table
 # infers schemas without reading every row.
