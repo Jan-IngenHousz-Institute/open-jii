@@ -35,4 +35,21 @@ describe("NumericRangeInput", () => {
     await userEvent.setup().clear(screen.getByPlaceholderText("dataFilters.rangeFrom"));
     expect(onChange).toHaveBeenLastCalledWith(["", 10]);
   });
+
+  it("marks both boxes invalid and points them at the error message", () => {
+    render(<NumericRangeInput value={[0, ""]} onChange={vi.fn()} errorMessageId="reason" />);
+    for (const placeholder of ["dataFilters.rangeFrom", "dataFilters.rangeTo"]) {
+      const box = screen.getByPlaceholderText(placeholder);
+      expect(box).toHaveAttribute("aria-invalid", "true");
+      expect(box).toHaveAttribute("aria-describedby", "reason");
+    }
+  });
+
+  it("marks neither box without an error message", () => {
+    render(<NumericRangeInput value={[1, 9]} onChange={vi.fn()} />);
+    expect(screen.getByPlaceholderText("dataFilters.rangeFrom")).not.toHaveAttribute(
+      "aria-invalid",
+    );
+    expect(screen.getByPlaceholderText("dataFilters.rangeTo")).not.toHaveAttribute("aria-invalid");
+  });
 });
