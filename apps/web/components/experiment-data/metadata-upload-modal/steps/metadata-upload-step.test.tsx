@@ -88,12 +88,14 @@ vi.mock("@repo/ui/components/button", () => ({
     children,
     disabled,
     onClick,
+    "aria-label": ariaLabel,
   }: {
     children: React.ReactNode;
     disabled?: boolean;
     onClick?: () => void;
+    "aria-label"?: string;
   }) => (
-    <button disabled={disabled} onClick={onClick}>
+    <button aria-label={ariaLabel} disabled={disabled} onClick={onClick}>
       {children}
     </button>
   ),
@@ -262,9 +264,7 @@ describe("MetadataUploadStep", () => {
   it("opens a saved record for editing from the list", () => {
     mockExistingMetadata = [savedRecord];
     renderStep();
-    const [editButton] = within(screen.getByTestId("dialog-body")).getAllByRole("button");
-
-    fireEvent.click(editButton);
+    fireEvent.click(screen.getByRole("button", { name: "common.edit" }));
 
     expect(screen.getByTestId("metadata-name")).toHaveValue("Plot layout");
   });
