@@ -182,6 +182,10 @@ describe("classifyFilter", () => {
     });
   });
 
+  it("never treats text that isn't a date as a reversed range", () => {
+    expect(between(["b", "a"])).toMatchObject({ status: "applied" });
+  });
+
   it("applies a complete range, including one of a single point", () => {
     expect(between([1, 9])).toEqual({
       status: "applied",

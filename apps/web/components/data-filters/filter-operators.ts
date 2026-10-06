@@ -175,14 +175,11 @@ function isEmptyBound(bound: unknown): boolean {
   return bound === undefined || bound === null || bound === "";
 }
 
-function isReversedRange(start: unknown, end: unknown): boolean {
+// The schema has already checked that both bounds have the same type. Text that isn't a date
+// parses to NaN, and comparing NaN is always false, so it never counts as reversed.
+function isReversedRange(start: string | number, end: string | number): boolean {
   if (typeof start === "number" && typeof end === "number") {
     return start > end;
   }
-  if (typeof start === "string" && typeof end === "string") {
-    const startTime = Date.parse(start);
-    const endTime = Date.parse(end);
-    return Number.isFinite(startTime) && Number.isFinite(endTime) && startTime > endTime;
-  }
-  return false;
+  return Date.parse(String(start)) > Date.parse(String(end));
 }
