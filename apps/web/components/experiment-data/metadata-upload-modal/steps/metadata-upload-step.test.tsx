@@ -235,6 +235,30 @@ describe("MetadataUploadStep", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it("keeps Add new outside the scrolling list so it stays in view", () => {
+    mockExistingMetadata = [
+      {
+        metadataId: "11111111-1111-4111-8111-111111111111",
+        experimentId: "test-experiment",
+        metadata: {
+          name: "Plot layout",
+          columns: [{ id: "col_0", name: "plot", type: "string" }],
+          rows: [],
+          identifierColumnId: "col_0",
+        },
+        createdBy: "22222222-2222-4222-8222-222222222222",
+        createdAt: "2026-09-25T09:09:24.000Z",
+        updatedAt: "2026-09-25T09:09:24.000Z",
+      },
+    ];
+    renderStep();
+    const body = screen.getByTestId("dialog-body");
+
+    expect(within(body).getByText("Plot layout")).toBeInTheDocument();
+    expect(body).not.toContainElement(getButton("uploadModal.metadata.addNew"));
+    expect(body).not.toContainElement(getButton("uploadModal.fileUpload.back"));
+  });
+
   describe("file import", () => {
     it("opens the file picker when Upload File is clicked", () => {
       renderStep();
