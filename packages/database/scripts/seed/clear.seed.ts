@@ -138,9 +138,9 @@ export async function clearSeedData() {
   }
 
   if (seedUsers.length > 0) {
-    const seedUserIds = seedUsers.map((user) => user.id);
-    await db.delete(profiles).where(inArray(profiles.userId, seedUserIds));
-    await db.delete(users).where(inArray(users.id, seedUserIds));
+    const accountIds = seedUsers.map((user) => user.id);
+    await db.delete(profiles).where(inArray(profiles.userId, accountIds));
+    await db.delete(users).where(inArray(users.id, accountIds));
   }
   await db.delete(profiles).where(inArray(profiles.userId, contributorIds));
   await db.delete(users).where(inArray(users.id, contributorIds));

@@ -9,6 +9,7 @@ import {
   databaseUrl,
   dismissCookieBanner,
   locale,
+  newcomerEmail,
   seedEmail,
   waitForFreshOtp,
 } from "../helpers.js";
@@ -49,5 +50,5 @@ setup("authenticate as the seed user", async ({ page }) => {
 });
 
 setup("authenticate as the newcomer", async ({ page }) => {
-  await authenticate(page, "newcomer@openjii.local", newcomerAuthFile);
+  await authenticate(page, newcomerEmail, newcomerAuthFile);
 });
