@@ -102,7 +102,8 @@ export const NOTIFICATION_TYPES = {
   organization_join_request_received: {
     category: "requests_and_invitations",
     channels: { email: "preference" },
-    params: organization,
+    // As on the experiment type: the email carries the requester's message, the bell does not.
+    params: organization.extend({ message: z.string().optional() }),
   },
   organization_invitation_received: {
     category: "requests_and_invitations",

@@ -87,3 +87,13 @@ export interface DeletionBlockers {
   resources: DeletionBlocker[];
   organizations: SoleOwnedOrganization[];
 }
+
+// An organization invitation still waiting for an address, carrying the organization name
+// the notification copy needs. `role` is nullable in the schema, as Better Auth leaves it.
+export interface PendingOrganizationInvitation {
+  id: string;
+  organizationId: string;
+  inviterId: string;
+  role: string | null;
+  organizationName: string;
+}

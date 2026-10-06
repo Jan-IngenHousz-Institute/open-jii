@@ -1,14 +1,21 @@
+import type { AuthHookContext } from "@thallesp/nestjs-better-auth";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import type { APIError } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { emailOTP } from "better-auth/plugins";
+import type { MockInstance } from "vitest";
 
-import { openJiiOrganization, rethrowAsOrganizationInUse } from "@repo/auth/organization";
+import {
+  hasAccountForEmail,
+  openJiiOrganization,
+  rethrowAsOrganizationInUse,
+} from "@repo/auth/organization";
 import {
   and,
   db,
   eq,
   ensurePersonalOrganization,
+  notifications,
   organizationInvitations,
   organizationMembers,
   organizations,
@@ -18,7 +25,27 @@ import {
 } from "@repo/database";
 import * as schema from "@repo/database/schema";
 
+import { EmailAdapter } from "../common/modules/email/services/email.adapter";
+import { success } from "../common/utils/fp-utils";
 import { TestHarness } from "../test/test-harness";
+import { NotifyOrganizationInviteeUseCase } from "./application/use-cases/notify-organization-invitee/notify-organization-invitee";
+import { OrganizationAuthHook } from "./presentation/hooks/organization-auth.hook";
+
+/**
+ * The backend's `@AfterHook("/organization/invite-member")`, reached the way the Nest
+ * adapter reaches it: as one handler on the instance's own `hooks.after`, which runs
+ * before any plugin after-hook. Installed for the whole file and inert until a test
+ * assigns `inviteHook`, so every other invite in here behaves exactly as before.
+ *
+ * This is the only place in the backend suite where the real endpoint runs —
+ * `src/test/setup.ts` mocks `@repo/auth/server` down to `getSession`, so no
+ * `TestHarness` spec can reach it — which makes it the only proof that the path
+ * matches, that `ctx.context.returned` carries the invitation row, and that a refused
+ * invite reaches the hook as an `APIError`.
+ */
+let inviteHook: OrganizationAuthHook | null = null;
+/** What the endpoint handed the after-hook, in call order. */
+const returnedToHook: unknown[] = [];
 
 /**
  * The backend suite mocks `@repo/auth/server` down to `getSession`, so none of the
@@ -58,6 +85,16 @@ const auth = betterAuth({
     }),
     openJiiOrganization(),
   ],
+  hooks: {
+    // One middleware for the whole instance, matching on the path itself — the exact
+    // shape the Nest adapter builds, which chains every `@AfterHook` method into this
+    // single `hooks.after` and compares `ctx.path` by equality.
+    after: createAuthMiddleware(async (ctx) => {
+      if (!inviteHook || ctx.path !== "/organization/invite-member") return;
+      returnedToHook.push(ctx.context.returned);
+      await inviteHook.notifyInvitee(ctx);
+    }),
+  },
 });
 
 interface Signed {
@@ -1027,6 +1064,209 @@ describe("organization plugin configuration and protection hooks", () => {
         .from(organizationMembers)
         .where(eq(organizationMembers.id, adminMemberId));
       expect(stored.role).toBe("member");
+    });
+
+    /**
+     * The two halves of the invitation: who is told, and who sends the email. Both
+     * turn on one predicate — does a `users` row exist for this address — applied in
+     * `packages/auth` and again in the backend hook, which cannot share code. Driven
+     * through the real endpoint because that is the only thing that can show the two
+     * halves agreeing, and that the hook sees what the plan says it sees.
+     */
+    describe("telling an invitee who already has an account", () => {
+      let sendInvitation: MockInstance<EmailAdapter["sendOrganizationInvitationNotification"]>;
+
+      beforeEach(() => {
+        sendInvitation = vi
+          .spyOn(testApp.module.get(EmailAdapter), "sendOrganizationInvitationNotification")
+          .mockResolvedValue(success(undefined));
+
+        returnedToHook.length = 0;
+        inviteHook = new OrganizationAuthHook(
+          testApp.database,
+          testApp.module.get(NotifyOrganizationInviteeUseCase),
+        );
+      });
+
+      afterEach(() => {
+        inviteHook = null;
+      });
+
+      const rowsFor = (userId: string) =>
+        testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
+
+      /**
+       * A signed-in invitee with an activated profile. `signIn` goes through Better
+       * Auth, which writes no `profiles` row, and dispatch reads addresses through
+       * the anonymizing projection — so without one there is a bell row and no email.
+       */
+      async function activatedInvitee() {
+        const invitee = await signIn("invitee");
+        await testApp.database.insert(schema.profiles).values({
+          userId: invitee.userId,
+          firstName: "Iris",
+          lastName: "Invitee",
+          activated: true,
+        });
+        return invitee;
+      }
+
+      it("hands the hook the invitation row, and writes the invitee one notification", async () => {
+        const { owner, org } = await orgWithAdmin();
+        const invitee = await signIn("invitee");
+
+        const invitation = await auth.api.createInvitation({
+          body: { email: invitee.email, role: "admin", organizationId: org.id },
+          headers: owner.headers,
+        });
+
+        // The shape the hook narrows on, straight off the live endpoint.
+        expect(returnedToHook).toEqual([
+          expect.objectContaining({
+            id: invitation.id,
+            email: invitee.email.toLowerCase(),
+            role: "admin",
+            organizationId: org.id,
+            inviterId: owner.userId,
+            status: "pending",
+          }),
+        ]);
+        expect(await rowsFor(invitee.userId)).toMatchObject([
+          {
+            type: "organization_invitation_received",
+            actorId: owner.userId,
+            resourceType: "organization",
+            resourceId: org.id,
+            params: { organizationName: "Photosynthesis Lab", role: "admin" },
+            dedupeKey: `organization_invitation_received:${invitation.id}`,
+          },
+        ]);
+      });
+
+      it("emails the account holder from the backend, once", async () => {
+        const { owner, org } = await orgWithAdmin();
+        const invitee = await activatedInvitee();
+
+        await auth.api.createInvitation({
+          body: { email: invitee.email, role: "member", organizationId: org.id },
+          headers: owner.headers,
+        });
+
+        expect(sendInvitation).toHaveBeenCalledExactlyOnceWith(
+          org.id,
+          "Photosynthesis Lab",
+          // Dispatch resolves the actor's name; these accounts carry no profile name.
+          expect.any(String),
+          "member",
+          invitee.email,
+        );
+      });
+
+      it("tells nobody and emails nobody when the address has no account", async () => {
+        const { owner, org } = await orgWithAdmin();
+        const stranger = `nobody-${crypto.randomUUID()}@example.com`;
+
+        await auth.api.createInvitation({
+          body: { email: stranger, role: "member", organizationId: org.id },
+          headers: owner.headers,
+        });
+
+        // Better Auth emailed them inside the endpoint; there is no account to
+        // address a row or a dispatch email to.
+        expect(sendInvitation).not.toHaveBeenCalled();
+        expect(await testApp.database.select().from(notifications)).toEqual([]);
+      });
+
+      /**
+       * The two halves of the split cannot share code — `packages/auth` runs outside
+       * Nest — so what has to hold is that they answer alike. Checked here against
+       * the real table, with a mixed-case account to pin the `lower()` on both: the
+       * hook found this invitee, so `sendInvitationEmail` must have stood down, and
+       * it did not find the stranger, so Better Auth must have sent theirs.
+       */
+      it("agrees with the predicate packages/auth splits the email on", async () => {
+        const { owner, org } = await orgWithAdmin();
+        const invitee = await activatedInvitee();
+        await testApp.database
+          .update(schema.users)
+          .set({ email: invitee.email.toUpperCase() })
+          .where(eq(schema.users.id, invitee.userId));
+        const stranger = `nobody-${crypto.randomUUID()}@example.com`;
+
+        await auth.api.createInvitation({
+          body: { email: invitee.email, role: "member", organizationId: org.id },
+          headers: owner.headers,
+        });
+
+        // Better Auth lowercases the invitation address; the account is upper case.
+        expect(await rowsFor(invitee.userId)).toHaveLength(1);
+        expect(await hasAccountForEmail(invitee.email)).toBe(true);
+        expect(await hasAccountForEmail(stranger)).toBe(false);
+      });
+
+      it("hands the hook an APIError when the invite is refused, and writes nothing", async () => {
+        const { owner, org } = await orgWithAdmin();
+        const invitee = await signIn("invitee");
+        await auth.api.createInvitation({
+          body: { email: invitee.email, role: "member", organizationId: org.id },
+          headers: owner.headers,
+        });
+        returnedToHook.length = 0;
+        const before = await rowsFor(invitee.userId);
+
+        // The product has no resend path, so a second invite to a pending address is
+        // Better Auth's refusal — which still reaches the after-hook.
+        await expect(
+          auth.api.createInvitation({
+            body: { email: invitee.email, role: "member", organizationId: org.id },
+            headers: owner.headers,
+          }),
+        ).rejects.toThrow(/already invited/i);
+
+        expect(returnedToHook).toHaveLength(1);
+        expect(returnedToHook[0]).toBeInstanceOf(APIError);
+        expect(await rowsFor(invitee.userId)).toEqual(before);
+      });
+
+      it("writes one row when the same invitation reaches the hook twice", async () => {
+        const { owner, org } = await orgWithAdmin();
+        const invitee = await activatedInvitee();
+
+        await auth.api.createInvitation({
+          body: { email: invitee.email, role: "member", organizationId: org.id },
+          headers: owner.headers,
+        });
+        // What the sign-in catch-up will do for an invitation hook 1 already told
+        // them about: the invitation id is the dedupe key on both sides.
+        await inviteHook?.notifyInvitee({
+          context: { returned: returnedToHook[0] },
+        } as unknown as AuthHookContext);
+
+        expect(await rowsFor(invitee.userId)).toHaveLength(1);
+        expect(sendInvitation).toHaveBeenCalledTimes(1);
+      });
+
+      it("writes a second row after a cancel and a fresh invite", async () => {
+        const { owner, org } = await orgWithAdmin();
+        const invitee = await signIn("invitee");
+
+        const first = await auth.api.createInvitation({
+          body: { email: invitee.email, role: "member", organizationId: org.id },
+          headers: owner.headers,
+        });
+        await auth.api.cancelInvitation({
+          body: { invitationId: first.id },
+          headers: owner.headers,
+        });
+        await auth.api.createInvitation({
+          body: { email: invitee.email, role: "member", organizationId: org.id },
+          headers: owner.headers,
+        });
+
+        // A new invitation is a new id, so it is a new row — the product's only
+        // repeat path, since nothing ever passes `resend`.
+        expect(await rowsFor(invitee.userId)).toHaveLength(2);
+      });
     });
   });
 

@@ -5,6 +5,7 @@ import Mail from "nodemailer/lib/mailer";
 import { renderAddedUserNotification } from "@repo/transactional/render/added-user-notification";
 import { renderJoinRequestRejected } from "@repo/transactional/render/join-request-rejected";
 import { renderJoinRequestSubmitted } from "@repo/transactional/render/join-request-submitted";
+import { renderOrganizationInvitation } from "@repo/transactional/render/organization-invitation";
 import { renderOrganizationJoinRequestApproved } from "@repo/transactional/render/organization-join-request-approved";
 import { renderOrganizationJoinRequestRejected } from "@repo/transactional/render/organization-join-request-rejected";
 import { renderOrganizationJoinRequestSubmitted } from "@repo/transactional/render/organization-join-request-submitted";
@@ -57,6 +58,13 @@ export class NotificationsService {
   /* v8 ignore next 5 */
   protected renderJoinRequestRejectedEmail(...args: Parameters<typeof renderJoinRequestRejected>) {
     return renderJoinRequestRejected(...args);
+  }
+
+  /* v8 ignore next 5 */
+  protected renderOrganizationInvitationEmail(
+    ...args: Parameters<typeof renderOrganizationInvitation>
+  ) {
+    return renderOrganizationInvitation(...args);
   }
 
   /* v8 ignore next 5 */
@@ -118,6 +126,67 @@ export class NotificationsService {
     const { host } = new URL(baseUrl);
     const { href } = new URL(`/platform/organizations/${organizationId}`, baseUrl);
     return { host, url: href, baseUrl };
+  }
+
+  /**
+   * The invitation email for an invitee who already has an account — the same
+   * `@repo/transactional` template and the same destination `packages/auth` uses for
+   * an invitee who does not, so the two halves of the split read identically. The
+   * link is the account tab listing every invitation waiting for the address signed
+   * in with, not a per-invitation route: an id belonging to another address could
+   * only ever be refused.
+   */
+  async sendOrganizationInvitationNotification(
+    organizationId: string,
+    organizationName: string,
+    inviterName: string,
+    role: string,
+    recipientEmail: string,
+  ) {
+    return await tryCatch(
+      async () => {
+        const baseUrl = this.emailConfigService.getBaseUrl();
+        const { host } = new URL(baseUrl);
+        const { href: inviteUrl } = new URL("/platform/account/invitations", baseUrl);
+
+        const { html, text } = await this.renderOrganizationInvitationEmail({
+          host,
+          organizationName,
+          inviteUrl,
+          inviterName,
+          role,
+          baseUrl,
+        });
+
+        await this.dispatch({
+          to: recipientEmail,
+          subject: `You've been invited to join ${organizationName}`,
+          html,
+          text,
+        });
+
+        this.logger.log({
+          msg: "Organization invitation notification sent",
+          operation: "sendOrganizationInvitationNotification",
+          email: recipientEmail,
+          organizationId,
+          status: "success",
+        });
+      },
+      (error) => {
+        this.logger.error({
+          msg: "Failed to send organization invitation notification",
+          errorCode: ErrorCodes.EMAIL_SEND_FAILED,
+          operation: "sendOrganizationInvitationNotification",
+          email: recipientEmail,
+          organizationId,
+          error,
+        });
+        return apiErrorMapper(
+          `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      },
+    );
   }
 
   async sendOrganizationJoinRequestSubmittedNotification(
