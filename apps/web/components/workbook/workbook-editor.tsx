@@ -19,7 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { WorkbookConnectionType } from "~/hooks/iot/useIotConnections/useIotConnections";
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
@@ -30,12 +30,19 @@ import { cn } from "@repo/ui/lib/utils";
 
 import { AddCellButton } from "./add-cell-button";
 import { CellRenderer } from "./cell-renderer";
+import { WorkbookCellsProvider } from "./workbook-cells-context";
 import { WorkbookHeader } from "./workbook-header";
 import { WorkbookSidebar } from "./workbook-sidebar";
 
 const noop = () => {
   // no-op
 };
+
+// dnd-kit rebuilds the context every sortable reads when these change identity, so they are
+// defined once rather than per render.
+const POINTER_SENSOR_OPTIONS = { activationConstraint: { distance: 5 } };
+const KEYBOARD_SENSOR_OPTIONS = { coordinateGetter: sortableKeyboardCoordinates };
+const DRAG_MODIFIERS = [restrictToVerticalAxis];
 
 type CellExecutionStatus = "idle" | "running" | "completed" | "error";
 
@@ -129,19 +136,33 @@ interface CellGroup {
   sourceIndex: number;
   output?: WorkbookCell;
   outputIndex?: number;
+  producer?: WorkbookCell;
 }
 
 export function buildCellGroups(cells: WorkbookCell[]): CellGroup[] {
+  const cellsById = new Map(cells.map((cell) => [cell.id, cell]));
   const groups: CellGroup[] = [];
   for (let i = 0; i < cells.length; i++) {
     const source = cells[i];
     if (source.type === "output") {
-      groups.push({ id: source.id, source, sourceIndex: i });
+      groups.push({
+        id: source.id,
+        source,
+        sourceIndex: i,
+        producer: cellsById.get(source.producedBy),
+      });
       continue;
     }
     const next = i + 1 < cells.length ? cells[i + 1] : undefined;
     if (next?.type === "output" && next.producedBy === source.id) {
-      groups.push({ id: source.id, source, sourceIndex: i, output: next, outputIndex: i + 1 });
+      groups.push({
+        id: source.id,
+        source,
+        sourceIndex: i,
+        output: next,
+        outputIndex: i + 1,
+        producer: source,
+      });
       i++;
     } else {
       groups.push({ id: source.id, source, sourceIndex: i });
@@ -193,9 +214,7 @@ export function reorderCellsWithGluedOutput(
   return updated;
 }
 
-interface SortableCellGroupProps {
-  group: CellGroup;
-  cells: WorkbookCell[];
+interface SortableCellGroupProps extends CellGroup {
   cellNumber?: number;
   executionStates?: Record<string, CellExecutionState>;
   sensorFamily?: SensorFamily;
@@ -212,9 +231,15 @@ interface SortableCellGroupProps {
   onDelete: (index: number) => void;
 }
 
-function SortableCellGroup({
-  group,
-  cells,
+// Memoized so an edit re-renders only the group it touched. Keep every prop either this group's
+// own cells or stable across edits, or each keystroke re-renders the whole workbook again.
+const SortableCellGroup = memo(function SortableCellGroup({
+  id,
+  source,
+  sourceIndex,
+  output,
+  outputIndex,
+  producer,
   cellNumber,
   executionStates,
   sensorFamily,
@@ -230,7 +255,7 @@ function SortableCellGroup({
   onUpdate,
   onDelete,
 }: SortableCellGroupProps) {
-  const draggable = !readOnly && group.source.type !== "output";
+  const draggable = !readOnly && source.type !== "output";
   const {
     attributes,
     listeners,
@@ -239,9 +264,8 @@ function SortableCellGroup({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: group.id, disabled: !draggable });
+  } = useSortable({ id, disabled: !draggable });
 
-  const { source, sourceIndex, output, outputIndex } = group;
   const cellState = executionStates?.[source.id];
 
   return (
@@ -255,7 +279,6 @@ function SortableCellGroup({
           <AddCellButton
             onAdd={(type) => onAdd(type, sourceIndex)}
             onAddCell={(cell) => onAddCell(cell, sourceIndex)}
-            existingCells={cells}
             sensorFamily={sensorFamily}
           />
         )}
@@ -289,7 +312,7 @@ function SortableCellGroup({
               onUpdate={(updated) => onUpdate(sourceIndex, updated)}
               onDelete={() => onDelete(sourceIndex)}
               onRun={onRunCell ? () => onRunCell(source.id) : undefined}
-              allCells={cells}
+              producer={producer}
               executionStatus={cellState?.status}
               executionError={cellState?.error}
               promptedQuestionId={promptedQuestionId}
@@ -315,7 +338,7 @@ function SortableCellGroup({
                 onUpdate={(updated) => onUpdate(outputIndex, updated)}
                 onDelete={() => onDelete(outputIndex)}
                 onRun={onRunCell ? () => onRunCell(output.id) : undefined}
-                allCells={cells}
+                producer={producer}
                 executionStatus={executionStates?.[output.id]?.status}
                 executionError={executionStates?.[output.id]?.error}
                 promptedQuestionId={promptedQuestionId}
@@ -328,7 +351,7 @@ function SortableCellGroup({
       )}
     </div>
   );
-}
+});
 
 /**
  * Resolved against `el`, not the root: `--sidebar-inset-offset` is declared on
@@ -374,98 +397,108 @@ export function WorkbookEditor({
   const cellRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(PointerSensor, POINTER_SENSOR_OPTIONS),
+    useSensor(KeyboardSensor, KEYBOARD_SENSOR_OPTIONS),
   );
 
   const groups = useMemo(() => buildCellGroups(cells), [cells]);
-  const sortableIds = useMemo(
-    () => groups.filter((g) => g.source.type !== "output").map((g) => g.id),
-    [groups],
-  );
+
+  // SortableContext re-renders every sortable when `items` changes identity, so the list is only
+  // rebuilt when the ids themselves change.
+  const sortableKey = groups
+    .filter((g) => g.source.type !== "output")
+    .map((g) => g.id)
+    .join(" ");
+  const sortableIds = useMemo(() => (sortableKey ? sortableKey.split(" ") : []), [sortableKey]);
+
+  // The handlers read these at call time, so they keep one identity across edits.
+  const cellsRef = useRef(cells);
+  cellsRef.current = cells;
+  const onCellsChangeRef = useRef(onCellsChange);
+  onCellsChangeRef.current = onCellsChange;
+  const onRunCellRef = useRef(onRunCell);
+  onRunCellRef.current = onRunCell;
+  const onQuestionAnsweredRef = useRef(onQuestionAnswered);
+  onQuestionAnsweredRef.current = onQuestionAnswered;
 
   const handleAdd = useCallback(
     (type: WorkbookCell["type"], atIndex: number) => {
       const newCell = createDefaultCell(type, sensorFamily);
-      const updated = [...cells];
+      const updated = [...cellsRef.current];
       updated.splice(atIndex, 0, newCell);
-      onCellsChange(updated);
+      onCellsChangeRef.current(updated);
     },
-    [cells, onCellsChange, sensorFamily],
+    [sensorFamily],
   );
 
-  const handleAddCell = useCallback(
-    (cell: WorkbookCell, atIndex: number) => {
-      const updated = [...cells];
-      updated.splice(atIndex, 0, cell);
-      onCellsChange(updated);
-    },
-    [cells, onCellsChange],
-  );
+  const handleAddCell = useCallback((cell: WorkbookCell, atIndex: number) => {
+    const updated = [...cellsRef.current];
+    updated.splice(atIndex, 0, cell);
+    onCellsChangeRef.current(updated);
+  }, []);
 
-  const handleUpdate = useCallback(
-    (index: number, cell: WorkbookCell) => {
-      const updated = [...cells];
-      updated[index] = cell;
+  const handleUpdate = useCallback((index: number, cell: WorkbookCell) => {
+    const updated = [...cellsRef.current];
+    updated[index] = cell;
 
-      if (cell.type === "question" && cell.isAnswered && cell.answer != null) {
-        const existingOutputIndex = updated.findIndex(
-          (c) => c.type === "output" && c.producedBy === cell.id,
-        );
-        if (existingOutputIndex === -1) {
-          const outputCell = {
-            id: crypto.randomUUID(),
-            type: "output" as const,
-            producedBy: cell.id,
-            data: { answer: cell.answer },
-            isCollapsed: false,
-          };
-          updated.splice(index + 1, 0, outputCell);
-        } else {
-          updated[existingOutputIndex] = {
-            ...updated[existingOutputIndex],
-            data: { answer: cell.answer },
-          } as WorkbookCell;
-        }
-      }
-
-      onCellsChange(updated);
-    },
-    [cells, onCellsChange],
-  );
-
-  const handleDelete = useCallback(
-    (index: number) => {
-      const deletedCell = cells[index];
-      let updated = [...cells];
-
-      // Deleting a question's output should reset the question itself.
-      if (deletedCell.type === "output") {
-        const sourceIndex = updated.findIndex((c) => c.id === deletedCell.producedBy);
-        if (sourceIndex !== -1 && updated[sourceIndex].type === "question") {
-          updated[sourceIndex] = {
-            ...updated[sourceIndex],
-            answer: undefined,
-            isAnswered: false,
-          };
-        }
-      }
-
-      updated = updated.filter(
-        (c, i) => i !== index && !(c.type === "output" && c.producedBy === deletedCell.id),
+    if (cell.type === "question" && cell.isAnswered && cell.answer != null) {
+      const existingOutputIndex = updated.findIndex(
+        (c) => c.type === "output" && c.producedBy === cell.id,
       );
+      if (existingOutputIndex === -1) {
+        const outputCell = {
+          id: crypto.randomUUID(),
+          type: "output" as const,
+          producedBy: cell.id,
+          data: { answer: cell.answer },
+          isCollapsed: false,
+        };
+        updated.splice(index + 1, 0, outputCell);
+      } else {
+        updated[existingOutputIndex] = {
+          ...updated[existingOutputIndex],
+          data: { answer: cell.answer },
+        } as WorkbookCell;
+      }
+    }
 
-      onCellsChange(updated);
-    },
-    [cells, onCellsChange],
-  );
+    onCellsChangeRef.current(updated);
+  }, []);
 
-  const handleReorder = useCallback(
-    (activeId: string, overId: string) => {
-      onCellsChange(moveCellGroup(cells, activeId, overId));
-    },
-    [cells, onCellsChange],
-  );
+  const handleDelete = useCallback((index: number) => {
+    const deletedCell = cellsRef.current[index];
+    let updated = [...cellsRef.current];
+
+    // Deleting a question's output should reset the question itself.
+    if (deletedCell.type === "output") {
+      const sourceIndex = updated.findIndex((c) => c.id === deletedCell.producedBy);
+      if (sourceIndex !== -1 && updated[sourceIndex].type === "question") {
+        updated[sourceIndex] = {
+          ...updated[sourceIndex],
+          answer: undefined,
+          isAnswered: false,
+        };
+      }
+    }
+
+    updated = updated.filter(
+      (c, i) => i !== index && !(c.type === "output" && c.producedBy === deletedCell.id),
+    );
+
+    onCellsChangeRef.current(updated);
+  }, []);
+
+  const handleReorder = useCallback((activeId: string, overId: string) => {
+    onCellsChangeRef.current(moveCellGroup(cellsRef.current, activeId, overId));
+  }, []);
+
+  const handleRunCell = useCallback((cellId: string) => {
+    onRunCellRef.current?.(cellId);
+  }, []);
+
+  const handleQuestionAnswered = useCallback((answer: string) => {
+    onQuestionAnsweredRef.current?.(answer);
+  }, []);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -534,7 +567,6 @@ export function WorkbookEditor({
           <AddCellButton
             onAdd={(type) => handleAdd(type, 0)}
             onAddCell={(cell) => handleAddCell(cell, 0)}
-            existingCells={cells}
             sensorFamily={sensorFamily}
             variant="bottom"
             showEmptyState
@@ -571,51 +603,51 @@ export function WorkbookEditor({
 
       <div className="flex gap-6">
         <div className="min-w-0 flex-1 space-y-0">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            modifiers={[restrictToVerticalAxis]}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-              {groups.map((group) => (
-                <SortableCellGroup
-                  key={group.id}
-                  group={group}
-                  cells={cells}
-                  cellNumber={executionCounts[group.source.id]}
-                  executionStates={executionStates}
-                  sensorFamily={sensorFamily}
-                  readOnly={readOnly}
-                  entitySnapshots={entitySnapshots}
-                  onRunCell={onRunCell}
-                  promptedQuestionId={promptedQuestionId}
-                  onQuestionAnswered={onQuestionAnswered}
-                  registerRef={registerRef}
-                  onSelect={setActiveCellId}
-                  onAdd={handleAdd}
-                  onAddCell={handleAddCell}
-                  onUpdate={handleUpdate}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
+          <WorkbookCellsProvider cells={cells}>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={DRAG_MODIFIERS}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+                {groups.map((group) => (
+                  <SortableCellGroup
+                    key={group.id}
+                    {...group}
+                    cellNumber={executionCounts[group.source.id]}
+                    executionStates={executionStates}
+                    sensorFamily={sensorFamily}
+                    readOnly={readOnly}
+                    entitySnapshots={entitySnapshots}
+                    onRunCell={onRunCell ? handleRunCell : undefined}
+                    promptedQuestionId={promptedQuestionId}
+                    onQuestionAnswered={onQuestionAnswered ? handleQuestionAnswered : undefined}
+                    registerRef={registerRef}
+                    onSelect={setActiveCellId}
+                    onAdd={handleAdd}
+                    onAddCell={handleAddCell}
+                    onUpdate={handleUpdate}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
 
-          {!readOnly && (
-            <div className="flex items-stretch gap-1 pt-6">
-              <div className="w-10 shrink-0" />
-              <div className="min-w-0 flex-1">
-                <AddCellButton
-                  onAdd={(type) => handleAdd(type, cells.length)}
-                  onAddCell={(cell) => handleAddCell(cell, cells.length)}
-                  existingCells={cells}
-                  sensorFamily={sensorFamily}
-                  variant="bottom"
-                />
+            {!readOnly && (
+              <div className="flex items-stretch gap-1 pt-6">
+                <div className="w-10 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <AddCellButton
+                    onAdd={(type) => handleAdd(type, cells.length)}
+                    onAddCell={(cell) => handleAddCell(cell, cells.length)}
+                    sensorFamily={sensorFamily}
+                    variant="bottom"
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </WorkbookCellsProvider>
         </div>
 
         <div className="sticky top-[120px] hidden max-h-[calc(100vh-120px)] shrink-0 xl:block">

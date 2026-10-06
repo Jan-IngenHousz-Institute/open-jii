@@ -27,14 +27,13 @@ import {
 } from "@repo/ui/components/select";
 
 import { CellWrapper } from "../cell-wrapper";
+import { useWorkbookCells } from "../workbook-cells-context";
 
 interface BranchCellProps {
   cell: BranchCellType;
   onUpdate: (cell: BranchCellType) => void;
   onDelete: () => void;
   onRun?: () => void;
-  /** All cells in the workbook - used to populate source/target dropdowns */
-  allCells?: WorkbookCell[];
   executionStatus?: "idle" | "running" | "completed" | "error";
   executionError?: string;
   readOnly?: boolean;
@@ -56,11 +55,11 @@ export function BranchCellComponent({
   onUpdate,
   onDelete,
   onRun,
-  allCells,
   executionStatus,
   executionError,
   readOnly,
 }: BranchCellProps) {
+  const allCells = useWorkbookCells();
   const cell = useMemo(
     () => (Array.isArray(rawCell.paths) ? rawCell : { ...rawCell, paths: [] as BranchPath[] }),
     [rawCell],
@@ -76,7 +75,7 @@ export function BranchCellComponent({
 
   const sourceCells = useMemo(
     () =>
-      (allCells ?? []).filter(
+      allCells.filter(
         (c) =>
           c.id !== cell.id &&
           (c.type === "protocol" ||
@@ -88,7 +87,7 @@ export function BranchCellComponent({
   );
 
   const jumpTargets = useMemo(
-    () => (allCells ?? []).filter((c) => c.id !== cell.id && c.type !== "output"),
+    () => allCells.filter((c) => c.id !== cell.id && c.type !== "output"),
     [allCells, cell.id],
   );
 
@@ -96,8 +95,6 @@ export function BranchCellComponent({
     (sourceCellId: string): string[] => {
       // The connected device exposes a fixed field list from its identity.
       if (sourceCellId === DEVICE_CONTEXT_KEY) return [...DEVICE_CONTEXT_FIELDS];
-
-      if (!allCells) return [];
 
       // Questions only expose a single implicit "answer" field.
       const sourceCell = allCells.find((c) => c.id === sourceCellId);
@@ -196,7 +193,7 @@ export function BranchCellComponent({
                   if (c.id !== condId) return c;
                   const updated = { ...c, [field]: value };
                   if (field === "sourceCellId") {
-                    const src = (allCells ?? []).find((ac) => ac.id === value);
+                    const src = allCells.find((ac) => ac.id === value);
                     if (value === DEVICE_CONTEXT_KEY) {
                       // Keep a still-valid device field on reselect; default to family.
                       if (!(DEVICE_CONTEXT_FIELDS as readonly string[]).includes(c.field)) {
@@ -255,7 +252,7 @@ export function BranchCellComponent({
 
   const renderCondition = (path: BranchPath, cond: BranchCondition, index: number) => {
     const fields = getFieldsForSource(cond.sourceCellId);
-    const sourceCell = (allCells ?? []).find((c) => c.id === cond.sourceCellId);
+    const sourceCell = allCells.find((c) => c.id === cond.sourceCellId);
     const isQuestionSource = sourceCell?.type === "question";
 
     return (

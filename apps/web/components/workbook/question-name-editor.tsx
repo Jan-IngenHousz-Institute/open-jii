@@ -4,7 +4,6 @@ import { HelpCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
-import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import {
   sanitizeQuestionLabel,
   stripSpecialCharacters,
@@ -13,10 +12,11 @@ import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 
+import { useWorkbookCells } from "./workbook-cells-context";
+
 interface QuestionNameEditorProps {
   initialName: string;
   cellId: string;
-  existingCells: WorkbookCell[];
   onRename: (newName: string) => void;
   children: ReactNode;
 }
@@ -24,10 +24,10 @@ interface QuestionNameEditorProps {
 export function QuestionNameEditor({
   initialName,
   cellId,
-  existingCells,
   onRename,
   children,
 }: QuestionNameEditorProps) {
+  const existingCells = useWorkbookCells();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(initialName);
 

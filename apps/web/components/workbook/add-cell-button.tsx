@@ -30,7 +30,6 @@ type CellType = WorkbookCell["type"];
 interface AddCellButtonProps {
   onAdd: (type: CellType) => void;
   onAddCell?: (cell: WorkbookCell) => void;
-  existingCells?: WorkbookCell[];
   sensorFamily?: SensorFamily;
   variant?: "inline" | "bottom";
   showBranch?: boolean;
@@ -55,7 +54,6 @@ const cellOptions: {
 export function AddCellButton({
   onAdd,
   onAddCell,
-  existingCells = [],
   sensorFamily = "multispeq",
   variant = "inline",
   showBranch = true,
@@ -88,7 +86,7 @@ export function AddCellButton({
     }
     if (type === "question") {
       return (
-        <QuestionPicker key={key} existingCells={existingCells} onSelect={onAddCell}>
+        <QuestionPicker key={key} onSelect={onAddCell}>
           {button}
         </QuestionPicker>
       );

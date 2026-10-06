@@ -3,10 +3,7 @@
 import { CheckCircle2, Hash, HelpCircle, List, Pencil, Send, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-import type {
-  QuestionCell as QuestionCellType,
-  WorkbookCell,
-} from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { QuestionCell as QuestionCellType } from "@repo/api/domains/workbook/workbook-cells.schema";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
@@ -33,7 +30,6 @@ interface QuestionCellProps {
   executionError?: string;
   promptOpen?: boolean;
   onQuestionAnswered?: (answer: string) => void;
-  allCells?: WorkbookCell[];
   readOnly?: boolean;
 }
 
@@ -55,7 +51,6 @@ export function QuestionCellComponent({
   executionError,
   promptOpen,
   onQuestionAnswered,
-  allCells = [],
   readOnly,
 }: QuestionCellProps) {
   const question = cell.question;
@@ -333,7 +328,6 @@ export function QuestionCellComponent({
             <QuestionNameEditor
               initialName={cell.name}
               cellId={cell.id}
-              existingCells={allCells}
               onRename={handleNameRename}
             >
               <Button

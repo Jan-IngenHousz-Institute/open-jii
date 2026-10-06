@@ -4,7 +4,7 @@ import { HelpCircle, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
-import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { QuestionCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import {
   sanitizeQuestionLabel,
   stripSpecialCharacters,
@@ -13,8 +13,9 @@ import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 
+import { useWorkbookCells } from "./workbook-cells-context";
+
 interface QuestionPickerProps {
-  existingCells: WorkbookCell[];
   onSelect: (cell: QuestionCell) => void;
   children: ReactNode;
 }
@@ -22,7 +23,8 @@ interface QuestionPickerProps {
 // Question cells supply column keys for the data pipeline, so the name must
 // be set at creation time and be unique within the workbook. This is the only
 // path that creates question cells; createDefaultCell throws for that type.
-export function QuestionPicker({ existingCells, onSelect, children }: QuestionPickerProps) {
+export function QuestionPicker({ onSelect, children }: QuestionPickerProps) {
+  const existingCells = useWorkbookCells();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
 
