@@ -15,6 +15,7 @@ import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.a
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { ListExperimentsUseCase } from "../application/use-cases/list-experiments/list-experiments";
+import { ListRecentlyOpenedExperimentsUseCase } from "../application/use-cases/list-recently-opened-experiments/list-recently-opened-experiments";
 
 describe("ExperimentController", () => {
   const testApp = TestHarness.App;
@@ -516,6 +517,15 @@ describe("ExperimentController", () => {
       const response = await testApp.get(path()).withAuth(testUserId).expect(StatusCodes.OK);
 
       expect(response.body).toHaveLength(3);
+    });
+
+    it("returns 500 when the use case fails", async () => {
+      vi.spyOn(
+        testApp.module.get(ListRecentlyOpenedExperimentsUseCase),
+        "execute",
+      ).mockResolvedValue(failure(AppError.internal("Database error")));
+
+      await testApp.get(path()).withAuth(testUserId).expect(StatusCodes.INTERNAL_SERVER_ERROR);
     });
 
     it("rejects a limit above the maximum", async () => {
