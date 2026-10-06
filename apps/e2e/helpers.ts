@@ -5,6 +5,7 @@ import { readLatestSignInOtp } from "@repo/devkit/otp";
 
 export const locale = process.env.E2E_LOCALE ?? "en-US";
 export const seedEmail = process.env.E2E_EMAIL ?? "seed@openjii.local";
+export const newcomerEmail = "newcomer@openjii.local";
 export const databaseUrl =
   process.env.E2E_DATABASE_URL ??
   process.env.DATABASE_URL ??
