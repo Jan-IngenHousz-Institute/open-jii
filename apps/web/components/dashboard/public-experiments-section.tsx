@@ -12,9 +12,10 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
+import { PUBLIC_EXPERIMENTS_PAGE_SIZE, publicExperimentsQuery } from "./dashboard-queries";
+
 const PUBLIC_EXPERIMENTS_HREF = "/platform/experiments?visibility=public";
 
-const PAGE_SIZE = 6;
 const STALE_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 
 const placeholderClassName =
@@ -28,17 +29,7 @@ export function PublicExperimentsSection() {
   const { t } = useTranslation();
   const locale = useLocale();
 
-  const { data, isError, refetch } = useQuery(
-    orpc.experiments.listExperiments.queryOptions({
-      input: {
-        scope: "all",
-        visibility: "public",
-        sort: [{ field: "updated", direction: "desc" }],
-        page: 1,
-        pageSize: PAGE_SIZE,
-      },
-    }),
-  );
+  const { data, isError, refetch } = useQuery(publicExperimentsQuery(orpc));
 
   if (isError) {
     return (
@@ -54,7 +45,7 @@ export function PublicExperimentsSection() {
   if (!data) {
     return (
       <div aria-busy="true" className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: PAGE_SIZE }).map((_, index) => (
+        {Array.from({ length: PUBLIC_EXPERIMENTS_PAGE_SIZE }).map((_, index) => (
           <Skeleton key={index} className="h-48" />
         ))}
       </div>

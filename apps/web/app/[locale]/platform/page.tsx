@@ -5,8 +5,13 @@ import { PublicExperimentsSection } from "@/components/dashboard/public-experime
 import { ResearchActivityPanel } from "@/components/dashboard/research-activity-panel";
 import { UserExperimentsSection } from "@/components/dashboard/user-experiments-section";
 import { PageContainer } from "@/components/page-container";
+import { PrefetchedQueries } from "@/components/server-prefetch/prefetched-queries";
 import type { Metadata } from "next";
 import { BlogPostsSection } from "~/components/dashboard/blog-posts-section";
+import {
+  publicExperimentsQuery,
+  userExperimentsQuery,
+} from "~/components/dashboard/dashboard-queries";
 import { env } from "~/env";
 
 import initTranslations from "@repo/i18n/server";
@@ -31,57 +36,61 @@ export default async function PlatformDashboard({ params }: PlatformPageProps) {
   });
 
   return (
-    <PageContainer width="fluid" className="space-y-6">
-      {/* Dashboard Banner */}
-      <DashboardBanner
-        title={t("dashboard.transferBannerTitle")}
-        description={t("dashboard.transferBannerDescription")}
-        descriptionItalic={t("dashboard.transferBannerDescriptionItalic")}
-        descriptionItalicHref={
-          "https://github.com/Jan-IngenHousz-Institute/open-jii/discussions/new?category=ideas"
-        }
-        secondaryButtonLabel={t("dashboard.reportBugButton")}
-        secondaryButtonHref={`${env.NEXT_PUBLIC_DOCS_URL}/guide/reference/getting-help`}
-        buttonLabel={t("dashboard.transferBannerButton")}
-        buttonHref={`/${locale}/platform/transfer-request`}
-        locale={locale}
-      />
+    <PrefetchedQueries
+      queries={(utils) => [userExperimentsQuery(utils), publicExperimentsQuery(utils)]}
+    >
+      <PageContainer width="fluid" className="space-y-6">
+        {/* Dashboard Banner */}
+        <DashboardBanner
+          title={t("dashboard.transferBannerTitle")}
+          description={t("dashboard.transferBannerDescription")}
+          descriptionItalic={t("dashboard.transferBannerDescriptionItalic")}
+          descriptionItalicHref={
+            "https://github.com/Jan-IngenHousz-Institute/open-jii/discussions/new?category=ideas"
+          }
+          secondaryButtonLabel={t("dashboard.reportBugButton")}
+          secondaryButtonHref={`${env.NEXT_PUBLIC_DOCS_URL}/guide/reference/getting-help`}
+          buttonLabel={t("dashboard.transferBannerButton")}
+          buttonHref={`/${locale}/platform/transfer-request`}
+          locale={locale}
+        />
 
-      {/* Milestone Moment */}
-      <MilestoneBanner locale={locale} />
+        {/* Milestone Moment */}
+        <MilestoneBanner locale={locale} />
 
-      {/* Platform Pulse */}
-      <ResearchActivityPanel locale={locale} />
+        {/* Platform Pulse */}
+        <ResearchActivityPanel locale={locale} />
 
-      {/* First Row - User's Experiments */}
-      <DashboardSection
-        title={t("dashboard.yourExperiments")}
-        seeAllLabel={t("dashboard.seeAll")}
-        seeAllHref="/platform/experiments"
-        locale={locale}
-      >
-        <UserExperimentsSection />
-      </DashboardSection>
+        {/* First Row - User's Experiments */}
+        <DashboardSection
+          title={t("dashboard.yourExperiments")}
+          seeAllLabel={t("dashboard.seeAll")}
+          seeAllHref="/platform/experiments"
+          locale={locale}
+        >
+          <UserExperimentsSection />
+        </DashboardSection>
 
-      {/* Recently updated public experiments */}
-      <DashboardSection
-        title={t("dashboard.recentPublicExperiments")}
-        seeAllLabel={t("dashboard.seeAll")}
-        seeAllHref="/platform/experiments?visibility=public"
-        locale={locale}
-      >
-        <PublicExperimentsSection />
-      </DashboardSection>
+        {/* Recently updated public experiments */}
+        <DashboardSection
+          title={t("dashboard.recentPublicExperiments")}
+          seeAllLabel={t("dashboard.seeAll")}
+          seeAllHref="/platform/experiments?visibility=public"
+          locale={locale}
+        >
+          <PublicExperimentsSection />
+        </DashboardSection>
 
-      {/* Recent Blog Posts */}
-      <DashboardSection
-        title={t("dashboard.recentArticles")}
-        seeAllLabel={t("dashboard.seeAll")}
-        seeAllHref="/blog"
-        locale={locale}
-      >
-        <BlogPostsSection locale={locale} />
-      </DashboardSection>
-    </PageContainer>
+        {/* Recent Blog Posts */}
+        <DashboardSection
+          title={t("dashboard.recentArticles")}
+          seeAllLabel={t("dashboard.seeAll")}
+          seeAllHref="/blog"
+          locale={locale}
+        >
+          <BlogPostsSection locale={locale} />
+        </DashboardSection>
+      </PageContainer>
+    </PrefetchedQueries>
   );
 }

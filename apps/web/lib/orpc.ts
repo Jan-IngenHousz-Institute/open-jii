@@ -21,6 +21,9 @@ export const orpcClient: ContractRouterClient<typeof contract> = createORPCClien
 /** TanStack Query utilities (`orpc.<domain>.<endpoint>.queryOptions/mutationOptions(...)`). */
 export const orpc = createTanstackQueryUtils(orpcClient);
 
+/** The query utilities' shape, the same whichever client they wrap, so a query is built once. */
+export type QueryUtils = typeof orpc;
+
 /**
  * Narrows a thrown error to an `ORPCError` (carrying `.status` / `.code`) for
  * status-based handling in mutation `onError`. Returns undefined for non-oRPC
