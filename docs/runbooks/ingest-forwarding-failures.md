@@ -49,18 +49,30 @@ aws cloudwatch list-metrics --namespace AWS/IoT --metric-name Failure \
 
 IoT Core does not keep a message a rule action dropped, but the rule's error action does. Every
 message either action failed to deliver lands in the `open-jii-iot-raw-archive-<env>` bucket under
-`iot-rule-errors/<yyyy>/<MM>/<dd>/`, one object per message:
+`iot-rule-errors/<yyyy>/<MM>/<dd>/`, by the UTC day it failed, one object per message. Set `DAY` to
+the day of the lost window:
 
 ```bash
-aws s3 ls s3://open-jii-iot-raw-archive-<env>/iot-rule-errors/$(date -u +%Y/%m/%d)/
+DAY=2026/10/07
+aws s3 ls s3://open-jii-iot-raw-archive-<env>/iot-rule-errors/$DAY/
 ```
 
-Each object names the rule, topic and client, lists every failed action under `failures` with its
-error, and carries the device's original payload in `base64OriginalPayload`. A message whose Kinesis
-action failed while Firehose succeeded is also in the raw archive under `raw-iot/`, but only these
-objects say which messages the pipeline missed. No pipeline reads either prefix, so replay is a
-manual job of re-publishing those payloads into the stream, not a switch to flip. Establish which
-action failed before telling anyone the data is gone, because half the time it is not.
+Each object names the rule, topic and client, lists every failed action under `failures` with the
+resource it failed on and its error, and carries the device's original payload in
+`base64OriginalPayload`. Only a message whose Kinesis delivery failed is missing from the pipeline.
+One whose failures name only the Firehose stream reached Kinesis and is missing only from the raw
+archive; replaying it would count it twice. These are the objects to replay:
+
+```bash
+aws s3 cp --recursive s3://open-jii-iot-raw-archive-<env>/iot-rule-errors/$DAY/ ./rule-errors/
+jq -r 'select(any(.failures[]; .failedResource == "open-jii-<env>-data-ingest-stream")) | input_filename' ./rule-errors/*.json
+```
+
+A message whose Kinesis action failed while Firehose succeeded is also in the raw archive under
+`raw-iot/`, but only these objects say which messages the pipeline missed. No pipeline reads either
+prefix, so replay is a manual job of re-publishing those payloads into the stream, not a switch to
+flip. Establish which action failed before telling anyone the data is gone, because half the time it
+is not.
 
 ## Closing
 
