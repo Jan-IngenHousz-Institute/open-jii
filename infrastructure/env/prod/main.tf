@@ -695,10 +695,11 @@ module "experiment_secret_scope" {
   }
 }
 
-# The backend's warehouse was made by hand before it was code.
+# The backend's warehouse was made by hand before it was code. Imports refuse a sensitive id;
+# this one is an identifier, not a credential, and CI masks it in logs.
 import {
   to = module.backend_warehouse.databricks_sql_endpoint.this
-  id = var.backend_databricks_warehouse_id
+  id = nonsensitive(var.backend_databricks_warehouse_id)
 }
 
 module "backend_warehouse" {

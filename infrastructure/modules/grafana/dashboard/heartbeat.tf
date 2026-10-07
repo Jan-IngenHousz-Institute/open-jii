@@ -84,7 +84,7 @@ locals {
       key     = "platform"
       title   = "Platform"
       areas   = ["platform"]
-      caption = "**Site uptime** is the share of the week the site's health check passed. **Databricks cost** is the last seven complete days at list price, from Databricks' billing tables; its chart splits it by pipeline, the SQL warehouse, jobs and the rest. Which deploys failed, and how long each took from commit to production, are on [Delivery](/d/${local.flow_uids.delivery}); database storage sits with every other store on [Throughput and storage](/d/${local.flow_uids["throughput-storage"]})."
+      caption = "**Site uptime** is the share of the week the site's health check passed. **Databricks cost** is the last seven complete days at list price, from Databricks' billing tables; its chart splits it by pipeline, warehouse, jobs and the rest. Which deploys failed, and how long each took from commit to production, are on [Delivery](/d/${local.flow_uids.delivery}); database storage sits with every other store on [Throughput and storage](/d/${local.flow_uids["throughput-storage"]})."
     },
   ]
 
