@@ -799,6 +799,9 @@ importers:
       '@open-jii/release-tools':
         specifier: workspace:*
         version: link:../../tooling/release
+      '@posthog/cli':
+        specifier: 0.18.7
+        version: 0.18.7
       '@repo/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
@@ -5251,6 +5254,11 @@ packages:
 
   '@posthog/browser-common@0.7.0':
     resolution: {integrity: sha512-Kr6j9sH7NisT3fC3w7jZlonYeCFjPXZrDwHl3usFpjNEdgbHUrxPAmekEkTt+zRAa2huldFPIAmibZ3KC4hXoQ==}
+
+  '@posthog/cli@0.18.7':
+    resolution: {integrity: sha512-zNIRjq5XVeEMi8mhp2ZNHqx9tvK7QQmcj9SVxW/gz5fi6qi4WwimwwUcXeEwOP4wpRrHgw/h5pj+gYweHHtfww==}
+    engines: {node: '>=14.14', npm: '>=6'}
+    hasBin: true
 
   '@posthog/core@1.49.2':
     resolution: {integrity: sha512-AXHDo/4nisUg7OPG1TQNgREK7n+chBQXLQyttp7bDTDsDg2k9lV06TmnpvuNbwJs53q9mP9hjezKEZu4fYadfg==}
@@ -20851,6 +20859,10 @@ snapshots:
     dependencies:
       '@posthog/core': 1.49.2
       '@posthog/types': 1.407.1
+
+  '@posthog/cli@0.18.7':
+    dependencies:
+      detect-libc: 2.1.2
 
   '@posthog/core@1.49.2':
     dependencies:
