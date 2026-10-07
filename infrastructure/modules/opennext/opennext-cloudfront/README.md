@@ -8,18 +8,18 @@ One distribution serves the static assets from S3, the server-rendered pages and
 server Lambda, optimized images from the image Lambda, and PostHog's capture traffic through a
 reverse proxy. Behaviors are matched in the order below; the first path pattern that fits wins.
 
-| Order | Path pattern                                                      | Origin         | Cache policy                                   | Functions                               |
-| ----- | ----------------------------------------------------------------- | -------------- | ---------------------------------------------- | --------------------------------------- |
-| 1     | `/_next/static/*`                                                 | S3 assets      | Managed CachingOptimizedForUncompressedObjects | none                                    |
-| 2     | `/_next/image`                                                    | Image Lambda   | `image_cache_policy`                           | none                                    |
-| 3     | `/ingest/static/*`                                                | PostHog assets | Managed CachingOptimizedForUncompressedObjects | `posthog_rewrite` (viewer request)      |
-| 4     | `/ingest/*`                                                       | PostHog ingest | Managed CachingDisabled                        | `posthog_rewrite` (viewer request)      |
-| 5     | `api/*`                                                           | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
-| 6     | `_next/data/*`                                                    | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`                   |
-| 7, 8  | `*.svg`, `*.ico`                                                  | S3 assets      | Managed CachingOptimizedForUncompressedObjects | none                                    |
-| 9+    | `/*/platform*`, `/*/login*`, `/*/register*`, `/*/verify-request*` | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
-| next  | `/en-US*`                                                         | Server Lambda  | `server_pages`                                 | `forward_host_header`, `edge_hash_body` |
-| last  | default (`*`)                                                     | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
+| Order | Path pattern                                                                     | Origin         | Cache policy                                   | Functions                               |
+| ----- | -------------------------------------------------------------------------------- | -------------- | ---------------------------------------------- | --------------------------------------- |
+| 1     | `/_next/static/*`                                                                | S3 assets      | Managed CachingOptimizedForUncompressedObjects | none                                    |
+| 2     | `/_next/image`                                                                   | Image Lambda   | `image_cache_policy`                           | none                                    |
+| 3     | `/ingest/static/*`                                                               | PostHog assets | Managed CachingOptimizedForUncompressedObjects | `posthog_rewrite` (viewer request)      |
+| 4     | `/ingest/*`                                                                      | PostHog ingest | Managed CachingDisabled                        | `posthog_rewrite` (viewer request)      |
+| 5     | `api/*`                                                                          | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
+| 6     | `_next/data/*`                                                                   | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`                   |
+| 7, 8  | `*.svg`, `*.ico`                                                                 | S3 assets      | Managed CachingOptimizedForUncompressedObjects | none                                    |
+| 9+    | `/*/platform*`, `/*/login*`, `/*/register*`, `/*/verify-request*`                | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
+| next  | `/en-US*`, `/robots.txt`, `/sitemap.xml`, `/opengraph-image*`, `/twitter-image*` | Server Lambda  | `server_pages`                                 | `forward_host_header`, `edge_hash_body` |
+| last  | default (`*`)                                                                    | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
 
 - `forward_host_header` is a CloudFront Function on viewer request. It redirects `www.` hosts to
   the bare host and copies `host` into `x-forwarded-host`, which the origins route on.
@@ -28,10 +28,10 @@ reverse proxy. Behaviors are matched in the order below; the first path pattern 
 
 ## 🗄 Page caching
 
-Only the default locale's pages are cached: the `/en-US*` behavior uses `server_pages`, a cache
-policy that lets the origin's `Cache-Control` decide. Next marks static and ISR pages
-`s-maxage=…` and every page that reads the request `private, no-cache, no-store`, so only pages
-that are the same for every visitor are ever stored.
+Only the default locale's pages and the site-wide metadata files are cached: their behaviors use
+`server_pages`, a cache policy that lets the origin's `Cache-Control` decide. Next marks static
+and ISR pages `s-maxage=…` and every page that reads the request `private, no-cache, no-store`,
+so only pages that are the same for every visitor are ever stored.
 A response with no `Cache-Control`, such as a proxy redirect, is not kept (`default_ttl = 0`).
 
 What the cache key holds, and why:

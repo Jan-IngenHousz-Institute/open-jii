@@ -156,11 +156,17 @@ locals {
     "/*/verify-request*",
   ]
 
-  # Only the default locale (defaultLocale in packages/i18n/src/config.ts) is
-  # cached at the edge. proxy.ts decides per viewer who may see any other locale
-  # and can only decide for a request that reaches it, so a locale added later
-  # stays uncached unless it is listed here.
-  cached_page_patterns = ["/en-US*"]
+  # Only the default locale (defaultLocale in packages/i18n/src/config.ts) and the
+  # site-wide metadata files are cached at the edge. proxy.ts decides per viewer
+  # who may see any other locale and can only decide for a request that reaches
+  # it, so a locale added later stays uncached unless it is listed here.
+  cached_page_patterns = [
+    "/en-US*",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/opengraph-image*",
+    "/twitter-image*",
+  ]
 }
 
 resource "aws_cloudfront_distribution" "distribution" {
