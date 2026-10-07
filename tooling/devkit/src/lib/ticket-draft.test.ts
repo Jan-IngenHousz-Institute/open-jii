@@ -81,7 +81,7 @@ describe("parseDraft", () => {
   it("refuses text before the first title, stray lines under a title, and empty tickets", () => {
     expect(() => parseDraft("intro\n\n# T\n\n## A\n")).toThrow("before the first");
     expect(() => parseDraft("# T\n\nnote\n\n## A\n")).toThrow(
-      "only labels, blocks, blocked-by, related, milestone and state may sit",
+      "only labels, blocks, blocked-by, related, milestone, state and link may sit",
     );
     expect(() => parseDraft("# T\n\nlabels: A\n")).toThrow('no "## " section');
     expect(() => parseDraft("")).toThrow("at least one ticket");
@@ -114,6 +114,20 @@ describe("parseDraft", () => {
       milestone: null,
       state: null,
     });
+  });
+
+  it("collects any number of link lines and refuses one without a title or an https url", () => {
+    const parsed = parseDraft(
+      "# T\n\nlink: The guide | https://a.example/g\nlink: Spec, part two | https://a.example/s#2\n\n## A\n\nx\n",
+    );
+
+    expect(parsed.tickets[0]?.links).toEqual([
+      { title: "The guide", url: "https://a.example/g" },
+      { title: "Spec, part two", url: "https://a.example/s#2" },
+    ]);
+    expect(() => parseDraft("# T\n\nlink: https://a.example/g\n\n## A\n\nx\n")).toThrow(
+      'a link reads "link: <title> | <https url>"',
+    );
   });
 
   it("refuses a relation to a draft ticket that is not there", () => {

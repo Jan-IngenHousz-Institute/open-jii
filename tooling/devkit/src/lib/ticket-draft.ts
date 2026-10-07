@@ -11,6 +11,7 @@
 //   labels: Feature, Fullstack
 //   blocks: 2, OJD-1500
 //   milestone: 1. Researchers can find a resource
+//   link: Sorting in TanStack Table | https://tanstack.com/table/latest/docs/guide/sorting
 //
 //   ## User story
 //   ...
@@ -20,7 +21,7 @@
 //   Suggested implementation. ...
 //
 // Between the title and the first "## " heading a ticket may carry labels, blocks, blocked-by,
-// related, milestone and state. A relation target is a ticket number in this draft or an existing
+// related, milestone and state, once each, and any number of `link: title | url` lines. A relation target is a ticket number in this draft or an existing
 // identifier. `{{2}}` anywhere in a body or comment becomes the second ticket's identifier once it
 // exists.
 // A title that starts with an identifier, `# OJD-1810 Home shows public research`, updates that
@@ -28,6 +29,11 @@
 
 // A ticket number in the same draft, or an identifier that already exists.
 export type Target = number | string;
+
+export interface DraftLink {
+  title: string;
+  url: string;
+}
 
 export interface DraftTicket {
   index: number;
@@ -40,6 +46,7 @@ export interface DraftTicket {
   milestone: string | null;
   // Overrides the front matter state; an update only moves state when this is set.
   state: string | null;
+  links: DraftLink[];
   body: string;
   comment: string | null;
 }
@@ -90,6 +97,14 @@ function parseTarget(index: number, title: string, item: string): Target {
   );
 }
 
+function parseLink(index: number, title: string, value: string): DraftLink {
+  const match = /^(.+?)\s*\|\s*(https?:\/\/\S+)$/.exec(value);
+  if (!match) {
+    throw new Error(`Ticket ${index} ("${title}"): a link reads "link: <title> | <https url>"`);
+  }
+  return { title: match[1].trim(), url: match[2] };
+}
+
 function parseTicket(index: number, chunk: string): DraftTicket {
   const lines = chunk.split("\n");
   const heading = lines[0].replace(/^# /, "").trim();
@@ -104,6 +119,7 @@ function parseTicket(index: number, chunk: string): DraftTicket {
   let related: Target[] = [];
   let milestone: string | null = null;
   let state: string | null = null;
+  const links: DraftLink[] = [];
   let bodyStart = -1;
   for (let i = 1; i < lines.length; i += 1) {
     const line = lines[i];
@@ -112,10 +128,10 @@ function parseTicket(index: number, chunk: string): DraftTicket {
       break;
     }
     if (line.trim().length === 0) continue;
-    const pair = /^(labels|blocks|blocked-by|related|milestone|state):\s*(.*)$/.exec(line);
+    const pair = /^(labels|blocks|blocked-by|related|milestone|state|link):\s*(.*)$/.exec(line);
     if (!pair) {
       throw new Error(
-        `Ticket ${index} ("${title}"): only labels, blocks, blocked-by, related, milestone and state may sit between the title and the first "## " heading`,
+        `Ticket ${index} ("${title}"): only labels, blocks, blocked-by, related, milestone, state and link may sit between the title and the first "## " heading`,
       );
     }
     const value = pair[2].trim();
@@ -126,6 +142,7 @@ function parseTicket(index: number, chunk: string): DraftTicket {
     if (pair[1] === "related") related = targets();
     if (pair[1] === "milestone") milestone = unquoted(value) || null;
     if (pair[1] === "state") state = unquoted(value) || null;
+    if (pair[1] === "link") links.push(parseLink(index, title, value));
   }
   if (bodyStart < 0) throw new Error(`Ticket ${index} ("${title}"): no "## " section`);
 
@@ -144,6 +161,7 @@ function parseTicket(index: number, chunk: string): DraftTicket {
     related,
     milestone,
     state,
+    links,
     body,
     comment: comment === "" ? null : comment,
   };

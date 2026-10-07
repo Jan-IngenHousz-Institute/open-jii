@@ -47,8 +47,10 @@ The team runs **no cycles and no estimation**. Do not set estimates or look for 
   Linear issues section (`Closes OJD-####`, `Contributes to OJD-####`); that is what the release
   workflow reads. Branch names stay `<type>/<slug>` and carry no ticket ref.
 - **`Done` means live on production, and it is frozen.** A merged PR goes to `In Testing` (dev
-  deploys on merge); `Ready For Prod` means tested and signed off; the production release workflow's
-  `linear-release-action` moves shipped tickets to `Done`. Anything after that is a new ticket.
+  deploys on merge); `Ready For Prod` means tested and signed off. The production release
+  workflow's `linear-release-action` attaches tickets to a Linear release but never changes their
+  state, so a person moves shipped tickets to `Done` after the release. Anything after that is a
+  new ticket.
 - **Closing as a duplicate is three writes** in Linear: set the duplicate relation, move the status,
   then comment. Doing only the status move loses the link.
 - **Canceling a parent cancels its open sub-issues.** Read `children` and `parent` as well as the

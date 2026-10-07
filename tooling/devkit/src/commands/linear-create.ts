@@ -23,6 +23,7 @@ export interface CreatedTicket {
 export interface CreateState {
   tickets: Partial<Record<string, CreatedTicket>>;
   relations: string[];
+  links?: string[];
 }
 
 export interface Resolved {
@@ -45,7 +46,13 @@ export interface CreateDependencies {
   write: (text: string) => void;
   loadState: () => Promise<CreateState>;
   saveState: (state: CreateState) => Promise<void>;
+  pause: (milliseconds: number) => Promise<void>;
 }
+
+// Linear refused link attachments beyond about 20 a minute in practice, so a run with more than
+// that spaces them out.
+const LINK_BURST = 20;
+const LINK_SPACING_MS = 3100;
 
 interface TeamResult {
   teams: { nodes: { id: string; states: { nodes: { id: string; name: string }[] } }[] };
@@ -59,6 +66,7 @@ interface ExistingIssue {
   project: { id: string; name: string } | null;
   labels: { nodes: { id: string; name: string }[] };
   comments: { nodes: { id: string; body: string; user: { id: string } | null }[] };
+  attachments: { nodes: { url: string }[] };
 }
 
 interface IssueResult {
@@ -94,6 +102,7 @@ const issueByIdentifierQuery = `query($id: String!) {
     project { id name }
     labels { nodes { id name } }
     comments(first: 50) { nodes { id body user { id } } }
+    attachments(first: 50) { nodes { url } }
   }
 }`;
 const issueCreateMutation = `mutation($input: IssueCreateInput!) {
@@ -111,8 +120,11 @@ const commentUpdateMutation = `mutation($id: String!, $input: CommentUpdateInput
 const relationCreateMutation = `mutation($input: IssueRelationCreateInput!) {
   issueRelationCreate(input: $input) { success }
 }`;
+const linkMutation = `mutation($issueId: String!, $url: String!, $title: String) {
+  attachmentLinkURL(issueId: $issueId, url: $url, title: $title) { success }
+}`;
 
-export const emptyState = (): CreateState => ({ tickets: {}, relations: [] });
+export const emptyState = (): CreateState => ({ tickets: {}, relations: [], links: [] });
 
 function requireState(team: TeamResult["teams"]["nodes"][number], name: string, key: string) {
   const state = team.states.nodes.find((s) => sameName(s.name, name));
@@ -308,6 +320,7 @@ function describeTicket(
   }
   if (ticket.state !== null && ticket.identifier === null) parts.push(`state ${ticket.state}`);
   if (ticket.comment !== null) parts.push("with comment");
+  if (ticket.links.length > 0) parts.push(`${ticket.links.length} link(s)`);
   return `  ${ticket.index}. ${ticket.title}  [${ticket.labels.join(", ")}] ${parts.join("; ")}`;
 }
 
@@ -493,10 +506,46 @@ export async function createTickets(
     deps.write(`${edge.type} ${from.identifier} -> ${to.identifier}\n`);
   }
 
+  await attachLinks(draft, state, existing, deps);
+
   deps.write("\n");
   for (const ticket of draft.tickets) {
     const created = state.tickets[String(ticket.index)];
     if (created) deps.write(`${created.identifier}  ${created.title}\n${created.url}\n`);
+  }
+}
+
+// A link the ticket already carries, or one this draft attached in an earlier run, is skipped.
+async function attachLinks(
+  draft: Draft,
+  state: CreateState,
+  existing: Existing,
+  deps: CreateDependencies,
+): Promise<void> {
+  const done = state.links ?? [];
+  state.links = done;
+  const pending = draft.tickets.flatMap((ticket) => {
+    const created = state.tickets[String(ticket.index)];
+    if (!created) return [];
+    const issue = ticket.identifier === null ? undefined : existing.issues.get(ticket.identifier);
+    const attached = new Set(issue?.attachments.nodes.map((node) => node.url) ?? []);
+    return ticket.links
+      .map((link) => ({ link, created, tag: `${ticket.index}>${link.url}` }))
+      .filter(({ link, tag }) => !attached.has(link.url) && !done.includes(tag));
+  });
+  const isPaced = pending.length > LINK_BURST;
+
+  for (const [position, { link, created, tag }] of pending.entries()) {
+    if (isPaced && position > 0) await deps.pause(LINK_SPACING_MS);
+    await expectSuccess(
+      deps.client,
+      linkMutation,
+      { issueId: created.id, url: link.url, title: link.title },
+      `Linking ${link.url} on ${created.identifier}`,
+    );
+    done.push(tag);
+    await deps.saveState(state);
+    deps.write(`link ${created.identifier}  ${link.title}\n`);
   }
 }
 
@@ -552,6 +601,10 @@ async function run(args: string[]): Promise<number> {
       },
       loadState: () => loadStateFile(path),
       saveState: (state) => writeFile(path, `${JSON.stringify(state, null, 2)}\n`),
+      pause: (milliseconds) =>
+        new Promise((resolve) => {
+          setTimeout(resolve, milliseconds);
+        }),
     },
     { syncLabels },
   );

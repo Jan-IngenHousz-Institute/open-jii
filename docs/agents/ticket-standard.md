@@ -89,14 +89,17 @@ decided and what was written. And a sketch takes its tokens, type and components
 so a reader sees the product rather than a generic wireframe.
 
 `pnpm linear:document` publishes one and refuses to write until the prose rules pass and every
-mermaid block parses. `pnpm linear:upload` puts a sketch file in Linear's asset store so it opens
-without an account. `pnpm linear:view` creates the shared view and its document. The formats are in
+mermaid block parses. `pnpm linear:resources` adds outside links, such as the uploaded plan pages
+and the official documentation the design relies on, to the project's Resources. `pnpm linear:upload` puts a file in Linear's asset store, where anyone signed in
+to the workspace can open it; a request without a Linear session gets a 401, so an upload is not a
+public link. `pnpm linear:view` creates the shared view and its document. The formats are in
 `tooling/devkit/README.md`.
 
 ### The two plan pages
 
 Every project ships with two standalone pages. They are built from the draft files, never typed
-by hand, and they are working documents first and the record afterwards.
+by hand, so a diagram of the order of work cannot lose a relation the drafts hold. They are working
+documents first and the record afterwards.
 
 | Page                 | What it holds                                                                                                                                                                                                        |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -109,8 +112,8 @@ tickets: nothing is written to Linear that they have not seen on it, and a short
 the recommended options on that page and nothing else.
 
 Ticket ids do not exist until the apply, so the pages carry placeholders first and are published
-again once the ids exist. Only then is one copy of each uploaded with `pnpm linear:upload` and
-linked from the artifact index. An upload cannot be deleted, so a correction after that is a new
+again once the ids exist. Only then is one copy of each uploaded with `pnpm linear:upload --apply`,
+linked from the artifact index and added to the project's Resources. An upload cannot be deleted, so a correction after that is a new
 upload and a new link, and the old copy stays reachable. The layout is in
 `.agents/skills/openjii-work-design/references/review-pages.md`.
 
@@ -248,14 +251,18 @@ The test is not whether a ticket is valid. It is whether a developer new to the 
 delegate, can start it without asking anybody. Readability comes before completeness.
 
 **One outcome per ticket.** The board is where people choose what to pick up, so a ticket bundling
-several outcomes is too big even when each is one sentence. A vague WHO is the tell: if no
+several outcomes is too big even when each is one sentence. A ticket looks the way a developer
+expects a ticket to look; a dense specification inherited from triage is recut into ordinary
+tickets. A vague WHO is the tell: if no
 concrete situation can be named ("a researcher looking at a checklist step"), the split follows a
 mechanism rather than an outcome, so split again instead of rewording.
 
 **The invisible work is on the board.** Enabling and operational work gets its own tickets:
-deployment, infrastructure and cloud operations, rate limits, spend alerts, kill switches,
-feature-flag identity and usage plumbing. Splitting along user-visible outcomes never means
-dropping them. Work that is not code, such as policies, training and vendor reviews, takes the same
+deployment and infrastructure, secrets, scheduled jobs, monitoring and alerts, data retention, an
+outbox for anything sent, rate limits, spend alerts, kill switches, feature-flag identity, usage
+plumbing, and what the provider account actually allows, such as an email service's sending quota.
+Walk this list as a standard pass on every project. Splitting along user-visible outcomes never
+means dropping them. Work that is not code, such as policies, training and vendor reviews, takes the same
 team, shape and gates as code work.
 
 **Examples are generic.** A drought trial and a sensor fleet, not a study name, an instrument
@@ -275,11 +282,21 @@ moment the board is sorted differently. Use `OJD-1234`, or `{{N}}` in a draft.
 
 **The first comment says where to start.** It opens with a sentence on what it holds and which
 milestone the ticket sits in, then names the files in full repository paths with line numbers,
-checked against a named commit on `main`. It adds the local setup for testing the change and
+checked against a named commit on `main` and linked as GitHub permalinks pinned to that commit. It adds the local setup for testing the change and
 the sources behind any claim: code pinned to a commit and the official documentation for the fix.
 Comments carry no budget, so anything cut from a body to fit goes here and is never dropped. Every
 pointer is checked again when it is written, and a comment that already exists is edited in place
 rather than a second one stacked beside it.
+
+**Sources live in Linear.** A claim in a ticket or a document comes with a link a reader can open:
+code pinned to a commit, the official documentation for the fix, and related Linear documents. A
+ticket carries them as links, written as `link:` lines in its draft, or in its first comment. A
+project carries its outside references as resources, and each document section ends with its
+sources. A local draft or a chat message is not a source anyone else can open.
+
+**Order is visible without opening anything.** A blocked ticket's `## Dependencies and risks` opens
+with a line naming each blocker by identifier and what it delivers, such as "Blocked by OJD-1234,
+which adds the export endpoint." The relation is set in Linear as well; the line is for the reader.
 
 **Open questions are written as questions.** They live under `## Dependencies and risks` as
 "Open: does this apply to archived experiments? Ask the TPM." Acceptance criteria state rules, so
@@ -323,8 +340,13 @@ triage sweep lists any `In Testing` ticket that slipped through. `openjii-linear
 move without them.
 
 A spike carries neither section, since its shape has neither, and it skips `In Testing`. It is
-accepted when the artefact named in its `## Done when` exists, which is the one case where `Done`
-means accepted rather than deployed.
+accepted when the artefact named in its `## Done when` exists, so `Done` means accepted rather than
+deployed.
+
+A work item whose output is not code, such as a policy, a training session or a vendor review, has
+no PR and nothing to deploy. Its acceptance criteria name the artefact that ends it, it leaves the
+two developer sections empty and skips `In Review` and `In Testing`, and the person who requested it
+moves it to `Done` once the artefact exists.
 
 Testing criteria are written for someone who did not build the change (the requester, the TPM, or
 the intern) and read like the smoke tests in the Critical Flows document:
@@ -354,14 +376,19 @@ is longer than a default Linear board.
 | `In Progress`    | Started                                            | the PR is ready for review, with both dev sections filled       |
 | `In Review`      | PR open                                            | review is approved and the PR merges                            |
 | `In Testing`     | Merged and live on dev                             | QA runs the testing criteria and signs off                      |
-| `Ready For Prod` | Tested and signed off, waiting for a release       | the production release workflow completes                       |
+| `Ready For Prod` | Tested and signed off, waiting for a release       | the release ships and a person moves it to `Done`               |
 | `Done`           | Live on production. Frozen                         | terminal; anything after is a new ticket                        |
 | `Canceled`       | Dropped                                            | terminal                                                        |
 | `Duplicate`      | Superseded                                         | terminal, and needs the duplicate relation, not just the status |
 
 PR automation, once configured on the team, moves a ticket to `In Progress` when a branch or PR
-opens, to `In Review` when the PR is marked ready, and to `In Testing` on merge. The release
-workflow's `linear-release-action` moves shipped tickets to `Done`. The UX check stays label-driven
+opens, to `In Review` when the PR is marked ready, and to `In Testing` on merge. Nothing moves a
+ticket to `Done` on its own. The production release workflow's `linear-release-action` attaches
+every ticket its PRs mention to a Linear release and completes that release, but it never changes a
+ticket's state, so a person moves shipped tickets from `Ready For Prod` to `Done` after the release,
+as the Team Process document says. To tell whether a change is live, check that its merge commit is
+an ancestor of the latest `release/` branch; the `web-v*` and `backend-v*` tags are cut on `main`
+and say nothing about production. The UX check stays label-driven
 (`needs-ux-check`, `ux-fix-needed`); there is no `In Design Check` state.
 
 A refined ticket that is blocked stays in `Backlog` with the blocking relation set, and moves to
@@ -411,9 +438,11 @@ and a list of words is not a ticket.
 13. Titles say what the user can do or what is broken, at most 69 characters, no type prefix
     (`DISCOVERY:` is a label, not a title), no list of three. Project names are the outcome in
     three to six words.
-14. Spelling follows the product. Ticket and sketch copy uses the spelling of the `en-US` locale in
+14. Every file named in a ticket, a comment or a document is a full repository path, never a bare
+    file name.
+15. Spelling follows the product. Ticket and sketch copy uses the spelling of the `en-US` locale in
     `packages/i18n/locales/en-US`, which is American, so grep it when a word is in doubt.
-15. Then the `unslop` skill.
+16. Then the `unslop` skill.
 
 A document holds diagrams as well as prose, and a mermaid block Linear cannot parse renders as a
 red error box where the picture should be. `pnpm linear:document` parses every block with mermaid

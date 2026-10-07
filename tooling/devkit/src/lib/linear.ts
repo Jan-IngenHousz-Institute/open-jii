@@ -93,6 +93,24 @@ export function describeOperation(document: string): OperationSummary {
   return { kind, fields };
 }
 
+// Linear's `issue(id:)` and `project(id:)` take a String!, so an ID! variable is the usual slip.
+function hintFor(message: string): string {
+  const isIdForString = /of type "ID!?" used in position expecting type "String!?"/.test(message);
+  return isIdForString ? " Declare the variable as String! instead of ID!." : "";
+}
+
+function messagesIn(text: string): string | null {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (!isGraphqlResponse(parsed) || parsed.errors === undefined || parsed.errors.length === 0) {
+      return null;
+    }
+    return parsed.errors.map((error) => `${error.message}${hintFor(error.message)}`).join("; ");
+  } catch {
+    return null;
+  }
+}
+
 // Personal API keys go in the Authorization header bare, without a Bearer prefix.
 async function send<T>(
   request: typeof fetch,
@@ -114,7 +132,8 @@ async function send<T>(
     );
   }
   if (!response.ok) {
-    throw new Error(`Linear returned ${response.status}: ${text}`);
+    const messages = messagesIn(text);
+    throw new Error(`Linear returned ${response.status}: ${messages ?? text}`);
   }
 
   const parsed: unknown = JSON.parse(text);
@@ -122,8 +141,8 @@ async function send<T>(
     throw new Error(`Linear returned a non-object body: ${text}`);
   }
   if (parsed.errors !== undefined && parsed.errors.length > 0) {
-    const messages = parsed.errors.map((error) => error.message).join("; ");
-    throw new Error(`Linear query failed: ${messages}`);
+    const messages = parsed.errors.map((error) => `${error.message}${hintFor(error.message)}`);
+    throw new Error(`Linear query failed: ${messages.join("; ")}`);
   }
   if (parsed.data === undefined) {
     throw new Error(`Linear returned no data: ${text}`);

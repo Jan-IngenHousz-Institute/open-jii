@@ -40,8 +40,15 @@ framework, not only against the gaps found first.
 
 Search Linear before going further: projects by name, then `searchIssues` on two or three of the
 user's own words. A backlog this old often already holds the idea. If a project exists, this skill
-extends it rather than opening a second one. Existing tickets are kept and refined, never
-replaced. Read their comments and the project's documents for decisions an earlier session took.
+extends it rather than opening a second one, and work another project already plans is not proposed
+again. Existing tickets are kept and refined, never replaced. Read their comments and the project's
+documents for decisions an earlier session took.
+
+Then widen the scope. A request to refine some tickets is a request for the feature a user expects:
+compare the area with the standard feature set of comparable products and propose what is missing
+without waiting to be asked, such as every page a user expects in an account area rather than the
+three that have tickets. "As many as make pragmatic sense" means go wide on judgement. Never trade
+the asked-for scope for a smaller one, such as measuring a problem instead of fixing it.
 
 Read the Team Process document in Linear once per session (recipe in `openjii-linear`). It holds
 the Definition of Ready and who accepts what.
@@ -101,6 +108,11 @@ contract is the design artefact, not a description of one. Work outward: what th
 what the schema needs, what each side implements against it. Name the migration if the schema
 moves.
 
+When a project delivers a list of things, such as notification types or starter templates, adding
+one more must be cheap, and the design says how: one registry that the rest reads from, no
+migration per item, tables the compiler checks for completeness, and choices such as preferences
+that do not depend on one channel. The catalogue document names every item on the list.
+
 A short system design goes under the project's `## Design`. A long one is an ADR.
 
 ## 4. Record the decision
@@ -131,9 +143,11 @@ parallel lanes, no themes. Write them as a file for `pnpm linear:milestones`.
 Then the tickets, each in the work item, bug or spike shape, each meeting the ticket gate and each
 in exactly one milestone. Split along user-visible outcomes, never along layers. "Backend
 endpoint", "frontend form" and "tests" are not independently valuable; "org admin can invite a
-member", "invited member can accept", "org admin can revoke" are. The invisible work gets its own
-tickets too: deployment, infrastructure, rate limits, spend alerts, kill switches, feature-flag
-identity and usage plumbing. Policies, training and vendor reviews are tickets in the same shape.
+member", "invited member can accept", "org admin can revoke" are. Then walk the operational pass
+from `ticket-standard.md` ("The invisible work is on the board") and give each item that applies
+its own ticket: secrets, scheduled jobs, monitoring, retention, an outbox, rate limits, spend alerts,
+kill switches, feature-flag identity, usage plumbing, deployment, and what the provider account
+allows. Policies, training and vendor reviews are tickets in the same shape.
 `ticket-standard.md` says what makes a ticket readable cold: one outcome, a screen in the body, a
 first comment that says where to start, and open questions written as questions. A WHO that cannot
 name a concrete situation means the split is wrong.
@@ -195,7 +209,10 @@ Apply in this order, each step a dry run first and `--apply` once the person has
    `--sync-labels` when the draft's labels are the full set.
 3. The project body, as a `projectUpdate` through `linear:query`.
 4. The resource documents, then the artifact index.
-5. The two plan pages, republished with real ids, then uploaded once and linked from the index.
+5. The two plan pages, republished with real ids, then uploaded once with
+   `pnpm linear:upload --apply` and linked from the index.
+6. `pnpm linear:resources <file>`, which adds the uploaded pages and the outside references the
+   design relies on to the project's Resources.
 
 Ids do not exist before step 2, so documents and sketches carry placeholders first and are
 published again once the ids exist. That is two publishes by design, and the upload waits for the
@@ -204,6 +221,6 @@ second one because an upload cannot be deleted.
 Update the change plan's write log as each step finishes, from planned to done.
 
 Then validate the design against the code. Read the system design as the code stands, find what a
-ticket promises that the code cannot deliver, and change Linear where it is wrong instead of only
-reporting it. Read back what was written, re-check the milestone order, and report what was
+ticket promises that the code cannot deliver, and fix it where it lives: in Linear, in the
+published documents and in the scaffold, instead of only reporting it. Read back what was written, re-check the milestone order, and report what was
 verified.

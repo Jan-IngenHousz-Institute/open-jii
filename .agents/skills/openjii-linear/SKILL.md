@@ -28,14 +28,23 @@ A Linear session stays a Linear session. Do not offer a code branch or a skill e
   live data before building on it, and report which claims held, which did not and what the triage
   missed. A worktree has no `node_modules`, so read library source from the main checkout. A claim
   of absence needs the same check as a claim of presence.
-- **Decide, say so, ask once.** Choose the conventional option yourself and state it. Ask only where
-  the answer changes the work, in plain words: what the question means, what each answer changes,
-  and the default you will take. Do not ask what you can answer; give a recommendation with its
-  risk and carry on. List a decision once. After that, proceed on the default and keep it in the
-  ticket as an open question.
+- **Go broad.** Scope a project to what a user expects of the feature, measured against the standard
+  feature set of comparable products, and not only to the tickets that already exist. Propose what
+  is missing before anyone asks. "As many as make pragmatic sense" means use judgement and go wide,
+  not ask which ones. Never deliver a smaller scope than the one asked for, such as measuring a
+  problem when the ask was to fix it.
+- **Search first, then decide, say so, and ask once.** Search Linear and the code before the first
+  question. Choose the conventional option yourself and state it. Ask only where the answer changes
+  the work, in plain words: what the question means, what each answer changes, and the default you
+  will take. Do not ask what you can answer; give a recommendation with its risk and carry on. List
+  a decision once. After that, proceed on the default and keep it in the ticket as an open
+  question.
+- **Keep working while answers arrive.** Answers come mid-turn, one at a time. Fold each in as it
+  arrives instead of stopping to wait for the rest.
 - **Approval is narrow.** "Proceed" and "ok go" approve the recommended options in the review just
-  shown and nothing else. A person who delegates, as in "put in Ready what you think is ready",
-  has handed over that call; report what you did and why.
+  shown and nothing else. A person who delegates, as in "put in Ready what you think is ready" or
+  "just create the tickets", has handed over that call, including bodies they have not read; do it
+  and report what you did and why.
 - **Pilot first.** For a batch of rewritten tickets, show three and get a yes on voice and images
   before writing the rest.
 - **Say what you are doing.** Long work gets a one-line progress note between phases.
@@ -135,8 +144,10 @@ Project statuses: `Backlog` (template started), `Planned` (passes the project ga
 `Completed`, `Canceled`.
 
 PR automation, once configured on the team, moves tickets to `In Progress`, `In Review` and
-`In Testing` as the PR opens, is marked ready and merges. The production release workflow moves
-shipped tickets to `Done`. **Refuse to move a work item or bug to `In Testing` yourself while
+`In Testing` as the PR opens, is marked ready and merges. Nothing moves a ticket to `Done`: the
+production release workflow attaches tickets to a Linear release without changing their state, so a
+person moves them after the release. To tell whether a change is live, check that its merge commit
+is an ancestor of the latest `release/` branch. **Refuse to move a work item or bug to `In Testing` yourself while
 either dev section is empty**; point at `openjii-testing-criteria`. A spike has neither section and
 skips `In Testing` altogether.
 
@@ -201,23 +212,28 @@ exists. An update changes the title, the body and the listed labels, and moves s
 milestone only when the draft names them. `--sync-labels` also drops the labels the draft does not
 list, except the `WBSO` and `wayfinder:` series. The dry run prints each of these per ticket.
 
-A project's milestones, documents, uploads and shared view each have a command, so none of them
-needs a hand-written mutation:
+A project's milestones, documents, uploads, resource links and shared view each have a command,
+so none of them needs a hand-written mutation:
 
 ```bash
 pnpm linear:milestones <file.md> --project "<name>"
 pnpm linear:document <file.md> --project "<name>" --title "<Project>: implementation deep dive"
 pnpm linear:upload <file>
+pnpm linear:resources <file.md> --project "<name>"
 pnpm linear:view --project "<name>"
 ```
 
-Each is a dry run until `--apply`, except `linear:upload`, which uploads at once. An upload cannot
-be deleted, so a corrected page is a new upload and a new link, and the old URL stays reachable.
+Each is a dry run until `--apply`. An upload cannot be deleted, so upload only the final version; a
+corrected page is a new upload and a new link, and the old URL stays reachable.
+`linear:resources` adds outside links, such as the uploaded plan pages and the official
+documentation a design relies on, to the project's Resources, matched by URL and never deleted. A
+ticket's own links go in its draft as `link:` lines.
 `linear:document` updates the document that already carries the title, so republishing a corrected
 deep dive keeps its URL, and it refuses to write while a mermaid block does not parse.
 `linear:milestones` renames a milestone through a `was:` line instead of creating a second one,
-spaces the order by 1,000, reads the order back, and never deletes. The project body itself is still a `projectUpdate` mutation through
-`linear:query`, which edits the body and is not the same thing as a project update post.
+spaces the order by 1,000, reads the order back, and never deletes. The project body itself is
+still a `projectUpdate` mutation through `linear:query`, which edits the body and is not the same
+thing as a project update post.
 
 ## Writing
 
@@ -235,16 +251,16 @@ Each of these cost time in a real session.
 - Linear replaces an existing relation between two issues when the reverse one is created, and
   deleting a relation needs `--allow-destructive`.
 - Linear rewrites stored markdown: `-` bullets come back as `*`, link targets gain angle brackets,
-  and a bare domain becomes a link. A live body can fail a budget its draft passed, and a diff
-  against the draft needs both sides normalised first.
+  and a bare domain becomes a link. A diff against the draft needs both sides normalised first.
 - A comment is not appended through a draft. `linear:create` edits the viewer's own comment whose
   first line matches the draft's, and posts a new one otherwise. Elsewhere use `commentUpdate`
   with the existing body.
 - Rename old milestones. `projectMilestoneDelete` needs `--allow-destructive` and throws the
   history away for nothing.
-- Ticket links (`attachmentLinkURL`, about 20 a minute) and project resources
-  (`entityExternalLinkCreate`) have no devkit command. Use the raw mutation, with one process
-  pacing the calls.
+- Linear refused more than about 20 ticket links a minute in practice. `linear:create` paces a larger
+  batch of `link:` lines on its own.
+- `{{N}}` reaches only tickets in the same draft. Keep one project in one draft, or apply the first
+  draft and use real identifiers in the second.
 - The devkit key reads team `OJD`, so a linked ticket in another team cannot be checked.
 - Drive a multi-step sweep from a script, not a shell array. zsh arrays start at 1, and a loop
   written for bash silently skips the first element.

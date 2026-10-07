@@ -16,6 +16,7 @@ Run them from the repo root through the aliases in the root `package.json`.
 | `pnpm linear:milestones`                  | Creates, renames and orders a project's milestones      |
 | `pnpm linear:document`                    | Publishes a project document from a Markdown file       |
 | `pnpm linear:upload`                      | Uploads a file to Linear and prints its asset URL       |
+| `pnpm linear:resources`                   | Adds outside links to a project's Resources             |
 | `pnpm linear:view`                        | Creates a project's shared ticket view and its document |
 | `pnpm linear:taxonomy`                    | Plans and applies the `OJD` label taxonomy              |
 | `pnpm linear:apply`                       | Applies a reviewed per-ticket change file in batches    |
@@ -112,6 +113,7 @@ state: Backlog
 labels: Feature, Fullstack
 blocks: 2, OJD-1500
 milestone: 1. Researchers can find a resource
+link: Sorting in TanStack Table | https://tanstack.com/table/latest/docs/guide/sorting
 
 ## User story
 
@@ -146,10 +148,12 @@ starts a ticket. Between it and the first level-two heading a ticket may carry t
 | `blocks:`     | Tickets this one blocks, by draft number or existing identifier, as in `2, OJD-1500`        |
 | `blocked-by:` | Tickets that block this one, in the same form                                               |
 | `related:`    | Tickets this one relates to, in the same form                                               |
+| `link:`       | One link per line, as `link: <title> \| <https url>`, attached to the ticket as its links   |
 
 Everything after `<!-- comment -->` is posted as a comment once the ticket exists, which is where
 the "where to start" pointers go. `{{2}}` anywhere in a body or comment becomes the second
-ticket's identifier.
+ticket's identifier. It reaches only tickets in the same draft, so keep one project in one draft,
+or apply the first draft and use real identifiers in the second.
 
 ```bash
 pnpm linear:check .claude/tickets/home.md            # sentences, shape, budget, bullets, dashes, title, gate
@@ -176,6 +180,8 @@ what each update would do, such as `drops research; state Ready to Backlog; move
 project"`, so read it before applying. The comment after the marker edits the viewer's own comment
 whose first line matches, and posts a new one otherwise, so a "where to start" comment is edited in
 place. Linear replaces a relation when the reverse is created, and an update never removes one.
+Links are attached once each: a URL the ticket already carries is skipped, and a run with more than
+20 links spaces them about three seconds apart, because Linear refused faster bursts in practice.
 
 The check does not count screens, link targets or URLs against a budget, so a draft passes the same
 with a local image path as with the uploaded URL. It fails an open question or "confirm" inside the
@@ -213,13 +219,34 @@ pnpm linear:document .claude/drafts/deep-dive.md --project "..." --title "..." -
 ```
 
 `pnpm linear:upload` puts a file in Linear's own asset store and prints the URL a document links
-to, so a sketch or a bundle needs no account to open. It uploads at once, with no dry run, and an
-upload cannot be deleted, so upload a page only when it is final. The media type comes from the
-extension, or from `--type`:
+to. Anyone signed in to the workspace can open it, and a request without a Linear session gets a
+401, so it is not a public link. Without `--apply` it only names the file, its
+type and its size. An upload cannot be deleted, so apply only to the final version. The media type
+comes from the extension, or from `--type`:
 
 ```bash
-pnpm linear:upload .claude/drafts/sketches.html
-pnpm linear:upload design/canvas.bin --type application/octet-stream
+pnpm linear:upload .claude/drafts/sketches.html                     # dry run
+pnpm linear:upload .claude/drafts/sketches.html --apply
+pnpm linear:upload design/canvas.bin --type application/octet-stream --apply
+```
+
+`pnpm linear:resources` puts outside links on a project's Resources: the uploaded plan pages, and
+the official documentation and related pages the design relies on. The file is one markdown link
+per bullet. A link is matched by its URL, so relabelling one updates it, and links the file does
+not name are left alone:
+
+```markdown
+---
+project: Notifications
+---
+
+- [Notifications: Linear change plan](https://uploads.linear.app/...)
+- [Email sending quotas](https://docs.aws.amazon.com/ses/latest/dg/quotas.html)
+```
+
+```bash
+pnpm linear:resources .claude/drafts/resources.md           # dry run
+pnpm linear:resources .claude/drafts/resources.md --apply
 ```
 
 `pnpm linear:view` creates the project's shared ticket view, filtered to that project, and the
@@ -324,5 +351,6 @@ pnpm --filter @repo/devkit test
 pnpm --filter @repo/devkit typecheck
 ```
 
-`src/hooks.test.ts` is the exception: it spawns the repo's Git and secrets hooks with real payloads
-and asserts on their exit codes, so a change to either is caught in CI.
+`src/hooks.test.ts` is the exception: it runs the docs-reminder hook from `.claude/hooks` against a
+scratch Git repository with real session payloads, so a change to when it fires is caught in CI.
+It skips itself where `jq` is not installed.

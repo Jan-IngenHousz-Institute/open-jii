@@ -149,6 +149,7 @@ function fixture(options: FixtureOptions = {}): { client: LinearClient; calls: C
             project: { id: "proj-1", name: "Platform home" },
             labels: { nodes: [] },
             comments: { nodes: [] },
+            attachments: { nodes: [] },
             ...options.issue?.(identifier),
           },
         };
@@ -160,6 +161,8 @@ function fixture(options: FixtureOptions = {}): { client: LinearClient; calls: C
         answer = { commentUpdate: { success: true } };
       } else if (document.includes("issueRelationCreate(")) {
         answer = { issueRelationCreate: { success: true } };
+      } else if (document.includes("attachmentLinkURL(")) {
+        answer = { attachmentLinkURL: { success: true } };
       } else {
         throw new Error(`unexpected document ${document.slice(0, 40)}`);
       }
@@ -172,6 +175,7 @@ function fixture(options: FixtureOptions = {}): { client: LinearClient; calls: C
 function deps(client: LinearClient, state: CreateState = emptyState()) {
   const lines: string[] = [];
   const saves: CreateState[] = [];
+  const pauses: number[] = [];
   const value: CreateDependencies = {
     client,
     write: (text) => lines.push(text),
@@ -180,8 +184,12 @@ function deps(client: LinearClient, state: CreateState = emptyState()) {
       saves.push(structuredClone(next));
       return Promise.resolve();
     },
+    pause: (milliseconds) => {
+      pauses.push(milliseconds);
+      return Promise.resolve();
+    },
   };
-  return { value, lines, saves, state };
+  return { value, lines, saves, state, pauses };
 }
 
 function mutations(calls: readonly Call[]): string[] {
@@ -482,6 +490,44 @@ describe("createTickets, milestones, states and relations", () => {
     expect(d.lines.join("")).toContain(
       "note  2. Researcher can filter any resource list: no screen in the body",
     );
+  });
+});
+
+describe("createTickets, links", () => {
+  const withLinks = (lines: string) => draftText.replace("blocks: 2", `blocks: 2\n${lines}`);
+
+  it("attaches each link once, skipping what the ticket already carries", async () => {
+    const { client, calls } = fixture({
+      issue: () => ({ attachments: { nodes: [{ url: "https://a.example/kept" }] } }),
+    });
+    const d = deps(client);
+    const text = withLinks(
+      "link: Kept | https://a.example/kept\nlink: Sorting guide | https://a.example/sorting",
+    ).replace("# Researcher can sort", "# OJD-1810 Researcher can sort");
+
+    await createTickets(parseDraft(text), true, d.value);
+    const again = fixture({
+      issue: () => ({ attachments: { nodes: [{ url: "https://a.example/kept" }] } }),
+    });
+    await createTickets(parseDraft(text), true, deps(again.client, d.state).value);
+
+    const links = calls.filter((c) => c.document.includes("attachmentLinkURL("));
+    expect(links.map((c) => c.variables)).toEqual([
+      { issueId: "id-OJD-1810", url: "https://a.example/sorting", title: "Sorting guide" },
+    ]);
+    expect(mutations(again.calls)).not.toContain("attachmentLinkURL");
+    expect(d.lines.join("")).toContain("link OJD-1810  Sorting guide");
+  });
+
+  it("spaces links out only when a run carries more than the burst Linear allows", async () => {
+    const few = deps(fixture().client);
+    await createTickets(parseDraft(withLinks("link: One | https://a.example/1")), true, few.value);
+    const many = deps(fixture().client);
+    const lines = Array.from({ length: 21 }, (_, i) => `link: L${i} | https://a.example/${i}`);
+    await createTickets(parseDraft(withLinks(lines.join("\n"))), true, many.value);
+
+    expect(few.pauses).toEqual([]);
+    expect(many.pauses).toHaveLength(20);
   });
 });
 

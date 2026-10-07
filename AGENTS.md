@@ -96,8 +96,9 @@ If a change alters what a user sees or does, `apps/docs/content` changes in the 
 screenshot showing the affected screen is re-captured rather than reused. The
 `openjii-docs-update` skill covers where things live and the privacy rules on captures.
 
-A `Stop` hook in `.claude/settings.json` gives Claude Code one reminder per session when `apps/web`
-or `apps/mobile` change without `apps/docs/content`. It is a nudge, not a gate, and it only reaches
+A `Stop` hook in `.claude/settings.json` gives Claude Code one reminder per session when the session
+changes `apps/web` or `apps/mobile` without `apps/docs/content`. The same script runs at session
+start and records what the checkout already held, so work already on the branch does not count. It is a nudge, not a gate, and it only reaches
 Claude Code. Per-machine overrides belong in `.claude/settings.local.json`, which stays untracked.
 
 ## main is protected

@@ -56,8 +56,10 @@ decorate it.
 4. **Acceptance criteria.** The primary flow, the alternative flows that matter, and the business
    rules that apply. Name what must be shown on screen. Observable behaviour only; implementation
    suggestions go under Additional context.
-5. **Dependencies and risks.** Blockers, and every open question written as a question with the
-   default the ticket proceeds on. A ticket that cannot start without an answer is not `Ready`.
+5. **Dependencies and risks.** It opens with a line naming each blocker by identifier and what it
+   delivers, so a reader sees the order without opening the relations. Then every open question,
+   written as a question with the default the ticket proceeds on. A ticket that cannot start
+   without an answer is not `Ready`.
 6. **The screen.** A ticket that changes a screen embeds its picture under Additional context, with
    a caption that describes the picture. It is a capture of the real app with the change
    scaffolded in, made as `openjii-work-design`, `references/screens.md` describes. A ticket with
@@ -68,12 +70,19 @@ decorate it.
    `openjii-testing-criteria` before review.
 9. **The first comment.** After the `<!-- comment -->` marker, open with a sentence on what the
    comment holds and which milestone the ticket sits in. Then name the files in full repository
-   paths with line numbers, checked against a named commit on `main` as you write them, and give
-   the local steps to test the change. Anything the body had no room for goes here and is never
-   dropped.
+   paths with line numbers, checked against a named commit on `main` as you write them and linked
+   as permalinks pinned to it, and give the local steps to test the change. Anything the body had
+   no room for goes here and is never dropped.
+10. **Links.** The sources behind the ticket's claims, such as the official documentation for the
+    fix and related Linear documents, go in the draft as `link:` lines and land as the ticket's
+    links.
 
 If you cannot give the ticket a concrete WHO, a situation a person is actually in, the ticket is
 split along a mechanism and not an outcome. Split it again instead of rewording it.
+
+Before the ticket is shown, run a risk pass and bring a recommendation for each finding, not only
+a question: related tickets already in flight, edge write paths such as cascades and autosave,
+cost, and what the change means for fields other features share.
 
 Write it as a draft file in the format `tooling/devkit/README.md` describes; `.claude/tickets/` is
 gitignored and a good home. That is what `pnpm linear:check` reads and `pnpm linear:create` creates

@@ -9,11 +9,17 @@ out.
 Each is one standalone HTML page, generated from the draft files by a script and never typed by
 hand, so the page cannot disagree with what will be written. Generate them from the same inputs the
 apply reads: the ticket draft, the milestone file, the project body draft and the document drafts.
+Draw the order-of-work diagram from the drafts' relations too, never by hand.
+
+The approved layout is the Notifications project's review page, linked from that project's artifact
+index in Linear. Read it, and any other example the person names, in full before building a page.
+An example read halfway gets imitated halfway, and the page is built twice.
 
 The first publish is private and carries placeholders where ids are not known yet. After the apply,
 fill the real ids and links, mark the page as written, and build a standalone copy with the images
-inlined and the diagrams rendered to SVG. Upload that copy once with `pnpm linear:upload` and link
-the printed URL from the artifact index and the project's `## Design` section.
+inlined and the diagrams rendered to SVG. Upload that copy once with `pnpm linear:upload --apply`,
+link the printed URL from the artifact index and the project's `## Design` section, and add it to
+the project's Resources with `pnpm linear:resources`.
 
 Take the colours, type and spacing from `apps/web/app/globals.css`, so the page reads as the
 product, and make it work in light and dark and at phone width. Captures go on the page as the same
