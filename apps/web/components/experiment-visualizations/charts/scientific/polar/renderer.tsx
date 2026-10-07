@@ -1,6 +1,7 @@
 "use client";
 
 import { PolarPlot } from "@/components/charts/polar";
+import { useColumnMetadata } from "@/hooks/experiment/useColumnMetadata/useColumnMetadata";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
@@ -32,15 +33,20 @@ export function PolarRenderer({
     },
   );
 
+  const colorColumn = dataSources.find((ds) => ds.role === "color")?.columnName;
+  const { columns } = useColumnMetadata(experimentId, visualization.dataConfig.tableName);
+  const colorColumnType = columns.find((c) => c.name === colorColumn)?.type_text;
+
   // KEEP IN SYNC with the field reads in `transformPolarData`.
   const series = useMemo(() => {
     if (visualization.chartType !== "polar") {
       return [];
     }
-    return transformPolarData(rows, dataSources, chartConfig);
+    return transformPolarData(rows, dataSources, chartConfig, colorColumnType);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- leaf-listed; see KEEP IN SYNC comment.
   }, [
     rows,
+    colorColumnType,
     dataSources,
     visualization.chartType,
     chartConfig.colorMode,
