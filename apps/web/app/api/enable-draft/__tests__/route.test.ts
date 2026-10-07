@@ -40,6 +40,14 @@ function createMockRequest(url: string): NextRequest {
   return { url } as unknown as NextRequest;
 }
 
+// The route either answers or redirects, which throws; these cases expect an answer.
+function statusOf(response: Response | void): number {
+  if (!response) {
+    throw new Error("the route redirected instead of answering");
+  }
+  return response.status;
+}
+
 describe("GET /api/enable-draft", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -53,7 +61,7 @@ describe("GET /api/enable-draft", () => {
     const response = await GET(request);
 
     expect(response).toBeInstanceOf(Response);
-    expect((response as Response).status).toBe(400);
+    expect(statusOf(response)).toBe(400);
   });
 
   it("returns 401 without the preview secret", async () => {
@@ -61,7 +69,7 @@ describe("GET /api/enable-draft", () => {
 
     const response = await GET(request);
 
-    expect((response as Response).status).toBe(401);
+    expect(statusOf(response)).toBe(401);
     expect(enableMock).not.toHaveBeenCalled();
   });
 
@@ -72,7 +80,7 @@ describe("GET /api/enable-draft", () => {
 
     const response = await GET(request);
 
-    expect((response as Response).status).toBe(401);
+    expect(statusOf(response)).toBe(401);
     expect(enableMock).not.toHaveBeenCalled();
   });
 
@@ -84,7 +92,7 @@ describe("GET /api/enable-draft", () => {
 
     const response = await GET(request);
 
-    expect((response as Response).status).toBe(401);
+    expect(statusOf(response)).toBe(401);
     expect(enableMock).not.toHaveBeenCalled();
   });
 
@@ -98,7 +106,7 @@ describe("GET /api/enable-draft", () => {
 
     const response = await GET(request);
 
-    expect((response as Response).status).toBe(400);
+    expect(statusOf(response)).toBe(400);
     expect(enableMock).not.toHaveBeenCalled();
   });
 
@@ -179,7 +187,7 @@ describe("GET /api/enable-draft", () => {
 
       const response = await devGET(request);
 
-      expect((response as Response).status).toBe(400);
+      expect(statusOf(response)).toBe(400);
       expect(enableMock).not.toHaveBeenCalled();
     });
   });

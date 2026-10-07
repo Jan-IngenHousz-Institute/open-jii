@@ -455,10 +455,10 @@ export function WorkbookEditor({
         };
         updated.splice(index + 1, 0, outputCell);
       } else {
-        updated[existingOutputIndex] = {
-          ...updated[existingOutputIndex],
-          data: { answer: cell.answer },
-        } as WorkbookCell;
+        const existingOutput = updated[existingOutputIndex];
+        if (existingOutput.type === "output") {
+          updated[existingOutputIndex] = { ...existingOutput, data: { answer: cell.answer } };
+        }
       }
     }
 

@@ -17,6 +17,14 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
+// The route either answers or redirects, which throws; these cases expect an answer.
+function statusOf(response: Response | void): number {
+  if (!response) {
+    throw new Error("the route redirected instead of answering");
+  }
+  return response.status;
+}
+
 describe("GET /api/disable-draft", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -29,6 +37,16 @@ describe("GET /api/disable-draft", () => {
 
     expect(disableMock).toHaveBeenCalled();
     expect(redirectMock).toHaveBeenCalledWith("https://example.com/en-US/about");
+  });
+
+  it("redirects to a path holding a literal percent sign", async () => {
+    const request = new NextRequest(
+      "https://example.com/api/disable-draft?path=%2Fen-US%2Fblog%2F100%25-growth",
+    );
+
+    await expect(GET(request)).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(redirectMock).toHaveBeenCalledWith("https://example.com/en-US/blog/100%-growth");
   });
 
   it("redirects home when no path is given", async () => {
@@ -46,7 +64,7 @@ describe("GET /api/disable-draft", () => {
 
     const response = await GET(request);
 
-    expect((response as Response).status).toBe(400);
+    expect(statusOf(response)).toBe(400);
     expect(disableMock).not.toHaveBeenCalled();
   });
 });

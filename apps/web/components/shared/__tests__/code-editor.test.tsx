@@ -11,7 +11,10 @@ interface CodeMirrorProps {
   extensions: unknown[];
 }
 
-const codeMirror = vi.hoisted(() => ({ props: [] as CodeMirrorProps[] }));
+const codeMirror = vi.hoisted(() => {
+  const props: CodeMirrorProps[] = [];
+  return { props };
+});
 
 vi.mock("@uiw/react-codemirror", () => ({
   default: (props: CodeMirrorProps) => {
