@@ -15,6 +15,13 @@ the evidence you actually pulled, and the next step. Never present an unverified
 A UUID instead of a metric id is a PostHog error-tracking issue, from a Slack alert or the daily
 round. Skip to "An error-tracking issue" below, then carry on with steps 4 and 5.
 
+Triage reads the sources themselves, so it needs more than the round does: AWS SSO through the
+`openjii-prod` and `openjii-dev` profiles for CloudWatch and the heartbeat files, and the devkit's
+PostHog key for an error issue. `aws sts get-caller-identity --profile openjii-<env>` says whether
+the AWS session is live, and the `posthog:*` commands say when the key is missing. When one is
+missing, ask the person to sign in or run the auth command, and never look for credentials in env
+files; if they cannot, name what you could not check in the report.
+
 ## 1. Ground yourself in the catalog, not memory
 
 `docs/monitoring/metrics-catalog.yaml` is the source of truth. Find the entry whose `id` matches and
