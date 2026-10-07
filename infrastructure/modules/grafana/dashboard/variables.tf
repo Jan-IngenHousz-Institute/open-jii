@@ -53,6 +53,11 @@ variable "kinesis_shard_count" {
   type        = number
 }
 
+variable "databricks_cost_components" {
+  description = "Components the heartbeat export prices Databricks spend under, which the weekly report sums and charts"
+  type        = list(string)
+}
+
 variable "storage_buckets" {
   description = "S3 buckets the Throughput and storage dashboard sizes, by what they hold"
   type        = map(string)
@@ -125,6 +130,12 @@ variable "ingest_lag_threshold_ms" {
   description = "Iterator age that counts as a stall. Dev's lag still peaks above two hours now and then, so its tolerance is raised in the env."
   type        = number
   default     = 600000
+}
+
+variable "experiment_latency_threshold_seconds" {
+  description = "p95 seconds from silver to the experiment tables, per half hour, that counts as falling behind. Dev's runs higher on normal days, so its tolerance is raised in the env."
+  type        = number
+  default     = 60
 }
 
 variable "metrics_forwarder_function_name" {
