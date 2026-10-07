@@ -22,14 +22,16 @@ import { isFeatureFlagEnabledForSession } from "~/lib/posthog-server";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Namespace } from "@repo/i18n";
-import { namespaces } from "@repo/i18n/config";
+import { defaultNamespace, namespaces } from "@repo/i18n/config";
 import { loadNamespaceBundles } from "@repo/i18n/server";
 import { SidebarEdgePeek, SidebarInset, SidebarProvider } from "@repo/ui/components/sidebar";
 import { Toaster } from "@repo/ui/components/toaster";
 
-// Every namespace: a client component reaching for one that was not shipped would suspend the
-// whole page until it loaded.
-const PLATFORM_NAMESPACES: Namespace[] = [...namespaces];
+// Every namespace but common, which the locale layout already ships: a client component reaching
+// for one that was not shipped would suspend the whole page until it loaded.
+const PLATFORM_NAMESPACES: Namespace[] = namespaces.filter(
+  (namespace) => namespace !== defaultNamespace,
+);
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
