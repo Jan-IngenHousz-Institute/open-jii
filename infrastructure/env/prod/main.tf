@@ -695,6 +695,36 @@ module "experiment_secret_scope" {
   }
 }
 
+# The backend's warehouse was made by hand before it was code.
+import {
+  to = module.backend_warehouse.databricks_sql_endpoint.this
+  id = var.backend_databricks_warehouse_id
+}
+
+module "backend_warehouse" {
+  source = "../../modules/databricks/sql-warehouse"
+
+  name             = "Backend API"
+  cluster_size     = "2X-Small"
+  max_num_clusters = 2
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
+# For people's own queries, which would otherwise keep the backend's warehouse awake.
+module "investigations_warehouse" {
+  source = "../../modules/databricks/sql-warehouse"
+
+  name           = "Investigations"
+  can_use_groups = ["users"]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
 module "databricks_catalog" {
   source       = "../../modules/databricks/catalog"
   catalog_name = "open_jii_${var.environment}"
@@ -1167,10 +1197,11 @@ module "metrics_heartbeat_export" {
 
 locals {
   databricks_cost_components = {
-    centrum   = { dlt_pipeline_id = module.centrum_pipeline.pipeline_id }
-    macro     = { dlt_pipeline_id = module.macro_execution_pipeline.pipeline_id }
-    metrics   = { dlt_pipeline_id = module.metrics_pipeline.pipeline_id }
-    warehouse = { warehouse_id = var.backend_databricks_warehouse_id }
+    centrum        = { dlt_pipeline_id = module.centrum_pipeline.pipeline_id }
+    macro          = { dlt_pipeline_id = module.macro_execution_pipeline.pipeline_id }
+    metrics        = { dlt_pipeline_id = module.metrics_pipeline.pipeline_id }
+    warehouse      = { warehouse_id = var.backend_databricks_warehouse_id }
+    investigations = { warehouse_id = module.investigations_warehouse.warehouse_id }
   }
 }
 

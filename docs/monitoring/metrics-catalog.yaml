@@ -1568,5 +1568,5 @@ metrics:
     baseline: { method: wow }
     notes: >-
       Spend over the last seven complete days at list price, from system.billing.usage, per Component:
-      each classic and metrics pipeline and the SQL warehouse by the id it bills under, job runs
+      each classic and metrics pipeline and the backend and investigations warehouses by the id they bill under, job runs
       together, and the rest of the workspace as other. The dashboards query each component by name.
