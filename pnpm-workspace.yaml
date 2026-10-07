@@ -24,7 +24,7 @@ overrides:
   react-dom: "catalog:react19"
   "@types/react": "catalog:react19"
   lodash: "^4.18.0"
-  shell-quote: "^1.8.4"
+  shell-quote: "^1.11.0"
   postcss: ">=8.5.18"
   "serialize-javascript@6": 7.0.5
   "ws@8": 8.21.0
