@@ -8,7 +8,7 @@ import { formatLocaleNumber } from "@/util/format-locale-number";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import type { OnChangeFn, PaginationState, RowSelectionState } from "@tanstack/react-table";
 import { useTable } from "@tanstack/react-table";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
@@ -142,9 +142,15 @@ export function DataTable({
     );
   }, []);
 
+  // Read through a ref so the column definitions survive an expand: the rows re-render with the new
+  // state anyway, and new definitions would remount every cell.
+  const expandedCellRef = useRef(expandedCell);
+  expandedCellRef.current = expandedCell;
+
   const isCellExpanded: IsCellExpandedFn = useCallback(
-    (rowId, columnName) => expandedCell?.rowId === rowId && expandedCell.columnName === columnName,
-    [expandedCell],
+    (rowId, columnName) =>
+      expandedCellRef.current?.rowId === rowId && expandedCellRef.current.columnName === columnName,
+    [],
   );
 
   const orderedColumns = useMemo(

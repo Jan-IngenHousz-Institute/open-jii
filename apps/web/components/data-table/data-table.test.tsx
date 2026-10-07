@@ -262,12 +262,22 @@ describe("DataTable", () => {
 
     expect(bodyRows()).toBe(2);
 
-    // Re-queried each time: the row re-renders, so the earlier node is stale.
     await user.click(screen.getAllByRole("button")[0]);
     expect(bodyRows()).toBe(3);
 
     await user.click(screen.getAllByRole("button")[0]);
     expect(bodyRows()).toBe(2);
+  });
+
+  it("keeps the other cells mounted while a cell expands and collapses", async () => {
+    const user = userEvent.setup();
+    render(<DataTable columns={COLUMNS} rows={ROWS} />);
+    const value = screen.getByText("0.68");
+
+    await user.click(screen.getAllByRole("button")[0]);
+    await user.click(screen.getAllByRole("button")[0]);
+
+    expect(screen.getByText("0.68")).toBe(value);
   });
 
   it("expands a trace chart in the same slot as other expandable cells, and highlights the expanded row", async () => {
