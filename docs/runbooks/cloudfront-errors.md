@@ -3,6 +3,9 @@
 **The web distribution is returning 5xx above threshold.** CloudFront sits in front of the OpenNext
 server Lambda, so it reports both its own failures and the origin's.
 
+The rule fires only when more than 5% of requests, and at least 50 of them, fail within five
+minutes. It does not mean the site is unreachable; `site-up` watches that.
+
 Note that CloudFront metrics live in `us-east-1` regardless of where the rest of the platform runs.
 A query against the regional endpoint returns nothing and looks exactly like an outage.
 
@@ -22,6 +25,20 @@ Then check `opennext-lambda-errors` in the same alert list. If it is firing too,
 and that runbook is the one to work. If the Lambda is clean while CloudFront is not, the failure is
 at the edge: a distribution config change, an origin that CloudFront cannot reach, or a cache
 behaviour pointing somewhere wrong.
+
+## Which requests failed
+
+The distribution writes access logs to
+`s3://open-jii-eu-central-1-access-logs/cloudfront-logs/opennext/<distribution-id>.YYYY-MM-DD-HH.*.gz`.
+They usually land within minutes, but AWS only promises an hour and some entries take up to 24, so
+an empty result for the last hour proves nothing; read the metrics until the logs catch up. Field 9
+is the status, field 8 the path, so `gzcat *.gz | awk -F'\t' '$9 ~ /^5/ {print $2, $8, $9}'` names
+them.
+
+502s on `/_next/image` are the image Lambda (`open-jii-<env>-opennext-image-optimization`), not the
+server. If its log says `Exceeded maximum allowed payload size`, the response went over Lambda's
+6 MB limit. In October 2026 the Lambda was returning Contentful originals unresized, so any CMS
+photo over about 6 MB failed every time it was requested.
 
 ## Distribution changes are the usual edge cause
 

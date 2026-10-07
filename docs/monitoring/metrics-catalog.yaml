@@ -599,7 +599,10 @@ metrics:
       dimensions: { DistributionId: "${CLOUDFRONT_DISTRIBUTION_ID}", Region: Global }
     baseline: { method: threshold, max: 5 }
     runbook: docs/runbooks/cloudfront-errors.md
-    notes: Existing Grafana rule; CloudFront metrics live in us-east-1.
+    notes: >-
+      CloudFront metrics live in us-east-1. The rule reads five-minute buckets and also needs 50
+      failed requests in one, because at dev's traffic a dozen image 502s cross 5% in a single
+      minute. Reachability is site-up's rule.
 
   - num: 25
     id: opennext-lambda-errors
