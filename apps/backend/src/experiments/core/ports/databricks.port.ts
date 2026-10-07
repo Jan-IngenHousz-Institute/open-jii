@@ -73,6 +73,7 @@ export interface DatabricksPort {
     distinct?: boolean;
     orderBy?: string;
     orderDirection?: "ASC" | "DESC";
+    orderByContributorPseudonymSalt?: string;
     limit?: number;
     offset?: number;
   }): Result<string>;
