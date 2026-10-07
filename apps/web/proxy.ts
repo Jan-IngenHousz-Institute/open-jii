@@ -27,6 +27,14 @@ function handleI18nRouting(request: NextRequest) {
   return null;
 }
 
+// The router's requests are same-origin, so their referer is the page the viewer is on.
+function localeOfPage(referer: string | null): string | undefined {
+  if (!referer || !URL.canParse(referer)) {
+    return undefined;
+  }
+  return new URL(referer).pathname.split("/")[1];
+}
+
 /**
  * Another locale is a feature only some viewers have. It is decided here, before
  * any page renders, so the pages read nothing from the request and can be cached.
@@ -40,9 +48,11 @@ async function handleLocaleAccess(request: NextRequest) {
     return null;
   }
 
-  // Client navigations and prefetches start from a page in this locale or from the locale switcher,
-  // which only viewers with the feature see; the document request already decided for them.
-  if (request.headers.get("rsc") === "1") {
+  // A client navigation or prefetch from a page already in this locale follows a document load
+  // that passed this check. A move into the locale from another one is checked.
+  const isNavigationWithinLocale =
+    request.headers.get("rsc") === "1" && localeOfPage(request.headers.get("referer")) === locale;
+  if (isNavigationWithinLocale) {
     return null;
   }
 

@@ -68,15 +68,29 @@ describe("locale proxy", () => {
     );
   });
 
-  it("leaves client navigations to the document request that already passed the gate", async () => {
+  it("leaves a client navigation within the locale to the document load that passed the gate", async () => {
     flag.mockResolvedValue(false);
 
     const response = await proxy(
-      new NextRequest("https://openjii.org/de-DE/about", { headers: { rsc: "1" } }),
+      new NextRequest("https://openjii.org/de-DE/about", {
+        headers: { rsc: "1", referer: "https://openjii.org/de-DE/blog" },
+      }),
     );
 
     expect(response.headers.get("location")).toBeNull();
     expect(flag).not.toHaveBeenCalled();
+  });
+
+  it("checks a client navigation into the locale from another one", async () => {
+    flag.mockResolvedValue(false);
+
+    const response = await proxy(
+      new NextRequest("https://openjii.org/de-DE/about", {
+        headers: { rsc: "1", referer: "https://openjii.org/en-US/blog" },
+      }),
+    );
+
+    expect(response.headers.get("location")).toBe("https://openjii.org/en-US/about");
   });
 
   it("keeps the bare locale root in the default locale", async () => {
