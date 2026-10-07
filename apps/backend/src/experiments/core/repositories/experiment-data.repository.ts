@@ -1,6 +1,9 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
 
-import { DATA_QUERY_MAX_LIMIT } from "@repo/api/domains/experiment/data/experiment-data.schema";
+import {
+  DATA_QUERY_MAX_LIMIT,
+  WellKnownColumnTypes,
+} from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { isDecimalType, isNumericType } from "@repo/api/transforms/column-type-utils";
 
 import type {
@@ -167,7 +170,12 @@ export class ExperimentDataRepository {
     // pseudonyms; tag contributor id filters so the SQL compares the pseudonym
     // (recomputed in-query) instead of the raw id the client never receives.
     const effectiveFilters = this.pseudonymizeContributorFilters(experiment, filters);
-    const ordering = this.pseudonymizeContributorOrder(experiment, orderBy);
+    const orderingResult = await this.pseudonymizeContributorOrder(experiment, tableName, orderBy);
+    if (orderingResult.isFailure()) {
+      return orderingResult;
+    }
+
+    const ordering = orderingResult.value;
 
     // Aggregation summary: page/pageSize ignored.
     if (hasAggregation) {
@@ -175,7 +183,7 @@ export class ExperimentDataRepository {
       const queryResult = this.buildQuery(experimentId, shape, {
         filters: effectiveFilters,
         aggregation,
-        orderBy,
+        ...ordering,
         orderDirection,
         limit: ceiling + 1,
       });
@@ -482,18 +490,32 @@ export class ExperimentDataRepository {
 
   /**
    * Sort an anonymized experiment's contributor column by the pseudonym it shows rather than the
-   * real name, whose order would leak. The FE sorts contributors by a `<column>.name` path.
+   * real name, whose order would leak. The FE sorts contributors by a `<column>.name` path; the
+   * column's type is checked, so another struct's `name` field keeps its own order.
    */
-  private pseudonymizeContributorOrder(
+  private async pseudonymizeContributorOrder(
     experiment: ExperimentDto,
+    tableName: string,
     orderBy?: string,
-  ): { orderBy?: string; orderByContributorPseudonymSalt?: string } {
-    const contributor = orderBy === undefined ? null : /^([^.]+)\.name$/.exec(orderBy);
-    if (!experiment.anonymizeContributors || contributor === null) {
-      return { orderBy };
+  ): Promise<Result<{ orderBy?: string; orderByContributorPseudonymSalt?: string }>> {
+    const path = orderBy === undefined ? null : /^([^.]+)\.name$/.exec(orderBy);
+    if (!experiment.anonymizeContributors || path === null) {
+      return success({ orderBy });
     }
 
-    return { orderBy: `${contributor[1]}.id`, orderByContributorPseudonymSalt: experiment.id };
+    const columnsResult = await this.getTableColumns({ experimentId: experiment.id, tableName });
+    if (columnsResult.isFailure()) {
+      return columnsResult;
+    }
+
+    const isContributorColumn = columnsResult.value.some(
+      (column) => column.name === path[1] && column.type_text === WellKnownColumnTypes.CONTRIBUTOR,
+    );
+    if (!isContributorColumn) {
+      return success({ orderBy });
+    }
+
+    return success({ orderBy: `${path[1]}.id`, orderByContributorPseudonymSalt: experiment.id });
   }
 
   /**

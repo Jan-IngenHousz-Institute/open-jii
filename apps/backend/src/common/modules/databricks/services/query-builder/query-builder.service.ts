@@ -53,6 +53,7 @@ export class QueryBuilderService {
           aggregation: params.aggregation,
           orderBy: params.orderBy,
           orderDirection: params.orderDirection,
+          orderByContributorPseudonymSalt: params.orderByContributorPseudonymSalt,
           limit: params.limit,
           offset: params.offset,
         }),

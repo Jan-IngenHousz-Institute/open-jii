@@ -9,6 +9,7 @@ import {
   WellKnownColumnTypes,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
+import type { AggregationSpec } from "../../../common/modules/databricks/services/query-builder/query-builder.types";
 import {
   AppError,
   success,
@@ -567,7 +568,25 @@ describe("ExperimentDataRepository", () => {
         );
         vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
         vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
-          success({ columns: [], rows: [], totalRows: 0, truncated: false }),
+          success({
+            columns: [
+              {
+                name: "contributor",
+                type_name: "STRUCT",
+                type_text: WellKnownColumnTypes.CONTRIBUTOR,
+                position: 0,
+              },
+              {
+                name: "plot",
+                type_name: "STRUCT",
+                type_text: "STRUCT<id: STRING, name: STRING>",
+                position: 1,
+              },
+            ],
+            rows: [],
+            totalRows: 0,
+            truncated: false,
+          }),
         );
       });
 
@@ -603,6 +622,45 @@ describe("ExperimentDataRepository", () => {
           expect.objectContaining({
             orderBy: "contributor.name",
             orderByContributorPseudonymSalt: undefined,
+          }),
+        );
+      });
+
+      it("keeps another struct's name order in an anonymized experiment", async () => {
+        await repository.getTableData({
+          ...baseParams,
+          experiment: { ...mockExperiment, anonymizeContributors: true },
+          orderBy: "plot.name",
+          page: 1,
+          pageSize: 5,
+        });
+
+        expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            orderBy: "plot.name",
+            orderByContributorPseudonymSalt: undefined,
+          }),
+        );
+      });
+
+      it("orders an anonymized aggregation by the pseudonym too", async () => {
+        const aggregation: AggregationSpec = {
+          groupBy: [{ column: "contributor" }],
+          functions: [{ column: "value", function: "avg" }],
+        };
+
+        await repository.getTableData({
+          ...baseParams,
+          experiment: { ...mockExperiment, anonymizeContributors: true },
+          aggregation,
+          orderBy: "contributor.name",
+        });
+
+        expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            aggregation,
+            orderBy: "contributor.id",
+            orderByContributorPseudonymSalt: mockExperiment.id,
           }),
         );
       });
