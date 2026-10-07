@@ -9,7 +9,7 @@ const { contract } = require("../dist/contract.js");
 
 const dist = path.join(__dirname, "..", "dist");
 
-// Unchanged files are left alone, so the dev watcher, which reruns this on any change in dist, settles.
+// Unchanged files are left alone, so a dev rebuild that keeps the routes does not reload the web app.
 function writeIfChanged(file, lines) {
   const target = path.join(dist, file);
   const content = lines.join("\n");
