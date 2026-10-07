@@ -30,13 +30,17 @@ export function QuestionPicker({ onSelect, children }: QuestionPickerProps) {
 
   const canonical = name ? sanitizeQuestionLabel(name) : "";
 
+  // Every add button holds a closed picker, so the names are only read while this one is open.
   const existingCanonicals = useMemo(() => {
     const set = new Set<string>();
+    if (!open) {
+      return set;
+    }
     for (const cell of existingCells) {
       if (cell.type === "question") set.add(sanitizeQuestionLabel(cell.name));
     }
     return set;
-  }, [existingCells]);
+  }, [existingCells, open]);
 
   const trimmed = name.trim();
   const isDuplicate = trimmed.length > 0 && existingCanonicals.has(canonical);

@@ -34,14 +34,18 @@ export function QuestionNameEditor({
   const trimmed = name.trim();
   const canonical = trimmed ? sanitizeQuestionLabel(trimmed) : "";
 
+  // Every question cell holds a closed editor, so the names are only read while this one is open.
   const otherCanonicals = useMemo(() => {
     const set = new Set<string>();
+    if (!open) {
+      return set;
+    }
     for (const cell of existingCells) {
       if (cell.type !== "question" || cell.id === cellId) continue;
       set.add(sanitizeQuestionLabel(cell.name));
     }
     return set;
-  }, [existingCells, cellId]);
+  }, [existingCells, cellId, open]);
 
   const isDuplicate = trimmed.length > 0 && otherCanonicals.has(canonical);
   const isUnchanged = trimmed === initialName.trim();
