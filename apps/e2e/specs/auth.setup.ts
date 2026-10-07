@@ -19,7 +19,8 @@ const newcomerAuthFile = path.join(import.meta.dirname, "..", ".auth", "newcomer
 
 async function authenticate(page: Page, email: string, outputFile: string) {
   await fs.mkdir(path.dirname(outputFile), { recursive: true });
-  await page.goto(`/${locale}/login`, { waitUntil: "domcontentloaded" });
+  // A second login in a row loses the typed email if it starts before the form hydrates.
+  await page.goto(`/${locale}/login`, { waitUntil: "networkidle" });
   await dismissCookieBanner(page);
 
   const emailInput = page.getByPlaceholder("Enter your email...");
