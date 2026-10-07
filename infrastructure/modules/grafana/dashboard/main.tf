@@ -396,8 +396,8 @@ resource "grafana_rule_group" "cloudfront_errors" {
   interval_seconds = 60
 
   rule {
-    name      = "Site Down - High CloudFront 5xx Rate"
-    condition = "C"
+    name      = "High CloudFront 5xx Rate"
+    condition = "E"
 
     data {
       ref_id         = "A"
@@ -410,6 +410,7 @@ resource "grafana_rule_group" "cloudfront_errors" {
         namespace  = "AWS/CloudFront"
         metricName = "5xxErrorRate"
         statistic  = "Average"
+        period     = "300"
         dimensions = {
           DistributionId = var.cloudfront_distribution_id
           Region         = "Global"
@@ -417,7 +418,7 @@ resource "grafana_rule_group" "cloudfront_errors" {
       })
 
       relative_time_range {
-        from = 300
+        from = 600
         to   = 0
       }
     }
@@ -447,12 +448,41 @@ resource "grafana_rule_group" "cloudfront_errors" {
     data {
       ref_id         = "C"
       query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "C"
+        region     = "us-east-1"
+        namespace  = "AWS/CloudFront"
+        metricName = "Requests"
+        statistic  = "Sum"
+        period     = "300"
+        dimensions = {
+          DistributionId = var.cloudfront_distribution_id
+          Region         = "Global"
+        }
+      })
+
+      relative_time_range {
+        from = 600
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "D"
+      query_type     = ""
       datasource_uid = "__expr__"
 
       model = jsonencode({
-        expression = "$B > 5"
-        type       = "math"
-        refId      = "C"
+        expression = "C"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "D"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
       })
 
       relative_time_range {
@@ -461,13 +491,33 @@ resource "grafana_rule_group" "cloudfront_errors" {
       }
     }
 
-    no_data_state  = "NoData"
+    # The rate alone pages on a handful of failures when traffic is low: twelve 502s for one
+    # oversized image tripped it on dev. Require 50 failed requests in the five minutes as well.
+    # Reachability is the Route53 health-check rule's job, not this one's.
+    data {
+      ref_id         = "E"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 5 && $B * $D / 100 >= 50"
+        type       = "math"
+        refId      = "E"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
     exec_err_state = "OK"
-    for            = "1m"
+    for            = "2m"
 
     annotations = {
-      description      = "CloudFront 5xx error rate is above 5%, so the origin may be down"
-      summary          = "Site may be down: high 5xx rate on CloudFront"
+      description      = "Over 5% of CloudFront requests, and at least 50 of them, returned 5xx in five minutes"
+      summary          = "High 5xx rate on CloudFront"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/cloudfront-errors.md"
       __dashboardUid__ = local.heartbeat_daily_uid
       __panelId__      = local.heartbeat_panel_ids["cloudfront-errors"]
