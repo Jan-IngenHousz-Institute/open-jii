@@ -10,7 +10,8 @@ import { scatterStyleShelves } from "./shelves/style-shelves";
 
 export const scatterChartType: ChartTypeDef = {
   type: "scatter",
-  plotlyTraceTypes: ["scatter"],
+  // Large marker charts switch to WebGL in the cartesian renderer.
+  plotlyTraceTypes: ["scatter", "scattergl"],
   family: "basic",
   labelKey: "workspace.charts.types.scatter",
   descriptionKey: "workspace.charts.descriptions.scatter",
