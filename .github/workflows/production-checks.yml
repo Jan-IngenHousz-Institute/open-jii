@@ -25,7 +25,9 @@ jobs:
     # full build anyway so the bump's blast radius is actually exercised.
     if: github.event_name == 'workflow_dispatch' || inputs.is-dependabot || contains(fromJSON(inputs.affected-apps), 'backend')
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/docker-build-check
         with:
           image-name: open-jii-backend:pr-check
@@ -38,7 +40,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || inputs.is-dependabot || contains(fromJSON(inputs.affected-apps), '@repo/database')
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/docker-build-check
         with:
           image-name: open-jii-database:pr-check
@@ -54,7 +58,9 @@ jobs:
       matrix:
         language: [javascript, python, r]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/docker-build-check
         with:
           image-name: macro-sandbox-${{ matrix.language }}:pr-check
@@ -68,7 +74,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || inputs.is-dependabot || contains(fromJSON(inputs.affected-apps), 'calibration-sandbox')
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/docker-build-check
         with:
           image-name: calibration-sandbox:pr-check
@@ -82,7 +90,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || inputs.is-dependabot || contains(fromJSON(inputs.affected-apps), 'web')
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/opennext-build
         with:
           web-base-origin: ${{ vars.WEB_BASE_ORIGIN }}
@@ -93,7 +103,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || inputs.is-dependabot || contains(fromJSON(inputs.affected-apps), 'mobile')
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-nodejs-pnpm
       - run: pnpm --filter mobile prebuild:check
 
@@ -101,7 +113,9 @@ jobs:
     name: Scan Dependencies & Licenses
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
       - uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           scan-type: fs
