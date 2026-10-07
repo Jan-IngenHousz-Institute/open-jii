@@ -40,17 +40,15 @@ export default async function ReleasesPage({ params }: ReleasesPageProps) {
   const entries = await getAllReleaseNotes(locale, preview);
 
   return (
-    <>
-      <Container className="max-w-4xl pb-20 pt-10 md:pt-14">
-        <header className="mb-10 flex flex-col gap-2">
-          <p className="text-primary font-mono text-xs font-medium uppercase tracking-[0.16em]">
-            {t("releases.eyebrow")}
-          </p>
-          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{t("releases.heading")}</h1>
-          <p className="text-muted-foreground max-w-2xl">{t("releases.subheading")}</p>
-        </header>
-        <ReleasesChangelog entries={entries} linkBaseHref={`/${locale}/releases`} />
-      </Container>
-    </>
+    <Container className="max-w-4xl pb-20 pt-10 md:pt-14">
+      <header className="mb-10 flex flex-col gap-2">
+        <p className="text-primary font-mono text-xs font-medium uppercase tracking-[0.16em]">
+          {t("releases.eyebrow")}
+        </p>
+        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{t("releases.heading")}</h1>
+        <p className="text-muted-foreground max-w-2xl">{t("releases.subheading")}</p>
+      </header>
+      <ReleasesChangelog entries={entries} linkBaseHref={`/${locale}/releases`} />
+    </Container>
   );
 }
