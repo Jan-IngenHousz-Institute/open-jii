@@ -1,6 +1,7 @@
 "use client";
 
 import { OverviewToolbar } from "@/components/overview-toolbar";
+import { useSearchParams } from "next/navigation";
 import { ListPagination } from "~/components/list-pagination";
 import { getExperimentColumns } from "~/components/overview-table/experiment-columns";
 import {
@@ -38,6 +39,8 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
   const { t } = useTranslation(["experiments", "common"]);
   const locale = useLocale();
   const hasSearch = debouncedSearch.trim() !== "";
+  // Only links that ask for it take focus; the sidebar and "See all" land here too.
+  const focusSearch = useSearchParams().get("focus") === "search";
 
   return (
     <div className="space-y-4">
@@ -47,6 +50,7 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
             value={search}
             onChange={setSearch}
             isLoading={isSearchPending}
+            autoFocus={focusSearch}
             placeholder={t("experiments.searchExperiments")}
             clearLabel={t("experiments.clearSearch")}
             loadingLabel={t("experiments.loadingExperiments")}
