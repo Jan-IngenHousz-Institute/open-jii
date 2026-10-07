@@ -1,24 +1,10 @@
-import { TranslationBundles } from "@/components/translation-bundles";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-
-import type { Namespace } from "@repo/i18n";
-import { loadNamespaceBundles } from "@repo/i18n/server";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const AUTH_NAMESPACES: Namespace[] = ["account"];
-
-interface AuthLayoutProps {
-  children: ReactNode;
-  params: Promise<{ locale: string }>;
-}
-
-export default async function AuthLayout({ children, params }: AuthLayoutProps) {
-  const { locale } = await params;
-  const bundles = await loadNamespaceBundles(locale, AUTH_NAMESPACES);
-
-  return <TranslationBundles resources={bundles}>{children}</TranslationBundles>;
+export default function AuthLayout({ children }: { children: ReactNode }) {
+  return children;
 }
