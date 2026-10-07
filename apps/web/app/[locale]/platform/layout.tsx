@@ -5,7 +5,7 @@ import { CalibrationFlagProvider } from "@/components/calibrations/calibration-f
 import { CommandPalette } from "@/components/command/command-palette";
 import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
 import { PlatformHeaderProvider } from "@/components/navigation/site-header/platform-header-context";
-import { SiteHeaderWrapper } from "@/components/navigation/site-header/site-header-wrapper";
+import { SiteHeader } from "@/components/navigation/site-header/site-header";
 import { PageContainer } from "@/components/page-container";
 import { ShortcutHint } from "@/components/shortcuts/shortcut-hint";
 import { ShortcutsRoot } from "@/components/shortcuts/shortcuts-root";
@@ -89,7 +89,7 @@ export default async function AppLayout({
               <SidebarEdgePeek />
               <SidebarInset>
                 <PlatformHeaderProvider>
-                  <SiteHeaderWrapper locale={locale} />
+                  <SiteHeader locale={locale} />
                   <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 py-4 md:px-6 md:py-6">
                     <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
                       <Suspense>{children}</Suspense>

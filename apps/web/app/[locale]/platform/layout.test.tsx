@@ -15,8 +15,8 @@ vi.mock("@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-w
   },
 }));
 
-vi.mock("@/components/navigation/site-header/site-header-wrapper", () => ({
-  SiteHeaderWrapper: () => <header aria-label="site-header">Site header</header>,
+vi.mock("@/components/navigation/site-header/site-header", () => ({
+  SiteHeader: () => <header aria-label="site-header">Site header</header>,
 }));
 
 vi.mock("@/components/whats-new/whats-new-sheet", () => ({
