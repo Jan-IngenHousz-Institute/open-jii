@@ -7,7 +7,7 @@ import type {
   ExperimentChartType,
   ExperimentVisualization,
 } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
-import type { PlotlyTraceType } from "@repo/ui/components/charts/plotly-trace-types";
+import type { LoadableTraceType } from "@repo/ui/components/charts/plotly-trace-types";
 
 import type { ChartFormConfig, ChartFormDataConfig, ChartFormValues } from "./chart-config";
 
@@ -62,7 +62,7 @@ export interface ChartTypeDef {
   StylePanel: ComponentType<ChartPanelProps>;
   Renderer: ComponentType<ChartRendererProps>;
   /** The Plotly trace types this chart draws, so their code downloads alongside the data. */
-  plotlyTraceTypes: readonly PlotlyTraceType[];
+  plotlyTraceTypes: readonly LoadableTraceType[];
   /**
    * Optional shelf descriptors backing the toolbar's per-shelf
    * popovers. When present, the horizontal strip dispatches one popover
