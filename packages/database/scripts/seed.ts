@@ -11,7 +11,7 @@ import { seedMacros } from "./seed/macro.seed";
 import { seedNotifications } from "./seed/notification.seed";
 import { seedProtocolMacroLinks } from "./seed/protocol-macro.seed";
 import { seedProtocols } from "./seed/protocol.seed";
-import { seedUser } from "./seed/user.seed";
+import { seedNewcomer, seedUser } from "./seed/user.seed";
 import { seedWorkbooks } from "./seed/workbook.seed";
 
 /**
@@ -25,6 +25,7 @@ async function main() {
   console.log("Seeding local database...");
 
   const { user, personalOrganizationId } = await seedUser();
+  await seedNewcomer();
 
   const createdProtocols = await seedProtocols(user, personalOrganizationId);
   const createdMacros = await seedMacros(user, personalOrganizationId);
