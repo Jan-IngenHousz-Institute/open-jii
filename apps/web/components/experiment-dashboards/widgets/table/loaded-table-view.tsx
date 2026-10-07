@@ -17,7 +17,11 @@ import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/exp
 import { useTranslation } from "@repo/i18n";
 import { Table, TableBody } from "@repo/ui/components/table";
 
-import { useDashboardFiltersForTable } from "../../dashboard-filters-context";
+import {
+  useDashboardFiltersForTable,
+  useDashboardSkippedFiltersForTable,
+} from "../../dashboard-filters-context";
+import { SkippedFiltersNotice } from "../shell/skipped-filters-notice";
 import { WidgetEmptyState } from "../shell/widget-empty-state";
 import { projectAndOrderColumns, readColumnsFor } from "./loaded-table-columns";
 import { SkeletonTableHeader } from "./skeleton-table-header";
@@ -54,6 +58,7 @@ export function LoadedTableView({
   const { sortColumn, sortDirection, handleSort } = useTableSort(tableMeta?.defaultSortColumn);
 
   const dashboardFilters = useDashboardFiltersForTable(tableName);
+  const skippedFilters = useDashboardSkippedFiltersForTable(tableName);
   const mergedFilters = useMemo(() => {
     if (dashboardFilters.length === 0) {
       return widgetFilters;
@@ -150,6 +155,7 @@ export function LoadedTableView({
           </TableBody>
         </Table>
       </div>
+      {skippedFilters.length > 0 && <SkippedFiltersNotice skippedFilters={skippedFilters} />}
       {showFooter && (
         <TablePaginationFooter
           page={page}

@@ -87,6 +87,18 @@ line under the chart says how much it shows, for example _Showing 100,000 of
 553,000 rows_. Add a filter to the visualization or to the dashboard until every
 matching row fits, or export the table to work with all of it.
 
+## Filter a dashboard
+
+A filter widget narrows every chart and table on the dashboard that reads the
+same data table. A _between_ filter needs both _From_ and _To_, with _From_ as
+the start of the range and _To_ as the end. When a filter's value can't be
+used, the widget outlines its fields in red and says what to fix. It doesn't
+filter anything until then. Each chart and table on that data table says so in
+a line under it, for example _1 filter skipped: Signal_, and shows its rows
+without that filter. The dashboard editor shows the same red outline and
+reason for a filter's default value. Clear both fields to remove the filter on
+purpose.
+
 <Callout type="warn">
   Cross-experiment comparison and easy bulk exploration of raw fluorescence traces are known
   research needs, but they are not established as first-class workflows on this branch. Do not

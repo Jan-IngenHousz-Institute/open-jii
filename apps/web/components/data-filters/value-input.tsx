@@ -24,6 +24,8 @@ export interface FilterValueInputProps {
   onChange: (value: ExperimentDataFilterValue) => void;
   experimentId: string;
   tableName: string;
+  /** Marks a range input invalid and describes it by this element. */
+  errorMessageId?: string;
 }
 
 export function FilterValueInput({
@@ -33,15 +35,16 @@ export function FilterValueInput({
   onChange,
   experimentId,
   tableName,
+  errorMessageId,
 }: FilterValueInputProps) {
   const { t } = useTranslation("common");
   const kind = column ? getColumnKind(column.type_text) : undefined;
 
   if (operator === "between") {
     if (kind === "temporal") {
-      return <DateRangeInput value={value} onChange={onChange} />;
+      return <DateRangeInput value={value} onChange={onChange} errorMessageId={errorMessageId} />;
     }
-    return <NumericRangeInput value={value} onChange={onChange} />;
+    return <NumericRangeInput value={value} onChange={onChange} errorMessageId={errorMessageId} />;
   }
 
   if (operator === "in") {
