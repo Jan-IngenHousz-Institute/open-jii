@@ -2,6 +2,7 @@
 
 import { useLocale } from "@/hooks/useLocale";
 import { Building2, FlaskConical, Globe } from "lucide-react";
+import { ResourceCardGrid } from "~/components/shared/resource-card";
 
 import { useTranslation } from "@repo/i18n";
 
@@ -19,7 +20,7 @@ export function FirstWorkCards() {
   const locale = useLocale();
 
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <ResourceCardGrid>
       {FIRST_WORK.map(({ key, path, icon }) => (
         <FirstWorkCard
           key={key}
@@ -29,6 +30,6 @@ export function FirstWorkCards() {
           description={t(`dashboard.firstWork.${key}.description`)}
         />
       ))}
-    </div>
+    </ResourceCardGrid>
   );
 }
