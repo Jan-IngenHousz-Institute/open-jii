@@ -40,6 +40,12 @@ async function handleLocaleAccess(request: NextRequest) {
     return null;
   }
 
+  // Client navigations and prefetches start from a page in this locale or from the locale switcher,
+  // which only viewers with the feature see; the document request already decided for them.
+  if (request.headers.get("rsc") === "1") {
+    return null;
+  }
+
   // Loaded only here, so a default-locale request never pays for PostHog.
   const [{ isFeatureFlagEnabledForRequest }, { FEATURE_FLAGS }] = await Promise.all([
     import("~/lib/posthog-server"),
@@ -84,6 +90,8 @@ export const config = {
     // Match i18n routes. `ingest` is the PostHog reverse proxy: its flags and
     // capture paths carry no file extension, so without this exclusion the
     // locale redirect turns them into 404s and no feature flag ever loads.
-    "/((?!api|ingest|static|.*\\..*|_next).*)",
+    // Static files are left out by extension, so a page slug with a dot in it
+    // still passes through the locale gate.
+    "/((?!api|ingest|static|_next|.*\\.(?:ico|png|jpe?g|svg|webp|avif|gif|txt|xml)$).*)",
   ],
 };

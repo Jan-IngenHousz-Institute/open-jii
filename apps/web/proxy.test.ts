@@ -1,8 +1,9 @@
+import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { isFeatureFlagEnabledForRequest } from "~/lib/posthog-server";
 
-import { proxy } from "./proxy";
+import { config, proxy } from "./proxy";
 
 vi.mock("~/lib/posthog-server", () => ({
   isFeatureFlagEnabledForRequest: vi.fn().mockResolvedValue(true),
@@ -68,11 +69,41 @@ describe("locale proxy", () => {
     );
   });
 
+  it("leaves client navigations to the document request that already passed the gate", async () => {
+    flag.mockResolvedValue(false);
+
+    const response = await proxy(
+      new NextRequest("https://openjii.org/de-DE/about", { headers: { rsc: "1" } }),
+    );
+
+    expect(response.headers.get("location")).toBeNull();
+    expect(flag).not.toHaveBeenCalled();
+  });
+
   it("keeps the bare locale root in the default locale", async () => {
     flag.mockResolvedValue(false);
 
     const response = await proxy(new NextRequest("https://openjii.org/de-DE"));
 
     expect(response.headers.get("location")).toBe("https://openjii.org/en-US");
+  });
+});
+
+describe("locale proxy matcher", () => {
+  it.each(["/de-DE/releases/v2.71.0", "/en-US/about", "/", "/de-DE"])("runs for page %s", (url) => {
+    expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true);
+  });
+
+  it.each([
+    "/favicon.ico",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/logo-jii-yellow.svg",
+    "/login-background-1.jpg",
+    "/_next/static/chunks/app.js",
+    "/api/enable-draft",
+    "/ingest/flags",
+  ])("skips %s", (url) => {
+    expect(unstable_doesMiddlewareMatch({ config, url })).toBe(false);
   });
 });
