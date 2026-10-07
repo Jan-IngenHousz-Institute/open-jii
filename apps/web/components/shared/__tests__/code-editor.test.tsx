@@ -1,47 +1,26 @@
-import { render } from "@/test/test-utils";
+import { render, screen } from "@/test/test-utils";
+import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { CodeEditor } from "../code-editor";
 
 vi.unmock("~/components/shared/code-editor");
 
-interface CodeMirrorProps {
-  onChange: (value: string) => void;
-  basicSetup: object;
-  extensions: unknown[];
-}
-
-const codeMirror = vi.hoisted(() => {
-  const props: CodeMirrorProps[] = [];
-  return { props };
-});
-
-vi.mock("@uiw/react-codemirror", () => ({
-  default: (props: CodeMirrorProps) => {
-    codeMirror.props.push(props);
-    return null;
-  },
+vi.mock("../code-editor-view", () => ({
+  CodeEditorView: ({ value }: { value: string }) => <div data-testid="codemirror">{value}</div>,
 }));
 
 describe("CodeEditor", () => {
-  it("keeps the props CodeMirror reconfigures on stable while the caller re-renders", () => {
-    const firstChange = vi.fn();
-    const secondChange = vi.fn();
-    const { rerender } = render(
-      <CodeEditor value="{}" language="json" onChange={firstChange} basicSetup={{ tabSize: 2 }} />,
-    );
-    rerender(
-      <CodeEditor value="{}" language="json" onChange={secondChange} basicSetup={{ tabSize: 2 }} />,
-    );
+  it("renders the code as text on the server, where CodeMirror cannot draw", () => {
+    const html = renderToString(<CodeEditor value='{"steps": 3}' language="json" />);
 
-    const first = codeMirror.props.at(0);
-    const last = codeMirror.props.at(-1);
-    expect(last?.onChange).toBe(first?.onChange);
-    expect(last?.basicSetup).toBe(first?.basicSetup);
-    expect(last?.extensions).toBe(first?.extensions);
+    expect(html).toContain("{&quot;steps&quot;: 3}");
+    expect(html).not.toContain("codemirror");
+  });
 
-    last?.onChange("[]");
-    expect(secondChange).toHaveBeenCalledWith("[]");
-    expect(firstChange).not.toHaveBeenCalled();
+  it("swaps the text for the editor once CodeMirror has loaded", async () => {
+    render(<CodeEditor value='{"steps": 3}' language="json" />);
+
+    expect(await screen.findByTestId("codemirror")).toHaveTextContent('{"steps": 3}');
   });
 });

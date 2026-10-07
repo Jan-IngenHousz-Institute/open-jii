@@ -395,6 +395,5 @@ vi.mock("~/components/shared/code-editor", async () => {
             (props.onChange as ((v: string) => void) | undefined)?.(e.target.value),
         }),
       ),
-    createSyntaxLinter: vi.fn(),
   };
 });
