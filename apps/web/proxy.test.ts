@@ -1,4 +1,3 @@
-import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { isFeatureFlagEnabledForRequest } from "~/lib/posthog-server";
@@ -90,9 +89,17 @@ describe("locale proxy", () => {
 });
 
 describe("locale proxy matcher", () => {
-  it.each(["/de-DE/releases/v2.71.0", "/en-US/about", "/", "/de-DE"])("runs for page %s", (url) => {
-    expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true);
-  });
+  // The matcher is a regular expression over the path. Next's own matcher helper is not used
+  // here: it loads Next's server runtime into the shared test worker and breaks later files.
+  const runsFor = (path: string) =>
+    config.matcher.some((matcher) => new RegExp(`^${matcher}$`).test(path));
+
+  it.each(["/de-DE/releases/v2.71.0", "/en-US/about", "/", "/de-DE"])(
+    "runs for page %s",
+    (path) => {
+      expect(runsFor(path)).toBe(true);
+    },
+  );
 
   it.each([
     "/favicon.ico",
@@ -103,7 +110,7 @@ describe("locale proxy matcher", () => {
     "/_next/static/chunks/app.js",
     "/api/enable-draft",
     "/ingest/flags",
-  ])("skips %s", (url) => {
-    expect(unstable_doesMiddlewareMatch({ config, url })).toBe(false);
+  ])("skips %s", (path) => {
+    expect(runsFor(path)).toBe(false);
   });
 });
