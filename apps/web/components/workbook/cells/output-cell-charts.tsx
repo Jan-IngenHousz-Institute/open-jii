@@ -12,6 +12,53 @@ import { readThemeColor } from "@repo/ui/components/charts/utils";
 
 export type ChartClickHandler = (data: number[], columnName: string) => void;
 
+const SPARKLINE_WIDTH = 80;
+const SPARKLINE_HEIGHT = 24;
+const SPARKLINE_PADDING = 2;
+
+interface SparklinePoint {
+  index: number;
+  x: number;
+  y: number;
+}
+
+// The lowest and highest point of each pixel column draw the same line as every sample, so a
+// long series costs the page a couple of kilobytes instead of tens.
+function sparklinePath(data: number[]) {
+  const minY = data.reduce((min, value) => Math.min(min, value), Infinity);
+  const maxY = data.reduce((max, value) => Math.max(max, value), -Infinity);
+  const rangeY = maxY - minY || 1;
+  const lastIndex = data.length - 1 || 1;
+  const plotWidth = SPARKLINE_WIDTH - 2 * SPARKLINE_PADDING;
+  const plotHeight = SPARKLINE_HEIGHT - 2 * SPARKLINE_PADDING;
+
+  const columns = new Map<number, { low: SparklinePoint; high: SparklinePoint }>();
+  data.forEach((value, index) => {
+    const point = {
+      index,
+      x: SPARKLINE_PADDING + (index / lastIndex) * plotWidth,
+      y: SPARKLINE_HEIGHT - SPARKLINE_PADDING - ((value - minY) / rangeY) * plotHeight,
+    };
+    const pixel = Math.round(point.x);
+    const column = columns.get(pixel);
+    if (!column) {
+      columns.set(pixel, { low: point, high: point });
+      return;
+    }
+    if (point.y > column.low.y) {
+      column.low = point;
+    }
+    if (point.y < column.high.y) {
+      column.high = point;
+    }
+  });
+
+  const points = [...columns.values()].flatMap(({ low, high }) =>
+    low === high ? [low] : [low, high].sort((a, b) => a.index - b.index),
+  );
+  return `M ${points.map(({ x, y }) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" L ")}`;
+}
+
 export function Sparkline({
   data,
   columnName,
@@ -22,20 +69,7 @@ export function Sparkline({
   onClick?: ChartClickHandler;
 }) {
   const { t } = useTranslation("workbook");
-  const width = 80;
-  const height = 24;
-  const padding = 2;
-  const minY = Math.min(...data);
-  const maxY = Math.max(...data);
-  const rangeY = maxY - minY || 1;
-  const points = data
-    .map((value, index) => {
-      const x = padding + (index / (data.length - 1 || 1)) * (width - 2 * padding);
-      const y = height - padding - ((value - minY) / rangeY) * (height - 2 * padding);
-      return `${x},${y}`;
-    })
-    .join(" L ");
-  const path = `M ${points}`;
+  const path = sparklinePath(data);
   const interactive = !!onClick;
   return (
     <Button
@@ -47,7 +81,12 @@ export function Sparkline({
       data-testid={interactive ? `sparkline-${columnName}` : undefined}
       disabled={!interactive}
     >
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="shrink-0">
+      <svg
+        width={SPARKLINE_WIDTH}
+        height={SPARKLINE_HEIGHT}
+        viewBox={`0 0 ${SPARKLINE_WIDTH} ${SPARKLINE_HEIGHT}`}
+        className="shrink-0"
+      >
         <path
           d={path}
           fill="none"
