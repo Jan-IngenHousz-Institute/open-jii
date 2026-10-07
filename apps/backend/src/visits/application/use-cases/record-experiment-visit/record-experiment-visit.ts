@@ -5,8 +5,8 @@ import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
 import { VisitRepository } from "../../../core/repositories/visit.repository";
 
 @Injectable()
-export class RecordVisitUseCase {
-  private readonly logger = new Logger(RecordVisitUseCase.name);
+export class RecordExperimentVisitUseCase {
+  private readonly logger = new Logger(RecordExperimentVisitUseCase.name);
 
   constructor(
     private readonly authz: AuthorizationService,
@@ -34,7 +34,7 @@ export class RecordVisitUseCase {
       this.logger.error({
         msg: "Failed to record visit",
         errorCode: result.error.code,
-        operation: "recordVisit",
+        operation: "recordExperimentVisit",
         userId,
         experimentId,
       });

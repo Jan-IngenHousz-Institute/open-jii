@@ -3,17 +3,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthorizationService } from "../../../../authorization/authorization.service";
 import { AppError, failure, success } from "../../../../common/utils/fp-utils";
 import type { VisitRepository } from "../../../core/repositories/visit.repository";
-import { RecordVisitUseCase } from "./record-visit";
+import { RecordExperimentVisitUseCase } from "./record-experiment-visit";
 
-describe("RecordVisitUseCase", () => {
+describe("RecordExperimentVisitUseCase", () => {
   let authz: { can: ReturnType<typeof vi.fn> };
   let repo: { recordExperiment: ReturnType<typeof vi.fn> };
-  let useCase: RecordVisitUseCase;
+  let useCase: RecordExperimentVisitUseCase;
 
   beforeEach(() => {
     authz = { can: vi.fn() };
     repo = { recordExperiment: vi.fn() };
-    useCase = new RecordVisitUseCase(
+    useCase = new RecordExperimentVisitUseCase(
       authz as unknown as AuthorizationService,
       repo as unknown as VisitRepository,
     );

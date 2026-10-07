@@ -6,19 +6,19 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 import { visitContract } from "@repo/api/domains/visit/visit.contract";
 
 import { throwOrpcFailure } from "../../common/utils/orpc-fp";
-import { RecordVisitUseCase } from "../application/use-cases/record-visit/record-visit";
+import { RecordExperimentVisitUseCase } from "../application/use-cases/record-experiment-visit/record-experiment-visit";
 
-/** The resource type arrives in the body, so access is checked in the use case. */
+/** Access is checked in the use case before it records the experiment visit. */
 @Controller()
 export class VisitController {
   private readonly logger = new Logger(VisitController.name);
 
-  constructor(private readonly recordVisitUseCase: RecordVisitUseCase) {}
+  constructor(private readonly recordExperimentVisitUseCase: RecordExperimentVisitUseCase) {}
 
   @Implement(visitContract.recordExperimentVisit)
   recordExperimentVisit(@Session() session: UserSession) {
     return implement(visitContract.recordExperimentVisit).handler(async ({ input }) => {
-      const result = await this.recordVisitUseCase.execute(session.user.id, input.id);
+      const result = await this.recordExperimentVisitUseCase.execute(session.user.id, input.id);
       if (result.isSuccess()) {
         return undefined;
       }

@@ -32,7 +32,7 @@ describe("VisitController", () => {
   const visitsOf = (userId: string) =>
     testApp.database.select().from(resourceVisits).where(eq(resourceVisits.userId, userId));
 
-  describe("recordVisit", () => {
+  describe("recordExperimentVisit", () => {
     it("records a visit to an experiment the caller can open", async () => {
       const { experiment } = await testApp.createExperiment({ name: "Mine", userId: testUserId });
 
