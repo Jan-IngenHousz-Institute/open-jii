@@ -27,6 +27,8 @@ export type EagerTraceType = (typeof EAGER_TRACE_TYPES)[number];
 
 export type LazyTraceType = (typeof LAZY_TRACE_TYPES)[number];
 
+export type PlotlyTraceType = EagerTraceType | LazyTraceType;
+
 export const isEagerTraceType = (type: string): type is EagerTraceType =>
   EAGER_TRACE_TYPES.some((candidate) => candidate === type);
 

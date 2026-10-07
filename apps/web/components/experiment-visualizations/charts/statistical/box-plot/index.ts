@@ -10,6 +10,7 @@ import { boxPlotStyleShelves } from "./shelves/style-shelves";
 
 export const boxPlotChartType: ChartTypeDef = {
   type: "box-plot",
+  plotlyTraceTypes: ["box"],
   family: "statistical",
   labelKey: "workspace.charts.types.boxPlot",
   descriptionKey: "workspace.charts.descriptions.boxPlot",

@@ -10,6 +10,7 @@ import { dotPlotStyleShelves } from "./shelves/style-shelves";
 
 export const dotPlotChartType: ChartTypeDef = {
   type: "dot-plot",
+  plotlyTraceTypes: ["scatter"],
   family: "basic",
   labelKey: "workspace.charts.types.dot-plot",
   descriptionKey: "workspace.charts.descriptions.dot-plot",

@@ -10,6 +10,7 @@ import { bubbleStyleShelves } from "./shelves/style-shelves";
 
 export const bubbleChartType: ChartTypeDef = {
   type: "bubble",
+  plotlyTraceTypes: ["scatter"],
   family: "basic",
   labelKey: "workspace.charts.types.bubble",
   descriptionKey: "workspace.charts.descriptions.bubble",

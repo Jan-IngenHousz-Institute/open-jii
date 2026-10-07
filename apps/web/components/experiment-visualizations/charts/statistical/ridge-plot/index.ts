@@ -10,6 +10,7 @@ import { ridgePlotStyleShelves } from "./shelves/style-shelves";
 
 export const ridgePlotChartType: ChartTypeDef = {
   type: "ridge-plot",
+  plotlyTraceTypes: ["scatter"],
   family: "statistical",
   labelKey: "workspace.charts.types.ridgePlot",
   descriptionKey: "workspace.charts.descriptions.ridgePlot",

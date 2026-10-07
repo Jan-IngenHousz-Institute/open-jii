@@ -10,6 +10,7 @@ import { spcControlChartStyleShelves } from "./shelves/style-shelves";
 
 export const spcControlChartType: ChartTypeDef = {
   type: "spc-control-chart",
+  plotlyTraceTypes: ["scatter"],
   family: "statistical",
   labelKey: "workspace.charts.types.spcControlChart",
   descriptionKey: "workspace.charts.descriptions.spcControlChart",

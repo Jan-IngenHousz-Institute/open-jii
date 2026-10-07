@@ -10,6 +10,7 @@ import { scatterStyleShelves } from "./shelves/style-shelves";
 
 export const scatterChartType: ChartTypeDef = {
   type: "scatter",
+  plotlyTraceTypes: ["scatter"],
   family: "basic",
   labelKey: "workspace.charts.types.scatter",
   descriptionKey: "workspace.charts.descriptions.scatter",

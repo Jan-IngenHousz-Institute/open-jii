@@ -10,6 +10,7 @@ import { densityPlot2DStyleShelves } from "./shelves/style-shelves";
 
 export const densityPlot2DChartType: ChartTypeDef = {
   type: "density-plot-2d",
+  plotlyTraceTypes: ["histogram2dcontour", "scatter"],
   family: "statistical",
   labelKey: "workspace.charts.types.densityPlot2d",
   descriptionKey: "workspace.charts.descriptions.densityPlot2d",

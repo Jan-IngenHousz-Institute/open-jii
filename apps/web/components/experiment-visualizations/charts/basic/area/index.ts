@@ -10,6 +10,7 @@ import { areaStyleShelves } from "./shelves/style-shelves";
 
 export const areaChartType: ChartTypeDef = {
   type: "area",
+  plotlyTraceTypes: ["scatter"],
   family: "basic",
   labelKey: "workspace.charts.types.area",
   descriptionKey: "workspace.charts.descriptions.area",
