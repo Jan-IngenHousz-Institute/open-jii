@@ -4,6 +4,7 @@ import { PrincipalProvider } from "@/components/auth/principal-context";
 import { CalibrationFlagProvider } from "@/components/calibrations/calibration-flag-context";
 import { CommandPalette } from "@/components/command/command-palette";
 import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
+import { NavigationTimingReporter } from "@/components/navigation/navigation-timing/navigation-timing-reporter";
 import { PlatformHeaderProvider } from "@/components/navigation/site-header/platform-header-context";
 import { SiteHeader } from "@/components/navigation/site-header/site-header";
 import { PageContainer } from "@/components/page-container";
@@ -99,6 +100,7 @@ export default async function AppLayout({
                   </div>
                 </PlatformHeaderProvider>
               </SidebarInset>
+              <NavigationTimingReporter />
               <ShortcutsRoot locale={locale} />
               <CommandPalette locale={locale} />
               <Toaster />
