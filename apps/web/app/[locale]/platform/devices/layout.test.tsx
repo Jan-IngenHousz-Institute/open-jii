@@ -4,25 +4,25 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import DevicesLayout from "./layout";
 
-const renderLayout = async (children: React.ReactNode = <div>Child Content</div>) =>
-  render(await DevicesLayout({ children, params: Promise.resolve({ locale: "en-US" }) }));
+const renderLayout = (children: React.ReactNode = <div>Child Content</div>) =>
+  render(<DevicesLayout>{children}</DevicesLayout>);
 
 describe("<DevicesLayout />", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("renders the list content without repeating the shell heading", async () => {
+  it("renders the list content without repeating the shell heading", () => {
     vi.mocked(usePathname).mockReturnValue("/en-US/platform/devices");
-    await renderLayout();
+    renderLayout();
 
     expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
     expect(screen.getByText("Child Content")).toBeInTheDocument();
   });
 
-  it("renders children only (no header) on a device detail route", async () => {
+  it("renders children only (no header) on a device detail route", () => {
     vi.mocked(usePathname).mockReturnValue("/en-US/platform/devices/dev-1");
-    await renderLayout();
+    renderLayout();
 
     expect(screen.getByText("Child Content")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();

@@ -5,13 +5,11 @@ import { PublicExperimentsSection } from "@/components/dashboard/public-experime
 import { ResearchActivityPanel } from "@/components/dashboard/research-activity-panel";
 import { UserExperimentsSection } from "@/components/dashboard/user-experiments-section";
 import { PageContainer } from "@/components/page-container";
-import { TranslationBundles } from "@/components/translation-bundles";
 import type { Metadata } from "next";
 import { BlogPostsSection } from "~/components/dashboard/blog-posts-section";
 import { env } from "~/env";
 
-import type { Namespace } from "@repo/i18n";
-import initTranslations, { loadNamespaceBundles } from "@repo/i18n/server";
+import initTranslations from "@repo/i18n/server";
 
 interface PlatformPageProps {
   params: Promise<{ locale: string }>;
@@ -25,70 +23,65 @@ export async function generateMetadata({ params }: PlatformPageProps): Promise<M
 }
 
 /** Renders the localized dashboard with personal experiments, public updates, and blog posts. */
-const DASHBOARD_NAMESPACES: Namespace[] = ["publicMetrics"];
-
 export default async function PlatformDashboard({ params }: PlatformPageProps) {
   const { locale } = await params;
   const { t } = await initTranslations({
     locale,
     namespaces: ["common", "dashboard"],
   });
-  const bundles = await loadNamespaceBundles(locale, DASHBOARD_NAMESPACES);
 
   return (
-    <TranslationBundles resources={bundles}>
-      <PageContainer width="fluid" className="space-y-6">
-        {/* Dashboard Banner */}
-        <DashboardBanner
-          title={t("dashboard.transferBannerTitle")}
-          description={t("dashboard.transferBannerDescription")}
-          descriptionItalic={t("dashboard.transferBannerDescriptionItalic")}
-          descriptionItalicHref={
-            "https://github.com/Jan-IngenHousz-Institute/open-jii/discussions/new?category=ideas"
-          }
-          secondaryButtonLabel={t("dashboard.reportBugButton")}
-          secondaryButtonHref={`${env.NEXT_PUBLIC_DOCS_URL}/guide/reference/getting-help`}
-          buttonLabel={t("dashboard.transferBannerButton")}
-          buttonHref={`/${locale}/platform/transfer-request`}
-          locale={locale}
-        />
+    <PageContainer width="fluid" className="space-y-6">
+      {/* Dashboard Banner */}
+      <DashboardBanner
+        title={t("dashboard.transferBannerTitle")}
+        description={t("dashboard.transferBannerDescription")}
+        descriptionItalic={t("dashboard.transferBannerDescriptionItalic")}
+        descriptionItalicHref={
+          "https://github.com/Jan-IngenHousz-Institute/open-jii/discussions/new?category=ideas"
+        }
+        secondaryButtonLabel={t("dashboard.reportBugButton")}
+        secondaryButtonHref={`${env.NEXT_PUBLIC_DOCS_URL}/guide/reference/getting-help`}
+        buttonLabel={t("dashboard.transferBannerButton")}
+        buttonHref={`/${locale}/platform/transfer-request`}
+        locale={locale}
+      />
 
-        {/* Milestone Moment */}
-        <MilestoneBanner locale={locale} />
+      {/* Milestone Moment */}
+      <MilestoneBanner locale={locale} />
 
-        {/* Platform Pulse */}
-        <ResearchActivityPanel locale={locale} />
+      {/* Platform Pulse */}
+      <ResearchActivityPanel locale={locale} />
 
-        {/* First Row - User's Experiments */}
-        <DashboardSection
-          title={t("dashboard.yourExperiments")}
-          seeAllLabel={t("dashboard.seeAll")}
-          seeAllHref="/platform/experiments"
-          locale={locale}
-        >
-          <UserExperimentsSection />
-        </DashboardSection>
+      {/* First Row - User's Experiments */}
+      <DashboardSection
+        title={t("dashboard.yourExperiments")}
+        seeAllLabel={t("dashboard.seeAll")}
+        seeAllHref="/platform/experiments"
+        locale={locale}
+      >
+        <UserExperimentsSection />
+      </DashboardSection>
 
-        {/* Recently updated public experiments */}
-        <DashboardSection
-          title={t("dashboard.recentPublicExperiments")}
-          seeAllLabel={t("dashboard.seeAll")}
-          seeAllHref="/platform/experiments?visibility=public"
-          locale={locale}
-        >
-          <PublicExperimentsSection />
-        </DashboardSection>
+      {/* Recently updated public experiments */}
+      <DashboardSection
+        title={t("dashboard.recentPublicExperiments")}
+        seeAllLabel={t("dashboard.seeAll")}
+        seeAllHref="/platform/experiments?visibility=public"
+        locale={locale}
+      >
+        <PublicExperimentsSection />
+      </DashboardSection>
 
-        {/* Recent Blog Posts */}
-        <DashboardSection
-          title={t("dashboard.recentArticles")}
-          seeAllLabel={t("dashboard.seeAll")}
-          seeAllHref="/blog"
-          locale={locale}
-        >
-          <BlogPostsSection locale={locale} />
-        </DashboardSection>
-      </PageContainer>
-    </TranslationBundles>
+      {/* Recent Blog Posts */}
+      <DashboardSection
+        title={t("dashboard.recentArticles")}
+        seeAllLabel={t("dashboard.seeAll")}
+        seeAllHref="/blog"
+        locale={locale}
+      >
+        <BlogPostsSection locale={locale} />
+      </DashboardSection>
+    </PageContainer>
   );
 }

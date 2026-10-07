@@ -22,12 +22,14 @@ import { isFeatureFlagEnabledForSession } from "~/lib/posthog-server";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Namespace } from "@repo/i18n";
+import { namespaces } from "@repo/i18n/config";
 import { loadNamespaceBundles } from "@repo/i18n/server";
 import { SidebarEdgePeek, SidebarInset, SidebarProvider } from "@repo/ui/components/sidebar";
 import { Toaster } from "@repo/ui/components/toaster";
 
-// What the shell itself shows on the client: sidebar, command palette, notifications, passkey prompt.
-const SHELL_NAMESPACES: Namespace[] = ["navigation", "account", "notifications"];
+// Every namespace: a client component reaching for one that was not shipped would suspend the
+// whole page until it loaded.
+const PLATFORM_NAMESPACES: Namespace[] = [...namespaces];
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -69,7 +71,7 @@ export default async function AppLayout({
   const [releaseNotes, isCalibrationEnabled, bundles] = await Promise.all([
     fetchWebReleaseNotes(locale),
     isFeatureFlagEnabledForSession(FEATURE_FLAGS.CALIBRATION, session),
-    loadNamespaceBundles(locale, SHELL_NAMESPACES),
+    loadNamespaceBundles(locale, PLATFORM_NAMESPACES),
   ]);
 
   return (
