@@ -1013,7 +1013,7 @@
             "type": "cloudwatch",
             "uid": "${datasource_uid}"
           },
-          "description": "Share of cacheable requests CloudFront answered from its edge cache. Requests to behaviours with caching disabled (the API, PostHog ingest, signed-in pages) count as misses, so a low value means the traffic is mostly per-user rather than that the cache is broken.",
+          "description": "Share of all requests CloudFront answered from its edge cache. Requests to behaviours with caching disabled (the API, PostHog ingest, signed-in pages, every locale but the default) count as misses, so a low value means the traffic is mostly per-user rather than that the cache is broken.",
           "fieldConfig": {
             "defaults": {
               "color": {
