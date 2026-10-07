@@ -9,8 +9,12 @@ const ScrollArea = React.forwardRef<
   React.ElementRef<typeof ScrollAreaPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
 >(({ className, children, ...props }, ref) => (
-  <ScrollAreaPrimitive.Root ref={ref} className={cn("relative", className)} {...props}>
-    <ScrollAreaPrimitive.Viewport className="focus-visible:ring-ring/50 size-full rounded-[inherit] outline-none transition-[color,box-shadow] focus-visible:outline-1 focus-visible:ring-[3px]">
+  <ScrollAreaPrimitive.Root
+    ref={ref}
+    className={cn("relative flex flex-col", className)}
+    {...props}
+  >
+    <ScrollAreaPrimitive.Viewport className="focus-visible:ring-ring/50 size-full min-h-0 rounded-[inherit] outline-none transition-[color,box-shadow] focus-visible:outline-1 focus-visible:ring-[3px]">
       {children}
     </ScrollAreaPrimitive.Viewport>
     <ScrollBar />
