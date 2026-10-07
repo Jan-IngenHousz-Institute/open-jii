@@ -8,17 +8,18 @@ One distribution serves the static assets from S3, the server-rendered pages and
 server Lambda, optimized images from the image Lambda, and PostHog's capture traffic through a
 reverse proxy. Behaviors are matched in the order below; the first path pattern that fits wins.
 
-| Order | Path pattern                                                                 | Origin         | Cache policy                                   | Functions                               |
-| ----- | ---------------------------------------------------------------------------- | -------------- | ---------------------------------------------- | --------------------------------------- |
-| 1     | `/_next/static/*`                                                            | S3 assets      | Managed CachingOptimizedForUncompressedObjects | none                                    |
-| 2     | `/_next/image`                                                               | Image Lambda   | `image_cache_policy`                           | none                                    |
-| 3     | `/ingest/static/*`                                                           | PostHog assets | Managed CachingOptimizedForUncompressedObjects | `posthog_rewrite` (viewer request)      |
-| 4     | `/ingest/*`                                                                  | PostHog ingest | Managed CachingDisabled                        | `posthog_rewrite` (viewer request)      |
-| 5     | `api/*`                                                                      | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
-| 6     | `_next/data/*`                                                               | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`                   |
-| 7, 8  | `*.svg`, `*.ico`                                                             | S3 assets      | Managed CachingOptimizedForUncompressedObjects | none                                    |
-| 9+    | `/*/platform*`, `/*/login*`, `/*/register*`, `/*/verify-request*`, `/de-DE*` | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
-| last  | default (`*`)                                                                | Server Lambda  | `server_pages`                                 | `forward_host_header`, `edge_hash_body` |
+| Order | Path pattern                                                      | Origin         | Cache policy                                   | Functions                               |
+| ----- | ----------------------------------------------------------------- | -------------- | ---------------------------------------------- | --------------------------------------- |
+| 1     | `/_next/static/*`                                                 | S3 assets      | Managed CachingOptimizedForUncompressedObjects | none                                    |
+| 2     | `/_next/image`                                                    | Image Lambda   | `image_cache_policy`                           | none                                    |
+| 3     | `/ingest/static/*`                                                | PostHog assets | Managed CachingOptimizedForUncompressedObjects | `posthog_rewrite` (viewer request)      |
+| 4     | `/ingest/*`                                                       | PostHog ingest | Managed CachingDisabled                        | `posthog_rewrite` (viewer request)      |
+| 5     | `api/*`                                                           | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
+| 6     | `_next/data/*`                                                    | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`                   |
+| 7, 8  | `*.svg`, `*.ico`                                                  | S3 assets      | Managed CachingOptimizedForUncompressedObjects | none                                    |
+| 9+    | `/*/platform*`, `/*/login*`, `/*/register*`, `/*/verify-request*` | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
+| next  | `/en-US*`                                                         | Server Lambda  | `server_pages`                                 | `forward_host_header`, `edge_hash_body` |
+| last  | default (`*`)                                                     | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
 
 - `forward_host_header` is a CloudFront Function on viewer request. It redirects `www.` hosts to
   the bare host and copies `host` into `x-forwarded-host`, which the origins route on.
@@ -27,9 +28,10 @@ reverse proxy. Behaviors are matched in the order below; the first path pattern 
 
 ## 🗄 Page caching
 
-The default behavior uses `server_pages`, a cache policy that lets the origin's `Cache-Control`
-decide. Next marks static and ISR pages `s-maxage=…` and every page that reads the request
-`private, no-cache, no-store`, so only pages that are the same for every visitor are ever stored.
+Only the default locale's pages are cached: the `/en-US*` behavior uses `server_pages`, a cache
+policy that lets the origin's `Cache-Control` decide. Next marks static and ISR pages
+`s-maxage=…` and every page that reads the request `private, no-cache, no-store`, so only pages
+that are the same for every visitor are ever stored.
 A response with no `Cache-Control`, such as a proxy redirect, is not kept (`default_ttl = 0`).
 
 What the cache key holds, and why:
@@ -45,10 +47,12 @@ What the cache key holds, and why:
   The session cookie stays out of the key. It is still forwarded to the origin by the origin
   request policy.
 
-The CachingDisabled page behaviors (9+) are defence in depth for pages that differ per visitor.
-Every locale except the default is listed too: `proxy.ts` decides per viewer who may see another
-locale, and it can only decide for a request that reaches the origin. Add a locale's pattern here
-when the web app adds one.
+The CachingDisabled page behaviors (9+) are defence in depth for pages that differ per visitor,
+and they come before `/en-US*` so the default locale's platform and sign-in pages stay uncached.
+Everything else, including every other locale, falls to the uncached default behavior:
+`proxy.ts` decides per viewer who may see another locale, and it can only decide for a request
+that reaches the origin. A locale added later is therefore uncached until it is listed in
+`cached_page_patterns`.
 
 Origin errors (500, 502, 503 and 504) are never cached (`error_caching_min_ttl = 0`).
 

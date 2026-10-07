@@ -148,15 +148,19 @@ EOT
 }
 locals {
   # Pages that differ per visitor never come from the edge cache, whatever their
-  # headers say. Every locale but the default is here too: proxy.ts decides per
-  # viewer who may see one, and it can only decide for a request that reaches it.
+  # headers say.
   uncached_page_patterns = [
     "/*/platform*",
     "/*/login*",
     "/*/register*",
     "/*/verify-request*",
-    "/de-DE*",
   ]
+
+  # Only the default locale (defaultLocale in packages/i18n/src/config.ts) is
+  # cached at the edge. proxy.ts decides per viewer who may see any other locale
+  # and can only decide for a request that reaches it, so a locale added later
+  # stays uncached unless it is listed here.
+  cached_page_patterns = ["/en-US*"]
 }
 
 resource "aws_cloudfront_distribution" "distribution" {
@@ -247,7 +251,7 @@ resource "aws_cloudfront_distribution" "distribution" {
     cached_methods         = ["GET", "HEAD"]
     compress               = true
 
-    cache_policy_id          = aws_cloudfront_cache_policy.server_pages.id
+    cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingDisabled
     origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac" # Managed-AllViewerExceptHostHeader
 
     lambda_function_association {
@@ -400,6 +404,34 @@ resource "aws_cloudfront_distribution" "distribution" {
       compress               = true
 
       cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingDisabled
+      origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac" # Managed-AllViewerExceptHostHeader
+
+      lambda_function_association {
+        event_type   = "origin-request"
+        lambda_arn   = aws_lambda_function.edge_hash_body.qualified_arn
+        include_body = true
+      }
+
+      function_association {
+        event_type   = "viewer-request"
+        function_arn = aws_cloudfront_function.forward_host_header.arn
+      }
+    }
+  }
+
+  # After the uncached page behaviors, so the default locale's platform and sign-in pages stay uncached.
+  dynamic "ordered_cache_behavior" {
+    for_each = local.cached_page_patterns
+
+    content {
+      path_pattern           = ordered_cache_behavior.value
+      target_origin_id       = "ServerLambda"
+      viewer_protocol_policy = "redirect-to-https"
+      allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+      cached_methods         = ["GET", "HEAD"]
+      compress               = true
+
+      cache_policy_id          = aws_cloudfront_cache_policy.server_pages.id
       origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac" # Managed-AllViewerExceptHostHeader
 
       lambda_function_association {
