@@ -548,6 +548,66 @@ describe("ExperimentDataRepository", () => {
       );
     });
 
+    describe("sorting by contributor", () => {
+      const rawData: ExperimentTableMetadata = {
+        identifier: "raw_data",
+        displayName: "Raw data",
+        tableType: "static",
+        rowCount: 10,
+        latestRowAt: null,
+        schemaRevision: null,
+        macroSchema: null,
+        questionsSchema: null,
+        customMetadataSchema: null,
+      };
+
+      beforeEach(() => {
+        vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+          success([rawData]),
+        );
+        vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+        vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+          success({ columns: [], rows: [], totalRows: 0, truncated: false }),
+        );
+      });
+
+      it("orders an anonymized experiment by the pseudonym it shows, not the real name", async () => {
+        await repository.getTableData({
+          ...baseParams,
+          experiment: { ...mockExperiment, anonymizeContributors: true },
+          orderBy: "contributor.name",
+          orderDirection: "DESC",
+          page: 1,
+          pageSize: 5,
+        });
+
+        expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            orderBy: "contributor.id",
+            orderDirection: "DESC",
+            orderByContributorPseudonymSalt: mockExperiment.id,
+          }),
+        );
+      });
+
+      it("orders by the name when the experiment does not anonymize", async () => {
+        await repository.getTableData({
+          ...baseParams,
+          experiment: { ...mockExperiment, anonymizeContributors: false },
+          orderBy: "contributor.name",
+          page: 1,
+          pageSize: 5,
+        });
+
+        expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            orderBy: "contributor.name",
+            orderByContributorPseudonymSalt: undefined,
+          }),
+        );
+      });
+    });
+
     it("should return failure when table not found", async () => {
       vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(success([]));
 

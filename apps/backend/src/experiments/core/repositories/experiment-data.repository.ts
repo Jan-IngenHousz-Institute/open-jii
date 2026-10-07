@@ -56,6 +56,7 @@ interface PageQuery {
   filters?: FilterCondition[];
   orderBy?: string;
   orderDirection: "ASC" | "DESC";
+  orderByContributorPseudonymSalt?: string;
   limit: number;
   offset: number;
 }
@@ -166,6 +167,7 @@ export class ExperimentDataRepository {
     // pseudonyms; tag contributor id filters so the SQL compares the pseudonym
     // (recomputed in-query) instead of the raw id the client never receives.
     const effectiveFilters = this.pseudonymizeContributorFilters(experiment, filters);
+    const ordering = this.pseudonymizeContributorOrder(experiment, orderBy);
 
     // Aggregation summary: page/pageSize ignored.
     if (hasAggregation) {
@@ -219,7 +221,7 @@ export class ExperimentDataRepository {
           this.pageData(experimentId, shape, read, {
             columns,
             filters: effectiveFilters,
-            orderBy,
+            ...ordering,
             orderDirection,
             limit: pageSize,
             offset,
@@ -256,7 +258,7 @@ export class ExperimentDataRepository {
       const queryResult = this.buildQuery(experimentId, shape, {
         columns,
         filters: effectiveFilters,
-        orderBy,
+        ...ordering,
         orderDirection,
         limit: ceiling + 1,
       });
@@ -286,7 +288,7 @@ export class ExperimentDataRepository {
     const usedPageSize = pageSize ?? 5;
     const offset = (usedPage - 1) * usedPageSize;
     const pageResult = await this.pageData(experimentId, shape, read, {
-      orderBy,
+      ...ordering,
       orderDirection,
       limit: usedPageSize,
       offset,
@@ -479,6 +481,22 @@ export class ExperimentDataRepository {
   }
 
   /**
+   * Sort an anonymized experiment's contributor column by the pseudonym it shows rather than the
+   * real name, whose order would leak. The FE sorts contributors by a `<column>.name` path.
+   */
+  private pseudonymizeContributorOrder(
+    experiment: ExperimentDto,
+    orderBy?: string,
+  ): { orderBy?: string; orderByContributorPseudonymSalt?: string } {
+    const contributor = orderBy === undefined ? null : /^([^.]+)\.name$/.exec(orderBy);
+    if (!experiment.anonymizeContributors || contributor === null) {
+      return { orderBy };
+    }
+
+    return { orderBy: `${contributor[1]}.id`, orderByContributorPseudonymSalt: experiment.id };
+  }
+
+  /**
    * The table's metadata, what a read of it flattens and hides, and the names its base columns
    * hold. The view's columns are looked up only when a payload is flattened, since only then can
    * a field's name clash with one of them.
@@ -615,12 +633,22 @@ export class ExperimentDataRepository {
       distinct?: boolean;
       orderBy?: string;
       orderDirection?: "ASC" | "DESC";
+      orderByContributorPseudonymSalt?: string;
       limit?: number;
       offset?: number;
     } = {},
   ): Result<string> {
-    const { columns, filters, aggregation, distinct, orderBy, orderDirection, limit, offset } =
-      options;
+    const {
+      columns,
+      filters,
+      aggregation,
+      distinct,
+      orderBy,
+      orderDirection,
+      orderByContributorPseudonymSalt,
+      limit,
+      offset,
+    } = options;
     const { metadata, variants, exceptColumns, reservedColumns } = shape;
 
     return this.databricksPort.buildExperimentQuery({
@@ -636,6 +664,7 @@ export class ExperimentDataRepository {
       distinct,
       orderBy,
       orderDirection,
+      orderByContributorPseudonymSalt,
       limit,
       offset,
     });

@@ -38,6 +38,7 @@ export class QueryBuilderService {
         ...params,
         orderBy: undefined,
         orderDirection: undefined,
+        orderByContributorPseudonymSalt: undefined,
         limit: undefined,
         offset: undefined,
         aggregation: undefined,
@@ -91,6 +92,7 @@ export class QueryBuilderService {
       distinct,
       orderBy,
       orderDirection,
+      orderByContributorPseudonymSalt,
       limit,
       offset,
     } = params;
@@ -117,7 +119,7 @@ export class QueryBuilderService {
     }
 
     if (orderBy) {
-      builder.orderBy(orderBy, orderDirection);
+      builder.orderBy(orderBy, orderDirection, orderByContributorPseudonymSalt);
     }
 
     if (limit !== undefined) {
@@ -144,6 +146,7 @@ export class QueryBuilderService {
       distinct,
       orderBy,
       orderDirection,
+      orderByContributorPseudonymSalt,
       limit,
       offset,
     } = params;
@@ -176,7 +179,7 @@ export class QueryBuilderService {
     }
 
     if (orderBy) {
-      builder.orderBy(orderBy, orderDirection);
+      builder.orderBy(orderBy, orderDirection, orderByContributorPseudonymSalt);
     }
 
     if (limit !== undefined) {
