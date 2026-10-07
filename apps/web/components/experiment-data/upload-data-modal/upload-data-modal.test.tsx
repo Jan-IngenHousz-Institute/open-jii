@@ -1,15 +1,26 @@
 import { createExperimentTable } from "@/test/factories";
 import { API_URL } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor, fireEvent } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor, fireEvent, within } from "@/test/test-utils";
 import { http, HttpResponse } from "msw";
 import { File as NodeFile } from "node:buffer";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import type * as DialogModule from "@repo/ui/components/dialog";
 
 import { UploadDataModal } from "./upload-data-modal";
+
+vi.mock("@repo/ui/components/dialog", async (importOriginal) => {
+  const actual = await importOriginal<typeof DialogModule>();
+  return {
+    ...actual,
+    DialogBody: (props: React.ComponentProps<typeof actual.DialogBody>) => (
+      <actual.DialogBody data-testid="dialog-body" {...props} />
+    ),
+  };
+});
 
 function mountEmptyHistory() {
   server.mount(contract.experiments.listUploads, { body: { uploads: [] } });
@@ -105,6 +116,37 @@ describe("UploadDataModal", () => {
 
     expect(screen.getByText("experimentData.uploadDataModal.title")).toBeInTheDocument();
     expect(screen.getByText("experimentData.uploadDataModal.description")).toBeInTheDocument();
+  });
+
+  it("keeps New upload outside the scrolling history so it stays in view", () => {
+    setExperimentTables();
+    mountEmptyHistory();
+
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
+    const body = screen.getByTestId("dialog-body");
+
+    expect(
+      within(body).getByText("experimentData.uploadDataModal.history.title"),
+    ).toBeInTheDocument();
+    expect(body).not.toContainElement(
+      screen.getByRole("button", { name: "experimentData.uploadDataModal.actions.newUpload" }),
+    );
+  });
+
+  it("keeps Upload outside the scrolling form so it stays in view", async () => {
+    setExperimentTables();
+    mountEmptyHistory();
+
+    render(<UploadDataModal experimentId="exp-1" canManage open onOpenChange={vi.fn()} />);
+    await enterCreateView("csv");
+    const body = screen.getByTestId("dialog-body");
+
+    expect(
+      await within(body).findByLabelText("experimentData.uploadDataModal.newTable.label"),
+    ).toBeInTheDocument();
+    expect(body).not.toContainElement(
+      screen.getByRole("button", { name: "experimentData.uploadDataModal.actions.upload" }),
+    );
   });
 
   it("opens the create form from the New upload dropdown", async () => {
