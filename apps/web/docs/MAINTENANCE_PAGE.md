@@ -55,9 +55,11 @@ That changes how an outage shows:
   service. Visitors keep seeing real content through the outage.
 - **Every deploy starts with its pages cached.** Each build has its own cache, so
   the deploy build renders the default-locale pages, every blog post and every
-  release note ahead, reading published content with the delivery token. If
-  Contentful cannot be read then, the build fails and the running deploy keeps
-  serving its cached pages; re-run the deploy once Contentful is back.
+  release note ahead, reading published content with the delivery token. Each
+  page gets three attempts with backoff, so a brief error does not fail the
+  build. If Contentful still cannot be read, the build fails and the running
+  deploy keeps serving its cached pages; re-run the deploy once Contentful is
+  back.
 - **A page with nothing cached yet** answers a plain 500 when its render fails,
   not the maintenance page: a failed static render produces no page for the
   error boundaries to show. That leaves a post or note published since the last

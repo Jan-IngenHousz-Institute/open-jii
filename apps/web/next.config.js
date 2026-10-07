@@ -56,6 +56,12 @@ const nextConfig = {
 
   // For PostHog error tracking; the deploy uploads them and removes them before publishing assets.
   productionBrowserSourceMaps: true,
+
+  experimental: {
+    // The deploy build prerenders the public pages from Contentful. Three attempts with backoff ride
+    // out a rate-limited burst or a stray 5xx; an outage still fails the build.
+    staticGenerationRetryCount: 3,
+  },
 };
 
 export default nextConfig;
