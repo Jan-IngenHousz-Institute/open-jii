@@ -1,0 +1,143 @@
+"use client";
+
+import { ErrorDisplay } from "@/components/error-display";
+import { PlatformHeaderDetail } from "@/components/navigation/site-header/platform-header-context";
+import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
+import { useLocale } from "@/hooks/useLocale";
+import Link from "next/link";
+import { notFound, usePathname, useParams } from "next/navigation";
+import { ExperimentTitle } from "~/components/experiment-overview/experiment-title";
+
+import { useTranslation } from "@repo/i18n";
+import { NavTabs, NavTabsList, NavTabsTrigger } from "@repo/ui/components/nav-tabs";
+
+interface ExperimentArchiveLayoutShellProps {
+  children: React.ReactNode;
+}
+
+export function ExperimentArchiveLayoutShell({ children }: ExperimentArchiveLayoutShellProps) {
+  const pathname = usePathname();
+  const { id } = useParams<{ id: string }>();
+  const { t } = useTranslation("experiments");
+  const { t: tCommon } = useTranslation("common");
+  const { t: tSettings } = useTranslation();
+  const locale = useLocale();
+
+  // Access check
+  const { data: accessData, error, isLoading } = useExperimentAccess(id);
+  const apiBody = accessData;
+  const experiment = apiBody?.experiment;
+
+  // Loading
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-muted-foreground">{t("loading")}</div>
+      </div>
+    );
+  }
+
+  // Show error if access is denied or other error
+  if (error) {
+    // Extract status from API error response
+    const errorObj = error as { status?: number };
+    const errorStatus = errorObj.status;
+
+    // Handle 404 Not Found or 400 Bad Request (e.g., invalid UUID) - show not found page
+    if (errorStatus === 404 || errorStatus === 400) {
+      notFound();
+    }
+
+    // Handle 403 Forbidden
+    if (errorStatus === 403) {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-lg font-medium">{tCommon("errors.accessDenied")}</h3>
+            <p className="text-muted-foreground text-sm">{t("noPermissionToAccess")}</p>
+          </div>
+          <ErrorDisplay error={error} title={tCommon("errors.forbidden")} />
+        </div>
+      );
+    }
+
+    // Show generic error for other types (5xx, etc.)
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium">{tCommon("errors.error")}</h3>
+          <p className="text-muted-foreground text-sm">{t("errorLoadingExperiment")}</p>
+        </div>
+        <ErrorDisplay error={error} />
+      </div>
+    );
+  }
+
+  // If no experiment data, show not found
+  if (!experiment) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium">{tCommon("errors.notFound")}</h3>
+          <p className="text-muted-foreground text-sm">{t("experimentNotFound")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Determine active tab from URL
+  const getActiveTab = () => {
+    if (pathname.endsWith("/design")) return "design";
+    if (pathname.includes("/collaborators")) return "collaborators";
+    if (pathname.startsWith(`/${locale}/platform/experiments-archive/${id}/data`)) return "data";
+    if (pathname.includes("/analysis")) return "analysis";
+    if (pathname.endsWith(`/experiments-archive/${id}`)) return "overview";
+    return "overview";
+  };
+
+  const activeTab = getActiveTab();
+
+  return (
+    <div className="page-fluid flex flex-1 flex-col space-y-6">
+      <PlatformHeaderDetail
+        href={`/${locale}/platform/experiments-archive/${id}`}
+        label={experiment.name}
+      />
+      <ExperimentTitle
+        experimentId={id}
+        name={experiment.name}
+        status={experiment.status}
+        visibility={experiment.visibility}
+        isArchived
+      />
+
+      <NavTabs value={activeTab} className="w-full">
+        <NavTabsList>
+          <NavTabsTrigger value="overview" asChild>
+            <Link href={`/${locale}/platform/experiments-archive/${id}`}>{t("overview")}</Link>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="data" asChild>
+            <Link href={`/${locale}/platform/experiments-archive/${id}/data`}>{t("data")}</Link>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="analysis" asChild>
+            <Link href={`/${locale}/platform/experiments-archive/${id}/analysis`}>
+              {t("analysis.title")}
+            </Link>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="design" asChild>
+            <Link href={`/${locale}/platform/experiments-archive/${id}/design`}>
+              {t("flow.tabLabel")}
+            </Link>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="collaborators" asChild>
+            <Link href={`/${locale}/platform/experiments-archive/${id}/collaborators`}>
+              {tSettings("experimentSettings.collaborators")}
+            </Link>
+          </NavTabsTrigger>
+        </NavTabsList>
+
+        <div className="mt-6">{children}</div>
+      </NavTabs>
+    </div>
+  );
+}

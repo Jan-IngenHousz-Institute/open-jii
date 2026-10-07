@@ -1,6 +1,7 @@
 import { usePrincipal } from "@/components/auth/principal-context";
 import { withPrincipal } from "@/hooks/principal-query-key";
 import { orpc } from "@/lib/orpc";
+import type { QueryUtils } from "@/lib/orpc";
 import { shouldRetryQuery } from "@/util/query-retry";
 import { useQuery } from "@tanstack/react-query";
 
@@ -13,6 +14,19 @@ export function experimentAccessQueryKey(userId: string | undefined, experimentI
   });
 }
 
+/** The access query, built the same way for the hook and for the server that prefetches it. */
+export function experimentAccessQuery(
+  utils: QueryUtils,
+  userId: string | undefined,
+  experimentId: string,
+) {
+  return utils.experiments.getExperimentAccess.queryOptions({
+    input: { id: experimentId },
+    queryKey: experimentAccessQueryKey(userId, experimentId),
+    retry: shouldRetryQuery,
+  });
+}
+
 /**
  * Access answers are principal-specific, so the key includes the user and fetching
  * waits for session resolution; otherwise a new user could briefly receive cached
@@ -22,14 +36,10 @@ export function experimentAccessQueryKey(userId: string | undefined, experimentI
 export const useExperimentAccess = (experimentId: string) => {
   const { userId, isPending: isSessionPending } = usePrincipal();
 
-  const query = useQuery(
-    orpc.experiments.getExperimentAccess.queryOptions({
-      input: { id: experimentId },
-      queryKey: experimentAccessQueryKey(userId, experimentId),
-      retry: shouldRetryQuery,
-      enabled: !isSessionPending,
-    }),
-  );
+  const query = useQuery({
+    ...experimentAccessQuery(orpc, userId, experimentId),
+    enabled: !isSessionPending,
+  });
 
   return { ...query, isLoading: query.isPending };
 };
