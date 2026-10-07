@@ -114,14 +114,14 @@ describe("CreateTransferRequest", () => {
     vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValueOnce(
       success({
         columns: [
-          { name: "request_id", type_name: "STRING", type_text: "STRING" },
-          { name: "user_id", type_name: "STRING", type_text: "STRING" },
-          { name: "user_email", type_name: "STRING", type_text: "STRING" },
-          { name: "source_platform", type_name: "STRING", type_text: "STRING" },
-          { name: "project_id_old", type_name: "STRING", type_text: "STRING" },
-          { name: "project_url_old", type_name: "STRING", type_text: "STRING" },
-          { name: "status", type_name: "STRING", type_text: "STRING" },
-          { name: "requested_at", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+          { name: "request_id", position: 0, type_name: "STRING", type_text: "STRING" },
+          { name: "user_id", position: 1, type_name: "STRING", type_text: "STRING" },
+          { name: "user_email", position: 2, type_name: "STRING", type_text: "STRING" },
+          { name: "source_platform", position: 3, type_name: "STRING", type_text: "STRING" },
+          { name: "project_id_old", position: 4, type_name: "STRING", type_text: "STRING" },
+          { name: "project_url_old", position: 5, type_name: "STRING", type_text: "STRING" },
+          { name: "status", position: 6, type_name: "STRING", type_text: "STRING" },
+          { name: "requested_at", position: 7, type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
         ],
         rows: [
           [
@@ -204,25 +204,29 @@ describe("CreateTransferRequest", () => {
     expect(result.error.code).toBe("INTERNAL_ERROR");
   });
 
-  it("should still notify when the stored identifier is not an email address", async () => {
+  it("should store the notification but send no email when the stored identifier is not an email address", async () => {
     const orcidId = "0000-0002-1825-0097"; // Example ORCID ID (not an email)
+    // Dispatch reads the address from `users.email`, so the ORCID id has to be what
+    // this requester is stored with for the withheld email to mean anything.
+    const orcidUserId = await testApp.createTestUser({ email: orcidId });
     mockCreatePath();
 
     // Act
-    const result = await useCase.execute(testUserId, orcidId, input);
+    const result = await useCase.execute(orcidUserId, orcidId, input);
 
     // Assert - request should still be created successfully
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     expect(result.value).toMatchObject({
-      userId: testUserId,
+      userId: orcidUserId,
       userEmail: orcidId,
       sourcePlatform: "photosynq",
       projectIdOld: input.projectIdOld,
       projectUrlOld: input.projectUrlOld,
       status: "pending",
     });
-    expect(await notificationsFor(testUserId)).toHaveLength(1);
+    expect(await notificationsFor(orcidUserId)).toHaveLength(1);
+    expect(emailAdapter.sendTransferRequestConfirmation).not.toHaveBeenCalled();
   });
 
   it("should still return the request when the notification cannot be stored", async () => {
