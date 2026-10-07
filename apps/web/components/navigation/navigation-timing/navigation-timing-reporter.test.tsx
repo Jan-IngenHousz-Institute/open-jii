@@ -6,9 +6,9 @@ import { navigationTiming } from "~/lib/navigation-timing";
 
 import { NavigationTimingReporter } from "./navigation-timing-reporter";
 
-const posthog = vi.hoisted(() => ({ __loaded: true, capture: vi.fn() }));
+const posthog = vi.hoisted(() => ({ capture: vi.fn() }));
 
-vi.mock("posthog-js/react", () => ({ usePostHog: () => posthog }));
+vi.mock("~/providers/posthog-context", () => ({ usePostHog: () => posthog }));
 
 const EXPERIMENT = "/en-US/platform/experiments/3e5309b8-d5f2-4f7a-b20a-8b5e1e73a9f1";
 

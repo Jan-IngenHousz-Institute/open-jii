@@ -2,7 +2,6 @@
 
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { Check, Copy } from "lucide-react";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FC } from "react";
 import { CodeEditor } from "~/components/shared/code-editor";
@@ -12,6 +11,7 @@ import { useDebounce } from "~/hooks/useDebounce";
 import { useJsonFormatStyle } from "~/hooks/useJsonFormatStyle";
 import type { JsonFormatStyle } from "~/lib/json-format";
 import { formatJson, reformatJsonString } from "~/lib/json-format";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
 import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
 import {

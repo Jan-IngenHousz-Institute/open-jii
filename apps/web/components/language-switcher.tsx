@@ -3,7 +3,7 @@
 import { Globe } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useFeatureFlagEnabled } from "posthog-js/react";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { Button } from "@repo/ui/components/button";

@@ -2,9 +2,9 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
-import { usePostHog } from "posthog-js/react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { navigationTiming, routeShape } from "~/lib/navigation-timing";
+import { usePostHog } from "~/providers/posthog-context";
 
 /**
  * Reports how long a client navigation took: until the new page was on screen, and until the
@@ -13,7 +13,10 @@ import { navigationTiming, routeShape } from "~/lib/navigation-timing";
 export function NavigationTimingReporter() {
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  // PostHog loads after the first render, so a navigation that settles later still reports.
   const posthog = usePostHog();
+  const posthogRef = useRef(posthog);
+  posthogRef.current = posthog;
 
   useEffect(() => {
     const navigation = navigationTiming.take(pathname);
@@ -27,10 +30,7 @@ export function NavigationTimingReporter() {
     const report = () => {
       unsubscribe?.();
       unsubscribe = undefined;
-      if (!posthog.__loaded) {
-        return;
-      }
-      posthog.capture("platform_navigation", {
+      posthogRef.current?.capture("platform_navigation", {
         route: routeShape(pathname),
         navigation_type: navigation.type,
         committed_ms: Math.round(committedAt - navigation.startedAt),
@@ -57,7 +57,7 @@ export function NavigationTimingReporter() {
       clearTimeout(timer);
       unsubscribe?.();
     };
-  }, [pathname, posthog, queryClient]);
+  }, [pathname, queryClient]);
 
   return null;
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePostHog } from "posthog-js/react";
 import { useEffect, useState } from "react";
+import { usePostHog } from "~/providers/posthog-context";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -34,26 +34,26 @@ export function CookieBanner() {
   const handleAcceptCookies = () => {
     setConsentStatus("accepted");
     setConsentGiven("accepted");
-    posthog.opt_in_capturing();
+    posthog?.opt_in_capturing();
   };
 
   const handleDeclineCookies = () => {
     setConsentStatus("rejected");
     setConsentGiven("rejected");
-    posthog.opt_out_capturing();
-    posthog.reset();
+    posthog?.opt_out_capturing();
+    posthog?.reset();
   };
 
   const handleSavePreferences = () => {
     if (analyticsEnabled) {
       setConsentStatus("accepted");
       setConsentGiven("accepted");
-      posthog.opt_in_capturing();
+      posthog?.opt_in_capturing();
     } else {
       setConsentStatus("rejected");
       setConsentGiven("rejected");
-      posthog.opt_out_capturing();
-      posthog.reset();
+      posthog?.opt_out_capturing();
+      posthog?.reset();
     }
     setShowManage(false);
   };

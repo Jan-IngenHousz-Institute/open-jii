@@ -522,7 +522,7 @@ describe("<MacroDetailsSidebar />", () => {
     });
 
     it("shows danger zone when user is creator and deletion flag is enabled", async () => {
-      const { useFeatureFlagEnabled } = await import("posthog-js/react");
+      const { useFeatureFlagEnabled } = await import("~/providers/posthog-context");
       vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
@@ -532,7 +532,7 @@ describe("<MacroDetailsSidebar />", () => {
     });
 
     it("shows delete button in danger zone", async () => {
-      const { useFeatureFlagEnabled } = await import("posthog-js/react");
+      const { useFeatureFlagEnabled } = await import("~/providers/posthog-context");
       vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
@@ -542,7 +542,7 @@ describe("<MacroDetailsSidebar />", () => {
     });
 
     it("shows delete confirmation dialog with macro name", async () => {
-      const { useFeatureFlagEnabled } = await import("posthog-js/react");
+      const { useFeatureFlagEnabled } = await import("~/providers/posthog-context");
       vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
@@ -553,7 +553,7 @@ describe("<MacroDetailsSidebar />", () => {
     });
 
     it("shows cancel and confirm delete buttons in dialog", async () => {
-      const { useFeatureFlagEnabled } = await import("posthog-js/react");
+      const { useFeatureFlagEnabled } = await import("~/providers/posthog-context");
       vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);
@@ -563,7 +563,7 @@ describe("<MacroDetailsSidebar />", () => {
     });
 
     it("calls deleteMacro and navigates on confirm delete", async () => {
-      const { useFeatureFlagEnabled } = await import("posthog-js/react");
+      const { useFeatureFlagEnabled } = await import("~/providers/posthog-context");
       vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
       const spy = server.mount(contract.macros.deleteMacro, {});
 
@@ -587,7 +587,7 @@ describe("<MacroDetailsSidebar />", () => {
     });
 
     it("shows deleting state when deletion is pending", async () => {
-      const { useFeatureFlagEnabled } = await import("posthog-js/react");
+      const { useFeatureFlagEnabled } = await import("~/providers/posthog-context");
       vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
       server.mount(contract.macros.deleteMacro, { delay: 999_999 });
 
@@ -605,7 +605,7 @@ describe("<MacroDetailsSidebar />", () => {
     });
 
     it("renders additional separator before danger zone", async () => {
-      const { useFeatureFlagEnabled } = await import("posthog-js/react");
+      const { useFeatureFlagEnabled } = await import("~/providers/posthog-context");
       vi.mocked(useFeatureFlagEnabled).mockReturnValue(true);
 
       render(<MacroDetailsSidebar macroId="abc12345" macro={baseMacro} />);

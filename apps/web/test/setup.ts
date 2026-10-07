@@ -333,17 +333,15 @@ vi.mock("posthog-js", () => ({
   },
 }));
 
-vi.mock("posthog-js/react", () => {
-  const posthog = {
-    opt_in_capturing: vi.fn(),
-    opt_out_capturing: vi.fn(),
-    reset: vi.fn(),
-    capture: vi.fn(),
-  };
+vi.mock("~/providers/posthog-context", async () => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  const React = await vi.importActual<typeof import("react")>("react");
+  // The posthog-js mock above, so components and hooks see one client.
+  const { default: posthog } = await import("posthog-js");
   return {
+    PostHogContext: React.createContext(null),
     usePostHog: vi.fn(() => posthog),
     useFeatureFlagEnabled: vi.fn().mockReturnValue(false),
-    PostHogProvider: ({ children }: { children: React.ReactNode }) => children,
   };
 });
 
