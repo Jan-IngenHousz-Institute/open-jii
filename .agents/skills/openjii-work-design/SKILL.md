@@ -83,17 +83,18 @@ document answers both how the area works and what the project changes.
 
 Two tracks. Most user-facing work needs both.
 
-**Interface.** Draw the screens that have no design yet in the platform's own design scheme, and
-capture the real app only where it already shows the thing. `references/screens.md` covers what to
-draw, when to scaffold a reference implementation, and what a screen may show. Every ticket that
-changes a screen embeds its picture in the body, so the sketches document is the collection and
-not the delivery. Cover the states that get forgotten: empty, loading, error, permission denied,
-narrow viewport. A sketch fixes what is on a screen, not its spacing or its copy, so a ticket keeps
-`needs-design` until a real design is attached.
+**Interface.** Every ticket that changes a screen gets a picture of the change in its body. The
+default is to scaffold the change on a local branch and photograph the real app, with the
+warehouse answered from fixtures wherever the screen needs data. A drawing in the platform's tokens
+is the fallback for what the app cannot show honestly, such as a model's answer.
+`references/screens.md` covers the scaffold, the fixtures, the capture, what a screen may show and
+how the change is marked. The `screen sketches` document collects every picture, but it is not the
+delivery; the ticket body is. Cover the states that get forgotten: empty, loading, error,
+permission denied, narrow viewport. A screen fixes what is on it, not its spacing or its copy, so a
+ticket keeps `needs-design` until a real design is attached.
 
 For one component or a diagram, a plain diagram in the deep dive is lighter than a set of
-screens. Do not sketch a screen when an annotated screenshot would do, and do not invent one for
-work with no visible surface.
+screens. Do not make a screen for work with no visible surface.
 
 **System.** Contracts first. `packages/api` owns the API shapes and both sides import them, so the
 contract is the design artefact, not a description of one. Work outward: what the contract says,

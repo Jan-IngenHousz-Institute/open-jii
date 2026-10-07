@@ -59,8 +59,9 @@ decorate it.
 5. **Dependencies and risks.** Blockers, and every open question written as a question with the
    default the ticket proceeds on. A ticket that cannot start without an answer is not `Ready`.
 6. **The screen.** A ticket that changes a screen embeds its picture under Additional context, with
-   a caption that describes the picture. Drawing it is in `openjii-work-design`,
-   `references/screens.md`. A ticket with no visible surface gets none.
+   a caption that describes the picture. It is a capture of the real app with the change
+   scaffolded in, made as `openjii-work-design`, `references/screens.md` describes. A ticket with
+   no visible surface gets none.
 7. **Labels.** One `type`, at least one `area`. Both are required by the gate, and both must be
    labels that exist today (`linear-taxonomy.md`, "Labels today").
 8. Leave `## How it was built` and `## Testing criteria` empty. The developer fills them through

@@ -191,7 +191,7 @@ delivers a list, and the two plan pages are linked from the index once they are 
 | Document                              | What it holds                                                                   |
 | ------------------------------------- | ------------------------------------------------------------------------------- |
 | `<Project>: implementation deep dive` | How the area works today, written against a named commit, with mermaid diagrams |
-| `<Project>: screen sketches`          | The screens with no design yet, in the platform's own tokens, as one HTML file  |
+| `<Project>: screen sketches`          | Every ticket's screens, captured from a scaffold or drawn, on one uploaded page |
 | `<Project>: live ticket view`         | A pointer to the project's shared ticket view                                   |
 | `<Project>: artifact index`           | The short front page that links the three above and the project                 |
 

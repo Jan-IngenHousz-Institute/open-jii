@@ -77,7 +77,7 @@ which is how the index links them without knowing their ids.
 | Document                   | What it holds                                                                                          |
 | -------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `implementation deep dive` | How the area works today, against a named commit, with mermaid diagrams, and where each ticket cuts in |
-| `screen sketches`          | The screens with no design yet, drawn in the platform's own tokens, as one uploaded HTML file          |
+| `screen sketches`          | Every ticket's screens, captured from a scaffold of the change or drawn, on one uploaded page          |
 | `live ticket view`         | A pointer to the project's shared ticket view                                                          |
 | `artifact index`           | A short front page linking the documents above, the project, and the two plan pages                    |
 | `catalogue`                | When the project delivers a list: every item, one line each                                            |
@@ -263,7 +263,9 @@ jargon term, a column name or a team name. This repository is public.
 
 **A screen sits in the body.** A ticket that changes a screen embeds a picture of the change under
 `## Additional context`, or under `## Evidence` for a bug. A linked document, a downloadable
-sketch and a review page do not count, because the body is what the delegate reads. The caption
+sketch and a review page do not count, because the body is what the delegate reads. The picture is
+a capture of the real app with the change scaffolded into it, as `openjii-work-design` describes,
+and a drawing only where the app cannot show it. The caption
 describes the picture, not the ticket, and starts with `Sketch:` when it is a drawing. A spike has
 no Additional context, so its screen goes in its comment. Work with no visible surface, such as a
 rate limit or a durable write, gets no screen, and a decorative one is worse than none.
@@ -435,7 +437,8 @@ and a bare domain such as `INFO.nl` becomes a link. A live body can therefore di
 draft, so compare after normalising those, and keep link targets out of the prose they sit in.
 
 Before the apply, one more pass that a script cannot do: every path and line number opens at the
-commit named, budgets hold with real URLs, a diagram's relations match the draft's `blocks:` lines
+commit named, every screen shows only what its criteria say and its caption matches the picture,
+budgets hold with real URLs, a diagram's relations match the draft's `blocks:` lines
 one for one, spelling matches the product, and milestone names are identical in every document.
 A claim of absence ("there is no dark mode") is checked as hard as a claim of presence, and what
 an inventory agent reported is a lead, not a fact, until it is read at line level.
