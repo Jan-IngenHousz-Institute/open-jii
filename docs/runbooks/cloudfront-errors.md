@@ -29,9 +29,11 @@ behaviour pointing somewhere wrong.
 ## Which requests failed
 
 The distribution writes access logs to
-`s3://open-jii-eu-central-1-access-logs/cloudfront-logs/opennext/<distribution-id>.YYYY-MM-DD-HH.*.gz`,
-a few minutes behind. Field 9 is the status, field 8 the path, so
-`gzcat *.gz | awk -F'\t' '$9 ~ /^5/ {print $2, $8, $9}'` names them.
+`s3://open-jii-eu-central-1-access-logs/cloudfront-logs/opennext/<distribution-id>.YYYY-MM-DD-HH.*.gz`.
+They usually land within minutes, but AWS only promises an hour and some entries take up to 24, so
+an empty result for the last hour proves nothing; read the metrics until the logs catch up. Field 9
+is the status, field 8 the path, so `gzcat *.gz | awk -F'\t' '$9 ~ /^5/ {print $2, $8, $9}'` names
+them.
 
 502s on `/_next/image` are the image Lambda (`open-jii-<env>-opennext-image-optimization`), not the
 server. If its log says `Exceeded maximum allowed payload size`, the response went over Lambda's
