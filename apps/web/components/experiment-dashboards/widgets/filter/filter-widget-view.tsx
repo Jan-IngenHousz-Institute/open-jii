@@ -1,6 +1,7 @@
 "use client";
 
 import { Filter, RotateCcw } from "lucide-react";
+import { useId } from "react";
 
 import type { ExperimentFilterWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
@@ -10,6 +11,7 @@ import { FilterValueInput } from "../../../data-filters/value-input";
 import { useDashboardFilterWidget } from "../../dashboard-filters-context";
 import { WidgetEmptyState } from "../shell/widget-empty-state";
 import { WidgetHeader } from "../shell/widget-header";
+import { FilterIssueMessage } from "./filter-issue-message";
 import { useFilterWidgetConfig } from "./use-filter-widget-config";
 
 interface FilterWidgetViewProps {
@@ -19,7 +21,8 @@ interface FilterWidgetViewProps {
 
 export function FilterWidgetView({ widget, experimentId }: FilterWidgetViewProps) {
   const { t } = useTranslation("experimentDashboards");
-  const { value, setValue, isOverridden, reset } = useDashboardFilterWidget(widget.id);
+  const { value, setValue, isOverridden, reset, issue } = useDashboardFilterWidget(widget.id);
+  const issueId = useId();
   const { tableName, operator, column, operatorLabel, displayTitle } = useFilterWidgetConfig(
     widget,
     experimentId,
@@ -70,7 +73,9 @@ export function FilterWidgetView({ widget, experimentId }: FilterWidgetViewProps
         onChange={setValue}
         experimentId={experimentId}
         tableName={tableName}
+        errorMessageId={issue ? issueId : undefined}
       />
+      {issue && <FilterIssueMessage id={issueId} issue={issue} />}
     </div>
   );
 }
