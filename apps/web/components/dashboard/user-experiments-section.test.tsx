@@ -1,15 +1,11 @@
 import { createRecentlyOpenedExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, waitFor } from "@/test/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
 import { UserExperimentsSection } from "./user-experiments-section";
-
-vi.mock("~/components/dashboard/first-work-cards", () => ({
-  FirstWorkCards: () => <div data-testid="first-work-cards" />,
-}));
 
 describe("UserExperimentsSection", () => {
   it("asks for the three related experiments the researcher opened last", async () => {
@@ -27,7 +23,7 @@ describe("UserExperimentsSection", () => {
     render(<UserExperimentsSection />);
 
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("first-work-cards")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /dashboard\.firstWork\.create\.title/ })).toBeNull();
   });
 
   it("renders the opened experiments in the order the server returned", async () => {
@@ -68,8 +64,15 @@ describe("UserExperimentsSection", () => {
 
     render(<UserExperimentsSection />);
 
-    expect(await screen.findByTestId("first-work-cards")).toBeInTheDocument();
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("link", { name: /dashboard\.firstWork\.create\.title/ }),
+    ).toHaveAttribute("href", "/en-US/platform/experiments/new");
+    expect(
+      screen.getByRole("link", { name: /dashboard\.firstWork\.join\.title/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /dashboard\.firstWork\.browse\.title/ }),
+    ).toBeInTheDocument();
   });
 
   it("does not offer the first-work cards when the row fails to load", async () => {
@@ -78,6 +81,6 @@ describe("UserExperimentsSection", () => {
     render(<UserExperimentsSection />);
 
     await waitFor(() => expect(spy.called).toBe(true));
-    expect(screen.queryByTestId("first-work-cards")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /dashboard\.firstWork\.create\.title/ })).toBeNull();
   });
 });

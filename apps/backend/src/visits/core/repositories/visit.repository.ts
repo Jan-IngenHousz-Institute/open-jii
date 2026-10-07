@@ -1,7 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import type { VisitResourceType } from "@repo/api/domains/visit/visit.schema";
-import { and, desc, eq, resourceVisits, sql } from "@repo/database";
+import { and, desc, eq, resourceVisits, sql, users } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -17,18 +16,28 @@ export class VisitRepository {
   ) {}
 
   /** Moves the resource to the user's most recent visit, then drops the oldest past the cap. */
-  async record(
-    userId: string,
-    resourceType: VisitResourceType,
-    resourceId: string,
-  ): Promise<Result<void>> {
+  async recordExperiment(userId: string, experimentId: string): Promise<Result<void>> {
     return tryCatch(async () => {
       await this.database.transaction(async (tx) => {
+        // All visit writers for one user take the same lock. Without it, two tabs can
+        // each insert a different 51st row and both decide that nothing needs pruning.
+        await tx
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1)
+          .for("update");
+
         const visitedAt = sql`(now() AT TIME ZONE 'UTC')`;
 
         await tx
           .insert(resourceVisits)
-          .values({ userId, resourceType, resourceId, visitedAt })
+          .values({
+            userId,
+            resourceType: "experiment",
+            resourceId: experimentId,
+            visitedAt,
+          })
           .onConflictDoUpdate({
             target: [resourceVisits.userId, resourceVisits.resourceType, resourceVisits.resourceId],
             set: { visitedAt },

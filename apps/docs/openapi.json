@@ -37296,36 +37296,21 @@
         }
       }
     },
-    "/api/v1/visits": {
+    "/api/v1/experiments/{id}/visits": {
       "post": {
-        "operationId": "visits.recordVisit",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "resourceType": {
-                    "enum": [
-                      "experiment"
-                    ],
-                    "type": "string"
-                  },
-                  "resourceId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "description": "ID of the opened resource"
-                  }
-                },
-                "required": [
-                  "resourceType",
-                  "resourceId"
-                ]
-              }
+        "operationId": "visits.recordExperimentVisit",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the opened experiment"
             }
           }
-        },
+        ],
         "responses": {
           "204": {
             "description": "OK",

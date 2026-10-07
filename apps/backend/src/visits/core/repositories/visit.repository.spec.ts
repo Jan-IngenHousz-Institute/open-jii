@@ -1,4 +1,5 @@
-import { eq, resourceVisits } from "@repo/database";
+import { createSecondaryDatabase, eq, resourceVisits } from "@repo/database";
+import type { DatabaseInstance } from "@repo/database";
 
 import { assertSuccess } from "../../../common/utils/fp-utils";
 import { TestHarness } from "../../../test/test-harness";
@@ -7,10 +8,14 @@ import { VISITS_KEPT_PER_USER, VisitRepository } from "./visit.repository";
 describe("VisitRepository", () => {
   const testApp = TestHarness.App;
   let repository: VisitRepository;
+  let secondary: { database: DatabaseInstance; close: () => Promise<void> };
+  let secondaryRepository: VisitRepository;
   let testUserId: string;
 
   beforeAll(async () => {
     await testApp.setup();
+    secondary = createSecondaryDatabase();
+    secondaryRepository = new VisitRepository(secondary.database);
   });
 
   beforeEach(async () => {
@@ -24,6 +29,7 @@ describe("VisitRepository", () => {
   });
 
   afterAll(async () => {
+    await secondary.close();
     await testApp.teardown();
   });
 
@@ -40,7 +46,7 @@ describe("VisitRepository", () => {
         visitedAt: earlier,
       });
 
-      const result = await repository.record(testUserId, "experiment", experiment.id);
+      const result = await repository.recordExperiment(testUserId, experiment.id);
 
       assertSuccess(result);
       const rows = await visitsOf(testUserId);
@@ -78,7 +84,7 @@ describe("VisitRepository", () => {
         userId: testUserId,
       });
 
-      const result = await repository.record(testUserId, "experiment", latest.id);
+      const result = await repository.recordExperiment(testUserId, latest.id);
 
       assertSuccess(result);
       const kept = (await visitsOf(testUserId)).map((row) => row.resourceId);
@@ -87,6 +93,40 @@ describe("VisitRepository", () => {
       expect(kept).not.toContain(oldestIds[0]);
       expect(kept).toContain(oldestIds[1]);
       expect(await visitsOf(otherUserId)).toHaveLength(1);
+    });
+
+    it("keeps the cap when two experiments are recorded concurrently", async () => {
+      for (let index = 0; index < VISITS_KEPT_PER_USER - 1; index++) {
+        const { experiment } = await testApp.createExperiment({
+          name: `Existing ${index}`,
+          userId: testUserId,
+        });
+        await testApp.addResourceVisit({
+          userId: testUserId,
+          resourceId: experiment.id,
+          visitedAt: new Date(index * 60_000),
+        });
+      }
+      const { experiment: first } = await testApp.createExperiment({
+        name: "Concurrent first",
+        userId: testUserId,
+      });
+      const { experiment: second } = await testApp.createExperiment({
+        name: "Concurrent second",
+        userId: testUserId,
+      });
+
+      const results = await Promise.all([
+        repository.recordExperiment(testUserId, first.id),
+        secondaryRepository.recordExperiment(testUserId, second.id),
+      ]);
+
+      results.forEach(assertSuccess);
+      const kept = await visitsOf(testUserId);
+      expect(kept).toHaveLength(VISITS_KEPT_PER_USER);
+      expect(kept.map((visit) => visit.resourceId)).toEqual(
+        expect.arrayContaining([first.id, second.id]),
+      );
     });
   });
 });

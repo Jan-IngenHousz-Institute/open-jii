@@ -15,14 +15,10 @@ export class VisitController {
 
   constructor(private readonly recordVisitUseCase: RecordVisitUseCase) {}
 
-  @Implement(visitContract.recordVisit)
-  recordVisit(@Session() session: UserSession) {
-    return implement(visitContract.recordVisit).handler(async ({ input }) => {
-      const result = await this.recordVisitUseCase.execute(
-        session.user.id,
-        input.resourceType,
-        input.resourceId,
-      );
+  @Implement(visitContract.recordExperimentVisit)
+  recordExperimentVisit(@Session() session: UserSession) {
+    return implement(visitContract.recordExperimentVisit).handler(async ({ input }) => {
+      const result = await this.recordVisitUseCase.execute(session.user.id, input.id);
       if (result.isSuccess()) {
         return undefined;
       }

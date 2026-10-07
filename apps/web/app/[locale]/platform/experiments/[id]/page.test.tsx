@@ -92,17 +92,17 @@ describe("ExperimentOverviewPage", () => {
 
   it("records a visit once the experiment loads", async () => {
     mountDefaults();
-    const visit = server.mount(contract.visits.recordVisit, { status: 204 });
+    const visit = server.mount(contract.visits.recordExperimentVisit, { status: 204 });
 
     render(<ExperimentOverviewPage {...props} />);
 
     await waitFor(() => expect(visit.called).toBe(true));
-    expect(visit.body).toEqual({ resourceType: "experiment", resourceId: "test-id" });
+    expect(visit.params).toEqual({ id: "test-id" });
   });
 
   it("records no visit when the experiment fails to load", async () => {
     server.mount(contract.experiments.getExperimentAccess, { status: 500 });
-    const visit = server.mount(contract.visits.recordVisit, { status: 204 });
+    const visit = server.mount(contract.visits.recordExperimentVisit, { status: 204 });
 
     render(<ExperimentOverviewPage {...props} />);
 

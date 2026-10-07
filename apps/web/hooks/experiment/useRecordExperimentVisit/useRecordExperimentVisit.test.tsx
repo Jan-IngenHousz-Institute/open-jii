@@ -9,7 +9,7 @@ import { useRecordExperimentVisit } from "./useRecordExperimentVisit";
 
 describe("useRecordExperimentVisit", () => {
   it("records a visit to the experiment once enabled", async () => {
-    const spy = server.mount(contract.visits.recordVisit, { status: 204 });
+    const spy = server.mount(contract.visits.recordExperimentVisit, { status: 204 });
 
     const { rerender } = renderHook(({ enabled }) => useRecordExperimentVisit("exp-1", enabled), {
       initialProps: { enabled: false },
@@ -19,11 +19,11 @@ describe("useRecordExperimentVisit", () => {
     rerender({ enabled: true });
 
     await waitFor(() => expect(spy.called).toBe(true));
-    expect(spy.body).toEqual({ resourceType: "experiment", resourceId: "exp-1" });
+    expect(spy.params).toEqual({ id: "exp-1" });
   });
 
   it("stays silent when recording fails", async () => {
-    const spy = server.mount(contract.visits.recordVisit, { status: 500 });
+    const spy = server.mount(contract.visits.recordExperimentVisit, { status: 500 });
 
     renderHook(() => useRecordExperimentVisit("exp-1", true));
 

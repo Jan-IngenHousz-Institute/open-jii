@@ -1,11 +1,11 @@
 import { oc } from "@orpc/contract";
 import { z } from "zod";
 
-import { zRecordVisitBody } from "./visit.schema";
+import { zRecordExperimentVisitPath } from "./visit.schema";
 
 export const visitContract = {
-  recordVisit: oc
-    .route({ method: "POST", path: "/api/v1/visits", successStatus: 204 })
-    .input(zRecordVisitBody)
+  recordExperimentVisit: oc
+    .route({ method: "POST", path: "/api/v1/experiments/{id}/visits", successStatus: 204 })
+    .input(zRecordExperimentVisitPath)
     .output(z.void()),
 };

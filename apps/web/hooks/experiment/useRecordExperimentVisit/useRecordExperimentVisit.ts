@@ -14,7 +14,7 @@ export function useRecordExperimentVisit(experimentId: string, enabled: boolean)
     if (!enabled) return;
 
     orpcClient.visits
-      .recordVisit({ resourceType: "experiment", resourceId: experimentId })
+      .recordExperimentVisit({ id: experimentId })
       .then(() =>
         queryClient.invalidateQueries({
           queryKey: orpc.experiments.listRecentlyOpenedExperiments.key(),
