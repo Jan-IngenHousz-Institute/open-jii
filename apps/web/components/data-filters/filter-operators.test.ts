@@ -5,6 +5,7 @@ import { WellKnownColumnTypes } from "@repo/api/domains/experiment/data/experime
 
 import {
   ALL_OPERATORS,
+  classifyFilter,
   coerceOperatorForColumn,
   defaultOperatorForColumn,
   defaultValueForOperator,
@@ -140,5 +141,78 @@ describe("defaultOperatorForColumn", () => {
     expect(defaultOperatorForColumn(numericColumn)).toBe("equals");
     expect(defaultOperatorForColumn(arrayColumn)).toBe("equals");
     expect(defaultOperatorForColumn(undefined)).toBe("equals");
+  });
+});
+
+describe("classifyFilter", () => {
+  const between = (value: unknown) =>
+    classifyFilter({ column: "signal", operator: "between", value: value as never });
+
+  it("treats an empty value as unset", () => {
+    expect(classifyFilter({ column: "signal", operator: "equals", value: undefined })).toEqual({
+      status: "unset",
+    });
+    expect(classifyFilter({ column: "signal", operator: "equals", value: "" })).toEqual({
+      status: "unset",
+    });
+    expect(classifyFilter({ column: "signal", operator: "in", value: [] })).toEqual({
+      status: "unset",
+    });
+    expect(between([])).toEqual({ status: "unset" });
+    expect(between(["", ""])).toEqual({ status: "unset" });
+  });
+
+  it("flags a range with only a start as missing its end", () => {
+    expect(between([0, ""])).toEqual({ status: "invalid", reason: "rangeMissingEnd" });
+    expect(between(["2026-01-01T00:00:00.000Z", ""])).toEqual({
+      status: "invalid",
+      reason: "rangeMissingEnd",
+    });
+  });
+
+  it("flags a range with only an end as missing its start", () => {
+    expect(between(["", 5])).toEqual({ status: "invalid", reason: "rangeMissingStart" });
+  });
+
+  it("flags a range whose start is after its end", () => {
+    expect(between([9, 1])).toEqual({ status: "invalid", reason: "rangeReversed" });
+    expect(between(["2026-02-01T00:00:00.000Z", "2026-01-01T00:00:00.000Z"])).toEqual({
+      status: "invalid",
+      reason: "rangeReversed",
+    });
+  });
+
+  it("compares numbers held as text by value, not as dates", () => {
+    expect(between(["1", "50"])).toMatchObject({ status: "applied" });
+    expect(between(["100", "99"])).toEqual({ status: "invalid", reason: "rangeReversed" });
+  });
+
+  it("never treats text that isn't a date as a reversed range", () => {
+    expect(between(["b", "a"])).toMatchObject({ status: "applied" });
+  });
+
+  it("applies a complete range, including one of a single point", () => {
+    expect(between([1, 9])).toEqual({
+      status: "applied",
+      filter: { column: "signal", operator: "between", value: [1, 9] },
+    });
+    expect(between([3, 3])).toMatchObject({ status: "applied" });
+  });
+
+  it("flags any other value the schema rejects", () => {
+    expect(classifyFilter({ column: "signal", operator: "greater_than", value: "abc" })).toEqual({
+      status: "invalid",
+      reason: "invalidValue",
+    });
+  });
+
+  it("applies valid values for operators other than between", () => {
+    expect(classifyFilter({ column: "signal", operator: "greater_than", value: 4 })).toEqual({
+      status: "applied",
+      filter: { column: "signal", operator: "greater_than", value: 4 },
+    });
+    expect(classifyFilter({ column: "line", operator: "in", value: ["A"] })).toMatchObject({
+      status: "applied",
+    });
   });
 });

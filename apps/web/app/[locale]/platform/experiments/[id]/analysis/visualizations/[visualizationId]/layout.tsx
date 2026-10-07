@@ -69,7 +69,8 @@ function buildDefaults(visualization: ExperimentVisualization): ChartFormValues 
     chartFamily: visualization.chartFamily,
     chartType: visualization.chartType,
     config: withResolvedColorMode(
-      { ...def.defaultConfig(), ...(visualization.config ?? {}) },
+      def.defaultConfig(),
+      visualization.config ?? {},
       visualization.dataConfig,
     ),
     dataConfig: visualization.dataConfig,
