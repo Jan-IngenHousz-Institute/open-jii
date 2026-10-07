@@ -2239,7 +2239,7 @@ module "backend_ecr" {
   environment                   = var.environment
   repository_name               = "open-jii-backend"
   service_name                  = "backend"
-  max_image_count               = 10
+  max_image_count               = 5
   enable_vulnerability_scanning = true
   encryption_type               = "KMS"
   image_tag_mutability          = "IMMUTABLE"

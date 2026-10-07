@@ -56,6 +56,12 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter=@repo/${PROJECT}
 FROM alpine AS runner
 ARG PROJECT=database
 
+# Migrations start with plain node. The package managers bundled in the base
+# image never run here, and their vendored dependencies show up in image scans.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+    /opt/yarn-v* /usr/local/bin/yarn /usr/local/bin/yarnpkg
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nodejs
 USER nodejs
