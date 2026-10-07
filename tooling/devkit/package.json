@@ -18,6 +18,7 @@
     "linear:check": "tsx src/commands/linear-check.ts",
     "linear:create": "tsx src/commands/linear-create.ts",
     "linear:document": "tsx src/commands/linear-document.ts",
+    "linear:milestones": "tsx src/commands/linear-milestones.ts",
     "linear:query": "tsx src/commands/linear-query.ts",
     "linear:taxonomy": "tsx src/commands/linear-taxonomy.ts",
     "linear:upload": "tsx src/commands/linear-upload.ts",

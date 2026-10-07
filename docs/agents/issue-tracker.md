@@ -15,7 +15,8 @@ Agents call Linear through `pnpm linear:query` and the other `linear:*` commands
 in a shell. The devkit refuses `*Delete` and `*Archive` mutations unless told otherwise and logs
 every mutation to `.claude/linear-writes.log`. Do not fan out subagents for bulk work; one process
 with `issueBatchUpdate` is faster and keeps one record. If no key is found, ask rather than
-inventing one.
+inventing one. The key reads team `OJD` only, so a linked ticket in another team cannot be checked
+through it; say so instead of guessing at its state.
 
 Linear's MCP server is a second route, optional and configured per developer rather than shipped in
 this repo. It is convenient for a lookup or a single write in an interactive session and stores no
@@ -50,6 +51,11 @@ The team runs **no cycles and no estimation**. Do not set estimates or look for 
   `linear-release-action` moves shipped tickets to `Done`. Anything after that is a new ticket.
 - **Closing as a duplicate is three writes** in Linear: set the duplicate relation, move the status,
   then comment. Doing only the status move loses the link.
+- **Canceling a parent cancels its open sub-issues.** Read `children` and `parent` as well as the
+  relations before any state change, because a sub-issue may be someone else's work.
+- **Everything in `OJD` mirrors to public GitHub**, comments included. A ticket describes the fix.
+  What is weak today goes in a project document. Examples stay generic for the same reason.
+- **Agents never query production.** Test data for QA comes from the person, who can reach it.
 
 ## When a skill says "publish to the issue tracker"
 

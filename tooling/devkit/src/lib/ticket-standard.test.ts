@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { checkBody, checkTitle, splitSections } from "./ticket-standard.js";
+import { advisories, checkBody, checkTitle, proseOnly, splitSections } from "./ticket-standard.js";
 
 const workItem = `## User story
 
@@ -47,7 +47,7 @@ describe("checkBody", () => {
 
     expect(report.shape).toBe("work-item");
     expect(report.findings).toEqual([]);
-    expect(report.budget).toBe(1200);
+    expect(report.budget).toBe(1500);
     expect(report.longestBullet).toBe(14);
   });
 
@@ -190,5 +190,86 @@ describe("checkTitle", () => {
     expect(checkTitle("DISCOVERY: platform search").map((f) => f.detail)).toEqual([
       "starts with a type prefix; that is a label",
     ]);
+  });
+});
+
+describe("proseOnly", () => {
+  it("drops screens, link targets and bare URLs but keeps the link text", () => {
+    expect(
+      proseOnly(
+        "See [the sketch](https://uploads.linear.app/a/b/c) and ![screen](https://uploads.linear.app/x) at https://example.com/long/path",
+      ),
+    ).toBe("See the sketch and  at ");
+  });
+});
+
+describe("checkBody, link and screen budget", () => {
+  it("does not charge a screen or a link target to the budget", () => {
+    const url = `https://uploads.linear.app/${"a".repeat(400)}`;
+    const body = workItem.replace(
+      "None.",
+      `![The sorted list](${url}) See [the sketch](${url}) and ${url}.`,
+    );
+
+    expect(checkBody(body).characters).toBeLessThan(checkBody(workItem).characters + 40);
+    expect(rules(body)).not.toContain("budget");
+  });
+});
+
+describe("checkBody, wrapped bullets", () => {
+  it("reads a bullet wrapped over lines as one bullet", () => {
+    const wrapped = workItem.replace(
+      "- The sort is part of the URL, so a refresh opens the same order.",
+      "- The sort is part of the URL,\n  so a refresh opens the same order.",
+    );
+
+    expect(rules(wrapped)).toEqual([]);
+    expect(checkBody(wrapped).longestBullet).toBe(14);
+  });
+
+  it("still fails a wrapped bullet that never ends as a sentence", () => {
+    const wrapped = workItem.replace(
+      "- The sort is part of the URL, so a refresh opens the same order.",
+      "- The sort is part of the URL,\n  so a refresh opens the same order",
+    );
+
+    expect(rules(wrapped)).toContain("sentence");
+  });
+});
+
+describe("checkBody, open questions and positional references", () => {
+  it("moves an open question out of the acceptance criteria", () => {
+    const asked = workItem.replace(
+      "- The sort is part of the URL, so a refresh opens the same order.",
+      "- Does the sort apply to archived rows?\n- Confirm the period with the TPM.\n- Open: which columns sort?\n- Sorting survives a refresh, confirm.",
+    );
+
+    expect(rules(asked).filter((rule) => rule === "open-question")).toHaveLength(4);
+  });
+
+  it("leaves a criterion that merely uses the words alone", () => {
+    const fine = workItem.replace(
+      "- The sort is part of the URL, so a refresh opens the same order.",
+      "- Open tickets are listed first.\n- The admin confirms the transfer in a dialog.",
+    );
+
+    expect(rules(fine)).toEqual([]);
+  });
+
+  it("fails a ticket named by its position instead of its identifier", () => {
+    const positional = workItem.replace("None.", "This builds on the previous ticket.");
+
+    expect(rules(positional)).toContain("reference");
+    expect(rules(workItem.replace("None.", "This builds on OJD-1859."))).toEqual([]);
+  });
+});
+
+describe("advisories", () => {
+  it("suspects a Web or Mobile ticket with no screen and nothing else", () => {
+    expect(advisories(["Web"], workItem, "work-item")).toHaveLength(1);
+    expect(advisories(["fullstack"], workItem, "bug")).toHaveLength(1);
+    expect(advisories(["Backend"], workItem, "work-item")).toEqual([]);
+    expect(advisories(["Web"], workItem, "spike")).toEqual([]);
+    expect(advisories(["Web"], `${workItem}\n![screen](a.png)`, "work-item")).toEqual([]);
   });
 });

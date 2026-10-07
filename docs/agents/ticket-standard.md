@@ -15,8 +15,8 @@ Read with `issue-tracker.md` (access and conventions) and `linear-taxonomy.md` (
 
 Everything lands on team `OJD`. A solution is designed as a **project**; the work is granularised
 into **tickets** under that project. There are no epics: a container is a project, and ticket
-sub-types beyond the three shapes below do not matter. Milestones sequence work inside a project
-only where order matters; they are not a second project layer.
+sub-types beyond the three shapes below do not matter. Milestones sequence the work inside a
+project and are required once it has more than one ticket; they are not a second project layer.
 
 Every ticket belongs to exactly one project. `openJII Development` is the maintenance bucket for
 bugs and chores with no solution home, and its scope line says so. A solution-shaped ticket that
@@ -24,9 +24,10 @@ fits no project is a signal that the project is missing, not that the bucket is 
 
 ## Project shape
 
-One template, fixed headings, under 2,500 characters. The one-line `description` field is the
-outcome in a sentence. Lead, priority, target date and team `OJD` are set when the project reaches
-`Planned`.
+One template, fixed headings, under 2,500 characters of prose. The one-line `description` field is
+the outcome in a sentence. The lead and team `OJD` are set when the project reaches `Planned`. The
+lead defaults to the person running the session and is never asked about. A target date is set
+only when someone supplies one. Priority is the TPM's call, so an agent leaves it unset.
 
 ```markdown
 ## Problem
@@ -49,7 +50,7 @@ codebase this follows.
 
 ## Deliverables
 
-The tickets, in intended order. Milestones named here if order matters.
+The milestones in order of work, one line each. The tickets sit under their milestone in Linear.
 
 ## Done when
 
@@ -67,26 +68,78 @@ feed, so an inventory posted there reaches nine people as news.
 ### Project resources
 
 A project carries its design and its grounding as Linear documents on the project itself, so a
-reader who opens the project finds them without being sent elsewhere. Four are the standard set,
-and a project carries more when the work needs it. Each is titled `<Project>: <thing>`, which is
-how the index links them without knowing their ids.
+reader who opens the project finds them without being sent elsewhere. Four are the standard set.
+A project that delivers a list of things, such as every notification type or every starter macro,
+adds a fifth: a catalogue that names each item, since the 2,500 character body can only name the
+categories. A project carries more when the work needs it. Each is titled `<Project>: <thing>`,
+which is how the index links them without knowing their ids.
 
 | Document                   | What it holds                                                                                          |
 | -------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `implementation deep dive` | How the area works today, against a named commit, with mermaid diagrams, and where each ticket cuts in |
 | `screen sketches`          | The screens with no design yet, drawn in the platform's own tokens, as one uploaded HTML file          |
 | `live ticket view`         | A pointer to the project's shared ticket view                                                          |
-| `artifact index`           | A short front page linking the three above and the project                                             |
+| `artifact index`           | A short front page linking the documents above, the project, and the two plan pages                    |
+| `catalogue`                | When the project delivers a list: every item, one line each                                            |
 
 Two rules decide whether something belongs here. A resource complements the project and its
 tickets, so a page that restates the deliverables or copies the ticket list is not one; the reader
-has both already. And a sketch takes its tokens, type and components from `apps/web`, so a reader
-sees the product rather than a generic wireframe.
+has both already. The two plan pages below are the one exception, because they record what was
+decided and what was written. And a sketch takes its tokens, type and components from `apps/web`,
+so a reader sees the product rather than a generic wireframe.
 
 `pnpm linear:document` publishes one and refuses to write until the prose rules pass and every
 mermaid block parses. `pnpm linear:upload` puts a sketch file in Linear's asset store so it opens
 without an account. `pnpm linear:view` creates the shared view and its document. The formats are in
 `tooling/devkit/README.md`.
+
+### The two plan pages
+
+Every project ships with two standalone pages. They are built from the draft files, never typed
+by hand, and they are working documents first and the record afterwards.
+
+| Page                 | What it holds                                                                                                                                                                                                        |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project plan`       | Why, the findings, the design, the integrations, the decisions taken, the milestones and the deep dive                                                                                                               |
+| `Linear change plan` | Every write in order with its status, each ticket as it will appear with its screen, a before and after for every rewrite, the disposition of every existing ticket, relations added and removed, what is left alone |
+
+The two pages link to each other and are republished in place at every step. Both exist before
+anyone asks for the apply. The change plan is how a person reads the
+tickets: nothing is written to Linear that they have not seen on it, and a short "proceed" approves
+the recommended options on that page and nothing else.
+
+Ticket ids do not exist until the apply, so the pages carry placeholders first and are published
+again once the ids exist. Only then is one copy of each uploaded with `pnpm linear:upload` and
+linked from the artifact index. An upload cannot be deleted, so a correction after that is a new
+upload and a new link, and the old copy stays reachable. The layout is in
+`.agents/skills/openjii-work-design/references/review-pages.md`.
+
+### Dispositions
+
+Every existing ticket a project touches is kept, changed or dropped, with a reason, and the change
+plan lists all of them. Existing tickets are refined, never replaced. A dropped ticket is canceled
+with a one-line reason, or closed as a duplicate with the relation. The draft is checked against
+the list before the apply, because writing the dispositions down is what surfaces a requirement
+that was silently dropped.
+
+### Milestones
+
+Milestones are the order of work, and a reader who has never opened the project must be able to
+see that order.
+
+- The milestones are a strict sequence. There are no parallel lanes, no "can run alongside", and no
+  themes. Sequence them by dependency and urgency.
+- A milestone is named as an outcome and numbered in its name, as in
+  `1. Members see what happened to their work`.
+- Its description is one sentence saying why it comes before the next.
+- Every ticket sits in exactly one milestone.
+- The sort order is spaced by 1,000, because Linear has been seen rewriting positions that were too
+  close together. `linear:milestones` reads the order back to catch it.
+- An old milestone is renamed, never deleted, so its history stays.
+- The names are identical in every document, ticket and plan page that mentions them.
+
+`pnpm linear:milestones` creates, renames and orders them from a file, and checks the rules above
+before it writes anything.
 
 ### Project lifecycle
 
@@ -99,9 +152,9 @@ without an account. `pnpm linear:view` creates the shared view and its document.
 | `Canceled`    | Dropped, with a one-line reason in the body | terminal                                                                 |
 
 **Project gate** (`Backlog` to `Planned`), checkable by a script: every heading above present and
-non-empty, a lead, a target date, at least one ticket in `Ready`, and a resource linked under
-`## Design`. That resource is a design canvas or the sketches when the work is user-facing, and the
-deep dive otherwise.
+non-empty, a lead, milestones once there is more than one ticket, at least one ticket in `Ready`,
+and a resource linked under `## Design`. That resource is a design canvas or the sketches when the
+work is user-facing, and the deep dive otherwise.
 
 ## Ticket shapes
 
@@ -129,7 +182,8 @@ change a user would notice.
 
 ## Additional context
 
-Links, design canvas, the precedent this follows, suggested implementation.
+The screen of the change, links, design canvas, the precedent this follows, suggested
+implementation.
 
 ## How it was built
 
@@ -188,6 +242,56 @@ A number of days. A spike without a timebox is a project.
 The artefact that ends it: an ADR, a comment on the project, a prototype branch.
 ```
 
+## A ticket is read cold
+
+The test is not whether a ticket is valid. It is whether a developer new to the area, or a
+delegate, can start it without asking anybody. Readability comes before completeness.
+
+**One outcome per ticket.** The board is where people choose what to pick up, so a ticket bundling
+several outcomes is too big even when each is one sentence. A vague WHO is the tell: if no
+concrete situation can be named ("a researcher looking at a checklist step"), the split follows a
+mechanism rather than an outcome, so split again instead of rewording.
+
+**The invisible work is on the board.** Enabling and operational work gets its own tickets:
+deployment, infrastructure and cloud operations, rate limits, spend alerts, kill switches,
+feature-flag identity and usage plumbing. Splitting along user-visible outcomes never means
+dropping them. Work that is not code, such as policies, training and vendor reviews, takes the same
+team, shape and gates as code work.
+
+**Examples are generic.** A drought trial and a sensor fleet, not a study name, an instrument
+jargon term, a column name or a team name. This repository is public.
+
+**A screen sits in the body.** A ticket that changes a screen embeds a picture of the change under
+`## Additional context`, or under `## Evidence` for a bug. A linked document, a downloadable
+sketch and a review page do not count, because the body is what the delegate reads. The caption
+describes the picture, not the ticket, and starts with `Sketch:` when it is a drawing. A spike has
+no Additional context, so its screen goes in its comment. Work with no visible surface, such as a
+rate limit or a durable write, gets no screen, and a decorative one is worse than none.
+
+**Tickets are named by identifier.** "The previous ticket" and "the configuration ticket" break the
+moment the board is sorted differently. Use `OJD-1234`, or `{{N}}` in a draft.
+
+**The first comment says where to start.** It opens with a sentence on what it holds and which
+milestone the ticket sits in, then names the files in full repository paths with line numbers,
+checked against a named commit on `main`. It adds the local setup for testing the change and
+the sources behind any claim: code pinned to a commit and the official documentation for the fix.
+Comments carry no budget, so anything cut from a body to fit goes here and is never dropped. Every
+pointer is checked again when it is written, and a comment that already exists is edited in place
+rather than a second one stacked beside it.
+
+**Open questions are written as questions.** They live under `## Dependencies and risks` as
+"Open: does this apply to archived experiments? Ask the TPM." Acceptance criteria state rules, so
+a criterion never ends in a question mark or says "confirm". A `Ready` ticket carries no open
+question that changes what is built; one that does not change the work stays, with the default the
+ticket proceeds on.
+
+**Nothing is cut to fit a tool.** A budget exists so a ticket stays readable. Screens, link targets
+and URLs are not prose and do not count, and `linear:check` leaves them out. When a body is still
+over, a criterion moves to a comment or the ticket splits; the grammar is never compressed.
+
+**Security work describes the fix only.** Every `OJD` ticket and comment mirrors to public GitHub.
+A ticket says what to build or change. What is weak today lives in a project document.
+
 ## Ticket gate
 
 A ticket may leave `Backlog` for `Ready` only when all of these hold. Skills check them; a sweep
@@ -197,8 +301,12 @@ reports any `Ready` ticket that fails.
 - at least one `area` label
 - a project
 - a non-empty `## Acceptance criteria` (or `## Done when`, for a spike)
-- no unresolved blocking relation
+- no unresolved blocking relation, read from both `relations` and `inverseRelations`
+- no open question that changes what is built
 
+Until the label taxonomy is applied, `type` and `area` mean the labels that exist today, listed in
+`linear-taxonomy.md` under "Labels today". Priority is set by the TPM when a ticket is moved to
+`Ready`; an agent never sets it, and says in its review how many tickets in the batch have none.
 The judged half (INVEST, the acceptance-criteria bar, attached designs for frontend work) is in the
 Team Process document. Two readings the team uses, since it runs neither cycles nor estimation:
 "Small" means one person can carry it to `Ready For Prod` without splitting, and "Estimable" means
@@ -239,7 +347,7 @@ is longer than a default Linear board.
 
 | State            | Meaning                                            | Leaves it when                                                  |
 | ---------------- | -------------------------------------------------- | --------------------------------------------------------------- |
-| `Backlog`        | Unrefined                                          | it passes the ticket gate                                       |
+| `Backlog`        | Not ready: unrefined, or refined but blocked       | it passes the ticket gate                                       |
 | `Ready`          | Someone can pick it up without hunting for context | someone starts it                                               |
 | `In Progress`    | Started                                            | the PR is ready for review, with both dev sections filled       |
 | `In Review`      | PR open                                            | review is approved and the PR merges                            |
@@ -253,6 +361,17 @@ PR automation, once configured on the team, moves a ticket to `In Progress` when
 opens, to `In Review` when the PR is marked ready, and to `In Testing` on merge. The release
 workflow's `linear-release-action` moves shipped tickets to `Done`. The UX check stays label-driven
 (`needs-ux-check`, `ux-fix-needed`); there is no `In Design Check` state.
+
+A refined ticket that is blocked stays in `Backlog` with the blocking relation set, and moves to
+`Ready` when the blocker is done. A person who says "put in Ready what you think is ready" has
+delegated the gate call; the agent moves what passes the gate and reports what it moved and why.
+
+Before any state change, read the ticket's `parent`, `children`, `relations` and
+`inverseRelations`, and never say "no link" after reading only one of them. Linear cancels the
+open sub-issues of a canceled parent, and one of them may be someone else's work. When an umbrella
+ticket is split, its blocking relations move to the pieces or are dropped, so the umbrella stops
+blocking work it no longer owns. Before narrowing a ticket, read its comments and its project's
+documents for decisions an earlier session took.
 
 ## Prose standard
 
@@ -268,9 +387,10 @@ and a list of words is not a ticket.
 1. Full sentences everywhere. A bullet reads as one sentence and ends with a full stop. No
    telegraphic fragments, no noun lists, no semicolon chains standing in for sentences.
 2. Headings are exactly the shape's. No extra sections, no date-stamped headings.
-3. Budgets, excluding the two dev-filled sections: work item under 1,200 characters, bug under
-   800, spike under 600, project body under 2,500. Over budget means a split, or the detail goes to
-   a comment, a linked document, or nowhere. It never means shorter grammar.
+3. Budgets, counting prose only, so the two dev-filled sections, embedded screens, link targets and
+   URLs are excluded: work item under 1,500 characters, bug under 800, spike under 600, project
+   body under 2,500. Over budget means a split, or the detail goes to a comment, a linked
+   document, or nowhere. It never means shorter grammar.
 4. One idea per bullet, under 25 words. A bullet that needs a second sentence is two bullets.
 5. Persona first, in WHO, and again in acceptance criteria where it matters: "an org admin can",
    "a plain member sees".
@@ -286,10 +406,12 @@ and a list of words is not a ticket.
     "project container (date)". Relations are set in Linear, with one line in a comment if needed.
 11. No authorship banner. If a person has not read and edited the text, it is not ready.
 12. At most one "X, not Y" sentence per body.
-13. Titles say what the user can do or what is broken, under 70 characters, no type prefix
+13. Titles say what the user can do or what is broken, at most 69 characters, no type prefix
     (`DISCOVERY:` is a label, not a title), no list of three. Project names are the outcome in
     three to six words.
-14. Then the `unslop` skill.
+14. Spelling follows the product. Ticket and sketch copy uses the spelling of the `en-US` locale in
+    `packages/i18n/locales/en-US`, which is American, so grep it when a word is in doubt.
+15. Then the `unslop` skill.
 
 A document holds diagrams as well as prose, and a mermaid block Linear cannot parse renders as a
 red error box where the picture should be. `pnpm linear:document` parses every block with mermaid
@@ -301,8 +423,22 @@ equals the shape; length within budget; longest bullet under 25 words; zero em d
 at most one "X, not Y" sentence; title length and prefix; the gate sections non-empty. It cannot
 judge grammar, so a fragment that happens to end in a full stop still needs a reader. The draft
 format is in `tooling/devkit/README.md`. A failed check stops the write; fix the body first. Then
-`unslop`. Then the person reads it. Nothing is written to Linear that a person
-has not read.
+`unslop`. Then the person reads it. Nothing is written to Linear that a person has not read.
+
+The check also fails an open question or a "confirm" inside the acceptance criteria and a ticket
+named by position ("the previous ticket"). It adds a note, which never fails a draft, when a `Web`,
+`Mobile` or `Fullstack` ticket embeds no screen. It reads a bullet wrapped over several lines as one
+bullet.
+
+Linear rewrites stored markdown: `-` bullets come back as `*`, link targets gain angle brackets,
+and a bare domain such as `INFO.nl` becomes a link. A live body can therefore differ from its
+draft, so compare after normalising those, and keep link targets out of the prose they sit in.
+
+Before the apply, one more pass that a script cannot do: every path and line number opens at the
+commit named, budgets hold with real URLs, a diagram's relations match the draft's `blocks:` lines
+one for one, spelling matches the product, and milestone names are identical in every document.
+A claim of absence ("there is no dark mode") is checked as hard as a claim of presence, and what
+an inventory agent reported is a lead, not a fact, until it is read at line level.
 
 ## Relation to the GitHub templates
 

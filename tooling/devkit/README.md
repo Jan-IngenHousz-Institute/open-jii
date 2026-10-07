@@ -13,6 +13,7 @@ Run them from the repo root through the aliases in the root `package.json`.
 | `pnpm linear:query`                       | Runs one GraphQL document against Linear                |
 | `pnpm linear:check`                       | Checks a ticket draft against the ticket standard       |
 | `pnpm linear:create`                      | Creates the tickets in a draft, with comments and links |
+| `pnpm linear:milestones`                  | Creates, renames and orders a project's milestones      |
 | `pnpm linear:document`                    | Publishes a project document from a Markdown file       |
 | `pnpm linear:upload`                      | Uploads a file to Linear and prints its asset URL       |
 | `pnpm linear:view`                        | Creates a project's shared ticket view and its document |
@@ -109,7 +110,8 @@ state: Backlog
 # Researcher can sort any resource list by up to two columns
 
 labels: Feature, Fullstack
-blocks: 2
+blocks: 2, OJD-1500
+milestone: 1. Researchers can find a resource
 
 ## User story
 
@@ -133,10 +135,21 @@ labels: Feature, Fullstack
 ```
 
 The front matter names the project (required to create), the team (default `OJD`) and the state
-(default `Backlog`). Each level-one heading starts a ticket; `labels:` and `blocks:` may sit
-between it and the first level-two heading. Everything after `<!-- comment -->` is posted as a comment once the
-ticket exists, which is where implementation pointers go when the body has no room. `{{2}}`
-anywhere in a body or comment becomes the second ticket's identifier.
+(default `Backlog`). A quoted value reads the same as an unquoted one. Each level-one heading
+starts a ticket. Between it and the first level-two heading a ticket may carry these lines:
+
+| Line          | What it does                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| `labels:`     | The labels, by name. They must exist in the workspace                                       |
+| `milestone:`  | The project milestone, by name. `pnpm linear:milestones` creates them first                 |
+| `state:`      | This ticket's state, overriding the front matter. An update moves state only when it is set |
+| `blocks:`     | Tickets this one blocks, by draft number or existing identifier, as in `2, OJD-1500`        |
+| `blocked-by:` | Tickets that block this one, in the same form                                               |
+| `related:`    | Tickets this one relates to, in the same form                                               |
+
+Everything after `<!-- comment -->` is posted as a comment once the ticket exists, which is where
+the "where to start" pointers go. `{{2}}` anywhere in a body or comment becomes the second
+ticket's identifier.
 
 ```bash
 pnpm linear:check .claude/tickets/home.md            # sentences, shape, budget, bullets, dashes, title, gate
@@ -150,15 +163,30 @@ and a bullet chained with semicolons fails. It cannot judge grammar, so a fragme
 full stop still needs a reader; the check exists to stop the obvious telegraphic draft, not to
 replace the person who reads the body before it is written.
 
-`linear:create` refuses a draft that fails the check, resolves team, project, state and labels by
-name, and records every step in `<draft>.created.json` next to the draft. A run that stops halfway
-resumes from that file instead of creating anything twice. A relative path, here and on every other
-command, is taken from the repo root.
+`linear:create` refuses a draft that fails the check, resolves team, project, state, milestone and
+labels by name, and records every step in `<draft>.created.json` next to the draft. A run that
+stops halfway resumes from that file instead of creating anything twice. A relative path, here and
+on every other command, is taken from the repo root.
+
+A ticket headed by an identifier is an update. It changes the title, the body and the listed
+labels, and moves the project, the state and the milestone only when the draft names a different
+one, so it never moves a ticket by accident. `--sync-labels` also removes the labels the draft does
+not list, except the `WBSO` and `wayfinder:` series. The dry run reads the live ticket and prints
+what each update would do, such as `drops research; state Ready to Backlog; moves from "Old
+project"`, so read it before applying. The comment after the marker edits the viewer's own comment
+whose first line matches, and posts a new one otherwise, so a "where to start" comment is edited in
+place. Linear replaces a relation when the reverse is created, and an update never removes one.
+
+The check does not count screens, link targets or URLs against a budget, so a draft passes the same
+with a local image path as with the uploaded URL. It fails an open question or "confirm" inside the
+acceptance criteria and a ticket named by position, reads a wrapped bullet as one bullet, and adds a
+non-failing `note` when a `Web`, `Mobile` or `Fullstack` ticket embeds no screen.
 
 ## Project resources
 
 A project carries its design and its grounding as Linear documents on the project itself. Four of
-them are the standard set, and a project carries more when the work needs it:
+them are the standard set, a fifth `<Project>: catalogue` holds every item when the project
+delivers a list, and the two plan pages are linked from the index once they are uploaded:
 
 | Document                              | What it holds                                                                   |
 | ------------------------------------- | ------------------------------------------------------------------------------- |
@@ -185,8 +213,9 @@ pnpm linear:document .claude/drafts/deep-dive.md --project "..." --title "..." -
 ```
 
 `pnpm linear:upload` puts a file in Linear's own asset store and prints the URL a document links
-to, so a sketch or a bundle needs no account to open. The media type comes from the extension, or
-from `--type`:
+to, so a sketch or a bundle needs no account to open. It uploads at once, with no dry run, and an
+upload cannot be deleted, so upload a page only when it is final. The media type comes from the
+extension, or from `--type`:
 
 ```bash
 pnpm linear:upload .claude/drafts/sketches.html
@@ -200,6 +229,35 @@ document that points at it. It reuses a view that already carries the project's 
 pnpm linear:view --project "Platform home and research discovery"           # dry run
 pnpm linear:view --project "Platform home and research discovery" --apply
 ```
+
+`pnpm linear:milestones` writes a project's milestones from a file. A milestone is a `#` heading
+numbered in its name, with an optional `was:` line to rename an existing one, and one sentence on
+why it comes before the next:
+
+```markdown
+---
+project: Notifications
+---
+
+# 1. Members see what happened to their work
+
+was: Phase one
+Nothing else can be tested without the feed, so it comes first.
+
+# 2. Members choose what reaches them
+
+Preferences need the feed to exist, so they follow it.
+```
+
+```bash
+pnpm linear:milestones .claude/drafts/milestones.md           # dry run
+pnpm linear:milestones .claude/drafts/milestones.md --apply
+```
+
+It refuses a name that does not start with its position, a missing or multi-sentence reason, and a
+dash. It spaces the order by 1,000, since Linear has been seen rewriting close positions, reads the order back
+after writing and exits non-zero if Linear changed it, and lists milestones the file does not
+mention as left alone. It never deletes one.
 
 Bookkeeping belongs in one of these documents or nowhere. Linear's project updates are the
 status post the team reads in its feed, so an inventory or a migration note posted there reaches

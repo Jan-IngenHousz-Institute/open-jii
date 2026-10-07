@@ -38,6 +38,7 @@
     "linear:check": "pnpm --filter @repo/devkit linear:check --",
     "linear:create": "pnpm --filter @repo/devkit linear:create --",
     "linear:document": "pnpm --filter @repo/devkit linear:document --",
+    "linear:milestones": "pnpm --filter @repo/devkit linear:milestones --",
     "linear:query": "pnpm --filter @repo/devkit linear:query --",
     "linear:taxonomy": "pnpm --filter @repo/devkit linear:taxonomy --",
     "linear:upload": "pnpm --filter @repo/devkit linear:upload --",

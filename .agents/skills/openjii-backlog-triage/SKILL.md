@@ -24,24 +24,28 @@ faster and keeps one record of what changed.
 ## Finding what needs attention
 
 One paginated query gets the open backlog. Exclude `duplicate` as well as `completed` and
-`canceled`; it is its own state type and it inflates every count if left in.
+`canceled`; it is its own state type and it inflates every count if left in. The page is 100 and
+the nested connections are capped, because blockers and parents push a larger page over Linear's
+query complexity limit. Blockers are in `inverseRelations`, not `relations`.
 
 ```bash
-pnpm linear:query --query 'query($after:String){ issues(first:250, after:$after, filter:{ team:{key:{eq:"OJD"}}, state:{type:{nin:["completed","canceled","duplicate"]}} }){ nodes{ id identifier title description state{name} project{name} labels{nodes{name}} } pageInfo{ hasNextPage endCursor } } }' --variables '{"after":null}'
+pnpm linear:query --query 'query($after:String){ issues(first:100, after:$after, filter:{ team:{key:{eq:"OJD"}}, state:{type:{nin:["completed","canceled","duplicate"]}} }){ nodes{ id identifier title description priority state{name} project{name} labels(first:10){nodes{name}} parent{identifier} inverseRelations(first:10){nodes{type issue{identifier state{type}}}} } pageInfo{ hasNextPage endCursor } } }' --variables '{"after":null}'
 ```
 
 Write the result to the scratchpad and analyse it there rather than re-querying.
 
 Report, in this order:
 
-| Gap                                                                                | Why it matters                                                                           |
-| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| No project                                                                         | Invisible to every project view. Solution-shaped tickets in the maintenance bucket count |
-| No `type` label, no `area` label                                                   | The ticket gate cannot pass; nothing can be counted or routed                            |
-| In `Ready` but fails the ticket gate                                               | The state is lying, which is worse than `Backlog`                                        |
-| A work item or bug in `In Testing` without `## Testing criteria`                   | QA has nothing to run                                                                    |
-| Project in `Planned` or later missing a template section, a lead, or a target date | The project gate is lying                                                                |
-| Open, untouched for six months                                                     | Probably dead; ask before touching                                                       |
+| Gap                                                                             | Why it matters                                                                           |
+| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| No project                                                                      | Invisible to every project view. Solution-shaped tickets in the maintenance bucket count |
+| No `type` label, no `area` label                                                | The ticket gate cannot pass; nothing can be counted or routed                            |
+| In `Ready` but fails the ticket gate                                            | The state is lying, which is worse than `Backlog`                                        |
+| In `Ready` with an unresolved blocker or an open "Confirm" in its criteria      | Against the gate; a refined but blocked ticket belongs in `Backlog`                      |
+| In `Ready` with no priority                                                     | The TPM sets it. Report the count, never set it                                          |
+| A work item or bug in `In Testing` without `## Testing criteria`                | QA has nothing to run                                                                    |
+| Project in `Planned` or later missing a template section, a lead, or milestones | The project gate is lying                                                                |
+| Open, untouched for six months                                                  | Probably dead; ask before touching                                                       |
 
 Unassigned is normal for backlog items. Do not report it.
 
@@ -64,6 +68,12 @@ The line for `ready-for-agent` is whether the acceptance criteria are checkable 
 anyone a question.
 
 Propose labels and projects. Do not invent acceptance criteria to push something over the gate.
+
+The `needs-info`, `needs-triage`, `ready-for-agent`, `ready-for-human` and `wontfix` labels do not
+exist yet (`docs/agents/triage-labels.md`), so until they are created record the decision as a
+comment and the state. "Put in Ready what you think is ready" hands you the gate call: move what
+passes and report what moved and why. Before canceling anything, read its `parent` and `children`,
+because Linear cancels the open sub-issues of a canceled parent and one may be someone else's.
 
 ## Applying the taxonomy
 

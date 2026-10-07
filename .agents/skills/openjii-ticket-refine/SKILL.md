@@ -10,7 +10,9 @@ Read `AGENTS.md` first. The ticket shapes, the ticket gate and the prose standar
 memory. Access and query recipes are in `openjii-linear`.
 
 This skill produces one ticket someone could pick up without asking a follow-up question. That is
-the whole bar.
+the whole bar. The reader is a developer new to the area, or a delegate, who has the ticket and
+nothing else, so readability comes before completeness. `docs/agents/ticket-standard.md` sets out
+what reading cold needs under "A ticket is read cold".
 
 It assumes the solution is already designed. Work that needs designing first, or that is larger
 than one ticket, starts in `openjii-work-design`, which writes the project and comes back here for
@@ -22,9 +24,10 @@ the tickets.
 plausible criterion nobody agreed to is worse than an empty section, because the empty section is
 honestly unfinished while the invented one silently becomes the spec.
 
-Where you do not know, ask. Where you infer from code or a sibling feature, say so in the ticket:
-"inferred from `experiment-overview`, confirm". Three confirmed criteria and an open question beat
-eight confident guesses.
+Where you do not know, ask. Where you infer from code or a sibling feature, say so in the ticket as
+an open question under Dependencies and risks: "Open: does this follow `experiment-overview` for
+archived rows? Ask the TPM." A criterion states a rule, so it never carries the question. Three
+confirmed criteria and an open question beat eight confident guesses.
 
 The same goes for the rest: do not guess the persona, do not assert a benefit nobody stated, do not
 pick a project because the name sounds close.
@@ -53,15 +56,29 @@ decorate it.
 4. **Acceptance criteria.** The primary flow, the alternative flows that matter, and the business
    rules that apply. Name what must be shown on screen. Observable behaviour only; implementation
    suggestions go under Additional context.
-5. **Dependencies and risks.**
-6. **Labels.** One `type`, at least one `area`. Both are required by the gate.
-7. Leave `## How it was built` and `## Testing criteria` empty. The developer fills them through
+5. **Dependencies and risks.** Blockers, and every open question written as a question with the
+   default the ticket proceeds on. A ticket that cannot start without an answer is not `Ready`.
+6. **The screen.** A ticket that changes a screen embeds its picture under Additional context, with
+   a caption that describes the picture. Drawing it is in `openjii-work-design`,
+   `references/screens.md`. A ticket with no visible surface gets none.
+7. **Labels.** One `type`, at least one `area`. Both are required by the gate, and both must be
+   labels that exist today (`linear-taxonomy.md`, "Labels today").
+8. Leave `## How it was built` and `## Testing criteria` empty. The developer fills them through
    `openjii-testing-criteria` before review.
+9. **The first comment.** After the `<!-- comment -->` marker, open with a sentence on what the
+   comment holds and which milestone the ticket sits in. Then name the files in full repository
+   paths with line numbers, checked against a named commit on `main` as you write them, and give
+   the local steps to test the change. Anything the body had no room for goes here and is never
+   dropped.
+
+If you cannot give the ticket a concrete WHO, a situation a person is actually in, the ticket is
+split along a mechanism and not an outcome. Split it again instead of rewording it.
 
 Write it as a draft file in the format `tooling/devkit/README.md` describes; `.claude/tickets/` is
 gitignored and a good home. That is what `pnpm linear:check` reads and `pnpm linear:create` creates
-from. Implementation pointers that do not fit the budget go after the `<!-- comment -->` marker,
-which becomes a comment on the created ticket.
+from. Examples are generic, such as a drought trial or a sensor fleet, never a study name or an
+instrument term, and name other tickets by identifier. The first comment goes after the
+`<!-- comment -->` marker.
 
 Search before creating: `searchIssues` on two or three of the user's own words. If a close match
 exists, say so and offer to refine that one instead. Existing tickets are not precedents for shape
@@ -72,8 +89,11 @@ or wording; most predate this standard. The shape comes from `ticket-standard.md
 Read the ticket **and its comments**. Comments routinely hold the decision the description never got
 updated with; rewriting over the top of that loses it.
 
-Preserve what is there. Refining means restructuring and filling gaps, not replacing someone's
-words with your own phrasing of the same thing.
+Preserve the substance. Every criterion, every decision and every open question stays. Refining
+means restructuring and filling gaps; reword only where the sentence cannot be read cold, and list
+each rewording as a decision the person can veto. Narrowing a ticket needs the same care: read its
+comments and the project's documents first, because an earlier session may have settled the point
+you are about to reverse. Existing tickets are kept and refined, never replaced.
 
 Then check the gate: one `type` label, at least one `area` label, a project, non-empty acceptance
 criteria (or `Done when` for a spike), no unresolved blocking relation. The judged half (INVEST, the
@@ -81,7 +101,10 @@ acceptance-criteria bar, designs attached for frontend work) is in the Team Proc
 Linear; fetch it, do not restate it.
 
 Report what fails. Labels and project you can propose and apply. Missing acceptance criteria is a
-conversation, not a fix.
+conversation, not a fix. A ticket that passes except for a blocker stays in `Backlog` with the
+relation set. A `Ready` ticket carrying an open question that changes what is built goes back to
+`Backlog`, or you propose an answer in the draft and list it as a numbered decision the person can
+veto. Priority is the TPM's, so report the `Ready` tickets that have none and leave them.
 
 ## When it is too big
 
@@ -97,10 +120,11 @@ there is no epic to create. Blocking relations only where order genuinely matter
   reconstruct the check by hand.
 - Then the `unslop` skill.
 - Set the state deliberately: a ticket that passes the gate goes to `Ready`; one still carrying open
-  questions stays in `Backlog` with `needs-info`.
+  questions stays in `Backlog`. The `needs-info` label does not exist yet, so say it in a comment.
 - Show the user the body before creating or updating, and wait. Nothing is written to Linear that a
   person has not read.
 - Then `pnpm linear:create <draft.md>` for the dry run, and `--apply` once they have read it. It
   refuses a failing draft, resolves the project and labels by name, rewrites `{{N}}` references to
-  real identifiers, posts each comment block, sets `blocks:` relations, and resumes from its state
-  file if interrupted. Updating an existing ticket is still `issueUpdate` through `linear:query`.
+  real identifiers, posts each comment block, sets relations, and resumes from its state file if
+  interrupted. A draft headed by an identifier updates that ticket through the same command, and
+  edits its pointer comment in place when the first line matches.

@@ -39,7 +39,7 @@ export const SHAPES: Record<Shape, ShapeSpec> = {
       "Additional context",
       ...DEV_SECTIONS,
     ],
-    budget: 1200,
+    budget: 1500,
     devSections: DEV_SECTIONS,
   },
   bug: {
@@ -72,6 +72,30 @@ interface Section {
   content: string;
 }
 
+// A reader reads the words. An embedded screen, a link target and a bare URL are not words, so
+// none of them spends a budget, whatever length Linear's upload URLs turn out to have.
+const IMAGE_MARKDOWN = /!\[[^\]]*\]\([^)]*\)/g;
+const LINK_MARKDOWN = /\[([^\]]*)\]\([^)]*\)/g;
+const BARE_URL = /https?:\/\/\S+/g;
+
+export function proseOnly(text: string): string {
+  return text.replace(IMAGE_MARKDOWN, "").replace(LINK_MARKDOWN, "$1").replace(BARE_URL, "");
+}
+
+const SCREEN_LABELS = /^(web|mobile|fullstack)$/i;
+
+// What a script can suspect but only a reader can settle, so it never fails a draft.
+export function advisories(labels: readonly string[], body: string, shape: Shape | null): string[] {
+  const hasSurface = labels.some((label) => SCREEN_LABELS.test(label));
+  const isTicket = shape === "work-item" || shape === "bug";
+  if (hasSurface && isTicket && body.match(IMAGE_MARKDOWN) === null) {
+    return [
+      "no screen in the body; a ticket that changes a screen embeds one, so ignore this when it has no visible surface",
+    ];
+  }
+  return [];
+}
+
 export function splitSections(body: string): Section[] {
   const sections: Section[] = [];
   let current: Section | null = null;
@@ -94,12 +118,38 @@ function shapeOf(firstHeading: string | undefined): Shape | null {
   return null;
 }
 
+// A bullet wrapped over several lines is one bullet.
 function bullets(text: string): string[] {
-  return text
-    .split("\n")
-    .map((line) => /^\s*(?:[-*]|\d+\.)\s+(.+)$/.exec(line)?.[1])
-    .filter((item): item is string => item !== undefined);
+  const items: string[] = [];
+  let isOpen = false;
+  for (const line of text.split("\n")) {
+    const start = /^\s*(?:[-*]|\d+\.)\s+(.+)$/.exec(line)?.[1];
+    const isContinuation = isOpen && line.trim().length > 0 && !line.startsWith("#");
+    if (start !== undefined) {
+      items.push(start);
+      isOpen = true;
+    } else if (isContinuation) {
+      const previous = items.pop() ?? "";
+      items.push(`${previous} ${line.trim()}`);
+    } else {
+      isOpen = false;
+    }
+  }
+  return items;
 }
+
+function isOpenQuestion(bullet: string): boolean {
+  const text = bullet.trim();
+  return (
+    /\?["'`)\]]*$/.test(text) ||
+    /^open:/i.test(text) ||
+    /^confirm\s+(?:the|this|that|these|those|whether|if|with)\b/i.test(text) ||
+    /[,(]\s*confirm\)?\W*$/i.test(text)
+  );
+}
+
+const POSITIONAL_REFERENCE =
+  /\b(?:the\s+)?(?:previous|next|above|first|second|third|last|following|earlier)\s+(?:ticket|issue)\b/i;
 
 function wordCount(text: string): number {
   return text.split(/\s+/).filter((word) => word.length > 0).length;
@@ -107,7 +157,7 @@ function wordCount(text: string): number {
 
 // A full stop, question or exclamation mark, allowing a closing quote, backtick or bracket after
 // it. This catches the telegraphic fragment; it cannot catch a fragment that ends in a full stop.
-function endsAsSentence(text: string): boolean {
+export function endsAsSentence(text: string): boolean {
   return /[.?!]["'`)\]]*$/.test(text.trim());
 }
 
@@ -170,7 +220,7 @@ export function checkBody(body: string): Report {
   const devSections = spec?.devSections ?? [];
   const counted = sections.filter((s) => !devSections.includes(s.heading));
   const countedText = counted.map((s) => `## ${s.heading}\n\n${s.content}`).join("\n\n");
-  const characters = countedText.length;
+  const characters = proseOnly(countedText).length;
   if (spec !== null && characters >= spec.budget) {
     findings.push({
       rule: "budget",
@@ -212,6 +262,14 @@ export function checkBody(body: string): Report {
 
   findings.push(...proseFindings(body));
 
+  const positional = POSITIONAL_REFERENCE.exec(body)?.[0];
+  if (positional !== undefined) {
+    findings.push({
+      rule: "reference",
+      detail: `"${positional}" points at a ticket by position; use {{N}} or the identifier`,
+    });
+  }
+
   const contrasts = (countedText.match(/,\s*not\s/g) ?? []).length;
   if (contrasts > 1) {
     findings.push({
@@ -230,6 +288,12 @@ export function checkBody(body: string): Report {
     const criteria = sections.find((s) => s.heading === "Acceptance criteria")?.content ?? "";
     if (criteria.length === 0) {
       findings.push({ rule: "gate", detail: "Acceptance criteria is empty" });
+    }
+    for (const bullet of bullets(criteria).filter(isOpenQuestion)) {
+      findings.push({
+        rule: "open-question",
+        detail: `a criterion states a rule, so an open question moves under Dependencies and risks as "Open: ...? Ask <person>.": "${bullet.split(/\s+/).slice(0, 8).join(" ")}..."`,
+      });
     }
   }
   if (shape === "spike") {
