@@ -1,7 +1,9 @@
 import { createVisualization } from "@/test/factories";
-import { act, render, screen, userEvent } from "@/test/test-utils";
+import { server } from "@/test/msw/server";
+import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { contract } from "@repo/api/contract";
 import type { PlotlyChartConfig } from "@repo/ui/components/charts/types";
 
 import { lineDefaultConfig } from "../basic/line/defaults";
@@ -9,7 +11,7 @@ import { CartesianRenderer } from "./cartesian-renderer";
 
 interface CartesianChartProps {
   config: PlotlyChartConfig;
-  data: { x: unknown[]; mode?: string }[];
+  data: { x: unknown[]; mode?: string; name?: string }[];
   onRelayout?: (event: Record<string, unknown>) => void;
 }
 
@@ -315,5 +317,77 @@ describe("CartesianRenderer", () => {
       />,
     );
     expect(screen.queryByText("errors.noData")).not.toBeInTheDocument();
+  });
+
+  // A chart saved through the API has no colorMode. The renderer reads the
+  // colour column's type from the table's column metadata to choose.
+  describe("with no colorMode saved", () => {
+    function scatterColouredBy(colorColumn: string) {
+      return buildViz({
+        chartType: "scatter",
+        config: { showLegend: true },
+        dataConfig: {
+          tableName: "readings",
+          dataSources: [
+            { tableName: "readings", columnName: "time", role: "x" },
+            { tableName: "readings", columnName: "load", role: "y" },
+            { tableName: "readings", columnName: colorColumn, role: "color" },
+          ],
+        },
+      });
+    }
+
+    const rows = [
+      { time: 1, load: 10, genotype: "WT", temp: 23.7 },
+      { time: 2, load: 20, genotype: "mutant", temp: 36.3 },
+    ];
+
+    beforeEach(() => {
+      server.mount(contract.experiments.getExperimentTableColumns, {
+        body: {
+          columns: [
+            { name: "time", type_name: "INT", type_text: "INT" },
+            { name: "load", type_name: "DOUBLE", type_text: "DOUBLE" },
+            { name: "genotype", type_name: "STRING", type_text: "STRING" },
+            { name: "temp", type_name: "DOUBLE", type_text: "DOUBLE" },
+          ],
+        },
+      });
+    });
+
+    it("splits a text colour column into one series per value", async () => {
+      render(
+        <CartesianRenderer
+          visualization={scatterColouredBy("genotype")}
+          experimentId="exp-1"
+          data={rows}
+          defaultTraceType="scatter"
+          supportsContinuousColor
+        />,
+      );
+
+      await waitFor(() => {
+        expect(renderedProps().data.map((s) => s.name)).toEqual(
+          expect.arrayContaining(["WT", "mutant"]),
+        );
+      });
+    });
+
+    it("keeps one gradient series for a numeric colour column", async () => {
+      render(
+        <CartesianRenderer
+          visualization={scatterColouredBy("temp")}
+          experimentId="exp-1"
+          data={rows}
+          defaultTraceType="scatter"
+          supportsContinuousColor
+        />,
+      );
+
+      await waitFor(() => {
+        expect(renderedProps().data).toHaveLength(1);
+      });
+      expect(renderedProps().data[0].name).toBe("load");
+    });
   });
 });
