@@ -1,7 +1,8 @@
-import { createVisualization } from "@/test/factories";
+import { createFilterWidget, createVisualization } from "@/test/factories";
 import { render, screen, userEvent } from "@/test/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
+import { DashboardFiltersProvider } from "../../experiment-dashboards/dashboard-filters-context";
 import { ChartConfigError, ChartFrame } from "./chart-frame";
 
 const baseProps = {
@@ -149,5 +150,58 @@ describe("ChartConfigError", () => {
     render(<ChartConfigError message="bad chart type" />);
     expect(screen.getByText("errors.configuration")).toBeInTheDocument();
     expect(screen.getByText("bad chart type")).toBeInTheDocument();
+  });
+});
+
+describe("ChartFrame on a dashboard", () => {
+  function filterOn(tableName: string, defaultValue: [number, number] | [number, ""]) {
+    return createFilterWidget({
+      config: { tableName, column: "value", operator: "between", defaultValue },
+    });
+  }
+
+  it("says a filter was skipped when a filter widget on its table is invalid", () => {
+    const table = baseProps.visualization.dataConfig.tableName;
+    render(
+      <DashboardFiltersProvider widgets={[filterOn(table, [0, ""])]}>
+        <ChartFrame {...baseProps} isLoading={false} error={undefined}>
+          <div>chart-body</div>
+        </ChartFrame>
+      </DashboardFiltersProvider>,
+    );
+    expect(screen.getByText("chart-body")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("widget.filtersSkipped");
+  });
+
+  it("shows the skipped line together with the truncation line", () => {
+    const table = baseProps.visualization.dataConfig.tableName;
+    render(
+      <DashboardFiltersProvider widgets={[filterOn(table, [5, 1])]}>
+        <ChartFrame
+          {...baseProps}
+          isLoading={false}
+          error={undefined}
+          truncation={{ shown: 100_000, total: 553_000 }}
+        >
+          <div>chart-body</div>
+        </ChartFrame>
+      </DashboardFiltersProvider>,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("widget.filtersSkipped");
+    expect(screen.getByText("charts.truncated")).toBeInTheDocument();
+  });
+
+  it("ignores filter widgets on other tables and valid filters", () => {
+    const table = baseProps.visualization.dataConfig.tableName;
+    render(
+      <DashboardFiltersProvider
+        widgets={[filterOn("another_table", [0, ""]), filterOn(table, [0, 10])]}
+      >
+        <ChartFrame {...baseProps} isLoading={false} error={undefined}>
+          <div>chart-body</div>
+        </ChartFrame>
+      </DashboardFiltersProvider>,
+    );
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 });
