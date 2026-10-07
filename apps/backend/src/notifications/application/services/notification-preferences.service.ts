@@ -2,16 +2,19 @@ import { Injectable } from "@nestjs/common";
 
 import {
   NOTIFICATION_CATEGORIES,
+  NOTIFICATION_TYPES,
   zNotificationCategory,
   zNotificationChannel,
 } from "@repo/api/domains/notification/notification.schema";
 import type {
   NotificationCategory,
   NotificationPreference,
+  NotificationType,
 } from "@repo/api/domains/notification/notification.schema";
 
 import { Result, success } from "../../../common/utils/fp-utils";
 import { NotificationRepository } from "../../core/repositories/notification.repository";
+import { NotificationEmailService } from "./notification-email.service";
 
 /**
  * A person's choice for every category and channel, saved or defaulted. Shared by the
@@ -19,7 +22,29 @@ import { NotificationRepository } from "../../core/repositories/notification.rep
  */
 @Injectable()
 export class NotificationPreferencesService {
-  constructor(private readonly notificationRepository: NotificationRepository) {}
+  constructor(
+    private readonly notificationRepository: NotificationRepository,
+    private readonly notificationEmail: NotificationEmailService,
+  ) {}
+
+  /**
+   * The categories whose choice has an effect today: some type in them is sent on the
+   * recipient's preference *and* has an email behind it. Derived rather than listed,
+   * so a category starts offering its switch the moment its producer gets a template —
+   * the same two conditions `NotificationDispatchService` gates a send on.
+   */
+  private availableCategories(): Set<NotificationCategory> {
+    const available = new Set<NotificationCategory>();
+    for (const [type, definition] of Object.entries(NOTIFICATION_TYPES)) {
+      if (
+        definition.channels.email === "preference" &&
+        this.notificationEmail.hasEmail(type as NotificationType)
+      ) {
+        available.add(definition.category);
+      }
+    }
+    return available;
+  }
 
   async resolve(userId: string): Promise<Result<NotificationPreference[]>> {
     const saved = await this.notificationRepository.findPreferences(userId);
@@ -30,6 +55,7 @@ export class NotificationPreferencesService {
     const savedChoice = new Map(
       saved.value.map((row) => [`${row.category}:${row.channel}`, row.enabled]),
     );
+    const available = this.availableCategories();
 
     return success(
       zNotificationCategory.options.flatMap((category) =>
@@ -37,7 +63,13 @@ export class NotificationPreferencesService {
           const fallback = NOTIFICATION_CATEGORIES[category][channel];
           const enabled =
             fallback.locked || (savedChoice.get(`${category}:${channel}`) ?? fallback.enabled);
-          return { category, channel, enabled, locked: fallback.locked };
+          return {
+            category,
+            channel,
+            enabled,
+            locked: fallback.locked,
+            available: available.has(category),
+          };
         }),
       ),
     );

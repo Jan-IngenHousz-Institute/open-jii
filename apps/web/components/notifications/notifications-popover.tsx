@@ -6,7 +6,7 @@ import { useMarkNotificationsRead } from "@/hooks/notifications/useMarkNotificat
 import { useNotifications } from "@/hooks/notifications/useNotifications/useNotifications";
 import { useUnreadNotificationCount } from "@/hooks/notifications/useUnreadNotificationCount/useUnreadNotificationCount";
 import { useLocale } from "@/hooks/useLocale";
-import { Bell } from "lucide-react";
+import { Bell, Settings2 } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
@@ -94,16 +94,28 @@ export function NotificationsPopover() {
       >
         <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
           <h3 className="text-sm font-semibold">{label}</h3>
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            onClick={handleMarkAllRead}
-            disabled={!(hasUnread || listedUnread) || markAllRead.isPending}
-            className="text-muted-foreground hover:text-foreground font-normal"
-          >
-            {t("markAllRead")}
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={handleMarkAllRead}
+              disabled={!(hasUnread || listedUnread) || markAllRead.isPending}
+              className="text-muted-foreground hover:text-foreground font-normal"
+            >
+              {t("markAllRead")}
+            </Button>
+            <Button asChild variant="ghost" size="icon-xs" className="text-muted-foreground">
+              <Link
+                href={`/${locale}/platform/account/notifications`}
+                onClick={closePopover}
+                aria-label={t("settings")}
+                title={t("settings")}
+              >
+                <Settings2 />
+              </Link>
+            </Button>
+          </div>
         </div>
         <div className="max-h-[400px] overflow-y-auto">
           <NotificationFeed
