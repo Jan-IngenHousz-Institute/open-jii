@@ -182,6 +182,11 @@ describe("classifyFilter", () => {
     });
   });
 
+  it("compares numbers held as text by value, not as dates", () => {
+    expect(between(["1", "50"])).toMatchObject({ status: "applied" });
+    expect(between(["100", "99"])).toEqual({ status: "invalid", reason: "rangeReversed" });
+  });
+
   it("never treats text that isn't a date as a reversed range", () => {
     expect(between(["b", "a"])).toMatchObject({ status: "applied" });
   });
