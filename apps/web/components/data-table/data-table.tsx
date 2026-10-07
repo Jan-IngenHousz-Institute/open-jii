@@ -8,7 +8,7 @@ import { formatLocaleNumber } from "@/util/format-locale-number";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import type { OnChangeFn, PaginationState, RowSelectionState } from "@tanstack/react-table";
 import { useTable } from "@tanstack/react-table";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import { useTranslation } from "@repo/i18n";
@@ -142,15 +142,11 @@ export function DataTable({
     );
   }, []);
 
-  // Read through a ref so the column definitions survive an expand: the rows re-render with the new
-  // state anyway, and new definitions would remount every cell.
-  const expandedCellRef = useRef(expandedCell);
-  expandedCellRef.current = expandedCell;
-
+  // Handed to the cells through the table's meta rather than the column definitions, which would
+  // remount every cell on each expand.
   const isCellExpanded: IsCellExpandedFn = useCallback(
-    (rowId, columnName) =>
-      expandedCellRef.current?.rowId === rowId && expandedCellRef.current.columnName === columnName,
-    [],
+    (rowId, columnName) => expandedCell?.rowId === rowId && expandedCell.columnName === columnName,
+    [expandedCell],
   );
 
   const orderedColumns = useMemo(
@@ -171,7 +167,6 @@ export function DataTable({
       onAddAnnotation,
       onDeleteAnnotations,
       onToggleCellExpansion: toggleCellExpansion,
-      isCellExpanded,
       errorColumn,
       preserveOrder: preserveColumnOrder,
     });
@@ -182,7 +177,6 @@ export function DataTable({
     onAddAnnotation,
     onDeleteAnnotations,
     toggleCellExpansion,
-    isCellExpanded,
     errorColumn,
     hasSelection,
     preserveColumnOrder,
@@ -222,6 +216,7 @@ export function DataTable({
       ...(selection ? { rowSelection: selection.state } : {}),
     },
     defaultColumn: { size: 180 },
+    meta: { isCellExpanded },
   });
 
   useHotkey(

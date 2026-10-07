@@ -41,7 +41,6 @@ export interface UseExperimentDataParams {
   onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
   onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
   onToggleCellExpansion?: (rowId: string, columnName: string) => void;
-  isCellExpanded?: (rowId: string, columnName: string) => boolean;
   errorColumn?: string;
   enabled?: boolean;
 }
@@ -69,7 +68,6 @@ function compactFilters(
  * @param params.onAddAnnotation Event handler for adding annotations
  * @param params.onDeleteAnnotations Event handler for deleting annotations
  * @param params.onToggleCellExpansion Event handler for toggling cell expansion
- * @param params.isCellExpanded Function to check if cell is expanded
  * @param params.errorColumn Optional error column name
  * @returns Query result containing the experiment data
  */
@@ -87,7 +85,6 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
     onAddAnnotation,
     onDeleteAnnotations,
     onToggleCellExpansion,
-    isCellExpanded,
     errorColumn,
     enabled = true,
   } = params;
@@ -133,7 +130,6 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
             onAddAnnotation,
             onDeleteAnnotations,
             onToggleCellExpansion,
-            isCellExpanded,
             errorColumn,
           }),
           totalPages: tableData.totalPages,
@@ -162,7 +158,6 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
     onAddAnnotation,
     onDeleteAnnotations,
     onToggleCellExpansion,
-    isCellExpanded,
     errorColumn,
   ]);
   const tableRows: DataRow[] | undefined = tableData?.data?.rows;
