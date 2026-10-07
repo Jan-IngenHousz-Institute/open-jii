@@ -1,6 +1,6 @@
 import { PrefetchedQueries } from "@/components/server-prefetch/prefetched-queries";
 import { WorkbookLayoutShell } from "@/components/workbook-overview/workbook-layout-shell";
-import { workbookQuery } from "@/hooks/workbook/useWorkbook/useWorkbook";
+import { workbookQuery } from "@/hooks/workbook/useWorkbook/workbook-query";
 import type { ReactNode } from "react";
 
 interface WorkbookLayoutProps {

@@ -1,5 +1,5 @@
 import { myJoinRequestQueryKey } from "@/hooks/experiment/join-request/useMyJoinRequest/useMyJoinRequest";
-import { experimentAccessQueryKey } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
+import { experimentAccessQueryKey } from "@/hooks/experiment/useExperimentAccess/experiment-access-query";
 import { myOrganizationInvitationsQueryKey } from "@/hooks/organization/organization-cache";
 import {
   collaboratorsQueryKey,

@@ -2,7 +2,7 @@ import { ListExperiments } from "@/components/list-experiments";
 import { ResourceMetricsSummary } from "@/components/metrics/resource-metrics-summary";
 import { PageContainer } from "@/components/page-container";
 import { PrefetchedQueries } from "@/components/server-prefetch/prefetched-queries";
-import { experimentsListQuery } from "@/hooks/experiment/useExperiments/useExperiments";
+import { experimentsListQuery } from "@/hooks/experiment/useExperiments/experiments-list-query";
 import type { Metadata } from "next";
 
 import initTranslations from "@repo/i18n/server";

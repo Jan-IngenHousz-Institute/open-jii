@@ -1,12 +1,7 @@
 import { orpc } from "@/lib/orpc";
-import type { QueryUtils } from "@/lib/orpc";
-import { shouldRetryQuery } from "@/util/query-retry";
 import { useQuery } from "@tanstack/react-query";
 
-/** The workbook query, built the same way for the hook and for the server that prefetches it. */
-export function workbookQuery(utils: QueryUtils, id: string) {
-  return utils.workbooks.getWorkbook.queryOptions({ input: { id }, retry: shouldRetryQuery });
-}
+import { workbookQuery } from "./workbook-query";
 
 export function useWorkbook(id: string, options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? !!id;

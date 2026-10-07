@@ -1,6 +1,6 @@
 import { ExperimentLayoutShell } from "@/components/experiment-overview/experiment-layout-shell";
 import { PrefetchedQueries } from "@/components/server-prefetch/prefetched-queries";
-import { experimentAccessQuery } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
+import { experimentAccessQuery } from "@/hooks/experiment/useExperimentAccess/experiment-access-query";
 import type { ReactNode } from "react";
 import { auth } from "~/app/actions/auth";
 
