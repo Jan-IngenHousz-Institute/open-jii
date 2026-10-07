@@ -1,21 +1,19 @@
-import { render } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
-import { Sparkline } from "./output-cell-charts";
+import { sparklinePath } from "./sparkline-path";
 
-function drawnPoints(container: HTMLElement) {
-  const path = container.querySelector("path")?.getAttribute("d") ?? "";
+const BOX = { width: 80, height: 24, padding: 2 };
+
+function drawnPoints(path: string) {
   return path
     .replace("M ", "")
     .split(" L ")
     .map((point) => point.split(",").map(Number));
 }
 
-describe("Sparkline", () => {
+describe("sparklinePath", () => {
   it("keeps every point of a short series", () => {
-    const { container } = render(<Sparkline data={[1, 3, 2]} columnName="spectrum" />);
-
-    expect(drawnPoints(container)).toEqual([
+    expect(drawnPoints(sparklinePath([1, 3, 2], BOX))).toEqual([
       [2, 22],
       [40, 2],
       [78, 12],
@@ -27,8 +25,7 @@ describe("Sparkline", () => {
     data[12_345] = 10;
     data[6_789] = -10;
 
-    const { container } = render(<Sparkline data={data} columnName="spectrum" />);
-    const points = drawnPoints(container);
+    const points = drawnPoints(sparklinePath(data, BOX));
     const ys = points.map(([, y]) => y);
 
     expect(points.length).toBeLessThanOrEqual(2 * 77);

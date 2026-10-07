@@ -1,6 +1,7 @@
 "use client";
 
 import { LineChart } from "@/components/charts/line-chart";
+import { sparklinePath } from "@/lib/sparkline-path";
 import { X } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
@@ -15,49 +16,11 @@ export type ChartClickHandler = (data: number[], columnName: string) => void;
 const SPARKLINE_WIDTH = 80;
 const SPARKLINE_HEIGHT = 24;
 const SPARKLINE_PADDING = 2;
-
-interface SparklinePoint {
-  index: number;
-  x: number;
-  y: number;
-}
-
-// The lowest and highest point of each pixel column draw the same line as every sample, so a
-// long series costs the page a couple of kilobytes instead of tens.
-function sparklinePath(data: number[]) {
-  const minY = data.reduce((min, value) => Math.min(min, value), Infinity);
-  const maxY = data.reduce((max, value) => Math.max(max, value), -Infinity);
-  const rangeY = maxY - minY || 1;
-  const lastIndex = data.length - 1 || 1;
-  const plotWidth = SPARKLINE_WIDTH - 2 * SPARKLINE_PADDING;
-  const plotHeight = SPARKLINE_HEIGHT - 2 * SPARKLINE_PADDING;
-
-  const columns = new Map<number, { low: SparklinePoint; high: SparklinePoint }>();
-  data.forEach((value, index) => {
-    const point = {
-      index,
-      x: SPARKLINE_PADDING + (index / lastIndex) * plotWidth,
-      y: SPARKLINE_HEIGHT - SPARKLINE_PADDING - ((value - minY) / rangeY) * plotHeight,
-    };
-    const pixel = Math.round(point.x);
-    const column = columns.get(pixel);
-    if (!column) {
-      columns.set(pixel, { low: point, high: point });
-      return;
-    }
-    if (point.y > column.low.y) {
-      column.low = point;
-    }
-    if (point.y < column.high.y) {
-      column.high = point;
-    }
-  });
-
-  const points = [...columns.values()].flatMap(({ low, high }) =>
-    low === high ? [low] : [low, high].sort((a, b) => a.index - b.index),
-  );
-  return `M ${points.map(({ x, y }) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" L ")}`;
-}
+const SPARKLINE_BOX = {
+  width: SPARKLINE_WIDTH,
+  height: SPARKLINE_HEIGHT,
+  padding: SPARKLINE_PADDING,
+};
 
 export function Sparkline({
   data,
@@ -69,7 +32,7 @@ export function Sparkline({
   onClick?: ChartClickHandler;
 }) {
   const { t } = useTranslation("workbook");
-  const path = sparklinePath(data);
+  const path = sparklinePath(data, SPARKLINE_BOX);
   const interactive = !!onClick;
   return (
     <Button
