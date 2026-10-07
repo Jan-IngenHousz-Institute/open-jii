@@ -61,6 +61,9 @@ const nextConfig = {
     // The deploy build prerenders the public pages from Contentful. Three attempts with backoff ride
     // out a rate-limited burst or a stray 5xx; an outage still fails the build.
     staticGenerationRetryCount: 3,
+    // A page visited in the last 30 s is shown again without a server round trip, matching how
+    // long the query cache treats its data as fresh.
+    staleTimes: { dynamic: 30 },
   },
 };
 

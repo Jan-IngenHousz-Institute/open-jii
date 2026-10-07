@@ -1,10 +1,10 @@
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { CompatibleMacrosCell } from "@/components/overview-table/protocol-macros-cell";
 import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { formatShortDate } from "@/util/date";
 import { getSensorFamilyBadgeTone } from "@/util/sensor-family";
-import Link from "next/link";
 
 import type { ProtocolListItem } from "@repo/api/domains/protocol/protocol.schema";
 import { Badge } from "@repo/ui/components/badge";
@@ -25,7 +25,7 @@ export function getProtocolColumns(
       cell: (protocol, href) => (
         <>
           <div className="flex min-w-0 items-center gap-2">
-            <Link
+            <IntentLink
               href={href}
               title={protocol.name}
               onClick={(e) => e.stopPropagation()}
@@ -35,7 +35,7 @@ export function getProtocolColumns(
               )}
             >
               {protocol.name}
-            </Link>
+            </IntentLink>
             {protocol.sortOrder !== null && (
               <Badge className="bg-secondary/30 text-primary shrink-0">
                 {t("common.preferred")}

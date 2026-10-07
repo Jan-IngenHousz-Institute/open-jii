@@ -1,10 +1,10 @@
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { CompatibleProtocolsCell } from "@/components/overview-table/macro-protocols-cell";
 import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { formatShortDate } from "@/util/date";
 import { getMacroLanguageBadgeTone, getMacroLanguageLabel } from "@/util/macro-language";
-import Link from "next/link";
 
 import type { MacroListItem } from "@repo/api/domains/macro/macro.schema";
 import { Badge } from "@repo/ui/components/badge";
@@ -25,7 +25,7 @@ export function getMacroColumns(
       cell: (macro, href) => (
         <>
           <div className="flex min-w-0 items-center gap-2">
-            <Link
+            <IntentLink
               href={href}
               title={macro.name}
               onClick={(e) => e.stopPropagation()}
@@ -35,7 +35,7 @@ export function getMacroColumns(
               )}
             >
               {macro.name}
-            </Link>
+            </IntentLink>
             {macro.sortOrder !== null && (
               <Badge className="bg-secondary/30 text-primary shrink-0">
                 {t("common.preferred")}

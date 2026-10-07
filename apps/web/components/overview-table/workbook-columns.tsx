@@ -1,5 +1,6 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { WorkbookCellSummary } from "@/components/workbook/workbook-cell-summary";
@@ -123,7 +124,7 @@ export function getWorkbookColumns(
       cell: (workbook, href) => (
         <>
           <div className="flex min-w-0 items-center gap-2">
-            <Link
+            <IntentLink
               href={href}
               title={workbook.name}
               onClick={(e) => e.stopPropagation()}
@@ -133,7 +134,7 @@ export function getWorkbookColumns(
               )}
             >
               {workbook.name}
-            </Link>
+            </IntentLink>
             {/* Only when private: "public" is the unremarkable default. */}
             <VisibilityBadge visibility={workbook.visibility} privateOnly className="shrink-0" />
           </div>

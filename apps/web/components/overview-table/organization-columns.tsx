@@ -1,7 +1,7 @@
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import type { OrganizationListItem } from "@/hooks/organization/useOrganizationsList/useOrganizationsList";
 import { FolderOpen, Users } from "lucide-react";
-import Link from "next/link";
 
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
 import { cn } from "@repo/ui/lib/utils";
@@ -19,7 +19,7 @@ export function getOrganizationColumns(
       cell: (organization, href) => (
         <>
           <div className="flex min-w-0 items-center gap-2">
-            <Link
+            <IntentLink
               href={href}
               title={organization.name}
               onClick={(event) => event.stopPropagation()}
@@ -29,7 +29,7 @@ export function getOrganizationColumns(
               )}
             >
               {organization.name}
-            </Link>
+            </IntentLink>
             <VisibilityBadge
               visibility={organization.visibility}
               privateOnly

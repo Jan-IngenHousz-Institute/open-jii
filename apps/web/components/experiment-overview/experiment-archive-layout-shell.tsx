@@ -1,10 +1,10 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { PlatformHeaderDetail } from "@/components/navigation/site-header/platform-header-context";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useLocale } from "@/hooks/useLocale";
-import Link from "next/link";
 import { notFound, usePathname, useParams } from "next/navigation";
 import { ExperimentTitle } from "~/components/experiment-overview/experiment-title";
 
@@ -114,25 +114,29 @@ export function ExperimentArchiveLayoutShell({ children }: ExperimentArchiveLayo
       <NavTabs value={activeTab} className="w-full">
         <NavTabsList>
           <NavTabsTrigger value="overview" asChild>
-            <Link href={`/${locale}/platform/experiments-archive/${id}`}>{t("overview")}</Link>
+            <IntentLink href={`/${locale}/platform/experiments-archive/${id}`}>
+              {t("overview")}
+            </IntentLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="data" asChild>
-            <Link href={`/${locale}/platform/experiments-archive/${id}/data`}>{t("data")}</Link>
+            <IntentLink href={`/${locale}/platform/experiments-archive/${id}/data`}>
+              {t("data")}
+            </IntentLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="analysis" asChild>
-            <Link href={`/${locale}/platform/experiments-archive/${id}/analysis`}>
+            <IntentLink href={`/${locale}/platform/experiments-archive/${id}/analysis`}>
               {t("analysis.title")}
-            </Link>
+            </IntentLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="design" asChild>
-            <Link href={`/${locale}/platform/experiments-archive/${id}/design`}>
+            <IntentLink href={`/${locale}/platform/experiments-archive/${id}/design`}>
               {t("flow.tabLabel")}
-            </Link>
+            </IntentLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="collaborators" asChild>
-            <Link href={`/${locale}/platform/experiments-archive/${id}/collaborators`}>
+            <IntentLink href={`/${locale}/platform/experiments-archive/${id}/collaborators`}>
               {tSettings("experimentSettings.collaborators")}
-            </Link>
+            </IntentLink>
           </NavTabsTrigger>
         </NavTabsList>
 

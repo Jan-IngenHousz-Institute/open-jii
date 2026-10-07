@@ -1,9 +1,9 @@
 import { ExperimentStatusIndicator } from "@/components/experiment/experiment-status-indicator";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { formatShortDate } from "@/util/date";
 import { Users } from "lucide-react";
-import Link from "next/link";
 
 import type { ExperimentListItem } from "@repo/api/domains/experiment/experiment.schema";
 import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
@@ -37,7 +37,7 @@ export function getExperimentColumns(
       cell: (experiment, href) => (
         <>
           <div className="flex min-w-0 items-center gap-2">
-            <Link
+            <IntentLink
               href={href}
               title={experiment.name}
               onClick={(e) => e.stopPropagation()}
@@ -47,7 +47,7 @@ export function getExperimentColumns(
               )}
             >
               {experiment.name}
-            </Link>
+            </IntentLink>
             {/* Only when private: "public" is the unremarkable default. */}
             <VisibilityBadge visibility={experiment.visibility} privateOnly className="shrink-0" />
           </div>
