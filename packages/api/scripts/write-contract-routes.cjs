@@ -9,22 +9,26 @@ const { contract } = require("../dist/contract.js");
 
 const dist = path.join(__dirname, "..", "dist");
 
-fs.writeFileSync(
-  path.join(dist, "contract-routes.js"),
-  [
-    '"use strict";',
-    'Object.defineProperty(exports, "__esModule", { value: true });',
-    `exports.contractRoutes = ${JSON.stringify(minifyContractRouter(contract))};`,
-    "",
-  ].join("\n"),
-);
+// Unchanged files are left alone, so the dev watcher, which reruns this on any change in dist, settles.
+function writeIfChanged(file, lines) {
+  const target = path.join(dist, file);
+  const content = lines.join("\n");
+  if (fs.existsSync(target) && fs.readFileSync(target, "utf8") === content) {
+    return;
+  }
+  fs.writeFileSync(target, content);
+}
 
-fs.writeFileSync(
-  path.join(dist, "contract-routes.d.ts"),
-  [
-    'import type { AnyContractRouter } from "@orpc/contract";',
-    "",
-    "export declare const contractRoutes: AnyContractRouter;",
-    "",
-  ].join("\n"),
-);
+writeIfChanged("contract-routes.js", [
+  '"use strict";',
+  'Object.defineProperty(exports, "__esModule", { value: true });',
+  `exports.contractRoutes = ${JSON.stringify(minifyContractRouter(contract))};`,
+  "",
+]);
+
+writeIfChanged("contract-routes.d.ts", [
+  'import type { AnyContractRouter } from "@orpc/contract";',
+  "",
+  "export declare const contractRoutes: AnyContractRouter;",
+  "",
+]);

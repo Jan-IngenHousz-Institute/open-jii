@@ -28,7 +28,7 @@
   "scripts": {
     "build": "tsc --build --verbose && node scripts/write-contract-routes.cjs",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
-    "dev": "tsc --watch",
+    "dev": "tsc --watch --preserveWatchOutput & node --watch-path=dist scripts/write-contract-routes.cjs",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
