@@ -1,12 +1,21 @@
 import { API_URL } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { QueryClient } from "@tanstack/react-query";
 import { HttpResponse, http } from "msw";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import { useSession } from "@repo/auth/client";
 
 import { NotificationPreferencesCard } from "./notification-preferences-card";
+
+/** A signed-in session for one person, as the hooks read it. */
+const sessionFor = (id: string) =>
+  vi.mocked(useSession).mockReturnValue({
+    data: { user: { id } },
+    isPending: false,
+  } as ReturnType<typeof useSession>);
 
 /** The two categories whose emails exist today are the only toggleable ones. */
 const preferences = [
@@ -64,6 +73,14 @@ function withCategory(category: string, enabled: boolean) {
 }
 
 describe("<NotificationPreferencesCard />", () => {
+  // `clearAllMocks` leaves a per-test `mockReturnValue` in place, and `isolate: false`
+  // shares the module registry with the files after this one.
+  afterEach(() => {
+    vi.mocked(useSession).mockReturnValue({ data: null, isPending: false } as ReturnType<
+      typeof useSession
+    >);
+  });
+
   it("shows one email switch per category with its saved state", async () => {
     server.mount(contract.notifications.getNotificationPreferences, { body: { preferences } });
 
@@ -232,6 +249,39 @@ describe("<NotificationPreferencesCard />", () => {
     expect(await screen.findByText("preferences.error")).toBeVisible();
     expect(screen.queryByRole("switch")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "retry" })).toBeVisible();
+  });
+
+  /**
+   * The QueryClient is module-level and outlives a sign-out — `useSignOut` removes
+   * queries but not mutations — so a failed save sits in the mutation cache for its
+   * gcTime. Without a principal in the mutation key the next person to sign in on the
+   * same tab reads it as their own and is told a change of theirs was not saved.
+   */
+  it("does not show one person's failed save to the next person on the same tab", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } },
+    });
+    server.mount(contract.notifications.getNotificationPreferences, { body: { preferences } });
+    server.mount(contract.notifications.updateNotificationPreference, { status: 500 });
+    const user = userEvent.setup();
+
+    sessionFor("user-a");
+    const asUserA = render(<NotificationPreferencesCard />, { queryClient: client });
+    await user.click((await screen.findAllByRole("switch"))[REQUESTS]);
+    expect(await screen.findByText("preferences.updateError")).toBeVisible();
+    asUserA.unmount();
+
+    // Same tab, same client, somebody else now signed in.
+    sessionFor("user-b");
+    const asUserB = render(<NotificationPreferencesCard />, { queryClient: client });
+    await screen.findAllByRole("switch");
+    expect(screen.queryByText("preferences.updateError")).not.toBeInTheDocument();
+    asUserB.unmount();
+
+    // Still theirs, so this is scoping rather than the cache having been emptied.
+    sessionFor("user-a");
+    render(<NotificationPreferencesCard />, { queryClient: client });
+    expect(await screen.findByText("preferences.updateError")).toBeVisible();
   });
 
   it("keeps the switches and reports a failed save", async () => {

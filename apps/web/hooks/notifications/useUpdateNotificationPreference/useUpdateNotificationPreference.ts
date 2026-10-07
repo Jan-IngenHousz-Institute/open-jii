@@ -1,3 +1,4 @@
+import { withPrincipal } from "@/hooks/principal-query-key";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -5,6 +6,16 @@ import type { NotificationPreferences } from "@repo/api/domains/notification/not
 import { useSession } from "@repo/auth/client";
 
 import { notificationPreferencesKey } from "../useNotificationPreferences/useNotificationPreferences";
+
+/**
+ * Scoped by principal like the query it writes into. The QueryClient is
+ * module-level and `useSignOut` removes queries but not mutations, so an
+ * unscoped key would let a failed save by the person who just signed out be
+ * read as the next person's — their switches would carry a save error from an
+ * account they never used.
+ */
+export const notificationPreferenceMutationKey = (userId: string | undefined) =>
+  withPrincipal(orpc.notifications.updateNotificationPreference.mutationKey(), userId);
 
 /**
  * Identifies a preference row the way the backend's resolve does. Widened to
@@ -29,8 +40,8 @@ export const useUpdateNotificationPreference = () => {
   const queryClient = useQueryClient();
   const { data: session } = useSession();
 
-  return useMutation(
-    orpc.notifications.updateNotificationPreference.mutationOptions({
+  return useMutation({
+    ...orpc.notifications.updateNotificationPreference.mutationOptions({
       onSuccess: (data, variables) => {
         queryClient.setQueryData<NotificationPreferences>(
           notificationPreferencesKey(session?.user.id),
@@ -51,5 +62,6 @@ export const useUpdateNotificationPreference = () => {
         );
       },
     }),
-  );
+    mutationKey: notificationPreferenceMutationKey(session?.user.id),
+  });
 };

@@ -1,17 +1,12 @@
 "use client";
 
 import { SettingsCard } from "@/components/shared/settings-card";
+import { useNotificationPreferenceSaves } from "@/hooks/notifications/useNotificationPreferenceSaves/useNotificationPreferenceSaves";
 import { useNotificationPreferences } from "@/hooks/notifications/useNotificationPreferences/useNotificationPreferences";
 import { useUpdateNotificationPreference } from "@/hooks/notifications/useUpdateNotificationPreference/useUpdateNotificationPreference";
-import { orpc } from "@/lib/orpc";
-import { useMutationState } from "@tanstack/react-query";
 import { AlertCircle, Loader2 } from "lucide-react";
 
-import type {
-  NotificationCategory,
-  NotificationPreference,
-  UpdateNotificationPreferenceBody,
-} from "@repo/api/domains/notification/notification.schema";
+import type { NotificationPreference } from "@repo/api/domains/notification/notification.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Switch } from "@repo/ui/components/switch";
@@ -20,34 +15,7 @@ export function NotificationPreferencesCard() {
   const { t } = useTranslation("notifications");
   const preferencesQuery = useNotificationPreferences();
   const update = useUpdateNotificationPreference();
-
-  /**
-   * Every save, not just the latest. A `useMutation` result tracks only its most
-   * recent call, so with two flips in flight the first switch would re-enable
-   * early and a failure of it would be reported as the second one's.
-   */
-  const saves = useMutationState({
-    filters: { mutationKey: orpc.notifications.updateNotificationPreference.mutationKey() },
-    select: (mutation) => ({
-      status: mutation.state.status,
-      category: (mutation.state.variables as UpdateNotificationPreferenceBody | undefined)
-        ?.category,
-    }),
-  });
-
-  const savingCategories = new Set(
-    saves.filter((save) => save.status === "pending").map((save) => save.category),
-  );
-  // Insertion order is submission order, so a later save of the same category
-  // overwrites the verdict of an earlier one: one success clears its own error.
-  const settled = new Map<NotificationCategory, string>();
-  for (const save of saves) {
-    if (save.category === undefined || save.status === "pending" || save.status === "idle") {
-      continue;
-    }
-    settled.set(save.category, save.status);
-  }
-  const hasFailedSave = [...settled.values()].includes("error");
+  const { savingCategories, hasFailedSave } = useNotificationPreferenceSaves();
 
   const retry = () => void preferencesQuery.refetch();
 
