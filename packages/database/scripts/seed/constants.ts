@@ -1,6 +1,7 @@
 /** What every seed module agrees the seed owns, so a clear-out finds exactly those rows. */
 
 export const SEED_EMAIL = "seed@openjii.local";
+export const NEWCOMER_EMAIL = "newcomer@openjii.local";
 export const SEED_PREFIX = "[Seed]%";
 
 // Fixed UUIDs so two seeded experiments line up with measurement data in

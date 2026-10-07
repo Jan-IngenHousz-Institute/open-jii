@@ -4,7 +4,7 @@
     "capturedOn": "2026-08-28",
     "surface": "apps/web on the local development stack",
     "environment": "local",
-    "account": "seed@openjii.local (seeded development identity)",
+    "account": "seed@openjii.local and newcomer@openjii.local (seeded development identities)",
     "data": "pnpm --filter database db:seed fixtures only",
     "frame": "1920x1200 desktop, rendered and published 1:1; see media/web/README.md",
     "captureMethod": "pnpm --filter @repo/e2e capture-docs-media; Playwright at 1920x1200, then ffmpeg metadata strip plus libwebp quality 90 for stills and libvpx-vp9 for recordings",
@@ -24,7 +24,8 @@
       "experiment-devices (captured 2026-09-03): the roster comes from a local experiment whose id mirrors a dev-lakehouse experiment with published Ambyte data, so the measurement counts are real dev data; device names are local labels and the client ids are dev gateway MAC addresses, not personal data. The iot-devices flag is pinned in the browser by the capture tool (see featureFlags in shots.ts); the backend evaluated the real flag.",
       "experiments-list, organizations-list and workbooks-list were recaptured on 2026-09-28 at 1920x1200 from the local stack with the seeded development identity; each shows Name sorted ascending. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp. The Experiments shot includes the current data-processing status banner.",
       "protocols-list and macros-list were recaptured on 2026-09-28 at 1920x1200 from the local stack with the seeded development identity; each shows Name sorted ascending. Frames were reviewed at full size and show only seeded protocol/macro names. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp. Both captures include the current data-processing status banner.",
-      "dashboard recaptured on 2026-09-29 at 1920x1200 with the seeded development identity. Reviewed the full frame: it shows seeded experiments and user only, with no credentials, precise locations or dev overlays. The community measurement banner and CMS blog cards are visible; one blog image is the pre-refresh dashboard. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp."
+      "dashboard recaptured on 2026-09-29 at 1920x1200 with the seeded development identity. Reviewed the full frame: it shows seeded experiments and user only, with no credentials, precise locations or dev overlays. The community measurement banner and CMS blog cards are visible; one blog image is the pre-refresh dashboard. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
+      "dashboard-first-work captured on 2026-10-05 at 1920x1200 with newcomer@openjii.local, an activated seeded identity with no experiment grants or shared organization memberships. The related-experiments row shows the three first-work cards. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp."
     ]
   },
   "assets": [
@@ -38,6 +39,17 @@
       "sha256": "271ad93c3a30622d88d5fe27619bf8850c23ce1d068e6fc0f2fd6bc71d0dfc32",
       "disposition": "published",
       "scope": "Authenticated dashboard: welcome card, recent experiments, recently updated public experiments and compact contextual header"
+    },
+    {
+      "path": "/img/guide/web/dashboard-first-work.webp",
+      "slug": "dashboard-first-work",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 179194,
+      "sha256": "3da4c35298147a0935dbd7018886663150bdb9475f8fe199496da35216fac3eb",
+      "disposition": "published",
+      "scope": "Dashboard empty state with the three first-work cards in the recent experiments row"
     },
     {
       "path": "/img/guide/web/experiments-list.webp",

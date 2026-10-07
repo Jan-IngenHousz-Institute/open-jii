@@ -21,6 +21,8 @@ export interface Shot {
   readonly webauthn?: boolean;
   /** Capture without a session. Default is the seeded development session. */
   readonly anonymous?: boolean;
+  /** Authenticated identity to capture as. Defaults to the seeded account. */
+  readonly session?: "seed" | "newcomer";
   /**
    * PostHog flags pinned on in the browser for this shot. The client SDK runs
    * cookieless until consent settles and reports no flags in that state, so a
@@ -106,6 +108,14 @@ export const SHOTS: readonly Shot[] = [
     frame: "desktop",
     route: "/platform",
     scope: "Authenticated dashboard: welcome card, recent experiments, compact contextual header",
+  },
+  {
+    slug: "dashboard-first-work",
+    publish: "img/guide/web/dashboard-first-work.webp",
+    frame: "desktop",
+    route: "/platform",
+    session: "newcomer",
+    scope: "Dashboard empty state with the three first-work cards in the recent experiments row",
   },
   {
     slug: "experiments-list",
