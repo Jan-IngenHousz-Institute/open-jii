@@ -1,10 +1,10 @@
-import { ContentfulLivePreview } from "@/components/contentful-live-preview";
 import { TranslationsProvider } from "@/components/translations-provider";
 import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
 import React from "react";
 import type { ReactNode } from "react";
 
+import { ContentfulPreviewProvider } from "@repo/cms/contentful";
 import { isKnownLocale } from "@repo/i18n";
 import type { Namespace } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
@@ -38,31 +38,22 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
 
   const { resources } = await initTranslations({ locale, namespaces: PAGE_NAMESPACES });
 
-  const page = (
-    <TranslationsProvider locale={locale} namespaces={PAGE_NAMESPACES} resources={resources}>
-      <AlertsBar locale={locale} preview={preview} />
-      <QueryProvider>
-        <PostHogIdentifier />
-        {children}
-      </QueryProvider>
-    </TranslationsProvider>
-  );
-
-  // Outside preview the CMS hooks find no provider and stay inert, as they did with it disabled.
   return (
     <div className="bg-background flex h-full min-h-screen flex-col antialiased">
-      {preview ? (
-        <ContentfulLivePreview
-          locale={locale}
-          enableInspectorMode
-          enableLiveUpdates
-          targetOrigin={allowedOriginList}
-        >
-          {page}
-        </ContentfulLivePreview>
-      ) : (
-        page
-      )}
+      <ContentfulPreviewProvider
+        locale={locale}
+        enableInspectorMode={preview}
+        enableLiveUpdates={preview}
+        targetOrigin={allowedOriginList}
+      >
+        <TranslationsProvider locale={locale} namespaces={PAGE_NAMESPACES} resources={resources}>
+          <AlertsBar locale={locale} preview={preview} />
+          <QueryProvider>
+            <PostHogIdentifier />
+            {children}
+          </QueryProvider>
+        </TranslationsProvider>
+      </ContentfulPreviewProvider>
     </div>
   );
 }

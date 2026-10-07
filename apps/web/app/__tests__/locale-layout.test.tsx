@@ -7,10 +7,8 @@ import initTranslations from "@repo/i18n/server";
 
 import Layout from "../[locale]/layout";
 
-vi.mock("@/components/contentful-live-preview", () => ({
-  ContentfulLivePreview: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="live-preview">{children}</div>
-  ),
+vi.mock("@repo/cms/contentful", () => ({
+  ContentfulPreviewProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("@/components/translations-provider", () => ({
@@ -61,13 +59,5 @@ describe("LocaleLayout", () => {
     }).catch(() => undefined);
 
     expect(notFound).toHaveBeenCalled();
-  });
-
-  it("leaves the live-preview SDK out unless an editor is previewing", async () => {
-    render(
-      await Layout({ children: <div>Content</div>, params: Promise.resolve({ locale: "en-US" }) }),
-    );
-
-    expect(screen.queryByTestId("live-preview")).not.toBeInTheDocument();
   });
 });
