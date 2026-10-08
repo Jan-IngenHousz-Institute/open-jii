@@ -27,7 +27,8 @@
       "dashboard recaptured on 2026-09-29 at 1920x1200 with the seeded development identity. Reviewed the full frame: it shows seeded experiments and user only, with no credentials, precise locations or dev overlays. The community measurement banner and CMS blog cards are visible; one blog image is the pre-refresh dashboard. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
       "notification-settings and notifications-bell were retaken on 2026-10-06 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only notification-settings,notifications-bell. notification-settings is the Notifications tab after its card dropped the header icon, so the account tabs read alike; it shows the seven switches at their registry defaults and names no experiment, organization or person. notifications-bell was retaken because the bell header gained a settings gear: the frame was reviewed at full size and every experiment in the recently-updated grid behind the popover belongs to a seeded persona (Sofie Janssen, Maya Rasmussen, Noah Visser, all @orgseed.local), with no developer-authored row in frame. The CMS blog artwork still carries a screenshot of the pre-refresh dashboard, as note 6 records. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
       "notification-settings retaken on 2026-10-06 at 1920x1200 after only categories with a live email producer became switchable: Requests and invitations and Membership and access are on and enabled, the four categories whose notifications do not email yet are off, disabled and labelled Not available yet, and Account security stays checked and locked with Always on. Reviewed at full size with the seeded development identity; no experiment, organization or person is named in the frame. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp. The bell shot is unaffected and was not retaken.",
-      "dashboard-first-work captured on 2026-10-05 at 1920x1200 with newcomer@openjii.local, an activated seeded identity with no experiment grants or shared organization memberships. The related-experiments row shows the three first-work cards. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp."
+      "dashboard-first-work captured on 2026-10-05 at 1920x1200 with newcomer@openjii.local, an activated seeded identity with no experiment grants or shared organization memberships. The related-experiments row shows the three first-work cards. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
+      "notification-settings retaken on 2026-10-08 at 1920x1200 after project transfers moved onto dispatch and the Project transfers switch went live: Requests and invitations, Membership and access and Project transfers are on and enabled, the three categories whose notifications do not email yet are off, disabled and labelled Not available yet, and Account security stays checked and locked with Always on. Reviewed at full size with the seeded development identity; no experiment, organization or person is named in the frame. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp."
     ]
   },
   "assets": [
@@ -378,10 +379,10 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 64796,
-      "sha256": "963335aaf842574b3fdffc8ebc3585b3d006491311ce3c1f74e5b0ee19843ba1",
+      "bytes": 63706,
+      "sha256": "a6200f2e2135858fa6d536983cab76e51ef733b41bddacb6f9f056efa1837706",
       "disposition": "published",
-      "scope": "Notifications tab in account settings: the two switchable categories, the four not yet available, and Account security locked on"
+      "scope": "Notifications tab in account settings: the three switchable categories, the three not yet available, and Account security locked on"
     },
     {
       "path": "/img/guide/web/account-security/passkeys-table.webp",

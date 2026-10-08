@@ -228,7 +228,7 @@ describe("NotificationController", () => {
     /**
      * `available` is derived from the email table, not listed anywhere: a category
      * offers its switch once one of its `preference` types has an email behind it.
-     * Today that is join requests and their decisions, and nothing else.
+     * Today that is join requests, their decisions and project transfers, and nothing else.
      */
     it("marks only the categories whose emails exist today as available", async () => {
       const response: SuperTestResponse<NotificationPreferences> = await testApp
@@ -241,7 +241,11 @@ describe("NotificationController", () => {
         .map((preference) => preference.category)
         .sort();
 
-      expect(available).toEqual(["membership_and_access", "requests_and_invitations"]);
+      expect(available).toEqual([
+        "membership_and_access",
+        "project_transfers",
+        "requests_and_invitations",
+      ]);
     });
 
     it("saves one category without touching the others or other people", async () => {
