@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
           ref: ${{ inputs.ref || github.ref_name }}
@@ -78,9 +78,10 @@ jobs:
 
       - name: Find previous release branch
         id: prev
+        env:
+          RELEASE_BRANCH: ${{ inputs.ref || github.ref_name }}
         run: |
           git fetch --all
-          RELEASE_BRANCH="${{ inputs.ref || github.ref_name }}"
           RELEASE_DATE="${RELEASE_BRANCH#release/}"
           to_sortable() { local d="$1"; echo "${d:4:4}${d:2:2}${d:0:2}"; }
           CURRENT_SORTABLE=$(to_sortable "$RELEASE_DATE")
@@ -111,7 +112,7 @@ jobs:
           echo "base_ref=$BASE_REF" >> $GITHUB_OUTPUT
 
       - name: Sync Linear release
-        uses: linear/linear-release-action@v0
+        uses: linear/linear-release-action@30f9ae77461ec29f07fffe0c52edd1909bfbb6f5 # v0.18.1
         with:
           access_key: ${{ secrets.LINEAR_ACCESS_KEY_WEB }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -123,7 +124,7 @@ jobs:
           dry_run: ${{ inputs.dry_run }}
 
       - name: Complete Linear release
-        uses: linear/linear-release-action@v0
+        uses: linear/linear-release-action@30f9ae77461ec29f07fffe0c52edd1909bfbb6f5 # v0.18.1
         with:
           access_key: ${{ secrets.LINEAR_ACCESS_KEY_WEB }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -141,9 +142,10 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Label PRs with release label
         env:

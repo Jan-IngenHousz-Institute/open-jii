@@ -16,12 +16,12 @@ runs:
   using: "composite"
   steps:
     - name: Setup OpenTofu
-      uses: opentofu/setup-opentofu@v2.0.0
+      uses: opentofu/setup-opentofu@fc711fa910b93cba0f3fbecaafc9f42fd0c411cb # v2.0.0
       with:
         tofu_version: ${{ inputs.tofu_version }}
 
     - name: Cache OpenTofu Plugins
-      uses: actions/cache@v6
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/.terraform.d/plugin-cache
         key: ${{ runner.os }}-tofu-${{ hashFiles('**/*.tf') }}
@@ -29,7 +29,7 @@ runs:
           ${{ runner.os }}-tofu-
 
     - name: Configure AWS Credentials via OIDC
-      uses: aws-actions/configure-aws-credentials@v6
+      uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
       with:
         role-to-assume: ${{ inputs.aws_role_arn }}
         aws-region: ${{ inputs.aws_region }}

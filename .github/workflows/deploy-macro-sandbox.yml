@@ -7,9 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "The deployment environment (dev, staging, prod)"
+        description: "The deployment environment (dev, prod)"
         required: true
-        type: string
+        type: choice
+        options:
+          - dev
+          - prod
       ref:
         description: "Git ref (commit SHA, branch, or tag) to deploy - leave empty to deploy current branch latest commit"
         required: false
@@ -23,7 +26,7 @@ on:
   workflow_call:
     inputs:
       environment:
-        description: "The deployment environment (dev, staging, prod)"
+        description: "The deployment environment (dev, prod)"
         required: true
         type: string
       ref:
@@ -54,11 +57,21 @@ jobs:
       matrix:
         language: ${{ fromJSON(inputs.languages) }}
     steps:
+      - name: Validate environment
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+        run: |
+          case "$TARGET_ENV" in
+            dev | prod) ;;
+            *) echo "::error::Unknown environment '$TARGET_ENV'"; exit 1 ;;
+          esac
+
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
           ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
 
       - name: Get Checked Out SHA
         id: get-sha
@@ -71,14 +84,14 @@ jobs:
         uses: ./.github/actions/capture-dora-start
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
 
       - name: Set environment variables
         run: |

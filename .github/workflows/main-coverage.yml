@@ -19,9 +19,10 @@ jobs:
       TURBO_TELEMETRY_DISABLED: 1
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       # The coverage artifact is uploaded by the PR run and keyed off the PR head
       # SHA. On main the commit is the squash-merge SHA (different), and the
@@ -64,7 +65,7 @@ jobs:
       - name: Try to download coverage artifacts
         id: download
         if: steps.locate.outputs.found == 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         continue-on-error: true
         with:
           name: ${{ steps.locate.outputs.artifact_name }}
@@ -111,7 +112,7 @@ jobs:
 
       - name: Upload coverage to Codecov for main branch
         if: steps.collect.outputs.files != ''
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ steps.collect.outputs.files }}

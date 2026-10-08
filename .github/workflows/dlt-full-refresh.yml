@@ -81,11 +81,13 @@ jobs:
           databricks pipelines update "$PID" --json @/tmp/spec.json
 
       - name: Trigger full-refresh and wait for completion
+        env:
+          REASON: ${{ inputs.reason }}
         run: |
           set -euo pipefail
           BODY=$(jq -Rnc --arg s "$TABLES" '{full_refresh_selection: ($s | split(",") | map(gsub("^\\s+|\\s+$"; ""))), cause: "API_CALL"}')
           UID=$(databricks pipelines start-update "$PID" --json "$BODY" | jq -r '.update_id')
-          echo "::notice::Update $UID started (${{ inputs.reason }})"
+          echo "::notice::Update $UID started ($REASON)"
           for _ in $(seq 1 240); do
             STATE=$(databricks pipelines get-update "$PID" "$UID" -o json | jq -r '.update.state')
             case "$STATE" in
