@@ -1,6 +1,8 @@
 "use client";
 
-import { lazy, Suspense, useSyncExternalStore } from "react";
+import { lazy, Suspense } from "react";
+
+import { useInView } from "@repo/ui/hooks/use-in-view";
 
 import { CodeEditorPlaceholder } from "./code-editor-placeholder";
 import type { CodeEditorProps } from "./code-editor-view";
@@ -13,18 +15,17 @@ const CodeEditorView = lazy(() =>
   import("./code-editor-view").then((module) => ({ default: module.CodeEditorView })),
 );
 
-const subscribeToNothing = () => () => undefined;
+// A screen ahead, as dashboard widgets do. Mounting every editor of a long workbook in one commit
+// blocked the page for half a second at 4x CPU.
+const ROOT_MARGIN = "100% 0px";
 
 export function CodeEditor(props: CodeEditorProps) {
   // False on the server and while hydrating, so both render the same placeholder.
-  const isHydrated = useSyncExternalStore(
-    subscribeToNothing,
-    () => true,
-    () => false,
-  );
+  const [placeholderRef, isNearViewport] = useInView<HTMLPreElement>({ rootMargin: ROOT_MARGIN });
 
   const placeholder = (
     <CodeEditorPlaceholder
+      ref={placeholderRef}
       value={props.value}
       density={props.density}
       height={props.height}
@@ -33,7 +34,7 @@ export function CodeEditor(props: CodeEditorProps) {
     />
   );
 
-  if (!isHydrated) {
+  if (!isNearViewport) {
     return placeholder;
   }
 

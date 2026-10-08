@@ -1,6 +1,7 @@
+import { stubIntersectionObserver } from "@/test/intersection-observer";
 import { render, screen } from "@/test/test-utils";
 import { renderToString } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CodeEditor } from "../code-editor";
 
@@ -11,6 +12,10 @@ vi.mock("../code-editor-view", () => ({
 }));
 
 describe("CodeEditor", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("renders the code as text on the server, where CodeMirror cannot draw", () => {
     const html = renderToString(<CodeEditor value='{"steps": 3}' language="json" />);
 
@@ -18,8 +23,15 @@ describe("CodeEditor", () => {
     expect(html).not.toContain("codemirror");
   });
 
-  it("swaps the text for the editor once CodeMirror has loaded", async () => {
+  it("keeps an editor far down the page as text until it comes within a screen", async () => {
+    const { intersect, rootMargins } = stubIntersectionObserver();
     render(<CodeEditor value='{"steps": 3}' language="json" />);
+
+    expect(screen.getByText('{"steps": 3}')).toBeInTheDocument();
+    expect(screen.queryByTestId("codemirror")).toBeNull();
+    expect(rootMargins()).toEqual(["100% 0px"]);
+
+    intersect(true);
 
     expect(await screen.findByTestId("codemirror")).toHaveTextContent('{"steps": 3}');
   });
