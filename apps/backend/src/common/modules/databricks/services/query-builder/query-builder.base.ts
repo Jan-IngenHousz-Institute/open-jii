@@ -1,6 +1,6 @@
 import { buildAggregateExpression } from "./expressions/aggregation";
 import { buildCumsumExpression } from "./expressions/cumsum";
-import { buildFilterCondition } from "./expressions/filter";
+import { buildFilterCondition, contributorPseudonym } from "./expressions/filter";
 import { buildTimeBucketExpression } from "./expressions/time-bucket";
 import { buildWidthBucketExpression } from "./expressions/width-bucket";
 import type {
@@ -191,15 +191,23 @@ export class SqlQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
-  orderBy(column: string, direction: "ASC" | "DESC" = "ASC"): this {
+  orderBy(
+    column: string,
+    direction: "ASC" | "DESC" = "ASC",
+    contributorPseudonymSalt?: string,
+  ): this {
     // Struct field paths (e.g. "contributor.name") escape per segment.
-    if (column.includes(".")) {
-      const parts = column.split(".");
-      const escapedParts = parts.map((part) => this.escapeIdentifier(part));
-      this.orderByClause = `${escapedParts.join(".")} ${direction}`;
-    } else {
-      this.orderByClause = `${this.escapeIdentifier(column)} ${direction}`;
-    }
+    const target = column.includes(".")
+      ? column
+          .split(".")
+          .map((part) => this.escapeIdentifier(part))
+          .join(".")
+      : this.escapeIdentifier(column);
+    const sorted =
+      contributorPseudonymSalt === undefined
+        ? target
+        : contributorPseudonym(target, contributorPseudonymSalt, this);
+    this.orderByClause = `${sorted} ${direction}`;
     return this;
   }
 
@@ -274,7 +282,11 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
   private variantColumns: FlattenedSource[] = [];
   private reservedColumns: string[] = [];
   private whereConditions: string[] = [];
-  private ordering?: { column: string; direction: "ASC" | "DESC" };
+  private ordering?: {
+    column: string;
+    direction: "ASC" | "DESC";
+    contributorPseudonymSalt?: string;
+  };
   private limitValue?: number;
   private offsetValue?: number;
   private exceptColumns: string[] = [];
@@ -311,8 +323,12 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     return this;
   }
 
-  orderBy(column: string, direction: "ASC" | "DESC" = "ASC"): this {
-    this.ordering = { column, direction };
+  orderBy(
+    column: string,
+    direction: "ASC" | "DESC" = "ASC",
+    contributorPseudonymSalt?: string,
+  ): this {
+    this.ordering = { column, direction, contributorPseudonymSalt };
     return this;
   }
 
@@ -349,7 +365,7 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     const where =
       this.whereConditions.length > 0 ? `WHERE ${this.whereConditions.join(" AND ")}` : "";
     const order = this.ordering
-      ? `ORDER BY ${this.orderTarget(this.ordering.column)} ${this.ordering.direction}`
+      ? `ORDER BY ${this.sortExpression(this.ordering)} ${this.ordering.direction}`
       : "";
     const limitClause = this.limitValue ? `LIMIT ${this.limitValue}` : "";
     const offsetClause = this.offsetValue ? `OFFSET ${this.offsetValue}` : "";
@@ -397,6 +413,19 @@ export class VariantQueryBuilder extends BaseQueryBuilder {
     return expression === undefined
       ? this.escapeIdentifier(column)
       : `${expression} AS ${this.quoteName(column)}`;
+  }
+
+  private sortExpression({
+    column,
+    contributorPseudonymSalt,
+  }: {
+    column: string;
+    contributorPseudonymSalt?: string;
+  }): string {
+    const target = this.orderTarget(column);
+    return contributorPseudonymSalt === undefined
+      ? target
+      : contributorPseudonym(target, contributorPseudonymSalt, this);
   }
 
   /** A projected field sorts by its output name, which DISTINCT requires; any other column by

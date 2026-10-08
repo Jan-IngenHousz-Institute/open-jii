@@ -1,6 +1,7 @@
 "use client";
 
 import { Filter } from "lucide-react";
+import { useId } from "react";
 import { useFormContext } from "react-hook-form";
 
 import type { ExperimentFilterWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
@@ -8,7 +9,9 @@ import type { ExperimentDataFilterValue } from "@repo/api/domains/experiment/dat
 import { useTranslation } from "@repo/i18n";
 
 import { FilterValueInput } from "../../../data-filters/value-input";
+import { useDashboardFilterWidget } from "../../dashboard-filters-context";
 import type { DashboardFormValues } from "../../dashboard-form-shell";
+import { FilterIssueMessage } from "./filter-issue-message";
 import { useFilterWidgetConfig } from "./use-filter-widget-config";
 
 interface FilterWidgetEditorProps {
@@ -24,6 +27,8 @@ export function FilterWidgetEditor({ widget, experimentId, widgetIndex }: Filter
     widget,
     experimentId,
   );
+  const { issue } = useDashboardFilterWidget(widget.id);
+  const issueId = useId();
 
   const handleChange = (next: ExperimentDataFilterValue) => {
     form.setValue(
@@ -60,7 +65,9 @@ export function FilterWidgetEditor({ widget, experimentId, widgetIndex }: Filter
         onChange={handleChange}
         experimentId={experimentId}
         tableName={tableName}
+        errorMessageId={issue ? issueId : undefined}
       />
+      {issue && <FilterIssueMessage id={issueId} issue={issue} />}
       <p className="text-muted-foreground/80 text-[10px]">
         {t("editor.filterConfig.defaultValueHint")}
       </p>

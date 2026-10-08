@@ -1,6 +1,6 @@
 ---
 name: openjii-daily-round
-description: Run the daily round over the platform heartbeat. Use once a day, or after time away, to find out whether the platform needs a person before anybody reports a problem. Reads Grafana's alert state, the two report dashboards and PostHog's open error issues, says what changed since the last round, and hands off to openjii-triage for anything that needs digging.
+description: Run the daily round over the platform heartbeat. Use once a day, or after time away, to find out whether the platform needs a person before anybody reports a problem. Reads Grafana's alert state and the daily report through the devkit with one Grafana token per environment, says what fired, continued and cleared over the window, and hands off to openjii-triage for anything that needs digging.
 ---
 
 # The daily round
@@ -13,112 +13,119 @@ Run it once a day, whenever suits. After a few days away you run it once over th
 Your output is a verdict a person can act on in under a minute on a quiet day. Lead with whether
 anything needs a human. Everything else is supporting detail.
 
-## What you are reading
+## 0. What you need
 
-Grafana carries the alerts and the numbers; errors live in PostHog (step 4). Alerts fire and resolve
-in Grafana and post to the one Slack channel through Grafana's own notification. The two report dashboards, generated from
-`docs/monitoring/metrics-catalog.yaml`, are where the numbers live:
+The round itself needs one credential per environment: a token for the `daily-round` Viewer
+account, which a developer mints and stores with `pnpm grafana:auth <env>`. Everything else is for
+triage, once the round has found something. AWS SSO (the `openjii-prod` and `openjii-dev`
+profiles) reaches CloudWatch and the heartbeat files, and the devkit's PostHog key reaches an error
+issue's detail and marks noise. A missing triage credential is no reason to stop: carry on, and
+name the step it would have taken in your report.
 
-| Dashboard uid            | Reads                                                                | Default window |
-| ------------------------ | -------------------------------------------------------------------- | -------------- |
-| `<env>-heartbeat-daily`  | what is firing, errors, the data path, rule-backed signals, levels   | 24 hours       |
-| `<env>-heartbeat-weekly` | usage, data path and platform against the week before, 90-day trends | 7 days         |
-| `<env>-heartbeat-errors` | the error inbox: every open issue with exceptions, by service        | 7 days         |
-
-Every alert rule claims a catalogue entry, and every such entry is a row on the daily report's board,
-ordered Web, API and database, Ingest, Lakehouse, Sandboxes. Entries without a rule are the level
-tiles beneath it. An entry's chart has its `num` as panel id, so `?viewPanel=<num>` opens it, with
-the rule's firing and clearing marked on it.
-
-For a closer look, three dashboards follow a thing through the platform hop by hop, and every
-report signal links to the one it sits on:
-
-| Dashboard uid         | Follows                                                                        |
-| --------------------- | ------------------------------------------------------------------------------ |
-| `<env>-platform`      | a researcher's request: site, page server, API, database, calibration sandbox  |
-| `<env>-data-pipeline` | a device's measurement: IoT Core, the Kinesis stream, lakehouse, macro sandbox |
-| `<env>-delivery`      | deploys per service: how often, how many failed, lead time                     |
-
-`<env>-throughput-storage` sits beside them: the ingest stream's throughput against its limits,
-and every store's size and growth.
-
-The workspace API needs a service account token. Mint one against the workspace with the AWS CLI
-and keep it in your shell for the session, never in a file in the repository:
+## 1. Read the environment
 
 ```bash
-WORKSPACE=$(aws grafana list-workspaces --profile openjii-<env> --region eu-central-1 \
-  --query 'workspaces[0].id' --output text)
-ENDPOINT=https://$(aws grafana describe-workspace --profile openjii-<env> --region eu-central-1 \
-  --workspace-id "$WORKSPACE" --query 'workspace.endpoint' --output text)
+pnpm round:read prod
+pnpm round:read dev
 ```
 
-The token itself comes from a service account in that workspace (`aws grafana
-create-workspace-service-account-token`); ask for one if you have none. Then:
+If it refuses the Grafana token as missing or expired, ask the person to mint one and store it as
+`tooling/devkit/README.md` shows, and wait. Never mint a token yourself, and never look for one in
+env files or credential stores.
+
+Each writes `.claude/round/<env>.json`. Invoked with an environment, as the daily report's header
+link does, read that one; otherwise read prod first, then dev. The window is the last 24 hours, or
+back to Friday on a Monday. After time away, pass `--since <date of the last round>` so the window
+covers the gap. The window stands in for a record of the previous round, so nothing needs saving
+between rounds.
+
+The file is too large to read whole; take it apart with `jq`:
+
+- `unavailable`: what could not be read. Everything here goes into your report.
+- `rules`: every alert rule, with its `state` (`firing`, `pending`, `inactive`), `health` (`ok`,
+  `error`, `nodata`), `activeSince`, `lastError` and `metricId`.
+- `delta`: the rules that started firing inside the window (`new`), fired since before it
+  (`continuing`, with days), or fired or resolved inside it and are quiet now (`cleared`).
+- `changes`: every state change Grafana recorded inside the window, oldest first.
+- `panels`: the daily report's open panels over the window. Each series has its `min`, `max`,
+  `last` and `sum`, and the `red` stretches where a reading passed its limit; charts keep `points`.
 
 ```bash
-# Every rule, with its current state and how long it has been in it.
-curl -s -H "Authorization: Bearer $GRAFANA_TOKEN" "$ENDPOINT/api/prometheus/grafana/api/v1/rules" \
-  | jq -r '.data.groups[] | .name as $g | .rules[] | "\(.state)\t\($g)\t\(.name)\t\(.labels.metric_id // "-")"'
-
-# Only what is firing right now, with when it started.
-curl -s -H "Authorization: Bearer $GRAFANA_TOKEN" "$ENDPOINT/api/alertmanager/grafana/api/v2/alerts" \
-  | jq -r '.[] | "\(.labels.alertname)\t\(.labels.severity)\t\(.startsAt)\t\(.annotations.summary // "")"'
+jq '.unavailable, .delta' .claude/round/prod.json
+jq -r '.rules[] | select(.state != "inactive" or .health != "ok") | [.state, .health, .name, .metricId] | @tsv' .claude/round/prod.json
+jq '.panels[] | select(.id == 901) | .series[] | select(.red != []) | {name, red}' .claude/round/prod.json
 ```
+
+Two parts are unconfirmed on Amazon Managed Grafana until a round reads them: that it records alert
+state changes as annotations, which `changes` and `cleared` come from, and that the PostHog panels
+answer through the API as they do in the browser. A rule in `delta.new` started firing inside the
+window, so `changes` must hold its move to `Alerting`. If it does not, or a PostHog panel sits in
+`unavailable`, say so in the report, so the person can fix the skill.
 
 `docs/monitoring/metrics-catalog.yaml` is the source of truth for what every rule and panel means.
 Do not infer a metric's meaning from its name; look the id up.
 
-## 1. Is the reporting itself alive
+## 2. Is the reporting itself alive
 
-Before reading any state, confirm the signals are arriving. The `Heartbeat Collector Dead-Man` and
+Before trusting any state, confirm the signals are arriving. The `Heartbeat Collector Dead-Man` and
 `Metrics Forwarder Errors` rules cover the lakehouse path; if either is firing, every lakehouse
 panel is stale and nothing else about them is trustworthy. `docs/runbooks/dlt-heartbeat.md` and
-`docs/runbooks/metrics-forwarder-errors.md` are the procedures. A rule in the `Error` or `NoData`
-state that should have data is the same finding: say so and treat its signal as unknown.
+`docs/runbooks/metrics-forwarder-errors.md` are the procedures. A rule whose `health` is `error` or
+`nodata` while it should have data is the same finding: say so and treat its signal as unknown.
 
-## 2. Name what changed, not what is
+## 3. Name what changed, not what is
 
-The point of a round is the delta. Compare the alert list against the previous round, and say
-which of these each firing rule is:
+The point of a round is the delta, and `delta` sorts it for you:
 
-- **New**: firing now, not at the last round. This is what deserves attention first.
-- **Continuing**: firing at the last round too. Say how many days it has now run, because a
+- **New**: firing now, and it started inside the window. This deserves attention first.
+- **Continuing**: firing since before the window. Say how many days it has now run, because a
   continuing alert nobody has acted on is a decision, not a finding.
-- **Cleared**: was firing, is not. Worth one line, because it tells you whether something was
-  transient or whether someone fixed it.
+- **Cleared**: fired or resolved inside the window, quiet now. Worth one line each, from
+  `changes`: when it fired and for how long, which tells you whether it was transient or fixed.
 
-A rule that fired and resolved between rounds shows in Slack's history but not in the current
-state; a scan of the channel since the last round is part of the round.
+## 4. Read the daily report
 
-## 3. Read the daily report
+A person reads the same panels at `<env>-heartbeat-daily` in Grafana; the ids below are its panel
+ids. Every alert rule claims a catalogue entry, and an entry's `num` is its chart's panel id.
 
-Open `<env>-heartbeat-daily` at the last 24 hours. Start with the data path. "How much flows"
-counts each stage per half hour, from device publishes to macro results; stages that stop
-tracking each other mean data is held up or lost between them. "How long each hop takes" gives
-each hop's p95. A hop that climbs through the day while volume holds steady is the pipeline
-degrading, as the September Centrum heap leak did. "Since last ingest" only means a stall while
-publishes keep arriving.
+Start with the data path. "How much flows" (902) counts each stage per half hour, from device
+publishes to macro results; stages that stop tracking each other mean data is held up or lost
+between them. "How long each hop takes" (903) gives each hop's p95. A hop that climbs through the
+day while volume holds steady is the pipeline degrading, as the September Centrum heap leak did.
+"Since last ingest" only means a stall while publishes keep arriving.
 
-Then the board. Muted green is within the limit the signal's rule enforces, red is a five-minute
-reading past it, and a gap is no data. The
-tooltip gives the stretch and its duration. Rules hold for minutes before firing, so red whose rule
-never fired was a brief breach: open its chart, say when it happened and what the shape was, and
-move on unless it repeats. A gap on a signal that should report is a finding in itself. The level
-tiles have no limit: say only what moved out of its usual range, and say it as a level, not as a
-fault. Dev's pipelines have run continuously since 23 September, yet its ingest lag still peaks above
-two hours now and then; check the environment before calling anything an incident.
+Then the board (901): one series per rule-backed signal at five-minute readings. A `red` stretch is
+a reading past the limit the signal's rule enforces. Rules hold for minutes before firing, so a
+stretch whose rule never fired was a brief breach: read the entry's chart for its shape, say when it
+happened and what the shape was, and move on unless it repeats.
 
-## 4. Read the errors
+```bash
+pnpm round:read prod --panels 89 --output .claude/round/prod-89.json
+```
+
+A gauge whose `lastAt` stops well before the window's end has stopped reporting, which is a
+finding in itself; a count that stops means no events, since an absent `Sum` is zero (the catalogue
+entry's statistic says which a signal is).
+
+The level tiles, stat panels numbered 100 plus the entry's `num`, have no limit: say only what
+moved out of its usual range, and say it as a level, not as a fault. Dev's pipelines have run
+continuously since 23 September, yet its ingest lag still peaks above two hours now and then;
+check the environment before calling anything an incident.
+
+## 5. Read the errors
 
 Errors that point at bugs live in PostHog's error tracking, grouped into issues, and its alerts post
-new, reopened and spiking issues to the same Slack channel. The daily report's Errors section, right
-under what is firing, lists the issues with exceptions over its time range, new ones first, and each
-row opens the issue in PostHog or starts triage on it. The error inbox, `<env>-heartbeat-errors`,
-holds the same issues over a week, with where each happened and in which app version. A daily report
-with no Errors section, or panels saying the plugin is missing, means Grafana cannot read PostHog;
+new, reopened and spiking issues to the same Slack channel. The daily report reads them through
+Grafana: the table (906) lists the issues with exceptions over the window, new ones first, and the
+tiles beside it count them. A PostHog panel in `unavailable` means Grafana cannot read PostHog;
 report that as a finding rather than as no errors, with `docs/runbooks/exceptions.md` for the fix.
-The devkit reads the same with your own
-PostHog key, for a gap the report's window does not cover (`tooling/devkit/README.md` has the setup):
+
+An issue needs a person when it is new inside the window and reaches users on a released build, or
+when an old one comes back or spikes. Builds on a developer's machine send PostHog nothing, so every
+event comes from dev, prod or an installed app.
+
+The devkit reads the same with the PostHog key, a triage credential, for an issue's detail, a gap
+the report does not cover, or noise to mark (`tooling/devkit/README.md` has the setup):
 
 ```bash
 pnpm posthog:issues list --days 1    # --days covers the gap since the last round
@@ -126,32 +133,36 @@ pnpm posthog:issues show <issue-id>  # first and last seen, and the latest stack
 ```
 
 `list` writes `.claude/posthog/issues-review.json`: every open issue with events in the window, with
-its service (`web`, `backend`, `mobile`), environment, app version, events, users and link. Read prod
-first. An issue needs a person when it is new since the last round and reaches users on a released
-build, or when an old one comes back or spikes. Builds on a developer's machine send PostHog
-nothing, so every event comes from dev, prod or an installed app.
+its service (`web`, `backend`, `mobile`), environment, app version, events, users and link.
 
 Propose each issue that needs a person as a bug or as noise. A bug gets a ticket drafted with
 `openjii-ticket-refine`, filed only on the person's word. Noise is set to `suppress` in the review
 file; `pnpm posthog:issues apply` prints what it would change, and only `--confirm`, on the person's
 word, writes to PostHog. For anything unclear, hand the issue id to `/openjii-triage`.
 
-## 5. For anything that needs a person
+## 6. For anything that needs a person
 
 Do not hand over a pointer. Pull the evidence first, then hand over a conclusion.
 
-Read the entry's runbook, take its first diagnostic step, and include what it returned. If the cause
+Read the entry's runbook, take its first diagnostic step, and include what it returned. Most first
+steps read AWS; if `aws sts get-caller-identity --profile openjii-<env>` says the session has
+expired, ask the person for `aws sso login` rather than skipping the step silently. If the cause
 is clear from that, say it. If it is not, invoke `/openjii-triage <metric-id>` and let it do the
 deep dive rather than guessing here.
+
+`round:read` reads only the daily report. For a closer look a person follows a thing hop by hop
+on `<env>-platform` (a researcher's request), `<env>-data-pipeline` (a device's measurement),
+`<env>-delivery` (deploys) and `<env>-throughput-storage`; name the one that fits in your hand-over.
 
 Most incidents are somebody's deploy. Check whether the onset lines up with a merge to `main` before
 reaching for anything more exotic.
 
-## 6. Report
+## 7. Report
 
 Open with one of: nothing needs a person, something needs a person, or the round could not be
-completed. Then the changes from step 2, the errors from step 4, then the evidence for anything in
-the second category.
+completed. Name the window it covered. Then the changes from step 3, the errors from step 5, then
+the evidence for anything in the second category.
 
-Say plainly what you could not check and why. A round that reads confidently past a firing
-dead-man is worse than no round, because it converts an unknown into a false all-clear.
+Say plainly what you could not check and why, starting with everything in `unavailable`. A round
+that reads confidently past a firing dead-man is worse than no round, because it converts an
+unknown into a false all-clear.
