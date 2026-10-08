@@ -123,6 +123,34 @@ describe("<NotificationsPopover />", () => {
     expect(listRequest.calls.at(-1)?.query).toMatchObject({ page: "1", pageSize: "10" });
   });
 
+  /** The page heads its rows with the day they arrived; the bell's preview is one flat list. */
+  it("lists the preview without day headings", async () => {
+    const yesterday = new Date();
+    yesterday.setHours(0, 0, 0, 0);
+    yesterday.setTime(yesterday.getTime() - 60 * 60 * 1000);
+
+    server.mount(contract.notifications.getUnreadNotificationCount, { body: { count: 1 } });
+    server.mount(contract.notifications.listNotifications, {
+      body: page([
+        createNotification(),
+        createNotification({
+          id: "00000000-0000-4000-8000-000000000002",
+          type: "experiment_join_request_approved",
+          createdAt: yesterday.toISOString(),
+        }),
+      ]),
+    });
+    const user = userEvent.setup();
+    render(<NotificationsPopover />);
+
+    await user.click(screen.getByRole("button", { name: /title/ }));
+
+    expect(await screen.findByText("types.experiment_join_request_received")).toBeVisible();
+    expect(screen.getByText("types.experiment_join_request_approved")).toBeVisible();
+    expect(screen.queryByText("groups.today")).not.toBeInTheDocument();
+    expect(screen.queryByText("groups.yesterday")).not.toBeInTheDocument();
+  });
+
   it("marks an unread notification read when it is opened", async () => {
     const notification = createNotification();
     server.mount(contract.notifications.getUnreadNotificationCount, { body: { count: 1 } });

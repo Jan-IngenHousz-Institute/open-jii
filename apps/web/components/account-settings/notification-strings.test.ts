@@ -59,5 +59,17 @@ describe("notifications locale coverage", () => {
         expect(value.trim(), `${locale} preferences.${key} is empty`).not.toBe("");
       }
     });
+
+    it.each(["filters", "groups", "empty"] as const)(
+      "keeps %s.* in parity with en-US, with no empty value",
+      (group) => {
+        expect(Object.keys(bundle[group]).sort()).toEqual(
+          Object.keys(enNotifications[group]).sort(),
+        );
+        for (const [key, value] of Object.entries(bundle[group])) {
+          expect(value.trim(), `${locale} ${group}.${key} is empty`).not.toBe("");
+        }
+      },
+    );
   });
 });
