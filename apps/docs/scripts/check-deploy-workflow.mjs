@@ -210,10 +210,17 @@ const neededOutputs = {
 };
 
 // A prerequisite must have succeeded, or been skipped because this run did not need it.
-function assertWaitsFor(job, prerequisite) {
+// Without a leading always(), GitHub's implicit success() skips the job whenever any
+// prerequisite is skipped, so the not-needed branch below could never let it run.
+function assertWaitsFor(jobName, prerequisite) {
+  const job = orchestratorJobs?.[jobName];
   const output = neededOutputs[prerequisite];
   assert.ok(orchestratorJobs.detect?.outputs?.[output], `detect does not publish ${output}`);
   assert.ok(job?.needs?.includes(prerequisite));
+  assert.ok(
+    job.if.trimStart().startsWith("always() &&"),
+    `${jobName} does not start with always()`,
+  );
   assert.ok(
     job.if.includes(
       `(needs.${prerequisite}.result == 'success' || (needs.${prerequisite}.result == 'skipped' && needs.detect.outputs.${output} == 'false'))`,
@@ -222,11 +229,10 @@ function assertWaitsFor(job, prerequisite) {
   );
 }
 
-assertWaitsFor(orchestratorJobs?.["deploy-databricks"], "deploy-backend");
+assertWaitsFor("deploy-databricks", "deploy-backend");
 
-const sandboxJob = orchestratorJobs?.["deploy-macro-sandbox"];
 for (const prerequisite of ["deploy-backend", "deploy-frontend", "deploy-databricks"]) {
-  assertWaitsFor(sandboxJob, prerequisite);
+  assertWaitsFor("deploy-macro-sandbox", prerequisite);
 }
 
 const prWorkflow = load(await readFile(prWorkflowPath, "utf8"));
