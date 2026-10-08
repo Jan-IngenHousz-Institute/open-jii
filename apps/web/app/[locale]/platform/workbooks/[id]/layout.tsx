@@ -1,6 +1,6 @@
 import { PrefetchedQueries } from "@/components/server-prefetch/prefetched-queries";
 import { WorkbookLayoutShell } from "@/components/workbook-overview/workbook-layout-shell";
-import { workbookQuery } from "@/hooks/workbook/useWorkbook/workbook-query";
+import { fitsServerRender, workbookQuery } from "@/hooks/workbook/useWorkbook/workbook-query";
 import type { ReactNode } from "react";
 
 interface WorkbookLayoutProps {
@@ -12,7 +12,7 @@ export default async function WorkbookLayout({ children, params }: WorkbookLayou
   const { id } = await params;
 
   return (
-    <PrefetchedQueries queries={(utils) => [workbookQuery(utils, id)]}>
+    <PrefetchedQueries queries={(utils) => [workbookQuery(utils, id)]} embedWhen={fitsServerRender}>
       <WorkbookLayoutShell>{children}</WorkbookLayoutShell>
     </PrefetchedQueries>
   );

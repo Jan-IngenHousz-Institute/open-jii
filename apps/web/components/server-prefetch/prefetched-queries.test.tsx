@@ -56,4 +56,22 @@ describe("PrefetchedQueries", () => {
     expect(keys).toContain("listExperiments");
     expect(keys).not.toContain("getWorkbook");
   });
+
+  it("leaves out a result the page should not render on the server", async () => {
+    listExperiments.mockResolvedValue({ items: [] });
+    getWorkbook.mockResolvedValue({ id: "wb-1", cells: [] });
+
+    const element = await PrefetchedQueries({
+      queries: (utils) => [
+        utils.experiments.listExperiments.queryOptions({ input: { scope: "related" } }),
+        utils.workbooks.getWorkbook.queryOptions({ input: { id: "wb-1" } }),
+      ],
+      embedWhen: (data) => !(typeof data === "object" && data !== null && "cells" in data),
+      children: null,
+    });
+    const keys = JSON.stringify(embeddedKeys(element));
+
+    expect(keys).toContain("listExperiments");
+    expect(keys).not.toContain("getWorkbook");
+  });
 });

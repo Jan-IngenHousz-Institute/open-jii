@@ -1,5 +1,10 @@
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
-import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query";
+import {
+  HydrationBoundary,
+  QueryClient,
+  defaultShouldDehydrateQuery,
+  dehydrate,
+} from "@tanstack/react-query";
 import type { DefaultError, FetchQueryOptions, QueryKey } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { QueryUtils } from "~/lib/orpc";
@@ -13,6 +18,8 @@ type PrefetchOptions = FetchQueryOptions<unknown, DefaultError, unknown, QueryKe
 
 interface PrefetchedQueriesProps {
   queries: (utils: QueryUtils) => PrefetchOptions[];
+  /** Leaves a result out of the page when false, for data too large to render on the server. */
+  embedWhen?: (data: unknown) => boolean;
   children: ReactNode;
 }
 
@@ -21,7 +28,7 @@ interface PrefetchedQueriesProps {
  * cache, so the page arrives with its content instead of fetching it once its code has loaded.
  * The queries are built by the same functions the client hooks use, so their keys match.
  */
-export async function PrefetchedQueries({ queries, children }: PrefetchedQueriesProps) {
+export async function PrefetchedQueries({ queries, embedWhen, children }: PrefetchedQueriesProps) {
   const queryClient = new QueryClient();
   const utils = createTanstackQueryUtils(await createServerOrpcClient());
   const prefetches = Promise.all(
@@ -33,5 +40,10 @@ export async function PrefetchedQueries({ queries, children }: PrefetchedQueries
     new Promise((resolve) => setTimeout(resolve, PREFETCH_BUDGET_MS)),
   ]);
 
-  return <HydrationBoundary state={dehydrate(queryClient)}>{children}</HydrationBoundary>;
+  const state = dehydrate(queryClient, {
+    shouldDehydrateQuery: (query) =>
+      defaultShouldDehydrateQuery(query) && (embedWhen?.(query.state.data) ?? true),
+  });
+
+  return <HydrationBoundary state={state}>{children}</HydrationBoundary>;
 }

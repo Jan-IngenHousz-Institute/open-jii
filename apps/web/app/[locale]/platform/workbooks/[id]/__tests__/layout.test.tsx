@@ -5,19 +5,22 @@ import { orpc } from "~/lib/orpc";
 import Layout from "../layout";
 
 const prefetched = vi.hoisted(() => {
-  const state: { queries: unknown[] } = { queries: [] };
+  const state: { queries: unknown[]; embedWhen?: (data: unknown) => boolean } = { queries: [] };
   return state;
 });
 
 vi.mock("@/components/server-prefetch/prefetched-queries", () => ({
   PrefetchedQueries: ({
     queries,
+    embedWhen,
     children,
   }: {
     queries: (utils: unknown) => unknown[];
+    embedWhen?: (data: unknown) => boolean;
     children: React.ReactNode;
   }) => {
     prefetched.queries = queries(orpc);
+    prefetched.embedWhen = embedWhen;
     return children;
   },
 }));
@@ -34,5 +37,15 @@ describe("workbook layout", () => {
     expect(screen.getByText("tab")).toBeInTheDocument();
     expect(queries).toContain("getWorkbook");
     expect(queries).toContain('"id":"workbook-1"');
+  });
+
+  it("leaves a workbook too large to render on the server for the browser", async () => {
+    render(await Layout({ children: <p>tab</p>, params: Promise.resolve({ id: "workbook-1" }) }));
+
+    const cells = (count: number) => ({
+      cells: Array.from({ length: count }, (_, i) => ({ id: i })),
+    });
+    expect(prefetched.embedWhen?.(cells(100))).toBe(true);
+    expect(prefetched.embedWhen?.(cells(101))).toBe(false);
   });
 });
