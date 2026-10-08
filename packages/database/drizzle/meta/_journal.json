@@ -393,6 +393,13 @@
       "when": 1790763435029,
       "tag": "0055_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1791293062069,
+      "tag": "0056_resource_visits",
+      "breakpoints": true
     }
   ]
 }

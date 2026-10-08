@@ -1256,6 +1256,389 @@
         }
       }
     },
+    "/api/v1/experiments/recently-opened": {
+      "get": {
+        "operationId": "experiments.listRecentlyOpenedExperiments",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "related",
+                "all"
+              ],
+              "type": "string",
+              "description": "Which slice of the opened experiments to return"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "description": "Rows to return, 3 by default"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "status": {
+                        "enum": [
+                          "active",
+                          "stale",
+                          "archived",
+                          "published"
+                        ],
+                        "type": "string"
+                      },
+                      "visibility": {
+                        "enum": [
+                          "private",
+                          "public"
+                        ],
+                        "type": "string"
+                      },
+                      "embargoUntil": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "anonymizeContributors": {
+                        "type": "boolean"
+                      },
+                      "workbookId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "workbookVersionId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "organizationId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "organizationName": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "createdBy": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "ownerFirstName": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "ownerLastName": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "membersCount": {
+                        "type": "integer"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "data": {
+                        "type": "object",
+                        "properties": {
+                          "columns": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "type_name": {
+                                  "type": "string"
+                                },
+                                "type_text": {
+                                  "type": "string"
+                                },
+                                "renamedFrom": {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "source": {
+                                      "enum": [
+                                        "macro_output",
+                                        "questions_data",
+                                        "custom_metadata",
+                                        "uploaded_data"
+                                      ],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "source"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "type_name",
+                                "type_text"
+                              ]
+                            }
+                          },
+                          "rows": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "anyOf": [
+                                  {},
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          "totalRows": {
+                            "type": "integer"
+                          },
+                          "truncated": {
+                            "type": "boolean",
+                            "description": "True when more rows matched than were returned; totalRows then counts them all"
+                          }
+                        },
+                        "required": [
+                          "columns",
+                          "rows",
+                          "totalRows",
+                          "truncated"
+                        ]
+                      },
+                      "locations": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 255
+                            },
+                            "latitude": {
+                              "type": "number",
+                              "minimum": -90,
+                              "maximum": 90
+                            },
+                            "longitude": {
+                              "type": "number",
+                              "minimum": -180,
+                              "maximum": 180
+                            },
+                            "country": {
+                              "type": "string"
+                            },
+                            "region": {
+                              "type": "string"
+                            },
+                            "municipality": {
+                              "type": "string"
+                            },
+                            "postalCode": {
+                              "type": "string"
+                            },
+                            "addressLabel": {
+                              "type": "string"
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "latitude",
+                            "longitude",
+                            "createdAt",
+                            "updatedAt"
+                          ]
+                        }
+                      },
+                      "activity": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "measurements": {
+                                "type": "number"
+                              },
+                              "days": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "date": {
+                                      "type": "string"
+                                    },
+                                    "measurements": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "date",
+                                    "measurements"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "measurements",
+                              "days"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "membershipStatus": {
+                        "enum": [
+                          "none",
+                          "pending_request",
+                          "member"
+                        ],
+                        "type": "string"
+                      },
+                      "openedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "callerRole": {
+                        "anyOf": [
+                          {
+                            "enum": [
+                              "owner",
+                              "admin",
+                              "member"
+                            ],
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "description",
+                      "status",
+                      "visibility",
+                      "embargoUntil",
+                      "anonymizeContributors",
+                      "workbookId",
+                      "workbookVersionId",
+                      "organizationId",
+                      "createdBy",
+                      "createdAt",
+                      "updatedAt",
+                      "membershipStatus",
+                      "openedAt",
+                      "callerRole"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/experiments/{id}": {
       "get": {
         "operationId": "experiments.getExperiment",
@@ -36905,6 +37288,42 @@
                   },
                   "required": [
                     "lastSeenAt"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/experiments/{id}/visits": {
+      "post": {
+        "operationId": "visits.recordExperimentVisit",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID of the opened experiment"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "not": {}
+                    },
+                    {
+                      "not": {}
+                    }
                   ]
                 }
               }

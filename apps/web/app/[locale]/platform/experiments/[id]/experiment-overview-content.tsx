@@ -4,6 +4,7 @@ import { ErrorDisplay } from "@/components/error-display";
 import { useExperimentAccess } from "@/hooks/experiment/useExperimentAccess/useExperimentAccess";
 import { useExperimentContributors } from "@/hooks/experiment/useExperimentContributors/useExperimentContributors";
 import { useExperimentLocations } from "@/hooks/experiment/useExperimentLocations/useExperimentLocations";
+import { useRecordExperimentVisit } from "@/hooks/experiment/useRecordExperimentVisit/useRecordExperimentVisit";
 import { notFound } from "next/navigation";
 import { use, useRef } from "react";
 import { ExperimentActivityPulse } from "~/components/experiment-overview/experiment-activity-pulse";
@@ -29,6 +30,7 @@ export default function ExperimentOverviewPage({ params }: ExperimentOverviewPag
   const { data: accessData, isLoading, error } = useExperimentAccess(id);
   const experiment = accessData?.experiment;
   const hasAccess = accessData?.isAdmin;
+  useRecordExperimentVisit(id, Boolean(experiment));
 
   // Locations
   const { data: locationsData } = useExperimentLocations(id);

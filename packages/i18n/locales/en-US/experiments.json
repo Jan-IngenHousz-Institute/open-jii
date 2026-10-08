@@ -222,6 +222,7 @@
   "created": "Created",
   "updated": "Updated",
   "updatedOn": "Updated {{date}}",
+  "openedOn": "Opened {{when}}",
   "descriptionTitle": "Description",
   "and": "and",
   "save": "Save",

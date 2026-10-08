@@ -90,6 +90,28 @@ describe("ExperimentOverviewPage", () => {
     });
   });
 
+  it("records a visit once the experiment loads", async () => {
+    mountDefaults();
+    const visit = server.mount(contract.visits.recordExperimentVisit, { status: 204 });
+
+    render(<ExperimentOverviewPage {...props} />);
+
+    await waitFor(() => expect(visit.called).toBe(true));
+    expect(visit.params).toEqual({ id: "test-id" });
+  });
+
+  it("records no visit when the experiment fails to load", async () => {
+    server.mount(contract.experiments.getExperimentAccess, { status: 500 });
+    const visit = server.mount(contract.visits.recordExperimentVisit, { status: 204 });
+
+    render(<ExperimentOverviewPage {...props} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("failedToLoad");
+    });
+    expect(visit.called).toBe(false);
+  });
+
   it("renders experiment sections on success", async () => {
     mountDefaults();
     render(<ExperimentOverviewPage {...props} />);

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "captureContext": {
-    "capturedOn": "2026-08-28",
+    "capturedOn": "2026-10-06",
     "surface": "apps/web on the local development stack",
     "environment": "local",
     "account": "seed@openjii.local and newcomer@openjii.local (seeded development identities)",
@@ -24,8 +24,7 @@
       "experiment-devices (captured 2026-09-03): the roster comes from a local experiment whose id mirrors a dev-lakehouse experiment with published Ambyte data, so the measurement counts are real dev data; device names are local labels and the client ids are dev gateway MAC addresses, not personal data. The iot-devices flag is pinned in the browser by the capture tool (see featureFlags in shots.ts); the backend evaluated the real flag.",
       "experiments-list, organizations-list and workbooks-list were recaptured on 2026-09-28 at 1920x1200 from the local stack with the seeded development identity; each shows Name sorted ascending. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp. The Experiments shot includes the current data-processing status banner.",
       "protocols-list and macros-list were recaptured on 2026-09-28 at 1920x1200 from the local stack with the seeded development identity; each shows Name sorted ascending. Frames were reviewed at full size and show only seeded protocol/macro names. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp. Both captures include the current data-processing status banner.",
-      "dashboard recaptured on 2026-09-29 at 1920x1200 with the seeded development identity. Reviewed the full frame: it shows seeded experiments and user only, with no credentials, precise locations or dev overlays. The community measurement banner and CMS blog cards are visible; one blog image is the pre-refresh dashboard. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
-      "dashboard-first-work captured on 2026-10-05 at 1920x1200 with newcomer@openjii.local, an activated seeded identity with no experiment grants or shared organization memberships. The related-experiments row shows the three first-work cards. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp."
+      "dashboard, dashboard-first-work, report-issue, command-palette and cheatsheet recaptured on 2026-10-06 at 1920x1200. The four seed captures show three recently opened seeded experiments; dashboard-first-work uses newcomer@openjii.local, an activated seeded identity with no experiment grants or shared organization memberships, and shows the three first-work cards. Reviewed all full frames: no credentials, precise locations or dev overlays. The dashboard and overlay shots include the community measurement banner and CMS blog cards; one blog image is the pre-refresh dashboard. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp."
     ]
   },
   "assets": [
@@ -35,10 +34,10 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 153202,
-      "sha256": "271ad93c3a30622d88d5fe27619bf8850c23ce1d068e6fc0f2fd6bc71d0dfc32",
+      "bytes": 165406,
+      "sha256": "fc86d6b4fec4dc5b21cb9835ab1aae56f06170582b6d1a766502dc12b04b141c",
       "disposition": "published",
-      "scope": "Authenticated dashboard: welcome card, recent experiments, recently updated public experiments and compact contextual header"
+      "scope": "Authenticated dashboard: welcome card, recently opened experiments, recently updated public experiments and compact contextual header"
     },
     {
       "path": "/img/guide/web/dashboard-first-work.webp",
@@ -46,10 +45,10 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 179194,
-      "sha256": "3da4c35298147a0935dbd7018886663150bdb9475f8fe199496da35216fac3eb",
+      "bytes": 179932,
+      "sha256": "ff498eb9be469de8138e77a1f5b2243986891b8183747fe4c3a5b7a8a7359924",
       "disposition": "published",
-      "scope": "Dashboard empty state with the three first-work cards in the recent experiments row"
+      "scope": "Dashboard empty state with the three first-work cards in the recently opened experiments row"
     },
     {
       "path": "/img/guide/web/experiments-list.webp",
@@ -167,8 +166,8 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 170652,
-      "sha256": "4cabaedfeace33ae842e5bc1534ec7a38279d49a22d3b767d6bec585ad40cbf6",
+      "bytes": 165436,
+      "sha256": "b84ff976d84226744cce86e217f58f82ad2ec86143d04854d564d0cdd4adb7d2",
       "disposition": "published",
       "scope": "Report bug action in the dashboard welcome card"
     },
@@ -288,8 +287,8 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 106132,
-      "sha256": "ad3e054648122174ab1a90b809ab38562368ba54906453175746e8a89b32070f",
+      "bytes": 121096,
+      "sha256": "335f040d68cee55f9b0e5a0741e7d3ffc1b272df44afed7025f3ecbca403ffd9",
       "disposition": "published",
       "scope": "Command palette open over the dashboard"
     },
@@ -299,8 +298,8 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 147788,
-      "sha256": "1605a5e827d1d8a79c1acd5070db5c46d2127a6d7bdec099be76a24db95c01ff",
+      "bytes": 163028,
+      "sha256": "b0006b17fc0789eb2af61e6295aa6ea2c2ce54e75bd461d430933c2e5e644779",
       "disposition": "published",
       "scope": "Keyboard shortcut cheatsheet"
     },

@@ -189,6 +189,7 @@
   "created": "Gemaakt",
   "updated": "Bijgewerkt",
   "updatedOn": "Bijgewerkt {{date}}",
+  "openedOn": "Geopend {{when}}",
   "descriptionTitle": "Beschrijving",
   "details": {
     "location": {
