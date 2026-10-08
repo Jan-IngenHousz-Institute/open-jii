@@ -203,17 +203,30 @@ await probeUploadScript(renderRunScript(uploadStep.run));
 
 const orchestratorWorkflow = load(await readFile(orchestratorWorkflowPath, "utf8"));
 const orchestratorJobs = orchestratorWorkflow.jobs;
-const databricksJob = orchestratorJobs?.["deploy-databricks"];
-assert.ok(databricksJob?.needs?.includes("deploy-backend"));
-assert.match(databricksJob.if, /contains\('success,skipped', needs\.deploy-backend\.result\)/);
+const neededOutputs = {
+  "deploy-backend": "backend_needed",
+  "deploy-frontend": "frontend_needed",
+  "deploy-databricks": "databricks_needed",
+};
+
+// A prerequisite must have succeeded, or been skipped because this run did not need it.
+function assertWaitsFor(job, prerequisite) {
+  const output = neededOutputs[prerequisite];
+  assert.ok(orchestratorJobs.detect?.outputs?.[output], `detect does not publish ${output}`);
+  assert.ok(job?.needs?.includes(prerequisite));
+  assert.ok(
+    job.if.includes(
+      `(needs.${prerequisite}.result == 'success' || (needs.${prerequisite}.result == 'skipped' && needs.detect.outputs.${output} == 'false'))`,
+    ),
+    `${prerequisite} is not gated on success or not-needed`,
+  );
+}
+
+assertWaitsFor(orchestratorJobs?.["deploy-databricks"], "deploy-backend");
 
 const sandboxJob = orchestratorJobs?.["deploy-macro-sandbox"];
 for (const prerequisite of ["deploy-backend", "deploy-frontend", "deploy-databricks"]) {
-  assert.ok(sandboxJob?.needs?.includes(prerequisite));
-  assert.match(
-    sandboxJob.if,
-    new RegExp(`contains\\('success,skipped', needs\\.${prerequisite}\\.result\\)`),
-  );
+  assertWaitsFor(sandboxJob, prerequisite);
 }
 
 const prWorkflow = load(await readFile(prWorkflowPath, "utf8"));
