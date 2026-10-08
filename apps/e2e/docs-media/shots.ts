@@ -483,6 +483,19 @@ export const SHOTS: readonly Shot[] = [
 
   // ------------------------------------------------- tier 4: account security
   {
+    slug: "notification-settings",
+    publish: "img/guide/web/account-security/notification-settings.webp",
+    frame: "desktop",
+    route: "/platform/account/notifications",
+    async prepare(page) {
+      // The switches render from the resolved preferences, not from the registry
+      // defaults, so a frame taken before that read lands shows an empty card.
+      await page.getByRole("switch").last().waitFor();
+      await settle(page, 900);
+    },
+    scope: "Notifications tab in account settings: one email switch per category",
+  },
+  {
     slug: "passkeys-table",
     publish: "img/guide/web/account-security/passkeys-table.webp",
     frame: "desktop",

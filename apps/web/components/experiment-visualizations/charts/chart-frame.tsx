@@ -9,6 +9,7 @@ import type { ExperimentVisualization } from "@repo/api/domains/experiment/visua
 import { useTranslation } from "@repo/i18n";
 import { Trans } from "@repo/i18n/client";
 
+import { useDashboardSkippedFiltersForTable } from "../../experiment-dashboards/dashboard-filters-context";
 import type { ChartResolution } from "./chart-resolution-notice";
 import { ChartWithReadNotice } from "./chart-with-read-notice";
 import type { ChartTruncation } from "./hooks/use-chart-data";
@@ -36,6 +37,7 @@ export function ChartFrame({
   children,
 }: ChartFrameProps) {
   const { t } = useTranslation("experimentVisualizations");
+  const skippedFilters = useDashboardSkippedFiltersForTable(visualization.dataConfig.tableName);
 
   if (isLoading) {
     return (
@@ -91,7 +93,11 @@ export function ChartFrame({
   }
 
   return (
-    <ChartWithReadNotice truncation={truncation} resolution={resolution}>
+    <ChartWithReadNotice
+      truncation={truncation}
+      resolution={resolution}
+      skippedFilters={skippedFilters}
+    >
       {children}
     </ChartWithReadNotice>
   );

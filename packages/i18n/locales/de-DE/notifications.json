@@ -2,6 +2,7 @@
   "title": "Benachrichtigungen",
   "markAllRead": "Alle als gelesen markieren",
   "seeAll": "Alle Benachrichtigungen anzeigen",
+  "settings": "Benachrichtigungseinstellungen",
   "unreadCount": "{{count}} ungelesen",
   "someone": "Jemand",
   "empty": {
@@ -10,6 +11,36 @@
   },
   "loadError": "Ihre Benachrichtigungen konnten nicht geladen werden.",
   "retry": "Erneut versuchen",
+  "categories": {
+    "requests_and_invitations": {
+      "label": "Anfragen und Einladungen",
+      "description": "Jemand möchte Ihrem Experiment oder Ihrer Organisation beitreten oder lädt Sie in eine Organisation ein."
+    },
+    "membership_and_access": {
+      "label": "Mitgliedschaft und Zugriff",
+      "description": "Über eine Ihrer Anfragen wird entschieden, Ihr Zugriff oder Ihre Rolle ändert sich, oder Personen treten Ihren Experimenten oder Organisationen bei oder verlassen sie."
+    },
+    "experiments_and_resources": {
+      "label": "Experimente und Ressourcen",
+      "description": "Etwas, woran Sie arbeiten, wird öffentlich, gelöscht, verschoben oder erhält eine neue Version einer Arbeitsmappe."
+    },
+    "devices_and_calibration": {
+      "label": "Geräte und Kalibrierung",
+      "description": "Ein Kalibrierlauf wartet auf Ihre Freigabe, oder ein von Ihnen gestarteter Lauf wurde angenommen oder abgelehnt."
+    },
+    "project_transfers": {
+      "label": "Projektübertragungen",
+      "description": "Ihre Übertragung eines PhotosynQ-Projekts wurde empfangen oder abgeschlossen."
+    },
+    "data_jobs": {
+      "label": "Datenexporte und Uploads",
+      "description": "Ein von Ihnen gestarteter Export oder Upload ist fertig oder fehlgeschlagen."
+    },
+    "account_security": {
+      "label": "Kontosicherheit",
+      "description": "Jemand fügt Ihrem Konto einen API-Schlüssel oder einen Passkey hinzu."
+    }
+  },
   "types": {
     "experiment_join_request_received": "{{actor}} möchte {{experimentName}} beitreten",
     "experiment_join_request_approved": "Ihre Anfrage, {{experimentName}} beizutreten, wurde angenommen",
@@ -42,5 +73,17 @@
     "calibration_run_rejected": "{{actor}} hat die {{definitionName}}-Kalibrierung von {{deviceName}} abgelehnt",
     "api_key_created": "Ihrem Konto wurde ein neuer API-Schlüssel hinzugefügt: {{keyName}}",
     "passkey_added": "Ihrem Konto wurde ein neuer Passkey hinzugefügt: {{passkeyName}}"
+  },
+  "preferences": {
+    "title": "E-Mail-Benachrichtigungen",
+    "description": "Wählen Sie, welche Benachrichtigungen Sie zusätzlich per E-Mail erhalten. In openJII sehen Sie sie immer.",
+    "emailLabel": "E-Mail für {{category}}",
+    "loading": "Ihre Benachrichtigungseinstellungen werden geladen",
+    "error": "Ihre Benachrichtigungseinstellungen konnten nicht geladen werden.",
+    "updateError": "Die Änderung wurde nicht gespeichert. Versuchen Sie es erneut.",
+    "essentialNote": "Anmeldecodes kommen immer an, unabhängig von dieser Auswahl.",
+    "newsletterNote": "Für den Newsletter gibt es eine eigene Einstellung unter Allgemein.",
+    "locked": "Immer an",
+    "unavailable": "Noch nicht verfügbar"
   }
 }

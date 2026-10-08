@@ -1,6 +1,7 @@
 "use client";
 
 import { CartesianChart } from "@/components/charts/cartesian-chart";
+import { useColumnMetadata } from "@/hooks/experiment/useColumnMetadata/useColumnMetadata";
 import { useCallback, useMemo, useState } from "react";
 
 import type { ExperimentSeriesTraceType } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
@@ -49,6 +50,10 @@ export function CartesianRenderer({
   const dataSources = visualization.dataConfig.dataSources;
   const xColumn = dataSources.find((ds) => ds.role === "x")?.columnName;
 
+  const colorColumn = dataSources.find((ds) => ds.role === "color")?.columnName;
+  const { columns } = useColumnMetadata(experimentId, visualization.dataConfig.tableName);
+  const colorColumnType = columns.find((c) => c.name === colorColumn)?.type_text;
+
   const { rows, isLoading, error, truncation, filters } = useChartData(
     visualization,
     experimentId,
@@ -88,6 +93,7 @@ export function CartesianRenderer({
       defaultTraceType,
       supportsContinuousColor,
       supportsSize,
+      colorColumnType,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- leaf-listed; see KEEP IN SYNC comment.
   }, [
@@ -96,6 +102,7 @@ export function CartesianRenderer({
     defaultTraceType,
     supportsContinuousColor,
     supportsSize,
+    colorColumnType,
     chartConfig.bubbleMaxSize,
     chartConfig.bubbleMinSize,
     chartConfig.color,

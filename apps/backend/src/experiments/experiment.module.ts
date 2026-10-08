@@ -11,8 +11,6 @@ import { CacheAdapter } from "../common/modules/cache/cache.adapter";
 import { CacheModule } from "../common/modules/cache/cache.module";
 import { DatabricksAdapter } from "../common/modules/databricks/databricks.adapter";
 import { DatabricksModule } from "../common/modules/databricks/databricks.module";
-import { EmailAdapter } from "../common/modules/email/services/email.adapter";
-import { EmailModule } from "../common/modules/email/services/email.module";
 import { CreateMacroUseCase } from "../macros/application/use-cases/create-macro/create-macro";
 import { MacroModule } from "../macros/macro.module";
 import { MetricsModule } from "../metrics/metrics.module";
@@ -91,7 +89,6 @@ import { ANALYTICS_PORT } from "./core/ports/analytics.port";
 import { AWS_PORT } from "./core/ports/aws.port";
 import { CACHE_PORT, SCHEMA_CACHE_PORT } from "./core/ports/cache.port";
 import { DATABRICKS_PORT } from "./core/ports/databricks.port";
-import { EMAIL_PORT } from "./core/ports/email.port";
 import { ExperimentDashboardRepository } from "./core/repositories/experiment-dashboard.repository";
 // Repositories
 import { ExperimentDataAnnotationsRepository } from "./core/repositories/experiment-data-annotations.repository";
@@ -133,7 +130,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     CacheModule,
     DatabricksModule,
     AwsModule,
-    EmailModule,
     AnalyticsModule,
     NotificationModule,
     UserModule,
@@ -169,10 +165,6 @@ import { ProjectTransferWebhookController } from "./presentation/project-transfe
     {
       provide: AWS_PORT,
       useExisting: AwsAdapter,
-    },
-    {
-      provide: EMAIL_PORT,
-      useExisting: EmailAdapter,
     },
     {
       provide: ANALYTICS_PORT,

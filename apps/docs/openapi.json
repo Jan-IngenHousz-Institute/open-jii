@@ -29960,13 +29960,18 @@
                           },
                           "locked": {
                             "type": "boolean"
+                          },
+                          "available": {
+                            "type": "boolean",
+                            "description": "Whether this category's notifications go through the preference check today, so the choice has an effect"
                           }
                         },
                         "required": [
                           "category",
                           "channel",
                           "enabled",
-                          "locked"
+                          "locked",
+                          "available"
                         ]
                       }
                     }
@@ -30056,13 +30061,18 @@
                           },
                           "locked": {
                             "type": "boolean"
+                          },
+                          "available": {
+                            "type": "boolean",
+                            "description": "Whether this category's notifications go through the preference check today, so the choice has an effect"
                           }
                         },
                         "required": [
                           "category",
                           "channel",
                           "enabled",
-                          "locked"
+                          "locked",
+                          "available"
                         ]
                       }
                     }

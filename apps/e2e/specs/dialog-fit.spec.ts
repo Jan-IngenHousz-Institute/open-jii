@@ -1,6 +1,12 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import postgres from "postgres";
 
+import {
+  cleanupDialogFitExperiment,
+  mockLakehouse,
+  seedDialogFitExperiment,
+} from "../experiment-data-fixtures.js";
+import type { LakehouseData } from "../experiment-data-fixtures.js";
 import { expect, test } from "../fixtures.js";
 import {
   assertSafeFixtureDatabase,
@@ -13,6 +19,7 @@ import {
 const tag = "dialog-fit";
 const questionText = "Which plot is this device stationed at?";
 let workbookId: string;
+let experimentId: string;
 
 test.setTimeout(90_000);
 
@@ -73,17 +80,44 @@ test.beforeAll(async () => {
   } finally {
     await sql.end({ timeout: 1 });
   }
+  experimentId = await seedDialogFitExperiment();
 });
 
-test.afterAll(cleanup);
+test.afterAll(async () => {
+  await cleanup();
+  await cleanupDialogFitExperiment();
+});
 
 async function openWorkbook(page: Page): Promise<void> {
   await page.goto(`/${locale}/platform/workbooks/${workbookId}`, { waitUntil: "networkidle" });
   await dismissCookieBanner(page);
 }
 
+async function openExperimentData(page: Page, data: LakehouseData): Promise<void> {
+  await mockLakehouse(page, experimentId, data);
+  await page.goto(`/${locale}/platform/experiments/${experimentId}/data`, {
+    waitUntil: "networkidle",
+  });
+  await dismissCookieBanner(page);
+}
+
+// In the viewport is not enough: a list that overflows its box can paint over a button.
+async function expectReachable(locator: Locator): Promise<void> {
+  await expect(locator).toBeInViewport({ ratio: 1 });
+  await expect
+    .poll(() =>
+      locator.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+        return hit !== null && element.contains(hit);
+      }),
+    )
+    .toBe(true);
+}
+
 // A zoomed browser is a smaller CSS viewport at a higher device scale factor.
 const screens = [
+  { name: "1440x900", viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },
   { name: "1920x1080 at 200% zoom", viewport: { width: 960, height: 540 }, deviceScaleFactor: 2 },
   { name: "phone landscape", viewport: { width: 844, height: 390 }, deviceScaleFactor: 1 },
 ];
@@ -124,6 +158,58 @@ for (const screen of screens) {
       await expect(dialog.getByRole("button", { name: "Submit" })).toBeEnabled();
       await dialog.getByRole("button", { name: "Cancel" }).click();
       await expect(dialog).not.toBeVisible();
+    });
+
+    test("a long upload history keeps the upload actions reachable", async ({ page }) => {
+      await openExperimentData(page, { uploads: 7 });
+      await page.getByRole("button", { name: "Upload Data" }).click();
+
+      const dialog = page.getByRole("dialog", { name: "Upload data" });
+      await expect(dialog.getByText("Upload #1")).toBeAttached();
+      await expectReachable(dialog.getByRole("heading", { name: "Upload data" }));
+      await expectReachable(dialog.getByRole("button", { name: "Close" }).first());
+      await expectReachable(dialog.getByRole("button", { name: "New upload" }));
+
+      const oldestUpload = dialog.getByText("Upload #1");
+      await oldestUpload.scrollIntoViewIfNeeded();
+      await expectReachable(oldestUpload);
+
+      await dialog.getByRole("button", { name: "New upload" }).click();
+      await page.getByRole("menuitem", { name: "CSV" }).click();
+      await expectReachable(dialog.getByRole("heading", { name: "Upload data" }));
+      await expectReachable(dialog.getByRole("button", { name: "Upload", exact: true }));
+      await dialog.getByRole("button", { name: "Back" }).click();
+      await expectReachable(dialog.getByRole("button", { name: "New upload" }));
+    });
+
+    test("many metadata records keep the metadata actions reachable", async ({ page }) => {
+      await openExperimentData(page, { metadata: 8 });
+      await page.getByRole("button", { name: "Edit Metadata" }).click();
+
+      const dialog = page.getByRole("dialog", { name: "Import Metadata" });
+      await expect(dialog.getByText("Plot layout 8")).toBeAttached();
+      await expectReachable(dialog.getByRole("heading", { name: "Import Metadata" }));
+      await expectReachable(dialog.getByRole("button", { name: "Back" }));
+      await expectReachable(dialog.getByRole("button", { name: "Add new" }));
+
+      const lastRecord = dialog.getByText("Plot layout 8");
+      await lastRecord.scrollIntoViewIfNeeded();
+      await expectReachable(lastRecord);
+    });
+
+    test("many exports keep the export actions reachable", async ({ page }) => {
+      await openExperimentData(page, { withTable: true, exports: 8 });
+      await page.getByRole("button", { name: "Download table" }).click();
+
+      const dialog = page.getByRole("dialog", { name: "Export Dataset" });
+      await expect(dialog.getByText("Export #1", { exact: true })).toBeAttached();
+      await expectReachable(dialog.getByRole("heading", { name: "Export Dataset" }));
+      await expectReachable(dialog.getByRole("button", { name: "Close" }).first());
+      await expectReachable(dialog.getByRole("button", { name: "Create Export" }));
+
+      const oldestExport = dialog.getByText("Export #1", { exact: true });
+      await oldestExport.scrollIntoViewIfNeeded();
+      await expectReachable(oldestExport);
     });
   });
 }

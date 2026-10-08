@@ -176,7 +176,7 @@ describe("<NotificationsPopover />", () => {
     expect(screen.getByRole("button", { name: "retry" })).toBeVisible();
   });
 
-  it("has no settings entry: preferences are not built yet", async () => {
+  it("links to the notification settings tab", async () => {
     server.mount(contract.notifications.getUnreadNotificationCount, { body: { count: 0 } });
     server.mount(contract.notifications.listNotifications, { body: page([]) });
     render(<NotificationsPopover />);
@@ -187,6 +187,9 @@ describe("<NotificationsPopover />", () => {
       "href",
       "/en-US/platform/notifications",
     );
-    expect(screen.queryByRole("link", { name: "settings" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "settings" })).toHaveAttribute(
+      "href",
+      "/en-US/platform/account/notifications",
+    );
   });
 });

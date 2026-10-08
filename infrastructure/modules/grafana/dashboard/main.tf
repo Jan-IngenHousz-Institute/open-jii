@@ -396,8 +396,8 @@ resource "grafana_rule_group" "cloudfront_errors" {
   interval_seconds = 60
 
   rule {
-    name      = "Site Down - High CloudFront 5xx Rate"
-    condition = "C"
+    name      = "High CloudFront 5xx Rate"
+    condition = "E"
 
     data {
       ref_id         = "A"
@@ -410,6 +410,7 @@ resource "grafana_rule_group" "cloudfront_errors" {
         namespace  = "AWS/CloudFront"
         metricName = "5xxErrorRate"
         statistic  = "Average"
+        period     = "300"
         dimensions = {
           DistributionId = var.cloudfront_distribution_id
           Region         = "Global"
@@ -417,7 +418,7 @@ resource "grafana_rule_group" "cloudfront_errors" {
       })
 
       relative_time_range {
-        from = 300
+        from = 600
         to   = 0
       }
     }
@@ -447,12 +448,41 @@ resource "grafana_rule_group" "cloudfront_errors" {
     data {
       ref_id         = "C"
       query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "C"
+        region     = "us-east-1"
+        namespace  = "AWS/CloudFront"
+        metricName = "Requests"
+        statistic  = "Sum"
+        period     = "300"
+        dimensions = {
+          DistributionId = var.cloudfront_distribution_id
+          Region         = "Global"
+        }
+      })
+
+      relative_time_range {
+        from = 600
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "D"
+      query_type     = ""
       datasource_uid = "__expr__"
 
       model = jsonencode({
-        expression = "$B > 5"
-        type       = "math"
-        refId      = "C"
+        expression = "C"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "D"
+        settings = {
+          mode             = "replaceNN"
+          replaceWithValue = 0
+        }
       })
 
       relative_time_range {
@@ -461,13 +491,33 @@ resource "grafana_rule_group" "cloudfront_errors" {
       }
     }
 
-    no_data_state  = "NoData"
+    # The rate alone pages on a handful of failures when traffic is low: twelve 502s for one
+    # oversized image tripped it on dev. Require 50 failed requests in the five minutes as well.
+    # Reachability is the Route53 health-check rule's job, not this one's.
+    data {
+      ref_id         = "E"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 5 && $B * $D / 100 >= 50"
+        type       = "math"
+        refId      = "E"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "OK"
     exec_err_state = "OK"
-    for            = "1m"
+    for            = "2m"
 
     annotations = {
-      description      = "CloudFront 5xx error rate is above 5%, so the origin may be down"
-      summary          = "Site may be down: high 5xx rate on CloudFront"
+      description      = "Over 5% of CloudFront requests, and at least 50 of them, returned 5xx in five minutes"
+      summary          = "High 5xx rate on CloudFront"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/cloudfront-errors.md"
       __dashboardUid__ = local.heartbeat_daily_uid
       __panelId__      = local.heartbeat_panel_ids["cloudfront-errors"]
@@ -2162,17 +2212,18 @@ resource "grafana_rule_group" "collector_liveness" {
 
 # Lakehouse Freshness
 #
-# The public metrics tables are rewritten on every scheduler cycle, so their age is how
-# stale the numbers on the public page are. Value-based rather than absence-based, so it
-# needs no gate: dlt-heartbeat is what notices the producer stopping altogether.
+# Whether what the lakehouse serves is current: the public metrics tables, the experiment
+# tables, the macro results, and the pipeline drivers that keep them so. Value-based rather
+# than absence-based, so it needs no gate: dlt-heartbeat is what notices the producer
+# stopping altogether.
 resource "grafana_rule_group" "lakehouse_freshness" {
   provider         = grafana.amg
   name             = "Lakehouse Freshness"
   folder_uid       = grafana_folder.folder.uid
   interval_seconds = 300
 
-  # Catalog entry 41. Measured at 12 minutes against a 60 minute threshold, so the
-  # headroom is four scheduler cycles.
+  # Catalog entry 41. The scheduler runs hourly and an update takes minutes, so past 90
+  # minutes the last update did not land.
   rule {
     name      = "Metrics Tables Stale"
     condition = "C"
@@ -2226,7 +2277,7 @@ resource "grafana_rule_group" "lakehouse_freshness" {
       datasource_uid = "__expr__"
 
       model = jsonencode({
-        expression = "$B > 60"
+        expression = "$B > 90"
         type       = "math"
         refId      = "C"
       })
@@ -2242,7 +2293,7 @@ resource "grafana_rule_group" "lakehouse_freshness" {
     for            = "15m"
 
     annotations = {
-      description      = "The public metrics tables have not been recomputed for over an hour, so every number on the public page is at least that stale."
+      description      = "The public metrics tables have not been recomputed for over 90 minutes, so every number on the public page is at least that stale."
       summary          = "Metrics tables are stale"
       runbook_url      = "${var.runbook_base_url}/docs/runbooks/metrics-mv-freshness.md"
       __dashboardUid__ = local.heartbeat_daily_uid
@@ -2334,6 +2385,171 @@ resource "grafana_rule_group" "lakehouse_freshness" {
       severity  = "warning"
       service   = "lakehouse"
       metric_id = "macro-backlog"
+    }
+  }
+
+  # Catalog entry 86. The collector publishes one p95 per closed half hour, stamped at its
+  # start, so the newest point is up to an hour old. It takes two slow half hours in a row:
+  # one on its own is not yet a pipeline falling behind.
+  rule {
+    name      = "Experiment Latency"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Data"
+        metricName = "ExperimentLatencyP95Seconds"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+      })
+
+      relative_time_range {
+        from = 4500
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > ${var.experiment_latency_threshold_seconds}"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "45m"
+
+    annotations = {
+      description      = "New measurements take longer than the environment's tolerance to reach the experiment tables, so researchers see their data late. The centrum pipeline is falling behind."
+      summary          = "Experiment tables are slow to update"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/experiment-latency.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["experiment-latency"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "lakehouse"
+      metric_id = "experiment-latency"
+    }
+  }
+
+  # Catalog entry 97. Published per pipeline, so matchExact false with only the environment
+  # covers every driver and each series alerts on its own. A point is a full collection in
+  # the last hour; a driver without one is under no pressure.
+  rule {
+    name      = "Pipeline Driver Memory"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Data"
+        metricName = "DriverOldGenAfterFullGcPercent"
+        statistic  = "Maximum"
+        dimensions = {
+          Environment = var.environment
+        }
+        matchExact = false
+      })
+
+      relative_time_range {
+        from = 3600
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B > 80"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "60m"
+
+    annotations = {
+      description      = "A pipeline driver's old generation is still over 80% full after a full collection. At 100% the driver collects continuously and every flow in the pipeline stalls."
+      summary          = "Pipeline driver is running out of memory"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/driver-heap.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["driver-heap"]
+    }
+    labels = {
+      severity  = "warning"
+      service   = "lakehouse"
+      metric_id = "driver-heap"
     }
   }
 }

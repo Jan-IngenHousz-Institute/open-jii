@@ -73,6 +73,8 @@ module "kinesis" {
   source      = "../../modules/kinesis"
   stream_name = "open-jii-${var.environment}-data-ingest-stream"
 
+  shard_count = 3
+
   retention_period_hours = 72
 
   workspace_kinesis_credential_id = var.kinesis_credential_id
@@ -693,6 +695,37 @@ module "experiment_secret_scope" {
   }
 }
 
+# The backend's warehouse was made by hand before it was code. Imports refuse a sensitive id;
+# this one is an identifier, not a credential, and CI masks it in logs.
+import {
+  to = module.backend_warehouse.databricks_sql_endpoint.this
+  id = nonsensitive(var.backend_databricks_warehouse_id)
+}
+
+module "backend_warehouse" {
+  source = "../../modules/databricks/sql-warehouse"
+
+  name             = "Backend API"
+  cluster_size     = "2X-Small"
+  max_num_clusters = 2
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
+# For people's own queries, which would otherwise keep the backend's warehouse awake.
+module "investigations_warehouse" {
+  source = "../../modules/databricks/sql-warehouse"
+
+  name           = "Investigations"
+  can_use_groups = ["users"]
+
+  providers = {
+    databricks.workspace = databricks.workspace
+  }
+}
+
 module "databricks_catalog" {
   source       = "../../modules/databricks/catalog"
   catalog_name = "open_jii_${var.environment}"
@@ -1023,9 +1056,9 @@ module "metrics_pipeline_scheduler" {
   name        = "Metrics-Pipeline-Scheduler-PROD"
   description = "Triggers the public metrics pipeline refresh"
 
-  # Schedule: every 15 minutes
+  # Schedule: hourly, which is how often the backend reads the figures
   # Format: "seconds minutes hours day-of-month month day-of-week"
-  schedule = "0 0/15 * * * ?"
+  schedule = "0 0 * * * ?"
 
   max_concurrent_runs           = 1
   use_serverless                = true
@@ -1096,7 +1129,7 @@ module "metrics_heartbeat_export" {
   max_concurrent_runs           = 1
   use_serverless                = true
   continuous                    = false
-  serverless_performance_target = "PERFORMANCE_OPTIMIZED"
+  serverless_performance_target = "STANDARD"
 
   run_as = {
     service_principal_name = module.node_service_principal.service_principal_application_id
@@ -1135,6 +1168,8 @@ module "metrics_heartbeat_export" {
         # Environment dimension, which the catalog and Grafana query as-is.
         "ENVIRONMENT"        = var.environment
         "HEARTBEAT_LOCATION" = "s3://${module.heartbeat_metrics_s3.bucket_id}"
+        "PIPELINE_LOGS_PATH" = module.pipeline_logs_volume.volume_path
+        "COST_COMPONENTS"    = jsonencode(local.databricks_cost_components)
       }
     }
   ]
@@ -1159,6 +1194,31 @@ module "metrics_heartbeat_export" {
   }
 
   depends_on = [module.heartbeat_external_location]
+}
+
+locals {
+  databricks_cost_components = {
+    centrum        = { dlt_pipeline_id = module.centrum_pipeline.pipeline_id }
+    macro          = { dlt_pipeline_id = module.macro_execution_pipeline.pipeline_id }
+    metrics        = { dlt_pipeline_id = module.metrics_pipeline.pipeline_id }
+    warehouse      = { warehouse_id = var.backend_databricks_warehouse_id }
+    investigations = { warehouse_id = module.investigations_warehouse.warehouse_id }
+  }
+}
+
+# Singular, so other principals' grants on the system catalog stay.
+resource "databricks_grant" "node_system_catalog" {
+  provider   = databricks.workspace
+  catalog    = "system"
+  principal  = module.node_service_principal.service_principal_application_id
+  privileges = ["USE_CATALOG"]
+}
+
+resource "databricks_grant" "node_system_billing" {
+  provider   = databricks.workspace
+  schema     = "system.billing"
+  principal  = module.node_service_principal.service_principal_application_id
+  privileges = ["USE_SCHEMA", "SELECT"]
 }
 
 module "centrum_backup_job" {
@@ -2956,6 +3016,7 @@ module "grafana_dashboard" {
   slack_webhook_url              = var.slack_webhook_url
   posthog_project_id             = "80726"
   kinesis_shard_count            = module.kinesis.shard_count
+  databricks_cost_components     = concat(keys(local.databricks_cost_components), ["jobs", "other"])
   payload_samples_log_group_name = module.iot_core.payload_samples_log_group_name
   storage_buckets = {
     "Raw payload archive"  = module.iot_raw_archive_s3.bucket_id
