@@ -213,7 +213,7 @@ export const NOTIFICATION_TYPES = {
   project_transfer_requested: {
     category: "project_transfers",
     channels: { email: "preference" },
-    params: z.object({ projectId: z.string() }),
+    params: z.object({ projectId: z.string(), projectUrl: z.string() }),
   },
   project_transfer_completed: {
     category: "project_transfers",
