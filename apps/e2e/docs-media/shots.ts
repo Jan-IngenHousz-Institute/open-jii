@@ -21,6 +21,8 @@ export interface Shot {
   readonly webauthn?: boolean;
   /** Capture without a session. Default is the seeded development session. */
   readonly anonymous?: boolean;
+  /** Authenticated identity to capture as. Defaults to the seeded account. */
+  readonly session?: "seed" | "newcomer";
   /**
    * PostHog flags pinned on in the browser for this shot. The client SDK runs
    * cookieless until consent settles and reports no flags in that state, so a
@@ -106,6 +108,14 @@ export const SHOTS: readonly Shot[] = [
     frame: "desktop",
     route: "/platform",
     scope: "Authenticated dashboard: welcome card, recent experiments, compact contextual header",
+  },
+  {
+    slug: "dashboard-first-work",
+    publish: "img/guide/web/dashboard-first-work.webp",
+    frame: "desktop",
+    route: "/platform",
+    session: "newcomer",
+    scope: "Dashboard empty state with the three first-work cards in the recent experiments row",
   },
   {
     slug: "experiments-list",
@@ -472,6 +482,19 @@ export const SHOTS: readonly Shot[] = [
   },
 
   // ------------------------------------------------- tier 4: account security
+  {
+    slug: "notification-settings",
+    publish: "img/guide/web/account-security/notification-settings.webp",
+    frame: "desktop",
+    route: "/platform/account/notifications",
+    async prepare(page) {
+      // The switches render from the resolved preferences, not from the registry
+      // defaults, so a frame taken before that read lands shows an empty card.
+      await page.getByRole("switch").last().waitFor();
+      await settle(page, 900);
+    },
+    scope: "Notifications tab in account settings: one email switch per category",
+  },
   {
     slug: "passkeys-table",
     publish: "img/guide/web/account-security/passkeys-table.webp",

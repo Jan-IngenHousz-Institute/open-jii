@@ -62,6 +62,13 @@ describe("QueryBuilder Base", () => {
       expect(query).toBe("SELECT * FROM t ORDER BY `user`.`profile`.`name` DESC");
     });
 
+    it("orders an anonymized contributor by the pseudonym of its id", () => {
+      const query = builder.from("t").orderBy("contributor.id", "DESC", "exp-1").build();
+      expect(query).toBe(
+        "SELECT * FROM t ORDER BY concat('Contributor-', upper(substr(sha2(concat('exp-1:', `contributor`.`id`), 256), 1, 6))) DESC",
+      );
+    });
+
     it("should allow disabling case-insensitive sorting", () => {
       const query = builder.from("t").orderBy("created_at", "ASC").build();
       expect(query).toBe("SELECT * FROM t ORDER BY `created_at` ASC");
@@ -203,6 +210,18 @@ describe("QueryBuilder Base", () => {
 
       expect(projected).toContain("ORDER BY `x` DESC");
       expect(unprojected).toContain("ORDER BY try_variant_get(`v`, '$[\"x\"]', 'INT') ASC");
+    });
+
+    it("orders an anonymized contributor by the pseudonym of its id", () => {
+      const query = new VariantQueryBuilder()
+        .from("t")
+        .parseVariant("v", "OBJECT<x: INT>")
+        .orderBy("contributor.id", "ASC", "exp-1")
+        .build();
+
+      expect(query).toContain(
+        "ORDER BY concat('Contributor-', upper(substr(sha2(concat('exp-1:', `contributor`.`id`), 256), 1, 6))) ASC",
+      );
     });
 
     it("quotes awkward field names in the path and keeps dotted names one identifier", () => {

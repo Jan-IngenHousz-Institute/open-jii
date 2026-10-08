@@ -914,7 +914,21 @@
     "noPublicExperiments": "Noch keine öffentlichen Experimente.",
     "publicExperimentsLoadFailed": "Öffentliche Experimente konnten nicht geladen werden.",
     "publicExperimentsStale": "Seit dem {{date}} wurde kein öffentliches Experiment aktualisiert.",
-    "browsePublicExperiments": "Öffentliche Experimente durchsuchen"
+    "browsePublicExperiments": "Öffentliche Experimente durchsuchen",
+    "firstWork": {
+      "create": {
+        "title": "Experiment erstellen",
+        "description": "Richten Sie Ihr eigenes Experiment ein und beginnen Sie mit dem Messen."
+      },
+      "join": {
+        "title": "Einer Organisation beitreten",
+        "description": "Arbeiten Sie mit den gemeinsamen Experimenten und Geräten Ihres Labors."
+      },
+      "browse": {
+        "title": "Öffentliche Forschung entdecken",
+        "description": "Sehen Sie sich echte Experimente an, die andere veröffentlicht haben."
+      }
+    }
   },
   "auth": {
     "login": "Anmelden",

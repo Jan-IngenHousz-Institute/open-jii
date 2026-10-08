@@ -1,6 +1,7 @@
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import * as nav from "next/navigation";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -25,6 +26,25 @@ describe("ListExperiments", () => {
     expect(screen.queryByRole("link", { name: "experiments.create" })).toBeNull();
     expect(screen.queryByRole("link", { name: "experiments.viewArchived" })).toBeNull();
     expect(screen.queryByRole("link", { name: "transferRequest.title" })).toBeNull();
+  });
+
+  it("focuses the search when the link asks for it", () => {
+    vi.mocked(nav.useSearchParams).mockReturnValue(
+      new nav.ReadonlyURLSearchParams("visibility=public&focus=search"),
+    );
+    server.mount(contract.experiments.listExperiments, { body: envelope([]) });
+
+    render(<ListExperiments />);
+
+    expect(screen.getByPlaceholderText("experiments.searchExperiments")).toHaveFocus();
+  });
+
+  it("leaves focus alone on a plain visit", () => {
+    server.mount(contract.experiments.listExperiments, { body: envelope([]) });
+
+    render(<ListExperiments />);
+
+    expect(screen.getByPlaceholderText("experiments.searchExperiments")).not.toHaveFocus();
   });
 
   it("renders experiments as table rows linking to their detail pages", async () => {

@@ -17,6 +17,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
     if (pathname.includes("/security")) return "security";
     if (pathname.includes("/api-keys")) return "api-keys";
     if (pathname.includes("/invitations")) return "invitations";
+    if (pathname.includes("/notifications")) return "notifications";
     return "general";
   };
 
@@ -35,6 +36,11 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
           </NavTabsTrigger>
           <NavTabsTrigger value="invitations" asChild>
             <Link href={`/${locale}/platform/account/invitations`}>{t("tabs.invitations")}</Link>
+          </NavTabsTrigger>
+          <NavTabsTrigger value="notifications" asChild>
+            <Link href={`/${locale}/platform/account/notifications`}>
+              {t("tabs.notifications")}
+            </Link>
           </NavTabsTrigger>
         </NavTabsList>
 

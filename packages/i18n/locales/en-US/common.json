@@ -914,7 +914,21 @@
     "noPublicExperiments": "No public experiments yet.",
     "publicExperimentsLoadFailed": "Could not load public experiments.",
     "publicExperimentsStale": "No public experiment has been updated since {{date}}.",
-    "browsePublicExperiments": "Browse public experiments"
+    "browsePublicExperiments": "Browse public experiments",
+    "firstWork": {
+      "create": {
+        "title": "Create an experiment",
+        "description": "Set up your own experiment and start measuring."
+      },
+      "join": {
+        "title": "Join an organization",
+        "description": "Work with your lab's shared experiments and devices."
+      },
+      "browse": {
+        "title": "Browse public research",
+        "description": "Look at real experiments others have published."
+      }
+    }
   },
   "auth": {
     "login": "Sign in",
