@@ -315,6 +315,11 @@ export const zNotificationPreference = z.object({
   channel: zNotificationChannel,
   enabled: z.boolean(),
   locked: z.boolean(),
+  available: z
+    .boolean()
+    .describe(
+      "Whether this category's notifications go through the preference check today, so the choice has an effect",
+    ),
 });
 
 export const zNotificationPreferences = z.object({

@@ -207,19 +207,41 @@ describe("NotificationController", () => {
         channel: "email",
         enabled: true,
         locked: false,
+        available: true,
       });
       expect(response.body.preferences).toContainEqual({
         category: "data_jobs",
         channel: "email",
         enabled: false,
         locked: false,
+        available: false,
       });
       expect(response.body.preferences).toContainEqual({
         category: "account_security",
         channel: "email",
         enabled: true,
         locked: true,
+        available: false,
       });
+    });
+
+    /**
+     * `available` is derived from the email table, not listed anywhere: a category
+     * offers its switch once one of its `preference` types has an email behind it.
+     * Today that is join requests and their decisions, and nothing else.
+     */
+    it("marks only the categories whose emails exist today as available", async () => {
+      const response: SuperTestResponse<NotificationPreferences> = await testApp
+        .get(testApp.resolveOrpcPath(contract.notifications.getNotificationPreferences))
+        .withAuth(recipientId)
+        .expect(StatusCodes.OK);
+
+      const available = response.body.preferences
+        .filter((preference) => preference.available)
+        .map((preference) => preference.category)
+        .sort();
+
+      expect(available).toEqual(["membership_and_access", "requests_and_invitations"]);
     });
 
     it("saves one category without touching the others or other people", async () => {
@@ -265,6 +287,7 @@ describe("NotificationController", () => {
         channel: "email",
         enabled: true,
         locked: true,
+        available: false,
       });
     });
   });
