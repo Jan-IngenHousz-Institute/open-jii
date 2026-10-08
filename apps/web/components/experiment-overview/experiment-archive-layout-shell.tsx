@@ -114,27 +114,39 @@ export function ExperimentArchiveLayoutShell({ children }: ExperimentArchiveLayo
       <NavTabs value={activeTab} className="w-full">
         <NavTabsList>
           <NavTabsTrigger value="overview" asChild>
-            <IntentLink href={`/${locale}/platform/experiments-archive/${id}`}>
+            <IntentLink prefetchWhileVisible href={`/${locale}/platform/experiments-archive/${id}`}>
               {t("overview")}
             </IntentLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="data" asChild>
-            <IntentLink href={`/${locale}/platform/experiments-archive/${id}/data`}>
+            <IntentLink
+              prefetchWhileVisible
+              href={`/${locale}/platform/experiments-archive/${id}/data`}
+            >
               {t("data")}
             </IntentLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="analysis" asChild>
-            <IntentLink href={`/${locale}/platform/experiments-archive/${id}/analysis`}>
+            <IntentLink
+              prefetchWhileVisible
+              href={`/${locale}/platform/experiments-archive/${id}/analysis`}
+            >
               {t("analysis.title")}
             </IntentLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="design" asChild>
-            <IntentLink href={`/${locale}/platform/experiments-archive/${id}/design`}>
+            <IntentLink
+              prefetchWhileVisible
+              href={`/${locale}/platform/experiments-archive/${id}/design`}
+            >
               {t("flow.tabLabel")}
             </IntentLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="collaborators" asChild>
-            <IntentLink href={`/${locale}/platform/experiments-archive/${id}/collaborators`}>
+            <IntentLink
+              prefetchWhileVisible
+              href={`/${locale}/platform/experiments-archive/${id}/collaborators`}
+            >
               {tSettings("experimentSettings.collaborators")}
             </IntentLink>
           </NavTabsTrigger>

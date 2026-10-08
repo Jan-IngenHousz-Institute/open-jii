@@ -119,33 +119,46 @@ export function ExperimentLayoutShell({ children }: ExperimentLayoutShellProps) 
       <NavTabs value={activeTab} className="flex w-full flex-1 flex-col">
         <NavTabsList>
           <NavTabsTrigger value="overview" asChild>
-            <IntentLink href={`/${locale}/platform/experiments/${id}`}>{t("overview")}</IntentLink>
+            <IntentLink prefetchWhileVisible href={`/${locale}/platform/experiments/${id}`}>
+              {t("overview")}
+            </IntentLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="data" asChild>
-            <IntentLink href={`/${locale}/platform/experiments/${id}/data`}>{t("data")}</IntentLink>
+            <IntentLink prefetchWhileVisible href={`/${locale}/platform/experiments/${id}/data`}>
+              {t("data")}
+            </IntentLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="analysis" asChild>
-            <IntentLink href={`/${locale}/platform/experiments/${id}/analysis`}>
+            <IntentLink
+              prefetchWhileVisible
+              href={`/${locale}/platform/experiments/${id}/analysis`}
+            >
               {t("analysis.title")}
             </IntentLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="dashboards" asChild>
-            <IntentLink href={`/${locale}/platform/experiments/${id}/dashboards`}>
+            <IntentLink
+              prefetchWhileVisible
+              href={`/${locale}/platform/experiments/${id}/dashboards`}
+            >
               {t("dashboards.tabLabel")}
             </IntentLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="design" asChild>
-            <IntentLink href={`/${locale}/platform/experiments/${id}/design`}>
+            <IntentLink prefetchWhileVisible href={`/${locale}/platform/experiments/${id}/design`}>
               {t("flow.tabLabel")}
             </IntentLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="collaborators" asChild>
-            <IntentLink href={`/${locale}/platform/experiments/${id}/collaborators`}>
+            <IntentLink
+              prefetchWhileVisible
+              href={`/${locale}/platform/experiments/${id}/collaborators`}
+            >
               {tSettings("experimentSettings.collaborators")}
             </IntentLink>
           </NavTabsTrigger>
           <NavTabsTrigger value="devices" asChild>
-            <IntentLink href={`/${locale}/platform/experiments/${id}/devices`}>
+            <IntentLink prefetchWhileVisible href={`/${locale}/platform/experiments/${id}/devices`}>
               {tIot("iot.experimentDevices.tabLabel")}
             </IntentLink>
           </NavTabsTrigger>

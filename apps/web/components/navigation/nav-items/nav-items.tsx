@@ -71,7 +71,7 @@ export function NavItems({ items }: { items: NavItem[] }) {
               isActive={isActivePath(pathname, item.url)}
               tooltip={item.title}
             >
-              <IntentLink href={item.url} onClick={closeMobileNavigation}>
+              <IntentLink prefetchWhileVisible href={item.url} onClick={closeMobileNavigation}>
                 {item.icon && <item.icon />}
                 <span>{item.title}</span>
               </IntentLink>
@@ -109,7 +109,7 @@ function NavGroup({
             {item.children?.map((child) => (
               <SidebarMenuSubItem key={child.title}>
                 <SidebarMenuSubButton asChild isActive={isActivePath(pathname, child.url)}>
-                  <IntentLink href={child.url} onClick={onNavigate}>
+                  <IntentLink prefetchWhileVisible href={child.url} onClick={onNavigate}>
                     {child.icon && <child.icon />}
                     <span>{child.title}</span>
                   </IntentLink>
