@@ -37,7 +37,7 @@ jobs:
           esac
 
       - name: Checkout code
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
@@ -59,7 +59,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Setup Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.10"
 
@@ -67,7 +67,7 @@ jobs:
         run: pip install --upgrade pip build
 
       - name: Setup Databricks CLI
-        uses: databricks/setup-cli@5a9e330acfb8aaf3fcf9b915cca4c7b7e2331c5b # v0.298.0
+        uses: databricks/setup-cli@d268e8b0d8f5d8cc0e743697fe702c9f8c53c950 # v0.299.2
 
       - name: Validate bundle
         working-directory: apps/data
