@@ -1,6 +1,7 @@
 "use client";
 
 import { TernaryPlot } from "@/components/charts/ternary";
+import { useColumnMetadata } from "@/hooks/experiment/useColumnMetadata/useColumnMetadata";
 import { useMemo } from "react";
 
 import { useTranslation } from "@repo/i18n";
@@ -35,15 +36,20 @@ export function TernaryRenderer({
 
   const sum = chartConfig.ternarySum ?? 100;
 
+  const colorColumn = dataSources.find((ds) => ds.role === "color")?.columnName;
+  const { columns } = useColumnMetadata(experimentId, visualization.dataConfig.tableName);
+  const colorColumnType = columns.find((c) => c.name === colorColumn)?.type_text;
+
   // KEEP IN SYNC with the field reads in `transformTernaryData`.
   const { series } = useMemo(() => {
     if (visualization.chartType !== "ternary") {
       return { series: [], aColumn: undefined, bColumn: undefined, cColumn: undefined };
     }
-    return transformTernaryData(rows, dataSources, chartConfig);
+    return transformTernaryData(rows, dataSources, chartConfig, colorColumnType);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- leaf-listed; see KEEP IN SYNC comment.
   }, [
     rows,
+    colorColumnType,
     dataSources,
     visualization.chartType,
     chartConfig.colorMode,

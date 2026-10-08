@@ -1,4 +1,5 @@
 import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import { isCategoricalColumnType } from "@repo/api/transforms/column-type-utils";
 import type { PolarSeriesData } from "@repo/ui/components/charts/polar";
 
 import type { ChartFormConfig } from "../../chart-config";
@@ -56,6 +57,7 @@ export function transformPolarData(
   rows: Record<string, unknown>[],
   dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
+  colorColumnType?: string,
 ): PolarSeriesData[] {
   const xColumn = dataSourcesByRole(dataSources, "x")[0]?.source.columnName;
   const yEntries = dataSourcesByRole(dataSources, "y");
@@ -75,7 +77,12 @@ export function transformPolarData(
   const lineWidth = chartConfig.polarLineWidth ?? 2;
   const markerSize = chartConfig.polarMarkerSize ?? 6;
   const fill = Boolean(chartConfig.polarFill);
-  const isCategoricalColor = Boolean(colorColumn) && chartConfig.colorMode === "categorical";
+  // No continuous path here, so a chart saved without `colorMode` (through the
+  // API) would otherwise ignore a text colour column.
+  const isCategoricalColor =
+    Boolean(colorColumn) &&
+    (chartConfig.colorMode === "categorical" ||
+      (chartConfig.colorMode === undefined && isCategoricalColumnType(colorColumnType)));
   const wantsLines = mode.includes("lines");
   const wantsMarkers = mode.includes("markers");
 

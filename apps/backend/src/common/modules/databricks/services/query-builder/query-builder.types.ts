@@ -107,6 +107,9 @@ export interface QueryParams {
   distinct?: boolean;
   orderBy?: string;
   orderDirection?: "ASC" | "DESC";
+  // Experiment id salt. When set, `orderBy` names a `<contributor>.id` path
+  // and rows sort by its pseudonym, the name an anonymized experiment shows.
+  orderByContributorPseudonymSalt?: string;
   limit?: number;
   offset?: number;
 }

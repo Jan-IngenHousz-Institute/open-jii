@@ -1722,6 +1722,22 @@ describe("UserRepository", () => {
       expect(userIds.filter((id) => id === testUser1Id)).toHaveLength(1);
       expect(userIds.filter((id) => id === testUser2Id)).toHaveLength(1);
     });
+
+    it("masks a deactivated user's name and avatar, as every other profile read does", async () => {
+      const inactiveId = await testApp.createTestUser({
+        email: "finduser-inactive@example.com",
+        name: "Ghosty Inactive",
+        image: "https://example.com/ghosty.jpg",
+        activated: false,
+      });
+
+      const result = await repository.findUsersByIds([inactiveId]);
+
+      assertSuccess(result);
+      expect(result.value).toEqual([
+        { userId: inactiveId, firstName: "Unknown", lastName: "User", avatarUrl: null },
+      ]);
+    });
   });
 
   describe("findWhatsNewLastSeen", () => {

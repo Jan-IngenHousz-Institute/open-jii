@@ -14,46 +14,52 @@ function dataConfig(roles: string[]): ChartFormDataConfig {
   } as ChartFormDataConfig;
 }
 
+const scatterDefaults: ChartFormConfig = { colorMode: "continuous", showLegend: true };
+const lineDefaults: ChartFormConfig = { showLegend: true };
+
 describe("withResolvedColorMode", () => {
   // Only the colour shelf's column picker stamps `colorMode`, so a config saved
   // before that, or authored through the API, arrives without one.
-  it("stamps categorical when a colour column has no mode", () => {
-    const result = withResolvedColorMode({}, dataConfig(["x", "y", "color"]));
+  it("stamps categorical for a categorical-only chart type", () => {
+    const result = withResolvedColorMode(lineDefaults, {}, dataConfig(["x", "y", "color"]));
 
     expect(result.colorMode).toBe("categorical");
   });
 
-  it("leaves an explicit mode alone", () => {
+  // The scatter default used to fill the gap with "continuous", which drew a
+  // text colour column in black. The renderer decides from the column type.
+  it("keeps the mode unset for a chart type with a continuous default", () => {
+    const result = withResolvedColorMode(scatterDefaults, {}, dataConfig(["x", "y", "color"]));
+
+    expect(result.colorMode).toBeUndefined();
+    expect(result.showLegend).toBe(true);
+  });
+
+  it("keeps a persisted mode over the defaults", () => {
     for (const mode of ["categorical", "continuous"] as const) {
-      const config = { colorMode: mode } as ChartFormConfig;
-      expect(withResolvedColorMode(config, dataConfig(["x", "y", "color"]))).toBe(config);
+      const result = withResolvedColorMode(
+        scatterDefaults,
+        { colorMode: mode },
+        dataConfig(["x", "y", "color"]),
+      );
+      expect(result.colorMode).toBe(mode);
     }
   });
 
-  // Charts that support continuous colour ship `colorMode` in their own
-  // defaults, so once those are merged the field is already set and this
-  // helper must not downgrade them to categorical.
-  it("leaves a continuous default from the chart type alone", () => {
-    const result = withResolvedColorMode(
-      { colorMode: "continuous" },
-      dataConfig(["x", "y", "color"]),
-    );
-
-    expect(result.colorMode).toBe("continuous");
+  it("adds no mode when no colour column is mapped", () => {
+    expect(
+      withResolvedColorMode(lineDefaults, {}, dataConfig(["x", "y"])).colorMode,
+    ).toBeUndefined();
+    expect(
+      withResolvedColorMode(scatterDefaults, {}, dataConfig(["x", "y"])).colorMode,
+    ).toBeUndefined();
   });
 
-  it("adds nothing when no colour column is mapped", () => {
-    const config = {} as ChartFormConfig;
-    const result = withResolvedColorMode(config, dataConfig(["x", "y"]));
+  it("does not mutate the configs it is given", () => {
+    const persisted = {} as ChartFormConfig;
+    withResolvedColorMode(scatterDefaults, persisted, dataConfig(["x", "y", "color"]));
 
-    expect(result).toBe(config);
-    expect(result.colorMode).toBeUndefined();
-  });
-
-  it("does not mutate the config it is given", () => {
-    const config = {} as ChartFormConfig;
-    withResolvedColorMode(config, dataConfig(["x", "y", "color"]));
-
-    expect(config.colorMode).toBeUndefined();
+    expect(persisted.colorMode).toBeUndefined();
+    expect(scatterDefaults.colorMode).toBe("continuous");
   });
 });

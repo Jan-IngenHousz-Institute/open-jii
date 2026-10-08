@@ -11,6 +11,7 @@ import {
   DashboardFiltersProvider,
   useDashboardFilterWidget,
   useDashboardFiltersForTable,
+  useDashboardSkippedFiltersForTable,
 } from "./dashboard-filters-context";
 
 function wrapWithWidgets(widgets: ExperimentDashboardWidget[]) {
@@ -279,5 +280,99 @@ describe("useDashboardFilterWidget", () => {
     );
     expect(captured.at(-1)).not.toBe(captured[0]);
     expect(captured.at(-1)).toEqual([{ column: "device_id", operator: "equals", value: "D2" }]);
+  });
+});
+
+describe("skipped filters", () => {
+  function rangeWidget(defaultValue?: ExperimentDataFilter["value"]) {
+    return createFilterWidget({
+      config: {
+        tableName: "raw_data",
+        column: "signal",
+        operator: "between",
+        title: "Signal",
+        defaultValue,
+      },
+    });
+  }
+
+  function renderRange(widget: ReturnType<typeof rangeWidget>) {
+    return renderHook(
+      () => ({
+        widget: useDashboardFilterWidget(widget.id),
+        filters: useDashboardFiltersForTable("raw_data"),
+        skipped: useDashboardSkippedFiltersForTable("raw_data"),
+      }),
+      { wrapper: wrapWithWidgets([widget]) },
+    );
+  }
+
+  it("reports a range with only a start as skipped instead of dropping it silently", () => {
+    const widget = rangeWidget([0, 10]);
+    const { result } = renderRange(widget);
+
+    act(() => {
+      result.current.widget.setValue([0, ""]);
+    });
+
+    expect(result.current.filters).toEqual([]);
+    expect(result.current.skipped).toEqual([
+      { widgetId: widget.id, label: "Signal", reason: "rangeMissingEnd" },
+    ]);
+    expect(result.current.widget.issue).toBe("rangeMissingEnd");
+  });
+
+  it("reports a reversed range as skipped", () => {
+    const widget = rangeWidget([5, 1]);
+    const { result } = renderRange(widget);
+
+    expect(result.current.filters).toEqual([]);
+    expect(result.current.skipped).toEqual([
+      { widgetId: widget.id, label: "Signal", reason: "rangeReversed" },
+    ]);
+    expect(result.current.widget.issue).toBe("rangeReversed");
+  });
+
+  it("treats a range with both bounds cleared as no filter, not a skipped one", () => {
+    const widget = rangeWidget([0, 10]);
+    const { result } = renderRange(widget);
+
+    act(() => {
+      result.current.widget.setValue(["", ""]);
+    });
+
+    expect(result.current.filters).toEqual([]);
+    expect(result.current.skipped).toEqual([]);
+    expect(result.current.widget.issue).toBeUndefined();
+  });
+
+  it("reports a saved default with only an end the same way", () => {
+    const widget = rangeWidget(["", 5]);
+    const { result } = renderRange(widget);
+
+    expect(result.current.skipped).toEqual([
+      { widgetId: widget.id, label: "Signal", reason: "rangeMissingStart" },
+    ]);
+  });
+
+  it("labels a skipped filter by its column when the widget has no title", () => {
+    const widget = createFilterWidget({
+      config: {
+        tableName: "raw_data",
+        column: "signal",
+        operator: "between",
+        defaultValue: [0, ""],
+      },
+    });
+    const { result } = renderRange(widget);
+
+    expect(result.current.skipped).toEqual([
+      { widgetId: widget.id, label: "signal", reason: "rangeMissingEnd" },
+    ]);
+  });
+
+  it("returns an empty list without a provider", () => {
+    const { result } = renderHook(() => useDashboardSkippedFiltersForTable("raw_data"));
+    expect(result.current).toEqual([]);
   });
 });

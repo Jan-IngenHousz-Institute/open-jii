@@ -8,6 +8,7 @@ allowBuilds:
   better-sqlite3: true
   turbo: true
   "@shopify/react-native-skia": true
+  "@posthog/cli": true
   "@scarf/scarf": false
   "@tree-sitter-grammars/tree-sitter-yaml": false
   core-js: false

@@ -9,6 +9,7 @@ import {
   WellKnownColumnTypes,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
+import type { AggregationSpec } from "../../../common/modules/databricks/services/query-builder/query-builder.types";
 import {
   AppError,
   success,
@@ -546,6 +547,123 @@ describe("ExperimentDataRepository", () => {
           filters: [{ column: "contributor.id", operator: "in", value: ["u1"] }],
         }),
       );
+    });
+
+    describe("sorting by contributor", () => {
+      const rawData: ExperimentTableMetadata = {
+        identifier: "raw_data",
+        displayName: "Raw data",
+        tableType: "static",
+        rowCount: 10,
+        latestRowAt: null,
+        schemaRevision: null,
+        macroSchema: null,
+        questionsSchema: null,
+        customMetadataSchema: null,
+      };
+
+      beforeEach(() => {
+        vi.spyOn(databricksPort, "getExperimentTableMetadata").mockResolvedValue(
+          success([rawData]),
+        );
+        vi.spyOn(databricksPort, "buildExperimentQuery").mockReturnValue(success("SELECT ..."));
+        vi.spyOn(databricksPort, "executeSqlQuery").mockResolvedValue(
+          success({
+            columns: [
+              {
+                name: "contributor",
+                type_name: "STRUCT",
+                type_text: WellKnownColumnTypes.CONTRIBUTOR,
+                position: 0,
+              },
+              {
+                name: "plot",
+                type_name: "STRUCT",
+                type_text: "STRUCT<id: STRING, name: STRING>",
+                position: 1,
+              },
+            ],
+            rows: [],
+            totalRows: 0,
+            truncated: false,
+          }),
+        );
+      });
+
+      it("orders an anonymized experiment by the pseudonym it shows, not the real name", async () => {
+        await repository.getTableData({
+          ...baseParams,
+          experiment: { ...mockExperiment, anonymizeContributors: true },
+          orderBy: "contributor.name",
+          orderDirection: "DESC",
+          page: 1,
+          pageSize: 5,
+        });
+
+        expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            orderBy: "contributor.id",
+            orderDirection: "DESC",
+            orderByContributorPseudonymSalt: mockExperiment.id,
+          }),
+        );
+      });
+
+      it("orders by the name when the experiment does not anonymize", async () => {
+        await repository.getTableData({
+          ...baseParams,
+          experiment: { ...mockExperiment, anonymizeContributors: false },
+          orderBy: "contributor.name",
+          page: 1,
+          pageSize: 5,
+        });
+
+        expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            orderBy: "contributor.name",
+            orderByContributorPseudonymSalt: undefined,
+          }),
+        );
+      });
+
+      it("keeps another struct's name order in an anonymized experiment", async () => {
+        await repository.getTableData({
+          ...baseParams,
+          experiment: { ...mockExperiment, anonymizeContributors: true },
+          orderBy: "plot.name",
+          page: 1,
+          pageSize: 5,
+        });
+
+        expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            orderBy: "plot.name",
+            orderByContributorPseudonymSalt: undefined,
+          }),
+        );
+      });
+
+      it("orders an anonymized aggregation by the pseudonym too", async () => {
+        const aggregation: AggregationSpec = {
+          groupBy: [{ column: "contributor" }],
+          functions: [{ column: "value", function: "avg" }],
+        };
+
+        await repository.getTableData({
+          ...baseParams,
+          experiment: { ...mockExperiment, anonymizeContributors: true },
+          aggregation,
+          orderBy: "contributor.name",
+        });
+
+        expect(databricksPort.buildExperimentQuery).toHaveBeenCalledWith(
+          expect.objectContaining({
+            aggregation,
+            orderBy: "contributor.id",
+            orderByContributorPseudonymSalt: mockExperiment.id,
+          }),
+        );
+      });
     });
 
     it("should return failure when table not found", async () => {

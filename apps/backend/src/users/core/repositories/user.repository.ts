@@ -188,9 +188,9 @@ export class UserRepository {
       const result = await this.database
         .select({
           userId: users.id,
-          firstName: profiles.firstName,
-          lastName: profiles.lastName,
-          avatarUrl: profiles.avatarUrl,
+          firstName: getAnonymizedFirstName(),
+          lastName: getAnonymizedLastName(),
+          avatarUrl: getAnonymizedAvatarUrl(),
         })
         .from(users)
         .innerJoin(profiles, eq(users.id, profiles.userId))
