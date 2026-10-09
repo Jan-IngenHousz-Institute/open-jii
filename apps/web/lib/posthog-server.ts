@@ -6,8 +6,9 @@ import { cache } from "react";
 import { env } from "~/env";
 
 import type { FeatureFlagKey } from "@repo/analytics";
-import { flagPersonProperties } from "@repo/analytics";
+import { FEATURE_FLAG_DEFAULTS, flagPersonProperties } from "@repo/analytics";
 import {
+  evaluateFeatureFlag as evaluateFeatureFlagBase,
   getPostHogServerClient,
   initializePostHogServer,
   isFeatureFlagEnabled as isFeatureFlagEnabledBase,
@@ -81,13 +82,14 @@ export async function isFeatureFlagEnabled(
 
 type ApiClient = ReturnType<typeof createOrpcClientWithCookie>;
 
-async function listOrganizationIds(client: ApiClient): Promise<string[]> {
+/** The person's organization ids, or null when they could not be read. */
+async function listOrganizationIds(client: ApiClient): Promise<string[] | null> {
   try {
     const organizations = await client.organizations.listMyOrganizations();
     return organizations.map(({ id }) => id);
   } catch (error) {
     console.error("[PostHog] Failed to load memberships for flag evaluation:", error);
-    return [];
+    return null;
   }
 }
 
@@ -158,13 +160,21 @@ export async function isFeatureFlagEnabledForSession(
     return cached;
   }
 
-  const isEnabled = await isFeatureFlagEnabledForPerson(
+  const organizationIds = await fetchMyOrganizationIds();
+  await ensureInitialized();
+  const { id, email } = session.user;
+  const decision = await evaluateFeatureFlagBase(
     flagKey,
-    session,
-    await fetchMyOrganizationIds(),
+    email || id,
+    flagPersonProperties({ email, organizationIds: organizationIds ?? [] }),
   );
-  flagDecisions.set(key, isEnabled);
-  return isEnabled;
+
+  // A fallback, from memberships that failed to load or a PostHog that did not answer, is used
+  // once and not kept, so a passing outage does not hide a feature for a minute.
+  if (organizationIds !== null && decision !== undefined) {
+    flagDecisions.set(key, decision);
+  }
+  return decision ?? FEATURE_FLAG_DEFAULTS[flagKey];
 }
 
 async function readSession(requestHeaders: Headers): Promise<Session | null> {
@@ -192,7 +202,7 @@ export async function isFeatureFlagEnabledForRequest(
   }
 
   const client = createOrpcClientWithCookie(requestHeaders.get("cookie") ?? "");
-  return isFeatureFlagEnabledForPerson(flagKey, session, await listOrganizationIds(client));
+  return isFeatureFlagEnabledForPerson(flagKey, session, (await listOrganizationIds(client)) ?? []);
 }
 
 /**

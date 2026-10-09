@@ -375,6 +375,38 @@ describe("posthog-server", () => {
       vi.useRealTimers();
     });
 
+    it("does not keep an answer made while the memberships failed to load", async () => {
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      listMyOrganizations
+        .mockRejectedValueOnce(new Error("backend unavailable"))
+        .mockResolvedValueOnce([createMyOrganization({ id: "org-qa" })]);
+      mockPostHogInstance.isFeatureEnabled.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+      const ana = createSession({ user: { id: "user-ana", email: "ana@example.com" } });
+
+      const duringOutage = await isFeatureFlagEnabledForSession(FEATURE_FLAGS.CALIBRATION, ana);
+      const afterOutage = await isFeatureFlagEnabledForSession(FEATURE_FLAGS.CALIBRATION, ana);
+
+      consoleErrorSpy.mockRestore();
+      expect(duringOutage).toBe(false);
+      expect(afterOutage).toBe(true);
+    });
+
+    it("does not keep the default it fell back to when PostHog failed", async () => {
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      listMyOrganizations.mockResolvedValue([]);
+      mockPostHogInstance.isFeatureEnabled
+        .mockRejectedValueOnce(new Error("posthog unavailable"))
+        .mockResolvedValueOnce(true);
+      const ana = createSession({ user: { id: "user-ana", email: "ana@example.com" } });
+
+      const duringOutage = await isFeatureFlagEnabledForSession(FEATURE_FLAGS.CALIBRATION, ana);
+      const afterOutage = await isFeatureFlagEnabledForSession(FEATURE_FLAGS.CALIBRATION, ana);
+
+      consoleErrorSpy.mockRestore();
+      expect(duringOutage).toBe(FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.CALIBRATION]);
+      expect(afterOutage).toBe(true);
+    });
+
     it("keeps each person's answer apart", async () => {
       listMyOrganizations.mockResolvedValue([]);
       mockPostHogInstance.isFeatureEnabled.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
