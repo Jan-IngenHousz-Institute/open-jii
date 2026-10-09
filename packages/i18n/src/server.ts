@@ -7,6 +7,12 @@ import { initReactI18next } from "react-i18next/initReactI18next";
 import { defaultNamespace, fallbackLng, fallbackNS, i18nConfig, isKnownLocale } from "./config";
 import type { Namespace } from "./config";
 
+export interface Translations {
+  i18n: i18n;
+  resources: Resource;
+  t: i18n["t"];
+}
+
 export interface InitTranslationsProps {
   i18nInstance?: i18n;
   locale: string;
@@ -52,7 +58,7 @@ export default async function initTranslations({
   locale,
   namespaces = [defaultNamespace],
   resources,
-}: InitTranslationsProps) {
+}: InitTranslationsProps): Promise<Translations> {
   if (!resources) {
     const instance = await loadServerTranslations(locale, ...namespaces);
     return { i18n: instance, resources: instance.services.resourceStore.data, t: instance.t };
