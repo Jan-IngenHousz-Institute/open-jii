@@ -37,3 +37,16 @@ vulnerabilities:
       - "pkg:rpm/amazon/pcre2-syntax@10.40-1.amzn2023.0.3"
     statement: "PCRE2 JIT memory corruption. Neither the runtime nor macro code uses PCRE2."
     expired_at: 2026-11-05
+
+  # aws-lambda-rie, Go stdlib 1.26.7, fixed in 1.26.9. The base entrypoint runs
+  # RIE only when AWS_LAMBDA_RUNTIME_API is unset, which Lambda always sets.
+  - id: CVE-2026-78667
+    purls:
+      - "pkg:golang/stdlib@v1.26.7"
+    statement: "net/http Range header DoS. RIE never runs in production."
+    expired_at: 2026-11-05
+  - id: CVE-2026-97031
+    purls:
+      - "pkg:golang/stdlib@v1.26.7"
+    statement: "crypto/tls ECH DoS. RIE never runs in production."
+    expired_at: 2026-11-05
