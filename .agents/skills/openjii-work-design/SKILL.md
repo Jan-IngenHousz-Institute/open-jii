@@ -141,16 +141,16 @@ named as an outcome, numbered, and carrying one sentence on why it comes before 
 parallel lanes, no themes. Write them as a file for `pnpm linear:milestones`.
 
 Then the tickets, each in the work item, bug or spike shape, each meeting the ticket gate and each
-in exactly one milestone. Split along user-visible outcomes, never along layers. "Backend
-endpoint", "frontend form" and "tests" are not independently valuable; "org admin can invite a
-member", "invited member can accept", "org admin can revoke" are. Then walk the operational pass
-from `ticket-standard.md` ("The invisible work is on the board") and give each item that applies
-its own ticket: secrets, scheduled jobs, monitoring, retention, an outbox, rate limits, spend alerts,
-kill switches, feature-flag identity, usage plumbing, deployment, and what the provider account
-allows. Policies, training and vendor reviews are tickets in the same shape.
-`ticket-standard.md` says what makes a ticket readable cold: one outcome, a screen in the body, a
-first comment that says where to start, and open questions written as questions. A WHO that cannot
-name a concrete situation means the split is wrong.
+in exactly one milestone. Split along user-visible outcomes, never along layers. "Backend endpoint",
+"frontend form" and "tests" are not independently valuable; "org admin can invite a member",
+"invited member can accept", "org admin can revoke" are. Then walk the operational pass from
+`ticket-standard.md` ("The invisible work is on the board") and give each item that applies its own
+ticket: secrets, scheduled jobs, monitoring, retention, an outbox, rate limits, spend alerts, kill
+switches, feature-flag identity, usage plumbing, deployment, and what the provider account allows.
+Policies, training and vendor reviews are tickets in the same shape. `ticket-standard.md` says what
+makes a ticket readable cold: one outcome, a screen in the body, a first comment that says where to
+start, and open questions written as questions. A WHO that cannot name a concrete situation means
+the split is wrong.
 
 Before a ticket is shown, run a risk pass and bring recommendations, not only questions: related
 tickets already in flight, edge write paths such as cascades and autosave, cost, and what the
@@ -221,6 +221,6 @@ second one because an upload cannot be deleted.
 Update the change plan's write log as each step finishes, from planned to done.
 
 Then validate the design against the code. Read the system design as the code stands, find what a
-ticket promises that the code cannot deliver, and fix it where it lives: in Linear, in the
-published documents and in the scaffold, instead of only reporting it. Read back what was written, re-check the milestone order, and report what was
-verified.
+ticket promises that the code cannot deliver, and fix it where it lives: in Linear, in the published
+documents and in the scaffold, instead of only reporting it. Read back what was written, re-check
+the milestone order, and report what was verified.

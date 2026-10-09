@@ -98,8 +98,9 @@ screenshot showing the affected screen is re-captured rather than reused. The
 
 A `Stop` hook in `.claude/settings.json` gives Claude Code one reminder per session when the session
 changes `apps/web` or `apps/mobile` without `apps/docs/content`. The same script runs at session
-start and records what the checkout already held, so work already on the branch does not count. It is a nudge, not a gate, and it only reaches
-Claude Code. Per-machine overrides belong in `.claude/settings.local.json`, which stays untracked.
+start and records what the checkout already held, so work already on the branch does not count. It
+is a nudge, not a gate, and it only reaches Claude Code. Per-machine overrides belong in
+`.claude/settings.local.json`, which stays untracked.
 
 ## main is protected
 

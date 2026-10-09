@@ -103,9 +103,9 @@ reading the file is the only way to get clean JSON.
 `secret` or `clientSecret`: a webhook's signing secret is readable with a personal key and never
 belongs in a transcript.
 
-Never read `tooling/devkit/.env` or any other env file into the context. A hook blocks the obvious ways;
-the rule covers the rest. If no key is found, say so and ask; do not invent one or guess at ticket
-contents.
+Never read `tooling/devkit/.env` or any other env file into the context. A hook blocks the obvious
+ways; the rule covers the rest. If no key is found, say so and ask; do not invent one or guess at
+ticket contents.
 
 ## Conventions
 
@@ -122,7 +122,8 @@ contents.
   standard set, the two plan pages and the rules they must meet. A ticket that touches a screen
   embeds its picture and links the sketches itself, because the person picking it up reads the
   ticket and nothing else.
-- Projects are sequenced in milestones, a strict order of work. `pnpm linear:milestones` writes them.
+- Projects are sequenced in milestones, a strict order of work. `pnpm linear:milestones` writes
+  them.
 - Bookkeeping goes in a document or nowhere, never in a project update. Project updates are the
   status post the team reads in its feed.
 - Closing as a duplicate is three writes: the relation, the state, a comment.
@@ -147,9 +148,9 @@ PR automation, once configured on the team, moves tickets to `In Progress`, `In 
 `In Testing` as the PR opens, is marked ready and merges. Nothing moves a ticket to `Done`: the
 production release workflow attaches tickets to a Linear release without changing their state, so a
 person moves them after the release. To tell whether a change is live, check that its merge commit
-is an ancestor of the latest `release/` branch. **Refuse to move a work item or bug to `In Testing` yourself while
-either dev section is empty**; point at `openjii-testing-criteria`. A spike has neither section and
-skips `In Testing` altogether.
+is an ancestor of the latest `release/` branch. **Refuse to move a work item or bug to `In Testing`
+yourself while either dev section is empty**; point at `openjii-testing-criteria`. A spike has
+neither section and skips `In Testing` altogether.
 
 ## Query recipes
 
@@ -159,8 +160,8 @@ One ticket, with everything a decision needs:
 pnpm linear:query --query 'query($id:String!){ issue(id:$id){ id identifier title description priorityLabel state{name} project{name} projectMilestone{name} labels{nodes{name}} assignee{name} parent{identifier state{name}} children{nodes{identifier title state{name}}} relations{nodes{type relatedIssue{identifier title state{name}}}} inverseRelations{nodes{type issue{identifier title state{name}}}} comments{nodes{id body user{name}}} } }' --variables '{"id":"OJD-1755"}'
 ```
 
-Declare `$id` as `String!`. An `ID!` variable is rejected. `relations` lists only the relations where
-this issue is the source, so what blocks it is in `inverseRelations`, with the blocker under
+Declare `$id` as `String!`. An `ID!` variable is rejected. `relations` lists only the relations
+where this issue is the source, so what blocks it is in `inverseRelations`, with the blocker under
 `issue`.
 
 Search when you have words, not an id. A `searchableContent` filter matches poorly:
@@ -257,8 +258,8 @@ Each of these cost time in a real session.
   with the existing body.
 - Rename old milestones. `projectMilestoneDelete` needs `--allow-destructive` and throws the
   history away for nothing.
-- Linear refused more than about 20 ticket links a minute in practice. `linear:create` paces a larger
-  batch of `link:` lines on its own.
+- Linear refused more than about 20 ticket links a minute in practice. `linear:create` paces a
+  larger batch of `link:` lines on its own.
 - `{{N}}` reaches only tickets in the same draft. Keep one project in one draft, or apply the first
   draft and use real identifiers in the second.
 - The devkit key reads team `OJD`, so a linked ticket in another team cannot be checked.

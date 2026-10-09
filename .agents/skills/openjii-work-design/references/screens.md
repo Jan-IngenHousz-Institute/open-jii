@@ -26,8 +26,8 @@ Scaffold work runs long, so post a one-line progress note between phases.
 ## Fill the screens that need data
 
 A local stack has no lakehouse, so every data view is empty until something answers for it. Do not
-put an empty screen in a ticket about data. Answer the requests in the browser with Playwright's
-`page.route` instead:
+put an empty screen in a ticket about data. Answer the requests in the browser instead, with the
+fixtures in `apps/e2e/ticket-screens`, which `apps/e2e/README.md` describes under "Ticket screens":
 
 - A fixture warehouse answers one experiment's data routes (the table list, the rows, the columns
   and the distinct values) from fixture tables. It applies the filter, aggregation, join and
@@ -36,15 +36,20 @@ put an empty screen in a ticket about data. Answer the requests in the browser w
 - A fixture session answers as a non-member or a signed-out visitor, for screens about access.
 - A fixture route returns a fixed body for one path. Use it for a state the database cannot hold
   yet, such as a chart type the `chart_type` enum does not have.
+- Every shot drops `[Seed]` and `[Local]` from names on its own, so the standard seed can be used.
+
+A contract change on the scaffold branch extends the fixture warehouse on the same branch, so the
+fixtures always answer the contract the screen is built against.
 
 Fixture rows use real column types, roles, states and field values from the code.
 
 ## Capture
 
-Capture with Playwright, one shot per ticket, against the scaffold's stack and signed in as
-`openjii-local-stack` describes. Use a device scale factor of 2, light mode and reduced motion, and
-hide the Next.js and TanStack Query developer overlays. When a shot fails, save the failed frame beside
-it so the cause is visible.
+Add one shot per ticket to `apps/e2e/ticket-screens/shots.ts` on the scaffold branch, then run
+`pnpm --filter @repo/e2e capture-ticket-screens` against the scaffold's stack with `E2E_BASE_URL`
+pointing at it. It captures at a device scale factor of 2 in light mode with reduced motion, hides
+the Next.js and TanStack Query developer overlays, and saves the failed frame beside any shot that
+stops, so the cause is visible.
 
 - Restart the backend after every `@repo/api` build, or it validates requests against the old
   contract.
@@ -81,7 +86,8 @@ guarantee get none, and saying so is better than a decorative picture.
 
 Outline the part that changes in one accent colour and put a short tag such as `New` beside it,
 placed so the tag does not cover what it points at. Leave the rest of the product untouched. Crop
-to the changed part plus enough context for a reader to find it on the page.
+to the changed part plus enough context for a reader to find it on the page. `ChangeMarker` does
+both: `mark` draws the outline and tag, and `frame` returns the crop a shot hands back.
 
 ## Captions
 

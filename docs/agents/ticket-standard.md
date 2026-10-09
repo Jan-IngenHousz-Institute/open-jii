@@ -90,9 +90,10 @@ so a reader sees the product rather than a generic wireframe.
 
 `pnpm linear:document` publishes one and refuses to write until the prose rules pass and every
 mermaid block parses. `pnpm linear:resources` adds outside links, such as the uploaded plan pages
-and the official documentation the design relies on, to the project's Resources. `pnpm linear:upload` puts a file in Linear's asset store, where anyone signed in
-to the workspace can open it; a request without a Linear session gets a 401, so an upload is not a
-public link. `pnpm linear:view` creates the shared view and its document. The formats are in
+and the official documentation the design relies on, to the project's Resources.
+`pnpm linear:upload` puts a file in Linear's asset store, where anyone signed in to the workspace
+can open it; a request without a Linear session gets a 401, so an upload is not a public link.
+`pnpm linear:view` creates the shared view and its document. The formats are in
 `tooling/devkit/README.md`.
 
 ### The two plan pages
@@ -113,9 +114,9 @@ the recommended options on that page and nothing else.
 
 Ticket ids do not exist until the apply, so the pages carry placeholders first and are published
 again once the ids exist. Only then is one copy of each uploaded with `pnpm linear:upload --apply`,
-linked from the artifact index and added to the project's Resources. An upload cannot be deleted, so a correction after that is a new
-upload and a new link, and the old copy stays reachable. The layout is in
-`.agents/skills/openjii-work-design/references/review-pages.md`.
+linked from the artifact index and added to the project's Resources. An upload cannot be deleted, so
+a correction after that is a new upload and a new link, and the old copy stays reachable. The layout
+is in `.agents/skills/openjii-work-design/references/review-pages.md`.
 
 ### Dispositions
 
@@ -262,8 +263,8 @@ deployment and infrastructure, secrets, scheduled jobs, monitoring and alerts, d
 outbox for anything sent, rate limits, spend alerts, kill switches, feature-flag identity, usage
 plumbing, and what the provider account actually allows, such as an email service's sending quota.
 Walk this list as a standard pass on every project. Splitting along user-visible outcomes never
-means dropping them. Work that is not code, such as policies, training and vendor reviews, takes the same
-team, shape and gates as code work.
+means dropping them. Work that is not code, such as policies, training and vendor reviews, takes the
+same team, shape and gates as code work.
 
 **Examples are generic.** A drought trial and a sensor fleet, not a study name, an instrument
 jargon term, a column name or a team name. This repository is public.
@@ -282,11 +283,11 @@ moment the board is sorted differently. Use `OJD-1234`, or `{{N}}` in a draft.
 
 **The first comment says where to start.** It opens with a sentence on what it holds and which
 milestone the ticket sits in, then names the files in full repository paths with line numbers,
-checked against a named commit on `main` and linked as GitHub permalinks pinned to that commit. It adds the local setup for testing the change and
-the sources behind any claim: code pinned to a commit and the official documentation for the fix.
-Comments carry no budget, so anything cut from a body to fit goes here and is never dropped. Every
-pointer is checked again when it is written, and a comment that already exists is edited in place
-rather than a second one stacked beside it.
+checked against a named commit on `main` and linked as GitHub permalinks pinned to that commit. It
+adds the local setup for testing the change and the sources behind any claim: code pinned to a
+commit and the official documentation for the fix. Comments carry no budget, so anything cut from a
+body to fit goes here and is never dropped. Every pointer is checked again when it is written, and a
+comment that already exists is edited in place rather than a second one stacked beside it.
 
 **Sources live in Linear.** A claim in a ticket or a document comes with a link a reader can open:
 code pinned to a commit, the official documentation for the fix, and related Linear documents. A

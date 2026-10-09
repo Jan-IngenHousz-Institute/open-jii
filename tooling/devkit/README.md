@@ -98,8 +98,8 @@ It lands beside the Linear key in `tooling/devkit/.env` and is found the same wa
 ## Writing tickets from a draft
 
 A draft is one Markdown file holding one or more tickets. `pnpm linear:check` runs the mechanical
-half of the ticket standard on it, and `pnpm linear:create` creates what it holds. `.claude/tickets/`
-is gitignored and a good place to keep drafts.
+half of the ticket standard on it, and `pnpm linear:create` creates what it holds.
+`.claude/tickets/` is gitignored and a good place to keep drafts.
 
 ```markdown
 ---
@@ -282,9 +282,9 @@ pnpm linear:milestones .claude/drafts/milestones.md --apply
 ```
 
 It refuses a name that does not start with its position, a missing or multi-sentence reason, and a
-dash. It spaces the order by 1,000, since Linear has been seen rewriting close positions, reads the order back
-after writing and exits non-zero if Linear changed it, and lists milestones the file does not
-mention as left alone. It never deletes one.
+dash. It spaces the order by 1,000, since Linear has been seen rewriting close positions, reads the
+order back after writing and exits non-zero if Linear changed it, and lists milestones the file does
+not mention as left alone. It never deletes one.
 
 Bookkeeping belongs in one of these documents or nowhere. Linear's project updates are the
 status post the team reads in its feed, so an inventory or a migration note posted there reaches
