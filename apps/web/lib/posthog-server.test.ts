@@ -355,6 +355,42 @@ describe("posthog-server", () => {
         },
       );
     });
+
+    it("reuses a person's answer for a minute, then asks again", async () => {
+      vi.useFakeTimers();
+      listMyOrganizations.mockResolvedValue([createMyOrganization({ id: "org-qa" })]);
+      mockPostHogInstance.isFeatureEnabled.mockResolvedValue(true);
+      const ana = createSession({ user: { id: "user-ana", email: "ana@example.com" } });
+
+      await isFeatureFlagEnabledForSession(FEATURE_FLAGS.CALIBRATION, ana);
+      const again = await isFeatureFlagEnabledForSession(FEATURE_FLAGS.CALIBRATION, ana);
+
+      expect(again).toBe(true);
+      expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(60_000);
+      await isFeatureFlagEnabledForSession(FEATURE_FLAGS.CALIBRATION, ana);
+
+      expect(mockPostHogInstance.isFeatureEnabled).toHaveBeenCalledTimes(2);
+      vi.useRealTimers();
+    });
+
+    it("keeps each person's answer apart", async () => {
+      listMyOrganizations.mockResolvedValue([]);
+      mockPostHogInstance.isFeatureEnabled.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+
+      const forAna = await isFeatureFlagEnabledForSession(
+        FEATURE_FLAGS.CALIBRATION,
+        createSession({ user: { id: "user-ana", email: "ana@example.com" } }),
+      );
+      const forBo = await isFeatureFlagEnabledForSession(
+        FEATURE_FLAGS.CALIBRATION,
+        createSession({ user: { id: "user-bo", email: "bo@example.com" } }),
+      );
+
+      expect(forAna).toBe(true);
+      expect(forBo).toBe(false);
+    });
   });
 
   describe("PostHog client initialization", () => {

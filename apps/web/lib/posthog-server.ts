@@ -95,6 +95,41 @@ const fetchMyOrganizationIds = cache(async () =>
   listOrganizationIds(await createServerOrpcClient()),
 );
 
+// Every platform render asks for the person's flags, at the cost of a membership read and a call to
+// PostHog. Memberships and flag rules change far less often, so an answer serves a minute of renders
+// on this server instance.
+const FLAG_DECISION_TTL_MS = 60_000;
+const MAX_FLAG_DECISIONS = 1_000;
+
+class FlagDecisions {
+  private readonly decisions = new Map<string, { isEnabled: boolean; expiresAt: number }>();
+
+  get(key: string): boolean | undefined {
+    const decision = this.decisions.get(key);
+    if (decision === undefined || decision.expiresAt <= Date.now()) {
+      this.decisions.delete(key);
+      return undefined;
+    }
+    return decision.isEnabled;
+  }
+
+  set(key: string, isEnabled: boolean): void {
+    if (this.decisions.size >= MAX_FLAG_DECISIONS) {
+      const oldest = this.decisions.keys().next();
+      if (!oldest.done) {
+        this.decisions.delete(oldest.value);
+      }
+    }
+    this.decisions.set(key, { isEnabled, expiresAt: Date.now() + FLAG_DECISION_TTL_MS });
+  }
+
+  clear(): void {
+    this.decisions.clear();
+  }
+}
+
+const flagDecisions = new FlagDecisions();
+
 function isFeatureFlagEnabledForPerson(
   flagKey: FeatureFlagKey,
   session: NonNullable<Session>,
@@ -117,7 +152,19 @@ export async function isFeatureFlagEnabledForSession(
   flagKey: FeatureFlagKey,
   session: NonNullable<Session>,
 ): Promise<boolean> {
-  return isFeatureFlagEnabledForPerson(flagKey, session, await fetchMyOrganizationIds());
+  const key = `${flagKey}:${session.user.id}`;
+  const cached = flagDecisions.get(key);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const isEnabled = await isFeatureFlagEnabledForPerson(
+    flagKey,
+    session,
+    await fetchMyOrganizationIds(),
+  );
+  flagDecisions.set(key, isEnabled);
+  return isEnabled;
 }
 
 async function readSession(requestHeaders: Headers): Promise<Session | null> {
@@ -174,6 +221,7 @@ export async function reportServerError(
  */
 export async function shutdownPostHog(): Promise<void> {
   lastReportedAt.clear();
+  flagDecisions.clear();
   if (initialized) {
     await shutdownPostHogBase();
     initialized = false;
