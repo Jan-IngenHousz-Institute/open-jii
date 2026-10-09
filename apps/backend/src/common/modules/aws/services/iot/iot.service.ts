@@ -191,6 +191,16 @@ export class AwsIotService {
     return result;
   }
 
+  // Bypasses the cache, so a health check learns whether IoT answers now.
+  async probeDataEndpoint(): Promise<Result<void>> {
+    return tryCatch(
+      async () => {
+        await this.iotClient.send(new DescribeEndpointCommand({ endpointType: "iot:Data-ATS" }));
+      },
+      (error) => this.mapError(error, ErrorCodes.AWS_IOT_DESCRIBE_ENDPOINT_FAILED),
+    );
+  }
+
   // Live broker connectivity from the fleet index (thingConnectivity STATUS
   // indexing). Things absent from the response (not yet indexed, or the index
   // still building after first enable) are simply missing from the map.
