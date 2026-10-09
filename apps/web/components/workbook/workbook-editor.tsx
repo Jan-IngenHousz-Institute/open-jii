@@ -30,6 +30,7 @@ import { cn } from "@repo/ui/lib/utils";
 
 import { AddCellButton } from "./add-cell-button";
 import { CellRenderer } from "./cell-renderer";
+import { useProgressiveMount } from "./use-progressive-mount";
 import { WorkbookCellsProvider } from "./workbook-cells-context";
 import { WorkbookHeader } from "./workbook-header";
 import { WorkbookSidebar } from "./workbook-sidebar";
@@ -402,6 +403,9 @@ export function WorkbookEditor({
   );
 
   const groups = useMemo(() => buildCellGroups(cells), [cells]);
+  const { mounted: mountedGroups, mountAll } = useProgressiveMount(groups.length);
+  // A cell picked in the outline before its batch has mounted is scrolled to once it has.
+  const [pendingScrollId, setPendingScrollId] = useState<string | null>(null);
 
   // SortableContext re-renders every sortable when `items` changes identity, so the list is only
   // rebuilt when the ids themselves change.
@@ -530,13 +534,27 @@ export function WorkbookEditor({
     cellRefs.current[id] = el;
   }, []);
 
-  const handleSidebarCellClick = useCallback((cellId: string) => {
-    setActiveCellId(cellId);
-    const el = cellRefs.current[cellId];
+  const handleSidebarCellClick = useCallback(
+    (cellId: string) => {
+      setActiveCellId(cellId);
+      const el = cellRefs.current[cellId];
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      mountAll();
+      setPendingScrollId(cellId);
+    },
+    [mountAll],
+  );
+
+  useEffect(() => {
+    const el = pendingScrollId ? cellRefs.current[pendingScrollId] : null;
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setPendingScrollId(null);
     }
-  }, []);
+  }, [pendingScrollId, mountedGroups]);
 
   const showHeader = onConnect && onRunAll;
 
@@ -611,7 +629,7 @@ export function WorkbookEditor({
               onDragEnd={handleDragEnd}
             >
               <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-                {groups.map((group) => (
+                {groups.slice(0, mountedGroups).map((group) => (
                   <SortableCellGroup
                     key={group.id}
                     {...group}
