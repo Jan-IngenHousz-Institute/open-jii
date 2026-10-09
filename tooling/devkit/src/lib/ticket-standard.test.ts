@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { advisories, checkBody, checkTitle, proseOnly, splitSections } from "./ticket-standard.js";
+import {
+  advisories,
+  checkBody,
+  checkTitle,
+  proseFindings,
+  proseOnly,
+  splitSections,
+} from "./ticket-standard.js";
 
 const workItem = `## User story
 
@@ -271,5 +278,22 @@ describe("advisories", () => {
     expect(advisories(["Backend"], workItem, "work-item")).toEqual([]);
     expect(advisories(["Web"], workItem, "spike")).toEqual([]);
     expect(advisories(["Web"], `${workItem}\n![screen](a.png)`, "work-item")).toEqual([]);
+  });
+});
+
+describe("proseFindings, borrowed context", () => {
+  it("fails a phrase that only makes sense to someone who was in the conversation", () => {
+    const rulesOf = (text: string) => proseFindings(text).map((finding) => finding.rule);
+
+    expect(rulesOf("As discussed, the export keeps every column.")).toEqual(["context"]);
+    expect(rulesOf("We agreed to drop the second chart.")).toEqual(["context"]);
+    expect(rulesOf("This follows the decision in the earlier session.")).toEqual(["context"]);
+    expect(rulesOf("Per our call, admins see the button.")).toEqual(["context"]);
+  });
+
+  it("leaves product language about login sessions and the document's own text alone", () => {
+    expect(proseFindings("The session expires after an hour of inactivity.")).toEqual([]);
+    expect(proseFindings("A member signs in and their previous session ends.")).toEqual([]);
+    expect(proseFindings("As shown in the diagram above, the read path is cached.")).toEqual([]);
   });
 });

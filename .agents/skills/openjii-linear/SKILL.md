@@ -45,6 +45,10 @@ A Linear session stays a Linear session. Do not offer a code branch or a skill e
   shown and nothing else. A person who delegates, as in "put in Ready what you think is ready" or
   "just create the tickets", has handed over that call, including bodies they have not read; do it
   and report what you did and why.
+- **Put it in context.** A developer reading a ticket has none of the context you had while writing
+  it. Say where in the product it happens, what is there today and how it fits the project, in
+  plain words, as `ticket-standard.md` sets out under "Put it in context". Run the cold-reader test
+  described there on everything before the person sees it.
 - **Pilot first.** For a batch of rewritten tickets, show three and get a yes on voice and images
   before writing the rest.
 - **Say what you are doing.** Long work gets a one-line progress note between phases.
@@ -241,7 +245,8 @@ thing as a project update post.
 Do not free-form a body. The project shape and the three ticket shapes in `ticket-standard.md` have
 headings that skills parse, and the prose standard there is the last step before anything is
 written. Draft in the file format from `tooling/devkit/README.md`, check with `pnpm linear:check`,
-show the person the body, then create with `pnpm linear:create`. One ticket is
+run the cold-reader test, show the person the body, then create with `pnpm linear:create`, and read
+the result again as it appears in Linear. One ticket is
 `openjii-ticket-refine`; a project with its tickets is `openjii-work-design`; the developer handoff
 is `openjii-testing-criteria`; bulk changes are `openjii-backlog-triage`.
 

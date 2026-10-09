@@ -180,6 +180,10 @@ Then build the two plan pages from those drafts: the project plan and the Linear
 `references/review-pages.md` says what each holds and how they are laid out. Do not type them by
 hand and do not ask for the apply until both exist.
 
+Run the cold-reader test from `ticket-standard.md` on every ticket with its comment and screen, on
+the project body and on each document, and rewrite until a reader with none of your context can
+say where each change happens, what it builds and for whom, with nothing left to guess.
+
 Run the verification pass from `ticket-standard.md` on everything the pages show: every path and
 line number against the commit named, budgets, the milestone diagram against the drafts' relations,
 spelling against the product locale, and the same milestone names in every document. Fix what it
@@ -219,6 +223,10 @@ published again once the ids exist. That is two publishes by design, and the upl
 second one because an upload cannot be deleted.
 
 Update the change plan's write log as each step finishes, from planned to done.
+
+Then read every ticket as it appears in Linear, top to bottom, the way a developer choosing work
+from the board would. Each says where it happens and where to start, keeps its open questions in
+one place, and can be acted on without the chat. Fix what fails in place.
 
 Then validate the design against the code. Read the system design as the code stands, find what a
 ticket promises that the code cannot deliver, and fix it where it lives: in Linear, in the published

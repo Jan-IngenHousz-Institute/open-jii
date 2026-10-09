@@ -172,9 +172,21 @@ function headingFindings(actual: readonly string[], expected: readonly string[])
   return [{ rule: "headings", detail: parts.join("; ") }];
 }
 
+// Phrases that point at a conversation the reader was not in. Kept narrow, since the product has
+// its own login sessions and a ticket about them must still pass.
+const BORROWED_CONTEXT =
+  /\b(?:as (?:discussed|agreed)|per (?:the|our) (?:discussion|chat|call|conversation)|(?:this|that|our) (?:chat|conversation)|we (?:discussed|agreed)|in (?:the|an|our) (?:earlier|previous) session)\b/i;
+
 // The rules any prose a person reads must meet, whether a ticket body or a project document.
 export function proseFindings(text: string): Finding[] {
   const findings: Finding[] = [];
+  const borrowed = BORROWED_CONTEXT.exec(text)?.[0];
+  if (borrowed !== undefined) {
+    findings.push({
+      rule: "context",
+      detail: `"${borrowed}" points at a conversation the reader was not in; say the thing itself`,
+    });
+  }
   const dashes = (text.match(/[–—]/g) ?? []).length;
   if (dashes > 0) findings.push({ rule: "dash", detail: `${dashes} em or en dash(es)` });
   if (/\b(generated|written) by (an? )?(AI|agent|LLM)\b|\bAI[- ]generated\b/i.test(text)) {

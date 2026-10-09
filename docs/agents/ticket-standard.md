@@ -254,9 +254,9 @@ delegate, can start it without asking anybody. Readability comes before complete
 **One outcome per ticket.** The board is where people choose what to pick up, so a ticket bundling
 several outcomes is too big even when each is one sentence. A ticket looks the way a developer
 expects a ticket to look; a dense specification inherited from triage is recut into ordinary
-tickets. A vague WHO is the tell: if no
-concrete situation can be named ("a researcher looking at a checklist step"), the split follows a
-mechanism rather than an outcome, so split again instead of rewording.
+tickets. A vague WHO is the tell: if no concrete situation can be named ("a researcher looking at a
+checklist step"), the split follows a mechanism rather than an outcome, so split again instead of
+rewording.
 
 **The invisible work is on the board.** Enabling and operational work gets its own tickets:
 deployment and infrastructure, secrets, scheduled jobs, monitoring and alerts, data retention, an
@@ -311,6 +311,67 @@ over, a criterion moves to a comment or the ticket splits; the grammar is never 
 
 **Security work describes the fix only.** Every `OJD` ticket and comment mirrors to public GitHub.
 A ticket says what to build or change. What is weak today lives in a project document.
+
+## Put it in context
+
+An agent writing a ticket has the code it read, the session and the other tickets it drafted in its
+head. A developer opening the ticket has none of that. Everything written into Linear, whether a
+ticket body, a comment, a project body, a document or a plan page, puts its subject in context for
+that reader, and the screen in the body is part of how it does so. Grammar is the floor, set by the
+prose standard below. These rules are about meaning, and they outrank completeness.
+
+**Say where it happens.** Name the page and how a user gets there, and who is on it. In a work item
+the WHO line carries it, as in "**WHO:** A researcher on an experiment's Data tab, reached from
+Experiments, comparing treatments." In a bug it is the first reproduction step. The screen shows
+that place, and the text tells the reader what to look at in it, such as "the outlined column". A
+screen with no words around it and words with no screen both leave the reader guessing.
+
+**Start with the situation.** The first lines a reader meets say what a user sees or does there
+today and what is wrong or missing, before any design or code. A ticket that opens with a mechanism
+("Add a `latestPer` param to the read path") makes the reader reconstruct why it exists.
+
+**Say how it fits.** The first comment opens with the ticket's place in the project: its
+milestone, what it builds on and what waits for it. A developer who picks one ticket off the board
+still knows what the larger piece of work is.
+
+**Plain words.** A term a newcomer to the area would not know, such as an internal name, a
+component, a table, an acronym or a mechanism, is replaced by what it does, or explained in the same
+sentence the first time it appears. Code names belong in the first comment, where the reader goes
+to find the code, and never in the acceptance criteria.
+
+**No borrowed context.** Nothing points at a conversation the reader was not in: no "as discussed",
+"as agreed", "per the review", "in the earlier session", "option B" or "the new flow". Say the thing
+itself. `linear:check` fails the common phrasings.
+
+**One name per thing.** A feature, a screen or a role has one name across the ticket, its comment,
+the project and every document. A reader who meets "the panel", "the drawer" and "the sidebar" sees
+three things.
+
+**Every reference resolves.** Tickets by identifier, files by full repository path, documents by
+link, people by role. A reader can follow each one without asking where it is.
+
+**Questions carry their context.** An open question says what it is about, what each answer would
+change, and the default the work proceeds on, so someone who missed the discussion can answer it.
+"Confirm retention and org-wide sharing" got "what do you mean?"; "Open: should a deleted member's
+notifications be kept for the 90 days the rest of their data is? Keeping them is the default. Ask
+the TPM." can be answered.
+
+**Concrete before abstract.** A generic example ("a drought trial with three treatments, where the
+researcher filters to drought") shows a rule faster than the rule stated alone.
+
+### The cold-reader test
+
+Before anything is shown to the person, give each ticket body with its first comment and screen,
+the project body and each document to a reader with none of the session's context, such as a fresh
+subagent given only that text and image. Ask it four things: where in the product this happens,
+what will be built and for whom, what it leaves out, and which words or references it had to guess
+at. Rewrite until its answers match what was meant and the
+list of guesses is empty. Then the person reads the result, and for a batch they read three tickets
+first.
+
+After the write, read every ticket again as it appears in Linear, top to bottom, the way a developer
+choosing work from the board would. Each one says where to start, keeps its open questions in one
+place, and can be acted on without the chat. Fix what fails in place.
 
 ## Ticket gate
 
@@ -409,10 +470,11 @@ The last step of every skill that writes to Linear. These rules come from the fa
 workspace's own agent-written tickets, not from a generic style guide.
 
 The first rule outranks the rest. A ticket is read by a person who did not write it, and it is
-written in proper English: whole sentences with a subject and a verb, in every bullet, in the WHO,
-WHAT and WHY lines, and in every open question. A budget is met by cutting criteria, never by
-compressing grammar. "Facets: status, visibility; protocols family, visibility" is a list of words,
-and a list of words is not a ticket.
+written in proper English, on top of putting its subject in context as "Put it in context" says:
+whole sentences with a subject and a verb, in every bullet, in the WHO, WHAT and WHY lines, and in
+every open question. A budget is met by cutting criteria, never by compressing grammar. "Facets:
+status, visibility; protocols family, visibility" is a list of words, and a list of words is not a
+ticket.
 
 1. Full sentences everywhere. A bullet reads as one sentence and ends with a full stop. No
    telegraphic fragments, no noun lists, no semicolon chains standing in for sentences.
@@ -455,21 +517,23 @@ equals the shape; length within budget; longest bullet under 25 words; zero em d
 at most one "X, not Y" sentence; title length and prefix; the gate sections non-empty. It cannot
 judge grammar, so a fragment that happens to end in a full stop still needs a reader. The draft
 format is in `tooling/devkit/README.md`. A failed check stops the write; fix the body first. Then
-`unslop`. Then the person reads it. Nothing is written to Linear that a person has not read.
+`unslop`, then the cold-reader test, then the person reads it. Nothing is written to Linear that a
+person has not read.
 
-The check also fails an open question or a "confirm" inside the acceptance criteria and a ticket
-named by position ("the previous ticket"). It adds a note, which never fails a draft, when a `Web`,
-`Mobile` or `Fullstack` ticket embeds no screen. It reads a bullet wrapped over several lines as one
-bullet.
+The check also fails an open question or a "confirm" inside the acceptance criteria, a ticket named
+by position ("the previous ticket"), and a phrase that points at a conversation the reader was not
+in ("as discussed", "in the earlier session"). It adds a note, which never fails a draft, when a
+`Web`, `Mobile` or `Fullstack` ticket embeds no screen. It reads a bullet wrapped over several lines
+as one bullet.
 
 Linear rewrites stored markdown: `-` bullets come back as `*`, link targets gain angle brackets,
 and a bare domain such as `INFO.nl` becomes a link. A live body can therefore differ from its
 draft, so compare after normalising those, and keep link targets out of the prose they sit in.
 
 Before the apply, one more pass that a script cannot do: every path and line number opens at the
-commit named, every screen shows only what its criteria say and its caption matches the picture,
-budgets hold with real URLs, a diagram's relations match the draft's `blocks:` lines
-one for one, spelling matches the product, and milestone names are identical in every document.
+commit named, every screen shows only what its criteria say and its caption matches the picture, a
+diagram's relations match the draft's `blocks:` lines one for one, spelling matches the product,
+and milestone names are identical in every document.
 A claim of absence ("there is no dark mode") is checked as hard as a claim of presence, and what
 an inventory agent reported is a lead, not a fact, until it is read at line level.
 

@@ -185,7 +185,8 @@ Links are attached once each: a URL the ticket already carries is skipped, and a
 
 The check does not count screens, link targets or URLs against a budget, so a draft passes the same
 with a local image path as with the uploaded URL. It fails an open question or "confirm" inside the
-acceptance criteria and a ticket named by position, reads a wrapped bullet as one bullet, and adds a
+acceptance criteria, a ticket named by position, and a phrase that points at a conversation the
+reader was not in, such as "as discussed". It reads a wrapped bullet as one bullet, and adds a
 non-failing `note` when a `Web`, `Mobile` or `Fullstack` ticket embeds no screen.
 
 ## Project resources

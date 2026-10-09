@@ -52,28 +52,31 @@ decorate it.
    solution-shaped, that is a missing project, not a reason to use the maintenance bucket. Read
    that project's documents before writing: the deep dive says how the area works today, and the
    sketches say what the screen should show. Link them from the ticket when it touches a screen.
-3. **WHO, WHAT, WHY.** A real persona: researcher, org admin, field operator, platform operator.
-4. **Acceptance criteria.** The primary flow, the alternative flows that matter, and the business
+3. **Where it happens.** The page and how a user gets there, what they see there today, and what
+   is wrong or missing. The reader has none of the context you have, so the WHO line names the
+   place, and the screen shows the same place.
+4. **WHO, WHAT, WHY.** A real persona: researcher, org admin, field operator, platform operator.
+5. **Acceptance criteria.** The primary flow, the alternative flows that matter, and the business
    rules that apply. Name what must be shown on screen. Observable behaviour only; implementation
    suggestions go under Additional context.
-5. **Dependencies and risks.** It opens with a line naming each blocker by identifier and what it
+6. **Dependencies and risks.** It opens with a line naming each blocker by identifier and what it
    delivers, so a reader sees the order without opening the relations. Then every open question,
    written as a question with the default the ticket proceeds on. A ticket that cannot start
    without an answer is not `Ready`.
-6. **The screen.** A ticket that changes a screen embeds its picture under Additional context, with
+7. **The screen.** A ticket that changes a screen embeds its picture under Additional context, with
    a caption that describes the picture. It is a capture of the real app with the change
    scaffolded in, made as `openjii-work-design`, `references/screens.md` describes. A ticket with
    no visible surface gets none.
-7. **Labels.** One `type`, at least one `area`. Both are required by the gate, and both must be
+8. **Labels.** One `type`, at least one `area`. Both are required by the gate, and both must be
    labels that exist today (`linear-taxonomy.md`, "Labels today").
-8. Leave `## How it was built` and `## Testing criteria` empty. The developer fills them through
+9. Leave `## How it was built` and `## Testing criteria` empty. The developer fills them through
    `openjii-testing-criteria` before review.
-9. **The first comment.** After the `<!-- comment -->` marker, open with a sentence on what the
-   comment holds and which milestone the ticket sits in. Then name the files in full repository
-   paths with line numbers, checked against a named commit on `main` as you write them and linked
-   as permalinks pinned to it, and give the local steps to test the change. Anything the body had
-   no room for goes here and is never dropped.
-10. **Links.** The sources behind the ticket's claims, such as the official documentation for the
+10. **The first comment.** After the `<!-- comment -->` marker, open with a sentence on what the
+    comment holds and which milestone the ticket sits in. Then name the files in full repository
+    paths with line numbers, checked against a named commit on `main` as you write them and linked
+    as permalinks pinned to it, and give the local steps to test the change. Anything the body had
+    no room for goes here and is never dropped.
+11. **Links.** The sources behind the ticket's claims, such as the official documentation for the
     fix and related Linear documents, go in the draft as `link:` lines and land as the ticket's
     links.
 
@@ -128,6 +131,9 @@ there is no epic to create. Blocking relations only where order genuinely matter
 
 - `pnpm linear:check <draft.md>`. A failed check stops there; fix the body before going on. Do not
   reconstruct the check by hand.
+- The cold-reader test from `ticket-standard.md`. Give the body, its first comment and its screen to
+  a reader with none of your context and rewrite until it can say where this happens, what will be
+  built and for whom, and has nothing left to guess at.
 - Then the `unslop` skill.
 - Set the state deliberately: a ticket that passes the gate goes to `Ready`; one still carrying open
   questions stays in `Backlog`. The `needs-info` label does not exist yet, so say it in a comment.
@@ -138,3 +144,5 @@ there is no epic to create. Blocking relations only where order genuinely matter
   real identifiers, posts each comment block, sets relations, and resumes from its state file if
   interrupted. A draft headed by an identifier updates that ticket through the same command, and
   edits its pointer comment in place when the first line matches.
+- After the write, open the ticket in Linear and read it top to bottom as a developer choosing work
+  would. Fix what reads wrong in place.
