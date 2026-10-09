@@ -47,11 +47,12 @@ module "platform_action" {
   source = "./posthog-action"
 
   name = "platform"
-  # As PostHog stores the step, including the regex it derives from the selector.
+  # As PostHog stores the step, including the regex it derives from the selector. When PostHog
+  # changes how it derives it, every apply fails until the plan's current value is copied here.
   steps = [{
     event          = "$autocapture"
     selector       = "a > .relative"
-    selector_regex = "(^|;).*?\\.relative[^;]*?($|;|:([^;^\\s]*(;|$|\\s)))a[^;]*?($|;|:([^;^\\s]*(;|$|\\s))).*"
+    selector_regex = "(^|;)(?:[^;\"]|\"(?:\\\\.|[^\"\\\\])*\")*?\\.relative(?:[^;\"]|\"(?:\\\\.|[^\"\\\\])*\")*?($|;|:([^;^\\s]*(;|$|\\s)))a(?:[^;\"]|\"(?:\\\\.|[^\"\\\\])*\")*?($|;|:([^;^\\s]*(;|$|\\s))).*"
     url_matching   = "exact"
     href           = null
     href_matching  = null
