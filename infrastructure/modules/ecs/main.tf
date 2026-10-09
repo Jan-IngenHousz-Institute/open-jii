@@ -147,6 +147,43 @@ resource "aws_iam_role_policy" "ecs_task_cognito_policy" {
   })
 }
 
+# Lets the backend read its dependencies' state and publish the results as metrics
+resource "aws_iam_role_policy" "ecs_task_dependency_health_policy" {
+  count = var.enable_dependency_health_policy ? 1 : 0
+  name  = "ecs-task-dependency-health-policy-${var.service_name}-${var.environment}"
+  role  = aws_iam_role.ecs_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "PublishDependencyHealth"
+        Effect   = "Allow"
+        Action   = ["cloudwatch:PutMetricData"]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "cloudwatch:namespace" = "OpenJII/Backend"
+          }
+        }
+      },
+      {
+        # Reads the database's capacity, which tells a paused database from a broken one.
+        Sid      = "ReadMetrics"
+        Effect   = "Allow"
+        Action   = ["cloudwatch:GetMetricData"]
+        Resource = "*"
+      },
+      {
+        Sid      = "DescribeDatabaseCluster"
+        Effect   = "Allow"
+        Action   = ["rds:DescribeDBClusters"]
+        Resource = var.database_cluster_arn
+      }
+    ]
+  })
+}
+
 ##### AWS ECS Cluster #####
 resource "aws_ecs_cluster" "ecs_cluster" {
   name = "${var.service_name}-cluster-${var.environment}"
