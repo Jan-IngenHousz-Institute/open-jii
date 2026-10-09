@@ -93,6 +93,17 @@ describe("listIssues", () => {
       url: `https://eu.posthog.com/project/80726/error_tracking/${id}`,
     });
   });
+
+  it("leaves lastSeen empty for an issue with no events in the window", async () => {
+    const query = vi.fn<PostHogClient["query"]>().mockResolvedValue({
+      columns: ["id", "events", "last_seen"],
+      results: [[id, 0, "1970-01-01T00:00:00Z"]],
+    });
+
+    const [first] = await listIssues(client({ query }), 30);
+
+    expect(first).toMatchObject({ events: 0, lastSeen: null });
+  });
 });
 
 describe("parseReview", () => {

@@ -102,20 +102,24 @@ function count(value: unknown): number {
 
 export async function listIssues(client: PostHogClient, days: number): Promise<ReviewEntry[]> {
   const rows = rowsOf(await client.query(listQuery(days)));
-  return rows.map((row) => ({
-    id: text(row.id),
-    name: text(row.name),
-    description: text(row.description).slice(0, 300),
-    service: text(row.service) || "unknown",
-    environment: text(row.environment) || "unknown",
-    appVersion: text(row.app_version),
-    events: count(row.events),
-    users: count(row.users),
-    lastSeen: text(row.last_seen) || null,
-    url: issueUrl(text(row.id)),
-    decision: "",
-    note: "",
-  }));
+  return rows.map((row) => {
+    // An issue quiet in the window has no joined row, and ClickHouse fills the gap with the epoch.
+    const hasEvents = count(row.events) > 0;
+    return {
+      id: text(row.id),
+      name: text(row.name),
+      description: text(row.description).slice(0, 300),
+      service: text(row.service) || "unknown",
+      environment: text(row.environment) || "unknown",
+      appVersion: text(row.app_version),
+      events: count(row.events),
+      users: count(row.users),
+      lastSeen: hasEvents ? text(row.last_seen) || null : null,
+      url: issueUrl(text(row.id)),
+      decision: "",
+      note: "",
+    };
+  });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -274,11 +278,13 @@ export async function showIssue(
 
   write(`${text(record.name)}: ${text(record.description)}\n`);
   write(`status ${text(record.status)}, ${issueUrl(id)}\n`);
-  if (summary !== undefined) {
+  if (summary !== undefined && count(summary.events) > 0) {
     write(
       `${count(summary.events)} events, ${count(summary.users)} users, ` +
         `first ${text(summary.first_seen)}, last ${text(summary.last_seen)}\n`,
     );
+  } else {
+    write("no events left in PostHog's retention\n");
   }
   if (sample === undefined) return;
   write(
