@@ -359,6 +359,27 @@ export async function getMeasurementIdsByRunId(
 }
 
 /**
+ * Ids of every measurement in the given statuses, without reading payloads.
+ * Enqueueing uploads needs only the ids, and decoding every unsynced payload
+ * to get them runs on the JS thread.
+ */
+export async function getMeasurementIds(statuses: readonly MeasurementStatus[]): Promise<string[]> {
+  await ensureMigrated();
+  if (statuses.length === 0) return [];
+  try {
+    const rows = db
+      .select({ id: measurements.id })
+      .from(measurements)
+      .where(inArray(measurements.status, [...statuses]))
+      .all();
+    return rows.map((r) => r.id);
+  } catch (error) {
+    log.error("Failed to fetch measurement ids", { err: error });
+    throw error;
+  }
+}
+
+/**
  * Fetch a single full row by id, including the decompressed
  * `measurementResult`. Used by the detail modal on open and by paths that
  * need the full payload (comment editing, MQTT publish).

@@ -255,6 +255,7 @@
     "tabResults": "Resultaten",
     "tabRaw": "Ruwe gegevens",
     "processingError": "Verwerkingsfout: {{message}}",
+    "pythonRuntimeUnavailable": "Deze macro heeft een internetverbinding nodig om op de telefoon te draaien. De resultaten verschijnen op de website zodra de meting is geüpload.",
     "noDataAvailable": "Geen gegevens beschikbaar",
     "allFieldsEmpty": "De macro is uitgevoerd, maar heeft voor deze meting geen waarden gemeten.",
     "emptyFields_one": "{{count}} veld zonder waarde",
