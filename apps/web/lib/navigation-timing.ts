@@ -10,6 +10,8 @@ interface PendingNavigation {
  */
 class NavigationTiming {
   private pending: PendingNavigation | null = null;
+  private loadingScreens = 0;
+  private loadingChangedAt = 0;
 
   start(url: string, type: string): void {
     this.pending = {
@@ -24,6 +26,26 @@ class NavigationTiming {
     const pending = this.pending;
     this.pending = null;
     return pending?.pathname === pathname ? pending : null;
+  }
+
+  /** Counts a page loading screen as on screen until the returned release is called. */
+  holdLoadingScreen(): () => void {
+    this.loadingScreens += 1;
+    this.loadingChangedAt = performance.now();
+
+    return () => {
+      this.loadingScreens -= 1;
+      this.loadingChangedAt = performance.now();
+    };
+  }
+
+  get isLoadingScreenShown(): boolean {
+    return this.loadingScreens > 0;
+  }
+
+  /** When a loading screen last appeared or gave way to the content. */
+  get lastLoadingChangeAt(): number {
+    return this.loadingChangedAt;
   }
 }
 

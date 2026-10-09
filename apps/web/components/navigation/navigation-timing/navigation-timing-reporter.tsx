@@ -6,6 +6,12 @@ import { useEffect, useRef } from "react";
 import { navigationTiming, routeShape } from "~/lib/navigation-timing";
 import { usePostHog } from "~/providers/posthog-context";
 
+// Settled means this long with nothing fetching and no loading screen, the usual quiet window for
+// timing single-page navigations. It also bridges a query that starts when another one lands.
+const QUIET_MS = 100;
+// A page that never goes quiet is reported as it stands after this.
+const MAX_WAIT_MS = 30_000;
+
 /**
  * Reports how long a client navigation took: until the new page was on screen, and until the
  * data it asked for had arrived. Field data for where people wait between pages.
@@ -25,38 +31,41 @@ export function NavigationTimingReporter() {
     }
 
     const committedAt = performance.now();
-    let unsubscribe: (() => void) | undefined;
+    let lastQueryActivityAt = committedAt;
+    let quietTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const isBusy = () => queryClient.isFetching() > 0 || navigationTiming.isLoadingScreenShown;
+
+    const stop = () => {
+      clearTimeout(quietTimer);
+      clearTimeout(giveUpTimer);
+      unsubscribe();
+    };
 
     const report = () => {
-      unsubscribe?.();
-      unsubscribe = undefined;
+      stop();
+      const settledAt = Math.max(lastQueryActivityAt, navigationTiming.lastLoadingChangeAt);
       posthogRef.current?.capture("platform_navigation", {
         route: routeShape(pathname),
         navigation_type: navigation.type,
         committed_ms: Math.round(committedAt - navigation.startedAt),
-        settled_ms: Math.round(performance.now() - navigation.startedAt),
+        settled_ms: Math.round(settledAt - navigation.startedAt),
       });
     };
 
-    const isSettled = () => queryClient.isFetching() === 0;
-
-    // The new page's queries start in this same commit, so look once they have.
-    const timer = setTimeout(() => {
-      if (isSettled()) {
-        report();
-        return;
-      }
-      unsubscribe = queryClient.getQueryCache().subscribe(() => {
-        if (isSettled()) {
-          report();
-        }
-      });
-    }, 0);
-
-    return () => {
-      clearTimeout(timer);
-      unsubscribe?.();
+    const waitForQuiet = () => {
+      clearTimeout(quietTimer);
+      quietTimer = setTimeout(() => (isBusy() ? waitForQuiet() : report()), QUIET_MS);
     };
+
+    const unsubscribe = queryClient.getQueryCache().subscribe(() => {
+      lastQueryActivityAt = performance.now();
+      waitForQuiet();
+    });
+    const giveUpTimer = setTimeout(report, MAX_WAIT_MS);
+    waitForQuiet();
+
+    return stop;
   }, [pathname, queryClient]);
 
   return null;
