@@ -13,7 +13,7 @@ import { renderProjectTransferComplete } from "@repo/transactional/render/projec
 import { renderTransferRequestConfirmation } from "@repo/transactional/render/transfer-request-confirmation";
 
 import { ErrorCodes } from "../../../../utils/error-codes";
-import { apiErrorMapper, tryCatch } from "../../../../utils/fp-utils";
+import { apiErrorMapper, AppError, Result, tryCatch } from "../../../../utils/fp-utils";
 import { EmailConfigService } from "../config/config.service";
 
 @Injectable()
@@ -86,6 +86,20 @@ export class NotificationsService {
     ...args: Parameters<typeof renderOrganizationJoinRequestRejected>
   ) {
     return renderOrganizationJoinRequestRejected(...args);
+  }
+
+  // Logs in to the SMTP server without sending anything.
+  async verifyTransport(): Promise<Result<void>> {
+    return tryCatch(
+      async () => {
+        await this.createMailTransport(this.emailConfigService.getServer()).verify();
+      },
+      (error) =>
+        AppError.internal(
+          `SMTP check failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+          ErrorCodes.EMAIL_TRANSPORT_VERIFY_FAILED,
+        ),
+    );
   }
 
   /**

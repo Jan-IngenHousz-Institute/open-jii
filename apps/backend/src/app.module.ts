@@ -20,6 +20,7 @@ import databaseConfig from "./common/config/database.config";
 import databricksConfig from "./common/config/databricks.config";
 import emailConfig from "./common/config/email.config";
 import githubConfig from "./common/config/github.config";
+import healthConfig from "./common/config/health.config";
 import mailchimpConfig from "./common/config/mailchimp.config";
 import { DatabaseModule } from "./common/database/database.module";
 import { CompressionMiddleware } from "./common/middleware/compression.middleware";
@@ -54,6 +55,7 @@ import { WorkbookModule } from "./workbooks/workbook.module";
         mailchimpConfig,
         analyticsConfig,
         githubConfig,
+        healthConfig,
       ],
     }),
     LoggerModule.forRoot({

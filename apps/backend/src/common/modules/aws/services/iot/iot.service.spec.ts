@@ -363,6 +363,32 @@ describe("AwsIotService", () => {
     });
   });
 
+  describe("probeDataEndpoint", () => {
+    it("asks AWS every time, even after the endpoint is cached", async () => {
+      iotMock
+        .on(DescribeEndpointCommand)
+        .resolves({ endpointAddress: "abc123-ats.iot.amazonaws.com" });
+      const probed = new AwsIotService(awsConfig);
+
+      await probed.describeDataEndpoint();
+      const first = await probed.probeDataEndpoint();
+      const second = await probed.probeDataEndpoint();
+
+      assertSuccess(first);
+      assertSuccess(second);
+      expect(iotMock.commandCalls(DescribeEndpointCommand)).toHaveLength(3);
+    });
+
+    it("reports a failure under the endpoint error code", async () => {
+      iotMock.on(DescribeEndpointCommand).rejects(new Error("throttled"));
+
+      const result = await new AwsIotService(awsConfig).probeDataEndpoint();
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.AWS_IOT_DESCRIBE_ENDPOINT_FAILED);
+    });
+  });
+
   describe("searchThingsConnectivity", () => {
     it("maps indexed things to connectivity with an ISO last-seen", async () => {
       iotMock.on(SearchIndexCommand).resolves({

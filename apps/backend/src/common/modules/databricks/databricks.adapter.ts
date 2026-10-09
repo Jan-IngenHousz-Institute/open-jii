@@ -13,6 +13,7 @@ import type { UploadMetadata } from "../../../experiments/core/models/experiment
 import type { ExperimentTableMetadata } from "../../../experiments/core/models/experiment-data.model";
 import { DatabricksPort as ExperimentDatabricksPort } from "../../../experiments/core/ports/databricks.port";
 import type { DataUploadJobInput } from "../../../experiments/core/ports/databricks.port";
+import type { DatabricksPort as HealthDatabricksPort } from "../../../health/core/ports/databricks.port";
 import type { DeviceLifecycleEventRow } from "../../../iot/core/models/device-lifecycle-event.model";
 import type {
   DeviceBatteryRow,
@@ -61,7 +62,7 @@ import { DatabricksSqlService } from "./services/sql/sql.service";
 import type { SchemaData, StatementParameter } from "./services/sql/sql.types";
 
 @Injectable()
-export class DatabricksAdapter implements ExperimentDatabricksPort {
+export class DatabricksAdapter implements ExperimentDatabricksPort, HealthDatabricksPort {
   private readonly logger = new Logger(DatabricksAdapter.name);
 
   readonly CATALOG_NAME: string;

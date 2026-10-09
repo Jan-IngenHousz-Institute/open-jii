@@ -7,11 +7,14 @@ import type {
   GeocodeLocationRequest,
   GeocodeResult,
 } from "../../../experiments/core/ports/aws.port";
+import type { AwsPort as HealthAwsPort } from "../../../health/core/ports/aws.port";
 import type { AwsPort as IotAwsPort } from "../../../iot/core/ports/aws.port";
 import type { LambdaPort } from "../../../macros/core/ports/lambda.port";
 import { ErrorCodes } from "../../utils/error-codes";
 import type { Result } from "../../utils/fp-utils";
 import { success, failure, AppError } from "../../utils/fp-utils";
+import { AwsCloudWatchService } from "./services/cloudwatch/cloudwatch.service";
+import type { MetricPoint } from "./services/cloudwatch/cloudwatch.types";
 import { CognitoService } from "./services/cognito/cognito.service";
 import type { IotCredentials } from "./services/cognito/cognito.types";
 import { AwsConfigService } from "./services/config/config.service";
@@ -26,11 +29,12 @@ import type {
 import { AwsLambdaService } from "./services/lambda/lambda.service";
 import type { InvokeLambdaResponse } from "./services/lambda/lambda.types";
 import { AwsLocationService } from "./services/location/location.service";
+import { AwsRdsService } from "./services/rds/rds.service";
 import { AwsS3Service } from "./services/s3/s3.service";
 import type { IotUploadUrl } from "./services/s3/s3.types";
 
 @Injectable()
-export class AwsAdapter implements IotAwsPort, LambdaPort {
+export class AwsAdapter implements IotAwsPort, LambdaPort, HealthAwsPort {
   private readonly logger = new Logger(AwsAdapter.name);
 
   constructor(
@@ -40,6 +44,8 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
     private readonly awsConfigService: AwsConfigService,
     private readonly awsS3Service: AwsS3Service,
     private readonly awsIotService: AwsIotService,
+    private readonly awsCloudWatchService: AwsCloudWatchService,
+    private readonly awsRdsService: AwsRdsService,
   ) {}
 
   /**
@@ -285,5 +291,21 @@ export class AwsAdapter implements IotAwsPort, LambdaPort {
     }
 
     return functionName;
+  }
+
+  latestDatabaseCapacity(clusterIdentifier: string): Promise<Result<number | null>> {
+    return this.awsCloudWatchService.latestDatabaseCapacity(clusterIdentifier);
+  }
+
+  databaseClusterStatus(clusterIdentifier: string): Promise<Result<string>> {
+    return this.awsRdsService.clusterStatus(clusterIdentifier);
+  }
+
+  probeIotEndpoint(): Promise<Result<void>> {
+    return this.awsIotService.probeDataEndpoint();
+  }
+
+  publishMetrics(namespace: string, points: MetricPoint[]): Promise<Result<void>> {
+    return this.awsCloudWatchService.publish(namespace, points);
   }
 }

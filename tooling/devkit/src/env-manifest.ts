@@ -25,6 +25,8 @@ export const envManifest: readonly EnvVar[] = [
   env("DB_PORT", set, undefined, backend),
   env("DB_NAME", set, undefined, backend),
   env("DB_CREDENTIALS", set, undefined, backend),
+  // Deployed only: the dependency checks read the cluster's state from AWS by this name.
+  env("DB_CLUSTER_IDENTIFIER", unset, undefined, backend),
   env("AUTH_SECRET", set, "local-dev-secret-change-me-000000000000", backend),
   env("AUTH_EMAIL_SERVER", unset, undefined, backend),
   env("AUTH_EMAIL_FROM", unset, undefined, backend),

@@ -1,6 +1,7 @@
 import type { MockInstance } from "vitest";
 
 import { TestHarness } from "../../../../../test/test-harness";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { NotificationsService } from "./notifications.service";
 
@@ -1210,6 +1211,28 @@ describe("NotificationsService", () => {
 
       assertFailure(result);
       expect(result.error.message).toContain("Failed to send email: SMTP connection failed");
+    });
+  });
+
+  describe("verifyTransport", () => {
+    it("succeeds when the SMTP server accepts the login", async () => {
+      mockCreateTransport.mockReturnValue({ verify: vi.fn().mockResolvedValue(true) });
+
+      const result = await service.verifyTransport();
+
+      assertSuccess(result);
+    });
+
+    it("fails with its own code when the SMTP server refuses the login", async () => {
+      mockCreateTransport.mockReturnValue({
+        verify: vi.fn().mockRejectedValue(new Error("535 Authentication failed")),
+      });
+
+      const result = await service.verifyTransport();
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.EMAIL_TRANSPORT_VERIFY_FAILED);
+      expect(result.error.message).toContain("535 Authentication failed");
     });
   });
 });
