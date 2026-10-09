@@ -2,12 +2,12 @@
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
+import { LocalTime } from "@/components/shared/local-time";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { WorkbookCellSummary } from "@/components/workbook/workbook-cell-summary";
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
 import { orpc } from "@/lib/orpc";
-import { formatShortDate } from "@/util/date";
 import { useQueryClient } from "@tanstack/react-query";
 import { GitFork, MoreHorizontal, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -195,7 +195,7 @@ export function getWorkbookColumns(
       className: "hidden w-40 lg:table-cell",
       cell: (workbook) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
-          {formatShortDate(workbook.updatedAt, locale)}
+          <LocalTime value={workbook.updatedAt} locale={locale} />
         </span>
       ),
     },

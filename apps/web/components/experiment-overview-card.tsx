@@ -2,7 +2,7 @@
 
 import { ResourceCard } from "@/components/shared/resource-card";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
-import { formatShortDate } from "@/util/date";
+import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 import { Building2, Users } from "lucide-react";
 
 import type { ExperimentListItem } from "@repo/api/domains/experiment/experiment.schema";
@@ -38,9 +38,10 @@ export function ExperimentOverviewCard({
   showUpdatedLabel = false,
 }: ExperimentOverviewCardProps) {
   const { t } = useTranslation("experiments");
+  const format = useLocalDateFormat(locale);
 
   const owner = ownerName(experiment);
-  const updated = formatShortDate(experiment.updatedAt, locale);
+  const updated = format.date(experiment.updatedAt);
   const members = experiment.membersCount ?? 0;
 
   const renderBadges = () => (

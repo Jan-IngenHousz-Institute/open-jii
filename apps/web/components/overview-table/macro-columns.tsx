@@ -1,9 +1,9 @@
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { CompatibleProtocolsCell } from "@/components/overview-table/macro-protocols-cell";
 import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
+import { LocalTime } from "@/components/shared/local-time";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
-import { formatShortDate } from "@/util/date";
 import { getMacroLanguageBadgeTone, getMacroLanguageLabel } from "@/util/macro-language";
 
 import type { MacroListItem } from "@repo/api/domains/macro/macro.schema";
@@ -85,7 +85,7 @@ export function getMacroColumns(
       className: "hidden w-40 lg:table-cell",
       cell: (macro) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
-          {formatShortDate(macro.updatedAt, locale)}
+          <LocalTime value={macro.updatedAt} locale={locale} />
         </span>
       ),
     },

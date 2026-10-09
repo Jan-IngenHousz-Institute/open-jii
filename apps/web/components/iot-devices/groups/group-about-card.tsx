@@ -2,8 +2,8 @@
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { CollaboratorsAboutRow } from "@/components/sharing/collaborators-about-row";
+import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 import { useLocale } from "@/hooks/useLocale";
-import { formatDate } from "@/util/date";
 import type { ReactNode } from "react";
 
 import type {
@@ -27,6 +27,7 @@ export function GroupAboutCard({
 }) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
+  const format = useLocalDateFormat("en-US");
 
   const onlineCount = members.filter((member) => member.connected === true).length;
   const connectivityUnknownCount = members.filter((member) => member.connected === null).length;
@@ -54,7 +55,7 @@ export function GroupAboutCard({
             </span>
           )}
         </Row>
-        <Row label={t("iot.groups.meta.created")}>{formatDate(group.createdAt)}</Row>
+        <Row label={t("iot.groups.meta.created")}>{format.date(group.createdAt)}</Row>
         <CollaboratorsAboutRow
           resourceType="device_group"
           resourceId={group.id}

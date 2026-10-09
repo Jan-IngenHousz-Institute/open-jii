@@ -1,9 +1,9 @@
 "use client";
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { LocalTime } from "@/components/shared/local-time";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { useLocale } from "@/hooks/useLocale";
-import { formatDate } from "@/util/date";
 import {
   presentDevice,
   resolveDevicePrimaryLabel,
@@ -139,7 +139,7 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
       <TableCell
         className={`${IOT_DEVICE_TABLE_COLUMN_CLASS.created} text-muted-foreground min-w-0 truncate px-6 py-3 text-[13px] tabular-nums`}
       >
-        {formatDate(device.createdAt)}
+        <LocalTime value={device.createdAt} locale="en-US" />
       </TableCell>
       <TableCell
         className={`${IOT_DEVICE_TABLE_COLUMN_CLASS.actions} px-3 py-3 text-right`}

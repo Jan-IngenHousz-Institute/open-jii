@@ -1,9 +1,9 @@
 "use client";
 
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
-import { formatShortDate } from "@/util/date";
 import { useQuery } from "@tanstack/react-query";
 import { ExperimentOverviewCards } from "~/components/experiment-overview-cards";
 
@@ -28,6 +28,7 @@ const placeholderClassName =
 export function PublicExperimentsSection() {
   const { t } = useTranslation();
   const locale = useLocale();
+  const format = useLocalDateFormat(locale);
 
   const { data, isError, refetch } = useQuery(publicExperimentsQuery(orpc));
 
@@ -70,7 +71,7 @@ export function PublicExperimentsSection() {
       {isStale ? (
         <p className="text-muted-foreground text-sm">
           {t("dashboard.publicExperimentsStale", {
-            date: formatShortDate(latestUpdate, locale),
+            date: format.date(latestUpdate),
           })}{" "}
           <IntentLink
             href={`/${locale}${PUBLIC_EXPERIMENTS_HREF}`}

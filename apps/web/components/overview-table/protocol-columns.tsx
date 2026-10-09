@@ -1,9 +1,9 @@
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { CompatibleMacrosCell } from "@/components/overview-table/protocol-macros-cell";
 import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
+import { LocalTime } from "@/components/shared/local-time";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
-import { formatShortDate } from "@/util/date";
 import { getSensorFamilyBadgeTone } from "@/util/sensor-family";
 
 import type { ProtocolListItem } from "@repo/api/domains/protocol/protocol.schema";
@@ -85,7 +85,7 @@ export function getProtocolColumns(
       className: "hidden w-40 lg:table-cell",
       cell: (protocol) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
-          {formatShortDate(protocol.updatedAt, locale)}
+          <LocalTime value={protocol.updatedAt} locale={locale} />
         </span>
       ),
     },

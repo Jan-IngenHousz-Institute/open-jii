@@ -1,8 +1,8 @@
 import { ExperimentStatusIndicator } from "@/components/experiment/experiment-status-indicator";
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
+import { LocalTime } from "@/components/shared/local-time";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
-import { formatShortDate } from "@/util/date";
 import { Users } from "lucide-react";
 
 import type { ExperimentListItem } from "@repo/api/domains/experiment/experiment.schema";
@@ -148,7 +148,7 @@ export function getExperimentColumns(
       className: "hidden w-32 lg:table-cell",
       cell: (experiment) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
-          {formatShortDate(experiment.updatedAt, locale)}
+          <LocalTime value={experiment.updatedAt} locale={locale} />
         </span>
       ),
     },

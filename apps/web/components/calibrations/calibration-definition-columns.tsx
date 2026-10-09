@@ -1,9 +1,9 @@
 import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import type { OverviewTableColumn } from "@/components/overview-table/overview-table";
 import { overviewTableText } from "@/components/overview-table/overview-table";
+import { LocalTime } from "@/components/shared/local-time";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
-import { formatShortDate } from "@/util/date";
 import { getSensorFamilyBadgeTone, getSensorFamilyLabel } from "@/util/sensor-family";
 
 import type { CalibrationDefinitionSummary } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
@@ -67,7 +67,7 @@ export function getCalibrationDefinitionColumns(
       className: "hidden w-40 lg:table-cell",
       cell: (definition) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
-          {formatShortDate(definition.updatedAt, locale)}
+          <LocalTime value={definition.updatedAt} locale={locale} />
         </span>
       ),
     },

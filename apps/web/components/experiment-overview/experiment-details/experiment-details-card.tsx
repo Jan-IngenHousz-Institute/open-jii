@@ -1,7 +1,7 @@
 "use client";
 
+import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 import { useLocale } from "@/hooks/useLocale";
-import { formatDate } from "@/util/date";
 import { ChevronDown, ChevronUp, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -89,6 +89,7 @@ export function ExperimentDetailsCard({
   const { t } = useTranslation("experiments");
   const { t: tSettings } = useTranslation();
   const locale = useLocale();
+  const format = useLocalDateFormat("en-US");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileCollapsed, setIsMobileCollapsed] = useState(true);
   const [transitionsReady, setTransitionsReady] = useState(false);
@@ -163,7 +164,8 @@ export function ExperimentDetailsCard({
           {/* Mobile collapsed summary */}
           {isMobileCollapsed && (
             <div className="text-muted-foreground -mt-2 truncate px-6 pb-1 text-sm lg:hidden">
-              {t("updated")} {formatDate(experiment.updatedAt)}, {t("experimentId")} {experiment.id}
+              {t("updated")} {format.date(experiment.updatedAt)}, {t("experimentId")}{" "}
+              {experiment.id}
             </div>
           )}
 
@@ -202,14 +204,14 @@ export function ExperimentDetailsCard({
                 <div className="space-y-1">
                   <h4 className="text-sm font-medium">{t("updated")}</h4>
                   <p className="text-muted-foreground text-sm">
-                    {formatDate(experiment.updatedAt)}
+                    {format.date(experiment.updatedAt)}
                   </p>
                 </div>
 
                 <div className="space-y-1">
                   <h4 className="text-sm font-medium">{t("created")}</h4>
                   <p className="text-muted-foreground text-sm">
-                    {formatDate(experiment.createdAt)}
+                    {format.date(experiment.createdAt)}
                   </p>
                 </div>
 
