@@ -50,6 +50,22 @@ describe("TrendSparkline", () => {
     expect(paths.item(1).getAttribute("d")).toBe("M 0,39.86666666666667 L 50,0 L 100,40");
   });
 
+  it("draws nothing for an empty window, rather than an invalid path", () => {
+    render(
+      <TrendSparkline
+        days={[]}
+        mark="line"
+        peakDate={null}
+        seriesName="Measurements"
+        locale="en-US"
+      />,
+    );
+
+    expect(screen.getByRole("img", { name: "Measurements" }).querySelectorAll("path")).toHaveLength(
+      0,
+    );
+  });
+
   it("shows a day's date and total on hover", async () => {
     const user = userEvent.setup();
     render(

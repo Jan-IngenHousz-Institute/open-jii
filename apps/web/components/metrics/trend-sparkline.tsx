@@ -74,6 +74,9 @@ export function TrendSparkline({
   }
 
   function renderLine() {
+    if (days.length === 0) {
+      return null;
+    }
     const points = days.map(
       (day, index) => `${index * step},${HEIGHT - heightOf(day.measurements)}`,
     );
