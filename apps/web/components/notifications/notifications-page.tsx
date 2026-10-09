@@ -2,6 +2,7 @@
 
 import { useMarkAllNotificationsRead } from "@/hooks/notifications/useMarkAllNotificationsRead/useMarkAllNotificationsRead";
 import { useMarkNotificationsRead } from "@/hooks/notifications/useMarkNotificationsRead/useMarkNotificationsRead";
+import { NOTIFICATIONS_PAGE_SIZE } from "@/hooks/notifications/useNotifications/notifications-list-query";
 import { useNotifications } from "@/hooks/notifications/useNotifications/useNotifications";
 import { useUnreadNotificationCount } from "@/hooks/notifications/useUnreadNotificationCount/useUnreadNotificationCount";
 import { BellOff } from "lucide-react";
@@ -14,14 +15,10 @@ import { EmptyState } from "@repo/ui/components/empty-state";
 
 import { NotificationFeed } from "./notification-feed";
 
-// One page of the most it is allowed to ask for. Filters, day groups and paging
-// are OJD-2051; until then the list is what one read returns.
-const PAGE_SIZE = 50;
-
 export function NotificationsPage() {
   const { t } = useTranslation("notifications");
 
-  const notifications = useNotifications({ page: 1, pageSize: PAGE_SIZE });
+  const notifications = useNotifications({ page: 1, pageSize: NOTIFICATIONS_PAGE_SIZE });
   const unread = useUnreadNotificationCount();
   const markRead = useMarkNotificationsRead();
   const markAllRead = useMarkAllNotificationsRead();

@@ -1,5 +1,11 @@
 import { PageContainer } from "@/components/page-container";
+import { PrefetchedQueries } from "@/components/server-prefetch/prefetched-queries";
+import {
+  NOTIFICATIONS_PAGE_SIZE,
+  notificationsListQuery,
+} from "@/hooks/notifications/useNotifications/notifications-list-query";
 import type { Metadata } from "next";
+import { auth } from "~/app/actions/auth";
 import { NotificationsPage } from "~/components/notifications/notifications-page";
 
 import initTranslations from "@repo/i18n/server";
@@ -15,10 +21,21 @@ export async function generateMetadata({ params }: NotificationsRouteProps): Pro
   return { title: t("title") };
 }
 
-export default function NotificationsRoute() {
+export default async function NotificationsRoute() {
+  const session = await auth();
+
   return (
     <PageContainer width="reading">
-      <NotificationsPage />
+      <PrefetchedQueries
+        queries={(utils) => [
+          notificationsListQuery(utils, session?.user.id, {
+            page: 1,
+            pageSize: NOTIFICATIONS_PAGE_SIZE,
+          }),
+        ]}
+      >
+        <NotificationsPage />
+      </PrefetchedQueries>
     </PageContainer>
   );
 }
