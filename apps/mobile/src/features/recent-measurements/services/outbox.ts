@@ -450,8 +450,9 @@ class OutboxImpl implements Outbox {
         log.info("online - resuming uploads");
         this.queue.start();
         // Rows that exhausted their retries while the connection was gone have
-        // left the queue; without this they wait for the next foreground.
-        void this.rehydrate();
+        // left the queue; without this they wait for the next foreground. The
+        // connectivity check already paces reconnects, so no cooldown applies.
+        void this.rehydrate({ bypassCooldown: true });
       } else {
         log.info("offline - pausing uploads");
         this.queue.stop();
@@ -470,10 +471,10 @@ class OutboxImpl implements Outbox {
     this.subscriptions.push(unsubscribe);
   }
 
-  private async rehydrate(): Promise<void> {
+  private async rehydrate({ bypassCooldown = false } = {}): Promise<void> {
     if (this.destroyed) return;
     if (this.rehydrating) return;
-    if (Date.now() - this.lastRehydrateAt < REHYDRATE_COOLDOWN_MS) {
+    if (!bypassCooldown && Date.now() - this.lastRehydrateAt < REHYDRATE_COOLDOWN_MS) {
       log.debug("rehydrate skipped - recent");
       return;
     }

@@ -514,15 +514,11 @@ describe("Outbox", () => {
       const { outbox } = await freshOutbox(transport);
       await flushTasks();
 
-      // Past the rehydrate cooldown, as a reconnect in the field would be.
-      vi.useFakeTimers();
-      vi.setSystemTime(Date.now() + 20_000);
-
+      // Reconnecting inside the cold start's rehydrate cooldown still re-queues.
       mockGetMeasurementIds.mockResolvedValueOnce(["field-1"]);
       mockGetMeasurementById.mockResolvedValue(row({ id: "field-1", status: "failed" }));
 
       assertDefined<(online: boolean) => void>(onlineCb, "online callback")(true);
-      vi.useRealTimers();
       await waitUntil(() => transport.calls.length > 0, 30);
 
       expect(mockGetMeasurementIds).toHaveBeenCalledTimes(2);
