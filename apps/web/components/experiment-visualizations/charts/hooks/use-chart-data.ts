@@ -8,7 +8,10 @@ import type { ExperimentVisualization } from "@repo/api/domains/experiment/visua
 import { useExperimentVisualizationData } from "../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import type { VisualizationDataConfig } from "../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { useDashboardFiltersForTable } from "../../../experiment-dashboards/dashboard-filters-context";
-import { useDashboardSharedRead } from "../../../experiment-dashboards/dashboard-shared-reads-context";
+import {
+  SHARED_READ_PENDING,
+  useDashboardSharedRead,
+} from "../../../experiment-dashboards/dashboard-shared-reads-context";
 import type { OwnRead } from "../../../experiment-dashboards/dashboard-shared-reads-context";
 import { dataSourcesByRole, readColumnsOf } from "../data/data-sources";
 import { sortRowsByColumn } from "../data/row-order";
@@ -65,11 +68,6 @@ export function useChartData(
       ? [...(dataConfig.filters ?? []), ...dashboardFilters]
       : dataConfig.filters;
 
-  // Pre-flight check so an orphan cumsum config renders inline, not a global toast.
-  const aggregationError = validateAggregation(dataConfig.aggregation, options.orderBy);
-  const canFetch =
-    providedData === undefined && aggregationError === undefined && options.enabled !== false;
-
   // On a dashboard, charts on the same table with the same filters read once
   // through a shared plan; the plan's input becomes the query key they share.
   const own: OwnRead = {
@@ -78,7 +76,17 @@ export function useChartData(
     filters: mergedFilters,
     aggregation: dataConfig.aggregation,
   };
-  const shared = useDashboardSharedRead(visualization.id, own);
+  const sharedPlan = useDashboardSharedRead(visualization.id, own);
+  const isPlanPending = sharedPlan === SHARED_READ_PENDING;
+  const shared = isPlanPending ? undefined : sharedPlan;
+
+  // Pre-flight check so an orphan cumsum config renders inline, not a global toast.
+  const aggregationError = validateAggregation(dataConfig.aggregation, options.orderBy);
+  const canFetch =
+    providedData === undefined &&
+    aggregationError === undefined &&
+    options.enabled !== false &&
+    !isPlanPending;
   const sharedRead = useExperimentVisualizationData(
     experimentId,
     shared
@@ -136,7 +144,7 @@ export function useChartData(
   }
   return {
     rows,
-    isLoading: active.isLoading,
+    isLoading: active.isLoading || isPlanPending,
     isRefreshing: active.isRefreshing,
     error: active.error,
     truncation: truncationOf(active.data),

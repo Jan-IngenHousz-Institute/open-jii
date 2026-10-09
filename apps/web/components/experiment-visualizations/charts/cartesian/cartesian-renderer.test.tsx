@@ -1,4 +1,9 @@
-import { createVisualization } from "@/test/factories";
+import {
+  createExperimentDataTable,
+  createExperimentTable,
+  createVisualization,
+} from "@/test/factories";
+import type { SpyCall } from "@/test/msw/mount";
 import { server } from "@/test/msw/server";
 import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -321,6 +326,82 @@ describe("CartesianRenderer", () => {
 
   // A chart saved through the API has no colorMode. The renderer reads the
   // colour column's type from the table's column metadata to choose.
+  describe("reads of a long series", () => {
+    const answer = (call: SpyCall) => {
+      const aggregation = call.query.aggregation || "";
+      const rows = aggregation.includes("widthBucket")
+        ? [
+            {
+              x_from: "2026-09-25T00:00:00.000Z",
+              x_to: "2026-09-25T00:30:00.000Z",
+              y0_low: "1",
+              y0_high: "9",
+              rows: "40000",
+            },
+            {
+              x_from: "2026-09-25T01:00:00.000Z",
+              x_to: "2026-09-25T01:30:00.000Z",
+              y0_low: "2",
+              y0_high: "8",
+              rows: "40000",
+            },
+          ]
+        : aggregation
+          ? [{ x_from: "2026-09-25T00:00:00.000Z", x_to: "2026-09-26T00:00:00.000Z" }]
+          : [{ time: "2026-09-25T00:00:00.000Z", load: "5" }];
+      return [
+        createExperimentDataTable({
+          data: { columns: [], rows, totalRows: rows.length, truncated: false },
+        }),
+      ];
+    };
+
+    function mountTable(totalRows: number) {
+      server.mount(contract.experiments.getExperimentTables, {
+        body: [createExperimentTable({ identifier: "readings", totalRows })],
+      });
+      server.mount(contract.experiments.getExperimentTableColumns, {
+        body: {
+          columns: [
+            { name: "time", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+            { name: "load", type_name: "DOUBLE", type_text: "DOUBLE" },
+          ],
+        },
+      });
+      return server.mount(contract.experiments.getExperimentData, { body: answer });
+    }
+
+    it("draws a line over a large table from buckets without reading its rows", async () => {
+      const reads = mountTable(80_000);
+
+      render(
+        <CartesianRenderer
+          visualization={buildViz()}
+          experimentId="exp-1"
+          defaultTraceType="line"
+        />,
+      );
+
+      await waitFor(() => expect(renderedProps().data[0]?.x).toHaveLength(4));
+      expect(reads.calls.every((call) => Boolean(call.query.aggregation))).toBe(true);
+    });
+
+    it("reads a small table's rows whole", async () => {
+      const reads = mountTable(500);
+
+      render(
+        <CartesianRenderer
+          visualization={buildViz()}
+          experimentId="exp-1"
+          defaultTraceType="line"
+        />,
+      );
+
+      await waitFor(() => expect(renderedProps().data[0]?.x).toHaveLength(1));
+      expect(reads.calls.some((call) => Boolean(call.query.aggregation))).toBe(false);
+    });
+  });
+
   describe("with no colorMode saved", () => {
     function scatterColouredBy(colorColumn: string) {
       return buildViz({

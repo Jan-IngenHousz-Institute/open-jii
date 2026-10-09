@@ -87,6 +87,30 @@ function mountRows() {
 }
 
 describe("useChartData on a dashboard", () => {
+  it("holds its read while its group waits to learn whether a line in it reads buckets", async () => {
+    const line = viz("a", [
+      ["x", "timestamp"],
+      ["y", "f0"],
+    ]);
+    const scatter = {
+      ...viz("b", [
+        ["x", "channel"],
+        ["y", "f0"],
+      ]),
+      chartType: "scatter" as const,
+    };
+    server.mount(contract.experiments.getExperimentTables, { body: [], delay: 999_999 });
+    const reads = mountRows();
+
+    const { result } = renderHook(() => useChartData(scatter, EXPERIMENT_ID, undefined), {
+      wrapper: dashboardWrapper([line, scatter]),
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(result.current.isLoading).toBe(true);
+    expect(reads.called).toBe(false);
+  });
+
   it("reads once for charts on one table and gives each its own order", async () => {
     const byTime = viz("a", [
       ["x", "timestamp"],
