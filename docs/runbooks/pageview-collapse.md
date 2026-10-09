@@ -38,4 +38,6 @@ hours. Treat it as a page even though no server-side metric agrees with it.
 
 ## Producer status
 
-Inactive until the PostHog insight alert is configured. Pageview capture itself is already live.
+Not built, and not planned. The web app sends a pageview only after a visitor accepts cookies,
+about 59 in two weeks in October 2026, so no threshold can tell a white screen from a quiet day.
+Dropped on 9 October 2026; the CloudFront error and health check alerts stay the site-down signals.

@@ -10,8 +10,4 @@ module "posthog" {
 
   # Issue events carry no environment, so every error alert, prod's included, posts here.
   slack_webhook_url = var.slack_webhook_url
-
-  # Off for the first apply, which is the deploy that starts reporting server and phone errors: their
-  # first burst of new issues is triaged once instead of posting one by one. Turn on after.
-  error_alerts_enabled = false
 }

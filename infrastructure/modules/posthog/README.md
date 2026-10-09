@@ -43,9 +43,8 @@ the way `modules/opennext` composes its parts:
   module in `main.tf`, its code in `transformations/`.
 - **Error alerts:** the `error_alert` modules post new, reopened and spiking issues to dev's Slack
   webhook, for every environment, since issue events do not say which one they came from. Set
-  `error_alerts_enabled = false` while a deploy that newly reports errors opens its first burst of
-  issues, then triage with `pnpm posthog:issues list` and turn it back on. The dev root has it off
-  for the first apply.
+  `error_alerts_enabled = false` in the dev root while a deploy that newly reports errors opens its
+  first burst of issues, then triage with `pnpm posthog:issues list` and remove it again.
 
 ## What stays in PostHog
 
