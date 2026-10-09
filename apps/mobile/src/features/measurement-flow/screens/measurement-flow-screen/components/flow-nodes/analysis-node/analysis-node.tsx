@@ -102,8 +102,10 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
   const { updateMeasurementComment } = useMeasurements();
 
   // Re-entry guard: taps queued while the JS thread is busy all arrive before
-  // isUploading re-renders the button disabled, and each would save a copy.
-  const isAcceptingRef = useRef(false);
+  // isUploading re-renders the button disabled, and each would save a copy. It
+  // holds the accepted scan, so a late tap cannot save it again after success;
+  // a new scan is a new results array.
+  const acceptedResultsRef = useRef<typeof results | null>(null);
 
   const cycleAnswers = getCycleAnswers(iterationCount);
   const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
@@ -270,17 +272,16 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
   };
 
   const handleAccept = async () => {
-    if (isUploading || isAcceptingRef.current) {
+    if (isUploading || acceptedResultsRef.current === results) {
       return;
     }
-    isAcceptingRef.current = true;
+    acceptedResultsRef.current = results;
 
     try {
       await handleUploadMeasurement();
     } catch (err) {
+      acceptedResultsRef.current = null;
       log.warn("handleUploadMeasurement failed", { err });
-    } finally {
-      isAcceptingRef.current = false;
     }
   };
 

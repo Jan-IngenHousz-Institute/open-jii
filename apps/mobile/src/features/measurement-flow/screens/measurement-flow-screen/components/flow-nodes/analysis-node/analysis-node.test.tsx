@@ -398,14 +398,7 @@ describe("AnalysisNode upload with a command in the flow", () => {
     });
   });
 
-  it("saves once when taps queued behind a busy JS thread arrive together", async () => {
-    let finishUpload: () => void = () => undefined;
-    const uploadMeasurements = vi.fn(
-      () =>
-        new Promise<void>((resolve) => {
-          finishUpload = resolve;
-        }),
-    );
+  function renderReadyToAccept(uploadMeasurements: () => Promise<void>) {
     useMeasurementUpload.mockReturnValue({ isUploading: false, uploadMeasurements });
     useMeasurementFlowStore.setState({
       experimentId: "exp-1",
@@ -422,10 +415,21 @@ describe("AnalysisNode upload with a command in the flow", () => {
     const props = actionBarProps.mock.calls.at(-1)?.[0] as
       | { onUpload: () => Promise<void> }
       | undefined;
-    expect(props).toBeDefined();
     if (!props) {
       throw new Error("AnalysisActionBar did not render");
     }
+    return props;
+  }
+
+  it("saves a scan once, for taps queued behind a busy JS thread and for taps after", async () => {
+    let finishUpload: () => void = () => undefined;
+    const uploadMeasurements = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishUpload = resolve;
+        }),
+    );
+    const props = renderReadyToAccept(uploadMeasurements);
 
     // No re-render between taps, so isUploading still reads false for all three.
     let queuedTaps: Promise<void> = Promise.resolve();
@@ -442,9 +446,24 @@ describe("AnalysisNode upload with a command in the flow", () => {
       await queuedTaps;
     });
     await act(async () => {
-      const nextTap = props.onUpload();
-      finishUpload();
-      await nextTap;
+      await props.onUpload();
+    });
+
+    expect(uploadMeasurements).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets a later tap retry the scan after a failed save", async () => {
+    const uploadMeasurements = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(new Error("storage full"))
+      .mockResolvedValueOnce(undefined);
+    const props = renderReadyToAccept(uploadMeasurements);
+
+    await act(async () => {
+      await props.onUpload();
+    });
+    await act(async () => {
+      await props.onUpload();
     });
 
     expect(uploadMeasurements).toHaveBeenCalledTimes(2);
