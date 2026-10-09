@@ -3041,11 +3041,11 @@ module "grafana_dashboard" {
   enable_site_availability_alert = true
   route53_health_check_id        = module.route53.health_check_id
 
+  # No depends_on on the workspace: the provider's url already waits for it, and a module-level
+  # dependency defers the account id lookup, which replaces every dashboard that embeds it.
   providers = {
     grafana.amg = grafana.amg
   }
-
-  depends_on = [module.managed_grafana_workspace]
 }
 
 module "grafana_metrics_publisher" {
