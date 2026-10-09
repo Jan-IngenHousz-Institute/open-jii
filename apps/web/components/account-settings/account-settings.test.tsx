@@ -1,11 +1,10 @@
-import { createUserProfile } from "@/test/factories";
+import { createSession, createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { CreateUserProfileBody } from "@repo/api/domains/user/user.schema";
-import type { Session } from "@repo/auth/types";
 import { toast } from "@repo/ui/hooks/use-toast";
 
 import { AccountSettings } from "./account-settings";
@@ -71,14 +70,9 @@ vi.mock("./newsletter-subscription-card", () => ({
   NewsletterSubscriptionCard: () => <div data-testid="newsletter-subscription-card" />,
 }));
 
-const session: Session = {
-  user: {
-    id: "u-1",
-    email: "hello@example.com",
-    name: "Vlad",
-    image: null,
-  } as unknown as Session["user"],
-} as Session;
+const signedInUser = createSession({
+  user: { id: "u-1", email: "hello@example.com", name: "Vlad" },
+}).user;
 
 const profile = createUserProfile({
   userId: "u-1",
@@ -111,7 +105,7 @@ describe("<AccountSettings />", () => {
 
   it("shows loading state while profile is being fetched", () => {
     mountGetProfile({ delay: 999_999 });
-    render(<AccountSettings session={session} />);
+    render(<AccountSettings user={signedInUser} />);
     expect(screen.getByText(/settings.loading/i)).toBeInTheDocument();
   });
 
@@ -120,14 +114,14 @@ describe("<AccountSettings />", () => {
       status: 404,
       body: { message: "Not found" },
     });
-    render(<AccountSettings session={session} />);
+    render(<AccountSettings user={signedInUser} />);
     await waitFor(() => {
       expect(screen.getByTestId("error-display")).toHaveTextContent("settings.errorTitle");
     });
   });
 
-  it("renders profile sections with empty defaults when session is null", () => {
-    render(<AccountSettings session={null} />);
+  it("renders profile sections with empty defaults when there is no user", () => {
+    render(<AccountSettings user={null} />);
     const card = screen.getByTestId("profile-information-card");
     expect(within(card).getByTestId("firstName")).toHaveTextContent("");
     expect(within(card).getByTestId("lastName")).toHaveTextContent("");
@@ -136,7 +130,7 @@ describe("<AccountSettings />", () => {
 
   it("renders existing profile data", async () => {
     mountGetProfile();
-    render(<AccountSettings session={session} />);
+    render(<AccountSettings user={signedInUser} />);
 
     await waitFor(() => {
       expect(
@@ -160,7 +154,7 @@ describe("<AccountSettings />", () => {
     mountGetProfile();
     const spy = mountCreateProfile();
     const user = userEvent.setup();
-    render(<AccountSettings session={session} />);
+    render(<AccountSettings user={signedInUser} />);
 
     await user.click(await screen.findByRole("button", { name: "save-name" }));
 
@@ -178,7 +172,7 @@ describe("<AccountSettings />", () => {
     mountGetProfile();
     const spy = mountCreateProfile();
     const user = userEvent.setup();
-    render(<AccountSettings session={session} />);
+    render(<AccountSettings user={signedInUser} />);
 
     await user.click(await screen.findByRole("button", { name: "save-avatar" }));
 
@@ -194,7 +188,7 @@ describe("<AccountSettings />", () => {
     mountGetProfile();
     const spy = mountCreateProfile();
     const user = userEvent.setup();
-    render(<AccountSettings session={session} />);
+    render(<AccountSettings user={signedInUser} />);
 
     await user.click(await screen.findByRole("button", { name: "save-bio" }));
 

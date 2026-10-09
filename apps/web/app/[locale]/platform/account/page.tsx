@@ -18,5 +18,5 @@ export async function generateMetadata({ params }: AccountPageProps): Promise<Me
 export default async function AccountPage() {
   const session = await auth();
 
-  return <AccountSettings session={session} />;
+  return <AccountSettings user={session?.user ?? null} />;
 }
