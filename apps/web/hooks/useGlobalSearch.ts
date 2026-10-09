@@ -6,7 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useDebounce } from "./useDebounce";
 
 const MIN_QUERY_LENGTH = 2;
-const SEARCH_DEBOUNCE_MS = 250;
+// Short enough that results follow a pause in typing at once, long enough to skip keystrokes.
+const SEARCH_DEBOUNCE_MS = 150;
 const DEFAULT_LIMIT = 20;
 
 /**
