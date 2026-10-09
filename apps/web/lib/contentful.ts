@@ -1,8 +1,8 @@
 /* eslint-disable no-restricted-properties */
 import { env } from "~/env";
 
-import { createContentfulClient } from "@repo/cms/client";
 import type { ContentfulClients } from "@repo/cms";
+import { createContentfulClient } from "@repo/cms/client";
 import { defaultLocale } from "@repo/i18n/config";
 
 import { getSecret, isLambdaEnvironment } from "./secrets";
