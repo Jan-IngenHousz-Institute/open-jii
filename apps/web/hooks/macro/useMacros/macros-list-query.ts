@@ -17,6 +17,7 @@ export function macrosListQuery(utils: QueryUtils, view: MacrosListView) {
       language: view.language,
       page: view.page,
       sort: view.sort?.length ? view.sort : undefined,
+      fields: "summary",
     },
   });
 }

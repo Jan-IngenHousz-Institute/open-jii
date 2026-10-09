@@ -369,6 +369,41 @@ describe("MacroController", () => {
       });
     });
 
+    it("leaves each macro's code out of a summary list, and keeps it otherwise", async () => {
+      const id = faker.string.uuid();
+      const macro: MacroDto = {
+        id,
+        name: "Summary Macro",
+        filename: generateHashedFilename(id),
+        description: null,
+        language: "python",
+        code: "c3VtbWFyeSBjb2Rl",
+        sortOrder: null,
+        forkedFrom: null,
+        organizationId: null,
+        visibility: "public",
+        createdBy: testUserId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdByName: "Test User",
+      };
+      vi.spyOn(listMacrosUseCase, "execute").mockResolvedValue(success([macro]));
+
+      const summary = await testApp
+        .get(testApp.resolveOrpcPath(contract.macros.listMacros))
+        .query({ fields: "summary" })
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+      const full = await testApp
+        .get(testApp.resolveOrpcPath(contract.macros.listMacros))
+        .withAuth(testUserId)
+        .expect(StatusCodes.OK);
+
+      expect(JSON.stringify(summary.body)).toContain("Summary Macro");
+      expect(JSON.stringify(summary.body)).not.toContain("c3VtbWFyeSBjb2Rl");
+      expect(JSON.stringify(full.body)).toContain("c3VtbWFyeSBjb2Rl");
+    });
+
     it("should handle query parameters", async () => {
       // Arrange
       vi.spyOn(listMacrosUseCase, "execute").mockResolvedValue(success([]));

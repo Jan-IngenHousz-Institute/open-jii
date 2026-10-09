@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, FileCode2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { Macro } from "@repo/api/domains/macro/macro.schema";
+import type { MacroListEntry } from "@repo/api/domains/macro/macro.schema";
 import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -45,7 +45,7 @@ export function ProtocolCompatibleMacrosCard({
   const [debouncedMacroSearch, isDebounced] = useDebounce(macroSearch, 300);
   const { data: macroResponse } = useQuery(
     orpc.macros.listMacros.queryOptions({
-      input: { search: debouncedMacroSearch || undefined },
+      input: { search: debouncedMacroSearch || undefined, fields: "summary" },
     }),
   );
 
@@ -60,7 +60,7 @@ export function ProtocolCompatibleMacrosCard({
   );
 
   // Filter out already-linked macros from the search dropdown
-  const availableMacros: Macro[] = useMemo(
+  const availableMacros: MacroListEntry[] = useMemo(
     () => (macroList ?? []).filter((m) => !compatibleMacroIds.has(m.id)),
     [macroList, compatibleMacroIds],
   );

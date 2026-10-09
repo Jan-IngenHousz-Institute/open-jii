@@ -5,7 +5,7 @@ import { useLocale } from "@/hooks/useLocale";
 import { ChevronsUpDown, ExternalLink } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 
-import type { Macro } from "@repo/api/domains/macro/macro.schema";
+import type { MacroListEntry } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverTrigger } from "@repo/ui/components/popover";
@@ -13,7 +13,7 @@ import { Popover, PopoverTrigger } from "@repo/ui/components/popover";
 import { MacroSearchPopover } from "./macro-search-popover";
 
 export interface MacroSearchWithDropdownProps {
-  availableMacros: Macro[];
+  availableMacros: MacroListEntry[];
   value: string;
   placeholder?: string;
   loading?: boolean;
@@ -44,7 +44,7 @@ export function MacroSearchWithDropdown({
   const { t } = useTranslation("common");
 
   // Snapshot the selected macro when it's visible in the current list.
-  const selectedSnapshotRef = useRef<Macro | undefined>(undefined);
+  const selectedSnapshotRef = useRef<MacroListEntry | undefined>(undefined);
 
   const currentMatch = value ? availableMacros.find((m) => m.id === value) : undefined;
 

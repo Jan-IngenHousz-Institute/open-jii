@@ -9,7 +9,7 @@ import { X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 
-import type { Macro } from "@repo/api/domains/macro/macro.schema";
+import type { MacroListEntry } from "@repo/api/domains/macro/macro.schema";
 import { listItems } from "@repo/api/shared/listing";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -30,8 +30,8 @@ import type { NewProtocolFormValues } from "./new-protocol-form-values";
 
 interface NewProtocolDetailsCardProps {
   form: UseFormReturn<NewProtocolFormValues>;
-  selectedMacros: Macro[];
-  onAddMacro: (macro: Macro) => void;
+  selectedMacros: MacroListEntry[];
+  onAddMacro: (macro: MacroListEntry) => void;
   onRemoveMacro: (macroId: string) => void;
 }
 
@@ -48,7 +48,7 @@ export function NewProtocolDetailsCard({
   const [debouncedMacroSearch, isDebounced] = useDebounce(macroSearch, 300);
   const { data: macroResponse } = useQuery(
     orpc.macros.listMacros.queryOptions({
-      input: { search: debouncedMacroSearch || undefined },
+      input: { search: debouncedMacroSearch || undefined, fields: "summary" },
     }),
   );
 
@@ -62,7 +62,7 @@ export function NewProtocolDetailsCard({
     [selectedMacros],
   );
 
-  const availableMacros: Macro[] = useMemo(
+  const availableMacros: MacroListEntry[] = useMemo(
     () => (macroList ?? []).filter((m) => !selectedMacroIds.has(m.id)),
     [macroList, selectedMacroIds],
   );

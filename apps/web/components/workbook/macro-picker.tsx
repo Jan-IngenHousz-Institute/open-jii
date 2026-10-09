@@ -73,6 +73,7 @@ export function MacroPicker({ onSelect, children }: MacroPickerProps) {
       input: {
         search: debouncedSearch.trim() || undefined,
         language,
+        fields: "summary",
       },
     }),
   );
