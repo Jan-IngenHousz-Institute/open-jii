@@ -3,7 +3,7 @@ import type { Transport } from "~/features/connection/services/mqtt/mqtt-transpo
 
 const {
   mockGetMeasurementById,
-  mockGetMeasurements,
+  mockGetMeasurementIds,
   mockMarkAsSuccessful,
   mockMarkAsFailed,
   mockOnlineIsOnline,
@@ -11,7 +11,7 @@ const {
   mockOnAppForeground,
 } = vi.hoisted(() => ({
   mockGetMeasurementById: vi.fn(),
-  mockGetMeasurements: vi.fn(),
+  mockGetMeasurementIds: vi.fn(),
   mockMarkAsSuccessful: vi.fn(),
   mockMarkAsFailed: vi.fn(),
   mockOnlineIsOnline: vi.fn(() => true),
@@ -21,7 +21,7 @@ const {
 
 vi.mock("~/shared/db/measurements-storage", () => ({
   getMeasurementById: mockGetMeasurementById,
-  getMeasurements: mockGetMeasurements,
+  getMeasurementIds: mockGetMeasurementIds,
   markAsSuccessful: mockMarkAsSuccessful,
   markAsFailed: mockMarkAsFailed,
   UNSYNCED_STATUSES: ["pending", "failed"],
@@ -164,7 +164,7 @@ function assertDefined<T>(value: T | null | undefined, label: string): T {
 describe("Outbox", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetMeasurements.mockResolvedValue([]);
+    mockGetMeasurementIds.mockResolvedValue([]);
     mockOnlineIsOnline.mockReturnValue(true);
     mockOnlineSubscribe.mockReturnValue(() => undefined);
   });
@@ -175,10 +175,7 @@ describe("Outbox", () => {
 
   describe("construction", () => {
     it("rehydrates pending + failed rows from the DB", async () => {
-      mockGetMeasurements.mockResolvedValueOnce([
-        row({ id: "a", status: "pending" }),
-        row({ id: "b", status: "failed" }),
-      ]);
+      mockGetMeasurementIds.mockResolvedValueOnce(["a", "b"]);
       mockGetMeasurementById.mockImplementation((id) =>
         Promise.resolve(row({ id, status: "pending" })),
       );
@@ -187,7 +184,7 @@ describe("Outbox", () => {
       const { outbox } = await freshOutbox(transport);
       await flushTasks();
 
-      expect(mockGetMeasurements).toHaveBeenCalledWith(["pending", "failed"]);
+      expect(mockGetMeasurementIds).toHaveBeenCalledWith(["pending", "failed"]);
       expect(outbox.isProcessing("a")).toBe(true);
       expect(outbox.isProcessing("b")).toBe(true);
     });
@@ -412,7 +409,7 @@ describe("Outbox", () => {
       });
 
       // First rehydrate (cold start): empty queue.
-      mockGetMeasurements.mockResolvedValueOnce([]);
+      mockGetMeasurementIds.mockResolvedValueOnce([]);
       const transport = makeTransport();
       const { outbox } = await freshOutbox(transport);
       await flushTasks();
@@ -422,10 +419,7 @@ describe("Outbox", () => {
       vi.setSystemTime(Date.now() + 20_000);
 
       // Second rehydrate (foreground): two rows waiting.
-      mockGetMeasurements.mockResolvedValueOnce([
-        row({ id: "fg-a", status: "pending" }),
-        row({ id: "fg-b", status: "failed" }),
-      ]);
+      mockGetMeasurementIds.mockResolvedValueOnce(["fg-a", "fg-b"]);
       mockGetMeasurementById.mockImplementation((id) =>
         Promise.resolve(row({ id, status: "pending" })),
       );
@@ -435,7 +429,7 @@ describe("Outbox", () => {
       vi.useRealTimers();
       await flushTasks(40);
 
-      expect(mockGetMeasurements).toHaveBeenCalledTimes(2);
+      expect(mockGetMeasurementIds).toHaveBeenCalledTimes(2);
       expect(outbox.isProcessing("fg-a")).toBe(true);
       expect(outbox.isProcessing("fg-b")).toBe(true);
     });
@@ -446,11 +440,11 @@ describe("Outbox", () => {
         foregroundCb = cb;
       });
 
-      mockGetMeasurements.mockResolvedValue([]);
+      mockGetMeasurementIds.mockResolvedValue([]);
       const transport = makeTransport();
       await freshOutbox(transport);
       await flushTasks();
-      const cold = mockGetMeasurements.mock.calls.length;
+      const cold = mockGetMeasurementIds.mock.calls.length;
 
       // Foregrounded immediately after cold start - well inside the
       // REHYDRATE_COOLDOWN_MS window (10s). The second call should be
@@ -458,13 +452,13 @@ describe("Outbox", () => {
       assertDefined<() => void>(foregroundCb, "foreground callback")();
       await flushTasks(10);
 
-      expect(mockGetMeasurements).toHaveBeenCalledTimes(cold);
+      expect(mockGetMeasurementIds).toHaveBeenCalledTimes(cold);
     });
 
     it("swallows rehydrate failures so the outbox stays usable", async () => {
       // Cold rehydrate throws; the constructor must not crash, and the
       // outbox must remain able to enqueue fresh work.
-      mockGetMeasurements.mockRejectedValueOnce(new Error("sqlite locked"));
+      mockGetMeasurementIds.mockRejectedValueOnce(new Error("sqlite locked"));
       mockGetMeasurementById.mockResolvedValueOnce(row({ id: "after-fail" }));
       const transport = makeTransport();
       const { outbox } = await freshOutbox(transport);
@@ -506,6 +500,37 @@ describe("Outbox", () => {
       transport.resolveNext();
       await flushTasks(20);
       expect(mockMarkAsSuccessful).toHaveBeenCalledWith("net-a");
+    });
+
+    it("re-enqueues rows that failed while offline when the connection returns", async () => {
+      mockOnlineIsOnline.mockReturnValue(false);
+      let onlineCb: ((online: boolean) => void) | null = null;
+      mockOnlineSubscribe.mockImplementation((cb: (online: boolean) => void) => {
+        onlineCb = cb;
+        return () => undefined;
+      });
+
+      const transport = makeTransport();
+      const { outbox } = await freshOutbox(transport);
+      await flushTasks();
+
+      // Past the rehydrate cooldown, as a reconnect in the field would be.
+      vi.useFakeTimers();
+      vi.setSystemTime(Date.now() + 20_000);
+
+      mockGetMeasurementIds.mockResolvedValueOnce(["field-1"]);
+      mockGetMeasurementById.mockResolvedValue(row({ id: "field-1", status: "failed" }));
+
+      assertDefined<(online: boolean) => void>(onlineCb, "online callback")(true);
+      vi.useRealTimers();
+      await waitUntil(() => transport.calls.length > 0, 30);
+
+      expect(mockGetMeasurementIds).toHaveBeenCalledTimes(2);
+      expect(transport.calls).toHaveLength(1);
+      transport.resolveNext();
+      await flushTasks(20);
+      expect(mockMarkAsSuccessful).toHaveBeenCalledWith("field-1");
+      expect(outbox.isProcessing("field-1")).toBe(false);
     });
 
     it("starts paused while offline at construction (no upload until online)", async () => {

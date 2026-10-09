@@ -3,7 +3,7 @@ import { onlineManager } from "@tanstack/react-query";
 import type { Transport } from "~/features/connection/services/mqtt/mqtt-transport";
 import {
   getMeasurementById,
-  getMeasurements,
+  getMeasurementIds,
   markAsFailed,
   markAsSuccessful,
   UNSYNCED_STATUSES,
@@ -449,6 +449,9 @@ class OutboxImpl implements Outbox {
       if (online) {
         log.info("online - resuming uploads");
         this.queue.start();
+        // Rows that exhausted their retries while the connection was gone have
+        // left the queue; without this they wait for the next foreground.
+        void this.rehydrate();
       } else {
         log.info("offline - pausing uploads");
         this.queue.stop();
@@ -477,9 +480,9 @@ class OutboxImpl implements Outbox {
     this.rehydrating = true;
     this.lastRehydrateAt = Date.now();
     try {
-      const rows = await getMeasurements([...UNSYNCED_STATUSES]);
-      log.info("rehydrate", { found: rows.length });
-      this.enqueueMany(rows.map((row) => row.id));
+      const ids = await getMeasurementIds(UNSYNCED_STATUSES);
+      log.info("rehydrate", { found: ids.length });
+      this.enqueueMany(ids);
     } catch (err) {
       log.warn("rehydrate failed", { err: (err as Error)?.message });
     } finally {

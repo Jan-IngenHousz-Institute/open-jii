@@ -37,9 +37,10 @@ discard it and start a new one.
 - **Failed** means the retry attempts were exhausted; the reading remains local
   for another attempt.
 
-The outbox pauses while offline and resumes on reconnect. It also rechecks queued
-and failed rows when the app returns to the foreground. Uploads are acknowledged
-one measurement at a time, including measurements from a multi-device round.
+The outbox pauses while offline. When the connection returns, and whenever the
+app returns to the foreground, it retries queued and failed rows. Uploads are
+acknowledged one measurement at a time, including measurements from a
+multi-device round.
 
 ![The Recent screen showing one synced demo measurement and no unsynced rows](/img/mobile/sync-state.png)
 
