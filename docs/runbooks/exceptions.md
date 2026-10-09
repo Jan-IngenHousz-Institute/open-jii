@@ -7,7 +7,9 @@ issues to Slack itself, so nothing in Grafana alerts on this.
 
 ## Where the exceptions come from
 
-Every exception carries `environment` and `service`:
+Every exception carries `environment` and `service`, except from phones still running JavaScript
+built before 28 September, such as the store build 2.65.0. The error inbox lists those as untagged
+until the phones update:
 
 - `web`: the browser, from visitors who accepted cookies, and the page server, for everyone.
 - `backend`: server errors only (5xx), counted against the signed-in user when there is one.

@@ -461,6 +461,9 @@ metrics:
       dimensions: { DBClusterIdentifier: "${DB_CLUSTER_IDENTIFIER}" }
     baseline: { method: threshold, max: 80 }
     runbook: docs/runbooks/database-cpu.md
+    notes: >-
+      A wake from auto-pause runs above 100% for a few minutes on the small starting capacity; the
+      rule's five-minute hold keeps that at Pending.
 
   - num: 75
     id: database-connections
