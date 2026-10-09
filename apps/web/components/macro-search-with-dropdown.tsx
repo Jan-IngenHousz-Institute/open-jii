@@ -1,8 +1,8 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
 import { ChevronsUpDown, ExternalLink } from "lucide-react";
-import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
 
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
@@ -78,7 +78,7 @@ export function MacroSearchWithDropdown({
               <div className="flex min-w-0 flex-col">
                 <div className="flex min-w-0 items-center gap-1">
                   <span className="truncate text-sm font-medium">{selectedMacro.name}</span>
-                  <Link
+                  <IntentLink
                     href={`/${locale}/platform/macros/${selectedMacro.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -88,7 +88,7 @@ export function MacroSearchWithDropdown({
                     onClick={(e) => e.stopPropagation()}
                   >
                     <ExternalLink className="group-hover:text-muted-foreground text-primary h-4 w-4 transition-colors" />
-                  </Link>
+                  </IntentLink>
                 </div>
                 <span className="text-muted-foreground truncate text-xs">
                   {selectedMacro.language} • {t("common.by")} {selectedMacro.createdByName}

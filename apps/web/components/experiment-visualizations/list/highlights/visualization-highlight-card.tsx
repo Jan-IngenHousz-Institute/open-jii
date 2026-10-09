@@ -1,7 +1,7 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { formatDate } from "@/util/date";
-import Link from "next/link";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
@@ -36,7 +36,7 @@ export function VisualizationHighlightCard({
 
   return (
     <Card className="hover:border-foreground/20 group relative overflow-hidden shadow-none transition-colors">
-      <Link
+      <IntentLink
         href={href}
         aria-label={visualization.name}
         className="focus-visible:ring-primary/40 focus-visible:outline-hidden absolute inset-0 z-10 rounded-xl focus-visible:ring-2"

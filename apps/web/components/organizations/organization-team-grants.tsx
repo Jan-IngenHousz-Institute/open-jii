@@ -1,5 +1,6 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -11,7 +12,6 @@ import {
   RadioReceiver,
   SlidersHorizontal,
 } from "lucide-react";
-import Link from "next/link";
 
 import type { OrganizationTeamGrant } from "@repo/api/domains/organization/organization.schema";
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
@@ -99,12 +99,12 @@ export function OrganizationTeamGrants({
                 {/* The name is always populated — an unnamed device arrives carrying its
                     thing name — and the link routes on the id either way, so a device
                     with no name of its own is still reachable from here. */}
-                <Link
+                <IntentLink
                   href={`/${locale}/platform/${RESOURCE_SEGMENT[grant.resourceType]}/${grant.resourceId}`}
                   className="min-w-0 flex-1 truncate text-sm hover:underline"
                 >
                   {grant.resourceName}
-                </Link>
+                </IntentLink>
                 <span className="text-muted-foreground shrink-0 text-xs">
                   {t(`organizations.delete.owned.${grant.resourceType}`, { count: 1 })}
                 </span>

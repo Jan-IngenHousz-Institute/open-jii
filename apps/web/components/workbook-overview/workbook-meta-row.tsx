@@ -1,5 +1,6 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { OwningOrganizationField } from "@/components/organizations/owning-organization-field";
 import { PublishConfirmDialog } from "@/components/visibility/publish-confirm-dialog";
 import { WorkbookDeleteAction } from "@/components/workbook-overview/workbook-delete-action";
@@ -10,7 +11,6 @@ import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkboo
 import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWorkbookVersions";
 import { formatDate } from "@/util/date";
 import { GitFork, Globe, Info, Loader2 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { parseApiError } from "~/util/apiError";
@@ -151,12 +151,12 @@ export function WorkbookMetaRow({ id, workbook }: WorkbookMetaRowProps) {
             <span className="text-foreground text-sm font-medium leading-[18px] tracking-[0.02em]">
               {t("workbooks.forkedFrom")}
             </span>
-            <Link
+            <IntentLink
               href={`/platform/workbooks/${workbook.forkedFrom}`}
               className="text-primary hover:text-primary text-sm leading-[21px] underline underline-offset-2"
             >
               {tCommon("common.viewOriginal")}
-            </Link>
+            </IntentLink>
           </div>
         ) : null}
 

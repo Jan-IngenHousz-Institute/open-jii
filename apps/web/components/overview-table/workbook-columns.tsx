@@ -10,7 +10,6 @@ import { orpc } from "@/lib/orpc";
 import { formatShortDate } from "@/util/date";
 import { useQueryClient } from "@tanstack/react-query";
 import { GitFork, MoreHorizontal, Pencil } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import type { WorkbookListEntry } from "@repo/api/domains/workbook/workbook.schema";
@@ -83,10 +82,10 @@ function WorkbookActionsCell({ workbook, href }: { workbook: WorkbookListItem; h
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem asChild>
-            <Link href={href}>
+            <IntentLink href={href}>
               <Pencil className="mr-2 size-4" />
               {t("workbooks.actions.open")}
-            </Link>
+            </IntentLink>
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={isDuplicating}

@@ -1,10 +1,10 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useExperimentDashboardDelete } from "@/hooks/experiment/useExperimentDashboardDelete/useExperimentDashboardDelete";
 import { formatDate } from "@/util/date";
 import { initialsOf } from "@/util/initials";
 import { Loader2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 
 import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
@@ -75,12 +75,12 @@ export function DashboardTableRow({ dashboard, experimentId, basePath }: Dashboa
     <>
       <TableRow className={cn("bg-card hover:bg-muted group", LIST_TABLE_BORDER)}>
         <TableCell className={cn("px-6 py-3 text-[13px] font-semibold", LIST_TEXT_STRONG)}>
-          <Link
+          <IntentLink
             href={viewHref}
             className="focus-visible:ring-primary/40 focus-visible:outline-hidden hover:underline focus-visible:ring-2"
           >
             {dashboard.name}
-          </Link>
+          </IntentLink>
         </TableCell>
         <TableCell className={cn("px-6 py-3 text-[13px]", LIST_TEXT_MUTED)}>
           {widgetCount}
@@ -114,10 +114,10 @@ export function DashboardTableRow({ dashboard, experimentId, basePath }: Dashboa
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem asChild>
-                  <Link href={editHref}>
+                  <IntentLink href={editHref}>
                     <Pencil className="mr-2 size-4" />
                     {t("ui.actions.edit")}
-                  </Link>
+                  </IntentLink>
                 </DropdownMenuItem>
                 <DropdownMenuItem variant="destructive" onSelect={handleDeleteSelect}>
                   <Trash2 className="mr-2 size-4" />

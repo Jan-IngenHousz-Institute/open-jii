@@ -1,10 +1,10 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
 import { formatShortDate } from "@/util/date";
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import { ExperimentOverviewCards } from "~/components/experiment-overview-cards";
 
 import { listItems } from "@repo/api/shared/listing";
@@ -72,12 +72,12 @@ export function PublicExperimentsSection() {
           {t("dashboard.publicExperimentsStale", {
             date: formatShortDate(latestUpdate, locale),
           })}{" "}
-          <Link
+          <IntentLink
             href={`/${locale}${PUBLIC_EXPERIMENTS_HREF}`}
             className="text-primary hover:text-primary/80 font-semibold"
           >
             {t("dashboard.browsePublicExperiments")}
-          </Link>
+          </IntentLink>
         </p>
       ) : null}
       <ExperimentOverviewCards experiments={experiments} showUpdatedLabel />

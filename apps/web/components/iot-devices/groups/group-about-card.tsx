@@ -1,9 +1,9 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { CollaboratorsAboutRow } from "@/components/sharing/collaborators-about-row";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import type {
@@ -63,12 +63,12 @@ export function GroupAboutCard({
         />
       </dl>
 
-      <Link
+      <IntentLink
         href={`/${locale}/platform/devices/groups/${group.id}/monitoring`}
         className="text-primary mt-4 inline-block text-sm font-medium hover:underline"
       >
         {t("iot.groups.overview.monitoringLink")}
-      </Link>
+      </IntentLink>
     </Card>
   );
 }

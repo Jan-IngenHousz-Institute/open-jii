@@ -1,5 +1,6 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
 import {
   ArrowRightLeft,
@@ -22,7 +23,6 @@ import {
   UserPlus,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
 import { formatRelativeTime } from "~/util/date";
 
 import type {
@@ -171,9 +171,9 @@ export function NotificationRow({ notification, onOpen }: NotificationRowProps) 
 
   if (path) {
     return (
-      <Link href={`/${locale}/platform/${path}`} onClick={handleOpen} className={rowClass}>
+      <IntentLink href={`/${locale}/platform/${path}`} onClick={handleOpen} className={rowClass}>
         {content}
-      </Link>
+      </IntentLink>
     );
   }
 

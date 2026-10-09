@@ -1,5 +1,6 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
@@ -10,7 +11,6 @@ import {
 } from "@/util/device-presentation";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { Eye, KeyRound, MoreHorizontal, Rocket } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import type { IotDeviceWithConnectivity } from "@repo/api/domains/iot/iot.schema";
@@ -55,10 +55,10 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
     if (nextAction === "issueCredentials") {
       return (
         <DropdownMenuItem asChild>
-          <Link href={`${viewHref}/credentials`}>
+          <IntentLink href={`${viewHref}/credentials`}>
             <KeyRound className="mr-2 size-4" />
             {t("iot.devices.nextAction.issueCredentials")}
-          </Link>
+          </IntentLink>
         </DropdownMenuItem>
       );
     }
@@ -66,10 +66,10 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
     if (nextAction === "onboard") {
       return (
         <DropdownMenuItem asChild>
-          <Link href={`${viewHref}/onboarding`}>
+          <IntentLink href={`${viewHref}/onboarding`}>
             <Rocket className="mr-2 size-4" />
             {t("iot.devices.nextAction.onboard")}
-          </Link>
+          </IntentLink>
         </DropdownMenuItem>
       );
     }
@@ -90,14 +90,14 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
       >
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2">
-            <Link
+            <IntentLink
               href={viewHref}
               title={displayName}
               onClick={(e) => e.stopPropagation()}
               className="focus-visible:ring-primary/40 focus-visible:outline-hidden text-foreground min-w-0 truncate text-[13px] font-semibold hover:underline focus-visible:ring-2"
             >
               {displayName}
-            </Link>
+            </IntentLink>
             {/* Only when private: "public" is the unremarkable default. */}
             <VisibilityBadge visibility={device.visibility} privateOnly className="shrink-0" />
           </div>
@@ -161,10 +161,10 @@ export function IotDeviceTableRow({ device }: { device: IotDeviceWithConnectivit
           <DropdownMenuContent align="end" className="w-56">
             {renderNextActionItem()}
             <DropdownMenuItem asChild>
-              <Link href={viewHref}>
+              <IntentLink href={viewHref}>
                 <Eye className="mr-2 size-4" />
                 {t("iot.devices.actions.view")}
-              </Link>
+              </IntentLink>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

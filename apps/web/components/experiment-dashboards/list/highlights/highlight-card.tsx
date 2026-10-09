@@ -1,7 +1,7 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { formatDate } from "@/util/date";
-import Link from "next/link";
 
 import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
@@ -23,7 +23,7 @@ export function HighlightCard({ dashboard, href, thumbnailMaxHeight }: Highlight
     : updatedLabel;
   return (
     <Card className="hover:border-foreground/20 group relative overflow-hidden shadow-none transition-colors">
-      <Link
+      <IntentLink
         href={href}
         aria-label={dashboard.name}
         className="focus-visible:ring-primary/40 focus-visible:outline-hidden absolute inset-0 z-10 rounded-xl focus-visible:ring-2"

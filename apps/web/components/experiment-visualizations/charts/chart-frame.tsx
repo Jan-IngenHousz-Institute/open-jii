@@ -1,8 +1,8 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { InsetPanel } from "@/components/shared/inset-panel";
 import { AlertCircle } from "lucide-react";
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
@@ -69,7 +69,7 @@ export function ChartFrame({
               components={{
                 configLink:
                   visualization.id && visualization.id !== "preview" ? (
-                    <Link
+                    <IntentLink
                       href={`/platform/experiments/${experimentId}/analysis/visualizations/${visualization.id}`}
                       className="text-foreground underline hover:opacity-80"
                     />

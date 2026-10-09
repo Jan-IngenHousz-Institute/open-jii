@@ -1,5 +1,6 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { WorkbookVersionBadge } from "@/components/workbook/workbook-version-badge";
 import { useAttachWorkbook } from "@/hooks/experiment/useAttachWorkbook/useAttachWorkbook";
 import { useDetachWorkbook } from "@/hooks/experiment/useDetachWorkbook/useDetachWorkbook";
@@ -24,7 +25,6 @@ import {
   Unlink,
   X,
 } from "lucide-react";
-import NextLink from "next/link";
 import { useState, useEffect, useCallback, useRef } from "react";
 
 import { useTranslation } from "@repo/i18n/client";
@@ -258,14 +258,14 @@ export function LinkedWorkbookCard({
               ) : (
                 <>
                   <div className="flex items-center gap-1.5">
-                    <NextLink
+                    <IntentLink
                       href={`/${locale}/platform/workbooks/${workbookId}`}
                       target="_blank"
                       className="truncate text-sm font-semibold hover:underline"
                     >
                       {workbook?.name ?? t("flow.title")}
                       <ExternalLink className="ml-1 inline h-3 w-3 align-baseline opacity-50" />
-                    </NextLink>
+                    </IntentLink>
                     {canRename && (
                       <Button
                         type="button"

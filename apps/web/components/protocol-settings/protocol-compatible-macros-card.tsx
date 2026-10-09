@@ -1,5 +1,6 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { SettingsCard } from "@/components/shared/settings-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -8,7 +9,6 @@ import { orpc } from "@/lib/orpc";
 import { getMacroLanguageBadgeTone, getMacroLanguageLabel } from "@/util/macro-language";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, FileCode2, X } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { Macro } from "@repo/api/domains/macro/macro.schema";
@@ -105,13 +105,13 @@ export function ProtocolCompatibleMacrosCard({
                 <div className="min-w-0 flex-1">
                   <div className="mb-1.5 flex items-center gap-2">
                     <FileCode2 className="text-muted-foreground h-4 w-4 shrink-0" />
-                    <Link
+                    <IntentLink
                       href={`/${locale}/platform/macros/${entry.macro.id}`}
                       className="line-clamp-2 text-sm font-semibold hover:underline"
                     >
                       {entry.macro.name}
-                    </Link>
-                    <Link
+                    </IntentLink>
+                    <IntentLink
                       href={`/${locale}/platform/macros/${entry.macro.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -125,7 +125,7 @@ export function ProtocolCompatibleMacrosCard({
                       onClick={(e) => e.stopPropagation()}
                     >
                       <ExternalLink className="h-4 w-4" />
-                    </Link>
+                    </IntentLink>
                   </div>
                   <StatusBadge tone={getMacroLanguageBadgeTone(entry.macro.language)}>
                     {getMacroLanguageLabel(entry.macro.language)}

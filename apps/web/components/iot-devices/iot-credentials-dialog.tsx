@@ -1,8 +1,8 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
 import { ArrowRight, Download, ExternalLink, FileText, KeyRound, ShieldCheck } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 
 import type { IssueIotCredentialsResponse } from "@repo/api/domains/iot/iot.schema";
@@ -213,10 +213,10 @@ export function IotCredentialsDialog({
             </Button>
             {hasBundle ? (
               <Button type="button" asChild>
-                <Link href={`/${locale}/platform/devices/${deviceId}/onboarding`}>
+                <IntentLink href={`/${locale}/platform/devices/${deviceId}/onboarding`}>
                   {t("iot.devices.credentials.continueToOnboarding")}
                   <ArrowRight className="ml-1.5 h-4 w-4" />
-                </Link>
+                </IntentLink>
               </Button>
             ) : (
               <Button type="button" onClick={downloadAll}>
