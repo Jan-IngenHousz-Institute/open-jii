@@ -28,6 +28,8 @@ import {
 
 import { CellWrapper } from "../cell-wrapper";
 import { useWorkbookCells } from "../workbook-cells-context";
+import { CellPickerSelect } from "./cell-picker-select";
+import type { CellPickerOption } from "./cell-picker-select";
 
 interface BranchCellProps {
   cell: BranchCellType;
@@ -145,6 +147,19 @@ export function BranchCellComponent({
     }
   }, []);
 
+  const sourceOptions = useMemo<CellPickerOption[]>(
+    () => [
+      { value: DEVICE_CONTEXT_KEY, label: "Connected device", className: "text-xs font-medium" },
+      ...sourceCells.map((sc) => ({ value: sc.id, label: getCellLabel(sc) })),
+    ],
+    [sourceCells, getCellLabel],
+  );
+
+  const jumpOptions = useMemo<CellPickerOption[]>(
+    () => jumpTargets.map((t) => ({ value: t.id, label: getCellLabel(t) })),
+    [jumpTargets, getCellLabel],
+  );
+
   const handleAddPath = useCallback(() => {
     const newPath: BranchPath = {
       id: crypto.randomUUID(),
@@ -261,25 +276,14 @@ export function BranchCellComponent({
           {index === 0 ? "If" : "And"}
         </span>
 
-        <Select
+        <CellPickerSelect
           value={cond.sourceCellId || undefined}
           onValueChange={(v) => handleConditionUpdate(path.id, cond.id, "sourceCellId", v)}
+          options={sourceOptions}
+          placeholder="source..."
+          triggerClassName="h-7 min-w-[100px] flex-1 text-xs"
           disabled={readOnly}
-        >
-          <SelectTrigger className="h-7 min-w-[100px] flex-1 text-xs">
-            <SelectValue placeholder="source..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={DEVICE_CONTEXT_KEY} className="text-xs font-medium">
-              Connected device
-            </SelectItem>
-            {sourceCells.map((sc) => (
-              <SelectItem key={sc.id} value={sc.id} className="text-xs">
-                {getCellLabel(sc)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
 
         {isQuestionSource ? (
           <span className="bg-muted text-muted-foreground flex h-7 min-w-[80px] flex-1 items-center rounded-md border px-2 text-xs">
@@ -430,22 +434,14 @@ export function BranchCellComponent({
                     Then
                   </span>
                   <ArrowRight className="text-muted-foreground size-3 shrink-0" />
-                  <Select
+                  <CellPickerSelect
                     value={path.gotoCellId ?? undefined}
                     onValueChange={(v) => handleUpdatePath(path.id, { gotoCellId: v })}
+                    options={jumpOptions}
+                    placeholder="Jump to cell..."
+                    triggerClassName="h-7 text-xs"
                     disabled={readOnly}
-                  >
-                    <SelectTrigger className="h-7 text-xs">
-                      <SelectValue placeholder="Jump to cell..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {jumpTargets.map((t) => (
-                        <SelectItem key={t.id} value={t.id} className="text-xs">
-                          {getCellLabel(t)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
               </InsetPanel>
             </div>
