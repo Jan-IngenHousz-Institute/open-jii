@@ -4,12 +4,24 @@
  */
 export const pythonMacroSandboxScript = `(function() {
   var pyodideReady = false;
+  var loadError = null;
   var pending = [];
 
   function send(obj) {
     if (window.ReactNativeWebView && ReactNativeWebView.postMessage) {
       ReactNativeWebView.postMessage(typeof obj === 'string' ? obj : JSON.stringify(obj));
     }
+  }
+
+  function rejectUnavailable(payload) {
+    send({ requestId: payload.requestId, error: loadError, runtimeUnavailable: true });
+  }
+
+  function failLoad(err) {
+    loadError = 'Pyodide failed to load: ' + (err && err.message ? err.message : err);
+    send({ type: 'error', message: loadError });
+    pending.forEach(rejectUnavailable);
+    pending.length = 0;
   }
 
   function indent(s) {
@@ -50,6 +62,8 @@ export const pythonMacroSandboxScript = `(function() {
       if (pyodideReady) {
         var macroJson = Object.prototype.hasOwnProperty.call(payload, 'json') ? payload.json : {};
         runMacro(payload.requestId, payload.code, macroJson, payload.ctx || {});
+      } else if (loadError) {
+        rejectUnavailable(payload);
       } else {
         pending.push(payload);
       }
@@ -57,6 +71,12 @@ export const pythonMacroSandboxScript = `(function() {
       // ignore parse errors; no requestId to report back
     }
   });
+
+  // Without a connection the CDN script tag fails and loadPyodide never exists.
+  if (typeof loadPyodide !== 'function') {
+    failLoad(new Error('the runtime script did not load'));
+    return;
+  }
 
   loadPyodide().then(function(pyodide) {
     window.pyodide = pyodide;
@@ -67,13 +87,7 @@ export const pythonMacroSandboxScript = `(function() {
       runMacro(p.requestId, p.code, macroJson, p.ctx || {});
     });
     pending.length = 0;
-  }).catch(function(err) {
-    send({ type: 'error', message: err.message || String(err) });
-    pending.forEach(function(p) {
-      send({ requestId: p.requestId, error: 'Pyodide failed to load: ' + (err.message || err) });
-    });
-    pending.length = 0;
-  });
+  }).catch(failLoad);
 })();`;
 
 /**

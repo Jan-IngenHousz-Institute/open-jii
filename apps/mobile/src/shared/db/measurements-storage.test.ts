@@ -964,6 +964,53 @@ describe("measurements-storage", () => {
   });
 
   // ---------------------------------------------------------------------------
+  // getMeasurementIds
+  // ---------------------------------------------------------------------------
+
+  describe("getMeasurementIds", () => {
+    it("returns the ids of every row in the requested statuses", async () => {
+      insertRow("p1", "pending");
+      insertRow("f1", "failed");
+      insertRow("s1", "successful");
+
+      const mod = await import("~/shared/db/measurements-storage");
+      const ids = await mod.getMeasurementIds(["pending", "failed"]);
+
+      expect(ids.sort()).toEqual(["f1", "p1"]);
+    });
+
+    it("returns ids without decoding payloads", async () => {
+      sqlite
+        .prepare(
+          `INSERT INTO measurements (id, status, topic, measurement_result, experiment_name, protocol_name, timestamp, created_at, questions_text, has_comment, day_key)
+           VALUES ('undecodable', 'pending', 'test/topic', 'not a payload', 'Test Experiment', 'protocol-1', '2026-03-02T10:00:00.000Z', 0, NULL, 0, NULL)`,
+        )
+        .run();
+
+      const mod = await import("~/shared/db/measurements-storage");
+
+      expect(await mod.getMeasurementIds(["pending"])).toEqual(["undecodable"]);
+    });
+
+    it("returns an empty list when no status is requested", async () => {
+      insertRow("p1", "pending");
+
+      const mod = await import("~/shared/db/measurements-storage");
+
+      expect(await mod.getMeasurementIds([])).toEqual([]);
+    });
+
+    it("rejects when the query fails, so the caller doesn't act on nothing", async () => {
+      const mod = await import("~/shared/db/measurements-storage");
+      sqlite.prepare("DROP TABLE measurements").run();
+      const logSpy = vi.spyOn(console, "error").mockImplementation(vi.fn());
+
+      await expect(mod.getMeasurementIds(["pending"])).rejects.toThrow();
+      logSpy.mockRestore();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // clearMeasurements
   // ---------------------------------------------------------------------------
 
