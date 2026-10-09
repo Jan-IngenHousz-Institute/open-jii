@@ -329,6 +329,19 @@ export const SHOTS: readonly Shot[] = [
     scope: "Notification bell opened from the sidebar",
   },
   {
+    slug: "notifications-page",
+    publish: "img/chrome-refresh/notifications-page.webp",
+    frame: "desktop",
+    route: "/platform/notifications",
+    async prepare(page) {
+      // The day headings are the point of the shot, so the first one standing in
+      // for the list having loaded is what the frame waits on.
+      await page.locator("section[aria-labelledby^='notifications-'] h2").first().waitFor();
+      await settle(page, 600);
+    },
+    scope: "Notifications page with day groups, read-state tabs and the category filter",
+  },
+  {
     slug: "login-signup",
     publish: "img/guide/web/login-signup.webp",
     frame: "desktop",
