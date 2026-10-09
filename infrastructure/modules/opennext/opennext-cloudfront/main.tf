@@ -248,8 +248,8 @@ resource "aws_cloudfront_distribution" "distribution" {
     }
   }
 
-  # Default cache behavior - route to Server Lambda for all pages. Only what Next
-  # marks shared-cacheable (static and ISR pages) is kept; see server_pages.
+  # Default cache behavior - route to Server Lambda, uncached. The public pages Next
+  # marks shared-cacheable have their own behaviors (cached_page_patterns, server_pages).
   default_cache_behavior {
     target_origin_id       = "ServerLambda"
     viewer_protocol_policy = "redirect-to-https"
