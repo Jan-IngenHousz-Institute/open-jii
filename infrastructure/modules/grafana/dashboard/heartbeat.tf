@@ -159,12 +159,14 @@ locals {
   # One series per entry for its tile and its board row. An event count has its empty periods
   # as zero, and TIME_SERIES(0) keeps a row of zeros when CloudWatch no longer lists the metric
   # at all. FILL sits inside the SUM because Grafana's CloudWatch plugin crashes on FILL over
-  # a SUM that matched nothing. A search that is not a count reads as its worst series.
+  # a SUM that matched nothing. A search that is not a count reads as its worst series: the
+  # lowest under a floor, otherwise the highest.
   heartbeat_readings = {
     for m in local.heartbeat_live : m.id => merge(local.heartbeat_queries[m.id], {
       expression = (
         local.heartbeat_facts[m.id].counts_events ? "SUM([TIME_SERIES(0), SUM(FILL(${local.heartbeat_count_searches[m.id]}, 0))])" :
         local.heartbeat_facts[m.id].is_count && local.heartbeat_facts[m.id].search != "" ? "SUM(${local.heartbeat_facts[m.id].search})" :
+        local.heartbeat_facts[m.id].search != "" && local.heartbeat_facts[m.id].floor != null ? "MIN(${local.heartbeat_facts[m.id].search})" :
         local.heartbeat_facts[m.id].search != "" ? "MAX(${local.heartbeat_facts[m.id].search})" :
         ""
       )

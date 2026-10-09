@@ -386,6 +386,93 @@ EOT
       service   = "backend"
     }
   }
+
+  # Catalog entry 99. Published per Dependency, so matchExact false with only the environment
+  # covers every service and each series alerts on its own. The backend publishes every five
+  # minutes, so no series at all means the checks themselves stopped.
+  rule {
+    name      = "Backend Dependency Unreachable"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      query_type     = ""
+      datasource_uid = grafana_data_source.cloudwatch_source.uid
+
+      model = jsonencode({
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Backend"
+        metricName = "DependencyUp"
+        statistic  = "Minimum"
+        period     = "300"
+        dimensions = {
+          Environment = var.environment
+        }
+        matchExact = false
+      })
+
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "B"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "A"
+        type       = "reduce"
+        reducer    = "last"
+        refId      = "B"
+        settings = {
+          mode = "dropNN"
+        }
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    data {
+      ref_id         = "C"
+      query_type     = ""
+      datasource_uid = "__expr__"
+
+      model = jsonencode({
+        expression = "$B < 1"
+        type       = "math"
+        refId      = "C"
+      })
+
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+    }
+
+    no_data_state  = "Alerting"
+    exec_err_state = "OK"
+    for            = "15m"
+
+    annotations = {
+      description      = "The backend has not reached a service it depends on for 15 minutes, or has stopped checking. Requests that need that service fail."
+      summary          = "Backend cannot reach a service it depends on"
+      runbook_url      = "${var.runbook_base_url}/docs/runbooks/dependency-health.md"
+      __dashboardUid__ = local.heartbeat_daily_uid
+      __panelId__      = local.heartbeat_panel_ids["dependency-health"]
+    }
+    labels = {
+      metric_id = "dependency-health"
+      severity  = "warning"
+      service   = "backend"
+    }
+  }
 }
 
 # CloudFront Alerts

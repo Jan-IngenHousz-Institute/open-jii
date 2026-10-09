@@ -48,7 +48,7 @@ const KNOWN_AREAS = [
   "platform",
   "errors",
 ];
-const KNOWN_SOURCES = ["aws", "dbx", "pg", "posthog", "gh", "composer"];
+const KNOWN_SOURCES = ["aws", "dbx", "pg", "api", "posthog", "gh", "composer"];
 const KNOWN_STATS = ["Sum", "Maximum", "Minimum", "Average", "SampleCount"];
 const KNOWN_SEVERITIES = ["critical", "warning"];
 // The report dashboards map these to Grafana unit ids; anything else charts as a bare number.

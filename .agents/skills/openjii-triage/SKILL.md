@@ -38,7 +38,8 @@ Two entry fields change what you should do:
   some inactive entries have live producers (AWS vitals, PostHog captures) and only lack a rule.
   Read the entry's notes and runbook for which it is, and query the source when one exists.
 - `source:` tells you where evidence lives: `aws` in CloudWatch, `dbx` in the heartbeat files,
-  `pg` in the metrics-publisher Lambda's namespace, `posthog` outside AWS entirely.
+  `pg` in the metrics-publisher Lambda's namespace, `api` in the backend's namespace and its logs,
+  `posthog` outside AWS entirely.
 
 ## 2. Pull the numbers
 

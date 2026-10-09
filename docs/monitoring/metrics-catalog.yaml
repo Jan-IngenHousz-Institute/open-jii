@@ -6,7 +6,7 @@
 # Field notes:
 # - family: observability (issues) | usage (levels)
 # - source: aws (native CloudWatch) | dbx (Databricks heartbeat job) | pg (metrics-publisher)
-#           | posthog | gh (GitHub Actions) | composer (retired)
+#           | api (the backend's own checks) | posthog | gh (GitHub Actions) | composer (retired)
 # - phase: roadmap phase in which the signal starts existing (P1..P5)
 # - active: the entry is charted on a report dashboard today; inactive entries are
 #           documentation until their producer publishes
@@ -70,6 +70,9 @@ passes:
   - date: 2026-10-01
     range: [98, 98]
     note: Databricks spend per component, so a cost change shows the week it happens
+  - date: 2026-10-09
+    range: [99, 99]
+    note: whether the API reaches each service it depends on, so a dead one shows at a quiet hour
 
 metrics:
   # Ingest path
@@ -479,6 +482,28 @@ metrics:
       dimensions: { DBClusterIdentifier: "${DB_CLUSTER_IDENTIFIER}" }
     baseline: { method: threshold, max: 80 }
     runbook: docs/runbooks/database-connections.md
+
+  - num: 99
+    id: dependency-health
+    name: Services the API reaches
+    family: observability
+    area: api
+    source: api
+    phase: P1
+    active: true
+    slots: [alert]
+    severity: warning
+    signal:
+      namespace: OpenJII/Backend
+      search: SEARCH('{OpenJII/Backend,Dependency,Environment} MetricName="DependencyUp" AND Environment="${ENVIRONMENT}"', 'Minimum')
+      stat: Minimum
+    baseline: { method: threshold, min: 1 }
+    runbook: docs/runbooks/dependency-health.md
+    notes: >-
+      The backend checks the database, Databricks, the email server and AWS IoT every five minutes and
+      publishes 1 per Dependency it reaches and 0 per one it does not. The database is read from AWS,
+      never connected to, so a paused one counts as reached and stays paused; DependencyPaused says
+      which. The board shows the lowest series, so one service down turns the row red.
 
   - num: 18
     id: backend-4xx-split
