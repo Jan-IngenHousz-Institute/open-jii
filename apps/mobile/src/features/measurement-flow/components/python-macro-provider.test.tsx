@@ -10,6 +10,7 @@ import {
   getPythonMacroRunner,
   registerPythonMacroRunner,
 } from "~/features/measurement-flow/utils/process-scan/python-macro-runner";
+import { PythonRuntimeUnavailableError } from "~/shared/measurements/python-runtime-unavailable-error";
 
 import { PythonMacroProvider } from "./python-macro-provider";
 
@@ -43,7 +44,9 @@ function providerMessageFromInjection(source: string): string {
   return JSON.parse(source.slice(prefix.length, -suffix.length)) as string;
 }
 
-function bootSandbox(onMessage: (data: string) => void) {
+// `loader` stands in for the global the CDN script defines; pass it as
+// undefined to boot a sandbox whose runtime script never loaded.
+function bootSandbox(onMessage: (data: string) => void, options: { loader?: unknown } = {}) {
   let messageHandler: ((event: { data: string }) => void) | undefined;
   let resultHolder: { result?: string } | undefined;
   const decodedInputs: unknown[] = [];
@@ -82,7 +85,12 @@ function bootSandbox(onMessage: (data: string) => void) {
     "pyodide",
     pythonMacroSandboxScript,
   );
-  start(windowStub, nativeBridge, () => Promise.resolve(pyodide), pyodide);
+  start(
+    windowStub,
+    nativeBridge,
+    "loader" in options ? options.loader : () => Promise.resolve(pyodide),
+    pyodide,
+  );
 
   return {
     receive(data: string) {
@@ -93,10 +101,87 @@ function bootSandbox(onMessage: (data: string) => void) {
   };
 }
 
+function mountProvider() {
+  render(
+    <PythonMacroProvider>
+      <Text>child</Text>
+    </PythonMacroProvider>,
+  );
+  const onMessage = webViewProps.mock.calls.at(-1)?.[0]?.onMessage as
+    | ((event: { nativeEvent: { data: string } }) => void)
+    | undefined;
+  if (!onMessage) {
+    throw new Error("PythonMacroProvider did not render its WebView");
+  }
+  const runner = getPythonMacroRunner();
+  if (!runner) {
+    throw new Error("PythonMacroProvider did not register a runner");
+  }
+
+  return { onMessage, runner };
+}
+
 afterEach(() => {
+  vi.useRealTimers();
   registerPythonMacroRunner(null);
   injectJavaScript.mockReset();
   webViewProps.mockClear();
+});
+
+describe("PythonMacroProvider without a runtime", () => {
+  it("answers instead of waiting when the runtime script never loaded", async () => {
+    const { onMessage, runner } = mountProvider();
+    const sandbox = bootSandbox((data) => onMessage({ nativeEvent: { data } }), {
+      loader: undefined,
+    });
+
+    const resultPromise = runner("return json", 1, {});
+    sandbox.receive(providerMessageFromInjection(injectJavaScript.mock.calls.at(-1)?.[0]));
+
+    await expect(resultPromise).rejects.toBeInstanceOf(PythonRuntimeUnavailableError);
+  });
+
+  it("answers requests queued before and sent after a failed load", async () => {
+    const { onMessage, runner } = mountProvider();
+    let failLoad: (err: Error) => void = () => undefined;
+    const sandbox = bootSandbox((data) => onMessage({ nativeEvent: { data } }), {
+      loader: () =>
+        new Promise((_resolve, reject) => {
+          failLoad = reject;
+        }),
+    });
+
+    const queued = runner("return json", 1, {});
+    sandbox.receive(providerMessageFromInjection(injectJavaScript.mock.calls.at(-1)?.[0]));
+    failLoad(new Error("network down"));
+    await expect(queued).rejects.toBeInstanceOf(PythonRuntimeUnavailableError);
+
+    const later = runner("return json", 2, {});
+    sandbox.receive(providerMessageFromInjection(injectJavaScript.mock.calls.at(-1)?.[0]));
+    await expect(later).rejects.toBeInstanceOf(PythonRuntimeUnavailableError);
+  });
+
+  it("gives up on a request while the runtime is still downloading", async () => {
+    vi.useFakeTimers();
+    const { onMessage, runner } = mountProvider();
+    const sandbox = bootSandbox((data) => onMessage({ nativeEvent: { data } }), {
+      loader: () => new Promise(() => undefined),
+    });
+
+    const resultPromise = runner("return json", 1, {});
+    sandbox.receive(providerMessageFromInjection(injectJavaScript.mock.calls.at(-1)?.[0]));
+    const settled = expect(resultPromise).rejects.toBeInstanceOf(PythonRuntimeUnavailableError);
+    vi.advanceTimersByTime(30_000);
+
+    await settled;
+
+    // The next request fails at once rather than spinning for another timeout.
+    const injectionsBefore = injectJavaScript.mock.calls.length;
+    await expect(runner("return json", 2, {})).rejects.toBeInstanceOf(
+      PythonRuntimeUnavailableError,
+    );
+    expect(injectJavaScript.mock.calls.length).toBe(injectionsBefore);
+  });
 });
 
 describe("PythonMacroProvider falsy input boundary", () => {
