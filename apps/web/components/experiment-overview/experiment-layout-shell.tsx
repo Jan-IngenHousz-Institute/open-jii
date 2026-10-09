@@ -42,8 +42,8 @@ export function ExperimentLayoutShell({ children }: ExperimentLayoutShellProps) 
   // Show error if access is denied or other error
   if (error) {
     // Extract status from API error response
-    const errorObj = error as { status?: number };
-    const errorStatus = errorObj.status;
+    const errorStatus =
+      "status" in error && typeof error.status === "number" ? error.status : undefined;
 
     // Handle 404 Not Found or 400 Bad Request (e.g., invalid UUID) - show not found page
     if (errorStatus === 404 || errorStatus === 400) {
@@ -102,7 +102,7 @@ export function ExperimentLayoutShell({ children }: ExperimentLayoutShellProps) 
 
   return (
     // `page-fluid` marker on the layout so all tabs (overview, data, analysis, flow)
-    // render at the same fluid width — switching tabs no longer reflows the page.
+    // render at the same fluid width, so switching tabs does not reflow the page.
     <div className="page-fluid flex flex-1 flex-col gap-6">
       <PlatformHeaderDetail
         href={`/${locale}/platform/experiments/${id}`}

@@ -40,8 +40,8 @@ export function ExperimentArchiveLayoutShell({ children }: ExperimentArchiveLayo
   // Show error if access is denied or other error
   if (error) {
     // Extract status from API error response
-    const errorObj = error as { status?: number };
-    const errorStatus = errorObj.status;
+    const errorStatus =
+      "status" in error && typeof error.status === "number" ? error.status : undefined;
 
     // Handle 404 Not Found or 400 Bad Request (e.g., invalid UUID) - show not found page
     if (errorStatus === 404 || errorStatus === 400) {
