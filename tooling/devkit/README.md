@@ -393,6 +393,21 @@ For per-ticket work, put the judgement in a change file and let `pnpm linear:app
 writing. It groups identical updates, batches them, and prints what it would do until you pass
 `--apply`.
 
+A row names its ticket by `issueId` or by `identifier`, and its state by `stateId` or by `state`,
+the name as the board shows it. A row can also carry a `comment`, such as the evidence for a move,
+and may carry nothing else. Comments are posted before any update, so a ticket never moves without
+the evidence its row carries:
+
+```json
+[
+  {
+    "identifier": "OJD-2145",
+    "state": "Ready For Prod",
+    "comment": "Verified on dev on 9 October."
+  }
+]
+```
+
 This touches a workspace nine people share and Linear has no undo for a bulk change. Dry run,
 show someone the counts, then apply one phase at a time.
 

@@ -99,13 +99,14 @@ For anything per-ticket (a type and area for each unlabelled ticket, a project f
 judgement goes into a change file and the write goes through `pnpm linear:apply`:
 
 1. From the scratchpad data, propose per ticket from title, body and project. Write a JSON array of
-   `{ "issueId", "identifier", "addedLabelIds", "removedLabelIds", "projectId", "stateId", "why" }`.
+   `{ "identifier", "addedLabelIds", "removedLabelIds", "projectId", "state", "comment", "why" }`.
+   `issueId` and `stateId` work in place of `identifier` and `state`.
 2. Show the user the counts, a sample, and the file path. Wait.
 3. `pnpm linear:apply <file>` prints what it would do; `--apply` writes, grouped by identical
    update, chunked, logging each chunk. A partial failure leaves a record of where it stopped.
 
-Resolve names to ids once at the start and reuse them. `issueBatchUpdate` takes issue UUIDs, not
-`OJD-####`.
+The command resolves identifiers and state names itself, with one read each, and posts each row's
+`comment` before any update. Label and project ids still come from the scratchpad data.
 
 ## Batch writes
 
