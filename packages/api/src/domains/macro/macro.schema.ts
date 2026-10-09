@@ -81,7 +81,9 @@ export const zMacroFilterQuery = z
     fields: z
       .enum(["summary", "full"])
       .optional()
-      .describe("`summary` leaves each macro's code out of the rows; `full`, the default, keeps it"),
+      .describe(
+        "`summary` leaves each macro's code out of the rows; `full`, the default, keeps it",
+      ),
   })
   .merge(zPaginationQuery);
 
