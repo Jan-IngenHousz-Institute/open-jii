@@ -4,7 +4,7 @@ import { queryKeys } from "~/features/recent-measurements/services/measurement-l
 import { getOutbox } from "~/shared/composition/upload";
 import {
   clearMeasurements,
-  getMeasurements,
+  getMeasurementIds,
   markAsFailed,
   removeMeasurement as removeMeasurementFromStorage,
   removeMeasurements as removeMeasurementsFromStorage,
@@ -28,9 +28,7 @@ export function useMeasurements() {
   const uploadMutation = useMutation({
     networkMode: "always",
     mutationFn: async () => {
-      const outbox = getOutbox();
-      const rows = await getMeasurements([...UNSYNCED_STATUSES]);
-      for (const row of rows) outbox.enqueue(row.id);
+      getOutbox().enqueueMany(await getMeasurementIds(UNSYNCED_STATUSES));
       await queryClient.invalidateQueries({ queryKey: queryKeys.root });
     },
   });
