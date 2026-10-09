@@ -9,10 +9,13 @@ const X_RANGE_KEY = /^xaxis(\d*)\.(autorange|range|range\[[01]\])$/;
 /**
  * The x ranges after a Plotly relayout event: a zoom or pan sets an axis's range, a reset drops it.
  * Everything else a relayout reports (y ranges, autosize, drag mode) leaves them as they were.
+ * Cells that share their x move together, so for them one range under `x` stands for all: the
+ * latest zoom in any cell, or none once any cell is reset.
  */
 export function rangesAfterRelayout(
   current: AxisRanges,
   event: Readonly<Record<string, unknown>>,
+  isSharedX = false,
 ): AxisRanges {
   const edges = new Map<string, [number | undefined, number | undefined]>();
   const resets = new Set<string>();
@@ -50,6 +53,11 @@ export function rangesAfterRelayout(
   const moved = [...edges].flatMap(([axisId, [from, to]]): [string, AxisRange][] =>
     isKnown(from) && isKnown(to) && from < to ? [[axisId, [from, to]]] : [],
   );
+
+  if (isSharedX) {
+    const latest = moved.at(-1);
+    return latest ? { x: latest[1] } : resets.size > 0 ? {} : current;
+  }
   return Object.fromEntries([...kept, ...moved]);
 }
 

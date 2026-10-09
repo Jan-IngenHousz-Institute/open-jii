@@ -63,7 +63,7 @@ export function CartesianRenderer({
 
   const [isShowingAll, setIsShowingAll] = useState(false);
   const toggleShowingAll = useCallback(() => setIsShowingAll((showing) => !showing), []);
-  const { ranges, onRelayout } = useAxisRanges();
+  const { ranges, onRelayout } = useAxisRanges(chartConfig.facetSharedX !== false);
 
   // A long series is drawn from buckets of the whole table, decided from the table's row count
   // before any rows are read; until that count and the x column's type are in, nothing is read.
@@ -108,8 +108,8 @@ export function CartesianRenderer({
     experimentId,
     tableName,
     filters,
-    // Bucketed facets share their x, so a zoom in any cell sets the window for all of them.
-    window: ranges.x ?? Object.values(ranges)[0],
+    // Bucketed facets share their x, whose one range follows a zoom in any cell.
+    window: ranges.x,
     enabled: isZoomReadable,
   });
   const drawnRows = isZoomReadable && zoomRead.rows ? zoomRead.rows : rows;
