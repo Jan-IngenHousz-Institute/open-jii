@@ -1,6 +1,6 @@
 ---
 name: openjii-linear
-description: Read from and write to the openJII Linear workspace (team OJD) - look up a ticket or a project, search the backlog, read the private process documents, create an issue in the agreed shape, move it through the workflow, or link a PR. Use whenever work involves an OJD-#### ticket, a project, or the backlog.
+description: Read from and write to the openJII Linear workspace, team OJD. Look up a ticket or a project, search the backlog, read the private process documents, move a ticket through the workflow, or link a PR, through the devkit's linear commands. Also holds the rules every Linear session follows, such as checking claims before writing, deciding defaults instead of asking, and never setting priority. Use whenever work involves an OJD-#### ticket, a project, or the backlog.
 ---
 
 # Working with Linear

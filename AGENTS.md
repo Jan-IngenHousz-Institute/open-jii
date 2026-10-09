@@ -71,11 +71,11 @@ Git, and `jq`; a missing `jq` prints a warning and skips the hook.
 | `openjii-mobile-control`   | Driving a connected phone to verify or reproduce mobile behaviour.                                            |
 | `openjii-docs-update`      | A change alters what a user sees or does, so docs and screenshots follow.                                     |
 | `openjii-prepare-release`  | Preparing or rehearsing a release, CMS notes, a mobile gate, or a Linear update.                              |
-| `openjii-linear`           | Anything touching an `OJD-####` ticket, the backlog, or project status.                                       |
-| `openjii-work-design`      | An idea needs designing as a project and splitting into tickets.                                              |
-| `openjii-ticket-refine`    | One ticket needs writing, or bringing up to the ticket gate.                                                  |
+| `openjii-linear`           | Starting any Linear work, or touching an `OJD-####` ticket, the backlog or project status.                    |
+| `openjii-work-design`      | A project needs designing or reworking, with milestones, tickets and plan pages.                              |
+| `openjii-ticket-refine`    | One ticket needs writing, or rewriting so it can be picked up cold.                                           |
 | `openjii-testing-criteria` | A PR is ready for review and the ticket needs its handoff sections for QA.                                    |
-| `openjii-backlog-triage`   | Bulk label, project or gate hygiene across many tickets.                                                      |
+| `openjii-backlog-triage`   | Gate, label and state hygiene across many tickets, never their bodies.                                        |
 | `openjii-daily-round`      | Once a day, or coming back after time away, and you need to know whether the platform needs a person.         |
 | `openjii-triage`           | A Grafana alert, a report panel or a runbook points at a metric id and you need evidence rather than a guess. |
 | `unslop`                   | Writing or editing prose a human will read: docs, PR bodies, changelogs.                                      |

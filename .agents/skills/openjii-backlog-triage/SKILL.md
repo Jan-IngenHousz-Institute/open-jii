@@ -1,6 +1,6 @@
 ---
 name: openjii-backlog-triage
-description: Sweep the OJD backlog for tickets and projects that fail the gates - no project, no type or area label, Ready without acceptance criteria, In Testing without testing criteria, projects missing template sections - and apply label, project and state changes in bulk from a reviewed change file. Use for the Monday review, a triage pass over new issues, the label taxonomy migration, or a relabel pass.
+description: Find the tickets and projects across the backlog that fail the gates, such as no project or labels, Ready while blocked or without criteria, In Testing without testing criteria, or projects missing sections, and apply label, project and state changes in bulk from a reviewed change file. Use for the Monday review of what is in Ready, a triage pass over new issues, or the label taxonomy migration. It never rewrites a ticket's body.
 ---
 
 # Backlog triage

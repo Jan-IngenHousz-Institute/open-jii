@@ -1,6 +1,6 @@
 ---
 name: openjii-work-design
-description: Take an idea from a sentence to a designed Project with its tickets in Linear - frame the problem, ground it in the existing codebase, design the solution as a visual canvas or a written system design, record the decision if it is contested, then write the project in the template shape, sequence it in milestones, granularise it into tickets, review it on two plan pages and apply it. Use when conceptualising a feature, designing a solution before implementation, or planning any body of work larger than one ticket.
+description: Design a Linear project and write its tickets, or rework a project that already exists, such as one triaged by AI or one whose tickets a junior developer cannot pick up cold. Covers grounding the design in the code, milestones in order of work, tickets with screens of the change, the two plan pages, the write to Linear and the check against the code afterwards. Use for any body of work larger than one ticket, new or existing.
 ---
 
 # From idea to a designed project

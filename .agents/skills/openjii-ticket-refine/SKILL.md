@@ -1,6 +1,6 @@
 ---
 name: openjii-ticket-refine
-description: Write one OJD ticket in the agreed shape, or bring an existing one up to the ticket gate - structure, acceptance criteria, labels, project, and splitting work that is too big. Use when a single ticket needs writing, when a ticket is too vague to start, or during the Monday review of what is in Ready.
+description: Write one OJD ticket, or rewrite one so a developer new to the area can pick it up cold, with the agreed shape, acceptance criteria, a screen of the change, a first comment saying where to start, labels and a project, or a split when it is too big. Use when a single ticket needs writing or is too vague to start. Several tickets in one project go through openjii-work-design.
 ---
 
 # Refining a ticket
