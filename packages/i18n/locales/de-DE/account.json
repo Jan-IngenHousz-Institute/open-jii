@@ -150,7 +150,8 @@
     "general": "Allgemein",
     "security": "Sicherheit",
     "apiKeys": "API-Schlüssel",
-    "invitations": "Einladungen"
+    "invitations": "Einladungen",
+    "notifications": "Benachrichtigungen"
   },
   "apiKeys": {
     "title": "API-Schlüssel",

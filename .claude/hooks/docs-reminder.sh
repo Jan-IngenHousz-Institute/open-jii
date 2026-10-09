@@ -65,7 +65,14 @@ else
 fi
 
 grep -qE '^apps/(web|mobile)/' <<<"$changed" || exit 0
-grep -qE '^apps/docs/content/' <<<"$changed" && exit 0
+
+# Docs the branch already changed count, whichever session wrote them.
+BRANCH_BASE=$(git merge-base origin/main HEAD 2>/dev/null || git merge-base main HEAD 2>/dev/null || true)
+branch_changes=""
+if [ -n "$BRANCH_BASE" ]; then
+  branch_changes=$(git diff --name-only "$BRANCH_BASE" HEAD 2>/dev/null || true)
+fi
+grep -qE '^apps/docs/content/' <<<"$changed"$'\n'"$branch_changes" && exit 0
 
 touch "$REMINDER_MARKER"
 

@@ -144,6 +144,18 @@ describe.skipIf(!hasJq)("docs-reminder hook", () => {
     expect(runHook(where, "Stop", "s1")).toBe("");
   });
 
+  it("counts docs the branch already changed, whichever session wrote them", async () => {
+    const where = await scratch();
+    await put(where.repo, "apps/docs/content/guide.mdx", "documented earlier on the branch\n");
+    git(where.repo, "add", ".");
+    git(where.repo, "commit", "-q", "-m", "docs");
+    runHook(where, "SessionStart", "s1");
+
+    await put(where.repo, "apps/web/page.tsx", "changed in this session\n");
+
+    expect(runHook(where, "Stop", "s1")).toBe("");
+  });
+
   it("keeps the first snapshot when a session resumes", async () => {
     const where = await scratch();
     runHook(where, "SessionStart", "s1");

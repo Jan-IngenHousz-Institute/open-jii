@@ -46,7 +46,10 @@
     "linear:view": "pnpm --filter @repo/devkit linear:view --",
     "posthog:auth": "pnpm --filter @repo/devkit posthog:auth --",
     "posthog:issues": "pnpm --filter @repo/devkit posthog:issues --",
-    "posthog:query": "pnpm --filter @repo/devkit posthog:query --"
+    "posthog:query": "pnpm --filter @repo/devkit posthog:query --",
+    "grafana:auth": "pnpm --filter @repo/devkit grafana:auth --",
+    "grafana:get": "pnpm --filter @repo/devkit grafana:get --",
+    "round:read": "pnpm --filter @repo/devkit round:read --"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",

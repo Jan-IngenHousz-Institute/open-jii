@@ -2,14 +2,59 @@
   "title": "Meldingen",
   "markAllRead": "Alles als gelezen markeren",
   "seeAll": "Alle meldingen bekijken",
+  "settings": "Meldingsinstellingen",
   "unreadCount": "{{count}} ongelezen",
   "someone": "Iemand",
   "empty": {
     "title": "Je bent helemaal bij",
-    "description": "Verzoeken, wijzigingen in je toegang en afgeronde taken verschijnen hier."
+    "filteredTitle": "Niets hier",
+    "description": "Verzoeken, wijzigingen in je toegang en afgeronde taken verschijnen hier.",
+    "unread": "Geen ongelezen meldingen. Kies Alle om eerdere te zien.",
+    "category": "Nog niets in deze categorie"
   },
   "loadError": "Je meldingen konden niet worden geladen.",
   "retry": "Opnieuw proberen",
+  "filters": {
+    "all": "Alle",
+    "unread": "Ongelezen",
+    "allCategories": "Alle categorieën",
+    "category": "Filteren op categorie"
+  },
+  "groups": {
+    "today": "Vandaag",
+    "yesterday": "Gisteren",
+    "earlier": "Eerder"
+  },
+  "categories": {
+    "requests_and_invitations": {
+      "label": "Verzoeken en uitnodigingen",
+      "description": "Iemand wil lid worden van je experiment of organisatie, of nodigt je uit voor een organisatie."
+    },
+    "membership_and_access": {
+      "label": "Lidmaatschap en toegang",
+      "description": "Er is besloten over een verzoek van jou, je toegang of rol verandert, of mensen komen bij of vertrekken uit wat jij beheert."
+    },
+    "experiments_and_resources": {
+      "label": "Experimenten en resources",
+      "description": "Iets waaraan je werkt wordt openbaar, verwijderd, verplaatst of krijgt een nieuwe werkboekversie."
+    },
+    "devices_and_calibration": {
+      "label": "Apparaten en kalibratie",
+      "description": "Een kalibratierun wacht op jouw goedkeuring, of een run die je startte is goedgekeurd of afgewezen."
+    },
+    "project_transfers": {
+      "label": "Projectoverdrachten",
+      "description": "Je overdracht van een PhotosynQ-project is ontvangen of afgerond."
+    },
+    "data_jobs": {
+      "label": "Data-exports en uploads",
+      "description": "Een export of upload die je hebt gestart is klaar of mislukt."
+    },
+    "account_security": {
+      "label": "Accountbeveiliging",
+      "description": "Iemand voegt een API-sleutel of een passkey toe aan je account."
+    }
+  },
   "types": {
     "experiment_join_request_received": "{{actor}} wil lid worden van {{experimentName}}",
     "experiment_join_request_approved": "Je verzoek om lid te worden van {{experimentName}} is goedgekeurd",
@@ -42,5 +87,17 @@
     "calibration_run_rejected": "{{actor}} heeft de {{definitionName}}-kalibratie van {{deviceName}} afgewezen",
     "api_key_created": "Er is een nieuwe API-sleutel aan je account toegevoegd: {{keyName}}",
     "passkey_added": "Er is een nieuwe passkey aan je account toegevoegd: {{passkeyName}}"
+  },
+  "preferences": {
+    "title": "E-mailmeldingen",
+    "description": "Kies welke meldingen je ook per e-mail krijgt. In openJII zie je ze altijd.",
+    "emailLabel": "E-mail voor {{category}}",
+    "loading": "Je meldingsinstellingen worden geladen",
+    "error": "Je meldingsinstellingen konden niet worden geladen.",
+    "updateError": "Die wijziging is niet opgeslagen. Probeer het opnieuw.",
+    "essentialNote": "Inlogcodes komen altijd aan, wat je hier ook kiest.",
+    "newsletterNote": "De nieuwsbrief heeft een eigen instelling onder Algemeen.",
+    "locked": "Altijd aan",
+    "unavailable": "Nog niet beschikbaar"
   }
 }

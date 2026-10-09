@@ -1,5 +1,7 @@
 import type { ExperimentProjectTransferWebhookPayload } from "@repo/api/domains/experiment/project-transfer-webhook/experiment-project-transfer-webhook.schema";
+import { eq, notifications } from "@repo/database";
 
+import { EmailAdapter } from "../../../../common/modules/email/services/email.adapter";
 import {
   AppError,
   assertFailure,
@@ -8,11 +10,10 @@ import {
   success,
 } from "../../../../common/utils/fp-utils";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
+import { NotificationRepository } from "../../../../notifications/core/repositories/notification.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
 import { TestHarness } from "../../../../test/test-harness";
 import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
-import type { EmailPort } from "../../../core/ports/email.port";
-import { EMAIL_PORT } from "../../../core/ports/email.port";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { FlowRepository } from "../../../core/repositories/flow.repository";
 import { ExecuteProjectTransferUseCase } from "./execute-project-transfer";
@@ -21,6 +22,10 @@ describe("ExecuteProjectTransferUseCase", () => {
   const testApp = TestHarness.App;
   let useCase: ExecuteProjectTransferUseCase;
   let testUserId: string;
+  let testUserEmail: string;
+
+  const notificationsFor = (userId: string) =>
+    testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
 
   beforeAll(async () => {
     await testApp.setup();
@@ -28,11 +33,12 @@ describe("ExecuteProjectTransferUseCase", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-    testUserId = await testApp.createTestUser({});
+    testUserEmail = "creator@example.com";
+    testUserId = await testApp.createTestUser({ email: testUserEmail });
     useCase = testApp.module.get(ExecuteProjectTransferUseCase);
 
     // Default: Email sending succeeds
-    const emailAdapter = testApp.module.get<EmailPort>(EMAIL_PORT);
+    const emailAdapter = testApp.module.get(EmailAdapter);
     vi.spyOn(emailAdapter, "sendProjectTransferComplete").mockResolvedValue(success(undefined));
   });
 
@@ -342,8 +348,8 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.value.macroName).toBe(macroName);
     });
 
-    it("should send project transfer complete email after successful transfer", async () => {
-      const emailAdapter = testApp.module.get<EmailPort>(EMAIL_PORT);
+    it("should notify and email the creator after a successful transfer", async () => {
+      const emailAdapter = testApp.module.get(EmailAdapter);
       const emailSpy = vi
         .spyOn(emailAdapter, "sendProjectTransferComplete")
         .mockResolvedValue(success(undefined));
@@ -352,23 +358,29 @@ describe("ExecuteProjectTransferUseCase", () => {
       const result = await useCase.execute(payload);
 
       assertSuccess(result);
+
+      const rows = await notificationsFor(testUserId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        type: "project_transfer_completed",
+        actorId: null,
+        resourceType: "experiment",
+        resourceId: result.value.experimentId,
+        params: { experimentName: payload.experiment.name },
+      });
+
       expect(emailSpy).toHaveBeenCalledOnce();
       expect(emailSpy).toHaveBeenCalledWith(
-        expect.any(String), // user email
+        testUserEmail,
         result.value.experimentId,
         payload.experiment.name,
       );
     });
 
     it("should succeed even when email sending fails (non-fatal)", async () => {
-      const emailAdapter = testApp.module.get<EmailPort>(EMAIL_PORT);
+      const emailAdapter = testApp.module.get(EmailAdapter);
       vi.spyOn(emailAdapter, "sendProjectTransferComplete").mockResolvedValue(
-        failure({
-          message: "Email service unavailable",
-          code: "INTERNAL_ERROR",
-          statusCode: 500,
-          name: "InternalError",
-        }),
+        failure(AppError.internal("Email service unavailable")),
       );
 
       const payload = buildPayload();
@@ -376,9 +388,12 @@ describe("ExecuteProjectTransferUseCase", () => {
 
       assertSuccess(result);
       expect(result.value.success).toBe(true);
+      expect(await notificationsFor(testUserId)).toHaveLength(1);
     });
 
-    it("should succeed when user has no email address", async () => {
+    it("should store the notification but send no email when the creator has no address", async () => {
+      const emailAdapter = testApp.module.get(EmailAdapter);
+      const emailSpy = vi.spyOn(emailAdapter, "sendProjectTransferComplete");
       // Create a user without an email
       const noEmailUserId = await testApp.createTestUser({ email: "" });
 
@@ -392,6 +407,59 @@ describe("ExecuteProjectTransferUseCase", () => {
 
       assertSuccess(result);
       expect(result.value.success).toBe(true);
+      expect(await notificationsFor(noEmailUserId)).toHaveLength(1);
+      expect(emailSpy).not.toHaveBeenCalled();
+    });
+
+    it("should store the notification but send no email for an unactivated profile", async () => {
+      const emailAdapter = testApp.module.get(EmailAdapter);
+      const emailSpy = vi.spyOn(emailAdapter, "sendProjectTransferComplete");
+      const unactivatedUserId = await testApp.createTestUser({
+        email: "dormant@example.com",
+        activated: false,
+      });
+
+      const payload = buildPayload({
+        experiment: { name: "Unactivated Transfer", createdBy: unactivatedUserId },
+      });
+      const result = await useCase.execute(payload);
+
+      assertSuccess(result);
+      expect(await notificationsFor(unactivatedUserId)).toHaveLength(1);
+      expect(emailSpy).not.toHaveBeenCalled();
+    });
+
+    it("should still return the transfer ids when the notification cannot be stored", async () => {
+      const emailAdapter = testApp.module.get(EmailAdapter);
+      const emailSpy = vi.spyOn(emailAdapter, "sendProjectTransferComplete");
+      vi.spyOn(testApp.module.get(NotificationRepository), "insertMany").mockResolvedValue(
+        failure(AppError.internal("notifications unavailable")),
+      );
+
+      const payload = buildPayload();
+      const result = await useCase.execute(payload);
+
+      assertSuccess(result);
+      expect(result.value.success).toBe(true);
+      expect(result.value.experimentId).toBeDefined();
+      expect(emailSpy).not.toHaveBeenCalled();
+    });
+
+    it("should store the notification but send no email when project transfers are switched off", async () => {
+      const emailAdapter = testApp.module.get(EmailAdapter);
+      const emailSpy = vi.spyOn(emailAdapter, "sendProjectTransferComplete");
+      assertSuccess(
+        await testApp.module
+          .get(NotificationRepository)
+          .upsertPreference(testUserId, "project_transfers", "email", false),
+      );
+
+      const payload = buildPayload();
+      const result = await useCase.execute(payload);
+
+      assertSuccess(result);
+      expect(await notificationsFor(testUserId)).toHaveLength(1);
+      expect(emailSpy).not.toHaveBeenCalled();
     });
 
     it("should reuse existing protocol when one with the same name exists", async () => {

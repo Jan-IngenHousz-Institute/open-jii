@@ -4,7 +4,9 @@ Local development commands that need a credential, written so the credential nev
 command line, a shell history, or an agent's context. Each command resolves what it needs in its
 own process and hands back a file or a result, not a secret.
 
-Run them from the repo root through the aliases in the root `package.json`.
+Run them from the repo root through the aliases in the root `package.json`. Run the `*:auth`
+commands in the main checkout: every worktree finds a key stored there, while a key stored in a
+linked worktree serves only that worktree.
 
 | Command                                   | What it does                                            |
 | ----------------------------------------- | ------------------------------------------------------- |
@@ -23,6 +25,9 @@ Run them from the repo root through the aliases in the root `package.json`.
 | `pnpm posthog:auth`                       | Stores your PostHog key in `tooling/devkit/.env`        |
 | `pnpm posthog:query`                      | Runs one HogQL query against the openJII project        |
 | `pnpm posthog:issues`                     | Lists, shows and triages open error-tracking issues     |
+| `pnpm grafana:auth`                       | Stores your Grafana token for the daily round           |
+| `pnpm grafana:get`                        | Reads one path of a Grafana workspace's API             |
+| `pnpm round:read`                         | Writes the daily round's reading of one environment     |
 | `pnpm --filter @repo/devkit env:generate` | Regenerates the `.env.example` files from the manifest  |
 
 ## Linear access
@@ -94,6 +99,63 @@ It lands beside the Linear key in `tooling/devkit/.env` and is found the same wa
 - `pnpm posthog:issues apply` prints what the review file would change; `--confirm` applies the
   status changes. Tickets are only listed, for the ticket skills to write. Every status change is
   appended to `.claude/posthog-writes.log`.
+
+## Grafana access, for the daily round
+
+The daily round reads each environment's Grafana with a token for `daily-round`, a Viewer service
+account the grafana workspace module creates. You mint the token yourself with the AWS CLI and pipe
+it straight into the devkit, so it never reaches your terminal; an agent never mints one. From the
+main checkout, signed in to AWS, for prod (swap `prod` for `dev` throughout for dev):
+
+```bash
+WORKSPACE=$(aws grafana list-workspaces --profile openjii-prod \
+  --query "workspaces[?starts_with(name, 'prod-')].id" --output text)
+ACCOUNT=$(aws grafana list-workspace-service-accounts --profile openjii-prod \
+  --workspace-id "$WORKSPACE" --query "serviceAccounts[?name=='daily-round'].id" --output text)
+aws grafana create-workspace-service-account-token --profile openjii-prod \
+  --workspace-id "$WORKSPACE" --service-account-id "$ACCOUNT" \
+  --name "round-$USER-$(date +%Y%m%d%H%M)" --seconds-to-live 2592000 \
+  --query serviceAccountToken.key --output text \
+  | pnpm grafana:auth prod --workspace "$WORKSPACE"
+```
+
+`grafana:auth` checks that the token can read the alert rules, then stores it with the workspace's
+address in `tooling/devkit/.env`. A token lives 30 days at most. When it expires, the round's
+commands refuse it and say to mint a new one; the old one needs no cleanup.
+
+The commands above use the AWS profiles `openjii-prod` and `openjii-dev`. Give both one
+`sso-session`, so that a single sign-in covers both environments:
+
+```ini
+[sso-session openjii]
+sso_start_url = <the AWS access portal URL>
+sso_region = <the portal's region>
+sso_registration_scopes = sso:account:access
+
+[profile openjii-prod]
+sso_session = openjii
+sso_account_id = <the prod account id>
+sso_role_name = <your role>
+region = eu-central-1
+
+[profile openjii-dev]
+sso_session = openjii
+sso_account_id = <the dev account id>
+sso_role_name = <your role>
+region = eu-central-1
+```
+
+```bash
+aws sso login --sso-session openjii
+```
+
+- `pnpm round:read <prod|dev>` writes `.claude/round/<env>.json`: every alert rule's state, what
+  fired, continued or cleared over the window, the state changes Grafana recorded, and the daily
+  report's open panels read over the same window, plus a list of what it could not read. The window
+  is the last day, or back to Friday on a Monday; `--since <date>` covers a longer gap, and
+  `--panels 89,91` reads those panels instead, collapsed or not.
+- `pnpm grafana:get <prod|dev> /api/<path>` (`--output <file>`) reads one path of the workspace's
+  API. The client sends the token only to that workspace's `/api/`, and only to read.
 
 ## Writing tickets from a draft
 

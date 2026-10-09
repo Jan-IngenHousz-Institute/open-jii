@@ -329,6 +329,19 @@ export const SHOTS: readonly Shot[] = [
     scope: "Notification bell opened from the sidebar",
   },
   {
+    slug: "notifications-page",
+    publish: "img/chrome-refresh/notifications-page.webp",
+    frame: "desktop",
+    route: "/platform/notifications",
+    async prepare(page) {
+      // The day headings are the point of the shot, so the first one standing in
+      // for the list having loaded is what the frame waits on.
+      await page.locator("section[aria-labelledby^='notifications-'] h2").first().waitFor();
+      await settle(page, 600);
+    },
+    scope: "Notifications page with day groups, read-state tabs and the category filter",
+  },
+  {
     slug: "login-signup",
     publish: "img/guide/web/login-signup.webp",
     frame: "desktop",
@@ -482,6 +495,19 @@ export const SHOTS: readonly Shot[] = [
   },
 
   // ------------------------------------------------- tier 4: account security
+  {
+    slug: "notification-settings",
+    publish: "img/guide/web/account-security/notification-settings.webp",
+    frame: "desktop",
+    route: "/platform/account/notifications",
+    async prepare(page) {
+      // The switches render from the resolved preferences, not from the registry
+      // defaults, so a frame taken before that read lands shows an empty card.
+      await page.getByRole("switch").last().waitFor();
+      await settle(page, 900);
+    },
+    scope: "Notifications tab in account settings: one email switch per category",
+  },
   {
     slug: "passkeys-table",
     publish: "img/guide/web/account-security/passkeys-table.webp",

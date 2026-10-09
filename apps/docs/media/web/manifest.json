@@ -25,7 +25,11 @@
       "experiments-list, organizations-list and workbooks-list were recaptured on 2026-09-28 at 1920x1200 from the local stack with the seeded development identity; each shows Name sorted ascending. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp. The Experiments shot includes the current data-processing status banner.",
       "protocols-list and macros-list were recaptured on 2026-09-28 at 1920x1200 from the local stack with the seeded development identity; each shows Name sorted ascending. Frames were reviewed at full size and show only seeded protocol/macro names. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp. Both captures include the current data-processing status banner.",
       "dashboard recaptured on 2026-09-29 at 1920x1200 with the seeded development identity. Reviewed the full frame: it shows seeded experiments and user only, with no credentials, precise locations or dev overlays. The community measurement banner and CMS blog cards are visible; one blog image is the pre-refresh dashboard. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
-      "dashboard-first-work captured on 2026-10-05 at 1920x1200 with newcomer@openjii.local, an activated seeded identity with no experiment grants or shared organization memberships. The related-experiments row shows the three first-work cards. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp."
+      "notification-settings and notifications-bell were retaken on 2026-10-06 at 1920x1200 from the local stack with the seeded development identity, via pnpm --filter @repo/e2e capture-docs-media --only notification-settings,notifications-bell. notification-settings is the Notifications tab after its card dropped the header icon, so the account tabs read alike; it shows the seven switches at their registry defaults and names no experiment, organization or person. notifications-bell was retaken because the bell header gained a settings gear: the frame was reviewed at full size and every experiment in the recently-updated grid behind the popover belongs to a seeded persona (Sofie Janssen, Maya Rasmussen, Noah Visser, all @orgseed.local), with no developer-authored row in frame. The CMS blog artwork still carries a screenshot of the pre-refresh dashboard, as note 6 records. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
+      "notification-settings retaken on 2026-10-06 at 1920x1200 after only categories with a live email producer became switchable: Requests and invitations and Membership and access are on and enabled, the four categories whose notifications do not email yet are off, disabled and labelled Not available yet, and Account security stays checked and locked with Always on. Reviewed at full size with the seeded development identity; no experiment, organization or person is named in the frame. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp. The bell shot is unaffected and was not retaken.",
+      "dashboard-first-work captured on 2026-10-05 at 1920x1200 with newcomer@openjii.local, an activated seeded identity with no experiment grants or shared organization memberships. The related-experiments row shows the three first-work cards. WebP was encoded at quality 90 with metadata omitted using cwebp because this machine’s ffmpeg lacks libwebp.",
+      "notification-settings retaken on 2026-10-08 at 1920x1200 after project transfers moved onto dispatch and the Project transfers switch went live: Requests and invitations, Membership and access and Project transfers are on and enabled, the three categories whose notifications do not email yet are off, disabled and labelled Not available yet, and Account security stays checked and locked with Always on. Reviewed at full size with the seeded development identity; no experiment, organization or person is named in the frame. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp.",
+      "notifications-page captured on 2026-10-08 at 1920x1200 from the local stack with the seeded development identity. The frame shows the All and Unread tabs, the category filter, Mark all read, and one row under each of Today, Yesterday and Earlier. Reviewed at full size. All three rows are seeded: a join request from Otto Outside on Field Trial 2025 — Corn Photosynthesis, and decisions on Greenhouse Tomato Stress Study and Vallei Drought Gradient. No developer-authored row, no credentials and no dev overlays are in frame. Two changes were made to the local data for the shot and both were undone after it: the three seeded rows' timestamps were set to the offsets the seed script writes (5 minutes, 26 hours, 3 days), since this database was seeded in September and all three had aged into Earlier, and four developer-authored transfer rows left by an earlier hand check were held out of frame. The before and after dumps of the table diff clean. WebP at quality 90 with metadata omitted using cwebp, this machine’s ffmpeg lacking libwebp."
     ]
   },
   "assets": [
@@ -310,10 +314,21 @@
       "kind": "screenshot",
       "frame": "desktop",
       "dimensions": "1920x1200",
-      "bytes": 172228,
-      "sha256": "5517e1631bdd0357c7995285efd0f41def993705b82b1650395c3a6e27d70aef",
+      "bytes": 200166,
+      "sha256": "9388c0bbe6d5049e8cc77eb3ff101aa6c0367f83dcc437c65957c39196293c9d",
       "disposition": "published",
       "scope": "Notification bell opened from the sidebar"
+    },
+    {
+      "path": "/img/chrome-refresh/notifications-page.webp",
+      "slug": "notifications-page",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 31322,
+      "sha256": "e141d2f2fb378042b49fff91f38d0df7f414d77ec93b9e1e259a5b354a274c43",
+      "disposition": "published",
+      "scope": "Notifications page with day groups, read-state tabs and the category filter"
     },
     {
       "path": "/img/workbooks/ux-sidebar.webp",
@@ -369,6 +384,17 @@
       "sha256": "ec9e276b12e67054812cc386653ddc5e194f664c5a429078f47b19e782c45926",
       "disposition": "published",
       "scope": "First frame of workbook-ux-improvements.webm"
+    },
+    {
+      "path": "/img/guide/web/account-security/notification-settings.webp",
+      "slug": "notification-settings",
+      "kind": "screenshot",
+      "frame": "desktop",
+      "dimensions": "1920x1200",
+      "bytes": 63706,
+      "sha256": "a6200f2e2135858fa6d536983cab76e51ef733b41bddacb6f9f056efa1837706",
+      "disposition": "published",
+      "scope": "Notifications tab in account settings: the three switchable categories, the three not yet available, and Account security locked on"
     },
     {
       "path": "/img/guide/web/account-security/passkeys-table.webp",

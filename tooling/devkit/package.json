@@ -13,6 +13,8 @@
     "build": "tsc --build tsconfig.build.json",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "env:generate": "tsx src/generate-env.ts",
+    "grafana:auth": "tsx src/commands/grafana-auth.ts",
+    "grafana:get": "tsx src/commands/grafana-get.ts",
     "linear:apply": "tsx src/commands/linear-apply.ts",
     "linear:auth": "tsx src/commands/linear-auth.ts",
     "linear:check": "tsx src/commands/linear-check.ts",
@@ -30,6 +32,7 @@
     "posthog:issues": "tsx src/commands/posthog-issues.ts",
     "posthog:query": "tsx src/commands/posthog-query.ts",
     "release:cms": "tsx src/commands/release-cms.ts",
+    "round:read": "tsx src/commands/round-read.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
