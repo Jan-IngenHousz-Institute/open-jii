@@ -335,14 +335,15 @@ module "warmer_function" {
 
   lambda_permissions = true
   lambda_function_arns = [
-    module.server_function.function_arn,
+    "${module.server_function.function_arn}:live",
     module.image_function.function_arn
   ]
 
+  # CloudFront invokes the server through its live alias, and Lambda keeps warm environments per version
   environment_variables = {
     WARM_PARAMS = jsonencode([
       {
-        function    = module.server_function.function_name
+        function    = "${module.server_function.function_name}:live"
         concurrency = 1
       },
       {
