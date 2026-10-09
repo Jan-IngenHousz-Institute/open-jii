@@ -86,6 +86,8 @@ export interface DataTableProps {
   columns: ExperimentDataColumn[];
   rows: DataRow[];
   isLoading?: boolean;
+  /** The rows are the previous page's, shown dimmed while the next one loads. */
+  isRefreshing?: boolean;
   /** Filters, bulk actions, anything the surface puts above its table. */
   toolbar?: React.ReactNode;
   /** Paging owned by the caller (server-driven); omit to show every row given. */
@@ -117,6 +119,7 @@ export function DataTable({
   columns,
   rows,
   isLoading = false,
+  isRefreshing = false,
   toolbar,
   pagination,
   sorting,
@@ -264,7 +267,10 @@ export function DataTable({
             sortDirection={sorting?.direction}
             onSort={sorting?.onSort}
           />
-          <TableBody>
+          <TableBody
+            aria-busy={isRefreshing}
+            className={cn("transition-opacity", isRefreshing && "opacity-60")}
+          >
             {isLoading ? (
               <LoadingRows columnCount={tableColumns.length} rowCount={loadingRowCount} />
             ) : (

@@ -137,6 +137,33 @@ describe("useExperimentData", () => {
     });
   });
 
+  it("keeps the current page on screen while the next one loads, when asked", async () => {
+    mountData();
+    const { result, rerender } = renderHook(
+      ({ page, keepPreviousPage }: { page: number; keepPreviousPage: boolean }) =>
+        useExperimentData({
+          experimentId: "experiment-123",
+          page,
+          pageSize: 20,
+          tableName: "test_table",
+          keepPreviousPage,
+        }),
+      { initialProps: { page: 1, keepPreviousPage: true } },
+    );
+    await waitFor(() => expect(result.current.tableRows).toHaveLength(2));
+
+    server.mount(contract.experiments.getExperimentData, { body: [], delay: 999_999 });
+    rerender({ page: 2, keepPreviousPage: true });
+
+    expect(result.current.tableRows).toHaveLength(2);
+    expect(result.current.isRefreshing).toBe(true);
+
+    rerender({ page: 3, keepPreviousPage: false });
+
+    expect(result.current.tableRows).toBeUndefined();
+    expect(result.current.isLoading).toBe(true);
+  });
+
   it("should start in loading state before data arrives", async () => {
     mountData();
 

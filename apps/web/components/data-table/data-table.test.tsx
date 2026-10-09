@@ -54,6 +54,14 @@ describe("DataTable", () => {
     expect(screen.getByText("0.68").className).toContain("text-right");
   });
 
+  it("keeps the rows it has, marked busy, while the next page loads", () => {
+    render(<DataTable columns={COLUMNS} rows={ROWS} isRefreshing />);
+
+    const body = screen.getAllByRole("rowgroup")[1];
+    expect(body).toHaveAttribute("aria-busy", "true");
+    expect(screen.getAllByRole("row")).toHaveLength(ROWS.length + 1);
+  });
+
   it("says so plainly when there are no rows", () => {
     render(<DataTable columns={COLUMNS} rows={[]} />);
 

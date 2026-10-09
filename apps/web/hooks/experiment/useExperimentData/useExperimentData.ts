@@ -1,5 +1,5 @@
 import { shouldRetryQuery } from "@/util/query-retry";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import {
   createTableColumns,
@@ -37,6 +37,11 @@ export interface UseExperimentDataParams {
   filters?: ExperimentDataFilter[];
   /** Read only these columns, when set, instead of every column the table has. */
   columns?: string[];
+  /**
+   * Keep the current page on screen while the next one loads. Only for a caller that remounts per
+   * table, or another table's rows would stand in for the new one's.
+   */
+  keepPreviousPage?: boolean;
   formatFunction?: DataRenderFunction;
   onAddAnnotation?: (rowIds: string[], type: ExperimentAnnotationType) => void;
   onDeleteAnnotations?: (rowIds: string[], type: ExperimentAnnotationType) => void;
@@ -87,6 +92,7 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
     onToggleCellExpansion,
     errorColumn,
     enabled = true,
+    keepPreviousPage = false,
   } = params;
 
   const cleanedFilters = compactFilters(filters);
@@ -98,7 +104,7 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
     [cleanedFilters],
   );
 
-  const { data, isLoading, error } = useQuery(
+  const { data, isLoading, isPlaceholderData, error } = useQuery(
     orpc.experiments.getExperimentData.queryOptions({
       input: {
         id: experimentId,
@@ -112,6 +118,7 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
       },
       staleTime: STALE_TIME,
       enabled,
+      placeholderData: keepPreviousPage ? keepPreviousData : undefined,
       // The experiment's freshness line refreshes changed tables and honours its pause.
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
@@ -162,5 +169,5 @@ export const useExperimentData = (params: UseExperimentDataParams) => {
   ]);
   const tableRows: DataRow[] | undefined = tableData?.data?.rows;
 
-  return { tableMetadata, tableRows, isLoading, error };
+  return { tableMetadata, tableRows, isLoading, isRefreshing: isPlaceholderData, error };
 };
