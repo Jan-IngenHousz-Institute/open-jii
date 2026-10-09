@@ -3,15 +3,29 @@ import { isEagerTraceType, isLazyTraceType } from "./plotly-trace-types";
 
 const importRuntime = () => import("./plotly-runtime");
 
-let runtimeLoad: ReturnType<typeof importRuntime> | undefined;
+type PlotlyRuntime = Awaited<ReturnType<typeof importRuntime>>;
+
+let runtimeLoad: Promise<PlotlyRuntime> | undefined;
+let loadedRuntime: PlotlyRuntime | undefined;
 
 /**
  * Plotly touches `window` on import, so it only loads on the client, once a
  * chart renders. Every caller shares one load rather than racing its own import.
  */
-export function loadPlotlyRuntime(): ReturnType<typeof importRuntime> {
-  runtimeLoad ??= importRuntime();
+export function loadPlotlyRuntime(): Promise<PlotlyRuntime> {
+  runtimeLoad ??= importRuntime().then((runtime) => {
+    loadedRuntime = runtime;
+    return runtime;
+  });
   return runtimeLoad;
+}
+
+/**
+ * The runtime once it has loaded. A chart drawing after the preload uses it directly, where a lazy
+ * component would still suspend once and hold the chart behind React's reveal throttle.
+ */
+export function loadedPlotlyRuntime(): PlotlyRuntime | undefined {
+  return loadedRuntime;
 }
 
 const registered = new Set<LazyTraceType>();

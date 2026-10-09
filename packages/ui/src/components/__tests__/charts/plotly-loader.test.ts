@@ -72,3 +72,15 @@ describe("pendingTraceTypes", () => {
     expect(warn.mock.calls[0]?.[0]).toContain("contourternary");
   });
 });
+
+describe("loadedPlotlyRuntime", () => {
+  it("is empty until the runtime has loaded, then hands it back without waiting", async () => {
+    const { loadPlotlyRuntime, loadedPlotlyRuntime } = await freshLoader();
+
+    expect(loadedPlotlyRuntime()).toBeUndefined();
+
+    const runtime = await loadPlotlyRuntime();
+
+    expect(loadedPlotlyRuntime()).toBe(runtime);
+  });
+});

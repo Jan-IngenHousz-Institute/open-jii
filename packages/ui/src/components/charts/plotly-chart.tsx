@@ -16,7 +16,7 @@ import type { PlotParams } from "react-plotly.js";
 import { cn } from "../../lib/utils";
 import { useDrawTurn } from "./draw-queue";
 import { PlotlyErrorBoundary } from "./plotly-error-boundary";
-import { loadPlotlyRuntime, pendingTraceTypes } from "./plotly-loader";
+import { loadPlotlyRuntime, loadedPlotlyRuntime, pendingTraceTypes } from "./plotly-loader";
 import { PlotlyTraceGate } from "./plotly-trace-gate";
 import { withBrandedPngExport } from "./png-export";
 
@@ -70,7 +70,7 @@ type StandardTraceType = "scatter" | "bar" | "line" | "area" | "pie" | "box" | "
 
 type PlotlyTraceType = WebGLTraceType | StandardTraceType | string;
 
-const Plot = lazy(() => loadPlotlyRuntime().then((runtime) => ({ default: runtime.Plot })));
+const LazyPlot = lazy(() => loadPlotlyRuntime().then((runtime) => ({ default: runtime.Plot })));
 
 /**
  * Starts the Plotly download before any chart has data to draw, so it overlaps
@@ -429,6 +429,8 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     }, [onRelayout]);
 
     const { onInitialized, onPurge, onWebGlContextLost } = plotProps;
+    const Plot = loadedPlotlyRuntime()?.Plot ?? LazyPlot;
+
     // Charts revealed together draw one per task, so the page keeps responding between them.
     const isDrawable = isClient && !loading && !error && !localError;
     const { hasTurn, onDrawn } = useDrawTurn(isDrawable);
