@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 
 import { pathFromRoot, repositoryRoot, requireLinearApiKey } from "../lib/config.js";
-import { createFileAudit, createLinearClient } from "../lib/linear.js";
+import { createFileAudit, createLinearClient, expectSuccess } from "../lib/linear.js";
 import type { LinearClient } from "../lib/linear.js";
 import { findProject, listMilestones, sameName } from "../lib/projects.js";
 import { parseDraft, substituteReferences } from "../lib/ticket-draft.js";
@@ -64,9 +64,12 @@ interface ExistingIssue {
   url: string;
   state: { name: string };
   project: { id: string; name: string } | null;
+  projectMilestone: { id: string } | null;
   labels: { nodes: { id: string; name: string }[] };
   comments: { nodes: { id: string; body: string; user: { id: string } | null }[] };
   attachments: { nodes: { url: string }[] };
+  relations: { nodes: { type: string; relatedIssue: { id: string } }[] };
+  inverseRelations: { nodes: { type: string; issue: { id: string } }[] };
 }
 
 interface IssueResult {
@@ -100,9 +103,12 @@ const issueByIdentifierQuery = `query($id: String!) {
     id identifier url
     state { name }
     project { id name }
+    projectMilestone { id }
     labels { nodes { id name } }
     comments(first: 50) { nodes { id body user { id } } }
     attachments(first: 50) { nodes { url } }
+    relations(first: 50) { nodes { type relatedIssue { id } } }
+    inverseRelations(first: 50) { nodes { type issue { id } } }
   }
 }`;
 const issueCreateMutation = `mutation($input: IssueCreateInput!) {
@@ -292,7 +298,7 @@ function planUpdate(
     notes.push(`moves from ${issue.project === null ? "no project" : `"${issue.project.name}"`}`);
   }
   const milestoneId = milestoneIdFor(ticket, resolved);
-  if (milestoneId !== null) {
+  if (milestoneId !== null && milestoneId !== issue.projectMilestone?.id) {
     input.projectMilestoneId = milestoneId;
     notes.push(`milestone ${ticket.milestone ?? ""}`);
   }
@@ -338,17 +344,6 @@ function describePlan(
     lines.push(describeTicket(ticket, state, resolved, existing, options));
   }
   return `${lines.join("\n")}\n`;
-}
-
-async function expectSuccess(
-  client: LinearClient,
-  mutation: string,
-  variables: Record<string, unknown>,
-  what: string,
-): Promise<void> {
-  const result = await client.query<Record<string, { success: boolean }>>(mutation, variables);
-  const outcome = Object.values(result).at(0);
-  if (!outcome?.success) throw new Error(`${what} did not succeed`);
 }
 
 // A comment is keyed by its first line, so a rerun edits the pointer comment instead of stacking
@@ -490,11 +485,22 @@ export async function createTickets(
     if (typeof end === "string") return existing.issues.get(end);
     return state.tickets[String(end)];
   };
+  // Compared by issue id, so one relation spelled two ways in the draft, or already in Linear, is
+  // created once.
+  const related = liveRelations(existing);
   for (const edge of draft.tickets.flatMap(edgesOf)) {
     if (state.relations.includes(edge.tag)) continue;
     const from = issueOf(edge.from);
     const to = issueOf(edge.to);
     if (!from || !to) continue;
+    const key = relationKey(edge.type, from.id, to.id);
+    if (related.has(key)) {
+      state.relations.push(edge.tag);
+      await deps.saveState(state);
+      deps.write(`already ${edge.type} ${from.identifier} -> ${to.identifier}\n`);
+      continue;
+    }
+    related.add(key);
     await expectSuccess(
       deps.client,
       relationCreateMutation,
@@ -513,6 +519,25 @@ export async function createTickets(
     const created = state.tickets[String(ticket.index)];
     if (created) deps.write(`${created.identifier}  ${created.title}\n${created.url}\n`);
   }
+}
+
+// Linear's "related" has no direction, so either order is the same relation.
+function relationKey(type: string, fromId: string, toId: string): string {
+  const ends = type === "related" ? [fromId, toId].sort() : [fromId, toId];
+  return `${type}:${ends.join(">")}`;
+}
+
+function liveRelations(existing: Existing): Set<string> {
+  const keys = new Set<string>();
+  for (const issue of existing.issues.values()) {
+    for (const node of issue.relations.nodes) {
+      keys.add(relationKey(node.type, issue.id, node.relatedIssue.id));
+    }
+    for (const node of issue.inverseRelations.nodes) {
+      keys.add(relationKey(node.type, node.issue.id, issue.id));
+    }
+  }
+  return keys;
 }
 
 // A link the ticket already carries, or one this draft attached in an earlier run, is skipped.

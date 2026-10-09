@@ -11,6 +11,7 @@
 // Each "# " heading is a milestone, in order of work. A "was:" line renames the milestone that
 // carries the old name instead of creating a second one. The rest is the one-sentence reason it
 // comes before the next.
+import { plannedPositions } from "./ordering.js";
 import type { ProjectMilestone } from "./projects.js";
 import { sameName } from "./projects.js";
 import { splitFrontMatter, unquoted } from "./ticket-draft.js";
@@ -44,13 +45,6 @@ export interface MilestonePlan {
   actions: MilestoneAction[];
   // In Linear but not in the file. Nothing here deletes a milestone, so they stay as they are.
   leftAlone: ProjectMilestone[];
-}
-
-// Linear has been seen rewriting positions that sit close together, so they are spread wide.
-export const SORT_STEP = 1000;
-
-export function sortOrderAt(position: number): number {
-  return position * SORT_STEP;
 }
 
 function parseMilestone(chunk: string): DesiredMilestone {
@@ -129,44 +123,38 @@ export function planMilestones(
   existing: readonly ProjectMilestone[],
 ): MilestonePlan {
   const used = new Set<string>();
-  const actions: MilestoneAction[] = [];
-
-  desired.forEach((wanted, offset) => {
-    const sortOrder = sortOrderAt(offset + 1);
+  const matched = desired.map((wanted) => {
     const candidates = existing.filter((m) => !used.has(m.id));
     const current =
       candidates.find((m) => sameName(m.name, wanted.name)) ??
       (wanted.was === null
         ? undefined
         : candidates.find((m) => sameName(m.name, wanted.was ?? "")));
+    if (current !== undefined) used.add(current.id);
+    return { wanted, current };
+  });
+  const positions = plannedPositions(matched.map(({ current }) => current?.sortOrder ?? null));
 
+  const actions = matched.map(({ wanted, current }, offset): MilestoneAction => {
+    const sortOrder = positions[offset] ?? 0;
     if (current === undefined) {
-      actions.push({
-        kind: "create",
-        name: wanted.name,
-        description: wanted.description,
-        sortOrder,
-      });
-      return;
+      return { kind: "create", name: wanted.name, description: wanted.description, sortOrder };
     }
-    used.add(current.id);
 
     const changes: string[] = [];
     if (current.name !== wanted.name) changes.push(`renamed from "${current.name}"`);
     if (descriptionOf(current) !== wanted.description) changes.push("reason");
     if (current.sortOrder !== sortOrder) changes.push("order");
-    actions.push(
-      changes.length === 0
-        ? { kind: "keep", name: wanted.name }
-        : {
-            kind: "update",
-            id: current.id,
-            name: wanted.name,
-            description: wanted.description,
-            sortOrder,
-            changes,
-          },
-    );
+    return changes.length === 0
+      ? { kind: "keep", name: wanted.name }
+      : {
+          kind: "update",
+          id: current.id,
+          name: wanted.name,
+          description: wanted.description,
+          sortOrder,
+          changes,
+        };
   });
 
   return { actions, leftAlone: existing.filter((m) => !used.has(m.id)) };

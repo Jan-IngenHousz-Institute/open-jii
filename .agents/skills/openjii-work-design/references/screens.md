@@ -30,16 +30,20 @@ put an empty screen in a ticket about data. Answer the requests in the browser i
 fixtures in `apps/e2e/ticket-screens`, which `apps/e2e/README.md` describes under "Ticket screens":
 
 - A fixture warehouse answers one experiment's data routes (the table list, the rows, the columns
-  and the distinct values) from fixture tables. It applies the filter, aggregation, join and
-  computed-column semantics the backend's SQL builder gives them, so a chart draws what it would
-  draw on real data.
-- A fixture session answers as a non-member or a signed-out visitor, for screens about access.
+  and the distinct values) from fixture tables. It applies the filters, time and width buckets,
+  aggregates and paging of the backend's query builder, as the contract on `main` defines them,
+  so a chart draws what it would draw on real data.
+- A non-member view shows an experiment as a signed-in user who is not a member sees it, for
+  screens about access. A signed-out view needs no fixture; a shot sets `anonymous`.
 - A fixture route returns a fixed body for one path. Use it for a state the database cannot hold
-  yet, such as a chart type the `chart_type` enum does not have.
-- Every shot drops `[Seed]` and `[Local]` from names on its own, so the standard seed can be used.
+  yet, such as a chart type the `chart_type` enum does not have. A fixture transform rewrites a
+  real response instead.
+- Every shot drops `[Seed]` and `[Local]` from names on its own, including in responses a fixture
+  fetches and rewrites, so the standard seed can be used.
 
-A contract change on the scaffold branch extends the fixture warehouse on the same branch, so the
-fixtures always answer the contract the screen is built against.
+A contract change on the scaffold branch, such as a new query parameter, extends the fixture
+warehouse on the same branch, so the fixtures always answer the contract the screen is built
+against.
 
 Fixture rows use real column types, roles, states and field values from the code.
 

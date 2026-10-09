@@ -147,9 +147,12 @@ function fixture(options: FixtureOptions = {}): { client: LinearClient; calls: C
             url: `https://linear.app/x/${identifier}`,
             state: { name: "Backlog" },
             project: { id: "proj-1", name: "Platform home" },
+            projectMilestone: null,
             labels: { nodes: [] },
             comments: { nodes: [] },
             attachments: { nodes: [] },
+            relations: { nodes: [] },
+            inverseRelations: { nodes: [] },
             ...options.issue?.(identifier),
           },
         };
@@ -490,6 +493,62 @@ describe("createTickets, milestones, states and relations", () => {
     expect(d.lines.join("")).toContain(
       "note  2. Researcher can filter any resource list: no screen in the body",
     );
+  });
+});
+
+describe("createTickets, relations by issue id", () => {
+  it("creates a relation once when the draft spells it from both ends", async () => {
+    const { client, calls } = fixture();
+    const text = draftText
+      .replace("# Researcher can sort", "# OJD-1810 Researcher can sort")
+      .replace("labels: Feature, Web", "labels: Feature, Web\nblocked-by: OJD-1810");
+
+    await createTickets(parseDraft(text), true, deps(client).value);
+
+    expect(calls.filter((c) => c.document.includes("issueRelationCreate("))).toHaveLength(1);
+  });
+
+  it("skips a relation Linear already has, in either direction for related", async () => {
+    const { client, calls } = fixture({
+      issue: (identifier) =>
+        identifier === "OJD-1300"
+          ? { relations: { nodes: [{ type: "related", relatedIssue: { id: "id-1" } }] } }
+          : identifier === "OJD-1400"
+            ? { relations: { nodes: [{ type: "blocks", relatedIssue: { id: "id-1" } }] } }
+            : {},
+    });
+    const d = deps(client);
+    const text = draftText.replace("blocks: 2", "blocked-by: OJD-1400\nrelated: OJD-1300");
+
+    await createTickets(parseDraft(text), true, d.value);
+
+    expect(calls.filter((c) => c.document.includes("issueRelationCreate("))).toHaveLength(0);
+    expect(d.lines.join("")).toContain("already blocks OJD-1400 -> OJD-1001");
+    expect(d.lines.join("")).toContain("already related OJD-1001 -> OJD-1300");
+  });
+
+  it("refuses a ticket that relates to itself by identifier", () => {
+    const text = draftText
+      .replace("# Researcher can sort", "# OJD-1810 Researcher can sort")
+      .replace("blocks: 2", "related: OJD-1810");
+
+    expect(() => parseDraft(text)).toThrow("refers to itself");
+  });
+
+  it("leaves a milestone alone when the ticket is already in it", async () => {
+    const { client, calls } = fixture({ issue: () => ({ projectMilestone: { id: "ms-1" } }) });
+    const d = deps(client);
+    const text = draftText
+      .replace("# Researcher can sort", "# OJD-1810 Researcher can sort")
+      .replace("blocks: 2", "milestone: 1. Members see their work");
+
+    await createTickets(parseDraft(text), true, d.value);
+
+    const update = calls.find((c) => c.document.includes("issueUpdate("))?.variables;
+    expect(update).not.toMatchObject({
+      input: { projectMilestoneId: expect.anything() as unknown },
+    });
+    expect(d.lines.join("")).not.toContain("milestone 1. Members see their work");
   });
 });
 

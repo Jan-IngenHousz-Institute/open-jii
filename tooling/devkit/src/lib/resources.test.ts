@@ -66,6 +66,18 @@ describe("planResources", () => {
     expect(plan.leftAlone.map((resource) => resource.id)).toEqual(["r9"]);
   });
 
+  it("keeps links Linear renumbered when their order is still right", () => {
+    const plan = planResources(
+      [
+        { label: "A", url: "https://a.example" },
+        { label: "B", url: "https://b.example" },
+      ],
+      [live("r1", "A", "https://a.example", 7), live("r2", "B", "https://b.example", 9)],
+    );
+
+    expect(plan.actions.map((action) => action.kind)).toEqual(["keep", "keep"]);
+  });
+
   it("keeps a link that already matches", () => {
     const plan = planResources(
       [{ label: "A", url: "https://a.example" }],

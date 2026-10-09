@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { checkMilestones, parseMilestones, planMilestones, sortOrderAt } from "./milestones.js";
+import { checkMilestones, parseMilestones, planMilestones } from "./milestones.js";
 import type { DesiredMilestone } from "./milestones.js";
 import type { ProjectMilestone } from "./projects.js";
 
@@ -87,9 +87,16 @@ describe("checkMilestones", () => {
 });
 
 describe("planMilestones", () => {
-  it("spreads positions by a thousand so Linear keeps them", () => {
-    expect(sortOrderAt(1)).toBe(1000);
-    expect(sortOrderAt(3)).toBe(3000);
+  it("keeps positions Linear renumbered when the order is still right, so a rerun settles", () => {
+    const plan = planMilestones(
+      [desired("1. One", "R."), desired("2. Two", "R.")],
+      [live("a", "1. One", 12.5, "R."), live("b", "2. Two", 40, "R.")],
+    );
+
+    expect(plan.actions).toEqual([
+      { kind: "keep", name: "1. One" },
+      { kind: "keep", name: "2. Two" },
+    ]);
   });
 
   it("creates what is missing, keeps what matches, and renames through was without a second copy", () => {

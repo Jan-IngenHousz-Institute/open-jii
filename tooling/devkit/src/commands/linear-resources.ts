@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 
+import { optionAfter } from "../lib/args.js";
 import { pathFromRoot, repositoryRoot, requireLinearApiKey } from "../lib/config.js";
-import { createFileAudit, createLinearClient } from "../lib/linear.js";
+import { createFileAudit, createLinearClient, expectSuccess } from "../lib/linear.js";
 import type { LinearClient } from "../lib/linear.js";
 import { findProject } from "../lib/projects.js";
 import { parseResources, planResources } from "../lib/resources.js";
@@ -32,14 +33,6 @@ const linkUpdateMutation = `mutation($id: String!, $input: EntityExternalLinkUpd
   entityExternalLinkUpdate(id: $id, input: $input) { success }
 }`;
 
-function optionAfter(args: string[], flag: string): string | null {
-  const index = args.indexOf(flag);
-  if (index < 0) return null;
-  const value = args[index + 1];
-  if (!value || value.startsWith("--")) throw new Error(`${flag} requires a value`);
-  return value;
-}
-
 export function parseArgs(args: string[]): ResourcesArgs {
   const project = optionAfter(args, "--project");
   const file = args.find((arg, index) => !arg.startsWith("--") && args[index - 1] !== "--project");
@@ -51,16 +44,6 @@ function describeAction(action: ResourceAction): string {
   if (action.kind === "create") return `create  ${action.label}  ${action.url}`;
   if (action.kind === "update") return `update  ${action.label}  (${action.changes.join(", ")})`;
   return `keep    ${action.label}`;
-}
-
-async function expectSuccess(
-  client: LinearClient,
-  mutation: string,
-  variables: Record<string, unknown>,
-  what: string,
-): Promise<void> {
-  const result = await client.query<Record<string, { success: boolean }>>(mutation, variables);
-  if (!Object.values(result).at(0)?.success) throw new Error(`${what} did not succeed`);
 }
 
 export async function writeResources(

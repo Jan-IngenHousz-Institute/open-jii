@@ -263,10 +263,22 @@ describe("checkBody, open questions and positional references", () => {
     expect(rules(fine)).toEqual([]);
   });
 
+  it("leaves a criterion that quotes the product's own question alone", () => {
+    const quoted = workItem.replace(
+      "- The sort is part of the URL, so a refresh opens the same order.",
+      '- The dialog asks "Delete this chart?"\n- The prompt reads `Leave without saving?`',
+    );
+
+    expect(rules(quoted)).toEqual([]);
+  });
+
   it("fails a ticket named by its position instead of its identifier", () => {
     const positional = workItem.replace("None.", "This builds on the previous ticket.");
 
     expect(rules(positional)).toContain("reference");
+    expect(
+      rules(workItem.replace("None.", "Clicking a row opens the next issue in the list.")),
+    ).toEqual([]);
     expect(rules(workItem.replace("None.", "This builds on OJD-1859."))).toEqual([]);
   });
 });
@@ -287,13 +299,17 @@ describe("proseFindings, borrowed context", () => {
 
     expect(rulesOf("As discussed, the export keeps every column.")).toEqual(["context"]);
     expect(rulesOf("We agreed to drop the second chart.")).toEqual(["context"]);
-    expect(rulesOf("This follows the decision in the earlier session.")).toEqual(["context"]);
+    expect(rulesOf("This follows the decision from our call.")).toEqual(["context"]);
     expect(rulesOf("Per our call, admins see the button.")).toEqual(["context"]);
   });
 
   it("leaves product language about login sessions and the document's own text alone", () => {
     expect(proseFindings("The session expires after an hour of inactivity.")).toEqual([]);
     expect(proseFindings("A member signs in and their previous session ends.")).toEqual([]);
+    expect(
+      proseFindings("Filters chosen in the previous session are restored after sign-in."),
+    ).toEqual([]);
+    expect(proseFindings("The assistant keeps this conversation after a reload.")).toEqual([]);
     expect(proseFindings("As shown in the diagram above, the read path is cached.")).toEqual([]);
   });
 });

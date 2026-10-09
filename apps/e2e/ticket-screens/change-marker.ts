@@ -17,6 +17,9 @@ const MARK_COLOR = "#EA580C";
  * crop around it. The overlay sits on top of the page; the product itself is untouched.
  */
 export class ChangeMarker {
+  // What mark() drew, so the crop keeps every outline and tag wherever it was placed.
+  private readonly drawn: Box[] = [];
+
   constructor(private readonly page: Page) {}
 
   async mark(
@@ -25,7 +28,7 @@ export class ChangeMarker {
     placement: TagPlacement = "above",
   ): Promise<void> {
     const box = await this.union(Array.isArray(targets) ? targets : [targets], 0);
-    await this.page.evaluate(
+    const marks = await this.page.evaluate(
       ({ box, label, color, placement }) => {
         const pad = 4;
         const frame = document.createElement("div");
@@ -71,27 +74,36 @@ export class ChangeMarker {
           whiteSpace: "nowrap",
         });
         document.body.append(frame, tag);
+        return [frame, tag].map((element) => {
+          const rect = element.getBoundingClientRect();
+          return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+        });
       },
       { box, label, color: MARK_COLOR, placement },
     );
+    this.drawn.push(...marks);
   }
 
-  /** The crop: the targets plus a margin of context, kept inside the viewport. */
+  /** The crop: the targets and every mark drawn, plus a margin of context, inside the viewport. */
   async frame(targets: readonly Locator[], margin = 32): Promise<Box> {
-    const box = await this.union(targets, margin);
+    const box = await this.union(targets, margin, this.drawn);
     const viewport = this.page.viewportSize() ?? { width: 1440, height: 900 };
     const left = Math.max(0, box.x);
-    // Room above for a tag placed over the top target.
-    const top = Math.max(0, box.y - 24);
+    const top = Math.max(0, box.y);
     const right = Math.min(viewport.width, box.x + box.width);
     const bottom = Math.min(viewport.height, box.y + box.height);
     return { x: left, y: top, width: right - left, height: bottom - top };
   }
 
-  private async union(targets: readonly Locator[], margin: number): Promise<Box> {
+  private async union(
+    targets: readonly Locator[],
+    margin: number,
+    extra: readonly Box[] = [],
+  ): Promise<Box> {
     const boxes = await Promise.all(targets.map((target) => target.boundingBox()));
-    const found = boxes.filter((box): box is Box => box !== null);
-    if (found.length === 0) throw new Error("None of the targets is on the page");
+    const located = boxes.filter((box): box is Box => box !== null);
+    if (located.length === 0) throw new Error("None of the targets is on the page");
+    const found = [...located, ...extra];
 
     const left = Math.min(...found.map((box) => box.x)) - margin;
     const top = Math.min(...found.map((box) => box.y)) - margin;

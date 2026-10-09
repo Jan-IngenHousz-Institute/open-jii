@@ -25,6 +25,25 @@ interface Node {
   sortOrder: number;
 }
 
+interface MilestoneInput {
+  name: string;
+  description: string;
+  sortOrder: number;
+}
+
+function isMilestoneInput(value: unknown): value is MilestoneInput {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "name" in value &&
+    typeof value.name === "string" &&
+    "description" in value &&
+    typeof value.description === "string" &&
+    "sortOrder" in value &&
+    typeof value.sortOrder === "number"
+  );
+}
+
 /** Fixtures are untyped while the client contract is generic; this is the one place that gap is bridged. */
 function fixture(initial: Node[], reorders = true) {
   const calls: Call[] = [];
@@ -40,11 +59,13 @@ function fixture(initial: Node[], reorders = true) {
           projects: { nodes: [{ id: "p1", name: "Notifications", url: "https://l/p1" }] },
         };
       } else if (document.includes("projectMilestoneCreate(")) {
-        const input = variables.input as { name: string; description: string; sortOrder: number };
+        const input = variables.input;
+        if (!isMilestoneInput(input)) throw new Error("create without a full milestone input");
         nodes.push({ id: `new-${nodes.length}`, ...input });
         answer = { projectMilestoneCreate: { success: true } };
       } else if (document.includes("projectMilestoneUpdate(")) {
-        const input = variables.input as Partial<Node>;
+        const input = variables.input;
+        if (!isMilestoneInput(input)) throw new Error("update without a full milestone input");
         const target = nodes.find((node) => node.id === variables.id);
         if (target) Object.assign(target, reorders ? input : { ...input, sortOrder: 0 });
         answer = { projectMilestoneUpdate: { success: true } };

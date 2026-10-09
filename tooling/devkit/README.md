@@ -173,13 +173,15 @@ stops halfway resumes from that file instead of creating anything twice. A relat
 on every other command, is taken from the repo root.
 
 A ticket headed by an identifier is an update. It changes the title, the body and the listed
-labels, and moves the project, the state and the milestone only when the draft names a different
-one, so it never moves a ticket by accident. `--sync-labels` also removes the labels the draft does
-not list, except the `WBSO` and `wayfinder:` series. The dry run reads the live ticket and prints
-what each update would do, such as `drops research; state Ready to Backlog; moves from "Old
-project"`, so read it before applying. The comment after the marker edits the viewer's own comment
-whose first line matches, and posts a new one otherwise, so a "where to start" comment is edited in
-place. Linear replaces a relation when the reverse is created, and an update never removes one.
+labels. A ticket listed in a draft belongs to the draft's project, so one that sits in another
+project moves into it. State and milestone change only when the ticket's own lines name a different
+one. `--sync-labels` also removes the labels the draft does not list, except the `WBSO` and
+`wayfinder:` series. The dry run reads the live ticket and prints what each update would do, such
+as `drops research; state Ready to Backlog; moves from "Old project"`, so read it before applying.
+The comment after the marker edits the viewer's own comment whose first line matches, and posts a
+new one otherwise, so a "where to start" comment is edited in place. Relations are compared by
+issue, so one the draft names from both ends, or one Linear already has, is created once; an update
+never removes a relation.
 Links are attached once each: a URL the ticket already carries is skipped, and a run with more than
 20 links spaces them about three seconds apart, because Linear refused faster bursts in practice.
 
@@ -352,6 +354,7 @@ pnpm --filter @repo/devkit test
 pnpm --filter @repo/devkit typecheck
 ```
 
-`src/hooks.test.ts` is the exception: it runs the docs-reminder hook from `.claude/hooks` against a
-scratch Git repository with real session payloads, so a change to when it fires is caught in CI.
-It skips itself where `jq` is not installed.
+`src/hooks.test.ts` is the exception: it runs the docs-reminder hook from `.claude/hooks` against
+scratch Git repositories with real session payloads, and skips itself where `jq` is not installed.
+The hook sits outside this package, so CI may not run the test for a change to the hook alone; run
+`pnpm --filter @repo/devkit test` after changing it.

@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 
+import { optionAfter } from "../lib/args.js";
 import { pathFromRoot, repositoryRoot, requireLinearApiKey } from "../lib/config.js";
-import { createFileAudit, createLinearClient } from "../lib/linear.js";
+import { createFileAudit, createLinearClient, expectSuccess } from "../lib/linear.js";
 import type { LinearClient } from "../lib/linear.js";
 import { checkMilestones, parseMilestones, planMilestones } from "../lib/milestones.js";
 import type { MilestoneAction, MilestoneFile, MilestonePlan } from "../lib/milestones.js";
@@ -25,14 +26,6 @@ const milestoneUpdateMutation = `mutation($id: String!, $input: ProjectMilestone
   projectMilestoneUpdate(id: $id, input: $input) { success }
 }`;
 
-function optionAfter(args: string[], flag: string): string | null {
-  const index = args.indexOf(flag);
-  if (index < 0) return null;
-  const value = args[index + 1];
-  if (!value || value.startsWith("--")) throw new Error(`${flag} requires a value`);
-  return value;
-}
-
 export function parseArgs(args: string[]): MilestonesArgs {
   const project = optionAfter(args, "--project");
   const file = args.find((arg, index) => !arg.startsWith("--") && args[index - 1] !== "--project");
@@ -53,16 +46,6 @@ function describePlan(projectName: string, plan: MilestonePlan): string {
     lines.push(`  left alone, not in the file: ${milestone.name}`);
   }
   return `${lines.join("\n")}\n`;
-}
-
-async function expectSuccess(
-  client: LinearClient,
-  mutation: string,
-  variables: Record<string, unknown>,
-  what: string,
-): Promise<void> {
-  const result = await client.query<Record<string, { success: boolean }>>(mutation, variables);
-  if (!Object.values(result).at(0)?.success) throw new Error(`${what} did not succeed`);
 }
 
 // Linear owns the final position, so the order is read back rather than assumed.

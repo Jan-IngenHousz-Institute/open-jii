@@ -211,3 +211,15 @@ export function createFileAudit(
     );
   };
 }
+
+// A mutation answers `{ <name>: { success } }`; anything but success true stops the run.
+export async function expectSuccess(
+  client: LinearClient,
+  mutation: string,
+  variables: Record<string, unknown>,
+  what: string,
+): Promise<void> {
+  const result = await client.query<Record<string, { success: boolean }>>(mutation, variables);
+  const outcome = Object.values(result).at(0);
+  if (!outcome?.success) throw new Error(`${what} did not succeed`);
+}

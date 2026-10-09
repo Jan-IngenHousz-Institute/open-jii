@@ -1,13 +1,24 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
 import { repositoryRoot } from "./lib/config.js";
 
 const hook = join(repositoryRoot(), ".claude", "hooks", "docs-reminder.sh");
 const hasJq = spawnSync("jq", ["--version"]).status === 0;
+const temporary: string[] = [];
+
+async function temporaryDirectory(prefix: string): Promise<string> {
+  const path = await mkdtemp(join(tmpdir(), prefix));
+  temporary.push(path);
+  return path;
+}
+
+afterAll(async () => {
+  await Promise.all(temporary.map((path) => rm(path, { recursive: true, force: true })));
+});
 
 interface Scratch {
   repo: string;
@@ -28,7 +39,7 @@ async function put(repo: string, path: string, content: string): Promise<void> {
 
 // A branch that already changed apps/web before the session starts, the case that used to fire.
 async function scratch(): Promise<Scratch> {
-  const repo = await mkdtemp(join(tmpdir(), "docs-reminder-repo-"));
+  const repo = await temporaryDirectory("docs-reminder-repo-");
   git(repo, "init", "-q", "-b", "main");
   await put(repo, "README.md", "x\n");
   git(repo, "add", ".");
@@ -37,12 +48,17 @@ async function scratch(): Promise<Scratch> {
   await put(repo, "apps/web/page.tsx", "earlier\n");
   git(repo, "add", ".");
   git(repo, "commit", "-q", "-m", "earlier web work");
-  return { repo, state: await mkdtemp(join(tmpdir(), "docs-reminder-state-")) };
+  return { repo, state: await temporaryDirectory("docs-reminder-state-") };
 }
 
-function runHook(where: Scratch, event: "SessionStart" | "Stop", session: string): string {
+function runHook(
+  where: Scratch,
+  event: "SessionStart" | "Stop",
+  session: string,
+  cwd = where.repo,
+): string {
   const result = spawnSync("bash", [hook], {
-    cwd: where.repo,
+    cwd,
     env: { ...process.env, TMPDIR: where.state },
     input: JSON.stringify({ session_id: session, hook_event_name: event }),
     encoding: "utf8",
@@ -87,6 +103,35 @@ describe.skipIf(!hasJq)("docs-reminder hook", () => {
     await put(committed.repo, "apps/web/page.tsx", "committed in this session\n");
     git(committed.repo, "commit", "-q", "-am", "session work");
     expect(runHook(committed, "Stop", "s3")).toContain("block");
+  });
+
+  it("counts an edit to a file that was already untracked when the session started", async () => {
+    const where = await scratch();
+    await put(where.repo, "apps/web/draft.tsx", "left untracked by an earlier session\n");
+    runHook(where, "SessionStart", "s1");
+    expect(runHook(where, "Stop", "s1")).toBe("");
+
+    await put(where.repo, "apps/web/draft.tsx", "rewritten in this session\n");
+
+    expect(runHook(where, "Stop", "s1")).toContain("block");
+  });
+
+  it("judges a checkout the session moved into by its own branch, not the first snapshot", async () => {
+    const start = await scratch();
+    const moved = await scratch();
+    runHook(start, "SessionStart", "s1");
+
+    const inMoved = { repo: moved.repo, state: start.state };
+
+    expect(runHook(inMoved, "Stop", "s1")).toContain("block");
+  });
+
+  it("reads paths from the repository root when run from a subdirectory", async () => {
+    const where = await scratch();
+    runHook(where, "SessionStart", "s1");
+    await put(where.repo, "apps/web/page.tsx", "changed\n");
+
+    expect(runHook(where, "Stop", "s1", join(where.repo, "apps"))).toContain("block");
   });
 
   it("stays quiet when the session changed the docs too", async () => {

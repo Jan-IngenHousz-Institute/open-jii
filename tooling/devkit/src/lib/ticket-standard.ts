@@ -138,18 +138,21 @@ function bullets(text: string): string[] {
   return items;
 }
 
+// Quoted copy, such as a dialog's own question, is what the product says, not what the ticket asks.
 function isOpenQuestion(bullet: string): boolean {
   const text = bullet.trim();
+  const unquoted = text.replace(/"[^"]*"|`[^`]*`/g, "").trim();
   return (
-    /\?["'`)\]]*$/.test(text) ||
+    /\?[)\]]*$/.test(unquoted) ||
     /^open:/i.test(text) ||
     /^confirm\s+(?:the|this|that|these|those|whether|if|with)\b/i.test(text) ||
     /[,(]\s*confirm\)?\W*$/i.test(text)
   );
 }
 
+// "Ticket" only: an issue is also a product word, as in the next error-tracking issue in a list.
 const POSITIONAL_REFERENCE =
-  /\b(?:the\s+)?(?:previous|next|above|first|second|third|last|following|earlier)\s+(?:ticket|issue)\b/i;
+  /\b(?:the\s+)?(?:previous|next|above|first|second|third|last|following|earlier)\s+ticket\b/i;
 
 function wordCount(text: string): number {
   return text.split(/\s+/).filter((word) => word.length > 0).length;
@@ -172,10 +175,10 @@ function headingFindings(actual: readonly string[], expected: readonly string[])
   return [{ rule: "headings", detail: parts.join("; ") }];
 }
 
-// Phrases that point at a conversation the reader was not in. Kept narrow, since the product has
-// its own login sessions and a ticket about them must still pass.
+// Phrases that point at a conversation the reader was not in. Only the author's own voice counts,
+// since the product has login sessions and assistant conversations a ticket must still describe.
 const BORROWED_CONTEXT =
-  /\b(?:as (?:discussed|agreed)|per (?:the|our) (?:discussion|chat|call|conversation)|(?:this|that|our) (?:chat|conversation)|we (?:discussed|agreed)|in (?:the|an|our) (?:earlier|previous) session)\b/i;
+  /\b(?:as (?:discussed|agreed)|(?:per|from|in) our (?:discussion|call|chat|conversation|session)|we (?:discussed|agreed))\b/i;
 
 // The rules any prose a person reads must meet, whether a ticket body or a project document.
 export function proseFindings(text: string): Finding[] {

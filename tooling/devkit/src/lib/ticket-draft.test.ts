@@ -130,6 +130,12 @@ describe("parseDraft", () => {
     );
   });
 
+  it("refuses a header line that appears twice, except link", () => {
+    expect(() =>
+      parseDraft("# T\n\nblocks: 2\nblocks: OJD-1500\n\n## A\n\nx\n\n# U\n\n## A\n\nx\n"),
+    ).toThrow('"blocks:" appears twice; list every value on one line');
+  });
+
   it("refuses a relation to a draft ticket that is not there", () => {
     expect(() => parseDraft("# T\n\nrelated: 4\n\n## A\n\nx\n")).toThrow("there are 1");
   });

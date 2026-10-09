@@ -213,8 +213,9 @@ Move state, assign, or relabel with `issueUpdate($id:String!, $input:IssueUpdate
 `addedLabelIds` and `removedLabelIds` rather than `labelIds`. The API takes ids, not names. A
 draft ticket headed by an identifier, `# OJD-1810 Home shows public research`, updates that ticket
 through `linear:create` instead of creating one, which is the way to rewrite a body that already
-exists. An update changes the title, the body and the listed labels, and moves state, project and
-milestone only when the draft names them. `--sync-labels` also drops the labels the draft does not
+exists. An update changes the title, the body and the listed labels, moves a ticket into the
+draft's project if it sits elsewhere, and changes state and milestone only when the ticket's own
+lines name a different one. `--sync-labels` also drops the labels the draft does not
 list, except the `WBSO` and `wayfinder:` series. The dry run prints each of these per ticket.
 
 A project's milestones, documents, uploads, resource links and shared view each have a command,

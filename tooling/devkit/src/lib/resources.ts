@@ -8,6 +8,7 @@
 //   - [Email sending quotas](https://docs.aws.amazon.com/ses/latest/dg/quotas.html)
 //
 // A link is matched by its URL, so relabelling one updates it instead of adding a second.
+import { plannedPositions } from "./ordering.js";
 import { splitFrontMatter } from "./ticket-draft.js";
 
 export interface DesiredResource {
@@ -38,7 +39,6 @@ export interface ResourcePlan {
   leftAlone: ProjectResource[];
 }
 
-const SORT_STEP = 1000;
 const LINK_ITEM = /^\s*[-*]\s+\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)\s*$/;
 
 export function parseResources(text: string): ResourceFile {
@@ -62,9 +62,14 @@ export function planResources(
   desired: readonly DesiredResource[],
   existing: readonly ProjectResource[],
 ): ResourcePlan {
-  const actions = desired.map((wanted, offset): ResourceAction => {
-    const sortOrder = (offset + 1) * SORT_STEP;
-    const current = existing.find((resource) => resource.url === wanted.url);
+  const matched = desired.map((wanted) => ({
+    wanted,
+    current: existing.find((resource) => resource.url === wanted.url),
+  }));
+  const positions = plannedPositions(matched.map(({ current }) => current?.sortOrder ?? null));
+
+  const actions = matched.map(({ wanted, current }, offset): ResourceAction => {
+    const sortOrder = positions[offset] ?? 0;
     if (current === undefined) {
       return { kind: "create", label: wanted.label, url: wanted.url, sortOrder };
     }

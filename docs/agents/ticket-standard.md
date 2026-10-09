@@ -522,7 +522,7 @@ person has not read.
 
 The check also fails an open question or a "confirm" inside the acceptance criteria, a ticket named
 by position ("the previous ticket"), and a phrase that points at a conversation the reader was not
-in ("as discussed", "in the earlier session"). It adds a note, which never fails a draft, when a
+in ("as discussed", "we agreed"). It adds a note, which never fails a draft, when a
 `Web`, `Mobile` or `Fullstack` ticket embeds no screen. It reads a bullet wrapped over several lines
 as one bullet.
 

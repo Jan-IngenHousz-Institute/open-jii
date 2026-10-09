@@ -120,6 +120,7 @@ function parseTicket(index: number, chunk: string): DraftTicket {
   let milestone: string | null = null;
   let state: string | null = null;
   const links: DraftLink[] = [];
+  const seen = new Set<string>();
   let bodyStart = -1;
   for (let i = 1; i < lines.length; i += 1) {
     const line = lines[i];
@@ -134,6 +135,13 @@ function parseTicket(index: number, chunk: string): DraftTicket {
         `Ticket ${index} ("${title}"): only labels, blocks, blocked-by, related, milestone, state and link may sit between the title and the first "## " heading`,
       );
     }
+    // Only link repeats; a second blocks or state line would otherwise replace the first unseen.
+    if (pair[1] !== "link" && seen.has(pair[1])) {
+      throw new Error(
+        `Ticket ${index} ("${title}"): "${pair[1]}:" appears twice; list every value on one line`,
+      );
+    }
+    seen.add(pair[1]);
     const value = pair[2].trim();
     const targets = (): Target[] => list(value).map((item) => parseTarget(index, title, item));
     if (pair[1] === "labels") labels = list(value);
@@ -187,6 +195,9 @@ export function parseDraft(text: string): Draft {
   const tickets = chunks.map((chunk, i) => parseTicket(i + 1, chunk));
   for (const ticket of tickets) {
     const relations = [...ticket.blocks, ...ticket.blockedBy, ...ticket.related];
+    if (ticket.identifier !== null && relations.includes(ticket.identifier)) {
+      throw new Error(`Ticket ${ticket.index} ("${ticket.title}") refers to itself`);
+    }
     const targets = [
       ...relations.filter((target): target is number => typeof target === "number"),
       ...referencesIn(`${ticket.body}\n${ticket.comment ?? ""}`),

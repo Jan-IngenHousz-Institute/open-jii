@@ -7,17 +7,28 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 0
 fi
 
-git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
+TOP=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+cd "$TOP"
 
 INPUT=$(cat)
 SESSION_ID=$(printf '%s' "$INPUT" | jq -r '.session_id // empty' | tr -cd '[:alnum:]_-')
 [ -z "$SESSION_ID" ] && exit 0
 
+# One snapshot per checkout, since a session can move into another worktree after it starts.
 STATE_DIR="${TMPDIR:-/tmp}/openjii-docs-reminder"
-BASE_FILE="$STATE_DIR/$SESSION_ID.base"
-UNTRACKED_FILE="$STATE_DIR/$SESSION_ID.untracked"
+CHECKOUT_KEY=$(printf '%s' "$TOP" | cksum | cut -d' ' -f1)
+BASE_FILE="$STATE_DIR/$SESSION_ID.$CHECKOUT_KEY.base"
+UNTRACKED_FILE="$STATE_DIR/$SESSION_ID.$CHECKOUT_KEY.untracked"
 REMINDER_MARKER="$STATE_DIR/$SESSION_ID"
 mkdir -p "$STATE_DIR"
+
+# Untracked files with their content hash, so an edit to a file that was already untracked counts.
+untracked_with_hashes() {
+  local paths
+  paths=$(git ls-files --others --exclude-standard)
+  [ -z "$paths" ] && return 0
+  paste -d ' ' <(printf '%s\n' "$paths" | git hash-object --stdin-paths) <(printf '%s\n' "$paths")
+}
 
 # At session start, snapshot what the checkout already holds, so work from earlier sessions on the
 # same branch never counts. `git stash create` writes a commit without touching the stash list. A
@@ -26,7 +37,7 @@ if [ "$(printf '%s' "$INPUT" | jq -r '.hook_event_name // empty')" = "SessionSta
   if [ ! -e "$BASE_FILE" ]; then
     snapshot=$(git stash create 2>/dev/null || true)
     [ -z "$snapshot" ] && snapshot=$(git rev-parse HEAD 2>/dev/null || true)
-    git ls-files --others --exclude-standard > "$UNTRACKED_FILE"
+    untracked_with_hashes > "$UNTRACKED_FILE"
     printf '%s\n' "$snapshot" > "$BASE_FILE"
   fi
   exit 0
@@ -39,9 +50,10 @@ if [ -s "$BASE_FILE" ]; then
   BASE=$(cat "$BASE_FILE")
   changed=$( {
     git diff --name-only "$BASE"
-    git ls-files --others --exclude-standard | grep -vxF -f "$UNTRACKED_FILE" || true
+    untracked_with_hashes | grep -vxF -f "$UNTRACKED_FILE" | cut -d' ' -f2- || true
   } 2>/dev/null | sort -u )
 else
+  # A checkout the session entered later, such as a worktree it created: its branch is the work.
   BASE_COMMIT=$(git merge-base origin/main HEAD 2>/dev/null || git merge-base main HEAD 2>/dev/null || true)
   changed=$( {
     if [ -n "$BASE_COMMIT" ]; then
