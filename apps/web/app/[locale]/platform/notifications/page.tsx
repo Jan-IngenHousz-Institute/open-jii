@@ -1,9 +1,6 @@
 import { PageContainer } from "@/components/page-container";
 import { PrefetchedQueries } from "@/components/server-prefetch/prefetched-queries";
-import {
-  NOTIFICATIONS_PAGE_SIZE,
-  notificationsListQuery,
-} from "@/hooks/notifications/useNotifications/notifications-list-query";
+import { notificationsListQuery } from "@/hooks/notifications/useNotifications/notifications-list-query";
 import type { Metadata } from "next";
 import { auth } from "~/app/actions/auth";
 import { NotificationsPage } from "~/components/notifications/notifications-page";
@@ -28,10 +25,8 @@ export default async function NotificationsRoute() {
     <PageContainer width="reading">
       <PrefetchedQueries
         queries={(utils) => [
-          notificationsListQuery(utils, session?.user.id, {
-            page: 1,
-            pageSize: NOTIFICATIONS_PAGE_SIZE,
-          }),
+          // The page's unfiltered first view exactly, or the browser asks again under another key.
+          notificationsListQuery(utils, session?.user.id, { readState: "all", page: 1 }),
         ]}
       >
         <NotificationsPage />

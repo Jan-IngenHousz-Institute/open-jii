@@ -37,7 +37,7 @@ describe("NotificationsRoute", () => {
     const queries = JSON.stringify(prefetched.queries);
     expect(screen.getByTestId("notifications")).toBeInTheDocument();
     expect(queries).toContain("listNotifications");
-    expect(queries).toContain('"pageSize":50');
+    expect(queries).toContain('{"readState":"all","page":1}');
     expect(queries).toContain("user-ana");
   });
 });

@@ -7,10 +7,24 @@
   "someone": "Someone",
   "empty": {
     "title": "You're all caught up",
-    "description": "Requests, changes to your access and finished jobs show up here."
+    "filteredTitle": "Nothing here",
+    "description": "Requests, changes to your access and finished jobs show up here.",
+    "unread": "No unread notifications. Switch to All to see earlier ones.",
+    "category": "Nothing in this category yet"
   },
   "loadError": "Your notifications could not be loaded.",
   "retry": "Try again",
+  "filters": {
+    "all": "All",
+    "unread": "Unread",
+    "allCategories": "All categories",
+    "category": "Filter by category"
+  },
+  "groups": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "earlier": "Earlier"
+  },
   "categories": {
     "requests_and_invitations": {
       "label": "Requests and invitations",
