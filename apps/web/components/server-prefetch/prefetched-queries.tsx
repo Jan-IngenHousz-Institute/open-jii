@@ -35,10 +35,14 @@ export async function PrefetchedQueries({ queries, embedWhen, children }: Prefet
     queries(utils).map((options) => queryClient.prefetchQuery(options)),
   );
 
+  let budget: ReturnType<typeof setTimeout> | undefined;
   await Promise.race([
     prefetches,
-    new Promise((resolve) => setTimeout(resolve, PREFETCH_BUDGET_MS)),
+    new Promise((resolve) => {
+      budget = setTimeout(resolve, PREFETCH_BUDGET_MS);
+    }),
   ]);
+  clearTimeout(budget);
 
   const state = dehydrate(queryClient, {
     shouldDehydrateQuery: (query) =>

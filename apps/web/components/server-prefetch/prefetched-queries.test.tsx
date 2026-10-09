@@ -38,6 +38,24 @@ describe("PrefetchedQueries", () => {
     expect(JSON.stringify(embeddedKeys(element))).toContain("listExperiments");
   });
 
+  it("clears its one-second budget when the fetches finish first", async () => {
+    listExperiments.mockResolvedValue({ items: [] });
+    const setTimer = vi.spyOn(globalThis, "setTimeout");
+    const clearTimer = vi.spyOn(globalThis, "clearTimeout");
+
+    await PrefetchedQueries({
+      queries: (utils) => [
+        utils.experiments.listExperiments.queryOptions({ input: { scope: "related" } }),
+      ],
+      children: null,
+    });
+
+    const budgetCall = setTimer.mock.calls.findIndex(([, delay]) => delay === 1000);
+    expect(clearTimer).toHaveBeenCalledWith(setTimer.mock.results[budgetCall]?.value);
+    setTimer.mockRestore();
+    clearTimer.mockRestore();
+  });
+
   it("leaves out a query slower than the budget, for the browser to fetch", async () => {
     vi.useFakeTimers();
     listExperiments.mockResolvedValue({ items: [] });
