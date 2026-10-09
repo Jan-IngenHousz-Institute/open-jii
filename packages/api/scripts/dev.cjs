@@ -2,6 +2,7 @@
 // tsc runs as this process's child, so stopping dev stops both.
 const { spawn, spawnSync } = require("node:child_process");
 const path = require("node:path");
+const readline = require("node:readline");
 
 const writeRoutes = path.join(__dirname, "write-contract-routes.cjs");
 
@@ -9,9 +10,10 @@ const tsc = spawn("tsc", ["--watch", "--preserveWatchOutput"], {
   stdio: ["ignore", "pipe", "inherit"],
 });
 
-tsc.stdout.on("data", (chunk) => {
-  process.stdout.write(chunk);
-  if (chunk.toString().includes("Found 0 errors")) {
+// Read by line: a chunk can end in the middle of tsc's summary.
+readline.createInterface({ input: tsc.stdout }).on("line", (line) => {
+  process.stdout.write(`${line}\n`);
+  if (line.includes("Found 0 errors")) {
     spawnSync(process.execPath, [writeRoutes], { stdio: "inherit" });
   }
 });
