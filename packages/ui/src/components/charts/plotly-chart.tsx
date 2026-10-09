@@ -14,6 +14,7 @@ import React, { useEffect, useRef, useState, Suspense, lazy } from "react";
 import type { PlotParams } from "react-plotly.js";
 
 import { cn } from "../../lib/utils";
+import { useDrawTurn } from "./draw-queue";
 import { PlotlyErrorBoundary } from "./plotly-error-boundary";
 import { loadPlotlyRuntime, pendingTraceTypes } from "./plotly-loader";
 import { PlotlyTraceGate } from "./plotly-trace-gate";
@@ -428,15 +429,20 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
     }, [onRelayout]);
 
     const { onInitialized, onPurge, onWebGlContextLost } = plotProps;
+    // Charts revealed together draw one per task, so the page keeps responding between them.
+    const isDrawable = isClient && !loading && !error && !localError;
+    const { hasTurn, onDrawn } = useDrawTurn(isDrawable);
+
     const handleInitialized = React.useCallback<NonNullable<PlotParams["onInitialized"]>>(
       (figure, graphDiv) => {
         graphDivRef.current = graphDiv;
         if (isPlotlyElement(graphDiv)) {
           graphDiv.on("plotly_relayout", (event) => onRelayoutRef.current?.(event));
         }
+        onDrawn();
         onInitialized?.(figure, graphDiv);
       },
-      [onInitialized],
+      [onInitialized, onDrawn],
     );
     const handlePurge = React.useCallback<NonNullable<PlotParams["onPurge"]>>(
       (figure, graphDiv) => {
@@ -562,12 +568,16 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
 
     useEffect(() => () => clearTimeout(glRetryTimerRef.current), []);
 
-    const handleLoadError = React.useCallback((loadError: unknown) => {
-      console.error("Plotly chart failed to load:", loadError);
-      setLocalError(
-        `Rendering error: ${loadError instanceof Error ? loadError.message : "Unknown error"}`,
-      );
-    }, []);
+    const handleLoadError = React.useCallback(
+      (loadError: unknown) => {
+        console.error("Plotly chart failed to load:", loadError);
+        onDrawn();
+        setLocalError(
+          `Rendering error: ${loadError instanceof Error ? loadError.message : "Unknown error"}`,
+        );
+      },
+      [onDrawn],
+    );
 
     // Validate and prepare layout
     const safeLayout = React.useMemo(() => {
@@ -666,36 +676,41 @@ export const PlotlyChart = React.forwardRef<HTMLDivElement, PlotlyChartProps>(
         ref={setContainer}
         className={cn("plotly-container relative h-full min-h-0 w-full flex-1", className)}
       >
-        <PlotlyErrorBoundary onError={handleLoadError}>
-          <Suspense fallback={<PlotLoadingComponent />}>
-            <PlotlyTraceGate types={renderTypes}>
-              <Plot
-                key={plotKey}
-                data={renderData}
-                layout={safeLayout}
-                config={safeConfig}
-                {...plotProps}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  ...plotProps.style,
-                }}
-                onError={(error: PlotlyErrorEvent) => {
-                  console.error("Plotly chart error:", error);
-                  setLocalError(`Rendering error: ${error.message || "Unknown error"}`);
+        {hasTurn ? (
+          <PlotlyErrorBoundary onError={handleLoadError}>
+            <Suspense fallback={<PlotLoadingComponent />}>
+              <PlotlyTraceGate types={renderTypes}>
+                <Plot
+                  key={plotKey}
+                  data={renderData}
+                  layout={safeLayout}
+                  config={safeConfig}
+                  {...plotProps}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    ...plotProps.style,
+                  }}
+                  onError={(error: PlotlyErrorEvent) => {
+                    console.error("Plotly chart error:", error);
+                    onDrawn();
+                    setLocalError(`Rendering error: ${error.message || "Unknown error"}`);
 
-                  // If it's a WebGL error, try fallback
-                  if (error.message?.includes("gl-") || error.message?.includes("WebGL")) {
-                    setIsWebGLEnabled(false);
-                  }
-                }}
-                onInitialized={handleInitialized}
-                onPurge={handlePurge}
-                onWebGlContextLost={handleWebGlContextLost}
-              />
-            </PlotlyTraceGate>
-          </Suspense>
-        </PlotlyErrorBoundary>
+                    // If it's a WebGL error, try fallback
+                    if (error.message?.includes("gl-") || error.message?.includes("WebGL")) {
+                      setIsWebGLEnabled(false);
+                    }
+                  }}
+                  onInitialized={handleInitialized}
+                  onPurge={handlePurge}
+                  onWebGlContextLost={handleWebGlContextLost}
+                />
+              </PlotlyTraceGate>
+            </Suspense>
+          </PlotlyErrorBoundary>
+        ) : (
+          <PlotLoadingComponent />
+        )}
       </div>
     );
   },

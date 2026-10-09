@@ -99,6 +99,8 @@ export function useChartData(
         }
       : NO_READ,
     canFetch && shared !== undefined,
+    // A failed group sends its members to read alone, so each mount asking again only repeats it.
+    { retryOnMount: false },
   );
   // One stale column in any member fails the whole group; that chart reads alone.
   const sharedFailed = shared !== undefined && Boolean(sharedRead.error);

@@ -1,11 +1,17 @@
 import { act, render, screen } from "@testing-library/react";
 import type { Data, PlotData } from "plotly.js";
+import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PlotlyChart, WebGLContextManager } from "../../charts/plotly-chart";
 
+interface PlotProps {
+  data: PlotData[];
+  onInitialized?: (figure: { data: PlotData[] }, graphDiv: HTMLElement) => void;
+}
+
 const runtime = vi.hoisted(() => ({
-  Plot: vi.fn((_props: { data: PlotData[] }) => null),
+  Plot: vi.fn((_props: PlotProps) => null),
   registerTraceTypes: vi.fn<(types: readonly string[]) => Promise<void>>(),
 }));
 
@@ -61,6 +67,14 @@ async function renderChart(data: Data[]) {
 describe("PlotlyChart trace loading", () => {
   beforeEach(() => {
     runtime.Plot.mockClear();
+    // Reports its first draw the way Plotly's component does, which hands the draw turn on.
+    runtime.Plot.mockImplementation(({ data, onInitialized }: PlotProps) => {
+      useEffect(() => {
+        onInitialized?.({ data }, document.createElement("div"));
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on the first draw.
+      }, []);
+      return null;
+    });
     runtime.registerTraceTypes.mockReset();
     runtime.registerTraceTypes.mockResolvedValue(undefined);
   });

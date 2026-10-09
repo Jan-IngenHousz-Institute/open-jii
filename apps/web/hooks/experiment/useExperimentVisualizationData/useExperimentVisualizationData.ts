@@ -129,6 +129,7 @@ export const useExperimentVisualizationData = (
   experimentId: string,
   dataConfig: VisualizationDataConfig,
   enabled = true,
+  { retryOnMount = true }: { retryOnMount?: boolean } = {},
 ) => {
   const cleanedColumns = dataConfig.columns?.filter((name) => name.length > 0);
   const cleanedFilters = compactFilters(dataConfig.filters);
@@ -202,6 +203,7 @@ export const useExperimentVisualizationData = (
       enabled: enabled && Boolean(dataConfig.tableName) && canQuery,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
+      retryOnMount,
       retry: shouldRetryQuery,
     }),
   );
