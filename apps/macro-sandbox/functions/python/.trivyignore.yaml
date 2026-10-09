@@ -44,3 +44,8 @@ vulnerabilities:
       - "pkg:golang/stdlib@v1.26.7"
     statement: "crypto/tls ECH DoS. RIE never runs in production."
     expired_at: 2026-11-05
+  - id: CVE-2026-78669
+    purls:
+      - "pkg:golang/stdlib@v1.26.7"
+    statement: "net/http HTTP/2 DoS. RIE never runs in production."
+    expired_at: 2026-11-05
