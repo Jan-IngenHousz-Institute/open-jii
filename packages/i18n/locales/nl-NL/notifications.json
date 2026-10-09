@@ -7,10 +7,24 @@
   "someone": "Iemand",
   "empty": {
     "title": "Je bent helemaal bij",
-    "description": "Verzoeken, wijzigingen in je toegang en afgeronde taken verschijnen hier."
+    "filteredTitle": "Niets hier",
+    "description": "Verzoeken, wijzigingen in je toegang en afgeronde taken verschijnen hier.",
+    "unread": "Geen ongelezen meldingen. Kies Alle om eerdere te zien.",
+    "category": "Nog niets in deze categorie"
   },
   "loadError": "Je meldingen konden niet worden geladen.",
   "retry": "Opnieuw proberen",
+  "filters": {
+    "all": "Alle",
+    "unread": "Ongelezen",
+    "allCategories": "Alle categorieën",
+    "category": "Filteren op categorie"
+  },
+  "groups": {
+    "today": "Vandaag",
+    "yesterday": "Gisteren",
+    "earlier": "Eerder"
+  },
   "categories": {
     "requests_and_invitations": {
       "label": "Verzoeken en uitnodigingen",

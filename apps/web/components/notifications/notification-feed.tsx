@@ -10,6 +10,18 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 
 import { NotificationRow } from "./notification-row";
 
+const DAY_GROUPS = ["today", "yesterday", "earlier"] as const;
+
+type DayGroup = (typeof DAY_GROUPS)[number];
+
+/** Day boundaries in the viewer's timezone, which is what `new Date()` already reads. */
+function dayGroupOf(createdAt: string, startOfToday: Date, startOfYesterday: Date): DayGroup {
+  const created = new Date(createdAt);
+  if (created >= startOfToday) return "today";
+  if (created >= startOfYesterday) return "yesterday";
+  return "earlier";
+}
+
 interface NotificationFeedProps {
   notifications: Notification[] | undefined;
   isPending: boolean;
@@ -18,6 +30,8 @@ interface NotificationFeedProps {
   onOpen: (notification: Notification) => void;
   /** What the bell and the page each say when there is nothing to list. */
   empty: ReactNode;
+  /** The page heads the rows with Today / Yesterday / Earlier; the bell's preview does not. */
+  groupByDay?: boolean;
 }
 
 /** The shared list body: the bell's preview and the full page differ only in what surrounds it. */
@@ -28,6 +42,7 @@ export function NotificationFeed({
   onRetry,
   onOpen,
   empty,
+  groupByDay = false,
 }: NotificationFeedProps) {
   const { t } = useTranslation("notifications");
 
@@ -60,13 +75,47 @@ export function NotificationFeed({
     return empty;
   }
 
+  const renderRow = (notification: Notification) => (
+    <li key={notification.id}>
+      <NotificationRow notification={notification} onOpen={onOpen} />
+    </li>
+  );
+
+  if (!groupByDay) {
+    return <ul className="divide-y">{notifications.map(renderRow)}</ul>;
+  }
+
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfYesterday = new Date(startOfToday);
+  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+
+  const grouped = new Map<DayGroup, Notification[]>();
+  for (const notification of notifications) {
+    const group = dayGroupOf(notification.createdAt, startOfToday, startOfYesterday);
+    const rows = grouped.get(group);
+    if (rows) rows.push(notification);
+    else grouped.set(group, [notification]);
+  }
+
   return (
-    <ul className="divide-y">
-      {notifications.map((notification) => (
-        <li key={notification.id}>
-          <NotificationRow notification={notification} onOpen={onOpen} />
-        </li>
-      ))}
-    </ul>
+    <div>
+      {DAY_GROUPS.map((group) => {
+        const rows = grouped.get(group);
+        if (!rows) return null;
+
+        return (
+          <section key={group} aria-labelledby={`notifications-${group}`}>
+            <h2
+              id={`notifications-${group}`}
+              className="text-muted-foreground bg-muted/30 px-4 py-2 text-xs font-medium uppercase tracking-wide"
+            >
+              {t(`groups.${group}`)}
+            </h2>
+            <ul className="divide-y border-t">{rows.map(renderRow)}</ul>
+          </section>
+        );
+      })}
+    </div>
   );
 }
