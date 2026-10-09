@@ -140,6 +140,7 @@ vi.mock("@repo/i18n", () => ({
             : key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
+  useCurrentLocale: () => "en-US",
   defaultLocale: "en-US",
   locales: ["en-US"],
   isKnownLocale: (locale: string) => ["en-US", "de-DE"].includes(locale),

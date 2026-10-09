@@ -92,6 +92,7 @@
     "emptyTitle": "Nog niets nieuws",
     "emptyDescription": "Updates, fixes en aankondigingen verschijnen hier zodra ze gepubliceerd zijn.",
     "unreadBadge": "{{count}} ongelezen",
+    "loadError": "De release-notities konden niet worden geladen.",
     "category": {
       "new_feature": "Nieuwe functie",
       "improvement": "Verbetering",

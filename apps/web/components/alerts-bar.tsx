@@ -2,7 +2,7 @@ import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { getContentfulClients } from "~/lib/contentful";
 
-import { AlertsContainer } from "@repo/cms";
+import { AlertsContainer } from "@repo/cms/alerts-container";
 import type { ComponentAlertFieldsFragment } from "@repo/cms";
 
 interface AlertsBarProps {

@@ -4,7 +4,6 @@ import { sidebarUtilityRow } from "@/components/navigation/navigation-sidebar/si
 import { useWhatsNewLastSeen } from "@/hooks/whats-new/useWhatsNewLastSeen/useWhatsNewLastSeen";
 import { Sparkles } from "lucide-react";
 
-import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms";
 import { useTranslation } from "@repo/i18n";
 
 import { WHATS_NEW_OPEN_EVENT, countUnread } from "./whats-new-shared";
@@ -15,17 +14,17 @@ import { WHATS_NEW_OPEN_EVENT, countUnread } from "./whats-new-shared";
  * Documentation, and shows an accent dot when there are new entries.
  */
 export function WhatsNewFooterItem({
-  entries,
+  releaseDates,
   onOpen,
 }: {
-  entries: ReleaseNoteFields[];
+  releaseDates: string[];
   onOpen?: () => void;
 }) {
   const { t } = useTranslation("navigation");
   const lastSeen = useWhatsNewLastSeen();
   // Wait for the query to resolve — treating a loading `undefined` as "never seen" flashes every
   // note as unread. A resolved null `lastSeenAt` still correctly means all unread.
-  const unreadCount = lastSeen.data ? countUnread(entries, lastSeen.data.lastSeenAt) : 0;
+  const unreadCount = lastSeen.data ? countUnread(releaseDates, lastSeen.data.lastSeenAt) : 0;
   const hasUnread = unreadCount > 0;
   const label = t("whatsNew.navLabel");
 

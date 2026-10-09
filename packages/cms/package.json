@@ -25,6 +25,14 @@
       "types": "./dist/lib/__generated/sdk.d.ts",
       "default": "./dist/lib/__generated/sdk.js"
     },
+    "./alerts-container": {
+      "types": "./dist/features/alert/alerts-container.d.ts",
+      "default": "./dist/features/alert/alerts-container.js"
+    },
+    "./release-notes-feed": {
+      "types": "./dist/features/release-notes/release-notes-feed.d.ts",
+      "default": "./dist/features/release-notes/release-notes-feed.js"
+    },
     "./alert": {
       "types": "./dist/features/alert/severity.d.ts",
       "default": "./dist/features/alert/severity.js"

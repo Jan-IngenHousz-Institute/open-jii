@@ -12,6 +12,7 @@ import { ShortcutHint } from "@/components/shortcuts/shortcut-hint";
 import { ShortcutsRoot } from "@/components/shortcuts/shortcuts-root";
 import { TranslationBundles } from "@/components/translation-bundles";
 import { fetchWebReleaseNotes } from "@/components/whats-new/fetch-release-notes";
+import { publishedDates } from "@/components/whats-new/whats-new-shared";
 import { WhatsNewSheet } from "@/components/whats-new/whats-new-sheet";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
@@ -76,6 +77,7 @@ export default async function AppLayout({
     isFeatureFlagEnabledForSession(FEATURE_FLAGS.CALIBRATION, session),
     loadNamespaceBundles(locale, PLATFORM_NAMESPACES),
   ]);
+  const releaseDates = publishedDates(releaseNotes);
 
   return (
     <TranslationBundles resources={bundles}>
@@ -85,7 +87,7 @@ export default async function AppLayout({
             <ActivityProvider>
               <NavigationSidebarWrapper
                 locale={locale}
-                releaseNotes={releaseNotes}
+                releaseDates={releaseDates}
                 user={{ id: session.user.id, email: session.user.email }}
                 isCalibrationEnabled={isCalibrationEnabled}
               />
@@ -106,7 +108,7 @@ export default async function AppLayout({
               <Toaster />
               <ShortcutHint />
               <PasskeyCreatePrompt userId={session.user.id} sessionId={session.session.id} />
-              <WhatsNewSheet entries={releaseNotes} />
+              <WhatsNewSheet releaseDates={releaseDates} />
             </ActivityProvider>
           </CalibrationFlagProvider>
         </SidebarProvider>
