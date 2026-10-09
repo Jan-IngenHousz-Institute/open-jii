@@ -972,7 +972,7 @@ metrics:
     slots: [alert]
     severity: warning
     runbook: docs/runbooks/client-error-spike.md
-    notes: PostHog insight alert, delivered by PostHog rather than through CloudWatch.
+    notes: Delivered by PostHog's error alerts (the error_alert hog functions), not through CloudWatch; entry 94 charts the count.
 
   - num: 43
     id: pageview-collapse
@@ -984,7 +984,7 @@ metrics:
     slots: [alert]
     severity: critical
     runbook: docs/runbooks/pageview-collapse.md
-    notes: Covers the white-screen-deploy blind spot; CloudWatch sees 200s throughout.
+    notes: Dropped on 9 October 2026; consent-gated pageviews (about 59 in two weeks) are too few to tell a white screen from a quiet day.
 
   # Product insights (PostHog, need event taxonomy)
   - num: 44
