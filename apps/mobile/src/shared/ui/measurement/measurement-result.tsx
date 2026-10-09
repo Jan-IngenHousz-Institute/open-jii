@@ -5,6 +5,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useTranslation } from "~/shared/i18n";
 import type { MacroMessageGroup, MacroOutput } from "~/shared/measurements/macro-output";
 import { partitionMacroOutput } from "~/shared/measurements/partition-macro-output";
+import { PythonRuntimeUnavailableError } from "~/shared/measurements/python-runtime-unavailable-error";
 import { TabBar } from "~/shared/ui/TabBar";
 import { useTheme } from "~/shared/ui/hooks/use-theme";
 import { Chart } from "~/shared/ui/measurement/chart";
@@ -67,7 +68,19 @@ export function MeasurementResult({
 
   const fields = useMemo(() => partitionMacroOutput(outputs), [outputs]);
 
+  const isRuntimeUnavailable = error instanceof PythonRuntimeUnavailableError;
+
   const renderProcessedContent = () => {
+    if (isRuntimeUnavailable) {
+      return (
+        <View className="items-center justify-center p-6">
+          <Text className={clsx("text-center", classes.textSecondary)}>
+            {t("measurementFlow:result.pythonRuntimeUnavailable")}
+          </Text>
+        </View>
+      );
+    }
+
     if (error) {
       return (
         <View className="rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
