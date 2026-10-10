@@ -9,7 +9,9 @@
 //   # Researcher can sort any resource list
 //
 //   labels: Feature, Fullstack
-//   blocks: 2
+//   blocks: 2, OJD-1500
+//   milestone: 1. Researchers can find a resource
+//   link: Sorting in TanStack Table | https://tanstack.com/table/latest/docs/guide/sorting
 //
 //   ## User story
 //   ...
@@ -18,16 +20,33 @@
 //   <!-- comment -->
 //   Suggested implementation. ...
 //
-// `{{2}}` anywhere in a body or comment becomes the second ticket's identifier once it exists.
+// Between the title and the first "## " heading a ticket may carry labels, blocks, blocked-by,
+// related, milestone and state, once each, and any number of `link: title | url` lines. A relation target is a ticket number in this draft or an existing
+// identifier. `{{2}}` anywhere in a body or comment becomes the second ticket's identifier once it
+// exists.
 // A title that starts with an identifier, `# OJD-1810 Home shows public research`, updates that
 // ticket's title, body and labels instead of creating one; its state is left alone.
+
+// A ticket number in the same draft, or an identifier that already exists.
+export type Target = number | string;
+
+export interface DraftLink {
+  title: string;
+  url: string;
+}
 
 export interface DraftTicket {
   index: number;
   identifier: string | null;
   title: string;
   labels: string[];
-  blocks: number[];
+  blocks: Target[];
+  blockedBy: Target[];
+  related: Target[];
+  milestone: string | null;
+  // Overrides the front matter state; an update only moves state when this is set.
+  state: string | null;
+  links: DraftLink[];
   body: string;
   comment: string | null;
 }
@@ -44,18 +63,23 @@ const COMMENT_MARKER = "<!-- comment -->";
 const DEFAULT_TEAM = "OJD";
 const DEFAULT_STATE = "Backlog";
 
-type FrontMatter = Partial<Record<string, string>>;
+export type FrontMatter = Partial<Record<string, string>>;
 
 // The block may be empty; a draft with no front matter at all is also fine.
-function splitFrontMatter(text: string): { meta: FrontMatter; rest: string } {
+export function splitFrontMatter(text: string): { meta: FrontMatter; rest: string } {
   const match = /^---\n([\s\S]*?)---\n/.exec(text);
   if (!match) return { meta: {}, rest: text };
   const meta: FrontMatter = {};
   for (const line of match[1].split("\n")) {
     const pair = /^([a-z]+):\s*(.*)$/.exec(line.trim());
-    if (pair) meta[pair[1]] = pair[2].trim();
+    if (pair) meta[pair[1]] = unquoted(pair[2].trim());
   }
   return { meta, rest: text.slice(match[0].length) };
+}
+
+export function unquoted(value: string): string {
+  const quoted = /^(["'])(.*)\1$/.exec(value);
+  return quoted ? quoted[2] : value;
 }
 
 function list(value: string): string[] {
@@ -63,6 +87,22 @@ function list(value: string): string[] {
     .split(",")
     .map((item) => item.trim())
     .filter((item) => item.length > 0);
+}
+
+function parseTarget(index: number, title: string, item: string): Target {
+  if (/^\d+$/.test(item) && Number(item) >= 1) return Number(item);
+  if (/^[A-Za-z]+-\d+$/.test(item)) return item.toUpperCase();
+  throw new Error(
+    `Ticket ${index} ("${title}"): "${item}" is neither a ticket number nor an identifier like OJD-1234`,
+  );
+}
+
+function parseLink(index: number, title: string, value: string): DraftLink {
+  const match = /^(.+?)\s*\|\s*(https?:\/\/\S+)$/.exec(value);
+  if (!match) {
+    throw new Error(`Ticket ${index} ("${title}"): a link reads "link: <title> | <https url>"`);
+  }
+  return { title: match[1].trim(), url: match[2] };
 }
 
 function parseTicket(index: number, chunk: string): DraftTicket {
@@ -74,7 +114,13 @@ function parseTicket(index: number, chunk: string): DraftTicket {
   if (title.length === 0) throw new Error(`Ticket ${index}: empty title`);
 
   let labels: string[] = [];
-  let blocks: number[] = [];
+  let blocks: Target[] = [];
+  let blockedBy: Target[] = [];
+  let related: Target[] = [];
+  let milestone: string | null = null;
+  let state: string | null = null;
+  const links: DraftLink[] = [];
+  const seen = new Set<string>();
   let bodyStart = -1;
   for (let i = 1; i < lines.length; i += 1) {
     const line = lines[i];
@@ -83,22 +129,28 @@ function parseTicket(index: number, chunk: string): DraftTicket {
       break;
     }
     if (line.trim().length === 0) continue;
-    const pair = /^(labels|blocks):\s*(.*)$/.exec(line);
+    const pair = /^(labels|blocks|blocked-by|related|milestone|state|link):\s*(.*)$/.exec(line);
     if (!pair) {
       throw new Error(
-        `Ticket ${index} ("${title}"): only "labels:" and "blocks:" may sit between the title and the first "## " heading`,
+        `Ticket ${index} ("${title}"): only labels, blocks, blocked-by, related, milestone, state and link may sit between the title and the first "## " heading`,
       );
     }
-    if (pair[1] === "labels") labels = list(pair[2]);
-    if (pair[1] === "blocks") {
-      blocks = list(pair[2]).map((item) => {
-        const n = Number(item);
-        if (!Number.isInteger(n) || n < 1) {
-          throw new Error(`Ticket ${index} ("${title}"): blocks must list ticket numbers`);
-        }
-        return n;
-      });
+    // Only link repeats; a second blocks or state line would otherwise replace the first unseen.
+    if (pair[1] !== "link" && seen.has(pair[1])) {
+      throw new Error(
+        `Ticket ${index} ("${title}"): "${pair[1]}:" appears twice; list every value on one line`,
+      );
     }
+    seen.add(pair[1]);
+    const value = pair[2].trim();
+    const targets = (): Target[] => list(value).map((item) => parseTarget(index, title, item));
+    if (pair[1] === "labels") labels = list(value);
+    if (pair[1] === "blocks") blocks = targets();
+    if (pair[1] === "blocked-by") blockedBy = targets();
+    if (pair[1] === "related") related = targets();
+    if (pair[1] === "milestone") milestone = unquoted(value) || null;
+    if (pair[1] === "state") state = unquoted(value) || null;
+    if (pair[1] === "link") links.push(parseLink(index, title, value));
   }
   if (bodyStart < 0) throw new Error(`Ticket ${index} ("${title}"): no "## " section`);
 
@@ -113,6 +165,11 @@ function parseTicket(index: number, chunk: string): DraftTicket {
     title,
     labels,
     blocks,
+    blockedBy,
+    related,
+    milestone,
+    state,
+    links,
     body,
     comment: comment === "" ? null : comment,
   };
@@ -137,7 +194,14 @@ export function parseDraft(text: string): Draft {
 
   const tickets = chunks.map((chunk, i) => parseTicket(i + 1, chunk));
   for (const ticket of tickets) {
-    const targets = [...ticket.blocks, ...referencesIn(`${ticket.body}\n${ticket.comment ?? ""}`)];
+    const relations = [...ticket.blocks, ...ticket.blockedBy, ...ticket.related];
+    if (ticket.identifier !== null && relations.includes(ticket.identifier)) {
+      throw new Error(`Ticket ${ticket.index} ("${ticket.title}") refers to itself`);
+    }
+    const targets = [
+      ...relations.filter((target): target is number => typeof target === "number"),
+      ...referencesIn(`${ticket.body}\n${ticket.comment ?? ""}`),
+    ];
     for (const target of targets) {
       if (target === ticket.index) {
         throw new Error(`Ticket ${ticket.index} ("${ticket.title}") refers to itself`);

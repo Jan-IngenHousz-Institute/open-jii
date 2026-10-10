@@ -12,6 +12,13 @@ export interface ProjectDocument {
   url: string;
 }
 
+export interface ProjectMilestone {
+  id: string;
+  name: string;
+  description: string | null;
+  sortOrder: number;
+}
+
 interface ProjectsResult {
   projects: { nodes: ProjectRef[] };
 }
@@ -20,6 +27,13 @@ interface DocumentsResult {
   project: { documents: { nodes: ProjectDocument[] } };
 }
 
+interface MilestonesResult {
+  project: { projectMilestones: { nodes: ProjectMilestone[] } };
+}
+
+const milestonesQuery = `query($id: String!) {
+  project(id: $id) { projectMilestones(first: 50) { nodes { id name description sortOrder } } }
+}`;
 const projectsQuery = `query($name: String!) {
   projects(first: 10, filter: { name: { containsIgnoreCase: $name } }) { nodes { id name url } }
 }`;
@@ -60,4 +74,13 @@ export async function listProjectDocuments(
 ): Promise<ProjectDocument[]> {
   const result = await client.query<DocumentsResult>(documentsQuery, { id: projectId });
   return result.project.documents.nodes;
+}
+
+// In board order, which is the order of work.
+export async function listMilestones(
+  client: LinearClient,
+  projectId: string,
+): Promise<ProjectMilestone[]> {
+  const result = await client.query<MilestonesResult>(milestonesQuery, { id: projectId });
+  return [...result.project.projectMilestones.nodes].sort((a, b) => a.sortOrder - b.sortOrder);
 }

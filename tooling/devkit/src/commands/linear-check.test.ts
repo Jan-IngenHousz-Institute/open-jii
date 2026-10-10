@@ -56,8 +56,9 @@ describe("checkDraft and formatReports", () => {
     expect(ok).toBe(false);
     expect(text).toBe(
       [
-        "ok    1. Researcher can sort any resource list  [work-item 190/1200, bullet max 2]",
-        "FAIL  2. DISCOVERY: a very long title that keeps going well past the seventy character limit  [work-item 117/1200, bullet max 0]",
+        "ok    1. Researcher can sort any resource list  [work-item 190/1500, bullet max 2]",
+        "        note: no screen in the body; a ticket that changes a screen embeds one, so ignore this when it has no visible surface",
+        "FAIL  2. DISCOVERY: a very long title that keeps going well past the seventy character limit  [work-item 117/1500, bullet max 0]",
         "        title: 83 characters; the limit is 70",
         "        title: starts with a type prefix; that is a label",
         "        persona: User story has no **WHAT:** line",
@@ -67,6 +68,16 @@ describe("checkDraft and formatReports", () => {
         "",
       ].join("\n"),
     );
+  });
+
+  it("keeps the note off a ticket that embeds a screen, and never fails on it", () => {
+    const withScreen = good.replace(
+      "- Sorting works.",
+      "- Sorting works.\n\n![The sorted list](sort.png)",
+    );
+
+    expect(formatReports(checkDraft(parseDraft(withScreen))).text).not.toContain("note:");
+    expect(formatReports(checkDraft(parseDraft(good))).ok).toBe(true);
   });
 
   it("is ok when every ticket passes", () => {

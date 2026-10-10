@@ -40,13 +40,18 @@ export function devkitEnvPath(root: string): string {
 }
 
 // A linked worktree's `.git` is a file naming `<main>/.git/worktrees/<name>`; the main
-// checkout is where `linear:auth` was most likely run.
+// checkout is where `linear:auth` was most likely run. In the main checkout itself `.git` is a
+// directory, so there is no other checkout to look in.
 export async function mainWorktreeRoot(root: string): Promise<string | null> {
   let pointer: string;
   try {
     pointer = await readFile(`${root}/.git`, "utf8");
   } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+    const isNotAPointer =
+      error instanceof Error &&
+      "code" in error &&
+      ["ENOENT", "EISDIR"].includes(String(error.code));
+    if (isNotAPointer) return null;
     throw error;
   }
   const gitdir = /^gitdir:\s*(.+)$/m.exec(pointer)?.[1]?.trim();
