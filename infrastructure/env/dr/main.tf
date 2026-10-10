@@ -174,6 +174,9 @@ module "cognito" {
 module "vpc" {
   source      = "../../modules/vpc"
   environment = var.environment
+
+  # DR has no serving store until the app reads from it; one is then loaded from the lakehouse.
+  create_serving_store_resources = false
 }
 
 module "vpc_endpoints" {
