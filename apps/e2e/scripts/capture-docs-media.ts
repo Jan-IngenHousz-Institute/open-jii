@@ -9,15 +9,17 @@
  *   pnpm --filter @repo/e2e capture-docs-media --theme dark
  */
 import { chromium } from "@playwright/test";
-import type { BrowserContext, Page } from "@playwright/test";
+import type { BrowserContext } from "@playwright/test";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { preparePage } from "../capture-page.js";
 import { FRAMES } from "../docs-media/frames.js";
 import { SHOTS, SHOTS_BY_SLUG, enableVirtualAuthenticator } from "../docs-media/shots.js";
 import type { Shot } from "../docs-media/shots.js";
-import { dismissCookieBanner, locale } from "../helpers.js";
+import { locale } from "../helpers.js";
+import { PinnedFeatureFlags } from "../pinned-feature-flags.js";
 
 const baseUrl = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 const authFile = path.join(import.meta.dirname, "..", ".auth", "seed.json");
@@ -31,27 +33,6 @@ function storageStateForShot(shot: Shot): string | undefined {
   if (shot.session === "newcomer") return newcomerAuthFile;
   return authFile;
 }
-
-/**
- * Development-only overlays that are not part of the product. Suppressing them
- * is not retouching: a production build renders none of them, and the
- * alternative is a docs image with the Next.js and TanStack Query badges in it.
- */
-const DEV_CHROME_CSS = `
-  nextjs-portal, [data-nextjs-toast], [data-nextjs-dev-tools-button],
-  .tsqd-open-btn-container, .tsqd-parent-container { display: none !important; }
-`;
-
-/** Animations mid-flight make stills non-reproducible. Never applied to video. */
-const STILLNESS_CSS = `
-  *, *::before, *::after {
-    animation-duration: 0s !important;
-    animation-delay: 0s !important;
-    transition-duration: 0s !important;
-    transition-delay: 0s !important;
-    caret-color: transparent !important;
-  }
-`;
 
 interface Options {
   readonly only: readonly string[] | null;
@@ -126,35 +107,6 @@ function extractPoster(input: string, output: string): void {
   ], input);
 }
 
-/** Answers the SDK's flag request locally with the given flags on; nothing else is touched. */
-async function pinFeatureFlags(page: Page, flags: readonly string[]): Promise<void> {
-  const body = {
-    errorsWhileComputingFlags: false,
-    flags: Object.fromEntries(
-      flags.map((key) => [key, { key, enabled: true, variant: null, reason: { code: "pinned" } }]),
-    ),
-    featureFlags: Object.fromEntries(flags.map((key) => [key, true])),
-    featureFlagPayloads: {},
-    sessionRecording: false,
-  };
-  await page.route("**/ingest/flags/**", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) }),
-  );
-}
-
-async function preparePage(page: Page, theme: Options["theme"], freeze: boolean): Promise<void> {
-  await page.addStyleTag({ content: DEV_CHROME_CSS });
-  if (freeze) await page.addStyleTag({ content: STILLNESS_CSS });
-  await dismissCookieBanner(page);
-  const passkeyPromptDismissal = page.getByRole("button", { name: "Not now" });
-  if (await passkeyPromptDismissal.isVisible().catch(() => false)) {
-    await passkeyPromptDismissal.click();
-    await passkeyPromptDismissal.waitFor({ state: "hidden" });
-  }
-  await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-  await page.waitForTimeout(400);
-}
-
 const contextOpenedAt = new WeakMap<BrowserContext, number>();
 
 async function captureShot(
@@ -167,7 +119,7 @@ async function captureShot(
   const page = await context.newPage();
   try {
     if (shot.webauthn) await enableVirtualAuthenticator(await context.newCDPSession(page));
-    if (shot.featureFlags) await pinFeatureFlags(page, shot.featureFlags);
+    if (shot.featureFlags) await new PinnedFeatureFlags(shot.featureFlags).install(page);
     const route = typeof shot.route === "string" ? shot.route : await shot.route();
     await page.goto(`${baseUrl}/${locale}${route}`, { waitUntil: "networkidle" });
     await preparePage(page, options.theme, !isVideo);

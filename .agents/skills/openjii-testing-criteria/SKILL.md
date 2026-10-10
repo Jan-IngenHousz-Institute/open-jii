@@ -1,6 +1,6 @@
 ---
 name: openjii-testing-criteria
-description: Write the two developer sections a ticket needs before review - How it was built, and Testing criteria that QA can run without having built the change - from the ticket's acceptance criteria and the actual diff, then mirror them into the PR. Use when a PR is ready for review, when a ticket is about to move to In Testing, or when an In Testing ticket has no testing section.
+description: Write the How it was built and Testing criteria sections a ticket needs before review, so QA can test a change they did not build, from the ticket's acceptance criteria and the actual diff, then mirror them into the PR. Use when a PR is ready for review, when a ticket is about to move to In Testing, or when an In Testing ticket has no testing section.
 ---
 
 # Testing criteria for the handoff
@@ -51,7 +51,8 @@ Rules:
 - One action per step, one observable expected result per step. "Works correctly" is not a result.
 - Cover each acceptance criterion at least once, the alternative flows the ticket names, and the
   negative case for any permission or validation rule the diff touches.
-- Say what data the tester needs and how to get it. A step nobody can set up is not a step.
+- Say what data the tester needs and how to get it. A step nobody can set up is not a step. When
+  the data lives only in production, ask the person for it; an agent never queries production.
 - Every step and every expected result is a whole sentence. A tester reads it cold; "Filters:
   status, clear; page 2" tells them nothing.
 - Under 1,200 characters. If the criteria run longer, the ticket was too big; say so. Cut steps,

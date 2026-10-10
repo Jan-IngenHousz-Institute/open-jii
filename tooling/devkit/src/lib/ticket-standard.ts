@@ -39,7 +39,7 @@ export const SHAPES: Record<Shape, ShapeSpec> = {
       "Additional context",
       ...DEV_SECTIONS,
     ],
-    budget: 1200,
+    budget: 1500,
     devSections: DEV_SECTIONS,
   },
   bug: {
@@ -72,6 +72,30 @@ interface Section {
   content: string;
 }
 
+// A reader reads the words. An embedded screen, a link target and a bare URL are not words, so
+// none of them spends a budget, whatever length Linear's upload URLs turn out to have.
+const IMAGE_MARKDOWN = /!\[[^\]]*\]\([^)]*\)/g;
+const LINK_MARKDOWN = /\[([^\]]*)\]\([^)]*\)/g;
+const BARE_URL = /https?:\/\/\S+/g;
+
+export function proseOnly(text: string): string {
+  return text.replace(IMAGE_MARKDOWN, "").replace(LINK_MARKDOWN, "$1").replace(BARE_URL, "");
+}
+
+const SCREEN_LABELS = /^(web|mobile|fullstack)$/i;
+
+// What a script can suspect but only a reader can settle, so it never fails a draft.
+export function advisories(labels: readonly string[], body: string, shape: Shape | null): string[] {
+  const hasSurface = labels.some((label) => SCREEN_LABELS.test(label));
+  const isTicket = shape === "work-item" || shape === "bug";
+  if (hasSurface && isTicket && body.match(IMAGE_MARKDOWN) === null) {
+    return [
+      "no screen in the body; a ticket that changes a screen embeds one, so ignore this when it has no visible surface",
+    ];
+  }
+  return [];
+}
+
 export function splitSections(body: string): Section[] {
   const sections: Section[] = [];
   let current: Section | null = null;
@@ -94,12 +118,41 @@ function shapeOf(firstHeading: string | undefined): Shape | null {
   return null;
 }
 
+// A bullet wrapped over several lines is one bullet.
 function bullets(text: string): string[] {
-  return text
-    .split("\n")
-    .map((line) => /^\s*(?:[-*]|\d+\.)\s+(.+)$/.exec(line)?.[1])
-    .filter((item): item is string => item !== undefined);
+  const items: string[] = [];
+  let isOpen = false;
+  for (const line of text.split("\n")) {
+    const start = /^\s*(?:[-*]|\d+\.)\s+(.+)$/.exec(line)?.[1];
+    const isContinuation = isOpen && line.trim().length > 0 && !line.startsWith("#");
+    if (start !== undefined) {
+      items.push(start);
+      isOpen = true;
+    } else if (isContinuation) {
+      const previous = items.pop() ?? "";
+      items.push(`${previous} ${line.trim()}`);
+    } else {
+      isOpen = false;
+    }
+  }
+  return items;
 }
+
+// Quoted copy, such as a dialog's own question, is what the product says, not what the ticket asks.
+function isOpenQuestion(bullet: string): boolean {
+  const text = bullet.trim();
+  const unquoted = text.replace(/"[^"]*"|`[^`]*`/g, "").trim();
+  return (
+    /\?[)\]]*$/.test(unquoted) ||
+    /^open:/i.test(text) ||
+    /^confirm\s+(?:the|this|that|these|those|whether|if|with)\b/i.test(text) ||
+    /[,(]\s*confirm\)?\W*$/i.test(text)
+  );
+}
+
+// "Ticket" only: an issue is also a product word, as in the next error-tracking issue in a list.
+const POSITIONAL_REFERENCE =
+  /\b(?:the\s+)?(?:previous|next|above|first|second|third|last|following|earlier)\s+ticket\b/i;
 
 function wordCount(text: string): number {
   return text.split(/\s+/).filter((word) => word.length > 0).length;
@@ -107,7 +160,7 @@ function wordCount(text: string): number {
 
 // A full stop, question or exclamation mark, allowing a closing quote, backtick or bracket after
 // it. This catches the telegraphic fragment; it cannot catch a fragment that ends in a full stop.
-function endsAsSentence(text: string): boolean {
+export function endsAsSentence(text: string): boolean {
   return /[.?!]["'`)\]]*$/.test(text.trim());
 }
 
@@ -122,9 +175,21 @@ function headingFindings(actual: readonly string[], expected: readonly string[])
   return [{ rule: "headings", detail: parts.join("; ") }];
 }
 
+// Phrases that point at a conversation the reader was not in. Only the author's own voice counts,
+// since the product has login sessions and assistant conversations a ticket must still describe.
+const BORROWED_CONTEXT =
+  /\b(?:as (?:discussed|agreed)|(?:per|from|in) our (?:discussion|call|chat|conversation|session)|we (?:discussed|agreed))\b/i;
+
 // The rules any prose a person reads must meet, whether a ticket body or a project document.
 export function proseFindings(text: string): Finding[] {
   const findings: Finding[] = [];
+  const borrowed = BORROWED_CONTEXT.exec(text)?.[0];
+  if (borrowed !== undefined) {
+    findings.push({
+      rule: "context",
+      detail: `"${borrowed}" points at a conversation the reader was not in; say the thing itself`,
+    });
+  }
   const dashes = (text.match(/[–—]/g) ?? []).length;
   if (dashes > 0) findings.push({ rule: "dash", detail: `${dashes} em or en dash(es)` });
   if (/\b(generated|written) by (an? )?(AI|agent|LLM)\b|\bAI[- ]generated\b/i.test(text)) {
@@ -170,7 +235,7 @@ export function checkBody(body: string): Report {
   const devSections = spec?.devSections ?? [];
   const counted = sections.filter((s) => !devSections.includes(s.heading));
   const countedText = counted.map((s) => `## ${s.heading}\n\n${s.content}`).join("\n\n");
-  const characters = countedText.length;
+  const characters = proseOnly(countedText).length;
   if (spec !== null && characters >= spec.budget) {
     findings.push({
       rule: "budget",
@@ -212,6 +277,14 @@ export function checkBody(body: string): Report {
 
   findings.push(...proseFindings(body));
 
+  const positional = POSITIONAL_REFERENCE.exec(body)?.[0];
+  if (positional !== undefined) {
+    findings.push({
+      rule: "reference",
+      detail: `"${positional}" points at a ticket by position; use {{N}} or the identifier`,
+    });
+  }
+
   const contrasts = (countedText.match(/,\s*not\s/g) ?? []).length;
   if (contrasts > 1) {
     findings.push({
@@ -230,6 +303,12 @@ export function checkBody(body: string): Report {
     const criteria = sections.find((s) => s.heading === "Acceptance criteria")?.content ?? "";
     if (criteria.length === 0) {
       findings.push({ rule: "gate", detail: "Acceptance criteria is empty" });
+    }
+    for (const bullet of bullets(criteria).filter(isOpenQuestion)) {
+      findings.push({
+        rule: "open-question",
+        detail: `a criterion states a rule, so an open question moves under Dependencies and risks as "Open: ...? Ask <person>.": "${bullet.split(/\s+/).slice(0, 8).join(" ")}..."`,
+      });
     }
   }
   if (shape === "spike") {

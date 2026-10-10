@@ -53,6 +53,29 @@ describe("parseChangeFile", () => {
     );
   });
 
+  it("accepts an identifier, a state name and a comment in place of ids", () => {
+    const rows = parseChangeFile(
+      JSON.stringify([
+        { identifier: "OJD-7", state: "Ready For Prod", comment: " Verified on dev. " },
+        { identifier: "OJD-8", comment: "Partly verified." },
+      ]),
+    );
+
+    expect(rows[0]).toMatchObject({
+      identifier: "OJD-7",
+      state: "Ready For Prod",
+      comment: "Verified on dev.",
+    });
+    expect(rows[1]).toMatchObject({ identifier: "OJD-8", comment: "Partly verified." });
+  });
+
+  it("rejects a row with neither id nor identifier, or with both state forms", () => {
+    expect(() => parseChangeFile(JSON.stringify([{ stateId: "s1" }]))).toThrow("OJD-####");
+    expect(() =>
+      parseChangeFile(JSON.stringify([{ identifier: "OJD-1", state: "Done", stateId: "s1" }])),
+    ).toThrow('both "state" and "stateId"');
+  });
+
   it("rejects a row that changes nothing", () => {
     expect(() => parseChangeFile(JSON.stringify([{ issueId: issueA, addedLabelIds: [] }]))).toThrow(
       "changes nothing",
@@ -114,6 +137,70 @@ describe("applyChanges", () => {
     expect(calls).toHaveLength(3);
     expect(calls[0].variables).toEqual({ ids: [issueA], input: { addedLabelIds: ["l1"] } });
     expect(calls[2].variables).toEqual({ ids: [issueC], input: { stateId: "s1" } });
+  });
+
+  const namedRows = parseChangeFile(
+    JSON.stringify([
+      { identifier: "OJD-7", state: "ready for prod", comment: "Verified on dev." },
+      { identifier: "ojd-8", comment: "Partly verified." },
+    ]),
+  );
+  const lookups = [
+    { i0: { id: issueA, identifier: "OJD-7" }, i1: { id: issueB, identifier: "OJD-8" } },
+    { teams: { nodes: [{ states: { nodes: [{ id: "s9", name: "Ready For Prod" }] } }] } },
+  ];
+
+  it("resolves identifiers and state names on a dry run and writes nothing", async () => {
+    const { client, calls } = recordingClient(lookups);
+    const lines: string[] = [];
+
+    await applyChanges(namedRows, false, {
+      client,
+      write: (text) => lines.push(text),
+      batchSize: 50,
+    });
+
+    expect(calls.map((call) => call.document.trimStart().split("(")[0])).toEqual([
+      "query",
+      "query",
+    ]);
+    expect(calls[0].variables).toEqual({ i0: "OJD-7", i1: "OJD-8" });
+    expect(lines.join("")).toContain("1 issue(s): state s9");
+    expect(lines.join("")).toContain("2 comment(s), posted before any update");
+  });
+
+  it("posts each comment before the updates", async () => {
+    const { client, calls } = recordingClient([
+      ...lookups,
+      { commentCreate: { success: true } },
+      { commentCreate: { success: true } },
+      { issueBatchUpdate: { success: true } },
+    ]);
+
+    await applyChanges(namedRows, true, { client, write: () => undefined, batchSize: 50 });
+
+    expect(calls[2].variables).toEqual({ input: { issueId: issueA, body: "Verified on dev." } });
+    expect(calls[3].variables).toEqual({ input: { issueId: issueB, body: "Partly verified." } });
+    expect(calls[4].variables).toEqual({ ids: [issueA], input: { stateId: "s9" } });
+  });
+
+  it("stops before any update when a comment fails", async () => {
+    const { client, calls } = recordingClient([...lookups, { commentCreate: { success: false } }]);
+
+    await expect(
+      applyChanges(namedRows, true, { client, write: () => undefined, batchSize: 50 }),
+    ).rejects.toThrow("no update is applied");
+
+    expect(calls).toHaveLength(3);
+  });
+
+  it("names the team's states when a state name does not exist", async () => {
+    const rows = parseChangeFile(JSON.stringify([{ identifier: "OJD-7", state: "Shipped" }]));
+    const { client } = recordingClient(lookups);
+
+    await expect(
+      applyChanges(rows, false, { client, write: () => undefined, batchSize: 50 }),
+    ).rejects.toThrow('no state "Shipped"; it has Ready For Prod');
   });
 });
 
