@@ -1,11 +1,11 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
 import { ChevronsUpDown, ExternalLink } from "lucide-react";
-import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
 
-import type { Macro } from "@repo/api/domains/macro/macro.schema";
+import type { MacroListEntry } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverTrigger } from "@repo/ui/components/popover";
@@ -13,7 +13,7 @@ import { Popover, PopoverTrigger } from "@repo/ui/components/popover";
 import { MacroSearchPopover } from "./macro-search-popover";
 
 export interface MacroSearchWithDropdownProps {
-  availableMacros: Macro[];
+  availableMacros: MacroListEntry[];
   value: string;
   placeholder?: string;
   loading?: boolean;
@@ -44,7 +44,7 @@ export function MacroSearchWithDropdown({
   const { t } = useTranslation("common");
 
   // Snapshot the selected macro when it's visible in the current list.
-  const selectedSnapshotRef = useRef<Macro | undefined>(undefined);
+  const selectedSnapshotRef = useRef<MacroListEntry | undefined>(undefined);
 
   const currentMatch = value ? availableMacros.find((m) => m.id === value) : undefined;
 
@@ -78,7 +78,7 @@ export function MacroSearchWithDropdown({
               <div className="flex min-w-0 flex-col">
                 <div className="flex min-w-0 items-center gap-1">
                   <span className="truncate text-sm font-medium">{selectedMacro.name}</span>
-                  <Link
+                  <IntentLink
                     href={`/${locale}/platform/macros/${selectedMacro.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -88,7 +88,7 @@ export function MacroSearchWithDropdown({
                     onClick={(e) => e.stopPropagation()}
                   >
                     <ExternalLink className="group-hover:text-muted-foreground text-primary h-4 w-4 transition-colors" />
-                  </Link>
+                  </IntentLink>
                 </div>
                 <span className="text-muted-foreground truncate text-xs">
                   {selectedMacro.language} • {t("common.by")} {selectedMacro.createdByName}

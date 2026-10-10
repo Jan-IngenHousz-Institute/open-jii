@@ -1,14 +1,18 @@
 import { ActivityProvider } from "@/components/activity/activity-context";
 import { PasskeyCreatePrompt } from "@/components/auth/passkey-create-prompt";
+import { PrincipalProvider } from "@/components/auth/principal-context";
 import { CalibrationFlagProvider } from "@/components/calibrations/calibration-flag-context";
 import { CommandPalette } from "@/components/command/command-palette";
 import { NavigationSidebarWrapper } from "@/components/navigation/navigation-sidebar-wrapper/navigation-sidebar-wrapper";
+import { NavigationTimingReporter } from "@/components/navigation/navigation-timing/navigation-timing-reporter";
 import { PlatformHeaderProvider } from "@/components/navigation/site-header/platform-header-context";
 import { SiteHeader } from "@/components/navigation/site-header/site-header";
 import { PageContainer } from "@/components/page-container";
 import { ShortcutHint } from "@/components/shortcuts/shortcut-hint";
 import { ShortcutsRoot } from "@/components/shortcuts/shortcuts-root";
+import { TranslationBundles } from "@/components/translation-bundles";
 import { fetchWebReleaseNotes } from "@/components/whats-new/fetch-release-notes";
+import { publishedDates } from "@/components/whats-new/whats-new-shared";
 import { WhatsNewSheet } from "@/components/whats-new/whats-new-sheet";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
@@ -19,8 +23,17 @@ import { auth } from "~/app/actions/auth";
 import { isFeatureFlagEnabledForSession } from "~/lib/posthog-server";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
+import type { Namespace } from "@repo/i18n";
+import { defaultNamespace, namespaces } from "@repo/i18n/config";
+import { loadNamespaceBundles } from "@repo/i18n/server";
 import { SidebarEdgePeek, SidebarInset, SidebarProvider } from "@repo/ui/components/sidebar";
 import { Toaster } from "@repo/ui/components/toaster";
+
+// Every namespace but common, which the locale layout already ships: a client component reaching
+// for one that was not shipped would suspend the whole page until it loaded.
+const PLATFORM_NAMESPACES: Namespace[] = namespaces.filter(
+  (namespace) => namespace !== defaultNamespace,
+);
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -59,40 +72,47 @@ export default async function AppLayout({
   }
 
   // The same person and memberships the backend checks, so one PostHog rule decides both sides.
-  const [releaseNotes, isCalibrationEnabled] = await Promise.all([
+  const [releaseNotes, isCalibrationEnabled, bundles] = await Promise.all([
     fetchWebReleaseNotes(locale),
     isFeatureFlagEnabledForSession(FEATURE_FLAGS.CALIBRATION, session),
+    loadNamespaceBundles(locale, PLATFORM_NAMESPACES),
   ]);
+  const releaseDates = publishedDates(releaseNotes);
 
   return (
-    <SidebarProvider defaultWidth={232}>
-      <CalibrationFlagProvider isEnabled={isCalibrationEnabled}>
-        <ActivityProvider>
-          <NavigationSidebarWrapper
-            locale={locale}
-            releaseNotes={releaseNotes}
-            user={{ id: session.user.id, email: session.user.email }}
-            isCalibrationEnabled={isCalibrationEnabled}
-          />
-          <SidebarEdgePeek />
-          <SidebarInset>
-            <PlatformHeaderProvider>
-              <SiteHeader locale={locale} />
-              <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 py-4 md:px-6 md:py-6">
-                <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
-                  <Suspense>{children}</Suspense>
-                </PageContainer>
-              </div>
-            </PlatformHeaderProvider>
-          </SidebarInset>
-          <ShortcutsRoot locale={locale} />
-          <CommandPalette locale={locale} />
-          <Toaster />
-          <ShortcutHint />
-          <PasskeyCreatePrompt userId={session.user.id} sessionId={session.session.id} />
-          <WhatsNewSheet entries={releaseNotes} />
-        </ActivityProvider>
-      </CalibrationFlagProvider>
-    </SidebarProvider>
+    <TranslationBundles resources={bundles}>
+      <PrincipalProvider userId={session.user.id}>
+        <SidebarProvider defaultWidth={232}>
+          <CalibrationFlagProvider isEnabled={isCalibrationEnabled}>
+            <ActivityProvider>
+              <NavigationSidebarWrapper
+                locale={locale}
+                releaseDates={releaseDates}
+                user={{ id: session.user.id, email: session.user.email }}
+                isCalibrationEnabled={isCalibrationEnabled}
+              />
+              <SidebarEdgePeek />
+              <SidebarInset>
+                <PlatformHeaderProvider>
+                  <SiteHeader locale={locale} />
+                  <div className="3xl:px-10 4xl:px-14 flex flex-1 flex-col px-4 py-4 md:px-6 md:py-6">
+                    <PageContainer width="wide" className="flex flex-1 flex-col gap-4">
+                      <Suspense>{children}</Suspense>
+                    </PageContainer>
+                  </div>
+                </PlatformHeaderProvider>
+              </SidebarInset>
+              <NavigationTimingReporter />
+              <ShortcutsRoot locale={locale} />
+              <CommandPalette locale={locale} />
+              <Toaster />
+              <ShortcutHint />
+              <PasskeyCreatePrompt userId={session.user.id} sessionId={session.session.id} />
+              <WhatsNewSheet releaseDates={releaseDates} />
+            </ActivityProvider>
+          </CalibrationFlagProvider>
+        </SidebarProvider>
+      </PrincipalProvider>
+    </TranslationBundles>
   );
 }

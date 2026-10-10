@@ -39,7 +39,15 @@ function viz(
   });
 }
 
-function dashboardWrapper(index: ExperimentVisualization[]) {
+// The table list answers at once and empty, so every table counts as small, unless a test holds it.
+function dashboardWrapper(
+  index: ExperimentVisualization[],
+  { holdTableList = false }: { holdTableList?: boolean } = {},
+) {
+  server.mount(contract.experiments.getExperimentTables, {
+    body: [],
+    delay: holdTableList ? "infinite" : undefined,
+  });
   const queryClient = createTestQueryClient();
   queryClient.setQueryData(experimentVisualizationIndexOptions(EXPERIMENT_ID).queryKey, index);
   const widgets = index.map((item) =>
@@ -87,6 +95,29 @@ function mountRows() {
 }
 
 describe("useChartData on a dashboard", () => {
+  it("holds its read while its group waits to learn whether a line in it reads buckets", async () => {
+    const line = viz("a", [
+      ["x", "timestamp"],
+      ["y", "f0"],
+    ]);
+    const scatter = {
+      ...viz("b", [
+        ["x", "channel"],
+        ["y", "f0"],
+      ]),
+      chartType: "scatter" as const,
+    };
+    const reads = mountRows();
+
+    const { result } = renderHook(() => useChartData(scatter, EXPERIMENT_ID, undefined), {
+      wrapper: dashboardWrapper([line, scatter], { holdTableList: true }),
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(result.current.isLoading).toBe(true);
+    expect(reads.called).toBe(false);
+  });
+
   it("reads once for charts on one table and gives each its own order", async () => {
     const byTime = viz("a", [
       ["x", "timestamp"],
@@ -156,6 +187,33 @@ describe("useChartData on a dashboard", () => {
     expect(spy.calls[0]?.query.columns).toBe("channel,f0,timestamp");
     expect(spy.calls[1]?.query.columns).toBe("timestamp,f0");
     await waitFor(() => expect(result.current.error).toBeTruthy());
+  });
+
+  it("does not ask a failed group again when another of its charts mounts", async () => {
+    const a = viz("a", [
+      ["x", "timestamp"],
+      ["y", "f0"],
+    ]);
+    const b = viz("b", [
+      ["x", "timestamp"],
+      ["y", "channel"],
+    ]);
+    const spy = server.mount(contract.experiments.getExperimentData, { status: 404 });
+    const wrapper = dashboardWrapper([a, b]);
+    const isGroupRead = (call: (typeof spy.calls)[number]) =>
+      call.query.columns === "channel,f0,timestamp";
+
+    renderHook(() => useChartData(a, EXPERIMENT_ID, undefined, { orderBy: "timestamp" }), {
+      wrapper,
+    });
+    await waitFor(() => expect(spy.callCount).toBe(2));
+
+    renderHook(() => useChartData(b, EXPERIMENT_ID, undefined, { orderBy: "timestamp" }), {
+      wrapper,
+    });
+    await waitFor(() => expect(spy.callCount).toBe(3));
+
+    expect(spy.calls.filter(isGroupRead)).toHaveLength(1);
   });
 
   it("leaves an aggregated chart on its own request", async () => {

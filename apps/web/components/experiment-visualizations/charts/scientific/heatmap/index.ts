@@ -10,6 +10,7 @@ import { heatmapStyleShelves } from "./shelves/style-shelves";
 
 export const heatmapChartType: ChartTypeDef = {
   type: "heatmap",
+  plotlyTraceTypes: ["heatmap"],
   family: "scientific",
   labelKey: "workspace.charts.types.heatmap",
   descriptionKey: "workspace.charts.descriptions.heatmap",

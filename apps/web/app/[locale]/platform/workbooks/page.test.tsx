@@ -1,40 +1,59 @@
-import { createWorkbook } from "@/test/factories";
-import { server } from "@/test/msw/server";
-import { render, screen, waitFor } from "@/test/test-utils";
-import { describe, it, expect } from "vitest";
+import { render, screen } from "@/test/test-utils";
+import { describe, it, expect, vi } from "vitest";
+import { orpc } from "~/lib/orpc";
 
-import { contract } from "@repo/api/contract";
+import Page from "./page";
 
-import WorkbookPage from "./page";
+vi.mock("@/components/list-workbooks", () => ({
+  ListWorkbooks: () => <div data-testid="list-workbooks" />,
+}));
 
-describe("WorkbookPage (list)", () => {
-  it("does not repeat the shell heading", () => {
-    server.mount(contract.workbooks.listWorkbooks, { body: [] });
+const prefetched = vi.hoisted(() => {
+  const state: { queries: unknown[] } = { queries: [] };
+  return state;
+});
 
-    render(WorkbookPage({ params: Promise.resolve({ locale: "en-US" }) }));
+vi.mock("@/components/server-prefetch/prefetched-queries", () => ({
+  PrefetchedQueries: ({
+    queries,
+    children,
+  }: {
+    queries: (utils: unknown) => unknown[];
+    children: React.ReactNode;
+  }) => {
+    prefetched.queries = queries(orpc);
+    return children;
+  },
+}));
 
-    expect(screen.queryByRole("heading", { name: "workbooks.title" })).not.toBeInTheDocument();
+describe("WorkbookPage", () => {
+  const renderPage = async (sort?: string) =>
+    render(
+      await Page({
+        params: Promise.resolve({ locale: "en-US" }),
+        searchParams: Promise.resolve({ sort }),
+      }),
+    );
+
+  it("does not repeat the shell heading", async () => {
+    await renderPage();
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
   });
 
-  it("renders the workbook list once data resolves", async () => {
-    server.mount(contract.workbooks.listWorkbooks, {
-      body: {
-        items: [
-          createWorkbook({ id: "wb-1", name: "Photosynthesis" }),
-          createWorkbook({ id: "wb-2", name: "Respiration" }),
-        ],
-        page: 1,
-        pageSize: 20,
-        totalPages: 1,
-        totalCount: 2,
-      },
-    });
+  it("renders the workbook list component", async () => {
+    await renderPage();
+    expect(screen.getByTestId("list-workbooks")).toBeInTheDocument();
+  });
 
-    render(WorkbookPage({ params: Promise.resolve({ locale: "en-US" }) }));
+  it("fetches the default view's first page while the server renders", async () => {
+    await renderPage();
+    const queries = JSON.stringify(prefetched.queries);
+    expect(queries).toContain("listWorkbooks");
+    expect(queries).toContain('"page":1');
+  });
 
-    await waitFor(() => {
-      expect(screen.getByText("Photosynthesis")).toBeInTheDocument();
-      expect(screen.getByText("Respiration")).toBeInTheDocument();
-    });
+  it("leaves a sorted view to the browser, which parses the sort itself", async () => {
+    await renderPage('[{"field":"name","direction":"asc"}]');
+    expect(prefetched.queries).toEqual([]);
   });
 });

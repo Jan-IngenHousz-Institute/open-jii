@@ -4,6 +4,7 @@ import { DevicePlanQuestions } from "@/components/iot-devices/device-plan-questi
 import type { PlanQuestionEntry } from "@/components/iot-devices/device-plan-questions";
 import { DeviceSelectableExperimentRow } from "@/components/iot-devices/device-selectable-experiment-row";
 import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGroup";
 import { useIotDeviceGroupMembers } from "@/hooks/iot/useIotDeviceGroupMembers/useIotDeviceGroupMembers";
 import { useOnboardIotDeviceGroup } from "@/hooks/iot/useOnboardIotDeviceGroup/useOnboardIotDeviceGroup";
@@ -13,7 +14,6 @@ import { formatHm } from "@/util/date";
 import { resolveDeviceLabel } from "@/util/device-presentation";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, RefreshCw, Rocket } from "lucide-react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
@@ -202,12 +202,12 @@ export function GroupOnboardingContent() {
                 {/* The reason carries the fix: phones need nothing, an inactive
                     device needs its credentials. */}
                 {member.deviceType !== "mobile" && (
-                  <Link
+                  <IntentLink
                     href={`/${locale}/platform/devices/${member.deviceId}/credentials`}
                     className="text-primary text-xs font-medium hover:underline"
                   >
                     {t("iot.devices.nextAction.issueCredentials")}
-                  </Link>
+                  </IntentLink>
                 )}
               </span>
             )

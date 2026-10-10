@@ -1,10 +1,10 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useExperimentVisualizationCreate } from "@/hooks/experiment/useExperimentVisualizationCreate/useExperimentVisualizationCreate";
 import { useExperimentVisualizations } from "@/hooks/experiment/useExperimentVisualizations/useExperimentVisualizations";
 import { useLocale } from "@/hooks/useLocale";
 import { ExternalLink, Loader2, Plus, Settings2 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 
@@ -190,12 +190,12 @@ export function VisualizationWidgetStrip({
                 aria-label={t("editor.visualizationConfig.editVisualization")}
                 className="text-muted-foreground hover:text-foreground h-8 gap-1.5 rounded-full px-2.5 text-xs"
               >
-                <Link href={editVizHref}>
+                <IntentLink href={editVizHref}>
                   <ExternalLink className="size-3.5" />
                   <span className="hidden md:inline">
                     {t("editor.visualizationConfig.editVisualization")}
                   </span>
-                </Link>
+                </IntentLink>
               </Button>
             ),
           } satisfies StripOverflowItem,

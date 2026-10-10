@@ -3,22 +3,23 @@
  * Re-exports from @repo/analytics/server for convenience
  */
 import { cache } from "react";
-import { auth } from "~/app/actions/auth";
 import { env } from "~/env";
 
 import type { FeatureFlagKey } from "@repo/analytics";
-import { flagPersonProperties } from "@repo/analytics";
+import { FEATURE_FLAG_DEFAULTS, flagPersonProperties } from "@repo/analytics";
 import {
+  evaluateFeatureFlag as evaluateFeatureFlagBase,
   getPostHogServerClient,
   initializePostHogServer,
   isFeatureFlagEnabled as isFeatureFlagEnabledBase,
   reportException,
   shutdownPostHog as shutdownPostHogBase,
 } from "@repo/analytics/server";
+import { authClient } from "@repo/auth/client";
 import type { Session } from "@repo/auth/types";
 
 import { POSTHOG_SERVER_CONFIG } from "./posthog-config";
-import { createServerOrpcClient } from "./server-orpc";
+import { createOrpcClientWithCookie, createServerOrpcClient } from "./server-orpc";
 
 // Track initialization state
 let initialized = false;
@@ -79,16 +80,70 @@ export async function isFeatureFlagEnabled(
   return isFeatureFlagEnabledBase(flagKey, distinctId, personProperties);
 }
 
-const fetchMyOrganizationIds = cache(async () => {
+type ApiClient = ReturnType<typeof createOrpcClientWithCookie>;
+
+/** The person's organization ids, or null when they could not be read. */
+async function listOrganizationIds(client: ApiClient): Promise<string[] | null> {
   try {
-    const client = await createServerOrpcClient();
     const organizations = await client.organizations.listMyOrganizations();
     return organizations.map(({ id }) => id);
   } catch (error) {
     console.error("[PostHog] Failed to load memberships for flag evaluation:", error);
-    return [];
+    return null;
   }
-});
+}
+
+const fetchMyOrganizationIds = cache(async () =>
+  listOrganizationIds(await createServerOrpcClient()),
+);
+
+// Every platform render asks for the person's flags, at the cost of a membership read and a call to
+// PostHog. Memberships and flag rules change far less often, so an answer serves a minute of renders
+// on this server instance.
+const FLAG_DECISION_TTL_MS = 60_000;
+const MAX_FLAG_DECISIONS = 1_000;
+
+class FlagDecisions {
+  private readonly decisions = new Map<string, { isEnabled: boolean; expiresAt: number }>();
+
+  get(key: string): boolean | undefined {
+    const decision = this.decisions.get(key);
+    if (decision === undefined || decision.expiresAt <= Date.now()) {
+      this.decisions.delete(key);
+      return undefined;
+    }
+    return decision.isEnabled;
+  }
+
+  set(key: string, isEnabled: boolean): void {
+    if (this.decisions.size >= MAX_FLAG_DECISIONS) {
+      const oldest = this.decisions.keys().next();
+      if (!oldest.done) {
+        this.decisions.delete(oldest.value);
+      }
+    }
+    this.decisions.set(key, { isEnabled, expiresAt: Date.now() + FLAG_DECISION_TTL_MS });
+  }
+
+  clear(): void {
+    this.decisions.clear();
+  }
+}
+
+const flagDecisions = new FlagDecisions();
+
+function isFeatureFlagEnabledForPerson(
+  flagKey: FeatureFlagKey,
+  session: NonNullable<Session>,
+  organizationIds: string[],
+): Promise<boolean> {
+  const { id, email } = session.user;
+  return isFeatureFlagEnabled(
+    flagKey,
+    email || id,
+    flagPersonProperties({ email, organizationIds }),
+  );
+}
 
 /**
  * Check a feature flag for this request's signed-in session, as the same person the backend
@@ -99,25 +154,55 @@ export async function isFeatureFlagEnabledForSession(
   flagKey: FeatureFlagKey,
   session: NonNullable<Session>,
 ): Promise<boolean> {
-  const { id, email } = session.user;
+  const key = `${flagKey}:${session.user.id}`;
+  const cached = flagDecisions.get(key);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   const organizationIds = await fetchMyOrganizationIds();
-  return isFeatureFlagEnabled(
+  await ensureInitialized();
+  const { id, email } = session.user;
+  const decision = await evaluateFeatureFlagBase(
     flagKey,
     email || id,
-    flagPersonProperties({ email, organizationIds }),
+    flagPersonProperties({ email, organizationIds: organizationIds ?? [] }),
   );
+
+  // A fallback, from memberships that failed to load or a PostHog that did not answer, is used
+  // once and not kept, so a passing outage does not hide a feature for a minute.
+  if (organizationIds !== null && decision !== undefined) {
+    flagDecisions.set(key, decision);
+  }
+  return decision ?? FEATURE_FLAG_DEFAULTS[flagKey];
+}
+
+async function readSession(requestHeaders: Headers): Promise<Session | null> {
+  try {
+    const { data } = await authClient.getSession({ fetchOptions: { headers: requestHeaders } });
+    return data;
+  } catch (error) {
+    console.error("[PostHog] Failed to read the session for flag evaluation:", error);
+    return null;
+  }
 }
 
 /**
- * Check a feature flag for whoever is making this request, anonymously when nobody is signed in
+ * Check a feature flag for whoever sent a request, from that request's own headers rather than
+ * `next/headers`, so the proxy can decide before any page renders. Anonymous when nobody is
+ * signed in.
  */
-export async function isFeatureFlagEnabledForViewer(flagKey: FeatureFlagKey): Promise<boolean> {
-  const session = await auth();
+export async function isFeatureFlagEnabledForRequest(
+  flagKey: FeatureFlagKey,
+  requestHeaders: Headers,
+): Promise<boolean> {
+  const session = await readSession(requestHeaders);
   if (!session) {
     return isFeatureFlagEnabled(flagKey);
   }
 
-  return isFeatureFlagEnabledForSession(flagKey, session);
+  const client = createOrpcClientWithCookie(requestHeaders.get("cookie") ?? "");
+  return isFeatureFlagEnabledForPerson(flagKey, session, (await listOrganizationIds(client)) ?? []);
 }
 
 /**
@@ -146,6 +231,7 @@ export async function reportServerError(
  */
 export async function shutdownPostHog(): Promise<void> {
   lastReportedAt.clear();
+  flagDecisions.clear();
   if (initialized) {
     await shutdownPostHogBase();
     initialized = false;

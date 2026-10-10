@@ -16,7 +16,7 @@ interface CellRendererProps {
   onUpdate: (cell: WorkbookCell) => void;
   onDelete: () => void;
   onRun?: () => void;
-  allCells?: WorkbookCell[];
+  producer?: WorkbookCell;
   executionStatus?: "idle" | "running" | "completed" | "error";
   executionError?: string;
   promptedQuestionId?: string;
@@ -32,7 +32,7 @@ export function CellRenderer({
   onUpdate,
   onDelete,
   onRun,
-  allCells,
+  producer,
   executionStatus,
   executionError,
   promptedQuestionId,
@@ -101,7 +101,6 @@ export function CellRenderer({
           executionError={executionError}
           promptOpen={promptedQuestionId === cell.id}
           onQuestionAnswered={promptedQuestionId === cell.id ? onQuestionAnswered : undefined}
-          allCells={allCells}
           readOnly={readOnly}
         />
       );
@@ -112,7 +111,7 @@ export function CellRenderer({
           onUpdate={onUpdate}
           onDelete={onDelete}
           readOnly={readOnly}
-          allCells={allCells}
+          producer={producer}
         />
       );
     case "branch":
@@ -122,7 +121,6 @@ export function CellRenderer({
           onUpdate={onUpdate}
           onDelete={onDelete}
           onRun={onRun}
-          allCells={allCells}
           executionStatus={executionStatus}
           executionError={executionError}
           readOnly={readOnly}

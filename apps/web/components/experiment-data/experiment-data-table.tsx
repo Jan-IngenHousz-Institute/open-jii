@@ -150,7 +150,7 @@ export function ExperimentDataTable({
     [sortColumn],
   );
 
-  const { tableMetadata, tableRows, isLoading, error } = useExperimentData({
+  const { tableMetadata, tableRows, isLoading, isRefreshing, error } = useExperimentData({
     experimentId,
     page: pagination.pageIndex + 1,
     pageSize: pagination.pageSize,
@@ -159,6 +159,7 @@ export function ExperimentDataTable({
     orderDirection: sortDirection,
     filters: activeFilters,
     errorColumn,
+    keepPreviousPage: true,
   });
 
   // Filters drop totalPages to 1; snap pageIndex back so the UI doesn't show "page 5 of 1".
@@ -235,6 +236,7 @@ export function ExperimentDataTable({
           columns={columns}
           rows={tableRows ?? []}
           isLoading={isLoading}
+          isRefreshing={isRefreshing}
           loadingRowCount={loadingRowCount}
           errorColumn={errorColumn}
           landedRowIds={landedRowIds}

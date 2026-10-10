@@ -86,6 +86,8 @@ export interface DataTableProps {
   columns: ExperimentDataColumn[];
   rows: DataRow[];
   isLoading?: boolean;
+  /** The rows are the previous page's, shown dimmed while the next one loads. */
+  isRefreshing?: boolean;
   /** Filters, bulk actions, anything the surface puts above its table. */
   toolbar?: React.ReactNode;
   /** Paging owned by the caller (server-driven); omit to show every row given. */
@@ -117,6 +119,7 @@ export function DataTable({
   columns,
   rows,
   isLoading = false,
+  isRefreshing = false,
   toolbar,
   pagination,
   sorting,
@@ -142,6 +145,8 @@ export function DataTable({
     );
   }, []);
 
+  // Handed to the cells through the table's meta rather than the column definitions, which would
+  // remount every cell on each expand.
   const isCellExpanded: IsCellExpandedFn = useCallback(
     (rowId, columnName) => expandedCell?.rowId === rowId && expandedCell.columnName === columnName,
     [expandedCell],
@@ -152,26 +157,31 @@ export function DataTable({
     [columns, preserveColumnOrder],
   );
 
+  // A new column definition remounts every cell in the table, so the columns depend on what the
+  // cells use rather than on the `selection` and `cellHandlers` objects, which callers pass inline.
+  const hasSelection = selection !== undefined;
+  const onAddAnnotation = cellHandlers?.onAddAnnotation;
+  const onDeleteAnnotations = cellHandlers?.onDeleteAnnotations;
+
   const tableColumns = useMemo(() => {
     const dataColumns = createTableColumns({
       columns,
       formatFunction: formatValue,
-      onAddAnnotation: cellHandlers?.onAddAnnotation,
-      onDeleteAnnotations: cellHandlers?.onDeleteAnnotations,
+      onAddAnnotation,
+      onDeleteAnnotations,
       onToggleCellExpansion: toggleCellExpansion,
-      isCellExpanded,
       errorColumn,
       preserveOrder: preserveColumnOrder,
     });
 
-    return selection === undefined ? dataColumns : [selectionColumn(), ...dataColumns];
+    return hasSelection ? [selectionColumn(), ...dataColumns] : dataColumns;
   }, [
     columns,
-    cellHandlers,
+    onAddAnnotation,
+    onDeleteAnnotations,
     toggleCellExpansion,
-    isCellExpanded,
     errorColumn,
-    selection,
+    hasSelection,
     preserveColumnOrder,
   ]);
 
@@ -209,6 +219,7 @@ export function DataTable({
       ...(selection ? { rowSelection: selection.state } : {}),
     },
     defaultColumn: { size: 180 },
+    meta: { isCellExpanded },
   });
 
   useHotkey(
@@ -256,7 +267,10 @@ export function DataTable({
             sortDirection={sorting?.direction}
             onSort={sorting?.onSort}
           />
-          <TableBody>
+          <TableBody
+            aria-busy={isRefreshing}
+            className={cn("transition-opacity", isRefreshing && "opacity-60")}
+          >
             {isLoading ? (
               <LoadingRows columnCount={tableColumns.length} rowCount={loadingRowCount} />
             ) : (

@@ -1,7 +1,7 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
-import Link from "next/link";
 
 import { useTranslation } from "@repo/i18n";
 import { cn } from "@repo/ui/lib/utils";
@@ -41,11 +41,11 @@ export function OwningOrganizationValue({
   }
 
   return (
-    <Link
+    <IntentLink
       href={organizationPath(locale, organizationId)}
       className={cn("underline underline-offset-2", className)}
     >
       {organizationName}
-    </Link>
+    </IntentLink>
   );
 }

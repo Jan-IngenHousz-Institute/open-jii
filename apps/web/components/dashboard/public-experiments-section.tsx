@@ -1,10 +1,10 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
-import { formatShortDate } from "@/util/date";
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import { ExperimentOverviewCards } from "~/components/experiment-overview-cards";
 
 import { listItems } from "@repo/api/shared/listing";
@@ -12,9 +12,10 @@ import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
+import { PUBLIC_EXPERIMENTS_PAGE_SIZE, publicExperimentsQuery } from "./dashboard-queries";
+
 const PUBLIC_EXPERIMENTS_HREF = "/platform/experiments?visibility=public";
 
-const PAGE_SIZE = 6;
 const STALE_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 
 const placeholderClassName =
@@ -27,18 +28,9 @@ const placeholderClassName =
 export function PublicExperimentsSection() {
   const { t } = useTranslation();
   const locale = useLocale();
+  const format = useLocalDateFormat(locale);
 
-  const { data, isError, refetch } = useQuery(
-    orpc.experiments.listExperiments.queryOptions({
-      input: {
-        scope: "all",
-        visibility: "public",
-        sort: [{ field: "updated", direction: "desc" }],
-        page: 1,
-        pageSize: PAGE_SIZE,
-      },
-    }),
-  );
+  const { data, isError, refetch } = useQuery(publicExperimentsQuery(orpc));
 
   if (isError) {
     return (
@@ -54,7 +46,7 @@ export function PublicExperimentsSection() {
   if (!data) {
     return (
       <div aria-busy="true" className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: PAGE_SIZE }).map((_, index) => (
+        {Array.from({ length: PUBLIC_EXPERIMENTS_PAGE_SIZE }).map((_, index) => (
           <Skeleton key={index} className="h-48" />
         ))}
       </div>
@@ -79,14 +71,14 @@ export function PublicExperimentsSection() {
       {isStale ? (
         <p className="text-muted-foreground text-sm">
           {t("dashboard.publicExperimentsStale", {
-            date: formatShortDate(latestUpdate, locale),
+            date: format.date(latestUpdate),
           })}{" "}
-          <Link
+          <IntentLink
             href={`/${locale}${PUBLIC_EXPERIMENTS_HREF}`}
             className="text-primary hover:text-primary/80 font-semibold"
           >
             {t("dashboard.browsePublicExperiments")}
-          </Link>
+          </IntentLink>
         </p>
       ) : null}
       <ExperimentOverviewCards experiments={experiments} showUpdatedLabel />

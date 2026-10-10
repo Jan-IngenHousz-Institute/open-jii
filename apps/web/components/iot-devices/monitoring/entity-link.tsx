@@ -1,7 +1,7 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { ArrowUpRight } from "lucide-react";
-import Link from "next/link";
 
 import { cn } from "@repo/ui/lib/utils";
 
@@ -18,12 +18,12 @@ export function EntityLink({ entity, className }: { entity: ResolvedEntity; clas
   }
 
   return (
-    <Link
+    <IntentLink
       href={entity.href}
       className={cn("inline-flex items-center gap-1 font-medium hover:underline", className)}
     >
       {entity.label}
       <ArrowUpRight className="h-3 w-3" />
-    </Link>
+    </IntentLink>
   );
 }

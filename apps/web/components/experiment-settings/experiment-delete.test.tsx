@@ -1,7 +1,7 @@
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi } from "vitest";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
 import { contract } from "@repo/api/contract";
 import { toast } from "@repo/ui/hooks/use-toast";

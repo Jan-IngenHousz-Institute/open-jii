@@ -26,7 +26,7 @@ export function ParallelCoordinatesRenderer({
       .map((ds) => ds.columnName),
   ).size;
 
-  const { rows, isLoading, error, truncation } = useChartData(
+  const { rows, isLoading, isRefreshing, error, truncation } = useChartData(
     visualization,
     experimentId,
     providedData,
@@ -68,6 +68,7 @@ export function ParallelCoordinatesRenderer({
       visualization={visualization}
       experimentId={experimentId}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
       error={error}
       hasRows={hasRows}
       truncation={truncation}

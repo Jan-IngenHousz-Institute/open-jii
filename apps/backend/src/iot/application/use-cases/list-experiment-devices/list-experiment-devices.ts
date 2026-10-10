@@ -97,8 +97,15 @@ export class ListExperimentDevicesUseCase {
       return failure(bindingsResult.error);
     }
     const bindings = bindingsResult.value;
+    const boundThings = new Set(bindings.map((binding) => binding.device.thingName));
 
-    const publishers = await this.lookupPublishers(experimentId, window);
+    // Stats and the bound devices' activity need nothing the publisher lookup returns, so the three
+    // warehouse reads run together; only devices publishing without a binding need a second read.
+    const [publishers, stats, boundActivity] = await Promise.all([
+      this.lookupPublishers(experimentId, window),
+      this.lookupDeviceStats(experimentId),
+      this.lookupActivity([...boundThings]),
+    ]);
     const observed = new Map<string, ExperimentPublisherRow>();
     for (const row of publishers ?? []) {
       if (row.clientId !== null) {
@@ -107,7 +114,6 @@ export class ListExperimentDevicesUseCase {
     }
 
     // Publishers with no binding still need a registry identity to render.
-    const boundThings = new Set(bindings.map((binding) => binding.device.thingName));
     const unboundClientIds = [...observed.keys()].filter((clientId) => !boundThings.has(clientId));
     const unboundDevicesResult = await this.deviceRepository.findByThingNames(unboundClientIds);
     if (unboundDevicesResult.isFailure()) {
@@ -126,11 +132,12 @@ export class ListExperimentDevicesUseCase {
       return failure(bindingCountsResult.error);
     }
     const bindingCounts = bindingCountsResult.value;
-    const [connectivity, activity, stats] = await Promise.all([
+    const [connectivity, unboundActivity] = await Promise.all([
       this.lookupConnectivity(thingNames),
-      this.lookupActivity(thingNames),
-      this.lookupDeviceStats(experimentId),
+      this.lookupActivity(unboundDevices.map((device) => device.thingName)),
     ]);
+    const activity =
+      boundActivity && unboundActivity ? new Map([...boundActivity, ...unboundActivity]) : null;
     const pipelineUnavailable = publishers === null || activity === null || stats === null;
     const reportedByClientId = this.foldDeviceStats(stats ?? []);
 

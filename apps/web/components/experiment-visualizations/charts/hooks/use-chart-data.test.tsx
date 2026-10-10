@@ -29,7 +29,12 @@ describe("useChartData", () => {
     const provided = [{ time: 1, temp: 21 }];
     const { result } = renderHook(() => useChartData(buildViz(), "exp-1", provided));
 
-    expect(result.current).toEqual({ rows: provided, isLoading: false, error: undefined });
+    expect(result.current).toEqual({
+      rows: provided,
+      isLoading: false,
+      isRefreshing: false,
+      error: undefined,
+    });
   });
 
   it("reports the truncation of a read handed over ready-made", () => {

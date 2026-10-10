@@ -15,6 +15,8 @@ import type {
 } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 
 import { experimentVisualizationIndexOptions } from "../../hooks/experiment/useExperimentVisualizationIndex/useExperimentVisualizationIndex";
+import { useTableRowCounts } from "../../hooks/experiment/useTableRowCounts/useTableRowCounts";
+import { drawsFromBuckets } from "../experiment-visualizations/charts/cartesian/zoom-read-plan";
 import { readColumnsOf } from "../experiment-visualizations/charts/data/data-sources";
 import { useDashboardFilterResolver } from "./dashboard-filters-context";
 
@@ -34,7 +36,13 @@ export interface OwnRead {
   aggregation: ExperimentDataAggregation | undefined;
 }
 
+/** A group waiting on its table's size, since one of its charts may leave it to read buckets. */
+export const SHARED_READ_PENDING = "pending";
+
+type SharedReadPlan = SharedRead | typeof SHARED_READ_PENDING;
+
 type FilterResolver = (tableName: string) => ExperimentDataFilter[];
+type RowCounter = ((tableName: string) => number) | undefined;
 
 interface GroupMember {
   id: string;
@@ -46,10 +54,11 @@ interface ReadGroup {
   tableName: string;
   filters: ExperimentDataFilter[] | undefined;
   members: GroupMember[];
+  isPending: boolean;
 }
 
-const DashboardSharedReadsContext = createContext<Map<string, SharedRead> | null>(null);
-const NO_PLANS = new Map<string, SharedRead>();
+const DashboardSharedReadsContext = createContext<Map<string, SharedReadPlan> | null>(null);
+const NO_PLANS = new Map<string, SharedReadPlan>();
 
 interface DashboardSharedReadsProviderProps {
   experimentId: string;
@@ -76,10 +85,11 @@ export function DashboardSharedReadsProvider({
   });
   const filtersFor = useDashboardFilterResolver();
   const visualizationIds = useVisualizationIds(widgets);
+  const rowCountOf = useTableRowCounts(experimentId, index !== undefined);
 
   const plans = useMemo(
-    () => (index ? planSharedReads(index, visualizationIds, filtersFor) : NO_PLANS),
-    [index, visualizationIds, filtersFor],
+    () => (index ? planSharedReads(index, visualizationIds, filtersFor, rowCountOf) : NO_PLANS),
+    [index, visualizationIds, filtersFor, rowCountOf],
   );
 
   return (
@@ -90,18 +100,18 @@ export function DashboardSharedReadsProvider({
 }
 
 /**
- * The shared read covering a chart's own read, or undefined when the chart is
- * outside a dashboard, alone on its table, or would read something the plan
- * does not carry. Any mismatch means the chart fetches alone.
+ * The shared read covering a chart's own read, pending while its group waits on a table's size,
+ * or undefined when the chart is outside a dashboard, alone on its table, or would read something
+ * the plan does not carry. Any mismatch means the chart fetches alone.
  */
 export function useDashboardSharedRead(
   visualizationId: string,
   own: OwnRead,
-): SharedRead | undefined {
+): SharedReadPlan | undefined {
   const plans = useContext(DashboardSharedReadsContext);
   const plan = plans?.get(visualizationId);
-  if (!plan) {
-    return undefined;
+  if (plan === undefined || plan === SHARED_READ_PENDING) {
+    return plan;
   }
   return covers(plan, own) ? plan : undefined;
 }
@@ -140,13 +150,22 @@ function planSharedReads(
   index: ExperimentVisualization[],
   visualizationIds: string[],
   filtersFor: FilterResolver,
-): Map<string, SharedRead> {
+  rowCountOf: RowCounter,
+): Map<string, SharedReadPlan> {
   const byId = new Map(index.map((visualization) => [visualization.id, visualization]));
   const groups = new Map<string, ReadGroup>();
 
   for (const id of visualizationIds) {
     const visualization = byId.get(id);
     if (!visualization) {
+      continue;
+    }
+    // A chart drawn from buckets reads its own, so its columns stay out of the group's read.
+    const bucketed = drawsFromBuckets(
+      visualization,
+      rowCountOf?.(visualization.dataConfig.tableName),
+    );
+    if (bucketed === true) {
       continue;
     }
     const member = memberOf(id, visualization.dataConfig, filtersFor);
@@ -158,15 +177,23 @@ function planSharedReads(
       tableName: member.tableName,
       filters: member.filters,
       members: [],
+      isPending: false,
     };
     group.members.push(member);
+    group.isPending ||= bucketed === undefined;
     groups.set(key, group);
   }
 
-  const plans = new Map<string, SharedRead>();
+  const plans = new Map<string, SharedReadPlan>();
   for (const group of groups.values()) {
     // A group of one gains nothing and would only change that chart's key.
     if (group.members.length < 2) {
+      continue;
+    }
+    if (group.isPending) {
+      for (const member of group.members) {
+        plans.set(member.id, SHARED_READ_PENDING);
+      }
       continue;
     }
     const plan: SharedRead = {

@@ -1,4 +1,4 @@
-import { createServerOrpcClient } from "~/lib/server-orpc";
+import { createAnonymousServerOrpcClient } from "~/lib/server-orpc";
 
 import { PublicMetricsSection } from "./public-metrics-section";
 
@@ -8,11 +8,12 @@ interface PublicMetricsPanelProps {
 
 /**
  * Fetches its own figures so the landing page can stream without waiting on the
- * warehouse. A failed read drops the section rather than erroring the page.
+ * warehouse. A failed read drops the section rather than erroring the page. The
+ * figures are public, so the read carries no session and the page stays cacheable.
  */
 export async function PublicMetricsPanel({ locale }: PublicMetricsPanelProps) {
   try {
-    const orpc = await createServerOrpcClient();
+    const orpc = createAnonymousServerOrpcClient();
     const metrics = await orpc.metrics.getPublicMetrics();
 
     return <PublicMetricsSection metrics={metrics} locale={locale} />;

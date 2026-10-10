@@ -1,6 +1,6 @@
 "use client";
 
-import { useFeatureFlagEnabled } from "posthog-js/react";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";

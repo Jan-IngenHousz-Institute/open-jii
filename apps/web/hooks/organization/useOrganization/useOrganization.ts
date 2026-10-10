@@ -1,9 +1,8 @@
+import { usePrincipal } from "@/components/auth/principal-context";
 import { withPrincipal } from "@/hooks/principal-query-key";
 import { orpc } from "@/lib/orpc";
 import { shouldRetryQuery } from "@/util/query-retry";
 import { useQuery } from "@tanstack/react-query";
-
-import { useSession } from "@repo/auth/client";
 
 /**
  * An organization profile. The response carries the caller's role, and a private
@@ -11,8 +10,7 @@ import { useSession } from "@repo/auth/client";
  * principal-scoped so one user's answer is never served to the next.
  */
 export const useOrganization = (organizationId: string, options?: { enabled?: boolean }) => {
-  const { data: session, isPending: isSessionPending } = useSession();
-  const userId = session?.user.id;
+  const { userId, isPending: isSessionPending } = usePrincipal();
   const input = { id: organizationId };
 
   return useQuery(

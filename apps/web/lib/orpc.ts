@@ -4,11 +4,12 @@ import { OpenAPILink } from "@orpc/openapi-client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { env } from "~/env";
 
-import { contract } from "@repo/api/contract";
+import type { contract } from "@repo/api/contract";
+import { contractRoutes } from "@repo/api/contract-routes";
 
-const link = new OpenAPILink(contract, {
+// Routes only: the full contract would ship zod and every schema to every page.
+const link = new OpenAPILink(contractRoutes, {
   url: env.NEXT_PUBLIC_API_URL,
-  headers: () => ({ "x-app-source": "orpc" }),
   // Send the session cookie with every request (browser-managed); oRPC throws
   // an ORPCError on >= 400, which hooks narrow via `getOrpcError`.
   fetch: (request, init) => fetch(request, { ...init, credentials: "include" }),
@@ -19,6 +20,9 @@ export const orpcClient: ContractRouterClient<typeof contract> = createORPCClien
 
 /** TanStack Query utilities (`orpc.<domain>.<endpoint>.queryOptions/mutationOptions(...)`). */
 export const orpc = createTanstackQueryUtils(orpcClient);
+
+/** The query utilities' shape, the same whichever client they wrap, so a query is built once. */
+export type QueryUtils = typeof orpc;
 
 /**
  * Narrows a thrown error to an `ORPCError` (carrying `.status` / `.code`) for

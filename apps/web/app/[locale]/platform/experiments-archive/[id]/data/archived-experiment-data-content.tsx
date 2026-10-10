@@ -1,10 +1,10 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { PageContainer } from "@/components/page-container";
 import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
 import { BarChart3, Upload } from "lucide-react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use } from "react";
 import * as React from "react";
@@ -99,13 +99,13 @@ export default function ExperimentDataPage({ params }: ExperimentDataPageProps) 
           icon={<BarChart3 />}
           description={t("experimentData.noData")}
           action={
-            <Link
+            <IntentLink
               href={`${env.NEXT_PUBLIC_DOCS_URL}/guide/measuring/taking-measurements`}
               target="_blank"
               rel="noopener noreferrer"
             >
               <Button variant="secondary">{t("experimentData.readMore")}</Button>
-            </Link>
+            </IntentLink>
           }
         />
 

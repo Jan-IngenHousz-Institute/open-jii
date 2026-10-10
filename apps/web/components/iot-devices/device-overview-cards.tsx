@@ -2,6 +2,7 @@
 
 import { useIsCalibrationEnabled } from "@/components/calibrations/calibration-flag-context";
 import { resolveMonitoringPreset } from "@/components/iot-devices/monitoring/monitoring-range";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useActiveDeviceCalibration } from "@/hooks/iot/useActiveDeviceCalibration/useActiveDeviceCalibration";
 import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
@@ -19,7 +20,6 @@ import {
 } from "@/util/firmware-family";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, Cpu, FlaskConical, SlidersHorizontal } from "lucide-react";
-import Link from "next/link";
 import { useMemo } from "react";
 
 import { zCalibrationFamily } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
@@ -130,12 +130,12 @@ export function DeviceOverviewCards({ device }: DeviceOverviewCardsProps) {
         key={experiment.id}
         className="hover:bg-muted/40 flex items-center gap-3 px-6 py-3 transition-colors"
       >
-        <Link
+        <IntentLink
           href={`/${locale}/platform/experiments/${experiment.id}`}
           className="focus-visible:ring-primary/40 focus-visible:outline-hidden min-w-0 flex-1 truncate text-sm font-medium hover:underline focus-visible:ring-2"
         >
           {experiment.name}
-        </Link>
+        </IntentLink>
       </li>
     );
   }

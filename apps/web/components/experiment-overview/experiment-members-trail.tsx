@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 
 import type { ExperimentContributor } from "@repo/api/domains/experiment/contributors/experiment-contributors.schema";
 import { useTranslation } from "@repo/i18n";
@@ -71,7 +71,7 @@ export function ExperimentMembersTrail({
   const remainder = Math.max(0, collaboratorCount - visible.length);
 
   return (
-    <Link
+    <IntentLink
       href={href}
       className="hover:bg-muted/50 group -mx-2 -my-1 flex items-center gap-3 rounded-md px-2 py-1 transition-colors"
     >
@@ -98,6 +98,6 @@ export function ExperimentMembersTrail({
       <span className="text-muted-foreground group-hover:text-foreground text-sm transition-colors">
         {t("sharing.collaboratorCount", { count: collaboratorCount })}
       </span>
-    </Link>
+    </IntentLink>
   );
 }

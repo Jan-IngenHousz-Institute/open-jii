@@ -1,15 +1,15 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { ResourceMetricsCell } from "@/components/overview-table/resource-metrics-cell";
+import { LocalTime } from "@/components/shared/local-time";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
 import { WorkbookCellSummary } from "@/components/workbook/workbook-cell-summary";
 import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookCreate } from "@/hooks/workbook/useWorkbookCreate/useWorkbookCreate";
 import { orpc } from "@/lib/orpc";
-import { formatShortDate } from "@/util/date";
 import { useQueryClient } from "@tanstack/react-query";
 import { GitFork, MoreHorizontal, Pencil } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import type { WorkbookListEntry } from "@repo/api/domains/workbook/workbook.schema";
@@ -82,10 +82,10 @@ function WorkbookActionsCell({ workbook, href }: { workbook: WorkbookListItem; h
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem asChild>
-            <Link href={href}>
+            <IntentLink href={href}>
               <Pencil className="mr-2 size-4" />
               {t("workbooks.actions.open")}
-            </Link>
+            </IntentLink>
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={isDuplicating}
@@ -123,7 +123,7 @@ export function getWorkbookColumns(
       cell: (workbook, href) => (
         <>
           <div className="flex min-w-0 items-center gap-2">
-            <Link
+            <IntentLink
               href={href}
               title={workbook.name}
               onClick={(e) => e.stopPropagation()}
@@ -133,7 +133,7 @@ export function getWorkbookColumns(
               )}
             >
               {workbook.name}
-            </Link>
+            </IntentLink>
             {/* Only when private: "public" is the unremarkable default. */}
             <VisibilityBadge visibility={workbook.visibility} privateOnly className="shrink-0" />
           </div>
@@ -195,7 +195,7 @@ export function getWorkbookColumns(
       className: "hidden w-40 lg:table-cell",
       cell: (workbook) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
-          {formatShortDate(workbook.updatedAt, locale)}
+          <LocalTime value={workbook.updatedAt} locale={locale} />
         </span>
       ),
     },

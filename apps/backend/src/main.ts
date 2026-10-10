@@ -24,6 +24,9 @@ async function bootstrap() {
       origin: corsOrigins,
       credentials: true,
       exposedHeaders: ["Content-Disposition"],
+      // Lets the browser skip the preflight on repeat writes to the same URL, such as autosave.
+      // Two hours is Chrome's ceiling.
+      maxAge: 7200,
     });
   }
 

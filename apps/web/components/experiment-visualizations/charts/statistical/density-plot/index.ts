@@ -10,6 +10,7 @@ import { densityPlotStyleShelves } from "./shelves/style-shelves";
 
 export const densityPlotChartType: ChartTypeDef = {
   type: "density-plot",
+  plotlyTraceTypes: ["scatter"],
   family: "statistical",
   labelKey: "workspace.charts.types.densityPlot",
   descriptionKey: "workspace.charts.descriptions.densityPlot",

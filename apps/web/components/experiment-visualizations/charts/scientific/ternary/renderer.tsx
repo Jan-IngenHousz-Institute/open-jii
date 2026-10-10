@@ -25,7 +25,7 @@ export function TernaryRenderer({
   const bColumn = dataSources.find((ds) => ds.role === "y")?.columnName;
   const cColumn = dataSources.find((ds) => ds.role === "z")?.columnName;
 
-  const { rows, isLoading, error, truncation } = useChartData(
+  const { rows, isLoading, isRefreshing, error, truncation } = useChartData(
     visualization,
     experimentId,
     providedData,
@@ -76,6 +76,7 @@ export function TernaryRenderer({
       visualization={visualization}
       experimentId={experimentId}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
       error={error}
       hasRows={hasRows}
       truncation={truncation}

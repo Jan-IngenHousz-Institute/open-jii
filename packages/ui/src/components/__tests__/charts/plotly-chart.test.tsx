@@ -12,7 +12,29 @@ let mockPlotComponent: any;
 vi.mock("../../charts/plotly-runtime", () => ({
   Plot: (props: any) => mockPlotComponent(props),
   Plotly: { Plots: { resize: vi.fn() } },
+  registerTraceTypes: vi.fn(() => Promise.resolve()),
 }));
+
+// The gate's suspending is covered in plotly-chart-trace-loading; here it only
+// records what it was asked to wait for, so these tests stay synchronous.
+const gateTypes = vi.hoisted(() => vi.fn<(types: readonly string[]) => void>());
+
+vi.mock("../../charts/plotly-trace-gate", () => ({
+  PlotlyTraceGate: ({
+    types,
+    children,
+  }: {
+    types: readonly string[];
+    children: React.ReactNode;
+  }) => {
+    gateTypes(types);
+    return children;
+  },
+}));
+
+function readGateTypes(): readonly string[] | undefined {
+  return gateTypes.mock.lastCall?.[0];
+}
 
 // Mock React.lazy to return our mock component directly
 vi.mock("react", async () => {
@@ -92,6 +114,28 @@ describe("PlotlyChart", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  describe("Trace loading", () => {
+    it("waits for scatter when a trace names no type", () => {
+      render(<PlotlyChart data={[{ x: [1, 2], y: [1, 2] }]} layout={{}} />);
+
+      expect(readGateTypes()).toEqual(["scatter"]);
+    });
+
+    it("waits for exactly the types it draws", () => {
+      render(
+        <PlotlyChart
+          data={[
+            { type: "box", y: [1, 2, 3] },
+            { type: "scattergl", x: [1, 2], y: [1, 2] },
+          ]}
+          layout={{}}
+        />,
+      );
+
+      expect(readGateTypes()).toEqual(readRenderedTypes());
+    });
   });
 
   describe("Basic Rendering", () => {

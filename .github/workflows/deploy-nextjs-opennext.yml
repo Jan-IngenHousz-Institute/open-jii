@@ -78,6 +78,8 @@ jobs:
           environment: ${{ inputs.environment }}
           web-base-origin: ${{ vars.WEB_BASE_ORIGIN }}
           posthog-key: ${{ secrets.POSTHOG_KEY }}
+          contentful-space-id: ${{ secrets.CONTENTFUL_SPACE_ID }}
+          contentful-access-token: ${{ secrets.CONTENTFUL_ACCESS_TOKEN }}
 
       # PostHog maps minified browser stack traces back to source with these. Injecting marks each
       # chunk with an id, so it runs before the assets are published. A PostHog outage or a missing

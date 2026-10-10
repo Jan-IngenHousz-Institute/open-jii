@@ -2,17 +2,38 @@ import { listQueryKeys } from "@/hooks/list-query-keys";
 import { orpc } from "@/lib/orpc";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import type { Experiment } from "@repo/api/domains/experiment/experiment.schema";
+
 export const useDetachWorkbook = () => {
   const queryClient = useQueryClient();
 
   return useMutation(
     orpc.experiments.detachWorkbook.mutationOptions({
-      // Detach has no workbookId in its response; read it from the experiment cache.
-      onMutate: (variables) => {
-        const experiment = queryClient.getQueryData(
-          orpc.experiments.getExperiment.queryKey({ input: { id: variables.id } }),
-        );
-        return { workbookId: experiment?.workbookId ?? undefined };
+      // The design page drops to its empty state at once, and gets the link back if the server
+      // refuses. Detach has no workbookId in its response, so it is read from the cache here.
+      onMutate: async (variables) => {
+        const experimentKey = orpc.experiments.getExperiment.queryKey({
+          input: { id: variables.id },
+        });
+        await queryClient.cancelQueries({ queryKey: experimentKey });
+
+        const previousExperiment = queryClient.getQueryData<Experiment>(experimentKey);
+        if (previousExperiment) {
+          queryClient.setQueryData<Experiment>(experimentKey, {
+            ...previousExperiment,
+            workbookId: null,
+          });
+        }
+
+        return { previousExperiment, workbookId: previousExperiment?.workbookId ?? undefined };
+      },
+      onError: (_error, variables, context) => {
+        if (context?.previousExperiment) {
+          queryClient.setQueryData(
+            orpc.experiments.getExperiment.queryKey({ input: { id: variables.id } }),
+            context.previousExperiment,
+          );
+        }
       },
       onSettled: async (_data, _error, variables, context) => {
         await queryClient.invalidateQueries({

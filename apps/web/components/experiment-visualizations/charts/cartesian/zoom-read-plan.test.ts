@@ -1,9 +1,8 @@
+import { createVisualization } from "@/test/factories";
 import { describe, expect, it } from "vitest";
 
 import type { ChartFormDataConfig, RenderedChartConfig } from "../chart-config";
-import { zoomReadPlanOf } from "./zoom-read-plan";
-
-const ROWS = [{ timestamp: "2026-09-25T12:00:00.000Z", fluo: "0.4", device_id: "d1" }];
+import { BUCKETED_ROWS, drawsFromBuckets, xScaleOf, zoomReadPlanOf } from "./zoom-read-plan";
 
 function dataConfig(overrides: Partial<ChartFormDataConfig> = {}): ChartFormDataConfig {
   return {
@@ -19,9 +18,16 @@ function dataConfig(overrides: Partial<ChartFormDataConfig> = {}): ChartFormData
 
 const CONFIG: RenderedChartConfig = {};
 
+const FACETED = dataConfig({
+  dataSources: [
+    ...dataConfig().dataSources,
+    { tableName: "raw_data", columnName: "site", role: "facet" },
+  ],
+});
+
 describe("zoomReadPlanOf", () => {
-  it("plans a time-bucketed read for a line over timestamps, split by its colour column", () => {
-    expect(zoomReadPlanOf(dataConfig(), CONFIG, "line", ROWS)).toEqual({
+  it("plans a bucketed read for a line, split by its colour column", () => {
+    expect(zoomReadPlanOf(dataConfig(), CONFIG, "line", "time")).toEqual({
       xColumn: "timestamp",
       scale: "time",
       yColumns: ["fluo"],
@@ -30,10 +36,11 @@ describe("zoomReadPlanOf", () => {
     });
   });
 
-  it("buckets a numeric x by value", () => {
-    const plan = zoomReadPlanOf(dataConfig(), CONFIG, "area", [{ timestamp: "12.5", fluo: 1 }]);
-
-    expect(plan?.scale).toBe("number");
+  it("buckets each facet apart when the facets share their x", () => {
+    expect(zoomReadPlanOf(FACETED, CONFIG, "line", "time")?.splitColumns).toEqual([
+      "device_id",
+      "site",
+    ]);
   });
 
   it.each([
@@ -45,17 +52,7 @@ describe("zoomReadPlanOf", () => {
     ],
     ["a stacked area", dataConfig(), { stackMode: "stacked" as const }, "area" as const],
     ["a scatter chart", dataConfig(), CONFIG, "scatter" as const],
-    [
-      "a faceted chart",
-      dataConfig({
-        dataSources: [
-          ...dataConfig().dataSources,
-          { tableName: "raw_data", columnName: "site", role: "facet" as const },
-        ],
-      }),
-      CONFIG,
-      "line" as const,
-    ],
+    ["facets that zoom apart", FACETED, { facetSharedX: false }, "line" as const],
     [
       "a column path the query cannot name",
       dataConfig({
@@ -68,12 +65,47 @@ describe("zoomReadPlanOf", () => {
       "line" as const,
     ],
   ])("plans nothing for %s", (_, config, chartConfig, traceType) => {
-    expect(zoomReadPlanOf(config, chartConfig, traceType, ROWS)).toBeUndefined();
+    expect(zoomReadPlanOf(config, chartConfig, traceType, "time")).toBeUndefined();
   });
 
-  it("plans nothing for a categorical x", () => {
-    expect(
-      zoomReadPlanOf(dataConfig(), CONFIG, "line", [{ timestamp: "site-a", fluo: 1 }]),
-    ).toBeUndefined();
+  it("plans nothing without a scale", () => {
+    expect(zoomReadPlanOf(dataConfig(), CONFIG, "line", undefined)).toBeUndefined();
+  });
+});
+
+describe("xScaleOf", () => {
+  it("reads the scale from the x column's type", () => {
+    expect(xScaleOf("TIMESTAMP", [], "timestamp")).toBe("time");
+    expect(xScaleOf("DOUBLE", [], "timestamp")).toBe("number");
+    expect(xScaleOf("STRING", [{ timestamp: "12.5" }], "timestamp")).toBeUndefined();
+  });
+
+  it("falls back to the first value when the type is unknown", () => {
+    expect(xScaleOf(undefined, [{ timestamp: "2026-09-25T12:00:00.000Z" }], "timestamp")).toBe(
+      "time",
+    );
+    expect(xScaleOf(undefined, [{ timestamp: "12.5" }], "timestamp")).toBe("number");
+    expect(xScaleOf(undefined, [{ timestamp: "site-a" }], "timestamp")).toBeUndefined();
+    expect(xScaleOf(undefined, [], "timestamp")).toBeUndefined();
+  });
+});
+
+describe("drawsFromBuckets", () => {
+  const line = createVisualization({ chartType: "line", dataConfig: dataConfig() });
+
+  it("draws a line from buckets once its table has more rows than a plot has pixels", () => {
+    expect(drawsFromBuckets(line, BUCKETED_ROWS + 1)).toBe(true);
+    expect(drawsFromBuckets(line, BUCKETED_ROWS)).toBe(false);
+  });
+
+  it("cannot tell before the table's size is known", () => {
+    expect(drawsFromBuckets(line, undefined)).toBeUndefined();
+  });
+
+  it("never draws a scatter chart from buckets", () => {
+    const scatter = createVisualization({ chartType: "scatter", dataConfig: dataConfig() });
+
+    expect(drawsFromBuckets(scatter, undefined)).toBe(false);
+    expect(drawsFromBuckets(scatter, 1_000_000)).toBe(false);
   });
 });

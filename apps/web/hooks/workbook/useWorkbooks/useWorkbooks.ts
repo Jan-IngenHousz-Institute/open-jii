@@ -8,6 +8,7 @@ import { isPaginatedList } from "@repo/api/shared/listing";
 import { useDebounce } from "../../useDebounce";
 import { useListSorting } from "../../useListSorting";
 import { useSearchPending } from "../../useSearchPending";
+import { workbooksListQuery } from "./workbooks-list-query";
 
 export function useWorkbooks({ initialSearch = "" }: { initialSearch?: string } = {}) {
   const [search, setSearchState] = useState<string>(initialSearch);
@@ -20,16 +21,10 @@ export function useWorkbooks({ initialSearch = "" }: { initialSearch?: string } 
     setPage(1);
   };
 
-  const query = useQuery(
-    orpc.workbooks.listWorkbooks.queryOptions({
-      input: {
-        search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
-        page,
-        sort: sort.length ? sort : undefined,
-      },
-      placeholderData: (prev) => prev,
-    }),
-  );
+  const query = useQuery({
+    ...workbooksListQuery(orpc, { search: debouncedSearch, page, sort }),
+    placeholderData: (prev) => prev,
+  });
 
   // `page` is always sent, so the response is the envelope; narrow the union.
   const data = query.data && isPaginatedList(query.data) ? query.data : undefined;

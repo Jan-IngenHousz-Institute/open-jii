@@ -91,6 +91,31 @@ describe("ListExperimentDevicesUseCase", () => {
     expect(result.value.pipelineUnavailable).toBe(false);
   });
 
+  it("reads stats and the bound devices' activity while the publisher lookup is still running", async () => {
+    const { experiment } = await testApp.createExperiment({ name: "E", userId });
+    const device = await testApp.createIotDevice({ createdBy: userId });
+    await repository.addExperiments(device.id, [experiment.id], userId);
+
+    let answerPublishers: () => void = () => undefined;
+    vi.spyOn(databricksAdapter, "getExperimentPublishers").mockReturnValue(
+      new Promise((resolve) => {
+        answerPublishers = () => resolve(success([]));
+      }),
+    );
+    const stats = vi.spyOn(databricksAdapter, "getExperimentDeviceStats");
+    const activity = vi.spyOn(databricksAdapter, "getDevicesLastActivity");
+
+    const pending = useCase.execute(experiment.id, userId, NOW);
+    await vi.waitFor(() => expect(activity).toHaveBeenCalledWith([device.thingName]));
+    expect(stats).toHaveBeenCalledWith(experiment.id, expect.any(Number));
+
+    answerPublishers();
+    const result = await pending;
+
+    assertSuccess(result);
+    expect(activity).toHaveBeenCalledTimes(1);
+  });
+
   it("joins fleet-index and warehouse facts onto a bound device", async () => {
     const { experiment } = await testApp.createExperiment({ name: "E", userId });
     const device = await testApp.createIotDevice({ createdBy: userId });

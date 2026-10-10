@@ -4,7 +4,7 @@ import { HelpCircle, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
-import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
+import type { QuestionCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 import {
   sanitizeQuestionLabel,
   stripSpecialCharacters,
@@ -13,8 +13,9 @@ import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 
+import { useWorkbookCells } from "./workbook-cells-context";
+
 interface QuestionPickerProps {
-  existingCells: WorkbookCell[];
   onSelect: (cell: QuestionCell) => void;
   children: ReactNode;
 }
@@ -22,19 +23,24 @@ interface QuestionPickerProps {
 // Question cells supply column keys for the data pipeline, so the name must
 // be set at creation time and be unique within the workbook. This is the only
 // path that creates question cells; createDefaultCell throws for that type.
-export function QuestionPicker({ existingCells, onSelect, children }: QuestionPickerProps) {
+export function QuestionPicker({ onSelect, children }: QuestionPickerProps) {
+  const existingCells = useWorkbookCells();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
 
   const canonical = name ? sanitizeQuestionLabel(name) : "";
 
+  // Every add button holds a closed picker, so the names are only read while this one is open.
   const existingCanonicals = useMemo(() => {
     const set = new Set<string>();
+    if (!open) {
+      return set;
+    }
     for (const cell of existingCells) {
       if (cell.type === "question") set.add(sanitizeQuestionLabel(cell.name));
     }
     return set;
-  }, [existingCells]);
+  }, [existingCells, open]);
 
   const trimmed = name.trim();
   const isDuplicate = trimmed.length > 0 && existingCanonicals.has(canonical);

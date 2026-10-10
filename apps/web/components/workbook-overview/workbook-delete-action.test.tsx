@@ -1,8 +1,8 @@
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
 import { contract } from "@repo/api/contract";
 

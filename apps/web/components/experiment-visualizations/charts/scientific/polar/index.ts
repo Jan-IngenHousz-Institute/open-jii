@@ -10,6 +10,7 @@ import { polarStyleShelves } from "./shelves/style-shelves";
 
 export const polarChartType: ChartTypeDef = {
   type: "polar",
+  plotlyTraceTypes: ["scatterpolar", "barpolar"],
   family: "scientific",
   labelKey: "workspace.charts.types.polar",
   descriptionKey: "workspace.charts.descriptions.polar",

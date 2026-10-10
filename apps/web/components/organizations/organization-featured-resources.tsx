@@ -1,9 +1,9 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
 import { stripHtml } from "@/util/strip-html";
 import { Lock, Users } from "lucide-react";
-import Link from "next/link";
 
 import type { OrganizationResource } from "@repo/api/domains/organization/organization.schema";
 import { useTranslation } from "@repo/i18n";
@@ -64,7 +64,7 @@ function FeaturedResourceCard({ resource }: { resource: OrganizationResource }) 
 
   return (
     <li className="flex">
-      <Link
+      <IntentLink
         href={`/${locale}/platform/${RESOURCE_SEGMENT[resource.type]}/${resource.id}`}
         className="flex flex-1"
       >
@@ -118,7 +118,7 @@ function FeaturedResourceCard({ resource }: { resource: OrganizationResource }) 
             </span>
           </div>
         </Card>
-      </Link>
+      </IntentLink>
     </li>
   );
 }

@@ -10,6 +10,7 @@ import { radarStyleShelves } from "./shelves/style-shelves";
 
 export const radarChartType: ChartTypeDef = {
   type: "radar",
+  plotlyTraceTypes: ["scatterpolar"],
   family: "scientific",
   labelKey: "workspace.charts.types.radar",
   descriptionKey: "workspace.charts.descriptions.radar",

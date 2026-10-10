@@ -10,6 +10,7 @@ import { histogram2DStyleShelves } from "./shelves/style-shelves";
 
 export const histogram2DChartType: ChartTypeDef = {
   type: "histogram-2d",
+  plotlyTraceTypes: ["histogram2d", "histogram2dcontour"],
   family: "statistical",
   labelKey: "workspace.charts.types.histogram2d",
   descriptionKey: "workspace.charts.descriptions.histogram2d",

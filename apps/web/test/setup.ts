@@ -140,6 +140,7 @@ vi.mock("@repo/i18n", () => ({
             : key,
     i18n: { language: "en-US", changeLanguage: vi.fn() },
   }),
+  useCurrentLocale: () => "en-US",
   defaultLocale: "en-US",
   locales: ["en-US"],
   isKnownLocale: (locale: string) => ["en-US", "de-DE"].includes(locale),
@@ -188,7 +189,8 @@ vi.mock("@repo/i18n/server", () => {
     i18n: { t: (key: string) => key },
     resources: {},
   });
-  return { default: initTranslations, initTranslations };
+  const loadNamespaceBundles = vi.fn().mockResolvedValue({});
+  return { default: initTranslations, initTranslations, loadNamespaceBundles };
 });
 
 vi.mock("next/navigation", () => ({
@@ -332,17 +334,15 @@ vi.mock("posthog-js", () => ({
   },
 }));
 
-vi.mock("posthog-js/react", () => {
-  const posthog = {
-    opt_in_capturing: vi.fn(),
-    opt_out_capturing: vi.fn(),
-    reset: vi.fn(),
-    capture: vi.fn(),
-  };
+vi.mock("~/providers/posthog-context", async () => {
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  const React = await vi.importActual<typeof import("react")>("react");
+  // The posthog-js mock above, so components and hooks see one client.
+  const { default: posthog } = await import("posthog-js");
   return {
+    PostHogContext: React.createContext(null),
     usePostHog: vi.fn(() => posthog),
     useFeatureFlagEnabled: vi.fn().mockReturnValue(false),
-    PostHogProvider: ({ children }: { children: React.ReactNode }) => children,
   };
 });
 
@@ -355,6 +355,7 @@ vi.mock("@repo/ui/hooks/use-toast", () => ({
 }));
 
 vi.mock("~/lib/contentful", () => ({
+  buildTimeLocaleParams: vi.fn().mockResolvedValue([]),
   getContentfulClients: vi.fn().mockResolvedValue({
     client: {},
     previewClient: {},
@@ -393,6 +394,5 @@ vi.mock("~/components/shared/code-editor", async () => {
             (props.onChange as ((v: string) => void) | undefined)?.(e.target.value),
         }),
       ),
-    createSyntaxLinter: vi.fn(),
   };
 });

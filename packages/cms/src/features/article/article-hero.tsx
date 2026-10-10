@@ -51,7 +51,6 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
             nextImageProps={{
               className: "w-full h-full object-cover",
               priority: true,
-              sizes: undefined,
             }}
             {...article.featuredImage}
           />

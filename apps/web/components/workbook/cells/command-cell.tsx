@@ -18,7 +18,6 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
-import { buildCommandExtensions } from "../../shared/command-completions";
 import { CellWrapper } from "../cell-wrapper";
 import { WorkbookCodeEditor } from "../workbook-code-editor";
 import type { EditorLanguage } from "../workbook-code-editor";
@@ -63,17 +62,8 @@ export function CommandCellComponent({
 
   // Known-command autocomplete + hover hints only apply to the free-text `string`
   // format; json/yaml payloads are structured, not a single command word.
-  const commandExtensions = useMemo(
-    () =>
-      format === "string"
-        ? buildCommandExtensions({
-            singleLine: true,
-            placeholder: t("experiments.commandPanelPlaceholder"),
-            readOnly,
-          })
-        : undefined,
-    [format, readOnly, t],
-  );
+  const commandInputPlaceholder =
+    format === "string" ? t("experiments.commandPanelPlaceholder") : undefined;
 
   // A single-line command reads as an input, not a code block; drop the gutter.
   const commandBasicSetup = useMemo(
@@ -153,7 +143,7 @@ export function CommandCellComponent({
           minHeight={format === "string" ? "44px" : readOnly ? "80px" : "120px"}
           maxHeight="400px"
           readOnly={readOnly}
-          extraExtensions={commandExtensions}
+          commandInputPlaceholder={commandInputPlaceholder}
           basicSetup={commandBasicSetup}
         />
         {!validation.ok ? <p className="text-destructive text-xs">{validation.error}</p> : null}

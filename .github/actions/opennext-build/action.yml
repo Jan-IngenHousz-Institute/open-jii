@@ -11,6 +11,12 @@ inputs:
   posthog-key:
     description: "PostHog API key"
     default: ""
+  contentful-space-id:
+    description: "Contentful space to prerender the public pages from; without it they render on first visit"
+    default: ""
+  contentful-access-token:
+    description: "Contentful delivery token, which reads published content only"
+    default: ""
   node-version:
     description: "Node.js version"
     default: "24"
@@ -49,6 +55,8 @@ runs:
       shell: bash
       env:
         NODE_ENV: production
+        CONTENTFUL_SPACE_ID: ${{ inputs.contentful-space-id }}
+        CONTENTFUL_ACCESS_TOKEN: ${{ inputs.contentful-access-token }}
       run: pnpm run build --filter=web
 
     - name: Run OpenNext Build

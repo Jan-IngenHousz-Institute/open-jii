@@ -14,7 +14,6 @@ import {
   SelectValue,
 } from "@repo/ui/components/select";
 
-import { buildCommandExtensions } from "../shared/command-completions";
 import { WorkbookCodeEditor } from "../workbook/workbook-code-editor";
 import type { EditorLanguage } from "../workbook/workbook-code-editor";
 
@@ -50,17 +49,8 @@ export function CommandPanel({ command, onChange, disabled = false }: CommandPan
 
   // Known-command autocomplete + hover hints only apply to the free-text `string`
   // format; json/yaml payloads are structured, not a single command word.
-  const commandExtensions = useMemo(
-    () =>
-      format === "string"
-        ? buildCommandExtensions({
-            singleLine: true,
-            placeholder: t("experiments.commandPanelPlaceholder"),
-            readOnly: disabled,
-          })
-        : undefined,
-    [format, disabled, t],
-  );
+  const commandInputPlaceholder =
+    format === "string" ? t("experiments.commandPanelPlaceholder") : undefined;
 
   const commandBasicSetup = useMemo(
     () =>
@@ -109,7 +99,7 @@ export function CommandPanel({ command, onChange, disabled = false }: CommandPan
         minHeight={format === "string" ? "44px" : "120px"}
         maxHeight="400px"
         readOnly={disabled}
-        extraExtensions={commandExtensions}
+        commandInputPlaceholder={commandInputPlaceholder}
         basicSetup={commandBasicSetup}
       />
       {!validation.ok ? <p className="text-destructive text-xs">{validation.error}</p> : null}

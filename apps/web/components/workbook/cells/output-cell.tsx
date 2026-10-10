@@ -40,7 +40,7 @@ interface OutputCellProps {
   onUpdate: (cell: OutputCellType) => void;
   onDelete: () => void;
   readOnly?: boolean;
-  allCells?: WorkbookCell[];
+  producer?: WorkbookCell;
 }
 
 function formatExecutionTime(ms?: number): string {
@@ -297,7 +297,7 @@ export function OutputCellComponent({
   onUpdate,
   onDelete,
   readOnly,
-  allCells,
+  producer,
 }: OutputCellProps) {
   const { t } = useTranslation("workbook");
   const hasContent =
@@ -328,9 +328,7 @@ export function OutputCellComponent({
     if (tab !== "table") setPinnedChart(null);
   };
 
-  const sourceCell = allCells?.find((c) => c.id === cell.producedBy);
-  const sourceProtocolId =
-    sourceCell?.type === "protocol" ? sourceCell.payload.protocolId : undefined;
+  const sourceProtocolId = producer?.type === "protocol" ? producer.payload.protocolId : undefined;
   const { data: protocolResponse, isLoading: protocolLoading } = useProtocol(
     sourceProtocolId ?? "",
     !!sourceProtocolId,

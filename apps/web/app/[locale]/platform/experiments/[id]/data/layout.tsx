@@ -1,35 +1,19 @@
-"use client";
-
-import { ErrorDisplay } from "@/components/error-display";
-import { useExperiment } from "@/hooks/experiment/useExperiment/useExperiment";
-import { use } from "react";
-import * as React from "react";
-
-import { useTranslation } from "@repo/i18n/client";
+import { PrefetchedQueries } from "@/components/server-prefetch/prefetched-queries";
+import { experimentTablesQuery } from "@/hooks/experiment/useExperimentTables/experiment-tables-query";
+import type { ReactNode } from "react";
 
 interface DataLayoutProps {
-  children: React.ReactNode;
-  params: Promise<{ id: string; locale: string }>;
+  children: ReactNode;
+  params: Promise<{ id: string }>;
 }
 
-export default function DataLayout({ children, params }: DataLayoutProps) {
-  const { id } = use(params);
-  const { data, isLoading, error } = useExperiment(id);
-  const { t } = useTranslation("experiments");
+// The table reads its first page only once it knows the tables, so the list comes with the page.
+export default async function DataLayout({ children, params }: DataLayoutProps) {
+  const { id } = await params;
 
-  const experiment = data;
-
-  if (isLoading) {
-    return <div>{t("loading")}</div>;
-  }
-
-  if (error) {
-    return <ErrorDisplay error={error} title={t("failedToLoad")} />;
-  }
-
-  if (!data || !experiment) {
-    return <div>{t("notFound")}</div>;
-  }
-
-  return <>{children}</>;
+  return (
+    <PrefetchedQueries queries={(utils) => [experimentTablesQuery(utils, id)]}>
+      {children}
+    </PrefetchedQueries>
+  );
 }

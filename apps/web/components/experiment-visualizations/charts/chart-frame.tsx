@@ -1,13 +1,14 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { InsetPanel } from "@/components/shared/inset-panel";
 import { AlertCircle } from "lucide-react";
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
 import { useTranslation } from "@repo/i18n";
 import { Trans } from "@repo/i18n/client";
+import { cn } from "@repo/ui/lib/utils";
 
 import { useDashboardSkippedFiltersForTable } from "../../experiment-dashboards/dashboard-filters-context";
 import type { ChartResolution } from "./chart-resolution-notice";
@@ -18,6 +19,7 @@ interface ChartFrameProps {
   visualization: ExperimentVisualization;
   experimentId: string;
   isLoading: boolean;
+  isRefreshing?: boolean;
   error: unknown;
   hasRows: boolean;
   truncation?: ChartTruncation;
@@ -30,6 +32,7 @@ export function ChartFrame({
   visualization,
   experimentId,
   isLoading,
+  isRefreshing = false,
   error,
   hasRows,
   truncation,
@@ -66,7 +69,7 @@ export function ChartFrame({
               components={{
                 configLink:
                   visualization.id && visualization.id !== "preview" ? (
-                    <Link
+                    <IntentLink
                       href={`/platform/experiments/${experimentId}/analysis/visualizations/${visualization.id}`}
                       className="text-foreground underline hover:opacity-80"
                     />
@@ -92,14 +95,23 @@ export function ChartFrame({
     );
   }
 
+  // Always rendered, so the chart keeps its place in the tree while a new read refreshes it.
   return (
-    <ChartWithReadNotice
-      truncation={truncation}
-      resolution={resolution}
-      skippedFilters={skippedFilters}
+    <div
+      aria-busy={isRefreshing}
+      className={cn(
+        "flex h-full min-h-0 flex-col transition-opacity",
+        isRefreshing && "opacity-50",
+      )}
     >
-      {children}
-    </ChartWithReadNotice>
+      <ChartWithReadNotice
+        truncation={truncation}
+        resolution={resolution}
+        skippedFilters={skippedFilters}
+      >
+        {children}
+      </ChartWithReadNotice>
+    </div>
   );
 }
 

@@ -10,6 +10,7 @@ import { pieStyleShelves } from "./shelves/style-shelves";
 
 export const pieChartType: ChartTypeDef = {
   type: "pie",
+  plotlyTraceTypes: ["pie"],
   family: "basic",
   labelKey: "workspace.charts.types.pie",
   descriptionKey: "workspace.charts.descriptions.pie",

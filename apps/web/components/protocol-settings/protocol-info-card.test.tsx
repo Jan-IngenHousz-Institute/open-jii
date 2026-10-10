@@ -2,8 +2,8 @@ import { createProtocol } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { formatDate } from "@/util/date";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
 import { contract } from "@repo/api/contract";
 

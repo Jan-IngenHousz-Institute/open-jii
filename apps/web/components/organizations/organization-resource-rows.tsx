@@ -1,5 +1,6 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { StatusBadge } from "@/components/shared/status-badge";
 import type { StatusTone } from "@/components/shared/status-badge";
 import { useLocale } from "@/hooks/useLocale";
@@ -9,7 +10,6 @@ import { getMacroLanguageBadgeTone, getMacroLanguageLabel } from "@/util/macro-l
 import { getSensorFamilyBadgeTone, getSensorFamilyLabel } from "@/util/sensor-family";
 import { stripHtml } from "@/util/strip-html";
 import { Lock } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { OrganizationResource } from "@repo/api/domains/organization/organization.schema";
@@ -242,12 +242,12 @@ function ResourceRow({
   return (
     <li className="border-border/60 border-b py-3 last:border-b-0">
       <span className="flex min-w-0 items-center gap-1.5">
-        <Link
+        <IntentLink
           href={`/${locale}/platform/${RESOURCE_SEGMENT[resource.type]}/${resource.id}`}
           className="truncate text-sm font-medium hover:underline"
         >
           {resource.name}
-        </Link>
+        </IntentLink>
         {/* Private only: public is the default, so marking it would be noise. */}
         {resource.visibility === "private" ? (
           <Tooltip>

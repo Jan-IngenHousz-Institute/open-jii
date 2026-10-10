@@ -2,6 +2,7 @@
 
 import { CartesianChart } from "@/components/charts/cartesian-chart";
 import { useColumnMetadata } from "@/hooks/experiment/useColumnMetadata/useColumnMetadata";
+import { useTableRowCounts } from "@/hooks/experiment/useTableRowCounts/useTableRowCounts";
 import { useCallback, useMemo, useState } from "react";
 
 import type { ExperimentSeriesTraceType } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
@@ -19,7 +20,7 @@ import { transformCartesianData } from "./cartesian-transform";
 import type { AxisRanges } from "./relayout-ranges";
 import { axisPosition, reduceSeries } from "./series-reduction";
 import type { AxisRange } from "./series-reduction";
-import { zoomReadPlanOf } from "./zoom-read-plan";
+import { drawsFromBuckets, xScaleOf, zoomReadPlanOf } from "./zoom-read-plan";
 import type { ZoomReadPlan } from "./zoom-read-plan";
 
 interface CartesianRendererProps extends ChartRendererProps {
@@ -51,40 +52,72 @@ export function CartesianRenderer({
   const xColumn = dataSources.find((ds) => ds.role === "x")?.columnName;
 
   const colorColumn = dataSources.find((ds) => ds.role === "color")?.columnName;
-  const { columns } = useColumnMetadata(experimentId, visualization.dataConfig.tableName);
+  const tableName = visualization.dataConfig.tableName;
+  const { columns, isLoading: isColumnsLoading } = useColumnMetadata(experimentId, tableName);
   const colorColumnType = columns.find((c) => c.name === colorColumn)?.type_text;
+  const xColumnType = columns.find((c) => c.name === xColumn)?.type_text;
 
-  const { rows, isLoading, error, truncation, filters } = useChartData(
-    visualization,
-    experimentId,
-    providedData,
-    {
-      orderBy: xColumn,
-    },
-  );
+  const rowCountOf = useTableRowCounts(experimentId);
 
   const chartConfig = narrowChartConfig(visualization);
 
   const [isShowingAll, setIsShowingAll] = useState(false);
   const toggleShowingAll = useCallback(() => setIsShowingAll((showing) => !showing), []);
-  const { ranges, onRelayout } = useAxisRanges();
+  const { ranges, onRelayout } = useAxisRanges(chartConfig.facetSharedX !== false);
 
-  // A series longer than one read is drawn from buckets of the whole table instead of its first rows.
+  // A long series is drawn from buckets of the whole table, decided from the table's row count
+  // before any rows are read; until that count and the x column's type are in, nothing is read.
+  const bucketDecision =
+    providedData === undefined ? drawsFromBuckets(visualization, rowCountOf?.(tableName)) : false;
+  const isBucketCandidate = bucketDecision === true && !isShowingAll;
+  const isAwaitingDecision =
+    bucketDecision === undefined || (isBucketCandidate && isColumnsLoading);
+  // Buckets name their scale from the x column's type; a categorical x is read whole instead.
+  const isBucketPath = isBucketCandidate && xScaleOf(xColumnType, [], xColumn) !== undefined;
+
+  const chartData = useChartData(visualization, experimentId, providedData, {
+    orderBy: xColumn,
+    enabled: !isAwaitingDecision && !isBucketPath,
+  });
+  const { rows, isRefreshing, truncation, filters } = chartData;
+
+  // A full read that came back truncated is drawn from buckets as well.
   const zoomReadPlan = useMemo(
-    () => zoomReadPlanOf(visualization.dataConfig, chartConfig, defaultTraceType, rows),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- stackMode is the only config it reads.
-    [visualization.dataConfig, chartConfig.stackMode, defaultTraceType, rows],
+    () =>
+      zoomReadPlanOf(
+        visualization.dataConfig,
+        chartConfig,
+        defaultTraceType,
+        xScaleOf(xColumnType, rows, xColumn),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the plan reads only these of the config.
+    [
+      visualization.dataConfig,
+      chartConfig.stackMode,
+      chartConfig.facetSharedX,
+      defaultTraceType,
+      xColumnType,
+      xColumn,
+      rows,
+    ],
   );
-  const isZoomReadable = zoomReadPlan !== undefined && truncation !== undefined && !isShowingAll;
+  const isZoomReadable =
+    zoomReadPlan !== undefined && !isShowingAll && (isBucketPath || truncation !== undefined);
   const zoomRead = useZoomRead({
     ...(zoomReadPlan ?? NO_ZOOM_READ),
     experimentId,
-    tableName: visualization.dataConfig.tableName,
+    tableName,
     filters,
+    // Bucketed facets share their x, whose one range follows a zoom in any cell.
     window: ranges.x,
     enabled: isZoomReadable,
   });
   const drawnRows = isZoomReadable && zoomRead.rows ? zoomRead.rows : rows;
+
+  const isLoading =
+    isAwaitingDecision ||
+    (isBucketPath ? zoomRead.rows === undefined && !zoomRead.error : chartData.isLoading);
+  const error = isBucketPath ? zoomRead.error : chartData.error;
 
   // KEEP IN SYNC with field reads in `transformCartesianData` and its helpers.
   // Re-derive: `grep -oE 'chartConfig\\.[a-zA-Z_]+' cartesian-transform.ts | sort -u`.
@@ -178,8 +211,9 @@ export function CartesianRenderer({
       visualization={visualization}
       experimentId={experimentId}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
       error={error}
-      hasRows={rows.length > 0}
+      hasRows={drawnRows.length > 0}
       truncation={isDrawingZoomRead ? undefined : truncation}
       resolution={resolution}
     >

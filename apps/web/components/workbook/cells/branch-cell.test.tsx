@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import type { BranchCell, WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.schema";
 
+import { WorkbookCellsProvider } from "../workbook-cells-context";
 import { BranchCellComponent } from "./branch-cell";
 
 function makeBranchCell(overrides: Partial<BranchCell> = {}): BranchCell {
@@ -53,13 +54,9 @@ function renderBranch(
   const onDelete = vi.fn();
   const cell = makeBranchCell(overrides);
   const result = render(
-    <BranchCellComponent
-      cell={cell}
-      onUpdate={onUpdate}
-      onDelete={onDelete}
-      allCells={[cell, questionCell, protocolCell]}
-      {...props}
-    />,
+    <WorkbookCellsProvider cells={[cell, questionCell, protocolCell]}>
+      <BranchCellComponent cell={cell} onUpdate={onUpdate} onDelete={onDelete} {...props} />
+    </WorkbookCellsProvider>,
   );
   return { ...result, onUpdate, onDelete, cell };
 }
@@ -122,12 +119,9 @@ describe("BranchCellComponent", () => {
     const user = userEvent.setup();
     const cell = makeBranchCell();
     render(
-      <BranchCellComponent
-        cell={cell}
-        onUpdate={vi.fn()}
-        onDelete={vi.fn()}
-        allCells={[cell, commandCell]}
-      />,
+      <WorkbookCellsProvider cells={[cell, commandCell]}>
+        <BranchCellComponent cell={cell} onUpdate={vi.fn()} onDelete={vi.fn()} />
+      </WorkbookCellsProvider>,
     );
 
     // The condition row renders the source-cell select first.

@@ -10,6 +10,7 @@ import { carpetStyleShelves } from "./shelves/style-shelves";
 
 export const carpetChartType: ChartTypeDef = {
   type: "carpet",
+  plotlyTraceTypes: ["carpet", "contourcarpet", "scattercarpet"],
   family: "scientific",
   labelKey: "workspace.charts.types.carpet",
   descriptionKey: "workspace.charts.descriptions.carpet",

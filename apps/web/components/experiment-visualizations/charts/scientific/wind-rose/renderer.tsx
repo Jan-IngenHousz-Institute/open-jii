@@ -23,7 +23,7 @@ export function WindRoseRenderer({
   const xColumn = dataSources.find((ds) => ds.role === "x")?.columnName;
   const yColumn = dataSources.find((ds) => ds.role === "y")?.columnName;
 
-  const { rows, isLoading, error, truncation } = useChartData(
+  const { rows, isLoading, isRefreshing, error, truncation } = useChartData(
     visualization,
     experimentId,
     providedData,
@@ -64,6 +64,7 @@ export function WindRoseRenderer({
       visualization={visualization}
       experimentId={experimentId}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
       error={error}
       hasRows={hasData}
       truncation={truncation}

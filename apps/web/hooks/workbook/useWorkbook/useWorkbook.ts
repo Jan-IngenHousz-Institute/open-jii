@@ -1,17 +1,12 @@
 import { orpc } from "@/lib/orpc";
-import { shouldRetryQuery } from "@/util/query-retry";
 import { useQuery } from "@tanstack/react-query";
+
+import { workbookQuery } from "./workbook-query";
 
 export function useWorkbook(id: string, options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? !!id;
 
-  const query = useQuery(
-    orpc.workbooks.getWorkbook.queryOptions({
-      input: { id },
-      retry: shouldRetryQuery,
-      enabled,
-    }),
-  );
+  const query = useQuery({ ...workbookQuery(orpc, id), enabled });
 
   return {
     data: enabled ? query.data : undefined,

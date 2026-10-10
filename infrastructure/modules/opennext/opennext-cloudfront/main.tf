@@ -146,6 +146,29 @@ function handler(event) {
 }
 EOT
 }
+locals {
+  # Pages that differ per visitor never come from the edge cache, whatever their
+  # headers say.
+  uncached_page_patterns = [
+    "/*/platform*",
+    "/*/login*",
+    "/*/register*",
+    "/*/verify-request*",
+  ]
+
+  # Only the default locale (defaultLocale in packages/i18n/src/config.ts) and the
+  # site-wide metadata files are cached at the edge. proxy.ts decides per viewer
+  # who may see any other locale and can only decide for a request that reaches
+  # it, so a locale added later stays uncached unless it is listed here.
+  cached_page_patterns = [
+    "/en-US*",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/opengraph-image*",
+    "/twitter-image*",
+  ]
+}
+
 resource "aws_cloudfront_distribution" "distribution" {
   enabled         = true
   is_ipv6_enabled = true
@@ -225,7 +248,8 @@ resource "aws_cloudfront_distribution" "distribution" {
     }
   }
 
-  # Default cache behavior - route to Server Lambda for all dynamic routes (SSR)
+  # Default cache behavior - route to Server Lambda, uncached. The public pages Next
+  # marks shared-cacheable have their own behaviors (cached_page_patterns, server_pages).
   default_cache_behavior {
     target_origin_id       = "ServerLambda"
     viewer_protocol_policy = "redirect-to-https"
@@ -373,6 +397,72 @@ resource "aws_cloudfront_distribution" "distribution" {
     cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6" # Managed-CachingOptimizedForUncompressedObjects
   }
 
+  # After the asset behaviors, so a chunk under app/[locale]/platform still comes from S3.
+  dynamic "ordered_cache_behavior" {
+    for_each = local.uncached_page_patterns
+
+    content {
+      path_pattern           = ordered_cache_behavior.value
+      target_origin_id       = "ServerLambda"
+      viewer_protocol_policy = "redirect-to-https"
+      allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+      cached_methods         = ["GET", "HEAD"]
+      compress               = true
+
+      cache_policy_id          = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingDisabled
+      origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac" # Managed-AllViewerExceptHostHeader
+
+      lambda_function_association {
+        event_type   = "origin-request"
+        lambda_arn   = aws_lambda_function.edge_hash_body.qualified_arn
+        include_body = true
+      }
+
+      function_association {
+        event_type   = "viewer-request"
+        function_arn = aws_cloudfront_function.forward_host_header.arn
+      }
+    }
+  }
+
+  # After the uncached page behaviors, so the default locale's platform and sign-in pages stay uncached.
+  dynamic "ordered_cache_behavior" {
+    for_each = local.cached_page_patterns
+
+    content {
+      path_pattern           = ordered_cache_behavior.value
+      target_origin_id       = "ServerLambda"
+      viewer_protocol_policy = "redirect-to-https"
+      allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+      cached_methods         = ["GET", "HEAD"]
+      compress               = true
+
+      cache_policy_id          = aws_cloudfront_cache_policy.server_pages.id
+      origin_request_policy_id = "b689b0a8-53d0-40ab-baf2-68738e2966ac" # Managed-AllViewerExceptHostHeader
+
+      lambda_function_association {
+        event_type   = "origin-request"
+        lambda_arn   = aws_lambda_function.edge_hash_body.qualified_arn
+        include_body = true
+      }
+
+      function_association {
+        event_type   = "viewer-request"
+        function_arn = aws_cloudfront_function.forward_host_header.arn
+      }
+    }
+  }
+
+  # An origin error is never kept; without this CloudFront holds a 5xx for 10 s.
+  dynamic "custom_error_response" {
+    for_each = [500, 502, 503, 504]
+
+    content {
+      error_code            = custom_error_response.value
+      error_caching_min_ttl = 0
+    }
+  }
+
   # SSL certificate configuration
   viewer_certificate {
     acm_certificate_arn            = var.acm_certificate_arn
@@ -384,6 +474,50 @@ resource "aws_cloudfront_distribution" "distribution" {
   restrictions {
     geo_restriction {
       restriction_type = "none"
+    }
+  }
+}
+
+# Cache policy for server-rendered pages: the origin's Cache-Control decides, so
+# a private or no-store response is never stored. The session cookie stays out
+# of the key; only the preview cookie is in it, so a preview request misses.
+resource "aws_cloudfront_cache_policy" "server_pages" {
+  name = "${var.project_name}-server-pages-cache-policy"
+
+  default_ttl = 0 # a response without Cache-Control, such as a proxy redirect, is not kept
+  max_ttl     = 31536000
+  min_ttl     = 0
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    enable_accept_encoding_brotli = true
+    enable_accept_encoding_gzip   = true
+
+    cookies_config {
+      cookie_behavior = "whitelist"
+
+      cookies {
+        items = ["__prerender_bypass"]
+      }
+    }
+
+    headers_config {
+      header_behavior = "whitelist"
+
+      headers {
+        items = [
+          "rsc", # an RSC payload and the HTML share a URL
+          "next-router-prefetch",
+          "next-router-segment-prefetch",
+          "next-router-state-tree",
+          "next-url",
+          "x-forwarded-host",       # set by forward_host_header before the lookup
+          "x-prerender-revalidate", # OpenNext's revalidation request must reach the origin
+        ]
+      }
+    }
+
+    query_strings_config {
+      query_string_behavior = "all" # carries _rsc
     }
   }
 }

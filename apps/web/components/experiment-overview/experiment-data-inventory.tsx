@@ -1,7 +1,7 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { Database } from "lucide-react";
-import Link from "next/link";
 import { useExperimentTables } from "~/hooks/experiment/useExperimentTables/useExperimentTables";
 import { useLocale } from "~/hooks/useLocale";
 
@@ -74,7 +74,7 @@ export function ExperimentDataInventory({
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-bold">{t("dataInventory.title")}</h2>
         <Button asChild variant="link" className="h-auto shrink-0 p-0">
-          <Link href={dataHref}>{t("dataInventory.seeAll")}</Link>
+          <IntentLink href={dataHref}>{t("dataInventory.seeAll")}</IntentLink>
         </Button>
       </div>
 

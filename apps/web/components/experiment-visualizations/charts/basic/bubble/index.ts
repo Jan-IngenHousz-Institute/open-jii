@@ -10,6 +10,8 @@ import { bubbleStyleShelves } from "./shelves/style-shelves";
 
 export const bubbleChartType: ChartTypeDef = {
   type: "bubble",
+  // Large marker charts switch to WebGL in the cartesian renderer.
+  plotlyTraceTypes: ["scatter", "scattergl"],
   family: "basic",
   labelKey: "workspace.charts.types.bubble",
   descriptionKey: "workspace.charts.descriptions.bubble",

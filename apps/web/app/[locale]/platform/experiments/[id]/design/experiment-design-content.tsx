@@ -5,6 +5,7 @@ import { EmptyWorkbookState } from "@/components/experiment-flow/empty-workbook-
 import { InaccessibleWorkbookState } from "@/components/experiment-flow/inaccessible-workbook-state";
 import { LinkedWorkbookCard } from "@/components/experiment-flow/linked-workbook-card";
 import { FlowEditor } from "@/components/flow-editor/flow-editor";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { PageContainer } from "@/components/page-container";
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import {
@@ -20,7 +21,6 @@ import { useUpgradeWorkbookVersion } from "@/hooks/experiment/useUpgradeWorkbook
 import { useWorkbook } from "@/hooks/workbook/useWorkbook/useWorkbook";
 import { useWorkbookVersion } from "@/hooks/workbook/useWorkbookVersion/useWorkbookVersion";
 import { GitBranch, Info, List } from "lucide-react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { use, useCallback, useMemo } from "react";
 
@@ -163,12 +163,12 @@ export default function ExperimentDesignPage({ params }: ExperimentDesignPagePro
               <Info className="mt-0.5 h-4 w-4 shrink-0" />
               <p>
                 {t("flow.editAutoApplyNotice")} {t("flow.editIsolatedHint")}{" "}
-                <Link
+                <IntentLink
                   href={`/${locale}/platform/workbooks/${workbookId}`}
                   className="text-primary font-medium underline underline-offset-2"
                 >
                   {t("flow.editOpenWorkbookLink")}
-                </Link>
+                </IntentLink>
               </p>
             </div>
             <EditAutosaveStatus />

@@ -96,6 +96,7 @@
     "emptyTitle": "Nothing new yet",
     "emptyDescription": "Updates, fixes, and announcements will appear here once they are published.",
     "unreadBadge": "{{count}} unread",
+    "loadError": "The release notes could not be loaded.",
     "category": {
       "new_feature": "New feature",
       "improvement": "Improvement",

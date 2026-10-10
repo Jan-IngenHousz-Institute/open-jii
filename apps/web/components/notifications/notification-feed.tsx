@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsHydrated } from "@/hooks/useIsHydrated";
 import { CircleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -14,7 +15,26 @@ const DAY_GROUPS = ["today", "yesterday", "earlier"] as const;
 
 type DayGroup = (typeof DAY_GROUPS)[number];
 
-/** Day boundaries in the viewer's timezone, which is what `new Date()` already reads. */
+/**
+ * Midnight today and yesterday. The server renders in UTC, so the page hydrates on UTC days and
+ * regroups on the reader's own afterwards; otherwise React discards the server's HTML.
+ */
+function startOfDays(isLocal: boolean): { startOfToday: Date; startOfYesterday: Date } {
+  const startOfToday = new Date();
+  const startOfYesterday = new Date();
+
+  if (isLocal) {
+    startOfToday.setHours(0, 0, 0, 0);
+    startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+    startOfYesterday.setHours(0, 0, 0, 0);
+  } else {
+    startOfToday.setUTCHours(0, 0, 0, 0);
+    startOfYesterday.setUTCDate(startOfYesterday.getUTCDate() - 1);
+    startOfYesterday.setUTCHours(0, 0, 0, 0);
+  }
+  return { startOfToday, startOfYesterday };
+}
+
 function dayGroupOf(createdAt: string, startOfToday: Date, startOfYesterday: Date): DayGroup {
   const created = new Date(createdAt);
   if (created >= startOfToday) return "today";
@@ -45,6 +65,7 @@ export function NotificationFeed({
   groupByDay = false,
 }: NotificationFeedProps) {
   const { t } = useTranslation("notifications");
+  const isHydrated = useIsHydrated();
 
   if (isPending) {
     return (
@@ -85,10 +106,7 @@ export function NotificationFeed({
     return <ul className="divide-y">{notifications.map(renderRow)}</ul>;
   }
 
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const startOfYesterday = new Date(startOfToday);
-  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+  const { startOfToday, startOfYesterday } = startOfDays(isHydrated);
 
   const grouped = new Map<DayGroup, Notification[]>();
   for (const notification of notifications) {

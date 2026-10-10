@@ -11,7 +11,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
-import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -75,7 +74,7 @@ export function AppSidebar({
   navigationData,
   translations,
   user,
-  releaseNotes = [],
+  releaseDates = [],
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   locale: string;
@@ -85,7 +84,7 @@ export function AppSidebar({
     id: string;
     email: string;
   };
-  releaseNotes?: ReleaseNoteFields[];
+  releaseDates?: string[];
 }) {
   const { t } = useTranslation("common");
   const pathname = usePathname();
@@ -189,7 +188,10 @@ export function AppSidebar({
                 <NotificationsPopover />
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <WhatsNewFooterItem entries={releaseNotes} onOpen={() => setOpenMobile(false)} />
+                <WhatsNewFooterItem
+                  releaseDates={releaseDates}
+                  onOpen={() => setOpenMobile(false)}
+                />
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <DocsNavLink />

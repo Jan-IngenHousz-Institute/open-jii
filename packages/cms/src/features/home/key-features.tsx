@@ -53,7 +53,7 @@ export const HomeKeyFeatures: React.FC<HomeKeyFeaturesProps> = ({
               className="flex h-20 w-20 shrink-0 items-center justify-center"
               {...featureInspectorProps({ fieldId: "icon" })}
             >
-              {feature.icon && <CtfImage {...feature.icon} />}
+              {feature.icon && <CtfImage {...feature.icon} nextImageProps={{ sizes: "80px" }} />}
             </div>
 
             {/* Text content */}

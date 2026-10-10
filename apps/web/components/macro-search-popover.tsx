@@ -1,11 +1,11 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
 import { SearchX, ExternalLink } from "lucide-react";
-import Link from "next/link";
 import React, { useCallback } from "react";
 
-import type { Macro } from "@repo/api/domains/macro/macro.schema";
+import type { MacroListEntry } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
 import {
@@ -36,7 +36,7 @@ const macroItemVariants = cva(
 
 // Props for the MacroList component
 interface MacroListProps {
-  macros: Macro[];
+  macros: MacroListEntry[];
   onAddMacro: (macroId: string) => Promise<void> | void;
   isAddingMacro: boolean;
   setOpen: (open: boolean) => void;
@@ -86,7 +86,7 @@ function MacroList({
               <div className="mb-1 flex items-center gap-1">
                 <h4 className="text-foreground truncate text-sm font-medium">{macro.name}</h4>
 
-                <Link
+                <IntentLink
                   href={`/${locale}/platform/macros/${macro.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -96,7 +96,7 @@ function MacroList({
                   onClick={(e) => e.stopPropagation()}
                 >
                   <ExternalLink className="group-hover:text-muted-foreground text-primary h-4 w-4 transition-colors" />
-                </Link>
+                </IntentLink>
 
                 {isFeatured && (
                   <div className="ml-auto">
@@ -176,7 +176,7 @@ function SearchStatus({ loading, hasMacros, hasSearchQuery, searchValue }: Searc
 
 // Props for the MacroSearchPopover component
 export interface MacroSearchPopoverProps {
-  availableMacros: Macro[];
+  availableMacros: MacroListEntry[];
   searchValue: string;
   onSearchChange: (value: string) => void;
   onAddMacro: (macroId: string) => Promise<void> | void;

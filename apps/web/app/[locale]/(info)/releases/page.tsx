@@ -1,4 +1,3 @@
-import { TranslationsProvider } from "@/components/translations-provider";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { getAllReleaseNotes } from "~/components/releases/fetch-public-release-notes";
@@ -37,21 +36,19 @@ export function generateMetadata({ params }: ReleasesPageProps): Promise<Metadat
 export default async function ReleasesPage({ params }: ReleasesPageProps) {
   const { locale } = await params;
   const { isEnabled: preview } = await draftMode();
-  const { t, resources } = await initTranslations({ locale, namespaces: ["navigation"] });
+  const { t } = await initTranslations({ locale, namespaces: ["navigation"] });
   const entries = await getAllReleaseNotes(locale, preview);
 
   return (
-    <TranslationsProvider locale={locale} namespaces={["navigation"]} resources={resources}>
-      <Container className="max-w-4xl pb-20 pt-10 md:pt-14">
-        <header className="mb-10 flex flex-col gap-2">
-          <p className="text-primary font-mono text-xs font-medium uppercase tracking-[0.16em]">
-            {t("releases.eyebrow")}
-          </p>
-          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{t("releases.heading")}</h1>
-          <p className="text-muted-foreground max-w-2xl">{t("releases.subheading")}</p>
-        </header>
-        <ReleasesChangelog entries={entries} linkBaseHref={`/${locale}/releases`} />
-      </Container>
-    </TranslationsProvider>
+    <Container className="max-w-4xl pb-20 pt-10 md:pt-14">
+      <header className="mb-10 flex flex-col gap-2">
+        <p className="text-primary font-mono text-xs font-medium uppercase tracking-[0.16em]">
+          {t("releases.eyebrow")}
+        </p>
+        <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{t("releases.heading")}</h1>
+        <p className="text-muted-foreground max-w-2xl">{t("releases.subheading")}</p>
+      </header>
+      <ReleasesChangelog entries={entries} linkBaseHref={`/${locale}/releases`} />
+    </Container>
   );
 }

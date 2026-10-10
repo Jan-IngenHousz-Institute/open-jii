@@ -26,7 +26,7 @@ export default function ExperimentVisualizationRenderer({
 
   return (
     <div className="flex h-full w-full flex-col">
-      <PlotlyPreload />
+      <PlotlyPreload traceTypes={def.plotlyTraceTypes} />
       {(showTitle || showDescription) && (
         <div className="mb-6">
           {showTitle && <h2 className="text-2xl font-bold">{visualization.name}</h2>}

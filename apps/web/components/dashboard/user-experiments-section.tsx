@@ -8,13 +8,10 @@ import { ExperimentOverviewCards } from "~/components/experiment-overview-cards"
 import { listItems } from "@repo/api/shared/listing";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
+import { userExperimentsQuery } from "./dashboard-queries";
+
 export function UserExperimentsSection() {
-  // Paginated, not the bare list: only that branch attaches `activity`.
-  const { data } = useQuery(
-    orpc.experiments.listExperiments.queryOptions({
-      input: { scope: "related", page: 1, pageSize: 3 },
-    }),
-  );
+  const { data } = useQuery(userExperimentsQuery(orpc));
 
   const limitedExperiments = data ? listItems(data) : undefined;
 

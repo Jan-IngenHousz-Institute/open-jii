@@ -1,50 +1,49 @@
 import * as bar from "plotly.js/lib/bar";
-import * as barpolar from "plotly.js/lib/barpolar";
-import * as box from "plotly.js/lib/box";
-import * as carpet from "plotly.js/lib/carpet";
-import * as contour from "plotly.js/lib/contour";
-import * as contourcarpet from "plotly.js/lib/contourcarpet";
 import * as Plotly from "plotly.js/lib/core";
-import * as heatmap from "plotly.js/lib/heatmap";
-import * as histogram from "plotly.js/lib/histogram";
-import * as histogram2d from "plotly.js/lib/histogram2d";
-import * as histogram2dcontour from "plotly.js/lib/histogram2dcontour";
-import * as parcats from "plotly.js/lib/parcats";
-import * as parcoords from "plotly.js/lib/parcoords";
-import * as pie from "plotly.js/lib/pie";
-import * as sankey from "plotly.js/lib/sankey";
-import * as scattercarpet from "plotly.js/lib/scattercarpet";
-import * as scattergl from "plotly.js/lib/scattergl";
-import * as scatterpolar from "plotly.js/lib/scatterpolar";
-import * as scatterternary from "plotly.js/lib/scatterternary";
-import * as violin from "plotly.js/lib/violin";
 import createPlotlyComponent from "react-plotly.js/factory";
 
+import type { LazyTraceType } from "./plotly-trace-types";
+
+type TraceModules = Extract<Parameters<typeof Plotly.register>[0], unknown[]>;
+
 /**
- * Plotly core plus only the trace families the chart wrappers emit; scatter
- * ships with core. Loaded lazily by the chart, never at page load.
+ * Plotly core plus bar, which is what every sparkline draws, so a dashboard of
+ * strips needs one request. Scatter ships with core. The other families load
+ * on first use through `registerTraceTypes`.
  */
-Plotly.register([
-  bar,
-  barpolar,
-  box,
-  carpet,
-  contour,
-  contourcarpet,
-  heatmap,
-  histogram,
-  histogram2d,
-  histogram2dcontour,
-  parcats,
-  parcoords,
-  pie,
-  sankey,
-  scattercarpet,
-  scattergl,
-  scatterpolar,
-  scatterternary,
-  violin,
-]);
+Plotly.register([bar]);
+
+const loadCarpet = () => import("plotly.js/lib/carpet");
+
+// The imports sit beside core so the bundler leaves core's modules out of each
+// family's chunk instead of copying them in.
+const TRACE_LOADERS = {
+  barpolar: () => Promise.all([import("plotly.js/lib/barpolar")]),
+  box: () => Promise.all([import("plotly.js/lib/box")]),
+  carpet: () => Promise.all([loadCarpet()]),
+  contour: () => Promise.all([import("plotly.js/lib/contour")]),
+  // Drawn on a carpet trace's axes, which only exist once carpet is registered.
+  contourcarpet: () => Promise.all([loadCarpet(), import("plotly.js/lib/contourcarpet")]),
+  heatmap: () => Promise.all([import("plotly.js/lib/heatmap")]),
+  histogram: () => Promise.all([import("plotly.js/lib/histogram")]),
+  histogram2d: () => Promise.all([import("plotly.js/lib/histogram2d")]),
+  histogram2dcontour: () => Promise.all([import("plotly.js/lib/histogram2dcontour")]),
+  parcats: () => Promise.all([import("plotly.js/lib/parcats")]),
+  parcoords: () => Promise.all([import("plotly.js/lib/parcoords")]),
+  pie: () => Promise.all([import("plotly.js/lib/pie")]),
+  sankey: () => Promise.all([import("plotly.js/lib/sankey")]),
+  scattercarpet: () => Promise.all([loadCarpet(), import("plotly.js/lib/scattercarpet")]),
+  scattergl: () => Promise.all([import("plotly.js/lib/scattergl")]),
+  scatterpolar: () => Promise.all([import("plotly.js/lib/scatterpolar")]),
+  scatterternary: () => Promise.all([import("plotly.js/lib/scatterternary")]),
+  violin: () => Promise.all([import("plotly.js/lib/violin")]),
+} satisfies Record<LazyTraceType, () => Promise<TraceModules>>;
+
+/** Registers the families behind `types`. Plotly ignores a family it already has. */
+export async function registerTraceTypes(types: readonly LazyTraceType[]): Promise<void> {
+  const families = await Promise.all(types.map((type) => TRACE_LOADERS[type]()));
+  Plotly.register(families.flat());
+}
 
 export const Plot = createPlotlyComponent(Plotly);
 

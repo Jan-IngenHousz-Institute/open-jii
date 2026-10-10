@@ -2,12 +2,12 @@
 
 import { MetricStatCard } from "@/components/metrics/metric-stat-card";
 import { metricsBandGrid } from "@/components/metrics/metrics-band-grid";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useExperimentDeviceRemove } from "@/hooks/experiment/useExperimentDeviceRemove/useExperimentDeviceRemove";
 import { useExperimentDevices } from "@/hooks/experiment/useExperimentDevices/useExperimentDevices";
 import { useLocale } from "@/hooks/useLocale";
 import { resolveDeviceLabel } from "@/util/device-presentation";
 import { AlertTriangle, Cpu, Loader2 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 
 import type {
@@ -99,9 +99,9 @@ export function ExperimentDevicesPanel({ experimentId }: { experimentId: string 
         description={t("iot.experimentDevices.empty")}
         action={
           <Button variant="outline" asChild>
-            <Link href={`/${locale}/platform/devices`}>
+            <IntentLink href={`/${locale}/platform/devices`}>
               {t("iot.experimentDevices.openRegistry")}
-            </Link>
+            </IntentLink>
           </Button>
         }
       />

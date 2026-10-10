@@ -1,8 +1,8 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import {
@@ -71,10 +71,10 @@ export function NavItems({ items }: { items: NavItem[] }) {
               isActive={isActivePath(pathname, item.url)}
               tooltip={item.title}
             >
-              <Link href={item.url} onClick={closeMobileNavigation}>
+              <IntentLink prefetchWhileVisible href={item.url} onClick={closeMobileNavigation}>
                 {item.icon && <item.icon />}
                 <span>{item.title}</span>
-              </Link>
+              </IntentLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
         );
@@ -109,10 +109,10 @@ function NavGroup({
             {item.children?.map((child) => (
               <SidebarMenuSubItem key={child.title}>
                 <SidebarMenuSubButton asChild isActive={isActivePath(pathname, child.url)}>
-                  <Link href={child.url} onClick={onNavigate}>
+                  <IntentLink prefetchWhileVisible href={child.url} onClick={onNavigate}>
                     {child.icon && <child.icon />}
                     <span>{child.title}</span>
-                  </Link>
+                  </IntentLink>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
             ))}

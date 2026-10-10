@@ -1,6 +1,6 @@
 import { render, screen, userEvent } from "@/test/test-utils";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
 import { LanguageSwitcher } from "./language-switcher";
 
@@ -15,7 +15,7 @@ describe("LanguageSwitcher", () => {
   });
 
   it("returns null when feature flag is loading (undefined)", () => {
-    vi.mocked(useFeatureFlagEnabled).mockReturnValue(undefined as unknown as boolean);
+    vi.mocked(useFeatureFlagEnabled).mockReturnValue(undefined);
     const { container } = render(<LanguageSwitcher locale="en-US" />);
     expect(container.firstChild).toBeNull();
   });

@@ -80,6 +80,7 @@ export const AboutContent: React.FC<AboutContentProps> = ({ about, locale, previ
                 {...currentAbout.image}
                 nextImageProps={{
                   priority: true,
+                  sizes: "(max-width: 768px) 100vw, 768px",
                   className: "h-full w-full object-cover",
                 }}
               />
