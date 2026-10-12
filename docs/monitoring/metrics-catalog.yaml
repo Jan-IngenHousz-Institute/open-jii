@@ -505,15 +505,15 @@ metrics:
     severity: warning
     signal:
       namespace: OpenJII/Backend
-      search: SEARCH('{OpenJII/Backend,Reason} MetricName="PipelineCallsRejected" AND (Reason="unknown-key" OR Reason="missing-signature" OR Reason="stale-timestamp" OR Reason="bad-signature" OR Reason="internal-error")', 'Sum')
+      metric: PipelineCallsRejected
       stat: Sum
     baseline: { method: threshold, max: 0 }
     runbook: docs/runbooks/webhook-failures.md
     notes: >-
-      Calls from the pipeline that the backend's HMAC guard refused, per Reason, from a metric filter
-      on the backend's log group. A call with no key id at all is left out: anyone can send one, so it
-      says nothing about the pipeline. The pipeline records a rejected call on each row it carried and
-      carries on, so nothing else shows it.
+      Calls the backend's HMAC guard refused, from a metric filter on the backend's log group. A call
+      with no key id at all is left out: anyone can send one, so it says nothing about the pipeline.
+      PipelineCallRejectionsByReason splits every rejection by Reason. The pipeline records a rejected
+      call on each row it carried and carries on, so nothing else shows it.
 
   - num: 20
     id: dbx-sql-from-backend
@@ -1149,7 +1149,7 @@ metrics:
     notes: >-
       Macro and protocol pairs over the last day where at least half of at least ten results failed
       in the macro or its input while the same macro works on another protocol. The heartbeat file's
-      macro_protocol_failures roster names each pair with its attempts, failures and first error.
+      macro_protocol_failures roster names each pair with its attempts, failures and a sample error.
       Shown rather than alerted, since the fix is the macro's author's.
 
   - num: 55

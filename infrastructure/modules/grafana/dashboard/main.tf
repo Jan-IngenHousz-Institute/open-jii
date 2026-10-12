@@ -387,9 +387,9 @@ EOT
     }
   }
 
-  # Catalog entry 19. Any rejected call that carried a key id is the pipeline failing to reach the
-  # backend: it records the rejection on each row and carries on, so nothing else shows it. Calls
-  # with no key id are left out of the search, since anyone can send one.
+  # Catalog entry 19. A rejected call that carried a key id is most likely the pipeline failing to
+  # reach the backend: it records the rejection on each row and carries on, so nothing else shows
+  # it. The metric filter leaves out calls with no key id, since anyone can send one.
   rule {
     name      = "Pipeline Calls Rejected"
     condition = "C"
@@ -400,16 +400,14 @@ EOT
       datasource_uid = grafana_data_source.cloudwatch_source.uid
 
       model = jsonencode({
-        refId            = "A"
-        region           = var.aws_region
-        namespace        = "OpenJII/Backend"
-        queryMode        = "Metrics"
-        metricQueryType  = 0
-        metricEditorMode = 1
-        statistic        = "Sum"
-        period           = "300"
-        id               = "rejected"
-        expression       = "SUM(SEARCH('{OpenJII/Backend,Reason} MetricName=\"PipelineCallsRejected\" AND (Reason=\"unknown-key\" OR Reason=\"missing-signature\" OR Reason=\"stale-timestamp\" OR Reason=\"bad-signature\" OR Reason=\"internal-error\")', 'Sum', 300))"
+        refId      = "A"
+        region     = var.aws_region
+        namespace  = "OpenJII/Backend"
+        metricName = "PipelineCallsRejected"
+        statistic  = "Sum"
+        period     = "300"
+        dimensions = {}
+        matchExact = true
       })
 
       relative_time_range {

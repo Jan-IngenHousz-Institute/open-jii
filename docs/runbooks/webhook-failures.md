@@ -5,11 +5,12 @@ backend to resolve user metadata, execute macro batches and look up the device r
 is called back for project transfers. A break here does not stop ingestion, it silently degrades
 enrichment, which is why it is worth an alarm rather than a dashboard.
 
-The backend's HMAC guard logs each rejected call once with a `reason`, and a metric filter on its log
-group counts them as `PipelineCallsRejected` per `Reason`. The alert counts every reason except
-`missing-key-id`: anyone can send a call with no key id, so that one says nothing about the pipeline.
-The pipeline records a rejected macro batch on each of its rows and carries on, which is why nothing
-else shows the break.
+The backend's HMAC guard logs each rejected call once with a `reason`. Metric filters on its log group
+count them twice: `PipelineCallsRejected`, which the alert reads, leaves out `missing-key-id`, since
+anyone can send a call with no key id; `PipelineCallRejectionsByReason` counts every rejection per
+`Reason`. A made-up key id from outside also counts as `unknown-key`, so check the rejections line up
+with the pipeline's calls before suspecting a rotation. The pipeline records a rejected macro batch
+on each of its rows and carries on, which is why nothing else shows the break.
 
 ## Establish the direction
 

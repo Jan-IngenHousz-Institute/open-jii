@@ -19,16 +19,19 @@ GROUP BY 1
 ORDER BY rows DESC
 ```
 
-| The error begins with                                                                                 | What failed                                                | Look at                                                 |
-| ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------- |
-| `Chunk failed:` with `Response status: 401`                                                           | The backend's guard rejected the pipeline's call           | `webhook-failures`, which names the reason              |
-| `Chunk failed:` with `Response status: 403`                                                           | The backend's WAF blocked the call before the guard saw it | The WAF's blocked requests for the backend              |
-| `Chunk failed:` with a 5xx status or none                                                             | The backend failed or was unreachable, after two retries   | `backend-5xx` and `api-hosts-unhealthy`                 |
-| `Lambda function error:`, `Handler error:`, `Wrapper returned`, `Invalid Lambda response payload`     | The sandbox crashed or answered with something unreadable  | `sandbox-errors`, and whether a sandbox deploy lines up |
-| `No result returned for item`, `Backend API error:`, `Unknown error`, `Lambda response did not match` | The backend answered without that row's result             | The backend's logs for the macro batch route            |
+| The error begins with                                                                          | What failed                                                   | Look at                                                 |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------- |
+| `Chunk failed:` with `Response status: 401`                                                    | The backend's guard rejected the pipeline's call              | `webhook-failures`, which names the reason              |
+| `Chunk failed:` with `Response status: 403`                                                    | The backend's WAF blocked the call before the guard saw it    | The WAF's blocked requests for the backend              |
+| `Chunk failed:` with `Response status: 400`                                                    | The backend refused the batch as malformed                    | The backend's logs for the macro batch route            |
+| `Chunk failed:` with a 5xx status or none                                                      | The backend failed or was unreachable, after two retries      | `backend-5xx` and `api-hosts-unhealthy`                 |
+| `No result returned for item`, `Backend API error:`                                            | The pipeline lost the row's result, or failed in its own call | The macro pipeline's driver logs                        |
+| `Invalid Lambda response payload`, `Lambda response did not match`, `Unknown error`            | The sandbox's answer broke its contract with the backend      | Whether a sandbox or backend deploy lines up            |
+| `Handler error:`, `Helper import failed:`, `Failed to load helpers:`, and the other setup ones | A sandbox runtime failed before running the macro             | `sandbox-errors`, and whether a sandbox deploy lines up |
 
-A raw AWS error from invoking the sandbox, such as a throttle, has no fixed text, so it counts under
-the macro's own errors. `sandbox-throttles` watches for those.
+Anything a macro can provoke counts as the macro's own: a compile error, a timeout, an output too
+large or that JSON cannot carry, a run that crashed or printed over its own result, a raw AWS error
+such as a throttle. `sandbox-errors` and `sandbox-throttles` watch the sandbox for those.
 
 Rows already written keep their error: fixing the cause only helps the rows that arrive afterwards.
 
@@ -37,7 +40,7 @@ Rows already written keep their error: fixing the cause only helps the rows that
 `Macros failing on one protocol` on the daily report counts macros that fail on one protocol over the
 last day while working on another. That is the macro not reading what the protocol produces, so it is
 for the macro's author rather than for whoever is on call, and it raises no alert. The heartbeat file
-names each pair with its attempts, failures and first error:
+names each pair with its attempts, failures and a sample error:
 
 ```bash
 prefix=s3://open-jii-heartbeat-<env>/heartbeat/$(date -u +%Y/%m/%d)/
