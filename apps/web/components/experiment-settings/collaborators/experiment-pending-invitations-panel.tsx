@@ -69,7 +69,7 @@ export function ExperimentPendingInvitationsPanel({
               className="text-foreground truncate text-sm font-medium"
               title={invitation.email ?? undefined}
             >
-              {invitation.email}
+              {invitation.email ?? t("experimentSettings.addressHidden")}
             </span>
             <StatusBadge tone="published">{t("experimentSettings.pendingInvite")}</StatusBadge>
           </div>

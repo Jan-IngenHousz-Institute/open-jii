@@ -88,7 +88,7 @@ export function OrganizationMemberRow({
             <span className="text-muted-foreground shrink-0 text-xs">{t("sharing.you")}</span>
           )}
         </div>
-        <span className="text-muted-foreground truncate text-xs">{email}</span>
+        {email && <span className="text-muted-foreground truncate text-xs">{email}</span>}
       </div>
 
       {/*

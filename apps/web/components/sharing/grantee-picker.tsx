@@ -465,13 +465,15 @@ function GranteeResults({
                 </Badge>
               ))}
             </div>
-            {result.type === "user" ? (
+            {result.type === "user" && result.email && (
               <div className="text-muted-foreground truncate text-xs">{result.email}</div>
-            ) : result.type === "team" ? (
+            )}
+            {result.type === "team" && (
               <div className="text-muted-foreground truncate text-xs">
                 {t("sharing.teamMemberCount", { count: result.memberCount ?? 0 })}
               </div>
-            ) : (
+            )}
+            {result.type === "organization" && (
               <div className="text-muted-foreground truncate text-xs">
                 {t("sharing.granteeTypeOrganization")}
               </div>

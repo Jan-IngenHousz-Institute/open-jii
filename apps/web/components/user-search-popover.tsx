@@ -261,9 +261,11 @@ function PopoverResults({
               <div className="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium">
                 {user.firstName} {user.lastName}
               </div>
-              <div className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
-                {user.email}
-              </div>
+              {user.email && (
+                <div className="text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap text-xs">
+                  {user.email}
+                </div>
+              )}
             </div>
           </Button>
         ))}

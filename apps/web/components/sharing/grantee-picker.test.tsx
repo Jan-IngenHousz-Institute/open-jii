@@ -65,6 +65,32 @@ describe("<GranteePicker />", () => {
     });
   });
 
+  it("keeps a redacted user selectable by id without an empty address line", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.sharing.searchGranteeUsers, {
+      body: [
+        createGranteeUser({
+          userId: "u-1",
+          firstName: "Lin",
+          lastName: "Zhao",
+          email: null,
+        }),
+      ],
+    });
+
+    const { onSelectionChange } = renderPicker();
+    await user.type(screen.getByLabelText("sharing.granteeSearchLabel"), "Lin");
+    await waitFor(() => expect(screen.getByText("Lin Zhao")).toBeInTheDocument());
+    const row = screen.getByText("Lin Zhao").closest("button");
+    expect(row).toBeEnabled();
+    expect(row?.querySelectorAll(".text-xs")).toHaveLength(0);
+    await user.click(screen.getByText("Lin Zhao"));
+    expect(onSelectionChange.mock.lastCall?.[0]).toMatchObject({
+      kind: "grantee",
+      grantee: { id: "u-1", email: null },
+    });
+  });
+
   it("switches to organization grantees and lists the caller's organizations", async () => {
     const user = userEvent.setup();
     const orgSpy = server.mount(contract.sharing.searchGranteeOrganizations, {

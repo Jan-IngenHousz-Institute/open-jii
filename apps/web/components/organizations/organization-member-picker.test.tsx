@@ -83,7 +83,7 @@ describe("<OrganizationMemberPicker />", () => {
 
     const { onSelectionChange } = renderPicker({ memberUserIds: ["u-1"] });
 
-    await user.type(search(), "e");
+    await user.type(search(), "ne");
 
     // Filtered out rather than listed unpickably, matching the sharing picker: a row
     // that cannot be picked is noise in a list whose only purpose is picking.
@@ -271,14 +271,56 @@ describe("<OrganizationMemberPicker />", () => {
     expect(screen.queryByText("organizations.invite.sendByEmail")).not.toBeInTheDocument();
   });
 
-  /**
-   * Every pick becomes an invitation, so a result with no address is a pick that could
-   * not be acted on. Dropping it here is what lets the selection type promise an
-   * address, which is what removes the dead "nowhere to send it" branch from both
-   * callers. `users.email` is `NOT NULL` and this endpoint only returns activated
-   * accounts, so this is a type boundary rather than a case seen in practice.
-   */
-  it("drops a result with no address, since an invitation could not reach it", async () => {
+  it("blocks a pending invitation even when search redacts the registered address", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.users.searchUsers, {
+      body: [
+        createUserProfile({
+          userId: "u-1",
+          firstName: "Lin",
+          lastName: "Zhao",
+          email: null,
+        }),
+      ],
+    });
+
+    const { onSelectionChange } = renderPicker({
+      pendingInvitationEmails: ["lin@uni.edu"],
+    });
+    await user.type(search(), "lin@uni.edu");
+
+    await waitFor(() =>
+      expect(screen.getByText("organizations.invite.alreadyInvited")).toBeInTheDocument(),
+    );
+    expect(screen.queryByText("organizations.invite.sendByEmail")).not.toBeInTheDocument();
+    expect(onSelectionChange).not.toHaveBeenCalled();
+  });
+
+  it("can invite a registered user by exact address when the result's address is redacted", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.users.searchUsers, {
+      body: [
+        createUserProfile({
+          userId: "u-1",
+          firstName: "Lin",
+          lastName: "Zhao",
+          email: null,
+        }),
+      ],
+    });
+
+    const { onSelectionChange } = renderPicker();
+    await user.type(search(), "lin@uni.edu");
+
+    await waitFor(() =>
+      expect(screen.getByText("organizations.invite.sendByEmail")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("Lin Zhao").closest("button")).toBeDisabled();
+    await user.click(screen.getByText("organizations.invite.sendByEmail"));
+    expect(onSelectionChange).toHaveBeenCalledWith({ kind: "email", email: "lin@uni.edu" });
+  });
+
+  it("keeps a redacted account visible but requires an exact address to invite it", async () => {
     const user = userEvent.setup();
     server.mount(contract.users.searchUsers, {
       body: [
@@ -297,7 +339,9 @@ describe("<OrganizationMemberPicker />", () => {
     await user.type(search(), "address");
 
     await waitFor(() => expect(screen.getByText("Has Address")).toBeInTheDocument());
-    expect(screen.queryByText("No Address")).not.toBeInTheDocument();
+    expect(screen.getByText("No Address")).toBeInTheDocument();
+    expect(screen.getByText("organizations.invite.enterExactEmail")).toBeInTheDocument();
+    expect(screen.getByText("No Address").closest("button")).toBeDisabled();
 
     await user.click(screen.getByText("Has Address"));
     expect(onSelectionChange).toHaveBeenCalledWith({

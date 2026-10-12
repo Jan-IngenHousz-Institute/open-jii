@@ -36848,9 +36848,11 @@
           {
             "name": "query",
             "in": "query",
+            "required": true,
             "schema": {
               "type": "string",
-              "description": "Name or email substring to match"
+              "minLength": 2,
+              "description": "Name, or a complete email address; at least 2 characters"
             },
             "allowEmptyValue": true,
             "allowReserved": true
@@ -36858,11 +36860,12 @@
           {
             "name": "limit",
             "in": "query",
+            "required": false,
             "schema": {
               "default": 20,
               "type": "integer",
               "minimum": 1,
-              "maximum": 50,
+              "maximum": 20,
               "description": "Maximum number of users to return"
             },
             "allowEmptyValue": true,
@@ -37163,9 +37166,11 @@
           {
             "name": "query",
             "in": "query",
+            "required": true,
             "schema": {
               "type": "string",
-              "description": "Search query for name or email"
+              "minLength": 2,
+              "description": "Name, or a complete email address; at least 2 characters"
             },
             "allowEmptyValue": true,
             "allowReserved": true
@@ -37173,11 +37178,12 @@
           {
             "name": "limit",
             "in": "query",
+            "required": false,
             "schema": {
-              "default": 50,
+              "default": 20,
               "type": "integer",
               "minimum": 1,
-              "maximum": 100,
+              "maximum": 20,
               "description": "Maximum number of users to return"
             },
             "allowEmptyValue": true,
@@ -37186,6 +37192,7 @@
           {
             "name": "offset",
             "in": "query",
+            "required": false,
             "schema": {
               "default": 0,
               "type": "integer",
@@ -37826,8 +37833,15 @@
                       ]
                     },
                     "email": {
-                      "type": "string",
-                      "format": "email"
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "tier": {
                       "enum": [
@@ -37942,8 +37956,15 @@
                         ]
                       },
                       "email": {
-                        "type": "string",
-                        "format": "email"
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "email"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       },
                       "tier": {
                         "enum": [
