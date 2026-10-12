@@ -6,7 +6,7 @@ The openJII web app — the public website (openjii.org) and the authenticated r
 
 Routes live under `app/[locale]/` (i18n via `@repo/i18n`, en-US and de-DE):
 
-- **Public site** — the homepage and `(info)` pages (about, blog, FAQ, policies, releases). Content is fetched from Contentful through `@repo/cms`; when Contentful is unavailable, pages degrade to a maintenance page.
+- **Public site** — the homepage and `(info)` pages (blog, FAQ, policies, releases). Content is fetched from Contentful through `@repo/cms`; when Contentful is unavailable, pages degrade to a maintenance page.
 - **`(auth)`** — login, registration, and verification pages, backed by Better Auth (`@repo/auth`).
 - **`platform/`** — the authenticated research platform (experiments, workbooks, protocols, macros, devices, account), wrapped in the sidebar/topbar chrome with command palette and keyboard shortcuts.
 

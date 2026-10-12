@@ -125,7 +125,6 @@ describe("public SEO routes", () => {
     expect(dynamic).toBe("force-dynamic");
     expect(entries.map((entry) => entry.url)).toEqual([
       `${SITE_URL}/${defaultLocale}`,
-      `${SITE_URL}/${defaultLocale}/about`,
       `${SITE_URL}/${defaultLocale}/blog`,
       `${SITE_URL}/${defaultLocale}/cookie-policy`,
       `${SITE_URL}/${defaultLocale}/faq`,
@@ -180,7 +179,7 @@ describe("public SEO routes", () => {
 
     const entries = await sitemap();
 
-    expect(entries.slice(8)).toEqual([
+    expect(entries.slice(7)).toEqual([
       {
         url: `${SITE_URL}/en-US/blog/plant-light-response`,
         lastModified: new Date("2026-01-10T12:00:00.000Z"),
@@ -245,7 +244,7 @@ describe("public SEO routes", () => {
       },
     });
 
-    const dynamicEntries = (await sitemap()).slice(8);
+    const dynamicEntries = (await sitemap()).slice(7);
 
     expect(dynamicEntries.map((entry) => entry.url)).toEqual([
       `${SITE_URL}/en-US/blog/duplicate`,
@@ -301,7 +300,7 @@ describe("public SEO routes", () => {
       }),
     );
 
-    const dynamicEntries = (await sitemap()).slice(8);
+    const dynamicEntries = (await sitemap()).slice(7);
     const dynamicUrls = dynamicEntries.map((entry) => entry.url);
 
     expect(dynamicUrls).toEqual([
@@ -337,7 +336,7 @@ describe("public SEO routes", () => {
     const entries = await sitemap();
     const cachedEntries = await sitemap();
 
-    expect(entries).toHaveLength(8);
+    expect(entries).toHaveLength(7);
     expect(cachedEntries).toEqual(entries);
     expect(entries.every((entry) => !entry.url.includes("/blog/"))).toBe(true);
     expect(sitemapPages.mock.calls.map(([variables]) => variables.skip)).toEqual([0, 1]);
@@ -371,7 +370,7 @@ describe("public SEO routes", () => {
 
     const entries = await sitemap();
 
-    expect(entries).toHaveLength(8);
+    expect(entries).toHaveLength(7);
     expect(sitemapPages.mock.calls.map(([variables]) => variables.skip)).toEqual([0, 1]);
     expect(errorLog).toHaveBeenCalledWith(
       "[sitemap] Dynamic content unavailable; serving static routes.",

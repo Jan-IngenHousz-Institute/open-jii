@@ -44,6 +44,7 @@ import {
   experimentJoinCodes,
   experimentJoinRequests,
   resourceGrants,
+  resourceVisits,
   ensurePersonalOrganization,
   eq,
   verifications,
@@ -203,6 +204,7 @@ export class TestHarness {
     // resource_grants is polymorphic (no FK to org/resource), so it is not
     // cleared by cascade — delete it explicitly to keep tests isolated.
     await this.database.delete(resourceGrants).execute();
+    await this.database.delete(resourceVisits).execute();
     await this.database.delete(auditLogs).execute();
     await this.database.delete(invitations).execute();
     await this.database.delete(experimentJoinRequests).execute();
@@ -577,6 +579,20 @@ export class TestHarness {
   }) {
     const [grant] = await this.database.insert(resourceGrants).values(data).returning();
     return grant;
+  }
+
+  /** Seed a visit, by default to an experiment and now. */
+  public async addResourceVisit(data: {
+    userId: string;
+    resourceId: string;
+    resourceType?: "experiment";
+    visitedAt?: Date;
+  }) {
+    const [visit] = await this.database
+      .insert(resourceVisits)
+      .values({ resourceType: "experiment", ...data })
+      .returning();
+    return visit;
   }
 
   /** Remove a seeded resource grant by id (e.g. to reproduce a revocation). */
