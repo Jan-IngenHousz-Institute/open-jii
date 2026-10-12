@@ -192,6 +192,13 @@
   "created": "Erstellt",
   "updated": "Aktualisiert",
   "updatedOn": "Aktualisiert am {{date}}",
+  "openedOn": "Geöffnet {{when}}",
+  "callerRoles": {
+    "owner": "Eigentümer",
+    "admin": "Administrator",
+    "viewer": "Betrachter",
+    "member": "Mitglied"
+  },
   "descriptionTitle": "Beschreibung",
   "details": {
     "location": {

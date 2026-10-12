@@ -14,7 +14,7 @@ const FIRST_WORK = [
   { key: "browse", path: "/platform/experiments?visibility=public&focus=search", icon: Globe },
 ] as const;
 
-/** Where a researcher with no experiments of their own can start. */
+/** Where a researcher who has opened no related experiment yet can start. */
 export function FirstWorkCards() {
   const { t } = useTranslation();
   const locale = useLocale();

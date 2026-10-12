@@ -15,6 +15,7 @@ import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.a
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { ListExperimentsUseCase } from "../application/use-cases/list-experiments/list-experiments";
+import { ListRecentlyOpenedExperimentsUseCase } from "../application/use-cases/list-recently-opened-experiments/list-recently-opened-experiments";
 
 describe("ExperimentController", () => {
   const testApp = TestHarness.App;
@@ -466,6 +467,77 @@ describe("ExperimentController", () => {
         .get(testApp.resolveOrpcPath(contract.experiments.listExperiments))
         .withoutAuth()
         .expect(StatusCodes.UNAUTHORIZED);
+    });
+  });
+
+  describe("listRecentlyOpenedExperiments", () => {
+    const path = () => testApp.resolveOrpcPath(contract.experiments.listRecentlyOpenedExperiments);
+
+    it("returns visited related experiments with when they were opened and the caller's role", async () => {
+      const { experiment: older } = await testApp.createExperiment({
+        name: "Older",
+        userId: testUserId,
+      });
+      const { experiment: newer } = await testApp.createExperiment({
+        name: "Newer",
+        userId: testUserId,
+      });
+      await testApp.addResourceVisit({
+        userId: testUserId,
+        resourceId: older.id,
+        visitedAt: new Date(Date.now() - 60 * 60_000),
+      });
+      await testApp.addResourceVisit({ userId: testUserId, resourceId: newer.id });
+
+      const response = await testApp
+        .get(path())
+        .withAuth(testUserId)
+        .query({ scope: "related" })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual([
+        expect.objectContaining({
+          id: newer.id,
+          callerRole: "owner",
+          openedAt: expect.any(String) as string,
+        }),
+        expect.objectContaining({ id: older.id }),
+      ]);
+    });
+
+    it("returns three by default", async () => {
+      for (let index = 0; index < 4; index++) {
+        const { experiment } = await testApp.createExperiment({
+          name: `Visited ${index}`,
+          userId: testUserId,
+        });
+        await testApp.addResourceVisit({ userId: testUserId, resourceId: experiment.id });
+      }
+
+      const response = await testApp.get(path()).withAuth(testUserId).expect(StatusCodes.OK);
+
+      expect(response.body).toHaveLength(3);
+    });
+
+    it("returns 500 when the use case fails", async () => {
+      vi.spyOn(
+        testApp.module.get(ListRecentlyOpenedExperimentsUseCase),
+        "execute",
+      ).mockResolvedValue(failure(AppError.internal("Database error")));
+
+      await testApp.get(path()).withAuth(testUserId).expect(StatusCodes.INTERNAL_SERVER_ERROR);
+    });
+
+    it("rejects a limit above the maximum", async () => {
+      await testApp
+        .get(path())
+        .withAuth(testUserId)
+        .query({ limit: 21 })
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("returns 401 without a session", async () => {
+      await testApp.get(path()).withoutAuth().expect(StatusCodes.UNAUTHORIZED);
     });
   });
 

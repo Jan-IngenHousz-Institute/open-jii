@@ -61,6 +61,7 @@ describe("orpc contract surface", () => {
       "search",
       "sharing",
       "users",
+      "visits",
       "workbooks",
     ]);
     expect(procedures.length).toBeGreaterThan(50);

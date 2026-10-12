@@ -189,6 +189,13 @@
   "created": "Gemaakt",
   "updated": "Bijgewerkt",
   "updatedOn": "Bijgewerkt {{date}}",
+  "openedOn": "Geopend {{when}}",
+  "callerRoles": {
+    "owner": "Eigenaar",
+    "admin": "Beheerder",
+    "viewer": "Kijker",
+    "member": "Lid"
+  },
   "descriptionTitle": "Beschrijving",
   "details": {
     "location": {

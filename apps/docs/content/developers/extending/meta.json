@@ -1,4 +1,11 @@
 {
   "title": "Extending the Platform",
-  "pages": ["index", "device-support", "transactional-emails", "alert-banners", "force-update-gate"]
+  "pages": [
+    "index",
+    "device-support",
+    "transactional-emails",
+    "alert-banners",
+    "force-update-gate",
+    "public-navigation"
+  ]
 }
