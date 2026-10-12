@@ -13,7 +13,10 @@ describe("NotFound", () => {
     expect(screen.getByText("errors.notFoundHeading")).toBeInTheDocument();
     expect(screen.getByText("errors.goToHomepage")).toBeInTheDocument();
     expect(screen.getByText("errors.accessPlatform")).toBeInTheDocument();
-    expect(screen.getByText("errors.learnAboutUs")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "errors.learnAboutUs" })).toHaveAttribute(
+      "href",
+      "/en-US#about-jii",
+    );
   });
 
   it("speaks the default locale without reading the request", async () => {

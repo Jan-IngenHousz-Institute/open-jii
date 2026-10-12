@@ -70,9 +70,12 @@ export default async function NotFound() {
                 </Link>
               </Button>
 
-              {/* About Page Link */}
+              {/* About JII section */}
               <Button asChild variant="outline" className="w-full" size="lg">
-                <Link href={`/about`} className="flex items-center justify-center gap-2">
+                <Link
+                  href={`/${defaultLocale}#about-jii`}
+                  className="flex items-center justify-center gap-2"
+                >
                   <Search className="h-5 w-5" />
                   {t("errors.learnAboutUs")}
                 </Link>

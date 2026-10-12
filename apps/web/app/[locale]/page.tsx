@@ -1,4 +1,4 @@
-import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
+import { PublicNavbar } from "@/components/navigation/public-navbar";
 import { NewsletterSubscribeForm } from "@/components/newsletter/newsletter-subscribe-form";
 import { PublicMetricsPanel } from "@/components/public-metrics/public-metrics-panel";
 import { TranslationBundles } from "@/components/translation-bundles";
@@ -79,7 +79,7 @@ export default async function Home({ params }: HomePageProps) {
 
   return (
     <TranslationBundles resources={bundles}>
-      <UnifiedNavbar locale={locale} isHomePage={true} />
+      <PublicNavbar locale={locale} isHomePage={true} />
       <main className="flex min-h-screen flex-col items-center">
         {/* Hero Section */}
         <HomeHeroComponent heroData={hero} preview={preview} locale={locale} />

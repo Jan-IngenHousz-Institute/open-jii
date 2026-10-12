@@ -1,0 +1,142 @@
+{
+  "name": "Footer",
+  "description": "",
+  "displayField": "internalName",
+  "fields": [
+    {
+      "id": "internalName",
+      "name": "Internal name",
+      "type": "Symbol",
+      "localized": false,
+      "required": true,
+      "validations": [
+        {
+          "unique": true
+        }
+      ],
+      "disabled": false,
+      "omitted": false
+    },
+    {
+      "id": "brand",
+      "name": "Brand",
+      "type": "Symbol",
+      "localized": false,
+      "required": true,
+      "validations": [],
+      "disabled": false,
+      "omitted": false
+    },
+    {
+      "id": "title",
+      "name": "Title",
+      "type": "Symbol",
+      "localized": false,
+      "required": true,
+      "validations": [],
+      "disabled": false,
+      "omitted": false
+    },
+    {
+      "id": "badge",
+      "name": "Badge",
+      "type": "Symbol",
+      "localized": false,
+      "required": true,
+      "validations": [],
+      "disabled": false,
+      "omitted": false
+    },
+    {
+      "id": "menuTitle",
+      "name": "menuTitle",
+      "type": "Symbol",
+      "localized": false,
+      "required": true,
+      "validations": [],
+      "disabled": false,
+      "omitted": false
+    },
+    {
+      "id": "supportTitle",
+      "name": "Support title",
+      "type": "Symbol",
+      "localized": false,
+      "required": true,
+      "validations": [],
+      "disabled": false,
+      "omitted": false
+    },
+    {
+      "id": "copyright",
+      "name": "Copyright",
+      "type": "Symbol",
+      "localized": false,
+      "required": true,
+      "validations": [],
+      "disabled": false,
+      "omitted": false
+    },
+    {
+      "id": "menuButtons",
+      "name": "menuButtons",
+      "type": "Array",
+      "localized": false,
+      "required": true,
+      "validations": [],
+      "disabled": false,
+      "omitted": false,
+      "items": {
+        "type": "Link",
+        "validations": [
+          {
+            "linkContentType": ["componentButton"]
+          }
+        ],
+        "linkType": "Entry"
+      }
+    },
+    {
+      "id": "supportButtons",
+      "name": "supportButtons",
+      "type": "Array",
+      "localized": false,
+      "required": true,
+      "validations": [],
+      "disabled": false,
+      "omitted": false,
+      "items": {
+        "type": "Link",
+        "validations": [
+          {
+            "linkContentType": ["componentButton"]
+          }
+        ],
+        "linkType": "Entry"
+      }
+    },
+    {
+      "id": "navigationButtons",
+      "name": "Public header links",
+      "type": "Array",
+      "required": false,
+      "localized": false,
+      "validations": [
+        {
+          "size": {
+            "max": 6
+          }
+        }
+      ],
+      "items": {
+        "type": "Link",
+        "linkType": "Entry",
+        "validations": [
+          {
+            "linkContentType": ["componentButton"]
+          }
+        ]
+      }
+    }
+  ]
+}
