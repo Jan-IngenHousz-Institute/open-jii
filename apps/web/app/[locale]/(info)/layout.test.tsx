@@ -8,8 +8,8 @@ import Layout from "./layout";
 
 const mockFooter = vi.fn();
 
-vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
-  UnifiedNavbar: () => <nav aria-label="main">navbar</nav>,
+vi.mock("@/components/navigation/public-navbar", () => ({
+  PublicNavbar: () => <nav aria-label="main">navbar</nav>,
 }));
 
 vi.mock("@repo/cms", () => ({
