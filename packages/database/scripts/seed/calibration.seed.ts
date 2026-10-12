@@ -2,8 +2,12 @@ import { and } from "drizzle-orm";
 
 import { zCreateCalibrationDefinitionBody } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 
-import { db } from "../../src/database";
-import { calibrationDefinitions, calibrationRuns, deviceCalibrations } from "../../src/schema";
+import { db } from "../../src/postgres/database";
+import {
+  calibrationDefinitions,
+  calibrationRuns,
+  deviceCalibrations,
+} from "../../src/postgres/schema";
 import type { SeedDevice, SeedUser } from "./types";
 
 /** The bench procedures as definitions, plus the one run a real sensor actually produced. */

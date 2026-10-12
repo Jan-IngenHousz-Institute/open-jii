@@ -1,7 +1,13 @@
 import { eq } from "drizzle-orm";
 
-import { db } from "../../src/database";
-import { protocols, macros, experiments, workbooks, workbookVersions } from "../../src/schema";
+import { db } from "../../src/postgres/database";
+import {
+  protocols,
+  macros,
+  experiments,
+  workbooks,
+  workbookVersions,
+} from "../../src/postgres/schema";
 import type { SeedExperiment, SeedProtocol, SeedUser } from "./types";
 
 /** Workbooks with a published version, pinned to the experiments that chart real data. */

@@ -1,4 +1,4 @@
-import type { experiments, iotDevices, macros, protocols, users } from "../../src/schema";
+import type { experiments, iotDevices, macros, protocols, users } from "../../src/postgres/schema";
 
 export type SeedUser = typeof users.$inferSelect;
 export type SeedProtocol = typeof protocols.$inferSelect;
