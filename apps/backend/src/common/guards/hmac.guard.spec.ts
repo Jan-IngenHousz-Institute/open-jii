@@ -260,6 +260,7 @@ describe("HmacGuard", () => {
     const rejections: { reason: HmacRejectionReason; headers: Record<string, string> }[] = [
       { reason: "missing-key-id", headers: {} },
       { reason: "unknown-key", headers: { "x-api-key-id": "unknown-key-id" } },
+      { reason: "unknown-key", headers: { "x-api-key-id": "constructor" } },
       {
         reason: "missing-signature",
         headers: { "x-api-key-id": mockApiKeyId, "x-databricks-timestamp": mockTimestamp },
@@ -295,6 +296,17 @@ describe("HmacGuard", () => {
       expect(warn).toHaveBeenCalledWith(
         expect.objectContaining({ reason, errorCode: "HMAC_AUTHENTICATION_FAILED" }),
       );
+    });
+
+    it("answers 500 when the key configuration cannot be read", () => {
+      const error = vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+      const guardWithoutKeys = new HmacGuard(new ConfigService({}));
+      const context = new ExecutionContextHost([
+        { headers: { "x-api-key-id": mockApiKeyId }, body: mockBody },
+      ]);
+
+      expect(() => guardWithoutKeys.canActivate(context)).toThrow(InternalServerErrorException);
+      expect(error).toHaveBeenCalledWith(expect.objectContaining({ reason: "internal-error" }));
     });
 
     it("logs an unreadable webhook secret once, as an internal error", () => {

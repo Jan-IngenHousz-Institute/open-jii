@@ -44,7 +44,8 @@ export class HmacGuard implements CanActivate {
       const apiKeys = this.configService.getOrThrow<Record<string, string>>(
         "databricks.webhookApiKeys",
       );
-      if (!apiKeys[apiKeyId]) {
+      // Own keys only, so an id such as "constructor" cannot match the object's prototype.
+      if (!Object.hasOwn(apiKeys, apiKeyId)) {
         return this.reject("unknown-key", "Invalid API key ID provided", { keyId: apiKeyId });
       }
 
