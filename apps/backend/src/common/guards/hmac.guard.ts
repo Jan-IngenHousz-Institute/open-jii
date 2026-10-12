@@ -13,160 +13,74 @@ import type { Request } from "express";
 import { ErrorCodes } from "../utils/error-codes";
 import { stableStringify } from "../utils/stable-json";
 
+// Logged once per rejection as `reason`. The alert on rejected pipeline calls selects on these
+// values, so renaming one silently drops it from that alert.
+export type HmacRejectionReason =
+  | "missing-key-id"
+  | "unknown-key"
+  | "missing-signature"
+  | "stale-timestamp"
+  | "bad-signature";
+
+const TIMESTAMP_TOLERANCE_SECONDS = 5 * 60;
+
 @Injectable()
 export class HmacGuard implements CanActivate {
   private readonly logger = new Logger(HmacGuard.name);
 
   constructor(private readonly configService: ConfigService) {}
 
-  /**
-   * Look up API key from the config using the provided ID
-   * @param keyId - The API key ID from request headers
-   * @returns The actual API key or null if not found
-   */
-  private getApiKeyById(keyId: string): string | null {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest<Request>();
+    const apiKeyId = this.header(request, "x-api-key-id");
+    const signature = this.header(request, "x-databricks-signature");
+    const timestamp = this.header(request, "x-databricks-timestamp");
+
     try {
+      if (!apiKeyId) {
+        return this.reject("missing-key-id", "Missing API key ID");
+      }
+
       const apiKeys = this.configService.getOrThrow<Record<string, string>>(
         "databricks.webhookApiKeys",
       );
-
-      const apiKey = apiKeys[keyId];
-
-      if (!apiKey) {
-        this.logger.warn({
-          msg: "API key not found",
-          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
-          operation: "hmacAuth",
-          keyId,
-        });
-        return null;
+      if (!apiKeys[apiKeyId]) {
+        return this.reject("unknown-key", "Invalid API key ID provided", { keyId: apiKeyId });
       }
 
-      return apiKey;
-    } catch (error) {
-      this.logger.error({
-        msg: "Failed to get API key",
-        errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
-        operation: "hmacAuth",
-        keyId,
-        error,
-      });
-      return null;
-    }
-  }
-
-  canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest<Request>();
-    const apiKeyId = request.headers["x-api-key-id"] as string;
-    const signature = request.headers["x-databricks-signature"] as string;
-    const timestamp = request.headers["x-databricks-timestamp"] as string;
-
-    try {
-      // Validate API key ID and look up the actual API key
-      if (!apiKeyId) {
-        this.logger.warn({
-          msg: "Missing API key ID",
-          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
-          operation: "hmacAuth",
-        });
-        throw new UnauthorizedException("Unauthorized");
-      }
-
-      // Get the actual API key using the ID
-      const apiKey = this.getApiKeyById(apiKeyId);
-      if (!apiKey) {
-        this.logger.warn({
-          msg: "Invalid API key ID provided",
-          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
-          operation: "hmacAuth",
-          keyId: apiKeyId,
-        });
-        throw new UnauthorizedException("Unauthorized");
-      }
-
-      // Get webhook secret from config
       const webhookSecret = this.configService.getOrThrow<string>("databricks.webhookSecret");
 
-      // Validate HMAC signature
       if (!signature || !timestamp) {
-        this.logger.warn({
-          msg: "Missing signature or timestamp headers",
-          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
-          operation: "hmacAuth",
-        });
-        throw new UnauthorizedException("Unauthorized");
+        return this.reject("missing-signature", "Missing signature or timestamp headers");
       }
 
-      // Validate timestamp to prevent replay attacks
-      // Timestamp should be within 5 minutes
+      // A timestamp outside the tolerance would let a captured request be replayed.
       const currentTime = Math.floor(Date.now() / 1000);
       const timestampValue = parseInt(timestamp, 10);
-      const fiveMinutesInSeconds = 5 * 60;
-
-      if (isNaN(timestampValue) || Math.abs(currentTime - timestampValue) > fiveMinutesInSeconds) {
-        this.logger.warn({
-          msg: "Invalid timestamp",
-          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
-          operation: "hmacAuth",
+      const timeDiff = Math.abs(currentTime - timestampValue);
+      if (isNaN(timestampValue) || timeDiff > TIMESTAMP_TOLERANCE_SECONDS) {
+        return this.reject("stale-timestamp", "Invalid timestamp", {
           timestamp,
           currentTime,
-          timeDiff: Math.abs(currentTime - timestampValue),
+          timeDiff,
         });
-        throw new UnauthorizedException("Unauthorized");
       }
 
-      // Get the raw body directly from the request
-      let rawBody: string;
-      try {
-        if (request.body) {
-          // If body-parser already consumed the stream, use the parsed body
-          // and re-stringify it in a stable way
-          rawBody = stableStringify(request.body);
-        } else {
-          // If we can't get the raw body, use an empty string
-          // This should not happen in normal operation
-          rawBody = "";
-        }
-      } catch (error) {
-        this.logger.error({
-          msg: "Failed to get raw request body",
-          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
-          operation: "hmacAuth",
-          error,
-        });
-        throw new InternalServerErrorException("Failed to process request body");
-      }
-
-      // Create the payload string with timestamp prefix
-      const payload = `${timestamp}:${rawBody}`;
+      // Body-parser has already consumed the stream, so the signed payload is the parsed body
+      // re-serialised in a stable key order.
+      const rawBody = request.body ? stableStringify(request.body) : "";
       const expectedSignature = crypto
         .createHmac("sha256", webhookSecret)
-        .update(payload)
+        .update(`${timestamp}:${rawBody}`)
         .digest("hex");
 
-      // Use timingSafeEqual to prevent timing attacks
-      try {
-        // Convert hex strings to Buffer for comparison
-        const signatureBuffer = Buffer.from(signature, "hex");
-        const expectedSignatureBuffer = Buffer.from(expectedSignature, "hex");
-
-        if (!crypto.timingSafeEqual(signatureBuffer, expectedSignatureBuffer)) {
-          this.logger.warn({
-            msg: "Invalid signature provided",
-            errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
-            operation: "hmacAuth",
-          });
-          throw new UnauthorizedException("Unauthorized");
-        }
-      } catch (error) {
-        // This can happen if the signatures have different lengths or are not valid hex
-        this.logger.warn({
-          msg: "Signature comparison failed",
-          errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
-          operation: "hmacAuth",
-          error,
-        });
-        throw new UnauthorizedException("Unauthorized");
+      const signatureBuffer = Buffer.from(signature, "hex");
+      const expectedSignatureBuffer = Buffer.from(expectedSignature, "hex");
+      const isSignatureValid =
+        signatureBuffer.length === expectedSignatureBuffer.length &&
+        crypto.timingSafeEqual(signatureBuffer, expectedSignatureBuffer);
+      if (!isSignatureValid) {
+        return this.reject("bad-signature", "Invalid signature provided");
       }
 
       return true;
@@ -179,9 +93,30 @@ export class HmacGuard implements CanActivate {
         msg: "HMAC verification failed",
         errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
         operation: "hmacAuth",
+        reason: "internal-error",
         error,
       });
       throw new InternalServerErrorException("HMAC verification failed");
     }
+  }
+
+  private reject(
+    reason: HmacRejectionReason,
+    msg: string,
+    details: Record<string, unknown> = {},
+  ): never {
+    this.logger.warn({
+      msg,
+      errorCode: ErrorCodes.HMAC_AUTHENTICATION_FAILED,
+      operation: "hmacAuth",
+      reason,
+      ...details,
+    });
+    throw new UnauthorizedException("Unauthorized");
+  }
+
+  private header(request: Request, name: string): string | undefined {
+    const value = request.headers[name];
+    return typeof value === "string" ? value : undefined;
   }
 }
