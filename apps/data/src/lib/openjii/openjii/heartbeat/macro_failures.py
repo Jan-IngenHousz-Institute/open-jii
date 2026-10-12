@@ -3,8 +3,9 @@
 A failed macro still writes its result row, with the reason in `macro_error` and no output, so
 the backlog stays at zero and the sandbox's own error count sees only crashes. The reason is free
 text written by the macro itself or by the layer that failed on its way: the pipeline, the backend
-or the sandbox. Those layers write fixed messages, matched here by prefix; anything else is the
-macro's own error.
+or the sandbox. Those layers write fixed messages, matched here as anchored patterns. A message a
+macro can provoke, such as a timeout, an output too large or unreadable, or a crashed run, counts
+as the macro's own: the sandbox's error alert watches its crashes.
 """
 
 from __future__ import annotations
@@ -15,34 +16,43 @@ PLATFORM_CAUSE = "platform"
 MACRO_CAUSES = (MACRO_CAUSE, INPUT_CAUSE, PLATFORM_CAUSE)
 
 # Nothing to run: no measurement in the payload, or no macro by that id.
-INPUT_ERROR_PREFIXES = (
-    "empty-envelope:",
-    "Invalid macro_id",
-    "NULL macro_id or data",
-    "Macro not found:",
-    "Macro snapshot not found:",
+INPUT_ERROR_PATTERNS = (
+    "^empty-envelope:",
+    "^Invalid macro_id",
+    "^NULL macro_id or data",
+    "^Macro not found:",
+    "^Macro snapshot not found:",
 )
 
-# The call never reached the macro, or its result never came back intact. A raw AWS error from
-# invoking the sandbox, such as a throttle, has no fixed text and counts as the macro's.
-PLATFORM_ERROR_PREFIXES = (
+# Failures no macro can cause: the call never reached the macro, or its result never came back.
+PLATFORM_ERROR_PATTERNS = (
     # The pipeline's call to the backend, a rejected one included
-    "Chunk failed:",
-    "Backend API error:",
-    "No result returned for item",
-    "Unknown error",
-    # The backend's call to the sandbox
-    "Invalid Lambda response payload",
-    "Lambda response did not match the requested items",
-    "Lambda execution failed",
-    "Lambda function error:",
-    # The sandbox's own handler
-    "Handler error:",
-    "Wrapper returned no output",
-    "Wrapper returned invalid JSON",
-    "Missing 'script' field",
-    "Invalid base64 in 'script'",
-    "'items' must be an array",
+    "^Chunk failed:",
+    "^Backend API error:",
+    "^No result returned for item",
+    "^Unknown error$",
+    # The backend's reading of the sandbox's response
+    "^Invalid Lambda response payload",
+    "^Lambda response did not match the requested items",
+    # The sandbox handlers, for every runtime
+    "^Handler error:",
+    "^Missing 'script' field",
+    "^Invalid base64 ",
+    "^'items' must be an array",
+    "^Exceeds \\d+ item limit$",
+    "^No event file provided",
+    "^Failed to parse event:",
+    "^Execution failed:",
+    # The sandbox wrappers' own setup, for every runtime
+    "^Usage: ",
+    "^Missing required arguments",
+    "^Failed to read input:",
+    "^IO Error:",
+    "^Input file not found",
+    "^Helper import failed:",
+    "^Failed to load helpers:",
+    "^Helper setup failed:",
+    "^Helpers file not found at:",
 )
 
 # A macro and protocol pair needs this many results before its failure share means anything.
@@ -56,13 +66,13 @@ NO_PROTOCOL = "none"
 def macro_cause_sql(error_column: str = "macro_error") -> str:
     """A SQL expression naming what failed for one result row, NULL when it succeeded."""
 
-    def matches(prefixes: tuple[str, ...]) -> str:
-        return " OR ".join(f"startswith({error_column}, {_literal(prefix)})" for prefix in prefixes)
+    def matches(patterns: tuple[str, ...]) -> str:
+        return " OR ".join(f"{error_column} RLIKE {_literal(pattern)}" for pattern in patterns)
 
     return f"""
         CASE WHEN {error_column} IS NULL THEN NULL
-             WHEN {matches(PLATFORM_ERROR_PREFIXES)} THEN '{PLATFORM_CAUSE}'
-             WHEN {matches(INPUT_ERROR_PREFIXES)} THEN '{INPUT_CAUSE}'
+             WHEN {matches(PLATFORM_ERROR_PATTERNS)} THEN '{PLATFORM_CAUSE}'
+             WHEN {matches(INPUT_ERROR_PATTERNS)} THEN '{INPUT_CAUSE}'
              ELSE '{MACRO_CAUSE}'
         END
     """
@@ -86,8 +96,9 @@ def protocol_failures_sql(macro_table: str, raw_table: str, since: str) -> str:
 
     Covers results processed since `since`, a SQL timestamp. A pair fails when at least
     PROTOCOL_FAILURE_SHARE of at least MIN_PROTOCOL_ATTEMPTS results failed in the macro or its
-    input. Platform failures are left out, since they fail every protocol alike and alert on
-    their own. The protocol comes from the result's source row, matched by id and processing
+    input, and works when as many results mostly succeeded. Platform failures are left out, since
+    they fail every protocol alike and alert on their own. Rows without a protocol, such as
+    imports, can fail but never count as the protocol the macro works on. The protocol comes from the result's source row, matched by id and processing
     time, as row ids repeat across the table's history; a row without one counts as `none`.
     """
     failed = f"cause IN ('{MACRO_CAUSE}', '{INPUT_CAUSE}')"
@@ -125,6 +136,8 @@ def protocol_failures_sql(macro_table: str, raw_table: str, since: str) -> str:
             SELECT 1 FROM judged working
             WHERE working.macro_id = failing.macro_id
               AND working.protocol_id <> failing.protocol_id
+              AND working.protocol_id <> '{NO_PROTOCOL}'
+              AND working.attempts >= {MIN_PROTOCOL_ATTEMPTS}
               AND NOT working.mostly_failing
           )
         ORDER BY failing.failures DESC, failing.macro_id, failing.protocol_id
