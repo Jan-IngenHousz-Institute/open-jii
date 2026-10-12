@@ -40,15 +40,21 @@ a connection.
 
 On **Recent**, a cloud icon at each reading shows where it stands:
 
-| Icon                     | Meaning                                                                                                                                      |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Blue cloud with an arrow | Saved on the phone and waiting to upload, or uploading now.                                                                                  |
-| Green cloud with a check | Synced: the platform has the reading. A reading up to 128 KiB is confirmed by the message broker; a larger one by the platform's file store. |
-| Red cloud with an alert  | The upload failed. A red line under the reading says why. The reading stays on the phone.                                                    |
+| Icon                     | Meaning                                                                                                                                                                                                               |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Blue cloud with an arrow | Saved on the phone and waiting to upload, or uploading now.                                                                                                                                                           |
+| Green cloud with a check | Synced in the app: for a reading up to 128 KiB, the message broker acknowledged receipt; for a larger one, the platform's file store confirmed the upload. Neither confirms that the reading has finished processing. |
+| Red cloud with an alert  | The upload failed. A red line under the reading says why. The reading stays on the phone.                                                                                                                             |
 
 The **Synced** and **Unsynced** filters split the list along the same line; a
 reading waiting to upload and a failed one both count as unsynced. While uploads
 run, a blue number on the upload button in the header counts them.
+
+<Callout type="warn">
+  A green cloud for a reading up to 128 KiB confirms broker receipt, not that the platform has
+  retained it. Delivery to storage can still fail after acknowledgement. Keep the local reading
+  until you have exported it or confirmed that it is available on the web platform.
+</Callout>
 
 Uploads pause while the phone is offline. Each reading is acknowledged on its
 own, including readings from a multi-device round. When an upload hits a
@@ -82,10 +88,11 @@ Open **Recent** and filter to **Unsynced**. Swipe a reading and select **Upload*
 to send that one; the action is hidden while the phone is offline. The upload
 button in the header sends every unsynced reading after you confirm **Upload
 All**; it is unavailable while uploads are already running. Do not delete a local
-reading until it is synced or exported.
+reading until you have exported it or confirmed that it is available on the web
+platform. A green cloud alone is not enough.
 
 The mobile **Export measurements** action creates JSON, but the current
 implementation selects failed and synced rows rather than every in-flight queued
-row. Treat it as a recovery aid, not a substitute for confirming sync. Dataset
-exports from the web platform use the formats described in
+row. Check that the exported JSON contains the readings you need before deleting
+them. Dataset exports from the web platform use the formats described in
 [Exporting data](/guide/data-analysis/exporting-data).

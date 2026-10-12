@@ -20,13 +20,13 @@ The deployment workflow detects affected applications. `deploy_all` selects all 
 
 ## Read a skipped job
 
-A dependent job runs only when each parent it needs succeeded or was skipped because that parent was not needed for this release. If a needed parent fails, its dependents stop, even when GitHub reports the parent as skipped after an earlier failure. In particular:
+A dependent job runs only when each required parent job has succeeded or was skipped because that parent was not needed for this release. If a needed parent fails, its dependents stop, even when GitHub reports the parent as skipped after an earlier failure. In particular:
 
 1. Infrastructure precedes migrations and application jobs. Docs depends on infrastructure but not the backend.
 2. Backend follows migrations when migrations are needed. Frontend and Databricks follow backend when it is needed.
 3. Macro and calibration sandboxes follow the backend, frontend and Databricks jobs when those are needed.
 
-For a partial release, read the job selection as well as the result. If backend was deliberately not selected, a separate migration failure does not automatically block a selected downstream application through that skipped backend job. Stop and inspect the failed migration before approving any remaining deployment.
+For a partial release, read the job selection as well as the result. If backend was deliberately not selected, a separate migration failure does not automatically block a selected downstream application through that skipped backend job. If a migration fails after approval, cancel the run before any still-eligible downstream deployment starts. Inspect the failure before starting another release.
 
 ## Workflow file rules
 
