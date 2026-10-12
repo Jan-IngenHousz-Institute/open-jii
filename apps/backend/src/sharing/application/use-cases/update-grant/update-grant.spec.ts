@@ -1,14 +1,17 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { StatusCodes } from "http-status-codes";
 
-import { eq, resourceGrants } from "@repo/database";
+import { eq, notifications, resourceGrants } from "@repo/database";
 
-import { assertFailure } from "../../../../common/utils/fp-utils";
+import { EmailAdapter } from "../../../../common/modules/email/services/email.adapter";
+import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { UpdateGrantUseCase } from "./update-grant";
 
 describe("updateGrant", () => {
   const testApp = TestHarness.App;
   let updateGrant: UpdateGrantUseCase;
+  let emailAdapter: EmailAdapter;
   let owner: string;
 
   beforeAll(async () => {
@@ -18,7 +21,9 @@ describe("updateGrant", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     updateGrant = testApp.module.get(UpdateGrantUseCase);
+    emailAdapter = testApp.module.get(EmailAdapter);
     owner = await testApp.createTestUser({ name: "Owner" });
+    vi.spyOn(emailAdapter, "sendAccessGrantedNotification").mockResolvedValue(success(undefined));
   });
 
   afterEach(() => {
@@ -61,6 +66,63 @@ describe("updateGrant", () => {
       .from(resourceGrants)
       .where(eq(resourceGrants.id, elsewhere.id));
     expect(untouched.role).toBe("viewer");
+  });
+
+  // A level change is something the collaborator hears about in the bell. It sends
+  // no email: the category's email is reserved for being given access in the first
+  // place.
+  describe("notifying the grantee", () => {
+    const notificationsFor = (userId: string) =>
+      testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
+
+    it("tells the grantee their level changed, with the new role", async () => {
+      const name = `Macro ${crypto.randomUUID()}`;
+      const macro = await testApp.createMacro({ name, createdBy: owner });
+      const collaborator = await testApp.createTestUser({ name: "Lifted Collaborator" });
+      const grant = await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: collaborator,
+        role: "viewer",
+        createdBy: owner,
+      });
+
+      assertSuccess(
+        await updateGrant.execute(owner, "macro", macro.id, grant.id, { role: "admin" }),
+      );
+
+      const rows = await notificationsFor(collaborator);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        type: "resource_access_changed",
+        actorId: owner,
+        resourceType: "macro",
+        resourceId: macro.id,
+        params: { resourceName: name, role: "admin" },
+      });
+      expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+    });
+
+    it("says nothing when the role is set to what it already was", async () => {
+      const macro = await testApp.createMacro({ name: "Unmoved", createdBy: owner });
+      const collaborator = await testApp.createTestUser({ name: "Unmoved Collaborator" });
+      const grant = await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: collaborator,
+        role: "viewer",
+        createdBy: owner,
+      });
+
+      assertSuccess(
+        await updateGrant.execute(owner, "macro", macro.id, grant.id, { role: "viewer" }),
+      );
+
+      expect(await notificationsFor(collaborator)).toEqual([]);
+      expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+    });
   });
 
   // An archived experiment is immutable everywhere else — the read-only row controls

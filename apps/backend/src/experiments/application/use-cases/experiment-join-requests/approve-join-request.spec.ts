@@ -45,7 +45,7 @@ describe("ApproveJoinRequestUseCase", () => {
     joinRequestRepository = testApp.module.get(ExperimentJoinRequestRepository);
     emailAdapter = testApp.module.get(EmailAdapter);
     authz = testApp.module.get(AuthorizationService);
-    vi.spyOn(emailAdapter, "sendAddedUserNotification").mockResolvedValue(success(undefined));
+    vi.spyOn(emailAdapter, "sendAccessGrantedNotification").mockResolvedValue(success(undefined));
   });
 
   afterEach(() => {
@@ -151,7 +151,7 @@ describe("ApproveJoinRequestUseCase", () => {
     expect(result.error.statusCode).toBe(StatusCodes.CONFLICT);
     expect(result.error.message).toContain("already has access");
     // A moot request notifies nobody.
-    expect(emailAdapter.sendAddedUserNotification).not.toHaveBeenCalled();
+    expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
     expect(await notificationsFor(requesterUserId)).toHaveLength(0);
     // The stale request was closed (cancelled).
     const reread = await joinRequestRepository.findById(request.id);
@@ -204,14 +204,15 @@ describe("ApproveJoinRequestUseCase", () => {
       params: { experimentName: experiment.name },
     });
 
-    expect(emailAdapter.sendAddedUserNotification).toHaveBeenCalledWith(
-      experiment.id,
-      experiment.name,
-      "Adam Admin",
+    expect(emailAdapter.sendAccessGrantedNotification).toHaveBeenCalledWith({
+      resourceType: "experiment",
+      resourceId: experiment.id,
+      resourceName: experiment.name,
+      actor: "Adam Admin",
       // Approval hands out the contributing tier, never an administering one.
-      "a contributor who can view and add data",
-      "requester@example.com",
-    );
+      role: "a contributor who can view and add data",
+      email: "requester@example.com",
+    });
   });
 
   it("does not demote a requester promoted after the access check", async () => {
@@ -278,7 +279,7 @@ describe("ApproveJoinRequestUseCase", () => {
     }
     expect(refused[0].error.statusCode).toBe(StatusCodes.CONFLICT);
     expect(refused[0].error.message).toContain("no longer pending");
-    expect(emailAdapter.sendAddedUserNotification).toHaveBeenCalledTimes(1);
+    expect(emailAdapter.sendAccessGrantedNotification).toHaveBeenCalledTimes(1);
     expect(await notificationsFor(requesterUserId)).toHaveLength(1);
 
     const decisions = await testApp.database
@@ -295,7 +296,7 @@ describe("ApproveJoinRequestUseCase", () => {
 
   it("still approves successfully when the membership email fails to send", async () => {
     const { experiment, request } = await seedPendingRequest();
-    vi.spyOn(emailAdapter, "sendAddedUserNotification").mockResolvedValue(
+    vi.spyOn(emailAdapter, "sendAccessGrantedNotification").mockResolvedValue(
       failure(AppError.internal("smtp down")),
     );
 

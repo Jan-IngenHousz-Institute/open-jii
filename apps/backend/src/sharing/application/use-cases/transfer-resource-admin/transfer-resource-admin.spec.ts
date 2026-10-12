@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
-import { and, createSecondaryDatabase, eq, resourceGrants } from "@repo/database";
+import { and, createSecondaryDatabase, eq, notifications, resourceGrants } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
-import { assertSuccess } from "../../../../common/utils/fp-utils";
+import { EmailAdapter } from "../../../../common/modules/email/services/email.adapter";
+import { assertSuccess, success } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
 import { UserRepository } from "../../../../users/core/repositories/user.repository";
 import { SharingRepository } from "../../../core/repositories/sharing.repository";
@@ -13,6 +15,7 @@ describe("TransferResourceAdminUseCase", () => {
   let testUserId: string;
   let useCase: TransferResourceAdminUseCase;
   let sharingRepo: SharingRepository;
+  let emailAdapter: EmailAdapter;
   let secondary: { database: DatabaseInstance; close: () => Promise<void> };
 
   /** The one answer every authorization negative gets, whatever its cause. */
@@ -78,9 +81,11 @@ describe("TransferResourceAdminUseCase", () => {
 
   beforeEach(async () => {
     await testApp.beforeEach();
-    testUserId = await testApp.createTestUser({});
+    testUserId = await testApp.createTestUser({ name: "Hilda Handover" });
     useCase = testApp.module.get(TransferResourceAdminUseCase);
     sharingRepo = testApp.module.get(SharingRepository);
+    emailAdapter = testApp.module.get(EmailAdapter);
+    vi.spyOn(emailAdapter, "sendAccessGrantedNotification").mockResolvedValue(success(undefined));
   });
 
   afterEach(() => {
@@ -443,6 +448,180 @@ describe("TransferResourceAdminUseCase", () => {
     expect(replay.value[0].success).toBe(false);
     expect(replay.value[0].error).toBe(NOT_SOLE_ADMIN_ERROR);
     expect(await directGrantRoleOf("experiment", experiment.id, targetId)).toBe("admin");
+  });
+
+  // What the hand-off did to the target's access, read from the repository: the use
+  // case's per-resource result only says whether it succeeded.
+  describe("hand-off outcome", () => {
+    const handOver = async (resourceId: string, targetUserId: string) => {
+      const outcome = await sharingRepo.ensureDirectAdminGrant({
+        resourceType: "experiment",
+        resourceId,
+        userId: targetUserId,
+        createdBy: testUserId,
+      });
+      assertSuccess(outcome);
+      return outcome.value;
+    };
+
+    it("reports granted for a target who held nothing", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Outcome Granted",
+        userId: testUserId,
+      });
+      const target = await testApp.createTestUser({ email: "outcome-granted@example.com" });
+
+      expect(await handOver(experiment.id, target)).toBe("granted");
+      expect(await directGrantRoleOf("experiment", experiment.id, target)).toBe("admin");
+    });
+
+    it("reports promoted for a target who held viewer", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Outcome Promoted",
+        userId: testUserId,
+      });
+      const target = await testApp.createTestUser({ email: "outcome-promoted@example.com" });
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId: target,
+        role: "viewer",
+      });
+
+      expect(await handOver(experiment.id, target)).toBe("promoted");
+      expect(await directGrantRoleOf("experiment", experiment.id, target)).toBe("admin");
+    });
+
+    it("reports unchanged for a target who already held admin", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Outcome Unchanged",
+        userId: testUserId,
+      });
+      // Deactivated, so their admin grant is not adequate cover and the caller is
+      // still the resource's last answerable person — which is what the hand-off
+      // demands before it will write at all.
+      const target = await testApp.createTestUser({
+        email: "outcome-unchanged@example.com",
+        activated: false,
+      });
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId: target,
+        role: "admin",
+      });
+      await expectIsDeletionBlocker("experiment", experiment.id, testUserId);
+
+      expect(await handOver(experiment.id, target)).toBe("unchanged");
+      expect(await directGrantRoleOf("experiment", experiment.id, target)).toBe("admin");
+    });
+  });
+
+  // Being handed a resource during someone's account deletion is a direct access
+  // change like any other, so the new admin hears about it the same way.
+  describe("notifying the new admin", () => {
+    const notificationsFor = (userId: string) =>
+      testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
+
+    it("tells a target who held nothing that they were given access, and emails them", async () => {
+      const name = `Handed Over ${crypto.randomUUID()}`;
+      const { experiment } = await testApp.createExperiment({ name, userId: testUserId });
+      const target = await testApp.createTestUser({
+        name: "Nell Newadmin",
+        email: "handover-granted@example.com",
+      });
+
+      const result = await useCase.execute(
+        [{ resourceType: "experiment", resourceId: experiment.id, targetUserId: target }],
+        testUserId,
+      );
+
+      assertSuccess(result);
+      expect(result.value[0].success).toBe(true);
+      const rows = await notificationsFor(target);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        type: "resource_access_granted",
+        actorId: testUserId,
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        params: { resourceName: name, role: "admin" },
+      });
+      expect(emailAdapter.sendAccessGrantedNotification).toHaveBeenCalledWith({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        resourceName: name,
+        actor: "Hilda Handover",
+        role: "a collaborator who can edit",
+        email: "handover-granted@example.com",
+      });
+    });
+
+    it("tells a target who already held viewer that their level changed, without an email", async () => {
+      const name = `Promoted Over ${crypto.randomUUID()}`;
+      const { experiment } = await testApp.createExperiment({ name, userId: testUserId });
+      const target = await testApp.createTestUser({ name: "Vic Viewer" });
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId: target,
+        role: "viewer",
+      });
+
+      const result = await useCase.execute(
+        [{ resourceType: "experiment", resourceId: experiment.id, targetUserId: target }],
+        testUserId,
+      );
+
+      assertSuccess(result);
+      expect(result.value[0].success).toBe(true);
+      const rows = await notificationsFor(target);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        type: "resource_access_changed",
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        params: { resourceName: name, role: "admin" },
+      });
+      expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+    });
+
+    it("says nothing to a target who already held admin", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Already Admin",
+        userId: testUserId,
+      });
+      // Deactivated, so the caller is still the resource's last answerable person
+      // and the hand-off will write at all. Their deactivation is also why the
+      // use case's own pre-flight check has to be stepped over: this state is only
+      // reachable when the target deactivates between that check and the write.
+      const target = await testApp.createTestUser({
+        name: "Dee Deactivated",
+        activated: false,
+      });
+      await testApp.addResourceGrant({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "user",
+        granteeId: target,
+        role: "admin",
+      });
+      await expectIsDeletionBlocker("experiment", experiment.id, testUserId);
+      vi.spyOn(sharingRepo, "granteeIsSelectable").mockResolvedValueOnce(true);
+
+      const result = await useCase.execute(
+        [{ resourceType: "experiment", resourceId: experiment.id, targetUserId: target }],
+        testUserId,
+      );
+
+      assertSuccess(result);
+      expect(result.value[0].success).toBe(true);
+      expect(await notificationsFor(target)).toEqual([]);
+      expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+    });
   });
 
   it("processes several resources of different types independently", async () => {

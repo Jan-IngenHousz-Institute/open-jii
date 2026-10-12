@@ -10,19 +10,16 @@ export const EMAIL_PORT = Symbol("USERS_EMAIL_PORT");
  */
 export interface EmailPort {
   /**
-   * Sends an invitation notification email.
-   *
-   * @param resourceId - The ID of the resource
-   * @param resourceName - The human-readable name of the resource
-   * @param actor - The name of the user who sent the invitation
-   * @param role - The role assigned to the invitee
-   * @param email - The email address of the invitee
+   * Sends an invitation notification email — the same access email a direct share
+   * sends. `resourceType` is fixed to `"experiment"` because only experiments can
+   * be invited to by address.
    */
-  sendInvitationEmail(
-    resourceId: string,
-    resourceName: string,
-    actor: string,
-    role: string,
-    email: string,
-  ): Promise<Result<void>>;
+  sendInvitationEmail(input: {
+    resourceType: "experiment";
+    resourceId: string;
+    resourceName: string;
+    actor: string;
+    role: string;
+    email: string;
+  }): Promise<Result<void>>;
 }
