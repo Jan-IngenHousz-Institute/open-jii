@@ -17,8 +17,10 @@ import { DashboardSection } from "./dashboard-section";
 export function UserExperimentsSection() {
   const locale = useLocale();
   const { t } = useTranslation();
-  const { data, isPending, isFetching, isError, refetch } = useQuery(userExperimentsQuery(orpc));
-  const loading = isPending || isFetching;
+  const { data, isPending, isFetching, isFetchedAfterMount, isError, refetch } = useQuery(
+    userExperimentsQuery(orpc),
+  );
+  const loading = isPending || (isFetching && !isFetchedAfterMount);
   const title =
     !loading && !isError
       ? t(
@@ -29,7 +31,7 @@ export function UserExperimentsSection() {
       : "";
 
   const content = () => {
-    // Every mount rechecks access; cached cards are not confirmed while that read is pending.
+    // Cards cached by an earlier mount stay hidden until this mount rechecks access.
     if (loading) {
       return (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">

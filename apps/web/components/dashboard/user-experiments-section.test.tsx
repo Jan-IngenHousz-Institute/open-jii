@@ -1,7 +1,7 @@
 import { orpc } from "@/lib/orpc";
 import { createHomeExperiment, createRecentlyOpenedExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { act, render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
@@ -164,4 +164,58 @@ describe("UserExperimentsSection", () => {
     expect(screen.queryByRole("link", { name: /Revoked/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /dashboard\.firstWork\.create\.title/ })).toBeNull();
   });
+
+  it("keeps confirmed cards and their title during a background refresh", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    server.mount(contract.experiments.listHomeExperiments, {
+      body: { source: "related", experiments: [createHomeExperiment({ name: "Confirmed" })] },
+    });
+    render(<UserExperimentsSection />, { queryClient: client });
+    await screen.findByRole("link", { name: /Confirmed/ });
+
+    let release: () => void = vi.fn();
+    const unblock = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const refresh = server.mount(contract.experiments.listHomeExperiments, {
+      body: { source: "related", experiments: [createHomeExperiment({ name: "Fresh" })] },
+      unblock,
+    });
+    act(() => {
+      void client.invalidateQueries({ queryKey: orpc.experiments.listHomeExperiments.key() });
+    });
+    await waitFor(() => expect(refresh.called).toBe(true));
+    expect(screen.getByRole("link", { name: /Confirmed/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "dashboard.yourExperiments" })).toBeInTheDocument();
+    release();
+    await screen.findByRole("link", { name: /Fresh/ });
+    expect(screen.queryByRole("link", { name: /Confirmed/ })).toBeNull();
+  });
+
+  it.each([404, 500])(
+    "replaces confirmed cards with the error when a background read fails with %s",
+    async (status) => {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      server.mount(contract.experiments.listHomeExperiments, {
+        body: {
+          source: "related",
+          experiments: [createHomeExperiment({ name: "Previously confirmed" })],
+        },
+      });
+      render(<UserExperimentsSection />, { queryClient: client });
+      await screen.findByRole("link", { name: /Previously confirmed/ });
+      server.mount(contract.experiments.listHomeExperiments, { status });
+      await act(async () => {
+        await client.invalidateQueries({ queryKey: orpc.experiments.listHomeExperiments.key() });
+      });
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "dashboard.userExperimentsLoadFailed",
+      );
+      expect(screen.queryByRole("link", { name: /Previously confirmed/ })).toBeNull();
+      expect(screen.queryByRole("heading", { name: "dashboard.yourExperiments" })).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "dashboard.userExperimentsRetry" }),
+      ).toBeInTheDocument();
+    },
+  );
 });
