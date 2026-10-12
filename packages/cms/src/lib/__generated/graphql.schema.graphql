@@ -1,4 +1,4 @@
-directive @contentSourceMaps on QUERY
+directive @contentSourceMaps(outsidePreview: Boolean) on QUERY
 
 directive @contentfulSchemaMetadata(contentTypePublishedCounters: JSON) on SCHEMA
 
@@ -15,7 +15,8 @@ directive @timeline(where: TimelineFilterInput!) on QUERY
 directive @typeIdentifier(contentTypeId: String) on OBJECT
 
 """Represents a binary file in a space. An asset can be any file type."""
-type Asset {
+type Asset implements _Node {
+  _id: ID!
   contentType(locale: String, useFallbackLocale: Boolean): String
   contentfulMetadata: ContentfulMetadata!
   description(locale: String, useFallbackLocale: Boolean): String
@@ -1897,6 +1898,8 @@ type Footer implements Entry & _Node {
   menuButtonsCollection(limit: Int = 100, locale: String, order: [FooterMenuButtonsCollectionOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: ComponentButtonFilter): FooterMenuButtonsCollection
   menuButtonsCursorCollection(limit: Int = 100, locale: String, order: [FooterMenuButtonsCursorCollectionOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean, where: ComponentButtonFilter): FooterMenuButtonsCursorCollection
   menuTitle(locale: String, useFallbackLocale: Boolean): String
+  navigationButtonsCollection(limit: Int = 100, locale: String, order: [FooterNavigationButtonsCollectionOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: ComponentButtonFilter): FooterNavigationButtonsCollection
+  navigationButtonsCursorCollection(limit: Int = 100, locale: String, order: [FooterNavigationButtonsCursorCollectionOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean, where: ComponentButtonFilter): FooterNavigationButtonsCursorCollection
   supportButtonsCollection(limit: Int = 100, locale: String, order: [FooterSupportButtonsCollectionOrder], preview: Boolean, skip: Int = 0, useFallbackLocale: Boolean, where: ComponentButtonFilter): FooterSupportButtonsCollection
   supportButtonsCursorCollection(limit: Int = 100, locale: String, order: [FooterSupportButtonsCursorCollectionOrder], pageNext: String, pagePrev: String, preview: Boolean, useFallbackLocale: Boolean, where: ComponentButtonFilter): FooterSupportButtonsCursorCollection
   supportTitle(locale: String, useFallbackLocale: Boolean): String
@@ -1958,6 +1961,8 @@ input FooterFilter {
   menuTitle_not: String
   menuTitle_not_contains: String
   menuTitle_not_in: [String]
+  navigationButtons: cfComponentButtonNestedFilter
+  navigationButtonsCollection_exists: Boolean
   supportButtons: cfComponentButtonNestedFilter
   supportButtonsCollection_exists: Boolean
   supportTitle: String
@@ -2013,6 +2018,53 @@ type FooterMenuButtonsCursorCollection {
 }
 
 enum FooterMenuButtonsCursorCollectionOrder {
+  internalName_ASC
+  internalName_DESC
+  label_ASC
+  label_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  url_ASC
+  url_DESC
+}
+
+type FooterNavigationButtonsCollection {
+  items: [ComponentButton]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+enum FooterNavigationButtonsCollectionOrder {
+  internalName_ASC
+  internalName_DESC
+  label_ASC
+  label_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  url_ASC
+  url_DESC
+}
+
+type FooterNavigationButtonsCursorCollection {
+  items: [ComponentButton]!
+  limit: Int!
+  pages: CursorPages!
+}
+
+enum FooterNavigationButtonsCursorCollectionOrder {
   internalName_ASC
   internalName_DESC
   label_ASC

@@ -27,7 +27,7 @@ export function ExperimentOverviewCards({
   const locale = useLocale();
 
   const segment = archived ? "experiments-archive" : "experiments";
-  const reserveBadgeRow = experiments?.some(hasBadges) ?? false;
+  const reserveBadgeRow = experiments?.some((experiment) => hasBadges(experiment)) ?? false;
 
   return (
     <ResourceCardGrid

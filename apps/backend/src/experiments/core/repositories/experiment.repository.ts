@@ -31,6 +31,7 @@ import {
   deleteResourceGrants,
   upsertGrant,
   resourceGrants,
+  resourceVisits,
 } from "@repo/database";
 import type { DatabaseInstance, DbOrTx, SQL } from "@repo/database";
 
@@ -53,8 +54,10 @@ import {
   accessibleResourceCondition,
   contributingResourceCondition,
   relatedResourceCondition,
+  resourceRoleExpression,
   resourceTierExpression,
 } from "../../../common/utils/resource-access-scope";
+import type { ResourceRoleName } from "../../../common/utils/resource-access-scope";
 import { userIsSelectableGrantee } from "../../../sharing/core/grantee-selectability";
 import {
   findOwningOrgOwnerIds,
@@ -74,6 +77,12 @@ import {
 export type ExperimentSearchRow = ExperimentDto & {
   score: number;
   membershipStatus: ExperimentMembershipStatus;
+};
+
+/** A listing row the caller has opened, with when and the role they hold on it. */
+export type RecentlyOpenedExperimentRow = ExperimentSearchRow & {
+  openedAt: Date;
+  callerRole: ResourceRoleName | null;
 };
 
 /**
@@ -603,6 +612,45 @@ export class ExperimentRepository {
       ]);
 
       return { items, totalCount: count };
+    });
+  }
+
+  /**
+   * The caller's visited experiments, most recently opened first. The listing's own
+   * access and scope conditions apply, so a visit the caller can no longer open, or
+   * one outside `scope`, never comes back.
+   */
+  async findRecentlyOpened(
+    userId: string,
+    limit: number,
+    scope?: ResourceScope,
+  ): Promise<Result<RecentlyOpenedExperimentRow[]>> {
+    return tryCatch(async () => {
+      const { where, fields } = this.buildListing(userId, scope);
+
+      const callerRole = resourceRoleExpression({
+        database: this.database,
+        resourceType: "experiment",
+        resourceIdColumn: experiments.id,
+        organizationIdColumn: experiments.organizationId,
+        userId,
+      });
+
+      return this.database
+        .select({ ...fields, openedAt: resourceVisits.visitedAt, callerRole })
+        .from(experiments)
+        .innerJoin(
+          resourceVisits,
+          and(
+            eq(resourceVisits.userId, userId),
+            eq(resourceVisits.resourceType, "experiment"),
+            eq(resourceVisits.resourceId, experiments.id),
+          ),
+        )
+        .leftJoin(profiles, eq(experiments.createdBy, profiles.userId))
+        .where(where)
+        .orderBy(desc(resourceVisits.visitedAt), asc(experiments.id))
+        .limit(limit);
     });
   }
 

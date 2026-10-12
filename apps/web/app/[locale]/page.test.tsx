@@ -16,8 +16,8 @@ vi.mock("~/lib/contentful", () => ({
     }),
 }));
 
-vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
-  UnifiedNavbar: () => <nav aria-label="main navigation">navbar</nav>,
+vi.mock("@/components/navigation/public-navbar", () => ({
+  PublicNavbar: () => <nav aria-label="main navigation">navbar</nav>,
 }));
 
 vi.mock("@repo/cms", () => ({

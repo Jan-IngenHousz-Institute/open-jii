@@ -1,4 +1,4 @@
-import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
+import { PublicNavbar } from "@/components/navigation/public-navbar";
 import { NewsletterSubscribeForm } from "@/components/newsletter/newsletter-subscribe-form";
 import { TranslationBundles } from "@/components/translation-bundles";
 import { draftMode } from "next/headers";
@@ -40,7 +40,7 @@ export default async function InfoGroupLayout({ children, params }: InfoLayoutPr
 
   return (
     <TranslationBundles resources={bundles}>
-      <UnifiedNavbar locale={locale} />
+      <PublicNavbar locale={locale} />
       <div className="mx-auto flex w-full max-w-7xl justify-center">
         <main className="flex min-h-screen w-full flex-col px-2">{children}</main>
       </div>

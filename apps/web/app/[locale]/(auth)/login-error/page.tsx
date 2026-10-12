@@ -1,4 +1,4 @@
-import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
+import { PublicNavbar } from "@/components/navigation/public-navbar";
 import { notFound } from "next/navigation";
 import { AuthBackground } from "~/components/auth/auth-background";
 import { AuthHeroSection } from "~/components/auth/auth-hero-section";
@@ -19,7 +19,7 @@ export default async function AuthErrorPage(props: {
   return (
     <>
       {/* Navbar stays sticky on top */}
-      <UnifiedNavbar locale={locale} />
+      <PublicNavbar locale={locale} />
 
       <AuthBackground alt="Error background" />
 

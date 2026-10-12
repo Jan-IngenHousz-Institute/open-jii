@@ -1,47 +1,6 @@
-import type { Metadata } from "next";
-import { draftMode } from "next/headers";
-import { cache } from "react";
-import { getContentfulClients } from "~/lib/contentful";
-import { safeMetadata } from "~/lib/safe-metadata";
+import { permanentRedirect } from "next/navigation";
 
-import { AboutContent } from "@repo/cms";
-import type { PageAboutFieldsFragment } from "@repo/cms/lib/__generated/sdk";
-
-interface AboutPageProps {
-  params: Promise<{ locale: string }>;
-}
-
-const getAboutData = cache(async (locale: string, preview: boolean) => {
-  const { previewClient, client } = await getContentfulClients();
-  const gqlClient = preview ? previewClient : client;
-  const aboutQuery = await gqlClient.pageAbout({ locale, preview });
-  return aboutQuery.pageAboutCollection?.items[0] as PageAboutFieldsFragment;
-});
-
-export function generateMetadata({ params }: AboutPageProps): Promise<Metadata> {
-  return safeMetadata(async () => {
-    const { locale } = await params;
-    const { isEnabled: preview } = await draftMode();
-    const about = await getAboutData(locale, preview);
-
-    const metadata: Metadata = {};
-
-    if (about.pageTitle) {
-      metadata.title = about.pageTitle;
-    }
-
-    if (about.pageDescription) {
-      metadata.description = about.pageDescription;
-    }
-
-    return metadata;
-  });
-}
-
-export default async function AboutPage({ params }: AboutPageProps) {
+export default async function AboutPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  const { isEnabled: preview } = await draftMode();
-  const about = await getAboutData(locale, preview);
-
-  return <AboutContent about={about} locale={locale} preview={preview} />;
+  permanentRedirect(`/${locale}#about-jii`);
 }
