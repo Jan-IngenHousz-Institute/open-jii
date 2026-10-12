@@ -1,4 +1,4 @@
-import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
+import { PublicNavbar } from "@/components/navigation/public-navbar";
 import type { SearchParamsType } from "@/util/searchParams";
 import { MailCheck } from "lucide-react";
 import { redirect } from "next/navigation";
@@ -24,7 +24,7 @@ export default async function VerifyRequestPage(props: {
 
   return (
     <>
-      <UnifiedNavbar locale={locale} />
+      <PublicNavbar locale={locale} />
 
       <AuthBackground alt="Verify request background" />
 

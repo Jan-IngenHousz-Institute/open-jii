@@ -15,7 +15,6 @@ const MAX_CONTENTFUL_PAGE_REQUESTS = 500;
 
 const publicRoutes = [
   "",
-  "/about",
   "/blog",
   "/cookie-policy",
   "/faq",
