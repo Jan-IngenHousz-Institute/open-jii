@@ -226,6 +226,56 @@ export function resourceTierExpression(params: {
   END)`;
 }
 
+/** The names {@link resourceRoleExpression} reports, strongest first. */
+export type ResourceRoleName = "owner" | "admin" | "viewer" | "member";
+
+/**
+ * The strongest role that reaches the caller on each row, by name: the owning
+ * organization's role and every grant (direct, team, org) are read, and only the
+ * stored role decides it. Authorship is not a role, so a creator without one gets
+ * null, as does anyone reaching the row only because it is public. `owner` and
+ * `admin` carry the same control; the name is reported because it is what they were
+ * given. The lowest tier is named by where it comes from: a `viewer` grant reports
+ * `viewer`, plain owning-org membership reports `member`, and a caller holding both
+ * gets `viewer`, the name the collaborators list shows them under.
+ */
+export function resourceRoleExpression(params: {
+  database: DatabaseInstance;
+  resourceType: ResourceType;
+  resourceIdColumn: AnyColumn;
+  organizationIdColumn: AnyColumn;
+  userId: string | undefined;
+}): SQL<ResourceRoleName | null> {
+  const { userId } = params;
+  if (!userId) {
+    return sql<null>`null::text`;
+  }
+
+  // A side left out drops its arms; the filter list cannot be empty, so its slot is
+  // filled from the other side and never read.
+  const holds = (roles: { grant?: readonly string[]; owningOrg?: readonly string[] }) => {
+    const grant = roles.grant ?? roles.owningOrg ?? [];
+    const owningOrg = roles.owningOrg ?? grant;
+    const parts = resourceRelationshipParts({
+      ...params,
+      userId,
+      roleFilters: { grant, owningOrg },
+    });
+    return or(
+      ...(roles.grant ? [parts.userGrantExists, parts.teamGrantExists, parts.orgGrantExists] : []),
+      ...(roles.owningOrg ? [parts.owningOrgMemberExists] : []),
+    );
+  };
+
+  return sql<ResourceRoleName | null>`(CASE
+    WHEN ${holds({ grant: ["owner"], owningOrg: ["owner"] })} THEN 'owner'
+    WHEN ${holds({ grant: ["admin"], owningOrg: ["admin"] })} THEN 'admin'
+    WHEN ${holds({ grant: ["viewer"] })} THEN 'viewer'
+    WHEN ${holds({ owningOrg: ["member"] })} THEN 'member'
+    ELSE NULL
+  END)`;
+}
+
 /**
  * Build the list-scoping predicate for an org-owned, shareable resource, matching
  * `can()`'s read precedence: a row is visible when it is public, the caller is a
