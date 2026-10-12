@@ -9,6 +9,7 @@ import deCommon from "@repo/i18n/locales/de-DE/common.json";
 
 import { generateMetadata as generateApiKeysMetadata } from "../account/api-keys/page";
 import { generateMetadata as generateInvitationsMetadata } from "../account/invitations/page";
+import { generateMetadata as generateNotificationSettingsMetadata } from "../account/notifications/page";
 import { generateMetadata as generateAccountMetadata } from "../account/page";
 import { generateMetadata as generateSecurityMetadata } from "../account/security/page";
 import { generateMetadata as generateCalibrationsMetadata } from "../calibrations/page";
@@ -164,8 +165,8 @@ function ownsTitleMetadata(source: string): boolean {
 describe("platform metadata ownership inventory", () => {
   const pageRoutes = findPageRoutes(platformDirectory).sort();
 
-  it("covers all 65 current page routes", () => {
-    expect(pageRoutes).toHaveLength(65);
+  it("covers all 66 current page routes", () => {
+    expect(pageRoutes).toHaveLength(66);
   });
 
   it.each(pageRoutes)("gives %s title ownership or a documented redirect exception", (route) => {
@@ -244,6 +245,7 @@ const { translations } = vi.hoisted(() => ({
       "macro:macros.newMacro": "New Macro",
       "macro:macros.title": "Macros",
       "notifications:title": "Notifications",
+      "notifications:settings": "Notification settings",
       "common:organizations.createAction": "Create organization",
       "common:organizations.title": "Organizations",
       "workbook:workbooks.title": "Workbooks",
@@ -266,6 +268,7 @@ const { translations } = vi.hoisted(() => ({
       "macro:macros.newMacro": "Neues Makro",
       "macro:macros.title": "Makros",
       "notifications:title": "Benachrichtigungen",
+      "notifications:settings": "Benachrichtigungseinstellungen",
       "common:organizations.createAction": "Organisation erstellen",
       "common:organizations.title": "Organisationen",
       "workbook:workbooks.title": "Arbeitsmappen",
@@ -295,6 +298,7 @@ const routes = [
   ["security", generateSecurityMetadata],
   ["apiKeys", generateApiKeysMetadata],
   ["invitations", generateInvitationsMetadata],
+  ["notificationSettings", generateNotificationSettingsMetadata],
   ["devices", generateDevicesMetadata],
   ["experiments", generateExperimentsMetadata],
   ["newExperiment", generateNewExperimentMetadata],
@@ -322,6 +326,7 @@ const expectedTitles: Record<
     security: "Security",
     apiKeys: "API keys",
     invitations: "Invitations",
+    notificationSettings: "Notification settings",
     devices: "Devices",
     experiments: "Experiments",
     newExperiment: "New Experiment",
@@ -344,6 +349,7 @@ const expectedTitles: Record<
     security: "Sicherheit",
     apiKeys: "API-Schlüssel",
     invitations: "Einladungen",
+    notificationSettings: "Benachrichtigungseinstellungen",
     devices: "Geräte",
     experiments: "Experimente",
     newExperiment: "Neues Experiment",

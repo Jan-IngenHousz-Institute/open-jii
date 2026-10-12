@@ -78,18 +78,24 @@ export class MacroController {
         sort: input.sort,
       };
 
+      // A list shows names, not code, and the code made up most of each row.
+      const shape = <T extends { code?: string }>(rows: T[]) =>
+        input.fields === "summary" ? rows.map(({ code: _code, ...row }) => row) : rows;
+
       if (input.page !== undefined) {
         const pageSize = input.pageSize ?? DEFAULT_PAGE_SIZE;
         const paged = await this.listMacrosUseCase.executePaginated(input.page, pageSize, filter);
         if (paged.isSuccess()) {
-          return toPage(paged.value, input.page, pageSize, formatDatesList);
+          return toPage(paged.value, input.page, pageSize, (items) =>
+            shape(formatDatesList(items)),
+          );
         }
         return throwOrpcFailure(paged, this.logger);
       }
 
       const result = await this.listMacrosUseCase.execute(filter);
       if (result.isSuccess()) {
-        return formatDatesList(result.value);
+        return shape(formatDatesList(result.value));
       }
       return throwOrpcFailure(result, this.logger);
     });

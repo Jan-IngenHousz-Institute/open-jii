@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 
 import { Button } from "@repo/ui/components/button";
 
@@ -41,14 +41,14 @@ export function DashboardBanner({
         <p className="text-muted-foreground text-[0.8125rem] font-normal leading-[1.3125rem]">
           {description}
           {descriptionItalic && descriptionItalicHref && (
-            <Link
+            <IntentLink
               href={descriptionItalicHref}
               target="_blank"
               rel="noopener noreferrer"
               className="italic hover:underline"
             >
               {descriptionItalic}
-            </Link>
+            </IntentLink>
           )}
         </p>
       </div>
@@ -56,7 +56,7 @@ export function DashboardBanner({
           what fits is a property of the text, not of the viewport. */}
       <div className="flex w-full flex-row flex-wrap gap-2 lg:w-auto lg:flex-nowrap lg:gap-4">
         {secondaryButtonLabel && secondaryButtonHref && (
-          <Link
+          <IntentLink
             href={secondaryButtonHref}
             target="_blank"
             rel="noopener noreferrer"
@@ -68,10 +68,10 @@ export function DashboardBanner({
             >
               {secondaryButtonLabel}
             </Button>
-          </Link>
+          </IntentLink>
         )}
         {buttonLabel && buttonHref && (
-          <Link
+          <IntentLink
             href={buttonHref}
             locale={locale}
             className="min-w-[9rem] flex-1 lg:w-auto lg:min-w-0 lg:flex-none"
@@ -79,7 +79,7 @@ export function DashboardBanner({
             <Button className="h-10 w-full whitespace-nowrap rounded-lg px-4 text-[0.9375rem] font-semibold leading-[1.25rem] shadow-none lg:h-11 lg:w-auto">
               {buttonLabel}
             </Button>
-          </Link>
+          </IntentLink>
         )}
       </div>
     </div>

@@ -27,7 +27,7 @@ export function LollipopRenderer({
   const yColumn = yEntry?.source.columnName;
   const yRowKey = yEntry ? rowKeyForSource(yEntry.source, yEntry.index) : undefined;
 
-  const { rows, isLoading, error, truncation } = useChartData(
+  const { rows, isLoading, isRefreshing, error, truncation } = useChartData(
     visualization,
     experimentId,
     providedData,
@@ -95,6 +95,7 @@ export function LollipopRenderer({
       visualization={visualization}
       experimentId={experimentId}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
       error={error}
       hasRows={hasRows}
       truncation={truncation}

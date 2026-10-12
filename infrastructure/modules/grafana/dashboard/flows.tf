@@ -132,6 +132,7 @@ locals {
     "macro-idle"                 = "macros"
     "macro-backlog"              = "macros"
     "broker-to-api-latency"      = "whole"
+    "driver-heap"                = "whole"
     "dlt-heartbeat"              = "whole"
     "metrics-mv-freshness"       = "whole"
     "metrics-forwarder-errors"   = "whole"
@@ -814,9 +815,10 @@ locals {
       {
         key     = "latency"
         chart   = merge(local.heartbeat_path_charts[1], { title = "Latency", gridPos = { h = 10, w = 18, x = 6, y = 1 } })
-        caption = "**Broker to API is what a researcher feels.** The measurement path project aims for 2 to 10 minutes.\n\n- **Arrival to lakehouse climbs:** the centrum pipeline's reader is behind; Ingest lag under Freshness says whether it stopped.\n- **Experiments to macro results climbs:** macro runs slowed down; Run time by language shows which runtime."
+        caption = "**Broker to API is what a researcher feels.** The measurement path project aims for 2 to 10 minutes.\n\n- **Arrival to lakehouse climbs:** the centrum pipeline's reader is behind; Ingest lag under Freshness says whether it stopped.\n- **Lakehouse to experiments climbs for hours:** a pipeline driver is short of memory; Pipeline driver memory kept says which. [Runbook](${local.flow_runbooks}/driver-heap.md)\n- **Experiments to macro results climbs:** macro runs slowed down; Run time by language shows which runtime."
         details = [
           { panel = "507", hop = "stream" },
+          { panel = "driver-heap", hop = "whole" },
           { panel = "513", hop = "macros" },
         ]
       },

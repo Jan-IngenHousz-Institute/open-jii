@@ -96,6 +96,7 @@ export function MetadataCard({
           variant="ghost"
           size="icon"
           className="h-8 w-8"
+          aria-label={t("common.edit")}
           onClick={onEdit}
           disabled={deleteStatus !== "idle"}
         >
@@ -105,6 +106,7 @@ export function MetadataCard({
           variant="ghost"
           size="icon"
           className="h-8 w-8"
+          aria-label={t("common.delete")}
           onClick={onDelete}
           disabled={deleteStatus !== "idle"}
         >

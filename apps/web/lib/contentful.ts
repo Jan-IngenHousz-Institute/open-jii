@@ -1,8 +1,9 @@
 /* eslint-disable no-restricted-properties */
 import { env } from "~/env";
 
-import { createContentfulClient } from "@repo/cms";
 import type { ContentfulClients } from "@repo/cms";
+import { createContentfulClient } from "@repo/cms/client";
+import { defaultLocale } from "@repo/i18n/config";
 
 import { getSecret, isLambdaEnvironment } from "./secrets";
 import type { SecretMap } from "./secrets";
@@ -56,6 +57,15 @@ export async function initializeContentfulClients(): Promise<ContentfulClients> 
   const config = await contentfulConfig;
 
   return createContentfulClient(config);
+}
+
+/**
+ * The public pages' locales to render at build time. A build that cannot read the CMS, such as a
+ * pull request check, renders none ahead and leaves each page to its first visit.
+ */
+export async function buildTimeLocaleParams(): Promise<{ locale: string }[]> {
+  const { spaceId, accessToken } = await contentfulConfig;
+  return spaceId && accessToken ? [{ locale: defaultLocale }] : [];
 }
 
 // Create a singleton instance of the Contentful clients

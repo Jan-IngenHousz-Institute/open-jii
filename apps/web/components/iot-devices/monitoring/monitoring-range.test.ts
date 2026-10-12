@@ -18,6 +18,15 @@ describe("monitoring range", () => {
     expect(day.to).toBe("2026-08-15T10:30:00.000Z");
   });
 
+  it("rounds the window's end up to the minute, so revisits ask for the same window", () => {
+    const first = resolveMonitoringPreset("last1h", NOW + 1_000);
+    const revisit = resolveMonitoringPreset("last1h", NOW + 45_000);
+
+    expect(first).toEqual(revisit);
+    expect(first.to).toBe("2026-08-15T10:31:00.000Z");
+    expect(first.from).toBe("2026-08-15T09:31:00.000Z");
+  });
+
   it("drops to daily buckets once the window outgrows an hourly axis", () => {
     expect(resolveMonitoringPreset("last7d", NOW).bucket).toBe("day");
     expect(resolveMonitoringPreset("last30d", NOW).bucket).toBe("day");

@@ -1,4 +1,5 @@
 import type { ExperimentDataSourceConfig } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import { isCategoricalColumnType } from "@repo/api/transforms/column-type-utils";
 import type { TernarySeriesData } from "@repo/ui/components/charts/ternary";
 
 import type { ChartFormConfig } from "../../chart-config";
@@ -25,6 +26,7 @@ export function transformTernaryData(
   rows: Record<string, unknown>[],
   dataSources: ExperimentDataSourceConfig[],
   chartConfig: ChartFormConfig,
+  colorColumnType?: string,
 ): TernaryTransformResult {
   const aColumn = dataSourcesByRole(dataSources, "x")[0]?.source.columnName;
   const bColumn = dataSourcesByRole(dataSources, "y")[0]?.source.columnName;
@@ -45,7 +47,12 @@ export function transformTernaryData(
   const lineWidth = chartConfig.ternaryLineWidth ?? 2;
   const wantsLines = mode.includes("lines");
   const wantsMarkers = mode.includes("markers");
-  const isCategoricalColor = Boolean(colorColumn) && chartConfig.colorMode === "categorical";
+  // No continuous path here, so a chart saved without `colorMode` (through the
+  // API) would otherwise ignore a text colour column.
+  const isCategoricalColor =
+    Boolean(colorColumn) &&
+    (chartConfig.colorMode === "categorical" ||
+      (chartConfig.colorMode === undefined && isCategoricalColumnType(colorColumnType)));
 
   const points: TernaryPoint[] = [];
   for (const row of rows) {

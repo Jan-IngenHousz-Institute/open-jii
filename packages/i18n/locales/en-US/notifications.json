@@ -2,14 +2,59 @@
   "title": "Notifications",
   "markAllRead": "Mark all read",
   "seeAll": "See all notifications",
+  "settings": "Notification settings",
   "unreadCount": "{{count}} unread",
   "someone": "Someone",
   "empty": {
     "title": "You're all caught up",
-    "description": "Requests, changes to your access and finished jobs show up here."
+    "filteredTitle": "Nothing here",
+    "description": "Requests, changes to your access and finished jobs show up here.",
+    "unread": "No unread notifications. Switch to All to see earlier ones.",
+    "category": "Nothing in this category yet"
   },
   "loadError": "Your notifications could not be loaded.",
   "retry": "Try again",
+  "filters": {
+    "all": "All",
+    "unread": "Unread",
+    "allCategories": "All categories",
+    "category": "Filter by category"
+  },
+  "groups": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "earlier": "Earlier"
+  },
+  "categories": {
+    "requests_and_invitations": {
+      "label": "Requests and invitations",
+      "description": "Someone asks to join your experiment or organization, or invites you to an organization."
+    },
+    "membership_and_access": {
+      "label": "Membership and access",
+      "description": "A request of yours is decided, your access or role changes, or people join or leave what you run."
+    },
+    "experiments_and_resources": {
+      "label": "Experiments and resources",
+      "description": "Something you work on is made public, deleted, moved, or has a new workbook version."
+    },
+    "devices_and_calibration": {
+      "label": "Devices and calibration",
+      "description": "A calibration run waits for your approval, or a run you started is approved or rejected."
+    },
+    "project_transfers": {
+      "label": "Project transfers",
+      "description": "Your PhotosynQ project transfer is received or completed."
+    },
+    "data_jobs": {
+      "label": "Data exports and uploads",
+      "description": "An export or upload you started finishes or fails."
+    },
+    "account_security": {
+      "label": "Account security",
+      "description": "Someone adds an API key or a passkey to your account."
+    }
+  },
   "types": {
     "experiment_join_request_received": "{{actor}} asked to join {{experimentName}}",
     "experiment_join_request_approved": "Your request to join {{experimentName}} was approved",
@@ -42,5 +87,17 @@
     "calibration_run_rejected": "{{actor}} rejected the {{definitionName}} calibration of {{deviceName}}",
     "api_key_created": "A new API key, {{keyName}}, was added to your account",
     "passkey_added": "A new passkey, {{passkeyName}}, was added to your account"
+  },
+  "preferences": {
+    "title": "Email notifications",
+    "description": "Choose which notifications also reach you by email. You always see them in openJII.",
+    "emailLabel": "Email for {{category}}",
+    "loading": "Loading your notification settings",
+    "error": "Your notification settings could not be loaded.",
+    "updateError": "That change was not saved. Try again.",
+    "essentialNote": "Sign-in codes always arrive, whatever you choose here.",
+    "newsletterNote": "The newsletter has its own setting under General.",
+    "locked": "Always on",
+    "unavailable": "Not available yet"
   }
 }

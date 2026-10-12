@@ -1,0 +1,17 @@
+version: 2
+updates:
+  # Workflows and composite actions pin third-party actions to commit SHAs with
+  # the version in a trailing comment; Dependabot bumps both together.
+  - package-ecosystem: github-actions
+    directories:
+      - "/"
+      - "/.github/actions/**"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      github-actions:
+        patterns:
+          - "*"

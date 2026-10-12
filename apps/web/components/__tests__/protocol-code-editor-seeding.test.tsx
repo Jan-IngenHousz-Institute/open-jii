@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@/test/test-utils";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
 import type { JsonValue } from "@repo/api/domains/protocol/protocol.schema";
 

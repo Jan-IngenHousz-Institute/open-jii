@@ -19,10 +19,21 @@ import type {
   ExperimentDataFilter,
   ExperimentDataFilterValue,
 } from "@repo/api/domains/experiment/data/experiment-data.schema";
-import { zExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
+
+import { parentColumnName } from "../data-filters/filter-column-path";
+import { classifyFilter } from "../data-filters/filter-operators";
+import type { FilterIssue } from "../data-filters/filter-operators";
+
+export interface SkippedDashboardFilter {
+  widgetId: string;
+  label: string;
+  reason: FilterIssue;
+}
 
 interface DashboardFiltersContextValue {
   getFiltersForTable: (tableName: string) => ExperimentDataFilter[];
+  getSkippedFiltersForTable: (tableName: string) => SkippedDashboardFilter[];
+  getIssueForWidget: (widgetId: string) => FilterIssue | undefined;
   getValueForWidget: (widgetId: string) => ExperimentDataFilterValue | undefined;
   setValueForWidget: (widgetId: string, value: ExperimentDataFilterValue | undefined) => void;
   isOverridden: (widgetId: string) => boolean;
@@ -33,6 +44,7 @@ type OverrideMap = Record<string, ExperimentDataFilterValue | undefined>;
 
 const DashboardFiltersContext = createContext<DashboardFiltersContextValue | null>(null);
 const EMPTY_FILTERS: ExperimentDataFilter[] = [];
+const EMPTY_SKIPPED: SkippedDashboardFilter[] = [];
 
 interface DashboardFiltersProviderProps {
   widgets: ExperimentDashboardWidget[];
@@ -93,20 +105,30 @@ export function DashboardFiltersProvider({ widgets, children }: DashboardFilters
   );
 
   // Pre-bucket so per-viz lookups are O(1).
-  const filtersByTable = useMemo(
-    () => buildFiltersByTable(filterWidgetsById, overrides),
+  const { filtersByTable, skippedByTable, issuesByWidget } = useMemo(
+    () => buildFilterState(filterWidgetsById, overrides),
     [filterWidgetsById, overrides],
   );
 
   const value = useMemo<DashboardFiltersContextValue>(
     () => ({
       getFiltersForTable: (tableName) => filtersByTable.get(tableName) ?? EMPTY_FILTERS,
+      getSkippedFiltersForTable: (tableName) => skippedByTable.get(tableName) ?? EMPTY_SKIPPED,
+      getIssueForWidget: (widgetId) => issuesByWidget.get(widgetId),
       getValueForWidget,
       setValueForWidget,
       isOverridden,
       resetWidget,
     }),
-    [filtersByTable, getValueForWidget, setValueForWidget, isOverridden, resetWidget],
+    [
+      filtersByTable,
+      skippedByTable,
+      issuesByWidget,
+      getValueForWidget,
+      setValueForWidget,
+      isOverridden,
+      resetWidget,
+    ],
   );
 
   return (
@@ -121,6 +143,17 @@ export function useDashboardFiltersForTable(tableName: string | undefined): Expe
     return EMPTY_FILTERS;
   }
   return ctx.getFiltersForTable(tableName);
+}
+
+/** Filter widgets on a table whose value is invalid, so their filter was left out. */
+export function useDashboardSkippedFiltersForTable(
+  tableName: string | undefined,
+): SkippedDashboardFilter[] {
+  const ctx = useContext(DashboardFiltersContext);
+  if (!ctx || !tableName) {
+    return EMPTY_SKIPPED;
+  }
+  return ctx.getSkippedFiltersForTable(tableName);
 }
 
 const EMPTY_RESOLVER = (): ExperimentDataFilter[] => EMPTY_FILTERS;
@@ -144,6 +177,7 @@ export function useDashboardFilterWidget(widgetId: string) {
     setValue: (next: ExperimentDataFilterValue | undefined) =>
       ctx.setValueForWidget(widgetId, next),
     isOverridden: ctx.isOverridden(widgetId),
+    issue: ctx.getIssueForWidget(widgetId),
     reset: () => ctx.resetWidget(widgetId),
   };
 }
@@ -206,28 +240,44 @@ function dropKey(map: OverrideMap, key: string): OverrideMap {
   return next;
 }
 
-function buildFiltersByTable(
+interface FilterState {
+  filtersByTable: Map<string, ExperimentDataFilter[]>;
+  skippedByTable: Map<string, SkippedDashboardFilter[]>;
+  issuesByWidget: Map<string, FilterIssue>;
+}
+
+function buildFilterState(
   filterWidgetsById: Map<string, ExperimentFilterWidget>,
   overrides: OverrideMap,
-): Map<string, ExperimentDataFilter[]> {
-  const map = new Map<string, ExperimentDataFilter[]>();
+): FilterState {
+  const state: FilterState = {
+    filtersByTable: new Map(),
+    skippedByTable: new Map(),
+    issuesByWidget: new Map(),
+  };
   for (const widget of filterWidgetsById.values()) {
     const { tableName, column, operator } = widget.config;
     if (!tableName || !column || !operator) {
       continue;
     }
     const value = resolveWidgetValue(widget, overrides);
-    if (value === undefined) {
-      continue;
+    const result = classifyFilter({ column, operator, value });
+    if (result.status === "applied") {
+      appendTo(state.filtersByTable, tableName, result.filter);
+    } else if (result.status === "invalid") {
+      appendTo(state.skippedByTable, tableName, {
+        widgetId: widget.id,
+        label: widget.config.title ?? parentColumnName(column),
+        reason: result.reason,
+      });
+      state.issuesByWidget.set(widget.id, result.reason);
     }
-    const candidate: ExperimentDataFilter = { column, operator, value };
-    if (!zExperimentDataFilter.safeParse(candidate).success) {
-      continue;
-    }
-    const existing = map.get(tableName) ?? [];
-    map.set(tableName, [...existing, candidate]);
   }
-  return map;
+  return state;
+}
+
+function appendTo<T>(map: Map<string, T[]>, key: string, item: T) {
+  map.set(key, [...(map.get(key) ?? []), item]);
 }
 
 /** Drops overrides whose widget was removed or whose column/operator changed. */

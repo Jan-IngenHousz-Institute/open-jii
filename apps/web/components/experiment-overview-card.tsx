@@ -2,7 +2,7 @@
 
 import { ResourceCard } from "@/components/shared/resource-card";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
-import { formatDateTime, formatRelativeTime, formatShortDate } from "@/util/date";
+import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 import { Building2, Users } from "lucide-react";
 
 import type {
@@ -54,9 +54,10 @@ export function ExperimentOverviewCard({
   visit,
 }: ExperimentOverviewCardProps) {
   const { t } = useTranslation("experiments");
+  const format = useLocalDateFormat(locale);
 
   const owner = ownerName(experiment);
-  const updated = formatShortDate(experiment.updatedAt, locale);
+  const updated = format.date(experiment.updatedAt);
   const members = experiment.membersCount ?? 0;
 
   const renderBadges = () => (
@@ -98,8 +99,8 @@ export function ExperimentOverviewCard({
           </span>
         ) : null}
         {visit ? (
-          <span className="tabular-nums" title={formatDateTime(visit.openedAt, locale)}>
-            {t("openedOn", { when: formatRelativeTime(visit.openedAt, locale) })}
+          <span className="tabular-nums" title={format.dateTime(visit.openedAt)}>
+            {t("openedOn", { when: format.relative(visit.openedAt) })}
           </span>
         ) : (
           <span className="tabular-nums" title={t("columns.updated")}>

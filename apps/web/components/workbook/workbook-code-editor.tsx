@@ -1,12 +1,8 @@
 "use client";
 
-import type { Diagnostic } from "@codemirror/lint";
-import type { Extension } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
-import { useMemo } from "react";
 import type { ComponentProps } from "react";
 import { CodeEditor } from "~/components/shared/code-editor";
-import type { CodeLanguage, LintSource } from "~/components/shared/code-editor";
+import type { CodeLanguage, Diagnostic, LintSource } from "~/components/shared/code-editor";
 
 export type EditorLanguage = CodeLanguage;
 export type { Diagnostic, LintSource };
@@ -21,14 +17,9 @@ interface WorkbookCodeEditorProps {
   className?: string;
   lintSource?: LintSource;
   syntaxLinting?: boolean;
-  extraExtensions?: Extension[];
+  commandInputPlaceholder?: string;
   basicSetup?: ComponentProps<typeof CodeEditor>["basicSetup"];
 }
-
-const compactTheme = EditorView.theme({
-  "&": { fontSize: "13px" },
-  ".cm-content": { padding: "12px 0" },
-});
 
 export function WorkbookCodeEditor({
   value,
@@ -40,17 +31,11 @@ export function WorkbookCodeEditor({
   className = "",
   lintSource,
   syntaxLinting = false,
-  extraExtensions: callerExtensions,
+  commandInputPlaceholder,
   basicSetup,
 }: WorkbookCodeEditorProps) {
   // The dark token palette and the surface tokens live in `CodeEditor`, so
   // every editor and read-only viewer gets them, not just this one.
-  const extraExtensions = useMemo(() => {
-    const exts: Extension[] = [compactTheme];
-    if (callerExtensions) exts.push(...callerExtensions);
-    return exts;
-  }, [callerExtensions]);
-
   return (
     <div
       className={`border-border bg-card rounded-md border ${className}`}
@@ -64,9 +49,10 @@ export function WorkbookCodeEditor({
         height="auto"
         minHeight={minHeight}
         maxHeight={maxHeight}
+        density="compact"
         lintSource={lintSource}
         syntaxLinting={syntaxLinting}
-        extraExtensions={extraExtensions}
+        commandInputPlaceholder={commandInputPlaceholder}
         basicSetup={basicSetup}
       />
     </div>

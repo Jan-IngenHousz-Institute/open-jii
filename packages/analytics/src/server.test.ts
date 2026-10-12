@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { FEATURE_FLAG_DEFAULTS, FEATURE_FLAGS } from "./feature-flags";
 import type { PostHogServerClient } from "./server";
-import { reportException, tagUnreportedExceptions } from "./server";
+import {
+  evaluateFeatureFlag,
+  isFeatureFlagEnabled,
+  reportException,
+  tagUnreportedExceptions,
+} from "./server";
 
 const client = {
   isFeatureEnabled: vi.fn(),
@@ -123,5 +129,14 @@ describe("tagUnreportedExceptions", () => {
     expect(tag(reported)).toBe(reported);
     expect(tag(other)).toBe(other);
     expect(tag(null)).toBeNull();
+  });
+});
+
+describe("evaluateFeatureFlag", () => {
+  it("says nothing when PostHog is not set up, where isFeatureFlagEnabled falls back to the default", async () => {
+    expect(await evaluateFeatureFlag(FEATURE_FLAGS.CALIBRATION, "ana@example.com")).toBeUndefined();
+    expect(await isFeatureFlagEnabled(FEATURE_FLAGS.CALIBRATION, "ana@example.com")).toBe(
+      FEATURE_FLAG_DEFAULTS[FEATURE_FLAGS.CALIBRATION],
+    );
   });
 });

@@ -14,7 +14,7 @@ this is downstream of them and will recover when they do. Fix the top of the cha
 
 ## Then the metrics pipeline itself
 
-`Metrics-DLT-Pipeline-<ENV>`, triggered by `Metrics-Pipeline-Scheduler-<ENV>` every fifteen minutes.
+`Metrics-DLT-Pipeline-<ENV>`, triggered by `Metrics-Pipeline-Scheduler-<ENV>` every hour.
 Read the last update.
 
 A failure in any one flow can hold back the whole update, which is why the ops tables in that

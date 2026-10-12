@@ -1,7 +1,11 @@
 import { OpenAPILink } from "@orpc/openapi-client/fetch";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createServerOrpcClient } from "./server-orpc";
+import {
+  createAnonymousServerOrpcClient,
+  createOrpcClientWithCookie,
+  createServerOrpcClient,
+} from "./server-orpc";
 
 interface CapturedLinkOptions {
   url: string;
@@ -58,18 +62,15 @@ describe("createServerOrpcClient auth boundary", () => {
     vi.clearAllMocks();
   });
 
-  it("forwards the exact incoming cookies as the only cookie header, tagged with the app source", async () => {
+  it("forwards the exact incoming cookies as the only header", async () => {
     cookieStore.value = "session=secret-token; theme=dark";
 
     await createServerOrpcClient();
 
     expect(OpenAPILink).toHaveBeenCalledTimes(1);
     const headers = latestHeaders();
-    // Exactly the app-source tag plus the verbatim incoming cookie: nothing more.
-    expect(headers).toEqual({
-      "x-app-source": "orpc",
-      cookie: "session=secret-token; theme=dark",
-    });
+    // Exactly the verbatim incoming cookie: nothing more.
+    expect(headers).toEqual({ cookie: "session=secret-token; theme=dark" });
     // The cookie value is not smuggled into the request URL either.
     expect(latestOptions().url).not.toContain("secret-token");
   });
@@ -80,8 +81,7 @@ describe("createServerOrpcClient auth boundary", () => {
     await createServerOrpcClient();
 
     const headers = latestHeaders();
-    expect(headers).toEqual({ "x-app-source": "orpc" });
-    expect(headers).not.toHaveProperty("cookie");
+    expect(headers).toEqual({});
   });
 
   it("builds a fresh link per call and never logs the cookie value (no persistent cache)", async () => {
@@ -107,5 +107,31 @@ describe("createServerOrpcClient auth boundary", () => {
       }
       spy.mockRestore();
     }
+  });
+});
+
+describe("cookie-scoped clients", () => {
+  beforeEach(() => {
+    linkConstructions.length = 0;
+    cookieStore.value = "session=secret-token";
+    vi.clearAllMocks();
+  });
+
+  it("sends exactly the cookie it was given, without reading the request", async () => {
+    const { cookies } = await import("next/headers");
+
+    createOrpcClientWithCookie("session=from-proxy");
+
+    expect(latestHeaders()).toEqual({ cookie: "session=from-proxy" });
+    expect(cookies).not.toHaveBeenCalled();
+  });
+
+  it("builds an anonymous client that never carries the request's session", async () => {
+    const { cookies } = await import("next/headers");
+
+    createAnonymousServerOrpcClient();
+
+    expect(latestHeaders()).toEqual({});
+    expect(cookies).not.toHaveBeenCalled();
   });
 });

@@ -1,13 +1,13 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { sidebarUtilityRow } from "@/components/navigation/navigation-sidebar/sidebar-utility-row";
 import { useMarkAllNotificationsRead } from "@/hooks/notifications/useMarkAllNotificationsRead/useMarkAllNotificationsRead";
 import { useMarkNotificationsRead } from "@/hooks/notifications/useMarkNotificationsRead/useMarkNotificationsRead";
 import { useNotifications } from "@/hooks/notifications/useNotifications/useNotifications";
 import { useUnreadNotificationCount } from "@/hooks/notifications/useUnreadNotificationCount/useUnreadNotificationCount";
 import { useLocale } from "@/hooks/useLocale";
-import { Bell } from "lucide-react";
-import Link from "next/link";
+import { Bell, Settings2 } from "lucide-react";
 import * as React from "react";
 
 import type { Notification } from "@repo/api/domains/notification/notification.schema";
@@ -94,16 +94,28 @@ export function NotificationsPopover() {
       >
         <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
           <h3 className="text-sm font-semibold">{label}</h3>
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            onClick={handleMarkAllRead}
-            disabled={!(hasUnread || listedUnread) || markAllRead.isPending}
-            className="text-muted-foreground hover:text-foreground font-normal"
-          >
-            {t("markAllRead")}
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={handleMarkAllRead}
+              disabled={!(hasUnread || listedUnread) || markAllRead.isPending}
+              className="text-muted-foreground hover:text-foreground font-normal"
+            >
+              {t("markAllRead")}
+            </Button>
+            <Button asChild variant="ghost" size="icon-xs" className="text-muted-foreground">
+              <IntentLink
+                href={`/${locale}/platform/account/notifications`}
+                onClick={closePopover}
+                aria-label={t("settings")}
+                title={t("settings")}
+              >
+                <Settings2 />
+              </IntentLink>
+            </Button>
+          </div>
         </div>
         <div className="max-h-[400px] overflow-y-auto">
           <NotificationFeed
@@ -117,9 +129,9 @@ export function NotificationsPopover() {
         </div>
         <div className="border-t p-1.5">
           <Button asChild variant="ghost" size="sm" className="w-full">
-            <Link href={`/${locale}/platform/notifications`} onClick={closePopover}>
+            <IntentLink href={`/${locale}/platform/notifications`} onClick={closePopover}>
               {t("seeAll")}
-            </Link>
+            </IntentLink>
           </Button>
         </div>
       </PopoverContent>

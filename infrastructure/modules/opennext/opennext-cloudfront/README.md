@@ -1,132 +1,105 @@
 # ☁️ OpenNext CloudFront Module
 
-This module creates a CloudFront distribution optimized for OpenNext deployments.
+This module creates the CloudFront distribution in front of an OpenNext deployment of the web app.
 
 ## 📖 Overview
 
-This module creates a CloudFront distribution specifically designed for Next.js applications deployed with OpenNext. It provides global content delivery with multiple origins optimized for different content types and implements cache behaviors that understand Next.js routing patterns.
+One distribution serves the static assets from S3, the server-rendered pages and the API from the
+server Lambda, optimized images from the image Lambda, and PostHog's capture traffic through a
+reverse proxy. Behaviors are matched in the order below; the first path pattern that fits wins.
 
-The distribution automatically handles static assets from S3, server-side rendered content from Lambda functions, and image optimization, providing a seamless experience for users worldwide.
+| Order | Path pattern                                                                     | Origin         | Cache policy                                   | Functions                               |
+| ----- | -------------------------------------------------------------------------------- | -------------- | ---------------------------------------------- | --------------------------------------- |
+| 1     | `/_next/static/*`                                                                | S3 assets      | Managed CachingOptimizedForUncompressedObjects | none                                    |
+| 2     | `/_next/image`                                                                   | Image Lambda   | `image_cache_policy`                           | none                                    |
+| 3     | `/ingest/static/*`                                                               | PostHog assets | Managed CachingOptimizedForUncompressedObjects | `posthog_rewrite` (viewer request)      |
+| 4     | `/ingest/*`                                                                      | PostHog ingest | Managed CachingDisabled                        | `posthog_rewrite` (viewer request)      |
+| 5     | `api/*`                                                                          | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
+| 6     | `_next/data/*`                                                                   | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`                   |
+| 7, 8  | `*.svg`, `*.ico`                                                                 | S3 assets      | Managed CachingOptimizedForUncompressedObjects | none                                    |
+| 9+    | `/*/platform*`, `/*/login*`, `/*/register*`, `/*/verify-request*`                | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
+| next  | `/en-US*`, `/robots.txt`, `/sitemap.xml`, `/opengraph-image*`, `/twitter-image*` | Server Lambda  | `server_pages`                                 | `forward_host_header`, `edge_hash_body` |
+| last  | default (`*`)                                                                    | Server Lambda  | Managed CachingDisabled                        | `forward_host_header`, `edge_hash_body` |
 
-```mermaid
-graph TD;
-    subgraph "CloudFront Distribution"
-        CF[CloudFront Distribution]
-        OAC[Origin Access Control]
-        CFH[CloudFront Function]
-    end
+- `forward_host_header` is a CloudFront Function on viewer request. It redirects `www.` hosts to
+  the bare host and copies `host` into `x-forwarded-host`, which the origins route on.
+- `edge_hash_body` is a Lambda@Edge function on origin request. It adds `x-amz-content-sha256` to
+  bodied requests, so the Lambda function URL accepts them under origin access control.
 
-    subgraph "Origins"
-        S3[S3 Assets Origin]
-        SL[Server Lambda Origin]
-        IL[Image Lambda Origin]
-    end
+## 🗄 Page caching
 
-    subgraph "Cache Behaviors"
-        CB1[Default: Static Assets]
-        CB2[_next/static/*: Long Cache]
-        CB3[_next/image*: Image Cache]
-        CB4[api/*: No Cache]
-        CB5[_next/data/*: ISR Cache]
-        CB6[*: Dynamic Cache]
-    end
+Only the default locale's pages and the site-wide metadata files are cached: their behaviors use
+`server_pages`, a cache policy that lets the origin's `Cache-Control` decide. Next marks static
+and ISR pages `s-maxage=…` and every page that reads the request `private, no-cache, no-store`,
+so only pages that are the same for every visitor are ever stored.
+A response with no `Cache-Control`, such as a proxy redirect, is not kept (`default_ttl = 0`).
 
-    CF -->|OAC Protection| S3
-    CF -->|Function URL| SL
-    CF -->|Function URL| IL
-    CF -->|Header Forwarding| CFH
+What the cache key holds, and why:
 
-    CB1 -->|Origin| S3
-    CB2 -->|Origin| S3
-    CB3 -->|Origin| IL
-    CB4 -->|Origin| SL
-    CB5 -->|Origin| SL
-    CB6 -->|Origin| SL
+- **`rsc` and the `next-router-*` headers, `next-url`**: Next answers an RSC payload and the
+  HTML at the same URL and varies on these headers.
+- **all query strings**: they carry `_rsc`.
+- **`x-forwarded-host`**: set by `forward_host_header` before the lookup.
+- **`x-prerender-revalidate`**: OpenNext regenerates a stale page by sending a request through
+  CloudFront with this header; without it in the key, that request would be answered from cache
+  and the page would never refresh.
+- **the `__prerender_bypass` cookie only**: a Contentful preview request misses the shared copy.
+  The session cookie stays out of the key. It is still forwarded to the origin by the origin
+  request policy.
 
-    style CF fill:#FF9800,stroke:#E65100,color:white,stroke-width:2px
-    style S3 fill:#03A9F4,stroke:#01579B,color:white,stroke-width:2px
-    style SL fill:#4CAF50,stroke:#1B5E20,color:white,stroke-width:2px
-    style IL fill:#2196F3,stroke:#0D47A1,color:white,stroke-width:2px
-    style OAC fill:#F44336,stroke:#B71C1C,color:white,stroke-width:2px
-    style CFH fill:#9C27B0,stroke:#4A148C,color:white,stroke-width:2px
-```
+The CachingDisabled page behaviors (9+) are defence in depth for pages that differ per visitor,
+and they come before `/en-US*` so the default locale's platform and sign-in pages stay uncached.
+Everything else, including every other locale, falls to the uncached default behavior:
+`proxy.ts` decides per viewer who may see another locale, and it can only decide for a request
+that reaches the origin. A locale added later is therefore uncached until it is listed in
+`cached_page_patterns`.
+
+Origin errors (500, 502, 503 and 504) are never cached (`error_caching_min_ttl = 0`).
 
 ## 🛠 Resources Used
 
-| Resource                               | Description                                                               | Documentation                                                                                                                      |
-| -------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `aws_cloudfront_distribution`          | Creates CloudFront distribution with multiple origins and cache behaviors | [AWS CloudFront Distribution](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution) |
-| `aws_cloudfront_origin_access_control` | Creates Origin Access Control for secure S3 access                        | [AWS CloudFront OAC](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_origin_access_control) |
-| `aws_cloudfront_function`              | Creates CloudFront Function for header forwarding                         | [AWS CloudFront Function](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_function)         |
+| Resource                               | Description                                                          |
+| -------------------------------------- | -------------------------------------------------------------------- |
+| `aws_cloudfront_distribution`          | The distribution, its origins and behaviors                          |
+| `aws_cloudfront_cache_policy`          | `server_pages` for pages and `image_cache_policy` for `/_next/image` |
+| `aws_cloudfront_origin_request_policy` | `posthog_passthrough` for the PostHog ingest origin                  |
+| `aws_cloudfront_origin_access_control` | Signed access to the S3 bucket and the Lambda function URLs          |
+| `aws_cloudfront_function`              | `forward_host_header` and `posthog_rewrite`                          |
+| `aws_lambda_function`                  | `edge_hash_body`, the Lambda@Edge body hasher                        |
 
 ## ⚙️ Usage
 
-### Basic CloudFront Distribution
-
 ```hcl
 module "opennext_cloudfront" {
-  source = "../../modules/opennext-cloudfront"
+  source = "./opennext-cloudfront"
 
-  project_name                   = "my-nextjs-app"
-  assets_bucket_name            = "my-app-assets"
-  assets_bucket_domain_name     = "my-app-assets.s3.amazonaws.com"
-  server_function_url_domain    = "abcd1234.lambda-url.us-east-1.on.aws"
-  image_function_url_domain     = "efgh5678.lambda-url.us-east-1.on.aws"
+  project_name               = "my-nextjs-app"
+  assets_bucket_name         = "my-app-assets"
+  assets_bucket_domain_name  = "my-app-assets.s3.amazonaws.com"
+  server_function_url_domain = "abcd1234.lambda-url.eu-central-1.on.aws"
+  image_function_url_domain  = "efgh5678.lambda-url.eu-central-1.on.aws"
 
-  tags = {
-    Environment = "production"
-    Project     = "web-platform"
-  }
-}
-```
-
-### CloudFront with Custom Domain
-
-```hcl
-module "opennext_cloudfront" {
-  source = "../../modules/opennext-cloudfront"
-
-  project_name                   = "my-nextjs-app"
-  assets_bucket_name            = "my-app-assets"
-  assets_bucket_domain_name     = "my-app-assets.s3.amazonaws.com"
-  server_function_url_domain    = "abcd1234.lambda-url.us-east-1.on.aws"
-  image_function_url_domain     = "efgh5678.lambda-url.us-east-1.on.aws"
-
-  # Custom domain configuration
   aliases             = ["app.example.com"]
-  acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/abc123"
-
-  # Performance optimization
-  price_class = "PriceClass_All"
-
-  tags = {
-    Environment = "production"
-    Project     = "web-platform"
-  }
+  acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/..."
 }
 ```
-
----
 
 ## 🔑 Inputs
 
 | Name                         | Description                                          | Type           | Default            | Required |
 | ---------------------------- | ---------------------------------------------------- | -------------- | ------------------ | :------: |
-| `project_name`               | Name of the project (used for resource naming)       | `string`       | n/a                |  ✅ Yes  |
-| `assets_bucket_name`         | Name of the S3 assets bucket                         | `string`       | n/a                |  ✅ Yes  |
-| `assets_bucket_domain_name`  | Domain name of the S3 assets bucket                  | `string`       | n/a                |  ✅ Yes  |
-| `server_function_url_domain` | Domain of the server Lambda function URL             | `string`       | n/a                |  ✅ Yes  |
-| `image_function_url_domain`  | Domain of the image optimization Lambda function URL | `string`       | n/a                |  ✅ Yes  |
-| `aliases`                    | List of custom domain aliases for the distribution   | `list(string)` | `[]`               |  ❌ No   |
-| `acm_certificate_arn`        | ARN of ACM certificate for custom domain             | `string`       | `null`             |  ❌ No   |
-| `price_class`                | CloudFront price class                               | `string`       | `"PriceClass_100"` |  ❌ No   |
-| `minimum_protocol_version`   | Minimum TLS protocol version                         | `string`       | `"TLSv1.2_2021"`   |  ❌ No   |
-| `ssl_support_method`         | SSL support method for custom domain                 | `string`       | `"sni-only"`       |  ❌ No   |
-| `forward_host_header`        | Enable host header forwarding                        | `bool`         | `true`             |  ❌ No   |
-| `compress`                   | Enable compression                                   | `bool`         | `true`             |  ❌ No   |
-| `tags`                       | Tags to apply to all resources                       | `map(string)`  | `{}`               |  ❌ No   |
-
----
+| `project_name`               | Name of the project, used for resource naming        | `string`       | n/a                |   Yes    |
+| `assets_bucket_name`         | Name of the S3 assets bucket                         | `string`       | n/a                |   Yes    |
+| `assets_bucket_domain_name`  | Domain name of the S3 assets bucket                  | `string`       | n/a                |   Yes    |
+| `server_function_url_domain` | Domain of the server Lambda function URL             | `string`       | n/a                |   Yes    |
+| `image_function_url_domain`  | Domain of the image optimization Lambda function URL | `string`       | n/a                |   Yes    |
+| `aliases`                    | Custom domain aliases                                | `list(string)` | `[]`               |    No    |
+| `acm_certificate_arn`        | ACM certificate for the custom domain                | `string`       | `null`             |    No    |
+| `price_class`                | CloudFront price class                               | `string`       | `"PriceClass_100"` |    No    |
+| `waf_acl_id`                 | WAFv2 ACL to associate with the distribution         | `string`       | `""`               |    No    |
+| `enable_logging`             | Enable CloudFront access logging                     | `bool`         | `false`            |    No    |
+| `log_bucket`                 | S3 bucket for the access logs                        | `string`       | `""`               |    No    |
+| `tags`                       | Tags to apply to resources                           | `map(string)`  | `{}`               |    No    |
 
 ## 📤 Outputs
 
@@ -136,17 +109,4 @@ module "opennext_cloudfront" {
 | `distribution_arn`            | ARN of the CloudFront distribution            |
 | `distribution_domain_name`    | Domain name of the CloudFront distribution    |
 | `distribution_hosted_zone_id` | Hosted zone ID of the CloudFront distribution |
-| `origin_access_control_id`    | ID of the Origin Access Control               |
-| `function_arn`                | ARN of the CloudFront Function (if created)   |
-| `cache_policy_ids`            | Map of cache policy IDs by behavior           |
-
----
-
-## 🌍 Notes
-
-- **Cache Behaviors:** The distribution is optimized for Next.js patterns with specific behaviors for static assets, images, API routes, and ISR
-- **Security:** Uses Origin Access Control (OAC) for secure S3 access instead of legacy Origin Access Identity
-- **Performance:** Includes optimized cache policies for different content types with appropriate TTL values
-- **Global Distribution:** Supports multiple price classes for cost optimization based on geographic reach requirements
-- **Custom Domains:** Full support for custom domains with SSL certificates and security policies
-- **Header Forwarding:** Includes CloudFront Function for proper host header forwarding to Lambda origins
+| `origin_access_control_id`    | ID of the S3 origin access control            |

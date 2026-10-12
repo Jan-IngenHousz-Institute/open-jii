@@ -1,19 +1,17 @@
 "use client";
 
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
-import { forceLinting } from "@codemirror/lint";
-import type { Diagnostic } from "@codemirror/lint";
-import type { EditorView } from "@codemirror/view";
 import { Check, Copy } from "lucide-react";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FC } from "react";
 import { CodeEditor } from "~/components/shared/code-editor";
+import type { Diagnostic } from "~/components/shared/code-editor";
 import { JsonFormatToggle } from "~/components/shared/json-format-toggle";
 import { useDebounce } from "~/hooks/useDebounce";
 import { useJsonFormatStyle } from "~/hooks/useJsonFormatStyle";
 import type { JsonFormatStyle } from "~/lib/json-format";
 import { formatJson, reformatJsonString } from "~/lib/json-format";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
 import { FEATURE_FLAGS, FEATURE_FLAG_DEFAULTS } from "@repo/analytics";
 import {
@@ -221,25 +219,12 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
     setEditorCode((current) => reformatJsonString(current ?? "", { style: next }));
   }, [style, setStyle]);
 
-  // Stable ref for the validation mode so lint source can read it without recreating
-  const validationAsWarningRef = useRef(validationAsWarning);
-  validationAsWarningRef.current = validationAsWarning;
-
+  // The PostHog flag resolves async. A new lint source when it flips makes the editor lint again,
+  // so existing diagnostics take the right severity instead of staying stale.
   const protocolLintSource = useCallback(
-    (doc: string): Diagnostic[] => computeProtocolDiagnostics(doc, validationAsWarningRef.current),
-    [],
+    (doc: string): Diagnostic[] => computeProtocolDiagnostics(doc, validationAsWarning),
+    [validationAsWarning],
   );
-
-  // The PostHog flag resolves async; force a re-lint when it flips so existing
-  // diagnostics re-render with the right severity instead of staying stale.
-  const editorViewRef = useRef<EditorView | null>(null);
-  const handleCreateEditor = useCallback((view: EditorView) => {
-    editorViewRef.current = view;
-  }, []);
-
-  useEffect(() => {
-    if (editorViewRef.current) forceLinting(editorViewRef.current);
-  }, [validationAsWarning]);
 
   const heightStr = typeof height === "number" ? `${height}px` : height;
 
@@ -323,7 +308,6 @@ const ProtocolCodeEditor: FC<ProtocolCodeEditorProps> = ({
             readOnly={readOnly}
             lintSource={protocolLintSource}
             lintDelay={300}
-            onCreateEditor={handleCreateEditor}
           />
         </div>
       </div>

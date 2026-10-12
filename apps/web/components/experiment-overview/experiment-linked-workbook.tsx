@@ -1,5 +1,6 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import {
   getWorkbookCellSummary,
   WorkbookCellSummary,
@@ -11,7 +12,6 @@ import { useWorkbookVersions } from "@/hooks/workbook/useWorkbookVersions/useWor
 import { formatDate } from "@/util/date";
 import { stripHtml } from "@/util/strip-html";
 import { BookOpen } from "lucide-react";
-import Link from "next/link";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -62,11 +62,11 @@ export function ExperimentLinkedWorkbook({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <CardTitle>{t("workbooks.workbook")}</CardTitle>
-        <Link href={`/${locale}/platform/workbooks/${workbook.id}`} className="shrink-0">
+        <IntentLink href={`/${locale}/platform/workbooks/${workbook.id}`} className="shrink-0">
           <Button variant="link" className="h-auto p-0">
             {t("workbooks.viewWorkbook")}
           </Button>
-        </Link>
+        </IntentLink>
       </div>
 
       <Card className="shadow-none">

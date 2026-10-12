@@ -23,6 +23,8 @@ const EMPTY_BOUND_LABEL = "…";
 interface DateRangeInputProps {
   value: ExperimentDataFilterValue;
   onChange: (value: ExperimentDataFilterValue) => void;
+  /** Marks the range invalid and describes it by this element. */
+  errorMessageId?: string;
 }
 
 interface ParsedRange {
@@ -30,7 +32,7 @@ interface ParsedRange {
   end: Date | undefined;
 }
 
-export function DateRangeInput({ value, onChange }: DateRangeInputProps) {
+export function DateRangeInput({ value, onChange, errorMessageId }: DateRangeInputProps) {
   const { t } = useTranslation("common");
   const { start, end } = parseRange(value);
   const [open, setOpen] = useState(false);
@@ -95,6 +97,8 @@ export function DateRangeInput({ value, onChange }: DateRangeInputProps) {
           type="button"
           variant="outline"
           className={cn("h-9 w-full justify-start font-normal", isUnset && "text-muted-foreground")}
+          aria-invalid={errorMessageId ? true : undefined}
+          aria-describedby={errorMessageId}
         >
           <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0" />
           <span className="truncate">{triggerLabel}</span>

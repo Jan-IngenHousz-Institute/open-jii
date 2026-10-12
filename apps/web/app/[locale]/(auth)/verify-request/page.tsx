@@ -2,7 +2,6 @@ import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-na
 import type { SearchParamsType } from "@/util/searchParams";
 import { MailCheck } from "lucide-react";
 import { redirect } from "next/navigation";
-import { auth } from "~/app/actions/auth";
 import { AuthBackground } from "~/components/auth/auth-background";
 import { AuthHeroSection } from "~/components/auth/auth-hero-section";
 
@@ -12,7 +11,6 @@ export default async function VerifyRequestPage(props: {
   params: Promise<{ locale: string }>;
   searchParams: SearchParamsType;
 }) {
-  const session = await auth();
   const { locale } = await props.params;
   const { t } = await initTranslations({
     locale,
@@ -26,7 +24,7 @@ export default async function VerifyRequestPage(props: {
 
   return (
     <>
-      <UnifiedNavbar locale={locale} session={session} />
+      <UnifiedNavbar locale={locale} />
 
       <AuthBackground alt="Verify request background" />
 

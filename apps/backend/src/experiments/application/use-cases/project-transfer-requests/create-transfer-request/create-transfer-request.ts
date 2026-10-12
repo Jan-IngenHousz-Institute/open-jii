@@ -1,11 +1,10 @@
-import { Injectable, Logger, Inject } from "@nestjs/common";
-import { z } from "zod";
+import { Injectable, Logger } from "@nestjs/common";
 
+import { ErrorCodes } from "../../../../../common/utils/error-codes";
 import type { Result } from "../../../../../common/utils/fp-utils";
 import { success, failure, AppError } from "../../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../../notifications/application/services/notification-dispatch.service";
 import type { BaseTransferRequest } from "../../../../core/models/project-transfer-request.model";
-import { EMAIL_PORT } from "../../../../core/ports/email.port";
-import type { EmailPort } from "../../../../core/ports/email.port";
 import { ProjectTransferRequestsRepository } from "../../../../core/repositories/project-transfer-requests.repository";
 
 interface CreateTransferRequestInput {
@@ -13,15 +12,13 @@ interface CreateTransferRequestInput {
   projectUrlOld: string;
 }
 
-const emailSchema = z.string().email();
-
 @Injectable()
 export class CreateTransferRequestUseCase {
   private readonly logger = new Logger(CreateTransferRequestUseCase.name);
 
   constructor(
     private readonly transferRequestsRepository: ProjectTransferRequestsRepository,
-    @Inject(EMAIL_PORT) private readonly emailPort: EmailPort,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   async execute(
@@ -36,7 +33,7 @@ export class CreateTransferRequestUseCase {
       projectIdOld: input.projectIdOld,
     });
 
-    // Validate that the user email is provided
+    // The transfer request row carries the requester's address to Databricks.
     if (!userEmail) {
       this.logger.warn({
         msg: "User does not have an email address",
@@ -85,32 +82,21 @@ export class CreateTransferRequestUseCase {
       return failure(createResult.error);
     }
 
-    // Send confirmation email only if the email is valid
-    const emailValidation = emailSchema.safeParse(userEmail);
+    const dispatched = await this.notifications.dispatch({
+      type: "project_transfer_requested",
+      recipientIds: [userId],
+      params: { projectId: input.projectIdOld, projectUrl: input.projectUrlOld },
+    });
 
-    if (!emailValidation.success) {
-      this.logger.warn({
-        msg: "User email is not a valid email address, skipping confirmation email",
+    if (dispatched.isFailure()) {
+      this.logger.error({
+        msg: "Failed to notify the requester, the transfer request was still created",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
         operation: "create_transfer_request",
         userId,
-        userEmail,
+        projectIdOld: input.projectIdOld,
+        error: dispatched.error,
       });
-    } else {
-      const emailResult = await this.emailPort.sendTransferRequestConfirmation(
-        userEmail,
-        input.projectIdOld,
-        input.projectUrlOld,
-      );
-
-      if (emailResult.isFailure()) {
-        this.logger.warn({
-          msg: "Failed to send transfer request confirmation email",
-          operation: "create_transfer_request",
-          userId,
-          projectIdOld: input.projectIdOld,
-          error: emailResult.error,
-        });
-      }
     }
 
     return success(createResult.value);

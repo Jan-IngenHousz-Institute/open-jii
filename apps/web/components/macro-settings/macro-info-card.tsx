@@ -5,9 +5,9 @@ import { useMacroDelete } from "@/hooks/macro/useMacroDelete/useMacroDelete";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import { useRouter } from "next/navigation";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
 import React from "react";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Macro } from "@repo/api/domains/macro/macro.schema";

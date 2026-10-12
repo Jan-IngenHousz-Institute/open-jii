@@ -97,4 +97,27 @@ describe("transformPolarData", () => {
     const result = transformPolarData([{ t: 0, r: 1 }], sources, baseConfig);
     expect(result[0].mode).toBe("markers");
   });
+
+  // A chart saved through the API may omit colorMode; the text column used to
+  // be ignored, leaving one trace named after the Y column.
+  it("splits a text colour column by category when colorMode is unset", () => {
+    const sources = [ds("x", "t"), ds("y", "r"), ds("color", "g")];
+    const rows = [
+      { t: 0, r: 1, g: "A" },
+      { t: 90, r: 2, g: "B" },
+      { t: 180, r: 3, g: "A" },
+    ];
+    const result = transformPolarData(rows, sources, baseConfig, "STRING");
+    expect(result.map((s) => s.name)).toEqual(["A", "B"]);
+  });
+
+  it("keeps one trace for a numeric colour column when colorMode is unset", () => {
+    const sources = [ds("x", "t"), ds("y", "r"), ds("color", "g")];
+    const rows = [
+      { t: 0, r: 1, g: 5 },
+      { t: 90, r: 2, g: 9 },
+    ];
+    const result = transformPolarData(rows, sources, baseConfig, "INT");
+    expect(result).toHaveLength(1);
+  });
 });

@@ -1,7 +1,7 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { UserAvatar } from "@/components/user-avatar";
-import Link from "next/link";
 
 /** One bubble on the trail. `avatarUrl` is absent for anything that has no picture. */
 export interface AvatarTrailFace {
@@ -39,7 +39,7 @@ export function OrganizationAvatarTrail({
   const remainder = faces.length - visible.length;
 
   return (
-    <Link
+    <IntentLink
       href={href}
       className="hover:bg-muted/50 group -mx-2 flex items-center gap-3 rounded-md px-2 py-1 transition-colors"
     >
@@ -75,7 +75,7 @@ export function OrganizationAvatarTrail({
       <span className="text-muted-foreground group-hover:text-foreground text-sm transition-colors">
         {label}
       </span>
-    </Link>
+    </IntentLink>
   );
 }
 

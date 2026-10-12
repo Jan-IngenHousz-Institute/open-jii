@@ -1,8 +1,8 @@
 import { createMacro } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
 import { contract } from "@repo/api/contract";
 

@@ -149,6 +149,24 @@ describe("NotificationDispatchService", () => {
     expect(await rowsFor(deactivatedId)).toHaveLength(1);
   });
 
+  it("stores the row and sends nothing when the stored address is not an email address", async () => {
+    // An ORCID sign-in that shares no address stores the ORCID id in `users.email`.
+    const orcidId = await testApp.createTestUser({ email: "0000-0002-1825-0097" });
+
+    const result = await dispatch.dispatch({
+      type: "experiment_join_request_received",
+      recipientIds: [orcidId],
+      actorId,
+      resource: experiment,
+      params: { experimentName: "Photosynthesis" },
+    });
+
+    assertSuccess(result);
+    expect(result.value).toEqual({ created: 1, emailed: 0 });
+    expect(await rowsFor(orcidId)).toHaveLength(1);
+    expect(sendSubmitted).not.toHaveBeenCalled();
+  });
+
   it("stores the row and sends nothing when the type never emails", async () => {
     // No type is both `never` and equipped with an email, so pretend this one is
     // equipped: the channel policy is then the only thing that can hold the email back.

@@ -1,10 +1,10 @@
+import { usePrincipal } from "@/components/auth/principal-context";
 import { granteeUsersQueryKey } from "@/hooks/sharing/sharing-query-keys";
 import { orpc } from "@/lib/orpc";
 import { shouldRetryQuery } from "@/util/query-retry";
 import { useQuery } from "@tanstack/react-query";
 
 import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
-import { useSession } from "@repo/auth/client";
 
 /**
  * The picker's user source: everyone the global search would find, annotated with
@@ -19,8 +19,7 @@ export const useGranteeUserSearch = (
   queryString: string,
   options?: { enabled?: boolean },
 ) => {
-  const { data: session, isPending: isSessionPending } = useSession();
-  const userId = session?.user.id;
+  const { userId, isPending: isSessionPending } = usePrincipal();
   const query = queryString.trim() || undefined;
   const input = { resourceType, id: resourceId, query };
 

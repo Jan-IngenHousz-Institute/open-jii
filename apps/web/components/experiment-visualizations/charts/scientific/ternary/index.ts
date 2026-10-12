@@ -10,6 +10,7 @@ import { ternaryStyleShelves } from "./shelves/style-shelves";
 
 export const ternaryChartType: ChartTypeDef = {
   type: "ternary",
+  plotlyTraceTypes: ["scatterternary"],
   family: "scientific",
   labelKey: "workspace.charts.types.ternary",
   descriptionKey: "workspace.charts.descriptions.ternary",

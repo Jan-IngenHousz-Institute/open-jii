@@ -34,6 +34,14 @@ resource "aws_grafana_workspace" "this" {
 
 }
 
+# The daily round reads alert state and the reports with this account's tokens. A person mints
+# one with pnpm grafana:auth; tokens live 30 days and are never stored here.
+resource "aws_grafana_workspace_service_account" "round" {
+  name         = "daily-round"
+  grafana_role = "VIEWER"
+  workspace_id = aws_grafana_workspace.this.id
+}
+
 resource "aws_iam_role" "assume" {
   name = "${local.workspace_name}-grafana-assume"
   assume_role_policy = jsonencode({

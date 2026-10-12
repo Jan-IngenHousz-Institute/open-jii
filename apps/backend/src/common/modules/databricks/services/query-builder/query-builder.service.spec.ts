@@ -245,6 +245,25 @@ describe("QueryBuilderService", () => {
       expect(sql).toContain("ORDER BY `timestamp_hour` ASC");
     });
 
+    it("orders an anonymized aggregation by the contributor's pseudonym, outside the grouping", () => {
+      const sql = unwrap(
+        service.buildQuery({
+          table: "catalog.centrum.raw_data",
+          whereConditions: [["experiment_id", "exp-1"]],
+          aggregation: {
+            groupBy: [{ column: "contributor" }],
+            functions: [{ column: "temperature", function: "avg" }],
+          },
+          orderBy: "contributor.id",
+          orderByContributorPseudonymSalt: "exp-1",
+        }),
+      );
+
+      expect(sql).toMatch(
+        /GROUP BY `contributor` ORDER BY concat\('Contributor-', upper\(substr\(sha2\(concat\('exp-1:', `contributor`\.`id`\), 256\), 1, 6\)\)\) ASC/,
+      );
+    });
+
     it("compiles cumsum as a windowed SUM over the first groupBy expression", () => {
       // The dashboard combo-chart shape: weekly counts as bars + a
       // cumulative line on the same X axis. Cumsum's OVER (ORDER BY ...)

@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import type { ExperimentUploadSourceKind } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
-import { DialogFooter } from "@repo/ui/components/dialog";
+import { DialogBody, DialogFooter } from "@repo/ui/components/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,8 +41,10 @@ export function UploadListView({
   const { t } = useTranslation("experimentData");
 
   return (
-    <div className="flex flex-col gap-4">
-      <UploadHistoryPanel experimentId={experimentId} enabled={enabled} />
+    <div className="flex min-h-0 flex-col gap-4">
+      <DialogBody>
+        <UploadHistoryPanel experimentId={experimentId} enabled={enabled} />
+      </DialogBody>
 
       <DialogFooter className="flex items-center justify-between gap-2 sm:justify-between">
         <Button variant="outline" onClick={onClose}>

@@ -10,6 +10,7 @@ import { windRoseStyleShelves } from "./shelves/style-shelves";
 
 export const windRoseChartType: ChartTypeDef = {
   type: "wind-rose",
+  plotlyTraceTypes: ["barpolar"],
   family: "scientific",
   labelKey: "workspace.charts.types.windRose",
   descriptionKey: "workspace.charts.descriptions.windRose",

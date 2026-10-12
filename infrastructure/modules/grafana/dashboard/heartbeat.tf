@@ -84,7 +84,7 @@ locals {
       key     = "platform"
       title   = "Platform"
       areas   = ["platform"]
-      caption = "**Site uptime** is the share of the week the site's health check passed. Which deploys failed, and how long each took from commit to production, are on [Delivery](/d/${local.flow_uids.delivery}); database storage sits with every other store on [Throughput and storage](/d/${local.flow_uids["throughput-storage"]})."
+      caption = "**Site uptime** is the share of the week the site's health check passed. **Databricks cost** is the last seven complete days at list price, from Databricks' billing tables; its chart splits it by pipeline, warehouse, jobs and the rest. Which deploys failed, and how long each took from commit to production, are on [Delivery](/d/${local.flow_uids.delivery}); database storage sits with every other store on [Throughput and storage](/d/${local.flow_uids["throughput-storage"]})."
     },
   ]
 
@@ -187,8 +187,42 @@ locals {
   # Entries queried one series at a time rather than through their catalogue search, which
   # forgets a series that has not published for two weeks.
   heartbeat_named_series = {
-    dora = { total = local.flow_dora_totals.attempts, series = local.flow_dora_series.attempts }
+    dora              = { total = local.flow_dora_totals.attempts, series = local.flow_dora_series.attempts }
+    "databricks-cost" = { total = local.heartbeat_cost_total, series = local.heartbeat_cost_series }
   }
+
+  # Spend is published per component, so the tile sums them and the trend shows each.
+  heartbeat_cost_series = [
+    for i, component in var.databricks_cost_components : {
+      refId            = "cost${i}"
+      id               = "cost${i}"
+      region           = var.aws_region
+      namespace        = "OpenJII/Usage"
+      queryMode        = "Metrics"
+      metricQueryType  = 0
+      metricEditorMode = 0
+      metricName       = "DatabricksCost7dUsd"
+      statistic        = "Maximum"
+      matchExact       = true
+      dimensions       = { Environment = var.environment, Component = component }
+      expression       = ""
+      label            = component
+      hide             = false
+    }
+  ]
+
+  heartbeat_cost_total = concat(
+    [for target in local.heartbeat_cost_series : merge(target, { hide = true })],
+    [merge(local.heartbeat_cost_series[0], {
+      refId            = "cost"
+      id               = "cost"
+      metricEditorMode = 1
+      metricName       = ""
+      dimensions       = {}
+      label            = ""
+      expression       = "SUM([${join(", ", [for target in local.heartbeat_cost_series : "FILL(${target.id}, 0)"])}])"
+    })],
+  )
 
   # Grafana fills ${__from} and ${__to} when a link is clicked, so encoded text carries
   # tokens and gets the variables back afterwards. Spaces go as %20, which every handler reads.
@@ -803,6 +837,7 @@ locals {
     bytes        = "bytes"
     percent      = "percent"
     ratio        = "percentunit"
+    usd          = "currencyUSD"
   }
 }
 

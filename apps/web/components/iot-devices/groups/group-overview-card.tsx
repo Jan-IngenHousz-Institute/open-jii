@@ -2,8 +2,8 @@
 
 import { ResourceCard } from "@/components/shared/resource-card";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
+import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 import { useLocale } from "@/hooks/useLocale";
-import { formatShortDate } from "@/util/date";
 import { Cpu } from "lucide-react";
 
 import type { IotDeviceGroupListItem } from "@repo/api/domains/iot/device-group/iot-device-group.schema";
@@ -23,6 +23,7 @@ interface GroupOverviewCardProps {
 export function GroupOverviewCard({ group, reserveBadgeRow }: GroupOverviewCardProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
+  const format = useLocalDateFormat(locale);
 
   const renderFooter = () => (
     <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
@@ -30,7 +31,7 @@ export function GroupOverviewCard({ group, reserveBadgeRow }: GroupOverviewCardP
         <Cpu className="size-3.5 shrink-0" aria-hidden />
         {t("iot.groups.memberCount", { count: group.memberCount })}
       </span>
-      <span className="tabular-nums">{formatShortDate(group.updatedAt, locale)}</span>
+      <span className="tabular-nums">{format.date(group.updatedAt)}</span>
     </span>
   );
 

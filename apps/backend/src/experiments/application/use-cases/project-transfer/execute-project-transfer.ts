@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 
 import type { ExperimentFlowGraph } from "@repo/api/domains/experiment/experiment.schema";
 import type {
@@ -12,15 +12,13 @@ import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import { CreateMacroUseCase } from "../../../../macros/application/use-cases/create-macro/create-macro";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import { CreateProtocolUseCase } from "../../../../protocols/application/use-cases/create-protocol/create-protocol";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
-import { UserRepository } from "../../../../users/core/repositories/user.repository";
 import { PublishVersionUseCase } from "../../../../workbooks/application/use-cases/publish-version/publish-version";
 import type { CreateWorkbookDto } from "../../../../workbooks/core/models/workbook.model";
 import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
 import type { CreateLocationDto } from "../../../core/models/experiment-locations.model";
-import { EMAIL_PORT } from "../../../core/ports/email.port";
-import type { EmailPort } from "../../../core/ports/email.port";
 import { LocationRepository } from "../../../core/repositories/experiment-location.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
 import { CreateFlowUseCase } from "../flows/create-flow";
@@ -37,11 +35,10 @@ export class ExecuteProjectTransferUseCase {
     private readonly createMacroUseCase: CreateMacroUseCase,
     private readonly macroRepository: MacroRepository,
     private readonly protocolRepository: ProtocolRepository,
-    private readonly userRepository: UserRepository,
     private readonly workbookRepository: WorkbookRepository,
     private readonly publishVersionUseCase: PublishVersionUseCase,
     private readonly authz: AuthorizationService,
-    @Inject(EMAIL_PORT) private readonly emailPort: EmailPort,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   async execute(
@@ -346,29 +343,20 @@ export class ExecuteProjectTransferUseCase {
       flowId,
     });
 
-    // 7. Send project transfer complete email (non-fatal)
-    const userResult = await this.userRepository.findOne(data.experiment.createdBy);
+    // 7. Notify the creator (non-fatal)
+    const dispatched = await this.notifications.dispatch({
+      type: "project_transfer_completed",
+      recipientIds: [data.experiment.createdBy],
+      resource: { type: "experiment", id: experiment.id },
+      params: { experimentName: experiment.name },
+    });
 
-    if (userResult.isSuccess() && userResult.value?.email) {
-      const emailResult = await this.emailPort.sendProjectTransferComplete(
-        userResult.value.email,
-        experiment.id,
-        experiment.name,
-      );
-
-      if (emailResult.isFailure()) {
-        this.logger.warn({
-          msg: "Failed to send project transfer complete email (non-fatal)",
-          operation: "executeProjectTransfer",
-          experimentId: experiment.id,
-          error: emailResult.error.message,
-        });
-      }
-    } else {
+    if (dispatched.isFailure()) {
       this.logger.warn({
-        msg: "Could not retrieve user email for project transfer notification",
+        msg: "Failed to notify the creator, the transfer still completed",
         operation: "executeProjectTransfer",
-        userId: data.experiment.createdBy,
+        experimentId: experiment.id,
+        error: dispatched.error,
       });
     }
 

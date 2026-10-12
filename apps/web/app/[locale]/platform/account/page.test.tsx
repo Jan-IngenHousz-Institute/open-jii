@@ -6,10 +6,8 @@ import { auth } from "~/app/actions/auth";
 import AccountPage from "./page";
 
 vi.mock("~/components/account-settings/account-settings", () => ({
-  AccountSettings: ({ session }: { session: unknown }) => (
-    <div data-testid="account-settings">
-      Account Settings - {session ? "with session" : "no session"}
-    </div>
+  AccountSettings: ({ user }: { user: unknown }) => (
+    <div data-testid="account-settings">Account Settings - {user ? "with user" : "no user"}</div>
   ),
 }));
 
@@ -19,7 +17,16 @@ describe("AccountPage", () => {
 
     render(await AccountPage());
 
-    expect(screen.getByText(/with session/)).toBeInTheDocument();
+    expect(screen.getByText(/with user/)).toBeInTheDocument();
+  });
+
+  it("passes only the user, so the session token stays out of the page", async () => {
+    const session = createSession({ user: { id: "1", name: "User" } });
+    vi.mocked(auth).mockResolvedValue(session);
+
+    const page = await AccountPage();
+
+    expect(page.props).toEqual({ user: session.user });
   });
 
   it("renders without session", async () => {
@@ -27,7 +34,7 @@ describe("AccountPage", () => {
 
     render(await AccountPage());
 
-    expect(screen.getByText(/no session/)).toBeInTheDocument();
+    expect(screen.getByText(/no user/)).toBeInTheDocument();
   });
 
   it("calls auth to get session", async () => {

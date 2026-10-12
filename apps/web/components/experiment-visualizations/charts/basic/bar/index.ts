@@ -10,6 +10,7 @@ import { barStyleShelves } from "./shelves/style-shelves";
 
 export const barChartType: ChartTypeDef = {
   type: "bar",
+  plotlyTraceTypes: ["bar"],
   family: "basic",
   labelKey: "workspace.charts.types.bar",
   descriptionKey: "workspace.charts.descriptions.bar",

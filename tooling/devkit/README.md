@@ -4,7 +4,9 @@ Local development commands that need a credential, written so the credential nev
 command line, a shell history, or an agent's context. Each command resolves what it needs in its
 own process and hands back a file or a result, not a secret.
 
-Run them from the repo root through the aliases in the root `package.json`.
+Run them from the repo root through the aliases in the root `package.json`. Run the `*:auth`
+commands in the main checkout: every worktree finds a key stored there, while a key stored in a
+linked worktree serves only that worktree.
 
 | Command                                   | What it does                                            |
 | ----------------------------------------- | ------------------------------------------------------- |
@@ -13,14 +15,19 @@ Run them from the repo root through the aliases in the root `package.json`.
 | `pnpm linear:query`                       | Runs one GraphQL document against Linear                |
 | `pnpm linear:check`                       | Checks a ticket draft against the ticket standard       |
 | `pnpm linear:create`                      | Creates the tickets in a draft, with comments and links |
+| `pnpm linear:milestones`                  | Creates, renames and orders a project's milestones      |
 | `pnpm linear:document`                    | Publishes a project document from a Markdown file       |
 | `pnpm linear:upload`                      | Uploads a file to Linear and prints its asset URL       |
+| `pnpm linear:resources`                   | Adds outside links to a project's Resources             |
 | `pnpm linear:view`                        | Creates a project's shared ticket view and its document |
 | `pnpm linear:taxonomy`                    | Plans and applies the `OJD` label taxonomy              |
 | `pnpm linear:apply`                       | Applies a reviewed per-ticket change file in batches    |
 | `pnpm posthog:auth`                       | Stores your PostHog key in `tooling/devkit/.env`        |
 | `pnpm posthog:query`                      | Runs one HogQL query against the openJII project        |
 | `pnpm posthog:issues`                     | Lists, shows and triages open error-tracking issues     |
+| `pnpm grafana:auth`                       | Stores your Grafana token for the daily round           |
+| `pnpm grafana:get`                        | Reads one path of a Grafana workspace's API             |
+| `pnpm round:read`                         | Writes the daily round's reading of one environment     |
 | `pnpm --filter @repo/devkit env:generate` | Regenerates the `.env.example` files from the manifest  |
 
 ## Linear access
@@ -93,11 +100,68 @@ It lands beside the Linear key in `tooling/devkit/.env` and is found the same wa
   status changes. Tickets are only listed, for the ticket skills to write. Every status change is
   appended to `.claude/posthog-writes.log`.
 
+## Grafana access, for the daily round
+
+The daily round reads each environment's Grafana with a token for `daily-round`, a Viewer service
+account the grafana workspace module creates. You mint the token yourself with the AWS CLI and pipe
+it straight into the devkit, so it never reaches your terminal; an agent never mints one. From the
+main checkout, signed in to AWS, for prod (swap `prod` for `dev` throughout for dev):
+
+```bash
+WORKSPACE=$(aws grafana list-workspaces --profile openjii-prod \
+  --query "workspaces[?starts_with(name, 'prod-')].id" --output text)
+ACCOUNT=$(aws grafana list-workspace-service-accounts --profile openjii-prod \
+  --workspace-id "$WORKSPACE" --query "serviceAccounts[?name=='daily-round'].id" --output text)
+aws grafana create-workspace-service-account-token --profile openjii-prod \
+  --workspace-id "$WORKSPACE" --service-account-id "$ACCOUNT" \
+  --name "round-$USER-$(date +%Y%m%d%H%M)" --seconds-to-live 2592000 \
+  --query serviceAccountToken.key --output text \
+  | pnpm grafana:auth prod --workspace "$WORKSPACE"
+```
+
+`grafana:auth` checks that the token can read the alert rules, then stores it with the workspace's
+address in `tooling/devkit/.env`. A token lives 30 days at most. When it expires, the round's
+commands refuse it and say to mint a new one; the old one needs no cleanup.
+
+The commands above use the AWS profiles `openjii-prod` and `openjii-dev`. Give both one
+`sso-session`, so that a single sign-in covers both environments:
+
+```ini
+[sso-session openjii]
+sso_start_url = <the AWS access portal URL>
+sso_region = <the portal's region>
+sso_registration_scopes = sso:account:access
+
+[profile openjii-prod]
+sso_session = openjii
+sso_account_id = <the prod account id>
+sso_role_name = <your role>
+region = eu-central-1
+
+[profile openjii-dev]
+sso_session = openjii
+sso_account_id = <the dev account id>
+sso_role_name = <your role>
+region = eu-central-1
+```
+
+```bash
+aws sso login --sso-session openjii
+```
+
+- `pnpm round:read <prod|dev>` writes `.claude/round/<env>.json`: every alert rule's state, what
+  fired, continued or cleared over the window, the state changes Grafana recorded, and the daily
+  report's open panels read over the same window, plus a list of what it could not read. The window
+  is the last day, or back to Friday on a Monday; `--since <date>` covers a longer gap, and
+  `--panels 89,91` reads those panels instead, collapsed or not.
+- `pnpm grafana:get <prod|dev> /api/<path>` (`--output <file>`) reads one path of the workspace's
+  API. The client sends the token only to that workspace's `/api/`, and only to read.
+
 ## Writing tickets from a draft
 
 A draft is one Markdown file holding one or more tickets. `pnpm linear:check` runs the mechanical
-half of the ticket standard on it, and `pnpm linear:create` creates what it holds. `.claude/tickets/`
-is gitignored and a good place to keep drafts.
+half of the ticket standard on it, and `pnpm linear:create` creates what it holds.
+`.claude/tickets/` is gitignored and a good place to keep drafts.
 
 ```markdown
 ---
@@ -109,7 +173,9 @@ state: Backlog
 # Researcher can sort any resource list by up to two columns
 
 labels: Feature, Fullstack
-blocks: 2
+blocks: 2, OJD-1500
+milestone: 1. Researchers can find a resource
+link: Sorting in TanStack Table | https://tanstack.com/table/latest/docs/guide/sorting
 
 ## User story
 
@@ -133,10 +199,23 @@ labels: Feature, Fullstack
 ```
 
 The front matter names the project (required to create), the team (default `OJD`) and the state
-(default `Backlog`). Each level-one heading starts a ticket; `labels:` and `blocks:` may sit
-between it and the first level-two heading. Everything after `<!-- comment -->` is posted as a comment once the
-ticket exists, which is where implementation pointers go when the body has no room. `{{2}}`
-anywhere in a body or comment becomes the second ticket's identifier.
+(default `Backlog`). A quoted value reads the same as an unquoted one. Each level-one heading
+starts a ticket. Between it and the first level-two heading a ticket may carry these lines:
+
+| Line          | What it does                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| `labels:`     | The labels, by name. They must exist in the workspace                                       |
+| `milestone:`  | The project milestone, by name. `pnpm linear:milestones` creates them first                 |
+| `state:`      | This ticket's state, overriding the front matter. An update moves state only when it is set |
+| `blocks:`     | Tickets this one blocks, by draft number or existing identifier, as in `2, OJD-1500`        |
+| `blocked-by:` | Tickets that block this one, in the same form                                               |
+| `related:`    | Tickets this one relates to, in the same form                                               |
+| `link:`       | One link per line, as `link: <title> \| <https url>`, attached to the ticket as its links   |
+
+Everything after `<!-- comment -->` is posted as a comment once the ticket exists, which is where
+the "where to start" pointers go. `{{2}}` anywhere in a body or comment becomes the second
+ticket's identifier. It reaches only tickets in the same draft, so keep one project in one draft,
+or apply the first draft and use real identifiers in the second.
 
 ```bash
 pnpm linear:check .claude/tickets/home.md            # sentences, shape, budget, bullets, dashes, title, gate
@@ -150,20 +229,40 @@ and a bullet chained with semicolons fails. It cannot judge grammar, so a fragme
 full stop still needs a reader; the check exists to stop the obvious telegraphic draft, not to
 replace the person who reads the body before it is written.
 
-`linear:create` refuses a draft that fails the check, resolves team, project, state and labels by
-name, and records every step in `<draft>.created.json` next to the draft. A run that stops halfway
-resumes from that file instead of creating anything twice. A relative path, here and on every other
-command, is taken from the repo root.
+`linear:create` refuses a draft that fails the check, resolves team, project, state, milestone and
+labels by name, and records every step in `<draft>.created.json` next to the draft. A run that
+stops halfway resumes from that file instead of creating anything twice. A relative path, here and
+on every other command, is taken from the repo root.
+
+A ticket headed by an identifier is an update. It changes the title, the body and the listed
+labels. A ticket listed in a draft belongs to the draft's project, so one that sits in another
+project moves into it. State and milestone change only when the ticket's own lines name a different
+one. `--sync-labels` also removes the labels the draft does not list, except the `WBSO` and
+`wayfinder:` series. The dry run reads the live ticket and prints what each update would do, such
+as `drops research; state Ready to Backlog; moves from "Old project"`, so read it before applying.
+The comment after the marker edits the viewer's own comment whose first line matches, and posts a
+new one otherwise, so a "where to start" comment is edited in place. Relations are compared by
+issue, so one the draft names from both ends, or one Linear already has, is created once; an update
+never removes a relation.
+Links are attached once each: a URL the ticket already carries is skipped, and a run with more than
+20 links spaces them about three seconds apart, because Linear refused faster bursts in practice.
+
+The check does not count screens, link targets or URLs against a budget, so a draft passes the same
+with a local image path as with the uploaded URL. It fails an open question or "confirm" inside the
+acceptance criteria, a ticket named by position, and a phrase that points at a conversation the
+reader was not in, such as "as discussed". It reads a wrapped bullet as one bullet, and adds a
+non-failing `note` when a `Web`, `Mobile` or `Fullstack` ticket embeds no screen.
 
 ## Project resources
 
 A project carries its design and its grounding as Linear documents on the project itself. Four of
-them are the standard set, and a project carries more when the work needs it:
+them are the standard set, a fifth `<Project>: catalogue` holds every item when the project
+delivers a list, and the two plan pages are linked from the index once they are uploaded:
 
 | Document                              | What it holds                                                                   |
 | ------------------------------------- | ------------------------------------------------------------------------------- |
 | `<Project>: implementation deep dive` | How the area works today, written against a named commit, with mermaid diagrams |
-| `<Project>: screen sketches`          | The screens with no design yet, in the platform's own tokens, as one HTML file  |
+| `<Project>: screen sketches`          | Every ticket's screens, captured from a scaffold or drawn, on one uploaded page |
 | `<Project>: live ticket view`         | A pointer to the project's shared ticket view                                   |
 | `<Project>: artifact index`           | The short front page that links the three above and the project                 |
 
@@ -185,12 +284,34 @@ pnpm linear:document .claude/drafts/deep-dive.md --project "..." --title "..." -
 ```
 
 `pnpm linear:upload` puts a file in Linear's own asset store and prints the URL a document links
-to, so a sketch or a bundle needs no account to open. The media type comes from the extension, or
-from `--type`:
+to. Anyone signed in to the workspace can open it, and a request without a Linear session gets a
+401, so it is not a public link. Without `--apply` it only names the file, its
+type and its size. An upload cannot be deleted, so apply only to the final version. The media type
+comes from the extension, or from `--type`:
 
 ```bash
-pnpm linear:upload .claude/drafts/sketches.html
-pnpm linear:upload design/canvas.bin --type application/octet-stream
+pnpm linear:upload .claude/drafts/sketches.html                     # dry run
+pnpm linear:upload .claude/drafts/sketches.html --apply
+pnpm linear:upload design/canvas.bin --type application/octet-stream --apply
+```
+
+`pnpm linear:resources` puts outside links on a project's Resources: the uploaded plan pages, and
+the official documentation and related pages the design relies on. The file is one markdown link
+per bullet. A link is matched by its URL, so relabelling one updates it, and links the file does
+not name are left alone:
+
+```markdown
+---
+project: Notifications
+---
+
+- [Notifications: Linear change plan](https://uploads.linear.app/...)
+- [Email sending quotas](https://docs.aws.amazon.com/ses/latest/dg/quotas.html)
+```
+
+```bash
+pnpm linear:resources .claude/drafts/resources.md           # dry run
+pnpm linear:resources .claude/drafts/resources.md --apply
 ```
 
 `pnpm linear:view` creates the project's shared ticket view, filtered to that project, and the
@@ -200,6 +321,35 @@ document that points at it. It reuses a view that already carries the project's 
 pnpm linear:view --project "Platform home and research discovery"           # dry run
 pnpm linear:view --project "Platform home and research discovery" --apply
 ```
+
+`pnpm linear:milestones` writes a project's milestones from a file. A milestone is a `#` heading
+numbered in its name, with an optional `was:` line to rename an existing one, and one sentence on
+why it comes before the next:
+
+```markdown
+---
+project: Notifications
+---
+
+# 1. Members see what happened to their work
+
+was: Phase one
+Nothing else can be tested without the feed, so it comes first.
+
+# 2. Members choose what reaches them
+
+Preferences need the feed to exist, so they follow it.
+```
+
+```bash
+pnpm linear:milestones .claude/drafts/milestones.md           # dry run
+pnpm linear:milestones .claude/drafts/milestones.md --apply
+```
+
+It refuses a name that does not start with its position, a missing or multi-sentence reason, and a
+dash. It spaces the order by 1,000, since Linear has been seen rewriting close positions, reads the
+order back after writing and exits non-zero if Linear changed it, and lists milestones the file does
+not mention as left alone. It never deletes one.
 
 Bookkeeping belongs in one of these documents or nowhere. Linear's project updates are the
 status post the team reads in its feed, so an inventory or a migration note posted there reaches
@@ -243,6 +393,21 @@ For per-ticket work, put the judgement in a change file and let `pnpm linear:app
 writing. It groups identical updates, batches them, and prints what it would do until you pass
 `--apply`.
 
+A row names its ticket by `issueId` or by `identifier`, and its state by `stateId` or by `state`,
+the name as the board shows it. A row can also carry a `comment`, such as the evidence for a move,
+and may carry nothing else. Comments are posted before any update, so a ticket never moves without
+the evidence its row carries:
+
+```json
+[
+  {
+    "identifier": "OJD-2145",
+    "state": "Ready For Prod",
+    "comment": "Verified on dev on 9 October."
+  }
+]
+```
+
 This touches a workspace nine people share and Linear has no undo for a bulk change. Dry run,
 show someone the counts, then apply one phase at a time.
 
@@ -266,5 +431,7 @@ pnpm --filter @repo/devkit test
 pnpm --filter @repo/devkit typecheck
 ```
 
-`src/hooks.test.ts` is the exception: it spawns the repo's Git and secrets hooks with real payloads
-and asserts on their exit codes, so a change to either is caught in CI.
+`src/hooks.test.ts` is the exception: it runs the docs-reminder hook from `.claude/hooks` against
+scratch Git repositories with real session payloads, and skips itself where `jq` is not installed.
+The hook sits outside this package, so CI may not run the test for a change to the hook alone; run
+`pnpm --filter @repo/devkit test` after changing it.

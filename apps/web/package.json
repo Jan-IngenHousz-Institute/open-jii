@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:opennext": "pnpm dlx @opennextjs/aws@latest build",
+    "build:opennext": "pnpm dlx @opennextjs/aws@4.1.7 build",
     "clean": "git clean -xdf .cache .next .turbo node_modules .open-next",
     "start": "next start",
     "lint": "eslint",

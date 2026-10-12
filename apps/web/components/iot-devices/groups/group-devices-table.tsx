@@ -1,9 +1,9 @@
 "use client";
 
 import { ConnectivityDot, useFormatLastSeen } from "@/components/iot-devices/device-connectivity";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { formatRelativeTime } from "@/util/date";
 import { AlertTriangle } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import type {
@@ -67,13 +67,13 @@ export function GroupDevicesTable({
         onClick={() => router.push(monitoringHref)}
       >
         <TableCell className="px-6 py-3">
-          <Link
+          <IntentLink
             href={monitoringHref}
             onClick={(e) => e.stopPropagation()}
             className="focus-visible:ring-primary/40 focus-visible:outline-hidden text-foreground text-[13px] font-semibold hover:underline focus-visible:ring-2"
           >
             {labelByDeviceId.get(member.deviceId) ?? member.serialNumber}
-          </Link>
+          </IntentLink>
         </TableCell>
         <TableCell className="px-6 py-3">
           <div className="flex flex-col gap-0.5">

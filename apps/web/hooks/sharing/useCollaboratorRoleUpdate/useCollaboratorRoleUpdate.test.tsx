@@ -1,11 +1,13 @@
 import { resourceCacheKeys } from "@/hooks/sharing/resource-cache-keys";
+import { collaboratorsQueryKey } from "@/hooks/sharing/sharing-query-keys";
 import { createResourceGrant } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { createTestQueryClient, renderHook } from "@/test/test-utils";
-import type { QueryClient } from "@tanstack/react-query";
+import { act, createTestQueryClient, renderHook, waitFor } from "@/test/test-utils";
+import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import type { ResourceCollaboratorDto } from "@repo/api/domains/sharing/sharing.schema";
 import { useSession } from "@repo/auth/client";
 
 import { useCollaboratorRoleUpdate } from "./useCollaboratorRoleUpdate";
@@ -93,5 +95,35 @@ describe("useCollaboratorRoleUpdate", () => {
     // The caller's own access did not move, so the page they are on is still
     // backed by exactly the capabilities it was rendered from.
     expect(experimentCachesInvalidated(queryClient)).toEqual([false, false, false]);
+  });
+
+  it("shows the new role before the server answers and puts the old one back on failure", async () => {
+    mockSession({ id: SELF_ID });
+    const listKey = collaboratorsQueryKey(SELF_ID, "experiment", "exp-1");
+    const grant = createResourceGrant({ id: "grant-other", resourceId: "exp-1", role: "admin" });
+    // The seeded list has no observer, so it must outlive the default zero gcTime.
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
+    });
+    queryClient.setQueryData(listKey, [grant]);
+    server.mount(contract.sharing.updateGrant, { status: 500, delay: 200 });
+
+    const { result } = renderHook(() => useCollaboratorRoleUpdate(), { queryClient });
+    act(() =>
+      result.current.mutate({
+        resourceType: "experiment",
+        id: "exp-1",
+        grantId: "grant-other",
+        role: "viewer",
+      }),
+    );
+    const roleShown = () =>
+      queryClient
+        .getQueryData<ResourceCollaboratorDto[]>(listKey)
+        ?.map((row) => row.kind === "grant" && row.role);
+
+    await waitFor(() => expect(roleShown()).toEqual(["viewer"]));
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(roleShown()).toEqual(["admin"]);
   });
 });

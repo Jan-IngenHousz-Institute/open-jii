@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
+import { DashboardFiltersProvider } from "../../dashboard-filters-context";
 import type { DashboardFormValues } from "../../dashboard-form-shell";
 import { FilterWidgetEditor } from "./filter-widget-editor";
 
@@ -26,7 +27,12 @@ function renderEditor(widget: ReturnType<typeof createFilterWidget>) {
   renderWithForm<DashboardFormValues>(
     (form) => {
       current = form.watch();
-      return <FilterWidgetEditor widget={widget} experimentId="exp-1" widgetIndex={0} />;
+      // The editor canvas wraps every widget in this provider, fed from the form.
+      return (
+        <DashboardFiltersProvider widgets={current.widgets}>
+          <FilterWidgetEditor widget={widget} experimentId="exp-1" widgetIndex={0} />
+        </DashboardFiltersProvider>
+      );
     },
     { useFormProps: { defaultValues: current } },
   );
@@ -102,5 +108,48 @@ describe("FilterWidgetEditor", () => {
     renderEditor(widget);
     expect(screen.getByText("Value filter")).toBeInTheDocument();
     expect(screen.getByText(">")).toBeInTheDocument();
+  });
+
+  function rangeWidget(defaultValue: [number, number] | ["", number]) {
+    return createFilterWidget({
+      config: {
+        showTitle: true,
+        showDescription: true,
+        tableName: "raw_data",
+        column: "value",
+        operator: "between",
+        defaultValue,
+      },
+    });
+  }
+
+  it("marks both boxes and says why when the default range is incomplete", async () => {
+    mountColumns();
+    renderEditor(rangeWidget(["", 10]));
+
+    const from = await screen.findByPlaceholderText("dataFilters.rangeFrom");
+    const reason = screen.getByRole("alert");
+    expect(reason).toHaveTextContent("widget.filterRangeMissingStart");
+    for (const box of [from, screen.getByPlaceholderText("dataFilters.rangeTo")]) {
+      expect(box).toHaveAttribute("aria-invalid", "true");
+      expect(box).toHaveAttribute("aria-describedby", reason.id);
+    }
+  });
+
+  it("marks a reversed default range the same way as the dashboard view", async () => {
+    mountColumns();
+    renderEditor(rangeWidget([5, 1]));
+
+    await screen.findByPlaceholderText("dataFilters.rangeFrom");
+    expect(screen.getByRole("alert")).toHaveTextContent("widget.filterRangeReversed");
+  });
+
+  it("shows no reason for a complete default range", async () => {
+    mountColumns();
+    renderEditor(rangeWidget([0, 10]));
+
+    const from = await screen.findByPlaceholderText("dataFilters.rangeFrom");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(from).not.toHaveAttribute("aria-invalid");
   });
 });

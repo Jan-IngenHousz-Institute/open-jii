@@ -203,17 +203,36 @@ await probeUploadScript(renderRunScript(uploadStep.run));
 
 const orchestratorWorkflow = load(await readFile(orchestratorWorkflowPath, "utf8"));
 const orchestratorJobs = orchestratorWorkflow.jobs;
-const databricksJob = orchestratorJobs?.["deploy-databricks"];
-assert.ok(databricksJob?.needs?.includes("deploy-backend"));
-assert.match(databricksJob.if, /contains\('success,skipped', needs\.deploy-backend\.result\)/);
+const neededOutputs = {
+  "deploy-backend": "backend_needed",
+  "deploy-frontend": "frontend_needed",
+  "deploy-databricks": "databricks_needed",
+};
 
-const sandboxJob = orchestratorJobs?.["deploy-macro-sandbox"];
-for (const prerequisite of ["deploy-backend", "deploy-frontend", "deploy-databricks"]) {
-  assert.ok(sandboxJob?.needs?.includes(prerequisite));
-  assert.match(
-    sandboxJob.if,
-    new RegExp(`contains\\('success,skipped', needs\\.${prerequisite}\\.result\\)`),
+// A prerequisite must have succeeded, or been skipped because this run did not need it.
+// Without a leading always(), GitHub's implicit success() skips the job whenever any
+// prerequisite is skipped, so the not-needed branch below could never let it run.
+function assertWaitsFor(jobName, prerequisite) {
+  const job = orchestratorJobs?.[jobName];
+  const output = neededOutputs[prerequisite];
+  assert.ok(orchestratorJobs.detect?.outputs?.[output], `detect does not publish ${output}`);
+  assert.ok(job?.needs?.includes(prerequisite));
+  assert.ok(
+    job.if.trimStart().startsWith("always() &&"),
+    `${jobName} does not start with always()`,
   );
+  assert.ok(
+    job.if.includes(
+      `(needs.${prerequisite}.result == 'success' || (needs.${prerequisite}.result == 'skipped' && needs.detect.outputs.${output} == 'false'))`,
+    ),
+    `${prerequisite} is not gated on success or not-needed`,
+  );
+}
+
+assertWaitsFor("deploy-databricks", "deploy-backend");
+
+for (const prerequisite of ["deploy-backend", "deploy-frontend", "deploy-databricks"]) {
+  assertWaitsFor("deploy-macro-sandbox", prerequisite);
 }
 
 const prWorkflow = load(await readFile(prWorkflowPath, "utf8"));

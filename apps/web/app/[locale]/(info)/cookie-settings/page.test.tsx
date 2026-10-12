@@ -1,8 +1,8 @@
 import { render, screen, userEvent } from "@/test/test-utils";
 import type { PostHog } from "posthog-js";
-import { usePostHog } from "posthog-js/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { setConsentStatus } from "~/lib/cookie-consent";
+import { usePostHog } from "~/providers/posthog-context";
 
 import { toast } from "@repo/ui/hooks/use-toast";
 
@@ -17,7 +17,7 @@ vi.mock("~/lib/cookie-consent", () => ({
 }));
 
 describe("CookieSettingsPage", () => {
-  let posthog: ReturnType<typeof usePostHog>;
+  let posthog: PostHog;
 
   beforeEach(() => {
     vi.clearAllMocks();

@@ -8,6 +8,7 @@ const { mockPageHome } = vi.hoisted(() => ({
   mockPageHome: vi.fn(),
 }));
 vi.mock("~/lib/contentful", () => ({
+  buildTimeLocaleParams: () => Promise.resolve([]),
   getContentfulClients: () =>
     Promise.resolve({
       client: { pageHome: mockPageHome },
@@ -16,9 +17,7 @@ vi.mock("~/lib/contentful", () => ({
 }));
 
 vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
-  UnifiedNavbar: ({ session }: { session: unknown }) => (
-    <nav aria-label="main navigation">{session ? "Logged in" : "Not logged in"}</nav>
-  ),
+  UnifiedNavbar: () => <nav aria-label="main navigation">navbar</nav>,
 }));
 
 vi.mock("@repo/cms", () => ({
@@ -58,17 +57,11 @@ describe("Home page", () => {
     expect(screen.getByRole("contentinfo", { name: /footer/i })).toBeInTheDocument();
   });
 
-  it("shows authenticated state in navbar when user is logged in", async () => {
-    vi.mocked(auth).mockResolvedValue({ user: { id: "1", name: "Test" } } as never);
+  it("never reads the session on the server, so the page can be cached", async () => {
     render(await Home(defaultProps));
 
-    expect(screen.getByText("Logged in")).toBeInTheDocument();
-  });
-
-  it("shows unauthenticated state when no session", async () => {
-    render(await Home(defaultProps));
-
-    expect(screen.getByText("Not logged in")).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "main navigation" })).toBeInTheDocument();
+    expect(auth).not.toHaveBeenCalled();
   });
 
   it("handles empty Contentful collections", async () => {

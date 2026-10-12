@@ -4,8 +4,8 @@ import { SettingsCard } from "@/components/shared/settings-card";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
 import { useRouter } from "next/navigation";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import type { Protocol } from "@repo/api/domains/protocol/protocol.schema";

@@ -19,7 +19,7 @@ import type {
 } from "@repo/api/domains/experiment/experiment.schema";
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
-import { DialogFooter } from "@repo/ui/components/dialog";
+import { DialogBody, DialogFooter } from "@repo/ui/components/dialog";
 import { FileUpload } from "@repo/ui/components/file-upload";
 
 import { UploadTargetPicker } from "./upload-target-picker";
@@ -144,58 +144,60 @@ export function UploadCreateView({
   const fileErrorMessage = useFileErrorMessage(fileError);
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-      <UploadTargetPicker
-        control={form.control}
-        canManage={canManage}
-        targetKind={targetKind}
-        uploadTables={uploadTables}
-        disabled={isUploading}
-      />
+    <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-col gap-5">
+      <DialogBody className="space-y-5">
+        <UploadTargetPicker
+          control={form.control}
+          canManage={canManage}
+          targetKind={targetKind}
+          uploadTables={uploadTables}
+          disabled={isUploading}
+        />
 
-      <FileUpload
-        files={files}
-        onFilesChange={handleFilesChange}
-        isUploading={isUploading}
-        allowDirectories={isAmbyte}
-        accept={isAmbyte ? undefined : extensions.join(",")}
-        multiple
-        icon={
-          isAmbyte ? (
-            <FolderUp className="text-muted-foreground h-8 w-8" />
-          ) : (
-            <FileSpreadsheet className="text-muted-foreground h-8 w-8" />
-          )
-        }
-        placeholder={
-          isAmbyte
-            ? t("experimentData.uploadDataModal.files.dropzone.ambytePlaceholder")
-            : t("experimentData.uploadDataModal.files.dropzone.placeholder", {
-                format: formatLabel,
-              })
-        }
-        selectedText={t("experimentData.uploadDataModal.files.dropzone.selected")}
-        browseInstruction={
-          isAmbyte
-            ? t("experimentData.uploadDataModal.files.dropzone.ambyteHint")
-            : t("experimentData.uploadDataModal.files.dropzone.accepted", {
-                extensions: extensions.join(", "),
-              })
-        }
-        selectedFilesText={t("experimentData.uploadDataModal.files.dropzone.selectedFiles")}
-        validationTitle={t("experimentData.uploadDataModal.validation.title")}
-        validationErrors={fileErrorMessage ? [fileErrorMessage] : []}
-        uploadError={
-          submitError
-            ? {
-                title: t("experimentData.uploadDataModal.submitError.title"),
-                message: submitError,
-              }
-            : undefined
-        }
-        uploadingText={t("experimentData.uploadDataModal.status.processing.title")}
-        uploadingDescription={t("experimentData.uploadDataModal.status.processing.description")}
-      />
+        <FileUpload
+          files={files}
+          onFilesChange={handleFilesChange}
+          isUploading={isUploading}
+          allowDirectories={isAmbyte}
+          accept={isAmbyte ? undefined : extensions.join(",")}
+          multiple
+          icon={
+            isAmbyte ? (
+              <FolderUp className="text-muted-foreground h-8 w-8" />
+            ) : (
+              <FileSpreadsheet className="text-muted-foreground h-8 w-8" />
+            )
+          }
+          placeholder={
+            isAmbyte
+              ? t("experimentData.uploadDataModal.files.dropzone.ambytePlaceholder")
+              : t("experimentData.uploadDataModal.files.dropzone.placeholder", {
+                  format: formatLabel,
+                })
+          }
+          selectedText={t("experimentData.uploadDataModal.files.dropzone.selected")}
+          browseInstruction={
+            isAmbyte
+              ? t("experimentData.uploadDataModal.files.dropzone.ambyteHint")
+              : t("experimentData.uploadDataModal.files.dropzone.accepted", {
+                  extensions: extensions.join(", "),
+                })
+          }
+          selectedFilesText={t("experimentData.uploadDataModal.files.dropzone.selectedFiles")}
+          validationTitle={t("experimentData.uploadDataModal.validation.title")}
+          validationErrors={fileErrorMessage ? [fileErrorMessage] : []}
+          uploadError={
+            submitError
+              ? {
+                  title: t("experimentData.uploadDataModal.submitError.title"),
+                  message: submitError,
+                }
+              : undefined
+          }
+          uploadingText={t("experimentData.uploadDataModal.status.processing.title")}
+          uploadingDescription={t("experimentData.uploadDataModal.status.processing.description")}
+        />
+      </DialogBody>
 
       <DialogFooter className="flex items-center justify-between gap-2 sm:justify-between">
         <Button type="button" variant="outline" onClick={onBack} disabled={isUploading}>

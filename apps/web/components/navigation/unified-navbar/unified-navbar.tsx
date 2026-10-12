@@ -18,6 +18,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useSignOut } from "~/hooks/auth/useSignOut/useSignOut";
 import { useGetUserProfile } from "~/hooks/profile/useGetUserProfile/useGetUserProfile";
 
+import { useSession } from "@repo/auth/client";
 import type { Session } from "@repo/auth/types";
 import { useTranslation } from "@repo/i18n";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/avatar";
@@ -33,7 +34,6 @@ import { ThemeToggle } from "@repo/ui/components/theme";
 
 interface UnifiedNavbarProps {
   locale: string;
-  session: Session | null;
   isHomePage?: boolean;
 }
 
@@ -140,8 +140,10 @@ function UserMenu({
   );
 }
 
-export function UnifiedNavbar({ locale, session, isHomePage = false }: UnifiedNavbarProps) {
+export function UnifiedNavbar({ locale, isHomePage = false }: UnifiedNavbarProps) {
   const { t } = useTranslation();
+  // Read in the browser, so the page around the navbar is the same for every visitor and can be cached.
+  const { data: session } = useSession();
   const pathname = usePathname();
   const router = useRouter();
   const [isIntersecting, setIsIntersecting] = useState(true);

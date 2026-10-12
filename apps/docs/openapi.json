@@ -27628,6 +27628,20 @@
             "example": "sort[0][field]=protocols&sort[0][direction]=desc&sort[1][field]=name&sort[1][direction]=asc"
           },
           {
+            "name": "fields",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "summary",
+                "full"
+              ],
+              "type": "string",
+              "description": "`summary` leaves each macro's code out of the rows; `full`, the default, keeps it"
+            },
+            "allowEmptyValue": true,
+            "allowReserved": true
+          },
+          {
             "name": "page",
             "in": "query",
             "schema": {
@@ -27802,7 +27816,6 @@
                           "filename",
                           "description",
                           "language",
-                          "code",
                           "createdBy",
                           "createdAt",
                           "updatedAt",
@@ -27958,7 +27971,6 @@
                               "filename",
                               "description",
                               "language",
-                              "code",
                               "createdBy",
                               "createdAt",
                               "updatedAt",
@@ -30344,13 +30356,18 @@
                           },
                           "locked": {
                             "type": "boolean"
+                          },
+                          "available": {
+                            "type": "boolean",
+                            "description": "Whether this category's notifications go through the preference check today, so the choice has an effect"
                           }
                         },
                         "required": [
                           "category",
                           "channel",
                           "enabled",
-                          "locked"
+                          "locked",
+                          "available"
                         ]
                       }
                     }
@@ -30440,13 +30457,18 @@
                           },
                           "locked": {
                             "type": "boolean"
+                          },
+                          "available": {
+                            "type": "boolean",
+                            "description": "Whether this category's notifications go through the preference check today, so the choice has an effect"
                           }
                         },
                         "required": [
                           "category",
                           "channel",
                           "enabled",
-                          "locked"
+                          "locked",
+                          "available"
                         ]
                       }
                     }

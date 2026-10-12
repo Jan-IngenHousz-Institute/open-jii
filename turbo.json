@@ -24,7 +24,9 @@
         "DB_CREDENTIALS",
         "DOCS_INDEXABLE",
         "DOCS_BASE_URL",
-        "PLATFORM_BASE_URL"
+        "PLATFORM_BASE_URL",
+        "CONTENTFUL_SPACE_ID",
+        "CONTENTFUL_ACCESS_TOKEN"
       ]
     },
     "lint": {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsHydrated } from "@/hooks/useIsHydrated";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDateTime } from "@/util/date";
 import { CalendarIcon, RefreshCw } from "lucide-react";
@@ -40,6 +41,8 @@ export function MonitoringRangeControl({
 }: MonitoringRangeControlProps) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
+  // The range ends at the reader's now, which the server cannot know.
+  const isHydrated = useIsHydrated();
   const [open, setOpen] = useState(false);
 
   const handlePreset = (preset: MonitoringPresetId) => {
@@ -96,7 +99,9 @@ export function MonitoringRangeControl({
           >
             <CalendarIcon className="h-3.5 w-3.5" />
             <span className="tabular-nums">
-              {formatDateTime(range.from, locale)} – {formatDateTime(range.to, locale)}
+              {isHydrated
+                ? `${formatDateTime(range.from, locale)} – ${formatDateTime(range.to, locale)}`
+                : null}
             </span>
           </Button>
         </PopoverTrigger>

@@ -1,18 +1,18 @@
 import { Home, Search, Sprout } from "lucide-react";
-import { headers } from "next/headers";
 import Link from "next/link";
 import React from "react";
 
+import { defaultLocale } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
 
 /**
- * Global 404 Not Found Page with Locale Detection
+ * Global 404 Not Found Page
  *
- * This page is displayed when users navigate to non-existent routes.
- * It detects the locale from the URL path and provides internationalized
- * error messages and locale-aware navigation options.
+ * This page is displayed when users navigate to non-existent routes. It speaks
+ * the default locale: Next renders this boundary into every page, so reading the
+ * URL here would make every route dynamic and none of them cacheable.
  *
  * Note: This component renders content only (no html/body tags) as those
  * are handled by the root layout to prevent hydration mismatches.
@@ -26,19 +26,7 @@ import { Card, CardContent } from "@repo/ui/components/card";
  * - 5.3: Appropriate translations for error messages
  */
 export default async function NotFound() {
-  // Extract locale from the URL path
-  const headersList = await headers();
-  const pathname = headersList.get("x-current-path") ?? "";
-
-  // Extract locale from pathname (e.g., /en-US/some-path -> en-US)
-  const pathSegments = pathname.split("/").filter(Boolean);
-  const potentialLocale = pathSegments[0];
-
-  // Initialize translations for the detected locale
-  const { t } = await initTranslations({
-    locale: potentialLocale,
-    namespaces: ["common"],
-  });
+  const { t } = await initTranslations({ locale: defaultLocale, namespaces: ["common"] });
 
   return (
     <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 py-16">

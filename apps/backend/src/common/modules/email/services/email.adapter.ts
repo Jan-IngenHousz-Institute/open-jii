@@ -1,12 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { EmailPort as ExperimentsEmailPort } from "../../../../experiments/core/ports/email.port";
 import { EmailPort as UsersEmailPort } from "../../../../users/core/ports/email.port";
 import { Result } from "../../../utils/fp-utils";
 import { NotificationsService } from "./notifications/notifications.service";
 
 @Injectable()
-export class EmailAdapter implements ExperimentsEmailPort, UsersEmailPort {
+export class EmailAdapter implements UsersEmailPort {
   private readonly logger = new Logger(EmailAdapter.name);
 
   constructor(private readonly notificationService: NotificationsService) {}

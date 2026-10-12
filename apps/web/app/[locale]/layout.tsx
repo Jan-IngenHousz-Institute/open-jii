@@ -1,19 +1,22 @@
 import { TranslationsProvider } from "@/components/translations-provider";
-import { draftMode, headers } from "next/headers";
-import { notFound, redirect } from "next/navigation";
+import { draftMode } from "next/headers";
+import { notFound } from "next/navigation";
 import React from "react";
 import type { ReactNode } from "react";
-import { isFeatureFlagEnabledForViewer } from "~/lib/posthog-server";
 
-import { FEATURE_FLAGS } from "@repo/analytics";
 import { ContentfulPreviewProvider } from "@repo/cms/contentful";
-import { defaultLocale, isKnownLocale, namespaces } from "@repo/i18n";
+import { isKnownLocale } from "@repo/i18n";
+import type { Namespace } from "@repo/i18n";
 import initTranslations from "@repo/i18n/server";
 
 import { AlertsBar } from "../../components/alerts-bar";
 import { PostHogIdentifier } from "../../hooks/usePostHogAuth";
 import { QueryProvider } from "../../providers/QueryProvider";
 import "../globals.css";
+
+// What every page shows, including the cookie banner outside any provider. Route
+// segments add the rest through `TranslationBundles`.
+const PAGE_NAMESPACES: Namespace[] = ["common"];
 
 interface LocaleLayoutProps {
   children: ReactNode;
@@ -22,16 +25,6 @@ interface LocaleLayoutProps {
 
 const allowedOriginList = ["https://app.contentful.com", "https://app.eu.contentful.com"];
 
-async function defaultLocalePath(locale: string): Promise<string> {
-  const requestHeaders = await headers();
-  const currentPath = requestHeaders.get("x-current-path") ?? "";
-  const search = requestHeaders.get("x-current-search") ?? "";
-
-  const localePrefix = `/${locale}`;
-  const rest = currentPath.startsWith(localePrefix) ? currentPath.slice(localePrefix.length) : "";
-  return `/${defaultLocale}${rest}${search}`;
-}
-
 export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
   const { locale } = await params;
 
@@ -39,20 +32,11 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
     notFound();
   }
 
+  // Who may see another locale is decided per viewer in proxy.ts, before this renders, so the
+  // layout reads nothing from the request and the pages under it can be cached.
   const { isEnabled: preview } = await draftMode();
 
-  // Only another locale needs the flag, so default-locale pages skip the session lookup. Without it
-  // the viewer gets the same page in the default locale, so a signed-out member of a targeted
-  // organization still reaches login rather than a 404.
-  const isOtherLocale = locale !== defaultLocale;
-  if (isOtherLocale && !(await isFeatureFlagEnabledForViewer(FEATURE_FLAGS.MULTI_LANGUAGE))) {
-    redirect(await defaultLocalePath(locale));
-  }
-
-  const { resources } = await initTranslations({
-    locale,
-    namespaces: [...namespaces],
-  });
+  const { resources } = await initTranslations({ locale, namespaces: PAGE_NAMESPACES });
 
   return (
     <div className="bg-background flex h-full min-h-screen flex-col antialiased">
@@ -62,7 +46,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
         enableLiveUpdates={preview}
         targetOrigin={allowedOriginList}
       >
-        <TranslationsProvider locale={locale} namespaces={[...namespaces]} resources={resources}>
+        <TranslationsProvider locale={locale} namespaces={PAGE_NAMESPACES} resources={resources}>
           <AlertsBar locale={locale} preview={preview} />
           <QueryProvider>
             <PostHogIdentifier />

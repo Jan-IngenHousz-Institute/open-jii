@@ -321,15 +321,14 @@ resource "aws_iam_policy" "iot_s3_policy" {
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect   = "Allow",
-      Action   = ["s3:PutObject"],
-      Resource = "${var.s3_archive_bucket_arn}/device-lifecycle-events/*"
+      Effect = "Allow",
+      Action = ["s3:PutObject"],
+      Resource = [
+        "${var.s3_archive_bucket_arn}/device-lifecycle-events/*",
+        "${var.s3_archive_bucket_arn}/iot-rule-errors/*",
+      ]
     }]
   })
-
-  # Narrow only after the ingest rules stop writing raw-iot/*, so in-flight
-  # archive writes are never denied while the old S3 action is still live.
-  depends_on = [aws_iot_topic_rule.iot_rules]
 }
 
 resource "aws_iam_role_policy_attachment" "iot_s3_attach" {
@@ -427,6 +426,18 @@ resource "aws_iot_topic_rule" "iot_rules" {
     delivery_stream_name = var.firehose_delivery_stream_name
     separator            = "\n"
   }
+
+  # IoT Core keeps no copy of a message an action failed to deliver.
+  error_action {
+    s3 {
+      role_arn    = aws_iam_role.iot_s3_role.arn
+      bucket_name = var.s3_archive_bucket_name
+      key         = "iot-rule-errors/$${parse_time(\"yyyy/MM/dd\", timestamp())}/$${newuuid()}.json"
+    }
+  }
+
+  # The role may write there before the rule starts to.
+  depends_on = [aws_iam_role_policy_attachment.iot_s3_attach]
 }
 
 # A random share of each channel's messages, kept a few days, so the Data pipeline dashboard can show

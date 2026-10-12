@@ -38,7 +38,7 @@ export default async function UserRegistrationPage(props: {
   return (
     <>
       {/* Navbar stays sticky on top */}
-      <UnifiedNavbar locale={locale} session={session} />
+      <UnifiedNavbar locale={locale} />
 
       <AuthBackground alt="Registration background" />
 

@@ -1,12 +1,24 @@
 import { createExportRecord } from "@/test/factories";
 import { server } from "@/test/msw/server";
-import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
+import type React from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ExperimentExportRecord } from "@repo/api/domains/experiment/experiment.schema";
+import type * as DialogModule from "@repo/ui/components/dialog";
 
 import { ExportListStep } from "../steps/export-list-step";
+
+vi.mock("@repo/ui/components/dialog", async (importOriginal) => {
+  const actual = await importOriginal<typeof DialogModule>();
+  return {
+    ...actual,
+    DialogBody: (props: React.ComponentProps<typeof actual.DialogBody>) => (
+      <actual.DialogBody data-testid="dialog-body" {...props} />
+    ),
+  };
+});
 
 const mockDownloadExport = vi.fn();
 vi.mock("~/hooks/experiment/useDownloadExport/useDownloadExport", () => ({
@@ -99,6 +111,21 @@ describe("ExportListStep", () => {
     });
     expect(screen.getByText("CSV")).toBeInTheDocument();
     expect(screen.getByText(/100/)).toBeInTheDocument();
+  });
+
+  it("keeps Create Export outside the scrolling list so it stays in view", async () => {
+    mountExports([completedExport]);
+
+    render(<ExportListStep {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("experimentData.exportModal.exportCount")).toBeInTheDocument();
+    });
+    const body = screen.getByTestId("dialog-body");
+    expect(within(body).getByText("CSV")).toBeInTheDocument();
+    expect(body).not.toContainElement(
+      screen.getByRole("button", { name: "experimentData.exportModal.createExport" }),
+    );
   });
 
   it("renders running export without download button", async () => {

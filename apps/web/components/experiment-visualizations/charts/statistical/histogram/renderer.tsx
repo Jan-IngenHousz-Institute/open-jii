@@ -19,7 +19,7 @@ export function HistogramRenderer({
   const { t } = useTranslation("experimentVisualizations");
 
   // No orderBy: bins are order-independent, so skip the alias handshake.
-  const { rows, isLoading, error, truncation } = useChartData(
+  const { rows, isLoading, isRefreshing, error, truncation } = useChartData(
     visualization,
     experimentId,
     providedData,
@@ -64,6 +64,7 @@ export function HistogramRenderer({
       visualization={visualization}
       experimentId={experimentId}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
       error={error}
       hasRows={rows.length > 0}
       truncation={truncation}

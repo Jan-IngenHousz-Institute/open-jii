@@ -1,10 +1,11 @@
 "use client";
 
+import { usePrincipal } from "@/components/auth/principal-context";
 import { ORGANIZATION_AUTH_QUERY_KEY } from "@/hooks/organization/organization-cache";
 import { withPrincipal } from "@/hooks/principal-query-key";
 import { useQuery } from "@tanstack/react-query";
 
-import { authClient, useSession } from "@repo/auth/client";
+import { authClient } from "@repo/auth/client";
 
 /**
  * Whether a slug is still free. Better Auth answers this by *refusing* the
@@ -16,8 +17,7 @@ import { authClient, useSession } from "@repo/auth/client";
  * pass an already well-formed slug, or a malformed one would read as "available".
  */
 export const useOrganizationSlugAvailability = (slug: string, options?: { enabled?: boolean }) => {
-  const { data: session, isPending: isSessionPending } = useSession();
-  const userId = session?.user.id;
+  const { userId, isPending: isSessionPending } = usePrincipal();
 
   return useQuery({
     queryKey: withPrincipal([...ORGANIZATION_AUTH_QUERY_KEY, "slug", slug], userId),

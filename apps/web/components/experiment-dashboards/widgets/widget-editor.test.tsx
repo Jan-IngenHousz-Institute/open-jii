@@ -7,12 +7,18 @@ import {
 import { renderWithForm, screen } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
+import { DashboardFiltersProvider } from "../dashboard-filters-context";
 import type { DashboardFormValues } from "../dashboard-form-shell";
 import { WidgetEditor } from "./widget-editor";
 
 function renderWidgetEditor(widget: DashboardFormValues["widgets"][number]) {
   renderWithForm<DashboardFormValues>(
-    () => <WidgetEditor widget={widget} experimentId="exp-1" widgetIndex={0} isSelected={false} />,
+    // The editor canvas wraps every widget in this provider.
+    () => (
+      <DashboardFiltersProvider widgets={[widget]}>
+        <WidgetEditor widget={widget} experimentId="exp-1" widgetIndex={0} isSelected={false} />
+      </DashboardFiltersProvider>
+    ),
     {
       useFormProps: {
         defaultValues: {

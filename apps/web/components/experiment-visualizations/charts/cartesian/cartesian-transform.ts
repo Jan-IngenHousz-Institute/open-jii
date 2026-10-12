@@ -2,6 +2,7 @@ import type {
   ExperimentDataSourceConfig,
   ExperimentSeriesTraceType,
 } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
+import { isCategoricalColumnType } from "@repo/api/transforms/column-type-utils";
 import type { CartesianSeries } from "@repo/ui/components/charts/cartesian-chart";
 import type { FacetGridConfig } from "@repo/ui/components/charts/cartesian-chart";
 import type { MarkerConfig } from "@repo/ui/components/charts/types";
@@ -20,6 +21,8 @@ export interface CartesianTransformOptions {
   supportsContinuousColor: boolean;
   /** Allow a `role: "size"` data source to drive bubble sizes. */
   supportsSize: boolean;
+  /** The colour column's type, which decides a missing `colorMode`. */
+  colorColumnType?: string;
 }
 
 export interface CartesianTransformResult {
@@ -65,8 +68,13 @@ export function transformCartesianData(
   // `categoricalOnly` and never writes `colorMode`, so a colour column implies
   // categorical. Requiring `colorMode === "categorical"` here left the category
   // list empty while the dispatch still chose the categorical builder.
+  // A chart saved through the API may carry no `colorMode` at all, and a
+  // gradient cannot place text, so the column type decides as the shelf does.
   const isContinuousColor =
-    supportsContinuousColor && Boolean(colorColumn) && chartConfig.colorMode !== "categorical";
+    supportsContinuousColor &&
+    Boolean(colorColumn) &&
+    (chartConfig.colorMode === "continuous" ||
+      (chartConfig.colorMode === undefined && !isCategoricalColumnType(options.colorColumnType)));
   const isCategoricalColor = Boolean(colorColumn) && !isContinuousColor;
 
   // Each data source's row-key for reading values: when the source has

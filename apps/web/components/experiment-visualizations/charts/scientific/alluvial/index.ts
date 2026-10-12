@@ -10,6 +10,7 @@ import { alluvialStyleShelves } from "./shelves/style-shelves";
 
 export const alluvialChartType: ChartTypeDef = {
   type: "alluvial",
+  plotlyTraceTypes: ["sankey"],
   family: "scientific",
   labelKey: "workspace.charts.types.alluvial",
   descriptionKey: "workspace.charts.descriptions.alluvial",

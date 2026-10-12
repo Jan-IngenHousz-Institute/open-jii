@@ -1,6 +1,7 @@
 "use client";
 
 import { DocsHelpLink } from "@/components/docs-help-link";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { UserAvatar } from "@/components/user-avatar";
 import { useDeleteOrganizationTeam } from "@/hooks/organization/useDeleteOrganizationTeam/useDeleteOrganizationTeam";
 import { useOrganization } from "@/hooks/organization/useOrganization/useOrganization";
@@ -11,7 +12,6 @@ import { useOrganizationTeams } from "@/hooks/organization/useOrganizationTeams/
 import { useUpdateOrganizationTeam } from "@/hooks/organization/useUpdateOrganizationTeam/useUpdateOrganizationTeam";
 import { useLocale } from "@/hooks/useLocale";
 import { ArrowLeft, Pencil, Plus, X } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { authErrorMessage } from "~/hooks/organization/auth-organization-result";
@@ -152,10 +152,10 @@ export function OrganizationTeamDetail({
       <div className="flex flex-col items-start gap-3">
         <p className="text-sm font-semibold">{t("organizations.teams.notFound")}</p>
         <Button variant="outline" size="sm" asChild>
-          <Link href={organizationTeamsPath(locale, organizationId)}>
+          <IntentLink href={organizationTeamsPath(locale, organizationId)}>
             <ArrowLeft className="h-4 w-4" />
             {t("organizations.teams.backToTeams")}
-          </Link>
+          </IntentLink>
         </Button>
       </div>
     );
@@ -165,13 +165,13 @@ export function OrganizationTeamDetail({
 
   return (
     <div className="flex max-w-4xl flex-col gap-5">
-      <Link
+      <IntentLink
         href={organizationTeamsPath(locale, organizationId)}
         className="text-muted-foreground hover:text-foreground flex w-fit items-center gap-1.5 text-xs"
       >
         <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
         {t("organizations.teams.backToTeams")}
-      </Link>
+      </IntentLink>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">

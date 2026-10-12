@@ -22,7 +22,7 @@ export function DensityPlot2DRenderer({
 
   // Order doesn't matter for either trace; scatter renders points
   // regardless of order, contour bins by frequency.
-  const { rows, isLoading, error, truncation } = useChartData(
+  const { rows, isLoading, isRefreshing, error, truncation } = useChartData(
     visualization,
     experimentId,
     providedData,
@@ -53,6 +53,7 @@ export function DensityPlot2DRenderer({
       visualization={visualization}
       experimentId={experimentId}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
       error={error}
       hasRows={(pairs?.x.length ?? 0) > 0 && (pairs?.hasColumns ?? false)}
       truncation={truncation}

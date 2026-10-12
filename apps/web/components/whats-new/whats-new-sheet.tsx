@@ -1,5 +1,6 @@
 "use client";
 
+import { PageLoading } from "@/components/shared/page-loading";
 import { useMarkWhatsNewSeen } from "@/hooks/whats-new/useMarkWhatsNewSeen/useMarkWhatsNewSeen";
 import { useWhatsNewLastSeen } from "@/hooks/whats-new/useWhatsNewLastSeen/useWhatsNewLastSeen";
 import { ExternalLink } from "lucide-react";
@@ -7,8 +8,6 @@ import Link from "next/link";
 import * as React from "react";
 import { env } from "~/env";
 
-import type { ComponentReleaseNoteFieldsFragment as ReleaseNoteFields } from "@repo/cms";
-import { ReleaseNotesFeed } from "@repo/cms";
 import { useCurrentLocale, useTranslation } from "@repo/i18n";
 import i18nConfig from "@repo/i18n/config";
 import {
@@ -21,8 +20,14 @@ import {
 
 import { WHATS_NEW_OPEN_EVENT, countUnread } from "./whats-new-shared";
 
+// The notes and the CMS renderer they need stay out of every platform page until someone opens
+// the sheet.
+const WhatsNewFeed = React.lazy(() =>
+  import("./whats-new-feed").then((module) => ({ default: module.WhatsNewFeed })),
+);
+
 /** Right-side 480px panel listing release notes, grouped by month, with a "Full changelog" link. */
-export function WhatsNewSheet({ entries }: { entries: ReleaseNoteFields[] }) {
+export function WhatsNewSheet({ releaseDates }: { releaseDates: string[] }) {
   const { t } = useTranslation("navigation");
   const locale = useCurrentLocale(i18nConfig) ?? "en-US";
   // Same-app origin (env, not a hardcoded domain), locale in the path so the proxy doesn't redirect
@@ -42,7 +47,7 @@ export function WhatsNewSheet({ entries }: { entries: ReleaseNoteFields[] }) {
   const handleOpenChange = (next: boolean) => {
     setIsOpen(next);
     // On close, stamp "seen" (cross-device) only when something was actually unread.
-    if (!next && countUnread(entries, lastSeen.data?.lastSeenAt ?? null) > 0) {
+    if (!next && countUnread(releaseDates, lastSeen.data?.lastSeenAt ?? null) > 0) {
       markSeen.mutate({});
     }
   };
@@ -56,12 +61,9 @@ export function WhatsNewSheet({ entries }: { entries: ReleaseNoteFields[] }) {
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-6">
-          <ReleaseNotesFeed
-            entries={entries}
-            linkBaseHref={releasesBaseUrl}
-            linkTarget="_blank"
-            variant="sheet"
-          />
+          <React.Suspense fallback={<PageLoading />}>
+            <WhatsNewFeed locale={locale} releasesBaseUrl={releasesBaseUrl} />
+          </React.Suspense>
         </div>
 
         <div className="border-border border-t px-6 py-4">

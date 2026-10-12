@@ -2,11 +2,11 @@
 
 import { ConnectivityDot } from "@/components/iot-devices/device-connectivity";
 import { IotDeviceStatusBadge } from "@/components/iot-devices/iot-device-status-badge";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate, formatRelativeTime } from "@/util/date";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { ExternalLink, Lock, Unlink } from "lucide-react";
-import Link from "next/link";
 
 import type {
   ExperimentDeviceEntry,
@@ -140,13 +140,13 @@ export function ExperimentDeviceDetail({
         window={window}
         action={
           device === null ? undefined : entry.canView ? (
-            <Link
+            <IntentLink
               href={`/${locale}/platform/devices/${device.id}/monitoring`}
               className="text-primary inline-flex items-center gap-1.5 whitespace-nowrap text-sm hover:underline"
             >
               {t("iot.experimentDevices.openMonitoring")}
               <ExternalLink className="size-3.5" aria-hidden />
-            </Link>
+            </IntentLink>
           ) : (
             <span className="text-muted-foreground inline-flex items-center gap-1.5 whitespace-nowrap text-sm">
               <Lock className="size-3.5" aria-hidden />

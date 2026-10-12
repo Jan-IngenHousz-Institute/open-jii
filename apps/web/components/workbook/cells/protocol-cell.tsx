@@ -1,6 +1,7 @@
 "use client";
 
 import { DocsHelpLink } from "@/components/docs-help-link";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { JsonFormatToggle } from "@/components/shared/json-format-toggle";
 import { useProtocol } from "@/hooks/protocol/useProtocol/useProtocol";
@@ -14,7 +15,6 @@ import { formatJson, jsonDocKey, reformatJsonString } from "@/lib/json-format";
 import { registerProtocolCodeSource } from "@/lib/protocol-code-registry";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import { Check, Copy, ExternalLink, GitFork, Hand, Loader2, Microscope } from "lucide-react";
-import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
@@ -301,12 +301,12 @@ export function ProtocolCellComponent({
               </span>
             ) : null}
             {forkedFrom ? (
-              <Link
+              <IntentLink
                 href={`/platform/protocols/${forkedFrom}`}
                 className="text-primary hover:text-primary text-xs underline underline-offset-2"
               >
                 {tWorkbook("cells.forkedFrom")}
-              </Link>
+              </IntentLink>
             ) : null}
             {isReadOnlyWithoutUpdate ? (
               <>
@@ -362,14 +362,14 @@ export function ProtocolCellComponent({
             className="text-muted-foreground hover:text-primary h-7 w-7 p-0"
             title="Open protocol in new tab"
           >
-            <Link
+            <IntentLink
               href={`/platform/protocols/${protocolId}`}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Open protocol in new tab"
             >
               <ExternalLink className="h-3 w-3" />
-            </Link>
+            </IntentLink>
           </Button>
           <Button
             variant="ghost"

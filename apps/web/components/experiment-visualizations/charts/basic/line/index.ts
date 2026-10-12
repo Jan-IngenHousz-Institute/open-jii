@@ -10,6 +10,7 @@ import { lineStyleShelves } from "./shelves/style-shelves";
 
 export const lineChartType: ChartTypeDef = {
   type: "line",
+  plotlyTraceTypes: ["scatter"],
   family: "basic",
   labelKey: "workspace.charts.types.line",
   descriptionKey: "workspace.charts.descriptions.line",

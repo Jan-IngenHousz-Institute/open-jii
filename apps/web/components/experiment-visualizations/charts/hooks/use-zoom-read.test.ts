@@ -98,6 +98,19 @@ describe("useZoomRead", () => {
     ]);
   });
 
+  it("keeps a window denser than the plot's pixels in buckets, though one read could hold it", async () => {
+    const spy = server.mount(contract.experiments.getExperimentData, {
+      body: answer([3_000, 2_000]),
+    });
+
+    const { result } = renderHook(() => useZoomRead(INPUT));
+
+    await waitFor(() => expect(result.current.rows).toBeDefined());
+    expect(result.current.isBucketed).toBe(true);
+    expect(result.current.total).toBe(5_000);
+    expect(spy.calls.every((call) => aggregationOf(call) !== undefined)).toBe(true);
+  });
+
   it("reads the window's rows whole once they fit in one read", async () => {
     server.mount(contract.experiments.getExperimentData, { body: answer([300, 200]) });
 

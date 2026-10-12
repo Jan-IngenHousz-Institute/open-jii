@@ -1,7 +1,7 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { Plus } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import type { ExperimentVisualization } from "@repo/api/domains/experiment/visualizations/experiment-visualizations.schema";
@@ -83,7 +83,7 @@ export default function ExperimentVisualizationsDisplay({
                 {t("selector.createVisualization")}
               </Button>
             ) : (
-              <Link
+              <IntentLink
                 href={`/en-US/platform/experiments/${experimentId}/analysis/visualizations`}
                 passHref
               >
@@ -91,7 +91,7 @@ export default function ExperimentVisualizationsDisplay({
                   <Plus className="size-4" aria-hidden />
                   {t("selector.createVisualization")}
                 </Button>
-              </Link>
+              </IntentLink>
             )}
           </CardContent>
         </Card>

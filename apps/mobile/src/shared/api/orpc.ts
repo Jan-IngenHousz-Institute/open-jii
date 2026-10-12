@@ -10,7 +10,6 @@ import { orpcFetch } from "./orpc-fetch";
 
 const link = new OpenAPILink(contract, {
   url: () => getEnvVar("BACKEND_URI"),
-  headers: () => ({ "x-app-source": "orpc" }),
   fetch: orpcFetch,
 });
 

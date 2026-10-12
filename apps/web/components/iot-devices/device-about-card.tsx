@@ -1,8 +1,8 @@
 "use client";
 
 import { CollaboratorsAboutRow } from "@/components/sharing/collaborators-about-row";
+import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 import { useLocale } from "@/hooks/useLocale";
-import { formatDate } from "@/util/date";
 import { presentDevice, resolveDeviceRoleLabels } from "@/util/device-presentation";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import type { ReactNode } from "react";
@@ -22,6 +22,7 @@ import { useFormatLastSeen } from "./device-connectivity";
 export function DeviceAboutCard({ device }: { device: IotDeviceDetail }) {
   const { t } = useTranslation("iot");
   const locale = useLocale();
+  const format = useLocalDateFormat("en-US");
   const formatLastSeen = useFormatLastSeen();
 
   const present = presentDevice({
@@ -47,7 +48,7 @@ export function DeviceAboutCard({ device }: { device: IotDeviceDetail }) {
         {roleLabels.length > 0 && (
           <Row label={t("iot.devices.detail.meta.role")}>{roleLabels.join(" · ")}</Row>
         )}
-        <Row label={t("iot.devices.detail.meta.registered")}>{formatDate(device.createdAt)}</Row>
+        <Row label={t("iot.devices.detail.meta.registered")}>{format.date(device.createdAt)}</Row>
         <Row label={t("iot.devices.detail.meta.thingName")}>
           <span className="break-all font-mono">{device.thingName}</span>
         </Row>

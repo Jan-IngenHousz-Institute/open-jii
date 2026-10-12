@@ -1,4 +1,5 @@
 import { render, screen, userEvent } from "@/test/test-utils";
+import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import type { MonitoringRange } from "./monitoring-range";
@@ -66,6 +67,19 @@ describe("MonitoringRangeControl", () => {
     await user.click(screen.getByRole("button", { name: /Aug 14/ }));
 
     expect(await screen.findByText("iot.devices.monitoring.rangeLimit")).toBeInTheDocument();
+  });
+
+  it("leaves the window bounds out of the server's HTML, since the window ends at the reader's now", () => {
+    const html = renderToString(
+      <MonitoringRangeControl
+        range={RANGE}
+        activePreset="last24h"
+        onRangeChange={vi.fn()}
+        isUpdating={false}
+      />,
+    );
+
+    expect(html).not.toContain("Aug 14");
   });
 
   it("surfaces an in-flight refresh", () => {

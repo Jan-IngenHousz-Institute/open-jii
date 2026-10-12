@@ -8,6 +8,7 @@ allowBuilds:
   better-sqlite3: true
   turbo: true
   "@shopify/react-native-skia": true
+  "@posthog/cli": true
   "@scarf/scarf": false
   "@tree-sitter-grammars/tree-sitter-yaml": false
   core-js: false
@@ -53,7 +54,7 @@ catalog:
   nodemailer: 10.0.12
   posthog-js: 1.422.5
   posthog-node: 5.51.4
-  next: 16.3.7
+  next: 16.3.8
 
 catalogs:
   orpc:

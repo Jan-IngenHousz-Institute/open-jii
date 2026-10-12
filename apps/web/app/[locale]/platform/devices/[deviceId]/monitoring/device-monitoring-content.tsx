@@ -79,7 +79,9 @@ export default function DeviceMonitoringPage() {
   const { data: visibleWorkbooks } = useQuery(
     orpc.workbooks.listWorkbooks.queryOptions({ input: {} }),
   );
-  const { data: visibleMacros } = useQuery(orpc.macros.listMacros.queryOptions({ input: {} }));
+  const { data: visibleMacros } = useQuery(
+    orpc.macros.listMacros.queryOptions({ input: { fields: "summary" } }),
+  );
   const {
     data: monitoring,
     isLoading,

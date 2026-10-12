@@ -1,8 +1,8 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { resolveDeviceLabel } from "@/util/device-presentation";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import type { SensorFamily } from "@repo/api/domains/protocol/protocol.schema";
@@ -45,13 +45,13 @@ export function DeviceIdentity({ device, href, showSerial, className }: DeviceId
       {href === undefined ? (
         <span className="truncate text-sm font-medium">{label}</span>
       ) : (
-        <Link
+        <IntentLink
           href={href}
           onClick={(event) => event.stopPropagation()}
           className="focus-visible:ring-primary/40 focus-visible:outline-hidden truncate text-sm font-medium hover:underline focus-visible:ring-2"
         >
           {label}
-        </Link>
+        </IntentLink>
       )}
       {showSerial === true && (
         <span className="text-muted-foreground truncate font-mono text-xs">

@@ -9,13 +9,11 @@ import { ResourceCardGrid } from "~/components/shared/resource-card";
 
 import { Skeleton } from "@repo/ui/components/skeleton";
 
+import { userExperimentsQuery } from "./dashboard-queries";
+
 export function UserExperimentsSection() {
   const locale = useLocale();
-  const { data: experiments } = useQuery(
-    orpc.experiments.listRecentlyOpenedExperiments.queryOptions({
-      input: { scope: "related", limit: 3 },
-    }),
-  );
+  const { data: experiments } = useQuery(userExperimentsQuery(orpc));
 
   if (!experiments) {
     return (

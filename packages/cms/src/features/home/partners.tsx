@@ -59,6 +59,7 @@ export const HomePartners: React.FC<HomePartnersProps> = ({ partnersData, previe
               <CtfImage
                 {...partner.logo}
                 nextImageProps={{
+                  sizes: "240px",
                   className: "h-20 w-auto object-contain dark:brightness-0 dark:invert",
                   ...partnerInspectorProps({ fieldId: "logo" }),
                 }}

@@ -10,6 +10,7 @@ import { correlationMatrixStyleShelves } from "./shelves/style-shelves";
 
 export const correlationMatrixChartType: ChartTypeDef = {
   type: "correlation-matrix",
+  plotlyTraceTypes: ["heatmap"],
   family: "scientific",
   labelKey: "workspace.charts.types.correlationMatrix",
   descriptionKey: "workspace.charts.descriptions.correlationMatrix",

@@ -1,8 +1,8 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
 import { ChevronsUpDown, ExternalLink } from "lucide-react";
-import Link from "next/link";
 import React, { useEffect, useRef, useState } from "react";
 
 import type { ProtocolListItem } from "@repo/api/domains/protocol/protocol.schema";
@@ -74,7 +74,7 @@ export function ProtocolSearchWithDropdown({
               <div className="flex min-w-0 flex-col">
                 <div className="flex min-w-0 items-center gap-1">
                   <span className="truncate text-sm font-medium">{selectedProtocol.name}</span>
-                  <Link
+                  <IntentLink
                     href={`/${locale}/platform/protocols/${selectedProtocol.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -84,7 +84,7 @@ export function ProtocolSearchWithDropdown({
                     onClick={(e) => e.stopPropagation()}
                   >
                     <ExternalLink className="group-hover:text-muted-foreground text-primary h-4 w-4 transition-colors" />
-                  </Link>
+                  </IntentLink>
                 </div>
                 <span className="text-muted-foreground truncate text-xs">
                   {selectedProtocol.family} • {t("common.by")} {selectedProtocol.createdByName}

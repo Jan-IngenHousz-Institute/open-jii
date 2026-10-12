@@ -1,10 +1,10 @@
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import type { OverviewTableColumn } from "@/components/overview-table/overview-table";
 import { overviewTableText } from "@/components/overview-table/overview-table";
+import { LocalTime } from "@/components/shared/local-time";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { VisibilityBadge } from "@/components/visibility/visibility-badge";
-import { formatShortDate } from "@/util/date";
 import { getSensorFamilyBadgeTone, getSensorFamilyLabel } from "@/util/sensor-family";
-import Link from "next/link";
 
 import type { CalibrationDefinitionSummary } from "@repo/api/domains/iot/calibration/iot-calibration.schema";
 import { cn } from "@repo/ui/lib/utils";
@@ -19,7 +19,7 @@ export function getCalibrationDefinitionColumns(
       cell: (definition, href) => (
         <>
           <div className="flex min-w-0 items-center gap-2">
-            <Link
+            <IntentLink
               href={href}
               title={definition.name}
               onClick={(event) => event.stopPropagation()}
@@ -29,7 +29,7 @@ export function getCalibrationDefinitionColumns(
               )}
             >
               {definition.name}
-            </Link>
+            </IntentLink>
             {/* The family column is gone on a phone; the badge rides with the name there. */}
             <StatusBadge
               tone={getSensorFamilyBadgeTone(definition.family)}
@@ -67,7 +67,7 @@ export function getCalibrationDefinitionColumns(
       className: "hidden w-40 lg:table-cell",
       cell: (definition) => (
         <span className={cn("text-[13px] tabular-nums", overviewTableText.muted)}>
-          {formatShortDate(definition.updatedAt, locale)}
+          <LocalTime value={definition.updatedAt} locale={locale} />
         </span>
       ),
     },

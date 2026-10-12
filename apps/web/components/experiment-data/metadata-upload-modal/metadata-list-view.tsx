@@ -6,7 +6,7 @@ import type { ExperimentMetadata } from "@repo/api/domains/experiment/metadata/e
 import { useTranslation } from "@repo/i18n/client";
 import { Button } from "@repo/ui/components/button";
 import { Card } from "@repo/ui/components/card";
-import { DialogFooter } from "@repo/ui/components/dialog";
+import { DialogBody, DialogFooter } from "@repo/ui/components/dialog";
 import { ScrollArea } from "@repo/ui/components/scroll-area";
 
 import { asStoredMetadata } from "./form-helpers";
@@ -72,43 +72,45 @@ export function MetadataListView({
   const isEmpty = records.length === 0 && Object.keys(exitingRecords).length === 0;
 
   return (
-    <div className="flex flex-col gap-4 pt-4">
-      {isEmpty ? (
-        <Card className="items-center justify-center gap-0 py-8">
-          <div className="bg-muted mb-3 flex h-16 w-16 items-center justify-center rounded-full">
-            <FileSpreadsheet className="text-muted-foreground h-8 w-8" />
-          </div>
-          <p className="text-muted-foreground text-center text-sm">
-            {t("uploadModal.metadata.noMetadata", { defaultValue: "No metadata uploaded yet." })}
-          </p>
-        </Card>
-      ) : (
-        <>
-          <p className="text-muted-foreground text-sm">
-            {records.length} metadata record{records.length !== 1 ? "s" : ""}
-          </p>
-          <ScrollArea className="max-h-[320px]">
-            <div className="space-y-2">
-              {displayRecords.map((record) => {
-                const meta = asStoredMetadata(record);
-                return (
-                  <MetadataCard
-                    key={record.metadataId}
-                    name={meta.name}
-                    identifierColumnId={meta.identifierColumnId}
-                    rowCount={meta.rows?.length ?? 0}
-                    columnNames={(meta.columns ?? []).map((c) => c.name).filter(Boolean)}
-                    updatedAt={record.updatedAt}
-                    onEdit={() => onEdit(record.metadataId)}
-                    onDelete={() => handleDelete(record.metadataId)}
-                    deleteStatus={isDeleting[record.metadataId] ?? "idle"}
-                  />
-                );
-              })}
+    <div className="flex min-h-0 flex-col gap-4 pt-4">
+      <DialogBody className="space-y-4">
+        {isEmpty ? (
+          <Card className="items-center justify-center gap-0 py-8">
+            <div className="bg-muted mb-3 flex h-16 w-16 items-center justify-center rounded-full">
+              <FileSpreadsheet className="text-muted-foreground h-8 w-8" />
             </div>
-          </ScrollArea>
-        </>
-      )}
+            <p className="text-muted-foreground text-center text-sm">
+              {t("uploadModal.metadata.noMetadata", { defaultValue: "No metadata uploaded yet." })}
+            </p>
+          </Card>
+        ) : (
+          <>
+            <p className="text-muted-foreground text-sm">
+              {records.length} metadata record{records.length !== 1 ? "s" : ""}
+            </p>
+            <ScrollArea className="max-h-[320px]">
+              <div className="space-y-2">
+                {displayRecords.map((record) => {
+                  const meta = asStoredMetadata(record);
+                  return (
+                    <MetadataCard
+                      key={record.metadataId}
+                      name={meta.name}
+                      identifierColumnId={meta.identifierColumnId}
+                      rowCount={meta.rows?.length ?? 0}
+                      columnNames={(meta.columns ?? []).map((c) => c.name).filter(Boolean)}
+                      updatedAt={record.updatedAt}
+                      onEdit={() => onEdit(record.metadataId)}
+                      onDelete={() => handleDelete(record.metadataId)}
+                      deleteStatus={isDeleting[record.metadataId] ?? "idle"}
+                    />
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </>
+        )}
+      </DialogBody>
 
       <DialogFooter className="mt-2 flex items-center justify-between gap-2 sm:justify-between">
         <Button variant="outline" onClick={onClose}>

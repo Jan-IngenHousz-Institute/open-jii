@@ -147,7 +147,8 @@
     "cancel": "Annuleren"
   },
   "tabs": {
-    "invitations": "Uitnodigingen"
+    "invitations": "Uitnodigingen",
+    "notifications": "Meldingen"
   },
   "invitations": {
     "title": "Uitnodigingen"

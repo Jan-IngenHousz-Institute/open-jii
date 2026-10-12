@@ -73,15 +73,26 @@ export function buildFilterCondition(filter: FilterCondition, builder: BaseQuery
 /**
  * Column SQL for a filter. When `contributorPseudonymSalt` is set the column
  * is wrapped in the deterministic contributor pseudonym so an anonymized
- * picker's pseudonym matches the raw `<contributor>.id`. Kept byte-identical
- * to `ContributorAnonymizerService.pseudonymFor`: `Contributor-` + first 6
- * upper-hex of `sha2('<experimentId>:<id>', 256)`.
+ * picker's pseudonym matches the raw `<contributor>.id`.
  */
 function contributorPseudonymColumn(filter: FilterCondition, builder: BaseQueryBuilder): string {
   const col = builder.columnExpression(filter.column);
   if (filter.contributorPseudonymSalt === undefined) {
     return col;
   }
-  const salt = builder.escapeValue(`${filter.contributorPseudonymSalt}:`);
-  return `concat('Contributor-', upper(substr(sha2(concat(${salt}, ${col}), 256), 1, 6)))`;
+  return contributorPseudonym(col, filter.contributorPseudonymSalt, builder);
+}
+
+/**
+ * The pseudonym of a contributor id expression, kept byte-identical to
+ * `ContributorAnonymizerService.pseudonymFor`: `Contributor-` + first 6
+ * upper-hex of `sha2('<experimentId>:<id>', 256)`.
+ */
+export function contributorPseudonym(
+  idSql: string,
+  salt: string,
+  builder: BaseQueryBuilder,
+): string {
+  const prefix = builder.escapeValue(`${salt}:`);
+  return `concat('Contributor-', upper(substr(sha2(concat(${prefix}, ${idSql}), 256), 1, 6)))`;
 }

@@ -114,6 +114,12 @@ const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
         recipientEmail,
       ),
   ),
+  // No `aboutResource`: the request is about a PhotosynQ project, not a platform resource.
+  project_transfer_requested: (email, { params, recipientEmail }) =>
+    email.sendTransferRequestConfirmation(recipientEmail, params.projectId, params.projectUrl),
+  project_transfer_completed: aboutResource((experimentId, email, { params, recipientEmail }) =>
+    email.sendProjectTransferComplete(recipientEmail, experimentId, params.experimentName),
+  ),
 };
 
 /** Turns a stored notification into the email its type sends. */

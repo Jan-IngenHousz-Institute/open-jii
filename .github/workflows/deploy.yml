@@ -10,7 +10,7 @@ on:
   workflow_call:
     inputs:
       environment:
-        description: "Target environment (dev, staging, prod)"
+        description: "Target environment (dev, prod)"
         required: true
         type: string
       ref:
@@ -47,18 +47,40 @@ jobs:
       affected_apps: ${{ steps.apps.outputs.affected_apps }}
       has_affected_apps: ${{ steps.apps.outputs.has_affected_apps }}
       macro_sandbox_languages: ${{ steps.apps.outputs.macro_sandbox_languages }}
+      # Whether each deploy job is wanted for this run. A skipped job publishes
+      # no outputs, so a child cannot otherwise tell "not needed" from "skipped
+      # because its own parent failed".
+      infrastructure_needed: ${{ (github.event_name == 'workflow_dispatch' && inputs.deploy_infrastructure) || (github.event_name != 'workflow_dispatch' && steps.infra.outputs.changed == 'true') }}
+      migrations_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'migration') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), '@repo/database')) }}
+      backend_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'backend') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'backend')) }}
+      frontend_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'web') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'web')) }}
+      docs_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'docs') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'docs')) }}
+      databricks_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'databricks') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'data')) }}
+      macro_sandbox_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'macro-sandbox') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'macro-sandbox') && steps.apps.outputs.macro_sandbox_languages != '[]') }}
+      calibration_sandbox_needed: ${{ inputs.deploy_all || contains(inputs.deploy_app, 'calibration-sandbox') || (inputs.deploy_app == '' && contains(fromJSON(steps.apps.outputs.affected_apps), 'calibration-sandbox')) }}
     steps:
+      - name: Validate environment
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+        run: |
+          case "$TARGET_ENV" in
+            dev | prod) ;;
+            *) echo "::error::Unknown environment '$TARGET_ENV'"; exit 1 ;;
+          esac
+
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Detect Infra Changes
         id: infra
+        env:
+          BASE: ${{ github.event.before }}
+          HEAD: ${{ inputs.ref || github.sha }}
         run: |
-          BASE="${{ github.event.before }}"
-          HEAD="${{ inputs.ref || github.sha }}"
           if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
           # OpenTofu reads the serving views' SQL from apps/data.
@@ -106,9 +128,7 @@ jobs:
   deploy-infrastructure:
     name: Deploy Infrastructure
     needs: [detect, approval-gate]
-    if: >-
-      (github.event_name == 'workflow_dispatch' && inputs.deploy_infrastructure) ||
-      (github.event_name != 'workflow_dispatch' && needs.detect.outputs.infra_changed == 'true')
+    if: needs.detect.outputs.infrastructure_needed == 'true'
     permissions:
       id-token: write
       contents: read
@@ -119,6 +139,9 @@ jobs:
       tofu_version: "1.9.0"
     secrets: inherit
 
+  # Each job below runs only if every deploy job it needs either succeeded or
+  # was skipped because this run did not need it. A parent that was needed but
+  # skipped (its own parent failed) stops the chain here too.
   database-migrations:
     name: Database Migrations
     needs: [deploy-infrastructure, detect, approval-gate]
@@ -126,8 +149,8 @@ jobs:
       always() &&
       needs.detect.result == 'success' &&
       needs.approval-gate.result == 'success' &&
-      contains('success,skipped', needs.deploy-infrastructure.result) &&
-      (inputs.deploy_all || contains(inputs.deploy_app, 'migration') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), '@repo/database')))
+      (needs.deploy-infrastructure.result == 'success' || (needs.deploy-infrastructure.result == 'skipped' && needs.detect.outputs.infrastructure_needed == 'false')) &&
+      needs.detect.outputs.migrations_needed == 'true'
     permissions:
       id-token: write
       contents: read
@@ -145,9 +168,9 @@ jobs:
       always() &&
       needs.detect.result == 'success' &&
       needs.approval-gate.result == 'success' &&
-      contains('success,skipped', needs.deploy-infrastructure.result) &&
-      contains('success,skipped', needs.database-migrations.result) &&
-      (inputs.deploy_all || contains(inputs.deploy_app, 'backend') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), 'backend')))
+      (needs.deploy-infrastructure.result == 'success' || (needs.deploy-infrastructure.result == 'skipped' && needs.detect.outputs.infrastructure_needed == 'false')) &&
+      (needs.database-migrations.result == 'success' || (needs.database-migrations.result == 'skipped' && needs.detect.outputs.migrations_needed == 'false')) &&
+      needs.detect.outputs.backend_needed == 'true'
     permissions:
       id-token: write
       contents: read
@@ -164,9 +187,9 @@ jobs:
       always() &&
       needs.detect.result == 'success' &&
       needs.approval-gate.result == 'success' &&
-      contains('success,skipped', needs.deploy-infrastructure.result) &&
-      contains('success,skipped', needs.deploy-backend.result) &&
-      (inputs.deploy_all || contains(inputs.deploy_app, 'web') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), 'web')))
+      (needs.deploy-infrastructure.result == 'success' || (needs.deploy-infrastructure.result == 'skipped' && needs.detect.outputs.infrastructure_needed == 'false')) &&
+      (needs.deploy-backend.result == 'success' || (needs.deploy-backend.result == 'skipped' && needs.detect.outputs.backend_needed == 'false')) &&
+      needs.detect.outputs.frontend_needed == 'true'
     permissions:
       id-token: write
       contents: read
@@ -183,8 +206,8 @@ jobs:
       always() &&
       needs.detect.result == 'success' &&
       needs.approval-gate.result == 'success' &&
-      contains('success,skipped', needs.deploy-infrastructure.result) &&
-      (inputs.deploy_all || contains(inputs.deploy_app, 'docs') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), 'docs')))
+      (needs.deploy-infrastructure.result == 'success' || (needs.deploy-infrastructure.result == 'skipped' && needs.detect.outputs.infrastructure_needed == 'false')) &&
+      needs.detect.outputs.docs_needed == 'true'
     permissions:
       id-token: write
       contents: read
@@ -197,27 +220,29 @@ jobs:
   deploy-databricks:
     name: Deploy Databricks
     # Mixed-version macro rollout: backend normalization lands before the
-    # Databricks producer adapter. A skipped backend still permits data-only deploys.
+    # Databricks producer adapter. A backend this run does not need still
+    # permits data-only deploys.
     needs: [deploy-infrastructure, deploy-backend, detect, approval-gate]
     if: >-
       always() &&
       needs.detect.result == 'success' &&
       needs.approval-gate.result == 'success' &&
-      contains('success,skipped', needs.deploy-infrastructure.result) &&
-      contains('success,skipped', needs.deploy-backend.result) &&
-      (inputs.deploy_all || contains(inputs.deploy_app, 'databricks') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), 'data')))
+      (needs.deploy-infrastructure.result == 'success' || (needs.deploy-infrastructure.result == 'skipped' && needs.detect.outputs.infrastructure_needed == 'false')) &&
+      (needs.deploy-backend.result == 'success' || (needs.deploy-backend.result == 'skipped' && needs.detect.outputs.backend_needed == 'false')) &&
+      needs.detect.outputs.databricks_needed == 'true'
     permissions:
       id-token: write
       contents: read
     uses: ./.github/workflows/deploy-databricks.yml
     with:
       environment: ${{ inputs.environment }}
+      ref: ${{ inputs.ref || github.sha }}
     secrets: inherit
 
   deploy-macro-sandbox:
     name: Deploy Macro Sandbox
     # Sandbox simplification is last: backend normalization, the web producer,
-    # and the Databricks adapter must be deployed or intentionally skipped first.
+    # and the Databricks adapter must be deployed or not needed first.
     needs:
       [
         deploy-infrastructure,
@@ -231,11 +256,11 @@ jobs:
       always() &&
       needs.detect.result == 'success' &&
       needs.approval-gate.result == 'success' &&
-      contains('success,skipped', needs.deploy-infrastructure.result) &&
-      contains('success,skipped', needs.deploy-backend.result) &&
-      contains('success,skipped', needs.deploy-frontend.result) &&
-      contains('success,skipped', needs.deploy-databricks.result) &&
-      (inputs.deploy_all || contains(inputs.deploy_app, 'macro-sandbox') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), 'macro-sandbox') && needs.detect.outputs.macro_sandbox_languages != '[]'))
+      (needs.deploy-infrastructure.result == 'success' || (needs.deploy-infrastructure.result == 'skipped' && needs.detect.outputs.infrastructure_needed == 'false')) &&
+      (needs.deploy-backend.result == 'success' || (needs.deploy-backend.result == 'skipped' && needs.detect.outputs.backend_needed == 'false')) &&
+      (needs.deploy-frontend.result == 'success' || (needs.deploy-frontend.result == 'skipped' && needs.detect.outputs.frontend_needed == 'false')) &&
+      (needs.deploy-databricks.result == 'success' || (needs.deploy-databricks.result == 'skipped' && needs.detect.outputs.databricks_needed == 'false')) &&
+      needs.detect.outputs.macro_sandbox_needed == 'true'
     permissions:
       id-token: write
       contents: read
@@ -263,11 +288,11 @@ jobs:
       always() &&
       needs.detect.result == 'success' &&
       needs.approval-gate.result == 'success' &&
-      contains('success,skipped', needs.deploy-infrastructure.result) &&
-      contains('success,skipped', needs.deploy-backend.result) &&
-      contains('success,skipped', needs.deploy-frontend.result) &&
-      contains('success,skipped', needs.deploy-databricks.result) &&
-      (inputs.deploy_all || contains(inputs.deploy_app, 'calibration-sandbox') || (inputs.deploy_app == '' && contains(fromJSON(needs.detect.outputs.affected_apps), 'calibration-sandbox')))
+      (needs.deploy-infrastructure.result == 'success' || (needs.deploy-infrastructure.result == 'skipped' && needs.detect.outputs.infrastructure_needed == 'false')) &&
+      (needs.deploy-backend.result == 'success' || (needs.deploy-backend.result == 'skipped' && needs.detect.outputs.backend_needed == 'false')) &&
+      (needs.deploy-frontend.result == 'success' || (needs.deploy-frontend.result == 'skipped' && needs.detect.outputs.frontend_needed == 'false')) &&
+      (needs.deploy-databricks.result == 'success' || (needs.deploy-databricks.result == 'skipped' && needs.detect.outputs.databricks_needed == 'false')) &&
+      needs.detect.outputs.calibration_sandbox_needed == 'true'
     permissions:
       id-token: write
       contents: read

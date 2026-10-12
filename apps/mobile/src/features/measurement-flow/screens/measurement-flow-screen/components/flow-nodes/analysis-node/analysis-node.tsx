@@ -1,6 +1,6 @@
 import { clsx } from "clsx";
 import { CircleCheckBig } from "lucide-react-native";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { View, Text, ScrollView } from "react-native";
 import { useSession } from "~/features/auth/hooks/use-session";
 import { MOBILE_PRE_IDENTITY_FAMILY } from "~/features/connection/services/mobile-runtime-support";
@@ -100,6 +100,12 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
 
   const { isUploading, uploadMeasurements } = useMeasurementUpload();
   const { updateMeasurementComment } = useMeasurements();
+
+  // Re-entry guard: taps queued while the JS thread is busy all arrive before
+  // isUploading re-renders the button disabled, and each would save a copy. It
+  // holds the accepted scan, so a late tap cannot save it again after success;
+  // a new scan is a new results array.
+  const acceptedResultsRef = useRef<typeof results | null>(null);
 
   const cycleAnswers = getCycleAnswers(iterationCount);
   const questions = convertCycleAnswersToArray(cycleAnswers, flowNodes);
@@ -265,6 +271,20 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
     nextStep();
   };
 
+  const handleAccept = async () => {
+    if (isUploading || acceptedResultsRef.current === results) {
+      return;
+    }
+    acceptedResultsRef.current = results;
+
+    try {
+      await handleUploadMeasurement();
+    } catch (err) {
+      acceptedResultsRef.current = null;
+      log.warn("handleUploadMeasurement failed", { err });
+    }
+  };
+
   const handleRetry = () => {
     previousStep();
   };
@@ -336,11 +356,7 @@ export function AnalysisNode({ content, nodeId }: AnalysisNodeProps) {
         isUploading={isUploading}
         onScrollToTop={scrollToTop}
         onRetry={handleRetry}
-        onUpload={() =>
-          handleUploadMeasurement().catch((e) =>
-            log.warn("handleUploadMeasurement failed", { err: (e as Error)?.message }),
-          )
-        }
+        onUpload={handleAccept}
       />
 
       <MeasurementQuestionsModal

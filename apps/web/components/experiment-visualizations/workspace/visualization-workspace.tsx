@@ -168,7 +168,7 @@ export function VisualizationWorkspace({
 
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="flex min-w-0 flex-1 flex-col gap-4">
-            <PlotlyPreload />
+            <PlotlyPreload traceTypes={getChartTypeDef(watchedChartType).plotlyTraceTypes} />
             <WorkspaceCanvas
               control={form.control}
               experimentId={experimentId}

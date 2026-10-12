@@ -1,10 +1,15 @@
-import { createExperimentDataTable, createExperimentTable } from "@/test/factories";
+import {
+  createExperimentDataTable,
+  createExperimentTable,
+  createFilterWidget,
+} from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 
+import { DashboardFiltersProvider } from "../../dashboard-filters-context";
 import { LoadedTableView } from "./loaded-table-view";
 
 function mountDataAndTables(opts: {
@@ -206,5 +211,45 @@ describe("LoadedTableView", () => {
 
     // Reaching the loaded row (not timing out) is the regression assertion.
     await waitFor(() => expect(screen.getByText("9")).toBeInTheDocument());
+  });
+
+  it("says a filter was skipped when a filter widget on its table is invalid", async () => {
+    mountDataAndTables({ tableName: "raw_data", rows: [{ id: "r1", value: 11 }] });
+    const filter = createFilterWidget({
+      config: {
+        tableName: "raw_data",
+        column: "value",
+        operator: "between",
+        defaultValue: [0, ""],
+      },
+    });
+
+    render(
+      <DashboardFiltersProvider widgets={[filter]}>
+        <LoadedTableView tableName="raw_data" pageSize={25} experimentId="exp-1" />
+      </DashboardFiltersProvider>,
+    );
+    await waitFor(() => expect(screen.getByText("11")).toBeInTheDocument());
+    expect(screen.getByRole("status")).toHaveTextContent("widget.filtersSkipped");
+  });
+
+  it("shows no skipped line when the table's filters all apply", async () => {
+    mountDataAndTables({ tableName: "raw_data", rows: [{ id: "r1", value: 11 }] });
+    const filter = createFilterWidget({
+      config: {
+        tableName: "raw_data",
+        column: "value",
+        operator: "between",
+        defaultValue: [0, 20],
+      },
+    });
+
+    render(
+      <DashboardFiltersProvider widgets={[filter]}>
+        <LoadedTableView tableName="raw_data" pageSize={25} experimentId="exp-1" />
+      </DashboardFiltersProvider>,
+    );
+    await waitFor(() => expect(screen.getByText("11")).toBeInTheDocument());
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { ErrorDisplay } from "@/components/error-display";
+import { PageLoading } from "@/components/shared/page-loading";
 import { notFound } from "next/navigation";
 
 import { useTranslation } from "@repo/i18n";
@@ -25,11 +26,7 @@ export function EntityLayoutShell({
   const { t } = useTranslation("common");
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-muted-foreground">{loadingMessage ?? t("common.loading")}</div>
-      </div>
-    );
+    return <PageLoading message={loadingMessage} />;
   }
 
   if (error) {

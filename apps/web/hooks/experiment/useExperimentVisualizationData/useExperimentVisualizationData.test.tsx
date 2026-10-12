@@ -4,6 +4,7 @@ import { act, createTestQueryClient, renderHook, waitFor } from "@/test/test-uti
 import { describe, it, expect } from "vitest";
 
 import { contract } from "@repo/api/contract";
+import type { ExperimentDataFilter } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { useExperimentVisualizationData } from "./useExperimentVisualizationData";
 
@@ -62,6 +63,67 @@ describe("useExperimentVisualizationData", () => {
       totalRows: 1000,
     });
     expect(result.current.error).toBeNull();
+  });
+
+  describe("while a new read loads", () => {
+    const tableWith = (plot: string) =>
+      createExperimentDataTable({
+        name: "measurements",
+        data: {
+          columns: [{ name: "plot", type_name: "STRING", type_text: "STRING" }],
+          rows: [{ plot }],
+          totalRows: 1,
+          truncated: false,
+        },
+      });
+
+    interface ReadProps {
+      columns: string[];
+      filters?: ExperimentDataFilter[];
+    }
+    const initialProps: ReadProps = { columns: ["plot"] };
+
+    const renderRead = () =>
+      renderHook(
+        ({ columns, filters }: ReadProps) =>
+          useExperimentVisualizationData("exp-123", {
+            tableName: "measurements",
+            columns,
+            filters,
+          }),
+        { initialProps },
+      );
+
+    it("keeps drawing the previous rows, marked as refreshing, when only the filter changed", async () => {
+      server.mount(contract.experiments.getExperimentData, { body: [tableWith("all")] });
+      const { result, rerender } = renderRead();
+      await waitFor(() => expect(result.current.data?.rows).toEqual([{ plot: "all" }]));
+
+      server.mount(contract.experiments.getExperimentData, { body: [tableWith("A1")], delay: 100 });
+      rerender({
+        columns: ["plot"],
+        filters: [{ column: "plot", operator: "equals", value: "A1" }],
+      });
+
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.isRefreshing).toBe(true);
+      expect(result.current.data?.rows).toEqual([{ plot: "all" }]);
+
+      await waitFor(() => expect(result.current.data?.rows).toEqual([{ plot: "A1" }]));
+      expect(result.current.isRefreshing).toBe(false);
+    });
+
+    it("drops to loading when the new read asks for other columns", async () => {
+      server.mount(contract.experiments.getExperimentData, { body: [tableWith("all")] });
+      const { result, rerender } = renderRead();
+      await waitFor(() => expect(result.current.data?.rows).toEqual([{ plot: "all" }]));
+
+      server.mount(contract.experiments.getExperimentData, { body: [tableWith("A1")], delay: 100 });
+      rerender({ columns: ["plot", "SPAD"] });
+
+      expect(result.current.isLoading).toBe(true);
+      expect(result.current.data).toBeUndefined();
+    });
   });
 
   it("drops orderBy when it doesn't match the aggregation projection", async () => {

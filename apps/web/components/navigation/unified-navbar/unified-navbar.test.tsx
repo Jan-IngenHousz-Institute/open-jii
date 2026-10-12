@@ -1,12 +1,12 @@
-import { createSession, createUserProfile } from "@/test/factories";
+import { createSession, createUseSessionResult, createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { usePathname } from "next/navigation";
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import { authClient } from "@repo/auth/client";
+import { authClient, useSession } from "@repo/auth/client";
 
 import { UnifiedNavbar } from "./unified-navbar";
 
@@ -95,22 +95,21 @@ function renderNavbar(
   } = {},
 ) {
   vi.mocked(usePathname).mockReturnValue(opts.pathname ?? "/en-US");
+  vi.mocked(useSession).mockReturnValue(createUseSessionResult({ data: opts.session ?? null }));
   if (opts.session?.user) {
     server.mount(contract.users.getUserProfile, {
       body: createUserProfile({ firstName: "Ada", lastName: "Lovelace" }),
     });
   }
-  return render(
-    <UnifiedNavbar
-      locale={opts.locale ?? "en-US"}
-      session={opts.session ?? null}
-      isHomePage={opts.isHomePage}
-    />,
-  );
+  return render(<UnifiedNavbar locale={opts.locale ?? "en-US"} isHomePage={opts.isHomePage} />);
 }
 
 describe("UnifiedNavbar", () => {
   beforeEach(() => vi.clearAllMocks());
+  // The mock is shared with other test files, so the signed-out default goes back after each.
+  afterEach(() => {
+    vi.mocked(useSession).mockReturnValue(createUseSessionResult());
+  });
 
   it("shows nav links and marks current page active", () => {
     renderNavbar({ pathname: "/en-US/blog/some-post" });

@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/unbound-method */
+import { eq, notifications } from "@repo/database";
+
 import { DatabricksAdapter } from "../../../../../common/modules/databricks/databricks.adapter";
 import { EmailAdapter } from "../../../../../common/modules/email/services/email.adapter";
 import {
@@ -5,7 +8,9 @@ import {
   assertSuccess,
   failure,
   success,
+  AppError,
 } from "../../../../../common/utils/fp-utils";
+import { NotificationRepository } from "../../../../../notifications/core/repositories/notification.repository";
 import { TestHarness } from "../../../../../test/test-harness";
 import { CreateTransferRequestUseCase } from "./create-transfer-request";
 
@@ -16,6 +21,21 @@ describe("CreateTransferRequest", () => {
   let useCase: CreateTransferRequestUseCase;
   let databricksAdapter: DatabricksAdapter;
   let emailAdapter: EmailAdapter;
+
+  const input = {
+    projectIdOld: "12345",
+    projectUrlOld: "https://photosynq.org/projects/12345",
+  };
+
+  const notificationsFor = (userId: string) =>
+    testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
+
+  // findExistingRequest finds nothing, then createTransferRequest inserts a row.
+  const mockCreatePath = () =>
+    vi
+      .spyOn(databricksAdapter, "executeSqlQuery")
+      .mockResolvedValueOnce(success({ columns: [], rows: [], totalRows: 0, truncated: false }))
+      .mockResolvedValueOnce(success({ columns: [], rows: [], totalRows: 1, truncated: false }));
 
   beforeAll(async () => {
     await testApp.setup();
@@ -29,6 +49,7 @@ describe("CreateTransferRequest", () => {
     useCase = testApp.module.get(CreateTransferRequestUseCase);
     databricksAdapter = testApp.module.get(DatabricksAdapter);
     emailAdapter = testApp.module.get(EmailAdapter);
+    vi.spyOn(emailAdapter, "sendTransferRequestConfirmation").mockResolvedValue(success(undefined));
   });
 
   afterEach(() => {
@@ -39,35 +60,8 @@ describe("CreateTransferRequest", () => {
     await testApp.teardown();
   });
 
-  it("should create a transfer request", async () => {
-    // Mock Databricks calls
-    vi.spyOn(databricksAdapter, "executeSqlQuery")
-      .mockResolvedValueOnce(
-        // findExistingRequest - no existing request
-        success({
-          columns: [],
-          rows: [],
-          totalRows: 0,
-          truncated: false,
-        }),
-      )
-      .mockResolvedValueOnce(
-        // createTransferRequest - successful insert
-        success({
-          columns: [],
-          rows: [],
-          totalRows: 1,
-          truncated: false,
-        }),
-      );
-
-    // Mock email adapter
-    vi.spyOn(emailAdapter, "sendTransferRequestConfirmation").mockResolvedValue(success(undefined));
-
-    const input = {
-      projectIdOld: "12345",
-      projectUrlOld: "https://photosynq.org/projects/12345",
-    };
+  it("should create a transfer request and notify the requester", async () => {
+    mockCreatePath();
 
     // Act
     const result = await useCase.execute(testUserId, testUserEmail, input);
@@ -85,14 +79,26 @@ describe("CreateTransferRequest", () => {
     });
     expect(result.value.requestId).toBeDefined();
     expect(result.value.requestedAt).toBeInstanceOf(Date);
+
+    const rows = await notificationsFor(testUserId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      type: "project_transfer_requested",
+      actorId: null,
+      resourceType: null,
+      resourceId: null,
+      params: { projectId: input.projectIdOld, projectUrl: input.projectUrlOld },
+    });
+
+    expect(emailAdapter.sendTransferRequestConfirmation).toHaveBeenCalledTimes(1);
+    expect(emailAdapter.sendTransferRequestConfirmation).toHaveBeenCalledWith(
+      testUserEmail,
+      input.projectIdOld,
+      input.projectUrlOld,
+    );
   });
 
   it("should return bad request error when user email is missing", async () => {
-    const input = {
-      projectIdOld: "12345",
-      projectUrlOld: "https://photosynq.org/projects/12345",
-    };
-
     // Act
     const result = await useCase.execute(testUserId, null, input);
 
@@ -108,14 +114,14 @@ describe("CreateTransferRequest", () => {
     vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValueOnce(
       success({
         columns: [
-          { name: "request_id", type_name: "STRING", type_text: "STRING" },
-          { name: "user_id", type_name: "STRING", type_text: "STRING" },
-          { name: "user_email", type_name: "STRING", type_text: "STRING" },
-          { name: "source_platform", type_name: "STRING", type_text: "STRING" },
-          { name: "project_id_old", type_name: "STRING", type_text: "STRING" },
-          { name: "project_url_old", type_name: "STRING", type_text: "STRING" },
-          { name: "status", type_name: "STRING", type_text: "STRING" },
-          { name: "requested_at", type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
+          { name: "request_id", position: 0, type_name: "STRING", type_text: "STRING" },
+          { name: "user_id", position: 1, type_name: "STRING", type_text: "STRING" },
+          { name: "user_email", position: 2, type_name: "STRING", type_text: "STRING" },
+          { name: "source_platform", position: 3, type_name: "STRING", type_text: "STRING" },
+          { name: "project_id_old", position: 4, type_name: "STRING", type_text: "STRING" },
+          { name: "project_url_old", position: 5, type_name: "STRING", type_text: "STRING" },
+          { name: "status", position: 6, type_name: "STRING", type_text: "STRING" },
+          { name: "requested_at", position: 7, type_name: "TIMESTAMP", type_text: "TIMESTAMP" },
         ],
         rows: [
           [
@@ -123,8 +129,8 @@ describe("CreateTransferRequest", () => {
             testUserId,
             testUserEmail,
             "photosynq",
-            "12345",
-            "https://photosynq.org/projects/12345",
+            input.projectIdOld,
+            input.projectUrlOld,
             "pending",
             new Date().toISOString(),
           ],
@@ -133,11 +139,6 @@ describe("CreateTransferRequest", () => {
         truncated: false,
       }),
     );
-
-    const input = {
-      projectIdOld: "12345",
-      projectUrlOld: "https://photosynq.org/projects/12345",
-    };
 
     // Act
     const result = await useCase.execute(testUserId, testUserEmail, input);
@@ -148,44 +149,15 @@ describe("CreateTransferRequest", () => {
     expect(result.error.code).toBe("FORBIDDEN");
     expect(result.error.message).toContain("You already have a transfer request for this project");
     expect(result.error.message).toContain("Status: pending");
+    expect(await notificationsFor(testUserId)).toHaveLength(0);
+    expect(emailAdapter.sendTransferRequestConfirmation).not.toHaveBeenCalled();
   });
 
   it("should succeed even if email sending fails", async () => {
-    // Mock Databricks calls
-    vi.spyOn(databricksAdapter, "executeSqlQuery")
-      .mockResolvedValueOnce(
-        // findExistingRequest - no existing request
-        success({
-          columns: [],
-          rows: [],
-          totalRows: 0,
-          truncated: false,
-        }),
-      )
-      .mockResolvedValueOnce(
-        // createTransferRequest - successful insert
-        success({
-          columns: [],
-          rows: [],
-          totalRows: 1,
-          truncated: false,
-        }),
-      );
-
-    // Mock email adapter to fail
+    mockCreatePath();
     vi.spyOn(emailAdapter, "sendTransferRequestConfirmation").mockResolvedValue(
-      failure({
-        message: "Email service unavailable",
-        code: "INTERNAL_ERROR",
-        statusCode: 500,
-        name: "InternalError",
-      }),
+      failure(AppError.internal("Email service unavailable")),
     );
-
-    const input = {
-      projectIdOld: "12345",
-      projectUrlOld: "https://photosynq.org/projects/12345",
-    };
 
     // Act
     const result = await useCase.execute(testUserId, testUserEmail, input);
@@ -194,34 +166,19 @@ describe("CreateTransferRequest", () => {
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     expect(result.value.status).toBe("pending");
+    expect(await notificationsFor(testUserId)).toHaveLength(1);
   });
 
   it("should return internal error when repository fails to create request", async () => {
-    // Mock Databricks calls
     vi.spyOn(databricksAdapter, "executeSqlQuery")
       .mockResolvedValueOnce(
         // findExistingRequest - no existing request
-        success({
-          columns: [],
-          rows: [],
-          totalRows: 0,
-          truncated: false,
-        }),
+        success({ columns: [], rows: [], totalRows: 0, truncated: false }),
       )
       .mockResolvedValueOnce(
         // createTransferRequest - failure
-        failure({
-          message: "Database error",
-          code: "INTERNAL_ERROR",
-          statusCode: 500,
-          name: "InternalError",
-        }),
+        failure(AppError.internal("Database error")),
       );
-
-    const input = {
-      projectIdOld: "12345",
-      projectUrlOld: "https://photosynq.org/projects/12345",
-    };
 
     // Act
     const result = await useCase.execute(testUserId, testUserEmail, input);
@@ -230,23 +187,13 @@ describe("CreateTransferRequest", () => {
     expect(result.isFailure()).toBe(true);
     assertFailure(result);
     expect(result.error.code).toBe("INTERNAL_ERROR");
+    expect(await notificationsFor(testUserId)).toHaveLength(0);
   });
 
   it("should return internal error when checking for existing request fails", async () => {
-    // Mock Databricks to fail on findExistingRequest
     vi.spyOn(databricksAdapter, "executeSqlQuery").mockResolvedValueOnce(
-      failure({
-        message: "Database connection failed",
-        code: "INTERNAL_ERROR",
-        statusCode: 500,
-        name: "InternalError",
-      }),
+      failure(AppError.internal("Database connection failed")),
     );
-
-    const input = {
-      projectIdOld: "12345",
-      projectUrlOld: "https://photosynq.org/projects/12345",
-    };
 
     // Act
     const result = await useCase.execute(testUserId, testUserEmail, input);
@@ -257,54 +204,61 @@ describe("CreateTransferRequest", () => {
     expect(result.error.code).toBe("INTERNAL_ERROR");
   });
 
-  it("should create transfer request and skip email when user has non-email identifier", async () => {
+  it("should store the notification but send no email when the stored identifier is not an email address", async () => {
     const orcidId = "0000-0002-1825-0097"; // Example ORCID ID (not an email)
-
-    // Mock Databricks calls
-    vi.spyOn(databricksAdapter, "executeSqlQuery")
-      .mockResolvedValueOnce(
-        // findExistingRequest - no existing request
-        success({
-          columns: [],
-          rows: [],
-          totalRows: 0,
-          truncated: false,
-        }),
-      )
-      .mockResolvedValueOnce(
-        // createTransferRequest - successful insert
-        success({
-          columns: [],
-          rows: [],
-          totalRows: 1,
-          truncated: false,
-        }),
-      );
-
-    // Mock email adapter - should noy be called for invalid email
-    const emailSpy = vi.spyOn(emailAdapter, "sendTransferRequestConfirmation");
-
-    const input = {
-      projectIdOld: "12345",
-      projectUrlOld: "https://photosynq.org/projects/12345",
-    };
+    // Dispatch reads the address from `users.email`, so the ORCID id has to be what
+    // this requester is stored with for the withheld email to mean anything.
+    const orcidUserId = await testApp.createTestUser({ email: orcidId });
+    mockCreatePath();
 
     // Act
-    const result = await useCase.execute(testUserId, orcidId, input);
+    const result = await useCase.execute(orcidUserId, orcidId, input);
 
     // Assert - request should still be created successfully
     expect(result.isSuccess()).toBe(true);
     assertSuccess(result);
     expect(result.value).toMatchObject({
-      userId: testUserId,
+      userId: orcidUserId,
       userEmail: orcidId,
       sourcePlatform: "photosynq",
       projectIdOld: input.projectIdOld,
       projectUrlOld: input.projectUrlOld,
       status: "pending",
     });
+    expect(await notificationsFor(orcidUserId)).toHaveLength(1);
+    expect(emailAdapter.sendTransferRequestConfirmation).not.toHaveBeenCalled();
+  });
 
-    // Email should not have been sent
-    expect(emailSpy).not.toHaveBeenCalled();
+  it("should still return the request when the notification cannot be stored", async () => {
+    mockCreatePath();
+    vi.spyOn(testApp.module.get(NotificationRepository), "insertMany").mockResolvedValue(
+      failure(AppError.internal("notifications unavailable")),
+    );
+
+    // Act
+    const result = await useCase.execute(testUserId, testUserEmail, input);
+
+    // Assert
+    expect(result.isSuccess()).toBe(true);
+    assertSuccess(result);
+    expect(result.value.status).toBe("pending");
+    expect(emailAdapter.sendTransferRequestConfirmation).not.toHaveBeenCalled();
+  });
+
+  it("should store the notification but send no email when project transfers are switched off", async () => {
+    assertSuccess(
+      await testApp.module
+        .get(NotificationRepository)
+        .upsertPreference(testUserId, "project_transfers", "email", false),
+    );
+    mockCreatePath();
+
+    // Act
+    const result = await useCase.execute(testUserId, testUserEmail, input);
+
+    // Assert
+    assertSuccess(result);
+    expect(await notificationsFor(testUserId)).toHaveLength(1);
+    expect(emailAdapter.sendTransferRequestConfirmation).not.toHaveBeenCalled();
   });
 });

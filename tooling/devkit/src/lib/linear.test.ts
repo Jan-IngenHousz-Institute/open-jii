@@ -169,6 +169,25 @@ describe("createLinearClient", () => {
     );
   });
 
+  it("reads a rejected query's messages out of the body and hints at an ID! variable", async () => {
+    const body = JSON.stringify({
+      errors: [
+        {
+          message: 'Variable "$id" of type "ID!" used in position expecting type "String!".',
+          extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
+        },
+      ],
+    });
+    const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(body, { status: 400 }));
+    const client = createLinearClient({ apiKey: "k", request });
+
+    await expect(
+      client.query("query($id: ID!) { issue(id: $id) { identifier } }", { id: "OJD-1" }),
+    ).rejects.toThrow(
+      'Linear returned 400: Variable "$id" of type "ID!" used in position expecting type "String!". Declare the variable as String! instead of ID!.',
+    );
+  });
+
   it("surfaces GraphQL errors as one message", async () => {
     const request = vi
       .fn<typeof fetch>()

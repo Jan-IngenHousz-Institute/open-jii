@@ -7,10 +7,15 @@ import { Input } from "@repo/ui/components/input";
 export interface NumericRangeInputProps {
   value: ExperimentDataFilterValue;
   onChange: (value: ExperimentDataFilterValue) => void;
+  /** Marks both boxes invalid and describes them by this element. */
+  errorMessageId?: string;
 }
 
-export function NumericRangeInput({ value, onChange }: NumericRangeInputProps) {
+export function NumericRangeInput({ value, onChange, errorMessageId }: NumericRangeInputProps) {
   const { t } = useTranslation("common");
+  const errorProps = errorMessageId
+    ? { "aria-invalid": true, "aria-describedby": errorMessageId }
+    : {};
   const tuple: [string | number, string | number] = Array.isArray(value)
     ? [value[0] ?? "", value[1] ?? ""]
     : ["", ""];
@@ -35,6 +40,7 @@ export function NumericRangeInput({ value, onChange }: NumericRangeInputProps) {
         className="h-9 flex-1"
         placeholder={t("dataFilters.rangeFrom")}
         value={display(tuple[0])}
+        {...errorProps}
         onChange={(e) => updateBound(0, e.target.value)}
       />
       <span className="text-muted-foreground shrink-0 text-xs">→</span>
@@ -43,6 +49,7 @@ export function NumericRangeInput({ value, onChange }: NumericRangeInputProps) {
         className="h-9 flex-1"
         placeholder={t("dataFilters.rangeTo")}
         value={display(tuple[1])}
+        {...errorProps}
         onChange={(e) => updateBound(1, e.target.value)}
       />
     </div>

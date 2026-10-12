@@ -114,6 +114,7 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
                     <CtfImage
                       {...img}
                       nextImageProps={{
+                        sizes: "(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 320px",
                         className: "block h-full w-full object-cover",
                       }}
                     />

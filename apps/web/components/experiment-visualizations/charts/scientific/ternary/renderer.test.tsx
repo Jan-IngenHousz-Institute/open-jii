@@ -1,9 +1,25 @@
 import { createVisualization } from "@/test/factories";
-import { render, screen } from "@/test/test-utils";
-import { describe, expect, it } from "vitest";
+import { server } from "@/test/msw/server";
+import { render, screen, waitFor } from "@/test/test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { contract } from "@repo/api/contract";
 
 import { ternaryDefaultConfig } from "./defaults";
 import { TernaryRenderer } from "./renderer";
+
+const { ternaryPlot } = vi.hoisted(() => ({
+  ternaryPlot: vi.fn((_props: { data: { name: string }[] }) => null),
+}));
+vi.mock("@/components/charts/ternary", () => ({ TernaryPlot: ternaryPlot }));
+
+function plottedNames(): string[] {
+  const call = ternaryPlot.mock.calls.at(-1);
+  if (!call) {
+    throw new Error("TernaryPlot was never rendered");
+  }
+  return call[0].data.map((series) => series.name);
+}
 
 function buildViz(overrides: Parameters<typeof createVisualization>[0] = {}) {
   return createVisualization({
@@ -140,5 +156,64 @@ describe("TernaryRenderer", () => {
     ];
     render(<TernaryRenderer visualization={viz} experimentId="exp-1" data={rows} />);
     expect(screen.queryByText("errors.noData")).not.toBeInTheDocument();
+  });
+
+  // A chart saved through the API has no colorMode. The renderer reads the
+  // colour column's type from the table's column metadata to choose.
+  describe("with no colorMode saved", () => {
+    const rows = [
+      { sand: 40, silt: 40, clay: 20, genotype: "WT", temp: 21 },
+      { sand: 20, silt: 30, clay: 50, genotype: "mutant", temp: 30 },
+    ];
+
+    function colouredBy(colorColumn: string) {
+      return buildViz({
+        config: { ...ternaryDefaultConfig() },
+        dataConfig: {
+          tableName: "t",
+          dataSources: [
+            { tableName: "t", columnName: "sand", role: "x" },
+            { tableName: "t", columnName: "silt", role: "y" },
+            { tableName: "t", columnName: "clay", role: "z" },
+            { tableName: "t", columnName: colorColumn, role: "color" },
+          ],
+        },
+      });
+    }
+
+    beforeEach(() => {
+      ternaryPlot.mockClear();
+      server.mount(contract.experiments.getExperimentTableColumns, {
+        body: {
+          columns: [
+            { name: "sand", type_name: "INT", type_text: "INT" },
+            { name: "silt", type_name: "INT", type_text: "INT" },
+            { name: "clay", type_name: "INT", type_text: "INT" },
+            { name: "genotype", type_name: "STRING", type_text: "STRING" },
+            { name: "temp", type_name: "DOUBLE", type_text: "DOUBLE" },
+          ],
+        },
+      });
+    });
+
+    it("splits a text colour column into one series per value", async () => {
+      render(
+        <TernaryRenderer visualization={colouredBy("genotype")} experimentId="exp-1" data={rows} />,
+      );
+
+      await waitFor(() => {
+        expect(plottedNames()).toEqual(expect.arrayContaining(["WT", "mutant"]));
+      });
+    });
+
+    it("keeps one series for a numeric colour column", async () => {
+      render(
+        <TernaryRenderer visualization={colouredBy("temp")} experimentId="exp-1" data={rows} />,
+      );
+
+      await waitFor(() => {
+        expect(plottedNames()).toEqual(["sand"]);
+      });
+    });
   });
 });

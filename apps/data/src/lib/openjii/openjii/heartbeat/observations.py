@@ -29,6 +29,7 @@ def observation(
     observed_at: datetime,
     environment: str,
     unit: str = "None",
+    dimensions: dict[str, str] | None = None,
 ) -> dict:
     """Build one CloudWatch datapoint line."""
     return {
@@ -37,7 +38,7 @@ def observation(
         "value": value,
         "unit": unit,
         "timestamp": _isoformat(observed_at),
-        "dimensions": {"Environment": environment},
+        "dimensions": {"Environment": environment, **(dimensions or {})},
     }
 
 

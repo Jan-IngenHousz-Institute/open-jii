@@ -40,13 +40,18 @@ export function devkitEnvPath(root: string): string {
 }
 
 // A linked worktree's `.git` is a file naming `<main>/.git/worktrees/<name>`; the main
-// checkout is where `linear:auth` was most likely run.
+// checkout is where `linear:auth` was most likely run. In the main checkout itself `.git` is a
+// directory, so there is no other checkout to look in.
 export async function mainWorktreeRoot(root: string): Promise<string | null> {
   let pointer: string;
   try {
     pointer = await readFile(`${root}/.git`, "utf8");
   } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+    const isNotAPointer =
+      error instanceof Error &&
+      "code" in error &&
+      ["ENOENT", "EISDIR"].includes(String(error.code));
+    if (isNotAPointer) return null;
     throw error;
   }
   const gitdir = /^gitdir:\s*(.+)$/m.exec(pointer)?.[1]?.trim();
@@ -57,20 +62,21 @@ export async function mainWorktreeRoot(root: string): Promise<string | null> {
 
 export interface DevkitKey {
   variable: string;
-  service: string;
-  authCommand: string;
+  name: string;
+  remedy: string;
 }
 
 export const linearKey: DevkitKey = {
   variable: "LINEAR_API_KEY",
-  service: "Linear",
-  authCommand: "linear:auth",
+  name: "Linear key",
+  remedy: "pnpm linear:auth with the key on stdin, for example pbpaste | pnpm linear:auth on macOS",
 };
 
 export const posthogKey: DevkitKey = {
   variable: "POSTHOG_PERSONAL_API_KEY",
-  service: "PostHog",
-  authCommand: "posthog:auth",
+  name: "PostHog key",
+  remedy:
+    "pnpm posthog:auth with the key on stdin, for example pbpaste | pnpm posthog:auth on macOS",
 };
 
 // Shell first, which is how CI supplies it, then this checkout's env file, then the main
@@ -104,9 +110,7 @@ export async function requireDevkitKey(
     devkitEnvPath(root),
     ...(mainRoot === null ? [] : [devkitEnvPath(mainRoot)]),
   ];
-  throw new Error(
-    `No ${key.service} key found. Looked at ${looked.join(", ")}. Run: pnpm ${key.authCommand} with the key on stdin, for example pbpaste | pnpm ${key.authCommand} on macOS`,
-  );
+  throw new Error(`No ${key.name} found. Looked at ${looked.join(", ")}. Run: ${key.remedy}`);
 }
 
 export function resolveLinearApiKey(

@@ -9,6 +9,7 @@ import { isPaginatedList } from "@repo/api/shared/listing";
 import { useDebounce } from "../../useDebounce";
 import { useListSorting } from "../../useListSorting";
 import { useSearchPending } from "../../useSearchPending";
+import { macrosListQuery } from "./macros-list-query";
 
 export function useMacros({
   initialSearch = "",
@@ -33,17 +34,10 @@ export function useMacros({
     setPage(1);
   };
 
-  const query = useQuery(
-    orpc.macros.listMacros.queryOptions({
-      input: {
-        search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
-        language,
-        page,
-        sort: sort.length ? sort : undefined,
-      },
-      placeholderData: (prev) => prev,
-    }),
-  );
+  const query = useQuery({
+    ...macrosListQuery(orpc, { search: debouncedSearch, language, page, sort }),
+    placeholderData: (prev) => prev,
+  });
 
   // `page` is always sent, so the response is the envelope; narrow the union.
   const data = query.data && isPaginatedList(query.data) ? query.data : undefined;

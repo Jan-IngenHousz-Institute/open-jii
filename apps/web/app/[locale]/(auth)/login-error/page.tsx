@@ -1,6 +1,5 @@
 import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
 import { notFound } from "next/navigation";
-import { auth } from "~/app/actions/auth";
 import { AuthBackground } from "~/components/auth/auth-background";
 import { AuthHeroSection } from "~/components/auth/auth-hero-section";
 import { ErrorContent } from "~/components/auth/error-content";
@@ -11,7 +10,6 @@ export default async function AuthErrorPage(props: {
 }) {
   const { locale } = await props.params;
   const searchParams = await props.searchParams;
-  const session = await auth();
 
   // Show 404 if error parameter is not present in URL at all
   if (!("error" in searchParams)) {
@@ -21,7 +19,7 @@ export default async function AuthErrorPage(props: {
   return (
     <>
       {/* Navbar stays sticky on top */}
-      <UnifiedNavbar locale={locale} session={session} />
+      <UnifiedNavbar locale={locale} />
 
       <AuthBackground alt="Error background" />
 

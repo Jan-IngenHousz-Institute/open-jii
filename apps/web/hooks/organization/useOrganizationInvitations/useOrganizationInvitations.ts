@@ -1,10 +1,11 @@
 "use client";
 
+import { usePrincipal } from "@/components/auth/principal-context";
 import { unwrapAuthResult } from "@/hooks/organization/auth-organization-result";
 import { organizationInvitationsQueryKey } from "@/hooks/organization/organization-cache";
 import { useQuery } from "@tanstack/react-query";
 
-import { authClient, useSession } from "@repo/auth/client";
+import { authClient } from "@repo/auth/client";
 
 /**
  * Pending invitations for the Invited tab. The one organization *read* that does
@@ -17,8 +18,7 @@ export const useOrganizationInvitations = (
   organizationId: string,
   options?: { enabled?: boolean },
 ) => {
-  const { data: session, isPending: isSessionPending } = useSession();
-  const userId = session?.user.id;
+  const { userId, isPending: isSessionPending } = usePrincipal();
 
   return useQuery({
     queryKey: organizationInvitationsQueryKey(userId, organizationId),

@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import type { ExperimentDataColumn } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
 import { lineChartType } from "../../../charts/basic/line";
+import { scatterChartType } from "../../../charts/basic/scatter";
 import type { ChartFormValues } from "../../../charts/chart-config";
 import { DataSourcesFieldArrayProvider } from "../../context/data-sources-field-array-context";
 import { ColorDimensionShelf } from "./color-dimension-shelf";
@@ -202,5 +203,52 @@ describe("ColorDimensionShelf", () => {
     expect(screen.getByText("workspace.shelves.colorScale")).toBeInTheDocument();
     expect(screen.getByText("workspace.shelves.colorAxisTitle")).toBeInTheDocument();
     expect(screen.getByText("workspace.shelves.showColorbar")).toBeInTheDocument();
+  });
+
+  // A chart saved through the API has no colorMode; the renderer then goes by the
+  // column type, and the shelf has to say the same without writing anything.
+  describe("with no colorMode saved", () => {
+    function renderScatter(colorColumn: string) {
+      const { colorMode: _unset, ...config } = scatterChartType.defaultConfig();
+      return renderShelf((form) => <ColorDimensionShelf form={form} columns={columns} />, {
+        useFormProps: {
+          defaultValues: defaults({
+            chartFamily: scatterChartType.family,
+            chartType: scatterChartType.type,
+            config,
+            dataConfig: {
+              tableName: "readings",
+              dataSources: [
+                { tableName: "readings", columnName: "time", role: "x" },
+                { tableName: "readings", columnName: "temp", role: "y" },
+                { tableName: "readings", columnName: colorColumn, role: "color" },
+              ],
+            },
+          }),
+        },
+      });
+    }
+
+    it("shows categorical for a text column", async () => {
+      const user = userEvent.setup();
+      const { form } = renderScatter("sensor");
+
+      await expandShelf(user);
+      const modePicker = screen.getAllByRole("combobox")[1];
+      expect(modePicker).toHaveTextContent("workspace.shelves.colorModeCategorical");
+      expect(screen.getByText("workspace.shelves.colorModeCategoricalHelp")).toBeInTheDocument();
+      expect(form.getValues("config.colorMode")).toBeUndefined();
+    });
+
+    it("shows continuous for a numeric column", async () => {
+      const user = userEvent.setup();
+      const { form } = renderScatter("temp");
+
+      await expandShelf(user);
+      const modePicker = screen.getAllByRole("combobox")[1];
+      expect(modePicker).toHaveTextContent("workspace.shelves.colorModeContinuous");
+      expect(screen.getByText("workspace.shelves.colorScale")).toBeInTheDocument();
+      expect(form.getValues("config.colorMode")).toBeUndefined();
+    });
   });
 });

@@ -105,4 +105,54 @@ describe("FilterWidgetView", () => {
 
     expect(screen.getByRole("button", { name: /widget.filterReset/ })).toBeInTheDocument();
   });
+
+  function rangeWidget(defaultValue: [number, number] | [number, ""]) {
+    return createFilterWidget({
+      config: {
+        showTitle: true,
+        showDescription: false,
+        tableName: "raw_data",
+        column: "value",
+        operator: "between",
+        defaultValue,
+      },
+    });
+  }
+
+  it("says why when a range is left incomplete", async () => {
+    mountColumns();
+    const widget = rangeWidget([0, 10]);
+    const user = userEvent.setup();
+    render(
+      <DashboardFiltersProvider widgets={[widget]}>
+        <FilterWidgetView widget={widget} experimentId="exp-1" />
+      </DashboardFiltersProvider>,
+    );
+
+    const to = await screen.findByPlaceholderText("dataFilters.rangeTo");
+    await user.clear(to);
+
+    const reason = screen.getByRole("alert");
+    expect(reason).toHaveTextContent("widget.filterRangeMissingEnd");
+    for (const box of [screen.getByPlaceholderText("dataFilters.rangeFrom"), to]) {
+      expect(box).toHaveAttribute("aria-invalid", "true");
+      expect(box).toHaveAttribute("aria-describedby", reason.id);
+    }
+  });
+
+  it("shows no reason for a complete range", async () => {
+    mountColumns();
+    const widget = rangeWidget([0, 10]);
+    render(
+      <DashboardFiltersProvider widgets={[widget]}>
+        <FilterWidgetView widget={widget} experimentId="exp-1" />
+      </DashboardFiltersProvider>,
+    );
+
+    const to = await screen.findByPlaceholderText("dataFilters.rangeTo");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    for (const box of [screen.getByPlaceholderText("dataFilters.rangeFrom"), to]) {
+      expect(box).not.toHaveAttribute("aria-invalid");
+    }
+  });
 });

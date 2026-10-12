@@ -2,6 +2,7 @@ import { SqlQueryBuilder } from "../query-builder.base";
 import type { BaseQueryBuilder } from "../query-builder.base";
 import type { AggregateExpression, AggregationSpec } from "../query-builder.types";
 import { QueryBuilderInputError } from "../query-builder.types";
+import { contributorPseudonym } from "./filter";
 
 /** True when the spec has any grouping or aggregate functions to apply. */
 export function hasAggregationContent(spec: AggregationSpec | undefined): boolean {
@@ -58,6 +59,22 @@ export function buildAggregateExpression(
   };
 }
 
+/** The outer sort key, as the pseudonym of a contributor id when the experiment anonymizes. */
+function sortTarget(
+  builder: BaseQueryBuilder,
+  orderBy: string | undefined,
+  contributorPseudonymSalt: string | undefined,
+): string | undefined {
+  if (!orderBy) {
+    return undefined;
+  }
+
+  const target = builder.escapeIdentifier(orderBy);
+  return contributorPseudonymSalt === undefined
+    ? target
+    : contributorPseudonym(target, contributorPseudonymSalt, builder);
+}
+
 /**
  * Wrap already-built inner SQL with an outer SELECT applying GROUP BY +
  * aggregates and final ordering/pagination. User filters are not applied
@@ -79,6 +96,7 @@ export function wrapWithAggregation(
     aggregation?: AggregationSpec;
     orderBy?: string;
     orderDirection?: "ASC" | "DESC";
+    orderByContributorPseudonymSalt?: string;
     limit?: number;
     offset?: number;
   },
@@ -87,6 +105,7 @@ export function wrapWithAggregation(
   const selectClauses: string[] = [];
   const groupByClauses: string[] = [];
   const windowProjections: string[] = [];
+  const orderSql = sortTarget(builder, opts.orderBy, opts.orderByContributorPseudonymSalt);
 
   let firstGroupBySql: string | undefined;
 
@@ -104,8 +123,7 @@ export function wrapWithAggregation(
       firstGroupBySql ??= expr.sql;
     }
 
-    const cumsumOrderBy =
-      firstGroupBySql ?? (opts.orderBy ? builder.escapeIdentifier(opts.orderBy) : undefined);
+    const cumsumOrderBy = firstGroupBySql ?? orderSql;
 
     for (const item of opts.aggregation.functions ?? []) {
       if (item.function === "cumsum") {
@@ -155,9 +173,9 @@ export function wrapWithAggregation(
     }
   }
 
-  if (opts.orderBy) {
+  if (orderSql !== undefined) {
     const direction = opts.orderDirection ?? "ASC";
-    sql += ` ORDER BY ${builder.escapeIdentifier(opts.orderBy)} ${direction}`;
+    sql += ` ORDER BY ${orderSql} ${direction}`;
   }
 
   if (opts.limit !== undefined) {

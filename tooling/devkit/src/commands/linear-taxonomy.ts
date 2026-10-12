@@ -107,7 +107,7 @@ function skip(phase: LabelPhase, name: string, reason: string): PlannedOperation
   return { phase, kind: "skip", name, reason };
 }
 
-function isUntouchable(spec: TaxonomySpec, name: string): boolean {
+export function isUntouchable(spec: TaxonomySpec, name: string): boolean {
   return spec.untouchablePrefixes.some((prefix) => name.startsWith(prefix));
 }
 

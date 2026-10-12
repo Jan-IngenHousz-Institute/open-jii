@@ -197,6 +197,21 @@ describe("wrapWithAggregation", () => {
     expect(sql).toContain("OFFSET 10");
   });
 
+  it("orders an anonymized contributor group by the pseudonym of its id", () => {
+    const sql = wrapWithAggregation("SELECT * FROM t", {
+      aggregation: {
+        groupBy: [{ column: "contributor" }],
+        functions: [{ column: "value", function: "avg" }],
+      },
+      orderBy: "contributor.id",
+      orderByContributorPseudonymSalt: "exp-1",
+    });
+
+    expect(sql).toContain(
+      "ORDER BY concat('Contributor-', upper(substr(sha2(concat('exp-1:', `contributor`.`id`), 256), 1, 6))) ASC",
+    );
+  });
+
   it("throws when called with empty aggregation content", () => {
     expect(() => wrapWithAggregation("SELECT * FROM t", { aggregation: {} })).toThrow(
       /without aggregation content/,

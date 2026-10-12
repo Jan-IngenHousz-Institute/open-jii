@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { z } from "zod";
 
 import { NOTIFICATION_TYPES } from "@repo/api/domains/notification/notification.schema";
 import type {
@@ -160,7 +161,9 @@ export class NotificationDispatchService {
         continue;
       }
       const recipientEmail = byId.get(row.recipientId)?.email;
-      if (!recipientEmail) {
+      // An ORCID sign-in that shares no address stores the ORCID id in `users.email`,
+      // so the stored value is not always something the mail server can deliver to.
+      if (!recipientEmail || !z.string().email().safeParse(recipientEmail).success) {
         continue;
       }
 

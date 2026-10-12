@@ -1,8 +1,8 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
 import { CheckCircle2 } from "lucide-react";
-import Link from "next/link";
 
 import { useTranslation } from "@repo/i18n";
 import { Badge } from "@repo/ui/components/badge";
@@ -53,12 +53,12 @@ export function DeviceExperimentRow({
     return (
       <li className="flex items-center gap-3 px-3 py-2.5">
         <CheckCircle2 className="text-primary size-4 shrink-0" aria-hidden />
-        <Link
+        <IntentLink
           href={`/${locale}/platform/experiments/${experiment.id}`}
           className="focus-visible:ring-primary/40 focus-visible:outline-hidden min-w-0 flex-1 truncate text-sm font-medium hover:underline focus-visible:ring-2"
         >
           {experiment.name}
-        </Link>
+        </IntentLink>
         {status}
         {trailing}
       </li>

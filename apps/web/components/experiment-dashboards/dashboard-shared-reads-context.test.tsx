@@ -1,5 +1,7 @@
 import { experimentVisualizationIndexOptions } from "@/hooks/experiment/useExperimentVisualizationIndex/useExperimentVisualizationIndex";
+import { orpc } from "@/lib/orpc";
 import {
+  createExperimentTable,
   createFilterWidget,
   createVisualization,
   createVisualizationWidget,
@@ -12,6 +14,7 @@ import { describe, expect, it } from "vitest";
 
 import { contract } from "@repo/api/contract";
 import type { ExperimentDashboardWidget } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
+import type { ExperimentTableMetadata } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type {
   ExperimentChartDataConfig,
   ExperimentRole,
@@ -26,6 +29,7 @@ import {
 } from "./dashboard-filters-context";
 import {
   DashboardSharedReadsProvider,
+  SHARED_READ_PENDING,
   useDashboardSharedRead,
 } from "./dashboard-shared-reads-context";
 import type { OwnRead } from "./dashboard-shared-reads-context";
@@ -79,10 +83,22 @@ function useOwnSharedRead(item: ExperimentVisualization, extraColumns: string[] 
   return useDashboardSharedRead(item.id, own);
 }
 
-function setup(index: ExperimentVisualization[] | undefined, widgets: ExperimentDashboardWidget[]) {
+// An empty table list counts every table as small, so no chart is drawn from buckets; null leaves
+// the list unloaded.
+function setup(
+  index: ExperimentVisualization[] | undefined,
+  widgets: ExperimentDashboardWidget[],
+  tables: ExperimentTableMetadata[] | null = [],
+) {
   const queryClient = createTestQueryClient();
   if (index) {
     queryClient.setQueryData(experimentVisualizationIndexOptions(EXPERIMENT_ID).queryKey, index);
+  }
+  if (tables) {
+    queryClient.setQueryData(
+      orpc.experiments.getExperimentTables.queryKey({ input: { id: EXPERIMENT_ID } }),
+      tables,
+    );
   }
   function Wrapper({ children }: { children: ReactNode }) {
     // A fresh array per render, as the editor form produces.
@@ -123,6 +139,62 @@ describe("DashboardSharedReadsProvider", () => {
       orderBy: "timestamp",
     });
     expect(result.current.b).toBe(result.current.a);
+  });
+
+  it("leaves a line drawn from buckets out of its group's read", () => {
+    const line = viz("line", "macro", [
+      ["x", "timestamp"],
+      ["y", "f0"],
+    ]);
+    const scatterA = {
+      ...viz("a", "macro", [
+        ["x", "ratio_initial"],
+        ["y", "ratio_final"],
+      ]),
+      chartType: "scatter" as const,
+    };
+    const scatterB = {
+      ...viz("b", "macro", [
+        ["x", "ratio_initial"],
+        ["y", "fm"],
+      ]),
+      chartType: "scatter" as const,
+    };
+    const { wrapper } = setup([line, scatterA, scatterB], widgetsFor([line, scatterA, scatterB]), [
+      createExperimentTable({ identifier: "macro", totalRows: 77_000 }),
+    ]);
+
+    const { result } = renderHook(
+      () => ({
+        line: useOwnSharedRead(line),
+        scatter: useOwnSharedRead(scatterA),
+      }),
+      { wrapper },
+    );
+
+    expect(result.current.line).toBeUndefined();
+    expect(result.current.scatter).toEqual(
+      expect.objectContaining({ columns: ["fm", "ratio_final", "ratio_initial"] }),
+    );
+  });
+
+  it("holds a group while its table's size is unknown, since a line in it may leave", () => {
+    const line = viz("line", "macro", [
+      ["x", "timestamp"],
+      ["y", "f0"],
+    ]);
+    const scatter = {
+      ...viz("a", "macro", [
+        ["x", "ratio_initial"],
+        ["y", "ratio_final"],
+      ]),
+      chartType: "scatter" as const,
+    };
+    const { wrapper } = setup([line, scatter], widgetsFor([line, scatter]), null);
+
+    const { result } = renderHook(() => useOwnSharedRead(scatter), { wrapper });
+
+    expect(result.current).toBe(SHARED_READ_PENDING);
   });
 
   it("leaves a chart alone on its table without a plan", () => {
@@ -227,7 +299,11 @@ describe("DashboardSharedReadsProvider", () => {
     );
 
     const before = result.current.a;
-    expect(before?.filters).toEqual([{ column: "device_id", operator: "equals", value: "dev-1" }]);
+    expect(before).toEqual(
+      expect.objectContaining({
+        filters: [{ column: "device_id", operator: "equals", value: "dev-1" }],
+      }),
+    );
     expect(result.current.b).toBe(before);
 
     act(() => {
@@ -235,9 +311,11 @@ describe("DashboardSharedReadsProvider", () => {
     });
 
     expect(result.current.a).not.toBe(before);
-    expect(result.current.a?.filters).toEqual([
-      { column: "device_id", operator: "equals", value: "dev-2" },
-    ]);
+    expect(result.current.a).toEqual(
+      expect.objectContaining({
+        filters: [{ column: "device_id", operator: "equals", value: "dev-2" }],
+      }),
+    );
   });
 
   it("orders the group by the x most members share and still covers the minority", () => {
@@ -259,7 +337,7 @@ describe("DashboardSharedReadsProvider", () => {
       wrapper,
     });
 
-    expect(result.current.a?.orderBy).toBe("timestamp");
+    expect(result.current.a).toEqual(expect.objectContaining({ orderBy: "timestamp" }));
     expect(result.current.c).toBe(result.current.a);
   });
 

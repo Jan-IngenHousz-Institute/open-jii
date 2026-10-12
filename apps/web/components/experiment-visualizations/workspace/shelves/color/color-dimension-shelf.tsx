@@ -59,9 +59,13 @@ export function ColorDimensionShelf({
   const colorColumnIsCategorical = isCategoricalColumnType(colorColumnType);
   const watchedColorMode = useWatch({ control: form.control, name: "config.colorMode" });
   // Categorical-only chart types pin the mode; legacy data may still hold "continuous".
+  // With no mode saved, the renderer goes by the column type, so show that.
   const colorMode = resolveColorMode({
     categoricalOnly,
-    isCategorical: watchedColorMode === "categorical",
+    isCategorical:
+      watchedColorMode === undefined
+        ? colorColumnIsCategorical
+        : watchedColorMode === "categorical",
   });
 
   const colorscale = useWatch({ control: form.control, name: "config.marker.colorscale" }) as
@@ -148,10 +152,7 @@ export function ColorDimensionShelf({
                   <FormLabel className="text-xs font-medium">
                     {t("workspace.shelves.colorMode")}
                   </FormLabel>
-                  <Select
-                    value={field.value ?? "continuous"}
-                    onValueChange={(v) => field.onChange(v)}
-                  >
+                  <Select value={field.value ?? colorMode} onValueChange={(v) => field.onChange(v)}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue />

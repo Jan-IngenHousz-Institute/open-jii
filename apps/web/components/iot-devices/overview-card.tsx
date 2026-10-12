@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import type { ReactNode } from "react";
 
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
@@ -53,12 +53,12 @@ export function OverviewCard({
         </CardTitle>
         {link !== undefined && (
           <CardAction>
-            <Link
+            <IntentLink
               href={link.href}
               className="text-primary shrink-0 text-sm font-medium hover:underline"
             >
               {link.label}
-            </Link>
+            </IntentLink>
           </CardAction>
         )}
       </CardHeader>

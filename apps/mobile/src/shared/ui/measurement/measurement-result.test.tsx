@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react-native";
 import React from "react";
 import { Text } from "react-native";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { PythonRuntimeUnavailableError } from "~/shared/measurements/python-runtime-unavailable-error";
 
 import { MeasurementResult } from "./measurement-result";
 
@@ -101,6 +102,19 @@ describe("MeasurementResult", () => {
     ).toBeTruthy();
     expect(chartProps).not.toHaveBeenCalled();
     expect(messageProps).not.toHaveBeenCalled();
+  });
+
+  it("explains a missing Python runtime instead of reporting a processing error", () => {
+    render(
+      <MeasurementResult
+        rawMeasurement={{ sample: [] }}
+        outputs={undefined}
+        error={new PythonRuntimeUnavailableError("Pyodide failed to load")}
+      />,
+    );
+
+    expect(screen.getByText("measurementFlow:result.pythonRuntimeUnavailable")).toBeTruthy();
+    expect(screen.queryByText(/processingError/)).toBeNull();
   });
 
   it("says so when the macro produced nothing", () => {

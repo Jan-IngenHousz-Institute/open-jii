@@ -48,11 +48,14 @@ export const zMacro = z.object({
   visibility: z.enum(["private", "public"]),
 });
 const zMacroListEntry = zMacro.extend({
+  /** Left out when the caller asked for `fields: "summary"`. */
+  code: z.string().optional(),
   /** Present on the paginated list, which reads it for the rows it returns. */
   activity: zResourceSeries.nullable().optional(),
 });
 
 export const zMacroList = z.array(zMacroListEntry);
+export type MacroListEntry = z.infer<typeof zMacroListEntry>;
 
 /**
  * A single macro plus the caller's effective capabilities on it. Only the detail
@@ -75,6 +78,12 @@ export const zMacroFilterQuery = z
     filter: z.enum(["my"]).optional().describe("Deprecated alias for scope=related"),
     scope: zResourceScope.optional().describe("Which slice of the accessible set to return"),
     sort: zMacroSort.optional().describe("Up to two ordered sort criteria"),
+    fields: z
+      .enum(["summary", "full"])
+      .optional()
+      .describe(
+        "`summary` leaves each macro's code out of the rows; `full`, the default, keeps it",
+      ),
   })
   .merge(zPaginationQuery);
 

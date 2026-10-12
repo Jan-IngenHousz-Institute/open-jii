@@ -1,7 +1,6 @@
 import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
 import type { SearchParamsType } from "@/util/searchParams";
 import { getFirstSearchParam } from "@/util/searchParams";
-import { auth } from "~/app/actions/auth";
 import { AuthBackground } from "~/components/auth/auth-background";
 import { AuthHeroSection } from "~/components/auth/auth-hero-section";
 import { LoginForm } from "~/components/auth/login-form";
@@ -15,7 +14,6 @@ export default async function LoginPage(props: {
 }) {
   const { locale } = await props.params;
   const { callbackUrl } = await props.searchParams;
-  const session = await auth();
 
   // Fetch terms data on the server
   const termsData = await TermsAndConditionsDialog({ locale });
@@ -23,7 +21,7 @@ export default async function LoginPage(props: {
   return (
     <>
       {/* Navbar stays sticky on top */}
-      <UnifiedNavbar locale={locale} session={session} />
+      <UnifiedNavbar locale={locale} />
 
       <AuthBackground alt="Login background" />
 

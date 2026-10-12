@@ -52,7 +52,7 @@ const KNOWN_SOURCES = ["aws", "dbx", "pg", "posthog", "gh", "composer"];
 const KNOWN_STATS = ["Sum", "Maximum", "Minimum", "Average", "SampleCount"];
 const KNOWN_SEVERITIES = ["critical", "warning"];
 // The report dashboards map these to Grafana unit ids; anything else charts as a bare number.
-const KNOWN_UNITS = ["milliseconds", "seconds", "minutes", "bytes", "percent", "ratio"];
+const KNOWN_UNITS = ["milliseconds", "seconds", "minutes", "bytes", "percent", "ratio", "usd"];
 
 // Only these signal fields go through placeholder resolution on the dashboards; a
 // placeholder anywhere else reaches CloudWatch as a literal and matches nothing forever.
@@ -364,13 +364,14 @@ describe("signals", () => {
     const catalogued = metrics.filter(
       (m) => m.signal?.namespace && ALLOWED_NAMESPACES.has(m.signal.namespace),
     );
+    // A series published per extra dimension is read through a SEARCH that names it.
+    const metricOf = (m: CatalogMetric) =>
+      m.signal?.metric ?? /MetricName="([^"]+)"/.exec(m.signal?.search ?? "")?.[1] ?? "";
 
-    expect(catalogued.filter((m) => !emitted.has(m.signal?.metric ?? "")).map((m) => m.id)).toEqual(
+    expect(catalogued.filter((m) => !emitted.has(metricOf(m))).map((m) => m.id)).toEqual([]);
+    expect([...emitted].filter((name) => !catalogued.some((m) => metricOf(m) === name))).toEqual(
       [],
     );
-    expect(
-      [...emitted].filter((name) => !catalogued.some((m) => m.signal?.metric === name)),
-    ).toEqual([]);
   });
 });
 

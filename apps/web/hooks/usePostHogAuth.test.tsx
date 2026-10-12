@@ -9,6 +9,7 @@ import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";
 
 import { setConsentStatus } from "../lib/cookie-consent";
+import { usePostHog } from "../providers/posthog-context";
 import { usePostHogAuth } from "./usePostHogAuth";
 
 const session = createSession({ user: { id: "user-ana", email: "ana@example.com", name: "Ana" } });
@@ -35,6 +36,7 @@ describe("usePostHogAuth", () => {
   let storedConsent: MockInstance | undefined;
 
   beforeEach(() => {
+    vi.mocked(usePostHog).mockReturnValue(posthog);
     server.mount(contract.organizations.listMyOrganizations, {
       body: [createMyOrganization({ id: "org-qa" }), createMyOrganization({ id: "org-lab" })],
     });
@@ -44,6 +46,23 @@ describe("usePostHogAuth", () => {
     mockSession(null);
     vi.mocked(posthog.get_property).mockReset();
     storedConsent?.mockRestore();
+  });
+
+  it("waits for PostHog to load, then brings it up to date", async () => {
+    vi.mocked(usePostHog).mockReturnValue(null);
+    mockSession(session);
+    storedConsent = storeConsent("accepted");
+
+    const { rerender } = renderHook(() => usePostHogAuth());
+    await waitFor(() => expect(vi.mocked(useSession)).toHaveBeenCalled());
+    expect(posthog.identify).not.toHaveBeenCalled();
+
+    vi.mocked(usePostHog).mockReturnValue(posthog);
+    rerender();
+
+    await waitFor(() => {
+      expect(posthog.identify).toHaveBeenCalledWith("user-ana", { email: "ana@example.com" });
+    });
   });
 
   it("gives flag evaluations the memberships, without the email or identifying, before consent", async () => {

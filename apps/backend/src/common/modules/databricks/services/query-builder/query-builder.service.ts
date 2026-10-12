@@ -38,6 +38,7 @@ export class QueryBuilderService {
         ...params,
         orderBy: undefined,
         orderDirection: undefined,
+        orderByContributorPseudonymSalt: undefined,
         limit: undefined,
         offset: undefined,
         aggregation: undefined,
@@ -52,6 +53,7 @@ export class QueryBuilderService {
           aggregation: params.aggregation,
           orderBy: params.orderBy,
           orderDirection: params.orderDirection,
+          orderByContributorPseudonymSalt: params.orderByContributorPseudonymSalt,
           limit: params.limit,
           offset: params.offset,
         }),
@@ -91,6 +93,7 @@ export class QueryBuilderService {
       distinct,
       orderBy,
       orderDirection,
+      orderByContributorPseudonymSalt,
       limit,
       offset,
     } = params;
@@ -117,7 +120,7 @@ export class QueryBuilderService {
     }
 
     if (orderBy) {
-      builder.orderBy(orderBy, orderDirection);
+      builder.orderBy(orderBy, orderDirection, orderByContributorPseudonymSalt);
     }
 
     if (limit !== undefined) {
@@ -144,6 +147,7 @@ export class QueryBuilderService {
       distinct,
       orderBy,
       orderDirection,
+      orderByContributorPseudonymSalt,
       limit,
       offset,
     } = params;
@@ -176,7 +180,7 @@ export class QueryBuilderService {
     }
 
     if (orderBy) {
-      builder.orderBy(orderBy, orderDirection);
+      builder.orderBy(orderBy, orderDirection, orderByContributorPseudonymSalt);
     }
 
     if (limit !== undefined) {

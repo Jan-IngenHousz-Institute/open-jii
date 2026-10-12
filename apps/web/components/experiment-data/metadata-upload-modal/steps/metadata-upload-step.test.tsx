@@ -88,12 +88,14 @@ vi.mock("@repo/ui/components/button", () => ({
     children,
     disabled,
     onClick,
+    "aria-label": ariaLabel,
   }: {
     children: React.ReactNode;
     disabled?: boolean;
     onClick?: () => void;
+    "aria-label"?: string;
   }) => (
-    <button disabled={disabled} onClick={onClick}>
+    <button aria-label={ariaLabel} disabled={disabled} onClick={onClick}>
       {children}
     </button>
   ),
@@ -176,6 +178,20 @@ const sampleData = {
   ],
 };
 
+const savedRecord = {
+  metadataId: "11111111-1111-4111-8111-111111111111",
+  experimentId: "test-experiment",
+  metadata: {
+    name: "Plot layout",
+    columns: [{ id: "col_0", name: "plot", type: "string" }],
+    rows: [],
+    identifierColumnId: "col_0",
+  },
+  createdBy: "22222222-2222-4222-8222-222222222222",
+  createdAt: "2026-09-25T09:09:24.000Z",
+  updatedAt: "2026-09-25T09:09:24.000Z",
+};
+
 describe("MetadataUploadStep", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -233,6 +249,24 @@ describe("MetadataUploadStep", () => {
     renderStep({ onClose });
     fireEvent.click(getButton("uploadModal.fileUpload.back"));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("keeps Add new outside the scrolling list so it stays in view", () => {
+    mockExistingMetadata = [savedRecord];
+    renderStep();
+    const body = screen.getByTestId("dialog-body");
+
+    expect(within(body).getByText("Plot layout")).toBeInTheDocument();
+    expect(body).not.toContainElement(getButton("uploadModal.metadata.addNew"));
+    expect(body).not.toContainElement(getButton("uploadModal.fileUpload.back"));
+  });
+
+  it("opens a saved record for editing from the list", () => {
+    mockExistingMetadata = [savedRecord];
+    renderStep();
+    fireEvent.click(screen.getByRole("button", { name: "common.edit" }));
+
+    expect(screen.getByTestId("metadata-name")).toHaveValue("Plot layout");
   });
 
   describe("file import", () => {

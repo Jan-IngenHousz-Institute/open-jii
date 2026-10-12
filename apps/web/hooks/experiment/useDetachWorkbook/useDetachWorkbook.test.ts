@@ -2,6 +2,7 @@ import { orpc } from "@/lib/orpc";
 import { createExperiment } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { renderHook, waitFor, act, createTestQueryClient } from "@/test/test-utils";
+import { QueryClient } from "@tanstack/react-query";
 import { describe, it, expect, vi } from "vitest";
 
 import { contract } from "@repo/api/contract";
@@ -81,5 +82,27 @@ describe("useDetachWorkbook", () => {
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
+  });
+
+  it("unlinks the workbook before the server answers and links it back when detach fails", async () => {
+    const workbookId = "22222222-2222-2222-2222-222222222222";
+    const experimentKey = orpc.experiments.getExperiment.queryKey({ input: { id: experimentId } });
+    // The seeded experiment has no observer, so it must outlive the default zero gcTime.
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
+    });
+    queryClient.setQueryData(experimentKey, createExperiment({ id: experimentId, workbookId }));
+    server.mount(contract.experiments.detachWorkbook, { status: 500, delay: 200 });
+    const linkedWorkbook = () =>
+      queryClient.getQueryData<{ workbookId: string | null }>(experimentKey)?.workbookId;
+
+    const { result } = renderHook(() => useDetachWorkbook(), { queryClient });
+    act(() => {
+      result.current.mutate({ id: experimentId });
+    });
+
+    await waitFor(() => expect(linkedWorkbook()).toBeNull());
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(linkedWorkbook()).toBe(workbookId);
   });
 });

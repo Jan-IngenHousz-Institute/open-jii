@@ -1,28 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-// Every trace type a wrapper can emit, including the WebGL twin of scatter.
-const EMITTED_TRACE_TYPES = [
-  "bar",
-  "barpolar",
-  "box",
-  "carpet",
-  "contour",
-  "contourcarpet",
-  "heatmap",
-  "histogram",
-  "histogram2d",
-  "histogram2dcontour",
-  "parcats",
-  "parcoords",
-  "pie",
-  "sankey",
-  "scatter",
-  "scattercarpet",
-  "scattergl",
-  "scatterpolar",
-  "scatterternary",
-  "violin",
-];
+import { EAGER_TRACE_TYPES, LAZY_TRACE_TYPES } from "../../charts/plotly-trace-types";
 
 interface PlotSchemaCarrier {
   PlotSchema: { get(): { traces: Record<string, unknown> } };
@@ -42,21 +20,59 @@ function hasPlotSchema(value: object): value is PlotSchemaCarrier {
   );
 }
 
+async function registeredTypes(): Promise<string[]> {
+  const { Plotly } = await import("../../charts/plotly-runtime");
+  if (!hasPlotSchema(Plotly)) {
+    throw new Error("Plotly runtime exposes no PlotSchema");
+  }
+  return Object.keys(Plotly.PlotSchema.get().traces).sort();
+}
+
+const sorted = (types: readonly string[]) => [...types].sort();
+
+// Registered alongside contourcarpet, so it adds nothing once that case has run.
+const CARPET_FAMILY = new Set(["carpet", "contourcarpet"]);
+
+// Plotly's registry lives as long as the module does, so these cases build on
+// each other and run in order.
 describe("plotly runtime", () => {
-  afterEach(() => {
+  beforeAll(() => {
+    // jsdom has no canvas; Plotly probes one while loading the WebGL traces.
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+  });
+
+  afterAll(() => {
     vi.restoreAllMocks();
   });
 
-  it("registers every trace type the wrappers emit and nothing heavier", async () => {
-    // jsdom has no canvas; Plotly probes one while loading the WebGL trace.
-    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
-    const { Plotly } = await import("../../charts/plotly-runtime");
-    if (!hasPlotSchema(Plotly)) {
-      throw new Error("Plotly runtime exposes no PlotSchema");
-    }
+  it("registers only what sparklines draw on import", async () => {
+    expect(await registeredTypes()).toEqual(sorted(EAGER_TRACE_TYPES));
+  });
 
-    const registered = Object.keys(Plotly.PlotSchema.get().traces).sort();
+  it("registers carpet along with a trace drawn on its axes", async () => {
+    const { registerTraceTypes } = await import("../../charts/plotly-runtime");
 
-    expect(registered).toEqual([...EMITTED_TRACE_TYPES].sort());
+    await registerTraceTypes(["contourcarpet"]);
+
+    expect(await registeredTypes()).toEqual(
+      sorted([...EAGER_TRACE_TYPES, "carpet", "contourcarpet"]),
+    );
+  });
+
+  it.each(LAZY_TRACE_TYPES.filter((type) => !CARPET_FAMILY.has(type)))(
+    "registers %s and nothing else",
+    async (type) => {
+      const { registerTraceTypes } = await import("../../charts/plotly-runtime");
+      const before = new Set(await registeredTypes());
+
+      await registerTraceTypes([type]);
+
+      const added = (await registeredTypes()).filter((registered) => !before.has(registered));
+      expect(added).toEqual([type]);
+    },
+  );
+
+  it("ends up with every type the wrappers emit", async () => {
+    expect(await registeredTypes()).toEqual(sorted([...EAGER_TRACE_TYPES, ...LAZY_TRACE_TYPES]));
   });
 });

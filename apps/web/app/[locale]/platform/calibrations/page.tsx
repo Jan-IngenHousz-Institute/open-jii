@@ -1,5 +1,7 @@
 import { ListCalibrationDefinitions } from "@/components/calibrations/list-calibration-definitions";
 import { PageContainer } from "@/components/page-container";
+import { PrefetchedQueries } from "@/components/server-prefetch/prefetched-queries";
+import { calibrationDefinitionsQuery } from "@/hooks/iot/useAllCalibrationDefinitions/calibration-definitions-query";
 import type { Metadata } from "next";
 
 import initTranslations from "@repo/i18n/server";
@@ -18,7 +20,9 @@ export async function generateMetadata({ params }: CalibrationsPageProps): Promi
 export default function CalibrationsPage() {
   return (
     <PageContainer width="fluid" className="space-y-6">
-      <ListCalibrationDefinitions />
+      <PrefetchedQueries queries={(utils) => [calibrationDefinitionsQuery(utils)]}>
+        <ListCalibrationDefinitions />
+      </PrefetchedQueries>
     </PageContainer>
   );
 }

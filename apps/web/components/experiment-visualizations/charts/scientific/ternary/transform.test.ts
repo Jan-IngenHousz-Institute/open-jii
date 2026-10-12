@@ -88,4 +88,26 @@ describe("transformTernaryData", () => {
     const result = transformTernaryData([{ a: 0.5, b: 0.3, c: 0.2 }], sources, cfg);
     expect(result.series[0].sum).toBe(1);
   });
+
+  // A chart saved through the API may omit colorMode; the text column used to
+  // be ignored, leaving one trace named after the A column.
+  it("splits a text colour column by category when colorMode is unset", () => {
+    const sources = [ds("x", "a"), ds("y", "b"), ds("z", "c"), ds("color", "g")];
+    const rows = [
+      { a: 10, b: 10, c: 10, g: "X" },
+      { a: 20, b: 20, c: 20, g: "Y" },
+    ];
+    const result = transformTernaryData(rows, sources, baseConfig, "STRING");
+    expect(result.series.map((s) => s.name)).toEqual(["X", "Y"]);
+  });
+
+  it("keeps one trace for a numeric colour column when colorMode is unset", () => {
+    const sources = [ds("x", "a"), ds("y", "b"), ds("z", "c"), ds("color", "g")];
+    const rows = [
+      { a: 10, b: 10, c: 10, g: 1 },
+      { a: 20, b: 20, c: 20, g: 2 },
+    ];
+    const result = transformTernaryData(rows, sources, baseConfig, "INT");
+    expect(result.series).toHaveLength(1);
+  });
 });

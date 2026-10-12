@@ -5,7 +5,6 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { orpc } from "~/lib/orpc";
 
-import { DATA_QUERY_MAX_LIMIT } from "@repo/api/domains/experiment/data/experiment-data.schema";
 import type {
   ExperimentDataAggregation,
   ExperimentDataFilter,
@@ -14,9 +13,9 @@ import type {
 import { useExperimentVisualizationData } from "../../../../hooks/experiment/useExperimentVisualizationData/useExperimentVisualizationData";
 import { axisPosition } from "../cartesian/series-reduction";
 import type { AxisRange } from "../cartesian/series-reduction";
+import { BUCKETED_ROWS, WINDOW_BUCKETS } from "../cartesian/zoom-read-plan";
+import type { AxisScale } from "../cartesian/zoom-read-plan";
 
-/** Buckets per window: one per pixel column on plots up to this many pixels wide. */
-const WINDOW_BUCKETS = 2_000;
 const STALE_TIME = 2 * 60 * 1000;
 
 export interface ZoomReadInput {
@@ -24,7 +23,7 @@ export interface ZoomReadInput {
   tableName: string;
   filters: ExperimentDataFilter[] | undefined;
   xColumn: string;
-  scale: "time" | "number";
+  scale: AxisScale;
   yColumns: string[];
   splitColumns: string[];
   readColumns: string[];
@@ -38,12 +37,13 @@ export interface ZoomRead {
   /** How many table rows the drawing stands for. */
   total: number | undefined;
   isBucketed: boolean;
+  error: unknown;
 }
 
 /**
- * Reads for a series longer than one read can hold. The visible window comes back as the lowest
- * and highest value per bucket, one bucket per pixel column, so the whole series draws faithfully;
- * once the window holds few enough rows to read whole, its rows come back instead.
+ * Reads for a series with more rows than a plot has pixels. The visible window comes back as the
+ * lowest and highest value per bucket, one bucket per pixel column, so the whole series draws
+ * faithfully; once the window holds few enough rows to draw each one, its rows come back instead.
  */
 export function useZoomRead(input: ZoomReadInput): ZoomRead {
   const { experimentId, tableName, filters, xColumn, scale, yColumns, splitColumns, enabled } =
@@ -97,9 +97,8 @@ export function useZoomRead(input: ZoomReadInput): ZoomRead {
   const bucketRows = buckets.data?.[0]?.data?.rows;
   const total = bucketRows?.reduce((sum, row) => sum + Number(row.rows), 0);
   // While a new window's counts are loading, the previous window's stand in for the drawing, but
-  // they say nothing about whether the new window fits in one read.
-  const fitsOneRead =
-    !buckets.isPlaceholderData && total !== undefined && total <= DATA_QUERY_MAX_LIMIT;
+  // they say nothing about how many rows the new window holds.
+  const fitsOneRead = !buckets.isPlaceholderData && total !== undefined && total <= BUCKETED_ROWS;
 
   const windowRead = useExperimentVisualizationData(
     experimentId,
@@ -123,6 +122,7 @@ export function useZoomRead(input: ZoomReadInput): ZoomRead {
     rows: windowRows ?? drawnBuckets,
     total,
     isBucketed: windowRows === undefined && drawnBuckets !== undefined,
+    error: extent.error ?? buckets.error ?? windowRead.error,
   };
 }
 
@@ -138,7 +138,7 @@ function rangeOf(from: unknown, to: unknown): AxisRange | undefined {
 
 function windowFilter(
   xColumn: string,
-  scale: "time" | "number",
+  scale: AxisScale,
   [from, to]: AxisRange,
 ): ExperimentDataFilter {
   const value =
@@ -148,7 +148,7 @@ function windowFilter(
 
 function bucketAggregation(
   xColumn: string,
-  scale: "time" | "number",
+  scale: AxisScale,
   yColumns: string[],
   splitColumns: string[],
   [from, to]: AxisRange,

@@ -20,7 +20,7 @@ FAILED_COLLECTORS_DETAIL = "failed_collectors"
 GOLD_AGE_METRIC = "GoldMaterializationAgeMinutes"
 
 # Minutes since the public metrics tables were last computed. A fixed
-# threshold works here: the scheduler runs every fifteen minutes everywhere.
+# threshold works here: the scheduler runs hourly everywhere.
 METRICS_AGE_METRIC = "MetricsPipelineAgeMinutes"
 
 STALE_EXPERIMENTS_METRIC = "StaleExperimentsCount"
@@ -37,6 +37,8 @@ MEASUREMENTS_7D_METRIC = "Measurements7d"
 ACTIVE_DEVICES_7D_METRIC = "ActiveDevices7d"
 ACTIVE_EXPERIMENTS_7D_METRIC = "ActiveExperiments7d"
 ACTIVE_CONTRIBUTORS_7D_METRIC = "ActiveContributors7d"
+# Databricks spend at list price, per platform component.
+DATABRICKS_COST_7D_METRIC = "DatabricksCost7dUsd"
 
 # The data path, one half hour at a time: rows through each stage, how long
 # each hop took at p95, what is waiting for macros, and how long since each
@@ -55,6 +57,10 @@ INGEST_IDLE_METRIC = "IngestIdleMinutes"
 MACRO_IDLE_METRIC = "MacroIdleMinutes"
 
 PATH_BUCKET_MINUTES = 30
+
+# How full a classic pipeline driver's old generation is right after a full collection, per
+# pipeline. What a full collection cannot free is memory the driver still holds.
+DRIVER_OLD_GEN_METRIC = "DriverOldGenAfterFullGcPercent"
 
 STALE_EXPERIMENTS_DETAIL = "stale_experiments"
 SILENT_DEVICES_DETAIL = "silent_devices"
