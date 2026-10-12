@@ -1,4 +1,4 @@
-import { experimentJoinRequests, organizationMembers } from "@repo/database";
+import { experimentJoinRequests, organizationMembers, resourceGrants } from "@repo/database";
 
 import { TestHarness } from "../test/test-harness";
 import {
@@ -127,6 +127,44 @@ describe("EmailVisibilityService", () => {
       expect(await sees()).toBe(false);
     });
 
+    it("a direct admin grant sees a pending requester", async () => {
+      const { experiment } = await experimentWithJoinRequest();
+      await testApp.addExperimentAdmin(experiment.id, callerId);
+
+      expect(await sees({ experimentId: experiment.id })).toBe(true);
+    });
+
+    it("a team admin grant sees a pending requester", async () => {
+      const { experiment } = await experimentWithJoinRequest();
+      const orgId = await testApp.createOrganization();
+      const teamId = await testApp.createTeam(orgId);
+      await testApp.addTeamMember(teamId, callerId);
+      await testApp.database.insert(resourceGrants).values({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "team",
+        granteeId: teamId,
+        role: "admin",
+      });
+
+      expect(await sees({ experimentId: experiment.id })).toBe(true);
+    });
+
+    it("an organization admin grant sees a pending requester", async () => {
+      const { experiment } = await experimentWithJoinRequest();
+      const orgId = await testApp.createOrganization();
+      await testApp.addOrganizationMember(orgId, callerId, "member");
+      await testApp.database.insert(resourceGrants).values({
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        granteeType: "organization",
+        granteeId: orgId,
+        role: "admin",
+      });
+
+      expect(await sees({ experimentId: experiment.id })).toBe(true);
+    });
+
     it("a viewer of the experiment does not see the requester", async () => {
       const { experiment } = await experimentWithJoinRequest();
       await testApp.addExperimentCollaborator(experiment.id, callerId);
@@ -139,6 +177,33 @@ describe("EmailVisibilityService", () => {
       callerId = ownerId;
 
       expect(await sees({ experimentId: experiment.id })).toBe(false);
+    });
+  });
+
+  describe("one SQL round trip", () => {
+    it("looks up organization evidence in one statement", async () => {
+      await sharedOrganization("owner", "member");
+      const execute = vi.spyOn(testApp.database, "execute");
+
+      try {
+        expect(await sees()).toBe(true);
+        expect(execute).toHaveBeenCalledTimes(1);
+      } finally {
+        execute.mockRestore();
+      }
+    });
+
+    it("looks up experiment management and requests in the same statement", async () => {
+      const { experiment, ownerId } = await experimentWithJoinRequest();
+      callerId = ownerId;
+      const execute = vi.spyOn(testApp.database, "execute");
+
+      try {
+        expect(await sees({ experimentId: experiment.id })).toBe(true);
+        expect(execute).toHaveBeenCalledTimes(1);
+      } finally {
+        execute.mockRestore();
+      }
     });
   });
 

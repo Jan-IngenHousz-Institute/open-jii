@@ -1,21 +1,14 @@
 import { Inject, Injectable } from "@nestjs/common";
 
 import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
-import {
-  and,
-  eq,
-  experimentJoinRequests,
-  inArray,
-  organizationJoinRequests,
-  organizationMembers,
-} from "@repo/database";
+import { grantRoleCan, orgRoleCan } from "@repo/auth/access";
+import { sql } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { success } from "../common/utils/fp-utils";
 import type { Result } from "../common/utils/fp-utils";
 import { isMembershipManagerRole } from "../organizations/core/organization-access";
 import type { ResourceCollaborator } from "../sharing/core/models/sharing.model";
-import { AuthorizationService } from "./authorization.service";
 
 /** Narrows visibility to people who asked to join this experiment. */
 export interface EmailScope {
@@ -29,6 +22,13 @@ export interface EmailLens<T> {
 }
 
 const NO_EMAIL = { email: null };
+
+interface VisibilityEvidence {
+  [key: string]: unknown;
+  targetId: string | null;
+  kind: "org_member" | "org_request" | "experiment_request" | "manage_org" | "manage_grant";
+  role: string | null;
+}
 
 export function flatEmail<T extends { userId: string; email: string | null }>(): EmailLens<T> {
   return { userId: (row) => row.userId, withoutEmail: (row) => Object.assign({}, row, NO_EMAIL) };
@@ -60,10 +60,7 @@ export function collaboratorEmail<T extends ResourceCollaborator>(): EmailLens<T
 /** Decides email visibility. Resource grants alone never reveal an address. */
 @Injectable()
 export class EmailVisibilityService {
-  constructor(
-    @Inject("DATABASE") private readonly db: DatabaseInstance,
-    private readonly authz: AuthorizationService,
-  ) {}
+  constructor(@Inject("DATABASE") private readonly db: DatabaseInstance) {}
 
   async visibleUserEmails(
     callerId: string,
@@ -74,52 +71,71 @@ export class EmailVisibilityService {
     const others = [...new Set(targetIds.filter((id) => id !== callerId))];
     if (others.length === 0) return visible;
 
-    const [managedOrgIds, managesExperiment] = await Promise.all([
-      this.managedOrganizationIds(callerId),
-      scope ? this.managesExperiment(callerId, scope.experimentId) : Promise.resolve(false),
-    ]);
+    const targetSql = sql.join(
+      others.map((id) => sql`${id}::uuid`),
+      sql`, `,
+    );
+    const evidence = await this.db.execute<VisibilityEvidence>(sql`
+      WITH targets AS (SELECT unnest(ARRAY[${targetSql}]::uuid[]) AS id),
+        scoped_experiment AS (
+          SELECT e.id, e.organization_id
+          FROM experiments e
+          WHERE e.id = ${scope?.experimentId ?? null}::uuid
+        )
+      SELECT t.id AS "targetId", 'org_member'::text AS kind, cm.role
+      FROM targets t
+      JOIN organization_members tm ON tm.user_id = t.id
+      JOIN organization_members cm ON cm.organization_id = tm.organization_id
+        AND cm.user_id = ${callerId}::uuid
+      UNION ALL
+      SELECT t.id, 'org_request'::text, cm.role
+      FROM targets t
+      JOIN organization_join_requests r ON r.user_id = t.id AND r.status = 'pending'
+      JOIN organization_members cm ON cm.organization_id = r.organization_id
+        AND cm.user_id = ${callerId}::uuid
+      UNION ALL
+      SELECT t.id, 'experiment_request'::text, NULL::text
+      FROM targets t
+      JOIN experiment_join_requests r ON r.user_id = t.id AND r.status = 'pending'
+      JOIN scoped_experiment e ON e.id = r.experiment_id
+      UNION ALL
+      SELECT NULL::uuid, 'manage_org'::text, cm.role
+      FROM scoped_experiment e
+      JOIN organization_members cm ON cm.organization_id = e.organization_id
+        AND cm.user_id = ${callerId}::uuid
+      UNION ALL
+      SELECT NULL::uuid, 'manage_grant'::text, g.role
+      FROM scoped_experiment e
+      JOIN resource_grants g ON g.resource_type = 'experiment' AND g.resource_id = e.id
+        AND g.grantee_type = 'user' AND g.grantee_id = ${callerId}::uuid
+      UNION ALL
+      SELECT NULL::uuid, 'manage_grant'::text, g.role
+      FROM scoped_experiment e
+      JOIN resource_grants g ON g.resource_type = 'experiment' AND g.resource_id = e.id
+        AND g.grantee_type = 'team'
+      JOIN team_members tm ON tm.team_id = g.grantee_id AND tm.user_id = ${callerId}::uuid
+      UNION ALL
+      SELECT NULL::uuid, 'manage_grant'::text, g.role
+      FROM scoped_experiment e
+      JOIN resource_grants g ON g.resource_type = 'experiment' AND g.resource_id = e.id
+        AND g.grantee_type = 'organization'
+      JOIN organization_members cm ON cm.organization_id = g.grantee_id
+        AND cm.user_id = ${callerId}::uuid
+    `);
 
-    const lookups: Promise<{ userId: string }[]>[] = [];
-    if (managedOrgIds.length > 0) {
-      lookups.push(
-        this.db
-          .select({ userId: organizationMembers.userId })
-          .from(organizationMembers)
-          .where(
-            and(
-              inArray(organizationMembers.organizationId, managedOrgIds),
-              inArray(organizationMembers.userId, others),
-            ),
-          ),
-        this.db
-          .select({ userId: organizationJoinRequests.userId })
-          .from(organizationJoinRequests)
-          .where(
-            and(
-              inArray(organizationJoinRequests.organizationId, managedOrgIds),
-              eq(organizationJoinRequests.status, "pending"),
-              inArray(organizationJoinRequests.userId, others),
-            ),
-          ),
-      );
-    }
-    if (scope && managesExperiment) {
-      lookups.push(
-        this.db
-          .select({ userId: experimentJoinRequests.userId })
-          .from(experimentJoinRequests)
-          .where(
-            and(
-              eq(experimentJoinRequests.experimentId, scope.experimentId),
-              eq(experimentJoinRequests.status, "pending"),
-              inArray(experimentJoinRequests.userId, others),
-            ),
-          ),
-      );
-    }
-
-    for (const rows of await Promise.all(lookups)) {
-      for (const { userId } of rows) visible.add(userId);
+    const managesExperiment = evidence.some(
+      ({ kind, role }) =>
+        (kind === "manage_org" && orgRoleCan(role, "experiment", "manage")) ||
+        (kind === "manage_grant" && grantRoleCan(role, "experiment", "manage")),
+    );
+    for (const { targetId, kind, role } of evidence) {
+      if (!targetId) continue;
+      if (
+        ((kind === "org_member" || kind === "org_request") && isMembershipManagerRole(role)) ||
+        (kind === "experiment_request" && managesExperiment)
+      ) {
+        visible.add(targetId);
+      }
     }
     return visible;
   }
@@ -172,27 +188,5 @@ export class EmailVisibilityService {
     return invitations.map((invitation) =>
       invitation.invitedBy === callerId ? invitation : { ...invitation, ...NO_EMAIL },
     );
-  }
-
-  private async managedOrganizationIds(callerId: string): Promise<string[]> {
-    const memberships = await this.db
-      .select({
-        organizationId: organizationMembers.organizationId,
-        role: organizationMembers.role,
-      })
-      .from(organizationMembers)
-      .where(eq(organizationMembers.userId, callerId));
-    return memberships
-      .filter(({ role }) => isMembershipManagerRole(role))
-      .map(({ organizationId }) => organizationId);
-  }
-
-  private async managesExperiment(callerId: string, experimentId: string): Promise<boolean> {
-    const decision = await this.authz.can(callerId, {
-      resourceType: "experiment",
-      resourceId: experimentId,
-      action: "manage",
-    });
-    return decision.allow;
   }
 }
