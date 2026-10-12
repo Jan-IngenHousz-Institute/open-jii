@@ -168,7 +168,7 @@ resource "aws_iam_role_policy" "ecs_task_dependency_health_policy" {
         }
       },
       {
-        # Reads the database's capacity, which tells a paused database from a broken one.
+        # Reads the database's capacity, which tells a paused database from a running one.
         Sid      = "ReadMetrics"
         Effect   = "Allow"
         Action   = ["cloudwatch:GetMetricData"]
