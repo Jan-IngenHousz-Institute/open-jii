@@ -44,6 +44,8 @@ interface OverviewTableProps<T extends RowData> {
   getRowHref: (item: T) => string;
   emptyMessage: string;
   emptyHelpPath?: string;
+  /** A way out of the empty state, such as clearing the filters that caused it. */
+  emptyAction?: ReactNode;
   sorting?: OverviewTableSorting;
 }
 
@@ -105,6 +107,7 @@ export function OverviewTable<T extends RowData>({
   getRowHref,
   emptyMessage,
   emptyHelpPath,
+  emptyAction,
   sorting,
 }: OverviewTableProps<T>) {
   const router = useRouter();
@@ -166,6 +169,7 @@ export function OverviewTable<T extends RowData>({
             <DocsHelpLink path={emptyHelpPath} />
           </div>
         )}
+        {emptyAction && <div className="mt-3">{emptyAction}</div>}
       </div>
     );
   }

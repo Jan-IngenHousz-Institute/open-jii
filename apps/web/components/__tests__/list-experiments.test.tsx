@@ -208,7 +208,7 @@ describe("ListExperiments", () => {
       expect(spy.calls.at(-1)?.query).toMatchObject({
         page: "2",
         scope: "related",
-        status: "archived",
+        "status[0]": "archived",
       });
     });
   });
@@ -253,7 +253,7 @@ describe("ListExperiments", () => {
 
     await screen.findByRole("link", { name: "Old Exp" });
     expect(spy.calls.at(-1)?.query).toMatchObject({
-      status: "archived",
+      "status[0]": "archived",
       "sort[0][field]": "updated",
       "sort[0][direction]": "desc",
     });
@@ -317,5 +317,108 @@ describe("ListExperiments", () => {
     await waitFor(() => {
       expect(container.querySelector('[aria-busy="true"]')).toBeNull();
     });
+  });
+
+  it("offers status and visibility filters on the main list", () => {
+    server.mount(contract.experiments.listExperiments, { body: envelope([]) });
+
+    render(<ListExperiments />);
+
+    expect(screen.getByRole("button", { name: "filters.status" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "filters.visibility" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
+  });
+
+  it("offers only the visibility filter in the archive", () => {
+    server.mount(contract.experiments.listExperiments, { body: envelope([]) });
+
+    render(<ListExperiments archived />);
+
+    expect(screen.queryByRole("button", { name: /filters\.status/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /filters\.visibility/ })).toBeInTheDocument();
+  });
+
+  it("lists the statuses without archived and filters through the API", async () => {
+    const user = userEvent.setup();
+    const replace = vi.mocked(nav.useRouter().replace);
+    replace.mockClear();
+    const spy = server.mount(contract.experiments.listExperiments, { body: envelope([]) });
+
+    render(<ListExperiments />);
+    await user.click(screen.getByRole("button", { name: "filters.status" }));
+
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "status.active",
+      "status.stale",
+      "status.published",
+    ]);
+    await user.click(screen.getByRole("option", { name: "status.stale" }));
+
+    expect(replace).toHaveBeenLastCalledWith("/platform/experiments?status=stale", {
+      scroll: false,
+    });
+    await waitFor(() => {
+      expect(spy.calls[spy.calls.length - 1].url).toContain("status%5B0%5D=stale");
+    });
+    expect(screen.getByRole("button", { name: /filters\.status/ })).toHaveTextContent("1");
+  });
+
+  it("restores shared filters and clears them from the toolbar", async () => {
+    const user = userEvent.setup();
+    vi.mocked(nav.useSearchParams).mockReturnValue(
+      new nav.ReadonlyURLSearchParams("status=active,stale&visibility=public"),
+    );
+    const replace = vi.mocked(nav.useRouter().replace);
+    replace.mockClear();
+    server.mount(contract.experiments.listExperiments, {
+      body: envelope([createExperiment({ id: "1", name: "Exp 1" })]),
+    });
+
+    render(<ListExperiments />);
+
+    expect(screen.getByRole("button", { name: /filters\.status/ })).toHaveTextContent("2");
+    expect(screen.getByRole("button", { name: /filters\.visibility/ })).toHaveTextContent("1");
+    await screen.findByRole("link", { name: "Exp 1" });
+
+    await user.click(screen.getByRole("button", { name: "common.clearFilters" }));
+
+    expect(replace).toHaveBeenLastCalledWith("/platform/experiments", { scroll: false });
+    expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
+  });
+
+  it("offers to clear the filters when nothing matches them", async () => {
+    const user = userEvent.setup();
+    vi.mocked(nav.useSearchParams).mockReturnValue(
+      new nav.ReadonlyURLSearchParams("visibility=private"),
+    );
+    server.mount(contract.experiments.listExperiments, { body: envelope([]) });
+
+    render(<ListExperiments />);
+
+    await screen.findByText("experiments.noFilterMatches");
+    expect(document.querySelector('a[href*="/guide/get-started/quick-start"]')).toBeNull();
+    const clearButtons = screen.getAllByRole("button", { name: "common.clearFilters" });
+    expect(clearButtons).toHaveLength(2);
+
+    await user.click(clearButtons[1]);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "common.clearFilters" })).toBeNull();
+    });
+  });
+
+  it("retries after a failed load", async () => {
+    const user = userEvent.setup();
+    server.mount(contract.experiments.listExperiments, { status: 500 });
+
+    render(<ListExperiments />);
+
+    const retry = await screen.findByRole("button", { name: "common.errors.tryAgain" });
+    server.mount(contract.experiments.listExperiments, {
+      body: envelope([createExperiment({ id: "1", name: "Exp 1" })]),
+    });
+    await user.click(retry);
+
+    expect(await screen.findByRole("link", { name: "Exp 1" })).toBeInTheDocument();
   });
 });

@@ -9,7 +9,7 @@ import initTranslations from "@repo/i18n/server";
 
 interface ExperimentPageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ sort?: string }>;
+  searchParams: Promise<{ sort?: string; status?: string; visibility?: string }>;
 }
 
 export async function generateMetadata({
@@ -22,15 +22,17 @@ export async function generateMetadata({
 }
 
 export default async function ExperimentPage({ searchParams }: ExperimentPageProps) {
-  // Only the default view is fetched ahead; a sorted view's input comes from the client's parsing.
-  const { sort } = await searchParams;
+  // Only the default view is fetched ahead; a sorted or filtered view's input comes from the
+  // client's parsing.
+  const { sort, status, visibility } = await searchParams;
+  const isDefaultView = !sort && !status && !visibility;
 
   return (
     <PageContainer width="fluid" className="space-y-6">
       <ResourceMetricsSummary kind="experiment" />
       <PrefetchedQueries
         queries={(utils) =>
-          sort ? [] : [experimentsListQuery(utils, { archived: false, page: 1 })]
+          isDefaultView ? [experimentsListQuery(utils, { archived: false, page: 1 })] : []
         }
       >
         <ListExperiments />

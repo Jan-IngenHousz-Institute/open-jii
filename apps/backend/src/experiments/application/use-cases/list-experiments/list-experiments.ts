@@ -27,10 +27,10 @@ export class ListExperimentsUseCase {
   async execute(
     userId: string,
     scope?: ResourceScope,
-    status?: ExperimentStatus,
+    status?: ExperimentStatus[],
     search?: string,
     sort?: ExperimentSort,
-    visibility?: ExperimentVisibility,
+    visibility?: ExperimentVisibility[],
   ): Promise<Result<ExperimentSearchRow[]>> {
     this.logger.log({
       msg: "Listing experiments",
@@ -80,10 +80,10 @@ export class ListExperimentsUseCase {
     page: number,
     pageSize: number,
     scope?: ResourceScope,
-    status?: ExperimentStatus,
+    status?: ExperimentStatus[],
     search?: string,
     sort?: ExperimentSort,
-    visibility?: ExperimentVisibility,
+    visibility?: ExperimentVisibility[],
   ): Promise<Result<{ items: ExperimentWithActivity[]; totalCount: number }>> {
     this.logger.log({
       msg: "Listing experiments",

@@ -742,7 +742,7 @@ describe("ExperimentRepository", () => {
       });
 
       // Act - query with active status filter
-      const result = await repository.findAll(mainUserId, undefined, "active");
+      const result = await repository.findAll(mainUserId, undefined, ["active"]);
 
       // Assert - should only see active experiment
       expect(result.isSuccess()).toBe(true);
@@ -775,7 +775,7 @@ describe("ExperimentRepository", () => {
       });
 
       // Act - query with archived status filter
-      const result = await repository.findAll(mainUserId, undefined, "archived");
+      const result = await repository.findAll(mainUserId, undefined, ["archived"]);
 
       // Assert - should only see archived experiment
       expect(result.isSuccess()).toBe(true);
@@ -785,6 +785,93 @@ describe("ExperimentRepository", () => {
       expect(experiments.length).toBe(1);
       expect(experiments[0].id).toBe(archivedExp.id);
       expect(experiments[0].status).toBe("archived");
+    });
+
+    it("should match either of two statuses", async () => {
+      const userId = await testApp.createTestUser({ email: "status-either@example.com" });
+      const { experiment: active } = await testApp.createExperiment({
+        name: "Active",
+        userId,
+        status: "active",
+      });
+      const { experiment: stale } = await testApp.createExperiment({
+        name: "Stale",
+        userId,
+        status: "stale",
+      });
+      await testApp.createExperiment({ name: "Published", userId, status: "published" });
+
+      const result = await repository.findAll(userId, undefined, ["active", "stale"]);
+
+      assertSuccess(result);
+      expect(result.value.map((e) => e.id).sort()).toEqual([active.id, stale.id].sort());
+    });
+
+    it("should include archived rows when archived is one of several statuses", async () => {
+      const userId = await testApp.createTestUser({ email: "status-with-archived@example.com" });
+      const { experiment: active } = await testApp.createExperiment({
+        name: "Active",
+        userId,
+        status: "active",
+      });
+      const { experiment: archived } = await testApp.createExperiment({
+        name: "Archived",
+        userId,
+        status: "archived",
+      });
+      await testApp.createExperiment({ name: "Stale", userId, status: "stale" });
+
+      const result = await repository.findAll(userId, undefined, ["active", "archived"]);
+
+      assertSuccess(result);
+      expect(result.value.map((e) => e.id).sort()).toEqual([active.id, archived.id].sort());
+    });
+
+    it("should require both status and visibility to match", async () => {
+      const userId = await testApp.createTestUser({ email: "status-and-visibility@example.com" });
+      const { experiment: match } = await testApp.createExperiment({
+        name: "Active Public",
+        userId,
+        status: "active",
+        visibility: "public",
+      });
+      await testApp.createExperiment({
+        name: "Active Private",
+        userId,
+        status: "active",
+        visibility: "private",
+      });
+      await testApp.createExperiment({
+        name: "Stale Public",
+        userId,
+        status: "stale",
+        visibility: "public",
+      });
+
+      const result = await repository.findAll(userId, undefined, ["active"], undefined, undefined, {
+        visibility: ["public"],
+      });
+
+      assertSuccess(result);
+      expect(result.value.map((e) => e.id)).toEqual([match.id]);
+    });
+
+    it("should treat empty filters as no filter and still hide archived rows", async () => {
+      const userId = await testApp.createTestUser({ email: "status-empty@example.com" });
+      const { experiment: active } = await testApp.createExperiment({
+        name: "Active",
+        userId,
+        status: "active",
+        visibility: "private",
+      });
+      await testApp.createExperiment({ name: "Archived", userId, status: "archived" });
+
+      const result = await repository.findAll(userId, undefined, [], undefined, undefined, {
+        visibility: [],
+      });
+
+      assertSuccess(result);
+      expect(result.value.map((e) => e.id)).toEqual([active.id]);
     });
 
     it("should filter experiments by status", async () => {
@@ -808,7 +895,7 @@ describe("ExperimentRepository", () => {
       });
 
       // Act - filter by active status
-      const result = await repository.findAll(userId, undefined, "active");
+      const result = await repository.findAll(userId, undefined, ["active"]);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -852,7 +939,7 @@ describe("ExperimentRepository", () => {
       });
 
       // Act - scope to "related" with "active" status
-      const result = await repository.findAll(mainUserId, "related", "active");
+      const result = await repository.findAll(mainUserId, "related", ["active"]);
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -935,7 +1022,7 @@ describe("ExperimentRepository", () => {
       });
 
       // Act
-      const result = await repository.findAll(mainUserId, undefined, "active", "Searchable");
+      const result = await repository.findAll(mainUserId, undefined, ["active"], "Searchable");
 
       // Assert
       expect(result.isSuccess()).toBe(true);
@@ -2068,7 +2155,7 @@ describe("ExperimentRepository", () => {
           .set({ status: "archived" })
           .where(eq(experimentsTable.id, experiment.id));
 
-        const listed = await repository.findAll(callerId, "all", "archived");
+        const listed = await repository.findAll(callerId, "all", ["archived"]);
         const access = await repository.checkAccess(experiment.id, callerId);
         assertSuccess(listed);
         assertSuccess(access);
@@ -2085,7 +2172,7 @@ describe("ExperimentRepository", () => {
           .set({ status: "archived" })
           .where(eq(experimentsTable.id, experiment.id));
 
-        const listed = await repository.findAll(callerId, "all", "archived");
+        const listed = await repository.findAll(callerId, "all", ["archived"]);
         const access = await repository.checkAccess(experiment.id, callerId);
         assertSuccess(listed);
         assertSuccess(access);

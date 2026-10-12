@@ -295,12 +295,12 @@ export class ExperimentRepository {
   private buildListing(
     userId: string,
     scope?: ResourceScope,
-    status?: ExperimentStatus,
+    status?: ExperimentStatus[],
     search?: string,
     options?: {
       organizationId?: string;
       includeArchived?: boolean;
-      visibility?: ExperimentVisibility;
+      visibility?: ExperimentVisibility[];
     },
     sort?: ExperimentSort,
   ) {
@@ -364,7 +364,7 @@ export class ExperimentRepository {
 
       // Archived rows are hidden unless asked for, either by filtering to them or by
       // opting in: a listing is a place to work, and archived means finished.
-      if (!includeArchived && status !== "archived") {
+      if (!includeArchived && !status?.includes("archived")) {
         conditions.push(ne(experiments.status, "archived"));
       }
 
@@ -403,12 +403,12 @@ export class ExperimentRepository {
         conditions.push(userId ? or(related, eq(experiments.createdBy, userId)) : sql`false`);
       }
 
-      if (status) {
-        conditions.push(eq(experiments.status, status));
+      if (status?.length) {
+        conditions.push(inArray(experiments.status, status));
       }
 
-      if (visibility) {
-        conditions.push(eq(experiments.visibility, visibility));
+      if (visibility?.length) {
+        conditions.push(inArray(experiments.visibility, visibility));
       }
 
       // Cross-table fields matched at query time (can't live in the generated search_vector):
@@ -523,13 +523,13 @@ export class ExperimentRepository {
   async findAll(
     userId: string,
     scope?: ResourceScope,
-    status?: ExperimentStatus,
+    status?: ExperimentStatus[],
     search?: string,
     limit?: number,
     options?: {
       organizationId?: string;
       includeArchived?: boolean;
-      visibility?: ExperimentVisibility;
+      visibility?: ExperimentVisibility[];
     },
     sort?: ExperimentSort,
   ): Promise<Result<ExperimentSearchRow[]>> {
@@ -568,12 +568,12 @@ export class ExperimentRepository {
     page: number,
     pageSize: number,
     scope?: ResourceScope,
-    status?: ExperimentStatus,
+    status?: ExperimentStatus[],
     search?: string,
     options?: {
       organizationId?: string;
       includeArchived?: boolean;
-      visibility?: ExperimentVisibility;
+      visibility?: ExperimentVisibility[];
     },
     sort?: ExperimentSort,
   ): Promise<Result<{ items: ExperimentSearchRow[]; totalCount: number }>> {

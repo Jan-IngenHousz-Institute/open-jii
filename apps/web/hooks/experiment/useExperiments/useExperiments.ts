@@ -2,7 +2,6 @@ import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
-import type { ExperimentStatus } from "@repo/api/domains/experiment/experiment.schema";
 import { zExperimentSort } from "@repo/api/domains/experiment/experiment.schema";
 import { isPaginatedList } from "@repo/api/shared/listing";
 
@@ -10,17 +9,17 @@ import { useDebounce } from "../../useDebounce";
 import { useListSorting } from "../../useListSorting";
 import { useSearchPending } from "../../useSearchPending";
 import { experimentsListQuery } from "./experiments-list-query";
+import { useExperimentListFilters } from "./useExperimentListFilters";
 
 export const useExperiments = ({
-  initialStatus = undefined,
   initialSearch = "",
   archived = false,
 }: {
-  initialStatus?: ExperimentStatus | undefined;
   initialSearch?: string;
   archived?: boolean;
 }) => {
-  const [status, setStatusState] = useState<ExperimentStatus | undefined>(initialStatus);
+  const filters = useExperimentListFilters({ archived });
+  const { status, visibility } = filters;
   const [search, setSearchState] = useState<string>(initialSearch);
   const [page, setPage] = useState(1);
   const { sort, setSort, toggleSort } = useListSorting(zExperimentSort);
@@ -31,13 +30,30 @@ export const useExperiments = ({
     setPage(1);
   };
 
-  const setStatus = (value: ExperimentStatus | undefined) => {
-    setStatusState(value);
+  const setStatus = (values: typeof status) => {
+    filters.setStatus(values);
+    setPage(1);
+  };
+
+  const setVisibility = (values: typeof visibility) => {
+    filters.setVisibility(values);
+    setPage(1);
+  };
+
+  const clearFilters = () => {
+    filters.clearFilters();
     setPage(1);
   };
 
   const query = useQuery({
-    ...experimentsListQuery(orpc, { archived, status, search: debouncedSearch, page, sort }),
+    ...experimentsListQuery(orpc, {
+      archived,
+      status,
+      visibility,
+      search: debouncedSearch,
+      page,
+      sort,
+    }),
     placeholderData: (prev) => prev,
   });
 
@@ -66,6 +82,10 @@ export const useExperiments = ({
     refetch: query.refetch,
     status,
     setStatus,
+    visibility,
+    setVisibility,
+    clearFilters,
+    hasActiveFilters: filters.hasActiveFilters,
     search,
     debouncedSearch,
     setSearch,
