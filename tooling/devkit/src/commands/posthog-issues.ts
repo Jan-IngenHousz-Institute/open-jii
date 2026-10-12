@@ -103,8 +103,10 @@ function count(value: unknown): number {
 export async function listIssues(client: PostHogClient, days: number): Promise<ReviewEntry[]> {
   const rows = rowsOf(await client.query(listQuery(days)));
   return rows.map((row) => {
+    const events = count(row.events);
     // An issue quiet in the window has no joined row, and ClickHouse fills the gap with the epoch.
-    const hasEvents = count(row.events) > 0;
+    const hasEvents = events > 0;
+
     return {
       id: text(row.id),
       name: text(row.name),
@@ -112,7 +114,7 @@ export async function listIssues(client: PostHogClient, days: number): Promise<R
       service: text(row.service) || "unknown",
       environment: text(row.environment) || "unknown",
       appVersion: text(row.app_version),
-      events: count(row.events),
+      events,
       users: count(row.users),
       lastSeen: hasEvents ? text(row.last_seen) || null : null,
       url: issueUrl(text(row.id)),
@@ -278,7 +280,8 @@ export async function showIssue(
 
   write(`${text(record.name)}: ${text(record.description)}\n`);
   write(`status ${text(record.status)}, ${issueUrl(id)}\n`);
-  if (summary !== undefined && count(summary.events) > 0) {
+  const hasEvents = summary !== undefined && count(summary.events) > 0;
+  if (hasEvents) {
     write(
       `${count(summary.events)} events, ${count(summary.users)} users, ` +
         `first ${text(summary.first_seen)}, last ${text(summary.last_seen)}\n`,

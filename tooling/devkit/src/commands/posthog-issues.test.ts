@@ -8,6 +8,7 @@ import {
   parseArgs,
   parseReview,
   planApply,
+  showIssue,
 } from "./posthog-issues.js";
 import type { ReviewEntry } from "./posthog-issues.js";
 
@@ -103,6 +104,28 @@ describe("listIssues", () => {
     const [first] = await listIssues(client({ query }), 30);
 
     expect(first).toMatchObject({ events: 0, lastSeen: null });
+  });
+});
+
+describe("showIssue", () => {
+  it("says an issue has no events left rather than printing empty dates", async () => {
+    const query = vi.fn<PostHogClient["query"]>().mockImplementation((hogql) =>
+      Promise.resolve(
+        hogql.includes("error_tracking_issues")
+          ? {
+              columns: ["name", "description", "status"],
+              results: [["Error", "boom", "resolved"]],
+            }
+          : hogql.includes("count() AS events")
+            ? { columns: ["events", "users"], results: [[0, 0]] }
+            : { columns: [], results: [] },
+      ),
+    );
+    const lines: string[] = [];
+
+    await showIssue(client({ query }), id, (line) => lines.push(line));
+
+    expect(lines).toContain("no events left in PostHog's retention\n");
   });
 });
 
