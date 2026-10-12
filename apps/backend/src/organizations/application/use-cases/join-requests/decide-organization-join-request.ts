@@ -80,7 +80,7 @@ export class DecideOrganizationJoinRequestUseCase {
       decision === "approve"
         ? await this.approve(organizationId, requestId, existing, currentUserId)
         : await this.reject(organizationId, requestId, existing, currentUserId);
-    return this.emailVisibility.redactOne(currentUserId, decided, nestedUserEmail());
+    return this.emailVisibility.redactAfterWrite(currentUserId, decided, nestedUserEmail());
   }
 
   private async approve(

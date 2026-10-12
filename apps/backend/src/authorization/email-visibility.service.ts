@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 
 import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
 import { grantRoleCan, orgRoleCan } from "@repo/auth/access";
@@ -60,6 +60,8 @@ export function collaboratorEmail<T extends ResourceCollaborator>(): EmailLens<T
 /** Decides email visibility. Resource grants alone never reveal an address. */
 @Injectable()
 export class EmailVisibilityService {
+  private readonly logger = new Logger(EmailVisibilityService.name);
+
   constructor(@Inject("DATABASE") private readonly db: DatabaseInstance) {}
 
   async visibleUserEmails(
@@ -170,6 +172,26 @@ export class EmailVisibilityService {
     if (result.isFailure()) return result;
     const [row] = await this.redact(callerId, [result.value], lens, scope);
     return success(row);
+  }
+
+  /** A visibility outage must not turn a committed decision into a failed response. */
+  async redactAfterWrite<T>(
+    callerId: string,
+    result: Result<T>,
+    lens: EmailLens<T>,
+    scope?: EmailScope,
+  ): Promise<Result<T>> {
+    if (result.isFailure()) return result;
+    try {
+      return await this.redactOne(callerId, result, lens, scope);
+    } catch {
+      this.logger.warn({
+        msg: "Email visibility lookup failed after a committed write; withholding email",
+        operation: "redact-after-write",
+        callerId,
+      });
+      return success(lens.withoutEmail(result.value));
+    }
   }
 
   /** Apply an answer already fetched, for callers that redact several lists at once. */

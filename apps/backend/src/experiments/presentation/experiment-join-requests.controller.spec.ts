@@ -11,10 +11,12 @@ import type {
 import type { ErrorResponse } from "@repo/api/shared/errors";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
+import { EmailVisibilityService } from "../../authorization/email-visibility.service";
 import { EmailAdapter } from "../../common/modules/email/services/email.adapter";
 import { success } from "../../common/utils/fp-utils";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
+import { ExperimentJoinRequestRepository } from "../core/repositories/experiment-join-request.repository";
 
 describe("ExperimentJoinRequestsController", () => {
   const testApp = TestHarness.App;
@@ -371,6 +373,55 @@ describe("ExperimentJoinRequestsController", () => {
       );
     });
   });
+
+  it.each(["approve", "reject"] as const)(
+    "keeps a committed %s successful and hides email when the visibility read fails",
+    async (decision) => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Decision visibility failure",
+        userId: adminUserId,
+        visibility: "public",
+      });
+      const createPath = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
+        id: experiment.id,
+      });
+      const created: SuperTestResponse<ExperimentJoinRequest> = await testApp
+        .post(createPath)
+        .withAuth(requesterUserId)
+        .send({})
+        .expect(StatusCodes.CREATED);
+      vi.spyOn(
+        testApp.module.get(EmailVisibilityService),
+        "visibleUserEmails",
+      ).mockRejectedValueOnce(new Error("Visibility read unavailable"));
+      const decisionPath = testApp.resolveOrpcPath(
+        decision === "approve"
+          ? contract.experiments.approveJoinRequest
+          : contract.experiments.rejectJoinRequest,
+        { id: experiment.id, requestId: created.body.id },
+      );
+
+      const response: SuperTestResponse<ExperimentJoinRequest> = await testApp
+        .post(decisionPath)
+        .withAuth(adminUserId)
+        .send({})
+        .expect(StatusCodes.OK);
+
+      const status = decision === "approve" ? "approved" : "rejected";
+      expect(response.body).toMatchObject({ status, user: { id: requesterUserId, email: null } });
+      expect(JSON.stringify(response.body)).not.toContain("requester@example.com");
+      const persisted = await testApp.module
+        .get(ExperimentJoinRequestRepository)
+        .findById(created.body.id);
+      expect(persisted.isSuccess() && persisted.value).toMatchObject({ status });
+      const access = await testApp.module.get(AuthorizationService).can(requesterUserId, {
+        resourceType: "experiment",
+        resourceId: experiment.id,
+        action: "contribute",
+      });
+      expect(access.allow).toBe(decision === "approve");
+    },
+  );
 
   describe("cancelJoinRequest", () => {
     it("lets the requester cancel their own pending request", async () => {

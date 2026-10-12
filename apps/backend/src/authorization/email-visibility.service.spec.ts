@@ -1,5 +1,6 @@
 import { experimentJoinRequests, organizationMembers, resourceGrants } from "@repo/database";
 
+import { AppError, failure } from "../common/utils/fp-utils";
 import { TestHarness } from "../test/test-harness";
 import {
   EmailVisibilityService,
@@ -226,6 +227,16 @@ describe("EmailVisibilityService", () => {
   });
 
   describe("redaction", () => {
+    it("preserves a failed write without querying email visibility", async () => {
+      const writeFailure = failure(AppError.internal("Decision not committed"));
+      const visibility = vi.spyOn(service, "visibleUserEmails");
+
+      const result = await service.redactAfterWrite(callerId, writeFailure, nestedUserEmail());
+
+      expect(result).toBe(writeFailure);
+      expect(visibility).not.toHaveBeenCalled();
+    });
+
     it("nulls a flat row's address and leaves a visible one", async () => {
       const rows = [
         { userId: callerId, email: "me@example.com" },

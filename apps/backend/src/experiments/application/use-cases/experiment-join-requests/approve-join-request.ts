@@ -125,9 +125,14 @@ export class ApproveJoinRequestUseCase {
         });
       }
 
-      return this.emailVisibility.redactOne(currentUserId, success(approved), nestedUserEmail(), {
-        experimentId,
-      });
+      return this.emailVisibility.redactAfterWrite(
+        currentUserId,
+        success(approved),
+        nestedUserEmail(),
+        {
+          experimentId,
+        },
+      );
     });
   }
 }
