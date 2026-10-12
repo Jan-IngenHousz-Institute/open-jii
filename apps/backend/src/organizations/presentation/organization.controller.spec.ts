@@ -16,8 +16,9 @@ import type {
 import { zSharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
+import { EmailVisibilityService } from "../../authorization/email-visibility.service";
 import { AnalyticsAdapter } from "../../common/modules/analytics/analytics.adapter";
-import { assertSuccess } from "../../common/utils/fp-utils";
+import { AppError, assertSuccess, failure } from "../../common/utils/fp-utils";
 import { CreateIotDeviceGroupUseCase } from "../../iot/application/use-cases/create-iot-device-group/create-iot-device-group";
 import { IotCalibrationDefinitionRepository } from "../../iot/core/repositories/iot-calibration-definition.repository";
 import type { MockAnalyticsAdapter } from "../../test/mocks/adapters/analytics.adapter.mock";
@@ -1443,6 +1444,62 @@ describe("OrganizationController", () => {
       const publicOrg = await seedPublicOrg();
 
       await testApp.get(path(publicOrg)).withAuth(outsiderId).expect(StatusCodes.FORBIDDEN);
+    });
+
+    it("does not disclose a private organization's teams to a non-member", async () => {
+      const privateOrg = await seedPrivateOrg();
+      const teamId = await testApp.createTeam(privateOrg, "Private crew");
+      await testApp.addTeamMember(teamId, ownerId);
+      const listTeams = vi.spyOn(testApp.module.get(OrganizationRepository), "listTeams");
+
+      await testApp.get(path(privateOrg)).withAuth(outsiderId).expect(StatusCodes.NOT_FOUND);
+
+      expect(listTeams).not.toHaveBeenCalled();
+    });
+
+    it("returns an empty team without requiring any visible member emails", async () => {
+      const publicOrg = await seedPublicOrg();
+      const teamId = await testApp.createTeam(publicOrg, "Empty crew");
+
+      const response: SuperTestResponse<OrganizationTeamList> = await testApp
+        .get(path(publicOrg))
+        .withAuth(memberId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toEqual([
+        expect.objectContaining({ id: teamId, name: "Empty crew", members: [] }),
+      ]);
+    });
+
+    it("returns an error without reading teams when the access lookup fails", async () => {
+      const publicOrg = await seedPublicOrg();
+      const repository = testApp.module.get(OrganizationRepository);
+      vi.spyOn(repository, "findAccess").mockResolvedValueOnce(
+        failure(AppError.internal("Access lookup unavailable")),
+      );
+      const listTeams = vi.spyOn(repository, "listTeams");
+
+      await testApp
+        .get(path(publicOrg))
+        .withAuth(ownerId)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+
+      expect(listTeams).not.toHaveBeenCalled();
+    });
+
+    it("returns an error without redacting when the team lookup fails", async () => {
+      const publicOrg = await seedPublicOrg();
+      vi.spyOn(testApp.module.get(OrganizationRepository), "listTeams").mockResolvedValueOnce(
+        failure(AppError.internal("Team lookup unavailable")),
+      );
+      const visibility = vi.spyOn(testApp.module.get(EmailVisibilityService), "visibleUserEmails");
+
+      await testApp
+        .get(path(publicOrg))
+        .withAuth(ownerId)
+        .expect(StatusCodes.INTERNAL_SERVER_ERROR);
+
+      expect(visibility).not.toHaveBeenCalled();
     });
   });
 

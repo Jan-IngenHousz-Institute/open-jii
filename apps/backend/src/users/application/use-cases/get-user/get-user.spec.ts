@@ -1,5 +1,7 @@
-import { assertFailure, assertSuccess } from "../../../../common/utils/fp-utils";
+import { EmailVisibilityService } from "../../../../authorization/email-visibility.service";
+import { AppError, assertFailure, assertSuccess, failure } from "../../../../common/utils/fp-utils";
 import { TestHarness } from "../../../../test/test-harness";
+import { UserRepository } from "../../../core/repositories/user.repository";
 import { GetUserUseCase } from "./get-user";
 
 describe("GetUserUseCase", () => {
@@ -97,4 +99,25 @@ describe("GetUserUseCase", () => {
     assertFailure(result);
     expect(result.error.code).toBe("NOT_FOUND");
   });
+
+  it.each(["self", "stranger"])(
+    "propagates a failed %s lookup without redacting",
+    async (target) => {
+      const targetId = target === "self" ? testUserId : await testApp.createTestUser({});
+      const repository = testApp.module.get(UserRepository);
+      const lookupFailure = failure(AppError.internal("User lookup unavailable"));
+      vi.spyOn(
+        repository,
+        target === "self" ? "findOne" : "findDiscoverable",
+      ).mockResolvedValueOnce(lookupFailure);
+      const redact = vi.spyOn(testApp.module.get(EmailVisibilityService), "redactOne");
+
+      const result = await useCase.execute(testUserId, targetId);
+
+      assertFailure(result);
+      expect(result).toBe(lookupFailure);
+      expect(result.error.code).toBe("INTERNAL_ERROR");
+      expect(redact).not.toHaveBeenCalled();
+    },
+  );
 });
