@@ -13,9 +13,10 @@ backlog every half hour.
 - **The macro pipeline is not running.** In the Databricks workspace, open
   `Macro-Execution-DLT-Pipeline-<ENV>` and read its latest update. "Since last macro" on the daily
   report says how long since it last wrote.
-- **The backend or the sandboxes are refusing.** Check the same alert list for `backend-5xx`,
-  `sandbox-errors`, `sandbox-throttles` and `sandbox-blocked-connections`. The pipeline retries a
-  failed batch, then fails its update.
+- **The backend or the sandboxes are refusing.** This rarely shows here: the pipeline retries a
+  failed batch twice, then writes each of its rows with the error and carries on, so the rows are no
+  longer waiting. `macro-failures` watches for that. Check the same alert list for `backend-5xx`,
+  `sandbox-errors`, `sandbox-throttles` and `sandbox-blocked-connections`.
 - **One row can never get a result.** The count has no lower time bound, so a row whose result was
   deleted keeps it above zero on its own. List what is waiting:
 
