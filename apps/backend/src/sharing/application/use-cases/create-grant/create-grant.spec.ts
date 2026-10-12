@@ -537,6 +537,29 @@ describe("createGrant", () => {
       );
       expect(await notificationsFor(grantee)).toEqual([]);
     });
+
+    // Nothing can be said about a resource that cannot be named, so the share
+    // stands and the grantee simply hears nothing.
+    it("still shares when the resource name cannot be read", async () => {
+      const macro = await testApp.createMacro({ name: "Unnameable", createdBy: owner });
+      const grantee = await testApp.createTestUser({ name: "Unnamed Grantee" });
+      vi.spyOn(sharingRepo, "findResourceName").mockResolvedValue(
+        failure(AppError.internal("name lookup unavailable")),
+      );
+
+      const result = await createGrant.execute(owner, "macro", macro.id, {
+        granteeType: "user",
+        granteeId: grantee,
+        role: "viewer",
+      });
+
+      assertSuccess(result);
+      expect(result.value.flatMap((row) => (isGranteeRow(row) ? [row.granteeId] : []))).toContain(
+        grantee,
+      );
+      expect(await notificationsFor(grantee)).toEqual([]);
+      expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+    });
   });
 
   describe("findResourceName", () => {

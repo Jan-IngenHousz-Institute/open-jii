@@ -5,8 +5,16 @@ import { isGranteeRow } from "@repo/api/domains/sharing/sharing.schema";
 import { and, eq, notifications, resourceGrants } from "@repo/database";
 
 import { EmailAdapter } from "../../../../common/modules/email/services/email.adapter";
-import { assertFailure, assertSuccess, success } from "../../../../common/utils/fp-utils";
+import {
+  AppError,
+  assertFailure,
+  assertSuccess,
+  failure,
+  success,
+} from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import { TestHarness } from "../../../../test/test-harness";
+import { SharingRepository } from "../../../core/repositories/sharing.repository";
 import { CreateGrantUseCase } from "../create-grant/create-grant";
 import { ListGrantsUseCase } from "../list-grants/list-grants";
 import { RevokeGrantUseCase } from "./revoke-grant";
@@ -16,6 +24,7 @@ describe("revokeGrant", () => {
   let createGrant: CreateGrantUseCase;
   let listGrants: ListGrantsUseCase;
   let revokeGrant: RevokeGrantUseCase;
+  let sharingRepo: SharingRepository;
   let emailAdapter: EmailAdapter;
   let owner: string;
 
@@ -28,6 +37,7 @@ describe("revokeGrant", () => {
     createGrant = testApp.module.get(CreateGrantUseCase);
     listGrants = testApp.module.get(ListGrantsUseCase);
     revokeGrant = testApp.module.get(RevokeGrantUseCase);
+    sharingRepo = testApp.module.get(SharingRepository);
     emailAdapter = testApp.module.get(EmailAdapter);
     owner = await testApp.createTestUser({ name: "Owner" });
     vi.spyOn(emailAdapter, "sendAccessGrantedNotification").mockResolvedValue(success(undefined));
@@ -134,6 +144,62 @@ describe("revokeGrant", () => {
     });
     expect(rows[0].params).not.toHaveProperty("role");
     expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+  });
+
+  // A resource deleted in the same breath as the revoke has no name left to put in
+  // the row; the revoke itself still stands.
+  it("still revokes when the resource can no longer be named", async () => {
+    const macro = await testApp.createMacro({ name: "Vanished", createdBy: owner });
+    const collaborator = await testApp.createTestUser({ name: "Quiet Collaborator" });
+    const grant = await testApp.addResourceGrant({
+      resourceType: "macro",
+      resourceId: macro.id,
+      granteeType: "user",
+      granteeId: collaborator,
+      role: "viewer",
+      createdBy: owner,
+    });
+    vi.spyOn(sharingRepo, "findResourceName").mockResolvedValue(success(null));
+
+    assertSuccess(await revokeGrant.execute(owner, "macro", macro.id, grant.id));
+
+    expect(
+      await testApp.database.select().from(resourceGrants).where(eq(resourceGrants.id, grant.id)),
+    ).toEqual([]);
+    expect(
+      await testApp.database
+        .select()
+        .from(notifications)
+        .where(eq(notifications.recipientId, collaborator)),
+    ).toEqual([]);
+  });
+
+  it("still revokes when the notification cannot be dispatched", async () => {
+    const macro = await testApp.createMacro({ name: "Dispatch Down", createdBy: owner });
+    const collaborator = await testApp.createTestUser({ name: "Unreachable Collaborator" });
+    const grant = await testApp.addResourceGrant({
+      resourceType: "macro",
+      resourceId: macro.id,
+      granteeType: "user",
+      granteeId: collaborator,
+      role: "viewer",
+      createdBy: owner,
+    });
+    vi.spyOn(testApp.module.get(NotificationDispatchService), "dispatch").mockResolvedValue(
+      failure(AppError.internal("notifications unavailable")),
+    );
+
+    assertSuccess(await revokeGrant.execute(owner, "macro", macro.id, grant.id));
+
+    expect(
+      await testApp.database.select().from(resourceGrants).where(eq(resourceGrants.id, grant.id)),
+    ).toEqual([]);
+    expect(
+      await testApp.database
+        .select()
+        .from(notifications)
+        .where(eq(notifications.recipientId, collaborator)),
+    ).toEqual([]);
   });
 
   // An archived experiment is immutable everywhere else — the read-only row controls

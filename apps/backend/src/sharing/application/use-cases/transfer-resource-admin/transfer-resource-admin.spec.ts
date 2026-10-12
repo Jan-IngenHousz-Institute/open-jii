@@ -4,7 +4,8 @@ import { and, createSecondaryDatabase, eq, notifications, resourceGrants } from 
 import type { DatabaseInstance } from "@repo/database";
 
 import { EmailAdapter } from "../../../../common/modules/email/services/email.adapter";
-import { assertSuccess, success } from "../../../../common/utils/fp-utils";
+import { AppError, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import { TestHarness } from "../../../../test/test-harness";
 import { UserRepository } from "../../../../users/core/repositories/user.repository";
 import { SharingRepository } from "../../../core/repositories/sharing.repository";
@@ -621,6 +622,47 @@ describe("TransferResourceAdminUseCase", () => {
       expect(result.value[0].success).toBe(true);
       expect(await notificationsFor(target)).toEqual([]);
       expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+    });
+
+    // The hand-off clears a deletion blocker, so neither failure may undo it.
+    it("still hands over when the resource can no longer be named", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Unnameable Hand-off",
+        userId: testUserId,
+      });
+      const target = await testApp.createTestUser({ email: "unnamed-handover@example.com" });
+      vi.spyOn(sharingRepo, "findResourceName").mockResolvedValue(success(null));
+
+      const result = await useCase.execute(
+        [{ resourceType: "experiment", resourceId: experiment.id, targetUserId: target }],
+        testUserId,
+      );
+
+      assertSuccess(result);
+      expect(result.value[0].success).toBe(true);
+      expect(await directGrantRoleOf("experiment", experiment.id, target)).toBe("admin");
+      expect(await notificationsFor(target)).toEqual([]);
+    });
+
+    it("still hands over when the notification cannot be dispatched", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Dispatch Down Hand-off",
+        userId: testUserId,
+      });
+      const target = await testApp.createTestUser({ email: "unreachable-handover@example.com" });
+      vi.spyOn(testApp.module.get(NotificationDispatchService), "dispatch").mockResolvedValue(
+        failure(AppError.internal("notifications unavailable")),
+      );
+
+      const result = await useCase.execute(
+        [{ resourceType: "experiment", resourceId: experiment.id, targetUserId: target }],
+        testUserId,
+      );
+
+      assertSuccess(result);
+      expect(result.value[0].success).toBe(true);
+      expect(await directGrantRoleOf("experiment", experiment.id, target)).toBe("admin");
+      expect(await notificationsFor(target)).toEqual([]);
     });
   });
 
