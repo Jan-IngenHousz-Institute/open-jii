@@ -178,6 +178,10 @@ describe("catalog numbering", () => {
     expect(newest.range[1]).toBe(Math.max(...metrics.map((m) => m.num)));
   });
 
+  it("keeps nums below 200, since a num is its chart's panel id and the board's own panels start there", () => {
+    expect(metrics.filter((m) => m.num >= 200).map((m) => m.id)).toEqual([]);
+  });
+
   it("uses kebab-case ids so they survive as Slack text and CLI arguments", () => {
     const offenders = metrics.filter((m) => !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(m.id));
     expect(offenders.map((m) => m.id)).toEqual([]);
