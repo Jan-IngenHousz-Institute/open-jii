@@ -54,7 +54,6 @@ export function ExperimentOverviewCard({
   visit,
 }: ExperimentOverviewCardProps) {
   const { t } = useTranslation("experiments");
-  const { t: tCommon } = useTranslation();
 
   const owner = ownerName(experiment);
   const updated = formatShortDate(experiment.updatedAt, locale);
@@ -64,7 +63,7 @@ export function ExperimentOverviewCard({
     <>
       {visit?.callerRole ? (
         <Badge variant="outline" className="font-normal">
-          {tCommon(`organizations.roles.${visit.callerRole}`)}
+          {t(`callerRoles.${visit.callerRole}`)}
         </Badge>
       ) : null}
       {experiment.organizationName ? (

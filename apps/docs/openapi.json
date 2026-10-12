@@ -1603,6 +1603,7 @@
                             "enum": [
                               "owner",
                               "admin",
+                              "viewer",
                               "member"
                             ],
                             "type": "string"

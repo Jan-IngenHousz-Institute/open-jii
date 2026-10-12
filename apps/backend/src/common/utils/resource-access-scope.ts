@@ -227,7 +227,7 @@ export function resourceTierExpression(params: {
 }
 
 /** The names {@link resourceRoleExpression} reports, strongest first. */
-export type ResourceRoleName = "owner" | "admin" | "member";
+export type ResourceRoleName = "owner" | "admin" | "viewer" | "member";
 
 /**
  * The strongest role that reaches the caller on each row, by name: the owning
@@ -235,7 +235,9 @@ export type ResourceRoleName = "owner" | "admin" | "member";
  * stored role decides it. Authorship is not a role, so a creator without one gets
  * null, as does anyone reaching the row only because it is public. `owner` and
  * `admin` carry the same control; the name is reported because it is what they were
- * given.
+ * given. The lowest tier is named by where it comes from: a `viewer` grant reports
+ * `viewer`, plain owning-org membership reports `member`, and a caller holding both
+ * gets `viewer`, the name the collaborators list shows them under.
  */
 export function resourceRoleExpression(params: {
   database: DatabaseInstance;
@@ -249,24 +251,27 @@ export function resourceRoleExpression(params: {
     return sql<null>`null::text`;
   }
 
-  const holds = (grant: readonly string[], owningOrg: readonly string[]) => {
+  // A side left out drops its arms; the filter list cannot be empty, so its slot is
+  // filled from the other side and never read.
+  const holds = (roles: { grant?: readonly string[]; owningOrg?: readonly string[] }) => {
+    const grant = roles.grant ?? roles.owningOrg ?? [];
+    const owningOrg = roles.owningOrg ?? grant;
     const parts = resourceRelationshipParts({
       ...params,
       userId,
       roleFilters: { grant, owningOrg },
     });
     return or(
-      parts.userGrantExists,
-      parts.teamGrantExists,
-      parts.orgGrantExists,
-      parts.owningOrgMemberExists,
+      ...(roles.grant ? [parts.userGrantExists, parts.teamGrantExists, parts.orgGrantExists] : []),
+      ...(roles.owningOrg ? [parts.owningOrgMemberExists] : []),
     );
   };
 
   return sql<ResourceRoleName | null>`(CASE
-    WHEN ${holds(["owner"], ["owner"])} THEN 'owner'
-    WHEN ${holds(["admin"], ["admin"])} THEN 'admin'
-    WHEN ${holds(["viewer"], ["member"])} THEN 'member'
+    WHEN ${holds({ grant: ["owner"], owningOrg: ["owner"] })} THEN 'owner'
+    WHEN ${holds({ grant: ["admin"], owningOrg: ["admin"] })} THEN 'admin'
+    WHEN ${holds({ grant: ["viewer"] })} THEN 'viewer'
+    WHEN ${holds({ owningOrg: ["member"] })} THEN 'member'
     ELSE NULL
   END)`;
 }

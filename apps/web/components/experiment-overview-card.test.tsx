@@ -20,7 +20,7 @@ describe("ExperimentOverviewCard", () => {
   it("shows the caller's role and when they opened it in place of the update date", () => {
     renderCard({ openedAt: "2025-01-20T09:30:00.000Z", callerRole: "owner" });
 
-    expect(screen.getByText("organizations.roles.owner")).toBeInTheDocument();
+    expect(screen.getByText("callerRoles.owner")).toBeInTheDocument();
     expect(screen.getByText("openedOn")).toBeInTheDocument();
     expect(screen.queryByTitle("columns.updated")).not.toBeInTheDocument();
   });
@@ -28,7 +28,7 @@ describe("ExperimentOverviewCard", () => {
   it("shows no role when none reaches the caller", () => {
     renderCard({ openedAt: "2025-01-20T09:30:00.000Z", callerRole: null });
 
-    expect(screen.queryByText(/organizations\.roles\./)).not.toBeInTheDocument();
+    expect(screen.queryByText(/callerRoles\./)).not.toBeInTheDocument();
     expect(screen.getByText("openedOn")).toBeInTheDocument();
   });
 

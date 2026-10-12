@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 
-import { and, desc, eq, resourceVisits, sql, users } from "@repo/database";
+import { and, desc, eq, resourceVisits, sql } from "@repo/database";
 import type { DatabaseInstance } from "@repo/database";
 
 import { Result, tryCatch } from "../../../common/utils/fp-utils";
@@ -21,12 +21,10 @@ export class VisitRepository {
       await this.database.transaction(async (tx) => {
         // All visit writers for one user take the same lock. Without it, two tabs can
         // each insert a different 51st row and both decide that nothing needs pruning.
-        await tx
-          .select({ id: users.id })
-          .from(users)
-          .where(eq(users.id, userId))
-          .limit(1)
-          .for("update");
+        // An advisory lock, not FOR UPDATE on users, so profile writes never queue behind it.
+        await tx.execute(
+          sql`SELECT pg_advisory_xact_lock(hashtext('resource_visits'), hashtext(${userId}))`,
+        );
 
         const visitedAt = sql`(now() AT TIME ZONE 'UTC')`;
 

@@ -61,7 +61,7 @@ export const zExperimentList = z.array(zExperimentListEntry);
  * role and every grant that reaches them. `owner` and `admin` carry the same control;
  * the name is what they were given.
  */
-export const zExperimentCallerRole = z.enum(["owner", "admin", "member"]);
+export const zExperimentCallerRole = z.enum(["owner", "admin", "viewer", "member"]);
 
 const zRecentlyOpenedExperiment = zExperimentListEntry.extend({
   /** When the caller last opened the experiment's overview. */

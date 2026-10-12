@@ -2225,14 +2225,14 @@ describe("ExperimentRepository", () => {
         expect(await roleOn(experiment.id)).toBe("admin");
       });
 
-      it("is member for a viewer grant", async () => {
+      it("is viewer for a viewer grant", async () => {
         const { experiment } = await testApp.createExperiment({ name: "Shared", userId: ownerId });
         await testApp.addExperimentCollaborator(experiment.id, testUserId);
 
-        expect(await roleOn(experiment.id)).toBe("member");
+        expect(await roleOn(experiment.id)).toBe("viewer");
       });
 
-      it("is member for a viewer grant reached through a team", async () => {
+      it("is viewer for a viewer grant reached through a team", async () => {
         const organizationId = await testApp.createOrganization();
         await testApp.addOrganizationMember(organizationId, ownerId, "owner");
         const teamId = await testApp.createTeam(organizationId);
@@ -2250,7 +2250,34 @@ describe("ExperimentRepository", () => {
           role: "viewer",
         });
 
+        expect(await roleOn(experiment.id)).toBe("viewer");
+      });
+
+      it("is member for plain membership of the owning organization", async () => {
+        const organizationId = await testApp.createOrganization();
+        await testApp.addOrganizationMember(organizationId, ownerId, "owner");
+        await testApp.addOrganizationMember(organizationId, testUserId, "member");
+        const { experiment } = await testApp.createExperiment({
+          name: "Lab work",
+          userId: ownerId,
+          organizationId,
+        });
+
         expect(await roleOn(experiment.id)).toBe("member");
+      });
+
+      it("is viewer when a viewer grant and plain membership both reach the caller", async () => {
+        const organizationId = await testApp.createOrganization();
+        await testApp.addOrganizationMember(organizationId, ownerId, "owner");
+        await testApp.addOrganizationMember(organizationId, testUserId, "member");
+        const { experiment } = await testApp.createExperiment({
+          name: "Lab work",
+          userId: ownerId,
+          organizationId,
+        });
+        await testApp.addExperimentCollaborator(experiment.id, testUserId);
+
+        expect(await roleOn(experiment.id)).toBe("viewer");
       });
 
       it("follows the caller's role in the owning organization", async () => {

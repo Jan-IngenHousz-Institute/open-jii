@@ -54,8 +54,8 @@ describe("UserExperimentsSection", () => {
 
     render(<UserExperimentsSection />);
 
-    expect(await screen.findByText("organizations.roles.admin")).toBeInTheDocument();
-    expect(screen.getByText("organizations.roles.member")).toBeInTheDocument();
+    expect(await screen.findByText("callerRoles.admin")).toBeInTheDocument();
+    expect(screen.getByText("callerRoles.member")).toBeInTheDocument();
     expect(screen.getAllByText("openedOn")).toHaveLength(2);
   });
 
