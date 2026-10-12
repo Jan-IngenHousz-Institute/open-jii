@@ -203,13 +203,24 @@ for (item in batch_items) {
     on.exit(setTimeLimit(cpu = Inf, elapsed = Inf, transient = FALSE))
     
     eval(parsed_code, envir = run_env)
-    
+
     # Success
     # Convert output env back to a list for JSON.
+    output <- as.list(run_env$output)
+    # An empty list serialises as [], which is not an output; named, it serialises as {}.
+    if (length(output) == 0) {
+      names(output) <- character(0)
+    }
+    # Serialised per item, so an output JSON cannot carry, such as an environment, fails its own
+    # item instead of the whole batch.
+    tryCatch(
+      toJSON(output, auto_unbox = TRUE, digits = NA, null = "null"),
+      error = function(e) stop(paste0("output cannot be sent as JSON: ", conditionMessage(e)), call. = FALSE)
+    )
     list(
       id = item$id,
       success = TRUE,
-      output = as.list(run_env$output)
+      output = output
     )
   }, error = function(e) {
     list(

@@ -108,6 +108,11 @@ return {
 Use keys that are stable in the selected protocol's output. Return a dictionary
 even for one value so downstream cells and exported tables have named fields.
 
+In Python, convert NumPy values with `float()`, `int()` or `.tolist()` before
+returning them, and use `None` rather than `NaN`. A value JSON cannot carry fails
+that measurement's macro with an error saying so, and the other measurements
+still run.
+
 ## Read earlier workbook values with `ctx`
 
 Name the producing cells **Baseline** and **Stress**. Their canonical keys are
