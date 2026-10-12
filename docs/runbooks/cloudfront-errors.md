@@ -49,11 +49,13 @@ failure and is easy to misread as intermittent.
 
 ## What this metric will not tell you
 
-A page that renders blank with a 200 does not appear here at all. CloudFront is happy, the Lambda is
-happy, and users see nothing, and no alert watches for it: the web app sends pageviews only after
-consent, too few to alert on. If users report an outage the infrastructure disagrees with, load the
-site in a private window and read the browser console. The error inbox has the exception only if a
-visitor who accepted cookies hit it. If the onset matches a web deploy, roll back first.
+A page that renders blank with a 200 does not appear here at all: CloudFront and the Lambda are both
+happy while users see nothing. An error the page server throws while rendering reaches the error
+inbox for every visitor, and a new one posts to Slack. An error in the browser reaches it only from a
+visitor who accepted cookies, once the analytics have loaded, so a blank page that throws nothing on
+the server can pass unnoticed. If users report an outage the infrastructure disagrees with, load the
+site in a private window and read the browser console. If the onset matches a web deploy, roll back
+first.
 
 ## Closing
 

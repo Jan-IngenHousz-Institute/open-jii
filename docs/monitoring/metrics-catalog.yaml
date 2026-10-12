@@ -30,7 +30,8 @@ version: 1
 
 # A num in a runbook, a Slack line or an incident note has to mean one thing forever, so
 # numbers are never reused. A retired entry keeps its num and goes active: false; a merged
-# entry leaves a gap recorded here; a new entry takes the next num after the last pass.
+# entry, or one dropped before it was ever built, leaves a gap recorded here; a new entry takes
+# the next num after the last pass.
 # The consistency tests hold the catalog to this block.
 passes:
   - date: 2026-08-14
@@ -969,7 +970,7 @@ metrics:
     slots: [alert]
     severity: warning
     runbook: docs/runbooks/client-error-spike.md
-    notes: Delivered by PostHog's error alerts, not through CloudWatch.
+    notes: Delivered by PostHog's error alerts, which cover every service, not through CloudWatch.
 
   # Product insights (PostHog, need event taxonomy)
   - num: 44

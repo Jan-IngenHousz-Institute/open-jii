@@ -9,8 +9,9 @@ Nobody can use the platform while it holds.
 
 The probe goes through CloudFront to the OpenNext server Lambda, whose proxy answers `/` with a
 redirect to `/en-US/`. Route 53 counts any status from 200 to 399 as healthy, so a pass means the
-edge, the Lambda and the proxy answer. It never renders a page: a broken home page behind a working
-redirect passes, and no alert watches for that.
+edge, the Lambda and the proxy answer. It never renders a page, so a home page that renders blank
+behind a working redirect passes. One that fails with a server error still shows in
+`cloudfront-errors`.
 
 ## Confirm it from outside
 
