@@ -18,7 +18,8 @@ import { HEALTH_EMAIL_PORT } from "./core/ports/email.port";
 import { HealthController } from "./presentation/health.controller";
 
 @Module({
-  imports: [TerminusModule, AwsModule, DatabricksModule, EmailModule],
+  // The service logs what is down itself, once per round and with its reasons.
+  imports: [TerminusModule.forRoot({ logger: false }), AwsModule, DatabricksModule, EmailModule],
   controllers: [HealthController],
   providers: [
     DatabaseHealthIndicator,

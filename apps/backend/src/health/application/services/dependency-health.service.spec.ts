@@ -40,7 +40,10 @@ describe("DependencyHealthService", () => {
     vi.resetAllMocks();
     vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
     vi.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
-    config = { "health.deployed": true, "health.environment": "dev" };
+    config = {
+      "health.databaseClusterIdentifier": "open-jii-dev-db-cluster",
+      "health.environment": "dev",
+    };
     database.check.mockImplementation(() =>
       Promise.resolve(results.check("database").up({ paused: true })),
     );
@@ -81,8 +84,8 @@ describe("DependencyHealthService", () => {
     )?.value;
   }
 
-  it("does nothing outside the deployed service", async () => {
-    config["health.deployed"] = false;
+  it("does nothing without a database cluster, as outside the deployed service", async () => {
+    config["health.databaseClusterIdentifier"] = undefined;
 
     await service.checkDependencies();
 
@@ -93,6 +96,7 @@ describe("DependencyHealthService", () => {
   it("publishes every dependency as up, and the database as paused", async () => {
     await service.checkDependencies();
 
+    expect(database.check).toHaveBeenCalledWith("open-jii-dev-db-cluster");
     const metrics = published();
     for (const dependency of ["database", "databricks", "email", "iot"]) {
       expect(value(metrics, "DependencyUp", dependency)).toBe(1);
@@ -123,7 +127,19 @@ describe("DependencyHealthService", () => {
     await vi.advanceTimersByTimeAsync(DEPENDENCY_CHECK_TIMEOUT_MS);
     await run;
 
-    expect(value(published(), "DependencyUp", "iot")).toBe(0);
+    const metrics = published();
+    expect(value(metrics, "DependencyUp", "iot")).toBe(0);
+    expect(value(metrics, "DependencyCheckMilliseconds", "iot")).toBe(DEPENDENCY_CHECK_TIMEOUT_MS);
+  });
+
+  it("marks a dependency whose check throws as down and still publishes the rest", async () => {
+    databricks.check.mockRejectedValue(new Error("socket hang up"));
+
+    await service.checkDependencies();
+
+    const metrics = published();
+    expect(value(metrics, "DependencyUp", "databricks")).toBe(0);
+    expect(value(metrics, "DependencyUp", "email")).toBe(1);
   });
 
   it("logs a failed publish with its error code", async () => {

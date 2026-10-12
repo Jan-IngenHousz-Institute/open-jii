@@ -33,13 +33,14 @@ export class DependencyHealthService {
 
   @Cron(CronExpression.EVERY_5_MINUTES)
   async checkDependencies(): Promise<void> {
-    if (!this.configService.get<boolean>("health.deployed")) {
+    const clusterIdentifier = this.configService.get<string>("health.databaseClusterIdentifier");
+    if (!clusterIdentifier) {
       return;
     }
 
     const environment = this.configService.get<string>("health.environment") ?? "unknown";
     const durations = new Map<string, number>();
-    const result = await this.runChecks(durations);
+    const result = await this.runChecks(clusterIdentifier, durations);
     const down = Object.entries(result.details)
       .filter(([, detail]) => detail.status === "down")
       .map(([dependency]) => dependency);
@@ -68,10 +69,14 @@ export class DependencyHealthService {
     }
   }
 
-  private async runChecks(durations: Map<string, number>): Promise<HealthCheckResult> {
+  private async runChecks(
+    clusterIdentifier: string,
+    durations: Map<string, number>,
+  ): Promise<HealthCheckResult> {
     try {
       return await this.healthCheckService.check([
-        () => this.timed("database", () => this.databaseIndicator.check(), durations),
+        () =>
+          this.timed("database", () => this.databaseIndicator.check(clusterIdentifier), durations),
         () => this.timed("databricks", () => this.databricksIndicator.check(), durations),
         () => this.timed("email", () => this.emailIndicator.check(), durations),
         () => this.timed("iot", () => this.iotIndicator.check(), durations),
@@ -107,6 +112,11 @@ export class DependencyHealthService {
 
     try {
       return await Promise.race([check(), timeout]);
+    } catch (error) {
+      // Terminus rethrows anything but a down result, which would lose every dependency's round.
+      return this.healthIndicatorService
+        .check(key)
+        .down({ reason: error instanceof Error ? error.message : String(error) });
     } finally {
       clearTimeout(timer);
       durations.set(key, Date.now() - started);

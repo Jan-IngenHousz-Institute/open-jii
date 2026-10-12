@@ -5,7 +5,8 @@ import type { HealthIndicatorResult } from "@nestjs/terminus";
 import { HEALTH_EMAIL_PORT } from "../../core/ports/email.port";
 import type { EmailPort } from "../../core/ports/email.port";
 
-// Sign-in codes and invitations travel over this login, so a refused one blocks sign-ups.
+// Logs in with the backend's own email setting. Sign-in codes use a separate setting, which holds
+// the same SES login today.
 @Injectable()
 export class EmailHealthIndicator {
   constructor(

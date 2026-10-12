@@ -1,4 +1,3 @@
-import { ConfigService } from "@nestjs/config";
 import { HealthIndicatorService } from "@nestjs/terminus";
 import { Test } from "@nestjs/testing";
 
@@ -13,18 +12,16 @@ describe("DatabaseHealthIndicator", () => {
     probeIotEndpoint: vi.fn(),
     publishMetrics: vi.fn(),
   };
-  let clusterIdentifier: string | undefined;
+  const clusterIdentifier = "open-jii-dev-db-cluster";
   let indicator: DatabaseHealthIndicator;
 
   beforeEach(async () => {
     vi.resetAllMocks();
-    clusterIdentifier = "open-jii-dev-db-cluster";
     const module = await Test.createTestingModule({
       providers: [
         DatabaseHealthIndicator,
         HealthIndicatorService,
         { provide: HEALTH_AWS_PORT, useValue: awsPort },
-        { provide: ConfigService, useValue: { get: () => clusterIdentifier } },
       ],
     }).compile();
     indicator = module.get(DatabaseHealthIndicator);
@@ -34,7 +31,7 @@ describe("DatabaseHealthIndicator", () => {
     awsPort.databaseClusterStatus.mockResolvedValue(success("available"));
     awsPort.latestDatabaseCapacity.mockResolvedValue(success(0));
 
-    const result = await indicator.check();
+    const result = await indicator.check(clusterIdentifier);
 
     expect(result).toEqual({ database: { status: "up", paused: true } });
     expect(awsPort.latestDatabaseCapacity).toHaveBeenCalledWith("open-jii-dev-db-cluster");
@@ -44,13 +41,15 @@ describe("DatabaseHealthIndicator", () => {
     awsPort.databaseClusterStatus.mockResolvedValue(success("backing-up"));
     awsPort.latestDatabaseCapacity.mockResolvedValue(success(0.5));
 
-    expect(await indicator.check()).toEqual({ database: { status: "up", paused: false } });
+    expect(await indicator.check(clusterIdentifier)).toEqual({
+      database: { status: "up", paused: false },
+    });
   });
 
   it("reports a cluster that cannot serve as down, with its status", async () => {
     awsPort.databaseClusterStatus.mockResolvedValue(success("stopped"));
 
-    expect(await indicator.check()).toEqual({
+    expect(await indicator.check(clusterIdentifier)).toEqual({
       database: { status: "down", reason: "The cluster is stopped" },
     });
     expect(awsPort.latestDatabaseCapacity).not.toHaveBeenCalled();
@@ -59,17 +58,17 @@ describe("DatabaseHealthIndicator", () => {
   it("reports down when AWS cannot be asked", async () => {
     awsPort.databaseClusterStatus.mockResolvedValue(failure(AppError.internal("AccessDenied")));
 
-    expect(await indicator.check()).toEqual({
+    expect(await indicator.check(clusterIdentifier)).toEqual({
       database: { status: "down", reason: "AccessDenied" },
     });
   });
 
-  it("reports down when no cluster is configured", async () => {
-    clusterIdentifier = undefined;
+  it("stays up, not paused, when the capacity cannot be read", async () => {
+    awsPort.databaseClusterStatus.mockResolvedValue(success("available"));
+    awsPort.latestDatabaseCapacity.mockResolvedValue(failure(AppError.internal("AccessDenied")));
 
-    const result = await indicator.check();
-
-    expect(result.database.status).toBe("down");
-    expect(awsPort.databaseClusterStatus).not.toHaveBeenCalled();
+    expect(await indicator.check(clusterIdentifier)).toEqual({
+      database: { status: "up", paused: false },
+    });
   });
 });

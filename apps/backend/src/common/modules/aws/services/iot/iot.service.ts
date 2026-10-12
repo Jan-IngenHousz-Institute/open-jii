@@ -191,7 +191,7 @@ export class AwsIotService {
     return result;
   }
 
-  // Bypasses the cache, so a health check learns whether IoT answers now.
+  // Bypasses the cache, so the answer reflects whether IoT answers now.
   async probeDataEndpoint(): Promise<Result<void>> {
     return tryCatch(
       async () => {

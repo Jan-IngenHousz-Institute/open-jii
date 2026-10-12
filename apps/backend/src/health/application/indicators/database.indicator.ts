@@ -1,5 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { HealthIndicatorService } from "@nestjs/terminus";
 import type { HealthIndicatorResult } from "@nestjs/terminus";
 
@@ -10,31 +9,29 @@ import type { AwsPort } from "../../core/ports/aws.port";
 const SERVING_STATUSES = new Set([
   "available",
   "backing-up",
-  "modifying",
-  "upgrading",
   "maintenance",
+  "modifying",
   "renaming",
+  "resetting-master-credentials",
   "storage-optimization",
+  "update-iam-db-auth",
+  "upgrading",
 ]);
 
 // Asks AWS rather than the database. A connection every few minutes would stop the cluster from
 // ever reaching the idle time it needs to pause, and any connection attempt wakes a paused one.
 @Injectable()
 export class DatabaseHealthIndicator {
+  private readonly logger = new Logger(DatabaseHealthIndicator.name);
+
   constructor(
     private readonly healthIndicatorService: HealthIndicatorService,
-    private readonly configService: ConfigService,
     @Inject(HEALTH_AWS_PORT)
     private readonly awsPort: AwsPort,
   ) {}
 
-  async check(): Promise<HealthIndicatorResult<"database">> {
+  async check(clusterIdentifier: string): Promise<HealthIndicatorResult<"database">> {
     const indicator = this.healthIndicatorService.check("database");
-    const clusterIdentifier = this.configService.get<string>("health.databaseClusterIdentifier");
-
-    if (!clusterIdentifier) {
-      return indicator.down({ reason: "No database cluster identifier is configured" });
-    }
 
     const status = await this.awsPort.databaseClusterStatus(clusterIdentifier);
     if (status.isFailure()) {
@@ -44,7 +41,16 @@ export class DatabaseHealthIndicator {
       return indicator.down({ reason: `The cluster is ${status.value}` });
     }
 
+    // Capacity only tells a paused cluster from a running one, so a failed read leaves it up.
     const capacity = await this.awsPort.latestDatabaseCapacity(clusterIdentifier);
+    if (capacity.isFailure()) {
+      this.logger.warn({
+        msg: "Failed to read database capacity",
+        errorCode: capacity.error.code,
+        operation: "checkDatabase",
+        error: capacity.error.message,
+      });
+    }
     const isPaused = capacity.isSuccess() && capacity.value === 0;
 
     return indicator.up({ paused: isPaused });
