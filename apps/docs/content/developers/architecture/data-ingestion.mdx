@@ -88,7 +88,9 @@ meaning:
 | `{sensorVersion}` | Device firmware or hardware revision.             | Preserved as provenance so results can be traced to device behavior.                |
 | `{sensorId}`      | Unique identifier of the physical device.         | Attributes readings to one device across sessions.                                  |
 
-A transitional legacy channel with a trailing `{protocolId}` level remains routed for already-fielded mobile builds and is removed after their rollover; the pipeline records a null protocol attribution for rows ingested on the lean shape.
+A transitional legacy channel with a trailing `{protocolId}` level remains routed for older mobile builds. On the lean topic, Silver reads `protocol_id` from the payload when the publisher supplies it. Normal mobile measurements include that id; questions-only uploads do not have a protocol result to attribute.
+
+Mobile workbook uploads carry `workbook_version_id` and one `workbook_run_id` shared across the run's measurements, including questions-only uploads. For mobile uploads, the topic's `{sensorType}` is `mobile`, `{sensorVersion}` is the app version and `{sensorId}` is the phone's local IoT Thing name. The phone uses that same Thing name as its MQTT client ID. The broker-authenticated ID is distinct from self-reported `device_*` sensor details and `client_*` phone details in the payload.
 
 The exact channel parameters and message schema are maintained in the [MQTT API reference](/api/mqtt). Do not copy the deployed broker endpoint from examples: obtain environment-specific connection details and credentials through the supported application flow. For MQTT topic fundamentals, wildcards, and naming best practices, [HiveMQ's MQTT Essentials on topics](https://www.hivemq.com/blog/mqtt-essentials-part-5-mqtt-topics-best-practices/) is a good primer.
 
@@ -136,8 +138,10 @@ This lets researchers query one experiment-facing model without erasing the sour
 Macro execution reads one canonical value without rewriting the stored event.
 Every execution host calls the shared normalizer for every input. The
 normalizer projects only a plain top-level object with its own `sample`
-property when that property contains a JSON object or array. Direct objects,
-scalars, `null`, and root arrays of any length pass through unchanged.
+property when that property contains a JSON object or array. Direct objects
+and root arrays of any length pass through unchanged. The pure normalizer also
+returns direct scalars and `null` unchanged, but the backend's single and batch
+HTTP execution routes reject those inputs with HTTP 400 before it runs.
 
 The same normalizer runs at each execution surface, but Databricks deliberately
 adapts its legacy source shape before the host receives it:
@@ -162,7 +166,8 @@ preserves existing Gold macro results while the other surfaces adopt the new
 generic JSON contract.
 
 At the generic backend, web, and mobile boundaries, an empty root array is valid
-and remains `[]`. Only a value actually presented to normalization as an empty
+and remains `[]`. The backend HTTP routes accept root objects and arrays, not
+direct scalars or `null`. Only a value actually presented to normalization as an empty
 sample envelope (`{ sample: [] }`) fails before macro code runs. In a backend
 batch, only that item fails and valid siblings continue. If a `sample` envelope
 contains multiple entries, the first is selected and the host emits a
@@ -185,8 +190,9 @@ depend on wrapper behavior such as reading `json.sample[0]`.
 For mixed-version deployments, release the backend normalization first while
 the old sandbox remains compatible, then release the web producer and
 Databricks adapter, and simplify the language sandboxes last. The deployment
-workflow encodes the same successful-or-skipped dependency order without
-forcing unchanged applications to deploy.
+workflow deploys a dependent job after a parent succeeds or is skipped because
+that parent was not needed for the run. A parent skipped after an upstream
+failure blocks its dependents. See [Release workflows](/developers/contributing/release-workflows).
 
 ## Where to inspect the implementation
 

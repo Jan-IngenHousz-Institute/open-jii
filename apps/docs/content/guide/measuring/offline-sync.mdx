@@ -3,7 +3,7 @@ title: "Working offline & syncing"
 description: "Cache field flows, save readings locally, and recover failed uploads."
 ---
 
-{/* verified: code@efd66bdd4 2026-08-04 */}
+{/* verified: code@51111b3da 2026-10-12 */}
 
 openJII saves an accepted mobile measurement to local SQLite before attempting a
 cloud upload. Loss of connectivity therefore does not have to stop data
@@ -29,23 +29,47 @@ that the app no longer holds the workbook code for that flow, it shows **Can't
 resume this flow** instead of its steps; choose **Exit flow** to pause or
 discard it and start a new one.
 
-Python macros need an internet connection to run on the phone. Without one, the
-result step says so instead of showing macro output, and you can still accept
-the reading. The platform runs the macro once the measurement uploads, and its
-output appears on the web platform.
+The phone downloads the Python runtime from the internet. If that runtime has
+not loaded before the connection drops, the result step says the macro needs an
+internet connection instead of showing its output. You can still accept the
+reading. The platform runs the macro once the measurement uploads, and its
+output appears on the web platform. JavaScript macros run on the phone without
+a connection.
 
 ## What happens to a saved reading
 
-- **Queued** means the reading is saved locally and waiting for upload.
-- **Uploading** means the outbox is attempting delivery.
-- **Synced** means the broker acknowledged the upload.
-- **Failed** means the retry attempts were exhausted; the reading remains local
-  for another attempt.
+On **Recent**, a cloud icon at each reading shows where it stands:
 
-The outbox pauses while offline. When the connection returns, and whenever the
-app returns to the foreground, it retries queued and failed rows. Uploads are
-acknowledged one measurement at a time, including measurements from a
-multi-device round.
+| Icon                     | Meaning                                                                                                                                      |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Blue cloud with an arrow | Saved on the phone and waiting to upload, or uploading now.                                                                                  |
+| Green cloud with a check | Synced: the platform has the reading. A reading up to 128 KiB is confirmed by the message broker; a larger one by the platform's file store. |
+| Red cloud with an alert  | The upload failed. A red line under the reading says why. The reading stays on the phone.                                                    |
+
+The **Synced** and **Unsynced** filters split the list along the same line; a
+reading waiting to upload and a failed one both count as unsynced. While uploads
+run, a blue number on the upload button in the header counts them.
+
+Uploads pause while the phone is offline. Each reading is acknowledged on its
+own, including readings from a multi-device round. When an upload hits a
+problem that may pass, such as a dropped connection, the app tries it again up
+to three times, about 1, 4 and 15 seconds apart, before marking the reading
+failed. A problem that trying again cannot fix, such as an expired session,
+marks it failed at once.
+
+A failed reading is not given up on. The app tries every unsynced reading again,
+failed ones included, when it starts, when the connection returns, and when you
+bring it back to the foreground.
+
+### Why an upload failed
+
+| Red line under the reading                      | What it means                                                         | What to do                                                                                                                                                                                    |
+| ----------------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Could not reach the server. Swipe to try again. | The phone could not get the reading to the platform before giving up. | Wait for a connection, or swipe the reading and select **Upload**.                                                                                                                            |
+| Your session expired. Sign in again to upload.  | The upload could not be authenticated as you.                         | Sign in again, then upload the reading.                                                                                                                                                       |
+| You can no longer upload to this experiment.    | You no longer have access to the experiment, or it no longer exists.  | Keep the reading. If the experiment still exists, ask someone who manages it to restore your access. If it was deleted, export the reading and [get in touch](/guide/reference/getting-help). |
+| The server would not accept this measurement.   | The platform refused the reading itself.                              | Keep the reading, export it as below, and [get in touch](/guide/reference/getting-help).                                                                                                      |
+| Upload failed. Swipe to try again.              | Something else went wrong.                                            | Swipe the reading and select **Upload**.                                                                                                                                                      |
 
 ![The Recent screen showing one synced demo measurement and no unsynced rows](/img/mobile/sync-state.png)
 
@@ -54,9 +78,11 @@ multi-device round.
 
 ## Recover safely
 
-Open **Recent** and filter to **Unsynced**. Use the upload action for one row or
-the cloud action to upload all unsynced rows. Do not delete a local reading until
-it is synced or exported.
+Open **Recent** and filter to **Unsynced**. Swipe a reading and select **Upload**
+to send that one; the action is hidden while the phone is offline. The upload
+button in the header sends every unsynced reading after you confirm **Upload
+All**; it is unavailable while uploads are already running. Do not delete a local
+reading until it is synced or exported.
 
 The mobile **Export measurements** action creates JSON, but the current
 implementation selects failed and synced rows rather than every in-flight queued

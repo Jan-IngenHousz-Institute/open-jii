@@ -1,0 +1,39 @@
+---
+title: "Release workflows"
+description: "Choose the release ref and read the approval and dependency gates before a deployment."
+---
+
+{/* verified: code@51111b3da 2026-10-12 */}
+
+The release workflows deploy a selected revision through the shared deployment workflow. A GitHub Actions run is the place to check what was selected, what needed deployment, and which gate stopped it. This page describes those controls; it is not a cutover procedure.
+
+## Choose the entry point
+
+| Entry point               | What it does                                                                                                                                   |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **DEV Release Workflow**  | Runs on a push to `main` or by manual dispatch to dev. The dispatch offers infrastructure, all-app and named-app controls, but no `ref` input. |
+| **PROD Release Workflow** | Runs by manual dispatch for prod. Its optional `ref` accepts a commit SHA, branch or tag; leave it empty to use the workflow run's SHA.        |
+
+The PROD workflow passes `ref` to the shared deployment workflow. That workflow passes the same selected ref to infrastructure, migrations, backend, frontend, docs, Databricks and sandbox deployments. Each reusable workflow checks out the selected ref or the workflow SHA when `ref` is empty. Check the checked-out SHA in each job log, especially Databricks, when using a ref that differs from the dispatch branch.
+
+The deployment workflow detects affected applications. `deploy_all` selects all applications regardless of the diff, while `deploy_app` names particular apps to force; with neither, it uses change detection. An approval gate runs before a deployment that would change an application or infrastructure. Production jobs also target the `prod` GitHub environment; check its protection rules before approval. Review the selected jobs and their plans before approval.
+
+## Read a skipped job
+
+A dependent job runs only when each parent it needs succeeded or was skipped because that parent was not needed for this release. If a needed parent fails, its dependents stop, even when GitHub reports the parent as skipped after an earlier failure. In particular:
+
+1. Infrastructure precedes migrations and application jobs. Docs depends on infrastructure but not the backend.
+2. Backend follows migrations when migrations are needed. Frontend and Databricks follow backend when it is needed.
+3. Macro and calibration sandboxes follow the backend, frontend and Databricks jobs when those are needed.
+
+For a partial release, read the job selection as well as the result. If backend was deliberately not selected, a separate migration failure does not automatically block a selected downstream application through that skipped backend job. Stop and inspect the failed migration before approving any remaining deployment.
+
+## Workflow file rules
+
+Pin third-party `uses` to a full commit SHA and keep the version in a trailing comment. Dependabot's GitHub Actions group updates these pins. The 2026-10-12 QA check found repository-level SHA enforcement disabled, so verify **Settings → Actions → General** before relying on it to reject future unpinned actions.
+
+Pass free-text dispatch inputs to shell steps through `env:` and quote the shell variable. The shared deployment workflow accepts only `dev` or `prod` for its environment input. Review reusable workflows for the same validation when adding a new entry point. The deploy checkouts set `persist-credentials: false`; the PR release-preview dry run intentionally retains the checkout credential for its semantic-release push check. Do not copy that exception into a new job without the same need.
+
+The workflow files under `.github/workflows/` are the source for the current inputs and job conditions. Read them again before starting a release, especially when selecting an older ref.
+
+The [Centrum status-view cutover runbook](https://github.com/Jan-IngenHousz-Institute/open-jii/blob/main/docs/runbooks/releases/centrum-status-cutover.md) gives the separate manual steps for that release.
