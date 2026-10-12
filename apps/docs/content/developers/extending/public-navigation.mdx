@@ -12,18 +12,18 @@ The public website's desktop and mobile header use the **Public header links** l
 3. Reorder or remove links in the list. Keep labels short; the list allows up to six links.
 4. Publish changed buttons, then publish the Footer entry when its link list changed.
 
-The initial list is Home, Blog, FAQ and Platform. Blog, FAQ and Platform reuse the footer’s Button entries, so editing those labels or URLs changes both menus. Create a separate Button entry when the header needs different wording or a different destination. An explicitly empty list stays empty. If navigation content is missing or Contentful is unavailable, the header keeps Home and Platform links available. Invalid destinations and unpublished linked entries are skipped.
+The initial list is Home, Blog, FAQ and Platform. Blog, FAQ and Platform reuse the footer’s Button entries, so editing those labels or URLs changes both menus. Create a separate Button entry when the header needs different wording or a different destination. An explicitly empty list stays empty. If navigation content is missing, Contentful is unavailable, or every configured link is invalid or unpublished, the header keeps Home and Platform links available. Invalid destinations, duplicate references and unpublished linked entries are skipped. Removing a valid link, including Platform, is an intentional editor choice and does not activate the fallback.
 
 Published navigation is cached for five minutes. Public pages also regenerate on a five-minute interval, so allow about ten minutes and a fresh page load for a published edit to appear. Contentful preview uses unpublished links without the shared navigation cache. Root-relative destinations acquire the current locale unless they already include a supported locale. Absolute HTTP and HTTPS URLs stay external. Links open in the current tab.
 
-The existing Button content type uses nonlocalized fields. The navigation fetch passes the requested locale through Contentful; enabling independent translations requires a separate content-model decision.
+Button labels are localized in Contentful. Edit Label for each supported locale; missing translations use the CMS fallback locale. The link list and URLs are shared across locales, with locale-relative destinations resolved by the website.
 
 ## About JII
 
-JII has a short section in the homepage mission content and an external footer link to the institute website. The old `/{locale}/about` route permanently redirects to `/{locale}#about-jii` and no longer appears in the sitemap. The old About entry is retained in Contentful as an archive, but the deployed route does not read it.
+JII has a short section in the homepage mission content and an external footer link to the institute website. The old `/{locale}/about` route permanently redirects to `/{locale}#about-jii` and no longer appears in the sitemap. The old About entry is retained in Contentful as an archive, but the deployed route does not read it. Its Contentful preview also redirects to the homepage. The removal is permanent; retaining the content is an archive, not a guarantee that browsers will forget the permanent redirect if the route is restored.
 
 ## Model and code
 
-`packages/cms/content-models/footer.json` records the additive `navigationButtons` field. Apply and publish that field in each Contentful environment before generating the SDK or deploying the change. It is an optional array of links to `componentButton`, limited to six items. Populate the existing Footer entry rather than creating another Footer entry.
+`packages/cms/content-models/footer.json` records the additive `navigationButtons` field. Apply and publish that field in each Contentful environment before generating the SDK or deploying the change. It is an optional array of links to `componentButton`, limited to six items. Populate the existing Footer entry rather than creating another Footer entry. Also enable localization for the Button `label` field as recorded in `packages/cms/content-models/componentButton.json`. Preserve all existing field values and other model settings when applying these changes.
 
 The query is `packages/cms/src/lib/graphql/public-navigation.graphql`. After changing the model or query, regenerate the SDK with `pnpm --filter @repo/cms codegen` using the Contentful environment variables. The web server loads it in `apps/web/components/navigation/public-navbar.tsx`; both header layouts consume the same resolved link list. Contentful management credentials are not used by the website.

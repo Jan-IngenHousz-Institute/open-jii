@@ -228,7 +228,6 @@ export function UnifiedNavbar({ locale, isHomePage = false, links }: UnifiedNavb
     pathname.startsWith(`/${locale}/cookie-settings`) ||
     pathname.startsWith(`/${locale}/cookie-policy`) ||
     pathname.startsWith(`/${locale}/terms-and-conditions`) ||
-    pathname.startsWith(`/${locale}/about`) ||
     pathname.startsWith(`/${locale}/blog`) ||
     pathname.startsWith(`/${locale}/faq`) ||
     pathname.startsWith(`/${locale}/releases`) ||

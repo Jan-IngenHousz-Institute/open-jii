@@ -12,11 +12,15 @@ async function fetchNavigation(locale: string, preview: boolean) {
   const collection = data.footerCollection?.items[0]?.navigationButtonsCollection;
   if (!collection) return null;
 
-  return collection.items.flatMap((item): PublicNavigationLink[] => {
+  const seen = new Set<string>();
+  const links = collection.items.flatMap((item): PublicNavigationLink[] => {
     const label = item?.label?.trim();
     const href = item?.url ? publicNavigationHref(item.url, locale) : null;
-    return item && label && href ? [{ id: item.sys.id, label, href }] : [];
+    if (!item || !label || !href || seen.has(item.sys.id)) return [];
+    seen.add(item.sys.id);
+    return [{ id: item.sys.id, label, href }];
   });
+  return collection.items.length > 0 && links.length === 0 ? null : links;
 }
 
 const getPublishedNavigation = unstable_cache(

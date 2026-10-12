@@ -67,6 +67,32 @@ describe("CMS public navigation", () => {
     );
   });
 
+  it.each([
+    [null, null],
+    [{ sys: { id: "invalid" }, label: "Unsafe", url: "javascript:alert(1)" }],
+  ])("falls back when a configured list has no usable links: %j", async (...items) => {
+    published.mockResolvedValue({
+      footerCollection: { items: [{ navigationButtonsCollection: { items } }] },
+    });
+    render(await PublicNavbar({ locale: "en-US" }));
+    expect(screen.getByRole("link", { name: "navigation.home" })).toHaveAttribute("href", "/en-US");
+    expect(screen.getByRole("link", { name: "navigation.platform" })).toHaveAttribute(
+      "href",
+      "/en-US/platform",
+    );
+  });
+
+  it("uses CMS translations and skips duplicate entry references", async () => {
+    const home = { sys: { id: "home" }, label: "Startseite", url: "/" };
+    published.mockResolvedValue({
+      footerCollection: { items: [{ navigationButtonsCollection: { items: [home, home] } }] },
+    });
+    render(await PublicNavbar({ locale: "de-DE" }));
+    expect(screen.getAllByRole("link", { name: "Startseite" })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "Startseite" })).toHaveAttribute("href", "/de-DE");
+    expect(published).toHaveBeenCalledWith({ locale: "de-DE", preview: false });
+  });
+
   it("honors an empty published list", async () => {
     published.mockResolvedValue({
       footerCollection: { items: [{ navigationButtonsCollection: { items: [] } }] },

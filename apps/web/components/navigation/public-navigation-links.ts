@@ -11,7 +11,7 @@ export function publicNavigationHref(value: string, locale: string): string | nu
   if (!url || [...url].some((character) => character.charCodeAt(0) <= 32 || character === "\\"))
     return null;
 
-  if (/^https?:\/\//.test(url)) {
+  if (/^https?:\/\//i.test(url)) {
     try {
       const parsed = new URL(url);
       return parsed.username || parsed.password ? null : parsed.href;
@@ -35,7 +35,7 @@ export function isPublicNavigationLinkActive(href: string, pathname: string, loc
   const current = pathname.replace(/\/$/, "");
   if (path === `/${locale}`) return current === path;
   if (path === `/${locale}/platform`) {
-    const authRoutes = ["login", "register", "verify-request"];
+    const authRoutes = ["login", "login-error", "register", "verify-request"];
     if (authRoutes.some((route) => current === `/${locale}/${route}`)) return true;
     if (current === "/api/auth/verify-request") return true;
   }

@@ -9,6 +9,7 @@ describe("public navigation destinations", () => {
     ["/#about-jii", "/de-DE#about-jii"],
     ["/en-US/faq", "/en-US/faq"],
     ["https://docs.openjii.org/guide", "https://docs.openjii.org/guide"],
+    ["HTTPS://docs.openjii.org/guide", "https://docs.openjii.org/guide"],
   ])("resolves %s without double-prefixing locales", (input, expected) => {
     expect(publicNavigationHref(input, "de-DE")).toBe(expected);
   });
@@ -32,6 +33,9 @@ describe("public navigation destinations", () => {
     expect(isPublicNavigationLinkActive("/en-US", "/en-US/blog", "en-US")).toBe(false);
     expect(isPublicNavigationLinkActive("/en-US", "/en-US/", "en-US")).toBe(true);
     expect(isPublicNavigationLinkActive("/en-US/platform", "/en-US/login", "en-US")).toBe(true);
+    expect(isPublicNavigationLinkActive("/en-US/platform", "/en-US/login-error", "en-US")).toBe(
+      true,
+    );
     expect(isPublicNavigationLinkActive("https://example.com", "/en-US", "en-US")).toBe(false);
     expect(isPublicNavigationLinkActive("/en-US#about-jii", "/en-US", "en-US")).toBe(false);
   });
