@@ -447,9 +447,61 @@ describe("ExperimentJoinRequestsController", () => {
         .withAuth(adminUserId)
         .expect(StatusCodes.OK);
       expect(listResponse.body).toHaveLength(1);
+      expect(listResponse.body[0].user.email).toBe("requester@example.com");
 
       const otherUserId = await testApp.createTestUser({ email: "other-list@example.com" });
       await testApp.get(listPath).withAuth(otherUserId).expect(StatusCodes.FORBIDDEN);
+    });
+  });
+
+  describe("requester addresses", () => {
+    it("are out of a viewer's reach: the list is refused", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Scoped exp",
+        userId: adminUserId,
+        visibility: "public",
+      });
+      const createPath = testApp.resolveOrpcPath(contract.experiments.createJoinRequest, {
+        id: experiment.id,
+      });
+      await testApp.post(createPath).withAuth(requesterUserId).send({}).expect(StatusCodes.CREATED);
+      const viewerId = await testApp.createTestUser({ email: "viewer@example.com" });
+      await testApp.addExperimentCollaborator(experiment.id, viewerId);
+
+      await testApp
+        .get(testApp.resolveOrpcPath(contract.experiments.listJoinRequests, { id: experiment.id }))
+        .withAuth(viewerId)
+        .expect(StatusCodes.FORBIDDEN);
+    });
+
+    it("leave the decided request once it is no longer pending", async () => {
+      const { experiment } = await testApp.createExperiment({
+        name: "Decided exp",
+        userId: adminUserId,
+        visibility: "public",
+      });
+      const createResponse: SuperTestResponse<ExperimentJoinRequest> = await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.experiments.createJoinRequest, { id: experiment.id }),
+        )
+        .withAuth(requesterUserId)
+        .send({})
+        .expect(StatusCodes.CREATED);
+      expect(createResponse.body.user.email).toBe("requester@example.com");
+
+      const rejectResponse: SuperTestResponse<ExperimentJoinRequest> = await testApp
+        .post(
+          testApp.resolveOrpcPath(contract.experiments.rejectJoinRequest, {
+            id: experiment.id,
+            requestId: createResponse.body.id,
+          }),
+        )
+        .withAuth(adminUserId)
+        .send({})
+        .expect(StatusCodes.OK);
+
+      expect(rejectResponse.body.status).toBe("rejected");
+      expect(rejectResponse.body.user.email).toBeNull();
     });
   });
 

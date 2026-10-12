@@ -1,10 +1,11 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 
+import { EmailVisibilityService } from "../../../../authorization/email-visibility.service";
 import { describeAccess } from "../../../../common/utils/access-wording";
 import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { AppError, failure, Result, success } from "../../../../common/utils/fp-utils";
 import { ExperimentRepository } from "../../../../experiments/core/repositories/experiment.repository";
-import type { InvitationDto } from "../../../core/models/user-invitation.model";
+import type { InvitationView } from "../../../core/models/user-invitation.model";
 import { EMAIL_PORT } from "../../../core/ports/email.port";
 import type { EmailPort } from "../../../core/ports/email.port";
 import { InvitationRepository } from "../../../core/repositories/user-invitation.repository";
@@ -20,6 +21,7 @@ export class CreateInvitationUseCase {
     private readonly userRepository: UserRepository,
     private readonly experimentRepository: ExperimentRepository,
     @Inject(EMAIL_PORT) private readonly emailPort: EmailPort,
+    private readonly emailVisibility: EmailVisibilityService,
   ) {}
 
   /**
@@ -33,7 +35,7 @@ export class CreateInvitationUseCase {
     email: string,
     invite: InvitationTerms,
     invitedBy: string,
-  ): Promise<Result<InvitationDto>> {
+  ): Promise<Result<InvitationView>> {
     const accessResult = await this.experimentRepository.checkAccess(resourceId, invitedBy);
     if (accessResult.isFailure()) {
       return failure(AppError.internal("Failed to check experiment access"));
@@ -65,7 +67,7 @@ export class CreateInvitationUseCase {
     }
 
     if (existingResult.value) {
-      return success(existingResult.value);
+      return success(this.emailVisibility.redactInvitations(invitedBy, [existingResult.value])[0]);
     }
 
     // Check whether the email already holds a grant on the experiment
@@ -162,6 +164,6 @@ export class CreateInvitationUseCase {
       });
     }
 
-    return success(invitation);
+    return success(this.emailVisibility.redactInvitations(invitedBy, [invitation])[0]);
   }
 }

@@ -1,5 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import {
+  EmailVisibilityService,
+  nestedUserEmail,
+} from "../../../../authorization/email-visibility.service";
 import { Result, success, failure, AppError } from "../../../../common/utils/fp-utils";
 import type { ExperimentJoinRequestDto } from "../../../core/models/experiment-join-request.model";
 import { ExperimentJoinRequestRepository } from "../../../core/repositories/experiment-join-request.repository";
@@ -12,6 +16,7 @@ export class ListExperimentJoinRequestsUseCase {
   constructor(
     private readonly experimentRepository: ExperimentRepository,
     private readonly joinRequestRepository: ExperimentJoinRequestRepository,
+    private readonly emailVisibility: EmailVisibilityService,
   ) {}
 
   async execute(
@@ -38,6 +43,10 @@ export class ListExperimentJoinRequestsUseCase {
       return failure(AppError.internal("Failed to list join requests"));
     }
 
-    return success(listResult.value);
+    return success(
+      await this.emailVisibility.redact(currentUserId, listResult.value, nestedUserEmail(), {
+        experimentId,
+      }),
+    );
   }
 }

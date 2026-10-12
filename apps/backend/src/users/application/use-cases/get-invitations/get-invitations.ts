@@ -1,8 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
-import { AppError, Result, failure } from "../../../../common/utils/fp-utils";
-import type { InvitationDto } from "../../../core/models/user-invitation.model";
+import { EmailVisibilityService } from "../../../../authorization/email-visibility.service";
+import { AppError, Result, failure, success } from "../../../../common/utils/fp-utils";
+import type { InvitationDto, InvitationView } from "../../../core/models/user-invitation.model";
 import { InvitationRepository } from "../../../core/repositories/user-invitation.repository";
 
 @Injectable()
@@ -12,6 +13,7 @@ export class GetInvitationsUseCase {
   constructor(
     private readonly invitationRepository: InvitationRepository,
     private readonly authz: AuthorizationService,
+    private readonly emailVisibility: EmailVisibilityService,
   ) {}
 
   /**
@@ -25,7 +27,7 @@ export class GetInvitationsUseCase {
     resourceType: "experiment",
     resourceId: string,
     userId: string,
-  ): Promise<Result<InvitationDto[]>> {
+  ): Promise<Result<InvitationView[]>> {
     this.logger.log({
       msg: "Fetching invitations for resource",
       operation: "get-invitations",
@@ -63,6 +65,7 @@ export class GetInvitationsUseCase {
       });
     }
 
-    return result;
+    if (result.isFailure()) return result;
+    return success(this.emailVisibility.redactInvitations<InvitationDto>(userId, result.value));
   }
 }

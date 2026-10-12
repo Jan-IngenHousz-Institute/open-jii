@@ -203,8 +203,12 @@ export class UserRepository {
 
   async search(params: SearchUsersParams): Promise<Result<UserProfileDto[]>> {
     return tryCatch(() => {
-      // Select profiles and join users to get email
-      let query = this.database
+      const fullName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
+      const isExactEmail = sql`lower(${users.email}) = lower(${params.query})`;
+
+      // Names match loosely: substring (ILIKE) handles prefixes, trigram (%) adds typo
+      // tolerance. An address matches only in full, so search cannot enumerate them.
+      return this.database
         .select({
           userId: profiles.userId,
           firstName: getAnonymizedFirstName(),
@@ -219,49 +223,40 @@ export class UserRepository {
         })
         .from(profiles)
         .innerJoin(users, eq(profiles.userId, users.id))
-        .$dynamic();
-
-      const isDiscoverable = and(eq(profiles.activated, true), isNull(profiles.deletedAt));
-
-      // Match by name or email: substring (ILIKE) handles prefixes, trigram (%)
-      // adds typo tolerance; ranked by name/email similarity so the closest match leads.
-      if (params.query) {
-        const fullName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
-        query = query
-          .where(
-            and(
-              isDiscoverable,
-              or(
-                trigramMatch(profiles.firstName, params.query),
-                trigramMatch(profiles.lastName, params.query),
-                ilike(fullName, `%${escapeLike(params.query)}%`),
-                ilike(users.email, `%${escapeLike(params.query)}%`),
-              ),
+        .where(
+          and(
+            eq(profiles.activated, true),
+            isNull(profiles.deletedAt),
+            or(
+              trigramMatch(profiles.firstName, params.query),
+              trigramMatch(profiles.lastName, params.query),
+              ilike(fullName, `%${escapeLike(params.query)}%`),
+              isExactEmail,
             ),
-          )
-          .orderBy(
-            sql`greatest(similarity(${fullName}, ${params.query}), similarity(${users.email}, ${params.query})) DESC`,
-            asc(profiles.firstName),
-            // Names tie constantly, and without a unique tiebreaker paging drops rows.
-            asc(profiles.userId),
-          );
-      } else {
-        query = query.where(isDiscoverable).orderBy(asc(profiles.firstName), asc(profiles.userId));
-      }
+          ),
+        )
+        .orderBy(
+          sql`similarity(${fullName}, ${params.query}) DESC`,
+          asc(profiles.firstName),
+          // Names tie constantly, and without a unique tiebreaker paging drops rows.
+          asc(profiles.userId),
+        )
+        .limit(params.limit)
+        .offset(params.offset);
+    });
+  }
 
-      // Apply pagination
-      if (params.offset) {
-        query = query.offset(params.offset);
-      }
+  /** A user other people may look up: one with a live, activated profile. */
+  async findDiscoverable(id: string): Promise<Result<UserDto | null>> {
+    return tryCatch(async () => {
+      const result = await this.database
+        .select({ user: users })
+        .from(users)
+        .innerJoin(profiles, eq(profiles.userId, users.id))
+        .where(and(eq(users.id, id), eq(profiles.activated, true), isNull(profiles.deletedAt)))
+        .limit(1);
 
-      if (params.limit) {
-        query = query.limit(params.limit);
-      } else {
-        // Default limit to prevent unbounded queries
-        query = query.limit(50);
-      }
-
-      return query;
+      return result.length > 0 ? result[0].user : null;
     });
   }
 

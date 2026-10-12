@@ -51,9 +51,9 @@ export type UserProfileMetadata = typeof userProfileMetadataSchema._type;
 
 // Define search parameters type
 export interface SearchUsersParams {
-  query?: string;
-  limit?: number;
-  offset?: number;
+  query: string;
+  limit: number;
+  offset: number;
 }
 
 // A resource for which the user is the last answerable person — i.e. a blocker for

@@ -33,7 +33,11 @@ export function canViewOrganization(access: OrganizationAccessRow): boolean {
 }
 
 export function canManageMembership(access: OrganizationAccessRow): boolean {
-  return roleTokens(access.memberRole).some((token) => MEMBERSHIP_MANAGER_ROLES.includes(token));
+  return isMembershipManagerRole(access.memberRole);
+}
+
+export function isMembershipManagerRole(role: string | null): boolean {
+  return roleTokens(role).some((token) => MEMBERSHIP_MANAGER_ROLES.includes(token));
 }
 
 /**

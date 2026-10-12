@@ -278,6 +278,24 @@ describe("OrganizationJoinRequestsController", () => {
       }
     });
 
+    it("shows a decider the address of a pending requester, not of a rejected one", async () => {
+      const organizationId = await seedOrg("public");
+      const decided = await testApp.createTestUser({ email: "decided@example.com" });
+      await testApp.addOrganizationJoinRequest(organizationId, decided, { status: "rejected" });
+      await testApp.addOrganizationJoinRequest(organizationId, requesterId);
+
+      const response: SuperTestResponse<OrganizationJoinRequestList> = await testApp
+        .get(listPath(organizationId))
+        .withAuth(adminId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.map((request) => request.user.email)).toEqual([
+        "requester@example.com",
+        null,
+      ]);
+      expect(JSON.stringify(response.body)).not.toContain("decided@example.com");
+    });
+
     it("403s a plain member", async () => {
       const organizationId = await seedOrg("public");
 

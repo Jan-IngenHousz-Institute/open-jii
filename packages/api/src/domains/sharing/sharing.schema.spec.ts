@@ -6,6 +6,7 @@ import {
   zGranteeType,
   zGrantRole,
   zResourceGrant,
+  zSearchGranteeUsersQuery,
   zShareableRole,
   zSharingResourceType,
   zUpdateCollaboratorBody,
@@ -132,5 +133,23 @@ describe("the grantable role set is narrower than the stored one", () => {
       expect(zGrantRole.options).toContain(role);
     }
     expect(zShareableRole.options.length).toBeLessThan(zGrantRole.options.length);
+  });
+});
+
+describe("zSearchGranteeUsersQuery", () => {
+  const path = { resourceType: "experiment", id: "123e4567-e89b-12d3-a456-426614174000" };
+
+  it("defaults to 20 results and trims the query", () => {
+    const result = zSearchGranteeUsersQuery.parse({ ...path, query: "  jo " });
+    expect(result.query).toBe("jo");
+    expect(result.limit).toBe(20);
+  });
+
+  it.each([undefined, "", "a", "  a  "])("rejects the query %j", (query) => {
+    expect(zSearchGranteeUsersQuery.safeParse({ ...path, query }).success).toBe(false);
+  });
+
+  it.each([0, 21, 50])("rejects limit %i rather than clamping it", (limit) => {
+    expect(zSearchGranteeUsersQuery.safeParse({ ...path, query: "jo", limit }).success).toBe(false);
   });
 });

@@ -966,7 +966,7 @@ export class SharingRepository {
     resourceType: SharingResourceType,
     resourceId: string,
     owningOrganizationId: string | null,
-    params: { query?: string; limit: number },
+    params: { query: string; limit: number },
   ): Promise<Result<GranteeUserDto[]>> {
     return tryCatch(async () => {
       // No owning organization means nobody holds an org role over this resource.
@@ -978,6 +978,7 @@ export class SharingRepository {
         : sql`false`;
 
       const fullName = sql<string>`(${profiles.firstName} || ' ' || ${profiles.lastName})`;
+      const isExactEmail = sql`lower(${users.email}) = lower(${params.query})`;
       const isDiscoverable = and(eq(profiles.activated, true), isNull(profiles.deletedAt));
 
       const rows = await this.db
@@ -1005,22 +1006,16 @@ export class SharingRepository {
         .where(
           and(
             isDiscoverable,
-            params.query
-              ? or(
-                  trigramMatch(profiles.firstName, params.query),
-                  trigramMatch(profiles.lastName, params.query),
-                  ilike(fullName, `%${escapeLike(params.query)}%`),
-                  ilike(users.email, `%${escapeLike(params.query)}%`),
-                )
-              : undefined,
+            or(
+              trigramMatch(profiles.firstName, params.query),
+              trigramMatch(profiles.lastName, params.query),
+              ilike(fullName, `%${escapeLike(params.query)}%`),
+              isExactEmail,
+            ),
           ),
         )
         .orderBy(
-          ...(params.query
-            ? [
-                sql`greatest(similarity(${fullName}, ${params.query}), similarity(${users.email}, ${params.query})) DESC`,
-              ]
-            : []),
+          sql`similarity(${fullName}, ${params.query}) DESC`,
           asc(profiles.firstName),
           // Names tie constantly, and without a unique tiebreaker the cut-off drifts.
           asc(profiles.userId),

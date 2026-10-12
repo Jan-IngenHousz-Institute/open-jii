@@ -3,6 +3,7 @@ import { Global, Module } from "@nestjs/common";
 import { AuthorizationService } from "./authorization.service";
 import { CanAccessGuard } from "./can-access.guard";
 import { CanCreateInOrgGuard } from "./can-create-in-org.guard";
+import { EmailVisibilityService } from "./email-visibility.service";
 
 /**
  * Provides the single authorization entry point (org-scoped, per-resource) and
@@ -11,7 +12,7 @@ import { CanCreateInOrgGuard } from "./can-create-in-org.guard";
  */
 @Global()
 @Module({
-  providers: [AuthorizationService, CanAccessGuard, CanCreateInOrgGuard],
-  exports: [AuthorizationService, CanAccessGuard, CanCreateInOrgGuard],
+  providers: [AuthorizationService, CanAccessGuard, CanCreateInOrgGuard, EmailVisibilityService],
+  exports: [AuthorizationService, CanAccessGuard, CanCreateInOrgGuard, EmailVisibilityService],
 })
 export class AuthorizationModule {}

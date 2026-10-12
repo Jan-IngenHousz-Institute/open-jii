@@ -20,7 +20,7 @@ export const useGranteeUserSearch = (
   options?: { enabled?: boolean },
 ) => {
   const { userId, isPending: isSessionPending } = usePrincipal();
-  const query = queryString.trim() || undefined;
+  const query = queryString.trim();
   const input = { resourceType, id: resourceId, query };
 
   return useQuery(
@@ -28,7 +28,7 @@ export const useGranteeUserSearch = (
       input,
       queryKey: granteeUsersQueryKey(userId, resourceType, resourceId, query),
       retry: shouldRetryQuery,
-      enabled: (options?.enabled ?? true) && !!query && !!resourceId && !isSessionPending,
+      enabled: (options?.enabled ?? true) && query.length >= 2 && !!resourceId && !isSessionPending,
     }),
   );
 };

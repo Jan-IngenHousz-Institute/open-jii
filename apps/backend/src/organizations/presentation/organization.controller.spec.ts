@@ -1260,6 +1260,33 @@ describe("OrganizationController", () => {
       expect(response.body.members.map((m) => m.userId)).not.toContain(outsiderId);
     });
 
+    it("shows a plain member only their own address", async () => {
+      const publicOrg = await seedPublicOrg();
+
+      const response: SuperTestResponse<OrganizationMembers> = await testApp
+        .get(path(publicOrg))
+        .withAuth(memberId)
+        .expect(StatusCodes.OK);
+
+      const emails = Object.fromEntries(response.body.members.map((m) => [m.userId, m.email]));
+      expect(emails).toEqual({ [ownerId]: null, [memberId]: "member@example.com" });
+      expect(JSON.stringify(response.body)).not.toContain("owner@example.com");
+    });
+
+    it("shows an owner every member's address", async () => {
+      const publicOrg = await seedPublicOrg();
+
+      const response: SuperTestResponse<OrganizationMembers> = await testApp
+        .get(path(publicOrg))
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+
+      expect(response.body.members.map((m) => m.email).sort()).toEqual([
+        "member@example.com",
+        "owner@example.com",
+      ]);
+    });
+
     it("403s a non-member of a public organization", async () => {
       const publicOrg = await seedPublicOrg();
 
@@ -1382,6 +1409,34 @@ describe("OrganizationController", () => {
       expect(response.body).toHaveLength(1);
       expect(response.body[0].name).toBe("Field crew");
       expect(response.body[0].members.map((m) => m.userId)).toEqual([memberId]);
+    });
+
+    it("shows team members' addresses to an owner, and only their own to a plain member", async () => {
+      const publicOrg = await seedPublicOrg();
+      const teamId = await testApp.createTeam(publicOrg, "Field crew");
+      await testApp.addTeamMember(teamId, ownerId);
+      await testApp.addTeamMember(teamId, memberId);
+
+      const asOwner: SuperTestResponse<OrganizationTeamList> = await testApp
+        .get(path(publicOrg))
+        .withAuth(ownerId)
+        .expect(StatusCodes.OK);
+      const asMember: SuperTestResponse<OrganizationTeamList> = await testApp
+        .get(path(publicOrg))
+        .withAuth(memberId)
+        .expect(StatusCodes.OK);
+
+      const emailsOf = (body: OrganizationTeamList) =>
+        Object.fromEntries(body[0].members.map((m) => [m.userId, m.email]));
+      expect(emailsOf(asOwner.body)).toEqual({
+        [ownerId]: "owner@example.com",
+        [memberId]: "member@example.com",
+      });
+      expect(emailsOf(asMember.body)).toEqual({
+        [ownerId]: null,
+        [memberId]: "member@example.com",
+      });
+      expect(JSON.stringify(asMember.body)).not.toContain("owner@example.com");
     });
 
     it("403s a non-member", async () => {

@@ -65,7 +65,10 @@ export function ExperimentPendingInvitationsPanel({
             <Mail className="text-muted-foreground h-4 w-4" />
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <span className="text-foreground truncate text-sm font-medium" title={invitation.email}>
+            <span
+              className="text-foreground truncate text-sm font-medium"
+              title={invitation.email ?? undefined}
+            >
               {invitation.email}
             </span>
             <StatusBadge tone="published">{t("experimentSettings.pendingInvite")}</StatusBadge>

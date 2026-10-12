@@ -275,6 +275,179 @@ describe("SharingController", () => {
     });
   });
 
+  describe("addresses in the picker", () => {
+    const searchPath = (macroId: string) =>
+      testApp.resolveOrpcPath(contract.sharing.searchGranteeUsers, {
+        resourceType: "macro",
+        id: macroId,
+      });
+
+    it.each([
+      ["no query", ""],
+      ["a one-character query", "?query=a"],
+      ["a one-character query padded with spaces", "?query=%20a%20"],
+      ["a limit above 20", "?query=ab&limit=21"],
+    ])("rejects %s with 400", async (_label, queryString) => {
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+
+      await testApp
+        .get(`${searchPath(macro.id)}${queryString}`)
+        .withAuth(owner)
+        .expect(StatusCodes.BAD_REQUEST);
+    });
+
+    it("finds a stranger by name or full address, never showing the address", async () => {
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+      const stranger = await testApp.createTestUser({
+        name: "Wilhelmina Stranger",
+        email: "qvortrup.k@example.com",
+      });
+
+      const byName = await testApp
+        .get(`${searchPath(macro.id)}?query=Wilhelmina`)
+        .withAuth(owner)
+        .expect(StatusCodes.OK);
+      const byAddress = await testApp
+        .get(`${searchPath(macro.id)}?query=QVORTRUP.K@example.com`)
+        .withAuth(owner)
+        .expect(StatusCodes.OK);
+      const byFragment = await testApp
+        .get(`${searchPath(macro.id)}?query=qvortrup`)
+        .withAuth(owner)
+        .expect(StatusCodes.OK);
+
+      for (const res of [byName, byAddress]) {
+        expect(res.body as GranteeUserDto[]).toEqual([
+          expect.objectContaining({ userId: stranger, email: null }),
+        ]);
+        expect(JSON.stringify(res.body).toLowerCase()).not.toContain("qvortrup.k@example.com");
+      }
+      expect((byFragment.body as GranteeUserDto[]).map((c) => c.userId)).not.toContain(stranger);
+    });
+
+    it("shows an owner of the organization its members' addresses, but no one else's", async () => {
+      const org = await testApp.createOrganization("Greenhouse Lab");
+      await testApp.addOrganizationMember(org, owner, "owner");
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner, organizationId: org });
+      const member = await testApp.createTestUser({
+        name: "Xanthippe Member",
+        email: "xmember@example.com",
+      });
+      const outsider = await testApp.createTestUser({
+        name: "Xanthippe Outsider",
+        email: "xoutsider@example.com",
+      });
+      await testApp.addOrganizationMember(org, member, "member");
+
+      const res = await testApp
+        .get(`${searchPath(macro.id)}?query=Xanthippe`)
+        .withAuth(owner)
+        .expect(StatusCodes.OK);
+
+      const emails = Object.fromEntries(
+        (res.body as GranteeUserDto[]).map((candidate) => [candidate.userId, candidate.email]),
+      );
+      expect(emails).toEqual({ [member]: "xmember@example.com", [outsider]: null });
+    });
+
+    it("shows a share-capable plain member nobody's address", async () => {
+      const org = await testApp.createOrganization("Greenhouse Lab");
+      await testApp.addOrganizationMember(org, owner, "owner");
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner, organizationId: org });
+      const sharer = await testApp.createTestUser({ name: "Sharer" });
+      await testApp.addOrganizationMember(org, sharer, "member");
+      await testApp.addResourceAdmin("macro", macro.id, sharer);
+      await testApp.createTestUser({ name: "Ysolde Member", email: "ysolde@example.com" });
+
+      const res = await testApp
+        .get(`${searchPath(macro.id)}?query=Ysolde`)
+        .withAuth(sharer)
+        .expect(StatusCodes.OK);
+
+      expect((res.body as GranteeUserDto[]).every((candidate) => candidate.email === null)).toBe(
+        true,
+      );
+      expect(JSON.stringify(res.body)).not.toContain("ysolde@example.com");
+    });
+  });
+
+  describe("addresses on the collaborators list", () => {
+    const collaboratorsPath = (experimentId: string) =>
+      testApp.resolveOrpcPath(contract.sharing.listGrants, {
+        resourceType: "experiment",
+        id: experimentId,
+      });
+
+    it("never hands a grantee's address back to whoever granted them", async () => {
+      const sharer = await testApp.createTestUser({ name: "Sharer" });
+      const { experiment } = await testApp.createExperiment({ name: "Mine", userId: sharer });
+      const stranger = await testApp.createTestUser({
+        name: "Grant Target",
+        email: "target@example.com",
+      });
+
+      const created = await testApp
+        .post(collaboratorsPath(experiment.id))
+        .withAuth(sharer)
+        .send({ granteeType: "user", granteeId: stranger, role: "viewer" })
+        .expect(StatusCodes.CREATED);
+      const grant = (created.body as ResourceGrantDto[]).find((row) => row.granteeId === stranger);
+      if (!grant) throw new Error("the new grant is missing from the list");
+
+      const updated = await testApp
+        .patch(
+          testApp.resolveOrpcPath(contract.sharing.updateGrant, {
+            resourceType: "experiment",
+            id: experiment.id,
+            grantId: grant.id,
+          }),
+        )
+        .withAuth(sharer)
+        .send({ role: "admin" })
+        .expect(StatusCodes.OK);
+      const listed = await testApp
+        .get(collaboratorsPath(experiment.id))
+        .withAuth(sharer)
+        .expect(StatusCodes.OK);
+
+      for (const res of [created, updated, listed]) {
+        const row = (res.body as ResourceGrantDto[]).find((r) => r.granteeId === stranger);
+        expect(row?.grantee.email).toBeNull();
+        expect(JSON.stringify(res.body)).not.toContain("target@example.com");
+      }
+    });
+
+    it("shows an organization admin the address of a member granted on its experiment", async () => {
+      const org = await testApp.createOrganization("Greenhouse Lab");
+      await testApp.addOrganizationMember(org, owner, "owner");
+      const orgAdmin = await testApp.createTestUser({ name: "Org Admin" });
+      await testApp.addOrganizationMember(org, orgAdmin, "admin");
+      const member = await testApp.createTestUser({ name: "Member", email: "m@example.com" });
+      await testApp.addOrganizationMember(org, member, "member");
+      const outsider = await testApp.createTestUser({ name: "Outsider", email: "o@example.com" });
+      const { experiment } = await testApp.createExperiment({
+        name: "Org exp",
+        userId: owner,
+        organizationId: org,
+      });
+      await testApp.addExperimentCollaborator(experiment.id, member);
+      await testApp.addExperimentCollaborator(experiment.id, outsider);
+
+      const res = await testApp
+        .get(collaboratorsPath(experiment.id))
+        .withAuth(orgAdmin)
+        .expect(StatusCodes.OK);
+
+      const grantRows = (res.body as ResourceGrantDto[]).filter(
+        (row) => row.granteeType === "user",
+      );
+      const emails = Object.fromEntries(grantRows.map((row) => [row.granteeId, row.grantee.email]));
+      expect(emails[member]).toBe("m@example.com");
+      expect(emails[outsider]).toBeNull();
+      expect(JSON.stringify(res.body)).not.toContain("o@example.com");
+    });
+  });
+
   describe("transferResourceAdmin", () => {
     const transferPath = () => testApp.resolveOrpcPath(contract.sharing.transferResourceAdmin);
 

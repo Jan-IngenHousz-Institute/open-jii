@@ -6,6 +6,7 @@ import {
   zSearchUsersQuery,
   zCreateUserProfileBody,
   zUserIdPathParam,
+  zInvitation,
 } from "./user.schema";
 
 describe("User Schema", () => {
@@ -106,7 +107,7 @@ describe("User Schema", () => {
     it("should parse valid search query with all fields", () => {
       const query = {
         query: "john",
-        limit: 25,
+        limit: 20,
         offset: 10,
       };
 
@@ -114,25 +115,29 @@ describe("User Schema", () => {
       expect(result).toEqual(query);
     });
 
-    it("should apply default values when fields are undefined", () => {
-      const query = {};
-      const result = zSearchUsersQuery.parse(query);
+    it("defaults to 20 results from the start", () => {
+      const result = zSearchUsersQuery.parse({ query: "jo" });
 
-      expect(result.limit).toBe(50);
+      expect(result.limit).toBe(20);
       expect(result.offset).toBe(0);
     });
 
-    it("should handle empty object gracefully", () => {
-      const query = {};
-      const result = zSearchUsersQuery.parse(query);
+    it("trims the query", () => {
+      expect(zSearchUsersQuery.parse({ query: "  jo  " }).query).toBe("jo");
+    });
 
-      // Empty object should parse successfully, but optional fields may be undefined
-      expect(result).toBeDefined();
-      expect(typeof result).toBe("object");
+    it.each([
+      ["missing", {}],
+      ["empty", { query: "" }],
+      ["one character", { query: "a" }],
+      ["one character padded with spaces", { query: "  a  " }],
+    ])("rejects a %s query", (_label, query) => {
+      expect(zSearchUsersQuery.safeParse(query).success).toBe(false);
     });
 
     it("should coerce string numbers", () => {
       const query = {
+        query: "jo",
         limit: "10",
         offset: "5",
       };
@@ -142,13 +147,12 @@ describe("User Schema", () => {
       expect(result.offset).toBe(5);
     });
 
-    it("should reject limit above maximum", () => {
-      const query = { limit: 150 };
-      expect(() => zSearchUsersQuery.parse(query)).toThrow();
+    it.each([0, 21, 100])("rejects limit %i rather than clamping it", (limit) => {
+      expect(zSearchUsersQuery.safeParse({ query: "jo", limit }).success).toBe(false);
     });
 
     it("should reject negative offset", () => {
-      const query = { offset: -1 };
+      const query = { query: "jo", offset: -1 };
       expect(() => zSearchUsersQuery.parse(query)).toThrow();
     });
   });
@@ -215,6 +219,28 @@ describe("User Schema", () => {
     it("should reject invalid UUID", () => {
       const param = { id: "invalid-uuid" };
       expect(() => zUserIdPathParam.parse(param)).toThrow();
+    });
+  });
+
+  describe("zInvitation", () => {
+    const invitation = {
+      id: "123e4567-e89b-12d3-a456-426614174000",
+      resourceType: "experiment",
+      resourceId: "123e4567-e89b-12d3-a456-426614174001",
+      email: "invitee@example.com",
+      tier: "viewer",
+      status: "pending",
+      invitedBy: "123e4567-e89b-12d3-a456-426614174002",
+      createdAt: "2024-01-15T10:00:00Z",
+      updatedAt: "2024-01-15T10:00:00Z",
+    };
+
+    it("carries the invitee address for its creator", () => {
+      expect(zInvitation.parse(invitation).email).toBe("invitee@example.com");
+    });
+
+    it("accepts a withheld address", () => {
+      expect(zInvitation.parse({ ...invitation, email: null }).email).toBeNull();
     });
   });
 });

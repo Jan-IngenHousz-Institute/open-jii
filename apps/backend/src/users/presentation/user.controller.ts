@@ -78,9 +78,9 @@ export class UserController {
   }
 
   @Implement(userContract.searchUsers)
-  searchUsers() {
+  searchUsers(@Session() session: UserSession) {
     return implement(userContract.searchUsers).handler(async ({ input }) => {
-      const result = await this.searchUsersUseCase.execute({
+      const result = await this.searchUsersUseCase.execute(session.user.id, {
         query: input.query,
         limit: input.limit,
         offset: input.offset,
@@ -93,9 +93,9 @@ export class UserController {
   }
 
   @Implement(userContract.getUser)
-  getUser() {
+  getUser(@Session() session: UserSession) {
     return implement(userContract.getUser).handler(async ({ input }) => {
-      const result = await this.getUserUseCase.execute(input.id);
+      const result = await this.getUserUseCase.execute(session.user.id, input.id);
       if (result.isSuccess()) {
         return formatDates(result.value);
       }
