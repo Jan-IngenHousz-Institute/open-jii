@@ -693,7 +693,7 @@
     "invite": {
       "action": "Invite",
       "title": "Invite someone",
-      "description": "Search by name, or enter an exact email address. Either way they are sent an invitation.",
+      "description": "Search by name or enter an exact email address. If their address is hidden, enter it exactly to send an invitation.",
       "roleLabel": "Role",
       "submit": "Send invitation",
       "sending": "Sending…",

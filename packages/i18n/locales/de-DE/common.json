@@ -693,7 +693,7 @@
     "invite": {
       "action": "Einladen",
       "title": "Jemanden einladen",
-      "description": "Suchen Sie nach Namen oder geben Sie eine vollständige E-Mail-Adresse ein. In beiden Fällen wird eine Einladung gesendet.",
+      "description": "Suchen Sie nach Namen oder geben Sie eine vollständige E-Mail-Adresse ein. Ist die Adresse verborgen, müssen Sie sie vollständig eingeben, um die Person einzuladen.",
       "roleLabel": "Rolle",
       "submit": "Einladung senden",
       "sending": "Wird gesendet…",

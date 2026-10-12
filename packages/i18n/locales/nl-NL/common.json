@@ -693,7 +693,7 @@
     "invite": {
       "action": "Uitnodigen",
       "title": "Iemand uitnodigen",
-      "description": "Zoek iemand met een account of typ een adres zonder account. In beide gevallen wordt een uitnodiging verstuurd.",
+      "description": "Zoek op naam of voer een volledig e-mailadres in. Als het adres verborgen is, moet je het volledig invoeren om een uitnodiging te versturen.",
       "roleLabel": "Rol",
       "submit": "Uitnodiging versturen",
       "sending": "Versturen…",
