@@ -2673,6 +2673,23 @@ module "backend_ecs" {
   }
 }
 
+# The backend's HMAC guard logs each rejected pipeline call once, with its reason.
+resource "aws_cloudwatch_log_metric_filter" "pipeline_calls_rejected" {
+  name           = "pipeline-calls-rejected-${var.environment}"
+  log_group_name = module.backend_ecs.cloudwatch_log_group_name
+  pattern        = "{ ($.errorCode = \"HMAC_AUTHENTICATION_FAILED\") && ($.reason = \"*\") }"
+
+  metric_transformation {
+    name      = "PipelineCallsRejected"
+    namespace = "OpenJII/Backend"
+    value     = "1"
+    unit      = "Count"
+    dimensions = {
+      Reason = "$.reason"
+    }
+  }
+}
+
 module "backend_waf" {
   source = "../../modules/waf"
 
