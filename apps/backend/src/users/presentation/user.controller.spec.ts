@@ -113,6 +113,24 @@ describe("UserController", () => {
       expect(JSON.stringify(response.body).toLowerCase()).not.toContain(email);
     });
 
+    it("ranks an exact address ahead of more name matches than the page limit", async () => {
+      const email = "crowded@example.com";
+      const targetId = await testApp.createTestUser({ name: "Zelda Target", email });
+      for (let i = 0; i < 21; i++) {
+        await testApp.createTestUser({ name: `${email} Candidate ${i}` });
+      }
+
+      const response: SuperTestResponse<UserProfileList> = await testApp
+        .get(testApp.resolveOrpcPath(contract.users.searchUsers))
+        .withAuth(testUserId)
+        .query({ query: email.toUpperCase(), limit: 20 })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toHaveLength(20);
+      expect(response.body[0]).toMatchObject({ userId: targetId, email: null });
+      expect(response.body.every((candidate) => candidate.email === null)).toBe(true);
+    });
+
     it("shows an organization admin their members' addresses", async () => {
       const orgId = await testApp.createOrganization();
       await testApp.addOrganizationMember(orgId, testUserId, "admin");

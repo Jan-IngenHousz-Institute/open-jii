@@ -5,6 +5,7 @@ import type { GranteeUserDto, ResourceGrantDto } from "@repo/api/domains/sharing
 import { and, eq, profiles, resourceGrants, teamMembers } from "@repo/database";
 
 import { AuthorizationService } from "../../authorization/authorization.service";
+import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 
 /**
@@ -323,6 +324,25 @@ describe("SharingController", () => {
         expect(JSON.stringify(res.body).toLowerCase()).not.toContain("qvortrup.k@example.com");
       }
       expect((byFragment.body as GranteeUserDto[]).map((c) => c.userId)).not.toContain(stranger);
+    });
+
+    it("ranks an exact address ahead of more name matches than the page limit", async () => {
+      const macro = await testApp.createMacro({ name: "M", createdBy: owner });
+      const email = "crowded@example.com";
+      const targetId = await testApp.createTestUser({ name: "Zelda Target", email });
+      for (let i = 0; i < 21; i++) {
+        await testApp.createTestUser({ name: `${email} Candidate ${i}` });
+      }
+
+      const response: SuperTestResponse<GranteeUserDto[]> = await testApp
+        .get(searchPath(macro.id))
+        .withAuth(owner)
+        .query({ query: email.toUpperCase(), limit: 20 })
+        .expect(StatusCodes.OK);
+
+      expect(response.body).toHaveLength(20);
+      expect(response.body[0]).toMatchObject({ userId: targetId, email: null });
+      expect(response.body.every((candidate) => candidate.email === null)).toBe(true);
     });
 
     it("shows an owner of the organization its members' addresses, but no one else's", async () => {

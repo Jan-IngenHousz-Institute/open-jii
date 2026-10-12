@@ -1015,6 +1015,7 @@ export class SharingRepository {
           ),
         )
         .orderBy(
+          sql`CASE WHEN ${isExactEmail} THEN 0 ELSE 1 END`,
           sql`similarity(${fullName}, ${params.query}) DESC`,
           asc(profiles.firstName),
           // Names tie constantly, and without a unique tiebreaker the cut-off drifts.
