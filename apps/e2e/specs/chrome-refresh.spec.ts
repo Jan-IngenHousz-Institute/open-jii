@@ -1,5 +1,55 @@
+import postgres from "postgres";
+
 import { expect, test } from "../fixtures.js";
-import { dismissCookieBanner, findSeedExperiment, locale } from "../helpers.js";
+import {
+  assertSafeFixtureDatabase,
+  databaseUrl,
+  dismissCookieBanner,
+  findSeedExperiment,
+  locale,
+  seedEmail,
+} from "../helpers.js";
+
+// The seed user's personal organization is never listed, so the organizations table needs one more.
+const organizationSlug = "e2e-shared-table";
+
+function connect() {
+  return postgres(databaseUrl, { connect_timeout: 2, idle_timeout: 1, max: 1 });
+}
+
+async function cleanupOrganization(): Promise<void> {
+  assertSafeFixtureDatabase();
+  const sql = connect();
+  try {
+    await sql`delete from organizations where slug = ${organizationSlug}`;
+  } finally {
+    await sql.end({ timeout: 1 });
+  }
+}
+
+test.beforeAll(async () => {
+  await cleanupOrganization();
+  const sql = connect();
+  try {
+    await sql.begin(async (transaction) => {
+      const rows = await transaction<{ id: string }[]>`
+        insert into organizations (name, slug)
+        values ('[E2E] Shared table', ${organizationSlug})
+        returning id
+      `;
+      const organization = rows.at(0);
+      if (!organization) throw new Error("Failed to create the shared-table organization");
+      await transaction`
+        insert into organization_members (organization_id, user_id, role)
+        select ${organization.id}, id, 'owner' from users where email = ${seedEmail}
+      `;
+    });
+  } finally {
+    await sql.end({ timeout: 1 });
+  }
+});
+
+test.afterAll(cleanupOrganization);
 
 test("navigation keyboard shortcuts work", async ({ page }) => {
   await page.goto(`/${locale}/platform`, { waitUntil: "networkidle" });
@@ -29,14 +79,16 @@ test("navigation keyboard shortcuts work", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Experiments", level: 1 })).toBeVisible();
 });
 
-test("activity and account navigation remain usable", async ({ page }) => {
+test("notifications and account navigation remain usable", async ({ page }) => {
   await page.goto(`/${locale}/platform`, { waitUntil: "networkidle" });
   await dismissCookieBanner(page);
-  await page.getByRole("button", { name: /^Activity/ }).click();
-  const activityHeading = page.getByRole("heading", { name: "Activity" });
-  await expect(activityHeading).toBeVisible();
+  await page.getByRole("button", { name: /^Notifications/ }).click();
+  const notificationsHeading = page
+    .getByRole("dialog")
+    .getByRole("heading", { name: "Notifications" });
+  await expect(notificationsHeading).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(activityHeading).not.toBeVisible();
+  await expect(notificationsHeading).not.toBeVisible();
 
   // Direct-load coverage stays isolated in the fixme below while the hydration bug remains.
   await page.getByRole("button", { name: /SE|JII/ }).click();
