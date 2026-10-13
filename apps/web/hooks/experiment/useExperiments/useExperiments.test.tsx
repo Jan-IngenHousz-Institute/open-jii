@@ -41,8 +41,8 @@ describe("useExperiments", () => {
 
   it("initializes with defaults and fetches experiments", async () => {
     const { result } = renderHook(() => useExperiments({}));
-    expect(result.current.status).toEqual([]);
-    expect(result.current.visibility).toEqual([]);
+    expect(result.current.statuses).toEqual([]);
+    expect(result.current.visibilities).toEqual([]);
     expect(result.current.hasActiveFilters).toBe(false);
     expect(result.current.search).toBe("");
     expect(result.current.page).toBe(1);
@@ -63,8 +63,8 @@ describe("useExperiments", () => {
 
     const { result } = renderHook(() => useExperiments({}));
 
-    expect(result.current.status).toEqual(["active", "stale"]);
-    expect(result.current.visibility).toEqual(["public"]);
+    expect(result.current.statuses).toEqual(["active", "stale"]);
+    expect(result.current.visibilities).toEqual(["public"]);
     expect(result.current.hasActiveFilters).toBe(true);
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -138,9 +138,9 @@ describe("useExperiments", () => {
     act(() => result.current.setPage(3));
     expect(result.current.page).toBe(3);
 
-    act(() => result.current.setStatus(["active"]));
+    act(() => result.current.setStatuses(["active"]));
     expect(result.current.page).toBe(1);
-    expect(result.current.status).toEqual(["active"]);
+    expect(result.current.statuses).toEqual(["active"]);
   });
 
   it("resets to page 1 when visibility changes", () => {
@@ -149,9 +149,9 @@ describe("useExperiments", () => {
     const { result } = renderHook(() => useExperiments({}));
 
     act(() => result.current.setPage(3));
-    act(() => result.current.setVisibility(["private"]));
+    act(() => result.current.setVisibilities(["private"]));
     expect(result.current.page).toBe(1);
-    expect(result.current.visibility).toEqual(["private"]);
+    expect(result.current.visibilities).toEqual(["private"]);
   });
 
   it("resets to page 1 and sends the sort when sorting changes", async () => {
@@ -182,8 +182,8 @@ describe("useExperiments", () => {
     act(() => result.current.setPage(2));
     act(() => result.current.clearFilters());
     expect(result.current.page).toBe(1);
-    expect(result.current.status).toEqual([]);
-    expect(result.current.visibility).toEqual([]);
+    expect(result.current.statuses).toEqual([]);
+    expect(result.current.visibilities).toEqual([]);
     expect(result.current.hasActiveFilters).toBe(false);
   });
 
@@ -242,7 +242,7 @@ describe("useExperiments", () => {
 
     const { result } = renderHook(() => useExperiments({ archived: true }));
 
-    expect(result.current.status).toEqual([]);
+    expect(result.current.statuses).toEqual([]);
     expect(result.current.hasActiveFilters).toBe(true);
     await waitFor(() => {
       expect(result.current.data).toBeDefined();

@@ -8,8 +8,8 @@ import type {
 
 interface ExperimentsListView {
   archived: boolean;
-  status?: ExperimentStatus[];
-  visibility?: ExperimentVisibility[];
+  statuses?: ExperimentStatus[];
+  visibilities?: ExperimentVisibility[];
   search?: string;
   page: number;
   sort?: ExperimentSort;
@@ -20,8 +20,8 @@ export function experimentsListQuery(utils: QueryUtils, view: ExperimentsListVie
   return utils.experiments.listExperiments.queryOptions({
     input: {
       scope: view.archived ? "related" : undefined,
-      status: view.archived ? ["archived"] : view.status?.length ? view.status : undefined,
-      visibility: view.visibility?.length ? view.visibility : undefined,
+      status: view.archived ? ["archived"] : view.statuses?.length ? view.statuses : undefined,
+      visibility: view.visibilities?.length ? view.visibilities : undefined,
       search: view.search && view.search.trim() !== "" ? view.search : undefined,
       page: view.page,
       sort: view.sort?.length ? view.sort : undefined,

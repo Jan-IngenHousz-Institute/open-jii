@@ -35,10 +35,10 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
     search,
     debouncedSearch,
     setSearch,
-    status,
-    setStatus,
-    visibility,
-    setVisibility,
+    statuses,
+    setStatuses,
+    visibilities,
+    setVisibilities,
     clearFilters,
     hasActiveFilters,
     page,
@@ -77,8 +77,8 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
                   value,
                   label: t(`status.${value}`),
                 }))}
-                selected={status}
-                onChange={setStatus}
+                selected={statuses}
+                onChange={setStatuses}
                 emptyLabel={t("common.filterNoResults")}
                 selectedCountLabel={(count) => t("common.filterSelectedCount", { count })}
               />
@@ -89,8 +89,8 @@ export function ListExperiments({ archived = false }: ListExperimentsProps) {
                 value,
                 label: t(`visibility.${value}`),
               }))}
-              selected={visibility}
-              onChange={setVisibility}
+              selected={visibilities}
+              onChange={setVisibilities}
               emptyLabel={t("common.filterNoResults")}
               selectedCountLabel={(count) => t("common.filterSelectedCount", { count })}
             />

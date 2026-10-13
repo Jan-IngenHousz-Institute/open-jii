@@ -19,15 +19,15 @@ const EXPERIMENT_LIST_FILTERS = {
  */
 export function useExperimentListFilters({ archived }: { archived: boolean }) {
   const { filters, setFilter, clearFilters } = useListFilters(EXPERIMENT_LIST_FILTERS);
-  const status = archived ? [] : filters.status;
-  const { visibility } = filters;
+  const statuses = archived ? [] : filters.status;
+  const visibilities = filters.visibility;
 
   return {
-    status,
-    visibility,
-    setStatus: (values: typeof filters.status) => setFilter("status", values),
-    setVisibility: (values: typeof visibility) => setFilter("visibility", values),
+    statuses,
+    visibilities,
+    setStatuses: (values: typeof filters.status) => setFilter("status", values),
+    setVisibilities: (values: typeof visibilities) => setFilter("visibility", values),
     clearFilters,
-    hasActiveFilters: status.length > 0 || visibility.length > 0,
+    hasActiveFilters: statuses.length > 0 || visibilities.length > 0,
   };
 }

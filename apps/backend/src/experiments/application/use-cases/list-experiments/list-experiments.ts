@@ -27,28 +27,28 @@ export class ListExperimentsUseCase {
   async execute(
     userId: string,
     scope?: ResourceScope,
-    status?: ExperimentStatus[],
+    statuses?: ExperimentStatus[],
     search?: string,
     sort?: ExperimentSort,
-    visibility?: ExperimentVisibility[],
+    visibilities?: ExperimentVisibility[],
   ): Promise<Result<ExperimentSearchRow[]>> {
     this.logger.log({
       msg: "Listing experiments",
       operation: "list",
       userId,
       scope,
-      status,
-      visibility,
+      statuses,
+      visibilities,
       search,
     });
 
     const result = await this.experimentRepository.findAll(
       userId,
       scope,
-      status,
+      statuses,
       search,
       undefined,
-      { visibility },
+      { visibilities },
       sort,
     );
 
@@ -80,10 +80,10 @@ export class ListExperimentsUseCase {
     page: number,
     pageSize: number,
     scope?: ResourceScope,
-    status?: ExperimentStatus[],
+    statuses?: ExperimentStatus[],
     search?: string,
     sort?: ExperimentSort,
-    visibility?: ExperimentVisibility[],
+    visibilities?: ExperimentVisibility[],
   ): Promise<Result<{ items: ExperimentWithActivity[]; totalCount: number }>> {
     this.logger.log({
       msg: "Listing experiments",
@@ -92,8 +92,8 @@ export class ListExperimentsUseCase {
       page,
       pageSize,
       scope,
-      status,
-      visibility,
+      statuses,
+      visibilities,
       search,
       sort,
     });
@@ -103,9 +103,9 @@ export class ListExperimentsUseCase {
       page,
       pageSize,
       scope,
-      status,
+      statuses,
       search,
-      { visibility },
+      { visibilities },
       sort,
     );
     if (paged.isFailure()) {

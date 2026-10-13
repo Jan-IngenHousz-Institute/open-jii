@@ -849,7 +849,7 @@ describe("ExperimentRepository", () => {
       });
 
       const result = await repository.findAll(userId, undefined, ["active"], undefined, undefined, {
-        visibility: ["public"],
+        visibilities: ["public"],
       });
 
       assertSuccess(result);
@@ -867,7 +867,7 @@ describe("ExperimentRepository", () => {
       await testApp.createExperiment({ name: "Archived", userId, status: "archived" });
 
       const result = await repository.findAll(userId, undefined, [], undefined, undefined, {
-        visibility: [],
+        visibilities: [],
       });
 
       assertSuccess(result);

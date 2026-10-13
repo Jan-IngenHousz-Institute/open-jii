@@ -19,7 +19,7 @@ export const useExperiments = ({
   archived?: boolean;
 }) => {
   const filters = useExperimentListFilters({ archived });
-  const { status, visibility } = filters;
+  const { statuses, visibilities } = filters;
   const [search, setSearchState] = useState<string>(initialSearch);
   const [page, setPage] = useState(1);
   const { sort, setSort, toggleSort } = useListSorting(zExperimentSort);
@@ -30,13 +30,13 @@ export const useExperiments = ({
     setPage(1);
   };
 
-  const setStatus = (values: typeof status) => {
-    filters.setStatus(values);
+  const setStatuses = (values: typeof statuses) => {
+    filters.setStatuses(values);
     setPage(1);
   };
 
-  const setVisibility = (values: typeof visibility) => {
-    filters.setVisibility(values);
+  const setVisibilities = (values: typeof visibilities) => {
+    filters.setVisibilities(values);
     setPage(1);
   };
 
@@ -48,8 +48,8 @@ export const useExperiments = ({
   const query = useQuery({
     ...experimentsListQuery(orpc, {
       archived,
-      status,
-      visibility,
+      statuses,
+      visibilities,
       search: debouncedSearch,
       page,
       sort,
@@ -80,10 +80,10 @@ export const useExperiments = ({
     isSearchPending,
     error: query.error,
     refetch: query.refetch,
-    status,
-    setStatus,
-    visibility,
-    setVisibility,
+    statuses,
+    setStatuses,
+    visibilities,
+    setVisibilities,
     clearFilters,
     hasActiveFilters: filters.hasActiveFilters,
     search,
