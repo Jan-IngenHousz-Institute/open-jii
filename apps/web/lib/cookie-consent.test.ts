@@ -1,6 +1,47 @@
+import posthog from "posthog-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getConsentStatus, setConsentStatus, subscribeToConsentStatus } from "./cookie-consent";
+import {
+  getConsentStatus,
+  setAnalyticsConsent,
+  setConsentStatus,
+  subscribeToConsentStatus,
+} from "./cookie-consent";
+
+describe("setAnalyticsConsent", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("moves PostHog to cookie persistence before it starts capturing, so the identity outlives the page", () => {
+    setAnalyticsConsent(posthog, "accepted");
+
+    expect(posthog.set_config).toHaveBeenCalledWith({ persistence: "localStorage+cookie" });
+    expect(vi.mocked(posthog.set_config).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(posthog.opt_in_capturing).mock.invocationCallOrder[0],
+    );
+  });
+
+  it("stops capturing, forgets the visitor and keeps nothing beyond the page on rejection", () => {
+    setAnalyticsConsent(posthog, "rejected");
+
+    expect(posthog.opt_out_capturing).toHaveBeenCalled();
+    expect(posthog.reset).toHaveBeenCalled();
+    expect(posthog.set_config).toHaveBeenCalledWith({ persistence: "memory" });
+    expect(posthog.opt_in_capturing).not.toHaveBeenCalled();
+  });
+
+  it("still records the choice before PostHog has loaded", () => {
+    const onChange = vi.fn();
+    const unsubscribe = subscribeToConsentStatus(onChange);
+
+    setAnalyticsConsent(null, "accepted");
+
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(posthog.set_config).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+});
 
 describe("subscribeToConsentStatus", () => {
   afterEach(() => {
