@@ -3,22 +3,29 @@ import type { QueryUtils } from "@/lib/orpc";
 import type {
   ExperimentSort,
   ExperimentStatus,
+  ExperimentVisibility,
 } from "@repo/api/domains/experiment/experiment.schema";
 
 interface ExperimentsListView {
   archived: boolean;
-  status?: ExperimentStatus;
+  statuses?: ExperimentStatus[];
+  visibilities?: ExperimentVisibility[];
   search?: string;
   page: number;
   sort?: ExperimentSort;
 }
 
-/** One view of the experiments list, built the same way for the hook and for the server. */
+/**
+ * One view of the experiments list, built the same way for the hook and for the server.
+ * Archived views force related scope and archived status. Empty filters and sort criteria,
+ * and blank searches, are omitted; nonblank search text is sent unchanged.
+ */
 export function experimentsListQuery(utils: QueryUtils, view: ExperimentsListView) {
   return utils.experiments.listExperiments.queryOptions({
     input: {
       scope: view.archived ? "related" : undefined,
-      status: view.archived ? "archived" : view.status,
+      status: view.archived ? ["archived"] : view.statuses?.length ? view.statuses : undefined,
+      visibility: view.visibilities?.length ? view.visibilities : undefined,
       search: view.search && view.search.trim() !== "" ? view.search : undefined,
       page: view.page,
       sort: view.sort?.length ? view.sort : undefined,
