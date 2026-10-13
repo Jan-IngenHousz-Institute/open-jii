@@ -44,6 +44,8 @@ interface OverviewTableProps<T extends RowData> {
   getRowHref: (item: T) => string;
   emptyMessage: string;
   emptyHelpPath?: string;
+  /** A way out of the empty state, such as clearing the filters that caused it. */
+  emptyAction?: ReactNode;
   sorting?: OverviewTableSorting;
 }
 
@@ -93,6 +95,11 @@ interface OverviewColumnMeta {
   label?: string;
 }
 
+/**
+ * Render rows in the supplied order, with optional server sorting controls and row navigation.
+ * Show skeletons while loading, an error state for undefined items, or the empty message,
+ * help link and optional action for an empty array.
+ */
 export function OverviewTable<T extends RowData>({
   columns,
   items,
@@ -105,6 +112,7 @@ export function OverviewTable<T extends RowData>({
   getRowHref,
   emptyMessage,
   emptyHelpPath,
+  emptyAction,
   sorting,
 }: OverviewTableProps<T>) {
   const router = useRouter();
@@ -166,6 +174,7 @@ export function OverviewTable<T extends RowData>({
             <DocsHelpLink path={emptyHelpPath} />
           </div>
         )}
+        {emptyAction && <div className="mt-3">{emptyAction}</div>}
       </div>
     );
   }

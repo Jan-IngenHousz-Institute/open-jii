@@ -36,6 +36,10 @@
     "private": "Private",
     "public": "Public"
   },
+  "filters": {
+    "status": "Status",
+    "visibility": "Visibility"
+  },
   "actions": {
     "start": "Start Experiment",
     "pause": "Pause Experiment",

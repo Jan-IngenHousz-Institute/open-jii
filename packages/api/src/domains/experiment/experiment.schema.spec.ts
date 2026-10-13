@@ -493,9 +493,23 @@ describe("Experiment Schema", () => {
       expect(() => zExperimentFilterQuery.parse({ filter: "unknown" })).toThrow();
 
       // Test status field
-      expect(zExperimentFilterQuery.parse({ status: "active" })).toEqual({ status: "active" });
-      expect(zExperimentFilterQuery.parse({ status: "archived" })).toEqual({ status: "archived" });
+      expect(zExperimentFilterQuery.parse({ status: "active" })).toEqual({ status: ["active"] });
+      expect(zExperimentFilterQuery.parse({ status: "archived" })).toEqual({
+        status: ["archived"],
+      });
+      expect(zExperimentFilterQuery.parse({ status: ["active", "stale"] })).toEqual({
+        status: ["active", "stale"],
+      });
       expect(() => zExperimentFilterQuery.parse({ status: "invalid_status" })).toThrow();
+
+      // Test visibility field
+      expect(zExperimentFilterQuery.parse({ visibility: "public" })).toEqual({
+        visibility: ["public"],
+      });
+      expect(zExperimentFilterQuery.parse({ visibility: ["private", "public"] })).toEqual({
+        visibility: ["private", "public"],
+      });
+      expect(() => zExperimentFilterQuery.parse({ visibility: "hidden" })).toThrow();
 
       // Test search field
       expect(zExperimentFilterQuery.parse({ search: "test experiment" })).toEqual({
@@ -525,7 +539,7 @@ describe("Experiment Schema", () => {
         }),
       ).toEqual({
         filter: "member",
-        status: "active",
+        status: ["active"],
         search: "my experiment",
       });
     });
