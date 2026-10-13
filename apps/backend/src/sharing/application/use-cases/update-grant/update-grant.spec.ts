@@ -1,14 +1,26 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { StatusCodes } from "http-status-codes";
 
-import { eq, resourceGrants } from "@repo/database";
+import { eq, notifications, resourceGrants } from "@repo/database";
 
-import { assertFailure } from "../../../../common/utils/fp-utils";
+import { EmailAdapter } from "../../../../common/modules/email/services/email.adapter";
+import {
+  AppError,
+  assertFailure,
+  assertSuccess,
+  failure,
+  success,
+} from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import { TestHarness } from "../../../../test/test-harness";
+import { SharingRepository } from "../../../core/repositories/sharing.repository";
 import { UpdateGrantUseCase } from "./update-grant";
 
 describe("updateGrant", () => {
   const testApp = TestHarness.App;
   let updateGrant: UpdateGrantUseCase;
+  let sharingRepo: SharingRepository;
+  let emailAdapter: EmailAdapter;
   let owner: string;
 
   beforeAll(async () => {
@@ -18,7 +30,10 @@ describe("updateGrant", () => {
   beforeEach(async () => {
     await testApp.beforeEach();
     updateGrant = testApp.module.get(UpdateGrantUseCase);
+    sharingRepo = testApp.module.get(SharingRepository);
+    emailAdapter = testApp.module.get(EmailAdapter);
     owner = await testApp.createTestUser({ name: "Owner" });
+    vi.spyOn(emailAdapter, "sendAccessGrantedNotification").mockResolvedValue(success(undefined));
   });
 
   afterEach(() => {
@@ -61,6 +76,119 @@ describe("updateGrant", () => {
       .from(resourceGrants)
       .where(eq(resourceGrants.id, elsewhere.id));
     expect(untouched.role).toBe("viewer");
+  });
+
+  // A level change is something the collaborator hears about in the bell. It sends
+  // no email: the category's email is reserved for being given access in the first
+  // place.
+  describe("notifying the grantee", () => {
+    const notificationsFor = (userId: string) =>
+      testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
+
+    it("tells the grantee their level changed, with the new role", async () => {
+      const name = `Macro ${crypto.randomUUID()}`;
+      const macro = await testApp.createMacro({ name, createdBy: owner });
+      const collaborator = await testApp.createTestUser({ name: "Lifted Collaborator" });
+      const grant = await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: collaborator,
+        role: "viewer",
+        createdBy: owner,
+      });
+
+      assertSuccess(
+        await updateGrant.execute(owner, "macro", macro.id, grant.id, { role: "admin" }),
+      );
+
+      const rows = await notificationsFor(collaborator);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        type: "resource_access_changed",
+        actorId: owner,
+        resourceType: "macro",
+        resourceId: macro.id,
+        params: { resourceName: name, role: "admin" },
+      });
+      expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+    });
+
+    it("says nothing when the role is set to what it already was", async () => {
+      const macro = await testApp.createMacro({ name: "Unmoved", createdBy: owner });
+      const collaborator = await testApp.createTestUser({ name: "Unmoved Collaborator" });
+      const grant = await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: collaborator,
+        role: "viewer",
+        createdBy: owner,
+      });
+
+      assertSuccess(
+        await updateGrant.execute(owner, "macro", macro.id, grant.id, { role: "viewer" }),
+      );
+
+      expect(await notificationsFor(collaborator)).toEqual([]);
+      expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+    });
+
+    // Both ways the telling can fail leave the role change itself standing.
+    it("still changes the role when the resource name cannot be read", async () => {
+      const macro = await testApp.createMacro({ name: "Unnameable", createdBy: owner });
+      const collaborator = await testApp.createTestUser({ name: "Unnamed Collaborator" });
+      const grant = await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: collaborator,
+        role: "viewer",
+        createdBy: owner,
+      });
+      vi.spyOn(sharingRepo, "findResourceName").mockResolvedValue(
+        failure(AppError.internal("name lookup unavailable")),
+      );
+
+      assertSuccess(
+        await updateGrant.execute(owner, "macro", macro.id, grant.id, { role: "admin" }),
+      );
+
+      const [stored] = await testApp.database
+        .select()
+        .from(resourceGrants)
+        .where(eq(resourceGrants.id, grant.id));
+      expect(stored.role).toBe("admin");
+      expect(await notificationsFor(collaborator)).toEqual([]);
+    });
+
+    it("still changes the role when the notification cannot be dispatched", async () => {
+      const macro = await testApp.createMacro({ name: "Dispatch Down", createdBy: owner });
+      const collaborator = await testApp.createTestUser({ name: "Unreachable Collaborator" });
+      const grant = await testApp.addResourceGrant({
+        resourceType: "macro",
+        resourceId: macro.id,
+        granteeType: "user",
+        granteeId: collaborator,
+        role: "viewer",
+        createdBy: owner,
+      });
+      vi.spyOn(testApp.module.get(NotificationDispatchService), "dispatch").mockResolvedValue(
+        failure(AppError.internal("notifications unavailable")),
+      );
+
+      const result = await updateGrant.execute(owner, "macro", macro.id, grant.id, {
+        role: "admin",
+      });
+
+      assertSuccess(result);
+      const [stored] = await testApp.database
+        .select()
+        .from(resourceGrants)
+        .where(eq(resourceGrants.id, grant.id));
+      expect(stored.role).toBe("admin");
+      expect(await notificationsFor(collaborator)).toEqual([]);
+    });
   });
 
   // An archived experiment is immutable everywhere else — the read-only row controls

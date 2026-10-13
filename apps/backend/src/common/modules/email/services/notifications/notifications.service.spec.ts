@@ -1,6 +1,7 @@
 import type { MockInstance } from "vitest";
 
 import { TestHarness } from "../../../../../test/test-harness";
+import { ErrorCodes } from "../../../../utils/error-codes";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
 import { NotificationsService } from "./notifications.service";
 
@@ -12,7 +13,6 @@ function spyOnProtected(instance: object, method: string): MockInstance {
 const MOCK_EXPERIMENT_ID = "exp-123";
 const MOCK_EXPERIMENT_NAME = "Test Experiment";
 const MOCK_ACTOR = "John Doe";
-const MOCK_ROLE = "researcher";
 const MOCK_EMAIL = "test@example.com";
 const MOCK_HTML_CONTENT = "<html><body>Test email</body></html>";
 const MOCK_TEXT_CONTENT = "Test email";
@@ -23,7 +23,7 @@ describe("NotificationsService", () => {
 
   // Spy references - recreated fresh in each beforeEach
   let mockCreateTransport: MockInstance;
-  let mockRenderAddedUserNotification: MockInstance;
+  let mockRenderAccessGrantedNotification: MockInstance;
   let mockRenderTransferRequestConfirmation: MockInstance;
   let mockRenderProjectTransferComplete: MockInstance;
   let mockRenderJoinRequestSubmittedEmail: MockInstance;
@@ -40,9 +40,9 @@ describe("NotificationsService", () => {
 
     // Create fresh spies on the protected wrapper methods
     mockCreateTransport = spyOnProtected(service, "createMailTransport");
-    mockRenderAddedUserNotification = spyOnProtected(
+    mockRenderAccessGrantedNotification = spyOnProtected(
       service,
-      "renderAddedUserNotificationEmail",
+      "renderAccessGrantedNotificationEmail",
     ).mockResolvedValue({
       html: MOCK_HTML_CONTENT,
       text: MOCK_TEXT_CONTENT,
@@ -92,318 +92,137 @@ describe("NotificationsService", () => {
     await testApp.teardown();
   });
 
-  describe("sendAddedUserNotification", () => {
-    it("should successfully send notification email", async () => {
-      // Arrange
+  describe("sendAccessGrantedNotification", () => {
+    const MOCK_RESOURCE_ID = "res-123";
+    const MOCK_RESOURCE_NAME = "Leaf Area Index";
+
+    function acceptingTransport() {
       const mockSendMail = vi.fn().mockReturnValue({
         messageId: "test-message-id",
         accepted: [MOCK_EMAIL],
         rejected: [],
         pending: [],
       });
+      mockCreateTransport.mockReturnValue({ sendMail: mockSendMail });
+      return mockSendMail;
+    }
 
-      const mockTransport = {
-        sendMail: mockSendMail,
-      };
+    it("renders the generic access template and links to the resource's page", async () => {
+      const mockSendMail = acceptingTransport();
 
-      mockCreateTransport.mockReturnValue(mockTransport);
-
-      // Act
-      const result = await service.sendAddedUserNotification(
-        MOCK_EXPERIMENT_ID,
-        MOCK_EXPERIMENT_NAME,
-        MOCK_ACTOR,
-        MOCK_ROLE,
-        MOCK_EMAIL,
-      );
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-
-      // Verify transport creation
-      expect(mockCreateTransport).toHaveBeenCalledWith("smtp://localhost:1025");
-
-      // Verify email render function was called
-      expect(mockRenderAddedUserNotification).toHaveBeenCalledWith({
-        host: "localhost:3000",
-        baseUrl: "http://localhost:3000",
-        experimentName: MOCK_EXPERIMENT_NAME,
-        experimentUrl: `http://localhost:3000/platform/experiments/${MOCK_EXPERIMENT_ID}`,
+      const result = await service.sendAccessGrantedNotification({
+        resourceType: "experiment",
+        resourceId: MOCK_RESOURCE_ID,
+        resourceName: MOCK_RESOURCE_NAME,
         actor: MOCK_ACTOR,
-        role: MOCK_ROLE,
+        role: "a contributor who can view and add data",
+        email: MOCK_EMAIL,
       });
 
-      // Verify sendMail was called with correct parameters
+      assertSuccess(result);
+      expect(mockCreateTransport).toHaveBeenCalledWith("smtp://localhost:1025");
+      expect(mockRenderAccessGrantedNotification).toHaveBeenCalledWith({
+        host: "localhost:3000",
+        baseUrl: "http://localhost:3000",
+        resourceKind: "experiment",
+        resourceName: MOCK_RESOURCE_NAME,
+        resourceUrl: `http://localhost:3000/platform/experiments/${MOCK_RESOURCE_ID}`,
+        actor: MOCK_ACTOR,
+        role: "a contributor who can view and add data",
+      });
       expect(mockSendMail).toHaveBeenCalledWith({
         to: MOCK_EMAIL,
-        from: {
-          name: "openJII",
-          address: "noreply@localhost",
-        },
-        subject: "Added to experiment on the openJII Platform",
+        from: { name: "openJII", address: "noreply@localhost" },
+        subject: `Access to ${MOCK_RESOURCE_NAME} on the openJII Platform`,
         html: MOCK_HTML_CONTENT,
         text: MOCK_TEXT_CONTENT,
       });
     });
 
-    it("should handle email with rejected addresses", async () => {
-      // Arrange
-      const mockSendMail = vi.fn().mockReturnValue({
-        messageId: "test-message-id",
-        accepted: [],
-        rejected: [MOCK_EMAIL],
-        pending: [],
+    it("links a device group to its nested page and carries the non-experiment wording", async () => {
+      acceptingTransport();
+
+      const result = await service.sendAccessGrantedNotification({
+        resourceType: "device_group",
+        resourceId: MOCK_RESOURCE_ID,
+        resourceName: "Greenhouse sensors",
+        actor: MOCK_ACTOR,
+        role: "a collaborator who can view",
+        email: MOCK_EMAIL,
       });
 
-      const mockTransport = {
-        sendMail: mockSendMail,
-      };
-
-      mockCreateTransport.mockReturnValue(mockTransport);
-
-      // Act
-      const result = await service.sendAddedUserNotification(
-        MOCK_EXPERIMENT_ID,
-        MOCK_EXPERIMENT_NAME,
-        MOCK_ACTOR,
-        MOCK_ROLE,
-        MOCK_EMAIL,
+      assertSuccess(result);
+      expect(mockRenderAccessGrantedNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resourceKind: "device group",
+          resourceUrl: `http://localhost:3000/platform/devices/groups/${MOCK_RESOURCE_ID}`,
+          role: "a collaborator who can view",
+        }),
       );
+    });
 
-      // Assert
-      expect(result.isSuccess()).toBe(false);
+    it("links a calibration definition to the calibrations page", async () => {
+      acceptingTransport();
+
+      const result = await service.sendAccessGrantedNotification({
+        resourceType: "calibration_definition",
+        resourceId: MOCK_RESOURCE_ID,
+        resourceName: "SPAD baseline",
+        actor: MOCK_ACTOR,
+        role: "a collaborator who can edit",
+        email: MOCK_EMAIL,
+      });
+
+      assertSuccess(result);
+      expect(mockRenderAccessGrantedNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resourceKind: "calibration definition",
+          resourceUrl: `http://localhost:3000/platform/calibrations/${MOCK_RESOURCE_ID}`,
+        }),
+      );
+    });
+
+    it("treats a rejected address as a failure", async () => {
+      mockCreateTransport.mockReturnValue({
+        sendMail: vi.fn().mockReturnValue({
+          messageId: "test-message-id",
+          accepted: [],
+          rejected: [MOCK_EMAIL],
+          pending: [],
+        }),
+      });
+
+      const result = await service.sendAccessGrantedNotification({
+        resourceType: "workbook",
+        resourceId: MOCK_RESOURCE_ID,
+        resourceName: MOCK_RESOURCE_NAME,
+        actor: MOCK_ACTOR,
+        role: "a collaborator who can view",
+        email: MOCK_EMAIL,
+      });
+
       assertFailure(result);
       expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
     });
 
-    it("should handle email with pending addresses", async () => {
-      // Arrange
-      const mockSendMail = vi.fn().mockReturnValue({
-        messageId: "test-message-id",
-        accepted: [],
-        rejected: [],
-        pending: [MOCK_EMAIL],
+    it("reports a failed send as a failure rather than throwing", async () => {
+      mockCreateTransport.mockReturnValue({
+        sendMail: vi.fn().mockImplementation(() => {
+          throw new Error("SMTP connection failed");
+        }),
       });
 
-      const mockTransport = {
-        sendMail: mockSendMail,
-      };
-
-      mockCreateTransport.mockReturnValue(mockTransport);
-
-      // Act
-      const result = await service.sendAddedUserNotification(
-        MOCK_EXPERIMENT_ID,
-        MOCK_EXPERIMENT_NAME,
-        MOCK_ACTOR,
-        MOCK_ROLE,
-        MOCK_EMAIL,
-      );
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toContain(`Email (${MOCK_EMAIL}) could not be sent`);
-    });
-
-    it("should handle multiple failed addresses", async () => {
-      // Arrange
-      const rejectedEmail1 = "rejected1@example.com";
-      const rejectedEmail2 = "rejected2@example.com";
-      const pendingEmail = "pending@example.com";
-
-      const mockSendMail = vi.fn().mockReturnValue({
-        messageId: "test-message-id",
-        accepted: [],
-        rejected: [rejectedEmail1, rejectedEmail2],
-        pending: [pendingEmail],
+      const result = await service.sendAccessGrantedNotification({
+        resourceType: "macro",
+        resourceId: MOCK_RESOURCE_ID,
+        resourceName: MOCK_RESOURCE_NAME,
+        actor: MOCK_ACTOR,
+        role: "a collaborator who can edit",
+        email: MOCK_EMAIL,
       });
 
-      const mockTransport = {
-        sendMail: mockSendMail,
-      };
-
-      mockCreateTransport.mockReturnValue(mockTransport);
-
-      // Act
-      const result = await service.sendAddedUserNotification(
-        MOCK_EXPERIMENT_ID,
-        MOCK_EXPERIMENT_NAME,
-        MOCK_ACTOR,
-        MOCK_ROLE,
-        MOCK_EMAIL,
-      );
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toContain(
-        `Email (${rejectedEmail1}, ${rejectedEmail2}, ${pendingEmail}) could not be sent`,
-      );
-    });
-
-    it("should handle failed addresses with object format", async () => {
-      // Arrange
-      const failedAddressObject = { address: "failed@example.com" };
-
-      const mockSendMail = vi.fn().mockReturnValue({
-        messageId: "test-message-id",
-        accepted: [],
-        rejected: [failedAddressObject],
-        pending: [],
-      });
-
-      const mockTransport = {
-        sendMail: mockSendMail,
-      };
-
-      mockCreateTransport.mockReturnValue(mockTransport);
-
-      // Act
-      const result = await service.sendAddedUserNotification(
-        MOCK_EXPERIMENT_ID,
-        MOCK_EXPERIMENT_NAME,
-        MOCK_ACTOR,
-        MOCK_ROLE,
-        MOCK_EMAIL,
-      );
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toContain("Email (failed@example.com) could not be sent");
-    });
-
-    it("should handle nodemailer transport creation errors", async () => {
-      // Arrange
-      const transportError = new Error("Failed to create transport");
-      mockCreateTransport.mockImplementation(() => {
-        throw transportError;
-      });
-
-      // Act
-      const result = await service.sendAddedUserNotification(
-        MOCK_EXPERIMENT_ID,
-        MOCK_EXPERIMENT_NAME,
-        MOCK_ACTOR,
-        MOCK_ROLE,
-        MOCK_EMAIL,
-      );
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to send email: Failed to create transport");
-    });
-
-    it("should handle email rendering errors", async () => {
-      // Arrange
-      const renderError = new Error("Failed to render email template");
-      mockRenderAddedUserNotification.mockRejectedValue(renderError);
-
-      const mockTransport = {
-        sendMail: vi.fn(),
-      };
-      mockCreateTransport.mockReturnValue(mockTransport);
-
-      // Act
-      const result = await service.sendAddedUserNotification(
-        MOCK_EXPERIMENT_ID,
-        MOCK_EXPERIMENT_NAME,
-        MOCK_ACTOR,
-        MOCK_ROLE,
-        MOCK_EMAIL,
-      );
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toContain(
-        "Failed to send email: Failed to render email template",
-      );
-    });
-
-    it("should handle sendMail errors", async () => {
-      // Arrange
-      const sendMailError = new Error("SMTP connection failed");
-      const mockSendMail = vi.fn().mockImplementation(() => {
-        throw sendMailError;
-      });
-
-      const mockTransport = {
-        sendMail: mockSendMail,
-      };
-
-      mockCreateTransport.mockReturnValue(mockTransport);
-
-      // Act
-      const result = await service.sendAddedUserNotification(
-        MOCK_EXPERIMENT_ID,
-        MOCK_EXPERIMENT_NAME,
-        MOCK_ACTOR,
-        MOCK_ROLE,
-        MOCK_EMAIL,
-      );
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
       assertFailure(result);
       expect(result.error.message).toContain("Failed to send email: SMTP connection failed");
-    });
-
-    it("should handle missing rejected and pending properties gracefully", async () => {
-      // Arrange
-      const mockSendMail = vi.fn().mockReturnValue({
-        messageId: "test-message-id",
-        accepted: [MOCK_EMAIL],
-        rejected: [],
-        pending: [],
-      });
-
-      const mockTransport = {
-        sendMail: mockSendMail,
-      };
-
-      mockCreateTransport.mockReturnValue(mockTransport);
-
-      // Act
-      const result = await service.sendAddedUserNotification(
-        MOCK_EXPERIMENT_ID,
-        MOCK_EXPERIMENT_NAME,
-        MOCK_ACTOR,
-        MOCK_ROLE,
-        MOCK_EMAIL,
-      );
-
-      // Assert
-      expect(result.isSuccess()).toBe(true);
-      assertSuccess(result);
-
-      // Should not throw error when rejected/pending are undefined
-      expect(mockSendMail).toHaveBeenCalled();
-    });
-
-    it("should handle non-Error exceptions", async () => {
-      // Arrange
-      const stringError = new Error("String error message");
-      mockCreateTransport.mockImplementation(() => {
-        throw stringError;
-      });
-
-      // Act
-      const result = await service.sendAddedUserNotification(
-        MOCK_EXPERIMENT_ID,
-        MOCK_EXPERIMENT_NAME,
-        MOCK_ACTOR,
-        MOCK_ROLE,
-        MOCK_EMAIL,
-      );
-
-      // Assert
-      expect(result.isSuccess()).toBe(false);
-      assertFailure(result);
-      expect(result.error.message).toContain("Failed to send email: String error message");
     });
   });
 
@@ -1210,6 +1029,28 @@ describe("NotificationsService", () => {
 
       assertFailure(result);
       expect(result.error.message).toContain("Failed to send email: SMTP connection failed");
+    });
+  });
+
+  describe("verifyTransport", () => {
+    it("succeeds when the SMTP server accepts the login", async () => {
+      mockCreateTransport.mockReturnValue({ verify: vi.fn().mockResolvedValue(true) });
+
+      const result = await service.verifyTransport();
+
+      assertSuccess(result);
+    });
+
+    it("fails with its own code when the SMTP server refuses the login", async () => {
+      mockCreateTransport.mockReturnValue({
+        verify: vi.fn().mockRejectedValue(new Error("535 Authentication failed")),
+      });
+
+      const result = await service.verifyTransport();
+
+      assertFailure(result);
+      expect(result.error.code).toBe(ErrorCodes.EMAIL_TRANSPORT_VERIFY_FAILED);
+      expect(result.error.message).toContain("535 Authentication failed");
     });
   });
 });

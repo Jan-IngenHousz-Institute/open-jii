@@ -4,7 +4,7 @@
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 
-import { renderAddedUserNotification } from "../render/added-user-notification";
+import { renderAccessGrantedNotification } from "../render/access-granted-notification";
 import { renderOtpEmail } from "../render/otp-email";
 import { renderProjectTransferComplete } from "../render/project-transfer-complete";
 import { renderTransferRequestConfirmation } from "../render/transfer-request-confirmation";
@@ -34,14 +34,15 @@ async function main(): Promise<void> {
   );
 
   write(
-    "added-user",
-    await renderAddedUserNotification({
+    "access-granted",
+    await renderAccessGrantedNotification({
       host,
       baseUrl,
-      experimentName: "My Experiment",
-      experimentUrl: `${baseUrl}/en-US/platform/experiments/123`,
+      resourceKind: "workbook",
+      resourceName: "Leaf Area Index",
+      resourceUrl: `${baseUrl}/en-US/platform/workbooks/123`,
       actor: "Jane Doe",
-      role: "a contributor who can view and add data",
+      role: "a collaborator who can view",
     }),
   );
 

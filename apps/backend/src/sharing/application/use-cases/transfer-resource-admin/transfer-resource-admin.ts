@@ -1,7 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
 
 import { AuthorizationService } from "../../../../authorization/authorization.service";
+import { ErrorCodes } from "../../../../common/utils/error-codes";
 import { Result, success } from "../../../../common/utils/fp-utils";
+import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
 import type { ResourceRef } from "../../../core/models/sharing.model";
 import { SharingRepository } from "../../../core/repositories/sharing.repository";
 
@@ -33,6 +35,7 @@ export class TransferResourceAdminUseCase {
   constructor(
     private readonly repo: SharingRepository,
     private readonly authz: AuthorizationService,
+    private readonly notifications: NotificationDispatchService,
   ) {}
 
   async execute(
@@ -124,6 +127,62 @@ export class TransferResourceAdminUseCase {
       );
     }
 
+    if (grantResult.value !== "unchanged") {
+      await this.notify(
+        grantResult.value === "granted" ? "resource_access_granted" : "resource_access_changed",
+        currentUserId,
+        targetUserId,
+        resourceType,
+        resourceId,
+      );
+    }
+
     return { resourceType, resourceId, success: true };
+  }
+
+  /**
+   * Tell the new admin what they were handed. A failure anywhere here leaves the
+   * hand-off standing: the blocker it cleared must not come back.
+   */
+  private async notify(
+    type: "resource_access_granted" | "resource_access_changed",
+    actorId: string,
+    targetUserId: string,
+    resourceType: ResourceRef["resourceType"],
+    resourceId: string,
+  ): Promise<void> {
+    const name = await this.repo.findResourceName(resourceType, resourceId);
+    if (name.isFailure() || name.value === null) {
+      this.logger.error({
+        msg: "Could not name the resource, the new admin was not notified",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "transfer-resource-admin",
+        type,
+        resourceType,
+        resourceId,
+        ...(name.isFailure() ? { error: name.error } : {}),
+      });
+      return;
+    }
+
+    const dispatched = await this.notifications.dispatch({
+      type,
+      recipientIds: [targetUserId],
+      actorId,
+      resource: { type: resourceType, id: resourceId },
+      params: { resourceName: name.value, role: "admin" },
+    });
+
+    if (dispatched.isFailure()) {
+      this.logger.error({
+        msg: "Failed to notify the new admin, the hand-off still went through",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "transfer-resource-admin",
+        type,
+        resourceType,
+        resourceId,
+        error: dispatched.error,
+      });
+    }
   }
 }

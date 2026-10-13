@@ -5,6 +5,8 @@ import type {
   NotificationResourceType,
   NotificationType,
 } from "@repo/api/domains/notification/notification.schema";
+import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
+import { zSharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
 
 import { EmailAdapter } from "../../../common/modules/email/services/email.adapter";
 import { describeAccess } from "../../../common/utils/access-wording";
@@ -41,6 +43,13 @@ const aboutResource =
       : Promise.resolve(failure(AppError.internal("Notification has no resource to email about")));
 
 /**
+ * `organization` is a notification resource but never a shareable one, so the access
+ * email's type has to be narrowed before the page-link map can be asked for it.
+ */
+const isSharingResourceType = (type: NotificationResourceType): type is SharingResourceType =>
+  zSharingResourceType.safeParse(type).success;
+
+/**
  * The email a notification type sends, if it sends one. Partial on purpose: a type
  * with no entry here stores its row and sends nothing, and the ticket that moves
  * that email onto dispatch adds the entry. Each entry sees its own type's params.
@@ -56,16 +65,17 @@ const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
         params.message,
       ),
   ),
-  // The same "you were added" email a direct invite sends, fallback name included.
+  // The same access email a direct share sends, fallback name included.
   experiment_join_request_approved: aboutResource(
     (experimentId, email, { params, actorName, recipientEmail }) =>
-      email.sendAddedUserNotification(
-        experimentId,
-        params.experimentName,
-        actorName ?? "An openJII admin",
-        describeAccess({ tier: "viewer" }),
-        recipientEmail,
-      ),
+      email.sendAccessGrantedNotification({
+        resourceType: "experiment",
+        resourceId: experimentId,
+        resourceName: params.experimentName,
+        actor: actorName ?? "An openJII admin",
+        role: describeAccess({ tier: "viewer", resourceType: "experiment" }),
+        email: recipientEmail,
+      }),
   ),
   experiment_join_request_rejected: aboutResource(
     (experimentId, email, { params, recipientEmail }) =>
@@ -113,6 +123,24 @@ const NOTIFICATION_EMAILS: { [T in NotificationType]?: EmailSender<T> } = {
         params.organizationName,
         recipientEmail,
       ),
+  ),
+  resource_access_granted: aboutResource(
+    (resourceId, email, { params, actorName, recipientEmail, resource }) =>
+      resource && isSharingResourceType(resource.type)
+        ? email.sendAccessGrantedNotification({
+            resourceType: resource.type,
+            resourceId,
+            resourceName: params.resourceName,
+            actor: actorName ?? "Someone",
+            role: describeAccess({
+              tier: params.role === "admin" ? "admin" : "viewer",
+              resourceType: resource.type,
+            }),
+            email: recipientEmail,
+          })
+        : Promise.resolve(
+            failure(AppError.internal("Access notification on a non-shareable resource")),
+          ),
   ),
   // No `aboutResource`: the request is about a PhotosynQ project, not a platform resource.
   project_transfer_requested: (email, { params, recipientEmail }) =>
