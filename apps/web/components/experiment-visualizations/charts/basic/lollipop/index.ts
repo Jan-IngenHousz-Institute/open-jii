@@ -10,6 +10,7 @@ import { lollipopStyleShelves } from "./shelves/style-shelves";
 
 export const lollipopChartType: ChartTypeDef = {
   type: "lollipop",
+  plotlyTraceTypes: ["scatter"],
   family: "basic",
   labelKey: "workspace.charts.types.lollipop",
   descriptionKey: "workspace.charts.descriptions.lollipop",

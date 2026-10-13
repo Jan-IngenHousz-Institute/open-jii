@@ -1,7 +1,26 @@
 import { render, screen } from "@/test/test-utils";
 import { describe, it, expect, vi } from "vitest";
+import { orpc } from "~/lib/orpc";
 
 import Page from "./page";
+
+const prefetched = vi.hoisted(() => {
+  const state: { queries: unknown[] } = { queries: [] };
+  return state;
+});
+
+vi.mock("@/components/server-prefetch/prefetched-queries", () => ({
+  PrefetchedQueries: ({
+    queries,
+    children,
+  }: {
+    queries: (utils: unknown) => unknown[];
+    children: React.ReactNode;
+  }) => {
+    prefetched.queries = queries(orpc);
+    return children;
+  },
+}));
 
 vi.mock("@/components/dashboard/dashboard-banner", () => ({
   DashboardBanner: () => <section aria-label="banner" />,
@@ -12,7 +31,9 @@ vi.mock("@/components/dashboard/dashboard-section", () => ({
   ),
 }));
 vi.mock("@/components/dashboard/user-experiments-section", () => ({
-  UserExperimentsSection: () => <div>Experiments</div>,
+  UserExperimentsSection: () => (
+    <section aria-label="dashboard.yourExperiments">Experiments</section>
+  ),
 }));
 vi.mock("@/components/dashboard/public-experiments-section", () => ({
   PublicExperimentsSection: () => <div>Public Experiments</div>,
@@ -43,5 +64,12 @@ describe("PlatformDashboard", () => {
       "dashboard.recentArticles",
     ]);
     expect(screen.getByText("Public Experiments")).toBeInTheDocument();
+  });
+
+  it("fetches both experiment lists on the server so the page arrives with them", async () => {
+    render(await Page({ params: Promise.resolve({ locale: "en-US" }) }));
+
+    expect(JSON.stringify(prefetched.queries)).toContain('"listHomeExperiments"');
+    expect(JSON.stringify(prefetched.queries)).toContain('"visibility":"public"');
   });
 });

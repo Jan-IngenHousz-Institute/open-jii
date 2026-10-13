@@ -1,12 +1,12 @@
-import { createSession, createUserProfile } from "@/test/factories";
+import { createSession, createUseSessionResult, createUserProfile } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor, within } from "@/test/test-utils";
 import { usePathname } from "next/navigation";
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { contract } from "@repo/api/contract";
-import { authClient } from "@repo/auth/client";
+import { authClient, useSession } from "@repo/auth/client";
 
 import { UnifiedNavbar } from "./unified-navbar";
 
@@ -92,25 +92,36 @@ function renderNavbar(
     pathname?: string;
     session?: ReturnType<typeof createSession> | null;
     isHomePage?: boolean;
+    links?: { id: string; label: string; href: string }[] | null;
   } = {},
 ) {
   vi.mocked(usePathname).mockReturnValue(opts.pathname ?? "/en-US");
+  vi.mocked(useSession).mockReturnValue(createUseSessionResult({ data: opts.session ?? null }));
   if (opts.session?.user) {
     server.mount(contract.users.getUserProfile, {
       body: createUserProfile({ firstName: "Ada", lastName: "Lovelace" }),
     });
   }
+  const links =
+    opts.links === undefined
+      ? [
+          { id: "home", label: "Home", href: "/en-US" },
+          { id: "blog", label: "Blog", href: "/en-US/blog" },
+          { id: "faq", label: "FAQ", href: "/en-US/faq" },
+          { id: "platform", label: "Platform", href: "/en-US/platform" },
+        ]
+      : opts.links;
   return render(
-    <UnifiedNavbar
-      locale={opts.locale ?? "en-US"}
-      session={opts.session ?? null}
-      isHomePage={opts.isHomePage}
-    />,
+    <UnifiedNavbar locale={opts.locale ?? "en-US"} isHomePage={opts.isHomePage} links={links} />,
   );
 }
 
 describe("UnifiedNavbar", () => {
   beforeEach(() => vi.clearAllMocks());
+  // The mock is shared with other test files, so the signed-out default goes back after each.
+  afterEach(() => {
+    vi.mocked(useSession).mockReturnValue(createUseSessionResult());
+  });
 
   it("shows nav links and marks current page active", () => {
     renderNavbar({ pathname: "/en-US/blog/some-post" });
@@ -119,13 +130,8 @@ describe("UnifiedNavbar", () => {
     const desktop = nav.querySelector(".md\\:flex")!;
     const utils = within(desktop as HTMLElement);
 
-    expect(utils.getByRole("link", { name: /navigation\.home/i })).not.toHaveAttribute(
-      "aria-current",
-    );
-    expect(utils.getByRole("link", { name: /navigation\.blog/i })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    expect(utils.getByRole("link", { name: /^Home$/i })).not.toHaveAttribute("aria-current");
+    expect(utils.getByRole("link", { name: /^Blog$/i })).toHaveAttribute("aria-current", "page");
   });
 
   it("shows Platform link for guests", () => {
@@ -133,7 +139,7 @@ describe("UnifiedNavbar", () => {
     const nav = screen.getByRole("navigation");
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const desktop = within(nav.querySelector(".md\\:flex")!);
-    expect(desktop.getByRole("link", { name: /navigation\.platform/i })).toHaveAttribute(
+    expect(desktop.getByRole("link", { name: /^Platform$/i })).toHaveAttribute(
       "href",
       "/en-US/platform",
     );
@@ -142,7 +148,7 @@ describe("UnifiedNavbar", () => {
   it("shows Platform link as active for authenticated users on platform", () => {
     renderNavbar({ pathname: "/en-US/platform", session: makeSession() });
     const nav = screen.getByRole("navigation");
-    const link = within(nav).getAllByRole("link", { name: /navigation\.platform/i })[0];
+    const link = within(nav).getAllByRole("link", { name: /^Platform$/i })[0];
     expect(link).toHaveAttribute("aria-current", "page");
   });
 
@@ -186,14 +192,51 @@ describe("UnifiedNavbar", () => {
   });
 
   it("renders mobile nav links with active state", () => {
-    renderNavbar({ pathname: "/en-US/about" });
+    renderNavbar({ pathname: "/en-US/faq" });
     const dropdowns = screen.getAllByTestId("dropdown-content");
     const mobile = dropdowns[dropdowns.length - 1];
-    const aboutLink = within(mobile)
+    const faqLink = within(mobile)
       .getAllByRole("link")
-      .find((l) => l.textContent?.includes("navigation.about")); // eslint-disable-line @typescript-eslint/no-unnecessary-condition
-    expect(aboutLink).toBeDefined();
-    expect(aboutLink).toHaveAttribute("aria-current", "page");
+      .find((l) => l.textContent?.includes("FAQ")); // eslint-disable-line @typescript-eslint/no-unnecessary-condition
+    expect(faqLink).toBeDefined();
+    expect(faqLink).toHaveAttribute("aria-current", "page");
+  });
+
+  it("uses CMS labels, destinations and order in both menus without restoring removed links", () => {
+    renderNavbar({
+      links: [
+        { id: "docs", label: "Guides", href: "https://docs.openjii.org" },
+        { id: "news", label: "Latest news", href: "/en-US/blog" },
+      ],
+    });
+    const links = screen.getAllByRole("link");
+    expect(links.map((link) => link.textContent)).toEqual([
+      "Guides",
+      "Latest news",
+      "Guides",
+      "Latest news",
+    ]);
+    expect(
+      screen
+        .getAllByRole("link", { name: "Guides" })
+        .every((link) => link.getAttribute("href") === "https://docs.openjii.org"),
+    ).toBe(true);
+    expect(screen.queryByRole("link", { name: "About JII" })).not.toBeInTheDocument();
+  });
+
+  it("respects an intentionally empty CMS menu", () => {
+    renderNavbar({ links: [] });
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("keeps Home and Platform available when CMS navigation is missing", () => {
+    renderNavbar({ links: null });
+    expect(screen.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
+      "/en-US",
+      "/en-US/platform",
+      "/en-US",
+      "/en-US/platform",
+    ]);
   });
 
   it("shows User icon fallback when no avatar", () => {

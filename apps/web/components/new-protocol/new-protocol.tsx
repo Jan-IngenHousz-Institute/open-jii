@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useIotBrowserSupport } from "~/hooks/iot/useIotBrowserSupport";
 
-import type { Macro } from "@repo/api/domains/macro/macro.schema";
+import type { MacroListEntry } from "@repo/api/domains/macro/macro.schema";
 import { zJsonValue } from "@repo/api/domains/protocol/protocol.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -45,7 +45,7 @@ export function NewProtocolForm() {
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
   // Selected macros (local state before protocol creation)
-  const [selectedMacros, setSelectedMacros] = useState<Macro[]>([]);
+  const [selectedMacros, setSelectedMacros] = useState<MacroListEntry[]>([]);
 
   const addMacrosMutationRef = useRef<ReturnType<typeof useAddCompatibleMacro>>(null);
 
@@ -88,7 +88,7 @@ export function NewProtocolForm() {
       <NewProtocolDetailsCard
         form={form}
         selectedMacros={selectedMacros}
-        onAddMacro={(macro: Macro) => {
+        onAddMacro={(macro: MacroListEntry) => {
           setSelectedMacros((prev) => {
             if (prev.some((m) => m.id === macro.id)) return prev;
             setHasFormData(true);

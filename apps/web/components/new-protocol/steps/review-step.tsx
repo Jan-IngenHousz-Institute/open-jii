@@ -7,7 +7,7 @@ import { formatJson } from "@/lib/json-format";
 import { getSensorFamilyLabel } from "@/util/sensor-family";
 import * as z from "zod";
 
-import type { Macro } from "@repo/api/domains/macro/macro.schema";
+import type { MacroListEntry } from "@repo/api/domains/macro/macro.schema";
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
 import { RichTextRenderer } from "@repo/ui/components/rich-text-renderer";
@@ -26,7 +26,7 @@ export const reviewSchema = z.object({
 });
 
 interface ReviewStepProps extends WizardStepProps<NewProtocolFormValues> {
-  selectedMacros: Macro[];
+  selectedMacros: MacroListEntry[];
 }
 
 export function ReviewStep({

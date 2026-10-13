@@ -1,0 +1,11 @@
+query publicNavigation($locale: String, $preview: Boolean) {
+  footerCollection(limit: 1, locale: $locale, preview: $preview) {
+    items {
+      navigationButtonsCollection(limit: 6) {
+        items {
+          ...ButtonFields
+        }
+      }
+    }
+  }
+}

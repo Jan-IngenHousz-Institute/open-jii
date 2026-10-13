@@ -8,10 +8,8 @@ import Layout from "./layout";
 
 const mockFooter = vi.fn();
 
-vi.mock("@/components/navigation/unified-navbar/unified-navbar", () => ({
-  UnifiedNavbar: ({ session }: { session: unknown }) => (
-    <nav aria-label="main">{session ? "logged-in" : "guest"}</nav>
-  ),
+vi.mock("@/components/navigation/public-navbar", () => ({
+  PublicNavbar: () => <nav aria-label="main">navbar</nav>,
 }));
 
 vi.mock("@repo/cms", () => ({
@@ -45,14 +43,9 @@ describe("InfoGroupLayout", () => {
     expect(screen.getByRole("contentinfo")).toHaveTextContent("Footer");
   });
 
-  it("shows guest state when unauthenticated", async () => {
-    await renderLayout();
-    expect(screen.getByRole("navigation")).toHaveTextContent("guest");
-  });
-
-  it("passes session to navbar when authenticated", async () => {
+  it("never reads the session on the server, so the pages under it can be cached", async () => {
     await renderLayout(createSession());
-    expect(screen.getByRole("navigation")).toHaveTextContent("logged-in");
+    expect(auth).not.toHaveBeenCalled();
   });
 
   it("renders children without footer when Contentful throws", async () => {

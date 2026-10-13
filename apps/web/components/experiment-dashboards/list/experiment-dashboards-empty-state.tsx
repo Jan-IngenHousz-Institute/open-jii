@@ -1,7 +1,7 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { BarChart3, LayoutGrid, Plus } from "lucide-react";
-import Link from "next/link";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -32,17 +32,17 @@ export function ExperimentDashboardsEmptyState({
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           {hasAccess && (
             <Button asChild>
-              <Link href={dashboardsHref}>
+              <IntentLink href={dashboardsHref}>
                 <Plus className="mr-2 h-4 w-4" aria-hidden />
                 {t("overview.createDashboard")}
-              </Link>
+              </IntentLink>
             </Button>
           )}
           <Button asChild variant="outline">
-            <Link href={visualizationsHref}>
+            <IntentLink href={visualizationsHref}>
               <BarChart3 className="mr-2 h-4 w-4" />
               {t("overview.browseVisualizations")}
-            </Link>
+            </IntentLink>
           </Button>
         </div>
       </CardContent>

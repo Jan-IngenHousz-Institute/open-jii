@@ -54,6 +54,14 @@ describe("DataTable", () => {
     expect(screen.getByText("0.68").className).toContain("text-right");
   });
 
+  it("keeps the rows it has, marked busy, while the next page loads", () => {
+    render(<DataTable columns={COLUMNS} rows={ROWS} isRefreshing />);
+
+    const body = screen.getAllByRole("rowgroup")[1];
+    expect(body).toHaveAttribute("aria-busy", "true");
+    expect(screen.getAllByRole("row")).toHaveLength(ROWS.length + 1);
+  });
+
   it("says so plainly when there are no rows", () => {
     render(<DataTable columns={COLUMNS} rows={[]} />);
 
@@ -223,6 +231,24 @@ describe("DataTable", () => {
     expect(first.className).not.toContain("animate-row-landed");
   });
 
+  it("keeps its cells mounted when a selection changes, though the caller passes it inline", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <DataTable columns={COLUMNS} rows={ROWS} selection={{ state: {}, onChange }} />,
+    );
+    const value = screen.getByText("0.68");
+
+    rerender(
+      <DataTable
+        columns={COLUMNS}
+        rows={ROWS}
+        selection={{ state: { "row-1": true }, onChange }}
+      />,
+    );
+
+    expect(screen.getByText("0.68")).toBe(value);
+  });
+
   it("toggles selection through the header and the row checkboxes", async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();
@@ -244,12 +270,22 @@ describe("DataTable", () => {
 
     expect(bodyRows()).toBe(2);
 
-    // Re-queried each time: the row re-renders, so the earlier node is stale.
     await user.click(screen.getAllByRole("button")[0]);
     expect(bodyRows()).toBe(3);
 
     await user.click(screen.getAllByRole("button")[0]);
     expect(bodyRows()).toBe(2);
+  });
+
+  it("keeps the other cells mounted while a cell expands and collapses", async () => {
+    const user = userEvent.setup();
+    render(<DataTable columns={COLUMNS} rows={ROWS} />);
+    const value = screen.getByText("0.68");
+
+    await user.click(screen.getAllByRole("button")[0]);
+    await user.click(screen.getAllByRole("button")[0]);
+
+    expect(screen.getByText("0.68")).toBe(value);
   });
 
   it("expands a trace chart in the same slot as other expandable cells, and highlights the expanded row", async () => {

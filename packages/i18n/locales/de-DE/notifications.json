@@ -7,10 +7,24 @@
   "someone": "Jemand",
   "empty": {
     "title": "Alles gelesen",
-    "description": "Anfragen, Änderungen an Ihrem Zugriff und abgeschlossene Aufträge erscheinen hier."
+    "filteredTitle": "Nichts hier",
+    "description": "Anfragen, Änderungen an Ihrem Zugriff und abgeschlossene Aufträge erscheinen hier.",
+    "unread": "Keine ungelesenen Benachrichtigungen. Wechseln Sie zu Alle, um ältere zu sehen.",
+    "category": "Noch nichts in dieser Kategorie"
   },
   "loadError": "Ihre Benachrichtigungen konnten nicht geladen werden.",
   "retry": "Erneut versuchen",
+  "filters": {
+    "all": "Alle",
+    "unread": "Ungelesen",
+    "allCategories": "Alle Kategorien",
+    "category": "Nach Kategorie filtern"
+  },
+  "groups": {
+    "today": "Heute",
+    "yesterday": "Gestern",
+    "earlier": "Früher"
+  },
   "categories": {
     "requests_and_invitations": {
       "label": "Anfragen und Einladungen",

@@ -10,6 +10,7 @@ import { histogramStyleShelves } from "./shelves/style-shelves";
 
 export const histogramChartType: ChartTypeDef = {
   type: "histogram",
+  plotlyTraceTypes: ["histogram"],
   family: "statistical",
   labelKey: "workspace.charts.types.histogram",
   descriptionKey: "workspace.charts.descriptions.histogram",

@@ -5,6 +5,10 @@ import type { UserSession } from "@thallesp/nestjs-better-auth";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { experimentContract } from "@repo/api/domains/experiment/experiment.contract";
+import {
+  DEFAULT_HOME_EXPERIMENTS_LIMIT,
+  DEFAULT_RECENTLY_OPENED_LIMIT,
+} from "@repo/api/domains/experiment/experiment.schema";
 import { DEFAULT_PAGE_SIZE, resolveListScope } from "@repo/api/shared/listing";
 
 import { CanAccess } from "../../authorization/can-access.decorator";
@@ -19,6 +23,8 @@ import { DeleteExperimentUseCase } from "../application/use-cases/delete-experim
 import { GetExperimentAccessUseCase } from "../application/use-cases/get-experiment-access/get-experiment-access";
 import { GetExperimentUseCase } from "../application/use-cases/get-experiment/get-experiment";
 import { ListExperimentsUseCase } from "../application/use-cases/list-experiments/list-experiments";
+import { ListHomeExperimentsUseCase } from "../application/use-cases/list-home-experiments/list-home-experiments";
+import { ListRecentlyOpenedExperimentsUseCase } from "../application/use-cases/list-recently-opened-experiments/list-recently-opened-experiments";
 import { UpdateExperimentUseCase } from "../application/use-cases/update-experiment/update-experiment";
 import { ANALYTICS_PORT } from "../core/ports/analytics.port";
 import type { AnalyticsPort } from "../core/ports/analytics.port";
@@ -34,6 +40,8 @@ export class ExperimentController {
     private readonly getExperimentUseCase: GetExperimentUseCase,
     private readonly getExperimentAccessUseCase: GetExperimentAccessUseCase,
     private readonly listExperimentsUseCase: ListExperimentsUseCase,
+    private readonly listRecentlyOpenedExperimentsUseCase: ListRecentlyOpenedExperimentsUseCase,
+    private readonly listHomeExperimentsUseCase: ListHomeExperimentsUseCase,
     private readonly updateExperimentUseCase: UpdateExperimentUseCase,
     private readonly deleteExperimentUseCase: DeleteExperimentUseCase,
     private readonly setVisibilityUseCase: SetVisibilityUseCase,
@@ -99,6 +107,37 @@ export class ExperimentController {
         return formatDatesList(result.value);
       }
       return throwOrpcFailure(result, this.logger);
+    });
+  }
+
+  // Declared ahead of `getExperiment`: routes register in this order, and
+  // `/experiments/{id}` would otherwise take `recently-opened` as an id.
+  @Implement(experimentContract.listRecentlyOpenedExperiments)
+  listRecentlyOpenedExperiments(@Session() session: UserSession) {
+    return implement(experimentContract.listRecentlyOpenedExperiments).handler(
+      async ({ input }) => {
+        const result = await this.listRecentlyOpenedExperimentsUseCase.execute(
+          session.user.id,
+          input.limit ?? DEFAULT_RECENTLY_OPENED_LIMIT,
+          input.scope,
+        );
+        if (result.isSuccess()) {
+          return formatDatesList(result.value);
+        }
+        return throwOrpcFailure(result, this.logger);
+      },
+    );
+  }
+
+  @Implement(experimentContract.listHomeExperiments)
+  listHomeExperiments(@Session() session: UserSession) {
+    return implement(experimentContract.listHomeExperiments).handler(async ({ input }) => {
+      const result = await this.listHomeExperimentsUseCase.execute(
+        session.user.id,
+        input.limit ?? DEFAULT_HOME_EXPERIMENTS_LIMIT,
+      );
+      if (result.isFailure()) return throwOrpcFailure(result, this.logger);
+      return formatDates(result.value);
     });
   }
 

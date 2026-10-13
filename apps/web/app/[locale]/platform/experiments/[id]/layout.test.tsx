@@ -1,105 +1,44 @@
-import { createExperimentAccess } from "@/test/factories";
-import { server } from "@/test/msw/server";
-import { render, screen, waitFor } from "@/test/test-utils";
-import { usePathname, useParams, notFound } from "next/navigation";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createSession } from "@/test/factories";
+import { render, screen } from "@/test/test-utils";
+import { describe, expect, it, vi } from "vitest";
+import { auth } from "~/app/actions/auth";
+import { orpc } from "~/lib/orpc";
 
-import { contract } from "@repo/api/contract";
+import Layout from "./layout";
 
-import ExperimentLayout from "./layout";
+const prefetched = vi.hoisted(() => {
+  const state: { queries: unknown[] } = { queries: [] };
+  return state;
+});
 
-vi.mock("~/components/experiment-overview/experiment-title", () => ({
-  ExperimentTitle: ({ name }: { name: string }) => <h1>{name}</h1>,
+vi.mock("@/components/server-prefetch/prefetched-queries", () => ({
+  PrefetchedQueries: ({
+    queries,
+    children,
+  }: {
+    queries: (utils: unknown) => unknown[];
+    children: React.ReactNode;
+  }) => {
+    prefetched.queries = queries(orpc);
+    return children;
+  },
 }));
 
-vi.mock("@/components/error-display", () => ({
-  ErrorDisplay: ({ title }: { title: string }) => <div role="alert">{title}</div>,
+vi.mock("@/components/experiment-overview/experiment-layout-shell", () => ({
+  ExperimentLayoutShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-describe("ExperimentLayout", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(usePathname).mockReturnValue("/en-US/platform/experiments/test-id");
-    vi.mocked(useParams).mockReturnValue({ id: "test-id" });
-  });
+describe("experiment layout", () => {
+  it("fetches the signed-in user's access to this experiment while the server renders", async () => {
+    const session = createSession();
+    vi.mocked(auth).mockResolvedValue(session);
 
-  const renderLayout = () =>
-    render(
-      <ExperimentLayout>
-        <div data-testid="child">Child</div>
-      </ExperimentLayout>,
-    );
+    render(await Layout({ children: <p>tab</p>, params: Promise.resolve({ id: "experiment-1" }) }));
 
-  it("shows loading state", () => {
-    server.mount(contract.experiments.getExperimentAccess, {
-      body: createExperimentAccess(),
-      delay: 999_999,
-    });
-    renderLayout();
-    expect(screen.getByText("loading")).toBeInTheDocument();
-    expect(screen.queryByTestId("child")).not.toBeInTheDocument();
-  });
-
-  it("shows access denied for 403 errors", async () => {
-    server.mount(contract.experiments.getExperimentAccess, { status: 403 });
-    renderLayout();
-    await waitFor(() => {
-      expect(screen.getByText("errors.accessDenied")).toBeInTheDocument();
-    });
-  });
-
-  it("shows generic error for server errors", async () => {
-    server.mount(contract.experiments.getExperimentAccess, { status: 500 });
-    renderLayout();
-    await waitFor(
-      () => {
-        expect(screen.getByText("errors.error")).toBeInTheDocument();
-      },
-      { timeout: 5000 },
-    );
-  });
-
-  it("calls notFound for 404 errors", async () => {
-    server.mount(contract.experiments.getExperimentAccess, { status: 404 });
-    renderLayout();
-    await waitFor(() => {
-      expect(vi.mocked(notFound)).toHaveBeenCalled();
-    });
-  });
-
-  it("shows not-found when experiment data is missing", async () => {
-    // Simulate a successful response whose `experiment` is null — the layout
-    // defends against this even though it's outside the schema's typed shape.
-    server.mount(contract.experiments.getExperimentAccess, {
-      body: { experiment: null, hasAccess: false, isAdmin: false },
-    });
-    renderLayout();
-    await waitFor(() => {
-      expect(screen.getByText("errors.notFound")).toBeInTheDocument();
-    });
-    expect(screen.getByText("experimentNotFound")).toBeInTheDocument();
-  });
-
-  it("renders title, tabs, and children on success", async () => {
-    server.mount(contract.experiments.getExperimentAccess, {
-      body: createExperimentAccess({
-        experiment: {
-          id: "test-id",
-          name: "Test Experiment",
-          status: "active",
-          visibility: "private",
-        },
-        isAdmin: true,
-      }),
-    });
-    renderLayout();
-    await waitFor(() => {
-      expect(screen.getByText("Test Experiment")).toBeInTheDocument();
-    });
-    expect(screen.getByText("overview")).toBeInTheDocument();
-    expect(screen.getByText("data")).toBeInTheDocument();
-    expect(screen.getByText("analysis.title")).toBeInTheDocument();
-    expect(screen.getByText("flow.tabLabel")).toBeInTheDocument();
-    expect(screen.getByTestId("child")).toBeInTheDocument();
+    const queries = JSON.stringify(prefetched.queries);
+    expect(screen.getByText("tab")).toBeInTheDocument();
+    expect(queries).toContain("getExperimentAccess");
+    expect(queries).toContain('"id":"experiment-1"');
+    expect(queries).toContain(`"principal":"${session.user.id}"`);
   });
 });

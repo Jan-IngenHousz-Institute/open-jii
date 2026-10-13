@@ -17,6 +17,14 @@ export async function generateMetadata({ params }: JoinLandingPageProps): Promis
   return { title: t("joinLanding.title") };
 }
 
+// Regenerated at most this often; matches the alerts bar's 300 s cache. A literal, as Next requires.
+export const revalidate = 300;
+
+// No code is known at build time: each renders on its first visit and is then cached.
+export function generateStaticParams() {
+  return [];
+}
+
 export default async function JoinLandingPage({ params }: JoinLandingPageProps) {
   const { code } = await params;
   const parsed = zJoinCodeValue.safeParse(code);

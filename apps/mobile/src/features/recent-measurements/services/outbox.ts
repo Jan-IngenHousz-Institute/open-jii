@@ -3,7 +3,7 @@ import { onlineManager } from "@tanstack/react-query";
 import type { Transport } from "~/features/connection/services/mqtt/mqtt-transport";
 import {
   getMeasurementById,
-  getMeasurements,
+  getMeasurementIds,
   markAsFailed,
   markAsSuccessful,
   UNSYNCED_STATUSES,
@@ -449,6 +449,10 @@ class OutboxImpl implements Outbox {
       if (online) {
         log.info("online - resuming uploads");
         this.queue.start();
+        // Rows that exhausted their retries while the connection was gone have
+        // left the queue; without this they wait for the next foreground. The
+        // connectivity check already paces reconnects, so no cooldown applies.
+        void this.rehydrate({ bypassCooldown: true });
       } else {
         log.info("offline - pausing uploads");
         this.queue.stop();
@@ -467,19 +471,19 @@ class OutboxImpl implements Outbox {
     this.subscriptions.push(unsubscribe);
   }
 
-  private async rehydrate(): Promise<void> {
+  private async rehydrate({ bypassCooldown = false } = {}): Promise<void> {
     if (this.destroyed) return;
     if (this.rehydrating) return;
-    if (Date.now() - this.lastRehydrateAt < REHYDRATE_COOLDOWN_MS) {
+    if (!bypassCooldown && Date.now() - this.lastRehydrateAt < REHYDRATE_COOLDOWN_MS) {
       log.debug("rehydrate skipped - recent");
       return;
     }
     this.rehydrating = true;
     this.lastRehydrateAt = Date.now();
     try {
-      const rows = await getMeasurements([...UNSYNCED_STATUSES]);
-      log.info("rehydrate", { found: rows.length });
-      this.enqueueMany(rows.map((row) => row.id));
+      const ids = await getMeasurementIds(UNSYNCED_STATUSES);
+      log.info("rehydrate", { found: ids.length });
+      this.enqueueMany(ids);
     } catch (err) {
       log.warn("rehydrate failed", { err: (err as Error)?.message });
     } finally {

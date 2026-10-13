@@ -18,7 +18,7 @@ export function RidgePlotRenderer({
 }: ChartRendererProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  const { rows, isLoading, error, truncation } = useChartData(
+  const { rows, isLoading, isRefreshing, error, truncation } = useChartData(
     visualization,
     experimentId,
     providedData,
@@ -70,6 +70,7 @@ export function RidgePlotRenderer({
       visualization={visualization}
       experimentId={experimentId}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
       error={error}
       hasRows={hasRows}
       truncation={truncation}

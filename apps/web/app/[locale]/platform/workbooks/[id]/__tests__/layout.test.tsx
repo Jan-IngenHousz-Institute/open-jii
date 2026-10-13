@@ -1,79 +1,51 @@
-import { createWorkbook } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
-import { useParams } from "next/navigation";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { orpc } from "~/lib/orpc";
 
-import WorkbookLayout from "../layout";
+import Layout from "../layout";
 
-vi.mock("@/components/workbook-overview/workbook-layout-content", () => ({
-  WorkbookLayoutContent: ({ id, children }: { id: string; children: React.ReactNode }) => (
-    <div data-testid="workbook-layout-content" data-id={id}>
-      {children}
-    </div>
-  ),
+const prefetched = vi.hoisted(() => {
+  const state: { queries: unknown[]; embedWhen?: (data: unknown) => boolean } = { queries: [] };
+  return state;
+});
+
+vi.mock("@/components/server-prefetch/prefetched-queries", () => ({
+  PrefetchedQueries: ({
+    queries,
+    embedWhen,
+    children,
+  }: {
+    queries: (utils: unknown) => unknown[];
+    embedWhen?: (data: unknown) => boolean;
+    children: React.ReactNode;
+  }) => {
+    prefetched.queries = queries(orpc);
+    prefetched.embedWhen = embedWhen;
+    return children;
+  },
 }));
 
-vi.mock("@/components/shared/autosave/autosave-status-context", () => ({
-  AutosaveStatusProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+vi.mock("@/components/workbook-overview/workbook-layout-shell", () => ({
+  WorkbookLayoutShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock("@/components/error-display", () => ({
-  ErrorDisplay: ({ error }: { error: unknown }) => (
-    <div data-testid="error-display">{String(error)}</div>
-  ),
-}));
+describe("workbook layout", () => {
+  it("fetches the workbook while the server renders, so the page arrives with its cells", async () => {
+    render(await Layout({ children: <p>tab</p>, params: Promise.resolve({ id: "workbook-1" }) }));
 
-const mockUseWorkbook = vi.fn();
-vi.mock("@/hooks/workbook/useWorkbook/useWorkbook", () => ({
-  useWorkbook: (...args: unknown[]): unknown => mockUseWorkbook(...args),
-}));
-
-describe("WorkbookLayout", () => {
-  beforeEach(() => {
-    vi.mocked(useParams).mockReturnValue({ id: "wb-1", locale: "en-US" });
+    const queries = JSON.stringify(prefetched.queries);
+    expect(screen.getByText("tab")).toBeInTheDocument();
+    expect(queries).toContain("getWorkbook");
+    expect(queries).toContain('"id":"workbook-1"');
   });
 
-  it("shows loading state while data is being fetched", () => {
-    mockUseWorkbook.mockReturnValue({ data: undefined, isLoading: true, error: null });
-    render(<WorkbookLayout>Child</WorkbookLayout>);
-    expect(screen.getByText("common.loading")).toBeInTheDocument();
-  });
+  it("leaves a workbook too large to render on the server for the browser", async () => {
+    render(await Layout({ children: <p>tab</p>, params: Promise.resolve({ id: "workbook-1" }) }));
 
-  it("renders children inside WorkbookLayoutContent when data is available", () => {
-    mockUseWorkbook.mockReturnValue({
-      data: createWorkbook({ id: "wb-1", name: "My WB" }),
-      isLoading: false,
-      error: null,
+    const cells = (count: number) => ({
+      cells: Array.from({ length: count }, (_, i) => ({ id: i })),
     });
-    render(<WorkbookLayout>Child Content</WorkbookLayout>);
-    expect(screen.getByTestId("workbook-layout-content")).toBeInTheDocument();
-    expect(screen.getByText("Child Content")).toBeInTheDocument();
-  });
-
-  it("passes the workbook id to WorkbookLayoutContent", () => {
-    mockUseWorkbook.mockReturnValue({
-      data: createWorkbook({ id: "wb-1" }),
-      isLoading: false,
-      error: null,
-    });
-    render(<WorkbookLayout>Child</WorkbookLayout>);
-    expect(screen.getByTestId("workbook-layout-content")).toHaveAttribute("data-id", "wb-1");
-  });
-
-  it("renders error state when hook returns an error", () => {
-    mockUseWorkbook.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: { status: 500, message: "Server error" },
-    });
-    render(<WorkbookLayout>Child</WorkbookLayout>);
-    expect(screen.getByText("errors.error")).toBeInTheDocument();
-  });
-
-  it("renders nothing when no data and not loading", () => {
-    mockUseWorkbook.mockReturnValue({ data: undefined, isLoading: false, error: null });
-    const { container } = render(<WorkbookLayout>Child</WorkbookLayout>);
-    expect(screen.queryByText("Child")).not.toBeInTheDocument();
-    expect(container.querySelector(".page-fluid")).toBeInTheDocument();
+    expect(prefetched.embedWhen?.(cells(100))).toBe(true);
+    expect(prefetched.embedWhen?.(cells(101))).toBe(false);
   });
 });

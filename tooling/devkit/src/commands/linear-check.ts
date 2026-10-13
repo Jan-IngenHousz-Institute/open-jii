@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { pathFromRoot, repositoryRoot } from "../lib/config.js";
 import { parseDraft } from "../lib/ticket-draft.js";
 import type { Draft } from "../lib/ticket-draft.js";
-import { checkBody, checkTitle } from "../lib/ticket-standard.js";
+import { advisories, checkBody, checkTitle } from "../lib/ticket-standard.js";
 import type { Finding, Report } from "../lib/ticket-standard.js";
 
 export interface TicketReport {
@@ -11,6 +11,7 @@ export interface TicketReport {
   title: string;
   report: Report;
   findings: Finding[];
+  advisories: string[];
 }
 
 export function checkDraft(draft: Draft): TicketReport[] {
@@ -21,6 +22,7 @@ export function checkDraft(draft: Draft): TicketReport[] {
       title: ticket.title,
       report,
       findings: [...checkTitle(ticket.title), ...report.findings],
+      advisories: advisories(ticket.labels, ticket.body, report.shape),
     };
   });
 }
@@ -28,16 +30,14 @@ export function checkDraft(draft: Draft): TicketReport[] {
 export function formatReports(reports: readonly TicketReport[]): { text: string; ok: boolean } {
   const lines: string[] = [];
   let failing = 0;
-  for (const { index, title, report, findings } of reports) {
+  for (const { index, title, report, findings, advisories: notes } of reports) {
     const budget = report.budget === null ? "?" : String(report.budget);
     const summary = `[${report.shape ?? "unknown shape"} ${report.characters}/${budget}, bullet max ${report.longestBullet}]`;
-    if (findings.length === 0) {
-      lines.push(`ok    ${index}. ${title}  ${summary}`);
-      continue;
-    }
-    failing += 1;
-    lines.push(`FAIL  ${index}. ${title}  ${summary}`);
+    const isFailing = findings.length > 0;
+    if (isFailing) failing += 1;
+    lines.push(`${isFailing ? "FAIL" : "ok  "}  ${index}. ${title}  ${summary}`);
     for (const finding of findings) lines.push(`        ${finding.rule}: ${finding.detail}`);
+    for (const note of notes) lines.push(`        note: ${note}`);
   }
   lines.push(`${reports.length} ticket(s) checked, ${failing} failing`);
   return { text: `${lines.join("\n")}\n`, ok: failing === 0 };

@@ -129,7 +129,6 @@ interface CreateTableColumnsParams {
   onAddAnnotation?: OnAnnotationHandler;
   onDeleteAnnotations?: OnAnnotationHandler;
   onToggleCellExpansion?: OnToggleCellExpansionHandler;
-  isCellExpanded?: IsCellExpandedFn;
   errorColumn?: string;
   /** Keep the given order, for callers whose order already carries meaning. */
   preserveOrder?: boolean;
@@ -146,7 +145,6 @@ export function createTableColumns({
   onAddAnnotation,
   onDeleteAnnotations,
   onToggleCellExpansion,
-  isCellExpanded,
   errorColumn,
   preserveOrder = false,
 }: CreateTableColumnsParams) {
@@ -163,7 +161,12 @@ export function createTableColumns({
     return dataColumn.renamedFrom?.name ?? dataColumn.name;
   }
 
-  function getRow(columnName: string, typeName: string, row: Row<DataTableFeatures, DataRow>) {
+  function getRow(
+    columnName: string,
+    typeName: string,
+    row: Row<DataTableFeatures, DataRow>,
+    isCellExpanded: IsCellExpandedFn | undefined,
+  ) {
     const value = row.getValue(columnName);
     const rowId = row.original.id as string | undefined;
 
@@ -193,8 +196,13 @@ export function createTableColumns({
           type: dataColumn.type_text,
           renamedFrom: dataColumn.renamedFrom,
         },
-        cell: ({ row }) => {
-          return getRow(dataColumn.name, dataColumn.type_text, row);
+        cell: ({ row, table }) => {
+          return getRow(
+            dataColumn.name,
+            dataColumn.type_text,
+            row,
+            table.options.meta?.isCellExpanded,
+          );
         },
       }),
     );

@@ -40,6 +40,7 @@ import { SearchModule } from "./search/search.module";
 import { SharingModule } from "./sharing/sharing.module";
 import { UserModule } from "./users/user.module";
 import { VisibilityModule } from "./visibility/visibility.module";
+import { VisitModule } from "./visits/visit.module";
 import { WorkbookModule } from "./workbooks/workbook.module";
 
 @Module({
@@ -95,6 +96,7 @@ import { WorkbookModule } from "./workbooks/workbook.module";
     SearchModule,
     SharingModule,
     UserModule,
+    VisitModule,
     WorkbookModule,
     HealthModule,
   ],

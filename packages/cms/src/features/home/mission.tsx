@@ -69,7 +69,10 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
         </div>
 
         {/* --- GRID SECTION (TEXT + IMAGES) --- */}
-        <section className="mt-20 grid grid-cols-1 lg:grid-cols-2 lg:gap-x-8 lg:gap-y-16">
+        <section
+          id="about-jii"
+          className="mt-20 grid scroll-mt-24 grid-cols-1 lg:grid-cols-2 lg:gap-x-8 lg:gap-y-16"
+        >
           {/* --- LEFT COLUMN: SUBTITLE + MISSION --- */}
           <div className="lg:pr-8">
             <h2
@@ -114,6 +117,7 @@ export const HomeAboutMission: React.FC<HomeAboutMissionProps> = ({
                     <CtfImage
                       {...img}
                       nextImageProps={{
+                        sizes: "(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 320px",
                         className: "block h-full w-full object-cover",
                       }}
                     />

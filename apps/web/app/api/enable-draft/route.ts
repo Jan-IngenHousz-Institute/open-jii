@@ -1,7 +1,9 @@
 import { cookies, draftMode } from "next/headers";
 import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { env } from "~/env";
+import { contentfulConfig } from "~/lib/contentful";
 
 interface ParsedRequestUrl {
   origin: string;
@@ -47,6 +49,18 @@ const buildRedirectUrl = ({
   return redirectUrl.toString();
 };
 
+async function hasValidPreviewSecret(provided: string): Promise<boolean> {
+  const expected = Buffer.from((await contentfulConfig).previewSecret);
+  const actual = Buffer.from(provided);
+
+  // An unset secret must not turn into "anyone may preview".
+  if (expected.length === 0 || expected.length !== actual.length) {
+    return false;
+  }
+
+  return timingSafeEqual(expected, actual);
+}
+
 async function enableDraftMode() {
   (await draftMode()).enable();
   const store = await cookies();
@@ -65,7 +79,18 @@ async function enableDraftMode() {
 }
 
 export async function GET(request: NextRequest): Promise<Response | void> {
-  const { origin: base, path, bypassToken: bypassTokenFromQuery } = parseRequestUrl(request.url);
+  const {
+    origin: base,
+    path,
+    bypassToken: bypassTokenFromQuery,
+    contentfulPreviewSecret,
+  } = parseRequestUrl(request.url);
+
+  const staysOnSite = new URL(path, base).origin === base;
+  if (!staysOnSite) {
+    return new Response("Query parameter `path` must point to this site", { status: 400 });
+  }
+
   // if we're in development, we don't need to check, we can just enable draft mode
   if (env.NODE_ENV === "development") {
     await enableDraftMode();
@@ -77,6 +102,10 @@ export async function GET(request: NextRequest): Promise<Response | void> {
     return new Response("Missing required value for query parameter `path`", {
       status: 400,
     });
+  }
+
+  if (!(await hasValidPreviewSecret(contentfulPreviewSecret))) {
+    return new Response("Invalid preview secret", { status: 401 });
   }
 
   await enableDraftMode();

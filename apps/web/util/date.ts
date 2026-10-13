@@ -31,21 +31,23 @@ export function formatRelativeTime(value: Date | string, locale: string, now = D
   return date.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
 }
 
-export function formatShortDate(value: Date | string, locale: string): string {
+export function formatShortDate(value: Date | string, locale: string, timeZone?: string): string {
   return new Date(value).toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
     year: "numeric",
+    timeZone,
   });
 }
 
 /** Short date and time in the viewer's locale, e.g. "14 Aug, 09:30". */
-export function formatDateTime(value: Date | string, locale: string): string {
+export function formatDateTime(value: Date | string, locale: string, timeZone?: string): string {
   return new Date(value).toLocaleString(locale, {
     day: "numeric",
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone,
   });
 }
 

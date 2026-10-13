@@ -1,12 +1,12 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useProtocolUpdate } from "@/hooks/protocol/useProtocolUpdate/useProtocolUpdate";
 import { useLocale } from "@/hooks/useLocale";
 import { formatDate } from "@/util/date";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 import { parseApiError } from "~/util/apiError";
 import { getSensorFamilyLabel, SENSOR_FAMILY_OPTIONS } from "~/util/sensor-family";
 
@@ -146,12 +146,12 @@ export function ProtocolDetailsSidebar({ protocolId, protocol }: ProtocolDetails
       {protocol.forkedFrom ? (
         <div className="space-y-1">
           <h4 className="text-sm font-medium">{tCommon("common.forkedFrom")}</h4>
-          <Link
+          <IntentLink
             href={`/${locale}/platform/protocols/${protocol.forkedFrom}`}
             className="text-primary hover:text-primary/80 block w-fit text-sm underline underline-offset-2"
           >
             {tCommon("common.viewOriginal")}
-          </Link>
+          </IntentLink>
         </div>
       ) : null}
 

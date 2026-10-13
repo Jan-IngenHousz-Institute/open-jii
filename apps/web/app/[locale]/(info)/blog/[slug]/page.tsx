@@ -59,6 +59,20 @@ export function generateMetadata({ params }: BlogPageProps): Promise<Metadata> {
   });
 }
 
+// The layout builds a locale ahead only when the build can read the CMS; without one, Next still
+// calls this, with no locale. A post published later renders on its first visit.
+export async function generateStaticParams({ params }: { params: { locale?: string } }) {
+  if (!params.locale) {
+    return [];
+  }
+
+  const { client } = await getContentfulClients();
+  const { pageBlogPostCollection } = await client.sitemapPages({ locale: params.locale });
+  return (pageBlogPostCollection?.items ?? []).flatMap((post) =>
+    post?.slug ? [{ slug: post.slug }] : [],
+  );
+}
+
 export default async function Page({ params }: BlogPageProps) {
   const { locale, slug } = await params;
   const { isEnabled: preview } = await draftMode();

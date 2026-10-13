@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { LinearClient } from "./linear.js";
-import { findProject, listProjectDocuments, projectLabel } from "./projects.js";
+import { findProject, listMilestones, listProjectDocuments, projectLabel } from "./projects.js";
 
 /** Fixtures are untyped while the client contract is generic; this is the one place that gap is bridged. */
 function fixtureClient(answer: (document: string) => unknown): LinearClient {
@@ -60,5 +60,24 @@ describe("listProjectDocuments", () => {
     await expect(listProjectDocuments(client, "p1")).resolves.toEqual([
       { id: "d1", title: "X: deep dive", url: "https://l/d1" },
     ]);
+  });
+});
+
+describe("listMilestones", () => {
+  it("returns the milestones in board order whatever order Linear answers in", async () => {
+    const client = fixtureClient(() => ({
+      project: {
+        projectMilestones: {
+          nodes: [
+            { id: "m2", name: "2. Two", description: null, sortOrder: 2000 },
+            { id: "m1", name: "1. One", description: "Why.", sortOrder: 1000 },
+          ],
+        },
+      },
+    }));
+
+    const milestones = await listMilestones(client, "p1");
+
+    expect(milestones.map((milestone) => milestone.id)).toEqual(["m1", "m2"]);
   });
 });

@@ -5,6 +5,7 @@ import type { DeviceExperimentRowItem } from "@/components/iot-devices/device-ex
 import { DevicePlanQuestions } from "@/components/iot-devices/device-plan-questions";
 import type { PlanQuestionEntry } from "@/components/iot-devices/device-plan-questions";
 import { TabBodyHeader } from "@/components/iot-devices/tab-body-header";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useExperimentDeviceRemove } from "@/hooks/experiment/useExperimentDeviceRemove/useExperimentDeviceRemove";
 import { useDeviceExperiments } from "@/hooks/iot/useDeviceExperiments/useDeviceExperiments";
 import { useOnboardDevice } from "@/hooks/iot/useOnboardDevice/useOnboardDevice";
@@ -12,7 +13,6 @@ import { useLocale } from "@/hooks/useLocale";
 import { orpc } from "@/lib/orpc";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Loader2, MoreHorizontal, RefreshCw, Rocket, Trash2 } from "lucide-react";
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
@@ -290,12 +290,12 @@ export function DeviceOnboardingPanel({ device }: { device: IotDevice }) {
         <AlertTriangle className="size-4" aria-hidden />
         <AlertDescription>
           {t("iot.onboarding.inactiveDevice")}{" "}
-          <Link
+          <IntentLink
             href={`/${locale}/platform/devices/${device.id}/credentials`}
             className="text-primary underline underline-offset-4"
           >
             {t("iot.onboarding.inactiveDeviceAction")}
-          </Link>
+          </IntentLink>
         </AlertDescription>
       </Alert>
     );

@@ -1,7 +1,7 @@
 import { createExperiment } from "@/test/factories";
 import { render, screen } from "@/test/test-utils";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { describe, expect, it, vi } from "vitest";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
 import { useSession } from "@repo/auth/client";
 

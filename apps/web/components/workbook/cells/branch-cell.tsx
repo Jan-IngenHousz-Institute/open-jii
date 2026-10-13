@@ -27,14 +27,15 @@ import {
 } from "@repo/ui/components/select";
 
 import { CellWrapper } from "../cell-wrapper";
+import { useWorkbookCells } from "../workbook-cells-context";
+import { CellPickerSelect } from "./cell-picker-select";
+import type { CellPickerOption } from "./cell-picker-select";
 
 interface BranchCellProps {
   cell: BranchCellType;
   onUpdate: (cell: BranchCellType) => void;
   onDelete: () => void;
   onRun?: () => void;
-  /** All cells in the workbook - used to populate source/target dropdowns */
-  allCells?: WorkbookCell[];
   executionStatus?: "idle" | "running" | "completed" | "error";
   executionError?: string;
   readOnly?: boolean;
@@ -56,11 +57,11 @@ export function BranchCellComponent({
   onUpdate,
   onDelete,
   onRun,
-  allCells,
   executionStatus,
   executionError,
   readOnly,
 }: BranchCellProps) {
+  const allCells = useWorkbookCells();
   const cell = useMemo(
     () => (Array.isArray(rawCell.paths) ? rawCell : { ...rawCell, paths: [] as BranchPath[] }),
     [rawCell],
@@ -76,7 +77,7 @@ export function BranchCellComponent({
 
   const sourceCells = useMemo(
     () =>
-      (allCells ?? []).filter(
+      allCells.filter(
         (c) =>
           c.id !== cell.id &&
           (c.type === "protocol" ||
@@ -88,7 +89,7 @@ export function BranchCellComponent({
   );
 
   const jumpTargets = useMemo(
-    () => (allCells ?? []).filter((c) => c.id !== cell.id && c.type !== "output"),
+    () => allCells.filter((c) => c.id !== cell.id && c.type !== "output"),
     [allCells, cell.id],
   );
 
@@ -96,8 +97,6 @@ export function BranchCellComponent({
     (sourceCellId: string): string[] => {
       // The connected device exposes a fixed field list from its identity.
       if (sourceCellId === DEVICE_CONTEXT_KEY) return [...DEVICE_CONTEXT_FIELDS];
-
-      if (!allCells) return [];
 
       // Questions only expose a single implicit "answer" field.
       const sourceCell = allCells.find((c) => c.id === sourceCellId);
@@ -148,6 +147,19 @@ export function BranchCellComponent({
     }
   }, []);
 
+  const sourceOptions = useMemo<CellPickerOption[]>(
+    () => [
+      { value: DEVICE_CONTEXT_KEY, label: "Connected device", className: "text-xs font-medium" },
+      ...sourceCells.map((sc) => ({ value: sc.id, label: getCellLabel(sc) })),
+    ],
+    [sourceCells, getCellLabel],
+  );
+
+  const jumpOptions = useMemo<CellPickerOption[]>(
+    () => jumpTargets.map((t) => ({ value: t.id, label: getCellLabel(t) })),
+    [jumpTargets, getCellLabel],
+  );
+
   const handleAddPath = useCallback(() => {
     const newPath: BranchPath = {
       id: crypto.randomUUID(),
@@ -196,7 +208,7 @@ export function BranchCellComponent({
                   if (c.id !== condId) return c;
                   const updated = { ...c, [field]: value };
                   if (field === "sourceCellId") {
-                    const src = (allCells ?? []).find((ac) => ac.id === value);
+                    const src = allCells.find((ac) => ac.id === value);
                     if (value === DEVICE_CONTEXT_KEY) {
                       // Keep a still-valid device field on reselect; default to family.
                       if (!(DEVICE_CONTEXT_FIELDS as readonly string[]).includes(c.field)) {
@@ -255,7 +267,7 @@ export function BranchCellComponent({
 
   const renderCondition = (path: BranchPath, cond: BranchCondition, index: number) => {
     const fields = getFieldsForSource(cond.sourceCellId);
-    const sourceCell = (allCells ?? []).find((c) => c.id === cond.sourceCellId);
+    const sourceCell = allCells.find((c) => c.id === cond.sourceCellId);
     const isQuestionSource = sourceCell?.type === "question";
 
     return (
@@ -264,25 +276,14 @@ export function BranchCellComponent({
           {index === 0 ? "If" : "And"}
         </span>
 
-        <Select
+        <CellPickerSelect
           value={cond.sourceCellId || undefined}
           onValueChange={(v) => handleConditionUpdate(path.id, cond.id, "sourceCellId", v)}
+          options={sourceOptions}
+          placeholder="source..."
+          triggerClassName="h-7 min-w-[100px] flex-1 text-xs"
           disabled={readOnly}
-        >
-          <SelectTrigger className="h-7 min-w-[100px] flex-1 text-xs">
-            <SelectValue placeholder="source..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={DEVICE_CONTEXT_KEY} className="text-xs font-medium">
-              Connected device
-            </SelectItem>
-            {sourceCells.map((sc) => (
-              <SelectItem key={sc.id} value={sc.id} className="text-xs">
-                {getCellLabel(sc)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
 
         {isQuestionSource ? (
           <span className="bg-muted text-muted-foreground flex h-7 min-w-[80px] flex-1 items-center rounded-md border px-2 text-xs">
@@ -433,22 +434,14 @@ export function BranchCellComponent({
                     Then
                   </span>
                   <ArrowRight className="text-muted-foreground size-3 shrink-0" />
-                  <Select
+                  <CellPickerSelect
                     value={path.gotoCellId ?? undefined}
                     onValueChange={(v) => handleUpdatePath(path.id, { gotoCellId: v })}
+                    options={jumpOptions}
+                    placeholder="Jump to cell..."
+                    triggerClassName="h-7 text-xs"
                     disabled={readOnly}
-                  >
-                    <SelectTrigger className="h-7 text-xs">
-                      <SelectValue placeholder="Jump to cell..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {jumpTargets.map((t) => (
-                        <SelectItem key={t.id} value={t.id} className="text-xs">
-                          {getCellLabel(t)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
               </InsetPanel>
             </div>

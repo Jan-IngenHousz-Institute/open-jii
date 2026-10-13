@@ -30,6 +30,8 @@ import type {
   ExperimentFlowGraph,
   ExperimentListItem,
   ExperimentUploadMetadata,
+  RecentlyOpenedExperiment,
+  RelatedHomeExperiment,
 } from "@repo/api/domains/experiment/experiment.schema";
 import type { ExperimentFlow } from "@repo/api/domains/experiment/flows/experiment-flows.schema";
 import type {
@@ -83,6 +85,7 @@ import type {
 } from "@repo/api/domains/workbook/workbook-cells.schema";
 import type { WorkbookVersionSummary } from "@repo/api/domains/workbook/workbook-version.schema";
 import type { Workbook, WorkbookDetail } from "@repo/api/domains/workbook/workbook.schema";
+import type { useSession } from "@repo/auth/client";
 import type { Session } from "@repo/auth/types";
 
 // ── Experiment ──────────────────────────────────────────────────
@@ -110,6 +113,23 @@ export function createExperiment(overrides: Partial<ExperimentListItem> = {}): E
     membershipStatus: "none",
     ...overrides,
   };
+}
+
+export function createRecentlyOpenedExperiment(
+  overrides: Partial<RecentlyOpenedExperiment> = {},
+): RecentlyOpenedExperiment {
+  return {
+    ...createExperiment(),
+    openedAt: "2025-01-20T00:00:00.000Z",
+    callerRole: "owner",
+    ...overrides,
+  };
+}
+
+export function createHomeExperiment(
+  overrides: Partial<RelatedHomeExperiment> = {},
+): RelatedHomeExperiment {
+  return { ...createExperiment(), callerRole: "owner", ...overrides };
 }
 
 // ── Transfer Request ────────────────────────────────────────────
@@ -159,6 +179,22 @@ export function createExperimentAccess(
 }
 
 // ── Session / Auth ──────────────────────────────────────────────
+
+type UseSessionResult = ReturnType<typeof useSession>;
+
+/** A whole `useSession` result, so a test sets the fields it cares about without a cast. */
+export function createUseSessionResult(
+  overrides: Partial<UseSessionResult> = {},
+): UseSessionResult {
+  return {
+    data: null,
+    isPending: false,
+    isRefetching: false,
+    error: null,
+    refetch: () => Promise.resolve(),
+    ...overrides,
+  };
+}
 
 export function createSession(
   overrides: {

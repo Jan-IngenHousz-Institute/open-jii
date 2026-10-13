@@ -43,4 +43,20 @@ describe("rangesAfterRelayout", () => {
       rangesAfterRelayout(current, { autosize: true, "yaxis.range[0]": 4, dragmode: "pan" }),
     ).toEqual(current);
   });
+
+  describe("for cells that share their x", () => {
+    it("keeps the latest zoom in any cell as the one range", () => {
+      const afterFirst = rangesAfterRelayout({}, { "xaxis2.range": [1, 5] }, true);
+      const afterSecond = rangesAfterRelayout(afterFirst, { "xaxis3.range": [2, 4] }, true);
+
+      expect(afterFirst).toEqual({ x: [1, 5] });
+      expect(afterSecond).toEqual({ x: [2, 4] });
+    });
+
+    it("drops the range when any cell is reset", () => {
+      const zoomed = rangesAfterRelayout({}, { "xaxis2.range": [1, 5] }, true);
+
+      expect(rangesAfterRelayout(zoomed, { "xaxis3.autorange": true }, true)).toEqual({});
+    });
+  });
 });

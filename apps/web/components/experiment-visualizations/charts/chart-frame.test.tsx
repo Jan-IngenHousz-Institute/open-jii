@@ -42,6 +42,24 @@ describe("ChartFrame", () => {
     expect(screen.queryByText("chart-body")).not.toBeInTheDocument();
   });
 
+  it("keeps the same chart drawn, marked busy, while a new read refreshes it", () => {
+    const { rerender } = render(
+      <ChartFrame {...baseProps} isLoading={false} error={undefined}>
+        <div>chart-body</div>
+      </ChartFrame>,
+    );
+    const chart = screen.getByText("chart-body");
+
+    rerender(
+      <ChartFrame {...baseProps} isLoading={false} isRefreshing error={undefined}>
+        <div>chart-body</div>
+      </ChartFrame>,
+    );
+
+    expect(screen.getByText("chart-body")).toBe(chart);
+    expect(chart.closest("[aria-busy]")).toHaveAttribute("aria-busy", "true");
+  });
+
   it("renders children when not loading, no error, and rows are present", () => {
     render(
       <ChartFrame {...baseProps} isLoading={false} error={undefined}>

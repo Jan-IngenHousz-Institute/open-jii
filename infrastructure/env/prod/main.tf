@@ -2167,7 +2167,7 @@ module "opennext" {
 
   # Performance configuration
   enable_lambda_warming = true
-  price_class           = "PriceClass_100"
+  price_class           = "PriceClass_200" # Adds edges in Africa, the Middle East and Asia, where many of our users are
 
   # Monitoring configuration
   enable_cloudwatch_logs = true
@@ -2735,7 +2735,7 @@ module "backend_cloudfront" {
   custom_header_value = var.api_cloudfront_header_value
 
   # CloudFront settings
-  price_class = "PriceClass_100" # Use only North America and Europe
+  price_class = "PriceClass_200" # Adds edges in Africa, the Middle East and Asia, where many of our users are
   default_ttl = 0                # API shouldn't cache by default
   max_ttl     = 0                # API shouldn't cache by default
 

@@ -2,8 +2,8 @@
 
 import { useLocale } from "@/hooks/useLocale";
 import { useRouter } from "next/navigation";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 import { parseApiError } from "~/util/apiError";
 
 import { FEATURE_FLAGS } from "@repo/analytics";

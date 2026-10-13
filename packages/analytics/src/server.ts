@@ -71,6 +71,34 @@ export function getPostHogServerClient(): PostHogServerClient | null {
 }
 
 /**
+ * The flag's value for this person, or undefined when PostHog could not say: no client, no answer,
+ * or an error. Callers that keep an answer use this to keep only real ones.
+ */
+export async function evaluateFeatureFlag(
+  flagKey: FeatureFlagKey,
+  distinctId = "anonymous",
+  personProperties?: Record<string, string>,
+): Promise<boolean | undefined> {
+  try {
+    const client = getPostHogServerClient();
+    if (!client) {
+      return undefined;
+    }
+
+    // Unless told otherwise, posthog-node records a $feature_flag_called event under the distinct
+    // id, which creates the person before the user has consented.
+    const isEnabled = await client.isFeatureEnabled(flagKey, distinctId, {
+      personProperties,
+      sendFeatureFlagEvents: false,
+    });
+    return isEnabled ?? undefined;
+  } catch (error) {
+    console.error(`[PostHog] Error checking feature flag ${flagKey}:`, error);
+    return undefined;
+  }
+}
+
+/**
  * Check if a feature flag is enabled server-side
  * @param flagKey - The feature flag key to check
  * @param distinctId - User identifier (defaults to 'anonymous')
@@ -82,25 +110,10 @@ export async function isFeatureFlagEnabled(
   distinctId = "anonymous",
   personProperties?: Record<string, string>,
 ): Promise<boolean> {
-  try {
-    const client = getPostHogServerClient();
-
-    // If client is null (not initialized), return default
-    if (!client) {
-      return FEATURE_FLAG_DEFAULTS[flagKey];
-    }
-
-    // Unless told otherwise, posthog-node records a $feature_flag_called event under the distinct
-    // id, which creates the person before the user has consented.
-    const isEnabled = await client.isFeatureEnabled(flagKey, distinctId, {
-      personProperties,
-      sendFeatureFlagEvents: false,
-    });
-    return isEnabled ?? FEATURE_FLAG_DEFAULTS[flagKey];
-  } catch (error) {
-    console.error(`[PostHog] Error checking feature flag ${flagKey}:`, error);
-    return FEATURE_FLAG_DEFAULTS[flagKey];
-  }
+  return (
+    (await evaluateFeatureFlag(flagKey, distinctId, personProperties)) ??
+    FEATURE_FLAG_DEFAULTS[flagKey]
+  );
 }
 
 export interface ExceptionReport {

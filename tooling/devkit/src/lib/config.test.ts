@@ -66,6 +66,9 @@ describe("resolveLinearApiKey", () => {
 
 describe("mainWorktreeRoot", () => {
   it("is null for a main checkout and for a pointer it cannot read", async () => {
+    const main = await rootWithEnvFile(null);
+    await mkdir(join(main, ".git"));
+    await expect(mainWorktreeRoot(main)).resolves.toBeNull();
     await expect(mainWorktreeRoot(await rootWithEnvFile(null))).resolves.toBeNull();
     const odd = await mkdtemp(join(tmpdir(), "devkit-odd-"));
     await writeFile(join(odd, ".git"), "gitdir: /elsewhere/.git\n");
@@ -81,6 +84,15 @@ describe("pathFromRoot", () => {
 });
 
 describe("requireLinearApiKey", () => {
+  it("refuses in a main checkout by naming its own env file, rather than failing to read .git", async () => {
+    const main = await rootWithEnvFile(null);
+    await mkdir(join(main, ".git"));
+
+    await expect(requireLinearApiKey(main, {})).rejects.toThrow(
+      `Looked at LINEAR_API_KEY in the shell, ${main}/tooling/devkit/.env. Run`,
+    );
+  });
+
   it("names every place it looked, including the main worktree", async () => {
     const main = await rootWithEnvFile(null);
     const worktree = await linkedWorktree(main, "feature");

@@ -1,4 +1,4 @@
-import { GraphQLClient, RequestOptions } from "graphql-request";
+import { GraphQLClient, type RequestOptions } from "graphql-request";
 import gql from "graphql-tag";
 
 export type Maybe<T> = T | null;
@@ -28,8 +28,9 @@ export type Scalars = {
 };
 
 /** Represents a binary file in a space. An asset can be any file type. */
-export type Asset = {
+export type Asset = _Node & {
   __typename?: "Asset";
+  _id: Scalars["ID"]["output"];
   contentType?: Maybe<Scalars["String"]["output"]>;
   contentfulMetadata: ContentfulMetadata;
   description?: Maybe<Scalars["String"]["output"]>;
@@ -3114,6 +3115,8 @@ export type Footer = Entry &
     menuButtonsCollection?: Maybe<FooterMenuButtonsCollection>;
     menuButtonsCursorCollection?: Maybe<FooterMenuButtonsCursorCollection>;
     menuTitle?: Maybe<Scalars["String"]["output"]>;
+    navigationButtonsCollection?: Maybe<FooterNavigationButtonsCollection>;
+    navigationButtonsCursorCollection?: Maybe<FooterNavigationButtonsCursorCollection>;
     supportButtonsCollection?: Maybe<FooterSupportButtonsCollection>;
     supportButtonsCursorCollection?: Maybe<FooterSupportButtonsCursorCollection>;
     supportTitle?: Maybe<Scalars["String"]["output"]>;
@@ -3177,6 +3180,29 @@ export type FooterMenuButtonsCursorCollectionArgs = {
 export type FooterMenuTitleArgs = {
   locale?: InputMaybe<Scalars["String"]["input"]>;
   useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
+export type FooterNavigationButtonsCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<FooterNavigationButtonsCollectionOrder>>>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  skip?: InputMaybe<Scalars["Int"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentButtonFilter>;
+};
+
+/** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
+export type FooterNavigationButtonsCursorCollectionArgs = {
+  limit?: InputMaybe<Scalars["Int"]["input"]>;
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  order?: InputMaybe<Array<InputMaybe<FooterNavigationButtonsCursorCollectionOrder>>>;
+  pageNext?: InputMaybe<Scalars["String"]["input"]>;
+  pagePrev?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+  useFallbackLocale?: InputMaybe<Scalars["Boolean"]["input"]>;
+  where?: InputMaybe<ComponentButtonFilter>;
 };
 
 /** [See type definition](https://app.contentful.com/spaces/9h8woqnnje85/content_types/footer) */
@@ -3270,6 +3296,8 @@ export type FooterFilter = {
   menuTitle_not?: InputMaybe<Scalars["String"]["input"]>;
   menuTitle_not_contains?: InputMaybe<Scalars["String"]["input"]>;
   menuTitle_not_in?: InputMaybe<Array<InputMaybe<Scalars["String"]["input"]>>>;
+  navigationButtons?: InputMaybe<CfComponentButtonNestedFilter>;
+  navigationButtonsCollection_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
   supportButtons?: InputMaybe<CfComponentButtonNestedFilter>;
   supportButtonsCollection_exists?: InputMaybe<Scalars["Boolean"]["input"]>;
   supportTitle?: InputMaybe<Scalars["String"]["input"]>;
@@ -3345,6 +3373,55 @@ export type FooterMenuButtonsCursorCollection = {
 };
 
 export enum FooterMenuButtonsCursorCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  LabelAsc = "label_ASC",
+  LabelDesc = "label_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  UrlAsc = "url_ASC",
+  UrlDesc = "url_DESC",
+}
+
+export type FooterNavigationButtonsCollection = {
+  __typename?: "FooterNavigationButtonsCollection";
+  items: Array<Maybe<ComponentButton>>;
+  limit: Scalars["Int"]["output"];
+  skip: Scalars["Int"]["output"];
+  total: Scalars["Int"]["output"];
+};
+
+export enum FooterNavigationButtonsCollectionOrder {
+  InternalNameAsc = "internalName_ASC",
+  InternalNameDesc = "internalName_DESC",
+  LabelAsc = "label_ASC",
+  LabelDesc = "label_DESC",
+  SysFirstPublishedAtAsc = "sys_firstPublishedAt_ASC",
+  SysFirstPublishedAtDesc = "sys_firstPublishedAt_DESC",
+  SysIdAsc = "sys_id_ASC",
+  SysIdDesc = "sys_id_DESC",
+  SysPublishedAtAsc = "sys_publishedAt_ASC",
+  SysPublishedAtDesc = "sys_publishedAt_DESC",
+  SysPublishedVersionAsc = "sys_publishedVersion_ASC",
+  SysPublishedVersionDesc = "sys_publishedVersion_DESC",
+  UrlAsc = "url_ASC",
+  UrlDesc = "url_DESC",
+}
+
+export type FooterNavigationButtonsCursorCollection = {
+  __typename?: "FooterNavigationButtonsCursorCollection";
+  items: Array<Maybe<ComponentButton>>;
+  limit: Scalars["Int"]["output"];
+  pages: CursorPages;
+};
+
+export enum FooterNavigationButtonsCursorCollectionOrder {
   InternalNameAsc = "internalName_ASC",
   InternalNameDesc = "internalName_DESC",
   LabelAsc = "label_ASC",
@@ -8551,6 +8628,25 @@ export type PageTermsAndConditionsQuery = {
   } | null;
 };
 
+export type PublicNavigationQueryVariables = Exact<{
+  locale?: InputMaybe<Scalars["String"]["input"]>;
+  preview?: InputMaybe<Scalars["Boolean"]["input"]>;
+}>;
+
+export type PublicNavigationQuery = {
+  __typename?: "Query";
+  footerCollection?: {
+    __typename?: "FooterCollection";
+    items: Array<{
+      __typename?: "Footer";
+      navigationButtonsCollection?: {
+        __typename?: "FooterNavigationButtonsCollection";
+        items: Array<({ __typename?: "ComponentButton" } & ButtonFieldsFragment) | null>;
+      } | null;
+    } | null>;
+  } | null;
+};
+
 export type ComponentReleaseNoteFieldsFragment = {
   __typename: "ComponentReleaseNote";
   slug?: string | null;
@@ -9612,6 +9708,20 @@ export const PageTermsAndConditionsDocument = gql`
   }
   ${PageTermsAndConditionsFieldsFragmentDoc}
 `;
+export const PublicNavigationDocument = gql`
+  query publicNavigation($locale: String, $preview: Boolean) {
+    footerCollection(limit: 1, locale: $locale, preview: $preview) {
+      items {
+        navigationButtonsCollection(limit: 6) {
+          items {
+            ...ButtonFields
+          }
+        }
+      }
+    }
+  }
+  ${ButtonFieldsFragmentDoc}
+`;
 export const ActiveReleaseNotesDocument = gql`
   query activeReleaseNotes(
     $preview: Boolean
@@ -10064,6 +10174,24 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
             signal,
           }),
         "pageTermsAndConditions",
+        "query",
+        variables,
+      );
+    },
+    publicNavigation(
+      variables?: PublicNavigationQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<PublicNavigationQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<PublicNavigationQuery>({
+            document: PublicNavigationDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "publicNavigation",
         "query",
         variables,
       );

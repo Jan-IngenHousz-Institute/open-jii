@@ -1,8 +1,8 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
 import { AlertTriangle, Check, ExternalLink } from "lucide-react";
-import Link from "next/link";
 
 import type { BulkRegisterIotDevicesResult } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
@@ -35,12 +35,12 @@ export function BulkRegisterResults({ result }: BulkRegisterResultsProps) {
         {row.device === null ? (
           <span className="font-mono text-xs">{row.serialNumber}</span>
         ) : (
-          <Link
+          <IntentLink
             href={`/${locale}/platform/devices/${row.device.id}`}
             className="font-mono text-xs hover:underline"
           >
             {row.serialNumber}
-          </Link>
+          </IntentLink>
         )}
         <span className="text-muted-foreground min-w-0 flex-1 break-words text-xs">
           {row.error ?? row.device?.name ?? ""}
@@ -71,9 +71,9 @@ export function BulkRegisterResults({ result }: BulkRegisterResultsProps) {
 
       {result.groupId !== null && (
         <Button asChild variant="outline" size="sm">
-          <Link href={`/${locale}/platform/devices/groups/${result.groupId}`}>
+          <IntentLink href={`/${locale}/platform/devices/groups/${result.groupId}`}>
             {t("iot.devices.bulkDialog.viewGroup")}
-          </Link>
+          </IntentLink>
         </Button>
       )}
     </div>

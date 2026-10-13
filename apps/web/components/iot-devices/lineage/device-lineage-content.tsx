@@ -71,7 +71,7 @@ export default function DeviceLineagePage() {
     orpc.workbooks.listWorkbooks.queryOptions({ input: {} }),
   );
   const { data: visibleMacros, isPending: isMacroListPending } = useQuery(
-    orpc.macros.listMacros.queryOptions({ input: {} }),
+    orpc.macros.listMacros.queryOptions({ input: { fields: "summary" } }),
   );
   const {
     data: monitoring,

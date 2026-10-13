@@ -1,6 +1,7 @@
 "use client";
 
 import { DocsHelpLink } from "@/components/docs-help-link";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { AutosaveIndicator } from "@/components/shared/autosave/autosave-indicator";
 import { useMacro } from "@/hooks/macro/useMacro/useMacro";
 import { useMacroCreate } from "@/hooks/macro/useMacroCreate/useMacroCreate";
@@ -9,7 +10,6 @@ import { useAutosave } from "@/hooks/useAutosave";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { decodeBase64, encodeBase64 } from "@/util/base64";
 import { Check, Code, Copy, ExternalLink, GitFork, Loader2 } from "lucide-react";
-import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { parseApiError } from "~/util/apiError";
 
@@ -254,12 +254,12 @@ export function MacroCellComponent({
         isReadOnlyWithoutUpdate || (isEditable && localCode != null) || forkedFrom ? (
           <div className="flex items-center gap-2">
             {forkedFrom ? (
-              <Link
+              <IntentLink
                 href={`/platform/macros/${forkedFrom}`}
                 className="text-primary hover:text-primary text-xs underline underline-offset-2"
               >
                 {t("cells.forkedFrom")}
-              </Link>
+              </IntentLink>
             ) : null}
             {isReadOnlyWithoutUpdate ? (
               <>
@@ -307,14 +307,14 @@ export function MacroCellComponent({
             className="text-muted-foreground hover:text-primary h-7 w-7 p-0"
             title="Open macro in new tab"
           >
-            <Link
+            <IntentLink
               href={`/platform/macros/${macroId}`}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Open macro in new tab"
             >
               <ExternalLink className="h-3 w-3" />
-            </Link>
+            </IntentLink>
           </Button>
           {canUpdateMacro ? (
             <Select

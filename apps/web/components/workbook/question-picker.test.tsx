@@ -6,6 +6,7 @@ import type { QuestionCell, WorkbookCell } from "@repo/api/domains/workbook/work
 import { Button } from "@repo/ui/components/button";
 
 import { QuestionPicker } from "./question-picker";
+import { WorkbookCellsProvider } from "./workbook-cells-context";
 
 function renderPicker(overrides: Partial<{ existingCells: WorkbookCell[] }> = {}) {
   const onSelect = vi.fn<(cell: QuestionCell) => void>();
@@ -13,9 +14,11 @@ function renderPicker(overrides: Partial<{ existingCells: WorkbookCell[] }> = {}
   return {
     onSelect,
     ...render(
-      <QuestionPicker existingCells={existingCells} onSelect={onSelect}>
-        <Button>Add question</Button>
-      </QuestionPicker>,
+      <WorkbookCellsProvider cells={existingCells}>
+        <QuestionPicker onSelect={onSelect}>
+          <Button>Add question</Button>
+        </QuestionPicker>
+      </WorkbookCellsProvider>,
     ),
   };
 }

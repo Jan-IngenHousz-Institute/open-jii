@@ -1,5 +1,6 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { sidebarUtilityRow } from "@/components/navigation/navigation-sidebar/sidebar-utility-row";
 import { useMarkAllNotificationsRead } from "@/hooks/notifications/useMarkAllNotificationsRead/useMarkAllNotificationsRead";
 import { useMarkNotificationsRead } from "@/hooks/notifications/useMarkNotificationsRead/useMarkNotificationsRead";
@@ -7,7 +8,6 @@ import { useNotifications } from "@/hooks/notifications/useNotifications/useNoti
 import { useUnreadNotificationCount } from "@/hooks/notifications/useUnreadNotificationCount/useUnreadNotificationCount";
 import { useLocale } from "@/hooks/useLocale";
 import { Bell, Settings2 } from "lucide-react";
-import Link from "next/link";
 import * as React from "react";
 
 import type { Notification } from "@repo/api/domains/notification/notification.schema";
@@ -106,14 +106,14 @@ export function NotificationsPopover() {
               {t("markAllRead")}
             </Button>
             <Button asChild variant="ghost" size="icon-xs" className="text-muted-foreground">
-              <Link
+              <IntentLink
                 href={`/${locale}/platform/account/notifications`}
                 onClick={closePopover}
                 aria-label={t("settings")}
                 title={t("settings")}
               >
                 <Settings2 />
-              </Link>
+              </IntentLink>
             </Button>
           </div>
         </div>
@@ -129,9 +129,9 @@ export function NotificationsPopover() {
         </div>
         <div className="border-t p-1.5">
           <Button asChild variant="ghost" size="sm" className="w-full">
-            <Link href={`/${locale}/platform/notifications`} onClick={closePopover}>
+            <IntentLink href={`/${locale}/platform/notifications`} onClick={closePopover}>
               {t("seeAll")}
-            </Link>
+            </IntentLink>
           </Button>
         </div>
       </PopoverContent>

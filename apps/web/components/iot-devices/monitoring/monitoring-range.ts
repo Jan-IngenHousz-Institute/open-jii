@@ -13,6 +13,8 @@ export const MONITORING_MAX_RANGE_DAYS = 31;
 // bucket count outgrows the axis and daily is the honest grain.
 const HOURLY_BUCKET_MAX_HOURS = 48;
 
+const MINUTE_MS = 60_000;
+
 export interface MonitoringRange {
   from: string;
   to: string;
@@ -23,7 +25,9 @@ export function resolveMonitoringPreset(
   preset: MonitoringPresetId,
   now = Date.now(),
 ): MonitoringRange {
-  const to = new Date(now);
+  // Up to the next whole minute, so the window and the query key built from it stay the same
+  // between visits; to the millisecond, no revisit ever found its data cached.
+  const to = new Date(Math.ceil(now / MINUTE_MS) * MINUTE_MS);
   const from = {
     last1h: () => subHours(to, 1),
     last24h: () => subHours(to, 24),

@@ -80,7 +80,9 @@ describe("parseDraft", () => {
 
   it("refuses text before the first title, stray lines under a title, and empty tickets", () => {
     expect(() => parseDraft("intro\n\n# T\n\n## A\n")).toThrow("before the first");
-    expect(() => parseDraft("# T\n\nnote\n\n## A\n")).toThrow('only "labels:" and "blocks:"');
+    expect(() => parseDraft("# T\n\nnote\n\n## A\n")).toThrow(
+      "only labels, blocks, blocked-by, related, milestone, state and link may sit",
+    );
     expect(() => parseDraft("# T\n\nlabels: A\n")).toThrow('no "## " section');
     expect(() => parseDraft("")).toThrow("at least one ticket");
   });
@@ -88,7 +90,60 @@ describe("parseDraft", () => {
   it("refuses references and blocks that point nowhere or at the ticket itself", () => {
     expect(() => parseDraft("# T\n\nblocks: 1\n\n## A\n\nx\n")).toThrow("refers to itself");
     expect(() => parseDraft("# T\n\n## A\n\nsee {{3}}\n")).toThrow("there are 1");
-    expect(() => parseDraft("# T\n\nblocks: two\n\n## A\n\nx\n")).toThrow("ticket numbers");
+    expect(() => parseDraft("# T\n\nblocks: two\n\n## A\n\nx\n")).toThrow(
+      '"two" is neither a ticket number nor an identifier',
+    );
+  });
+
+  it("reads milestone, state and relations to numbers or existing identifiers", () => {
+    const parsed = parseDraft(
+      "# T\n\nblocks: 2, ojd-1500\nblocked-by: OJD-1400\nrelated: 2\nmilestone: 1. First\nstate: Ready\n\n## A\n\nx\n\n# U\n\n## A\n\nx\n",
+    );
+
+    expect(parsed.tickets[0]).toMatchObject({
+      blocks: [2, "OJD-1500"],
+      blockedBy: ["OJD-1400"],
+      related: [2],
+      milestone: "1. First",
+      state: "Ready",
+    });
+    expect(parsed.tickets[1]).toMatchObject({
+      blocks: [],
+      blockedBy: [],
+      related: [],
+      milestone: null,
+      state: null,
+    });
+  });
+
+  it("collects any number of link lines and refuses one without a title or an https url", () => {
+    const parsed = parseDraft(
+      "# T\n\nlink: The guide | https://a.example/g\nlink: Spec, part two | https://a.example/s#2\n\n## A\n\nx\n",
+    );
+
+    expect(parsed.tickets[0]?.links).toEqual([
+      { title: "The guide", url: "https://a.example/g" },
+      { title: "Spec, part two", url: "https://a.example/s#2" },
+    ]);
+    expect(() => parseDraft("# T\n\nlink: https://a.example/g\n\n## A\n\nx\n")).toThrow(
+      'a link reads "link: <title> | <https url>"',
+    );
+  });
+
+  it("refuses a header line that appears twice, except link", () => {
+    expect(() =>
+      parseDraft("# T\n\nblocks: 2\nblocks: OJD-1500\n\n## A\n\nx\n\n# U\n\n## A\n\nx\n"),
+    ).toThrow('"blocks:" appears twice; list every value on one line');
+  });
+
+  it("refuses a relation to a draft ticket that is not there", () => {
+    expect(() => parseDraft("# T\n\nrelated: 4\n\n## A\n\nx\n")).toThrow("there are 1");
+  });
+
+  it("strips quotes from front matter, which would otherwise break the project name", () => {
+    expect(parseDraft('---\nproject: "Platform home"\n---\n\n# T\n\n## A\n\nx\n').project).toBe(
+      "Platform home",
+    );
   });
 });
 

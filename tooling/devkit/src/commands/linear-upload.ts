@@ -57,25 +57,38 @@ export function contentTypeFor(file: string): string | null {
   return CONTENT_TYPES[extname(file).toLowerCase()] ?? null;
 }
 
-export function parseArgs(args: string[]): { file: string; contentType: string | null } {
+export function parseArgs(args: string[]): {
+  file: string;
+  contentType: string | null;
+  apply: boolean;
+} {
   const typeIndex = args.indexOf("--type");
   const explicit = typeIndex >= 0 ? args[typeIndex + 1] : undefined;
   if (typeIndex >= 0 && (!explicit || explicit.startsWith("--"))) {
     throw new Error("--type requires a media type such as text/html");
   }
   const file = args.find((arg, index) => !arg.startsWith("--") && args[index - 1] !== "--type");
-  if (!file) throw new Error("Usage: linear-upload <file> [--type <media type>]");
-  return { file, contentType: explicit ?? contentTypeFor(file) };
+  if (!file) throw new Error("Usage: linear-upload <file> [--type <media type>] [--apply]");
+  return { file, contentType: explicit ?? contentTypeFor(file), apply: args.includes("--apply") };
 }
 
 // Two steps, as Linear's API defines it: ask for a signed upload target, then PUT the bytes to
-// it with the headers Linear hands back. The asset URL is what a document links to.
+// it with the headers Linear hands back. The asset URL is what a document links to. An upload
+// cannot be deleted afterwards, so without apply nothing leaves the machine.
 export async function uploadFile(
   file: string,
   contentType: string,
+  apply: boolean,
   deps: UploadDependencies,
-): Promise<string> {
+): Promise<string | null> {
   const bytes = await deps.readBytes(file);
+  if (!apply) {
+    deps.write(
+      `would upload ${basename(file)} as ${contentType}, ${bytes.byteLength} bytes\n` +
+        "dry run; an upload cannot be deleted, so pass --apply only for the final version\n",
+    );
+    return null;
+  }
   const result = await deps.client.query<FileUploadResult>(fileUploadMutation, {
     contentType,
     filename: basename(file),
@@ -106,7 +119,7 @@ async function run(args: string[]): Promise<number> {
   const root = repositoryRoot();
   const apiKey = await requireLinearApiKey(root, process.env);
   const client = createLinearClient({ apiKey, audit: createFileAudit(root) });
-  await uploadFile(pathFromRoot(parsed.file, root), parsed.contentType, {
+  await uploadFile(pathFromRoot(parsed.file, root), parsed.contentType, parsed.apply, {
     client,
     // A fresh Uint8Array owns a plain ArrayBuffer, which is what fetch accepts as a body.
     readBytes: async (path) => new Uint8Array(await readFile(path)),

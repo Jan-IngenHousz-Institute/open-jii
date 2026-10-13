@@ -1,46 +1,20 @@
-"use client";
-
-import { DeviceGroupLayoutContent } from "@/components/iot-devices/groups/device-group-layout-content";
-import { PlatformHeaderDetail } from "@/components/navigation/site-header/platform-header-context";
-import { EntityLayoutShell } from "@/components/shared/entity-layout-shell";
-import { useIotDeviceGroup } from "@/hooks/iot/useIotDeviceGroup/useIotDeviceGroup";
-import { useLocale } from "@/hooks/useLocale";
-import { useParams } from "next/navigation";
-
-import { useTranslation } from "@repo/i18n";
+import { DeviceGroupLayoutShell } from "@/components/iot-devices/groups/device-group-layout-shell";
+import { PrefetchedQueries } from "@/components/server-prefetch/prefetched-queries";
+import { iotDeviceGroupQuery } from "@/hooks/iot/useIotDeviceGroup/iot-device-group-query";
+import type { ReactNode } from "react";
 
 interface DeviceGroupLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
+  params: Promise<{ groupId: string }>;
 }
 
-/**
- * Loads the group once for every tab under it, and owns the header + strip.
- * Each tab route resolves the same query from cache and adds no request.
- */
-export default function DeviceGroupLayout({ children }: DeviceGroupLayoutProps) {
-  const { groupId } = useParams<{ groupId: string }>();
-  const locale = useLocale();
-  const { t } = useTranslation("iot");
-  const { data, isLoading, error } = useIotDeviceGroup(groupId);
+// Every tab waits on the group, so it comes with the page and the tab's own reads start at once.
+export default async function DeviceGroupLayout({ children, params }: DeviceGroupLayoutProps) {
+  const { groupId } = await params;
 
   return (
-    <EntityLayoutShell
-      isLoading={isLoading}
-      error={error}
-      hasData={!!data}
-      errorDescription={t("iot.groups.loadError")}
-    >
-      {data && (
-        <>
-          <PlatformHeaderDetail
-            href={`/${locale}/platform/devices/groups/${groupId}`}
-            label={data.name}
-          />
-          <DeviceGroupLayoutContent groupId={groupId} group={data}>
-            {children}
-          </DeviceGroupLayoutContent>
-        </>
-      )}
-    </EntityLayoutShell>
+    <PrefetchedQueries queries={(utils) => [iotDeviceGroupQuery(utils, groupId)]}>
+      <DeviceGroupLayoutShell>{children}</DeviceGroupLayoutShell>
+    </PrefetchedQueries>
   );
 }

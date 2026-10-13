@@ -1,6 +1,6 @@
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useLocale } from "@/hooks/useLocale";
 import { Trash2, ExternalLink } from "lucide-react";
-import Link from "next/link";
 
 import { useTranslation } from "@repo/i18n";
 import { Button } from "@repo/ui/components/button";
@@ -85,7 +85,7 @@ export function ProtocolList({
               <Trash2 className="text-destructive h-4 w-4" />
             </Button>
             {/* External link button */}
-            <Link
+            <IntentLink
               href={`/${locale}/platform/protocols/${protocol.id}`}
               target="_blank"
               rel="noopener noreferrer"
@@ -94,7 +94,7 @@ export function ProtocolList({
               className="hover:bg-muted m-0.5 rounded-md p-2"
             >
               <ExternalLink className="h-4 w-4" />
-            </Link>
+            </IntentLink>
           </div>
         </div>
       ))}

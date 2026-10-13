@@ -6,6 +6,7 @@ import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.sch
 import { Button } from "@repo/ui/components/button";
 
 import { QuestionNameEditor } from "./question-name-editor";
+import { WorkbookCellsProvider } from "./workbook-cells-context";
 
 function renderEditor(
   overrides: Partial<{
@@ -19,14 +20,15 @@ function renderEditor(
   return {
     onRename,
     ...render(
-      <QuestionNameEditor
-        initialName={overrides.initialName ?? "soil_moisture"}
-        cellId={overrides.cellId ?? "q-1"}
-        existingCells={overrides.existingCells ?? []}
-        onRename={onRename}
-      >
-        <Button>{overrides.initialName ?? "soil_moisture"}</Button>
-      </QuestionNameEditor>,
+      <WorkbookCellsProvider cells={overrides.existingCells ?? []}>
+        <QuestionNameEditor
+          initialName={overrides.initialName ?? "soil_moisture"}
+          cellId={overrides.cellId ?? "q-1"}
+          onRename={onRename}
+        >
+          <Button>{overrides.initialName ?? "soil_moisture"}</Button>
+        </QuestionNameEditor>
+      </WorkbookCellsProvider>,
     ),
   };
 }

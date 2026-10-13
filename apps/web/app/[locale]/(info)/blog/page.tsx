@@ -1,4 +1,3 @@
-import { TranslationsProvider } from "@/components/translations-provider";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import Link from "next/link";
@@ -64,7 +63,7 @@ export function generateMetadata({ params }: LandingPageProps): Promise<Metadata
 export default async function Page({ params }: LandingPageProps) {
   const { locale } = await params;
   const { isEnabled: preview } = await draftMode();
-  const { t, resources } = await initTranslations({ locale });
+  const { t } = await initTranslations({ locale });
 
   const { page, posts } = await getBlogData(locale, preview);
 
@@ -87,33 +86,31 @@ export default async function Page({ params }: LandingPageProps) {
   }
 
   return (
-    <TranslationsProvider locale={locale} resources={resources}>
-      <div className="from-primary/40 via-background to-background relative isolate min-h-screen overflow-hidden bg-gradient-to-br">
-        {/* Background skew block */}
-        <div
-          aria-hidden="true"
-          className="shadow-primary/10 ring-primary/20 bg-background absolute inset-y-0 right-1/2 -z-10 -mr-96 w-[200%] origin-top-right skew-x-[-30deg] shadow-xl ring-1 sm:-mr-80 lg:-mr-96"
-        />
+    <div className="from-primary/40 via-background to-background relative isolate min-h-screen overflow-hidden bg-gradient-to-br">
+      {/* Background skew block */}
+      <div
+        aria-hidden="true"
+        className="shadow-primary/10 ring-primary/20 bg-background absolute inset-y-0 right-1/2 -z-10 -mr-96 w-[200%] origin-top-right skew-x-[-30deg] shadow-xl ring-1 sm:-mr-80 lg:-mr-96"
+      />
 
-        <div className="py-20">
-          <Container>
-            <Link href={`/${locale}/blog/${page.featuredBlogPost.slug}`}>
-              <ArticleHero article={page.featuredBlogPost} isFeatured={true} />
-            </Link>
-          </Container>
+      <div className="py-20">
+        <Container>
+          <Link href={`/${locale}/blog/${page.featuredBlogPost.slug}`}>
+            <ArticleHero article={page.featuredBlogPost} isFeatured={true} />
+          </Link>
+        </Container>
 
-          <Container className="mt-8">
-            <h2 className="mb-4 text-2xl font-medium md:mb-6 md:text-3xl">
-              {t("landingPage.latestArticles")}
-            </h2>
-            <ArticleTileGrid
-              className="md:grid-cols-2 lg:grid-cols-3"
-              articles={filteredPosts}
-              locale={locale}
-            />
-          </Container>
-        </div>
+        <Container className="mt-8">
+          <h2 className="mb-4 text-2xl font-medium md:mb-6 md:text-3xl">
+            {t("landingPage.latestArticles")}
+          </h2>
+          <ArticleTileGrid
+            className="md:grid-cols-2 lg:grid-cols-3"
+            articles={filteredPosts}
+            locale={locale}
+          />
+        </Container>
       </div>
-    </TranslationsProvider>
+    </div>
   );
 }

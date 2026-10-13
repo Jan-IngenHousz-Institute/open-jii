@@ -107,7 +107,8 @@ export const SHOTS: readonly Shot[] = [
     publish: "img/guide/web/dashboard.webp",
     frame: "desktop",
     route: "/platform",
-    scope: "Authenticated dashboard: welcome card, recent experiments, compact contextual header",
+    scope:
+      "Authenticated dashboard: welcome card, experiments selected from real visits or related work, compact contextual header",
   },
   {
     slug: "dashboard-first-work",
@@ -115,7 +116,7 @@ export const SHOTS: readonly Shot[] = [
     frame: "desktop",
     route: "/platform",
     session: "newcomer",
-    scope: "Dashboard empty state with the three first-work cards in the recent experiments row",
+    scope: "Dashboard with no accessible related experiments and the three first-work cards",
   },
   {
     slug: "experiments-list",
@@ -327,6 +328,19 @@ export const SHOTS: readonly Shot[] = [
       await activate(page, /^notifications\b/i);
     },
     scope: "Notification bell opened from the sidebar",
+  },
+  {
+    slug: "notifications-page",
+    publish: "img/chrome-refresh/notifications-page.webp",
+    frame: "desktop",
+    route: "/platform/notifications",
+    async prepare(page) {
+      // The day headings are the point of the shot, so the first one standing in
+      // for the list having loaded is what the frame waits on.
+      await page.locator("section[aria-labelledby^='notifications-'] h2").first().waitFor();
+      await settle(page, 600);
+    },
+    scope: "Notifications page with day groups, read-state tabs and the category filter",
   },
   {
     slug: "login-signup",

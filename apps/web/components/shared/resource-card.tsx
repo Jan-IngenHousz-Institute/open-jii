@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import type { ReactNode } from "react";
 
 import { Card } from "@repo/ui/components/card";
@@ -52,7 +52,7 @@ export function ResourceCard({
   className,
 }: ResourceCardProps) {
   return (
-    <Link href={href} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+    <IntentLink href={href} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       <Card interactive className={cn(resourceCardVariants({ featured }), className)}>
         {/* `badges` is a JSX element even when it renders nothing, so a card
             whose resource is public got an empty row and sat its title 22px
@@ -76,7 +76,7 @@ export function ResourceCard({
           <p className="text-muted-foreground border-border/60 border-t pt-3 text-xs">{footer}</p>
         ) : null}
       </Card>
-    </Link>
+    </IntentLink>
   );
 }
 

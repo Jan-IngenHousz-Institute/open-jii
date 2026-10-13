@@ -1,7 +1,7 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { ArrowUpRight, TrendingDown, TrendingUp } from "lucide-react";
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Badge } from "@repo/ui/components/badge";
@@ -78,12 +78,15 @@ export function MetricStatCard({
   };
 
   const renderLinkedValue = (target: string) => (
-    <Link href={target} className="hover:text-primary flex items-start gap-1.5 transition-colors">
+    <IntentLink
+      href={target}
+      className="hover:text-primary flex items-start gap-1.5 transition-colors"
+    >
       {/* The clamp has to sit on the text: `line-clamp` on the CardTitle counts
           this link as one box and never reaches the lines inside it. */}
       <span className="line-clamp-2 min-w-0 break-words">{value}</span>
       <ArrowUpRight aria-hidden className="size-5 shrink-0 opacity-60" />
-    </Link>
+    </IntentLink>
   );
 
   const renderNote = (text: string) => (

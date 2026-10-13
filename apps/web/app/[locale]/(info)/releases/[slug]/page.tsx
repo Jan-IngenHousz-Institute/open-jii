@@ -1,4 +1,3 @@
-import { TranslationsProvider } from "@/components/translations-provider";
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
@@ -55,11 +54,22 @@ export function generateMetadata({ params }: ReleaseDetailPageProps): Promise<Me
   });
 }
 
+// The layout builds a locale ahead only when the build can read the CMS; without one, Next still
+// calls this, with no locale. A note published later renders on its first visit.
+export async function generateStaticParams({ params }: { params: { locale?: string } }) {
+  if (!params.locale) {
+    return [];
+  }
+
+  const notes = await getAllReleaseNotes(params.locale, false);
+  return notes.flatMap((note) => (note.slug ? [{ slug: note.slug }] : []));
+}
+
 /** Public per-note permalink (openjii.org/releases/[slug]). */
 export default async function ReleaseDetailPage({ params }: ReleaseDetailPageProps) {
   const { locale, slug } = await params;
   const { isEnabled: preview } = await draftMode();
-  const { t, resources } = await initTranslations({ locale, namespaces: ["navigation"] });
+  const { t } = await initTranslations({ locale, namespaces: ["navigation"] });
   const [entry, all] = await Promise.all([
     getReleaseNoteBySlug(locale, slug, preview),
     getAllReleaseNotes(locale, preview),
@@ -79,7 +89,7 @@ export default async function ReleaseDetailPage({ params }: ReleaseDetailPagePro
     currentIndex >= 0 && currentIndex < all.length - 1 ? toNeighbor(all[currentIndex + 1]) : null;
 
   return (
-    <TranslationsProvider locale={locale} namespaces={["navigation"]} resources={resources}>
+    <>
       <div className="py-16 md:py-20">
         <Container className="max-w-4xl">
           <Link
@@ -99,6 +109,6 @@ export default async function ReleaseDetailPage({ params }: ReleaseDetailPagePro
           />
         </Container>
       </div>
-    </TranslationsProvider>
+    </>
   );
 }

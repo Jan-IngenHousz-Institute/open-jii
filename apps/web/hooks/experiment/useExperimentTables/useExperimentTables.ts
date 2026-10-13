@@ -3,11 +3,10 @@ import { orpc } from "~/lib/orpc";
 
 import type { ExperimentTableMetadata } from "@repo/api/domains/experiment/data/experiment-data.schema";
 
+import { experimentTablesQuery } from "./experiment-tables-query";
+
 // Re-export types for convenience
 export type { ExperimentTableMetadata };
-
-// Time in ms before data is removed from the cache
-const STALE_TIME = 2 * 60 * 1000;
 
 /**
  * Hook to fetch experiment tables metadata (names, display names, row counts)
@@ -15,12 +14,7 @@ const STALE_TIME = 2 * 60 * 1000;
  * @returns Query result containing the tables metadata
  */
 export const useExperimentTables = (experimentId: string) => {
-  const { data, isLoading, error } = useQuery(
-    orpc.experiments.getExperimentTables.queryOptions({
-      input: { id: experimentId },
-      staleTime: STALE_TIME,
-    }),
-  );
+  const { data, isLoading, error } = useQuery(experimentTablesQuery(orpc, experimentId));
 
   return { tables: data, isLoading, error };
 };

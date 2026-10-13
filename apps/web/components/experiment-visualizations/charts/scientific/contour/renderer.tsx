@@ -19,7 +19,7 @@ export function ContourRenderer({
 }: ChartRendererProps) {
   const { t } = useTranslation("experimentVisualizations");
 
-  const { rows, isLoading, error, truncation } = useChartData(
+  const { rows, isLoading, isRefreshing, error, truncation } = useChartData(
     visualization,
     experimentId,
     providedData,
@@ -75,6 +75,7 @@ export function ContourRenderer({
       visualization={visualization}
       experimentId={experimentId}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
       error={error}
       hasRows={hasRows}
       truncation={truncation}

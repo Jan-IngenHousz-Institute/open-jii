@@ -1,8 +1,8 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { useExperimentDashboards } from "@/hooks/experiment/useExperimentDashboards/useExperimentDashboards";
 import { useLocale } from "@/hooks/useLocale";
-import Link from "next/link";
 
 import type { ExperimentDashboard } from "@repo/api/domains/experiment/dashboards/experiment-dashboards.schema";
 import { useTranslation } from "@repo/i18n";
@@ -55,11 +55,11 @@ export default function ExperimentDashboardsDisplay({
       <div className="flex items-center justify-between">
         <CardTitle>{t("overview.title")}</CardTitle>
         {hasDashboards && (
-          <Link href={dashboardsHref} className="shrink-0">
+          <IntentLink href={dashboardsHref} className="shrink-0">
             <Button variant="link" className="h-auto p-0">
               {t("overview.viewAll")}
             </Button>
-          </Link>
+          </IntentLink>
         )}
       </div>
 

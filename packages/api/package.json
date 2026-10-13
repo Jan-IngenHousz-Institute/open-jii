@@ -6,6 +6,10 @@
       "types": "./dist/contract.d.ts",
       "default": "./dist/contract.js"
     },
+    "./contract-routes": {
+      "types": "./dist/contract-routes.d.ts",
+      "default": "./dist/contract-routes.js"
+    },
     "./domains/*": {
       "types": "./dist/domains/*.d.ts",
       "default": "./dist/domains/*.js"
@@ -22,9 +26,9 @@
   },
   "private": true,
   "scripts": {
-    "build": "tsc --build --verbose",
+    "build": "tsc --build --verbose && node scripts/write-contract-routes.cjs",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
-    "dev": "tsc --watch",
+    "dev": "node scripts/dev.cjs",
     "format": "prettier --check . --ignore-path ../../.gitignore",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",

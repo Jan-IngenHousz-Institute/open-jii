@@ -10,6 +10,7 @@ import { violinPlotStyleShelves } from "./shelves/style-shelves";
 
 export const violinPlotChartType: ChartTypeDef = {
   type: "violin-plot",
+  plotlyTraceTypes: ["violin"],
   family: "statistical",
   labelKey: "workspace.charts.types.violinPlot",
   descriptionKey: "workspace.charts.descriptions.violinPlot",

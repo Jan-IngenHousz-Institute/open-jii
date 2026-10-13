@@ -31,6 +31,9 @@ const tileMeta = "text-gray-300";
 // eslint-disable-next-line no-restricted-syntax -- pairs with tileScrim
 const tileDot = "fill-white/50";
 
+/** Tiles sit in one, two or three columns. */
+const TILE_SIZES = "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw";
+
 interface ArticleTileProps extends HTMLProps<HTMLDivElement> {
   article: PageBlogPostFieldsFragment;
   locale: string;
@@ -66,6 +69,7 @@ export const ArticleTile = ({
             <div {...inspectorProps({ fieldId: "featuredImage" })}>
               <CtfImage
                 nextImageProps={{
+                  sizes: TILE_SIZES,
                   className:
                     "absolute inset-0 -z-10 h-full w-full object-cover pointer-events-none",
                 }}
@@ -128,6 +132,7 @@ export const ArticleTile = ({
           <div {...inspectorProps({ fieldId: "featuredImage" })}>
             <CtfImage
               nextImageProps={{
+                sizes: TILE_SIZES,
                 className: "absolute inset-0 -z-10 h-full w-full object-cover pointer-events-none",
               }}
               {...featuredImage}

@@ -10,6 +10,7 @@ import { parallelCoordinatesStyleShelves } from "./shelves/style-shelves";
 
 export const parallelCoordinatesChartType: ChartTypeDef = {
   type: "parallel-coordinates",
+  plotlyTraceTypes: ["parcoords"],
   family: "scientific",
   labelKey: "workspace.charts.types.parallelCoordinates",
   descriptionKey: "workspace.charts.descriptions.parallelCoordinates",

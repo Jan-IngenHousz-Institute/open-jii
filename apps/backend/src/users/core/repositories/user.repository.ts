@@ -31,6 +31,7 @@ import {
   organizationJoinRequests,
   organizationMembers,
   organizations,
+  resourceVisits,
   sql,
   teamMembers,
   isNull,
@@ -441,6 +442,8 @@ export class UserRepository {
 
         await tx.delete(experimentMembers).where(eq(experimentMembers.userId, id));
         await deleteGranteeGrants(tx, id, "user");
+        // The user row survives the soft-delete, so its visits do not cascade away.
+        await tx.delete(resourceVisits).where(eq(resourceVisits.userId, id));
 
         await this.sweepOrganizationAssociations(tx, id);
 

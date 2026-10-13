@@ -24,7 +24,7 @@ export function PolarRenderer({
   const xColumn = dataSources.find((ds) => ds.role === "x")?.columnName;
   const hasYPicks = dataSources.some((ds) => ds.role === "y" && ds.columnName.length > 0);
 
-  const { rows, isLoading, error, truncation } = useChartData(
+  const { rows, isLoading, isRefreshing, error, truncation } = useChartData(
     visualization,
     experimentId,
     providedData,
@@ -78,6 +78,7 @@ export function PolarRenderer({
       visualization={visualization}
       experimentId={experimentId}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
       error={error}
       hasRows={hasRows}
       truncation={truncation}

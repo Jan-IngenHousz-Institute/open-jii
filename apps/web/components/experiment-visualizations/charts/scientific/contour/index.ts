@@ -10,6 +10,7 @@ import { contourStyleShelves } from "./shelves/style-shelves";
 
 export const contourChartType: ChartTypeDef = {
   type: "contour",
+  plotlyTraceTypes: ["contour"],
   family: "scientific",
   labelKey: "workspace.charts.types.contour",
   descriptionKey: "workspace.charts.descriptions.contour",

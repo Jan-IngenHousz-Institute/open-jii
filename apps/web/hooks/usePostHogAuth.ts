@@ -1,12 +1,12 @@
 "use client";
 
-import posthog from "posthog-js";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
 import { flagPersonProperties } from "@repo/analytics";
 import { useSession } from "@repo/auth/client";
 
 import { getConsentStatus, subscribeToConsentStatus } from "../lib/cookie-consent";
+import { usePostHog } from "../providers/posthog-context";
 import { useMyOrganizations } from "./organization/useMyOrganizations/useMyOrganizations";
 
 /**
@@ -18,6 +18,7 @@ import { useMyOrganizations } from "./organization/useMyOrganizations/useMyOrgan
  * their PostHog person is created.
  */
 export function usePostHogAuth() {
+  const posthog = usePostHog();
   const { data: session, isPending } = useSession();
   const { data: organizations, isPending: isOrganizationsPending } = useMyOrganizations();
   const consent = useSyncExternalStore(
@@ -36,7 +37,7 @@ export function usePostHogAuth() {
   const hasConsented = consent === "accepted";
 
   useEffect(() => {
-    if (!isSignedOut) {
+    if (!posthog || !isSignedOut) {
       return;
     }
 
@@ -45,19 +46,19 @@ export function usePostHogAuth() {
       posthog.reset();
       hasFlagOverrides.current = false;
     }
-  }, [isSignedOut]);
+  }, [posthog, isSignedOut]);
 
   useEffect(() => {
-    if (id && hasConsented) {
+    if (posthog && id && hasConsented) {
       posthog.identify(id, { email });
     }
-  }, [id, email, hasConsented]);
+  }, [posthog, id, email, hasConsented]);
 
   // Rejecting cookies resets PostHog, which drops the overrides, so every consent change
   // re-applies them. A failed membership fetch still sends what is known rather than holding every
   // flag back.
   useEffect(() => {
-    if (!email || isOrganizationsPending) {
+    if (!posthog || !email || isOrganizationsPending) {
       return;
     }
 
@@ -73,7 +74,7 @@ export function usePostHogAuth() {
     if (hasAccepted) {
       posthog.setPersonProperties(properties);
     }
-  }, [email, organizations, isOrganizationsPending, consent]);
+  }, [posthog, email, organizations, isOrganizationsPending, consent]);
 }
 
 /**

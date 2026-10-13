@@ -9,6 +9,7 @@ import { isPaginatedList } from "@repo/api/shared/listing";
 import { useDebounce } from "../../useDebounce";
 import { useListSorting } from "../../useListSorting";
 import { useSearchPending } from "../../useSearchPending";
+import { experimentsListQuery } from "./experiments-list-query";
 
 export const useExperiments = ({
   initialStatus = undefined,
@@ -35,18 +36,10 @@ export const useExperiments = ({
     setPage(1);
   };
 
-  const query = useQuery(
-    orpc.experiments.listExperiments.queryOptions({
-      input: {
-        scope: archived ? "related" : undefined,
-        status: archived ? "archived" : status,
-        search: debouncedSearch && debouncedSearch.trim() !== "" ? debouncedSearch : undefined,
-        page,
-        sort: sort.length ? sort : undefined,
-      },
-      placeholderData: (prev) => prev,
-    }),
-  );
+  const query = useQuery({
+    ...experimentsListQuery(orpc, { archived, status, search: debouncedSearch, page, sort }),
+    placeholderData: (prev) => prev,
+  });
 
   // `page` is always sent, so the response is the envelope; narrow the union.
   const data = query.data && isPaginatedList(query.data) ? query.data : undefined;

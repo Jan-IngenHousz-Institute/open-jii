@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { I18nextProvider } from "react-i18next";
 
 import { createInstance, initTranslations } from "@repo/i18n";
@@ -19,9 +20,12 @@ export function TranslationsProvider({
   namespaces,
   resources,
 }: TranslationProviderProps) {
-  const i18n = createInstance();
-
-  void initTranslations({ locale, namespaces, i18nInstance: i18n, resources });
+  // One instance for the page: route segments add their bundles to it as they render.
+  const [i18n] = useState(() => {
+    const instance = createInstance();
+    void initTranslations({ locale, namespaces, i18nInstance: instance, resources });
+    return instance;
+  });
 
   return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
 }

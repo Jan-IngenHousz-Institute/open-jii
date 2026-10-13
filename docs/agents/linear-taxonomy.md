@@ -9,6 +9,23 @@ Read with `ticket-standard.md` (what a ticket contains) and `triage-labels.md` (
 `@repo/devkit` applies it: `pnpm linear:taxonomy` for this change list, `pnpm linear:apply` for the
 per-ticket relabel pass that follows, both dry-run by default.
 
+## Labels today
+
+The gate in `ticket-standard.md` asks for one `type` label and at least one `area` label. Until
+this taxonomy is applied those names mean the flat labels that exist, and a draft must use them
+because `linear:create` refuses a label the workspace does not have. Resolve names against the live
+workspace before drafting.
+
+| Facet  | Labels that exist today                                                                         |
+| ------ | ----------------------------------------------------------------------------------------------- |
+| `type` | `Bug`, `Feature`, `Improvement`, `enhancement`, `research` (a spike)                            |
+| `area` | `Web`, `Mobile`, `Backend`, `Data`, `Platform`, `Fullstack`, `ci/cd`, `documentation`, `design` |
+
+`Frontend` and `DevOps` do not exist. `Web` and `Platform` do. None of the five `triage` labels
+exists either, so a ticket that would carry `needs-info` says so in a comment until they are
+created. Updating a ticket through `linear:create` adds the labels a draft lists and removes none
+unless `--sync-labels` is passed, which never touches the `WBSO` or `wayfinder:` series.
+
 ## Why groups
 
 Linear label groups make their children mutually exclusive and render them as one facet. Today all

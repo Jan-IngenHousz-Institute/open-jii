@@ -19,7 +19,7 @@ export function DensityPlotRenderer({
   const { t } = useTranslation("experimentVisualizations");
 
   // No `orderBy`: KDE is invariant to row order.
-  const { rows, isLoading, error, truncation } = useChartData(
+  const { rows, isLoading, isRefreshing, error, truncation } = useChartData(
     visualization,
     experimentId,
     providedData,
@@ -62,6 +62,7 @@ export function DensityPlotRenderer({
       visualization={visualization}
       experimentId={experimentId}
       isLoading={isLoading}
+      isRefreshing={isRefreshing}
       error={error}
       hasRows={rows.length > 0}
       truncation={truncation}

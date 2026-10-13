@@ -1,135 +1,34 @@
-import { createExperiment } from "@/test/factories";
-import { server } from "@/test/msw/server";
-import { render, screen, waitFor } from "@/test/test-utils";
-import { use } from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@/test/test-utils";
+import { describe, expect, it, vi } from "vitest";
+import { orpc } from "~/lib/orpc";
 
-import { contract } from "@repo/api/contract";
+import Layout from "../layout";
 
-import DataLayout from "../layout";
+const prefetched = vi.hoisted(() => {
+  const state: { queries: unknown[] } = { queries: [] };
+  return state;
+});
 
-vi.mock("@/components/error-display", () => ({
-  ErrorDisplay: ({ error, title }: { error: Error; title: string }) => (
-    <div data-testid="error-display">
-      <h2>{title}</h2>
-      <p>{error.message}</p>
-    </div>
-  ),
+vi.mock("@/components/server-prefetch/prefetched-queries", () => ({
+  PrefetchedQueries: ({
+    queries,
+    children,
+  }: {
+    queries: (utils: unknown) => unknown[];
+    children: React.ReactNode;
+  }) => {
+    prefetched.queries = queries(orpc);
+    return children;
+  },
 }));
 
-const mockParams = { id: "test-experiment-id", locale: "en-US" };
+describe("data layout", () => {
+  it("fetches the table list while the server renders, so the first page can load at once", async () => {
+    render(await Layout({ children: <p>tab</p>, params: Promise.resolve({ id: "experiment-1" }) }));
 
-describe("<DataLayout />", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(use).mockReturnValue(mockParams);
-  });
-
-  describe("Loading State", () => {
-    it("shows loading message when data is loading", () => {
-      server.mount(contract.experiments.getExperiment, { delay: "infinite" });
-
-      render(
-        <DataLayout params={Promise.resolve(mockParams)}>
-          <div data-testid="child-content">Child Content</div>
-        </DataLayout>,
-      );
-
-      expect(screen.getByText("loading")).toBeInTheDocument();
-      expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
-    });
-  });
-
-  describe("Error State", () => {
-    it("shows error display when there is an error", async () => {
-      server.mount(contract.experiments.getExperiment, { status: 500 });
-
-      render(
-        <DataLayout params={Promise.resolve(mockParams)}>
-          <div data-testid="child-content">Child Content</div>
-        </DataLayout>,
-      );
-
-      await waitFor(() => {
-        expect(screen.getByTestId("error-display")).toBeInTheDocument();
-      });
-      expect(screen.getByText("failedToLoad")).toBeInTheDocument();
-      expect(screen.queryByTestId("child-content")).not.toBeInTheDocument();
-    });
-  });
-
-  describe("Active State", () => {
-    it("renders children when experiment status is active", async () => {
-      server.mount(contract.experiments.getExperiment, {
-        body: createExperiment({ id: "test-experiment-id", status: "active" }),
-      });
-
-      render(
-        <DataLayout params={Promise.resolve(mockParams)}>
-          <div data-testid="child-content">Child Content</div>
-        </DataLayout>,
-      );
-
-      await waitFor(() => {
-        expect(screen.getByTestId("child-content")).toBeInTheDocument();
-      });
-      expect(screen.getByText("Child Content")).toBeInTheDocument();
-    });
-
-    it("renders children when experiment status is published", async () => {
-      server.mount(contract.experiments.getExperiment, {
-        body: createExperiment({ id: "test-experiment-id", status: "published" }),
-      });
-
-      render(
-        <DataLayout params={Promise.resolve(mockParams)}>
-          <div data-testid="child-content">Child Content</div>
-        </DataLayout>,
-      );
-
-      await waitFor(() => {
-        expect(screen.getByTestId("child-content")).toBeInTheDocument();
-      });
-    });
-
-    it("renders children when experiment status is unknown", async () => {
-      // Force-cast an out-of-enum status so the defensive branch is actually
-      // exercised, not silently coerced to a known value.
-      server.mount(contract.experiments.getExperiment, {
-        body: {
-          ...createExperiment({ id: "test-experiment-id" }),
-          status: "unknown",
-        },
-      });
-
-      render(
-        <DataLayout params={Promise.resolve(mockParams)}>
-          <div data-testid="child-content">Child Content</div>
-        </DataLayout>,
-      );
-
-      await waitFor(() => {
-        expect(screen.getByTestId("child-content")).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe("Hook Integration", () => {
-    it("calls use function with params promise", async () => {
-      server.mount(contract.experiments.getExperiment, {
-        body: createExperiment({ id: "test-experiment-id" }),
-      });
-
-      render(
-        <DataLayout params={Promise.resolve(mockParams)}>
-          <div data-testid="child-content">Child Content</div>
-        </DataLayout>,
-      );
-
-      await waitFor(() => {
-        expect(screen.getByTestId("child-content")).toBeInTheDocument();
-      });
-      expect(vi.mocked(use)).toHaveBeenCalledWith(expect.any(Promise));
-    });
+    const queries = JSON.stringify(prefetched.queries);
+    expect(screen.getByText("tab")).toBeInTheDocument();
+    expect(queries).toContain("getExperimentTables");
+    expect(queries).toContain('"id":"experiment-1"');
   });
 });

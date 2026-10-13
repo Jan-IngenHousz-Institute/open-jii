@@ -1,6 +1,7 @@
 "use client";
 
 import { DocsHelpLink } from "@/components/docs-help-link";
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { UserAvatar } from "@/components/user-avatar";
 import { useCreateOrganizationTeam } from "@/hooks/organization/useCreateOrganizationTeam/useCreateOrganizationTeam";
 import { useOrganization } from "@/hooks/organization/useOrganization/useOrganization";
@@ -8,7 +9,6 @@ import { useOrganizationTeamGrants } from "@/hooks/organization/useOrganizationT
 import { useOrganizationTeams } from "@/hooks/organization/useOrganizationTeams/useOrganizationTeams";
 import { useLocale } from "@/hooks/useLocale";
 import { FolderOpen, Network, Plus } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { authErrorMessage } from "~/hooks/organization/auth-organization-result";
 
@@ -178,7 +178,7 @@ export function OrganizationTeamsSurface({ organizationId }: { organizationId: s
           )}
 
           {teams.map((team) => (
-            <Link key={team.id} href={organizationTeamPath(locale, organizationId, team.id)}>
+            <IntentLink key={team.id} href={organizationTeamPath(locale, organizationId, team.id)}>
               <Card interactive className="h-full gap-3.5 p-5">
                 <div className="min-w-0">
                   <span className="block truncate text-base font-semibold tracking-tight">
@@ -204,7 +204,7 @@ export function OrganizationTeamsSurface({ organizationId }: { organizationId: s
                   )}
                 </div>
               </Card>
-            </Link>
+            </IntentLink>
           ))}
         </div>
       )}

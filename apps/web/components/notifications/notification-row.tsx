@@ -1,5 +1,7 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
+import { LocalTime } from "@/components/shared/local-time";
 import { useLocale } from "@/hooks/useLocale";
 import {
   ArrowRightLeft,
@@ -22,8 +24,6 @@ import {
   UserPlus,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
-import { formatRelativeTime } from "~/util/date";
 
 import type {
   Notification,
@@ -163,7 +163,7 @@ export function NotificationRow({ notification, onOpen }: NotificationRowProps) 
           {message}
         </p>
         <p className="text-muted-foreground mt-0.5 text-xs">
-          {formatRelativeTime(notification.createdAt, locale)}
+          <LocalTime value={notification.createdAt} locale={locale} isRelative />
         </p>
       </div>
     </>
@@ -171,9 +171,9 @@ export function NotificationRow({ notification, onOpen }: NotificationRowProps) 
 
   if (path) {
     return (
-      <Link href={`/${locale}/platform/${path}`} onClick={handleOpen} className={rowClass}>
+      <IntentLink href={`/${locale}/platform/${path}`} onClick={handleOpen} className={rowClass}>
         {content}
-      </Link>
+      </IntentLink>
     );
   }
 

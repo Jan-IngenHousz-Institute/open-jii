@@ -1,6 +1,7 @@
 "use client";
 
 import { LineChart } from "@/components/charts/line-chart";
+import { sparklinePath } from "@/lib/sparkline-path";
 import { X } from "lucide-react";
 
 import { useTranslation } from "@repo/i18n";
@@ -12,6 +13,15 @@ import { readThemeColor } from "@repo/ui/components/charts/utils";
 
 export type ChartClickHandler = (data: number[], columnName: string) => void;
 
+const SPARKLINE_WIDTH = 80;
+const SPARKLINE_HEIGHT = 24;
+const SPARKLINE_PADDING = 2;
+const SPARKLINE_BOX = {
+  width: SPARKLINE_WIDTH,
+  height: SPARKLINE_HEIGHT,
+  padding: SPARKLINE_PADDING,
+};
+
 export function Sparkline({
   data,
   columnName,
@@ -22,20 +32,7 @@ export function Sparkline({
   onClick?: ChartClickHandler;
 }) {
   const { t } = useTranslation("workbook");
-  const width = 80;
-  const height = 24;
-  const padding = 2;
-  const minY = Math.min(...data);
-  const maxY = Math.max(...data);
-  const rangeY = maxY - minY || 1;
-  const points = data
-    .map((value, index) => {
-      const x = padding + (index / (data.length - 1 || 1)) * (width - 2 * padding);
-      const y = height - padding - ((value - minY) / rangeY) * (height - 2 * padding);
-      return `${x},${y}`;
-    })
-    .join(" L ");
-  const path = `M ${points}`;
+  const path = sparklinePath(data, SPARKLINE_BOX);
   const interactive = !!onClick;
   return (
     <Button
@@ -47,7 +44,12 @@ export function Sparkline({
       data-testid={interactive ? `sparkline-${columnName}` : undefined}
       disabled={!interactive}
     >
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="shrink-0">
+      <svg
+        width={SPARKLINE_WIDTH}
+        height={SPARKLINE_HEIGHT}
+        viewBox={`0 0 ${SPARKLINE_WIDTH} ${SPARKLINE_HEIGHT}`}
+        className="shrink-0"
+      >
         <path
           d={path}
           fill="none"

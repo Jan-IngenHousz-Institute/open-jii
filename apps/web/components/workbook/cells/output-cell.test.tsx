@@ -583,7 +583,7 @@ describe("OutputCellComponent", () => {
           cell={cell}
           onUpdate={onUpdate}
           onDelete={onDelete}
-          allCells={[proto, cell]}
+          producer={proto}
         />,
       );
       expect(screen.queryByRole("tab", { name: "output.tabTimeseries" })).not.toBeInTheDocument();
@@ -604,7 +604,7 @@ describe("OutputCellComponent", () => {
           cell={cell}
           onUpdate={onUpdate}
           onDelete={onDelete}
-          allCells={[proto, cell]}
+          producer={proto}
         />,
       );
       expect(screen.queryByRole("tab", { name: "output.tabTimeseries" })).not.toBeInTheDocument();
@@ -623,7 +623,7 @@ describe("OutputCellComponent", () => {
           cell={cell}
           onUpdate={onUpdate}
           onDelete={onDelete}
-          allCells={[proto, cell]}
+          producer={proto}
         />,
       );
 
@@ -653,7 +653,7 @@ describe("OutputCellComponent", () => {
           cell={cell}
           onUpdate={onUpdate}
           onDelete={onDelete}
-          allCells={[proto, cell]}
+          producer={proto}
         />,
       );
       await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
@@ -676,7 +676,7 @@ describe("OutputCellComponent", () => {
           cell={cell}
           onUpdate={onUpdate}
           onDelete={onDelete}
-          allCells={[proto, cell]}
+          producer={proto}
         />,
       );
       await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
@@ -705,7 +705,7 @@ describe("OutputCellComponent", () => {
           cell={cell}
           onUpdate={onUpdate}
           onDelete={onDelete}
-          allCells={[proto, cell]}
+          producer={proto}
         />,
       );
       await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
@@ -729,7 +729,7 @@ describe("OutputCellComponent", () => {
           cell={cell}
           onUpdate={onUpdate}
           onDelete={onDelete}
-          allCells={[proto, cell]}
+          producer={proto}
         />,
       );
       await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
@@ -773,7 +773,7 @@ describe("OutputCellComponent", () => {
           cell={cell}
           onUpdate={onUpdate}
           onDelete={onDelete}
-          allCells={[proto, cell]}
+          producer={proto}
         />,
       );
       await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));
@@ -800,7 +800,7 @@ describe("OutputCellComponent", () => {
           cell={cell}
           onUpdate={onUpdate}
           onDelete={onDelete}
-          allCells={[proto, cell]}
+          producer={proto}
         />,
       );
       await user.click(screen.getByRole("tab", { name: "output.tabTimeseries" }));

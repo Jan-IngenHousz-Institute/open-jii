@@ -2,9 +2,9 @@ import { createProtocolDetail, readOnlyCapabilities } from "@/test/factories";
 import { server } from "@/test/msw/server";
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
 import { useRouter } from "next/navigation";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
 import { contract } from "@repo/api/contract";
 import { useSession } from "@repo/auth/client";

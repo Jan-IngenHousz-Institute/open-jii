@@ -1,4 +1,4 @@
-import { UnifiedNavbar } from "@/components/navigation/unified-navbar/unified-navbar";
+import { PublicNavbar } from "@/components/navigation/public-navbar";
 import type { SearchParamsType } from "@/util/searchParams";
 import { getFirstSearchParam } from "@/util/searchParams";
 import { redirect } from "next/navigation";
@@ -38,7 +38,7 @@ export default async function UserRegistrationPage(props: {
   return (
     <>
       {/* Navbar stays sticky on top */}
-      <UnifiedNavbar locale={locale} session={session} />
+      <PublicNavbar locale={locale} />
 
       <AuthBackground alt="Registration background" />
 

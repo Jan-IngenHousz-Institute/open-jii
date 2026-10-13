@@ -131,7 +131,6 @@ export const useExperimentDataUpload = () => {
           method: "POST",
           body,
           credentials: "include",
-          headers: { "x-app-source": "orpc" },
         },
       );
 

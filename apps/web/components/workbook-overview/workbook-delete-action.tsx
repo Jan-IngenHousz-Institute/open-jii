@@ -4,8 +4,8 @@ import { useLocale } from "@/hooks/useLocale";
 import { useWorkbookDelete } from "@/hooks/workbook/useWorkbookDelete/useWorkbookDelete";
 import { Loader2, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { useState } from "react";
+import { useFeatureFlagEnabled } from "~/providers/posthog-context";
 
 import { FEATURE_FLAGS } from "@repo/analytics";
 import { useTranslation } from "@repo/i18n";

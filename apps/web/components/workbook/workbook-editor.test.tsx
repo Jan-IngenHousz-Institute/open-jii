@@ -15,6 +15,12 @@ import type { WorkbookCell } from "@repo/api/domains/workbook/workbook-cells.sch
 
 import { WorkbookEditor, createDefaultCell, reorderCellsWithGluedOutput } from "./workbook-editor";
 
+// The first rich textarea in a worker loads Quill synchronously, which can outlast a test's timeout
+// on a busy runner, and nothing here edits markdown.
+vi.mock("@repo/ui/components/rich-textarea", () => ({
+  RichTextarea: () => <div data-testid="rich-textarea" />,
+}));
+
 vi.mock("./workbook-code-editor", () => ({
   WorkbookCodeEditor: ({ value }: { value: string }) => (
     <pre data-testid="code-editor">{value}</pre>

@@ -2,8 +2,11 @@
 
 import React, { useMemo } from "react";
 import type { OnToggleCellExpansionHandler } from "~/components/data-table/data-table-columns";
+import { sparklinePath } from "~/lib/sparkline-path";
 
 import { parseNumericArray } from "./parse-numeric-array";
+
+const SPARKLINE_BOX = { width: 80, height: 24, padding: 2 };
 
 interface DataTableChartCellProps {
   data: number[] | string;
@@ -20,25 +23,10 @@ export function DataTableChartCell({
 }: DataTableChartCellProps) {
   const parsedData = useMemo(() => parseNumericArray(data), [data]);
 
-  // Create SVG path for the line chart
-  const svgPath = useMemo(() => {
-    if (parsedData.length === 0) return "";
-
-    const width = 80;
-    const height = 24;
-    const padding = 2;
-    const minY = Math.min(...parsedData);
-    const maxY = Math.max(...parsedData);
-    const rangeY = maxY - minY || 1; // Avoid division by zero
-
-    const points = parsedData.map((value, index) => {
-      const x = padding + (index / (parsedData.length - 1 || 1)) * (width - 2 * padding);
-      const y = height - padding - ((value - minY) / rangeY) * (height - 2 * padding);
-      return `${x},${y}`;
-    });
-
-    return `M ${points.join(" L ")}`;
-  }, [parsedData]);
+  const svgPath = useMemo(
+    () => (parsedData.length === 0 ? "" : sparklinePath(parsedData, SPARKLINE_BOX)),
+    [parsedData],
+  );
 
   const handleClick = () => {
     if (parsedData.length > 0) {

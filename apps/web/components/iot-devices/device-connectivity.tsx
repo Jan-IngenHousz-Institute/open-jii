@@ -1,7 +1,7 @@
 "use client";
 
+import { useLocalDateFormat } from "@/hooks/useLocalDateFormat";
 import { useLocale } from "@/hooks/useLocale";
-import { formatDateTime, formatRelativeTime } from "@/util/date";
 
 import type { DeviceConnectivity, IotDevice } from "@repo/api/domains/iot/iot.schema";
 import { useTranslation } from "@repo/i18n";
@@ -73,6 +73,7 @@ function offlineLabel(
 export function useFormatLastSeen(): (connectivity: DeviceConnectivity | null) => string {
   const { t } = useTranslation("iot");
   const locale = useLocale();
+  const format = useLocalDateFormat(locale);
 
   return (connectivity: DeviceConnectivity | null) => {
     if (connectivity === null) {
@@ -82,12 +83,12 @@ export function useFormatLastSeen(): (connectivity: DeviceConnectivity | null) =
       return connectivity.lastSeenAt === null
         ? t("iot.devices.connectivity.connectedNow")
         : t("iot.devices.connectivity.onlineSince", {
-            time: formatDateTime(connectivity.lastSeenAt, locale),
+            time: format.dateTime(connectivity.lastSeenAt),
           });
     }
     if (connectivity.lastSeenAt === null) {
       return t("iot.devices.connectivity.never");
     }
-    return formatRelativeTime(connectivity.lastSeenAt, locale);
+    return format.relative(connectivity.lastSeenAt);
   };
 }

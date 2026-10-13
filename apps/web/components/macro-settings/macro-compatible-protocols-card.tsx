@@ -1,12 +1,12 @@
 "use client";
 
+import { IntentLink } from "@/components/navigation/intent-link/intent-link";
 import { SettingsCard } from "@/components/shared/settings-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useLocale } from "@/hooks/useLocale";
 import { getSensorFamilyBadgeTone } from "@/util/sensor-family";
 import { ExternalLink, FileJson2, X } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { MacroProtocolEntry } from "@repo/api/domains/macro/macro.schema";
@@ -96,13 +96,13 @@ export function MacroCompatibleProtocolsCard({
                 <div className="min-w-0 flex-1">
                   <div className="mb-1.5 flex items-center gap-2">
                     <FileJson2 className="text-muted-foreground h-4 w-4 shrink-0" />
-                    <Link
+                    <IntentLink
                       href={`/${locale}/platform/protocols/${entry.protocol.id}`}
                       className="line-clamp-2 text-sm font-semibold hover:underline"
                     >
                       {entry.protocol.name}
-                    </Link>
-                    <Link
+                    </IntentLink>
+                    <IntentLink
                       href={`/${locale}/platform/protocols/${entry.protocol.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -116,7 +116,7 @@ export function MacroCompatibleProtocolsCard({
                       onClick={(e) => e.stopPropagation()}
                     >
                       <ExternalLink className="h-4 w-4" />
-                    </Link>
+                    </IntentLink>
                   </div>
                   <StatusBadge
                     tone={getSensorFamilyBadgeTone(entry.protocol.family)}

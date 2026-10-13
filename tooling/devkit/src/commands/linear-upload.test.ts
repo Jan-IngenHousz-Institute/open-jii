@@ -53,7 +53,9 @@ describe("parseArgs and contentTypeFor", () => {
     expect(parseArgs(["docs/sketches.html"])).toEqual({
       file: "docs/sketches.html",
       contentType: "text/html",
+      apply: false,
     });
+    expect(parseArgs(["docs/sketches.html", "--apply"]).apply).toBe(true);
     expect(parseArgs(["--type", "font/woff2", "brand.woff2"]).contentType).toBe("font/woff2");
     expect(contentTypeFor("canvas.PNG")).toBe("image/png");
     expect(contentTypeFor("bundle.tar.gz")).toBeNull();
@@ -70,7 +72,7 @@ describe("uploadFile", () => {
   it("asks Linear for a target, PUTs the bytes with its headers, and prints the asset URL", async () => {
     const d = deps();
 
-    const url = await uploadFile("/tmp/sketches.html", "text/html", d.value);
+    const url = await uploadFile("/tmp/sketches.html", "text/html", true, d.value);
 
     expect(url).toBe("https://uploads.linear.app/org/asset");
     expect(d.calls[0]?.variables).toEqual({
@@ -92,11 +94,22 @@ describe("uploadFile", () => {
     expect(d.lines.join("")).toBe("https://uploads.linear.app/org/asset\n");
   });
 
+  it("dry-runs by default, naming the file and its size and sending nothing", async () => {
+    const d = deps();
+
+    const url = await uploadFile("/tmp/sketches.html", "text/html", false, d.value);
+
+    expect(url).toBeNull();
+    expect(d.calls).toEqual([]);
+    expect(d.puts).toEqual([]);
+    expect(d.lines.join("")).toContain("would upload sketches.html as text/html, 3 bytes");
+  });
+
   it("reports a refused target and a failed PUT with the status", async () => {
     const refused = deps({
       client: fixtureClient(() => ({ fileUpload: { success: false, uploadFile: null } })),
     });
-    await expect(uploadFile("x.html", "text/html", refused.value)).rejects.toThrow(
+    await expect(uploadFile("x.html", "text/html", true, refused.value)).rejects.toThrow(
       "Linear refused the upload",
     );
 
@@ -104,7 +117,7 @@ describe("uploadFile", () => {
       put: () =>
         Promise.resolve({ ok: false, status: 403, text: () => Promise.resolve("expired") }),
     });
-    await expect(uploadFile("x.html", "text/html", failed.value)).rejects.toThrow(
+    await expect(uploadFile("x.html", "text/html", true, failed.value)).rejects.toThrow(
       "failed with 403: expired",
     );
     expect(failed.lines).toEqual([]);

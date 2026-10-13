@@ -144,13 +144,15 @@ describe("createTableColumns", () => {
     expect(column.meta).toEqual({ type: "STRING", renamedFrom: renamedColumn.renamedFrom });
   });
 
-  it("hands the formatter the value, its type and the row id", () => {
+  it("hands the formatter the value, its type, the row id and the table's expansion check", () => {
     const formatFunction = vi.fn(() => "cell");
+    const isCellExpanded = vi.fn(() => false);
     const [phi2Column] = createTableColumns({ columns: COLUMNS, formatFunction });
     const row = { getValue: () => 0.71, original: { id: "row-1" } };
+    const table = { options: { meta: { isCellExpanded } } };
 
-    // @ts-expect-error tanstack passes a full cell context; the column only reads these two.
-    phi2Column.cell?.({ row });
+    // @ts-expect-error tanstack passes a full cell context; the column only reads the row and table.
+    phi2Column.cell?.({ row, table });
 
     expect(formatFunction).toHaveBeenCalledWith(
       0.71,
@@ -160,7 +162,7 @@ describe("createTableColumns", () => {
       undefined,
       undefined,
       undefined,
-      undefined,
+      isCellExpanded,
       undefined,
     );
   });
@@ -170,6 +172,6 @@ describe("createTableColumns", () => {
     const row = { getValue: () => 0.71, original: { id: "row-1" } };
 
     // @ts-expect-error see above
-    expect(phi2Column.cell?.({ row })).toBe(0.71);
+    expect(phi2Column.cell?.({ row, table: { options: {} } })).toBe(0.71);
   });
 });
