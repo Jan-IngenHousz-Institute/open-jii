@@ -47,7 +47,19 @@ describe("ExperimentArchivePage", () => {
     render(await ExperimentArchivePage(defaultProps));
 
     const queries = JSON.stringify(prefetched.queries);
-    expect(queries).toContain('"status":"archived"');
+    expect(queries).toContain('"status":["archived"]');
     expect(queries).toContain('"page":1');
+  });
+
+  it("leaves a sorted or visibility-filtered view to the browser", async () => {
+    for (const searchParams of [{ sort: "[]" }, { visibility: "public" }]) {
+      render(
+        await ExperimentArchivePage({
+          ...defaultProps,
+          searchParams: Promise.resolve(searchParams),
+        }),
+      );
+      expect(prefetched.queries).toEqual([]);
+    }
   });
 });

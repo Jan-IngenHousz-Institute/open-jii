@@ -5,6 +5,7 @@ import {
   isPaginatedList,
   listItems,
   resolveListScope,
+  zListFilter,
   zPaginated,
   zPaginationQuery,
   zListSort,
@@ -28,6 +29,31 @@ describe("resolveListScope", () => {
   it("lets scope win when both are sent, including the widening direction", () => {
     expect(resolveListScope({ scope: "all", filter: "my" })).toBe("all");
     expect(resolveListScope({ scope: "related", filter: "member" })).toBe("related");
+  });
+});
+
+describe("zListFilter", () => {
+  const schema = zListFilter(z.enum(["a", "b", "c"]));
+
+  it("wraps a single value, so a one-value caller keeps working", () => {
+    expect(schema.parse("a")).toEqual(["a"]);
+  });
+
+  it("passes an array through", () => {
+    expect(schema.parse(["a", "c"])).toEqual(["a", "c"]);
+  });
+
+  it("drops duplicates", () => {
+    expect(schema.parse(["b", "b", "a"])).toEqual(["b", "a"]);
+  });
+
+  it("accepts an empty array as no filter", () => {
+    expect(schema.parse([])).toEqual([]);
+  });
+
+  it("rejects a value outside the enum, alone or in an array", () => {
+    expect(() => schema.parse("d")).toThrow();
+    expect(() => schema.parse(["a", "d"])).toThrow();
   });
 });
 
