@@ -57,7 +57,7 @@ const LANGS: LangSpec[] = [
     port: 9103,
     echoScript: "output$seen <- json; invisible(NULL)",
     isolationScript: 'if (isTRUE(json$fail)) stop("boom"); output$tag <- json$tag',
-    unsendableScript: "output$value <- if (isTRUE(json$bad)) new.env() else 1",
+    unsendableScript: "output$value <- if (isTRUE(json$bad)) emptyenv() else 1",
     silentScript: "unused <- 1",
   },
 ];
@@ -212,7 +212,7 @@ describe.skipIf(!ENABLED)("handler container data contract", () => {
         expect(response.status).toBe("success");
         expect(response.results[0]).toEqual({ id: "good", success: true, output: { value: 1 } });
         expect(response.results[1]?.success).toBe(false);
-        expect(response.results[1]?.error).toBeTruthy();
+        expect(response.results[1]?.error).toContain("output cannot be sent as JSON");
       });
 
       it("returns an empty object for a macro that sets no output", async () => {

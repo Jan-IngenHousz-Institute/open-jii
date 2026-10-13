@@ -462,7 +462,9 @@ for item in batch_items:
         # whole batch: a NumPy number, or a NaN, which the backend's JSON parser refuses.
         try:
             json.dumps(output, allow_nan=False)
-        except (TypeError, ValueError) as e:
+        except MemoryError:
+            raise
+        except Exception as e:
             raise TypeError(f"output cannot be sent as JSON: {e}") from None
 
         results.append({

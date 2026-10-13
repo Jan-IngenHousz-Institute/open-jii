@@ -177,7 +177,11 @@ for (const item of batchItems) {
     script.runInContext(context, { timeout: 1000, displayErrors: false });
     // Serialised per item, so an output JSON cannot carry, such as a BigInt or a cycle, fails its
     // own item instead of the whole batch.
-    JSON.stringify(sandbox.output);
+    try {
+      JSON.stringify(sandbox.output);
+    } catch (e) {
+      throw new Error(`output cannot be sent as JSON: ${errorMessage(e)}`);
+    }
     results.push({
       id: item.id,
       success: true,
