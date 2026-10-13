@@ -2,7 +2,8 @@ import { Injectable, Logger } from "@nestjs/common";
 import { createTransport } from "nodemailer";
 import Mail from "nodemailer/lib/mailer";
 
-import { renderAddedUserNotification } from "@repo/transactional/render/added-user-notification";
+import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
+import { renderAccessGrantedNotification } from "@repo/transactional/render/access-granted-notification";
 import { renderJoinRequestRejected } from "@repo/transactional/render/join-request-rejected";
 import { renderJoinRequestSubmitted } from "@repo/transactional/render/join-request-submitted";
 import { renderOrganizationInvitation } from "@repo/transactional/render/organization-invitation";
@@ -16,6 +17,33 @@ import { ErrorCodes } from "../../../../utils/error-codes";
 import { apiErrorMapper, AppError, Result, tryCatch } from "../../../../utils/fp-utils";
 import { EmailConfigService } from "../config/config.service";
 
+/**
+ * Where each shareable resource lives under `/platform` in the web app. Total over
+ * `SharingResourceType` deliberately: a new shareable type fails to compile here
+ * rather than emailing a link that 404s. The web keeps its own copy for the bell,
+ * which also knows organizations.
+ */
+const RESOURCE_PAGE_SEGMENT: Record<SharingResourceType, string> = {
+  experiment: "experiments",
+  macro: "macros",
+  protocol: "protocols",
+  workbook: "workbooks",
+  device: "devices",
+  device_group: "devices/groups",
+  calibration_definition: "calibrations",
+};
+
+/** What the email calls each resource in its body: "access to the {kind} {name}". */
+const RESOURCE_KIND_LABEL: Record<SharingResourceType, string> = {
+  experiment: "experiment",
+  macro: "macro",
+  protocol: "protocol",
+  workbook: "workbook",
+  device: "device",
+  device_group: "device group",
+  calibration_definition: "calibration definition",
+};
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -28,10 +56,10 @@ export class NotificationsService {
   }
 
   /* v8 ignore next 5 */
-  protected renderAddedUserNotificationEmail(
-    ...args: Parameters<typeof renderAddedUserNotification>
+  protected renderAccessGrantedNotificationEmail(
+    ...args: Parameters<typeof renderAccessGrantedNotification>
   ) {
-    return renderAddedUserNotification(...args);
+    return renderAccessGrantedNotification(...args);
   }
 
   /* v8 ignore next 5 */
@@ -344,80 +372,73 @@ export class NotificationsService {
     );
   }
 
-  async sendAddedUserNotification(
-    experimentId: string,
-    experimentName: string,
-    actor: string,
-    role: string,
-    email: string,
-  ) {
+  /**
+   * The one email for being given access to anything — a direct share, an approved
+   * join request or an invitation by address — whatever the resource.
+   */
+  async sendAccessGrantedNotification(input: {
+    resourceType: SharingResourceType;
+    resourceId: string;
+    resourceName: string;
+    actor: string;
+    role: string;
+    email: string;
+  }) {
+    const { resourceType, resourceId, resourceName, actor, role, email } = input;
+
     return await tryCatch(
       async () => {
         this.logger.log({
-          msg: "Sending added user notification email",
-          operation: "sendAddedUserNotification",
+          msg: "Sending access granted notification email",
+          operation: "sendAccessGrantedNotification",
           email,
           role,
-          experimentId,
+          resourceType,
+          resourceId,
           actor,
         });
 
         const baseUrl = this.emailConfigService.getBaseUrl();
         const { host } = new URL(baseUrl);
-        const { href: experimentUrl } = new URL(`/platform/experiments/${experimentId}`, baseUrl);
-        const transport = this.createMailTransport(this.emailConfigService.getServer());
+        const { href: resourceUrl } = new URL(
+          `/platform/${RESOURCE_PAGE_SEGMENT[resourceType]}/${resourceId}`,
+          baseUrl,
+        );
 
-        const { html, text } = await this.renderAddedUserNotificationEmail({
+        const { html, text } = await this.renderAccessGrantedNotificationEmail({
           host,
-          experimentName,
-          experimentUrl,
+          baseUrl,
+          resourceKind: RESOURCE_KIND_LABEL[resourceType],
+          resourceName,
+          resourceUrl,
           actor,
           role,
-          baseUrl,
         });
 
-        const result = await transport.sendMail({
+        await this.dispatch({
           to: email,
-          from: {
-            name: "openJII",
-            address: this.emailConfigService.getFrom(),
-          },
-          subject: `Added to experiment on the openJII Platform`,
+          subject: `Access to ${resourceName} on the openJII Platform`,
           html,
           text,
         });
 
-        // Handle rejected and pending addresses
-        const rejected: (string | Mail.Address)[] = result.rejected;
-        const pending: (string | Mail.Address)[] = result.pending ?? [];
-        const failed: (string | Mail.Address)[] = rejected.concat(pending).filter(Boolean);
-
-        const isAddress = (addr: string | Mail.Address): addr is Mail.Address => {
-          return typeof addr === "object" && "address" in addr;
-        };
-
-        if (failed.length > 0) {
-          const failedAddresses = failed.map((failedAddress) =>
-            isAddress(failedAddress) ? failedAddress.address : failedAddress,
-          );
-          throw new Error(`Email (${failedAddresses.join(", ")}) could not be sent`);
-        }
-
         this.logger.log({
-          msg: "Added user notification email sent successfully",
-          operation: "sendAddedUserNotification",
+          msg: "Access granted notification email sent successfully",
+          operation: "sendAccessGrantedNotification",
           email,
-          experimentId,
+          resourceType,
+          resourceId,
           status: "success",
         });
       },
       (error) => {
         this.logger.error({
-          msg: "Failed to send added user notification email",
+          msg: "Failed to send access granted notification email",
           errorCode: ErrorCodes.EMAIL_SEND_FAILED,
-          operation: "sendAddedUserNotification",
+          operation: "sendAccessGrantedNotification",
           email,
-          experimentId,
+          resourceType,
+          resourceId,
           error,
         });
         return apiErrorMapper(

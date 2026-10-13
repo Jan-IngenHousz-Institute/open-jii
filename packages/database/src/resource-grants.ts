@@ -102,6 +102,9 @@ export async function upsertGrant(db: DbOrTx, input: GrantInput): Promise<Resour
   return row;
 }
 
+/** What {@link ensureDirectAdminGrant} did to the grantee's access. */
+export type EnsureAdminGrantOutcome = "granted" | "promoted" | "unchanged";
+
 /**
  * Ensure `userId` holds a grant that **staffs** this resource — used by the two
  * paths that mint an admin tier outside the sharing endpoints (creator seeding and
@@ -119,7 +122,7 @@ export async function ensureDirectAdminGrant(
     userId: string;
     createdBy?: string | null;
   },
-): Promise<void> {
+): Promise<EnsureAdminGrantOutcome> {
   const existing = await db
     .select({ role: resourceGrants.role })
     .from(resourceGrants)
@@ -137,7 +140,7 @@ export async function ensureDirectAdminGrant(
     existing.length > 0 &&
     (STAFFING_GRANT_ROLES as readonly string[]).includes(existing[0].role)
   ) {
-    return;
+    return "unchanged";
   }
 
   await upsertGrant(db, {
@@ -148,6 +151,7 @@ export async function ensureDirectAdminGrant(
     role: "admin",
     createdBy: input.createdBy ?? null,
   });
+  return existing.length > 0 ? "promoted" : "granted";
 }
 
 /**

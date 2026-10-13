@@ -10,7 +10,7 @@ import { toast } from "@repo/ui/hooks/use-toast";
 import { cva } from "@repo/ui/lib/utils";
 
 import type { ConsentStatus } from "../../../../lib/cookie-consent";
-import { getConsentStatus, setConsentStatus } from "../../../../lib/cookie-consent";
+import { getConsentStatus, setAnalyticsConsent } from "../../../../lib/cookie-consent";
 
 const statusVariants = cva("", {
   variants: {
@@ -38,14 +38,11 @@ export default function CookieSettingsPage() {
 
   const handleToggleAnalytics = () => {
     if (isAccepted) {
-      posthog?.opt_out_capturing();
-      posthog?.reset();
-      setConsentStatus("rejected");
+      setAnalyticsConsent(posthog, "rejected");
       setConsentGiven("rejected");
       toast({ description: t("cookieSettings.analyticsDisabledToast") });
     } else {
-      posthog?.opt_in_capturing();
-      setConsentStatus("accepted");
+      setAnalyticsConsent(posthog, "accepted");
       setConsentGiven("accepted");
       toast({ description: t("cookieSettings.analyticsEnabledToast") });
     }

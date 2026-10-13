@@ -69,20 +69,19 @@ const TYPE_ICON: Record<NotificationType, LucideIcon> = {
   passkey_added: Fingerprint,
 };
 
-// Resource types with no platform page of their own are absent, which reads as "no link".
-const RESOURCE_SEGMENT: Partial<Record<NotificationResourceType, string>> = {
+const RESOURCE_SEGMENT: Record<NotificationResourceType, string> = {
   experiment: "experiments",
   macro: "macros",
   protocol: "protocols",
   workbook: "workbooks",
   device: "devices",
+  device_group: "devices/groups",
+  calibration_definition: "calibrations",
   organization: "organizations",
 };
 
-const resourcePage = (resource: NotificationResource) => {
-  const segment = resource ? RESOURCE_SEGMENT[resource.type] : undefined;
-  return resource && segment ? `${segment}/${resource.id}` : null;
-};
+const resourcePage = (resource: NotificationResource) =>
+  resource ? `${RESOURCE_SEGMENT[resource.type]}/${resource.id}` : null;
 
 const resourceSubpage = (page: string) => (resource: NotificationResource) => {
   const base = resourcePage(resource);

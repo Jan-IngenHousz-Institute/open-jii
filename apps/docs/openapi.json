@@ -4323,50 +4323,6 @@
         }
       }
     },
-    "/api/v1/experiments/{id}/data/exports/{exportId}": {
-      "get": {
-        "operationId": "experiments.downloadExport",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "ID of the experiment"
-            }
-          },
-          {
-            "name": "exportId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "ID of the export"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "anyOf": [
-                    {},
-                    {
-                      "not": {}
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/experiments/{id}/data/uploads": {
       "get": {
         "operationId": "experiments.listUploads",

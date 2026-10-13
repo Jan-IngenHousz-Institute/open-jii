@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { NotificationModule } from "../notifications/notification.module";
 import { CreateGrantUseCase } from "./application/use-cases/create-grant/create-grant";
 import { LeaveResourceUseCase } from "./application/use-cases/leave-resource/leave-resource";
 import { ListGrantsUseCase } from "./application/use-cases/list-grants/list-grants";
@@ -17,6 +18,7 @@ import { SharingController } from "./presentation/sharing.controller";
  * use-case via the global AuthorizationService.
  */
 @Module({
+  imports: [NotificationModule],
   controllers: [SharingController],
   providers: [
     SharingRepository,
