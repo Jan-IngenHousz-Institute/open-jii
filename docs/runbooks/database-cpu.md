@@ -26,8 +26,11 @@ LIMIT 10;
   higher maximum capacity (`max_capacity` in the Aurora inputs in
   `infrastructure/env/<env>/main.tf`). It costs more only while the capacity is used.
 
-The cluster also pauses after 30 idle minutes, and the first connection after a pause waits for it
-to resume. That shows as a slow first request, not as CPU.
+The cluster also pauses after 30 idle minutes, and the first connection after a pause waits while it
+resumes; one dev request took 19 seconds. On dev on 9 October, all five spells above 80% CPU came
+within ten minutes of a wake-up, some reading above 100% on the daily report, and none lasted the
+rule's five-minute hold, so each stayed at Pending. A Pending flap right after
+`ServerlessDatabaseCapacity` left 0 is a wake-up, not load.
 
 ## Closing
 
