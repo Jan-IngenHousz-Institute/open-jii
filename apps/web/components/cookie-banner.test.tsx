@@ -1,13 +1,14 @@
 import { render, screen, userEvent, waitFor } from "@/test/test-utils";
+import posthog from "posthog-js";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { setConsentStatus } from "~/lib/cookie-consent";
+import { setAnalyticsConsent } from "~/lib/cookie-consent";
 
 import { CookieBanner } from "./cookie-banner";
 
 let mockConsentStatus = "pending";
 vi.mock("~/lib/cookie-consent", () => ({
   getConsentStatus: () => mockConsentStatus,
-  setConsentStatus: vi.fn((s: string) => {
+  setAnalyticsConsent: vi.fn((_posthog: unknown, s: string) => {
     mockConsentStatus = s;
   }),
 }));
@@ -35,7 +36,7 @@ describe("CookieBanner", () => {
     const user = userEvent.setup();
     render(<CookieBanner />);
     await user.click(screen.getByRole("button", { name: /cookieBanner.acceptAll/i }));
-    expect(setConsentStatus).toHaveBeenCalledWith("accepted");
+    expect(setAnalyticsConsent).toHaveBeenCalledWith(posthog, "accepted");
     expect(screen.queryByText("cookieBanner.intro", { exact: false })).not.toBeInTheDocument();
   });
 
@@ -43,7 +44,7 @@ describe("CookieBanner", () => {
     const user = userEvent.setup();
     render(<CookieBanner />);
     await user.click(screen.getByRole("button", { name: /cookieBanner.rejectAll/i }));
-    expect(setConsentStatus).toHaveBeenCalledWith("rejected");
+    expect(setAnalyticsConsent).toHaveBeenCalledWith(posthog, "rejected");
   });
 
   it("opens preferences dialog and saves analytics choice", async () => {
@@ -54,7 +55,7 @@ describe("CookieBanner", () => {
 
     await user.click(screen.getByRole("switch"));
     await user.click(screen.getByRole("button", { name: /cookieBanner.saveClose/i }));
-    expect(setConsentStatus).toHaveBeenCalledWith("accepted");
+    expect(setAnalyticsConsent).toHaveBeenCalledWith(posthog, "accepted");
   });
 
   it("saves rejection when analytics left disabled in preferences", async () => {
@@ -63,6 +64,6 @@ describe("CookieBanner", () => {
     await user.click(screen.getByRole("button", { name: /cookieBanner.managePreferences/i }));
     await waitFor(() => expect(screen.getByText("cookieBanner.dialogTitle")).toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: /cookieBanner.saveClose/i }));
-    expect(setConsentStatus).toHaveBeenCalledWith("rejected");
+    expect(setAnalyticsConsent).toHaveBeenCalledWith(posthog, "rejected");
   });
 });
