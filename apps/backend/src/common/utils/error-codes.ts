@@ -55,11 +55,15 @@ export enum ErrorCodes {
   AWS_IOT_LIST_PRINCIPALS_FAILED = "AWS_IOT_LIST_PRINCIPALS_FAILED", // IoT ListThingPrincipals failed
   AWS_IOT_SEARCH_INDEX_FAILED = "AWS_IOT_SEARCH_INDEX_FAILED", // IoT fleet-index connectivity search failed
   AWS_S3_PRESIGN_FAILED = "AWS_S3_PRESIGN_FAILED", // S3 pre-signed URL generation failed
+  AWS_CLOUDWATCH_READ_FAILED = "AWS_CLOUDWATCH_READ_FAILED", // CloudWatch GetMetricData failed
+  AWS_CLOUDWATCH_PUBLISH_FAILED = "AWS_CLOUDWATCH_PUBLISH_FAILED", // CloudWatch PutMetricData failed
+  AWS_RDS_DESCRIBE_FAILED = "AWS_RDS_DESCRIBE_FAILED", // RDS DescribeDBClusters failed
   AWS_OPERATION_FAILED = "AWS_OPERATION_FAILED", // Other AWS operations failed
 
   // ==================== Email Operations ====================
   // Location: src/common/modules/email/
   EMAIL_SEND_FAILED = "EMAIL_SEND_FAILED", // Email sending failed
+  EMAIL_TRANSPORT_VERIFY_FAILED = "EMAIL_TRANSPORT_VERIFY_FAILED", // SMTP login check failed
 
   // ==================== Mailchimp / Newsletter ====================
   // Location: src/common/modules/mailchimp/
@@ -199,6 +203,9 @@ export enum ErrorCodes {
   // ==================== Services ====================
   // Location: src/experiments/application/services/
   EMBARGO_PROCESSING_FAILED = "EMBARGO_PROCESSING_FAILED", // Failed to process embargoes
+
+  // Location: src/health/application/services/
+  DEPENDENCY_HEALTH_PUBLISH_FAILED = "DEPENDENCY_HEALTH_PUBLISH_FAILED", // Dependency health metrics not published
 
   // ==================== Domain Operations - Project Transfer ====================
   // Location: src/experiments/application/use-cases/project-transfer/

@@ -240,3 +240,15 @@ variable "cognito_identity_pool_arn" {
   default     = ""
 }
 
+variable "enable_dependency_health_policy" {
+  description = "Whether to let this service describe the database cluster and publish dependency health metrics"
+  type        = bool
+  default     = false
+}
+
+variable "database_cluster_arn" {
+  description = "Aurora cluster ARN the dependency health policy may describe"
+  type        = string
+  default     = ""
+}
+
