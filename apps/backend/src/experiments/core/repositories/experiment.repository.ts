@@ -299,16 +299,16 @@ export class ExperimentRepository {
   private buildListing(
     userId: string,
     scope?: ResourceScope,
-    status?: ExperimentStatus,
+    statuses?: ExperimentStatus[],
     search?: string,
     options?: {
       organizationId?: string;
       includeArchived?: boolean;
-      visibility?: ExperimentVisibility;
+      visibilities?: ExperimentVisibility[];
     },
     sort?: ExperimentSort,
   ) {
-    const { organizationId, includeArchived = false, visibility } = options ?? {};
+    const { organizationId, includeArchived = false, visibilities } = options ?? {};
 
     // What the caller may do with the row, not merely whether they can see it. Both
     // arms are uncorrelated on the caller's side, so Postgres hash-builds them once
@@ -368,7 +368,7 @@ export class ExperimentRepository {
 
       // Archived rows are hidden unless asked for, either by filtering to them or by
       // opting in: a listing is a place to work, and archived means finished.
-      if (!includeArchived && status !== "archived") {
+      if (!includeArchived && !statuses?.includes("archived")) {
         conditions.push(ne(experiments.status, "archived"));
       }
 
@@ -407,12 +407,12 @@ export class ExperimentRepository {
         conditions.push(userId ? or(related, eq(experiments.createdBy, userId)) : sql`false`);
       }
 
-      if (status) {
-        conditions.push(eq(experiments.status, status));
+      if (statuses?.length) {
+        conditions.push(inArray(experiments.status, statuses));
       }
 
-      if (visibility) {
-        conditions.push(eq(experiments.visibility, visibility));
+      if (visibilities?.length) {
+        conditions.push(inArray(experiments.visibility, visibilities));
       }
 
       // Cross-table fields matched at query time (can't live in the generated search_vector):
@@ -524,16 +524,24 @@ export class ExperimentRepository {
     }
   }
 
+  /**
+   * Return experiments the caller can access, optionally limited to `limit` rows.
+   * `related` scope narrows to personal access paths or authorship without bypassing access checks.
+   * Nonempty status and visibility filters match any value within each filter and must both match.
+   * Empty arrays apply no restriction; archived rows are hidden unless `statuses` includes
+   * `archived` or `options.includeArchived` is true. `options.organizationId` narrows by owning
+   * organization. Query errors are converted to failure results.
+   */
   async findAll(
     userId: string,
     scope?: ResourceScope,
-    status?: ExperimentStatus,
+    statuses?: ExperimentStatus[],
     search?: string,
     limit?: number,
     options?: {
       organizationId?: string;
       includeArchived?: boolean;
-      visibility?: ExperimentVisibility;
+      visibilities?: ExperimentVisibility[];
     },
     sort?: ExperimentSort,
   ): Promise<Result<ExperimentSearchRow[]>> {
@@ -541,7 +549,7 @@ export class ExperimentRepository {
       const { where, orderBy, fields } = this.buildListing(
         userId,
         scope,
-        status,
+        statuses,
         search,
         options,
         sort,
@@ -566,18 +574,22 @@ export class ExperimentRepository {
     });
   }
 
-  /** One page plus the total, counted separately so an out-of-range page still reports it. */
+  /**
+   * One page plus the total, counted separately so an out-of-range page still reports it.
+   * `page` is 1-based and `pageSize` is the maximum row count; neither is validated here.
+   * Access, filters and ordering follow {@link findAll}. Query errors become failure results.
+   */
   async findPage(
     userId: string,
     page: number,
     pageSize: number,
     scope?: ResourceScope,
-    status?: ExperimentStatus,
+    statuses?: ExperimentStatus[],
     search?: string,
     options?: {
       organizationId?: string;
       includeArchived?: boolean;
-      visibility?: ExperimentVisibility;
+      visibilities?: ExperimentVisibility[];
     },
     sort?: ExperimentSort,
   ): Promise<Result<{ items: ExperimentSearchRow[]; totalCount: number }>> {
@@ -585,7 +597,7 @@ export class ExperimentRepository {
       const { where, orderBy, fields } = this.buildListing(
         userId,
         scope,
-        status,
+        statuses,
         search,
         options,
         sort,
