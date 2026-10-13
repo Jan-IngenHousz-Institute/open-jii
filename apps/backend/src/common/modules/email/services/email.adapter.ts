@@ -1,5 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 
+import type { SharingResourceType } from "@repo/api/domains/sharing/sharing.schema";
+
 import type { EmailPort as HealthEmailPort } from "../../../../health/core/ports/email.port";
 import { EmailPort as UsersEmailPort } from "../../../../users/core/ports/email.port";
 import { Result } from "../../../utils/fp-utils";
@@ -11,27 +13,23 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
 
   constructor(private readonly notificationService: NotificationsService) {}
 
-  async sendAddedUserNotification(
-    experimentId: string,
-    experimentName: string,
-    actor: string,
-    role: string,
-    email: string,
-  ): Promise<Result<void>> {
+  async sendAccessGrantedNotification(input: {
+    resourceType: SharingResourceType;
+    resourceId: string;
+    resourceName: string;
+    actor: string;
+    role: string;
+    email: string;
+  }): Promise<Result<void>> {
     this.logger.log({
-      msg: "Sending email notification",
-      operation: "sendAddedUserNotification",
-      experimentId,
-      email,
+      msg: "Sending access granted notification",
+      operation: "sendAccessGrantedNotification",
+      resourceType: input.resourceType,
+      resourceId: input.resourceId,
+      email: input.email,
     });
 
-    return this.notificationService.sendAddedUserNotification(
-      experimentId,
-      experimentName,
-      actor,
-      role,
-      email,
-    );
+    return this.notificationService.sendAccessGrantedNotification(input);
   }
 
   async sendTransferRequestConfirmation(
@@ -53,20 +51,15 @@ export class EmailAdapter implements UsersEmailPort, HealthEmailPort {
     );
   }
 
-  async sendInvitationEmail(
-    resourceId: string,
-    resourceName: string,
-    actor: string,
-    role: string,
-    email: string,
-  ): Promise<Result<void>> {
-    return this.notificationService.sendAddedUserNotification(
-      resourceId,
-      resourceName,
-      actor,
-      role,
-      email,
-    );
+  async sendInvitationEmail(input: {
+    resourceType: "experiment";
+    resourceId: string;
+    resourceName: string;
+    actor: string;
+    role: string;
+    email: string;
+  }): Promise<Result<void>> {
+    return this.notificationService.sendAccessGrantedNotification(input);
   }
 
   async sendProjectTransferComplete(

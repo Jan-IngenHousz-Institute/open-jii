@@ -9,7 +9,7 @@ import type { EmailRichTextInterface } from "../components/ctf-rich-text";
  * Before adding a new email here, create the corresponding entry in Contentful first.
  */
 export type CmsEmailType =
-  | "added-user-notification"
+  | "access-granted-notification"
   | "otp-email"
   | "project-transfer-complete"
   | "transfer-request-confirmation"

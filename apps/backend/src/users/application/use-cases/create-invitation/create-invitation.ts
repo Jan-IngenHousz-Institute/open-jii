@@ -143,13 +143,14 @@ export class CreateInvitationUseCase {
       return failure(AppError.internal("Failed to resolve resource name"));
     }
 
-    const emailResult = await this.emailPort.sendInvitationEmail(
+    const emailResult = await this.emailPort.sendInvitationEmail({
+      resourceType: "experiment",
       resourceId,
-      resourceNameResult.value,
+      resourceName: resourceNameResult.value,
       actor,
-      describeAccess({ tier: invite.tier }),
-      invitation.email,
-    );
+      role: describeAccess({ tier: invite.tier, resourceType: "experiment" }),
+      email: invitation.email,
+    });
 
     if (emailResult.isFailure()) {
       this.logger.error({
