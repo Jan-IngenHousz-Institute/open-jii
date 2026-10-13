@@ -19,8 +19,12 @@ interface LangSpec {
   port: number;
   echoScript: string;
   isolationScript: string;
+  // Sets an output JSON cannot carry when the item asks for one.
+  unsendableScript: string;
+  silentScript: string;
 }
 
+const JAVASCRIPT_PORT = 9101;
 const PYTHON_PORT = 9102;
 
 // Unique localhost tags rebuilt every run, so stale images cannot satisfy the suite.
@@ -29,9 +33,11 @@ const LANGS: LangSpec[] = [
     language: "javascript",
     image: "localhost/macro-sandbox-passthrough-js",
     dockerfile: "functions/javascript/Dockerfile",
-    port: 9101,
+    port: JAVASCRIPT_PORT,
     echoScript: 'output["seen"] = json',
     isolationScript: 'if (json["fail"]) throw new Error("boom"); output["tag"] = json["tag"]',
+    unsendableScript: 'output["value"] = json["bad"] ? BigInt(1) : 1',
+    silentScript: "const unused = 1",
   },
   {
     language: "python",
@@ -41,6 +47,8 @@ const LANGS: LangSpec[] = [
     echoScript: 'output["seen"] = json',
     isolationScript:
       'if json.get("fail"):\n    raise ValueError("boom")\noutput["tag"] = json["tag"]',
+    unsendableScript: 'output["value"] = np.int64(1) if json.get("bad") else 1',
+    silentScript: "unused = 1",
   },
   {
     language: "r",
@@ -49,6 +57,8 @@ const LANGS: LangSpec[] = [
     port: 9103,
     echoScript: "output$seen <- json; invisible(NULL)",
     isolationScript: 'if (isTRUE(json$fail)) stop("boom"); output$tag <- json$tag',
+    unsendableScript: "output$value <- if (isTRUE(json$bad)) emptyenv() else 1",
+    silentScript: "unused <- 1",
   },
 ];
 
@@ -188,11 +198,79 @@ describe.skipIf(!ENABLED)("handler container data contract", () => {
         expect(response.results[2]?.output).toEqual({ tag: "third" });
         expect(response.results[3]?.output).toEqual({ tag: "fourth" });
       });
+
+      it("fails only the item whose output cannot be sent as JSON", async () => {
+        const response = await invoke(spec.port, {
+          script: b64(spec.unsendableScript),
+          items: [
+            { id: "good", data: {} },
+            { id: "bad", data: { bad: true } },
+          ],
+          timeout: 10,
+        });
+
+        expect(response.status).toBe("success");
+        expect(response.results[0]).toEqual({ id: "good", success: true, output: { value: 1 } });
+        expect(response.results[1]?.success).toBe(false);
+        expect(response.results[1]?.error).toContain("output cannot be sent as JSON");
+      });
+
+      it("returns an empty object for a macro that sets no output", async () => {
+        const response = await invoke(spec.port, {
+          script: b64(spec.silentScript),
+          items: [{ id: "silent", data: {} }],
+          timeout: 10,
+        });
+
+        expect(response.results[0]).toEqual({ id: "silent", success: true, output: {} });
+      });
     });
   }
 
+  describe("javascript errors", () => {
+    it("keeps the message of a thrown value that is not an Error", async () => {
+      const response = await invoke(JAVASCRIPT_PORT, {
+        script: b64('throw "plain words"'),
+        items: [{ id: "thrown", data: {} }],
+        timeout: 10,
+      });
+
+      expect(response.results[0]).toEqual({ id: "thrown", success: false, error: "plain words" });
+    });
+
+    it("fails only its own item when the thrown value cannot be read", async () => {
+      const response = await invoke(JAVASCRIPT_PORT, {
+        script: b64('if (json["bad"]) throw Object.create(null); output["ok"] = true'),
+        items: [
+          { id: "bad", data: { bad: true } },
+          { id: "good", data: {} },
+        ],
+        timeout: 10,
+      });
+
+      expect(response.status).toBe("success");
+      expect(response.results[0]).toEqual({
+        id: "bad",
+        success: false,
+        error: "the macro threw a value that cannot be read as an error message",
+      });
+      expect(response.results[1]).toEqual({ id: "good", success: true, output: { ok: true } });
+    });
+  });
+
   describe("python libraries", () => {
     const port = PYTHON_PORT;
+
+    it("fails an item whose output holds a NaN, which JSON cannot carry", async () => {
+      const response = await invoke(port, {
+        script: b64('output["value"] = float("nan")'),
+        items: [{ id: "nan", data: {} }],
+        timeout: 10,
+      });
+
+      expect(response.results[0]?.success).toBe(false);
+      expect(response.results[0]?.error).toContain("output cannot be sent as JSON");
+    });
 
     it("gives a macro that names np, scipy, pd or their helpers what those libraries compute", async () => {
       // Savitzky-Golay returns a straight line unchanged; the moving-average fallback bends its ends.

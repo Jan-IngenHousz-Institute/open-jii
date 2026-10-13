@@ -58,6 +58,20 @@ if (macroResult !== undefined) {
 }
 `;
 
+// A macro can throw any value. One thrown from the sandbox context is not an instance of this
+// realm's Error, so the message is read by shape. Reading it can throw too, for an object with no
+// prototype or a throwing getter, and that must still fail only the macro's own item.
+function errorMessage(thrown) {
+  try {
+    if (thrown !== null && typeof thrown === "object" && typeof thrown.message === "string") {
+      return thrown.message;
+    }
+    return String(thrown);
+  } catch {
+    return "the macro threw a value that cannot be read as an error message";
+  }
+}
+
 // Clone data preserving its type (array vs plain object).
 function cloneData(data) {
   if (Array.isArray(data)) return data.slice();
@@ -166,6 +180,13 @@ for (const item of batchItems) {
 
   try {
     script.runInContext(context, { timeout: 1000, displayErrors: false });
+    // Serialised per item, so an output JSON cannot carry, such as a BigInt or a cycle, fails its
+    // own item instead of the whole batch.
+    try {
+      JSON.stringify(sandbox.output);
+    } catch (e) {
+      throw new Error(`output cannot be sent as JSON: ${errorMessage(e)}`);
+    }
     results.push({
       id: item.id,
       success: true,
@@ -175,7 +196,7 @@ for (const item of batchItems) {
     results.push({
       id: item.id,
       success: false,
-      error: e.message,
+      error: errorMessage(e),
     });
   }
 }

@@ -55,15 +55,34 @@ export interface LambdaExecutionResponse {
   errors?: string[];
 }
 
+const MacroOutputSchema = z.record(z.unknown());
+
+// A macro can return any value, and only an object is an output. Anything else fails its own
+// item, so one macro run cannot make the whole response unreadable.
+const LambdaExecutionResultItemSchema = z
+  .object({
+    id: z.string(),
+    success: z.boolean(),
+    output: z.unknown().optional(),
+    error: z.string().optional(),
+  })
+  .transform(({ output, ...item }): LambdaExecutionResultItem => {
+    if (!item.success || output === undefined) {
+      return item;
+    }
+
+    const record = MacroOutputSchema.safeParse(output);
+    if (record.success) {
+      return { ...item, output: record.data };
+    }
+
+    const kind =
+      output === null ? "null" : Array.isArray(output) ? "an array" : `a ${typeof output}`;
+    return { id: item.id, success: false, error: `Macro output must be an object, not ${kind}` };
+  });
+
 export const LambdaExecutionResponseSchema = z.object({
   status: z.enum(["success", "error"]),
-  results: z.array(
-    z.object({
-      id: z.string(),
-      success: z.boolean(),
-      output: z.record(z.unknown()).optional(),
-      error: z.string().optional(),
-    }),
-  ),
+  results: z.array(LambdaExecutionResultItemSchema),
   errors: z.array(z.string()).optional(),
 });
