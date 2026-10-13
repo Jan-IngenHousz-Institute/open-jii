@@ -17,6 +17,11 @@ const expectedHttpFailures = [
     statuses: new Set([500]),
   },
   {
+    // An account has no profile until it registers, and the public navbar asks for one.
+    url: /\/api\/v1\/users\/[^/]+\/profile(?:[?#]|$)/,
+    statuses: new Set([404]),
+  },
+  {
     // Mailchimp is deliberately unconfigured in the example environment.
     url: /\/api\/v1\/newsletter\/status(?:[?#]|$)/,
     statuses: new Set([500]),

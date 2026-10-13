@@ -36,6 +36,7 @@ page before authentication starts.
 
 - `specs/chrome-refresh.spec.ts` covers the authenticated application shell and experiment chrome.
 - `specs/workbook-search.spec.ts` covers server-side workbook search and attachment.
+- `specs/registration.spec.ts` covers a new account registering and landing on home.
 - `scripts/record-maintenance.ts` records maintenance-mode screenshots and video but is not a test.
 - `scripts/capture-docs-media.ts` stages documentation screenshots and recordings for `apps/docs`.
 - `scripts/capture-ticket-screens.ts` captures the screens a Linear ticket carries.
