@@ -33,7 +33,7 @@ MMI uses AWS IoT's native SDK and X.509 paths. Mobile uses an AWS-signed WebSock
 
 ## Payloads
 
-Production mobile payloads include measurement/device output plus experiment context such as user, timestamp, timezone, questions, macros, annotations, and an optional workbook-run ID. The large `sample` field is gzip-compressed and base64-encoded; `_sample_encoding: "gzip+base64"` tells Silver processing to decompress it.
+Current mobile workbook measurements include a version ID and a run ID shared across that workbook attempt, as well as the result's protocol ID, user, timestamp, timezone, questions, macros, and annotations. A questions-only upload on the lean topic carries the workbook version and run IDs but no protocol or device result. The general MQTT contract leaves these fields optional for publishers outside the mobile workbook flow and for older payloads. The large `sample` field is gzip-compressed and base64-encoded; `_sample_encoding: "gzip+base64"` tells Silver processing to decompress it.
 
 MMI currently publishes the analyzed single-SPAD result produced by `DeviceManager`, with interactive `plant_metadata`. Continuous mode also adds an ISO timestamp. This development payload is useful for testing the route but is not a complete example of the mobile production payload.
 

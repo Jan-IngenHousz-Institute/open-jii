@@ -110,14 +110,17 @@ experiment through public visibility alone.
 
 ## Connect Ambit or MiniPAR locally
 
-The web workbook host can identify Ambit and MiniPAR devices over USB serial and
-select the matching driver automatically. MiniPAR can run a protocol cell and
-return a measurement envelope. A direct Ambit session supports command cells for
-calibration and spot readings; it does not run protocol cells because full Ambit
-measurements go through the Ambyte gateway.
+The web workbook host identifies Ambit and MiniPAR devices over USB serial and
+selects the matching driver automatically. The Android app does the same for a
+device connected by USB cable. Both families run protocol cells over a direct
+connection and return a measurement envelope; see
+[Writing protocols](/guide/devices-protocols/writing-protocols#target-the-right-device-family)
+for the protocol shape. Command cells cover single operations such as
+calibration commands and spot readings.
 
-If the family selected in the workbook toolbar differs from the identification
-handshake, the host shows a mismatch notice and uses the identified family.
+If the family selected in the workbook toolbar differs from what the device
+reports, the web host shows a **Different device identified** notice and uses the
+identified family.
 
 The web host connects local devices through the browser: **USB/serial** over Web
 Serial, and **Bluetooth Low Energy (BLE)** over Web Bluetooth. Browsers cannot
@@ -125,14 +128,26 @@ reach Bluetooth Classic (BR/EDR), so a Bluetooth-Classic device such as a
 MultispeQ connects over USB/serial on the web rather than over the browser's
 Bluetooth.
 
+### Connect a MiniPAR to the Android app
+
+1. Connect the MiniPAR to the phone with a USB cable or adapter. Use a powered
+   USB hub when connecting several devices.
+2. Open **Devices** from the device chip and select **Connect** beside the wired
+   device.
+3. Approve Android's USB permission request when it appears.
+
+Before the app has identified the device, the Devices sheet names it by its USB
+vendor and product numbers and the port's number, in the form
+`vendor:product #number`. Once it is identified, the connected row shows the
+name the MiniPAR reports, with **Measurement device** underneath.
+
 ## Ambyte support by surface
 
 Ambyte behaves differently in three separate contexts; keep them distinct:
 
 - **Web protocol testing** routes the `ambyte` family through the generic device
-  driver, which offers the browser's BLE and USB/serial channels. This is a
-  compatibility path for exercising a protocol, not a dedicated Ambyte
-  integration.
+  driver over USB/serial only. This is a compatibility path for exercising a
+  protocol, not a dedicated Ambyte integration.
 - **Mobile local connection and execution** has no Ambyte path. The mobile app
   cannot connect to an Ambyte for measurement.
 - A **product-specific Ambyte BLE integration** is planned but not yet built. Do
@@ -141,15 +156,15 @@ Ambyte behaves differently in three separate contexts; keep them distinct:
 ## Current limits
 
 For its normal workflow, Ambyte is an MQTT and folder-ingestion family rather
-than a monitored, locally connected workbook device. The registered-device
-**Monitoring** and **Onboarding** tabs are marked **Coming Soon**. Do not plan a
-field workflow around a live monitoring dashboard until that workflow has been
-confirmed on the deployed platform.
+than a locally connected workbook device. A registered device has a
+**Monitoring** tab, showing its broker connectivity and what its data looks like
+over time, and, for people who can manage it, an **Onboarding** tab for choosing
+the experiments it streams into and handing it its configuration.
 
 {/* NEEDS-LIVE-CHECK: register a production-equivalent Ambyte, ingest a representative folder, record processing latency, and confirm which data table appears. */}
 ![A populated Ambyte experiment data table after ingestion](/img/guide/web/ambyte-data.png)
 
-{/* MEDIA-PARTIAL: the authenticated non-mutating pass verified the populated Ambyte table. It intentionally omits device credentials and Coming Soon monitoring or onboarding panels. */}
+{/* MEDIA-PARTIAL: the authenticated non-mutating pass verified the populated Ambyte table. It intentionally omits device credentials and the Monitoring and Onboarding tabs. */}
 
 For analysis after ingestion, continue with
 [Viewing your data](/guide/data-analysis/viewing-data).
