@@ -1,9 +1,14 @@
 import type { MockInstance } from "vitest";
 
+import { LEASE_MS } from "../../../../../notifications/application/services/notification-outbox.worker";
 import { TestHarness } from "../../../../../test/test-harness";
 import { ErrorCodes } from "../../../../utils/error-codes";
 import { assertFailure, assertSuccess } from "../../../../utils/fp-utils";
-import { NotificationsService } from "./notifications.service";
+import {
+  MAIL_TRANSPORT_TIMEOUTS_MS,
+  NotificationsService,
+  mailTransportOptions,
+} from "./notifications.service";
 
 function spyOnProtected(instance: object, method: string): MockInstance {
   return vi.spyOn(instance as unknown as Record<string, unknown>, method as never);
@@ -1051,6 +1056,24 @@ describe("NotificationsService", () => {
       assertFailure(result);
       expect(result.error.code).toBe(ErrorCodes.EMAIL_TRANSPORT_VERIFY_FAILED);
       expect(result.error.message).toContain("535 Authentication failed");
+    });
+  });
+
+  describe("the transport's timeouts", () => {
+    it("travel beside the url, and stay under the outbox lease", () => {
+      // Shape first: the options and the url are one object, so they cannot end up in
+      // createTransport's second argument, where nodemailer treats them as per-message
+      // defaults and silently keeps its own ten-minute socket timeout.
+      expect(mailTransportOptions("smtp://127.0.0.1:1025")).toEqual({
+        url: "smtp://127.0.0.1:1025",
+        ...MAIL_TRANSPORT_TIMEOUTS_MS,
+      });
+
+      // The lease hands a row to another task after this long on the premise that no
+      // send outlives it; that premise holds only while each timeout is under it.
+      for (const timeout of Object.values(MAIL_TRANSPORT_TIMEOUTS_MS)) {
+        expect(timeout).toBeLessThan(LEASE_MS);
+      }
     });
   });
 });

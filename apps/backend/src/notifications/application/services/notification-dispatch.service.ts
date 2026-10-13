@@ -10,8 +10,12 @@ import type {
 
 import { ErrorCodes } from "../../../common/utils/error-codes";
 import { AppError, Result, failure, success } from "../../../common/utils/fp-utils";
+import { DELIVERY_CHANNEL_EMAIL } from "../../core/models/notification-delivery.model";
+import type { NotificationDeliveryInsertRow } from "../../core/models/notification-delivery.model";
+import { NotificationDeliveryRepository } from "../../core/repositories/notification-delivery.repository";
 import { NotificationRepository } from "../../core/repositories/notification.repository";
 import { NotificationEmailService } from "./notification-email.service";
+import { NotificationOutboxWorker } from "./notification-outbox.worker";
 import { NotificationPreferencesService } from "./notification-preferences.service";
 
 export interface DispatchInput<T extends NotificationType> {
@@ -30,9 +34,9 @@ export interface DispatchInput<T extends NotificationType> {
 }
 
 /**
- * The one way an event becomes a notification: it stores a row per recipient and then
- * sends that type's email. Producers call this and carry on — a failure here is logged
- * and never fails the action that caused it.
+ * The one way an event becomes a notification: it stores a row per recipient and
+ * queues that type's email for the worker to send. Producers call this and carry on —
+ * a failure here is logged and never fails the action that caused it.
  */
 @Injectable()
 export class NotificationDispatchService {
@@ -40,13 +44,15 @@ export class NotificationDispatchService {
 
   constructor(
     private readonly notificationRepository: NotificationRepository,
+    private readonly notificationDeliveries: NotificationDeliveryRepository,
     private readonly notificationEmail: NotificationEmailService,
     private readonly notificationPreferences: NotificationPreferencesService,
+    private readonly outbox: NotificationOutboxWorker,
   ) {}
 
   async dispatch<T extends NotificationType>(
     input: DispatchInput<T>,
-  ): Promise<Result<{ created: number; emailed: number }>> {
+  ): Promise<Result<{ created: number; queued: number }>> {
     const definition = NOTIFICATION_TYPES[input.type];
     const parsed = definition.params.safeParse(input.params);
 
@@ -73,7 +79,7 @@ export class NotificationDispatchService {
     const recipientIds = [...new Set(input.recipientIds)].filter((id) => id !== actorId);
 
     if (recipientIds.length === 0) {
-      return success({ created: 0, emailed: 0 });
+      return success({ created: 0, queued: 0 });
     }
 
     const resource = input.resource ?? null;
@@ -101,7 +107,7 @@ export class NotificationDispatchService {
       return insertResult;
     }
 
-    // Rows are in before any email leaves, so a mail-server failure loses nothing.
+    // Rows are in before an email is even owed, so nothing downstream can lose them.
     const created = insertResult.value;
 
     if (
@@ -110,12 +116,13 @@ export class NotificationDispatchService {
       definition.channels.email === "never" ||
       !this.notificationEmail.hasEmail(input.type)
     ) {
-      return success({ created: created.length, emailed: 0 });
+      return success({ created: created.length, queued: 0 });
     }
 
     // A `preference` type emails only those with the category switched on, saved or by
     // default; `always` ignores the switch. Rows are already in, so a failed lookup
-    // costs the emails of this event and nothing else.
+    // costs the emails of this event and nothing else. The worker never reads
+    // preferences: a switch flipped after this point does not hold the email back.
     let emailEnabled: Set<string> | null = null;
     if (definition.channels.email === "preference") {
       const enabled = await this.notificationPreferences.emailEnabledFor(
@@ -130,14 +137,16 @@ export class NotificationDispatchService {
           type: input.type,
           error: enabled.error,
         });
-        return success({ created: created.length, emailed: 0 });
+        return success({ created: created.length, queued: 0 });
       }
       emailEnabled = enabled.value;
     }
 
-    const usersResult = await this.notificationRepository.findUsers([
-      ...new Set([...created.map((row) => row.recipientId), ...(actorId ? [actorId] : [])]),
-    ]);
+    // Only to know whether there is an address worth queueing for; the worker reads the
+    // recipient again at send time, which is what keeps a since-deactivated one unsent.
+    const usersResult = await this.notificationRepository.findUsers(
+      created.map((row) => row.recipientId),
+    );
 
     if (usersResult.isFailure()) {
       this.logger.error({
@@ -147,14 +156,11 @@ export class NotificationDispatchService {
         type: input.type,
         error: usersResult.error,
       });
-      return success({ created: created.length, emailed: 0 });
+      return success({ created: created.length, queued: 0 });
     }
 
     const byId = new Map(usersResult.value.map((user) => [user.id, user]));
-    const actor = actorId === null ? undefined : byId.get(actorId);
-    const actorName = actor ? `${actor.firstName} ${actor.lastName}` : null;
-
-    let emailed = 0;
+    const deliveries: NotificationDeliveryInsertRow[] = [];
 
     for (const row of created) {
       if (emailEnabled && !emailEnabled.has(row.recipientId)) {
@@ -167,28 +173,30 @@ export class NotificationDispatchService {
         continue;
       }
 
-      const sent = await this.notificationEmail.send(input.type, {
-        recipientEmail,
-        actorName,
-        resource,
-        params: parsed.data as NotificationParams<T>,
-      });
-
-      if (sent.isFailure()) {
-        this.logger.error({
-          msg: "Failed to send a notification email, the notification was still stored",
-          errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
-          operation: "dispatch-notification",
-          type: input.type,
-          recipientId: row.recipientId,
-          error: sent.error,
-        });
-        continue;
-      }
-
-      emailed += 1;
+      deliveries.push({ notificationId: row.id, channel: DELIVERY_CHANNEL_EMAIL });
     }
 
-    return success({ created: created.length, emailed });
+    if (deliveries.length === 0) {
+      return success({ created: created.length, queued: 0 });
+    }
+
+    const queued = await this.notificationDeliveries.insertMany(deliveries);
+
+    if (queued.isFailure()) {
+      this.logger.error({
+        msg: "Failed to queue notification emails, the notifications were still stored",
+        errorCode: ErrorCodes.INTERNAL_SERVER_ERROR,
+        operation: "dispatch-notification",
+        type: input.type,
+        error: queued.error,
+      });
+      return success({ created: created.length, queued: 0 });
+    }
+
+    // Not awaited: the request returns now and the email leaves within a second,
+    // instead of waiting up to a poll interval.
+    this.outbox.nudge();
+
+    return success({ created: created.length, queued: queued.value.length });
   }
 }

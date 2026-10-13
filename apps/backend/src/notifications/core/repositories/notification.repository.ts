@@ -95,7 +95,10 @@ export class NotificationRepository {
   /**
    * Who to address, for the recipients of a dispatch and its actor. A deactivated
    * profile yields no address and an anonymised name, so nothing identifying leaves
-   * the platform on their behalf.
+   * the platform on their behalf. A closed account yields no address either: deletion
+   * sets `deleted_at` and rewrites `users.email` to a `deleted-…@example.com` stand-in
+   * without touching `activated`, which the anonymising projection alone would hand
+   * out as a deliverable address.
    */
   async findUsers(ids: string[]): Promise<Result<NotificationUserDto[]>> {
     return tryCatch(async () => {
@@ -106,7 +109,9 @@ export class NotificationRepository {
       return this.database
         .select({
           id: users.id,
-          email: getAnonymizedEmail(),
+          email: sql<
+            string | null
+          >`CASE WHEN ${profiles.deletedAt} IS NULL THEN ${getAnonymizedEmail()} ELSE NULL END`,
           firstName: getAnonymizedFirstName(),
           lastName: getAnonymizedLastName(),
         })

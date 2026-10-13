@@ -44,6 +44,26 @@ const RESOURCE_KIND_LABEL: Record<SharingResourceType, string> = {
   calibration_definition: "calibration definition",
 };
 
+/**
+ * Every one of these must stay well under the outbox worker's lease. The lease hands
+ * a row to another task once a claim is older than it, on the premise that no send
+ * takes that long; nodemailer's own defaults are longer (ten minutes of socket
+ * inactivity), so without these a stalled socket lets a second task send the same
+ * email while the first is still waiting on it.
+ */
+export const MAIL_TRANSPORT_TIMEOUTS_MS = {
+  connectionTimeout: 30_000,
+  greetingTimeout: 30_000,
+  socketTimeout: 60_000,
+} as const;
+
+/**
+ * The timeouts have to travel in `createTransport`'s first argument, beside the url:
+ * its second argument is per-message defaults, which would take them without complaint
+ * and leave the connection on nodemailer's own ten-minute socket default.
+ */
+export const mailTransportOptions = (url: string) => ({ url, ...MAIL_TRANSPORT_TIMEOUTS_MS });
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -52,7 +72,7 @@ export class NotificationsService {
 
   /* v8 ignore next 3 */
   protected createMailTransport(serverConfig: string) {
-    return createTransport(serverConfig);
+    return createTransport(mailTransportOptions(serverConfig));
   }
 
   /* v8 ignore next 5 */

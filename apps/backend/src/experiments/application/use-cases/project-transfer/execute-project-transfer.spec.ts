@@ -10,8 +10,10 @@ import {
   success,
 } from "../../../../common/utils/fp-utils";
 import { MacroRepository } from "../../../../macros/core/repositories/macro.repository";
+import { NotificationDeliveryRepository } from "../../../../notifications/core/repositories/notification-delivery.repository";
 import { NotificationRepository } from "../../../../notifications/core/repositories/notification.repository";
 import { ProtocolRepository } from "../../../../protocols/core/repositories/protocol.repository";
+import { queuedDeliveriesFor } from "../../../../test/notification-deliveries";
 import { TestHarness } from "../../../../test/test-harness";
 import { WorkbookRepository } from "../../../../workbooks/core/repositories/workbook.repository";
 import { ExperimentRepository } from "../../../core/repositories/experiment.repository";
@@ -23,6 +25,8 @@ describe("ExecuteProjectTransferUseCase", () => {
   let useCase: ExecuteProjectTransferUseCase;
   let testUserId: string;
   let testUserEmail: string;
+
+  const deliveriesFor = (userId: string) => queuedDeliveriesFor(testApp.database, userId);
 
   const notificationsFor = (userId: string) =>
     testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
@@ -348,7 +352,7 @@ describe("ExecuteProjectTransferUseCase", () => {
       expect(result.value.macroName).toBe(macroName);
     });
 
-    it("should notify and email the creator after a successful transfer", async () => {
+    it("should notify the creator and queue their email after a successful transfer", async () => {
       const emailAdapter = testApp.module.get(EmailAdapter);
       const emailSpy = vi
         .spyOn(emailAdapter, "sendProjectTransferComplete")
@@ -369,18 +373,15 @@ describe("ExecuteProjectTransferUseCase", () => {
         params: { experimentName: payload.experiment.name },
       });
 
-      expect(emailSpy).toHaveBeenCalledOnce();
-      expect(emailSpy).toHaveBeenCalledWith(
-        testUserEmail,
-        result.value.experimentId,
-        payload.experiment.name,
-      );
+      expect(await deliveriesFor(testUserId)).toMatchObject([
+        { type: "project_transfer_completed", channel: "email", status: "pending" },
+      ]);
+      expect(emailSpy).not.toHaveBeenCalled();
     });
 
-    it("should succeed even when email sending fails (non-fatal)", async () => {
-      const emailAdapter = testApp.module.get(EmailAdapter);
-      vi.spyOn(emailAdapter, "sendProjectTransferComplete").mockResolvedValue(
-        failure(AppError.internal("Email service unavailable")),
+    it("should succeed even when the email cannot be queued (non-fatal)", async () => {
+      vi.spyOn(testApp.module.get(NotificationDeliveryRepository), "insertMany").mockResolvedValue(
+        failure(AppError.internal("Database unavailable")),
       );
 
       const payload = buildPayload();
@@ -389,11 +390,10 @@ describe("ExecuteProjectTransferUseCase", () => {
       assertSuccess(result);
       expect(result.value.success).toBe(true);
       expect(await notificationsFor(testUserId)).toHaveLength(1);
+      expect(await deliveriesFor(testUserId)).toHaveLength(0);
     });
 
-    it("should store the notification but send no email when the creator has no address", async () => {
-      const emailAdapter = testApp.module.get(EmailAdapter);
-      const emailSpy = vi.spyOn(emailAdapter, "sendProjectTransferComplete");
+    it("should store the notification but queue no email when the creator has no address", async () => {
       // Create a user without an email
       const noEmailUserId = await testApp.createTestUser({ email: "" });
 
@@ -408,12 +408,10 @@ describe("ExecuteProjectTransferUseCase", () => {
       assertSuccess(result);
       expect(result.value.success).toBe(true);
       expect(await notificationsFor(noEmailUserId)).toHaveLength(1);
-      expect(emailSpy).not.toHaveBeenCalled();
+      expect(await deliveriesFor(noEmailUserId)).toHaveLength(0);
     });
 
-    it("should store the notification but send no email for an unactivated profile", async () => {
-      const emailAdapter = testApp.module.get(EmailAdapter);
-      const emailSpy = vi.spyOn(emailAdapter, "sendProjectTransferComplete");
+    it("should store the notification but queue no email for an unactivated profile", async () => {
       const unactivatedUserId = await testApp.createTestUser({
         email: "dormant@example.com",
         activated: false,
@@ -426,12 +424,10 @@ describe("ExecuteProjectTransferUseCase", () => {
 
       assertSuccess(result);
       expect(await notificationsFor(unactivatedUserId)).toHaveLength(1);
-      expect(emailSpy).not.toHaveBeenCalled();
+      expect(await deliveriesFor(unactivatedUserId)).toHaveLength(0);
     });
 
     it("should still return the transfer ids when the notification cannot be stored", async () => {
-      const emailAdapter = testApp.module.get(EmailAdapter);
-      const emailSpy = vi.spyOn(emailAdapter, "sendProjectTransferComplete");
       vi.spyOn(testApp.module.get(NotificationRepository), "insertMany").mockResolvedValue(
         failure(AppError.internal("notifications unavailable")),
       );
@@ -442,12 +438,10 @@ describe("ExecuteProjectTransferUseCase", () => {
       assertSuccess(result);
       expect(result.value.success).toBe(true);
       expect(result.value.experimentId).toBeDefined();
-      expect(emailSpy).not.toHaveBeenCalled();
+      expect(await deliveriesFor(testUserId)).toHaveLength(0);
     });
 
-    it("should store the notification but send no email when project transfers are switched off", async () => {
-      const emailAdapter = testApp.module.get(EmailAdapter);
-      const emailSpy = vi.spyOn(emailAdapter, "sendProjectTransferComplete");
+    it("should store the notification but queue no email when project transfers are switched off", async () => {
       assertSuccess(
         await testApp.module
           .get(NotificationRepository)
@@ -459,7 +453,7 @@ describe("ExecuteProjectTransferUseCase", () => {
 
       assertSuccess(result);
       expect(await notificationsFor(testUserId)).toHaveLength(1);
-      expect(emailSpy).not.toHaveBeenCalled();
+      expect(await deliveriesFor(testUserId)).toHaveLength(0);
     });
 
     it("should reuse existing protocol when one with the same name exists", async () => {

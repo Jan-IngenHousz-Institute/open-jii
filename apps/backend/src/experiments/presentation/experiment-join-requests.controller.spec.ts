@@ -14,6 +14,7 @@ import { AuthorizationService } from "../../authorization/authorization.service"
 import { EmailVisibilityService } from "../../authorization/email-visibility.service";
 import { EmailAdapter } from "../../common/modules/email/services/email.adapter";
 import { success } from "../../common/utils/fp-utils";
+import { queuedDeliveriesFor } from "../../test/notification-deliveries";
 import type { SuperTestResponse } from "../../test/test-harness";
 import { TestHarness } from "../../test/test-harness";
 import { ExperimentJoinRequestRepository } from "../core/repositories/experiment-join-request.repository";
@@ -55,7 +56,7 @@ describe("ExperimentJoinRequestsController", () => {
   });
 
   describe("createJoinRequest", () => {
-    it("creates a pending request on a public experiment and emails admins", async () => {
+    it("creates a pending request on a public experiment and queues the admins' email", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Public exp",
         userId: adminUserId,
@@ -79,13 +80,11 @@ describe("ExperimentJoinRequestsController", () => {
       });
       expect(response.body.user.id).toBe(requesterUserId);
 
-      expect(emailAdapter.sendJoinRequestSubmittedNotification).toHaveBeenCalledWith(
-        experiment.id,
-        experiment.name,
-        expect.any(String),
-        "admin@example.com",
-        "let me in",
-      );
+      // The admin's email is queued for the worker, not sent inside the request.
+      expect(await queuedDeliveriesFor(testApp.database, adminUserId)).toMatchObject([
+        { type: "experiment_join_request_received", channel: "email", status: "pending" },
+      ]);
+      expect(emailAdapter.sendJoinRequestSubmittedNotification).not.toHaveBeenCalled();
     });
 
     it("returns the existing pending request on duplicate submit (dedup)", async () => {
@@ -175,7 +174,7 @@ describe("ExperimentJoinRequestsController", () => {
   });
 
   describe("approveJoinRequest", () => {
-    it("approves the request, adds the requester as a member, and sends the membership email", async () => {
+    it("approves the request, adds the requester as a member, and queues the membership email", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Approve exp",
         userId: adminUserId,
@@ -218,16 +217,10 @@ describe("ExperimentJoinRequestsController", () => {
         requesterUserId,
       );
 
-      // Standard membership-change email fires
-      expect(emailAdapter.sendAccessGrantedNotification).toHaveBeenCalledWith({
-        resourceType: "experiment",
-        resourceId: experiment.id,
-        resourceName: experiment.name,
-        actor: expect.any(String) as string,
-        // Approval hands out the contributing tier, never an administering one.
-        role: "a contributor who can view and add data",
-        email: "requester@example.com",
-      });
+      // Standard membership-change email is queued
+      expect(await queuedDeliveriesFor(testApp.database, requesterUserId)).toMatchObject([
+        { type: "experiment_join_request_approved", channel: "email", status: "pending" },
+      ]);
     });
 
     it("returns 403 when a non-admin attempts to approve", async () => {
@@ -272,7 +265,6 @@ describe("ExperimentJoinRequestsController", () => {
         .expect(StatusCodes.CREATED);
 
       await testApp.addExperimentCollaborator(experiment.id, requesterUserId);
-      vi.mocked(emailAdapter).sendAccessGrantedNotification.mockClear();
 
       const approvePath = testApp.resolveOrpcPath(contract.experiments.approveJoinRequest, {
         id: experiment.id,
@@ -291,12 +283,12 @@ describe("ExperimentJoinRequestsController", () => {
         id: experiment.id,
       });
       await testApp.get(mePath).withAuth(requesterUserId).expect(StatusCodes.NOT_FOUND);
-      expect(vi.mocked(emailAdapter).sendAccessGrantedNotification.mock.calls).toHaveLength(0);
+      expect(await queuedDeliveriesFor(testApp.database, requesterUserId)).toHaveLength(0);
     });
   });
 
   describe("rejectJoinRequest", () => {
-    it("marks the request rejected and sends the rejection email", async () => {
+    it("marks the request rejected and queues the rejection email", async () => {
       const { experiment } = await testApp.createExperiment({
         name: "Reject exp",
         userId: adminUserId,
@@ -325,11 +317,9 @@ describe("ExperimentJoinRequestsController", () => {
 
       expect(rejectResponse.body.status).toBe("rejected");
 
-      expect(emailAdapter.sendJoinRequestRejectedNotification).toHaveBeenCalledWith(
-        experiment.id,
-        experiment.name,
-        "requester@example.com",
-      );
+      expect(await queuedDeliveriesFor(testApp.database, requesterUserId)).toMatchObject([
+        { type: "experiment_join_request_rejected", channel: "email", status: "pending" },
+      ]);
     });
 
     it("returns 409 and closes the request when the requester already has access", async () => {
@@ -349,7 +339,6 @@ describe("ExperimentJoinRequestsController", () => {
         .expect(StatusCodes.CREATED);
 
       await testApp.addExperimentCollaborator(experiment.id, requesterUserId);
-      vi.mocked(emailAdapter).sendJoinRequestRejectedNotification.mockClear();
 
       const rejectPath = testApp.resolveOrpcPath(contract.experiments.rejectJoinRequest, {
         id: experiment.id,
@@ -368,9 +357,7 @@ describe("ExperimentJoinRequestsController", () => {
         id: experiment.id,
       });
       await testApp.get(mePath).withAuth(requesterUserId).expect(StatusCodes.NOT_FOUND);
-      expect(vi.mocked(emailAdapter).sendJoinRequestRejectedNotification.mock.calls).toHaveLength(
-        0,
-      );
+      expect(await queuedDeliveriesFor(testApp.database, requesterUserId)).toHaveLength(0);
     });
   });
 

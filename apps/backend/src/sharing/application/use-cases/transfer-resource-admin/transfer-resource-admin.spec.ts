@@ -6,6 +6,7 @@ import type { DatabaseInstance } from "@repo/database";
 import { EmailAdapter } from "../../../../common/modules/email/services/email.adapter";
 import { AppError, assertSuccess, failure, success } from "../../../../common/utils/fp-utils";
 import { NotificationDispatchService } from "../../../../notifications/application/services/notification-dispatch.service";
+import { queuedDeliveriesFor } from "../../../../test/notification-deliveries";
 import { TestHarness } from "../../../../test/test-harness";
 import { UserRepository } from "../../../../users/core/repositories/user.repository";
 import { SharingRepository } from "../../../core/repositories/sharing.repository";
@@ -523,10 +524,12 @@ describe("TransferResourceAdminUseCase", () => {
   // Being handed a resource during someone's account deletion is a direct access
   // change like any other, so the new admin hears about it the same way.
   describe("notifying the new admin", () => {
+    const deliveriesFor = (userId: string) => queuedDeliveriesFor(testApp.database, userId);
+
     const notificationsFor = (userId: string) =>
       testApp.database.select().from(notifications).where(eq(notifications.recipientId, userId));
 
-    it("tells a target who held nothing that they were given access, and emails them", async () => {
+    it("tells a target who held nothing that they were given access, and queues their email", async () => {
       const name = `Handed Over ${crypto.randomUUID()}`;
       const { experiment } = await testApp.createExperiment({ name, userId: testUserId });
       const target = await testApp.createTestUser({
@@ -550,17 +553,13 @@ describe("TransferResourceAdminUseCase", () => {
         resourceId: experiment.id,
         params: { resourceName: name, role: "admin" },
       });
-      expect(emailAdapter.sendAccessGrantedNotification).toHaveBeenCalledWith({
-        resourceType: "experiment",
-        resourceId: experiment.id,
-        resourceName: name,
-        actor: "Hilda Handover",
-        role: "a collaborator who can edit",
-        email: "handover-granted@example.com",
-      });
+      expect(await deliveriesFor(target)).toMatchObject([
+        { type: "resource_access_granted", channel: "email", status: "pending" },
+      ]);
+      expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
     });
 
-    it("tells a target who already held viewer that their level changed, without an email", async () => {
+    it("tells a target who already held viewer that their level changed, with no email queued", async () => {
       const name = `Promoted Over ${crypto.randomUUID()}`;
       const { experiment } = await testApp.createExperiment({ name, userId: testUserId });
       const target = await testApp.createTestUser({ name: "Vic Viewer" });
@@ -587,7 +586,7 @@ describe("TransferResourceAdminUseCase", () => {
         resourceId: experiment.id,
         params: { resourceName: name, role: "admin" },
       });
-      expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+      expect(await deliveriesFor(target)).toEqual([]);
     });
 
     it("says nothing to a target who already held admin", async () => {
@@ -621,7 +620,7 @@ describe("TransferResourceAdminUseCase", () => {
       assertSuccess(result);
       expect(result.value[0].success).toBe(true);
       expect(await notificationsFor(target)).toEqual([]);
-      expect(emailAdapter.sendAccessGrantedNotification).not.toHaveBeenCalled();
+      expect(await deliveriesFor(target)).toEqual([]);
     });
 
     // The hand-off clears a deletion blocker, so neither failure may undo it.
